@@ -1,0 +1,5 @@
+-in spacebar let the user configure more action, so maybe the icon should be come a little bit bigger (configurable)
+- widgets must be completly customizable
+- spacebar also must be configurable
+- add slider and so
+
