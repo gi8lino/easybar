@@ -32,7 +32,6 @@ final class WidgetRunner {
         }
 
         LuaRuntime.shared.start()
-
         evaluateSubscriptions()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
@@ -44,7 +43,6 @@ final class WidgetRunner {
         Logger.debug("reloading widget runner")
 
         shutdown()
-
         WidgetStore.shared.clear()
 
         requiredEvents.removeAll()
@@ -68,20 +66,28 @@ final class WidgetRunner {
     private func handleRuntimeOutput(_ line: String) {
         Logger.debug("lua stdout: \(line)")
 
-        if line == #"{"type":"ready"}"# {
-            Logger.debug("lua runtime handshake received")
-            return
-        }
-
         guard let data = line.data(using: .utf8) else {
             Logger.debug("invalid utf8: \(line)")
             return
         }
 
         do {
-            let widget = try decoder.decode(WidgetState.self, from: data)
-            Logger.debug("decoded widget id=\(widget.id) text=\(widget.text)")
-            WidgetStore.shared.apply([widget])
+            let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
+
+            if update.type == "ready" {
+                Logger.debug("lua runtime handshake received")
+                return
+            }
+
+            if update.type == "tree",
+               let root = update.root,
+               let nodes = update.nodes {
+                Logger.debug("decoded widget tree root=\(root) nodes=\(nodes.count)")
+                WidgetStore.shared.apply(root: root, nodes: nodes)
+                return
+            }
+
+            Logger.debug("unknown lua message: \(line)")
         } catch {
             Logger.debug("json decode failed: \(line)")
         }
@@ -132,7 +138,6 @@ final class WidgetRunner {
         }
 
         Logger.debug("required events: \(requiredEvents)")
-
         EventManager.shared.start(subscriptions: requiredEvents)
     }
 

@@ -28,28 +28,111 @@ local function normalize_position(position)
 	return "right"
 end
 
-local function emit_widget(widget)
-	local id = widget.id or "unknown"
-	local icon = widget.icon or ""
-	local text = widget.text or ""
-	local position = normalize_position(widget.position)
-	local order = tonumber(widget.order or 0) or 0
-	local color = widget.color or ""
+local function normalize_kind(node)
+	if node.kind == "row" or node.kind == "column" or node.kind == "group" or node.kind == "popup" then
+		return node.kind
+	end
 
-	local json = string.format(
-		'{"id":"%s","icon":"%s","text":"%s","position":"%s","order":%d,"color":"%s"}',
-		escape_json(id),
-		escape_json(icon),
-		escape_json(text),
-		escape_json(position),
-		order,
-		escape_json(color)
+	if type(node.children) == "table" and #node.children > 0 then
+		return "row"
+	end
+
+	return "item"
+end
+
+local function flatten_node(node, root_id, parent_id, inherited_position, out)
+	local id = node.id or (root_id .. "_" .. tostring(#out + 1))
+	local position = normalize_position(node.position or inherited_position or "right")
+	local kind = normalize_kind(node)
+
+	table.insert(out, {
+		id = id,
+		root = root_id,
+		kind = kind,
+		parent = parent_id,
+		position = position,
+		order = tonumber(node.order or 0) or 0,
+		icon = node.icon or "",
+		text = node.text or "",
+		color = node.color or "",
+		visible = node.visible ~= false,
+		paddingX = node.paddingX,
+		paddingY = node.paddingY,
+		spacing = node.spacing,
+		backgroundColor = node.backgroundColor,
+		borderColor = node.borderColor,
+		borderWidth = node.borderWidth,
+		cornerRadius = node.cornerRadius,
+		opacity = node.opacity,
+	})
+
+	if type(node.children) == "table" then
+		for _, child in ipairs(node.children) do
+			flatten_node(child, root_id, id, position, out)
+		end
+	end
+end
+
+local function encode_bool(value)
+	return value and "true" or "false"
+end
+
+local function encode_nullable_number(value)
+	if value == nil then
+		return "null"
+	end
+	return tostring(value)
+end
+
+local function encode_nullable_string(value)
+	if value == nil or value == "" then
+		return "null"
+	end
+	return '"' .. escape_json(value) .. '"'
+end
+
+local function encode_node(node)
+	return string.format(
+		'{"id":"%s","root":"%s","kind":"%s","parent":%s,"position":"%s","order":%d,"icon":"%s","text":"%s","color":%s,"visible":%s,"paddingX":%s,"paddingY":%s,"spacing":%s,"backgroundColor":%s,"borderColor":%s,"borderWidth":%s,"cornerRadius":%s,"opacity":%s}',
+		escape_json(node.id),
+		escape_json(node.root),
+		escape_json(node.kind),
+		encode_nullable_string(node.parent),
+		escape_json(node.position),
+		tonumber(node.order or 0) or 0,
+		escape_json(node.icon or ""),
+		escape_json(node.text or ""),
+		encode_nullable_string(node.color),
+		encode_bool(node.visible ~= false),
+		encode_nullable_number(node.paddingX),
+		encode_nullable_number(node.paddingY),
+		encode_nullable_number(node.spacing),
+		encode_nullable_string(node.backgroundColor),
+		encode_nullable_string(node.borderColor),
+		encode_nullable_number(node.borderWidth),
+		encode_nullable_number(node.cornerRadius),
+		encode_nullable_number(node.opacity)
 	)
+end
+
+local function emit_tree(widget)
+	local root_id = widget.id or "unknown"
+	local nodes = {}
+
+	flatten_node(widget, root_id, nil, widget.position, nodes)
+
+	local encoded = {}
+	for _, node in ipairs(nodes) do
+		table.insert(encoded, encode_node(node))
+	end
+
+	local json =
+		string.format('{"type":"tree","root":"%s","nodes":[%s]}', escape_json(root_id), table.concat(encoded, ","))
 
 	io.stdout:write(json .. "\n")
 	io.stdout:flush()
 
-	log("emit " .. json)
+	log("emit tree root=" .. root_id .. " nodes=" .. tostring(#nodes))
 end
 
 local function merge_update(widget, update)
@@ -103,7 +186,7 @@ local function load_widgets()
 						end
 					end
 
-					emit_widget(widget)
+					emit_tree(widget)
 				end
 			end
 		end
@@ -161,7 +244,7 @@ local function dispatch_event(event_name, payload)
 				)
 			elseif type(result) == "table" then
 				merge_update(widget, result)
-				emit_widget(widget)
+				emit_tree(widget)
 			end
 		end
 	end

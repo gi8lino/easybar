@@ -7,8 +7,8 @@ struct WidgetBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(store.widgets.filter { $0.position == position }) { widget in
-                WidgetView(widget: widget)
+            ForEach(store.topLevelNodes(for: position)) { node in
+                WidgetNodeView(node: node)
             }
         }
     }
