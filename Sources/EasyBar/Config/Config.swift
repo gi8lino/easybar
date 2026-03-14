@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import TOMLKit
 
-/// Global EasyBar configuration loaded from ~/.config/easybar/config.toml
+/// Global EasyBar configuration loaded from disk.
 final class Config {
 
     static let shared = Config()
@@ -46,35 +46,80 @@ final class Config {
     var spaceInactiveBorderHex: String = "#00000000"
     var focusedAppBorderHex: String = "#ff3b30"
 
-    var luaPath: String = "/usr/bin/lua"
+    var luaPath: String = "/usr/local/bin/lua"
+
+    /// Absolute path to the widgets directory.
+    var widgetsPath: String = ""
 
     private init() {
+        resetDerivedDefaults()
         load()
     }
 
     /// Reloads configuration from disk.
     func reload() {
         Logger.info("reloading configuration")
+        resetDerivedDefaults()
         load()
+    }
+
+    /// Absolute path to the config file.
+    var configPath: String {
+        if let override = ProcessInfo.processInfo.environment["EASYBAR_CONFIG_PATH"],
+           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return NSString(string: override).expandingTildeInPath
+        }
+
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/easybar/config.toml")
+            .path
+    }
+
+    /// Returns the configured font weight for space labels.
+    var resolvedSpaceTextWeight: Font.Weight {
+        switch spaceTextWeight.lowercased() {
+        case "ultralight": return .ultraLight
+        case "thin": return .thin
+        case "light": return .light
+        case "regular": return .regular
+        case "medium": return .medium
+        case "bold": return .bold
+        case "heavy": return .heavy
+        case "black": return .black
+        default: return .semibold
+        }
+    }
+
+    /// Restores defaults that are derived from the user's home directory.
+    private func resetDerivedDefaults() {
+        widgetsPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/easybar/widgets")
+            .path
     }
 
     /// Loads configuration from disk.
     private func load() {
 
-        let configPath = FileManager.default
-            .homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/easybar/config.toml")
+        let resolvedConfigPath = configPath
 
         guard
-            let data = try? Data(contentsOf: configPath),
+            let data = try? Data(contentsOf: URL(fileURLWithPath: resolvedConfigPath)),
             let text = String(data: data, encoding: .utf8)
         else {
-            Logger.info("using default configuration")
+            Logger.info("using default configuration from \(resolvedConfigPath)")
+            applyEnvironmentOverrides()
             return
         }
 
         do {
             let toml = try TOMLTable(string: text)
+
+            if let paths = toml["paths"]?.table {
+                if let configuredWidgetsPath = paths["widgets"]?.string,
+                   !configuredWidgetsPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    widgetsPath = NSString(string: configuredWidgetsPath).expandingTildeInPath
+                }
+            }
 
             if let bar = toml["bar"]?.table {
                 barHeight = CGFloat(bar["height"]?.int ?? Int(barHeight))
@@ -138,20 +183,15 @@ final class Config {
         } catch {
             Logger.info("config parse error: \(error)")
         }
+
+        applyEnvironmentOverrides()
     }
 
-    /// Returns the configured font weight for space labels.
-    var resolvedSpaceTextWeight: Font.Weight {
-        switch spaceTextWeight.lowercased() {
-        case "ultralight": return .ultraLight
-        case "thin": return .thin
-        case "light": return .light
-        case "regular": return .regular
-        case "medium": return .medium
-        case "bold": return .bold
-        case "heavy": return .heavy
-        case "black": return .black
-        default: return .semibold
+    /// Applies environment variable overrides after config loading.
+    private func applyEnvironmentOverrides() {
+        if let widgetsOverride = ProcessInfo.processInfo.environment["EASYBAR_WIDGETS_PATH"],
+           !widgetsOverride.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            widgetsPath = NSString(string: widgetsOverride).expandingTildeInPath
         }
     }
 }

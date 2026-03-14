@@ -49,10 +49,11 @@ final class LuaRuntime {
         Logger.debug("starting lua runtime")
         Logger.debug("lua binary: \(Config.shared.luaPath)")
         Logger.debug("runtime script: \(runtime.path)")
+        Logger.debug("widgets path: \(Config.shared.widgetsPath)")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: Config.shared.luaPath)
-        process.arguments = [runtime.path]
+        process.arguments = [runtime.path, Config.shared.widgetsPath]
 
         let inPipe = Pipe()
         let outPipe = Pipe()

@@ -45,6 +45,10 @@ final class EventManager {
             NetworkEvents.shared.subscribeNetwork()
         }
 
+        if subscriptions.contains("volume_change") {
+            VolumeEvents.shared.subscribeVolume()
+        }
+
         if subscriptions.contains("minute_tick") {
             TimerEvents.shared.startMinuteTimer()
         }
@@ -59,6 +63,7 @@ final class EventManager {
         SystemEvents.shared.stopAll()
         NetworkEvents.shared.stopAll()
         PowerEvents.shared.stopAll()
+        VolumeEvents.shared.stopAll()
         activeSubscriptions.removeAll()
     }
 }

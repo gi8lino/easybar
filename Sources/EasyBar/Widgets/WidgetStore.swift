@@ -11,7 +11,6 @@ final class WidgetStore: ObservableObject {
     private var rootIndex: [String: Set<String>] = [:]
 
     func apply(root: String, nodes updates: [WidgetNodeState]) {
-
         let oldIDs = rootIndex[root] ?? []
 
         for id in oldIDs {
@@ -47,7 +46,13 @@ final class WidgetStore: ObservableObject {
 
     func children(of parentID: String) -> [WidgetNodeState] {
         nodes
-            .filter { $0.parent == parentID }
+            .filter { $0.parent == parentID && ($0.role ?? "") != "popup-anchor" }
+            .sorted(by: sortNodes)
+    }
+
+    func anchorChildren(of parentID: String) -> [WidgetNodeState] {
+        nodes
+            .filter { $0.parent == parentID && ($0.role ?? "") == "popup-anchor" }
             .sorted(by: sortNodes)
     }
 

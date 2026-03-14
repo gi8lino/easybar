@@ -1,12 +1,19 @@
 import Foundation
 
 /// Data returned from a widget script.
-struct WidgetModel: Identifiable, Decodable {
+struct WidgetModel: Identifiable {
 
-    let id: String
-    let icon: String?
-    let text: String
-    let position: String?
-    let order: Int?
-    let color: String?
+    var id: String
+    var kind: String?
+
+    var icon: String?
+    var text: String?
+
+    var min: Double?
+    var max: Double?
+    var step: Double?
+    var value: Double?
+
+    var position: String?
+    var order: Int?
 }

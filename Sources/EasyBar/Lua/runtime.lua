@@ -1,5 +1,9 @@
-local home = os.getenv("HOME")
-local widget_dir = home .. "/.config/easybar/widgets"
+local widget_dir = arg[1]
+
+if not widget_dir or widget_dir == "" then
+	local home = os.getenv("HOME")
+	widget_dir = home .. "/.config/easybar/widgets"
+end
 
 local widgets = {}
 
@@ -29,7 +33,16 @@ local function normalize_position(position)
 end
 
 local function normalize_kind(node)
-	if node.kind == "row" or node.kind == "column" or node.kind == "group" or node.kind == "popup" then
+	if
+		node.kind == "row"
+		or node.kind == "column"
+		or node.kind == "group"
+		or node.kind == "popup"
+		or node.kind == "slider"
+		or node.kind == "progress"
+		or node.kind == "progress_slider"
+		or node.kind == "sparkline"
+	then
 		return node.kind
 	end
 
@@ -40,10 +53,18 @@ local function normalize_kind(node)
 	return "item"
 end
 
+local function normalize_role(role)
+	if role == "popup-anchor" then
+		return role
+	end
+	return nil
+end
+
 local function flatten_node(node, root_id, parent_id, inherited_position, out)
 	local id = node.id or (root_id .. "_" .. tostring(#out + 1))
 	local position = normalize_position(node.position or inherited_position or "right")
 	local kind = normalize_kind(node)
+	local role = normalize_role(node.role)
 
 	table.insert(out, {
 		id = id,
@@ -56,6 +77,13 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		text = node.text or "",
 		color = node.color or "",
 		visible = node.visible ~= false,
+		role = role,
+		value = tonumber(node.value),
+		min = tonumber(node.min),
+		max = tonumber(node.max),
+		step = tonumber(node.step),
+		values = node.values,
+		lineWidth = tonumber(node.lineWidth),
 		paddingX = node.paddingX,
 		paddingY = node.paddingY,
 		spacing = node.spacing,
@@ -65,6 +93,13 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		cornerRadius = node.cornerRadius,
 		opacity = node.opacity,
 	})
+
+	if type(node.anchorChildren) == "table" then
+		for _, child in ipairs(node.anchorChildren) do
+			child.role = "popup-anchor"
+			flatten_node(child, root_id, id, position, out)
+		end
+	end
 
 	if type(node.children) == "table" then
 		for _, child in ipairs(node.children) do
@@ -91,9 +126,22 @@ local function encode_nullable_string(value)
 	return '"' .. escape_json(value) .. '"'
 end
 
-local function encode_node(node)
+local function encode_number_array(values)
+	if type(values) ~= "table" then
+		return "null"
+	end
+
+	local out = {}
+	for _, value in ipairs(values) do
+		table.insert(out, tostring(tonumber(value) or 0))
+	end
+
+	return "[" .. table.concat(out, ",") .. "]"
+end
+
+local function encode_single_node(node)
 	return string.format(
-		'{"id":"%s","root":"%s","kind":"%s","parent":%s,"position":"%s","order":%d,"icon":"%s","text":"%s","color":%s,"visible":%s,"paddingX":%s,"paddingY":%s,"spacing":%s,"backgroundColor":%s,"borderColor":%s,"borderWidth":%s,"cornerRadius":%s,"opacity":%s}',
+		'{"id":"%s","root":"%s","kind":"%s","parent":%s,"position":"%s","order":%d,"icon":"%s","text":"%s","color":%s,"visible":%s,"role":%s,"value":%s,"min":%s,"max":%s,"step":%s,"values":%s,"lineWidth":%s,"paddingX":%s,"paddingY":%s,"spacing":%s,"backgroundColor":%s,"borderColor":%s,"borderWidth":%s,"cornerRadius":%s,"opacity":%s}',
 		escape_json(node.id),
 		escape_json(node.root),
 		escape_json(node.kind),
@@ -104,6 +152,13 @@ local function encode_node(node)
 		escape_json(node.text or ""),
 		encode_nullable_string(node.color),
 		encode_bool(node.visible ~= false),
+		encode_nullable_string(node.role),
+		encode_nullable_number(node.value),
+		encode_nullable_number(node.min),
+		encode_nullable_number(node.max),
+		encode_nullable_number(node.step),
+		encode_number_array(node.values),
+		encode_nullable_number(node.lineWidth),
 		encode_nullable_number(node.paddingX),
 		encode_nullable_number(node.paddingY),
 		encode_nullable_number(node.spacing),
@@ -123,7 +178,7 @@ local function emit_tree(widget)
 
 	local encoded = {}
 	for _, node in ipairs(nodes) do
-		table.insert(encoded, encode_node(node))
+		table.insert(encoded, encode_single_node(node))
 	end
 
 	local json =

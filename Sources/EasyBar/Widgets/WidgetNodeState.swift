@@ -13,6 +13,15 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var color: String?
     var visible: Bool
 
+    var role: String?
+
+    var value: Double?
+    var min: Double?
+    var max: Double?
+    var step: Double?
+    var values: [Double]?
+    var lineWidth: Double?
+
     var paddingX: Double?
     var paddingY: Double?
     var spacing: Double?

@@ -94,11 +94,9 @@ final class WidgetRunner {
     }
 
     private func evaluateSubscriptions() {
-        Logger.debug("evaluating widget subscriptions")
+        Logger.debug("evaluating widget subscriptions from \(Config.shared.widgetsPath)")
 
-        let widgetPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/easybar/widgets")
-            .path
+        let widgetPath = Config.shared.widgetsPath
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: Config.shared.luaPath)
@@ -158,6 +156,10 @@ final class WidgetRunner {
 
         if requiredEvents.contains("network_change") {
             EventBus.shared.emit("network_change")
+        }
+
+        if requiredEvents.contains("volume_change") {
+            EventBus.shared.emit("volume_change")
         }
 
         if requiredEvents.contains("minute_tick") {
