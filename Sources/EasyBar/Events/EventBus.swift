@@ -12,6 +12,9 @@ final class EventBus {
         var payload = data
         payload["event"] = event
 
+        // Native widgets subscribe here.
+        NotificationCenter.default.post(name: .easyBarEvent, object: payload)
+
         guard let json = try? JSONSerialization.data(withJSONObject: payload),
               let string = String(data: json, encoding: .utf8) else {
             return
@@ -26,4 +29,8 @@ final class EventBus {
         payload["widget"] = widgetID
         emit(event, data: payload)
     }
+}
+
+extension Notification.Name {
+    static let easyBarEvent = Notification.Name("easybar.event")
 }

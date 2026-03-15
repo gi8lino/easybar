@@ -48,6 +48,30 @@ final class Config {
 
     var luaPath: String = "/usr/local/bin/lua"
 
+    // Builtins.
+    var builtinBatteryEnabled: Bool = true
+    var builtinBatteryPosition: String = "right"
+    var builtinBatteryOrder: Int = 10
+
+    var builtinVolumeEnabled: Bool = true
+    var builtinVolumePosition: String = "right"
+    var builtinVolumeOrder: Int = 20
+
+    var builtinDateEnabled: Bool = true
+    var builtinDatePosition: String = "right"
+    var builtinDateOrder: Int = 30
+    var builtinDateFormat: String = "yyyy-MM-dd"
+
+    var builtinTimeEnabled: Bool = true
+    var builtinTimePosition: String = "right"
+    var builtinTimeOrder: Int = 40
+    var builtinTimeFormat: String = "HH:mm"
+
+    var builtinCalendarEnabled: Bool = true
+    var builtinCalendarPosition: String = "right"
+    var builtinCalendarOrder: Int = 50
+    var builtinCalendarFormat: String = "EEE, MMM d"
+
     /// Absolute path to the widgets directory.
     var widgetsPath: String = ""
 
@@ -180,6 +204,42 @@ final class Config {
                 luaPath = lua["path"]?.string ?? luaPath
             }
 
+            if let builtins = toml["builtins"]?.table {
+
+                if let battery = builtins["battery"]?.table {
+                    builtinBatteryEnabled = battery["enabled"]?.bool ?? builtinBatteryEnabled
+                    builtinBatteryPosition = normalizedPosition(battery["position"]?.string ?? builtinBatteryPosition)
+                    builtinBatteryOrder = battery["order"]?.int ?? builtinBatteryOrder
+                }
+
+                if let volume = builtins["volume"]?.table {
+                    builtinVolumeEnabled = volume["enabled"]?.bool ?? builtinVolumeEnabled
+                    builtinVolumePosition = normalizedPosition(volume["position"]?.string ?? builtinVolumePosition)
+                    builtinVolumeOrder = volume["order"]?.int ?? builtinVolumeOrder
+                }
+
+                if let date = builtins["date"]?.table {
+                    builtinDateEnabled = date["enabled"]?.bool ?? builtinDateEnabled
+                    builtinDatePosition = normalizedPosition(date["position"]?.string ?? builtinDatePosition)
+                    builtinDateOrder = date["order"]?.int ?? builtinDateOrder
+                    builtinDateFormat = date["format"]?.string ?? builtinDateFormat
+                }
+
+                if let time = builtins["time"]?.table {
+                    builtinTimeEnabled = time["enabled"]?.bool ?? builtinTimeEnabled
+                    builtinTimePosition = normalizedPosition(time["position"]?.string ?? builtinTimePosition)
+                    builtinTimeOrder = time["order"]?.int ?? builtinTimeOrder
+                    builtinTimeFormat = time["format"]?.string ?? builtinTimeFormat
+                }
+
+                if let calendar = builtins["calendar"]?.table {
+                    builtinCalendarEnabled = calendar["enabled"]?.bool ?? builtinCalendarEnabled
+                    builtinCalendarPosition = normalizedPosition(calendar["position"]?.string ?? builtinCalendarPosition)
+                    builtinCalendarOrder = calendar["order"]?.int ?? builtinCalendarOrder
+                    builtinCalendarFormat = calendar["format"]?.string ?? builtinCalendarFormat
+                }
+            }
+
         } catch {
             Logger.info("config parse error: \(error)")
         }
@@ -192,6 +252,15 @@ final class Config {
         if let widgetsOverride = ProcessInfo.processInfo.environment["EASYBAR_WIDGETS_PATH"],
            !widgetsOverride.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             widgetsPath = NSString(string: widgetsOverride).expandingTildeInPath
+        }
+    }
+
+    private func normalizedPosition(_ value: String) -> String {
+        switch value {
+        case "left", "center", "right":
+            return value
+        default:
+            return "right"
         }
     }
 }

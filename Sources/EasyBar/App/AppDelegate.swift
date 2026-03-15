@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         aeroSpaceService.start()
         WidgetRunner.shared.start()
+        NativeWidgetRegistry.shared.start()
 
         socketServer.start { [weak self] command in
 
@@ -35,12 +36,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .reloadConfig:
                 Config.shared.reload()
                 WidgetRunner.shared.reload()
+                NativeWidgetRegistry.shared.reload()
                 self?.aeroSpaceService.triggerRefresh()
             }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        NativeWidgetRegistry.shared.stop()
         WidgetRunner.shared.shutdown()
     }
 }
