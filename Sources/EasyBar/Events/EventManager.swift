@@ -33,7 +33,7 @@ final class EventManager {
             SystemEvents.shared.subscribeDisplayChange()
         }
 
-        if subscriptions.contains("power_source_change") {
+        if subscriptions.contains("power_source_change") || subscriptions.contains("charging_state_change") {
             PowerEvents.shared.subscribePowerSource()
         }
 
