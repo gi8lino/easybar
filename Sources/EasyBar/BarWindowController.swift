@@ -19,7 +19,7 @@ final class BarWindowController: NSWindowController {
             defer: false
         )
 
-        window.level = .statusBar
+        window.level = .floating
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = false
