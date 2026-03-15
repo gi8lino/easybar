@@ -65,6 +65,16 @@ struct WidgetNodeView: View {
     }
 
     private var itemView: some View {
+        Group {
+            if node.root == "builtin_calendar" {
+                nativeCalendarAnchorView
+            } else {
+                defaultItemView
+            }
+        }
+    }
+
+    private var defaultItemView: some View {
         HStack(spacing: CGFloat(node.spacing ?? 4)) {
             if !node.icon.isEmpty {
                 Text(node.icon)
@@ -79,6 +89,45 @@ struct WidgetNodeView: View {
         .background(
             WidgetMouseView(widgetID: node.root)
         )
+    }
+
+    private var nativeCalendarAnchorView: some View {
+        HStack(spacing: CGFloat(node.spacing ?? 4)) {
+            if !node.icon.isEmpty {
+                Text(node.icon)
+            }
+
+            if !node.text.isEmpty {
+                Text(node.text)
+            }
+        }
+        .foregroundStyle(color(node.color))
+        .modifier(WidgetNodeStyle(node: node))
+        .background(
+            WidgetMouseView(widgetID: node.root)
+        )
+        .onHover { hovering in
+            anchorHovered = hovering
+
+            if hovering {
+                popupPresented = true
+            } else {
+                schedulePopupCloseCheck()
+            }
+        }
+        .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
+            NativeCalendarPopupView()
+                .padding(8)
+                .background(
+                    PopupHoverRegion { hovering in
+                        popupHovered = hovering
+
+                        if !hovering {
+                            schedulePopupCloseCheck()
+                        }
+                    }
+                )
+        }
     }
 
     private var popupAnchor: some View {

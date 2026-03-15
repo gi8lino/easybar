@@ -1,11 +1,8 @@
 import Foundation
-import EventKit
 
 final class CalendarNativeWidget: NativeWidget {
 
     let rootID = "builtin_calendar"
-
-    private let store = EKEventStore()
 
     private var timer: Timer?
     private var eventObserver: NSObjectProtocol?
@@ -13,7 +10,6 @@ final class CalendarNativeWidget: NativeWidget {
     func start() {
         CalendarEvents.shared.subscribeCalendar()
 
-        // Update on explicit calendar changes and on time changes.
         eventObserver = NotificationCenter.default.addObserver(
             forName: .easyBarEvent,
             object: nil,
@@ -31,7 +27,6 @@ final class CalendarNativeWidget: NativeWidget {
             }
         }
 
-        // Keeps "today" fresh even if the event store stays quiet.
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.publish()
         }
@@ -49,22 +44,247 @@ final class CalendarNativeWidget: NativeWidget {
         timer = nil
 
         WidgetStore.shared.apply(root: rootID, nodes: [])
+        NativeCalendarStore.shared.clear()
     }
 
     private func publish() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = Config.shared.builtinCalendarFormat
+        let config = Config.shared.builtinCalendar
+        let now = Date()
 
-        let node = WidgetNodeState(
-            id: rootID,
+        let nodes: [WidgetNodeState]
+
+        switch config.layout {
+        case "stack":
+            nodes = makeStackNodes(config: config, now: now)
+
+        case "inline":
+            nodes = makeInlineNodes(config: config, now: now)
+
+        default:
+            let formatter = DateFormatter()
+            formatter.dateFormat = config.format
+
+            nodes = [
+                BuiltinWidgetNodeFactory.makeItemNode(
+                    rootID: rootID,
+                    style: config.style,
+                    text: formatter.string(from: now)
+                )
+            ]
+        }
+
+        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+        NativeCalendarStore.shared.refresh()
+    }
+
+    private func makeStackNodes(
+        config: Config.CalendarBuiltinConfig,
+        now: Date
+    ) -> [WidgetNodeState] {
+        [
+            WidgetNodeState(
+                id: rootID,
+                root: rootID,
+                kind: "row",
+                parent: nil,
+                position: config.style.position,
+                order: config.style.order,
+                icon: "",
+                text: "",
+                color: nil,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: config.style.paddingX,
+                paddingY: config.style.paddingY,
+                spacing: config.style.spacing,
+                backgroundColor: config.style.backgroundColorHex,
+                borderColor: config.style.borderColorHex,
+                borderWidth: config.style.borderWidth,
+                cornerRadius: config.style.cornerRadius,
+                opacity: config.style.opacity
+            ),
+
+            WidgetNodeState(
+                id: "\(rootID)_icon",
+                root: rootID,
+                kind: "item",
+                parent: rootID,
+                position: config.style.position,
+                order: 0,
+                icon: config.style.icon,
+                text: "",
+                color: config.style.textColorHex,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: 0,
+                paddingY: 0,
+                spacing: 4,
+                backgroundColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                cornerRadius: nil,
+                opacity: 1
+            ),
+
+            WidgetNodeState(
+                id: "\(rootID)_text_column",
+                root: rootID,
+                kind: "column",
+                parent: rootID,
+                position: config.style.position,
+                order: 1,
+                icon: "",
+                text: "",
+                color: nil,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: 0,
+                paddingY: 0,
+                spacing: config.lineSpacing,
+                backgroundColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                cornerRadius: nil,
+                opacity: 1
+            ),
+
+            makeTextNode(
+                id: "\(rootID)_top",
+                parent: "\(rootID)_text_column",
+                position: config.style.position,
+                order: 0,
+                text: formatDate(now, format: config.topFormat),
+                color: config.topTextColorHex ?? config.style.textColorHex
+            ),
+
+            makeTextNode(
+                id: "\(rootID)_bottom",
+                parent: "\(rootID)_text_column",
+                position: config.style.position,
+                order: 1,
+                text: formatDate(now, format: config.bottomFormat),
+                color: config.bottomTextColorHex ?? config.style.textColorHex
+            )
+        ]
+    }
+
+    private func makeInlineNodes(
+        config: Config.CalendarBuiltinConfig,
+        now: Date
+    ) -> [WidgetNodeState] {
+        [
+            WidgetNodeState(
+                id: rootID,
+                root: rootID,
+                kind: "row",
+                parent: nil,
+                position: config.style.position,
+                order: config.style.order,
+                icon: "",
+                text: "",
+                color: nil,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: config.style.paddingX,
+                paddingY: config.style.paddingY,
+                spacing: config.style.spacing,
+                backgroundColor: config.style.backgroundColorHex,
+                borderColor: config.style.borderColorHex,
+                borderWidth: config.style.borderWidth,
+                cornerRadius: config.style.cornerRadius,
+                opacity: config.style.opacity
+            ),
+
+            WidgetNodeState(
+                id: "\(rootID)_icon",
+                root: rootID,
+                kind: "item",
+                parent: rootID,
+                position: config.style.position,
+                order: 0,
+                icon: config.style.icon,
+                text: "",
+                color: config.style.textColorHex,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: 0,
+                paddingY: 0,
+                spacing: 4,
+                backgroundColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                cornerRadius: nil,
+                opacity: 1
+            ),
+
+            makeTextNode(
+                id: "\(rootID)_left",
+                parent: rootID,
+                position: config.style.position,
+                order: 1,
+                text: formatDate(now, format: config.topFormat),
+                color: config.topTextColorHex ?? config.style.textColorHex
+            ),
+
+            makeTextNode(
+                id: "\(rootID)_right",
+                parent: rootID,
+                position: config.style.position,
+                order: 2,
+                text: formatDate(now, format: config.bottomFormat),
+                color: config.bottomTextColorHex ?? config.style.textColorHex
+            )
+        ]
+    }
+
+    private func makeTextNode(
+        id: String,
+        parent: String,
+        position: String,
+        order: Int,
+        text: String,
+        color: String?
+    ) -> WidgetNodeState {
+        WidgetNodeState(
+            id: id,
             root: rootID,
             kind: "item",
-            parent: nil,
-            position: Config.shared.builtinCalendarPosition,
-            order: Config.shared.builtinCalendarOrder,
-            icon: "🗓",
-            text: calendarText(dateFormatter: formatter),
-            color: nil,
+            parent: parent,
+            position: position,
+            order: order,
+            icon: "",
+            text: text,
+            color: color,
             visible: true,
             role: nil,
             value: nil,
@@ -73,49 +293,20 @@ final class CalendarNativeWidget: NativeWidget {
             step: nil,
             values: nil,
             lineWidth: nil,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 6,
+            paddingX: 0,
+            paddingY: 0,
+            spacing: 4,
             backgroundColor: nil,
             borderColor: nil,
             borderWidth: nil,
             cornerRadius: nil,
             opacity: 1
         )
-
-        WidgetStore.shared.apply(root: rootID, nodes: [node])
     }
 
-    private func calendarText(dateFormatter: DateFormatter) -> String {
-        // Request access lazily too, so the native widget can work standalone.
-        store.requestFullAccessToEvents { granted, error in
-            if let error {
-                Logger.debug("calendar widget access request failed: \(error)")
-                return
-            }
-
-            Logger.debug("calendar widget access granted: \(granted)")
-        }
-
-        let now = Date()
-        let calendar = Calendar.current
-
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else {
-            return dateFormatter.string(from: now)
-        }
-
-        let predicate = store.predicateForEvents(withStart: now, end: endOfDay, calendars: nil)
-        let events = store.events(matching: predicate)
-            .filter { !$0.isAllDay }
-            .sorted { $0.startDate < $1.startDate }
-
-        guard let nextEvent = events.first else {
-            return dateFormatter.string(from: now)
-        }
-
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm"
-
-        return "\(timeFormatter.string(from: nextEvent.startDate)) \(nextEvent.title ?? "Event")"
+    private func formatDate(_ date: Date, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        return formatter.string(from: date)
     }
 }

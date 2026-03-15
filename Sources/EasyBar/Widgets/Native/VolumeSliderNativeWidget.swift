@@ -32,7 +32,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
                     return
                 }
 
-                self.setSystemVolume(value / 100.0)
+                let config = Config.shared.builtinVolume
+                let span = max(config.maxValue - config.minValue, 0.0001)
+                let normalized = (value - config.minValue) / span
+
+                self.setSystemVolume(normalized)
                 self.publish()
 
             default:
@@ -53,38 +57,43 @@ final class VolumeSliderNativeWidget: NativeWidget {
     }
 
     private func publish() {
-        let volume = readSystemVolume()
-        let percentage = Int((volume * 100.0).rounded())
+        let config = Config.shared.builtinVolume
+        let systemVolume = readSystemVolume()
+        let clampedSystem = min(max(systemVolume, 0), 1)
 
-        let node = WidgetNodeState(
-            id: rootID,
-            root: rootID,
-            kind: "slider",
-            parent: nil,
-            position: Config.shared.builtinVolumePosition,
-            order: Config.shared.builtinVolumeOrder,
-            icon: "🔊",
-            text: "\(percentage)%",
-            color: nil,
-            visible: true,
-            role: nil,
-            value: Double(percentage),
-            min: 0,
-            max: 100,
-            step: 1,
-            values: nil,
-            lineWidth: nil,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 8,
-            backgroundColor: nil,
-            borderColor: nil,
-            borderWidth: nil,
-            cornerRadius: nil,
-            opacity: 1
+        let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
+        let roundedValue = (sliderValue / max(config.step, 0.0001)).rounded() * max(config.step, 0.0001)
+
+        var style = config.style
+        style.icon = resolvedIcon(for: clampedSystem, config: config)
+
+        let text = config.showPercentage
+            ? "\(Int((clampedSystem * 100.0).rounded()))%"
+            : ""
+
+        let node = BuiltinWidgetNodeFactory.makeSliderNode(
+            rootID: rootID,
+            style: style,
+            text: text,
+            value: roundedValue,
+            min: config.minValue,
+            max: config.maxValue,
+            step: max(config.step, 0.0001)
         )
 
         WidgetStore.shared.apply(root: rootID, nodes: [node])
+    }
+
+    private func resolvedIcon(for value: Double, config: Config.VolumeBuiltinConfig) -> String {
+        if value <= 0.001 {
+            return config.mutedIcon
+        }
+
+        if value < 0.5 {
+            return config.lowIcon
+        }
+
+        return config.highIcon
     }
 
     private func readSystemVolume() -> Double {

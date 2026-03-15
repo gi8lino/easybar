@@ -47,44 +47,24 @@ final class BatteryNativeWidget: NativeWidget {
 
     private func publish() {
         let snapshot = readBatterySnapshot()
-
-        let node = WidgetNodeState(
-            id: rootID,
-            root: rootID,
-            kind: "item",
-            parent: nil,
-            position: Config.shared.builtinBatteryPosition,
-            order: Config.shared.builtinBatteryOrder,
-            icon: snapshot.icon,
-            text: snapshot.text,
-            color: nil,
-            visible: true,
-            role: nil,
-            value: nil,
-            min: nil,
-            max: nil,
-            step: nil,
-            values: nil,
-            lineWidth: nil,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 6,
-            backgroundColor: nil,
-            borderColor: nil,
-            borderWidth: nil,
-            cornerRadius: nil,
-            opacity: 1
+        let node = BuiltinWidgetNodeFactory.makeItemNode(
+            rootID: rootID,
+            style: snapshot.style,
+            text: snapshot.text
         )
 
         WidgetStore.shared.apply(root: rootID, nodes: [node])
     }
 
-    private func readBatterySnapshot() -> (icon: String, text: String) {
+    private func readBatterySnapshot() -> (style: Config.BuiltinWidgetStyle, text: String) {
+        let config = Config.shared.builtinBattery
+        var style = config.style
+
         guard
             let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
             let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
         else {
-            return ("🔋", "n/a")
+            return (style, config.unavailableText)
         }
 
         for source in list {
@@ -100,11 +80,15 @@ final class BatteryNativeWidget: NativeWidget {
             let charging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
 
             let percentage = max > 0 ? Int((Double(current) / Double(max)) * 100.0) : 0
-            let icon = charging ? "⚡️" : "🔋"
 
-            return (icon, "\(percentage)%")
+            if charging {
+                style.icon = config.chargingIcon
+            }
+
+            let text = config.showPercentage ? "\(percentage)%" : ""
+            return (style, text)
         }
 
-        return ("🔋", "n/a")
+        return (style, config.unavailableText)
     }
 }

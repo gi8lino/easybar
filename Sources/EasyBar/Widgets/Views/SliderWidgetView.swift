@@ -6,9 +6,11 @@ struct SliderWidgetView: View {
     let minValue: Double
     let maxValue: Double
     let step: Double
+    let externalValue: Double
     let tint: Color
 
     @State private var value: Double
+    @State private var isEditing = false
 
     init(
         rootWidgetID: String,
@@ -22,6 +24,7 @@ struct SliderWidgetView: View {
         self.minValue = minValue
         self.maxValue = maxValue
         self.step = step
+        self.externalValue = value
         self.tint = tint
         _value = State(initialValue: value)
     }
@@ -45,6 +48,8 @@ struct SliderWidgetView: View {
             in: minValue...maxValue,
             step: step,
             onEditingChanged: { editing in
+                isEditing = editing
+
                 if !editing {
                     EventBus.shared.emitWidgetEvent(
                         "slider.changed",
@@ -58,5 +63,12 @@ struct SliderWidgetView: View {
         )
         .tint(tint)
         .frame(width: 140)
+        .onChange(of: externalValue) { _, newValue in
+            // Keep the slider in sync with native system updates,
+            // but do not fight the user while dragging.
+            if !isEditing {
+                value = newValue
+            }
+        }
     }
 }

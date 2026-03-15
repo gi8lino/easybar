@@ -6,9 +6,11 @@ struct ProgressSliderWidgetView: View {
     let minValue: Double
     let maxValue: Double
     let step: Double
+    let externalValue: Double
     let tint: Color
 
     @State private var value: Double
+    @State private var isDragging = false
 
     init(
         rootWidgetID: String,
@@ -22,6 +24,7 @@ struct ProgressSliderWidgetView: View {
         self.minValue = minValue
         self.maxValue = maxValue
         self.step = step
+        self.externalValue = value
         self.tint = tint
         _value = State(initialValue: value)
     }
@@ -46,6 +49,8 @@ struct ProgressSliderWidgetView: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
+                        isDragging = true
+
                         let newValue = value(for: gesture.location.x, width: geometry.size.width)
                         value = newValue
 
@@ -60,6 +65,7 @@ struct ProgressSliderWidgetView: View {
                     .onEnded { gesture in
                         let newValue = value(for: gesture.location.x, width: geometry.size.width)
                         value = newValue
+                        isDragging = false
 
                         EventBus.shared.emitWidgetEvent(
                             "slider.changed",
@@ -72,6 +78,13 @@ struct ProgressSliderWidgetView: View {
             )
         }
         .frame(width: 72, height: 14)
+        .onChange(of: externalValue) { _, newValue in
+            // Keep the slider in sync with native system updates,
+            // but do not fight the user while dragging.
+            if !isDragging {
+                value = newValue
+            }
+        }
     }
 
     private var normalizedValue: CGFloat {

@@ -5,6 +5,84 @@ import TOMLKit
 /// Global EasyBar configuration loaded from disk.
 final class Config {
 
+    struct BuiltinWidgetStyle {
+        var enabled: Bool
+        var position: String
+        var order: Int
+
+        var icon: String
+
+        var textColorHex: String?
+        var backgroundColorHex: String?
+        var borderColorHex: String?
+
+        var borderWidth: Double
+        var cornerRadius: Double
+        var paddingX: Double
+        var paddingY: Double
+        var spacing: Double
+        var opacity: Double
+    }
+
+    struct BatteryBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var chargingIcon: String
+        var unavailableText: String
+        var showPercentage: Bool
+    }
+
+    struct VolumeBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var mutedIcon: String
+        var lowIcon: String
+        var highIcon: String
+        var showPercentage: Bool
+        var minValue: Double
+        var maxValue: Double
+        var step: Double
+    }
+
+    struct DateBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var format: String
+    }
+
+    struct TimeBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var format: String
+    }
+
+    struct CalendarBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var format: String
+        var days: Int
+        var emptyText: String
+
+        // Anchor layout in the bar.
+        // "item"   => icon + single text using `format`
+        // "stack"  => icon + 2 text rows using `topFormat` and `bottomFormat`
+        // "inline" => icon + 2 text columns using `topFormat` and `bottomFormat`
+        var layout: String
+        var topFormat: String
+        var bottomFormat: String
+        var lineSpacing: Double
+        var topTextColorHex: String?
+        var bottomTextColorHex: String?
+
+        // Popup styling.
+        var popupBackgroundColorHex: String
+        var popupBorderColorHex: String
+        var popupBorderWidth: Double
+        var popupCornerRadius: Double
+        var popupPaddingX: Double
+        var popupPaddingY: Double
+        var popupSpacing: Double
+        var popupItemIndent: Double
+        var popupSectionTitleColorHex: String
+        var popupItemColorHex: String
+        var popupEmptyColorHex: String
+    }
+
     static let shared = Config()
 
     var barHeight: CGFloat = 36
@@ -48,29 +126,127 @@ final class Config {
 
     var luaPath: String = "/usr/local/bin/lua"
 
-    // Builtins.
-    var builtinBatteryEnabled: Bool = true
-    var builtinBatteryPosition: String = "right"
-    var builtinBatteryOrder: Int = 10
+    var builtinBattery = BatteryBuiltinConfig(
+        style: BuiltinWidgetStyle(
+            enabled: true,
+            position: "right",
+            order: 10,
+            icon: "🔋",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        chargingIcon: "⚡️",
+        unavailableText: "n/a",
+        showPercentage: true
+    )
 
-    var builtinVolumeEnabled: Bool = true
-    var builtinVolumePosition: String = "right"
-    var builtinVolumeOrder: Int = 20
+    var builtinVolume = VolumeBuiltinConfig(
+        style: BuiltinWidgetStyle(
+            enabled: true,
+            position: "right",
+            order: 20,
+            icon: "🔊",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 8,
+            opacity: 1
+        ),
+        mutedIcon: "🔇",
+        lowIcon: "🔉",
+        highIcon: "🔊",
+        showPercentage: true,
+        minValue: 0,
+        maxValue: 100,
+        step: 1
+    )
 
-    var builtinDateEnabled: Bool = true
-    var builtinDatePosition: String = "right"
-    var builtinDateOrder: Int = 30
-    var builtinDateFormat: String = "yyyy-MM-dd"
+    var builtinDate = DateBuiltinConfig(
+        style: BuiltinWidgetStyle(
+            enabled: true,
+            position: "right",
+            order: 30,
+            icon: "📅",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        format: "yyyy-MM-dd"
+    )
 
-    var builtinTimeEnabled: Bool = true
-    var builtinTimePosition: String = "right"
-    var builtinTimeOrder: Int = 40
-    var builtinTimeFormat: String = "HH:mm"
+    var builtinTime = TimeBuiltinConfig(
+        style: BuiltinWidgetStyle(
+            enabled: true,
+            position: "right",
+            order: 40,
+            icon: "🕒",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        format: "HH:mm"
+    )
 
-    var builtinCalendarEnabled: Bool = true
-    var builtinCalendarPosition: String = "right"
-    var builtinCalendarOrder: Int = 50
-    var builtinCalendarFormat: String = "EEE, MMM d"
+    var builtinCalendar = CalendarBuiltinConfig(
+        style: BuiltinWidgetStyle(
+            enabled: true,
+            position: "right",
+            order: 50,
+            icon: "🗓",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        format: "EEE, MMM d",
+        days: 3,
+        emptyText: "No upcoming events",
+        layout: "item",
+        topFormat: "HH:mm",
+        bottomFormat: "MMMM, d",
+        lineSpacing: 0,
+        topTextColorHex: nil,
+        bottomTextColorHex: nil,
+        popupBackgroundColorHex: "#1a1a1a",
+        popupBorderColorHex: "#333333",
+        popupBorderWidth: 1,
+        popupCornerRadius: 10,
+        popupPaddingX: 10,
+        popupPaddingY: 8,
+        popupSpacing: 8,
+        popupItemIndent: 8,
+        popupSectionTitleColorHex: "#ffffff",
+        popupItemColorHex: "#d0d0d0",
+        popupEmptyColorHex: "#c0c0c0"
+    )
 
     /// Absolute path to the widgets directory.
     var widgetsPath: String = ""
@@ -207,36 +383,75 @@ final class Config {
             if let builtins = toml["builtins"]?.table {
 
                 if let battery = builtins["battery"]?.table {
-                    builtinBatteryEnabled = battery["enabled"]?.bool ?? builtinBatteryEnabled
-                    builtinBatteryPosition = normalizedPosition(battery["position"]?.string ?? builtinBatteryPosition)
-                    builtinBatteryOrder = battery["order"]?.int ?? builtinBatteryOrder
+                    let style = parseBuiltinStyle(from: battery, fallback: builtinBattery.style)
+
+                    builtinBattery = BatteryBuiltinConfig(
+                        style: style,
+                        chargingIcon: battery["charging_icon"]?.string ?? builtinBattery.chargingIcon,
+                        unavailableText: battery["unavailable_text"]?.string ?? builtinBattery.unavailableText,
+                        showPercentage: battery["show_percentage"]?.bool ?? builtinBattery.showPercentage
+                    )
                 }
 
                 if let volume = builtins["volume"]?.table {
-                    builtinVolumeEnabled = volume["enabled"]?.bool ?? builtinVolumeEnabled
-                    builtinVolumePosition = normalizedPosition(volume["position"]?.string ?? builtinVolumePosition)
-                    builtinVolumeOrder = volume["order"]?.int ?? builtinVolumeOrder
+                    let style = parseBuiltinStyle(from: volume, fallback: builtinVolume.style)
+
+                    builtinVolume = VolumeBuiltinConfig(
+                        style: style,
+                        mutedIcon: volume["muted_icon"]?.string ?? builtinVolume.mutedIcon,
+                        lowIcon: volume["low_icon"]?.string ?? builtinVolume.lowIcon,
+                        highIcon: volume["high_icon"]?.string ?? builtinVolume.highIcon,
+                        showPercentage: volume["show_percentage"]?.bool ?? builtinVolume.showPercentage,
+                        minValue: volume["min"]?.double ?? builtinVolume.minValue,
+                        maxValue: volume["max"]?.double ?? builtinVolume.maxValue,
+                        step: volume["step"]?.double ?? builtinVolume.step
+                    )
                 }
 
                 if let date = builtins["date"]?.table {
-                    builtinDateEnabled = date["enabled"]?.bool ?? builtinDateEnabled
-                    builtinDatePosition = normalizedPosition(date["position"]?.string ?? builtinDatePosition)
-                    builtinDateOrder = date["order"]?.int ?? builtinDateOrder
-                    builtinDateFormat = date["format"]?.string ?? builtinDateFormat
+                    let style = parseBuiltinStyle(from: date, fallback: builtinDate.style)
+
+                    builtinDate = DateBuiltinConfig(
+                        style: style,
+                        format: date["format"]?.string ?? builtinDate.format
+                    )
                 }
 
                 if let time = builtins["time"]?.table {
-                    builtinTimeEnabled = time["enabled"]?.bool ?? builtinTimeEnabled
-                    builtinTimePosition = normalizedPosition(time["position"]?.string ?? builtinTimePosition)
-                    builtinTimeOrder = time["order"]?.int ?? builtinTimeOrder
-                    builtinTimeFormat = time["format"]?.string ?? builtinTimeFormat
+                    let style = parseBuiltinStyle(from: time, fallback: builtinTime.style)
+
+                    builtinTime = TimeBuiltinConfig(
+                        style: style,
+                        format: time["format"]?.string ?? builtinTime.format
+                    )
                 }
 
                 if let calendar = builtins["calendar"]?.table {
-                    builtinCalendarEnabled = calendar["enabled"]?.bool ?? builtinCalendarEnabled
-                    builtinCalendarPosition = normalizedPosition(calendar["position"]?.string ?? builtinCalendarPosition)
-                    builtinCalendarOrder = calendar["order"]?.int ?? builtinCalendarOrder
-                    builtinCalendarFormat = calendar["format"]?.string ?? builtinCalendarFormat
+                    let style = parseBuiltinStyle(from: calendar, fallback: builtinCalendar.style)
+
+                    builtinCalendar = CalendarBuiltinConfig(
+                        style: style,
+                        format: calendar["format"]?.string ?? builtinCalendar.format,
+                        days: max(1, calendar["days"]?.int ?? builtinCalendar.days),
+                        emptyText: calendar["empty_text"]?.string ?? builtinCalendar.emptyText,
+                        layout: normalizedCalendarLayout(calendar["layout"]?.string ?? builtinCalendar.layout),
+                        topFormat: calendar["top_format"]?.string ?? builtinCalendar.topFormat,
+                        bottomFormat: calendar["bottom_format"]?.string ?? builtinCalendar.bottomFormat,
+                        lineSpacing: calendar["line_spacing"]?.double ?? builtinCalendar.lineSpacing,
+                        topTextColorHex: calendar["top_text_color"]?.string ?? builtinCalendar.topTextColorHex,
+                        bottomTextColorHex: calendar["bottom_text_color"]?.string ?? builtinCalendar.bottomTextColorHex,
+                        popupBackgroundColorHex: calendar["popup_background_color"]?.string ?? builtinCalendar.popupBackgroundColorHex,
+                        popupBorderColorHex: calendar["popup_border_color"]?.string ?? builtinCalendar.popupBorderColorHex,
+                        popupBorderWidth: calendar["popup_border_width"]?.double ?? builtinCalendar.popupBorderWidth,
+                        popupCornerRadius: calendar["popup_corner_radius"]?.double ?? builtinCalendar.popupCornerRadius,
+                        popupPaddingX: calendar["popup_padding_x"]?.double ?? builtinCalendar.popupPaddingX,
+                        popupPaddingY: calendar["popup_padding_y"]?.double ?? builtinCalendar.popupPaddingY,
+                        popupSpacing: calendar["popup_spacing"]?.double ?? builtinCalendar.popupSpacing,
+                        popupItemIndent: calendar["popup_item_indent"]?.double ?? builtinCalendar.popupItemIndent,
+                        popupSectionTitleColorHex: calendar["popup_section_title_color"]?.string ?? builtinCalendar.popupSectionTitleColorHex,
+                        popupItemColorHex: calendar["popup_item_color"]?.string ?? builtinCalendar.popupItemColorHex,
+                        popupEmptyColorHex: calendar["popup_empty_color"]?.string ?? builtinCalendar.popupEmptyColorHex
+                    )
                 }
             }
 
@@ -255,12 +470,42 @@ final class Config {
         }
     }
 
+    private func parseBuiltinStyle(
+        from table: TOMLTable,
+        fallback: BuiltinWidgetStyle
+    ) -> BuiltinWidgetStyle {
+        BuiltinWidgetStyle(
+            enabled: table["enabled"]?.bool ?? fallback.enabled,
+            position: normalizedPosition(table["position"]?.string ?? fallback.position),
+            order: table["order"]?.int ?? fallback.order,
+            icon: table["icon"]?.string ?? fallback.icon,
+            textColorHex: table["text_color"]?.string ?? fallback.textColorHex,
+            backgroundColorHex: table["background_color"]?.string ?? fallback.backgroundColorHex,
+            borderColorHex: table["border_color"]?.string ?? fallback.borderColorHex,
+            borderWidth: table["border_width"]?.double ?? fallback.borderWidth,
+            cornerRadius: table["corner_radius"]?.double ?? fallback.cornerRadius,
+            paddingX: table["padding_x"]?.double ?? fallback.paddingX,
+            paddingY: table["padding_y"]?.double ?? fallback.paddingY,
+            spacing: table["spacing"]?.double ?? fallback.spacing,
+            opacity: table["opacity"]?.double ?? fallback.opacity
+        )
+    }
+
     private func normalizedPosition(_ value: String) -> String {
         switch value {
         case "left", "center", "right":
             return value
         default:
             return "right"
+        }
+    }
+
+    private func normalizedCalendarLayout(_ value: String) -> String {
+        switch value {
+        case "item", "stack", "inline":
+            return value
+        default:
+            return "item"
         }
     }
 }

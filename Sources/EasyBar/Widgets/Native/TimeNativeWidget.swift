@@ -22,35 +22,14 @@ final class TimeNativeWidget: NativeWidget {
     }
 
     private func publish() {
+        let config = Config.shared.builtinTime
         let formatter = DateFormatter()
-        formatter.dateFormat = Config.shared.builtinTimeFormat
+        formatter.dateFormat = config.format
 
-        let node = WidgetNodeState(
-            id: rootID,
-            root: rootID,
-            kind: "item",
-            parent: nil,
-            position: Config.shared.builtinTimePosition,
-            order: Config.shared.builtinTimeOrder,
-            icon: "🕒",
-            text: formatter.string(from: Date()),
-            color: nil,
-            visible: true,
-            role: nil,
-            value: nil,
-            min: nil,
-            max: nil,
-            step: nil,
-            values: nil,
-            lineWidth: nil,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 6,
-            backgroundColor: nil,
-            borderColor: nil,
-            borderWidth: nil,
-            cornerRadius: nil,
-            opacity: 1
+        let node = BuiltinWidgetNodeFactory.makeItemNode(
+            rootID: rootID,
+            style: config.style,
+            text: formatter.string(from: Date())
         )
 
         WidgetStore.shared.apply(root: rootID, nodes: [node])

@@ -13,23 +13,23 @@ final class NativeWidgetRegistry {
     private init() {}
 
     func start() {
-        if Config.shared.builtinBatteryEnabled {
+        if Config.shared.builtinBattery.style.enabled {
             batteryWidget.start()
         }
 
-        if Config.shared.builtinVolumeEnabled {
+        if Config.shared.builtinVolume.style.enabled {
             volumeWidget.start()
         }
 
-        if Config.shared.builtinDateEnabled {
+        if Config.shared.builtinDate.style.enabled {
             dateWidget.start()
         }
 
-        if Config.shared.builtinTimeEnabled {
+        if Config.shared.builtinTime.style.enabled {
             timeWidget.start()
         }
 
-        if Config.shared.builtinCalendarEnabled {
+        if Config.shared.builtinCalendar.style.enabled {
             calendarWidget.start()
         }
     }
