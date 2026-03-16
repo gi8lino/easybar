@@ -17,12 +17,7 @@ struct WidgetNodeView: View {
             } else {
                 switch node.kind {
                 case "row", "group":
-                    HStack(spacing: CGFloat(node.spacing ?? 6)) {
-                        ForEach(store.children(of: node.id)) { child in
-                            WidgetNodeView(node: child)
-                        }
-                    }
-                    .modifier(WidgetNodeStyle(node: node))
+                    rowOrGroupView
 
                 case "column":
                     VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
@@ -39,7 +34,6 @@ struct WidgetNodeView: View {
                     sliderView
                         .modifier(WidgetNodeStyle(node: node))
                         .background(
-                            // Let inline native sliders emit enter/exit too.
                             WidgetMouseView(widgetID: node.root)
                         )
 
@@ -71,70 +65,77 @@ struct WidgetNodeView: View {
         }
     }
 
-    private var itemView: some View {
+    private var rowOrGroupView: some View {
         Group {
-            if node.root == "builtin_calendar" {
-                nativeCalendarAnchorView
-            } else {
-                defaultItemView
-            }
-        }
-    }
-
-    private var defaultItemView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 4)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-            }
-        }
-        .foregroundStyle(color(node.color))
-        .modifier(WidgetNodeStyle(node: node))
-        .background(
-            WidgetMouseView(widgetID: node.root)
-        )
-    }
-
-    private var nativeCalendarAnchorView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 4)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-            }
-        }
-        .foregroundStyle(color(node.color))
-        .modifier(WidgetNodeStyle(node: node))
-        .background(
-            WidgetMouseView(widgetID: node.root)
-        )
-        .onHover { hovering in
-            anchorHovered = hovering
-
-            if hovering {
-                popupPresented = true
-            } else {
-                schedulePopupCloseCheck()
-            }
-        }
-        .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-            NativeCalendarPopupView()
-                .padding(8)
-                .background(
-                    PopupHoverRegion { hovering in
-                        popupHovered = hovering
-
-                        if !hovering {
-                            schedulePopupCloseCheck()
+            if node.id == "builtin_calendar" {
+                nativeCalendarAnchorView {
+                    HStack(spacing: CGFloat(node.spacing ?? 6)) {
+                        ForEach(store.children(of: node.id)) { child in
+                            WidgetNodeView(node: child)
                         }
                     }
-                )
+                }
+            } else {
+                HStack(spacing: CGFloat(node.spacing ?? 6)) {
+                    ForEach(store.children(of: node.id)) { child in
+                        WidgetNodeView(node: child)
+                    }
+                }
+                .modifier(WidgetNodeStyle(node: node))
+            }
         }
+    }
+
+    private var itemView: some View {
+        HStack(spacing: CGFloat(node.spacing ?? 4)) {
+            if !node.icon.isEmpty {
+                Text(node.icon)
+            }
+
+            if !node.text.isEmpty {
+                Text(node.text)
+            }
+        }
+        .foregroundStyle(color(node.color))
+        .modifier(WidgetNodeStyle(node: node))
+        .background(
+            // Calendar child items should not each own their own hover region.
+            node.root == "builtin_calendar" ? nil : AnyView(WidgetMouseView(widgetID: node.root))
+        )
+    }
+
+    private func nativeCalendarAnchorView<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .foregroundStyle(color(node.color))
+            .modifier(WidgetNodeStyle(node: node))
+            .background(
+                // One shared hover region for the whole calendar widget.
+                WidgetMouseView(widgetID: node.root)
+            )
+            .onHover { hovering in
+                anchorHovered = hovering
+
+                if hovering {
+                    popupPresented = true
+                } else {
+                    schedulePopupCloseCheck()
+                }
+            }
+            .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
+                NativeCalendarPopupView()
+                    .padding(8)
+                    .background(
+                        PopupHoverRegion { hovering in
+                            popupHovered = hovering
+
+                            if !hovering {
+                                schedulePopupCloseCheck()
+                            }
+                        }
+                    )
+            }
     }
 
     private var popupAnchor: some View {
