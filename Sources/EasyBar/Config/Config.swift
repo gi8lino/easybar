@@ -69,6 +69,12 @@ final class Config {
         var topTextColorHex: String?
         var bottomTextColorHex: String?
 
+        // Birthdays section.
+        var showBirthdays: Bool
+        var birthdaysTitle: String
+        var birthdaysDateFormat: String
+        var birthdaysShowAge: Bool
+
         // Popup styling.
         var popupBackgroundColorHex: String
         var popupBorderColorHex: String
@@ -235,6 +241,10 @@ final class Config {
         lineSpacing: 0,
         topTextColorHex: nil,
         bottomTextColorHex: nil,
+        showBirthdays: true,
+        birthdaysTitle: "Birthdays",
+        birthdaysDateFormat: "dd.MM.yyyy",
+        birthdaysShowAge: false,
         popupBackgroundColorHex: "#1a1a1a",
         popupBorderColorHex: "#333333",
         popupBorderWidth: 1,
@@ -440,6 +450,10 @@ final class Config {
                         lineSpacing: calendar["line_spacing"]?.double ?? builtinCalendar.lineSpacing,
                         topTextColorHex: calendar["top_text_color"]?.string ?? builtinCalendar.topTextColorHex,
                         bottomTextColorHex: calendar["bottom_text_color"]?.string ?? builtinCalendar.bottomTextColorHex,
+                        showBirthdays: calendar["show_birthdays"]?.bool ?? builtinCalendar.showBirthdays,
+                        birthdaysTitle: calendar["birthdays_title"]?.string ?? builtinCalendar.birthdaysTitle,
+                        birthdaysDateFormat: calendar["birthdays_date_format"]?.string ?? builtinCalendar.birthdaysDateFormat,
+                        birthdaysShowAge: calendar["birthdays_show_age"]?.bool ?? builtinCalendar.birthdaysShowAge,
                         popupBackgroundColorHex: calendar["popup_background_color"]?.string ?? builtinCalendar.popupBackgroundColorHex,
                         popupBorderColorHex: calendar["popup_border_color"]?.string ?? builtinCalendar.popupBorderColorHex,
                         popupBorderWidth: calendar["popup_border_width"]?.double ?? builtinCalendar.popupBorderWidth,
