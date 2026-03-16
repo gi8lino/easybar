@@ -29,6 +29,7 @@ local function normalize_position(position)
 	if position == "left" or position == "center" or position == "right" then
 		return position
 	end
+
 	return "right"
 end
 
@@ -57,6 +58,7 @@ local function normalize_role(role)
 	if role == "popup-anchor" then
 		return role
 	end
+
 	return nil
 end
 
@@ -116,6 +118,7 @@ local function encode_nullable_number(value)
 	if value == nil then
 		return "null"
 	end
+
 	return tostring(value)
 end
 
@@ -123,6 +126,7 @@ local function encode_nullable_string(value)
 	if value == nil or value == "" then
 		return "null"
 	end
+
 	return '"' .. escape_json(value) .. '"'
 end
 
@@ -200,6 +204,75 @@ local function merge_update(widget, update)
 	end
 end
 
+local function list_widget_files()
+	local files = {}
+	local command = 'ls "' .. widget_dir .. '" 2>/dev/null'
+
+	local pipe = io.popen(command)
+	if not pipe then
+		return files
+	end
+
+	for file in pipe:lines() do
+		if file:match("%.lua$") then
+			table.insert(files, file)
+		end
+	end
+
+	pipe:close()
+	table.sort(files)
+
+	return files
+end
+
+local function run_widget_init(widget)
+	if type(widget.on_event) ~= "function" then
+		return
+	end
+
+	local ok, result = pcall(widget.on_event, "init", {})
+	if ok and type(result) == "table" then
+		merge_update(widget, result)
+		return
+	end
+
+	if not ok then
+		log("init failed for widget id=" .. widget.id .. " error=" .. tostring(result))
+	end
+end
+
+local function load_widget_file(file)
+	local path = widget_dir .. "/" .. file
+	local chunk, load_err = loadfile(path)
+
+	if not chunk then
+		log("failed to load widget file=" .. file .. " error=" .. tostring(load_err))
+		return
+	end
+
+	local ok, widget = pcall(chunk)
+	if not ok then
+		log("failed to execute widget file=" .. file .. " error=" .. tostring(widget))
+		return
+	end
+
+	if type(widget) ~= "table" then
+		log("widget file=" .. file .. " returned " .. type(widget) .. " instead of table")
+		return
+	end
+
+	widget.__file = file
+	widget.id = widget.id or file
+	widget.position = normalize_position(widget.position)
+	widget.order = tonumber(widget.order or 0) or 0
+
+	widgets[widget.id] = widget
+	log("loaded widget file=" .. file .. " id=" .. widget.id)
+
+	run_widget_init(widget)
+	emit_tree(widget)
+end
+
 local function load_widgets()
 	widgets = {}
 
@@ -209,42 +282,8 @@ local function load_widgets()
 	io.stdout:write('{"type":"ready"}\n')
 	io.stdout:flush()
 
-	for file in io.popen('ls "' .. widget_dir .. '" 2>/dev/null'):lines() do
-		if file:match("%.lua$") then
-			local path = widget_dir .. "/" .. file
-			local chunk, load_err = loadfile(path)
-
-			if not chunk then
-				log("failed to load widget file=" .. file .. " error=" .. tostring(load_err))
-			else
-				local ok, widget = pcall(chunk)
-
-				if not ok then
-					log("failed to execute widget file=" .. file .. " error=" .. tostring(widget))
-				elseif type(widget) ~= "table" then
-					log("widget file=" .. file .. " returned " .. type(widget) .. " instead of table")
-				else
-					widget.__file = file
-					widget.id = widget.id or file
-					widget.position = normalize_position(widget.position)
-					widget.order = tonumber(widget.order or 0) or 0
-
-					widgets[widget.id] = widget
-					log("loaded widget file=" .. file .. " id=" .. widget.id)
-
-					if type(widget.on_event) == "function" then
-						local init_ok, init_result = pcall(widget.on_event, "init", {})
-						if init_ok and type(init_result) == "table" then
-							merge_update(widget, init_result)
-						elseif not init_ok then
-							log("init failed for widget id=" .. widget.id .. " error=" .. tostring(init_result))
-						end
-					end
-
-					emit_tree(widget)
-				end
-			end
-		end
+	for _, file in ipairs(list_widget_files()) do
+		load_widget_file(file)
 	end
 end
 
@@ -285,23 +324,38 @@ local function dispatch_event(event_name, payload)
 	for _, widget in pairs(widgets) do
 		local matchesTarget = (targetWidget == nil) or (widget.id == targetWidget)
 
-		if matchesTarget and widget_subscribed(widget, event_name) and type(widget.on_event) == "function" then
-			local ok, result = pcall(widget.on_event, event_name, payload)
-
-			if not ok then
-				log(
-					"widget id="
-						.. tostring(widget.id)
-						.. " failed on event="
-						.. tostring(event_name)
-						.. " error="
-						.. tostring(result)
-				)
-			elseif type(result) == "table" then
-				merge_update(widget, result)
-				emit_tree(widget)
-			end
+		if not matchesTarget then
+			goto continue
 		end
+
+		if not widget_subscribed(widget, event_name) then
+			goto continue
+		end
+
+		if type(widget.on_event) ~= "function" then
+			goto continue
+		end
+
+		local ok, result = pcall(widget.on_event, event_name, payload)
+
+		if not ok then
+			log(
+				"widget id="
+					.. tostring(widget.id)
+					.. " failed on event="
+					.. tostring(event_name)
+					.. " error="
+					.. tostring(result)
+			)
+			goto continue
+		end
+
+		if type(result) == "table" then
+			merge_update(widget, result)
+			emit_tree(widget)
+		end
+
+		::continue::
 	end
 end
 
@@ -310,15 +364,17 @@ load_widgets()
 while true do
 	local line = io.read()
 
-	if line then
-		log("stdin " .. tostring(line))
+	if not line then
+		break
+	end
 
-		local payload = parse_event(line)
+	log("stdin " .. tostring(line))
 
-		if payload and payload.event then
-			dispatch_event(payload.event, payload)
-		else
-			log("ignored invalid event payload: " .. tostring(line))
-		end
+	local payload = parse_event(line)
+
+	if payload and payload.event then
+		dispatch_event(payload.event, payload)
+	else
+		log("ignored invalid event payload: " .. tostring(line))
 	end
 end

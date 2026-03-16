@@ -5,9 +5,13 @@ final class WidgetRunner {
     static let shared = WidgetRunner()
 
     private let decoder = JSONDecoder()
+    private let subscriptionQueue = DispatchQueue(label: "easybar.widgetrunner.subscriptions", qos: .userInitiated)
 
     private var requiredEvents = Set<String>()
     private var started = false
+    private var runtimeReady = false
+    private var subscriptionsReady = false
+    private var didEmitInitialEvents = false
     private var stdoutObserver: NSObjectProtocol?
 
     private init() {}
@@ -19,6 +23,10 @@ final class WidgetRunner {
         }
 
         started = true
+        runtimeReady = false
+        subscriptionsReady = false
+        didEmitInitialEvents = false
+        requiredEvents.removeAll()
 
         Logger.debug("starting widget runner")
 
@@ -31,12 +39,11 @@ final class WidgetRunner {
             self?.handleRuntimeOutput(line)
         }
 
+        // Start runtime immediately so widgets can load and publish trees.
         LuaRuntime.shared.start()
-        evaluateSubscriptions()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.emitInitialEvents()
-        }
+        // Scan subscriptions off the main thread.
+        evaluateSubscriptions()
     }
 
     func reload() {
@@ -44,10 +51,6 @@ final class WidgetRunner {
 
         shutdown()
         WidgetStore.shared.clear()
-
-        requiredEvents.removeAll()
-        started = false
-
         start()
     }
 
@@ -58,6 +61,12 @@ final class WidgetRunner {
             NotificationCenter.default.removeObserver(stdoutObserver)
             self.stdoutObserver = nil
         }
+
+        started = false
+        runtimeReady = false
+        subscriptionsReady = false
+        didEmitInitialEvents = false
+        requiredEvents.removeAll()
 
         EventManager.shared.stopAll()
         LuaRuntime.shared.shutdown()
@@ -76,6 +85,8 @@ final class WidgetRunner {
 
             if update.type == "ready" {
                 Logger.debug("lua runtime handshake received")
+                runtimeReady = true
+                emitInitialEventsIfPossible()
                 return
             }
 
@@ -94,49 +105,113 @@ final class WidgetRunner {
     }
 
     private func evaluateSubscriptions() {
-        Logger.debug("evaluating widget subscriptions from \(Config.shared.widgetsPath)")
-
         let widgetPath = Config.shared.widgetsPath
+        let luaPath = Config.shared.luaPath
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: Config.shared.luaPath)
-        process.arguments = [
-            "-e",
-            """
-            local dir="\(widgetPath)"
-            for f in io.popen('ls "'..dir..'" 2>/dev/null'):lines() do
-                if f:match("%.lua$") then
-                    local ok, w = pcall(dofile, dir.."/"..f)
-                    if ok and type(w) == "table" and w.subscribe then
-                        for _,e in ipairs(w.subscribe) do
-                            print(e)
-                        end
+        Logger.debug("evaluating widget subscriptions from \(widgetPath)")
+
+        subscriptionQueue.async { [weak self] in
+            guard let self else { return }
+
+            let discovered = self.scanSubscriptions(
+                widgetPath: widgetPath,
+                luaPath: luaPath
+            )
+
+            DispatchQueue.main.async {
+                guard self.started else { return }
+
+                self.requiredEvents = discovered
+                self.subscriptionsReady = true
+
+                Logger.debug("required events: \(self.requiredEvents)")
+                EventManager.shared.start(subscriptions: self.requiredEvents)
+
+                self.emitInitialEventsIfPossible()
+            }
+        }
+    }
+
+    private func scanSubscriptions(widgetPath: String, luaPath: String) -> Set<String> {
+        var result = Set<String>()
+
+        let widgetDirectoryURL = URL(fileURLWithPath: widgetPath)
+
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: widgetDirectoryURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else {
+            Logger.debug("failed to enumerate widget directory")
+            return result
+        }
+
+        let widgetFiles = files
+            .filter { $0.pathExtension == "lua" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        if widgetFiles.isEmpty {
+            Logger.debug("no lua widgets found")
+            return result
+        }
+
+        for fileURL in widgetFiles {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: luaPath)
+            process.arguments = [
+                "-e",
+                """
+                local ok, w = pcall(dofile, arg[1])
+                if ok and type(w) == "table" and type(w.subscribe) == "table" then
+                    for _, e in ipairs(w.subscribe) do
+                        print(e)
                     end
                 end
-            end
-            """
-        ]
+                """,
+                fileURL.path
+            ]
 
-        let pipe = Pipe()
-        process.standardOutput = pipe
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
 
-        do {
-            try process.run()
-        } catch {
-            Logger.debug("subscription scan failed")
-            return
+            do {
+                try process.run()
+            } catch {
+                Logger.debug("subscription scan failed for \(fileURL.lastPathComponent): \(error)")
+                continue
+            }
+
+            process.waitUntilExit()
+
+            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            if let stderr = String(data: stderrData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               !stderr.isEmpty {
+                Logger.debug("subscription scan stderr for \(fileURL.lastPathComponent): \(stderr)")
+            }
+
+            let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            guard let output = String(data: data, encoding: .utf8) else {
+                continue
+            }
+
+            output.split(separator: "\n").forEach {
+                result.insert(String($0))
+            }
         }
 
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return result
+    }
 
-        guard let output = String(data: data, encoding: .utf8) else { return }
+    private func emitInitialEventsIfPossible() {
+        guard runtimeReady else { return }
+        guard subscriptionsReady else { return }
+        guard !didEmitInitialEvents else { return }
 
-        output.split(separator: "\n").forEach {
-            requiredEvents.insert(String($0))
-        }
-
-        Logger.debug("required events: \(requiredEvents)")
-        EventManager.shared.start(subscriptions: requiredEvents)
+        didEmitInitialEvents = true
+        emitInitialEvents()
     }
 
     private func emitInitialEvents() {
@@ -150,6 +225,10 @@ final class WidgetRunner {
             EventBus.shared.emit("power_source_change")
         }
 
+        if requiredEvents.contains("charging_state_change") {
+            EventBus.shared.emit("charging_state_change")
+        }
+
         if requiredEvents.contains("wifi_change") {
             EventBus.shared.emit("wifi_change")
         }
@@ -160,6 +239,14 @@ final class WidgetRunner {
 
         if requiredEvents.contains("volume_change") {
             EventBus.shared.emit("volume_change")
+        }
+
+        if requiredEvents.contains("mute_change") {
+            EventBus.shared.emit("mute_change")
+        }
+
+        if requiredEvents.contains("calendar_change") {
+            EventBus.shared.emit("calendar_change")
         }
 
         if requiredEvents.contains("minute_tick") {
