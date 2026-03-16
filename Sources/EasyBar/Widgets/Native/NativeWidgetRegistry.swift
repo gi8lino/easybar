@@ -25,6 +25,10 @@ final class NativeWidgetRegistry {
 
         var next: [NativeWidget] = []
 
+        if Config.shared.builtinSpaces.style.enabled {
+            next.append(SpacesNativeWidget())
+        }
+
         if Config.shared.builtinBattery.style.enabled {
             next.append(BatteryNativeWidget())
         }

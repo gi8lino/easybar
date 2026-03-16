@@ -16,6 +16,14 @@ extension Config {
             )
         }
 
+        if let spaces = builtins["spaces"]?.table {
+            let style = try parseBuiltinStyle(from: spaces, path: "builtins.spaces", fallback: builtinSpaces.style)
+
+            builtinSpaces = SpacesBuiltinConfig(
+                style: style
+            )
+        }
+
         if let frontApp = builtins["front_app"]?.table {
             let style = try parseBuiltinStyle(from: frontApp, path: "builtins.front_app", fallback: builtinFrontApp.style)
 

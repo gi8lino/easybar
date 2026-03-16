@@ -5,12 +5,11 @@ import SwiftUI
 final class BarWindowController: NSWindowController {
 
     /// Creates a borderless bar window pinned to the top of the screen.
-    init(aeroSpaceService: AeroSpaceService) {
-
+    init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let frame = Self.makeFrame(for: screen)
 
-        let contentView = BarRootView(aeroSpaceService: aeroSpaceService)
+        let contentView = BarRootView()
 
         let window = NSWindow(
             contentRect: frame,
@@ -41,7 +40,6 @@ final class BarWindowController: NSWindowController {
 
     /// Calculates the frame of the bar based on config.
     private static func makeFrame(for screen: NSScreen) -> NSRect {
-
         let height = Config.shared.barHeight
         let visibleFrame = screen.visibleFrame
 

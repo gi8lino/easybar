@@ -1,14 +1,9 @@
 import SwiftUI
 
 /// Renders all workspaces with their running applications.
-struct SpacesWidget: View {
+struct SpacesWidgetView: View {
 
-    @ObservedObject private var aeroSpaceService: AeroSpaceService
-
-    /// Creates the widget.
-    init(aeroSpaceService: AeroSpaceService) {
-        self.aeroSpaceService = aeroSpaceService
-    }
+    @ObservedObject private var aeroSpaceService = AeroSpaceService.shared
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -77,9 +72,11 @@ struct SpacesWidget: View {
                 }
             }
         }
+        // Keep the spaces widget only as wide as its content,
+        // so other left-positioned widgets like front_app stay on the left.
+        .fixedSize(horizontal: true, vertical: false)
     }
 
-    /// Returns whether the workspace number should be shown.
     private func shouldShowLabel(for space: SpaceItem) -> Bool {
         guard Config.shared.showSpaceNumber else { return false }
         if Config.shared.showOnlyFocusedLabel {
@@ -88,7 +85,6 @@ struct SpacesWidget: View {
         return true
     }
 
-    /// Returns whether icons should be shown for the workspace.
     private func shouldShowIcons(for space: SpaceItem) -> Bool {
         if !Config.shared.showSpaceIcons {
             return false
@@ -101,19 +97,16 @@ struct SpacesWidget: View {
         return true
     }
 
-    /// Returns visible apps for a space based on the configured icon limit.
     private func visibleApps(for space: SpaceItem) -> [SpaceApp] {
         let limit = max(0, Config.shared.maxIconsPerSpace)
         guard space.apps.count > limit else { return space.apps }
         return Array(space.apps.prefix(limit))
     }
 
-    /// Returns the number of hidden apps for a space.
     private func hiddenAppCount(for space: SpaceItem) -> Int {
         max(0, space.apps.count - visibleApps(for: space).count)
     }
 
-    /// Returns horizontal padding based on collapsed state.
     private func resolvedPaddingX(for space: SpaceItem) -> CGFloat {
         if Config.shared.collapseInactiveSpaces && !space.isFocused {
             return Config.shared.collapsedSpacePaddingX
@@ -121,7 +114,6 @@ struct SpacesWidget: View {
         return Config.shared.spacePaddingX
     }
 
-    /// Returns vertical padding based on collapsed state.
     private func resolvedPaddingY(for space: SpaceItem) -> CGFloat {
         if Config.shared.collapseInactiveSpaces && !space.isFocused {
             return Config.shared.collapsedSpacePaddingY

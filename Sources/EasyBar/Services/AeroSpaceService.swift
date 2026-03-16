@@ -3,16 +3,17 @@ import Foundation
 /// Loads workspace and window state from AeroSpace.
 final class AeroSpaceService: ObservableObject {
 
+    static let shared = AeroSpaceService()
+
     @Published private(set) var spaces: [SpaceItem] = []
     @Published private(set) var focusedAppID: String?
 
     private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
-
-    /// Debounce timer used to coalesce bursts of events.
     private var debounceWorkItem: DispatchWorkItem?
 
+    private init() {}
+
     /// Starts the service.
-    /// Updates arrive through socket events.
     func start() {
         refresh()
     }
@@ -22,42 +23,36 @@ final class AeroSpaceService: ObservableObject {
         debounceRefresh()
     }
 
-/// Focuses the requested workspace.
-func focusWorkspace(_ workspace: String) {
+    /// Focuses the requested workspace.
+    func focusWorkspace(_ workspace: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
 
-    // --- Optimistic UI update ---
-    DispatchQueue.main.async { [weak self] in
-        guard let self else { return }
-
-        self.spaces = self.spaces.map { space in
-            SpaceItem(
-                id: space.id,
-                name: space.name,
-                isFocused: space.name == workspace,
-                isVisible: space.isVisible,
-                apps: space.apps
-            )
+            self.spaces = self.spaces.map { space in
+                SpaceItem(
+                    id: space.id,
+                    name: space.name,
+                    isFocused: space.name == workspace,
+                    isVisible: space.isVisible,
+                    apps: space.apps
+                )
+            }
         }
-    }
 
-    // --- Tell AeroSpace ---
-    refreshQueue.async { [weak self] in
-        guard let self else { return }
+        refreshQueue.async { [weak self] in
+            guard let self else { return }
 
-        _ = self.runAeroSpace(arguments: ["workspace", workspace])
+            _ = self.runAeroSpace(arguments: ["workspace", workspace])
 
-        // Confirm real state
-        self.reloadState()
+            self.reloadState()
 
-        // One small follow-up refresh
-        Thread.sleep(forTimeInterval: 0.04)
-        self.reloadState()
+            Thread.sleep(forTimeInterval: 0.04)
+            self.reloadState()
         }
     }
 
     /// Schedules a debounced refresh.
     private func debounceRefresh() {
-
         debounceWorkItem?.cancel()
 
         let work = DispatchWorkItem { [weak self] in
@@ -65,13 +60,11 @@ func focusWorkspace(_ workspace: String) {
         }
 
         debounceWorkItem = work
-
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.04, execute: work)
     }
 
     /// Public refresh entry.
     func refresh() {
-
         refreshQueue.async { [weak self] in
             self?.reloadState()
         }
@@ -79,7 +72,6 @@ func focusWorkspace(_ workspace: String) {
 
     /// Reads current AeroSpace state and publishes it.
     private func reloadState() {
-
         let workspaces = loadWorkspaces()
         let windows = loadWindows()
         let groupedApps = Dictionary(grouping: windows, by: \.workspace)
@@ -105,10 +97,9 @@ func focusWorkspace(_ workspace: String) {
 
     /// Reads all known workspaces from AeroSpace.
     private func loadWorkspaces() -> [WorkspaceDTO] {
-
         guard
-            let namesOutput = runAeroSpace(arguments: ["list-workspaces","--all","--format","%{workspace}"]),
-            let stateOutput = runAeroSpace(arguments: ["list-workspaces","--all","--format","%{workspace} %{workspace-is-focused} %{workspace-is-visible}"])
+            let namesOutput = runAeroSpace(arguments: ["list-workspaces", "--all", "--format", "%{workspace}"]),
+            let stateOutput = runAeroSpace(arguments: ["list-workspaces", "--all", "--format", "%{workspace} %{workspace-is-focused} %{workspace-is-visible}"])
         else {
             return []
         }
@@ -121,7 +112,6 @@ func focusWorkspace(_ workspace: String) {
             stateOutput
                 .split(whereSeparator: \.isNewline)
                 .compactMap { line -> (String, WorkspaceState)? in
-
                     let parts = line.split(separator: " ").map(String.init)
                     guard parts.count >= 3 else { return nil }
 
@@ -136,7 +126,6 @@ func focusWorkspace(_ workspace: String) {
         )
 
         return names.map { name in
-
             let state = stateByWorkspace[name] ?? WorkspaceState(
                 isFocused: false,
                 isVisible: false
@@ -152,18 +141,18 @@ func focusWorkspace(_ workspace: String) {
 
     /// Reads all windows from AeroSpace.
     private func loadWindows() -> [WindowDTO] {
-
         guard let output = runAeroSpace(arguments: [
             "list-windows",
             "--all",
             "--format",
             "%{workspace} | %{app-name} | %{app-bundle-path}"
-        ]) else { return [] }
+        ]) else {
+            return []
+        }
 
         return output
             .split(whereSeparator: \.isNewline)
             .compactMap { line in
-
                 let parts = line
                     .components(separatedBy: " | ")
                     .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -180,13 +169,14 @@ func focusWorkspace(_ workspace: String) {
 
     /// Reads the focused window.
     private func loadFocusedAppID() -> String? {
-
         guard let output = runAeroSpace(arguments: [
             "list-windows",
             "--focused",
             "--format",
             "%{app-bundle-path} | %{app-name}"
-        ]) else { return nil }
+        ]) else {
+            return nil
+        }
 
         let parts = output
             .components(separatedBy: " | ")
@@ -205,12 +195,10 @@ func focusWorkspace(_ workspace: String) {
 
     /// Deduplicates apps per workspace.
     private func deduplicateApps(_ windows: [WindowDTO]) -> [SpaceApp] {
-
         var seen = Set<String>()
         var result: [SpaceApp] = []
 
         for window in windows {
-
             let key = window.bundlePath.isEmpty ? window.name : window.bundlePath
             guard !seen.contains(key) else { continue }
 
@@ -231,7 +219,6 @@ func focusWorkspace(_ workspace: String) {
 
     /// Runs the AeroSpace CLI.
     private func runAeroSpace(arguments: [String]) -> String? {
-
         guard let executable = resolveAeroSpacePath() else { return nil }
 
         let process = Process()
@@ -252,7 +239,6 @@ func focusWorkspace(_ workspace: String) {
 
     /// Resolves the AeroSpace binary.
     private func resolveAeroSpacePath() -> String? {
-
         let candidates = [
             "/opt/homebrew/bin/aerospace",
             "/usr/local/bin/aerospace",

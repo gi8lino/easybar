@@ -67,6 +67,24 @@ enum ConfigDefaults {
         showPercentage: true
     )
 
+    static let builtinSpaces = Config.SpacesBuiltinConfig(
+        style: Config.BuiltinWidgetStyle(
+            enabled: true,
+            position: "left",
+            order: 10,
+            icon: "",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 0,
+            paddingY: 0,
+            spacing: 0,
+            opacity: 1
+        )
+    )
+
     static let builtinFrontApp = Config.FrontAppBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,

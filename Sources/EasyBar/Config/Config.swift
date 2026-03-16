@@ -51,6 +51,7 @@ final class Config {
     var logFilePath: String = ConfigDefaults.logFilePath
 
     var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
+    var builtinSpaces: SpacesBuiltinConfig = ConfigDefaults.builtinSpaces
     var builtinFrontApp: FrontAppBuiltinConfig = ConfigDefaults.builtinFrontApp
     var builtinVolume: VolumeBuiltinConfig = ConfigDefaults.builtinVolume
     var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
@@ -172,6 +173,7 @@ final class Config {
         logFilePath = ConfigDefaults.logFilePath
 
         builtinBattery = ConfigDefaults.builtinBattery
+        builtinSpaces = ConfigDefaults.builtinSpaces
         builtinFrontApp = ConfigDefaults.builtinFrontApp
         builtinVolume = ConfigDefaults.builtinVolume
         builtinDate = ConfigDefaults.builtinDate
@@ -226,6 +228,7 @@ final class Config {
             logFilePath: logFilePath,
 
             builtinBattery: builtinBattery,
+            builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
             builtinVolume: builtinVolume,
             builtinDate: builtinDate,
@@ -282,6 +285,7 @@ final class Config {
         logFilePath = snapshot.logFilePath
 
         builtinBattery = snapshot.builtinBattery
+        builtinSpaces = snapshot.builtinSpaces
         builtinFrontApp = snapshot.builtinFrontApp
         builtinVolume = snapshot.builtinVolume
         builtinDate = snapshot.builtinDate

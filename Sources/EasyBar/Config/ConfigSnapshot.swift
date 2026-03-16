@@ -47,6 +47,7 @@ struct ConfigSnapshot {
     let logFilePath: String
 
     let builtinBattery: Config.BatteryBuiltinConfig
+    let builtinSpaces: Config.SpacesBuiltinConfig
     let builtinFrontApp: Config.FrontAppBuiltinConfig
     let builtinVolume: Config.VolumeBuiltinConfig
     let builtinDate: Config.DateBuiltinConfig

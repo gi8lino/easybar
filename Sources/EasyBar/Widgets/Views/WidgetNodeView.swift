@@ -28,6 +28,10 @@ struct WidgetNodeView: View {
                     }
                     .modifier(WidgetNodeStyle(node: node))
 
+                case "spaces":
+                    SpacesWidgetView()
+                        .modifier(WidgetNodeStyle(node: node))
+
                 case "popup":
                     popupAnchor
 

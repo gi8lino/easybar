@@ -3,22 +3,15 @@ import SwiftUI
 /// Root SwiftUI view of the EasyBar window.
 struct BarRootView: View {
 
-    @ObservedObject private var aeroSpaceService: AeroSpaceService
-
-    /// Creates the root bar view.
-    init(aeroSpaceService: AeroSpaceService) {
-        self.aeroSpaceService = aeroSpaceService
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             WidgetBar(position: "left")
 
-            SpacesWidget(aeroSpaceService: aeroSpaceService)
+            Spacer(minLength: 0)
 
             WidgetBar(position: "center")
 
-            Spacer()
+            Spacer(minLength: 0)
 
             WidgetBar(position: "right")
         }
@@ -33,3 +26,4 @@ struct BarRootView: View {
         .foregroundStyle(Theme.textColor)
     }
 }
+

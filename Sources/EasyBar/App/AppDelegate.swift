@@ -3,14 +3,13 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var barWindowController: BarWindowController?
-    private let aeroSpaceService = AeroSpaceService()
+    private let aeroSpaceService = AeroSpaceService.shared
     private let socketServer = SocketServer()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-
         NSApp.setActivationPolicy(.accessory)
 
-        let controller = BarWindowController(aeroSpaceService: aeroSpaceService)
+        let controller = BarWindowController()
         controller.showWindow(self)
         barWindowController = controller
 
@@ -19,9 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NativeWidgetRegistry.shared.start()
 
         socketServer.start { [weak self] command in
-
             switch command {
-
             case .workspaceChanged:
                 self?.aeroSpaceService.triggerRefresh()
                 EventBus.shared.emit("workspace_change")

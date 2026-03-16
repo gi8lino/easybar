@@ -27,6 +27,10 @@ extension Config {
         var showPercentage: Bool
     }
 
+    struct SpacesBuiltinConfig {
+        var style: BuiltinWidgetStyle
+    }
+
     struct FrontAppBuiltinConfig {
         var style: BuiltinWidgetStyle
         var showIcon: Bool
