@@ -6,6 +6,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let rootID = "builtin_volume"
 
     private var eventObserver: NSObjectProtocol?
+    private var isHovered = false
+    private var autoHideWorkItem: DispatchWorkItem?
 
     func start() {
         VolumeEvents.shared.subscribeVolume()
@@ -22,10 +24,49 @@ final class VolumeSliderNativeWidget: NativeWidget {
             }
 
             switch event {
-            case "volume_change":
+            case "volume_change", "mute_change":
+                // Keyboard / system changes should briefly expand the slider.
+                if Config.shared.builtinVolume.expandToSliderOnHover {
+                    self.isHovered = true
+                    self.scheduleAutoHide()
+                }
+
                 self.publish()
 
-            case "slider.preview", "slider.changed":
+            case "mouse.entered":
+                guard payload["widget"] == self.rootID else { return }
+
+                self.isHovered = true
+                self.cancelAutoHide()
+                self.publish()
+
+            case "mouse.exited":
+                guard payload["widget"] == self.rootID else { return }
+
+                self.isHovered = false
+                self.cancelAutoHide()
+                self.publish()
+
+            case "slider.preview":
+                guard payload["widget"] == self.rootID,
+                      let rawValue = payload["value"],
+                      let value = Double(rawValue) else {
+                    return
+                }
+
+                let config = Config.shared.builtinVolume
+                let span = max(config.maxValue - config.minValue, 0.0001)
+                let normalized = (value - config.minValue) / span
+
+                if config.expandToSliderOnHover {
+                    self.isHovered = true
+                    self.cancelAutoHide()
+                }
+
+                self.setSystemVolume(normalized)
+                self.publish()
+
+            case "slider.changed":
                 guard payload["widget"] == self.rootID,
                       let rawValue = payload["value"],
                       let value = Double(rawValue) else {
@@ -37,6 +78,12 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 let normalized = (value - config.minValue) / span
 
                 self.setSystemVolume(normalized)
+
+                if config.expandToSliderOnHover {
+                    self.isHovered = true
+                    self.scheduleAutoHide()
+                }
+
                 self.publish()
 
             default:
@@ -53,39 +100,213 @@ final class VolumeSliderNativeWidget: NativeWidget {
             self.eventObserver = nil
         }
 
+        cancelAutoHide()
+        isHovered = false
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
     private func publish() {
         let config = Config.shared.builtinVolume
         let systemVolume = readSystemVolume()
+        let isMuted = readMutedState()
         let clampedSystem = min(max(systemVolume, 0), 1)
 
         let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
-        let roundedValue = (sliderValue / max(config.step, 0.0001)).rounded() * max(config.step, 0.0001)
+        let step = max(config.step, 0.0001)
+        let roundedValue = (sliderValue / step).rounded() * step
 
         var style = config.style
-        style.icon = resolvedIcon(for: clampedSystem, config: config)
+        style.icon = resolvedIcon(for: clampedSystem, muted: isMuted, config: config)
 
         let text = config.showPercentage
             ? "\(Int((clampedSystem * 100.0).rounded()))%"
             : ""
 
-        let node = BuiltinWidgetNodeFactory.makeSliderNode(
-            rootID: rootID,
-            style: style,
-            text: text,
-            value: roundedValue,
-            min: config.minValue,
-            max: config.maxValue,
-            step: max(config.step, 0.0001)
-        )
+        let nodes: [WidgetNodeState]
 
-        WidgetStore.shared.apply(root: rootID, nodes: [node])
+        if config.expandToSliderOnHover {
+            nodes = makeExpandableNodes(
+                config: config,
+                style: style,
+                text: text,
+                value: roundedValue,
+                min: config.minValue,
+                max: config.maxValue,
+                step: step
+            )
+        } else {
+            nodes = [
+                BuiltinWidgetNodeFactory.makeSliderNode(
+                    rootID: rootID,
+                    style: style,
+                    text: text,
+                    value: roundedValue,
+                    min: config.minValue,
+                    max: config.maxValue,
+                    step: step
+                )
+            ]
+        }
+
+        WidgetStore.shared.apply(root: rootID, nodes: nodes)
     }
 
-    private func resolvedIcon(for value: Double, config: Config.VolumeBuiltinConfig) -> String {
-        if value <= 0.001 {
+    private func makeExpandableNodes(
+        config: Config.VolumeBuiltinConfig,
+        style: Config.BuiltinWidgetStyle,
+        text: String,
+        value: Double,
+        min: Double,
+        max: Double,
+        step: Double
+    ) -> [WidgetNodeState] {
+        var nodes: [WidgetNodeState] = []
+
+        nodes.append(
+            WidgetNodeState(
+                id: rootID,
+                root: rootID,
+                kind: "row",
+                parent: nil,
+                position: style.position,
+                order: style.order,
+                icon: "",
+                text: "",
+                color: nil,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: style.paddingX,
+                paddingY: style.paddingY,
+                spacing: style.spacing,
+                backgroundColor: style.backgroundColorHex,
+                borderColor: style.borderColorHex,
+                borderWidth: style.borderWidth,
+                cornerRadius: style.cornerRadius,
+                opacity: style.opacity
+            )
+        )
+
+        if !style.icon.isEmpty {
+            nodes.append(
+                WidgetNodeState(
+                    id: "\(rootID)_icon",
+                    root: rootID,
+                    kind: "item",
+                    parent: rootID,
+                    position: style.position,
+                    order: 0,
+                    icon: style.icon,
+                    text: "",
+                    color: style.textColorHex,
+                    visible: true,
+                    role: nil,
+                    value: nil,
+                    min: nil,
+                    max: nil,
+                    step: nil,
+                    values: nil,
+                    lineWidth: nil,
+                    paddingX: 0,
+                    paddingY: 0,
+                    spacing: 4,
+                    backgroundColor: nil,
+                    borderColor: nil,
+                    borderWidth: nil,
+                    cornerRadius: nil,
+                    opacity: 1
+                )
+            )
+        }
+
+        nodes.append(
+            WidgetNodeState(
+                id: "\(rootID)_label",
+                root: rootID,
+                kind: "item",
+                parent: rootID,
+                position: style.position,
+                order: 1,
+                icon: "",
+                text: text,
+                color: style.textColorHex,
+                visible: true,
+                role: nil,
+                value: nil,
+                min: nil,
+                max: nil,
+                step: nil,
+                values: nil,
+                lineWidth: nil,
+                paddingX: 0,
+                paddingY: 0,
+                spacing: 4,
+                backgroundColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                cornerRadius: nil,
+                opacity: 1
+            )
+        )
+
+        nodes.append(
+            WidgetNodeState(
+                id: "\(rootID)_slider",
+                root: rootID,
+                kind: "slider",
+                parent: rootID,
+                position: style.position,
+                order: 2,
+                icon: "",
+                text: "",
+                color: style.textColorHex,
+                visible: isHovered,
+                role: nil,
+                value: value,
+                min: min,
+                max: max,
+                step: step,
+                values: nil,
+                lineWidth: nil,
+                paddingX: 0,
+                paddingY: 0,
+                spacing: 4,
+                backgroundColor: nil,
+                borderColor: nil,
+                borderWidth: nil,
+                cornerRadius: nil,
+                opacity: 1
+            )
+        )
+
+        return nodes
+    }
+
+    private func scheduleAutoHide() {
+        cancelAutoHide()
+
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.isHovered = false
+            self.publish()
+        }
+
+        autoHideWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    private func cancelAutoHide() {
+        autoHideWorkItem?.cancel()
+        autoHideWorkItem = nil
+    }
+
+    private func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig) -> String {
+        if muted {
             return config.mutedIcon
         }
 
@@ -124,6 +345,36 @@ final class VolumeSliderNativeWidget: NativeWidget {
         }
 
         return Double(value)
+    }
+
+    private func readMutedState() -> Bool {
+        guard let deviceID = defaultOutputDeviceID() else {
+            return false
+        }
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var muted = UInt32(0)
+        var size = UInt32(MemoryLayout<UInt32>.size)
+
+        let status = AudioObjectGetPropertyData(
+            deviceID,
+            &address,
+            0,
+            nil,
+            &size,
+            &muted
+        )
+
+        guard status == noErr else {
+            return false
+        }
+
+        return muted != 0
     }
 
     private func setSystemVolume(_ volume: Double) {

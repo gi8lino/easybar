@@ -12,6 +12,8 @@ final class VolumeEvents {
     private var volumeListener: AudioObjectPropertyListenerBlock?
     private var muteListener: AudioObjectPropertyListenerBlock?
 
+    private var lastMutedState: Bool?
+
     private init() {}
 
     func subscribeVolume() {
@@ -22,6 +24,7 @@ final class VolumeEvents {
         refreshDeviceSubscription()
 
         Logger.debug("subscribed volume_change")
+        Logger.debug("subscribed mute_change")
     }
 
     func stopAll() {
@@ -30,6 +33,7 @@ final class VolumeEvents {
 
         currentDeviceID = nil
         isSubscribed = false
+        lastMutedState = nil
     }
 
     private func installDefaultOutputDeviceListener() {
@@ -97,7 +101,14 @@ final class VolumeEvents {
 
         uninstallDeviceListeners()
         currentDeviceID = newDeviceID
+        lastMutedState = readMutedState(for: newDeviceID)
         installDeviceListeners()
+
+        // Device switch should refresh UI state.
+        EventBus.shared.emit("volume_change")
+        EventBus.shared.emit("mute_change", data: [
+            "muted": (lastMutedState ?? false) ? "true" : "false"
+        ])
     }
 
     private func installDeviceListeners() {
@@ -132,8 +143,19 @@ final class VolumeEvents {
             mElement: kAudioObjectPropertyElementMain
         )
 
-        let muteBlock: AudioObjectPropertyListenerBlock = { _, _ in
+        let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             EventBus.shared.emit("volume_change")
+
+            guard let self, let deviceID = self.currentDeviceID else { return }
+
+            let muted = self.readMutedState(for: deviceID)
+            if self.lastMutedState != muted {
+                self.lastMutedState = muted
+
+                EventBus.shared.emit("mute_change", data: [
+                    "muted": muted ? "true" : "false"
+                ])
+            }
         }
 
         let muteStatus = AudioObjectAddPropertyListenerBlock(
@@ -221,5 +243,31 @@ final class VolumeEvents {
         }
 
         return deviceID
+    }
+
+    private func readMutedState(for deviceID: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var muted = UInt32(0)
+        var size = UInt32(MemoryLayout<UInt32>.size)
+
+        let status = AudioObjectGetPropertyData(
+            deviceID,
+            &address,
+            0,
+            nil,
+            &size,
+            &muted
+        )
+
+        guard status == noErr else {
+            return false
+        }
+
+        return muted != 0
     }
 }

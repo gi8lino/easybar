@@ -40,6 +40,9 @@ final class Config {
         var minValue: Double
         var maxValue: Double
         var step: Double
+
+        // Inline expand on hover.
+        var expandToSliderOnHover: Bool
     }
 
     struct DateBuiltinConfig {
@@ -175,7 +178,8 @@ final class Config {
         showPercentage: true,
         minValue: 0,
         maxValue: 100,
-        step: 1
+        step: 1,
+        expandToSliderOnHover: false
     )
 
     var builtinDate = DateBuiltinConfig(
@@ -414,7 +418,8 @@ final class Config {
                         showPercentage: volume["show_percentage"]?.bool ?? builtinVolume.showPercentage,
                         minValue: volume["min"]?.double ?? builtinVolume.minValue,
                         maxValue: volume["max"]?.double ?? builtinVolume.maxValue,
-                        step: volume["step"]?.double ?? builtinVolume.step
+                        step: volume["step"]?.double ?? builtinVolume.step,
+                        expandToSliderOnHover: volume["expand_to_slider_on_hover"]?.bool ?? builtinVolume.expandToSliderOnHover
                     )
                 }
 

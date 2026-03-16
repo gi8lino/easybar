@@ -45,7 +45,7 @@ final class EventManager {
             NetworkEvents.shared.subscribeNetwork()
         }
 
-        if subscriptions.contains("volume_change") {
+        if subscriptions.contains("volume_change") || subscriptions.contains("mute_change") {
             VolumeEvents.shared.subscribeVolume()
         }
 

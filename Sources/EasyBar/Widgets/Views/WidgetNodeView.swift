@@ -38,10 +38,17 @@ struct WidgetNodeView: View {
                 case "slider":
                     sliderView
                         .modifier(WidgetNodeStyle(node: node))
+                        .background(
+                            // Let inline native sliders emit enter/exit too.
+                            WidgetMouseView(widgetID: node.root)
+                        )
 
                 case "progress_slider":
                     progressSliderView
                         .modifier(WidgetNodeStyle(node: node))
+                        .background(
+                            WidgetMouseView(widgetID: node.root)
+                        )
 
                 case "progress":
                     progressView
