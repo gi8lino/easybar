@@ -38,22 +38,22 @@ struct WidgetNodeView: View {
                 case "slider":
                     sliderView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(WidgetMouseView(widgetID: node.root))
+                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 case "progress_slider":
                     progressSliderView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(WidgetMouseView(widgetID: node.root))
+                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 case "progress":
                     progressView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(WidgetMouseView(widgetID: node.root))
+                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 case "sparkline":
                     sparklineView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(WidgetMouseView(widgetID: node.root))
+                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 default:
                     itemView
@@ -100,12 +100,10 @@ struct WidgetNodeView: View {
 
             if !node.icon.isEmpty {
                 Text(node.icon)
-                    .font(resolvedFont)
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
-                    .font(resolvedFont)
             }
         }
         .foregroundStyle(color(node.color))
@@ -116,7 +114,7 @@ struct WidgetNodeView: View {
                 content
             } else {
                 content
-                    .background(WidgetMouseView(widgetID: node.root))
+                    .overlay(WidgetMouseView(widgetID: node.root))
             }
         }
     }
@@ -127,7 +125,7 @@ struct WidgetNodeView: View {
         content()
             .foregroundStyle(color(node.color))
             .modifier(WidgetNodeStyle(node: node))
-            .background(
+            .overlay(
                 WidgetMouseView(widgetID: node.root)
             )
             .onHover { hovering in
@@ -176,7 +174,7 @@ struct WidgetNodeView: View {
         }
         .foregroundStyle(color(node.color))
         .modifier(WidgetNodeStyle(node: node))
-        .background(
+        .overlay(
             WidgetMouseView(widgetID: node.root)
         )
         .onHover { hovering in
@@ -301,13 +299,6 @@ struct WidgetNodeView: View {
         }
     }
 
-    /// Resolves the optional per-node font size.
-    private var resolvedFont: Font? {
-        guard let fontSize = node.fontSize else { return nil }
-        return .system(size: CGFloat(fontSize))
-    }
-
-    /// Resolves one hex color or falls back to the theme text color.
     private func color(_ hex: String?) -> Color {
         guard let hex, !hex.isEmpty else {
             return Theme.textColor
@@ -316,7 +307,6 @@ struct WidgetNodeView: View {
         return Color(hex: hex)
     }
 
-    /// Closes popups shortly after both anchor and popup lose hover.
     private func schedulePopupCloseCheck() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             if !anchorHovered && !popupHovered {
