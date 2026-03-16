@@ -27,13 +27,22 @@ extension Config {
             spacePaddingY = CGFloat(spaces["padding_y"]?.int ?? Int(spacePaddingY))
             spaceCornerRadius = CGFloat(spaces["corner_radius"]?.int ?? Int(spaceCornerRadius))
 
+            // Keep fractional scale supported.
             if let focusedScale = spaces["focused_scale"]?.double {
+                spaceFocusedScale = CGFloat(focusedScale)
+            } else if let focusedScale = spaces["focused_scale"]?.int {
                 spaceFocusedScale = CGFloat(focusedScale)
             } else {
                 spaceFocusedScale = 1.0
             }
 
-            spaceInactiveOpacity = spaces["inactive_opacity"]?.double ?? spaceInactiveOpacity
+            // Keep fractional opacity supported.
+            if let inactiveOpacity = spaces["inactive_opacity"]?.double {
+                spaceInactiveOpacity = inactiveOpacity
+            } else if let inactiveOpacity = spaces["inactive_opacity"]?.int {
+                spaceInactiveOpacity = Double(inactiveOpacity)
+            }
+
             maxIconsPerSpace = spaces["max_icons"]?.int ?? maxIconsPerSpace
             showSpaceNumber = spaces["show_number"]?.bool ?? showSpaceNumber
             showSpaceIcons = spaces["show_icons"]?.bool ?? showSpaceIcons

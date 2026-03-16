@@ -26,11 +26,11 @@ extension Config {
                 lowIcon: volume["low_icon"]?.string ?? builtinVolume.lowIcon,
                 highIcon: volume["high_icon"]?.string ?? builtinVolume.highIcon,
                 showPercentage: volume["show_percentage"]?.bool ?? builtinVolume.showPercentage,
-                minValue: volume["min"]?.double ?? builtinVolume.minValue,
-                maxValue: volume["max"]?.double ?? builtinVolume.maxValue,
-                step: volume["step"]?.double ?? builtinVolume.step,
+                minValue: volume["min"]?.double ?? volume["min"]?.int.map(Double.init) ?? builtinVolume.minValue,
+                maxValue: volume["max"]?.double ?? volume["max"]?.int.map(Double.init) ?? builtinVolume.maxValue,
+                step: volume["step"]?.double ?? volume["step"]?.int.map(Double.init) ?? builtinVolume.step,
                 expandToSliderOnHover: volume["expand_to_slider_on_hover"]?.bool ?? builtinVolume.expandToSliderOnHover,
-                sliderWidth: volume["slider_width"]?.double ?? builtinVolume.sliderWidth
+                sliderWidth: volume["slider_width"]?.int.map(Double.init) ?? builtinVolume.sliderWidth
             )
         }
 
@@ -63,7 +63,7 @@ extension Config {
                 layout: normalizedCalendarLayout(calendar["layout"]?.string ?? builtinCalendar.layout),
                 topFormat: calendar["top_format"]?.string ?? builtinCalendar.topFormat,
                 bottomFormat: calendar["bottom_format"]?.string ?? builtinCalendar.bottomFormat,
-                lineSpacing: calendar["line_spacing"]?.double ?? builtinCalendar.lineSpacing,
+                lineSpacing: calendar["line_spacing"]?.int.map(Double.init) ?? builtinCalendar.lineSpacing,
                 topTextColorHex: calendar["top_text_color"]?.string ?? builtinCalendar.topTextColorHex,
                 bottomTextColorHex: calendar["bottom_text_color"]?.string ?? builtinCalendar.bottomTextColorHex,
                 showBirthdays: calendar["show_birthdays"]?.bool ?? builtinCalendar.showBirthdays,
@@ -72,12 +72,12 @@ extension Config {
                 birthdaysShowAge: calendar["birthdays_show_age"]?.bool ?? builtinCalendar.birthdaysShowAge,
                 popupBackgroundColorHex: calendar["popup_background_color"]?.string ?? builtinCalendar.popupBackgroundColorHex,
                 popupBorderColorHex: calendar["popup_border_color"]?.string ?? builtinCalendar.popupBorderColorHex,
-                popupBorderWidth: calendar["popup_border_width"]?.double ?? builtinCalendar.popupBorderWidth,
-                popupCornerRadius: calendar["popup_corner_radius"]?.double ?? builtinCalendar.popupCornerRadius,
-                popupPaddingX: calendar["popup_padding_x"]?.double ?? builtinCalendar.popupPaddingX,
-                popupPaddingY: calendar["popup_padding_y"]?.double ?? builtinCalendar.popupPaddingY,
-                popupSpacing: calendar["popup_spacing"]?.double ?? builtinCalendar.popupSpacing,
-                popupItemIndent: calendar["popup_item_indent"]?.double ?? builtinCalendar.popupItemIndent,
+                popupBorderWidth: calendar["popup_border_width"]?.int.map(Double.init) ?? builtinCalendar.popupBorderWidth,
+                popupCornerRadius: calendar["popup_corner_radius"]?.int.map(Double.init) ?? builtinCalendar.popupCornerRadius,
+                popupPaddingX: calendar["popup_padding_x"]?.int.map(Double.init) ?? builtinCalendar.popupPaddingX,
+                popupPaddingY: calendar["popup_padding_y"]?.int.map(Double.init) ?? builtinCalendar.popupPaddingY,
+                popupSpacing: calendar["popup_spacing"]?.int.map(Double.init) ?? builtinCalendar.popupSpacing,
+                popupItemIndent: calendar["popup_item_indent"]?.int.map(Double.init) ?? builtinCalendar.popupItemIndent,
                 popupSectionTitleColorHex: calendar["popup_section_title_color"]?.string ?? builtinCalendar.popupSectionTitleColorHex,
                 popupItemColorHex: calendar["popup_item_color"]?.string ?? builtinCalendar.popupItemColorHex,
                 popupEmptyColorHex: calendar["popup_empty_color"]?.string ?? builtinCalendar.popupEmptyColorHex
@@ -97,12 +97,14 @@ extension Config {
             textColorHex: table["text_color"]?.string ?? fallback.textColorHex,
             backgroundColorHex: table["background_color"]?.string ?? fallback.backgroundColorHex,
             borderColorHex: table["border_color"]?.string ?? fallback.borderColorHex,
-            borderWidth: table["border_width"]?.double ?? fallback.borderWidth,
-            cornerRadius: table["corner_radius"]?.double ?? fallback.cornerRadius,
-            paddingX: table["padding_x"]?.double ?? fallback.paddingX,
-            paddingY: table["padding_y"]?.double ?? fallback.paddingY,
-            spacing: table["spacing"]?.double ?? fallback.spacing,
-            opacity: table["opacity"]?.double ?? fallback.opacity
+            // Read ints from TOML, keep runtime model as Double.
+            borderWidth: table["border_width"]?.int.map(Double.init) ?? fallback.borderWidth,
+            cornerRadius: table["corner_radius"]?.int.map(Double.init) ?? fallback.cornerRadius,
+            paddingX: table["padding_x"]?.int.map(Double.init) ?? fallback.paddingX,
+            paddingY: table["padding_y"]?.int.map(Double.init) ?? fallback.paddingY,
+            spacing: table["spacing"]?.int.map(Double.init) ?? fallback.spacing,
+            // Opacity can stay fractional.
+            opacity: table["opacity"]?.double ?? table["opacity"]?.int.map(Double.init) ?? fallback.opacity
         )
     }
 

@@ -13,6 +13,7 @@ extension Config {
         var backgroundColorHex: String?
         var borderColorHex: String?
 
+        // Runtime values.
         var borderWidth: Double
         var cornerRadius: Double
         var paddingX: Double
@@ -34,14 +35,15 @@ extension Config {
         var lowIcon: String
         var highIcon: String
         var showPercentage: Bool
+
+        // Range values.
         var minValue: Double
         var maxValue: Double
         var step: Double
 
-        // Inline expand on hover.
         var expandToSliderOnHover: Bool
 
-        // Slider width in points.
+        // Runtime width.
         var sliderWidth: Double
     }
 
@@ -61,21 +63,21 @@ extension Config {
         var days: Int
         var emptyText: String
 
-        // Anchor layout in the bar.
         var layout: String
         var topFormat: String
         var bottomFormat: String
+
+        // Runtime values.
         var lineSpacing: Double
+
         var topTextColorHex: String?
         var bottomTextColorHex: String?
 
-        // Birthdays section.
         var showBirthdays: Bool
         var birthdaysTitle: String
         var birthdaysDateFormat: String
         var birthdaysShowAge: Bool
 
-        // Popup styling.
         var popupBackgroundColorHex: String
         var popupBorderColorHex: String
         var popupBorderWidth: Double
