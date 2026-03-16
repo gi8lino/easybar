@@ -500,6 +500,11 @@ extension Config {
             ) ?? builtinCalendar.birthdaysShowAge
         )
 
+        let birthdaysPopupTable = popupTable["birthdays"]?.table ?? TOMLTable()
+        let todayPopupTable = popupTable["today"]?.table ?? TOMLTable()
+        let tomorrowPopupTable = popupTable["tomorrow"]?.table ?? TOMLTable()
+        let futurePopupTable = popupTable["future"]?.table ?? TOMLTable()
+
         let popup = Config.CalendarBuiltinConfig.Popup(
             backgroundColorHex: try optionalString(
                 popupTable["background_color"],
@@ -533,18 +538,26 @@ extension Config {
                 popupTable["item_indent"],
                 path: "builtins.calendar.popup.item_indent"
             ) ?? builtinCalendar.popupItemIndent,
-            sectionTitleColorHex: try optionalString(
-                popupTable["section_title_color"],
-                path: "builtins.calendar.popup.section_title_color"
-            ) ?? builtinCalendar.popupSectionTitleColorHex,
-            itemColorHex: try optionalString(
-                popupTable["item_color"],
-                path: "builtins.calendar.popup.item_color"
-            ) ?? builtinCalendar.popupItemColorHex,
-            emptyColorHex: try optionalString(
-                popupTable["empty_color"],
-                path: "builtins.calendar.popup.empty_color"
-            ) ?? builtinCalendar.popupEmptyColorHex
+            birthdays: try parseCalendarPopupSectionStyle(
+                from: birthdaysPopupTable,
+                path: "builtins.calendar.popup.birthdays",
+                fallback: builtinCalendar.popup.birthdays
+            ),
+            today: try parseCalendarPopupSectionStyle(
+                from: todayPopupTable,
+                path: "builtins.calendar.popup.today",
+                fallback: builtinCalendar.popup.today
+            ),
+            tomorrow: try parseCalendarPopupSectionStyle(
+                from: tomorrowPopupTable,
+                path: "builtins.calendar.popup.tomorrow",
+                fallback: builtinCalendar.popup.tomorrow
+            ),
+            future: try parseCalendarPopupSectionStyle(
+                from: futurePopupTable,
+                path: "builtins.calendar.popup.future",
+                fallback: builtinCalendar.popup.future
+            )
         )
 
         builtinCalendar = CalendarBuiltinConfig(
@@ -553,6 +566,28 @@ extension Config {
             events: events,
             birthdays: birthdays,
             popup: popup
+        )
+    }
+
+    /// Parses one calendar popup section style block.
+    private func parseCalendarPopupSectionStyle(
+        from table: TOMLTable,
+        path: String,
+        fallback: Config.CalendarBuiltinConfig.PopupSectionStyle
+    ) throws -> Config.CalendarBuiltinConfig.PopupSectionStyle {
+        Config.CalendarBuiltinConfig.PopupSectionStyle(
+            titleColorHex: try optionalString(
+                table["title_color"],
+                path: "\(path).title_color"
+            ) ?? fallback.titleColorHex,
+            itemColorHex: try optionalString(
+                table["item_color"],
+                path: "\(path).item_color"
+            ) ?? fallback.itemColorHex,
+            emptyColorHex: try optionalString(
+                table["empty_color"],
+                path: "\(path).empty_color"
+            ) ?? fallback.emptyColorHex
         )
     }
 }

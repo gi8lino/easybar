@@ -230,9 +230,26 @@ enum ConfigDefaults {
             paddingY: 8,
             spacing: 8,
             itemIndent: 8,
-            sectionTitleColorHex: "#ffffff",
-            itemColorHex: "#d0d0d0",
-            emptyColorHex: "#c0c0c0"
+            birthdays: .init(
+                titleColorHex: "#f5a97f",
+                itemColorHex: "#eed49f",
+                emptyColorHex: "#c0c0c0"
+            ),
+            today: .init(
+                titleColorHex: "#ffffff",
+                itemColorHex: "#d0d0d0",
+                emptyColorHex: "#c0c0c0"
+            ),
+            tomorrow: .init(
+                titleColorHex: "#8bd5ca",
+                itemColorHex: "#cfeee8",
+                emptyColorHex: "#c0c0c0"
+            ),
+            future: .init(
+                titleColorHex: "#91d7e3",
+                itemColorHex: "#d0d0d0",
+                emptyColorHex: "#c0c0c0"
+            )
         )
     )
 

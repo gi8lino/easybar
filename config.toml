@@ -192,13 +192,33 @@ background_color = "#111111" # Background color of the popup.
 border_color = "#444444" # Border color of the popup.
 border_width = 1 # Border width of the popup.
 corner_radius = 10 # Corner radius of the popup.
+empty_color = "#c0c0c0" # Color used for empty-state text.
+item_color = "#d0d0d0" # Color of popup event and birthday items.
+item_indent = 8 # Left indent for popup items under a section title.
 padding_x = 10 # Horizontal inner padding of the popup.
 padding_y = 8 # Vertical inner padding of the popup.
-spacing = 8 # Vertical spacing between popup sections.
-item_indent = 8 # Left indent for popup items under a section title.
 section_title_color = "#ffffff" # Color of popup section titles.
-item_color = "#d0d0d0" # Color of popup event and birthday items.
-empty_color = "#c0c0c0" # Color used for empty-state text.
+spacing = 8 # Vertical spacing between popup sections.
+
+[builtins.calendar.popup.birthdays]
+title_color = "#89CFEF"
+item_color = "#7285A5"
+empty_color = "#c0c0c0"
+
+[builtins.calendar.popup.today]
+title_color = "#5F9EA0"
+item_color = "#d0d0d0"
+empty_color = "#c0c0c0"
+
+[builtins.calendar.popup.tomorrow]
+title_color = "#8bd5ca"
+item_color = "#cfeee8"
+empty_color = "#c0c0c0"
+
+[builtins.calendar.popup.future]
+title_color = "#91d7e3"
+item_color = "#d0d0d0"
+empty_color = "#c0c0c0"
 
 [builtins.time.style]
 enabled = false # Shows or hides the time widget.

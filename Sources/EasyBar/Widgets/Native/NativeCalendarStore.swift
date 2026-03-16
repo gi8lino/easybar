@@ -60,12 +60,17 @@ final class NativeCalendarStore: ObservableObject {
             }
 
             let title: String
+            let kind: NativeCalendarPopupSectionKind
+
             if calendar.isDateInToday(day) {
                 title = "Today"
+                kind = .today
             } else if calendar.isDateInTomorrow(day) {
                 title = "Tomorrow"
+                kind = .tomorrow
             } else {
                 title = formatDayTitle(day)
+                kind = .future
             }
 
             let items: [NativeCalendarPopupItem]
@@ -93,6 +98,7 @@ final class NativeCalendarStore: ObservableObject {
                 NativeCalendarPopupSection(
                     id: "events-\(dayOffset)",
                     title: title,
+                    kind: kind,
                     items: items
                 )
             )
@@ -120,6 +126,7 @@ final class NativeCalendarStore: ObservableObject {
             return NativeCalendarPopupSection(
                 id: "birthdays",
                 title: config.birthdaysTitle,
+                kind: .birthdays,
                 items: []
             )
         }
@@ -143,6 +150,7 @@ final class NativeCalendarStore: ObservableObject {
         return NativeCalendarPopupSection(
             id: "birthdays",
             title: config.birthdaysTitle,
+            kind: .birthdays,
             items: items
         )
     }

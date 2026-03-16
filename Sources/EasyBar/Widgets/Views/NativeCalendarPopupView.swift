@@ -10,16 +10,20 @@ struct NativeCalendarPopupView: View {
         VStack(alignment: .leading, spacing: config.popupSpacing) {
             if store.sections.isEmpty {
                 Text(config.emptyText)
-                    .foregroundStyle(color(config.popupEmptyColorHex))
+                    .foregroundStyle(color(config.popup.future.emptyColorHex))
             } else {
                 ForEach(store.sections) { section in
+                    let style = style(for: section.kind)
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(section.title):")
-                            .foregroundStyle(color(config.popupSectionTitleColorHex))
+                            .foregroundStyle(color(style.titleColorHex))
 
                         ForEach(section.items) { item in
-                            Text("\(item.time) \(item.title)")
-                                .foregroundStyle(color(config.popupItemColorHex))
+                            Text(itemLine(for: item))
+                                .foregroundStyle(
+                                    color(item.time.isEmpty ? style.emptyColorHex : style.itemColorHex)
+                                )
                                 .padding(.leading, config.popupItemIndent)
                         }
                     }
@@ -42,8 +46,32 @@ struct NativeCalendarPopupView: View {
         .frame(minWidth: 220, alignment: .leading)
     }
 
+    private func style(
+        for kind: NativeCalendarPopupSectionKind
+    ) -> Config.CalendarBuiltinConfig.PopupSectionStyle {
+        let popup = Config.shared.builtinCalendar.popup
+
+        switch kind {
+        case .birthdays:
+            return popup.birthdays
+        case .today:
+            return popup.today
+        case .tomorrow:
+            return popup.tomorrow
+        case .future:
+            return popup.future
+        }
+    }
+
+    private func itemLine(for item: NativeCalendarPopupItem) -> String {
+        if item.time.isEmpty {
+            return item.title
+        }
+
+        return "\(item.time) \(item.title)"
+    }
+
     private func color(_ hex: String) -> Color {
         Color(hex: hex)
     }
 }
-

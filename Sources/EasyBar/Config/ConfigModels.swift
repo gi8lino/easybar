@@ -285,6 +285,12 @@ extension Config {
             var showAge: Bool
         }
 
+        struct PopupSectionStyle {
+            var titleColorHex: String
+            var itemColorHex: String
+            var emptyColorHex: String
+        }
+
         struct Popup {
             var backgroundColorHex: String
             var borderColorHex: String
@@ -294,9 +300,11 @@ extension Config {
             var paddingY: Double
             var spacing: Double
             var itemIndent: Double
-            var sectionTitleColorHex: String
-            var itemColorHex: String
-            var emptyColorHex: String
+
+            var birthdays: PopupSectionStyle
+            var today: PopupSectionStyle
+            var tomorrow: PopupSectionStyle
+            var future: PopupSectionStyle
         }
 
         var style: BuiltinWidgetStyle
@@ -408,21 +416,6 @@ extension Config {
         var popupItemIndent: Double {
             get { popup.itemIndent }
             set { popup.itemIndent = newValue }
-        }
-
-        var popupSectionTitleColorHex: String {
-            get { popup.sectionTitleColorHex }
-            set { popup.sectionTitleColorHex = newValue }
-        }
-
-        var popupItemColorHex: String {
-            get { popup.itemColorHex }
-            set { popup.itemColorHex = newValue }
-        }
-
-        var popupEmptyColorHex: String {
-            get { popup.emptyColorHex }
-            set { popup.emptyColorHex = newValue }
         }
     }
 }
