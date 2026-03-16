@@ -5,6 +5,9 @@ widgets = "~/.config/easybar/widgets"
 enabled = true
 file = "/tmp/easybar.log"
 
+[lua]
+path = "/usr/local/bin/lua"
+
 [bar]
 height = 32
 padding = 10
@@ -14,9 +17,6 @@ background = "#111111"
 border = "#222222"
 text = "#ffffff"
 focused_app_border = "#00000000"
-
-[lua]
-path = "/usr/local/bin/lua"
 
 [builtins.spaces.style]
 enabled = true
