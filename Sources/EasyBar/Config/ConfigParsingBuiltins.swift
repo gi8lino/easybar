@@ -142,8 +142,8 @@ extension Config {
                 path: "builtins.spaces.layout.corner_radius"
             ) ?? builtinSpaces.layout.cornerRadius,
             focusedCornerRadius: try optionalNumber(
-                layoutTable["active_corner_radius"],
-                path: "builtins.spaces.layout.active_corner_radius"
+                layoutTable["focused_corner_radius"],
+                path: "builtins.spaces.layout.focused_corner_radius"
             ) ?? builtinSpaces.layout.focusedCornerRadius,
             focusedScale: try optionalNumber(
                 layoutTable["focused_scale"],

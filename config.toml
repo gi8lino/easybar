@@ -42,7 +42,7 @@ margin_x = 4 # Horizontal outer margin around the whole spaces row.
 margin_y = 8 # Vertical outer margin around the whole spaces row.
 
 corner_radius = 8 # Corner radius of inactive space pills.
-focused_corner_radius = 18 # Corner radius of the focused space pill.
+focused_corner_radius = 8 # Corner radius of the focused space pill.
 
 focused_scale = 1.0 # Scale multiplier applied to the focused space pill.
 inactive_opacity = 0.85 # Opacity applied to inactive space pills.
