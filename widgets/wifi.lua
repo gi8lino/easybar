@@ -2,7 +2,7 @@ local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function read_wifi_status()
+local function current_wifi_state()
 	local ssid = ""
 	local connected = false
 
@@ -24,10 +24,9 @@ local function read_wifi_status()
 	end
 
 	if ssid ~= "" then
-		connected = true
 		return {
 			icon = "􀙇",
-			text = ssid,
+			label = ssid,
 			color = "#f5a97f",
 		}
 	end
@@ -43,25 +42,70 @@ local function read_wifi_status()
 	if connected then
 		return {
 			icon = "􀙇",
-			text = "Connected",
+			label = "Connected",
 			color = "#f5a97f",
 		}
 	end
 
 	return {
 		icon = "􀙈",
-		text = "Not Connected",
+		label = "Not Connected",
 		color = "#c6a0f6",
+	}
+end
+
+local function full_state(label_visible)
+	local state = current_wifi_state()
+
+	return {
+		children = {
+			{
+				id = "wifi_icon",
+				kind = "item",
+				icon = state.icon,
+				text = "",
+				color = state.color,
+				visible = true,
+			},
+			{
+				id = "wifi_label",
+				kind = "item",
+				icon = "",
+				text = state.label,
+				color = state.color,
+				visible = label_visible,
+			},
+		},
 	}
 end
 
 return {
 	id = "wifi",
+	kind = "row",
 	position = "right",
-	order = 40,
-	icon = "",
-	text = "",
-	color = "",
+	order = 20,
+	spacing = 6,
+	paddingX = 8,
+	paddingY = 4,
+
+	children = {
+		{
+			id = "wifi_icon",
+			kind = "item",
+			icon = "􀙈",
+			text = "",
+			color = "#f5a97f",
+			visible = true,
+		},
+		{
+			id = "wifi_label",
+			kind = "item",
+			icon = "",
+			text = "",
+			color = "#f5a97f",
+			visible = false,
+		},
+	},
 
 	subscribe = {
 		"init",
@@ -70,43 +114,19 @@ return {
 		"system_woke",
 		"mouse.entered",
 		"mouse.exited",
-		"mouse.clicked",
-		"mouse.scrolled",
 	},
 
-	on_event = function(event, payload)
-		if event == "init" or event == "wifi_change" or event == "network_change" or event == "system_woke" then
-			return read_wifi_status()
-		end
-
+	on_event = function(event, _)
 		if event == "mouse.entered" then
-			local state = read_wifi_status()
-			return {
-				icon = state.icon,
-				text = " " .. state.text,
-				color = state.color,
-			}
+			return full_state(true)
 		end
 
 		if event == "mouse.exited" then
-			local state = read_wifi_status()
-			return {
-				icon = state.icon,
-				text = "",
-				color = state.color,
-			}
+			return full_state(false)
 		end
 
-		if event == "mouse.clicked" then
-			if payload and payload.button == "right" then
-				os.execute("open -a 'System Settings'")
-			end
-
-			return read_wifi_status()
-		end
-
-		if event == "mouse.scrolled" then
-			return read_wifi_status()
+		if event == "init" or event == "wifi_change" or event == "network_change" or event == "system_woke" then
+			return full_state(false)
 		end
 	end,
 }

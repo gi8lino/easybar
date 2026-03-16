@@ -18,7 +18,8 @@ enum ConfigDefaults {
 
     static let builtinBattery = Config.BatteryBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "right",
             order: 10,
             icon: "🔋",
@@ -40,7 +41,8 @@ enum ConfigDefaults {
 
     static let builtinSpaces = Config.SpacesBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "left",
             order: 10,
             icon: "",
@@ -94,6 +96,7 @@ enum ConfigDefaults {
 
     static let builtinFrontApp = Config.FrontAppBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
+            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "left",
             order: 15,
@@ -119,7 +122,8 @@ enum ConfigDefaults {
 
     static let builtinVolume = Config.VolumeBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "right",
             order: 20,
             icon: "🔊",
@@ -150,7 +154,8 @@ enum ConfigDefaults {
 
     static let builtinDate = Config.DateBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "right",
             order: 30,
             icon: "📅",
@@ -171,7 +176,8 @@ enum ConfigDefaults {
 
     static let builtinTime = Config.TimeBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "right",
             order: 40,
             icon: "🕒",
@@ -192,7 +198,8 @@ enum ConfigDefaults {
 
     static let builtinCalendar = Config.CalendarBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            enabled: true,
+            // Builtins are off unless explicitly configured.
+            enabled: false,
             position: "right",
             order: 50,
             icon: "🗓",

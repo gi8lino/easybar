@@ -10,164 +10,13 @@ height = 32
 padding = 10
 
 [bar.colors]
-bar_background = "#111111"
-bar_border = "#222222"
-text_color = "#ffffff"
+background = "#111111"
+border = "#222222"
+text = "#ffffff"
 focused_app_border = "#00000000"
 
 [lua]
 path = "/usr/local/bin/lua"
-
-[builtins.battery.style]
-enabled = true
-position = "right"
-order = 10
-icon = "🔋" # fallback only
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.battery.content]
-show_percentage = true
-unavailable_text = "n/a"
-
-[builtins.volume.style]
-enabled = false
-position = "right"
-order = 20
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 8
-opacity = 1.0
-
-[builtins.volume.content]
-muted_icon = "🔇"
-low_icon = "🔉"
-high_icon = "🔊"
-show_percentage = true
-min = 0
-max = 100
-step = 1
-
-[builtins.volume.slider]
-expand_to_slider_on_hover = true
-width = 80
-
-[builtins.date.style]
-enabled = false
-position = "right"
-order = 30
-icon = "📅"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.date.content]
-format = "yyyy-MM-dd"
-
-[builtins.time.style]
-enabled = false
-position = "right"
-order = 40
-icon = "🕒"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.time.content]
-format = "HH:mm"
-
-[builtins.calendar.style]
-enabled = true
-position = "right"
-order = 50
-icon = ""
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.calendar.anchor]
-layout = "stack"
-format = "EEE, MMM d"
-top_format = "HH:mm"
-bottom_format = "d. MMM"
-line_spacing = 0
-top_text_color = "#ffffff"
-bottom_text_color = "#d0d0d0"
-
-[builtins.calendar.events]
-days = 3
-empty_text = "No upcoming events"
-
-[builtins.calendar.birthdays]
-show = true
-title = "Birthdays"
-date_format = "dd.MM.yyyy"
-show_age = false
-
-[builtins.calendar.popup]
-background_color = "#111111"
-border_color = "#444444"
-border_width = 1
-corner_radius = 10
-padding_x = 10
-padding_y = 8
-spacing = 8
-item_indent = 8
-section_title_color = "#ffffff"
-item_color = "#d0d0d0"
-empty_color = "#c0c0c0"
-
-[builtins.front_app.style]
-enabled = true
-position = "left"
-order = 15
-icon = "􀈔"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.front_app.content]
-show_icon = true
-show_name = true
-fallback_text = "No App"
-icon_size = 14
-icon_corner_radius = 4
 
 [builtins.spaces.style]
 enabled = true
@@ -217,3 +66,154 @@ active_background = "#2b2b2b"
 inactive_background = "#1a1a1a"
 active_border = "#444444"
 inactive_border = "#00000000"
+
+[builtins.front_app.style]
+enabled = true
+position = "left"
+order = 20
+icon = "􀈔"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.front_app.content]
+show_icon = true
+show_name = true
+fallback_text = "No App"
+icon_size = 14
+icon_corner_radius = 4
+
+[builtins.battery.style]
+enabled = true
+position = "right"
+order = 10
+icon = "🔋"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.battery.content]
+show_percentage = true
+unavailable_text = "n/a"
+
+[builtins.volume.style]
+enabled = false
+position = "right"
+order = 20
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 8
+opacity = 1.0
+
+[builtins.volume.content]
+muted_icon = "🔇"
+low_icon = "🔉"
+high_icon = "🔊"
+show_percentage = true
+min = 0
+max = 100
+step = 1
+
+[builtins.volume.slider]
+expand_to_slider_on_hover = true
+width = 80
+
+[builtins.calendar.style]
+enabled = true
+position = "right"
+order = 30
+icon = ""
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.calendar.anchor]
+layout = "stack"
+format = "EEE, MMM d"
+top_format = "HH:mm"
+bottom_format = "d. MMM"
+line_spacing = 0
+top_text_color = "#ffffff"
+bottom_text_color = "#d0d0d0"
+
+[builtins.calendar.events]
+days = 3
+empty_text = "No upcoming events"
+
+[builtins.calendar.birthdays]
+show = true
+title = "Birthdays"
+date_format = "dd.MM.yyyy"
+show_age = false
+
+[builtins.calendar.popup]
+background_color = "#111111"
+border_color = "#444444"
+border_width = 1
+corner_radius = 10
+padding_x = 10
+padding_y = 8
+spacing = 8
+item_indent = 8
+section_title_color = "#ffffff"
+item_color = "#d0d0d0"
+empty_color = "#c0c0c0"
+
+[builtins.time.style]
+enabled = false
+position = "right"
+order = 40
+icon = "🕒"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.time.content]
+format = "HH:mm"
+
+[builtins.date.style]
+enabled = false
+position = "right"
+order = 50
+icon = "📅"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.date.content]
+format = "yyyy-MM-dd"

@@ -20,14 +20,13 @@ extension Config {
         do {
             let toml = try TOMLTable(string: text)
 
+            // Core top-level sections.
             try parsePaths(from: toml)
             try parseBar(from: toml)
-            try parseSpaces(from: toml)
-            try parseSpaceText(from: toml)
-            try parseIcons(from: toml)
-            try parseColors(from: toml)
             try parseLua(from: toml)
             try parseLogging(from: toml)
+
+            // Built-in widgets.
             try parseBuiltins(from: toml)
         } catch let error as ConfigError {
             throw error

@@ -9,7 +9,7 @@ BIN_DIR=$(PREFIX)/bin
 CONFIG_DIR=$(HOME)/.config/easybar
 WIDGET_DIR=$(CONFIG_DIR)/widgets
 
-.PHONY: build run install uninstall widgets clean reload
+.PHONY: build run install uninstall widgets clean reload test-login-item
 
 build:
 	swift build
@@ -31,6 +31,10 @@ widgets:
 
 reload:
 	easybarctl reload_config
+
+test-login-item: install
+	open -a $(BIN_DIR)/easybar || $(BIN_DIR)/easybar
+	@echo "Open EasyBar Settings and toggle 'Start at login'. Then quit and log out/in to verify."
 
 clean:
 	swift package clean
