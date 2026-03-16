@@ -5,7 +5,10 @@ final class WidgetRunner {
     static let shared = WidgetRunner()
 
     private let decoder = JSONDecoder()
-    private let subscriptionQueue = DispatchQueue(label: "easybar.widgetrunner.subscriptions", qos: .userInitiated)
+    private let subscriptionQueue = DispatchQueue(
+        label: "easybar.widgetrunner.subscriptions",
+        qos: .userInitiated
+    )
 
     private var requiredEvents = Set<String>()
     private var started = false
@@ -39,10 +42,10 @@ final class WidgetRunner {
             self?.handleRuntimeOutput(line)
         }
 
-        // Start runtime immediately so widgets can load and publish trees.
+        // Start the long-running runtime first.
         LuaRuntime.shared.start()
 
-        // Scan subscriptions off the main thread.
+        // Discover event subscriptions in parallel.
         evaluateSubscriptions()
     }
 
@@ -101,6 +104,7 @@ final class WidgetRunner {
             Logger.debug("unknown lua message: \(line)")
         } catch {
             Logger.debug("json decode failed: \(line)")
+            Logger.debug("decode error: \(error)")
         }
     }
 
@@ -158,18 +162,29 @@ final class WidgetRunner {
         for fileURL in widgetFiles {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: luaPath)
+
+            // Use an environment variable instead of arg[1].
+            // This avoids the fragile indexing behavior of `lua -e`.
             process.arguments = [
                 "-e",
                 """
-                local ok, w = pcall(dofile, arg[1])
-                if ok and type(w) == "table" and type(w.subscribe) == "table" then
-                    for _, e in ipairs(w.subscribe) do
-                        print(e)
+                local path = os.getenv("EASYBAR_WIDGET_FILE")
+                if not path or path == "" then
+                    os.exit(1)
+                end
+
+                local ok, widget = pcall(dofile, path)
+                if ok and type(widget) == "table" and type(widget.subscribe) == "table" then
+                    for _, event in ipairs(widget.subscribe) do
+                        print(event)
                     end
                 end
-                """,
-                fileURL.path
+                """
             ]
+
+            var environment = ProcessInfo.processInfo.environment
+            environment["EASYBAR_WIDGET_FILE"] = fileURL.path
+            process.environment = environment
 
             let stdoutPipe = Pipe()
             let stderrPipe = Pipe()
@@ -179,7 +194,9 @@ final class WidgetRunner {
             do {
                 try process.run()
             } catch {
-                Logger.debug("subscription scan failed for \(fileURL.lastPathComponent): \(error)")
+                Logger.debug(
+                    "subscription scan failed for \(fileURL.lastPathComponent): \(error)"
+                )
                 continue
             }
 
@@ -189,16 +206,36 @@ final class WidgetRunner {
             if let stderr = String(data: stderrData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !stderr.isEmpty {
-                Logger.debug("subscription scan stderr for \(fileURL.lastPathComponent): \(stderr)")
+                Logger.debug(
+                    "subscription scan stderr for \(fileURL.lastPathComponent): \(stderr)"
+                )
             }
 
             let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             guard let output = String(data: data, encoding: .utf8) else {
+                Logger.debug(
+                    "subscription scan produced non-utf8 output for \(fileURL.lastPathComponent)"
+                )
                 continue
             }
 
-            output.split(separator: "\n").forEach {
-                result.insert(String($0))
+            let events = output
+                .split(whereSeparator: \.isNewline)
+                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            if events.isEmpty {
+                Logger.debug(
+                    "no subscriptions found for \(fileURL.lastPathComponent)"
+                )
+            } else {
+                Logger.debug(
+                    "subscriptions for \(fileURL.lastPathComponent): \(events)"
+                )
+            }
+
+            for event in events {
+                result.insert(event)
             }
         }
 

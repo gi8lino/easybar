@@ -127,7 +127,7 @@ final class LuaRuntime {
                 try pipe.fileHandleForWriting.write(contentsOf: data)
                 Logger.debug("sent to lua stdin: \(string)")
             } catch {
-                Logger.debug("failed writing to lua stdin: \(error)")
+                Logger.info("failed writing to lua stdin: \(error)")
             }
         }
     }
@@ -192,7 +192,8 @@ final class LuaRuntime {
                     continue
                 }
 
-                Logger.debug("lua stderr: \(line)")
+                // Lua runtime errors should always be visible in normal logs.
+                Logger.info("lua stderr: \(line)")
             }
         }
     }
