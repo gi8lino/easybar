@@ -67,12 +67,14 @@ final class Config {
         } catch {
             let message = "invalid config at \(configPath): \(error)"
             Logger.info(message)
+            fputs("easybar: \(message)\n", stderr)
             exit(1)
         }
     }
 
     /// Reloads configuration from disk.
     func reload() {
+        // Early message may only go to stdout/current logger state.
         Logger.info("reloading configuration")
 
         let snapshot = snapshot()
@@ -82,9 +84,15 @@ final class Config {
 
         do {
             try load()
+
+            // This runs after Logger.configure(...) inside load(),
+            // so it also lands in the configured log file.
+            Logger.info("reload applied")
         } catch {
-            // Keep old runtime config on reload failure.
+            // Restore old runtime config and logger/file target.
             apply(snapshot)
+
+            // This is logged after restoring the previous logger config.
             Logger.info("reload rejected: \(error)")
         }
     }
@@ -288,3 +296,4 @@ final class Config {
         Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 }
+
