@@ -51,6 +51,7 @@ final class Config {
     var logFilePath: String = ConfigDefaults.logFilePath
 
     var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
+    var builtinFrontApp: FrontAppBuiltinConfig = ConfigDefaults.builtinFrontApp
     var builtinVolume: VolumeBuiltinConfig = ConfigDefaults.builtinVolume
     var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
     var builtinTime: TimeBuiltinConfig = ConfigDefaults.builtinTime
@@ -74,7 +75,6 @@ final class Config {
 
     /// Reloads configuration from disk.
     func reload() {
-        // Early message may only go to stdout/current logger state.
         Logger.info("reloading configuration")
 
         let snapshot = snapshot()
@@ -84,15 +84,9 @@ final class Config {
 
         do {
             try load()
-
-            // This runs after Logger.configure(...) inside load(),
-            // so it also lands in the configured log file.
             Logger.info("reload applied")
         } catch {
-            // Restore old runtime config and logger/file target.
             apply(snapshot)
-
-            // This is logged after restoring the previous logger config.
             Logger.info("reload rejected: \(error)")
         }
     }
@@ -178,6 +172,7 @@ final class Config {
         logFilePath = ConfigDefaults.logFilePath
 
         builtinBattery = ConfigDefaults.builtinBattery
+        builtinFrontApp = ConfigDefaults.builtinFrontApp
         builtinVolume = ConfigDefaults.builtinVolume
         builtinDate = ConfigDefaults.builtinDate
         builtinTime = ConfigDefaults.builtinTime
@@ -231,6 +226,7 @@ final class Config {
             logFilePath: logFilePath,
 
             builtinBattery: builtinBattery,
+            builtinFrontApp: builtinFrontApp,
             builtinVolume: builtinVolume,
             builtinDate: builtinDate,
             builtinTime: builtinTime,
@@ -286,6 +282,7 @@ final class Config {
         logFilePath = snapshot.logFilePath
 
         builtinBattery = snapshot.builtinBattery
+        builtinFrontApp = snapshot.builtinFrontApp
         builtinVolume = snapshot.builtinVolume
         builtinDate = snapshot.builtinDate
         builtinTime = snapshot.builtinTime
@@ -296,4 +293,3 @@ final class Config {
         Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 }
-

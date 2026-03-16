@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct WidgetNodeView: View {
 
@@ -33,30 +34,22 @@ struct WidgetNodeView: View {
                 case "slider":
                     sliderView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(
-                            WidgetMouseView(widgetID: node.root)
-                        )
+                        .background(WidgetMouseView(widgetID: node.root))
 
                 case "progress_slider":
                     progressSliderView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(
-                            WidgetMouseView(widgetID: node.root)
-                        )
+                        .background(WidgetMouseView(widgetID: node.root))
 
                 case "progress":
                     progressView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(
-                            WidgetMouseView(widgetID: node.root)
-                        )
+                        .background(WidgetMouseView(widgetID: node.root))
 
                 case "sparkline":
                     sparklineView
                         .modifier(WidgetNodeStyle(node: node))
-                        .background(
-                            WidgetMouseView(widgetID: node.root)
-                        )
+                        .background(WidgetMouseView(widgetID: node.root))
 
                 default:
                     itemView
@@ -87,7 +80,20 @@ struct WidgetNodeView: View {
     }
 
     private var itemView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 4)) {
+        let content = HStack(spacing: CGFloat(node.spacing ?? 4)) {
+            if let imagePath = node.imagePath, !imagePath.isEmpty {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: imagePath))
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(
+                        width: CGFloat(node.imageSize ?? 14),
+                        height: CGFloat(node.imageSize ?? 14)
+                    )
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
+                    )
+            }
+
             if !node.icon.isEmpty {
                 Text(node.icon)
             }
@@ -98,10 +104,15 @@ struct WidgetNodeView: View {
         }
         .foregroundStyle(color(node.color))
         .modifier(WidgetNodeStyle(node: node))
-        .background(
-            // Calendar child items should not each own their own hover region.
-            node.root == "builtin_calendar" ? nil : AnyView(WidgetMouseView(widgetID: node.root))
-        )
+
+        return Group {
+            if node.root == "builtin_calendar" {
+                content
+            } else {
+                content
+                    .background(WidgetMouseView(widgetID: node.root))
+            }
+        }
     }
 
     private func nativeCalendarAnchorView<Content: View>(
@@ -111,7 +122,6 @@ struct WidgetNodeView: View {
             .foregroundStyle(color(node.color))
             .modifier(WidgetNodeStyle(node: node))
             .background(
-                // One shared hover region for the whole calendar widget.
                 WidgetMouseView(widgetID: node.root)
             )
             .onHover { hovering in

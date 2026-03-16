@@ -4,46 +4,63 @@ final class NativeWidgetRegistry {
 
     static let shared = NativeWidgetRegistry()
 
-    private let batteryWidget = BatteryNativeWidget()
-    private let volumeWidget = VolumeSliderNativeWidget()
-    private let dateWidget = DateNativeWidget()
-    private let timeWidget = TimeNativeWidget()
-    private let calendarWidget = CalendarNativeWidget()
+    private var widgets: [NativeWidget] = []
 
     private init() {}
 
     func start() {
-        if Config.shared.builtinBattery.style.enabled {
-            batteryWidget.start()
-        }
-
-        if Config.shared.builtinVolume.style.enabled {
-            volumeWidget.start()
-        }
-
-        if Config.shared.builtinDate.style.enabled {
-            dateWidget.start()
-        }
-
-        if Config.shared.builtinTime.style.enabled {
-            timeWidget.start()
-        }
-
-        if Config.shared.builtinCalendar.style.enabled {
-            calendarWidget.start()
-        }
-    }
-
-    func stop() {
-        batteryWidget.stop()
-        volumeWidget.stop()
-        dateWidget.stop()
-        timeWidget.stop()
-        calendarWidget.stop()
+        registerAll()
     }
 
     func reload() {
-        stop()
-        start()
+        registerAll()
+    }
+
+    func stop() {
+        stopAll()
+    }
+
+    private func registerAll() {
+        stopAll()
+
+        var next: [NativeWidget] = []
+
+        if Config.shared.builtinBattery.style.enabled {
+            next.append(BatteryNativeWidget())
+        }
+
+        if Config.shared.builtinFrontApp.style.enabled {
+            next.append(FrontAppNativeWidget())
+        }
+
+        if Config.shared.builtinVolume.style.enabled {
+            next.append(VolumeSliderNativeWidget())
+        }
+
+        if Config.shared.builtinDate.style.enabled {
+            next.append(DateNativeWidget())
+        }
+
+        if Config.shared.builtinTime.style.enabled {
+            next.append(TimeNativeWidget())
+        }
+
+        if Config.shared.builtinCalendar.style.enabled {
+            next.append(CalendarNativeWidget())
+        }
+
+        widgets = next
+
+        for widget in widgets {
+            widget.start()
+        }
+    }
+
+    private func stopAll() {
+        for widget in widgets {
+            widget.stop()
+        }
+
+        widgets.removeAll()
     }
 }

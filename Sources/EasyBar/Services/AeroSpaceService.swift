@@ -12,7 +12,7 @@ final class AeroSpaceService: ObservableObject {
     private var debounceWorkItem: DispatchWorkItem?
 
     /// Starts the service.
-    /// No polling is used anymore — updates arrive through socket events.
+    /// Updates arrive through socket events.
     func start() {
         refresh()
     }

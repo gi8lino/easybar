@@ -7,14 +7,12 @@ extension Config {
         var position: String
         var order: Int
 
-        // Generic fallback icon.
         var icon: String
 
         var textColorHex: String?
         var backgroundColorHex: String?
         var borderColorHex: String?
 
-        // Runtime values.
         var borderWidth: Double
         var cornerRadius: Double
         var paddingX: Double
@@ -29,17 +27,24 @@ extension Config {
         var showPercentage: Bool
     }
 
+    struct FrontAppBuiltinConfig {
+        var style: BuiltinWidgetStyle
+        var showIcon: Bool
+        var showName: Bool
+        var fallbackText: String
+        var iconSize: Double
+        var iconCornerRadius: Double
+    }
+
     struct VolumeBuiltinConfig {
         var style: BuiltinWidgetStyle
         var mutedIcon: String
         var lowIcon: String
         var highIcon: String
         var showPercentage: Bool
-
         var minValue: Double
         var maxValue: Double
         var step: Double
-
         var expandToSliderOnHover: Bool
         var sliderWidth: Double
     }
@@ -59,20 +64,16 @@ extension Config {
         var format: String
         var days: Int
         var emptyText: String
-
         var layout: String
         var topFormat: String
         var bottomFormat: String
         var lineSpacing: Double
-
         var topTextColorHex: String?
         var bottomTextColorHex: String?
-
         var showBirthdays: Bool
         var birthdaysTitle: String
         var birthdaysDateFormat: String
         var birthdaysShowAge: Bool
-
         var popupBackgroundColorHex: String
         var popupBorderColorHex: String
         var popupBorderWidth: Double

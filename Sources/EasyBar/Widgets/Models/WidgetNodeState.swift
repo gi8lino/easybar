@@ -15,6 +15,10 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
     var role: String?
 
+    var imagePath: String?
+    var imageSize: Double?
+    var imageCornerRadius: Double?
+
     var value: Double?
     var min: Double?
     var max: Double?

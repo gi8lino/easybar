@@ -7,31 +7,30 @@ extension Config {
         guard let builtins = toml["builtins"]?.table else { return }
 
         if let battery = builtins["battery"]?.table {
-            let style = try parseBuiltinStyle(
-                from: battery,
-                path: "builtins.battery",
-                fallback: builtinBattery.style
-            )
+            let style = try parseBuiltinStyle(from: battery, path: "builtins.battery", fallback: builtinBattery.style)
 
             builtinBattery = BatteryBuiltinConfig(
                 style: style,
-                unavailableText: try optionalString(
-                    battery["unavailable_text"],
-                    path: "builtins.battery.unavailable_text"
-                ) ?? builtinBattery.unavailableText,
-                showPercentage: try optionalBool(
-                    battery["show_percentage"],
-                    path: "builtins.battery.show_percentage"
-                ) ?? builtinBattery.showPercentage
+                unavailableText: try optionalString(battery["unavailable_text"], path: "builtins.battery.unavailable_text") ?? builtinBattery.unavailableText,
+                showPercentage: try optionalBool(battery["show_percentage"], path: "builtins.battery.show_percentage") ?? builtinBattery.showPercentage
+            )
+        }
+
+        if let frontApp = builtins["front_app"]?.table {
+            let style = try parseBuiltinStyle(from: frontApp, path: "builtins.front_app", fallback: builtinFrontApp.style)
+
+            builtinFrontApp = FrontAppBuiltinConfig(
+                style: style,
+                showIcon: try optionalBool(frontApp["show_icon"], path: "builtins.front_app.show_icon") ?? builtinFrontApp.showIcon,
+                showName: try optionalBool(frontApp["show_name"], path: "builtins.front_app.show_name") ?? builtinFrontApp.showName,
+                fallbackText: try optionalString(frontApp["fallback_text"], path: "builtins.front_app.fallback_text") ?? builtinFrontApp.fallbackText,
+                iconSize: try optionalNumber(frontApp["icon_size"], path: "builtins.front_app.icon_size") ?? builtinFrontApp.iconSize,
+                iconCornerRadius: try optionalNumber(frontApp["icon_corner_radius"], path: "builtins.front_app.icon_corner_radius") ?? builtinFrontApp.iconCornerRadius
             )
         }
 
         if let volume = builtins["volume"]?.table {
-            let style = try parseBuiltinStyle(
-                from: volume,
-                path: "builtins.volume",
-                fallback: builtinVolume.style
-            )
+            let style = try parseBuiltinStyle(from: volume, path: "builtins.volume", fallback: builtinVolume.style)
 
             builtinVolume = VolumeBuiltinConfig(
                 style: style,
@@ -48,11 +47,7 @@ extension Config {
         }
 
         if let date = builtins["date"]?.table {
-            let style = try parseBuiltinStyle(
-                from: date,
-                path: "builtins.date",
-                fallback: builtinDate.style
-            )
+            let style = try parseBuiltinStyle(from: date, path: "builtins.date", fallback: builtinDate.style)
 
             builtinDate = DateBuiltinConfig(
                 style: style,
@@ -61,11 +56,7 @@ extension Config {
         }
 
         if let time = builtins["time"]?.table {
-            let style = try parseBuiltinStyle(
-                from: time,
-                path: "builtins.time",
-                fallback: builtinTime.style
-            )
+            let style = try parseBuiltinStyle(from: time, path: "builtins.time", fallback: builtinTime.style)
 
             builtinTime = TimeBuiltinConfig(
                 style: style,
@@ -74,11 +65,7 @@ extension Config {
         }
 
         if let calendar = builtins["calendar"]?.table {
-            let style = try parseBuiltinStyle(
-                from: calendar,
-                path: "builtins.calendar",
-                fallback: builtinCalendar.style
-            )
+            let style = try parseBuiltinStyle(from: calendar, path: "builtins.calendar", fallback: builtinCalendar.style)
 
             builtinCalendar = CalendarBuiltinConfig(
                 style: style,

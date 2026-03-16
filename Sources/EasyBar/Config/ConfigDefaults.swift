@@ -44,7 +44,6 @@ enum ConfigDefaults {
 
     static let luaPath = "/usr/local/bin/lua"
 
-    // File logging defaults.
     static let logToFile = false
     static let logFilePath = "~/Library/Logs/EasyBar.log"
 
@@ -53,7 +52,6 @@ enum ConfigDefaults {
             enabled: true,
             position: "right",
             order: 10,
-            // Fallback icon only when battery state cannot be read.
             icon: "🔋",
             textColorHex: nil,
             backgroundColorHex: nil,
@@ -67,6 +65,29 @@ enum ConfigDefaults {
         ),
         unavailableText: "n/a",
         showPercentage: true
+    )
+
+    static let builtinFrontApp = Config.FrontAppBuiltinConfig(
+        style: Config.BuiltinWidgetStyle(
+            enabled: false,
+            position: "left",
+            order: 15,
+            icon: "􀈔",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        showIcon: true,
+        showName: true,
+        fallbackText: "No App",
+        iconSize: 14,
+        iconCornerRadius: 4
     )
 
     static let builtinVolume = Config.VolumeBuiltinConfig(
