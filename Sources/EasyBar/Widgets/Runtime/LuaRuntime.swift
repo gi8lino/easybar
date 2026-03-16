@@ -61,7 +61,7 @@ final class LuaRuntime {
 
         Logger.debug("starting lua runtime")
         Logger.debug("lua binary: \(Config.shared.luaPath)")
-        Logger.debug("runtime script: \(runtime.path)")
+        Logger.debug("lua script: \(runtime.path)")
         Logger.debug("widgets path: \(Config.shared.widgetsPath)")
 
         let process = Process()
@@ -130,7 +130,7 @@ final class LuaRuntime {
         self.errorPipe = nil
     }
 
-    /// Sends one JSON event payload line to the Lua runtime stdin.
+    /// Sends one encoded event line to the Lua runtime stdin.
     func send(_ string: String) {
         guard let pipe = inputPipe else {
             Logger.debug("cannot send event, lua stdin not available")
@@ -186,7 +186,7 @@ final class LuaRuntime {
         }
     }
 
-    /// Installs the stderr handler used for Lua logs and runtime/widget errors.
+    /// Installs the stderr handler used for Lua logs and widget/runtime failures.
     private func installErrorReadabilityHandler() {
         guard let pipe = errorPipe else { return }
 
@@ -230,7 +230,7 @@ final class LuaRuntime {
         }
     }
 
-    /// Installs process signal handlers once for clean Lua shutdown on exit/crash.
+    /// Installs signal handlers once for clean Lua shutdown on exit/crash.
     private func installSignalHandlersIfNeeded() {
         guard !signalHandlersInstalled else { return }
         signalHandlersInstalled = true

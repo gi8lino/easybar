@@ -6,6 +6,7 @@ extension Config {
     func parseBuiltins(from toml: TOMLTable) throws {
         guard let builtins = toml["builtins"]?.table else { return }
 
+        try parseCPUBuiltin(from: builtins)
         try parseBatteryBuiltin(from: builtins)
         try parseSpacesBuiltin(from: builtins)
         try parseFrontAppBuiltin(from: builtins)
@@ -13,6 +14,46 @@ extension Config {
         try parseDateBuiltin(from: builtins)
         try parseTimeBuiltin(from: builtins)
         try parseCalendarBuiltin(from: builtins)
+    }
+
+    private func parseCPUBuiltin(from builtins: TOMLTable) throws {
+        guard let cpu = builtins["cpu"]?.table else { return }
+
+        let styleTable = cpu["style"]?.table ?? TOMLTable()
+        let contentTable = cpu["content"]?.table ?? TOMLTable()
+
+        let style = try parseBuiltinStyle(
+            from: styleTable,
+            path: "builtins.cpu.style",
+            fallback: builtinCPU.style
+        )
+
+        let content = Config.CPUBuiltinConfig.Content(
+            label: try optionalString(
+                contentTable["label"],
+                path: "builtins.cpu.content.label"
+            ) ?? builtinCPU.label,
+            historySize: max(
+                2,
+                try optionalInt(
+                    contentTable["history_size"],
+                    path: "builtins.cpu.content.history_size"
+                ) ?? builtinCPU.historySize
+            ),
+            lineWidth: try optionalNumber(
+                contentTable["line_width"],
+                path: "builtins.cpu.content.line_width"
+            ) ?? builtinCPU.lineWidth,
+            colorHex: try optionalString(
+                contentTable["color"],
+                path: "builtins.cpu.content.color"
+            ) ?? builtinCPU.colorHex
+        )
+
+        builtinCPU = CPUBuiltinConfig(
+            style: style,
+            content: content
+        )
     }
 
     private func parseBatteryBuiltin(from builtins: TOMLTable) throws {

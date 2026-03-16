@@ -19,6 +19,7 @@ final class Config {
     var logToFile: Bool = ConfigDefaults.logToFile
     var logFilePath: String = ConfigDefaults.logFilePath
 
+    var builtinCPU: CPUBuiltinConfig = ConfigDefaults.builtinCPU
     var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
     var builtinSpaces: SpacesBuiltinConfig = ConfigDefaults.builtinSpaces
     var builtinFrontApp: FrontAppBuiltinConfig = ConfigDefaults.builtinFrontApp
@@ -253,6 +254,7 @@ final class Config {
         logToFile = ConfigDefaults.logToFile
         logFilePath = ConfigDefaults.logFilePath
 
+        builtinCPU = ConfigDefaults.builtinCPU
         builtinBattery = ConfigDefaults.builtinBattery
         builtinSpaces = ConfigDefaults.builtinSpaces
         builtinFrontApp = ConfigDefaults.builtinFrontApp
@@ -273,6 +275,7 @@ final class Config {
             luaPath: luaPath,
             logToFile: logToFile,
             logFilePath: logFilePath,
+            builtinCPU: builtinCPU,
             builtinBattery: builtinBattery,
             builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
@@ -298,6 +301,7 @@ final class Config {
         logToFile = snapshot.logToFile
         logFilePath = snapshot.logFilePath
 
+        builtinCPU = snapshot.builtinCPU
         builtinBattery = snapshot.builtinBattery
         builtinSpaces = snapshot.builtinSpaces
         builtinFrontApp = snapshot.builtinFrontApp

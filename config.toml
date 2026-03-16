@@ -89,6 +89,17 @@ fallback_text = "No App"
 icon_size = 14
 icon_corner_radius = 4
 
+[builtins.cpu.style]
+enabled = true
+position = "right"
+order = 60
+
+[builtins.cpu.content]
+label = "CPU"
+history_size = 10
+line_width = 1.8
+color = "#a6da95"
+
 [builtins.battery.style]
 enabled = true
 position = "right"
@@ -217,3 +228,4 @@ opacity = 1.0
 
 [builtins.date.content]
 format = "yyyy-MM-dd"
+

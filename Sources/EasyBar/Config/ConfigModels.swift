@@ -21,6 +21,38 @@ extension Config {
         var opacity: Double
     }
 
+    struct CPUBuiltinConfig {
+        struct Content {
+            var label: String
+            var historySize: Int
+            var lineWidth: Double
+            var colorHex: String?
+        }
+
+        var style: BuiltinWidgetStyle
+        var content: Content
+
+        var label: String {
+            get { content.label }
+            set { content.label = newValue }
+        }
+
+        var historySize: Int {
+            get { content.historySize }
+            set { content.historySize = newValue }
+        }
+
+        var lineWidth: Double {
+            get { content.lineWidth }
+            set { content.lineWidth = newValue }
+        }
+
+        var colorHex: String? {
+            get { content.colorHex }
+            set { content.colorHex = newValue }
+        }
+    }
+
     struct BatteryBuiltinConfig {
         struct Content {
             var unavailableText: String

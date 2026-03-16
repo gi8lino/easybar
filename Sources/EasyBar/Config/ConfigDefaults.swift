@@ -16,6 +16,30 @@ enum ConfigDefaults {
     static let logToFile = false
     static let logFilePath = "~/Library/Logs/EasyBar.log"
 
+    static let builtinCPU = Config.CPUBuiltinConfig(
+        style: Config.BuiltinWidgetStyle(
+            enabled: false,
+            position: "right",
+            order: 60,
+            icon: "󰍛",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        content: .init(
+            label: "CPU",
+            historySize: 10,
+            lineWidth: 1.8,
+            colorHex: "#a6da95"
+        )
+    )
+
     static let builtinBattery = Config.BatteryBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             // Builtins are off unless explicitly configured.

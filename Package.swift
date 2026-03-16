@@ -21,7 +21,8 @@ let package = Package(
                 .product(name: "TOMLKit", package: "TOMLKit")
             ],
             resources: [
-                .process("Lua/runtime.lua")
+                .copy("Lua/runtime.lua"),
+                .copy("Lua/easybar")
             ]
         ),
         .executableTarget(

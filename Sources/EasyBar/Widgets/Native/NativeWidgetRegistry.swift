@@ -53,6 +53,10 @@ final class NativeWidgetRegistry {
             next.append(CalendarNativeWidget())
         }
 
+        if Config.shared.builtinCPU.style.enabled {
+            next.append(CPUSparklineNativeWidget())
+        }
+
         widgets = next
 
         for widget in widgets {

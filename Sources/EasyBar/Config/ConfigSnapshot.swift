@@ -15,6 +15,7 @@ struct ConfigSnapshot {
     let logToFile: Bool
     let logFilePath: String
 
+    let builtinCPU: Config.CPUBuiltinConfig
     let builtinBattery: Config.BatteryBuiltinConfig
     let builtinSpaces: Config.SpacesBuiltinConfig
     let builtinFrontApp: Config.FrontAppBuiltinConfig
