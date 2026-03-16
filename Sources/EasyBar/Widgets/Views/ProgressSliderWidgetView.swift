@@ -77,7 +77,7 @@ struct ProgressSliderWidgetView: View {
                     }
             )
         }
-        .frame(width: 72, height: 14)
+        .frame(width: resolvedWidth, height: 14)
         .onChange(of: externalValue) { _, newValue in
             // Keep the slider in sync with native system updates,
             // but do not fight the user while dragging.
@@ -85,6 +85,14 @@ struct ProgressSliderWidgetView: View {
                 value = newValue
             }
         }
+    }
+
+    private var resolvedWidth: CGFloat {
+        if rootWidgetID == "builtin_volume" {
+            return CGFloat(Config.shared.builtinVolume.sliderWidth)
+        }
+
+        return 72
     }
 
     private var normalizedValue: CGFloat {

@@ -62,7 +62,7 @@ struct SliderWidgetView: View {
             }
         )
         .tint(tint)
-        .frame(width: 140)
+        .frame(width: resolvedWidth)
         .onChange(of: externalValue) { _, newValue in
             // Keep the slider in sync with native system updates,
             // but do not fight the user while dragging.
@@ -70,5 +70,13 @@ struct SliderWidgetView: View {
                 value = newValue
             }
         }
+    }
+
+    private var resolvedWidth: CGFloat {
+        if rootWidgetID == "builtin_volume" {
+            return CGFloat(Config.shared.builtinVolume.sliderWidth)
+        }
+
+        return 140
     }
 }
