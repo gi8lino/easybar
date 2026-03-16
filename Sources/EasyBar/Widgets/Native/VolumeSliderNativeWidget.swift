@@ -118,7 +118,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
         var style = config.style
         style.icon = resolvedIcon(for: clampedSystem, muted: isMuted, config: config)
 
-        let text = config.showPercentage
+        // Show percentage only while expanded.
+        let text = (config.showPercentage && isHovered)
             ? "\(Int((clampedSystem * 100.0).rounded()))%"
             : ""
 
@@ -235,7 +236,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 icon: "",
                 text: text,
                 color: style.textColorHex,
-                visible: true,
+                // Label is only visible while expanded and non-empty.
+                visible: isHovered && !text.isEmpty,
                 role: nil,
                 value: nil,
                 min: nil,
