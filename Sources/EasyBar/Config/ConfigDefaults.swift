@@ -53,6 +53,7 @@ enum ConfigDefaults {
             enabled: true,
             position: "right",
             order: 10,
+            // Fallback icon only when battery state cannot be read.
             icon: "🔋",
             textColorHex: nil,
             backgroundColorHex: nil,
@@ -64,7 +65,6 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        chargingIcon: "⚡️",
         unavailableText: "n/a",
         showPercentage: true
     )

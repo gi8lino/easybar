@@ -7,18 +7,31 @@ extension Config {
         guard let builtins = toml["builtins"]?.table else { return }
 
         if let battery = builtins["battery"]?.table {
-            let style = try parseBuiltinStyle(from: battery, path: "builtins.battery", fallback: builtinBattery.style)
+            let style = try parseBuiltinStyle(
+                from: battery,
+                path: "builtins.battery",
+                fallback: builtinBattery.style
+            )
 
             builtinBattery = BatteryBuiltinConfig(
                 style: style,
-                chargingIcon: try optionalString(battery["charging_icon"], path: "builtins.battery.charging_icon") ?? builtinBattery.chargingIcon,
-                unavailableText: try optionalString(battery["unavailable_text"], path: "builtins.battery.unavailable_text") ?? builtinBattery.unavailableText,
-                showPercentage: try optionalBool(battery["show_percentage"], path: "builtins.battery.show_percentage") ?? builtinBattery.showPercentage
+                unavailableText: try optionalString(
+                    battery["unavailable_text"],
+                    path: "builtins.battery.unavailable_text"
+                ) ?? builtinBattery.unavailableText,
+                showPercentage: try optionalBool(
+                    battery["show_percentage"],
+                    path: "builtins.battery.show_percentage"
+                ) ?? builtinBattery.showPercentage
             )
         }
 
         if let volume = builtins["volume"]?.table {
-            let style = try parseBuiltinStyle(from: volume, path: "builtins.volume", fallback: builtinVolume.style)
+            let style = try parseBuiltinStyle(
+                from: volume,
+                path: "builtins.volume",
+                fallback: builtinVolume.style
+            )
 
             builtinVolume = VolumeBuiltinConfig(
                 style: style,
@@ -35,7 +48,11 @@ extension Config {
         }
 
         if let date = builtins["date"]?.table {
-            let style = try parseBuiltinStyle(from: date, path: "builtins.date", fallback: builtinDate.style)
+            let style = try parseBuiltinStyle(
+                from: date,
+                path: "builtins.date",
+                fallback: builtinDate.style
+            )
 
             builtinDate = DateBuiltinConfig(
                 style: style,
@@ -44,7 +61,11 @@ extension Config {
         }
 
         if let time = builtins["time"]?.table {
-            let style = try parseBuiltinStyle(from: time, path: "builtins.time", fallback: builtinTime.style)
+            let style = try parseBuiltinStyle(
+                from: time,
+                path: "builtins.time",
+                fallback: builtinTime.style
+            )
 
             builtinTime = TimeBuiltinConfig(
                 style: style,
@@ -53,7 +74,11 @@ extension Config {
         }
 
         if let calendar = builtins["calendar"]?.table {
-            let style = try parseBuiltinStyle(from: calendar, path: "builtins.calendar", fallback: builtinCalendar.style)
+            let style = try parseBuiltinStyle(
+                from: calendar,
+                path: "builtins.calendar",
+                fallback: builtinCalendar.style
+            )
 
             builtinCalendar = CalendarBuiltinConfig(
                 style: style,

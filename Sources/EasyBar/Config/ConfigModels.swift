@@ -7,6 +7,7 @@ extension Config {
         var position: String
         var order: Int
 
+        // Generic fallback icon.
         var icon: String
 
         var textColorHex: String?
@@ -24,7 +25,6 @@ extension Config {
 
     struct BatteryBuiltinConfig {
         var style: BuiltinWidgetStyle
-        var chargingIcon: String
         var unavailableText: String
         var showPercentage: Bool
     }
@@ -36,14 +36,11 @@ extension Config {
         var highIcon: String
         var showPercentage: Bool
 
-        // Range values.
         var minValue: Double
         var maxValue: Double
         var step: Double
 
         var expandToSliderOnHover: Bool
-
-        // Runtime width.
         var sliderWidth: Double
     }
 
@@ -66,8 +63,6 @@ extension Config {
         var layout: String
         var topFormat: String
         var bottomFormat: String
-
-        // Runtime values.
         var lineSpacing: Double
 
         var topTextColorHex: String?

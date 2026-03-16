@@ -11,7 +11,6 @@ final class BatteryNativeWidget: NativeWidget {
     private var isHovered = false
 
     func start() {
-        // Native battery updates.
         PowerEvents.shared.subscribePowerSource()
         SystemEvents.shared.subscribeSystemWake()
 
@@ -47,7 +46,6 @@ final class BatteryNativeWidget: NativeWidget {
             }
         }
 
-        // Matches the Lua routine-style refresh more closely.
         timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
             self?.publish()
         }
@@ -73,7 +71,6 @@ final class BatteryNativeWidget: NativeWidget {
         let style = snapshot.style
 
         let nodes: [WidgetNodeState] = [
-            // Root row.
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
@@ -102,7 +99,6 @@ final class BatteryNativeWidget: NativeWidget {
                 opacity: style.opacity
             ),
 
-            // Battery icon.
             WidgetNodeState(
                 id: "\(rootID)_icon",
                 root: rootID,
@@ -131,7 +127,6 @@ final class BatteryNativeWidget: NativeWidget {
                 opacity: 1
             ),
 
-            // Percentage label only on hover.
             WidgetNodeState(
                 id: "\(rootID)_label",
                 root: rootID,
@@ -179,7 +174,8 @@ final class BatteryNativeWidget: NativeWidget {
         else {
             return (
                 style,
-                "!",
+                // Use configured fallback icon if state cannot be read.
+                style.icon,
                 config.unavailableText,
                 config.style.textColorHex
             )
@@ -199,15 +195,13 @@ final class BatteryNativeWidget: NativeWidget {
 
             let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
             let isCharging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
-
-            // More reliable than only kIOPSIsChargingKey.
             let charging = powerSourceState == kIOPSACPowerValue || isCharging
 
             let text = config.showPercentage ? "\(percentage)%" : ""
 
             return (
                 style,
-                resolvedBatteryIcon(for: percentage, charging: charging),
+                resolvedBatteryIcon(for: percentage, charging: charging, fallback: style.icon),
                 text,
                 resolvedBatteryColor(for: percentage, charging: charging, fallback: config.style.textColorHex)
             )
@@ -215,13 +209,21 @@ final class BatteryNativeWidget: NativeWidget {
 
         return (
             style,
-            "!",
+            style.icon,
             config.unavailableText,
             config.style.textColorHex
         )
     }
 
-    private func resolvedBatteryIcon(for percentage: Int, charging: Bool) -> String {
+    private func resolvedBatteryIcon(
+        for percentage: Int,
+        charging: Bool,
+        fallback: String
+    ) -> String {
+        if percentage <= 0 && !fallback.isEmpty {
+            return fallback
+        }
+
         if charging {
             switch percentage {
             case 100:      return "󰂅"
@@ -258,7 +260,7 @@ final class BatteryNativeWidget: NativeWidget {
         charging: Bool,
         fallback: String?
     ) -> String? {
-        // User config wins.
+        // Explicit text_color wins.
         if let fallback, !fallback.isEmpty {
             return fallback
         }
@@ -266,25 +268,25 @@ final class BatteryNativeWidget: NativeWidget {
         if charging {
             switch percentage {
             case 70...100:
-                return "#8bd5ca" // green
+                return "#8bd5ca"
             case 50...69:
-                return "#eed49f" // yellow
+                return "#eed49f"
             case 30...49:
-                return "#f5a97f" // orange
+                return "#f5a97f"
             default:
-                return "#ed8796" // red
+                return "#ed8796"
             }
         }
 
         switch percentage {
         case 70...100:
-            return "#8bd5ca" // green
+            return "#8bd5ca"
         case 50...69:
-            return "#eed49f" // yellow
+            return "#eed49f"
         case 30...49:
-            return "#f5a97f" // orange
+            return "#f5a97f"
         default:
-            return "#ed8796" // red
+            return "#ed8796"
         }
     }
 }
