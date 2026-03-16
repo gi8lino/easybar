@@ -6,40 +6,9 @@ enum ConfigDefaults {
     static let barHeight: CGFloat = 36
     static let barPadding: CGFloat = 10
 
-    static let spaceSpacing: CGFloat = 8
-    static let hideEmptySpaces = true
-    static let spacePaddingX: CGFloat = 10
-    static let spacePaddingY: CGFloat = 6
-    static let spaceCornerRadius: CGFloat = 8
-    static let spaceFocusedScale: CGFloat = 1.0
-    static let spaceInactiveOpacity: Double = 0.85
-    static let maxIconsPerSpace = 4
-    static let showSpaceNumber = true
-    static let showSpaceIcons = true
-    static let showOnlyFocusedLabel = false
-    static let collapseInactiveSpaces = false
-    static let collapsedSpacePaddingX: CGFloat = 6
-    static let collapsedSpacePaddingY: CGFloat = 4
-
-    static let spaceTextSize: CGFloat = 12
-    static let spaceTextWeight = "semibold"
-    static let spaceFocusedTextHex = "#ffffff"
-    static let spaceInactiveTextHex = "#d0d0d0"
-
-    static let iconSize: CGFloat = 14
-    static let iconSpacing: CGFloat = 4
-    static let iconCornerRadius: CGFloat = 3
-    static let focusedIconSize: CGFloat = 18
-    static let iconBorderWidth: CGFloat = 1
-    static let focusedIconBorderWidth: CGFloat = 1
-
     static let barBackgroundHex = "#111111"
     static let barBorderHex = "#222222"
     static let textColorHex = "#ffffff"
-    static let spaceActiveBackgroundHex = "#2b2b2b"
-    static let spaceInactiveBackgroundHex = "#1a1a1a"
-    static let spaceActiveBorderHex = "#444444"
-    static let spaceInactiveBorderHex = "#00000000"
     static let focusedAppBorderHex = "#ff3b30"
 
     static let luaPath = "/usr/local/bin/lua"
@@ -63,8 +32,10 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        unavailableText: "n/a",
-        showPercentage: true
+        content: .init(
+            unavailableText: "n/a",
+            showPercentage: true
+        )
     )
 
     static let builtinSpaces = Config.SpacesBuiltinConfig(
@@ -74,14 +45,50 @@ enum ConfigDefaults {
             order: 10,
             icon: "",
             textColorHex: nil,
-            backgroundColorHex: nil,
-            borderColorHex: nil,
+            backgroundColorHex: "#00000000",
+            borderColorHex: "#00000000",
             borderWidth: 0,
             cornerRadius: 0,
             paddingX: 0,
             paddingY: 0,
             spacing: 0,
             opacity: 1
+        ),
+        layout: .init(
+            spacing: 8,
+            hideEmpty: true,
+            paddingX: 10,
+            paddingY: 6,
+            cornerRadius: 8,
+            focusedScale: 1.0,
+            inactiveOpacity: 0.85,
+            maxIcons: 4,
+            showNumber: true,
+            showIcons: true,
+            showOnlyFocusedLabel: false,
+            collapseInactive: false,
+            collapsedPaddingX: 6,
+            collapsedPaddingY: 4
+        ),
+        text: .init(
+            size: 12,
+            weight: "semibold",
+            focusedColorHex: "#ffffff",
+            inactiveColorHex: "#d0d0d0"
+        ),
+        icons: .init(
+            size: 14,
+            spacing: 4,
+            cornerRadius: 3,
+            focusedSize: 18,
+            borderWidth: 1,
+            focusedBorderWidth: 1
+        ),
+        colors: .init(
+            activeBackgroundHex: "#2b2b2b",
+            inactiveBackgroundHex: "#1a1a1a",
+            activeBorderHex: "#444444",
+            inactiveBorderHex: "#00000000"
         )
     )
 
@@ -101,11 +108,13 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        showIcon: true,
-        showName: true,
-        fallbackText: "No App",
-        iconSize: 14,
-        iconCornerRadius: 4
+        content: .init(
+            showIcon: true,
+            showName: true,
+            fallbackText: "No App",
+            iconSize: 14,
+            iconCornerRadius: 4
+        )
     )
 
     static let builtinVolume = Config.VolumeBuiltinConfig(
@@ -124,15 +133,19 @@ enum ConfigDefaults {
             spacing: 8,
             opacity: 1
         ),
-        mutedIcon: "🔇",
-        lowIcon: "🔉",
-        highIcon: "🔊",
-        showPercentage: true,
-        minValue: 0,
-        maxValue: 100,
-        step: 1,
-        expandToSliderOnHover: false,
-        sliderWidth: 140
+        content: .init(
+            mutedIcon: "🔇",
+            lowIcon: "🔉",
+            highIcon: "🔊",
+            showPercentage: true,
+            minValue: 0,
+            maxValue: 100,
+            step: 1
+        ),
+        slider: .init(
+            expandToSliderOnHover: false,
+            width: 140
+        )
     )
 
     static let builtinDate = Config.DateBuiltinConfig(
@@ -151,7 +164,9 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        format: "yyyy-MM-dd"
+        content: .init(
+            format: "yyyy-MM-dd"
+        )
     )
 
     static let builtinTime = Config.TimeBuiltinConfig(
@@ -170,7 +185,9 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        format: "HH:mm"
+        content: .init(
+            format: "HH:mm"
+        )
     )
 
     static let builtinCalendar = Config.CalendarBuiltinConfig(
@@ -189,29 +206,37 @@ enum ConfigDefaults {
             spacing: 6,
             opacity: 1
         ),
-        format: "EEE, MMM d",
-        days: 3,
-        emptyText: "No upcoming events",
-        layout: "item",
-        topFormat: "HH:mm",
-        bottomFormat: "MMMM, d",
-        lineSpacing: 0,
-        topTextColorHex: nil,
-        bottomTextColorHex: nil,
-        showBirthdays: true,
-        birthdaysTitle: "Birthdays",
-        birthdaysDateFormat: "dd.MM.yyyy",
-        birthdaysShowAge: false,
-        popupBackgroundColorHex: "#1a1a1a",
-        popupBorderColorHex: "#333333",
-        popupBorderWidth: 1,
-        popupCornerRadius: 10,
-        popupPaddingX: 10,
-        popupPaddingY: 8,
-        popupSpacing: 8,
-        popupItemIndent: 8,
-        popupSectionTitleColorHex: "#ffffff",
-        popupItemColorHex: "#d0d0d0",
-        popupEmptyColorHex: "#c0c0c0"
+        anchor: .init(
+            format: "EEE, MMM d",
+            layout: "item",
+            topFormat: "HH:mm",
+            bottomFormat: "MMMM, d",
+            lineSpacing: 0,
+            topTextColorHex: nil,
+            bottomTextColorHex: nil
+        ),
+        events: .init(
+            days: 3,
+            emptyText: "No upcoming events"
+        ),
+        birthdays: .init(
+            show: true,
+            title: "Birthdays",
+            dateFormat: "dd.MM.yyyy",
+            showAge: false
+        ),
+        popup: .init(
+            backgroundColorHex: "#1a1a1a",
+            borderColorHex: "#333333",
+            borderWidth: 1,
+            cornerRadius: 10,
+            paddingX: 10,
+            paddingY: 8,
+            spacing: 8,
+            itemIndent: 8,
+            sectionTitleColorHex: "#ffffff",
+            itemColorHex: "#d0d0d0",
+            emptyColorHex: "#c0c0c0"
+        )
     )
 }

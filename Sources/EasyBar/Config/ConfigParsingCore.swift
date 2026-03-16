@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 import TOMLKit
 
 extension Config {
@@ -23,67 +22,84 @@ extension Config {
         if let value = bar["padding"] {
             barPadding = CGFloat(try requiredInt(value, path: "bar.padding"))
         }
+
+        if let colors = bar["colors"]?.table {
+            if let value = colors["background"] {
+                barBackgroundHex = try requiredString(value, path: "bar.colors.background")
+            }
+
+            if let value = colors["border"] {
+                barBorderHex = try requiredString(value, path: "bar.colors.border")
+            }
+        }
+
+        // Backward compatibility.
+        if let value = bar["background_color"] {
+            barBackgroundHex = try requiredString(value, path: "bar.background_color")
+        }
+
+        if let value = bar["border_color"] {
+            barBorderHex = try requiredString(value, path: "bar.border_color")
+        }
     }
 
     func parseSpaces(from toml: TOMLTable) throws {
         guard let spaces = toml["spaces"]?.table else { return }
 
         if let value = spaces["spacing"] {
-            spaceSpacing = CGFloat(try requiredInt(value, path: "spaces.spacing"))
+            builtinSpaces.layout.spacing = Double(try requiredInt(value, path: "spaces.spacing"))
         }
 
         if let value = spaces["hide_empty"] {
-            hideEmptySpaces = try requiredBool(value, path: "spaces.hide_empty")
+            builtinSpaces.layout.hideEmpty = try requiredBool(value, path: "spaces.hide_empty")
         }
 
         if let value = spaces["padding_x"] {
-            spacePaddingX = CGFloat(try requiredInt(value, path: "spaces.padding_x"))
+            builtinSpaces.layout.paddingX = Double(try requiredInt(value, path: "spaces.padding_x"))
         }
 
         if let value = spaces["padding_y"] {
-            spacePaddingY = CGFloat(try requiredInt(value, path: "spaces.padding_y"))
+            builtinSpaces.layout.paddingY = Double(try requiredInt(value, path: "spaces.padding_y"))
         }
 
         if let value = spaces["corner_radius"] {
-            spaceCornerRadius = CGFloat(try requiredInt(value, path: "spaces.corner_radius"))
+            builtinSpaces.layout.cornerRadius = Double(try requiredInt(value, path: "spaces.corner_radius"))
         }
 
-        // Keep fractional scale supported.
         if let value = spaces["focused_scale"] {
-            spaceFocusedScale = CGFloat(try requiredNumber(value, path: "spaces.focused_scale"))
+            builtinSpaces.layout.focusedScale = try requiredNumber(value, path: "spaces.focused_scale")
         }
 
-        // Keep fractional opacity supported.
         if let value = spaces["inactive_opacity"] {
-            spaceInactiveOpacity = try requiredNumber(value, path: "spaces.inactive_opacity")
+            builtinSpaces.layout.inactiveOpacity = try requiredNumber(value, path: "spaces.inactive_opacity")
         }
 
         if let value = spaces["max_icons"] {
-            maxIconsPerSpace = try requiredInt(value, path: "spaces.max_icons")
+            builtinSpaces.layout.maxIcons = try requiredInt(value, path: "spaces.max_icons")
         }
 
         if let value = spaces["show_number"] {
-            showSpaceNumber = try requiredBool(value, path: "spaces.show_number")
+            builtinSpaces.layout.showNumber = try requiredBool(value, path: "spaces.show_number")
         }
 
         if let value = spaces["show_icons"] {
-            showSpaceIcons = try requiredBool(value, path: "spaces.show_icons")
+            builtinSpaces.layout.showIcons = try requiredBool(value, path: "spaces.show_icons")
         }
 
         if let value = spaces["show_only_focused_label"] {
-            showOnlyFocusedLabel = try requiredBool(value, path: "spaces.show_only_focused_label")
+            builtinSpaces.layout.showOnlyFocusedLabel = try requiredBool(value, path: "spaces.show_only_focused_label")
         }
 
         if let value = spaces["collapse_inactive"] {
-            collapseInactiveSpaces = try requiredBool(value, path: "spaces.collapse_inactive")
+            builtinSpaces.layout.collapseInactive = try requiredBool(value, path: "spaces.collapse_inactive")
         }
 
         if let value = spaces["collapsed_padding_x"] {
-            collapsedSpacePaddingX = CGFloat(try requiredInt(value, path: "spaces.collapsed_padding_x"))
+            builtinSpaces.layout.collapsedPaddingX = Double(try requiredInt(value, path: "spaces.collapsed_padding_x"))
         }
 
         if let value = spaces["collapsed_padding_y"] {
-            collapsedSpacePaddingY = CGFloat(try requiredInt(value, path: "spaces.collapsed_padding_y"))
+            builtinSpaces.layout.collapsedPaddingY = Double(try requiredInt(value, path: "spaces.collapsed_padding_y"))
         }
     }
 
@@ -91,19 +107,19 @@ extension Config {
         guard let spaceText = toml["space_text"]?.table else { return }
 
         if let value = spaceText["size"] {
-            spaceTextSize = CGFloat(try requiredInt(value, path: "space_text.size"))
+            builtinSpaces.text.size = Double(try requiredInt(value, path: "space_text.size"))
         }
 
         if let value = spaceText["weight"] {
-            spaceTextWeight = try requiredString(value, path: "space_text.weight")
+            builtinSpaces.text.weight = try requiredString(value, path: "space_text.weight")
         }
 
         if let value = spaceText["focused_color"] {
-            spaceFocusedTextHex = try requiredString(value, path: "space_text.focused_color")
+            builtinSpaces.text.focusedColorHex = try requiredString(value, path: "space_text.focused_color")
         }
 
         if let value = spaceText["inactive_color"] {
-            spaceInactiveTextHex = try requiredString(value, path: "space_text.inactive_color")
+            builtinSpaces.text.inactiveColorHex = try requiredString(value, path: "space_text.inactive_color")
         }
     }
 
@@ -111,59 +127,51 @@ extension Config {
         guard let icons = toml["icons"]?.table else { return }
 
         if let value = icons["size"] {
-            iconSize = CGFloat(try requiredInt(value, path: "icons.size"))
+            builtinSpaces.icons.size = Double(try requiredInt(value, path: "icons.size"))
         }
 
         if let value = icons["spacing"] {
-            iconSpacing = CGFloat(try requiredInt(value, path: "icons.spacing"))
+            builtinSpaces.icons.spacing = Double(try requiredInt(value, path: "icons.spacing"))
         }
 
         if let value = icons["corner_radius"] {
-            iconCornerRadius = CGFloat(try requiredInt(value, path: "icons.corner_radius"))
+            builtinSpaces.icons.cornerRadius = Double(try requiredInt(value, path: "icons.corner_radius"))
         }
 
         if let value = icons["focused_size"] {
-            focusedIconSize = CGFloat(try requiredInt(value, path: "icons.focused_size"))
+            builtinSpaces.icons.focusedSize = Double(try requiredInt(value, path: "icons.focused_size"))
         }
 
         if let value = icons["border_width"] {
-            iconBorderWidth = CGFloat(try requiredInt(value, path: "icons.border_width"))
+            builtinSpaces.icons.borderWidth = Double(try requiredInt(value, path: "icons.border_width"))
         }
 
         if let value = icons["focused_border_width"] {
-            focusedIconBorderWidth = CGFloat(try requiredInt(value, path: "icons.focused_border_width"))
+            builtinSpaces.icons.focusedBorderWidth = Double(try requiredInt(value, path: "icons.focused_border_width"))
         }
     }
 
     func parseColors(from toml: TOMLTable) throws {
         guard let colors = toml["colors"]?.table else { return }
 
-        if let value = colors["bar_background"] {
-            barBackgroundHex = try requiredString(value, path: "colors.bar_background")
-        }
-
-        if let value = colors["bar_border"] {
-            barBorderHex = try requiredString(value, path: "colors.bar_border")
-        }
-
         if let value = colors["text_color"] {
             textColorHex = try requiredString(value, path: "colors.text_color")
         }
 
         if let value = colors["space_active_background"] {
-            spaceActiveBackgroundHex = try requiredString(value, path: "colors.space_active_background")
+            builtinSpaces.colors.activeBackgroundHex = try requiredString(value, path: "colors.space_active_background")
         }
 
         if let value = colors["space_inactive_background"] {
-            spaceInactiveBackgroundHex = try requiredString(value, path: "colors.space_inactive_background")
+            builtinSpaces.colors.inactiveBackgroundHex = try requiredString(value, path: "colors.space_inactive_background")
         }
 
         if let value = colors["space_active_border"] {
-            spaceActiveBorderHex = try requiredString(value, path: "colors.space_active_border")
+            builtinSpaces.colors.activeBorderHex = try requiredString(value, path: "colors.space_active_border")
         }
 
         if let value = colors["space_inactive_border"] {
-            spaceInactiveBorderHex = try requiredString(value, path: "colors.space_inactive_border")
+            builtinSpaces.colors.inactiveBorderHex = try requiredString(value, path: "colors.space_inactive_border")
         }
 
         if let value = colors["focused_app_border"] {
@@ -191,88 +199,5 @@ extension Config {
                 string: try requiredString(value, path: "logging.file")
             ).expandingTildeInPath
         }
-    }
-
-    // MARK: - Type helpers
-
-    // Internal so builtins parsing can reuse them.
-    func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {
-        if let string = value.string {
-            return string
-        }
-
-        throw ConfigError.invalidType(
-            path: path,
-            expected: "string",
-            actual: describe(value)
-        )
-    }
-
-    func requiredBool(_ value: any TOMLValueConvertible, path: String) throws -> Bool {
-        if let bool = value.bool {
-            return bool
-        }
-
-        throw ConfigError.invalidType(
-            path: path,
-            expected: "bool",
-            actual: describe(value)
-        )
-    }
-
-    func requiredInt(_ value: any TOMLValueConvertible, path: String) throws -> Int {
-        if let int = value.int {
-            return int
-        }
-
-        throw ConfigError.invalidType(
-            path: path,
-            expected: "integer",
-            actual: describe(value)
-        )
-    }
-
-    func requiredNumber(_ value: any TOMLValueConvertible, path: String) throws -> Double {
-        if let double = value.double {
-            return double
-        }
-
-        if let int = value.int {
-            return Double(int)
-        }
-
-        throw ConfigError.invalidType(
-            path: path,
-            expected: "number",
-            actual: describe(value)
-        )
-    }
-
-    func describe(_ value: any TOMLValueConvertible) -> String {
-        if let string = value.string {
-            return "string(\(string.debugDescription))"
-        }
-
-        if let int = value.int {
-            return "integer(\(int))"
-        }
-
-        if let double = value.double {
-            return "number(\(double))"
-        }
-
-        if let bool = value.bool {
-            return "bool(\(bool))"
-        }
-
-        if value.array != nil {
-            return "array"
-        }
-
-        if value.table != nil {
-            return "table"
-        }
-
-        return "unknown"
     }
 }

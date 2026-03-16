@@ -1,14 +1,191 @@
 [paths]
 widgets = "~/.config/easybar/widgets"
 
+[logging]
+enabled = true
+file = "/tmp/easybar.log"
+
 [bar]
-height = 36
+height = 32
 padding = 10
 
-[spaces]
+[bar.colors]
+bar_background = "#111111"
+bar_border = "#222222"
+text_color = "#ffffff"
+focused_app_border = "#00000000"
+
+[lua]
+path = "/usr/local/bin/lua"
+
+[builtins.battery.style]
+enabled = true
+position = "right"
+order = 10
+icon = "🔋" # fallback only
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.battery.content]
+show_percentage = true
+unavailable_text = "n/a"
+
+[builtins.volume.style]
+enabled = false
+position = "right"
+order = 20
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 8
+opacity = 1.0
+
+[builtins.volume.content]
+muted_icon = "🔇"
+low_icon = "🔉"
+high_icon = "🔊"
+show_percentage = true
+min = 0
+max = 100
+step = 1
+
+[builtins.volume.slider]
+expand_to_slider_on_hover = true
+width = 80
+
+[builtins.date.style]
+enabled = false
+position = "right"
+order = 30
+icon = "📅"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.date.content]
+format = "yyyy-MM-dd"
+
+[builtins.time.style]
+enabled = false
+position = "right"
+order = 40
+icon = "🕒"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.time.content]
+format = "HH:mm"
+
+[builtins.calendar.style]
+enabled = true
+position = "right"
+order = 50
+icon = ""
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.calendar.anchor]
+layout = "stack"
+format = "EEE, MMM d"
+top_format = "HH:mm"
+bottom_format = "d. MMM"
+line_spacing = 0
+top_text_color = "#ffffff"
+bottom_text_color = "#d0d0d0"
+
+[builtins.calendar.events]
+days = 3
+empty_text = "No upcoming events"
+
+[builtins.calendar.birthdays]
+show = true
+title = "Birthdays"
+date_format = "dd.MM.yyyy"
+show_age = false
+
+[builtins.calendar.popup]
+background_color = "#111111"
+border_color = "#444444"
+border_width = 1
+corner_radius = 10
+padding_x = 10
+padding_y = 8
+spacing = 8
+item_indent = 8
+section_title_color = "#ffffff"
+item_color = "#d0d0d0"
+empty_color = "#c0c0c0"
+
+[builtins.front_app.style]
+enabled = true
+position = "left"
+order = 15
+icon = "􀈔"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.front_app.content]
+show_icon = true
+show_name = true
+fallback_text = "No App"
+icon_size = 14
+icon_corner_radius = 4
+
+[builtins.spaces.style]
+enabled = true
+position = "left"
+order = 10
+background_color = "#00000000"
+border_color = "#00000000"
+border_width = 0
+corner_radius = 0
+padding_x = 0
+padding_y = 0
+spacing = 0
+opacity = 1.0
+
+[builtins.spaces.layout]
 spacing = 8
 hide_empty = true
-padding_x = 10
+padding_x = 8
 padding_y = 6
 corner_radius = 8
 focused_scale = 1.02
@@ -21,13 +198,13 @@ collapse_inactive = false
 collapsed_padding_x = 6
 collapsed_padding_y = 4
 
-[space_text]
+[builtins.spaces.text]
 size = 12
 weight = "semibold"
 focused_color = "#ffffff"
 inactive_color = "#d0d0d0"
 
-[icons]
+[builtins.spaces.icons]
 size = 20
 spacing = 4
 corner_radius = 3
@@ -35,142 +212,8 @@ focused_size = 28
 border_width = 1
 focused_border_width = 1
 
-[colors]
-bar_background = "#111111"
-bar_border = "#222222"
-text_color = "#ffffff"
-space_active_background = "#2b2b2b"
-space_inactive_background = "#1a1a1a"
-space_active_border = "#444444"
-space_inactive_border = "#00000000"
-focused_app_border = "#00000000"
-
-[lua]
-path = "/usr/local/bin/lua"
-
-
-[builtins.battery]
-enabled = true
-position = "right"
-order = 10
-icon = "🔋"
-charging_icon = "⚡️"
-show_percentage = true
-unavailable_text = "n/a"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.volume]
-enabled = true
-position = "right"
-order = 20
-muted_icon = "🔇"
-low_icon = "🔉"
-high_icon = "🔊"
-show_percentage = true
-min = 0
-max = 100
-step = 1
-expand_to_slider_on_hover = true
-slider_width = 80
-
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 8
-opacity = 1.0
-
-[builtins.date]
-enabled = false
-position = "right"
-order = 30
-icon = "📅"
-format = "yyyy-MM-dd"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.time]
-enabled = false
-position = "right"
-order = 40
-icon = "🕒"
-format = "HH:mm"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-
-[builtins.calendar]
-enabled = true
-position = "right"
-order = 50
-icon = ""
-
-# item | stack | inline
-layout = "stack"
-
-# used by layout = "item"
-format = "EEE, MMM d"
-
-# used by layout = "stack" or "inline"
-top_format = "HH:mm"
-bottom_format = "d. MMM"
-line_spacing = 0
-top_text_color = "#ffffff"
-bottom_text_color = "#d0d0d0"
-
-days = 3
-
-show_birthdays = true
-birthdays_title = "Birthdays"
-birthdays_date_format = "dd.MM.yyyy"
-birthdays_show_age = false
-
-empty_text = "No upcoming events"
-
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-popup_background_color = "#111111"
-popup_border_color = "#444444"
-popup_border_width = 1
-popup_corner_radius = 10
-popup_padding_x = 10
-popup_padding_y = 8
-popup_spacing = 8
-popup_item_indent = 8
-popup_section_title_color = "#ffffff"
-popup_item_color = "#d0d0d0"
-popup_empty_color = "#c0c0c0"
-
+[builtins.spaces.colors]
+active_background = "#2b2b2b"
+inactive_background = "#1a1a1a"
+active_border = "#444444"
+inactive_border = "#00000000"

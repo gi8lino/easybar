@@ -9,40 +9,9 @@ final class Config {
     var barHeight: CGFloat = ConfigDefaults.barHeight
     var barPadding: CGFloat = ConfigDefaults.barPadding
 
-    var spaceSpacing: CGFloat = ConfigDefaults.spaceSpacing
-    var hideEmptySpaces: Bool = ConfigDefaults.hideEmptySpaces
-    var spacePaddingX: CGFloat = ConfigDefaults.spacePaddingX
-    var spacePaddingY: CGFloat = ConfigDefaults.spacePaddingY
-    var spaceCornerRadius: CGFloat = ConfigDefaults.spaceCornerRadius
-    var spaceFocusedScale: CGFloat = ConfigDefaults.spaceFocusedScale
-    var spaceInactiveOpacity: Double = ConfigDefaults.spaceInactiveOpacity
-    var maxIconsPerSpace: Int = ConfigDefaults.maxIconsPerSpace
-    var showSpaceNumber: Bool = ConfigDefaults.showSpaceNumber
-    var showSpaceIcons: Bool = ConfigDefaults.showSpaceIcons
-    var showOnlyFocusedLabel: Bool = ConfigDefaults.showOnlyFocusedLabel
-    var collapseInactiveSpaces: Bool = ConfigDefaults.collapseInactiveSpaces
-    var collapsedSpacePaddingX: CGFloat = ConfigDefaults.collapsedSpacePaddingX
-    var collapsedSpacePaddingY: CGFloat = ConfigDefaults.collapsedSpacePaddingY
-
-    var spaceTextSize: CGFloat = ConfigDefaults.spaceTextSize
-    var spaceTextWeight: String = ConfigDefaults.spaceTextWeight
-    var spaceFocusedTextHex: String = ConfigDefaults.spaceFocusedTextHex
-    var spaceInactiveTextHex: String = ConfigDefaults.spaceInactiveTextHex
-
-    var iconSize: CGFloat = ConfigDefaults.iconSize
-    var iconSpacing: CGFloat = ConfigDefaults.iconSpacing
-    var iconCornerRadius: CGFloat = ConfigDefaults.iconCornerRadius
-    var focusedIconSize: CGFloat = ConfigDefaults.focusedIconSize
-    var iconBorderWidth: CGFloat = ConfigDefaults.iconBorderWidth
-    var focusedIconBorderWidth: CGFloat = ConfigDefaults.focusedIconBorderWidth
-
     var barBackgroundHex: String = ConfigDefaults.barBackgroundHex
     var barBorderHex: String = ConfigDefaults.barBorderHex
     var textColorHex: String = ConfigDefaults.textColorHex
-    var spaceActiveBackgroundHex: String = ConfigDefaults.spaceActiveBackgroundHex
-    var spaceInactiveBackgroundHex: String = ConfigDefaults.spaceInactiveBackgroundHex
-    var spaceActiveBorderHex: String = ConfigDefaults.spaceActiveBorderHex
-    var spaceInactiveBorderHex: String = ConfigDefaults.spaceInactiveBorderHex
     var focusedAppBorderHex: String = ConfigDefaults.focusedAppBorderHex
 
     var luaPath: String = ConfigDefaults.luaPath
@@ -104,6 +73,149 @@ final class Config {
             .path
     }
 
+    // MARK: - Spaces compatibility accessors
+
+    // Keep old runtime call-sites unchanged.
+    var spaceSpacing: CGFloat {
+        get { CGFloat(builtinSpaces.layout.spacing) }
+        set { builtinSpaces.layout.spacing = Double(newValue) }
+    }
+
+    var hideEmptySpaces: Bool {
+        get { builtinSpaces.layout.hideEmpty }
+        set { builtinSpaces.layout.hideEmpty = newValue }
+    }
+
+    var spacePaddingX: CGFloat {
+        get { CGFloat(builtinSpaces.layout.paddingX) }
+        set { builtinSpaces.layout.paddingX = Double(newValue) }
+    }
+
+    var spacePaddingY: CGFloat {
+        get { CGFloat(builtinSpaces.layout.paddingY) }
+        set { builtinSpaces.layout.paddingY = Double(newValue) }
+    }
+
+    var spaceCornerRadius: CGFloat {
+        get { CGFloat(builtinSpaces.layout.cornerRadius) }
+        set { builtinSpaces.layout.cornerRadius = Double(newValue) }
+    }
+
+    var spaceFocusedScale: CGFloat {
+        get { CGFloat(builtinSpaces.layout.focusedScale) }
+        set { builtinSpaces.layout.focusedScale = Double(newValue) }
+    }
+
+    var spaceInactiveOpacity: Double {
+        get { builtinSpaces.layout.inactiveOpacity }
+        set { builtinSpaces.layout.inactiveOpacity = newValue }
+    }
+
+    var maxIconsPerSpace: Int {
+        get { builtinSpaces.layout.maxIcons }
+        set { builtinSpaces.layout.maxIcons = newValue }
+    }
+
+    var showSpaceNumber: Bool {
+        get { builtinSpaces.layout.showNumber }
+        set { builtinSpaces.layout.showNumber = newValue }
+    }
+
+    var showSpaceIcons: Bool {
+        get { builtinSpaces.layout.showIcons }
+        set { builtinSpaces.layout.showIcons = newValue }
+    }
+
+    var showOnlyFocusedLabel: Bool {
+        get { builtinSpaces.layout.showOnlyFocusedLabel }
+        set { builtinSpaces.layout.showOnlyFocusedLabel = newValue }
+    }
+
+    var collapseInactiveSpaces: Bool {
+        get { builtinSpaces.layout.collapseInactive }
+        set { builtinSpaces.layout.collapseInactive = newValue }
+    }
+
+    var collapsedSpacePaddingX: CGFloat {
+        get { CGFloat(builtinSpaces.layout.collapsedPaddingX) }
+        set { builtinSpaces.layout.collapsedPaddingX = Double(newValue) }
+    }
+
+    var collapsedSpacePaddingY: CGFloat {
+        get { CGFloat(builtinSpaces.layout.collapsedPaddingY) }
+        set { builtinSpaces.layout.collapsedPaddingY = Double(newValue) }
+    }
+
+    var spaceTextSize: CGFloat {
+        get { CGFloat(builtinSpaces.text.size) }
+        set { builtinSpaces.text.size = Double(newValue) }
+    }
+
+    var spaceTextWeight: String {
+        get { builtinSpaces.text.weight }
+        set { builtinSpaces.text.weight = newValue }
+    }
+
+    var spaceFocusedTextHex: String {
+        get { builtinSpaces.text.focusedColorHex }
+        set { builtinSpaces.text.focusedColorHex = newValue }
+    }
+
+    var spaceInactiveTextHex: String {
+        get { builtinSpaces.text.inactiveColorHex }
+        set { builtinSpaces.text.inactiveColorHex = newValue }
+    }
+
+    var iconSize: CGFloat {
+        get { CGFloat(builtinSpaces.icons.size) }
+        set { builtinSpaces.icons.size = Double(newValue) }
+    }
+
+    var iconSpacing: CGFloat {
+        get { CGFloat(builtinSpaces.icons.spacing) }
+        set { builtinSpaces.icons.spacing = Double(newValue) }
+    }
+
+    var iconCornerRadius: CGFloat {
+        get { CGFloat(builtinSpaces.icons.cornerRadius) }
+        set { builtinSpaces.icons.cornerRadius = Double(newValue) }
+    }
+
+    var focusedIconSize: CGFloat {
+        get { CGFloat(builtinSpaces.icons.focusedSize) }
+        set { builtinSpaces.icons.focusedSize = Double(newValue) }
+    }
+
+    var iconBorderWidth: CGFloat {
+        get { CGFloat(builtinSpaces.icons.borderWidth) }
+        set { builtinSpaces.icons.borderWidth = Double(newValue) }
+    }
+
+    var focusedIconBorderWidth: CGFloat {
+        get { CGFloat(builtinSpaces.icons.focusedBorderWidth) }
+        set { builtinSpaces.icons.focusedBorderWidth = Double(newValue) }
+    }
+
+    var spaceActiveBackgroundHex: String {
+        get { builtinSpaces.colors.activeBackgroundHex }
+        set { builtinSpaces.colors.activeBackgroundHex = newValue }
+    }
+
+    var spaceInactiveBackgroundHex: String {
+        get { builtinSpaces.colors.inactiveBackgroundHex }
+        set { builtinSpaces.colors.inactiveBackgroundHex = newValue }
+    }
+
+    var spaceActiveBorderHex: String {
+        get { builtinSpaces.colors.activeBorderHex }
+        set { builtinSpaces.colors.activeBorderHex = newValue }
+    }
+
+    var spaceInactiveBorderHex: String {
+        get { builtinSpaces.colors.inactiveBorderHex }
+        set { builtinSpaces.colors.inactiveBorderHex = newValue }
+    }
+
     /// Returns the configured font weight for space labels.
     var resolvedSpaceTextWeight: Font.Weight {
         switch spaceTextWeight.lowercased() {
@@ -131,40 +243,9 @@ final class Config {
         barHeight = ConfigDefaults.barHeight
         barPadding = ConfigDefaults.barPadding
 
-        spaceSpacing = ConfigDefaults.spaceSpacing
-        hideEmptySpaces = ConfigDefaults.hideEmptySpaces
-        spacePaddingX = ConfigDefaults.spacePaddingX
-        spacePaddingY = ConfigDefaults.spacePaddingY
-        spaceCornerRadius = ConfigDefaults.spaceCornerRadius
-        spaceFocusedScale = ConfigDefaults.spaceFocusedScale
-        spaceInactiveOpacity = ConfigDefaults.spaceInactiveOpacity
-        maxIconsPerSpace = ConfigDefaults.maxIconsPerSpace
-        showSpaceNumber = ConfigDefaults.showSpaceNumber
-        showSpaceIcons = ConfigDefaults.showSpaceIcons
-        showOnlyFocusedLabel = ConfigDefaults.showOnlyFocusedLabel
-        collapseInactiveSpaces = ConfigDefaults.collapseInactiveSpaces
-        collapsedSpacePaddingX = ConfigDefaults.collapsedSpacePaddingX
-        collapsedSpacePaddingY = ConfigDefaults.collapsedSpacePaddingY
-
-        spaceTextSize = ConfigDefaults.spaceTextSize
-        spaceTextWeight = ConfigDefaults.spaceTextWeight
-        spaceFocusedTextHex = ConfigDefaults.spaceFocusedTextHex
-        spaceInactiveTextHex = ConfigDefaults.spaceInactiveTextHex
-
-        iconSize = ConfigDefaults.iconSize
-        iconSpacing = ConfigDefaults.iconSpacing
-        iconCornerRadius = ConfigDefaults.iconCornerRadius
-        focusedIconSize = ConfigDefaults.focusedIconSize
-        iconBorderWidth = ConfigDefaults.iconBorderWidth
-        focusedIconBorderWidth = ConfigDefaults.focusedIconBorderWidth
-
         barBackgroundHex = ConfigDefaults.barBackgroundHex
         barBorderHex = ConfigDefaults.barBorderHex
         textColorHex = ConfigDefaults.textColorHex
-        spaceActiveBackgroundHex = ConfigDefaults.spaceActiveBackgroundHex
-        spaceInactiveBackgroundHex = ConfigDefaults.spaceInactiveBackgroundHex
-        spaceActiveBorderHex = ConfigDefaults.spaceActiveBorderHex
-        spaceInactiveBorderHex = ConfigDefaults.spaceInactiveBorderHex
         focusedAppBorderHex = ConfigDefaults.focusedAppBorderHex
 
         luaPath = ConfigDefaults.luaPath
@@ -185,48 +266,13 @@ final class Config {
         ConfigSnapshot(
             barHeight: barHeight,
             barPadding: barPadding,
-
-            spaceSpacing: spaceSpacing,
-            hideEmptySpaces: hideEmptySpaces,
-            spacePaddingX: spacePaddingX,
-            spacePaddingY: spacePaddingY,
-            spaceCornerRadius: spaceCornerRadius,
-            spaceFocusedScale: spaceFocusedScale,
-            spaceInactiveOpacity: spaceInactiveOpacity,
-            maxIconsPerSpace: maxIconsPerSpace,
-            showSpaceNumber: showSpaceNumber,
-            showSpaceIcons: showSpaceIcons,
-            showOnlyFocusedLabel: showOnlyFocusedLabel,
-            collapseInactiveSpaces: collapseInactiveSpaces,
-            collapsedSpacePaddingX: collapsedSpacePaddingX,
-            collapsedSpacePaddingY: collapsedSpacePaddingY,
-
-            spaceTextSize: spaceTextSize,
-            spaceTextWeight: spaceTextWeight,
-            spaceFocusedTextHex: spaceFocusedTextHex,
-            spaceInactiveTextHex: spaceInactiveTextHex,
-
-            iconSize: iconSize,
-            iconSpacing: iconSpacing,
-            iconCornerRadius: iconCornerRadius,
-            focusedIconSize: focusedIconSize,
-            iconBorderWidth: iconBorderWidth,
-            focusedIconBorderWidth: focusedIconBorderWidth,
-
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
             textColorHex: textColorHex,
-            spaceActiveBackgroundHex: spaceActiveBackgroundHex,
-            spaceInactiveBackgroundHex: spaceInactiveBackgroundHex,
-            spaceActiveBorderHex: spaceActiveBorderHex,
-            spaceInactiveBorderHex: spaceInactiveBorderHex,
             focusedAppBorderHex: focusedAppBorderHex,
-
             luaPath: luaPath,
-
             logToFile: logToFile,
             logFilePath: logFilePath,
-
             builtinBattery: builtinBattery,
             builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
@@ -234,7 +280,6 @@ final class Config {
             builtinDate: builtinDate,
             builtinTime: builtinTime,
             builtinCalendar: builtinCalendar,
-
             widgetsPath: widgetsPath
         )
     }
@@ -243,40 +288,9 @@ final class Config {
         barHeight = snapshot.barHeight
         barPadding = snapshot.barPadding
 
-        spaceSpacing = snapshot.spaceSpacing
-        hideEmptySpaces = snapshot.hideEmptySpaces
-        spacePaddingX = snapshot.spacePaddingX
-        spacePaddingY = snapshot.spacePaddingY
-        spaceCornerRadius = snapshot.spaceCornerRadius
-        spaceFocusedScale = snapshot.spaceFocusedScale
-        spaceInactiveOpacity = snapshot.spaceInactiveOpacity
-        maxIconsPerSpace = snapshot.maxIconsPerSpace
-        showSpaceNumber = snapshot.showSpaceNumber
-        showSpaceIcons = snapshot.showSpaceIcons
-        showOnlyFocusedLabel = snapshot.showOnlyFocusedLabel
-        collapseInactiveSpaces = snapshot.collapseInactiveSpaces
-        collapsedSpacePaddingX = snapshot.collapsedSpacePaddingX
-        collapsedSpacePaddingY = snapshot.collapsedSpacePaddingY
-
-        spaceTextSize = snapshot.spaceTextSize
-        spaceTextWeight = snapshot.spaceTextWeight
-        spaceFocusedTextHex = snapshot.spaceFocusedTextHex
-        spaceInactiveTextHex = snapshot.spaceInactiveTextHex
-
-        iconSize = snapshot.iconSize
-        iconSpacing = snapshot.iconSpacing
-        iconCornerRadius = snapshot.iconCornerRadius
-        focusedIconSize = snapshot.focusedIconSize
-        iconBorderWidth = snapshot.iconBorderWidth
-        focusedIconBorderWidth = snapshot.focusedIconBorderWidth
-
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex
         textColorHex = snapshot.textColorHex
-        spaceActiveBackgroundHex = snapshot.spaceActiveBackgroundHex
-        spaceInactiveBackgroundHex = snapshot.spaceInactiveBackgroundHex
-        spaceActiveBorderHex = snapshot.spaceActiveBorderHex
-        spaceInactiveBorderHex = snapshot.spaceInactiveBorderHex
         focusedAppBorderHex = snapshot.focusedAppBorderHex
 
         luaPath = snapshot.luaPath
