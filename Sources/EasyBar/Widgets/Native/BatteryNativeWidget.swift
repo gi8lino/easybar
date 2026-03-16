@@ -1,6 +1,7 @@
 import Foundation
 import IOKit.ps
 
+/// Native battery widget with hover-to-show percentage behavior.
 final class BatteryNativeWidget: NativeWidget {
 
     let rootID = "builtin_battery"
@@ -10,6 +11,7 @@ final class BatteryNativeWidget: NativeWidget {
 
     private var isHovered = false
 
+    /// Starts the battery widget and subscribes to relevant events.
     func start() {
         PowerEvents.shared.subscribePowerSource()
         SystemEvents.shared.subscribeSystemWake()
@@ -53,6 +55,7 @@ final class BatteryNativeWidget: NativeWidget {
         publish()
     }
 
+    /// Stops the widget and clears its rendered nodes.
     func stop() {
         if let eventObserver {
             NotificationCenter.default.removeObserver(eventObserver)
@@ -66,9 +69,11 @@ final class BatteryNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
+    /// Publishes the current battery widget tree.
     private func publish() {
         let snapshot = readBatterySnapshot()
         let style = snapshot.style
+        let config = Config.shared.builtinBattery
 
         let nodes: [WidgetNodeState] = [
             WidgetNodeState(
@@ -83,6 +88,10 @@ final class BatteryNativeWidget: NativeWidget {
                 color: nil,
                 visible: true,
                 role: nil,
+                imagePath: nil,
+                imageSize: nil,
+                imageCornerRadius: nil,
+                fontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -91,7 +100,7 @@ final class BatteryNativeWidget: NativeWidget {
                 lineWidth: nil,
                 paddingX: style.paddingX,
                 paddingY: style.paddingY,
-                spacing: style.spacing,
+                spacing: style.spacing, // Controls gap between icon and label.
                 backgroundColor: style.backgroundColorHex,
                 borderColor: style.borderColorHex,
                 borderWidth: style.borderWidth,
@@ -111,6 +120,10 @@ final class BatteryNativeWidget: NativeWidget {
                 color: snapshot.colorHex,
                 visible: true,
                 role: nil,
+                imagePath: nil,
+                imageSize: nil,
+                imageCornerRadius: nil,
+                fontSize: config.iconSize, // Battery icon font size.
                 value: nil,
                 min: nil,
                 max: nil,
@@ -119,7 +132,7 @@ final class BatteryNativeWidget: NativeWidget {
                 lineWidth: nil,
                 paddingX: 0,
                 paddingY: 0,
-                spacing: 4,
+                spacing: 0,
                 backgroundColor: nil,
                 borderColor: nil,
                 borderWidth: nil,
@@ -139,6 +152,10 @@ final class BatteryNativeWidget: NativeWidget {
                 color: snapshot.colorHex,
                 visible: isHovered && !snapshot.text.isEmpty,
                 role: nil,
+                imagePath: nil,
+                imageSize: nil,
+                imageCornerRadius: nil,
+                fontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -147,7 +164,7 @@ final class BatteryNativeWidget: NativeWidget {
                 lineWidth: nil,
                 paddingX: 0,
                 paddingY: 0,
-                spacing: 4,
+                spacing: 0,
                 backgroundColor: nil,
                 borderColor: nil,
                 borderWidth: nil,
@@ -159,6 +176,7 @@ final class BatteryNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: nodes)
     }
 
+    /// Reads the current battery state and resolves icon/text/colors.
     private func readBatterySnapshot() -> (
         style: Config.BuiltinWidgetStyle,
         icon: String,
@@ -215,6 +233,7 @@ final class BatteryNativeWidget: NativeWidget {
         )
     }
 
+    /// Resolves the displayed battery icon for the current state.
     private func resolvedBatteryIcon(
         for percentage: Int,
         charging: Bool,
@@ -255,6 +274,7 @@ final class BatteryNativeWidget: NativeWidget {
         }
     }
 
+    /// Resolves the battery color, honoring explicit text color overrides.
     private func resolvedBatteryColor(
         for percentage: Int,
         charging: Bool,

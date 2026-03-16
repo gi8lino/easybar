@@ -57,6 +57,7 @@ extension Config {
         struct Content {
             var unavailableText: String
             var showPercentage: Bool
+            var iconSize: Double
         }
 
         var style: BuiltinWidgetStyle
@@ -72,6 +73,11 @@ extension Config {
             get { content.showPercentage }
             set { content.showPercentage = newValue }
         }
+
+        var iconSize: Double {
+            get { content.iconSize }
+            set { content.iconSize = newValue }
+        }
     }
 
     struct SpacesBuiltinConfig {
@@ -80,17 +86,10 @@ extension Config {
             var hideEmpty: Bool
             var paddingX: Double
             var paddingY: Double
-
-            // Outer margin around the whole spaces widget.
             var marginX: Double
             var marginY: Double
-
-            // Default corner radius for inactive spaces.
             var cornerRadius: Double
-
-            // Corner radius for the active space.
             var focusedCornerRadius: Double
-
             var focusedScale: Double
             var inactiveOpacity: Double
             var maxIcons: Int

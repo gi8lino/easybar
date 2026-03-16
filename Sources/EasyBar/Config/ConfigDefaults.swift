@@ -5,6 +5,7 @@ enum ConfigDefaults {
 
     static let barHeight: CGFloat = 36
     static let barPadding: CGFloat = 10
+    static let barPaddingY: CGFloat = 0
 
     static let barBackgroundHex = "#111111"
     static let barBorderHex = "#222222"
@@ -54,12 +55,13 @@ enum ConfigDefaults {
             cornerRadius: 0,
             paddingX: 8,
             paddingY: 4,
-            spacing: 6,
+            spacing: 8, // Root row spacing between icon and label.
             opacity: 1
         ),
         content: .init(
             unavailableText: "n/a",
-            showPercentage: true
+            showPercentage: true,
+            iconSize: 16 // Font size of the battery icon node.
         )
     )
 

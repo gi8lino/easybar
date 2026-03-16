@@ -100,10 +100,12 @@ struct WidgetNodeView: View {
 
             if !node.icon.isEmpty {
                 Text(node.icon)
+                    .font(resolvedFont)
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
+                    .font(resolvedFont)
             }
         }
         .foregroundStyle(color(node.color))
@@ -299,6 +301,13 @@ struct WidgetNodeView: View {
         }
     }
 
+    /// Resolves the optional per-node font size.
+    private var resolvedFont: Font? {
+        guard let fontSize = node.fontSize else { return nil }
+        return .system(size: CGFloat(fontSize))
+    }
+
+    /// Resolves one hex color or falls back to the theme text color.
     private func color(_ hex: String?) -> Color {
         guard let hex, !hex.isEmpty else {
             return Theme.textColor
@@ -307,6 +316,7 @@ struct WidgetNodeView: View {
         return Color(hex: hex)
     }
 
+    /// Closes popups shortly after both anchor and popup lose hover.
     private func schedulePopupCloseCheck() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             if !anchorHovered && !popupHovered {

@@ -11,6 +11,7 @@ file = "~/Library/Logs/EasyBar.log" # Log file path used when logging is enabled
 [bar]
 height = 32 # Total height of the bar.
 padding = 10 # Horizontal left/right padding inside the bar.
+padding_y = 0 # Vertical top/bottom padding inside the bar.
 
 [bar.colors]
 background = "#111111" # Bar background color.
@@ -41,7 +42,7 @@ margin_x = 4 # Horizontal outer margin around the whole spaces row.
 margin_y = 8 # Vertical outer margin around the whole spaces row.
 
 corner_radius = 8 # Corner radius of inactive space pills.
-active_corner_radius = 18 # Corner radius of the focused space pill.
+focused_corner_radius = 18 # Corner radius of the focused space pill.
 
 focused_scale = 1.0 # Scale multiplier applied to the focused space pill.
 inactive_opacity = 0.85 # Opacity applied to inactive space pills.
@@ -118,12 +119,13 @@ border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 6 # Gap between icon and text.
+spacing = 10 # Gap between the battery icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.battery.content]
 show_percentage = true # Shows the battery percentage text.
 unavailable_text = "n/a" # Fallback text when battery data is unavailable.
+icon_size = 18 # Font size of the battery icon.
 
 [builtins.volume.style]
 enabled = false # Shows or hides the volume widget.

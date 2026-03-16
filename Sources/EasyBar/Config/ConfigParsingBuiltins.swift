@@ -3,7 +3,7 @@ import TOMLKit
 
 extension Config {
 
-    /// Parses all builtin widget sections.
+    /// Parses all built-in widget sections.
     func parseBuiltins(from toml: TOMLTable) throws {
         guard let builtins = toml["builtins"]?.table else { return }
 
@@ -17,7 +17,7 @@ extension Config {
         try parseCalendarBuiltin(from: builtins)
     }
 
-    /// Parses the builtin CPU widget.
+    /// Parses the built-in CPU widget.
     private func parseCPUBuiltin(from builtins: TOMLTable) throws {
         guard let cpu = builtins["cpu"]?.table else { return }
 
@@ -58,7 +58,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin battery widget.
+    /// Parses the built-in battery widget.
     private func parseBatteryBuiltin(from builtins: TOMLTable) throws {
         guard let battery = builtins["battery"]?.table else { return }
 
@@ -81,16 +81,22 @@ extension Config {
             path: "builtins.battery.content.show_percentage"
         ) ?? builtinBattery.showPercentage
 
+        let iconSize = try optionalNumber(
+            contentTable["icon_size"],
+            path: "builtins.battery.content.icon_size"
+        ) ?? builtinBattery.iconSize
+
         builtinBattery = BatteryBuiltinConfig(
             style: style,
             content: .init(
                 unavailableText: unavailableText,
-                showPercentage: showPercentage
+                showPercentage: showPercentage,
+                iconSize: iconSize
             )
         )
     }
 
-    /// Parses the builtin spaces widget.
+    /// Parses the built-in spaces widget.
     private func parseSpacesBuiltin(from builtins: TOMLTable) throws {
         guard let spaces = builtins["spaces"]?.table else { return }
 
@@ -136,8 +142,8 @@ extension Config {
                 path: "builtins.spaces.layout.corner_radius"
             ) ?? builtinSpaces.layout.cornerRadius,
             focusedCornerRadius: try optionalNumber(
-                layoutTable["focused_corner_radius"],
-                path: "builtins.spaces.layout.focused_corner_radius"
+                layoutTable["active_corner_radius"],
+                path: "builtins.spaces.layout.active_corner_radius"
             ) ?? builtinSpaces.layout.focusedCornerRadius,
             focusedScale: try optionalNumber(
                 layoutTable["focused_scale"],
@@ -251,7 +257,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin front app widget.
+    /// Parses the built-in front app widget.
     private func parseFrontAppBuiltin(from builtins: TOMLTable) throws {
         guard let frontApp = builtins["front_app"]?.table else { return }
 
@@ -301,7 +307,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin volume widget.
+    /// Parses the built-in volume widget.
     private func parseVolumeBuiltin(from builtins: TOMLTable) throws {
         guard let volume = builtins["volume"]?.table else { return }
 
@@ -364,7 +370,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin date widget.
+    /// Parses the built-in date widget.
     private func parseDateBuiltin(from builtins: TOMLTable) throws {
         guard let date = builtins["date"]?.table else { return }
 
@@ -388,7 +394,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin time widget.
+    /// Parses the built-in time widget.
     private func parseTimeBuiltin(from builtins: TOMLTable) throws {
         guard let time = builtins["time"]?.table else { return }
 
@@ -412,7 +418,7 @@ extension Config {
         )
     }
 
-    /// Parses the builtin calendar widget.
+    /// Parses the built-in calendar widget.
     private func parseCalendarBuiltin(from builtins: TOMLTable) throws {
         guard let calendar = builtins["calendar"]?.table else { return }
 

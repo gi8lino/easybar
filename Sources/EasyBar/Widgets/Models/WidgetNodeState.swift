@@ -19,6 +19,9 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var imageSize: Double?
     var imageCornerRadius: Double?
 
+    // Optional per-node font size for text/icon rendering.
+    var fontSize: Double?
+
     var value: Double?
     var min: Double?
     var max: Double?
