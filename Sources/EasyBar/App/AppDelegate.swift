@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var barWindowController: BarWindowController?
     private let aeroSpaceService = AeroSpaceService.shared
     private let socketServer = SocketServer()
+    private let configFileWatcher = ConfigFileWatcher.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -16,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         aeroSpaceService.start()
         WidgetRunner.shared.start()
         NativeWidgetRegistry.shared.start()
+        configFileWatcher.start()
 
         socketServer.start { [weak self] command in
             switch command {
@@ -34,12 +36,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Config.shared.reload()
                 WidgetRunner.shared.reload()
                 NativeWidgetRegistry.shared.reload()
+                self?.configFileWatcher.restart()
                 self?.aeroSpaceService.triggerRefresh()
             }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        configFileWatcher.stop()
         NativeWidgetRegistry.shared.stop()
         WidgetRunner.shared.shutdown()
     }

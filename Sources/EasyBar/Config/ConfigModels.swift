@@ -63,7 +63,6 @@ extension Config {
         var style: BuiltinWidgetStyle
         var content: Content
 
-        // Compatibility accessors.
         var unavailableText: String {
             get { content.unavailableText }
             set { content.unavailableText = newValue }

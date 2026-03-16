@@ -3,16 +3,38 @@ import TOMLKit
 
 extension Config {
 
-    func parsePaths(from toml: TOMLTable) throws {
-        guard let paths = toml["paths"]?.table else { return }
+    /// Parses app-level settings.
+    func parseApp(from toml: TOMLTable) throws {
+        guard let app = toml["app"]?.table else { return }
 
-        guard let value = paths["widgets"] else { return }
+        if let value = app["widgets_dir"] {
+            widgetsPath = NSString(
+                string: try requiredString(value, path: "app.widgets_dir")
+            ).expandingTildeInPath
+        }
 
-        widgetsPath = NSString(
-            string: try requiredString(value, path: "paths.widgets")
-        ).expandingTildeInPath
+        if let value = app["lua_path"] {
+            luaPath = try requiredString(value, path: "app.lua_path")
+        }
+
+        if let value = app["watch_config"] {
+            watchConfigFile = try requiredBool(value, path: "app.watch_config")
+        }
+
+        guard let logging = app["logging"]?.table else { return }
+
+        if let value = logging["enabled"] {
+            logToFile = try requiredBool(value, path: "app.logging.enabled")
+        }
+
+        if let value = logging["file"] {
+            logFilePath = NSString(
+                string: try requiredString(value, path: "app.logging.file")
+            ).expandingTildeInPath
+        }
     }
 
+    /// Parses bar-level settings.
     func parseBar(from toml: TOMLTable) throws {
         guard let bar = toml["bar"]?.table else { return }
 
@@ -22,6 +44,10 @@ extension Config {
 
         if let value = bar["padding"] {
             barPadding = CGFloat(try requiredInt(value, path: "bar.padding"))
+        }
+
+        if let value = bar["padding_y"] {
+            barPaddingY = CGFloat(try requiredInt(value, path: "bar.padding_y"))
         }
 
         guard let colors = bar["colors"]?.table else { return }
@@ -40,27 +66,6 @@ extension Config {
 
         if let value = colors["focused_app_border"] {
             focusedAppBorderHex = try requiredString(value, path: "bar.colors.focused_app_border")
-        }
-    }
-
-    func parseLua(from toml: TOMLTable) throws {
-        guard let lua = toml["lua"]?.table else { return }
-        guard let value = lua["path"] else { return }
-
-        luaPath = try requiredString(value, path: "lua.path")
-    }
-
-    func parseLogging(from toml: TOMLTable) throws {
-        guard let logging = toml["logging"]?.table else { return }
-
-        if let value = logging["enabled"] {
-            logToFile = try requiredBool(value, path: "logging.enabled")
-        }
-
-        if let value = logging["file"] {
-            logFilePath = NSString(
-                string: try requiredString(value, path: "logging.file")
-            ).expandingTildeInPath
         }
     }
 }

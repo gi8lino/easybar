@@ -6,30 +6,38 @@ final class Config {
 
     static let shared = Config()
 
+    // MARK: - App
+
+    var widgetsPath: String = ""
+    var luaPath: String = ConfigDefaults.luaPath
+    var watchConfigFile: Bool = ConfigDefaults.watchConfigFile
+
+    // MARK: - App logging
+
+    var logToFile: Bool = ConfigDefaults.logToFile
+    var logFilePath: String = ConfigDefaults.logFilePath
+
+    // MARK: - Bar
+
     var barHeight: CGFloat = ConfigDefaults.barHeight
     var barPadding: CGFloat = ConfigDefaults.barPadding
+    var barPaddingY: CGFloat = ConfigDefaults.barPaddingY
 
     var barBackgroundHex: String = ConfigDefaults.barBackgroundHex
     var barBorderHex: String = ConfigDefaults.barBorderHex
     var textColorHex: String = ConfigDefaults.textColorHex
     var focusedAppBorderHex: String = ConfigDefaults.focusedAppBorderHex
 
-    var luaPath: String = ConfigDefaults.luaPath
-
-    var logToFile: Bool = ConfigDefaults.logToFile
-    var logFilePath: String = ConfigDefaults.logFilePath
+    // MARK: - Builtins
 
     var builtinCPU: CPUBuiltinConfig = ConfigDefaults.builtinCPU
     var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
     var builtinSpaces: SpacesBuiltinConfig = ConfigDefaults.builtinSpaces
     var builtinFrontApp: FrontAppBuiltinConfig = ConfigDefaults.builtinFrontApp
     var builtinVolume: VolumeBuiltinConfig = ConfigDefaults.builtinVolume
-    var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
-    var builtinTime: TimeBuiltinConfig = ConfigDefaults.builtinTime
     var builtinCalendar: CalendarBuiltinConfig = ConfigDefaults.builtinCalendar
-
-    /// Absolute path to the widgets directory.
-    var widgetsPath: String = ""
+    var builtinTime: TimeBuiltinConfig = ConfigDefaults.builtinTime
+    var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
 
     private init() {
         resetDerivedDefaults()
@@ -286,76 +294,83 @@ final class Config {
 
     /// Restores all static defaults before parsing TOML again.
     func resetAllToDefaults() {
+        luaPath = ConfigDefaults.luaPath
+        watchConfigFile = ConfigDefaults.watchConfigFile
+
+        logToFile = ConfigDefaults.logToFile
+        logFilePath = ConfigDefaults.logFilePath
+
         barHeight = ConfigDefaults.barHeight
         barPadding = ConfigDefaults.barPadding
+        barPaddingY = ConfigDefaults.barPaddingY
 
         barBackgroundHex = ConfigDefaults.barBackgroundHex
         barBorderHex = ConfigDefaults.barBorderHex
         textColorHex = ConfigDefaults.textColorHex
         focusedAppBorderHex = ConfigDefaults.focusedAppBorderHex
 
-        luaPath = ConfigDefaults.luaPath
-
-        logToFile = ConfigDefaults.logToFile
-        logFilePath = ConfigDefaults.logFilePath
-
         builtinCPU = ConfigDefaults.builtinCPU
         builtinBattery = ConfigDefaults.builtinBattery
         builtinSpaces = ConfigDefaults.builtinSpaces
         builtinFrontApp = ConfigDefaults.builtinFrontApp
         builtinVolume = ConfigDefaults.builtinVolume
-        builtinDate = ConfigDefaults.builtinDate
-        builtinTime = ConfigDefaults.builtinTime
         builtinCalendar = ConfigDefaults.builtinCalendar
+        builtinTime = ConfigDefaults.builtinTime
+        builtinDate = ConfigDefaults.builtinDate
     }
 
+    /// Captures the current config state.
     private func snapshot() -> ConfigSnapshot {
         ConfigSnapshot(
+            widgetsPath: widgetsPath,
+            luaPath: luaPath,
+            watchConfigFile: watchConfigFile,
+            logToFile: logToFile,
+            logFilePath: logFilePath,
             barHeight: barHeight,
             barPadding: barPadding,
+            barPaddingY: barPaddingY,
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
             textColorHex: textColorHex,
             focusedAppBorderHex: focusedAppBorderHex,
-            luaPath: luaPath,
-            logToFile: logToFile,
-            logFilePath: logFilePath,
             builtinCPU: builtinCPU,
             builtinBattery: builtinBattery,
             builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
             builtinVolume: builtinVolume,
-            builtinDate: builtinDate,
-            builtinTime: builtinTime,
             builtinCalendar: builtinCalendar,
-            widgetsPath: widgetsPath
+            builtinTime: builtinTime,
+            builtinDate: builtinDate
         )
     }
 
+    /// Restores a previous config state.
     private func apply(_ snapshot: ConfigSnapshot) {
+        widgetsPath = snapshot.widgetsPath
+        luaPath = snapshot.luaPath
+        watchConfigFile = snapshot.watchConfigFile
+
+        logToFile = snapshot.logToFile
+        logFilePath = snapshot.logFilePath
+
         barHeight = snapshot.barHeight
         barPadding = snapshot.barPadding
+        barPaddingY = snapshot.barPaddingY
 
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex
         textColorHex = snapshot.textColorHex
         focusedAppBorderHex = snapshot.focusedAppBorderHex
 
-        luaPath = snapshot.luaPath
-
-        logToFile = snapshot.logToFile
-        logFilePath = snapshot.logFilePath
-
         builtinCPU = snapshot.builtinCPU
         builtinBattery = snapshot.builtinBattery
         builtinSpaces = snapshot.builtinSpaces
         builtinFrontApp = snapshot.builtinFrontApp
         builtinVolume = snapshot.builtinVolume
-        builtinDate = snapshot.builtinDate
-        builtinTime = snapshot.builtinTime
         builtinCalendar = snapshot.builtinCalendar
-
-        widgetsPath = snapshot.widgetsPath
+        builtinTime = snapshot.builtinTime
+        builtinDate = snapshot.builtinDate
 
         Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }

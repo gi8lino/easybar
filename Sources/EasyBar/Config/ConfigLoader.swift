@@ -21,10 +21,8 @@ extension Config {
             let toml = try TOMLTable(string: text)
 
             // Core top-level sections.
-            try parsePaths(from: toml)
+            try parseApp(from: toml)
             try parseBar(from: toml)
-            try parseLua(from: toml)
-            try parseLogging(from: toml)
 
             // Built-in widgets.
             try parseBuiltins(from: toml)

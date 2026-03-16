@@ -1,10 +1,9 @@
-[paths]
-widgets = "~/.config/easybar/widgets" # Folder that contains your custom Lua widget files.
+[app]
+widgets_dir = "~/.config/easybar/widgets" # Folder that contains your custom Lua widget files.
+lua_path = "/usr/local/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
+watch_config = true # Auto-reload EasyBar when config.toml changes.
 
-[lua]
-path = "/usr/local/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
-
-[logging]
+[app.logging]
 enabled = false # Enables or disables writing logs to a file.
 file = "~/Library/Logs/EasyBar.log" # Log file path used when logging is enabled.
 

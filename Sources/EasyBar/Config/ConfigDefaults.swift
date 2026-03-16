@@ -3,6 +3,18 @@ import SwiftUI
 
 enum ConfigDefaults {
 
+    // MARK: - App
+
+    static let luaPath = "/usr/local/bin/lua"
+    static let watchConfigFile = true
+
+    // MARK: - App logging
+
+    static let logToFile = false
+    static let logFilePath = "~/Library/Logs/EasyBar.log"
+
+    // MARK: - Bar
+
     static let barHeight: CGFloat = 36
     static let barPadding: CGFloat = 10
     static let barPaddingY: CGFloat = 0
@@ -12,10 +24,7 @@ enum ConfigDefaults {
     static let textColorHex = "#ffffff"
     static let focusedAppBorderHex = "#ff3b30"
 
-    static let luaPath = "/usr/local/bin/lua"
-
-    static let logToFile = false
-    static let logFilePath = "~/Library/Logs/EasyBar.log"
+    // MARK: - Builtins
 
     static let builtinCPU = Config.CPUBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
@@ -43,7 +52,6 @@ enum ConfigDefaults {
 
     static let builtinBattery = Config.BatteryBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "right",
             order: 10,
@@ -55,19 +63,18 @@ enum ConfigDefaults {
             cornerRadius: 0,
             paddingX: 8,
             paddingY: 4,
-            spacing: 8, // Root row spacing between icon and label.
+            spacing: 8,
             opacity: 1
         ),
         content: .init(
             unavailableText: "n/a",
             showPercentage: true,
-            iconSize: 16 // Font size of the battery icon node.
+            iconSize: 16
         )
     )
 
     static let builtinSpaces = Config.SpacesBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "left",
             order: 10,
@@ -125,7 +132,6 @@ enum ConfigDefaults {
 
     static let builtinFrontApp = Config.FrontAppBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "left",
             order: 15,
@@ -151,7 +157,6 @@ enum ConfigDefaults {
 
     static let builtinVolume = Config.VolumeBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "right",
             order: 20,
@@ -181,53 +186,8 @@ enum ConfigDefaults {
         )
     )
 
-    static let builtinDate = Config.DateBuiltinConfig(
-        style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
-            enabled: false,
-            position: "right",
-            order: 30,
-            icon: "📅",
-            textColorHex: nil,
-            backgroundColorHex: nil,
-            borderColorHex: nil,
-            borderWidth: 0,
-            cornerRadius: 0,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 6,
-            opacity: 1
-        ),
-        content: .init(
-            format: "yyyy-MM-dd"
-        )
-    )
-
-    static let builtinTime = Config.TimeBuiltinConfig(
-        style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
-            enabled: false,
-            position: "right",
-            order: 40,
-            icon: "🕒",
-            textColorHex: nil,
-            backgroundColorHex: nil,
-            borderColorHex: nil,
-            borderWidth: 0,
-            cornerRadius: 0,
-            paddingX: 8,
-            paddingY: 4,
-            spacing: 6,
-            opacity: 1
-        ),
-        content: .init(
-            format: "HH:mm"
-        )
-    )
-
     static let builtinCalendar = Config.CalendarBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
-            // Builtins are off unless explicitly configured.
             enabled: false,
             position: "right",
             order: 50,
@@ -273,6 +233,48 @@ enum ConfigDefaults {
             sectionTitleColorHex: "#ffffff",
             itemColorHex: "#d0d0d0",
             emptyColorHex: "#c0c0c0"
+        )
+    )
+
+    static let builtinTime = Config.TimeBuiltinConfig(
+        style: Config.BuiltinWidgetStyle(
+            enabled: false,
+            position: "right",
+            order: 40,
+            icon: "🕒",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        content: .init(
+            format: "HH:mm"
+        )
+    )
+
+    static let builtinDate = Config.DateBuiltinConfig(
+        style: Config.BuiltinWidgetStyle(
+            enabled: false,
+            position: "right",
+            order: 30,
+            icon: "📅",
+            textColorHex: nil,
+            backgroundColorHex: nil,
+            borderColorHex: nil,
+            borderWidth: 0,
+            cornerRadius: 0,
+            paddingX: 8,
+            paddingY: 4,
+            spacing: 6,
+            opacity: 1
+        ),
+        content: .init(
+            format: "yyyy-MM-dd"
         )
     )
 }
