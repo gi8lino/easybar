@@ -1,7 +1,13 @@
 import Foundation
 
+/// Tracks the process group ID of the running Lua runtime process.
+/// This lets EasyBar terminate the runtime and any child processes it spawned.
 private var easyBarLuaProcessGroupPID: pid_t = 0
 
+/// Terminates the Lua runtime process group.
+///
+/// A soft terminate is attempted first, then a forced kill shortly after.
+/// This prevents orphaned child processes from surviving reload/shutdown.
 private func easyBarTerminateLuaProcessGroup() {
     let pid = easyBarLuaProcessGroupPID
     guard pid > 0 else { return }
@@ -13,12 +19,17 @@ private func easyBarTerminateLuaProcessGroup() {
     easyBarLuaProcessGroupPID = 0
 }
 
+/// Handles termination-related signals by shutting down the Lua process group first.
 private func easyBarSignalHandler(_ signal: Int32) {
     easyBarTerminateLuaProcessGroup()
     Darwin.signal(signal, SIG_DFL)
     Darwin.raise(signal)
 }
 
+/// Manages the long-running Lua runtime process used for scripted widgets.
+///
+/// stdout is reserved for structured JSON widget updates.
+/// stderr is used for Lua-side logs and runtime/widget errors.
 final class LuaRuntime {
 
     static let shared = LuaRuntime()
@@ -28,11 +39,13 @@ final class LuaRuntime {
     private var outputPipe: Pipe?
     private var errorPipe: Pipe?
 
+    // Serialize writes so events do not interleave on stdin.
     private let writeQueue = DispatchQueue(label: "easybar.lua.write")
     private var signalHandlersInstalled = false
 
     private init() {}
 
+    /// Starts the Lua runtime if it is not already running.
     func start() {
         guard process == nil else {
             Logger.debug("lua runtime already started")
@@ -79,6 +92,8 @@ final class LuaRuntime {
         }
 
         let pid = process.processIdentifier
+
+        // Put Lua into its own process group so shutdown can kill the whole tree.
         _ = setpgid(pid, pid)
         easyBarLuaProcessGroupPID = pid
 
@@ -93,6 +108,7 @@ final class LuaRuntime {
         installErrorReadabilityHandler()
     }
 
+    /// Stops the Lua runtime and clears all pipe handlers.
     func shutdown() {
         guard let process else { return }
 
@@ -114,6 +130,7 @@ final class LuaRuntime {
         self.errorPipe = nil
     }
 
+    /// Sends one JSON event payload line to the Lua runtime stdin.
     func send(_ string: String) {
         guard let pipe = inputPipe else {
             Logger.debug("cannot send event, lua stdin not available")
@@ -132,6 +149,7 @@ final class LuaRuntime {
         }
     }
 
+    /// Installs the stdout handler used for structured JSON widget updates.
     private func installOutputReadabilityHandler() {
         guard let pipe = outputPipe else { return }
 
@@ -157,6 +175,7 @@ final class LuaRuntime {
                     continue
                 }
 
+                // stdout should contain only machine-readable widget messages.
                 Logger.debug("lua stdout raw: \(line)")
 
                 NotificationCenter.default.post(
@@ -167,6 +186,7 @@ final class LuaRuntime {
         }
     }
 
+    /// Installs the stderr handler used for Lua logs and runtime/widget errors.
     private func installErrorReadabilityHandler() {
         guard let pipe = errorPipe else { return }
 
@@ -192,12 +212,25 @@ final class LuaRuntime {
                     continue
                 }
 
-                // Lua runtime errors should always be visible in normal logs.
+                // Errors stay visible in normal logs.
+                if line.hasPrefix("ERROR:") {
+                    Logger.info("lua \(line)")
+                    continue
+                }
+
+                // Info/debug chatter only appears in debug mode.
+                if line.hasPrefix("INFO:") || line.hasPrefix("DEBUG:") {
+                    Logger.debug("lua \(line)")
+                    continue
+                }
+
+                // Unknown stderr output is treated as important.
                 Logger.info("lua stderr: \(line)")
             }
         }
     }
 
+    /// Installs process signal handlers once for clean Lua shutdown on exit/crash.
     private func installSignalHandlersIfNeeded() {
         guard !signalHandlersInstalled else { return }
         signalHandlersInstalled = true

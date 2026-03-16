@@ -10,11 +10,14 @@ local widgets = {}
 io.stdout:setvbuf("line")
 io.stderr:setvbuf("line")
 
-local function log(message)
-	io.stderr:write(message .. "\n")
+-- Writes one structured log line to stderr.
+-- stdout stays reserved for JSON widget updates only.
+local function log(level, message)
+	io.stderr:write(level .. ": " .. message .. "\n")
 	io.stderr:flush()
 end
 
+-- Escapes a string for safe manual JSON encoding.
 local function escape_json(value)
 	value = tostring(value or "")
 	value = value:gsub("\\", "\\\\")
@@ -25,6 +28,7 @@ local function escape_json(value)
 	return value
 end
 
+-- Normalizes widget position to one of the supported bar sections.
 local function normalize_position(position)
 	if position == "left" or position == "center" or position == "right" then
 		return position
@@ -33,6 +37,8 @@ local function normalize_position(position)
 	return "right"
 end
 
+-- Resolves the widget node kind.
+-- Container-like nodes default to row when children exist.
 local function normalize_kind(node)
 	if
 		node.kind == "row"
@@ -54,6 +60,7 @@ local function normalize_kind(node)
 	return "item"
 end
 
+-- Only known internal roles are preserved.
 local function normalize_role(role)
 	if role == "popup-anchor" then
 		return role
@@ -62,6 +69,7 @@ local function normalize_role(role)
 	return nil
 end
 
+-- Flattens a widget tree into a list of renderable nodes.
 local function flatten_node(node, root_id, parent_id, inherited_position, out)
 	local id = node.id or (root_id .. "_" .. tostring(#out + 1))
 	local position = normalize_position(node.position or inherited_position or "right")
@@ -96,6 +104,7 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		opacity = node.opacity,
 	})
 
+	-- Anchor children are rendered separately from normal popup children.
 	if type(node.anchorChildren) == "table" then
 		for _, child in ipairs(node.anchorChildren) do
 			child.role = "popup-anchor"
@@ -110,10 +119,12 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 	end
 end
 
+-- Encodes a Lua boolean for JSON.
 local function encode_bool(value)
 	return value and "true" or "false"
 end
 
+-- Encodes a nullable number for JSON.
 local function encode_nullable_number(value)
 	if value == nil then
 		return "null"
@@ -122,6 +133,7 @@ local function encode_nullable_number(value)
 	return tostring(value)
 end
 
+-- Encodes a nullable string for JSON.
 local function encode_nullable_string(value)
 	if value == nil or value == "" then
 		return "null"
@@ -130,6 +142,7 @@ local function encode_nullable_string(value)
 	return '"' .. escape_json(value) .. '"'
 end
 
+-- Encodes a numeric array for JSON.
 local function encode_number_array(values)
 	if type(values) ~= "table" then
 		return "null"
@@ -143,6 +156,7 @@ local function encode_number_array(values)
 	return "[" .. table.concat(out, ",") .. "]"
 end
 
+-- Encodes one flattened widget node into JSON.
 local function encode_single_node(node)
 	return string.format(
 		'{"id":"%s","root":"%s","kind":"%s","parent":%s,"position":"%s","order":%d,"icon":"%s","text":"%s","color":%s,"visible":%s,"role":%s,"value":%s,"min":%s,"max":%s,"step":%s,"values":%s,"lineWidth":%s,"paddingX":%s,"paddingY":%s,"spacing":%s,"backgroundColor":%s,"borderColor":%s,"borderWidth":%s,"cornerRadius":%s,"opacity":%s}',
@@ -174,6 +188,7 @@ local function encode_single_node(node)
 	)
 end
 
+-- Emits one full widget tree update on stdout.
 local function emit_tree(widget)
 	local root_id = widget.id or "unknown"
 	local nodes = {}
@@ -191,9 +206,10 @@ local function emit_tree(widget)
 	io.stdout:write(json .. "\n")
 	io.stdout:flush()
 
-	log("emit tree root=" .. root_id .. " nodes=" .. tostring(#nodes))
+	log("DEBUG", "emit tree root=" .. root_id .. " nodes=" .. tostring(#nodes))
 end
 
+-- Merges a widget update table back into the widget state.
 local function merge_update(widget, update)
 	if type(update) ~= "table" then
 		return
@@ -204,6 +220,7 @@ local function merge_update(widget, update)
 	end
 end
 
+-- Lists all Lua widget files in the configured widget directory.
 local function list_widget_files()
 	local files = {}
 	local command = 'ls "' .. widget_dir .. '" 2>/dev/null'
@@ -225,6 +242,7 @@ local function list_widget_files()
 	return files
 end
 
+-- Runs the synthetic init event for a widget, if supported.
 local function run_widget_init(widget)
 	if type(widget.on_event) ~= "function" then
 		return
@@ -237,27 +255,28 @@ local function run_widget_init(widget)
 	end
 
 	if not ok then
-		log("init failed for widget id=" .. widget.id .. " error=" .. tostring(result))
+		log("ERROR", "init failed for widget id=" .. widget.id .. " error=" .. tostring(result))
 	end
 end
 
+-- Loads and executes one widget file.
 local function load_widget_file(file)
 	local path = widget_dir .. "/" .. file
 	local chunk, load_err = loadfile(path)
 
 	if not chunk then
-		log("failed to load widget file=" .. file .. " error=" .. tostring(load_err))
+		log("ERROR", "failed to load widget file=" .. file .. " error=" .. tostring(load_err))
 		return
 	end
 
 	local ok, widget = pcall(chunk)
 	if not ok then
-		log("failed to execute widget file=" .. file .. " error=" .. tostring(widget))
+		log("ERROR", "failed to execute widget file=" .. file .. " error=" .. tostring(widget))
 		return
 	end
 
 	if type(widget) ~= "table" then
-		log("widget file=" .. file .. " returned " .. type(widget) .. " instead of table")
+		log("ERROR", "widget file=" .. file .. " returned " .. type(widget) .. " instead of table")
 		return
 	end
 
@@ -267,17 +286,18 @@ local function load_widget_file(file)
 	widget.order = tonumber(widget.order or 0) or 0
 
 	widgets[widget.id] = widget
-	log("loaded widget file=" .. file .. " id=" .. widget.id)
+	log("INFO", "loaded widget file=" .. file .. " id=" .. widget.id)
 
 	run_widget_init(widget)
 	emit_tree(widget)
 end
 
+-- Loads all widgets and emits the runtime ready message.
 local function load_widgets()
 	widgets = {}
 
-	log("lua runtime started")
-	log("widget dir: " .. widget_dir)
+	log("INFO", "lua runtime started")
+	log("INFO", "widget dir: " .. widget_dir)
 
 	io.stdout:write('{"type":"ready"}\n')
 	io.stdout:flush()
@@ -287,6 +307,7 @@ local function load_widgets()
 	end
 end
 
+-- Returns whether a widget subscribed to a given event.
 local function widget_subscribed(widget, event_name)
 	if type(widget.subscribe) ~= "table" then
 		return false
@@ -301,6 +322,7 @@ local function widget_subscribed(widget, event_name)
 	return false
 end
 
+-- Parses the JSON line sent from Swift into a minimal Lua payload table.
 local function parse_event(line)
 	local event = line:match('"event"%s*:%s*"([^"]+)"')
 	if not event then
@@ -316,8 +338,9 @@ local function parse_event(line)
 	return payload
 end
 
+-- Dispatches one event to all subscribed widgets.
 local function dispatch_event(event_name, payload)
-	log("dispatch event=" .. tostring(event_name))
+	log("DEBUG", "dispatch event=" .. tostring(event_name))
 
 	local targetWidget = payload and payload.widget or nil
 
@@ -340,6 +363,7 @@ local function dispatch_event(event_name, payload)
 
 		if not ok then
 			log(
+				"ERROR",
 				"widget id="
 					.. tostring(widget.id)
 					.. " failed on event="
@@ -368,13 +392,13 @@ while true do
 		break
 	end
 
-	log("stdin " .. tostring(line))
+	log("DEBUG", "stdin " .. tostring(line))
 
 	local payload = parse_event(line)
 
 	if payload and payload.event then
 		dispatch_event(payload.event, payload)
 	else
-		log("ignored invalid event payload: " .. tostring(line))
+		log("ERROR", "ignored invalid event payload: " .. tostring(line))
 	end
 end
