@@ -44,6 +44,10 @@ enum ConfigDefaults {
 
     static let luaPath = "/usr/local/bin/lua"
 
+    // File logging defaults.
+    static let logToFile = false
+    static let logFilePath = "~/Library/Logs/EasyBar.log"
+
     static let builtinBattery = Config.BatteryBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: true,

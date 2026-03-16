@@ -78,6 +78,9 @@ show_percentage = true
 min = 0
 max = 100
 step = 1
+expand_to_slider_on_hover = true
+slider_width = 80
+
 text_color = "#ffffff"
 background_color = "#1a1a1a"
 border_color = "#333333"
@@ -89,7 +92,7 @@ spacing = 8
 opacity = 1.0
 
 [builtins.date]
-enabled = true
+enabled = false
 position = "right"
 order = 30
 icon = "📅"
@@ -105,7 +108,7 @@ spacing = 6
 opacity = 1.0
 
 [builtins.time]
-enabled = true
+enabled = false
 position = "right"
 order = 40
 icon = "🕒"
@@ -135,12 +138,18 @@ format = "EEE, MMM d"
 
 # used by layout = "stack" or "inline"
 top_format = "HH:mm"
-bottom_format = "MMMM, d"
+bottom_format = "d. MMM"
 line_spacing = 0
 top_text_color = "#ffffff"
 bottom_text_color = "#d0d0d0"
 
 days = 3
+
+show_birthdays = true
+birthdays_title = "Birthdays"
+birthdays_date_format = "dd.MM.yyyy"
+birthdays_show_age = false
+
 empty_text = "No upcoming events"
 
 text_color = "#ffffff"

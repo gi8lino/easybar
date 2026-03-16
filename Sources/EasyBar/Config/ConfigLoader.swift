@@ -4,7 +4,7 @@ import TOMLKit
 extension Config {
 
     /// Loads configuration from disk.
-    func load() {
+    func load() throws {
         let resolvedConfigPath = configPath
 
         guard
@@ -13,25 +13,33 @@ extension Config {
         else {
             Logger.info("using default configuration from \(resolvedConfigPath)")
             applyEnvironmentOverrides()
+            Logger.configure(logToFile: logToFile, filePath: logFilePath)
             return
         }
 
         do {
             let toml = try TOMLTable(string: text)
 
-            parsePaths(from: toml)
-            parseBar(from: toml)
-            parseSpaces(from: toml)
-            parseSpaceText(from: toml)
-            parseIcons(from: toml)
-            parseColors(from: toml)
-            parseLua(from: toml)
-            parseBuiltins(from: toml)
+            try parsePaths(from: toml)
+            try parseBar(from: toml)
+            try parseSpaces(from: toml)
+            try parseSpaceText(from: toml)
+            try parseIcons(from: toml)
+            try parseColors(from: toml)
+            try parseLua(from: toml)
+            try parseLogging(from: toml)
+            try parseBuiltins(from: toml)
+        } catch let error as ConfigError {
+            throw error
         } catch {
-            Logger.info("config parse error: \(error)")
+            throw ConfigError.invalidValue(
+                path: "config",
+                message: "parse failed: \(error)"
+            )
         }
 
         applyEnvironmentOverrides()
+        Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 
     /// Applies environment variable overrides after config loading.
@@ -39,6 +47,15 @@ extension Config {
         if let widgetsOverride = ProcessInfo.processInfo.environment["EASYBAR_WIDGETS_PATH"],
            !widgetsOverride.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             widgetsPath = NSString(string: widgetsOverride).expandingTildeInPath
+        }
+
+        if let logEnabled = ProcessInfo.processInfo.environment["EASYBAR_LOG_ENABLED"] {
+            logToFile = ["1", "true", "yes", "on"].contains(logEnabled.lowercased())
+        }
+
+        if let logFile = ProcessInfo.processInfo.environment["EASYBAR_LOG_FILE"],
+           !logFile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            logFilePath = NSString(string: logFile).expandingTildeInPath
         }
     }
 }

@@ -47,6 +47,9 @@ final class Config {
 
     var luaPath: String = ConfigDefaults.luaPath
 
+    var logToFile: Bool = ConfigDefaults.logToFile
+    var logFilePath: String = ConfigDefaults.logFilePath
+
     var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
     var builtinVolume: VolumeBuiltinConfig = ConfigDefaults.builtinVolume
     var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
@@ -58,15 +61,32 @@ final class Config {
 
     private init() {
         resetDerivedDefaults()
-        load()
+
+        do {
+            try load()
+        } catch {
+            let message = "invalid config at \(configPath): \(error)"
+            Logger.info(message)
+            exit(1)
+        }
     }
 
     /// Reloads configuration from disk.
     func reload() {
         Logger.info("reloading configuration")
+
+        let snapshot = snapshot()
+
         resetAllToDefaults()
         resetDerivedDefaults()
-        load()
+
+        do {
+            try load()
+        } catch {
+            // Keep old runtime config on reload failure.
+            apply(snapshot)
+            Logger.info("reload rejected: \(error)")
+        }
     }
 
     /// Absolute path to the config file.
@@ -146,10 +166,125 @@ final class Config {
 
         luaPath = ConfigDefaults.luaPath
 
+        logToFile = ConfigDefaults.logToFile
+        logFilePath = ConfigDefaults.logFilePath
+
         builtinBattery = ConfigDefaults.builtinBattery
         builtinVolume = ConfigDefaults.builtinVolume
         builtinDate = ConfigDefaults.builtinDate
         builtinTime = ConfigDefaults.builtinTime
         builtinCalendar = ConfigDefaults.builtinCalendar
+    }
+
+    private func snapshot() -> ConfigSnapshot {
+        ConfigSnapshot(
+            barHeight: barHeight,
+            barPadding: barPadding,
+
+            spaceSpacing: spaceSpacing,
+            hideEmptySpaces: hideEmptySpaces,
+            spacePaddingX: spacePaddingX,
+            spacePaddingY: spacePaddingY,
+            spaceCornerRadius: spaceCornerRadius,
+            spaceFocusedScale: spaceFocusedScale,
+            spaceInactiveOpacity: spaceInactiveOpacity,
+            maxIconsPerSpace: maxIconsPerSpace,
+            showSpaceNumber: showSpaceNumber,
+            showSpaceIcons: showSpaceIcons,
+            showOnlyFocusedLabel: showOnlyFocusedLabel,
+            collapseInactiveSpaces: collapseInactiveSpaces,
+            collapsedSpacePaddingX: collapsedSpacePaddingX,
+            collapsedSpacePaddingY: collapsedSpacePaddingY,
+
+            spaceTextSize: spaceTextSize,
+            spaceTextWeight: spaceTextWeight,
+            spaceFocusedTextHex: spaceFocusedTextHex,
+            spaceInactiveTextHex: spaceInactiveTextHex,
+
+            iconSize: iconSize,
+            iconSpacing: iconSpacing,
+            iconCornerRadius: iconCornerRadius,
+            focusedIconSize: focusedIconSize,
+            iconBorderWidth: iconBorderWidth,
+            focusedIconBorderWidth: focusedIconBorderWidth,
+
+            barBackgroundHex: barBackgroundHex,
+            barBorderHex: barBorderHex,
+            textColorHex: textColorHex,
+            spaceActiveBackgroundHex: spaceActiveBackgroundHex,
+            spaceInactiveBackgroundHex: spaceInactiveBackgroundHex,
+            spaceActiveBorderHex: spaceActiveBorderHex,
+            spaceInactiveBorderHex: spaceInactiveBorderHex,
+            focusedAppBorderHex: focusedAppBorderHex,
+
+            luaPath: luaPath,
+
+            logToFile: logToFile,
+            logFilePath: logFilePath,
+
+            builtinBattery: builtinBattery,
+            builtinVolume: builtinVolume,
+            builtinDate: builtinDate,
+            builtinTime: builtinTime,
+            builtinCalendar: builtinCalendar,
+
+            widgetsPath: widgetsPath
+        )
+    }
+
+    private func apply(_ snapshot: ConfigSnapshot) {
+        barHeight = snapshot.barHeight
+        barPadding = snapshot.barPadding
+
+        spaceSpacing = snapshot.spaceSpacing
+        hideEmptySpaces = snapshot.hideEmptySpaces
+        spacePaddingX = snapshot.spacePaddingX
+        spacePaddingY = snapshot.spacePaddingY
+        spaceCornerRadius = snapshot.spaceCornerRadius
+        spaceFocusedScale = snapshot.spaceFocusedScale
+        spaceInactiveOpacity = snapshot.spaceInactiveOpacity
+        maxIconsPerSpace = snapshot.maxIconsPerSpace
+        showSpaceNumber = snapshot.showSpaceNumber
+        showSpaceIcons = snapshot.showSpaceIcons
+        showOnlyFocusedLabel = snapshot.showOnlyFocusedLabel
+        collapseInactiveSpaces = snapshot.collapseInactiveSpaces
+        collapsedSpacePaddingX = snapshot.collapsedSpacePaddingX
+        collapsedSpacePaddingY = snapshot.collapsedSpacePaddingY
+
+        spaceTextSize = snapshot.spaceTextSize
+        spaceTextWeight = snapshot.spaceTextWeight
+        spaceFocusedTextHex = snapshot.spaceFocusedTextHex
+        spaceInactiveTextHex = snapshot.spaceInactiveTextHex
+
+        iconSize = snapshot.iconSize
+        iconSpacing = snapshot.iconSpacing
+        iconCornerRadius = snapshot.iconCornerRadius
+        focusedIconSize = snapshot.focusedIconSize
+        iconBorderWidth = snapshot.iconBorderWidth
+        focusedIconBorderWidth = snapshot.focusedIconBorderWidth
+
+        barBackgroundHex = snapshot.barBackgroundHex
+        barBorderHex = snapshot.barBorderHex
+        textColorHex = snapshot.textColorHex
+        spaceActiveBackgroundHex = snapshot.spaceActiveBackgroundHex
+        spaceInactiveBackgroundHex = snapshot.spaceInactiveBackgroundHex
+        spaceActiveBorderHex = snapshot.spaceActiveBorderHex
+        spaceInactiveBorderHex = snapshot.spaceInactiveBorderHex
+        focusedAppBorderHex = snapshot.focusedAppBorderHex
+
+        luaPath = snapshot.luaPath
+
+        logToFile = snapshot.logToFile
+        logFilePath = snapshot.logFilePath
+
+        builtinBattery = snapshot.builtinBattery
+        builtinVolume = snapshot.builtinVolume
+        builtinDate = snapshot.builtinDate
+        builtinTime = snapshot.builtinTime
+        builtinCalendar = snapshot.builtinCalendar
+
+        widgetsPath = snapshot.widgetsPath
+
+        Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 }
