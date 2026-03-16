@@ -46,6 +46,7 @@ struct SpacesWidgetView: View {
                                 }
                             }
                         }
+                        // Inner pill padding.
                         .padding(.horizontal, resolvedPaddingX(for: space))
                         .padding(.vertical, resolvedPaddingY(for: space))
                         .background(
@@ -54,7 +55,7 @@ struct SpacesWidgetView: View {
                             : Theme.spaceInactiveBackground
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: Config.shared.spaceCornerRadius)
+                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space))
                                 .stroke(
                                     space.isFocused
                                     ? Theme.spaceActiveBorder
@@ -63,7 +64,7 @@ struct SpacesWidgetView: View {
                                 )
                         }
                         .clipShape(
-                            RoundedRectangle(cornerRadius: Config.shared.spaceCornerRadius)
+                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space))
                         )
                         .scaleEffect(space.isFocused ? Config.shared.spaceFocusedScale : 1.0)
                         .opacity(space.isFocused ? 1.0 : Config.shared.spaceInactiveOpacity)
@@ -71,20 +72,27 @@ struct SpacesWidgetView: View {
                     .buttonStyle(.plain)
                 }
             }
+            // Outer margin around the whole spaces block.
+            .padding(.horizontal, Config.shared.spaceMarginX)
+            .padding(.vertical, Config.shared.spaceMarginY)
         }
         // Keep the spaces widget only as wide as its content,
         // so other left-positioned widgets like front_app stay on the left.
         .fixedSize(horizontal: true, vertical: false)
     }
 
+    /// Returns whether the space label should be shown.
     private func shouldShowLabel(for space: SpaceItem) -> Bool {
         guard Config.shared.showSpaceNumber else { return false }
+
         if Config.shared.showOnlyFocusedLabel {
             return space.isFocused
         }
+
         return true
     }
 
+    /// Returns whether app icons should be shown for one space.
     private func shouldShowIcons(for space: SpaceItem) -> Bool {
         if !Config.shared.showSpaceIcons {
             return false
@@ -97,28 +105,41 @@ struct SpacesWidgetView: View {
         return true
     }
 
+    /// Returns the visible app icons for one space.
     private func visibleApps(for space: SpaceItem) -> [SpaceApp] {
         let limit = max(0, Config.shared.maxIconsPerSpace)
         guard space.apps.count > limit else { return space.apps }
         return Array(space.apps.prefix(limit))
     }
 
+    /// Returns the number of hidden apps for one space.
     private func hiddenAppCount(for space: SpaceItem) -> Int {
         max(0, space.apps.count - visibleApps(for: space).count)
     }
 
+    /// Returns horizontal pill padding for one space.
     private func resolvedPaddingX(for space: SpaceItem) -> CGFloat {
         if Config.shared.collapseInactiveSpaces && !space.isFocused {
             return Config.shared.collapsedSpacePaddingX
         }
+
         return Config.shared.spacePaddingX
     }
 
+    /// Returns vertical pill padding for one space.
     private func resolvedPaddingY(for space: SpaceItem) -> CGFloat {
         if Config.shared.collapseInactiveSpaces && !space.isFocused {
             return Config.shared.collapsedSpacePaddingY
         }
+
         return Config.shared.spacePaddingY
+    }
+
+    /// Returns the corner radius for one space.
+    private func resolvedCornerRadius(for space: SpaceItem) -> CGFloat {
+        space.isFocused
+            ? Config.shared.spaceFocusedCornerRadius
+            : Config.shared.spaceCornerRadius
     }
 }
 
@@ -128,10 +149,12 @@ private struct AppIconView: View {
     let app: SpaceApp
     let isFocusedApp: Bool
 
+    /// Returns the app icon size.
     private var resolvedSize: CGFloat {
         isFocusedApp ? Config.shared.focusedIconSize : Config.shared.iconSize
     }
 
+    /// Returns the app icon border width.
     private var resolvedBorderWidth: CGFloat {
         isFocusedApp ? Config.shared.focusedIconBorderWidth : Config.shared.iconBorderWidth
     }

@@ -80,7 +80,17 @@ extension Config {
             var hideEmpty: Bool
             var paddingX: Double
             var paddingY: Double
+
+            // Outer margin around the whole spaces widget.
+            var marginX: Double
+            var marginY: Double
+
+            // Default corner radius for inactive spaces.
             var cornerRadius: Double
+
+            // Corner radius for the active space.
+            var focusedCornerRadius: Double
+
             var focusedScale: Double
             var inactiveOpacity: Double
             var maxIcons: Int
