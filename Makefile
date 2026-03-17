@@ -13,10 +13,11 @@ APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
+APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
 
-BUNDLE_ID ?= io.github.gi8lino.easybar
+BUNDLE_ID ?= com.example.EasyBar
 VERSION ?= dev
 ARCH ?= universal
 
@@ -43,7 +44,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package app cli clean clean-dist run \
-        build-app build-cli copy-resources verify stamp-plist \
+        build-app build-cli copy-resources verify stamp-plist sign \
         print-arch print-version print-latest-tag \
         tag-patch tag-minor tag-major push-tags
 
@@ -80,6 +81,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
+	@$(MAKE) --no-print-directory sign
 	@$(MAKE) --no-print-directory verify
 
 package: bundle ## Create dist/EasyBar.app.zip.
@@ -112,13 +114,13 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
+copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle root.
 ifeq ($(ARCH),universal)
-	@rm -rf "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
-	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+	@rm -rf "$(APP_RESOURCE_BUNDLE)"
+	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 else
-	@rm -rf "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
-	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+	@rm -rf "$(APP_RESOURCE_BUNDLE)"
+	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 endif
 
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
@@ -126,12 +128,17 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
 
+sign: ## Ad-hoc sign the bundle for local launching.
+	@codesign --force --deep --sign - "$(APP_BUNDLE)" >/dev/null 2>&1 || true
+
 verify: ## Show the built binary architectures and packaged resources.
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
 	@file "$(CLI_BIN)"
-	@echo "Packaged resources:"
-	@ls -1 "$(APP_RESOURCES)"
+	@echo "Packaged app root:"
+	@ls -1 "$(APP_BUNDLE)"
+	@echo "Packaged Contents:"
+	@ls -1 "$(APP_CONTENTS)"
 
 run: bundle ## Build and open the app bundle.
 	@open "$(APP_BUNDLE)"
