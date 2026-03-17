@@ -17,31 +17,53 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
-local function get_wifi_status()
-	local ssid = ""
-	local output = shell(os.getenv("HOME") .. "/.local/bin/wifisnitchctl get wifi.ssid --format=lines")
+local function get_network_fields()
+	local home = os.getenv("HOME") or ""
+	local command = home .. "/.local/bin/wifisnitchctl get wifi.ssid,network.primary_interface --format=lines"
+
+	local output = shell(command)
+
+	local result = {
+		ssid = "",
+		primary_interface = "",
+	}
 
 	for line in output:gmatch("[^\r\n]+") do
 		local key, value = line:match("^([^=]+)=(.*)$")
 		value = trim(value)
 
 		if key == "wifi.ssid" then
-			ssid = value
+			result.ssid = value
+		elseif key == "network.primary_interface" then
+			result.primary_interface = value
 		end
 	end
+
+	return result
+end
+
+local function get_wifi_status()
+	local fields = get_network_fields()
+	local ssid = fields.ssid
+	local primary_interface = fields.primary_interface
 
 	if ssid ~= "" then
 		return ssid, true
 	end
 
-	local summary = shell("ipconfig getsummary en0")
-	local connected = summary:match("LinkStatusActive : TRUE") ~= nil
+	if primary_interface == "en0" then
+		return "", true
+	end
 
-	return "", connected
+	return "", false
 end
 
 local function get_vpn_status()
-	return shell("scutil --nwi"):match("utun") ~= nil
+	local fields = get_network_fields()
+	local primary_interface = fields.primary_interface
+
+	-- Show VPN only when the active primary route goes through a utun device.
+	return primary_interface:match("^utun%d+$") ~= nil
 end
 
 local function toggle_vpn()
@@ -53,7 +75,7 @@ local function toggle_vpn()
 	local name = quote(vpn_name)
 	local status = trim(shell("scutil --nc status " .. name)):lower()
 
-	if status == "connected" or status:match("^connecting") or status:match("^on demand") then
+	if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
 		shell("scutil --nc stop " .. name)
 	else
 		shell("scutil --nc start " .. name)
@@ -90,7 +112,7 @@ local function refresh(show_label)
 	easybar.set("wifi_vpn_vpn", {
 		drawing = vpn_connected,
 		icon = {
-			string = "󰦝",
+			string = "󰦝 ",
 			color = "#30d158",
 			font = { size = 14 },
 		},
