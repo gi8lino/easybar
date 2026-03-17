@@ -13,6 +13,7 @@ struct SpaceApp: Identifiable, Hashable {
         guard let bundlePath, !bundlePath.isEmpty else {
             return nil
         }
+
         return NSWorkspace.shared.icon(forFile: bundlePath)
     }
 }

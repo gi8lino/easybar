@@ -1,6 +1,10 @@
+import AppKit
 import Foundation
 
-/// Loads workspace and window state from AeroSpace.
+/// Loads workspace and focused-app state from AeroSpace.
+///
+/// Widgets can register themselves as consumers so AeroSpace refresh work only
+/// runs when at least one native widget depends on that state.
 final class AeroSpaceService: ObservableObject {
 
     static let shared = AeroSpaceService()
@@ -8,19 +12,59 @@ final class AeroSpaceService: ObservableObject {
     @Published private(set) var spaces: [SpaceItem] = []
     @Published private(set) var focusedAppID: String?
 
+    /// Resolved focused app used by `FrontAppNativeWidget`.
+    @Published private(set) var focusedApp: SpaceApp?
+
     private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
     private var debounceWorkItem: DispatchWorkItem?
+    private var consumers = Set<String>()
+    private var appSwitchObserver: NSObjectProtocol?
 
     private init() {}
 
     /// Starts the service.
     func start() {
+        subscribeAppSwitches()
         refresh()
     }
 
-    /// Called by the socket server when an external event occurs.
+    /// Registers one widget that depends on AeroSpace state.
+    func registerConsumer(_ id: String) {
+        consumers.insert(id)
+        Logger.debug("aerospace consumer registered id=\(id) count=\(consumers.count)")
+        refresh()
+    }
+
+    /// Unregisters one widget that no longer depends on AeroSpace state.
+    func unregisterConsumer(_ id: String) {
+        consumers.remove(id)
+        Logger.debug("aerospace consumer unregistered id=\(id) count=\(consumers.count)")
+    }
+
+    /// Returns whether any native widget currently needs AeroSpace state.
+    private var hasConsumers: Bool {
+        !consumers.isEmpty
+    }
+
+    /// Called by the socket server when an external AeroSpace event occurs.
+    ///
+    /// This path should feel immediate, so it skips the normal debounce and
+    /// performs one fast reload plus a short follow-up reload for consistency.
     func triggerRefresh() {
-        debounceRefresh()
+        guard hasConsumers else {
+            Logger.debug("aerospace refresh skipped, no registered consumers")
+            return
+        }
+
+        debounceWorkItem?.cancel()
+
+        refreshQueue.async { [weak self] in
+            guard let self else { return }
+
+            self.reloadState()
+            Thread.sleep(forTimeInterval: 0.04)
+            self.reloadState()
+        }
     }
 
     /// Focuses the requested workspace.
@@ -28,6 +72,7 @@ final class AeroSpaceService: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
 
+            // Update the visible selection immediately for direct clicks in EasyBar.
             self.spaces = self.spaces.map { space in
                 SpaceItem(
                     id: space.id,
@@ -45,7 +90,6 @@ final class AeroSpaceService: ObservableObject {
             _ = self.runAeroSpace(arguments: ["workspace", workspace])
 
             self.reloadState()
-
             Thread.sleep(forTimeInterval: 0.04)
             self.reloadState()
         }
@@ -70,12 +114,60 @@ final class AeroSpaceService: ObservableObject {
         }
     }
 
+    /// Listens for app activation so focused-app UI can update immediately.
+    private func subscribeAppSwitches() {
+        guard appSwitchObserver == nil else { return }
+
+        appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard
+                let self,
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            else {
+                return
+            }
+
+            self.applyOptimisticFocusedApp(from: app)
+        }
+    }
+
+    /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
+    private func applyOptimisticFocusedApp(from app: NSRunningApplication) {
+        let bundlePath = app.bundleURL?.path
+        let name = app.localizedName ?? ""
+
+        let id: String
+        if let bundlePath, !bundlePath.isEmpty {
+            id = bundlePath
+        } else {
+            id = name
+        }
+
+        guard !id.isEmpty else { return }
+
+        let focused = SpaceApp(
+            id: id,
+            bundleID: app.bundleIdentifier ?? "",
+            name: name,
+            bundlePath: bundlePath
+        )
+
+        focusedApp = focused
+        focusedAppID = focused.id
+
+        Logger.debug("aerospace optimistic focus updated app=\(focused.name)")
+        NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
+    }
+
     /// Reads current AeroSpace state and publishes it.
     private func reloadState() {
         let workspaces = loadWorkspaces()
         let windows = loadWindows()
         let groupedApps = Dictionary(grouping: windows, by: \.workspace)
-        let focusedAppID = loadFocusedAppID()
+        let focused = loadFocusedApp()
 
         let spaces = workspaces
             .map { workspace in
@@ -89,9 +181,20 @@ final class AeroSpaceService: ObservableObject {
             }
             .filter { !$0.apps.isEmpty }
 
+        let focusedAppID = focused?.id
+
         DispatchQueue.main.async { [weak self] in
-            self?.spaces = spaces
-            self?.focusedAppID = focusedAppID
+            guard let self else { return }
+
+            self.spaces = spaces
+            self.focusedApp = focused
+            self.focusedAppID = focusedAppID
+
+            Logger.debug(
+                "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none")"
+            )
+
+            NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
         }
     }
 
@@ -99,7 +202,12 @@ final class AeroSpaceService: ObservableObject {
     private func loadWorkspaces() -> [WorkspaceDTO] {
         guard
             let namesOutput = runAeroSpace(arguments: ["list-workspaces", "--all", "--format", "%{workspace}"]),
-            let stateOutput = runAeroSpace(arguments: ["list-workspaces", "--all", "--format", "%{workspace} %{workspace-is-focused} %{workspace-is-visible}"])
+            let stateOutput = runAeroSpace(arguments: [
+                "list-workspaces",
+                "--all",
+                "--format",
+                "%{workspace} %{workspace-is-focused} %{workspace-is-visible}"
+            ])
         else {
             return []
         }
@@ -167,8 +275,8 @@ final class AeroSpaceService: ObservableObject {
             }
     }
 
-    /// Reads the focused window.
-    private func loadFocusedAppID() -> String? {
+    /// Reads the currently focused app from AeroSpace.
+    private func loadFocusedApp() -> SpaceApp? {
         guard let output = runAeroSpace(arguments: [
             "list-windows",
             "--focused",
@@ -180,17 +288,28 @@ final class AeroSpaceService: ObservableObject {
 
         let parts = output
             .components(separatedBy: " | ")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-        if let bundlePath = parts.first, !bundlePath.isEmpty {
-            return bundlePath
+        let bundlePath = parts.first.flatMap { $0.isEmpty ? nil : $0 }
+        let name = parts.count > 1 ? parts[1] : ""
+
+        let id: String
+        if let bundlePath, !bundlePath.isEmpty {
+            id = bundlePath
+        } else {
+            id = name
         }
 
-        if parts.count > 1 {
-            return parts[1]
+        if id.isEmpty {
+            return nil
         }
 
-        return nil
+        return SpaceApp(
+            id: id,
+            bundleID: "",
+            name: name,
+            bundlePath: bundlePath
+        )
     }
 
     /// Deduplicates apps per workspace.
@@ -228,7 +347,13 @@ final class AeroSpaceService: ObservableObject {
         let pipe = Pipe()
         process.standardOutput = pipe
 
-        try? process.run()
+        do {
+            try process.run()
+        } catch {
+            Logger.debug("failed to run aerospace \(arguments.joined(separator: " ")): \(error)")
+            return nil
+        }
+
         process.waitUntilExit()
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -248,6 +373,10 @@ final class AeroSpaceService: ObservableObject {
         let fm = FileManager.default
         return candidates.first(where: { fm.isExecutableFile(atPath: $0) })
     }
+}
+
+extension Notification.Name {
+    static let easyBarAeroSpaceDidUpdate = Notification.Name("easybar.aerospace.did-update")
 }
 
 private struct WorkspaceDTO {

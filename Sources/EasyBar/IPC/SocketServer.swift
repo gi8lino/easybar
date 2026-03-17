@@ -67,6 +67,8 @@ final class SocketServer {
                 continue
             }
 
+            Logger.debug("socket accepted client")
+
             var buffer = [UInt8](repeating: 0, count: 256)
             let count = read(client, &buffer, 255)
 
@@ -74,10 +76,12 @@ final class SocketServer {
                 let string = String(bytes: buffer.prefix(count), encoding: .utf8)?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
 
-                Logger.debug("received command '\(string ?? "unknown")'")
+                Logger.debug("socket received raw command '\(string ?? "unknown")'")
 
                 if let string,
                    let cmd = IPCCommand(rawValue: string) {
+                    Logger.debug("socket dispatching command '\(cmd.rawValue)'")
+
                     DispatchQueue.main.async {
                         handler(cmd)
                     }
