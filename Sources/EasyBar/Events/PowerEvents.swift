@@ -14,7 +14,7 @@ final class PowerEvents {
         guard runLoopSource == nil else { return }
 
         let callback: IOPowerSourceCallbackType = { _ in
-            EventBus.shared.emit("power_source_change")
+            EventBus.shared.emit(.powerSourceChange)
             PowerEvents.shared.handlePowerSourceCallback()
         }
 
@@ -55,7 +55,7 @@ final class PowerEvents {
         if lastChargingState != newState {
             lastChargingState = newState
 
-            EventBus.shared.emit("charging_state_change", data: [
+            EventBus.shared.emit(.chargingStateChange, data: [
                 "charging": newState ? "true" : "false"
             ])
         }

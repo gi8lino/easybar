@@ -28,7 +28,7 @@ final class CalendarEvents {
             object: store,
             queue: .main
         ) { _ in
-            EventBus.shared.emit("calendar_change")
+            EventBus.shared.emit(.calendarChange)
         }
 
         Logger.debug("subscribed calendar_change")

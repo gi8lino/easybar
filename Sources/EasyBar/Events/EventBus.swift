@@ -9,14 +9,14 @@ final class EventBus {
     private init() {}
 
     /// Emits one event to native widgets and the Lua runtime.
-    func emit(_ event: String, data: [String: String] = [:]) {
+    func emit(_ event: AppEvent, data: [String: String] = [:]) {
         var payload = data
-        payload["event"] = event
+        payload["event"] = event.rawValue
 
         // Native widgets subscribe through NotificationCenter.
         NotificationCenter.default.post(name: .easyBarEvent, object: payload)
 
-        Logger.debug("emit event \(event)")
+        Logger.debug("emit event \(event.rawValue)")
 
         guard let encoded = encodeJSON(payload) else {
             Logger.info("failed to encode lua event payload")
@@ -27,10 +27,12 @@ final class EventBus {
     }
 
     /// Emits one widget-scoped event.
-    func emitWidgetEvent(_ event: String, widgetID: String, data: [String: String] = [:]) {
+    func emitWidgetEvent(_ event: WidgetEvent, widgetID: String, data: [String: String] = [:]) {
         var payload = data
         payload["widget"] = widgetID
-        emit(event, data: payload)
+        payload["event"] = event.rawValue
+
+        NotificationCenter.default.post(name: .easyBarEvent, object: payload)
     }
 
     /// Encodes the Lua event payload as JSON.

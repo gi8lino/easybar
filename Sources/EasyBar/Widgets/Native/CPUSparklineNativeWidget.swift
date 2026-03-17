@@ -52,7 +52,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
         let node = WidgetNodeState(
             id: rootID,
             root: rootID,
-            kind: "sparkline",
+            kind: .sparkline,
             parent: nil,
             position: style.position,
             order: style.order,
@@ -64,6 +64,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
             imagePath: nil,
             imageSize: nil,
             imageCornerRadius: nil,
+            fontSize: nil,
             value: nil,
             min: nil,
             max: nil,

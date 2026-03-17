@@ -24,21 +24,32 @@ final class BatteryNativeWidget: NativeWidget {
             guard
                 let self,
                 let payload = notification.object as? [String: String],
-                let event = payload["event"]
+                let rawEvent = payload["event"]
             else {
                 return
             }
 
-            switch event {
-            case "power_source_change", "charging_state_change", "system_woke":
-                self.publish()
+            if let event = AppEvent(rawValue: rawEvent) {
+                switch event {
+                case .powerSourceChange, .chargingStateChange, .systemWoke:
+                    self.publish()
+                default:
+                    break
+                }
+                return
+            }
 
-            case "mouse.entered":
+            guard let event = WidgetEvent(rawValue: rawEvent) else {
+                return
+            }
+
+            switch event {
+            case .mouseEntered:
                 guard payload["widget"] == self.rootID else { return }
                 self.isHovered = true
                 self.publish()
 
-            case "mouse.exited":
+            case .mouseExited:
                 guard payload["widget"] == self.rootID else { return }
                 self.isHovered = false
                 self.publish()
@@ -79,7 +90,7 @@ final class BatteryNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
-                kind: "row",
+                kind: .row,
                 parent: nil,
                 position: style.position,
                 order: style.order,
@@ -100,7 +111,7 @@ final class BatteryNativeWidget: NativeWidget {
                 lineWidth: nil,
                 paddingX: style.paddingX,
                 paddingY: style.paddingY,
-                spacing: style.spacing, // Controls gap between icon and label.
+                spacing: style.spacing,
                 backgroundColor: style.backgroundColorHex,
                 borderColor: style.borderColorHex,
                 borderWidth: style.borderWidth,
@@ -111,7 +122,7 @@ final class BatteryNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_icon",
                 root: rootID,
-                kind: "item",
+                kind: .item,
                 parent: rootID,
                 position: style.position,
                 order: 0,
@@ -123,7 +134,7 @@ final class BatteryNativeWidget: NativeWidget {
                 imagePath: nil,
                 imageSize: nil,
                 imageCornerRadius: nil,
-                fontSize: config.iconSize, // Battery icon font size.
+                fontSize: config.iconSize,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -143,7 +154,7 @@ final class BatteryNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_label",
                 root: rootID,
-                kind: "item",
+                kind: .item,
                 parent: rootID,
                 position: style.position,
                 order: 1,
@@ -192,7 +203,6 @@ final class BatteryNativeWidget: NativeWidget {
         else {
             return (
                 style,
-                // Use configured fallback icon if state cannot be read.
                 style.icon,
                 config.unavailableText,
                 config.style.textColorHex
@@ -280,7 +290,6 @@ final class BatteryNativeWidget: NativeWidget {
         charging: Bool,
         fallback: String?
     ) -> String? {
-        // Explicit text_color wins.
         if let fallback, !fallback.isEmpty {
             return fallback
         }

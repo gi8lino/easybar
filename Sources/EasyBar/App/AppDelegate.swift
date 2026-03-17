@@ -23,15 +23,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch command {
             case .workspaceChanged:
                 self?.aeroSpaceService.triggerRefresh()
-                EventBus.shared.emit("workspace_change")
+                EventBus.shared.emit(.workspaceChange)
 
             case .focusChanged:
                 self?.aeroSpaceService.triggerRefresh()
-                EventBus.shared.emit("focus_change")
+                EventBus.shared.emit(.focusChange)
 
             case .refresh:
                 self?.aeroSpaceService.triggerRefresh()
-                EventBus.shared.emit("forced")
+                EventBus.shared.emit(.forced)
 
             case .reloadConfig:
                 Config.shared.reload()

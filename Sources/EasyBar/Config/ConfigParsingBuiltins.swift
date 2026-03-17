@@ -443,7 +443,7 @@ extension Config {
                 try optionalString(
                     anchorTable["layout"],
                     path: "builtins.calendar.anchor.layout"
-                ) ?? builtinCalendar.layout
+                ) ?? builtinCalendar.layout.rawValue
             ),
             topFormat: try optionalString(
                 anchorTable["top_format"],

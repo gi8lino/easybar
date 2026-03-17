@@ -47,7 +47,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
         }
 
         let callback: SCNetworkReachabilityCallBack = { _, _, _ in
-            EventBus.shared.emit("network_change")
+            EventBus.shared.emit(.networkChange)
         }
 
         if !SCNetworkReachabilitySetCallback(reachability, callback, &context) {
@@ -81,7 +81,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     }
 
     func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-        EventBus.shared.emit("wifi_change", data: [
+        EventBus.shared.emit(.wifiChange, data: [
             "interface": interfaceName
         ])
     }

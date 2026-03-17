@@ -18,7 +18,7 @@ final class SpacesNativeWidget: NativeWidget {
         let node = WidgetNodeState(
             id: rootID,
             root: rootID,
-            kind: "spaces",
+            kind: .spaces,
             parent: nil,
             position: style.position,
             order: style.order,
@@ -30,6 +30,7 @@ final class SpacesNativeWidget: NativeWidget {
             imagePath: nil,
             imageSize: nil,
             imageCornerRadius: nil,
+            fontSize: nil,
             value: nil,
             min: nil,
             max: nil,

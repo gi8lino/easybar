@@ -29,7 +29,7 @@ enum ConfigDefaults {
     static let builtinCPU = Config.CPUBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 60,
             icon: "󰍛",
             textColorHex: nil,
@@ -53,7 +53,7 @@ enum ConfigDefaults {
     static let builtinBattery = Config.BatteryBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 10,
             icon: "🔋",
             textColorHex: nil,
@@ -76,7 +76,7 @@ enum ConfigDefaults {
     static let builtinSpaces = Config.SpacesBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "left",
+            position: .left,
             order: 10,
             icon: "",
             textColorHex: nil,
@@ -133,7 +133,7 @@ enum ConfigDefaults {
     static let builtinFrontApp = Config.FrontAppBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "left",
+            position: .left,
             order: 15,
             icon: "􀈔",
             textColorHex: nil,
@@ -158,7 +158,7 @@ enum ConfigDefaults {
     static let builtinVolume = Config.VolumeBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 20,
             icon: "🔊",
             textColorHex: nil,
@@ -189,7 +189,7 @@ enum ConfigDefaults {
     static let builtinCalendar = Config.CalendarBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 50,
             icon: "🗓",
             textColorHex: nil,
@@ -204,7 +204,7 @@ enum ConfigDefaults {
         ),
         anchor: .init(
             format: "EEE, MMM d",
-            layout: "item",
+            layout: .item,
             topFormat: "HH:mm",
             bottomFormat: "MMMM, d",
             lineSpacing: 0,
@@ -256,7 +256,7 @@ enum ConfigDefaults {
     static let builtinTime = Config.TimeBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 40,
             icon: "🕒",
             textColorHex: nil,
@@ -277,7 +277,7 @@ enum ConfigDefaults {
     static let builtinDate = Config.DateBuiltinConfig(
         style: Config.BuiltinWidgetStyle(
             enabled: false,
-            position: "right",
+            position: .right,
             order: 30,
             icon: "📅",
             textColorHex: nil,

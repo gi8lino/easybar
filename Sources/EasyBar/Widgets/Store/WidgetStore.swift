@@ -38,7 +38,7 @@ final class WidgetStore: ObservableObject {
         }
     }
 
-    func topLevelNodes(for position: String) -> [WidgetNodeState] {
+    func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
         nodes
             .filter { ($0.parent == nil || $0.parent == "") && $0.position == position }
             .sorted(by: sortNodes)
@@ -46,13 +46,13 @@ final class WidgetStore: ObservableObject {
 
     func children(of parentID: String) -> [WidgetNodeState] {
         nodes
-            .filter { $0.parent == parentID && ($0.role ?? "") != "popup-anchor" }
+            .filter { $0.parent == parentID && $0.role != .popupAnchor }
             .sorted(by: sortNodes)
     }
 
     func anchorChildren(of parentID: String) -> [WidgetNodeState] {
         nodes
-            .filter { $0.parent == parentID && ($0.role ?? "") == "popup-anchor" }
+            .filter { $0.parent == parentID && $0.role == .popupAnchor }
             .sorted(by: sortNodes)
     }
 
@@ -68,7 +68,7 @@ final class WidgetStore: ObservableObject {
 
     private func sortNodes(_ lhs: WidgetNodeState, _ rhs: WidgetNodeState) -> Bool {
         if lhs.position != rhs.position {
-            return lhs.position < rhs.position
+            return lhs.position.rawValue < rhs.position.rawValue
         }
 
         if lhs.order != rhs.order {

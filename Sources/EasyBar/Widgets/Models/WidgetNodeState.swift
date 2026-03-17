@@ -3,9 +3,9 @@ import Foundation
 struct WidgetNodeState: Identifiable, Codable, Equatable {
     let id: String
     let root: String
-    let kind: String
+    let kind: WidgetNodeKind
     let parent: String?
-    let position: String
+    let position: WidgetPosition
     let order: Int
 
     var icon: String
@@ -15,7 +15,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var labelColor: String?
     var visible: Bool
 
-    var role: String?
+    var role: WidgetNodeRole?
 
     var imagePath: String?
     var imageSize: Double?

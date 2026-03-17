@@ -17,10 +17,10 @@ struct WidgetNodeView: View {
                 EmptyView()
             } else {
                 switch node.kind {
-                case "row", "group":
+                case .row, .group:
                     rowOrGroupView
 
-                case "column":
+                case .column:
                     VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
                         ForEach(store.children(of: node.id)) { child in
                             WidgetNodeView(node: child)
@@ -28,34 +28,34 @@ struct WidgetNodeView: View {
                     }
                     .modifier(WidgetNodeStyle(node: node))
 
-                case "spaces":
+                case .spaces:
                     SpacesWidgetView()
                         .modifier(WidgetNodeStyle(node: node))
 
-                case "popup":
+                case .popup:
                     popupAnchor
 
-                case "slider":
+                case .slider:
                     sliderView
                         .modifier(WidgetNodeStyle(node: node))
                         .overlay(WidgetMouseView(widgetID: node.root))
 
-                case "progress_slider":
+                case .progressSlider:
                     progressSliderView
                         .modifier(WidgetNodeStyle(node: node))
                         .overlay(WidgetMouseView(widgetID: node.root))
 
-                case "progress":
+                case .progress:
                     progressView
                         .modifier(WidgetNodeStyle(node: node))
                         .overlay(WidgetMouseView(widgetID: node.root))
 
-                case "sparkline":
+                case .sparkline:
                     sparklineView
                         .modifier(WidgetNodeStyle(node: node))
                         .overlay(WidgetMouseView(widgetID: node.root))
 
-                default:
+                case .item:
                     itemView
                 }
             }
@@ -234,7 +234,7 @@ struct WidgetNodeView: View {
                 step: node.step ?? 1,
                 value: node.value ?? 0,
                 tint: color(node.color),
-                width: node.width.map(CGFloat.init)
+                width: cgFloat(node.width)
             )
         }
     }
@@ -260,7 +260,7 @@ struct WidgetNodeView: View {
                 step: node.step ?? 1,
                 value: node.value ?? 0,
                 tint: color(node.color),
-                width: node.width.map(CGFloat.init)
+                width: cgFloat(node.width)
             )
         }
     }
@@ -325,6 +325,11 @@ struct WidgetNodeView: View {
         return .system(size: CGFloat(size))
     }
 
+    private func cgFloat(_ value: Double?) -> CGFloat? {
+        guard let value else { return nil }
+        return CGFloat(value)
+    }
+
     private func schedulePopupCloseCheck() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             if !anchorHovered && !popupHovered {
@@ -338,30 +343,42 @@ private struct WidgetNodeStyle: ViewModifier {
 
     let node: WidgetNodeState
 
+    /// Splits the layout values out first.
+    /// This avoids the SwiftUI type-checker issue from the chained optional math.
     func body(content: Content) -> some View {
-        content
-            .padding(.leading, CGFloat(node.paddingLeft ?? node.paddingX ?? 0))
-            .padding(.trailing, CGFloat(node.paddingRight ?? node.paddingX ?? 0))
-            .padding(.top, CGFloat(node.paddingTop ?? node.paddingY ?? 0))
-            .padding(.bottom, CGFloat(node.paddingBottom ?? node.paddingY ?? 0))
+        let leading = CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
+        let trailing = CGFloat(node.paddingRight ?? node.paddingX ?? 0)
+        let top = CGFloat(node.paddingTop ?? node.paddingY ?? 0)
+        let bottom = CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
+        let frameWidth = node.width.map { CGFloat($0) }
+        let frameHeight = node.height.map { CGFloat($0) }
+        let radius = CGFloat(node.cornerRadius ?? 0)
+        let lineWidth = CGFloat(node.borderWidth ?? 0)
+        let yOffset = CGFloat(node.yOffset ?? 0)
+
+        return content
+            .padding(.leading, leading)
+            .padding(.trailing, trailing)
+            .padding(.top, top)
+            .padding(.bottom, bottom)
             .frame(
-                width: node.width.map(CGFloat.init),
-                height: node.height.map(CGFloat.init),
+                width: frameWidth,
+                height: frameHeight,
                 alignment: .center
             )
             .background(backgroundColor)
             .overlay {
-                RoundedRectangle(cornerRadius: CGFloat(node.cornerRadius ?? 0))
+                RoundedRectangle(cornerRadius: radius)
                     .stroke(
                         borderColor,
-                        lineWidth: CGFloat(node.borderWidth ?? 0)
+                        lineWidth: lineWidth
                     )
             }
             .clipShape(
-                RoundedRectangle(cornerRadius: CGFloat(node.cornerRadius ?? 0))
+                RoundedRectangle(cornerRadius: radius)
             )
             .opacity(node.opacity ?? 1.0)
-            .offset(y: CGFloat(node.yOffset ?? 0))
+            .offset(y: yOffset)
     }
 
     private var backgroundColor: Color {

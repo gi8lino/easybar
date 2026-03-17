@@ -3,7 +3,7 @@ import SwiftUI
 struct WidgetBar: View {
 
     @ObservedObject private var store = WidgetStore.shared
-    let position: String
+    let position: WidgetPosition
 
     var body: some View {
         HStack(spacing: 10) {

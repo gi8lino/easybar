@@ -10,7 +10,7 @@ enum BuiltinWidgetNodeFactory {
         WidgetNodeState(
             id: rootID,
             root: rootID,
-            kind: "item",
+            kind: .item,
             parent: nil,
             position: style.position,
             order: style.order,
@@ -48,7 +48,7 @@ enum BuiltinWidgetNodeFactory {
         WidgetNodeState(
             id: rootID,
             root: rootID,
-            kind: "slider",
+            kind: .slider,
             parent: nil,
             position: style.position,
             order: style.order,

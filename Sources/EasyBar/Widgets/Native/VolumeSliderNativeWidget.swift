@@ -19,35 +19,47 @@ final class VolumeSliderNativeWidget: NativeWidget {
         ) { [weak self] notification in
             guard let self,
                   let payload = notification.object as? [String: String],
-                  let event = payload["event"] else {
+                  let rawEvent = payload["event"] else {
+                return
+            }
+
+            if let event = AppEvent(rawValue: rawEvent) {
+                switch event {
+                case .volumeChange, .muteChange:
+                    if Config.shared.builtinVolume.expandToSliderOnHover {
+                        self.isHovered = true
+                        self.scheduleAutoHide()
+                    }
+
+                    self.publish()
+
+                default:
+                    break
+                }
+
+                return
+            }
+
+            guard let event = WidgetEvent(rawValue: rawEvent) else {
                 return
             }
 
             switch event {
-            case "volume_change", "mute_change":
-                // Keyboard / system changes should briefly expand the slider.
-                if Config.shared.builtinVolume.expandToSliderOnHover {
-                    self.isHovered = true
-                    self.scheduleAutoHide()
-                }
-
-                self.publish()
-
-            case "mouse.entered":
+            case .mouseEntered:
                 guard payload["widget"] == self.rootID else { return }
 
                 self.isHovered = true
                 self.cancelAutoHide()
                 self.publish()
 
-            case "mouse.exited":
+            case .mouseExited:
                 guard payload["widget"] == self.rootID else { return }
 
                 self.isHovered = false
                 self.cancelAutoHide()
                 self.publish()
 
-            case "slider.preview":
+            case .sliderPreview:
                 guard payload["widget"] == self.rootID,
                       let rawValue = payload["value"],
                       let value = Double(rawValue) else {
@@ -66,7 +78,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 self.setSystemVolume(normalized)
                 self.publish()
 
-            case "slider.changed":
+            case .sliderChanged:
                 guard payload["widget"] == self.rootID,
                       let rawValue = payload["value"],
                       let value = Double(rawValue) else {
@@ -118,7 +130,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
         var style = config.style
         style.icon = resolvedIcon(for: clampedSystem, muted: isMuted, config: config)
 
-        // Show percentage only while expanded.
         let text = (config.showPercentage && isHovered)
             ? "\(Int((clampedSystem * 100.0).rounded()))%"
             : ""
@@ -167,7 +178,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
-                kind: "row",
+                kind: .row,
                 parent: nil,
                 position: style.position,
                 order: style.order,
@@ -176,6 +187,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 color: nil,
                 visible: true,
                 role: nil,
+                fontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -198,7 +210,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 WidgetNodeState(
                     id: "\(rootID)_icon",
                     root: rootID,
-                    kind: "item",
+                    kind: .item,
                     parent: rootID,
                     position: style.position,
                     order: 0,
@@ -207,6 +219,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
                     color: style.textColorHex,
                     visible: true,
                     role: nil,
+                    fontSize: nil,
                     value: nil,
                     min: nil,
                     max: nil,
@@ -229,16 +242,16 @@ final class VolumeSliderNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_label",
                 root: rootID,
-                kind: "item",
+                kind: .item,
                 parent: rootID,
                 position: style.position,
                 order: 1,
                 icon: "",
                 text: text,
                 color: style.textColorHex,
-                // Label is only visible while expanded and non-empty.
                 visible: isHovered && !text.isEmpty,
                 role: nil,
+                fontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -260,7 +273,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_slider",
                 root: rootID,
-                kind: "slider",
+                kind: .slider,
                 parent: rootID,
                 position: style.position,
                 order: 2,
@@ -269,6 +282,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 color: style.textColorHex,
                 visible: isHovered,
                 role: nil,
+                fontSize: nil,
                 value: value,
                 min: min,
                 max: max,

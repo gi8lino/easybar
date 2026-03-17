@@ -14,7 +14,7 @@ final class SystemEvents {
             object: nil,
             queue: .main
         ) { _ in
-            EventBus.shared.emit("system_woke")
+            EventBus.shared.emit(.systemWoke)
         }
 
         observers.append(observer)
@@ -27,7 +27,7 @@ final class SystemEvents {
             object: nil,
             queue: .main
         ) { _ in
-            EventBus.shared.emit("sleep")
+            EventBus.shared.emit(.sleep)
         }
 
         observers.append(observer)
@@ -40,7 +40,7 @@ final class SystemEvents {
             object: nil,
             queue: .main
         ) { _ in
-            EventBus.shared.emit("space_change")
+            EventBus.shared.emit(.spaceChange)
         }
 
         observers.append(observer)
@@ -54,7 +54,7 @@ final class SystemEvents {
             queue: .main
         ) { notification in
             if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
-                EventBus.shared.emit("app_switch", data: [
+                EventBus.shared.emit(.appSwitch, data: [
                     "app": app.localizedName ?? ""
                 ])
             }
@@ -70,7 +70,7 @@ final class SystemEvents {
             object: nil,
             queue: .main
         ) { _ in
-            EventBus.shared.emit("display_change")
+            EventBus.shared.emit(.displayChange)
         }
 
         observers.append(observer)

@@ -58,7 +58,7 @@ struct ProgressSliderWidgetView: View {
                         value = newValue
 
                         EventBus.shared.emitWidgetEvent(
-                            "slider.preview",
+                            .sliderPreview,
                             widgetID: rootWidgetID,
                             data: [
                                 "value": String(Int(newValue.rounded()))
@@ -71,7 +71,7 @@ struct ProgressSliderWidgetView: View {
                         isDragging = false
 
                         EventBus.shared.emitWidgetEvent(
-                            "slider.changed",
+                            .sliderChanged,
                             widgetID: rootWidgetID,
                             data: [
                                 "value": String(Int(newValue.rounded()))

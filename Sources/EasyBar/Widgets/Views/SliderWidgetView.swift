@@ -40,7 +40,7 @@ struct SliderWidgetView: View {
                     value = newValue
 
                     EventBus.shared.emitWidgetEvent(
-                        "slider.preview",
+                        .sliderPreview,
                         widgetID: rootWidgetID,
                         data: [
                             "value": String(Int(newValue.rounded()))
@@ -55,7 +55,7 @@ struct SliderWidgetView: View {
 
                 if !editing {
                     EventBus.shared.emitWidgetEvent(
-                        "slider.changed",
+                        .sliderChanged,
                         widgetID: rootWidgetID,
                         data: [
                             "value": String(Int(value.rounded()))

@@ -10,7 +10,9 @@ extension Config {
     ) throws -> BuiltinWidgetStyle {
         BuiltinWidgetStyle(
             enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
-            position: normalizedPosition(try optionalString(table["position"], path: "\(path).position") ?? fallback.position),
+            position: normalizedPosition(
+                try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
+            ),
             order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
             icon: try optionalString(table["icon"], path: "\(path).icon") ?? fallback.icon,
             textColorHex: try optionalString(table["text_color"], path: "\(path).text_color") ?? fallback.textColorHex,
@@ -25,22 +27,12 @@ extension Config {
         )
     }
 
-    func normalizedPosition(_ value: String) -> String {
-        switch value {
-        case "left", "center", "right":
-            return value
-        default:
-            return "right"
-        }
+    func normalizedPosition(_ value: String) -> WidgetPosition {
+        WidgetPosition(rawValue: value) ?? .right
     }
 
-    func normalizedCalendarLayout(_ value: String) -> String {
-        switch value {
-        case "item", "stack", "inline":
-            return value
-        default:
-            return "item"
-        }
+    func normalizedCalendarLayout(_ value: String) -> CalendarAnchorLayout {
+        CalendarAnchorLayout(rawValue: value) ?? .item
     }
 
     func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {

@@ -5,15 +5,15 @@ struct BarRootView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            WidgetBar(position: "left")
+            WidgetBar(position: .left)
 
             Spacer(minLength: 0)
 
-            WidgetBar(position: "center")
+            WidgetBar(position: .center)
 
             Spacer(minLength: 0)
 
-            WidgetBar(position: "right")
+            WidgetBar(position: .right)
         }
         .padding(.horizontal, Config.shared.barPadding)
         .frame(height: Config.shared.barHeight)
@@ -26,4 +26,3 @@ struct BarRootView: View {
         .foregroundStyle(Theme.textColor)
     }
 }
-

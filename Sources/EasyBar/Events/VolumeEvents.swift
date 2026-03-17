@@ -47,7 +47,7 @@ final class VolumeEvents {
 
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
             self?.refreshDeviceSubscription()
-            EventBus.shared.emit("volume_change")
+            EventBus.shared.emit(.volumeChange)
         }
 
         let status = AudioObjectAddPropertyListenerBlock(
@@ -105,8 +105,8 @@ final class VolumeEvents {
         installDeviceListeners()
 
         // Device switch should refresh UI state.
-        EventBus.shared.emit("volume_change")
-        EventBus.shared.emit("mute_change", data: [
+        EventBus.shared.emit(.volumeChange)
+        EventBus.shared.emit(.muteChange, data: [
             "muted": (lastMutedState ?? false) ? "true" : "false"
         ])
     }
@@ -121,7 +121,7 @@ final class VolumeEvents {
         )
 
         let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
-            EventBus.shared.emit("volume_change")
+            EventBus.shared.emit(.volumeChange)
         }
 
         let volumeStatus = AudioObjectAddPropertyListenerBlock(
@@ -144,7 +144,7 @@ final class VolumeEvents {
         )
 
         let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            EventBus.shared.emit("volume_change")
+            EventBus.shared.emit(.volumeChange)
 
             guard let self, let deviceID = self.currentDeviceID else { return }
 
@@ -152,7 +152,7 @@ final class VolumeEvents {
             if self.lastMutedState != muted {
                 self.lastMutedState = muted
 
-                EventBus.shared.emit("mute_change", data: [
+                EventBus.shared.emit(.muteChange, data: [
                     "muted": muted ? "true" : "false"
                 ])
             }

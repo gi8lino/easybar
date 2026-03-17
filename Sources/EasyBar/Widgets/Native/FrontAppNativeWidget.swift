@@ -14,13 +14,14 @@ final class FrontAppNativeWidget: NativeWidget {
         ) { [weak self] notification in
             guard
                 let payload = notification.object as? [String: String],
-                let event = payload["event"]
+                let rawEvent = payload["event"],
+                let event = AppEvent(rawValue: rawEvent)
             else {
                 return
             }
 
             switch event {
-            case "app_switch", "focus_change", "workspace_change", "system_woke":
+            case .appSwitch, .focusChange, .workspaceChange, .systemWoke:
                 self?.publish()
             default:
                 break
@@ -48,7 +49,7 @@ final class FrontAppNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
-                kind: "row",
+                kind: .row,
                 parent: nil,
                 position: style.position,
                 order: style.order,
@@ -60,6 +61,7 @@ final class FrontAppNativeWidget: NativeWidget {
                 imagePath: nil,
                 imageSize: nil,
                 imageCornerRadius: nil,
+                fontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -82,7 +84,7 @@ final class FrontAppNativeWidget: NativeWidget {
                 WidgetNodeState(
                     id: "\(rootID)_icon",
                     root: rootID,
-                    kind: "item",
+                    kind: .item,
                     parent: rootID,
                     position: style.position,
                     order: 0,
@@ -94,6 +96,7 @@ final class FrontAppNativeWidget: NativeWidget {
                     imagePath: focused.bundlePath,
                     imageSize: config.iconSize,
                     imageCornerRadius: config.iconCornerRadius,
+                    fontSize: nil,
                     value: nil,
                     min: nil,
                     max: nil,
@@ -117,7 +120,7 @@ final class FrontAppNativeWidget: NativeWidget {
                 WidgetNodeState(
                     id: "\(rootID)_label",
                     root: rootID,
-                    kind: "item",
+                    kind: .item,
                     parent: rootID,
                     position: style.position,
                     order: 1,
@@ -129,6 +132,7 @@ final class FrontAppNativeWidget: NativeWidget {
                     imagePath: nil,
                     imageSize: nil,
                     imageCornerRadius: nil,
+                    fontSize: nil,
                     value: nil,
                     min: nil,
                     max: nil,

@@ -4,7 +4,7 @@ extension Config {
 
     struct BuiltinWidgetStyle {
         var enabled: Bool
-        var position: String
+        var position: WidgetPosition
         var order: Int
 
         var icon: String
@@ -265,7 +265,7 @@ extension Config {
     struct CalendarBuiltinConfig {
         struct Anchor {
             var format: String
-            var layout: String
+            var layout: CalendarAnchorLayout
             var topFormat: String
             var bottomFormat: String
             var lineSpacing: Double
@@ -318,7 +318,7 @@ extension Config {
             set { anchor.format = newValue }
         }
 
-        var layout: String {
+        var layout: CalendarAnchorLayout {
             get { anchor.layout }
             set { anchor.layout = newValue }
         }

@@ -11,7 +11,7 @@ final class TimerEvents {
     func startMinuteTimer() {
 
         let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            EventBus.shared.emit("minute_tick")
+            EventBus.shared.emit(.minuteTick)
         }
 
         timers.append(timer)
@@ -22,7 +22,7 @@ final class TimerEvents {
     func startSecondTimer() {
 
         let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            EventBus.shared.emit("second_tick")
+            EventBus.shared.emit(.secondTick)
         }
 
         timers.append(timer)

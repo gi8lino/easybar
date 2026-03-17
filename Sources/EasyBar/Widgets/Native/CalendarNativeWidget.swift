@@ -17,12 +17,13 @@ final class CalendarNativeWidget: NativeWidget {
         ) { [weak self] notification in
             guard
                 let payload = notification.object as? [String: String],
-                let event = payload["event"]
+                let rawEvent = payload["event"],
+                let event = AppEvent(rawValue: rawEvent)
             else {
                 return
             }
 
-            if event == "calendar_change" || event == "minute_tick" {
+            if event == .calendarChange || event == .minuteTick {
                 self?.publish()
             }
         }
@@ -54,13 +55,13 @@ final class CalendarNativeWidget: NativeWidget {
         let nodes: [WidgetNodeState]
 
         switch config.layout {
-        case "stack":
+        case .stack:
             nodes = makeStackNodes(config: config, now: now)
 
-        case "inline":
+        case .inline:
             nodes = makeInlineNodes(config: config, now: now)
 
-        default:
+        case .item:
             let formatter = DateFormatter()
             formatter.dateFormat = config.format
 
@@ -85,7 +86,7 @@ final class CalendarNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
-                kind: "row",
+                kind: .row,
                 parent: nil,
                 position: config.style.position,
                 order: config.style.order,
@@ -113,7 +114,7 @@ final class CalendarNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_icon",
                 root: rootID,
-                kind: "item",
+                kind: .item,
                 parent: rootID,
                 position: config.style.position,
                 order: 0,
@@ -141,7 +142,7 @@ final class CalendarNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_text_column",
                 root: rootID,
-                kind: "column",
+                kind: .column,
                 parent: rootID,
                 position: config.style.position,
                 order: 1,
@@ -194,7 +195,7 @@ final class CalendarNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: rootID,
                 root: rootID,
-                kind: "row",
+                kind: .row,
                 parent: nil,
                 position: config.style.position,
                 order: config.style.order,
@@ -222,7 +223,7 @@ final class CalendarNativeWidget: NativeWidget {
             WidgetNodeState(
                 id: "\(rootID)_icon",
                 root: rootID,
-                kind: "item",
+                kind: .item,
                 parent: rootID,
                 position: config.style.position,
                 order: 0,
@@ -270,7 +271,7 @@ final class CalendarNativeWidget: NativeWidget {
     private func makeTextNode(
         id: String,
         parent: String,
-        position: String,
+        position: WidgetPosition,
         order: Int,
         text: String,
         color: String?
@@ -278,7 +279,7 @@ final class CalendarNativeWidget: NativeWidget {
         WidgetNodeState(
             id: id,
             root: rootID,
-            kind: "item",
+            kind: .item,
             parent: parent,
             position: position,
             order: order,

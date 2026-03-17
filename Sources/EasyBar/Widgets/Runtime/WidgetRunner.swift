@@ -123,53 +123,53 @@ final class WidgetRunner {
         Logger.debug("emitting initial widget events")
 
         if requiredEvents.contains("system_woke") {
-            EventBus.shared.emit("system_woke")
+            EventBus.shared.emit(.systemWoke)
         }
 
         if requiredEvents.contains("power_source_change") {
-            EventBus.shared.emit("power_source_change")
+            EventBus.shared.emit(.powerSourceChange)
         }
 
         if requiredEvents.contains("charging_state_change") {
-            EventBus.shared.emit("charging_state_change")
+            EventBus.shared.emit(.chargingStateChange)
         }
 
         if requiredEvents.contains("wifi_change") {
-            EventBus.shared.emit("wifi_change")
+            EventBus.shared.emit(.wifiChange)
         }
 
         if requiredEvents.contains("network_change") {
-            EventBus.shared.emit("network_change")
+            EventBus.shared.emit(.networkChange)
         }
 
         if requiredEvents.contains("volume_change") {
-            EventBus.shared.emit("volume_change")
+            EventBus.shared.emit(.volumeChange)
         }
 
         if requiredEvents.contains("mute_change") {
-            EventBus.shared.emit("mute_change")
+            EventBus.shared.emit(.muteChange)
         }
 
         if requiredEvents.contains("calendar_change") {
-            EventBus.shared.emit("calendar_change")
+            EventBus.shared.emit(.calendarChange)
         }
 
         if requiredEvents.contains("minute_tick") {
-            EventBus.shared.emit("minute_tick")
+            EventBus.shared.emit(.minuteTick)
         }
 
         if requiredEvents.contains("second_tick") {
-            EventBus.shared.emit("second_tick")
+            EventBus.shared.emit(.secondTick)
         }
 
         if requiredEvents.contains("focus_change") {
-            EventBus.shared.emit("focus_change")
+            EventBus.shared.emit(.focusChange)
         }
 
         if requiredEvents.contains("workspace_change") {
-            EventBus.shared.emit("workspace_change")
+            EventBus.shared.emit(.workspaceChange)
         }
 
-        EventBus.shared.emit("forced")
+        EventBus.shared.emit(.forced)
     }
 }
