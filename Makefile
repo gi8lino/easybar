@@ -29,7 +29,8 @@ NEXT_PATCH := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split("."))
 NEXT_MINOR := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split(".")); print(f"{m}.{n+1}.0")')
 NEXT_MAJOR := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split(".")); print(f"{m+1}.0.0")')
 
-SWIFT_BUILD := swift build -c release
+SWIFT_BUILD_RELEASE := swift build -c release
+SWIFT_BUILD_DEBUG := swift build -c debug
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -43,7 +44,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package app cli clean clean-dist run \
+.PHONY: help all prepare-version build bundle package app cli clean clean-dist run dev \
         build-app build-cli copy-resources verify stamp-plist sign \
         print-arch print-version print-latest-tag \
         tag-patch tag-minor tag-major push-tags
@@ -90,27 +91,27 @@ package: bundle ## Create dist/EasyBar.app.zip.
 
 build-app: ## Internal target: build the app executable for ARCH.
 ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD) --arch arm64 --product $(APP_PRODUCT)
-	@$(SWIFT_BUILD) --arch x86_64 --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(APP_PRODUCT)
 	@lipo -create \
 		".build/arm64-apple-macosx/release/$(APP_PRODUCT)" \
 		".build/x86_64-apple-macosx/release/$(APP_PRODUCT)" \
 		-output "$(APP_BIN)"
 else
-	@$(SWIFT_BUILD) --arch $(ARCH) --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(APP_PRODUCT)
 	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
 endif
 
 build-cli: ## Internal target: build the CLI executable for ARCH.
 ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD) --arch arm64 --product $(CLI_PRODUCT)
-	@$(SWIFT_BUILD) --arch x86_64 --product $(CLI_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(CLI_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(CLI_PRODUCT)
 	@lipo -create \
 		".build/arm64-apple-macosx/release/$(CLI_PRODUCT)" \
 		".build/x86_64-apple-macosx/release/$(CLI_PRODUCT)" \
 		-output "$(CLI_BIN)"
 else
-	@$(SWIFT_BUILD) --arch $(ARCH) --product $(CLI_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(CLI_PRODUCT)
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
@@ -142,6 +143,10 @@ verify: ## Show the built binary architectures and packaged resources.
 
 run: bundle ## Build and open the app bundle.
 	@open "$(APP_BUNDLE)"
+
+dev: prepare-version ## Fast debug run without bundling.
+	@EASYBAR_DEBUG=1 $(SWIFT_BUILD_DEBUG) --product $(APP_PRODUCT)
+	@EASYBAR_DEBUG=1 swift run -c debug $(APP_PRODUCT)
 
 ##@ Cleanup
 
