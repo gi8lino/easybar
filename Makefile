@@ -2,6 +2,7 @@ APP_NAME := EasyBar
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
 CLI_PRODUCT := easybarctl
+RESOURCE_BUNDLE_NAME := EasyBar_EasyBar.bundle
 
 DIST_DIR := dist
 APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
@@ -15,7 +16,7 @@ PLIST := $(APP_CONTENTS)/Info.plist
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
 
-BUNDLE_ID ?= com.example.EasyBar
+BUNDLE_ID ?= io.github.gi8lino.easybar
 VERSION ?= dev
 ARCH ?= universal
 
@@ -42,12 +43,12 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package app cli clean clean-dist run \
-        build-app build-cli verify stamp-plist \
+        build-app build-cli copy-resources verify stamp-plist \
         print-arch print-version print-latest-tag \
         tag-patch tag-minor tag-major push-tags
 
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Build
 
@@ -75,6 +76,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
+	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
@@ -110,15 +112,26 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
+copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
+ifeq ($(ARCH),universal)
+	@rm -rf "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+else
+	@rm -rf "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)"
+endif
+
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
 
-verify: ## Show the built binary architectures.
+verify: ## Show the built binary architectures and packaged resources.
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
 	@file "$(CLI_BIN)"
+	@echo "Packaged resources:"
+	@ls -1 "$(APP_RESOURCES)"
 
 run: bundle ## Build and open the app bundle.
 	@open "$(APP_BUNDLE)"
