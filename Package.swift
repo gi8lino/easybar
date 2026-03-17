@@ -15,9 +15,14 @@ let package = Package(
         .package(url: "https://github.com/LebJe/TOMLKit", from: "0.2.0")
     ],
     targets: [
+        .target(
+            name: "EasyBarShared",
+            path: "Sources/shared"
+        ),
         .executableTarget(
             name: "EasyBar",
             dependencies: [
+                "EasyBarShared",
                 .product(name: "TOMLKit", package: "TOMLKit")
             ],
             resources: [
@@ -26,7 +31,10 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "easybarctl"
+            name: "easybarctl",
+            dependencies: [
+                "EasyBarShared"
+            ]
         )
     ]
 )

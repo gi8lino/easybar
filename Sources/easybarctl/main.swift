@@ -1,6 +1,5 @@
 import Foundation
-
-let defaultSocketPath = "/tmp/easybar.sock"
+import EasyBarShared
 
 struct CommandFlag {
     let flag: String
@@ -43,7 +42,7 @@ func usage() -> Never {
 
 func parseArguments(_ arguments: [String]) -> (command: String, socketPath: String, debug: Bool)? {
     var selectedCommand: String?
-    var socketPath = defaultSocketPath
+    var socketPath = defaultSocketPath()
     var debugEnabled = false
 
     var i = 1
@@ -66,6 +65,7 @@ func parseArguments(_ arguments: [String]) -> (command: String, socketPath: Stri
                 fputs("easybarctl: missing value for \(arg)\n", stderr)
                 usage()
             }
+
             socketPath = arguments[i]
             i += 1
             continue
@@ -77,6 +77,7 @@ func parseArguments(_ arguments: [String]) -> (command: String, socketPath: Stri
                 fputs("easybarctl: missing value for --socket\n", stderr)
                 usage()
             }
+
             i += 1
             continue
         }
@@ -86,6 +87,7 @@ func parseArguments(_ arguments: [String]) -> (command: String, socketPath: Stri
                 fputs("easybarctl: only one command flag may be specified\n", stderr)
                 usage()
             }
+
             selectedCommand = match.command
             i += 1
             continue
@@ -128,13 +130,7 @@ guard fd >= 0 else {
 
 defer { close(fd) }
 
-var addr = sockaddr_un()
-addr.sun_family = sa_family_t(AF_UNIX)
-
-_ = socketPath.withCString { path in
-    strncpy(&addr.sun_path.0, path, MemoryLayout.size(ofValue: addr.sun_path) - 1)
-}
-
+var addr = makeSockAddrUn(path: socketPath)
 let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
 let result = withUnsafePointer(to: &addr) {

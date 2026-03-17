@@ -14,6 +14,9 @@ WIDGET_DIR=$(CONFIG_DIR)/widgets
 build:
 	swift build
 
+build-release:
+	swift build -c release
+
 run:
 	swift run $(APP_NAME)
 
