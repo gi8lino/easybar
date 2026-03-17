@@ -5,10 +5,6 @@ final class WidgetRunner {
     static let shared = WidgetRunner()
 
     private let decoder = JSONDecoder()
-    private let subscriptionQueue = DispatchQueue(
-        label: "easybar.widgetrunner.subscriptions",
-        qos: .userInitiated
-    )
 
     private var requiredEvents = Set<String>()
     private var started = false
@@ -42,11 +38,7 @@ final class WidgetRunner {
             self?.handleRuntimeOutput(line)
         }
 
-        // Start the long-running runtime first.
         LuaRuntime.shared.start()
-
-        // Discover event subscriptions in parallel.
-        evaluateSubscriptions()
     }
 
     func reload() {
@@ -86,6 +78,16 @@ final class WidgetRunner {
         do {
             let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
 
+            if update.type == "subscriptions" {
+                requiredEvents = Set(update.events ?? [])
+                subscriptionsReady = true
+
+                Logger.debug("required events: \(requiredEvents)")
+                EventManager.shared.start(subscriptions: requiredEvents)
+                emitInitialEventsIfPossible()
+                return
+            }
+
             if update.type == "ready" {
                 Logger.debug("lua runtime handshake received")
                 runtimeReady = true
@@ -106,140 +108,6 @@ final class WidgetRunner {
             Logger.debug("json decode failed: \(line)")
             Logger.debug("decode error: \(error)")
         }
-    }
-
-    private func evaluateSubscriptions() {
-        let widgetPath = Config.shared.widgetsPath
-        let luaPath = Config.shared.luaPath
-
-        Logger.debug("evaluating widget subscriptions from \(widgetPath)")
-
-        subscriptionQueue.async { [weak self] in
-            guard let self else { return }
-
-            let discovered = self.scanSubscriptions(
-                widgetPath: widgetPath,
-                luaPath: luaPath
-            )
-
-            DispatchQueue.main.async {
-                guard self.started else { return }
-
-                self.requiredEvents = discovered
-                self.subscriptionsReady = true
-
-                Logger.debug("required events: \(self.requiredEvents)")
-                EventManager.shared.start(subscriptions: self.requiredEvents)
-
-                self.emitInitialEventsIfPossible()
-            }
-        }
-    }
-
-    private func scanSubscriptions(widgetPath: String, luaPath: String) -> Set<String> {
-        var result = Set<String>()
-
-        let widgetDirectoryURL = URL(fileURLWithPath: widgetPath)
-
-        guard let files = try? FileManager.default.contentsOfDirectory(
-            at: widgetDirectoryURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else {
-            Logger.debug("failed to enumerate widget directory")
-            return result
-        }
-
-        let widgetFiles = files
-            .filter { $0.pathExtension == "lua" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
-
-        if widgetFiles.isEmpty {
-            Logger.debug("no lua widgets found")
-            return result
-        }
-
-        for fileURL in widgetFiles {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: luaPath)
-
-            // Use an environment variable instead of arg[1].
-            // This avoids the fragile indexing behavior of `lua -e`.
-            process.arguments = [
-                "-e",
-                """
-                local path = os.getenv("EASYBAR_WIDGET_FILE")
-                if not path or path == "" then
-                    os.exit(1)
-                end
-
-                local ok, widget = pcall(dofile, path)
-                if ok and type(widget) == "table" and type(widget.subscribe) == "table" then
-                    for _, event in ipairs(widget.subscribe) do
-                        print(event)
-                    end
-                end
-                """
-            ]
-
-            var environment = ProcessInfo.processInfo.environment
-            environment["EASYBAR_WIDGET_FILE"] = fileURL.path
-            process.environment = environment
-
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
-
-            do {
-                try process.run()
-            } catch {
-                Logger.debug(
-                    "subscription scan failed for \(fileURL.lastPathComponent): \(error)"
-                )
-                continue
-            }
-
-            process.waitUntilExit()
-
-            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            if let stderr = String(data: stderrData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-               !stderr.isEmpty {
-                Logger.debug(
-                    "subscription scan stderr for \(fileURL.lastPathComponent): \(stderr)"
-                )
-            }
-
-            let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-            guard let output = String(data: data, encoding: .utf8) else {
-                Logger.debug(
-                    "subscription scan produced non-utf8 output for \(fileURL.lastPathComponent)"
-                )
-                continue
-            }
-
-            let events = output
-                .split(whereSeparator: \.isNewline)
-                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-
-            if events.isEmpty {
-                Logger.debug(
-                    "no subscriptions found for \(fileURL.lastPathComponent)"
-                )
-            } else {
-                Logger.debug(
-                    "subscriptions for \(fileURL.lastPathComponent): \(events)"
-                )
-            }
-
-            for event in events {
-                result.insert(event)
-            }
-        }
-
-        return result
     }
 
     private func emitInitialEventsIfPossible() {
@@ -301,5 +169,7 @@ final class WidgetRunner {
         if requiredEvents.contains("workspace_change") {
             EventBus.shared.emit("workspace_change")
         }
+
+        EventBus.shared.emit("forced")
     }
 }

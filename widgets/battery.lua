@@ -3,9 +3,8 @@ local function read_battery()
 	if not handle then
 		return {
 			icon = "!",
-			text = "?",
+			label = "?",
 			color = "#8bd5ca",
-			show_label = false,
 		}
 	end
 
@@ -72,50 +71,44 @@ local function read_battery()
 		icon = icon,
 		label = tostring(charge) .. "%",
 		color = color,
-		show_label = false,
 	}
 end
 
-local function render(state)
-	return {
-		icon = state.icon or "",
-		text = state.show_label and (state.label or "") or "",
-		color = state.color or "#8bd5ca",
-	}
+local function apply(show_label)
+	local state = read_battery()
+
+	easybar.set("battery", {
+		icon = {
+			string = state.icon,
+			color = state.color,
+			font = { size = 16 },
+		},
+		label = {
+			string = show_label and state.label or "",
+			color = state.color,
+		},
+	})
 end
 
-return {
-	id = "battery",
+easybar.add("item", "battery", {
 	position = "right",
 	order = 20,
-	icon = "",
-	text = "",
-	color = "",
-
-	subscribe = {
-		"init",
-		"power_source_change",
-		"system_woke",
-		"mouse.entered",
-		"mouse.exited",
+	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
+})
 
-	on_event = function(event, _)
-		if event == "init" or event == "power_source_change" or event == "system_woke" then
-			local state = read_battery()
-			return render(state)
-		end
+easybar.subscribe("battery", { "forced", "power_source_change", "system_woke" }, function()
+	apply(false)
+end)
 
-		if event == "mouse.entered" then
-			local state = read_battery()
-			state.show_label = true
-			return render(state)
-		end
+easybar.subscribe("battery", "mouse.entered", function()
+	apply(true)
+end)
 
-		if event == "mouse.exited" then
-			local state = read_battery()
-			state.show_label = false
-			return render(state)
-		end
-	end,
-}
+easybar.subscribe("battery", "mouse.exited", function()
+	apply(false)
+end)

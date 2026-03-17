@@ -8,7 +8,6 @@ end
 
 local base_dir = runtime_dir()
 
--- Loads one bundled helper module from the copied easybar directory.
 local function load_module(name)
 	local path = base_dir .. "/easybar/" .. name .. ".lua"
 	local chunk, err = loadfile(path)
@@ -22,6 +21,7 @@ end
 
 local log = load_module("log")
 local json = load_module("json")
+local api = load_module("api")
 local loader = load_module("loader")
 local events = load_module("events")
 local render = load_module("render")
@@ -33,13 +33,21 @@ if not widget_dir or widget_dir == "" then
 	widget_dir = home .. "/.config/easybar/widgets"
 end
 
-local widgets = {}
+local registry = api.new(log)
 
 io.stdout:setvbuf("line")
 io.stderr:setvbuf("line")
 
--- Load all widget files and emit the initial ready message.
-loader.load_widgets(widget_dir, widgets, render, log, json)
+loader.load_widgets(widget_dir, registry, log)
+
+io.stdout:write(json.encode({
+	type = "subscriptions",
+	events = registry.required_events(),
+}) .. "\n")
+io.stdout:write('{"type":"ready"}' .. "\n")
+io.stdout:flush()
+
+render.emit_all(registry, log, json)
 
 while true do
 	local line = io.read()
@@ -50,12 +58,11 @@ while true do
 
 	log.debug("runtime stdin " .. tostring(line))
 
-	-- Swift sends JSON lines to Lua stdin.
 	local ok, payload = pcall(json.decode, line)
 
 	if not ok or type(payload) ~= "table" or not payload.event then
 		log.error("runtime ignored invalid json payload=" .. tostring(line))
 	else
-		events.dispatch_event(widgets, payload.event, payload, render, log, json)
+		events.dispatch_event(registry, payload.event, payload, render, log, json)
 	end
 end

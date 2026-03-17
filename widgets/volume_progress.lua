@@ -10,11 +10,11 @@ local function get_audio_state()
 	local output = handle:read("*a") or ""
 	handle:close()
 
-	local volumeString, mutedString = output:match("^%s*(.-)%s*,%s*(.-)%s*$")
+	local volume_string, muted_string = output:match("^%s*(.-)%s*,%s*(.-)%s*$")
 
 	return {
-		volume = math.max(0, math.min(100, tonumber(volumeString) or 0)),
-		muted = mutedString == "true",
+		volume = math.max(0, math.min(100, tonumber(volume_string) or 0)),
+		muted = muted_string == "true",
 	}
 end
 
@@ -43,119 +43,126 @@ local function text_for_state(state)
 	return tostring(state.volume) .. "%"
 end
 
-local function build_widget(state)
-	state = state or get_audio_state()
+local function refresh()
+	local state = get_audio_state()
 
-	return {
-		id = "volume_progress",
-		kind = "popup",
-		position = "right",
-		order = 50,
-
-		icon = "",
-		text = "",
-		color = "#8aadf4",
-
-		paddingX = 8,
-		paddingY = 4,
-		spacing = 6,
-
-		anchorChildren = {
-			{
-				id = "volume_progress_anchor",
-				kind = "row",
-				spacing = 6,
-				children = {
-					{
-						id = "volume_progress_icon",
-						kind = "item",
-						icon = icon_for_state(state),
-						text = text_for_state(state),
-						color = "#8aadf4",
-					},
-					{
-						id = "volume_progress_bar",
-						kind = "progress",
-						min = 0,
-						max = 100,
-						value = state.muted and 0 or state.volume,
-						color = "#8aadf4",
-					},
-				},
-			},
+	easybar.set("volume_progress", {
+		popup = {
+			drawing = true,
 		},
+	})
 
-		children = {
-			{
-				id = "volume_progress_popup_column",
-				kind = "column",
-				spacing = 8,
-				paddingX = 12,
-				paddingY = 12,
-				cornerRadius = 10,
-				backgroundColor = "#1e2030",
-				borderColor = "#494d64",
-				borderWidth = 1,
-
-				children = {
-					{
-						id = "volume_progress_popup_label",
-						kind = "item",
-						icon = icon_for_state(state),
-						text = "Volume " .. text_for_state(state),
-						color = "#cad3f5",
-					},
-					{
-						id = "volume_progress_popup_slider",
-						kind = "slider",
-						min = 0,
-						max = 100,
-						step = 1,
-						value = state.muted and 0 or state.volume,
-						color = "#8aadf4",
-					},
-				},
-			},
+	easybar.set("volume_progress_anchor", {
+		icon = {
+			string = icon_for_state(state),
+			color = "#8aadf4",
 		},
-	}
+		label = {
+			string = text_for_state(state),
+			color = "#8aadf4",
+		},
+	})
+
+	easybar.set("volume_progress_bar", {
+		value = state.muted and 0 or state.volume,
+	})
+
+	easybar.set("volume_progress_popup_label", {
+		icon = {
+			string = icon_for_state(state),
+			color = "#cad3f5",
+		},
+		label = {
+			string = "Volume " .. text_for_state(state),
+			color = "#cad3f5",
+		},
+	})
+
+	easybar.set("volume_progress_popup_slider", {
+		value = state.muted and 0 or state.volume,
+	})
 end
 
-return {
-	id = "volume_progress",
-	kind = "popup",
+easybar.add("row", "volume_progress", {
 	position = "right",
 	order = 50,
-
-	subscribe = {
-		"init",
-		"volume_change",
-		"mouse.scrolled",
-		"slider.preview",
-		"slider.changed",
+	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
+	spacing = 8,
+	popup = {
+		drawing = false,
+		background = {
+			color = "#1e2030",
+			border_color = "#494d64",
+			border_width = 1,
+			corner_radius = 10,
+		},
+		padding_left = 12,
+		padding_right = 12,
+		padding_top = 12,
+		padding_bottom = 12,
+		spacing = 8,
+	},
+})
 
-	on_event = function(event, payload)
-		if event == "init" or event == "volume_change" then
-			return build_widget(get_audio_state())
-		end
+easybar.add("item", "volume_progress_anchor", {
+	parent = "volume_progress",
+})
 
-		if event == "mouse.scrolled" and payload then
-			local state = get_audio_state()
-			local delta = payload.direction == "up" and 5 or -5
-			local updated = set_volume(state.volume + delta)
-			return build_widget({ volume = updated, muted = false })
-		end
+easybar.add("progress", "volume_progress_bar", {
+	parent = "volume_progress",
+	min = 0,
+	max = 100,
+	value = 0,
+	width = 64,
+	height = 8,
+	color = "#8aadf4",
+})
 
-		if event == "slider.preview" and payload and payload.value then
-			return build_widget({
-				volume = tonumber(payload.value) or get_audio_state().volume,
-				muted = false,
-			})
-		end
+easybar.add("item", "volume_progress_popup_label", {
+	position = "popup.volume_progress",
+})
 
-		if event == "slider.changed" and payload and payload.value then
-			local updated = set_volume(payload.value)
-			return build_widget({ volume = updated, muted = false })
-		end
-	end,
-}
+easybar.add("slider", "volume_progress_popup_slider", {
+	position = "popup.volume_progress",
+	min = 0,
+	max = 100,
+	step = 1,
+	width = 140,
+})
+
+easybar.subscribe("volume_progress", { "volume_change", "forced" }, refresh)
+
+easybar.subscribe("volume_progress", "mouse.entered", function()
+	easybar.set("volume_progress", {
+		popup = { drawing = true },
+	})
+	refresh()
+end)
+
+easybar.subscribe("volume_progress", "mouse.exited", function()
+	easybar.set("volume_progress", {
+		popup = { drawing = false },
+	})
+end)
+
+easybar.subscribe("volume_progress", "mouse.scrolled", function(env)
+	local delta = env.INFO.direction == "up" and 5 or -5
+	set_volume(get_audio_state().volume + delta)
+	refresh()
+end)
+
+easybar.subscribe("volume_progress_popup_slider", "slider.preview", function(env)
+	easybar.set("volume_progress_popup_slider", {
+		value = tonumber(env.INFO.value) or get_audio_state().volume,
+	})
+end)
+
+easybar.subscribe("volume_progress_popup_slider", "slider.changed", function(env)
+	set_volume(env.INFO.value)
+	refresh()
+end)

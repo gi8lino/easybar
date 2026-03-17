@@ -8,6 +8,7 @@ struct ProgressSliderWidgetView: View {
     let step: Double
     let externalValue: Double
     let tint: Color
+    let width: CGFloat?
 
     @State private var value: Double
     @State private var isDragging = false
@@ -18,7 +19,8 @@ struct ProgressSliderWidgetView: View {
         maxValue: Double,
         step: Double,
         value: Double,
-        tint: Color
+        tint: Color,
+        width: CGFloat? = nil
     ) {
         self.rootWidgetID = rootWidgetID
         self.minValue = minValue
@@ -26,6 +28,7 @@ struct ProgressSliderWidgetView: View {
         self.step = step
         self.externalValue = value
         self.tint = tint
+        self.width = width
         _value = State(initialValue: value)
     }
 
@@ -79,8 +82,6 @@ struct ProgressSliderWidgetView: View {
         }
         .frame(width: resolvedWidth, height: 14)
         .onChange(of: externalValue) { _, newValue in
-            // Keep the slider in sync with native system updates,
-            // but do not fight the user while dragging.
             if !isDragging {
                 value = newValue
             }
@@ -88,6 +89,10 @@ struct ProgressSliderWidgetView: View {
     }
 
     private var resolvedWidth: CGFloat {
+        if let width {
+            return width
+        }
+
         if rootWidgetID == "builtin_volume" {
             return CGFloat(Config.shared.builtinVolume.sliderWidth)
         }

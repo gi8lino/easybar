@@ -13,14 +13,6 @@ local function shell(command)
 	return output
 end
 
-local function first_line(s)
-	if not s then
-		return ""
-	end
-
-	return trim((s:gsub("\r", "")):match("([^\n]*)") or "")
-end
-
 local function quote(s)
 	return string.format("%q", s or "")
 end
@@ -49,23 +41,17 @@ local function get_wifi_status()
 end
 
 local function get_vpn_status()
-	local output = shell("scutil --nwi")
-	return output:match("utun") ~= nil
+	return shell("scutil --nwi"):match("utun") ~= nil
 end
 
 local function toggle_vpn()
 	local vpn_name = trim(os.getenv("EASYBAR_VPN_NAME") or "")
 	if vpn_name == "" then
-		io.stderr:write("ERROR: wifi_vpn missing EASYBAR_VPN_NAME\n")
-		io.stderr:flush()
 		return
 	end
 
 	local name = quote(vpn_name)
-	local status = first_line(shell("scutil --nc status " .. name)):lower()
-
-	io.stderr:write("INFO: wifi_vpn toggle click vpn_name=" .. vpn_name .. " status=" .. status .. "\n")
-	io.stderr:flush()
+	local status = trim(shell("scutil --nc status " .. name)):lower()
 
 	if status == "connected" or status:match("^connecting") or status:match("^on demand") then
 		shell("scutil --nc stop " .. name)
@@ -74,7 +60,7 @@ local function toggle_vpn()
 	end
 end
 
-local function build_widget(show_wifi_label)
+local function refresh(show_label)
 	local ssid, wifi_connected = get_wifi_status()
 	local vpn_connected = get_vpn_status()
 
@@ -90,79 +76,71 @@ local function build_widget(show_wifi_label)
 		wifi_label = ssid
 	end
 
-	local children = {
-		{
-			id = "wifi_vpn_wifi",
-			kind = "item",
-			icon = wifi_icon,
-			text = show_wifi_label and wifi_label or "",
+	easybar.set("wifi_vpn_wifi", {
+		icon = {
+			string = wifi_icon,
 			color = wifi_color,
-			spacing = 8,
 		},
-	}
+		label = {
+			string = show_label and wifi_label or "",
+			color = wifi_color,
+		},
+	})
 
-	if vpn_connected then
-		children[#children + 1] = {
-			id = "wifi_vpn_vpn",
-			kind = "item",
-			icon = "󰦝 ",
-			text = "",
+	easybar.set("wifi_vpn_vpn", {
+		drawing = vpn_connected,
+		icon = {
+			string = "󰦝",
 			color = "#30d158",
-		}
-	end
-
-	return children
+			font = { size = 14 },
+		},
+		label = "",
+	})
 end
 
-local show_wifi_label = false
-
-return {
-	id = "wifi_vpn",
-	kind = "row",
+easybar.add("row", "wifi_vpn", {
 	position = "right",
 	order = 25,
-	paddingX = 8,
-	paddingY = 4,
-	spacing = 15,
-	backgroundColor = "#1a1a1a",
-	borderColor = "#333333",
-	borderWidth = 1,
-	cornerRadius = 8,
-	subscribe = {
-		"init",
-		"wifi_change",
-		"network_change",
-		"minute_tick",
-		"mouse.entered",
-		"mouse.exited",
-		"mouse.clicked",
+	background = {
+		color = "#1a1a1a",
+		border_color = "#333333",
+		border_width = 1,
+		corner_radius = 8,
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
-	on_event = function(event, payload)
-		io.stderr:write(
-			"INFO: wifi_vpn event=" .. tostring(event) .. " widget=" .. tostring(payload and payload.widget) .. "\n"
-		)
-		io.stderr:flush()
+	spacing = 15,
+	click_script = "",
+})
 
-		if payload and payload.widget ~= "wifi_vpn" and payload.widget ~= nil then
-			if event == "wifi_change" or event == "network_change" or event == "minute_tick" or event == "init" then
-				return {
-					children = build_widget(show_wifi_label),
-				}
-			end
+easybar.add("item", "wifi_vpn_wifi", {
+	parent = "wifi_vpn",
+})
 
-			return nil
-		end
+easybar.add("item", "wifi_vpn_vpn", {
+	parent = "wifi_vpn",
+	drawing = false,
+})
 
-		if event == "mouse.entered" then
-			show_wifi_label = true
-		elseif event == "mouse.exited" then
-			show_wifi_label = false
-		elseif event == "mouse.clicked" then
-			toggle_vpn()
-		end
+local show_label = false
 
-		return {
-			children = build_widget(show_wifi_label),
-		}
-	end,
-}
+easybar.subscribe("wifi_vpn", { "wifi_change", "network_change", "minute_tick", "forced" }, function()
+	refresh(show_label)
+end)
+
+easybar.subscribe("wifi_vpn", "mouse.entered", function()
+	show_label = true
+	refresh(true)
+end)
+
+easybar.subscribe("wifi_vpn", "mouse.exited", function()
+	show_label = false
+	refresh(false)
+end)
+
+easybar.subscribe("wifi_vpn", "mouse.clicked", function()
+	toggle_vpn()
+	refresh(show_label)
+end)

@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             case .refresh:
                 self?.aeroSpaceService.triggerRefresh()
+                EventBus.shared.emit("forced")
 
             case .reloadConfig:
                 Config.shared.reload()

@@ -28,96 +28,101 @@ local function icon_for_volume(value)
 	end
 end
 
-local function build_widget()
+local function refresh()
 	local value = get_volume()
 
-	return {
-		id = "volume",
-		kind = "popup",
-		position = "right",
-		order = 45,
-
-		icon = icon_for_volume(value),
-		text = tostring(value) .. "%",
-		color = "#8aadf4",
-
-		paddingX = 8,
-		paddingY = 4,
-		spacing = 6,
-
-		anchorChildren = {
-			{
-				id = "volume_anchor",
-				kind = "item",
-				icon = icon_for_volume(value),
-				text = tostring(value) .. "%",
-				color = "#8aadf4",
-			},
+	easybar.set("volume", {
+		icon = {
+			string = icon_for_volume(value),
+			color = "#8aadf4",
 		},
-
-		children = {
-			{
-				id = "volume_popup_column",
-				kind = "column",
-				spacing = 8,
-				paddingX = 12,
-				paddingY = 12,
-				cornerRadius = 10,
-				backgroundColor = "#1e2030",
-				borderColor = "#494d64",
-				borderWidth = 1,
-
-				children = {
-					{
-						id = "volume_popup_label",
-						kind = "item",
-						icon = "󰕾",
-						text = "Volume " .. tostring(value) .. "%",
-						color = "#cad3f5",
-					},
-					{
-						id = "volume_slider",
-						kind = "slider",
-						min = 0,
-						max = 100,
-						step = 1,
-						value = value,
-						color = "#8aadf4",
-					},
-				},
-			},
+		label = {
+			string = tostring(value) .. "%",
+			color = "#8aadf4",
 		},
-	}
+	})
+
+	easybar.set("volume_popup_label", {
+		icon = {
+			string = "󰕾",
+			color = "#cad3f5",
+		},
+		label = {
+			string = "Volume " .. tostring(value) .. "%",
+			color = "#cad3f5",
+		},
+	})
+
+	easybar.set("volume_slider", {
+		value = value,
+	})
 end
 
-return {
-	id = "volume",
-	kind = "popup",
+easybar.add("item", "volume", {
 	position = "right",
 	order = 45,
-
-	subscribe = {
-		"init",
-		"volume_change",
-		"mouse.scrolled",
-		"slider.changed",
+	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
+	popup = {
+		drawing = false,
+		background = {
+			color = "#1e2030",
+			border_color = "#494d64",
+			border_width = 1,
+			corner_radius = 10,
+		},
+		padding_left = 12,
+		padding_right = 12,
+		padding_top = 12,
+		padding_bottom = 12,
+		spacing = 8,
+	},
+})
 
-	on_event = function(event, payload)
-		if event == "init" or event == "volume_change" then
-			return build_widget()
-		end
+easybar.add("item", "volume_popup_label", {
+	position = "popup.volume",
+})
 
-		if event == "mouse.scrolled" and payload then
-			local current = get_volume()
-			local delta = payload.direction == "up" and 5 or -5
-			set_volume(current + delta)
-			return build_widget()
-		end
+easybar.add("slider", "volume_slider", {
+	position = "popup.volume",
+	min = 0,
+	max = 100,
+	step = 1,
+	width = 140,
+})
 
-		if event == "slider.changed" and payload and payload.value then
-			set_volume(payload.value)
-			return build_widget()
-		end
-	end,
-}
+easybar.subscribe("volume", { "volume_change", "forced" }, refresh)
+
+easybar.subscribe("volume", "mouse.entered", function()
+	easybar.set("volume", {
+		popup = { drawing = true },
+	})
+	refresh()
+end)
+
+easybar.subscribe("volume", "mouse.exited", function()
+	easybar.set("volume", {
+		popup = { drawing = false },
+	})
+end)
+
+easybar.subscribe("volume", "mouse.scrolled", function(env)
+	local delta = env.INFO.direction == "up" and 5 or -5
+	set_volume(get_volume() + delta)
+	refresh()
+end)
+
+easybar.subscribe("volume_slider", "slider.preview", function(env)
+	easybar.set("volume_slider", {
+		value = tonumber(env.INFO.value) or get_volume(),
+	})
+end)
+
+easybar.subscribe("volume_slider", "slider.changed", function(env)
+	set_volume(env.INFO.value)
+	refresh()
+end)

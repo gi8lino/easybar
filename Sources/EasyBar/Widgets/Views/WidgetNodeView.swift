@@ -100,13 +100,16 @@ struct WidgetNodeView: View {
 
             if !node.icon.isEmpty {
                 Text(node.icon)
+                    .font(font(size: node.iconFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.iconColor ?? node.color))
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
+                    .font(font(size: node.labelFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.labelColor ?? node.color))
             }
         }
-        .foregroundStyle(color(node.color))
         .modifier(WidgetNodeStyle(node: node))
 
         return Group {
@@ -214,12 +217,14 @@ struct WidgetNodeView: View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
             if !node.icon.isEmpty {
                 Text(node.icon)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.iconFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.iconColor ?? node.color))
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.labelFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.labelColor ?? node.color))
             }
 
             SliderWidgetView(
@@ -228,7 +233,8 @@ struct WidgetNodeView: View {
                 maxValue: node.max ?? 100,
                 step: node.step ?? 1,
                 value: node.value ?? 0,
-                tint: color(node.color)
+                tint: color(node.color),
+                width: node.width.map(CGFloat.init)
             )
         }
     }
@@ -237,12 +243,14 @@ struct WidgetNodeView: View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
             if !node.icon.isEmpty {
                 Text(node.icon)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.iconFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.iconColor ?? node.color))
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.labelFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.labelColor ?? node.color))
             }
 
             ProgressSliderWidgetView(
@@ -251,7 +259,8 @@ struct WidgetNodeView: View {
                 maxValue: node.max ?? 100,
                 step: node.step ?? 1,
                 value: node.value ?? 0,
-                tint: color(node.color)
+                tint: color(node.color),
+                width: node.width.map(CGFloat.init)
             )
         }
     }
@@ -260,12 +269,14 @@ struct WidgetNodeView: View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
             if !node.icon.isEmpty {
                 Text(node.icon)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.iconFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.iconColor ?? node.color))
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.labelFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.labelColor ?? node.color))
             }
 
             ProgressBarCanvas(
@@ -274,7 +285,7 @@ struct WidgetNodeView: View {
                 maxValue: node.max ?? 100,
                 tint: color(node.color)
             )
-            .frame(width: 64, height: 8)
+            .frame(width: CGFloat(node.width ?? 64), height: CGFloat(node.height ?? 8))
         }
     }
 
@@ -282,12 +293,14 @@ struct WidgetNodeView: View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
             if !node.icon.isEmpty {
                 Text(node.icon)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.iconFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.iconColor ?? node.color))
             }
 
             if !node.text.isEmpty {
                 Text(node.text)
-                    .foregroundStyle(color(node.color))
+                    .font(font(size: node.labelFontSize ?? node.fontSize))
+                    .foregroundStyle(color(node.labelColor ?? node.color))
             }
 
             SparklineCanvas(
@@ -295,7 +308,7 @@ struct WidgetNodeView: View {
                 tint: color(node.color),
                 lineWidth: CGFloat(node.lineWidth ?? 1.5)
             )
-            .frame(width: 64, height: 18)
+            .frame(width: CGFloat(node.width ?? 64), height: CGFloat(node.height ?? 18))
         }
     }
 
@@ -305,6 +318,11 @@ struct WidgetNodeView: View {
         }
 
         return Color(hex: hex)
+    }
+
+    private func font(size: Double?) -> Font? {
+        guard let size else { return nil }
+        return .system(size: CGFloat(size))
     }
 
     private func schedulePopupCloseCheck() {
@@ -322,8 +340,15 @@ private struct WidgetNodeStyle: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, CGFloat(node.paddingX ?? 0))
-            .padding(.vertical, CGFloat(node.paddingY ?? 0))
+            .padding(.leading, CGFloat(node.paddingLeft ?? node.paddingX ?? 0))
+            .padding(.trailing, CGFloat(node.paddingRight ?? node.paddingX ?? 0))
+            .padding(.top, CGFloat(node.paddingTop ?? node.paddingY ?? 0))
+            .padding(.bottom, CGFloat(node.paddingBottom ?? node.paddingY ?? 0))
+            .frame(
+                width: node.width.map(CGFloat.init),
+                height: node.height.map(CGFloat.init),
+                alignment: .center
+            )
             .background(backgroundColor)
             .overlay {
                 RoundedRectangle(cornerRadius: CGFloat(node.cornerRadius ?? 0))
@@ -336,6 +361,7 @@ private struct WidgetNodeStyle: ViewModifier {
                 RoundedRectangle(cornerRadius: CGFloat(node.cornerRadius ?? 0))
             )
             .opacity(node.opacity ?? 1.0)
+            .offset(y: CGFloat(node.yOffset ?? 0))
     }
 
     private var backgroundColor: Color {

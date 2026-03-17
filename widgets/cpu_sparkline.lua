@@ -21,27 +21,34 @@ local function push_value(value)
 	table.insert(history, value)
 end
 
-return {
-	id = "cpu_sparkline",
-	kind = "sparkline",
+easybar.add("sparkline", "cpu_sparkline", {
 	position = "right",
 	order = 60,
-
-	icon = "󰍛",
-	text = "CPU",
-	color = "#a6da95",
-	lineWidth = 1.8,
+	update_freq = 1,
+	icon = {
+		string = "󰍛",
+		color = "#a6da95",
+	},
+	label = {
+		string = "CPU",
+		color = "#a6da95",
+	},
 	values = history,
+	line_width = 1.8,
+	width = 64,
+	height = 18,
+	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
+	},
+})
 
-	subscribe = { "init", "second_tick" },
+easybar.subscribe("cpu_sparkline", { "routine", "forced" }, function()
+	push_value(read_cpu())
 
-	on_event = function(event, _)
-		if event == "init" or event == "second_tick" then
-			push_value(read_cpu())
-
-			return {
-				values = history,
-			}
-		end
-	end,
-}
+	easybar.set("cpu_sparkline", {
+		values = history,
+	})
+end)

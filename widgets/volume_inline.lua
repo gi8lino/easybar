@@ -10,11 +10,11 @@ local function get_audio_state()
 	local output = handle:read("*a") or ""
 	handle:close()
 
-	local volumeString, mutedString = output:match("^%s*(.-)%s*,%s*(.-)%s*$")
+	local volume_string, muted_string = output:match("^%s*(.-)%s*,%s*(.-)%s*$")
 
 	return {
-		volume = math.max(0, math.min(100, tonumber(volumeString) or 0)),
-		muted = mutedString == "true",
+		volume = math.max(0, math.min(100, tonumber(volume_string) or 0)),
+		muted = muted_string == "true",
 	}
 end
 
@@ -31,90 +31,76 @@ local function text_for_state(state)
 	return tostring(state.volume) .. "%"
 end
 
-local function build_widget(state, expanded)
-	state = state or get_audio_state()
+local function refresh(expanded)
+	local state = get_audio_state()
 
-	local children = {
-		{
-			id = "volume_inline_label",
-			kind = "item",
-			text = text_for_state(state),
+	easybar.set("volume_inline_label", {
+		label = {
+			string = text_for_state(state),
 			color = "#8aadf4",
 		},
-	}
+	})
 
-	if expanded then
-		table.insert(children, {
-			id = "volume_inline_slider",
-			kind = "slider",
-			min = 0,
-			max = 100,
-			step = 1,
-			value = state.muted and 0 or state.volume,
-			color = "#8aadf4",
-		})
-	end
-
-	return {
-		id = "volume_inline",
-		kind = "row",
-		position = "right",
-		order = 52,
-
-		spacing = 8,
-		paddingX = 8,
-		paddingY = 4,
-
-		children = children,
-	}
+	easybar.set("volume_inline_slider", {
+		drawing = expanded,
+		value = state.muted and 0 or state.volume,
+	})
 end
 
-return {
-	id = "volume_inline",
-	kind = "row",
+easybar.add("row", "volume_inline", {
 	position = "right",
 	order = 52,
-
-	subscribe = {
-		"init",
-		"volume_change",
-		"mouse.entered",
-		"mouse.exited",
-		"mouse.scrolled",
-		"slider.preview",
-		"slider.changed",
+	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
+	spacing = 8,
+})
 
-	on_event = function(event, payload)
-		if event == "init" or event == "volume_change" then
-			return build_widget(get_audio_state(), false)
-		end
+easybar.add("item", "volume_inline_label", {
+	parent = "volume_inline",
+})
 
-		if event == "mouse.entered" then
-			return build_widget(get_audio_state(), true)
-		end
+easybar.add("slider", "volume_inline_slider", {
+	parent = "volume_inline",
+	min = 0,
+	max = 100,
+	step = 1,
+	width = 120,
+	drawing = false,
+})
 
-		if event == "mouse.exited" then
-			return build_widget(get_audio_state(), false)
-		end
+local expanded = false
 
-		if event == "mouse.scrolled" and payload then
-			local state = get_audio_state()
-			local delta = payload.direction == "up" and 5 or -5
-			local updated = set_volume(state.volume + delta)
-			return build_widget({ volume = updated, muted = false }, true)
-		end
+easybar.subscribe("volume_inline", { "volume_change", "forced" }, function()
+	refresh(expanded)
+end)
 
-		if event == "slider.preview" and payload and payload.value then
-			return build_widget({
-				volume = tonumber(payload.value) or get_audio_state().volume,
-				muted = false,
-			}, true)
-		end
+easybar.subscribe("volume_inline", "mouse.entered", function()
+	expanded = true
+	refresh(true)
+end)
 
-		if event == "slider.changed" and payload and payload.value then
-			local updated = set_volume(payload.value)
-			return build_widget({ volume = updated, muted = false }, true)
-		end
-	end,
-}
+easybar.subscribe("volume_inline", "mouse.exited", function()
+	expanded = false
+	refresh(false)
+end)
+
+easybar.subscribe("volume_inline", "mouse.scrolled", function(env)
+	local delta = env.INFO.direction == "up" and 5 or -5
+	set_volume(get_audio_state().volume + delta)
+	refresh(true)
+end)
+
+easybar.subscribe("volume_inline_slider", "slider.preview", function(env)
+	easybar.set("volume_inline_slider", {
+		value = tonumber(env.INFO.value) or get_audio_state().volume,
+	})
+end)
+
+easybar.subscribe("volume_inline_slider", "slider.changed", function(env)
+	set_volume(env.INFO.value)
+	refresh(true)
+end)
