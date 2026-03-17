@@ -1,48 +1,161 @@
-APP_NAME=EasyBar
-CTL_NAME=easybarctl
+APP_NAME := EasyBar
+APP_EXEC := EasyBar
+APP_PRODUCT := EasyBar
+CLI_PRODUCT := easybarctl
 
-BUILD_DIR=.build/debug
+DIST_DIR := dist
+APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
+APP_CONTENTS := $(APP_BUNDLE)/Contents
+APP_MACOS := $(APP_CONTENTS)/MacOS
+APP_RESOURCES := $(APP_CONTENTS)/Resources
+APP_BIN := $(APP_MACOS)/$(APP_EXEC)
+CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
+PLIST_TEMPLATE := packaging/Info.plist
+PLIST := $(APP_CONTENTS)/Info.plist
 
-PREFIX=/usr/local
-BIN_DIR=$(PREFIX)/bin
+BUILD_INFO := Sources/shared/BuildInfo.swift
 
-CONFIG_DIR=$(HOME)/.config/easybar
-WIDGET_DIR=$(CONFIG_DIR)/widgets
+BUNDLE_ID ?= com.example.EasyBar
+VERSION ?= dev
+ARCH ?= universal
 
-.PHONY: build run install uninstall widgets clean reload test-login-item
+VERSION_PREFIX ?= v
+LATEST_TAG := $(shell git tag --list '$(VERSION_PREFIX)*' --sort=-v:refname | head -n 1)
+CURRENT_VERSION := $(if $(LATEST_TAG),$(patsubst $(VERSION_PREFIX)%,%,$(LATEST_TAG)),0.0.0)
 
-build:
-	swift build
+NEXT_PATCH := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split(".")); print(f"{m}.{n}.{p+1}")')
+NEXT_MINOR := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split(".")); print(f"{m}.{n+1}.0")')
+NEXT_MAJOR := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split(".")); print(f"{m+1}.0.0")')
 
-build-release:
-	swift build -c release
+SWIFT_BUILD := swift build -c release
 
-run:
-	swift run $(APP_NAME)
+ifeq ($(ARCH),universal)
+ARCHES := arm64 x86_64
+else ifeq ($(ARCH),arm64)
+ARCHES := arm64
+else ifeq ($(ARCH),x86_64)
+ARCHES := x86_64
+else
+$(error Unsupported ARCH '$(ARCH)'. Use arm64, x86_64, or universal)
+endif
 
-install: build
-	mkdir -p $(BIN_DIR)
-	cp $(BUILD_DIR)/$(APP_NAME) $(BIN_DIR)/easybar
-	cp $(BUILD_DIR)/$(CTL_NAME) $(BIN_DIR)/easybarctl
-	mkdir -p $(WIDGET_DIR)
-	@echo "Installed EasyBar to $(BIN_DIR)"
+.DEFAULT_GOAL := help
 
-widgets:
-	mkdir -p $(WIDGET_DIR)
-	cp widgets/*.lua $(WIDGET_DIR)/
-	@echo "Installed example widgets"
+.PHONY: help all prepare-version build bundle package app cli clean clean-dist run \
+        build-app build-cli verify stamp-plist \
+        print-arch print-version print-latest-tag \
+        tag-patch tag-minor tag-major push-tags
 
-reload:
-	easybarctl reload_config
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-test-login-item: install
-	open -a $(BIN_DIR)/easybar || $(BIN_DIR)/easybar
-	@echo "Open EasyBar Settings and toggle 'Start at login'. Then quit and log out/in to verify."
+##@ Build
 
-clean:
-	swift package clean
+all: build ## Build the default artifacts.
 
-uninstall:
-	rm -f $(BIN_DIR)/easybar
-	rm -f $(BIN_DIR)/easybarctl
-	@echo "Removed EasyBar binaries"
+prepare-version: ## Generate Sources/shared/BuildInfo.swift with the selected VERSION.
+	@mkdir -p "$(dir $(BUILD_INFO))"
+	@printf '%s\n' 'import Foundation' > "$(BUILD_INFO)"
+	@printf '\n' >> "$(BUILD_INFO)"
+	@printf '%s\n' '/// Build-time version information shared by the app and CLI.' >> "$(BUILD_INFO)"
+	@printf '%s\n' 'public enum BuildInfo {' >> "$(BUILD_INFO)"
+	@printf '%s\n' '    /// The application version embedded at build time.' >> "$(BUILD_INFO)"
+	@printf '%s\n' '    public static let appVersion = "$(VERSION)"' >> "$(BUILD_INFO)"
+	@printf '%s\n' '}' >> "$(BUILD_INFO)"
+
+build: bundle ## Build the app bundle and CLI for the selected ARCH.
+
+app: prepare-version ## Build only the app executable for the selected ARCH.
+	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
+
+cli: prepare-version ## Build only the CLI executable for the selected ARCH.
+	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
+
+bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
+	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(DIST_DIR)"
+	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
+	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
+	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
+	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
+	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
+	@$(MAKE) --no-print-directory verify
+
+package: bundle ## Create dist/EasyBar.app.zip.
+	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(APP_BUNDLE).zip"
+	@echo "Created $(APP_BUNDLE).zip"
+
+build-app: ## Internal target: build the app executable for ARCH.
+ifeq ($(ARCH),universal)
+	@$(SWIFT_BUILD) --arch arm64 --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD) --arch x86_64 --product $(APP_PRODUCT)
+	@lipo -create \
+		".build/arm64-apple-macosx/release/$(APP_PRODUCT)" \
+		".build/x86_64-apple-macosx/release/$(APP_PRODUCT)" \
+		-output "$(APP_BIN)"
+else
+	@$(SWIFT_BUILD) --arch $(ARCH) --product $(APP_PRODUCT)
+	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+build-cli: ## Internal target: build the CLI executable for ARCH.
+ifeq ($(ARCH),universal)
+	@$(SWIFT_BUILD) --arch arm64 --product $(CLI_PRODUCT)
+	@$(SWIFT_BUILD) --arch x86_64 --product $(CLI_PRODUCT)
+	@lipo -create \
+		".build/arm64-apple-macosx/release/$(CLI_PRODUCT)" \
+		".build/x86_64-apple-macosx/release/$(CLI_PRODUCT)" \
+		-output "$(CLI_BIN)"
+else
+	@$(SWIFT_BUILD) --arch $(ARCH) --product $(CLI_PRODUCT)
+	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
+endif
+
+stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
+
+verify: ## Show the built binary architectures.
+	@echo "Built $(ARCH) artifacts:"
+	@file "$(APP_BIN)"
+	@file "$(CLI_BIN)"
+
+run: bundle ## Build and open the app bundle.
+	@open "$(APP_BUNDLE)"
+
+##@ Cleanup
+
+clean-dist: ## Remove dist/.
+	@rm -rf "$(DIST_DIR)"
+
+clean: ## Remove dist/, .build, and generated BuildInfo.swift.
+	@rm -rf "$(DIST_DIR)" ".build"
+	@rm -f "$(BUILD_INFO)"
+
+##@ Info
+
+print-arch: ## Print the selected ARCH.
+	@echo "$(ARCH)"
+
+print-version: ## Print the current version derived from the latest tag.
+	@echo "$(CURRENT_VERSION)"
+
+print-latest-tag: ## Print the latest matching git tag.
+	@echo "$(LATEST_TAG)"
+
+##@ Tagging
+
+tag-patch: ## Create the next patch tag locally.
+	@git tag -a "$(VERSION_PREFIX)$(NEXT_PATCH)" -m "Release $(VERSION_PREFIX)$(NEXT_PATCH)"
+	@echo "Created tag $(VERSION_PREFIX)$(NEXT_PATCH)"
+
+tag-minor: ## Create the next minor tag locally.
+	@git tag -a "$(VERSION_PREFIX)$(NEXT_MINOR)" -m "Release $(VERSION_PREFIX)$(NEXT_MINOR)"
+	@echo "Created tag $(VERSION_PREFIX)$(NEXT_MINOR)"
+
+tag-major: ## Create the next major tag locally.
+	@git tag -a "$(VERSION_PREFIX)$(NEXT_MAJOR)" -m "Release $(VERSION_PREFIX)$(NEXT_MAJOR)"
+	@echo "Created tag $(VERSION_PREFIX)$(NEXT_MAJOR)"
+
+push-tags: ## Push commits and tags to origin.
+	@git push --follow-tags

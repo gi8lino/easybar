@@ -12,22 +12,30 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Build release artifacts
+      - name: Build universal release artifacts
         run: |
-          make bundle VERSION="${GITHUB_REF_NAME}"
+          make bundle ARCH=universal VERSION="${GITHUB_REF_NAME}"
+
+      - name: Verify artifacts
+        run: |
+          file dist/EasyBar.app/Contents/MacOS/EasyBar
+          file dist/wifisnitchctl
 
       - name: Package assets
         run: |
           mkdir -p dist
-          ditto -c -k --sequesterRsrc --keepParent dist/WiFiSnitch.app dist/WiFiSnitch.app.zip
+          ditto -c -k --sequesterRsrc --keepParent dist/EasyBar.app dist/EasyBar.app.zip
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            dist/WiFiSnitch.app.zip \
-            dist/wifisnitchctl \
+            dist/EasyBar.app.zip \
+            dist/easybarctl \
             --generate-notes
