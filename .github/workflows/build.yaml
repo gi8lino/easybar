@@ -34,6 +34,7 @@ jobs:
           echo "Version: $VERSION"
 
       - name: Build universal release artifact
+        shell: bash
         run: |
           make release \
             ARCH=universal \
@@ -41,19 +42,23 @@ jobs:
             BUNDLE_ID="${BUNDLE_ID}"
 
       - name: Verify bundled artifacts
+        shell: bash
         run: |
-          file dist/EasyBar.app/Contents/MacOS/EasyBar
-          file dist/EasyBar.app/Contents/MacOS/easybarctl
-          test -f dist/EasyBar.app/Contents/Info.plist
-          test -d dist/EasyBar.app/Contents/Resources/EasyBar_EasyBar.bundle
+          file "dist/EasyBar.app/Contents/MacOS/EasyBar"
+          file "dist/easybarctl"
+          test -f "dist/EasyBar.app/Contents/Info.plist"
+          test -d "dist/EasyBar.app/EasyBar_EasyBar.bundle"
+          test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
 
       - name: Print package checksum
+        shell: bash
         run: |
           shasum -a 256 "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
             "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \

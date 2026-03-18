@@ -9,9 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout EasyBar repo
-        uses: actions/checkout@v4
-
       - name: Derive version and asset URL
         id: vars
         shell: bash
@@ -27,7 +24,7 @@ jobs:
       - name: Download release archive
         shell: bash
         run: |
-          curl -L "${{ steps.vars.outputs.asset_url }}" -o EasyBar.zip
+          curl -fL "${{ steps.vars.outputs.asset_url }}" -o EasyBar.zip
 
       - name: Compute SHA-256
         id: sha
@@ -61,7 +58,7 @@ jobs:
             depends_on macos: ">= :sonoma"
 
             app "EasyBar.app"
-            binary "#{appdir}/EasyBar.app/Contents/MacOS/easybarctl", target: "easybar"
+            binary "easybarctl", target: "easybar"
 
             zap trash: [
               "~/Library/Logs/EasyBar.log",
