@@ -11,7 +11,6 @@ struct ConfigSnapshot {
 
     let barHeight: CGFloat
     let barPadding: CGFloat
-    let barPaddingY: CGFloat
 
     let barBackgroundHex: String
     let barBorderHex: String

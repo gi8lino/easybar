@@ -21,7 +21,6 @@ final class Config {
 
     var barHeight: CGFloat = ConfigDefaults.barHeight
     var barPadding: CGFloat = ConfigDefaults.barPadding
-    var barPaddingY: CGFloat = ConfigDefaults.barPaddingY
 
     var barBackgroundHex: String = ConfigDefaults.barBackgroundHex
     var barBorderHex: String = ConfigDefaults.barBorderHex
@@ -302,7 +301,6 @@ final class Config {
 
         barHeight = ConfigDefaults.barHeight
         barPadding = ConfigDefaults.barPadding
-        barPaddingY = ConfigDefaults.barPaddingY
 
         barBackgroundHex = ConfigDefaults.barBackgroundHex
         barBorderHex = ConfigDefaults.barBorderHex
@@ -329,7 +327,6 @@ final class Config {
             logFilePath: logFilePath,
             barHeight: barHeight,
             barPadding: barPadding,
-            barPaddingY: barPaddingY,
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
             textColorHex: textColorHex,
@@ -356,7 +353,6 @@ final class Config {
 
         barHeight = snapshot.barHeight
         barPadding = snapshot.barPadding
-        barPaddingY = snapshot.barPaddingY
 
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex

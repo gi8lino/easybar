@@ -17,7 +17,6 @@ enum ConfigDefaults {
 
     static let barHeight: CGFloat = 36
     static let barPadding: CGFloat = 10
-    static let barPaddingY: CGFloat = 0
 
     static let barBackgroundHex = "#111111"
     static let barBorderHex = "#222222"

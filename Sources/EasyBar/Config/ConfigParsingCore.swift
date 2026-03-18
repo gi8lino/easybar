@@ -46,10 +46,6 @@ extension Config {
             barPadding = CGFloat(try requiredInt(value, path: "bar.padding"))
         }
 
-        if let value = bar["padding_y"] {
-            barPaddingY = CGFloat(try requiredInt(value, path: "bar.padding_y"))
-        }
-
         guard let colors = bar["colors"]?.table else { return }
 
         if let value = colors["background"] {
