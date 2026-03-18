@@ -92,9 +92,9 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 package: bundle ## Create dist/EasyBar-<version>.zip containing EasyBar.app and easybarctl.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
-	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/"
-	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/"
-	@ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
+	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
+	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybarctl"
+	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "easybarctl"
 	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 
