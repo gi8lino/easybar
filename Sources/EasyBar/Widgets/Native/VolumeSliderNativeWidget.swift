@@ -5,22 +5,15 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     let rootID = "builtin_volume"
 
-    private var eventObserver: NSObjectProtocol?
+    private let eventObserver = NativeEventObserver()
     private var isHovered = false
     private var autoHideWorkItem: DispatchWorkItem?
 
     func start() {
         VolumeEvents.shared.subscribeVolume()
 
-        eventObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarEvent,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self,
-                  let payload = notification.object as? EasyBarEventPayload else {
-                return
-            }
+        eventObserver.start { [weak self] payload in
+            guard let self else { return }
 
             if let event = payload.appEvent {
                 switch event {
@@ -104,10 +97,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     }
 
     func stop() {
-        if let eventObserver {
-            NotificationCenter.default.removeObserver(eventObserver)
-            self.eventObserver = nil
-        }
+        eventObserver.stop()
 
         cancelAutoHide()
         isHovered = false

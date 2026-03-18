@@ -5,25 +5,18 @@ final class CalendarNativeWidget: NativeWidget {
     let rootID = "builtin_calendar"
 
     private var timer: Timer?
-    private var eventObserver: NSObjectProtocol?
+    private let eventObserver = NativeEventObserver()
 
     func start() {
         CalendarEvents.shared.subscribeCalendar()
 
-        eventObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarEvent,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard
-                let payload = notification.object as? EasyBarEventPayload,
-                let event = payload.appEvent
-            else {
+        eventObserver.start { [weak self] payload in
+            guard let self, let event = payload.appEvent else {
                 return
             }
 
             if event == .calendarChange || event == .minuteTick {
-                self?.publish()
+                self.publish()
             }
         }
 
@@ -35,10 +28,7 @@ final class CalendarNativeWidget: NativeWidget {
     }
 
     func stop() {
-        if let eventObserver {
-            NotificationCenter.default.removeObserver(eventObserver)
-            self.eventObserver = nil
-        }
+        eventObserver.stop()
 
         timer?.invalidate()
         timer = nil

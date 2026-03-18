@@ -7,7 +7,7 @@ final class BatteryNativeWidget: NativeWidget {
     let rootID = "builtin_battery"
 
     private var timer: Timer?
-    private var eventObserver: NSObjectProtocol?
+    private let eventObserver = NativeEventObserver()
 
     private var isHovered = false
 
@@ -16,17 +16,8 @@ final class BatteryNativeWidget: NativeWidget {
         PowerEvents.shared.subscribePowerSource()
         SystemEvents.shared.subscribeSystemWake()
 
-        eventObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarEvent,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard
-                let self,
-                let payload = notification.object as? EasyBarEventPayload
-            else {
-                return
-            }
+        eventObserver.start { [weak self] payload in
+            guard let self else { return }
 
             if let event = payload.appEvent {
                 switch event {
@@ -67,10 +58,7 @@ final class BatteryNativeWidget: NativeWidget {
 
     /// Stops the widget and clears its rendered nodes.
     func stop() {
-        if let eventObserver {
-            NotificationCenter.default.removeObserver(eventObserver)
-            self.eventObserver = nil
-        }
+        eventObserver.stop()
 
         timer?.invalidate()
         timer = nil
