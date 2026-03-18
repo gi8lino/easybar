@@ -7,7 +7,7 @@ final class BatteryNativeWidget: NativeWidget {
     let rootID = "builtin_battery"
 
     private var timer: Timer?
-    private let eventObserver = NativeEventObserver()
+    private let eventObserver = EasyBarEventObserver()
 
     private var isHovered = false
 

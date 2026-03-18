@@ -1,7 +1,7 @@
 import Foundation
 
 /// Small helper for observing typed EasyBar events in native widgets.
-final class NativeEventObserver {
+final class EasyBarEventObserver {
 
     private var token: NSObjectProtocol?
 

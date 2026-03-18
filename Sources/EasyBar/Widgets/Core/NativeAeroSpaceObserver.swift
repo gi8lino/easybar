@@ -1,7 +1,7 @@
 import Foundation
 
 /// Small helper for observing AeroSpace state updates in native widgets.
-final class NativeAeroSpaceObserver {
+final class AeroSpaceUpdateObserver {
 
     private var token: NSObjectProtocol?
 

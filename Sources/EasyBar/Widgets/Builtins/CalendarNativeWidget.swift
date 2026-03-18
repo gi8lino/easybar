@@ -5,7 +5,7 @@ final class CalendarNativeWidget: NativeWidget {
     let rootID = "builtin_calendar"
 
     private var timer: Timer?
-    private let eventObserver = NativeEventObserver()
+    private let eventObserver = EasyBarEventObserver()
 
     func start() {
         CalendarEvents.shared.subscribeCalendar()
@@ -55,7 +55,7 @@ final class CalendarNativeWidget: NativeWidget {
             formatter.dateFormat = config.format
 
             nodes = [
-                BuiltinWidgetNodeFactory.makeItemNode(
+                BuiltinNativeNodeFactory.makeItemNode(
                     rootID: rootID,
                     style: config.style,
                     text: formatter.string(from: now)

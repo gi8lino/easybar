@@ -5,7 +5,7 @@ final class SpacesNativeWidget: NativeWidget {
 
     let rootID = "builtin_spaces"
 
-    private let aeroSpaceObserver = NativeAeroSpaceObserver()
+    private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
     /// Starts the widget and listens for AeroSpace state updates.
     func start() {

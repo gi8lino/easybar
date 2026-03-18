@@ -5,7 +5,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     let rootID = "builtin_volume"
 
-    private let eventObserver = NativeEventObserver()
+    private let eventObserver = EasyBarEventObserver()
     private var isHovered = false
     private var autoHideWorkItem: DispatchWorkItem?
 
@@ -135,7 +135,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
             )
         } else {
             nodes = [
-                BuiltinWidgetNodeFactory.makeSliderNode(
+                BuiltinNativeNodeFactory.makeSliderNode(
                     rootID: rootID,
                     style: style,
                     text: text,

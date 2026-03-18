@@ -5,7 +5,7 @@ final class FrontAppNativeWidget: NativeWidget {
 
     let rootID = "builtin_front_app"
 
-    private let aeroSpaceObserver = NativeAeroSpaceObserver()
+    private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
     /// Starts the widget and registers AeroSpace interest.
     func start() {
