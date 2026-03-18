@@ -211,7 +211,6 @@ function M.new(log)
 	end
 
 	--- Sets defaults for future easybar.add(...) calls.
-	--- Later calls merge on top of earlier defaults.
 	function api.default(props)
 		deep_merge(state.defaults, normalize_props(props or {}))
 	end
@@ -253,9 +252,7 @@ function M.new(log)
 		end
 	end
 
-	--- Small UX helper.
-	--- EasyBar already animates visual state changes on the SwiftUI side,
-	--- so animate(...) writes through the normal set(...) path.
+	--- Writes through the normal set(...) path.
 	function api.animate(id, props, options)
 		local _ = options
 		api.set(id, props)
@@ -292,6 +289,7 @@ function M.new(log)
 	end
 
 	--- Subscribes one item to one or more events.
+	--- Handlers receive one normalized event table.
 	function api.subscribe(id, events, handler)
 		ensure_item_exists(id)
 		assert(type(handler) == "function", "easybar.subscribe(id, events, handler) requires handler")
@@ -315,14 +313,6 @@ function M.new(log)
 		end
 	end
 
-	local function make_env(id, event_name, payload)
-		return {
-			NAME = id,
-			SENDER = event_name,
-			INFO = deep_copy(payload or {}),
-		}
-	end
-
 	local function maybe_run_click_script(id, event_name)
 		if event_name ~= "mouse.clicked" then
 			return
@@ -341,30 +331,48 @@ function M.new(log)
 		api.exec(command)
 	end
 
-	local function dispatch_handlers_for(id, event_name, payload)
+	local function make_handler_event(id, event)
+		return {
+			name = event.name,
+			widget_id = id,
+			target_widget_id = event.widget_id,
+			app_name = event.app_name,
+			interface_name = event.interface_name,
+			button = event.button,
+			direction = event.direction,
+			charging = event.charging,
+			muted = event.muted,
+			value = event.value,
+			delta_x = event.delta_x,
+			delta_y = event.delta_y,
+			raw = deep_copy(event.raw or {}),
+		}
+	end
+
+	local function dispatch_handlers_for(id, event)
 		local bucket = state.subscriptions[id]
 		if not bucket then
 			return
 		end
 
-		local handlers = bucket[event_name]
+		local handlers = bucket[event.name]
 		if type(handlers) ~= "table" then
 			return
 		end
 
-		maybe_run_click_script(id, event_name)
+		maybe_run_click_script(id, event.name)
 
-		local env = make_env(id, event_name, payload)
+		local handler_event = make_handler_event(id, event)
 
 		for _, handler in ipairs(handlers) do
-			local ok, err = pcall(handler, env)
+			local ok, err = pcall(handler, handler_event)
 
 			if not ok and log then
 				log.error(
 					"lua handler failed id="
 						.. tostring(id)
 						.. " event="
-						.. tostring(event_name)
+						.. tostring(event.name)
 						.. " error="
 						.. tostring(err)
 				)
@@ -372,13 +380,13 @@ function M.new(log)
 		end
 	end
 
-	local function dispatch_targeted(event_name, payload)
-		local target = payload and payload.widget or nil
+	local function dispatch_targeted(event)
+		local target = event.widget_id
 
 		for _, id in ipairs(state.item_order) do
 			if state.items[id] ~= nil then
 				if target == nil or target == id then
-					dispatch_handlers_for(id, event_name, payload)
+					dispatch_handlers_for(id, event)
 				end
 			end
 		end
@@ -401,7 +409,12 @@ function M.new(log)
 
 						if now >= next_due then
 							state.routine_next_due[id] = now + interval
-							dispatch_handlers_for(id, "routine", {})
+
+							dispatch_handlers_for(id, {
+								name = "routine",
+								widget_id = nil,
+								raw = {},
+							})
 						end
 					end
 				end
@@ -409,13 +422,13 @@ function M.new(log)
 		end
 	end
 
-	--- Handles one incoming EasyBar event.
-	function api.handle_event(event_name, payload)
-		if event_name == "second_tick" then
+	--- Handles one incoming normalized EasyBar event.
+	function api.handle_event(event)
+		if event.name == "second_tick" then
 			dispatch_routine_if_due()
 		end
 
-		dispatch_targeted(event_name, payload)
+		dispatch_targeted(event)
 	end
 
 	--- Returns the driver events required by the runtime.

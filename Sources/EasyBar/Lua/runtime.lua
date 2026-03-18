@@ -63,6 +63,7 @@ while true do
 	if not ok or type(payload) ~= "table" or not payload.event then
 		log.error("runtime ignored invalid json payload=" .. tostring(line))
 	else
-		events.dispatch_event(registry, payload.event, payload, render, log, json)
+		local event = events.normalize_event(payload)
+		events.dispatch_event(registry, event, render, log, json)
 	end
 end
