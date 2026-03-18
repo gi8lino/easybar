@@ -88,9 +88,9 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory sign
 	@$(MAKE) --no-print-directory verify
 
-package: bundle ## Create dist/EasyBar-<version>.zip.
+package: bundle ## Create dist/EasyBar-<version>.zip containing EasyBar.app and easybarctl.
 	@rm -f "$(PACKAGE_ZIP)"
-	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(PACKAGE_ZIP)"
+	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(CLI_BIN)" "$(PACKAGE_ZIP)"
 	@echo "Created $(PACKAGE_ZIP)"
 
 release: package ## Build the zipped release artifact.
