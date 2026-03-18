@@ -71,9 +71,8 @@ final class Config {
 
     /// Absolute path to the config file.
     var configPath: String {
-        if let override = ProcessInfo.processInfo.environment["EASYBAR_CONFIG_PATH"],
-           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return NSString(string: override).expandingTildeInPath
+        if let override = environmentConfigPathOverride() {
+            return override
         }
 
         return FileManager.default.homeDirectoryForCurrentUser
