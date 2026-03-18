@@ -54,10 +54,7 @@ final class PowerEvents {
 
         if lastChargingState != newState {
             lastChargingState = newState
-
-            EventBus.shared.emit(.chargingStateChange, data: [
-                "charging": newState ? "true" : "false"
-            ])
+            EventBus.shared.emit(.chargingStateChange, charging: newState)
         }
     }
 

@@ -18,12 +18,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
             queue: .main
         ) { [weak self] notification in
             guard let self,
-                  let payload = notification.object as? [String: String],
-                  let rawEvent = payload["event"] else {
+                  let payload = notification.object as? EasyBarEventPayload else {
                 return
             }
 
-            if let event = AppEvent(rawValue: rawEvent) {
+            if let event = payload.appEvent {
                 switch event {
                 case .volumeChange, .muteChange:
                     if Config.shared.builtinVolume.expandToSliderOnHover {
@@ -40,29 +39,28 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 return
             }
 
-            guard let event = WidgetEvent(rawValue: rawEvent) else {
+            guard let event = payload.widgetEvent else {
                 return
             }
 
             switch event {
             case .mouseEntered:
-                guard payload["widget"] == self.rootID else { return }
+                guard payload.widgetID == self.rootID else { return }
 
                 self.isHovered = true
                 self.cancelAutoHide()
                 self.publish()
 
             case .mouseExited:
-                guard payload["widget"] == self.rootID else { return }
+                guard payload.widgetID == self.rootID else { return }
 
                 self.isHovered = false
                 self.cancelAutoHide()
                 self.publish()
 
             case .sliderPreview:
-                guard payload["widget"] == self.rootID,
-                      let rawValue = payload["value"],
-                      let value = Double(rawValue) else {
+                guard payload.widgetID == self.rootID,
+                      let value = payload.value else {
                     return
                 }
 
@@ -79,9 +77,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
                 self.publish()
 
             case .sliderChanged:
-                guard payload["widget"] == self.rootID,
-                      let rawValue = payload["value"],
-                      let value = Double(rawValue) else {
+                guard payload.widgetID == self.rootID,
+                      let value = payload.value else {
                     return
                 }
 

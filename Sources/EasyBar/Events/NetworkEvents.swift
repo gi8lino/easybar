@@ -81,8 +81,6 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     }
 
     func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-        EventBus.shared.emit(.wifiChange, data: [
-            "interface": interfaceName
-        ])
+        EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
     }
 }

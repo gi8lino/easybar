@@ -60,9 +60,7 @@ struct ProgressSliderWidgetView: View {
                         EventBus.shared.emitWidgetEvent(
                             .sliderPreview,
                             widgetID: rootWidgetID,
-                            data: [
-                                "value": String(Int(newValue.rounded()))
-                            ]
+                            value: newValue
                         )
                     }
                     .onEnded { gesture in
@@ -73,9 +71,7 @@ struct ProgressSliderWidgetView: View {
                         EventBus.shared.emitWidgetEvent(
                             .sliderChanged,
                             widgetID: rootWidgetID,
-                            data: [
-                                "value": String(Int(newValue.rounded()))
-                            ]
+                            value: newValue
                         )
                     }
             )

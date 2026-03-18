@@ -54,9 +54,7 @@ final class SystemEvents {
             queue: .main
         ) { notification in
             if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
-                EventBus.shared.emit(.appSwitch, data: [
-                    "app": app.localizedName ?? ""
-                ])
+                EventBus.shared.emit(.appSwitch, appName: app.localizedName ?? "")
             }
         }
 

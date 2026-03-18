@@ -23,13 +23,12 @@ final class BatteryNativeWidget: NativeWidget {
         ) { [weak self] notification in
             guard
                 let self,
-                let payload = notification.object as? [String: String],
-                let rawEvent = payload["event"]
+                let payload = notification.object as? EasyBarEventPayload
             else {
                 return
             }
 
-            if let event = AppEvent(rawValue: rawEvent) {
+            if let event = payload.appEvent {
                 switch event {
                 case .powerSourceChange, .chargingStateChange, .systemWoke:
                     self.publish()
@@ -39,18 +38,18 @@ final class BatteryNativeWidget: NativeWidget {
                 return
             }
 
-            guard let event = WidgetEvent(rawValue: rawEvent) else {
+            guard let event = payload.widgetEvent else {
                 return
             }
 
             switch event {
             case .mouseEntered:
-                guard payload["widget"] == self.rootID else { return }
+                guard payload.widgetID == self.rootID else { return }
                 self.isHovered = true
                 self.publish()
 
             case .mouseExited:
-                guard payload["widget"] == self.rootID else { return }
+                guard payload.widgetID == self.rootID else { return }
                 self.isHovered = false
                 self.publish()
 

@@ -10,39 +10,68 @@ final class EventBus {
     private init() {}
 
     /// Emits one app-wide event to native widgets and the Lua runtime.
-    func emit(_ event: AppEvent, data: [String: String] = [:]) {
-        var payload = data
-        payload["event"] = event.rawValue
+    func emit(_ event: AppEvent) {
+        emit(.app(event))
+    }
 
-        // Native widgets observe these through NotificationCenter.
-        NotificationCenter.default.post(name: .easyBarEvent, object: payload)
+    /// Emits one app-wide event with app name context.
+    func emit(_ event: AppEvent, appName: String) {
+        emit(.app(event, appName: appName))
+    }
 
-        Logger.debug("emit event \(event.rawValue)")
+    /// Emits one app-wide event with interface name context.
+    func emit(_ event: AppEvent, interfaceName: String) {
+        emit(.app(event, interfaceName: interfaceName))
+    }
 
-        sendToLua(payload)
+    /// Emits one app-wide event with charging state context.
+    func emit(_ event: AppEvent, charging: Bool) {
+        emit(.app(event, charging: charging))
+    }
+
+    /// Emits one app-wide event with muted state context.
+    func emit(_ event: AppEvent, muted: Bool) {
+        emit(.app(event, muted: muted))
     }
 
     /// Emits one widget-scoped event to native widgets and the Lua runtime.
-    ///
-    /// Mouse and slider events must also reach Lua, otherwise Lua widgets
-    /// cannot react to hover, click, scroll, or slider changes.
-    func emitWidgetEvent(_ event: WidgetEvent, widgetID: String, data: [String: String] = [:]) {
-        var payload = data
-        payload["widget"] = widgetID
-        payload["event"] = event.rawValue
+    func emitWidgetEvent(
+        _ event: WidgetEvent,
+        widgetID: String,
+        button: MouseButton? = nil,
+        direction: ScrollDirection? = nil,
+        value: Double? = nil,
+        deltaX: Double? = nil,
+        deltaY: Double? = nil
+    ) {
+        emit(.widget(
+            event,
+            widgetID: widgetID,
+            button: button,
+            direction: direction,
+            value: value,
+            deltaX: deltaX,
+            deltaY: deltaY
+        ))
+    }
 
-        // Native widgets observe these through NotificationCenter.
+    /// Emits one typed event payload.
+    func emit(_ payload: EasyBarEventPayload) {
         NotificationCenter.default.post(name: .easyBarEvent, object: payload)
 
-        Logger.debug("emit widget event \(event.rawValue) widget=\(widgetID)")
+        if let appEvent = payload.appEvent {
+            Logger.debug("emit event \(appEvent.rawValue)")
+        } else if let widgetEvent = payload.widgetEvent {
+            Logger.debug("emit widget event \(widgetEvent.rawValue) widget=\(payload.widgetID ?? "")")
+        }
 
         sendToLua(payload)
     }
 
     /// Encodes and forwards one payload to the Lua runtime.
-    private func sendToLua(_ payload: [String: String]) {
-        guard let encoded = encodeJSON(payload) else {
-            Logger.info("failed to encode lua event payload")
+    private func sendToLua(_ payload: EasyBarEventPayload) {
+        guard let encoded = encodeJSON(payload.toDictionary()) else {
+            Logger.error("failed to encode lua event payload")
             return
         }
 

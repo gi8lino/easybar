@@ -16,9 +16,8 @@ final class CalendarNativeWidget: NativeWidget {
             queue: .main
         ) { [weak self] notification in
             guard
-                let payload = notification.object as? [String: String],
-                let rawEvent = payload["event"],
-                let event = AppEvent(rawValue: rawEvent)
+                let payload = notification.object as? EasyBarEventPayload,
+                let event = payload.appEvent
             else {
                 return
             }

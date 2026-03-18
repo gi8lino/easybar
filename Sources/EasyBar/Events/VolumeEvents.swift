@@ -104,11 +104,8 @@ final class VolumeEvents {
         lastMutedState = readMutedState(for: newDeviceID)
         installDeviceListeners()
 
-        // Device switch should refresh UI state.
         EventBus.shared.emit(.volumeChange)
-        EventBus.shared.emit(.muteChange, data: [
-            "muted": (lastMutedState ?? false) ? "true" : "false"
-        ])
+        EventBus.shared.emit(.muteChange, muted: lastMutedState ?? false)
     }
 
     private func installDeviceListeners() {
@@ -151,10 +148,7 @@ final class VolumeEvents {
             let muted = self.readMutedState(for: deviceID)
             if self.lastMutedState != muted {
                 self.lastMutedState = muted
-
-                EventBus.shared.emit(.muteChange, data: [
-                    "muted": muted ? "true" : "false"
-                ])
+                EventBus.shared.emit(.muteChange, muted: muted)
             }
         }
 
