@@ -5,17 +5,13 @@ final class SpacesNativeWidget: NativeWidget {
 
     let rootID = "builtin_spaces"
 
-    private var aeroSpaceObserver: NSObjectProtocol?
+    private let aeroSpaceObserver = NativeAeroSpaceObserver()
 
     /// Starts the widget and listens for AeroSpace state updates.
     func start() {
         AeroSpaceService.shared.registerConsumer(rootID)
 
-        aeroSpaceObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarAeroSpaceDidUpdate,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
+        aeroSpaceObserver.start { [weak self] in
             self?.publish()
         }
 
@@ -24,11 +20,7 @@ final class SpacesNativeWidget: NativeWidget {
 
     /// Stops the widget and unregisters AeroSpace interest.
     func stop() {
-        if let aeroSpaceObserver {
-            NotificationCenter.default.removeObserver(aeroSpaceObserver)
-            self.aeroSpaceObserver = nil
-        }
-
+        aeroSpaceObserver.stop()
         AeroSpaceService.shared.unregisterConsumer(rootID)
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }

@@ -5,18 +5,14 @@ final class FrontAppNativeWidget: NativeWidget {
 
     let rootID = "builtin_front_app"
 
-    private var aeroSpaceObserver: NSObjectProtocol?
+    private let aeroSpaceObserver = NativeAeroSpaceObserver()
 
     /// Starts the widget and registers AeroSpace interest.
     func start() {
         AeroSpaceService.shared.registerConsumer(rootID)
 
         // Publish only after fresh AeroSpace data has been resolved.
-        aeroSpaceObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarAeroSpaceDidUpdate,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
+        aeroSpaceObserver.start { [weak self] in
             self?.publish()
         }
 
@@ -25,11 +21,7 @@ final class FrontAppNativeWidget: NativeWidget {
 
     /// Stops the widget and removes observers.
     func stop() {
-        if let aeroSpaceObserver {
-            NotificationCenter.default.removeObserver(aeroSpaceObserver)
-            self.aeroSpaceObserver = nil
-        }
-
+        aeroSpaceObserver.stop()
         AeroSpaceService.shared.unregisterConsumer(rootID)
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
