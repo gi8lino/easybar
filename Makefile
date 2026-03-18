@@ -17,6 +17,7 @@ APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
+PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
 
@@ -89,8 +90,12 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory verify
 
 package: bundle ## Create dist/EasyBar-<version>.zip containing EasyBar.app and easybarctl.
-	@rm -f "$(PACKAGE_ZIP)"
-	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(CLI_BIN)" "$(PACKAGE_ZIP)"
+	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
+	@mkdir -p "$(PACKAGE_STAGE)"
+	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/"
+	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/"
+	@ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
+	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 
 release: package ## Build the zipped release artifact.
