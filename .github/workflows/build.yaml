@@ -10,6 +10,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+      actions: write
 
     env:
       BUNDLE_ID: com.gi8lino.EasyBar
@@ -63,3 +64,12 @@ jobs:
           gh release create "${{ steps.version.outputs.tag }}" \
             "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \
             --generate-notes
+
+      - name: Trigger Homebrew update workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run update-homebrew-cask.yml \
+            -f tag="${{ steps.version.outputs.tag }}" \
+            -f version="${{ steps.version.outputs.version }}"

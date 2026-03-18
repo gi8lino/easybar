@@ -1,20 +1,28 @@
 name: update-homebrew-cask
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: true
+        type: string
+      version:
+        description: Release version without leading v
+        required: true
+        type: string
 
 jobs:
   update-cask:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Derive version and asset URL
+      - name: Derive asset URL
         id: vars
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
+          TAG="${{ inputs.tag }}"
+          VERSION="${{ inputs.version }}"
           ASSET_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/EasyBar-${VERSION}.zip"
 
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
