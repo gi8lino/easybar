@@ -62,7 +62,7 @@ jobs:
             sha256 "${{ steps.sha.outputs.sha }}"
             version "${{ inputs.version }}"
 
-            depends_on macos: ">= :sonoma"
+            depends_on macos: :sonoma
 
             def install
               libexec.install "EasyBar.app"
