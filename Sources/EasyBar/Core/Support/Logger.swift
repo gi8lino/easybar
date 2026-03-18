@@ -1,5 +1,6 @@
 import Foundation
 
+/// Central app logger used by Swift and Lua runtime messages.
 enum Logger {
 
     private static let formatter: DateFormatter = {
@@ -16,7 +17,7 @@ enum Logger {
         ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
     }
 
-    // Called after config is loaded or reloaded.
+    /// Configures optional file logging.
     static func configure(logToFile: Bool, filePath: String) {
         queue.sync {
             closeFileHandle()
@@ -42,25 +43,37 @@ enum Logger {
                 fileHandle = handle
                 currentLogPath = expandedPath
             } catch {
-                // Fall back to stdout only.
                 fileHandle = nil
                 currentLogPath = nil
-                print("[\(formatter.string(from: Date()))] easybar: failed to open log file \(expandedPath): \(error)")
+                print("[\(formatter.string(from: Date()))] easybar [WARN] failed to open log file \(expandedPath): \(error)")
             }
         }
     }
 
+    /// Writes one debug message when debug logging is enabled.
     static func debug(_ msg: String) {
         guard debugEnabled else { return }
-        write(msg)
+        write(level: "DEBUG", message: msg)
     }
 
+    /// Writes one info message.
     static func info(_ msg: String) {
-        write(msg)
+        write(level: "INFO", message: msg)
     }
 
-    private static func write(_ msg: String) {
-        let line = "[\(formatter.string(from: Date()))] easybar: \(msg)"
+    /// Writes one warning message.
+    static func warn(_ msg: String) {
+        write(level: "WARN", message: msg)
+    }
+
+    /// Writes one error message.
+    static func error(_ msg: String) {
+        write(level: "ERROR", message: msg)
+    }
+
+    /// Formats and writes one log line to console and optional file.
+    private static func write(level: String, message: String) {
+        let line = "[\(formatter.string(from: Date()))] easybar [\(level)] \(message)"
         print(line)
 
         queue.async {
@@ -70,11 +83,12 @@ enum Logger {
             do {
                 try fileHandle.write(contentsOf: data)
             } catch {
-                print("[\(formatter.string(from: Date()))] easybar: failed writing log file \(currentLogPath ?? ""): \(error)")
+                print("[\(formatter.string(from: Date()))] easybar [WARN] failed writing log file \(currentLogPath ?? ""): \(error)")
             }
         }
     }
 
+    /// Closes the currently open log file handle.
     private static func closeFileHandle() {
         try? fileHandle?.close()
         fileHandle = nil

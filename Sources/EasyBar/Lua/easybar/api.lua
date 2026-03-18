@@ -126,6 +126,16 @@ local function trim_trailing_newlines(value)
 	return value
 end
 
+local function join_message(...)
+	local parts = {}
+
+	for i = 1, select("#", ...) do
+		parts[#parts + 1] = tostring(select(i, ...))
+	end
+
+	return table.concat(parts, " ")
+end
+
 function M.new(log)
 	local state = {
 		items = {},
@@ -190,6 +200,14 @@ function M.new(log)
 		deep_merge(merged, state.defaults)
 		deep_merge(merged, normalize_props(props or {}))
 		return merged
+	end
+
+	local function log_widget(source, level, ...)
+		if not log or type(log.widget) ~= "function" then
+			return
+		end
+
+		log.widget(source or "widget", level or "INFO", join_message(...))
 	end
 
 	--- Sets defaults for future easybar.add(...) calls.
@@ -428,6 +446,34 @@ function M.new(log)
 
 		table.sort(result)
 		return result
+	end
+
+	--- Returns one widget-scoped EasyBar API.
+	function api.make_widget_api(source)
+		local widget_api = {}
+
+		local function copy(name)
+			widget_api[name] = api[name]
+		end
+
+		copy("default")
+		copy("clear_defaults")
+		copy("add")
+		copy("set")
+		copy("animate")
+		copy("get")
+		copy("remove")
+		copy("exec")
+		copy("subscribe")
+		copy("handle_event")
+		copy("required_events")
+
+		--- Writes one widget log line through the host logger.
+		function widget_api.log(level, ...)
+			log_widget(source, level, ...)
+		end
+
+		return widget_api
 	end
 
 	api._state = state

@@ -29,7 +29,7 @@ private func easyBarSignalHandler(_ signal: Int32) {
 /// Manages the long-running Lua runtime process used for scripted widgets.
 ///
 /// stdout is reserved for structured JSON widget updates.
-/// stderr is used for Lua-side logs and runtime/widget errors.
+/// stderr is used for structured Lua/widget logs and runtime errors.
 final class LuaRuntime {
 
     static let shared = LuaRuntime()
@@ -55,7 +55,7 @@ final class LuaRuntime {
         installSignalHandlersIfNeeded()
 
         guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
-            Logger.info("runtime.lua not found")
+            Logger.error("runtime.lua not found")
             return
         }
 
@@ -87,7 +87,7 @@ final class LuaRuntime {
         do {
             try process.run()
         } catch {
-            Logger.info("failed to start lua runtime: \(error)")
+            Logger.error("failed to start lua runtime: \(error)")
             return
         }
 
@@ -144,7 +144,7 @@ final class LuaRuntime {
                 try pipe.fileHandleForWriting.write(contentsOf: data)
                 Logger.debug("sent to lua stdin: \(string)")
             } catch {
-                Logger.info("failed writing to lua stdin: \(error)")
+                Logger.error("failed writing to lua stdin: \(error)")
             }
         }
     }
@@ -175,7 +175,6 @@ final class LuaRuntime {
                     continue
                 }
 
-                // stdout should contain only machine-readable widget messages.
                 Logger.debug("lua stdout raw: \(line)")
 
                 NotificationCenter.default.post(
@@ -186,7 +185,7 @@ final class LuaRuntime {
         }
     }
 
-    /// Installs the stderr handler used for Lua logs and widget/runtime failures.
+    /// Installs the stderr handler used for Lua/widget logs and runtime failures.
     private func installErrorReadabilityHandler() {
         guard let pipe = errorPipe else { return }
 
@@ -212,21 +211,46 @@ final class LuaRuntime {
                     continue
                 }
 
-                // Errors stay visible in normal logs.
-                if line.hasPrefix("ERROR:") {
-                    Logger.info("lua \(line)")
-                    continue
-                }
-
-                // Info/debug chatter only appears in debug mode.
-                if line.hasPrefix("INFO:") || line.hasPrefix("DEBUG:") {
-                    Logger.debug("lua \(line)")
-                    continue
-                }
-
-                // Unknown stderr output is treated as important.
-                Logger.info("lua stderr: \(line)")
+                self.handleLuaStderrLine(line)
             }
+        }
+    }
+
+    /// Routes one stderr line from the Lua runtime into the normal logger.
+    private func handleLuaStderrLine(_ line: String) {
+        // Structured widget/runtime logs use:
+        // EASYBAR_LOG<TAB>LEVEL<TAB>SOURCE<TAB>MESSAGE
+        let prefix = "EASYBAR_LOG\t"
+
+        guard line.hasPrefix(prefix) else {
+            Logger.error("lua stderr: \(line)")
+            return
+        }
+
+        let parts = line.split(separator: "\t", maxSplits: 3, omittingEmptySubsequences: false)
+
+        guard parts.count == 4 else {
+            Logger.error("lua stderr: \(line)")
+            return
+        }
+
+        let level = String(parts[1]).uppercased()
+        let source = String(parts[2])
+        let message = String(parts[3])
+
+        let formatted = "lua[\(source)] \(message)"
+
+        switch level {
+        case "DEBUG":
+            Logger.debug(formatted)
+        case "INFO":
+            Logger.info(formatted)
+        case "WARN":
+            Logger.warn(formatted)
+        case "ERROR":
+            Logger.error(formatted)
+        default:
+            Logger.info(formatted)
         }
     }
 

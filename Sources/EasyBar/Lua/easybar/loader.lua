@@ -21,9 +21,10 @@ local function list_widget_files(widget_dir)
 	return files
 end
 
-local function make_widget_env(registry)
+local function make_widget_env(registry, file)
 	local env = {
-		easybar = registry,
+		-- Each widget gets its own logging source.
+		easybar = registry.make_widget_api(file),
 	}
 
 	setmetatable(env, {
@@ -35,7 +36,7 @@ end
 
 local function load_widget_file(widget_dir, file, registry, log)
 	local path = widget_dir .. "/" .. file
-	local env = make_widget_env(registry)
+	local env = make_widget_env(registry, file)
 	local chunk, load_err = loadfile(path, "t", env)
 
 	if not chunk then

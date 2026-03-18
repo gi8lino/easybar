@@ -69,6 +69,7 @@ end
 local function toggle_vpn()
 	local vpn_name = trim(os.getenv("EASYBAR_VPN_NAME") or "")
 	if vpn_name == "" then
+		easybar.log("warn", "missing env EASYBAR_VPN_NAME")
 		return
 	end
 
