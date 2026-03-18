@@ -203,6 +203,8 @@ border_width = 1 # Border width of the popup.
 corner_radius = 10 # Corner radius of the popup.
 padding_x = 10 # Horizontal inner padding of the popup.
 padding_y = 8 # Vertical inner padding of the popup.
+margin_x = 8 # Horizontal outer margin around the whole popup.
+margin_y = 8 # Vertical outer margin around the whole popup.
 spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
 

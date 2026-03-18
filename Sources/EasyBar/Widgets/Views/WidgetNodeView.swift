@@ -142,7 +142,6 @@ struct WidgetNodeView: View {
             }
             .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
                 NativeCalendarPopupView()
-                    .padding(8)
                     .background(
                         PopupHoverRegion { hovering in
                             popupHovered = hovering
@@ -191,7 +190,6 @@ struct WidgetNodeView: View {
         }
         .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
             popupContent
-                .padding(8)
         }
     }
 

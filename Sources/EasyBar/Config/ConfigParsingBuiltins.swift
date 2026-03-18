@@ -538,6 +538,14 @@ extension Config {
                 popupTable["item_indent"],
                 path: "builtins.calendar.popup.item_indent"
             ) ?? builtinCalendar.popupItemIndent,
+            marginX: try optionalNumber(
+                popupTable["margin_x"],
+                path: "builtins.calendar.popup.margin_x"
+            ) ?? builtinCalendar.popupMarginX,
+            marginY: try optionalNumber(
+                popupTable["margin_y"],
+                path: "builtins.calendar.popup.margin_y"
+            ) ?? builtinCalendar.popupMarginY,
             birthdays: try parseCalendarPopupSectionStyle(
                 from: birthdaysPopupTable,
                 path: "builtins.calendar.popup.birthdays",

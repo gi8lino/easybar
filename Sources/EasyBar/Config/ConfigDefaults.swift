@@ -190,7 +190,7 @@ enum ConfigDefaults {
             enabled: false,
             position: .right,
             order: 50,
-            icon: "🗓",
+            icon: "",
             textColorHex: nil,
             backgroundColorHex: nil,
             borderColorHex: nil,
@@ -229,6 +229,8 @@ enum ConfigDefaults {
             paddingY: 8,
             spacing: 8,
             itemIndent: 8,
+            marginX: 8,
+            marginY: 8,
             birthdays: .init(
                 titleColorHex: "#f5a97f",
                 itemColorHex: "#eed49f",

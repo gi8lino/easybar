@@ -29,47 +29,62 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Hoverable popups and interactive widgets
 - Fast reload flow for config and widgets
 - Optional file logging
-- Launch at login support
+- Homebrew-managed background service support
 
 ## Install
 
-EasyBar is distributed through Homebrew in the `gi8lino/formulae` tap.
+EasyBar is distributed through Homebrew in the `gi8lino/homebrew-tap` tap.
 
 Add the tap:
 
 ```bash
-brew tap gi8lino/formulae
+brew tap gi8lino/tap
 ```
 
 Install EasyBar:
 
 ```bash
-brew install easybar
+brew install gi8lino/tap/easybar
 ```
 
 This installs:
 
-- `EasyBar.app`
-- `easybar`
+- `EasyBar.app` inside the Homebrew Cellar
+- `easybar` to launch EasyBar
+- `easybarctl` for CLI control and IPC commands
 
-The `easybar` command is linked from inside the installed app bundle, so it always matches the installed EasyBar version.
+## Start at login with Homebrew
 
-If Homebrew asks for an explicit cask install, use:
+Start EasyBar as a Homebrew-managed user service:
 
 ```bash
-brew install --cask easybar
+brew services start easybar
 ```
 
-### Upgrade
+Stop it:
 
 ```bash
-brew upgrade easybar
+brew services stop easybar
 ```
 
-### Uninstall
+Restart it:
 
 ```bash
-brew uninstall easybar
+brew services restart easybar
+```
+
+## Upgrade
+
+```bash
+brew upgrade gi8lino/tap/easybar
+brew services restart easybar
+```
+
+## Uninstall
+
+```bash
+brew services stop easybar
+brew uninstall gi8lino/tap/easybar
 ```
 
 ## Built-in widgets
@@ -398,29 +413,29 @@ If AeroSpace is not installed, widgets that depend on it will not show useful st
 
 To keep the `spaces` and `front_app` widgets in sync, AeroSpace should notify EasyBar when the focused workspace or focused window changes.
 
-AeroSpace runs `exec-and-forget` commands through `/bin/bash -c`, so using an absolute path for `easybar` is the safest option.
+AeroSpace runs `exec-and-forget` commands through `/bin/bash -c`, so using an absolute path for `easybarctl` is the safest option.
 
 If EasyBar was installed with Homebrew in the default prefix, the command path is usually:
 
-- Apple Silicon: `/opt/homebrew/bin/easybar`
-- Intel: `/usr/local/bin/easybar`
+- Apple Silicon: `/opt/homebrew/bin/easybarctl`
+- Intel: `/usr/local/bin/easybarctl`
 
 Add this to your `~/.aerospace.toml`:
 
 ```toml
 exec-on-workspace-change = [
-  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
+  'exec-and-forget /opt/homebrew/bin/easybarctl --workspace-changed'
 ]
 
 on-focus-changed = [
-  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
+  'exec-and-forget /opt/homebrew/bin/easybarctl --focus-changed'
 ]
 ```
 
 If your Homebrew installation uses a different prefix, replace the path accordingly. You can verify the correct path with:
 
 ```bash
-command -v easybar
+command -v easybarctl
 ```
 
 ## Events
@@ -515,7 +530,7 @@ file = "~/Library/Logs/EasyBar.log"
 You can also enable debug logging with:
 
 ```bash
-EASYBAR_DEBUG=1
+EASYBAR_DEBUG=1 easybar
 ```
 
 Lua runtime logs are bridged back into the same logger.
@@ -538,12 +553,6 @@ This is controlled by:
 watch_config = true
 ```
 
-## Launch at login
-
-EasyBar includes a small Settings window with launch-at-login support through `SMAppService`.
-
-This requires macOS 13 or newer.
-
 ## Project structure
 
 ```text
@@ -557,7 +566,7 @@ Sources/EasyBar/
   Services/    AeroSpace and file watching services
   Widgets/     native widgets, runtime bridge, shared state, SwiftUI views
 
-Sources/EasyBarShared/
+Sources/shared/
   shared code used by app and CLI
 ```
 

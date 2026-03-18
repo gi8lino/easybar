@@ -27,9 +27,11 @@ struct NativeCalendarPopupView: View {
                                 .padding(.leading, config.popupItemIndent)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, config.popupPaddingX)
         .padding(.vertical, config.popupPaddingY)
         .background(color(config.popupBackgroundColorHex))
@@ -43,7 +45,9 @@ struct NativeCalendarPopupView: View {
         .clipShape(
             RoundedRectangle(cornerRadius: config.popupCornerRadius)
         )
-        .frame(minWidth: 220, alignment: .leading)
+        .padding(.horizontal, config.popupMarginX)
+        .padding(.vertical, config.popupMarginY)
+        .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
     }
 
     private func style(

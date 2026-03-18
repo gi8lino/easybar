@@ -300,6 +300,8 @@ extension Config {
             var paddingY: Double
             var spacing: Double
             var itemIndent: Double
+            var marginX: Double
+            var marginY: Double
 
             var birthdays: PopupSectionStyle
             var today: PopupSectionStyle
@@ -416,6 +418,16 @@ extension Config {
         var popupItemIndent: Double {
             get { popup.itemIndent }
             set { popup.itemIndent = newValue }
+        }
+
+        var popupMarginX: Double {
+            get { popup.marginX }
+            set { popup.marginX = newValue }
+        }
+
+        var popupMarginY: Double {
+            get { popup.marginY }
+            set { popup.marginY = newValue }
         }
     }
 }
