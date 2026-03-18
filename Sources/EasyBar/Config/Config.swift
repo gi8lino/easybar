@@ -20,7 +20,7 @@ final class Config {
     // MARK: - Bar
 
     var barHeight: CGFloat = ConfigDefaults.barHeight
-    var barPadding: CGFloat = ConfigDefaults.barPadding
+    var barPaddingX: CGFloat = ConfigDefaults.barPaddingX
 
     var barBackgroundHex: String = ConfigDefaults.barBackgroundHex
     var barBorderHex: String = ConfigDefaults.barBorderHex
@@ -149,10 +149,10 @@ final class Config {
         set { builtinSpaces.layout.maxIcons = newValue }
     }
 
-    /// Shows the space number label.
-    var showSpaceNumber: Bool {
-        get { builtinSpaces.layout.showNumber }
-        set { builtinSpaces.layout.showNumber = newValue }
+    /// Shows the space label.
+    var showSpaceLabel: Bool {
+        get { builtinSpaces.layout.showLabel }
+        set { builtinSpaces.layout.showLabel = newValue }
     }
 
     /// Shows app icons inside a space.
@@ -228,9 +228,9 @@ final class Config {
     }
 
     /// Focused app icon size.
-    var focusedIconSize: CGFloat {
-        get { CGFloat(builtinSpaces.icons.focusedSize) }
-        set { builtinSpaces.icons.focusedSize = Double(newValue) }
+    var focusedAppIconSize: CGFloat {
+        get { CGFloat(builtinSpaces.icons.focusedAppSize) }
+        set { builtinSpaces.icons.focusedAppSize = Double(newValue) }
     }
 
     /// Default app icon border width.
@@ -240,9 +240,9 @@ final class Config {
     }
 
     /// Focused app icon border width.
-    var focusedIconBorderWidth: CGFloat {
-        get { CGFloat(builtinSpaces.icons.focusedBorderWidth) }
-        set { builtinSpaces.icons.focusedBorderWidth = Double(newValue) }
+    var focusedAppIconBorderWidth: CGFloat {
+        get { CGFloat(builtinSpaces.icons.focusedAppBorderWidth) }
+        set { builtinSpaces.icons.focusedAppBorderWidth = Double(newValue) }
     }
 
     /// Active space background color.
@@ -300,7 +300,7 @@ final class Config {
         logFilePath = ConfigDefaults.logFilePath
 
         barHeight = ConfigDefaults.barHeight
-        barPadding = ConfigDefaults.barPadding
+        barPaddingX = ConfigDefaults.barPaddingX
 
         barBackgroundHex = ConfigDefaults.barBackgroundHex
         barBorderHex = ConfigDefaults.barBorderHex
@@ -326,7 +326,7 @@ final class Config {
             logToFile: logToFile,
             logFilePath: logFilePath,
             barHeight: barHeight,
-            barPadding: barPadding,
+            barPaddingX: barPaddingX,
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
             textColorHex: textColorHex,
@@ -352,7 +352,7 @@ final class Config {
         logFilePath = snapshot.logFilePath
 
         barHeight = snapshot.barHeight
-        barPadding = snapshot.barPadding
+        barPaddingX = snapshot.barPaddingX
 
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex

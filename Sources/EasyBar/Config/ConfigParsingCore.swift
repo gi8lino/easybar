@@ -42,8 +42,8 @@ extension Config {
             barHeight = CGFloat(try requiredInt(value, path: "bar.height"))
         }
 
-        if let value = bar["padding"] {
-            barPadding = CGFloat(try requiredInt(value, path: "bar.padding"))
+        if let value = bar["padding_x"] {
+            barPaddingX = CGFloat(try requiredInt(value, path: "bar.padding_x"))
         }
 
         guard let colors = bar["colors"]?.table else { return }

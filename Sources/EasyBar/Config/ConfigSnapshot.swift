@@ -10,7 +10,7 @@ struct ConfigSnapshot {
     let logFilePath: String
 
     let barHeight: CGFloat
-    let barPadding: CGFloat
+    let barPaddingX: CGFloat
 
     let barBackgroundHex: String
     let barBorderHex: String

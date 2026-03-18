@@ -52,7 +52,7 @@ final class CalendarNativeWidget: NativeWidget {
 
         case .item:
             let formatter = DateFormatter()
-            formatter.dateFormat = config.format
+            formatter.dateFormat = config.itemFormat
 
             nodes = [
                 BuiltinNativeNodeFactory.makeItemNode(

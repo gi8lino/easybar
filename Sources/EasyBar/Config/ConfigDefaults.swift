@@ -16,7 +16,7 @@ enum ConfigDefaults {
     // MARK: - Bar
 
     static let barHeight: CGFloat = 36
-    static let barPadding: CGFloat = 10
+    static let barPaddingX: CGFloat = 10
 
     static let barBackgroundHex = "#111111"
     static let barBorderHex = "#222222"
@@ -100,7 +100,7 @@ enum ConfigDefaults {
             focusedScale: 1.0,
             inactiveOpacity: 0.85,
             maxIcons: 4,
-            showNumber: true,
+            showLabel: true,
             showIcons: true,
             showOnlyFocusedLabel: false,
             collapseInactive: false,
@@ -117,9 +117,9 @@ enum ConfigDefaults {
             size: 14,
             spacing: 4,
             cornerRadius: 3,
-            focusedSize: 18,
+            focusedAppSize: 18,
             borderWidth: 1,
-            focusedBorderWidth: 1
+            focusedAppBorderWidth: 1
         ),
         colors: .init(
             activeBackgroundHex: "#2b2b2b",
@@ -202,7 +202,7 @@ enum ConfigDefaults {
             opacity: 1
         ),
         anchor: .init(
-            format: "EEE, MMM d",
+            itemFormat: "EEE, MMM d",
             layout: .item,
             topFormat: "HH:mm",
             bottomFormat: "MMMM, d",

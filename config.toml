@@ -9,8 +9,7 @@ file = "~/Library/Logs/EasyBar.log" # Log file path used when logging is enabled
 
 [bar]
 height = 32 # Total height of the bar.
-padding = 10 # Horizontal left/right padding inside the bar.
-padding_y = 0 # Vertical top/bottom padding inside the bar.
+padding_x = 10 # Horizontal left and right padding inside the bar.
 
 [bar.colors]
 background = "#111111" # Bar background color.
@@ -27,26 +26,25 @@ text_color = "" # Fallback text color for the spaces root widget.
 background_color = "#00000000" # Background behind the whole spaces block.
 border_color = "#00000000" # Border color around the whole spaces block.
 border_width = 0 # Border width around the whole spaces block.
+corner_radius = 0 # Corner radius around the whole spaces block.
+padding_x = 0 # Horizontal inner padding of the spaces root container.
+padding_y = 0 # Vertical inner padding of the spaces root container.
 spacing = 0 # Root-level spacing of the spaces widget container.
 opacity = 1 # Overall opacity of the spaces widget container.
 
 [builtins.spaces.layout]
 spacing = 8 # Gap between one space pill and the next.
 hide_empty = true # Hides spaces with no apps.
-
 padding_x = 12 # Horizontal inner padding inside each space pill.
 padding_y = 2 # Vertical inner padding inside each space pill.
-
 margin_x = 4 # Horizontal outer margin around the whole spaces row.
 margin_y = 8 # Vertical outer margin around the whole spaces row.
-
 corner_radius = 8 # Corner radius of inactive space pills.
 focused_corner_radius = 8 # Corner radius of the focused space pill.
-
 focused_scale = 1.0 # Scale multiplier applied to the focused space pill.
 inactive_opacity = 0.85 # Opacity applied to inactive space pills.
 max_icons = 4 # Maximum number of app icons shown per space.
-show_number = true # Shows the space name/number label.
+show_label = true # Shows the workspace label.
 show_icons = true # Shows app icons inside each space pill.
 show_only_focused_label = false # Shows the label only on the focused space when true.
 collapse_inactive = false # Makes inactive spaces more compact when true.
@@ -63,9 +61,9 @@ inactive_color = "#d0d0d0" # Text color of inactive space labels.
 size = 20 # Default app icon size in a space.
 spacing = 4 # Gap between app icons.
 corner_radius = 3 # Corner radius of app icons.
-focused_size = 28 # Size of the currently focused app icon.
+focused_app_size = 28 # Size of the currently focused app icon.
 border_width = 1 # Border width of normal app icons.
-focused_border_width = 1 # Border width of the focused app icon.
+focused_app_border_width = 1 # Border width of the focused app icon.
 
 [builtins.spaces.colors]
 active_background = "#2b2b2b" # Background color of the focused space pill.
@@ -99,6 +97,16 @@ icon_corner_radius = 4 # Corner radius of the displayed app icon.
 enabled = true # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 60 # Sort order among widgets in the same position.
+icon = "󰍛" # Leading icon of the widget.
+text_color = "" # Text color of the widget when no content color is set.
+background_color = "" # Background color of the widget.
+border_color = "" # Border color of the widget.
+border_width = 0 # Border width of the widget.
+corner_radius = 0 # Corner radius of the widget background.
+padding_x = 8 # Horizontal inner padding of the widget.
+padding_y = 4 # Vertical inner padding of the widget.
+spacing = 6 # Gap between icon, label, and sparkline.
+opacity = 1 # Overall opacity of the widget.
 
 [builtins.cpu.content]
 label = "CPU" # Text label shown next to the sparkline.
@@ -130,6 +138,7 @@ icon_size = 18 # Font size of the battery icon.
 enabled = false # Shows or hides the volume widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
+icon = "" # Leading icon of the compact widget.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.
 border_color = "#333333" # Border color of the widget.
@@ -145,8 +154,8 @@ muted_icon = "🔇" # Icon shown when audio is muted.
 low_icon = "🔉" # Icon shown for low volume.
 high_icon = "🔊" # Icon shown for high volume.
 show_percentage = true # Shows the volume percentage text.
-min = 0 # Minimum slider/display value.
-max = 100 # Maximum slider/display value.
+min = 0 # Minimum slider and display value.
+max = 100 # Maximum slider and display value.
 step = 1 # Slider step size.
 
 [builtins.volume.slider]
@@ -170,9 +179,9 @@ opacity = 1.0 # Overall opacity of the anchor widget.
 
 [builtins.calendar.anchor]
 layout = "stack" # Anchor layout: item, stack, or inline.
-format = "EEE, MMM d" # Default single-line format used by item layout.
-top_format = "HH:mm" # Top line format in stack/inline layouts.
-bottom_format = "d. MMM" # Bottom or second line format in stack/inline layouts.
+item_format = "EEE, MMM d" # Format used when anchor layout is item.
+top_format = "HH:mm" # Top line format in stack or inline layouts.
+bottom_format = "d. MMM" # Bottom or second line format in stack or inline layouts.
 line_spacing = 0 # Vertical spacing between top and bottom lines in stack layout.
 top_text_color = "#ffffff" # Color of the top line text.
 bottom_text_color = "#d0d0d0" # Color of the bottom line text.
@@ -192,33 +201,30 @@ background_color = "#111111" # Background color of the popup.
 border_color = "#444444" # Border color of the popup.
 border_width = 1 # Border width of the popup.
 corner_radius = 10 # Corner radius of the popup.
-empty_color = "#c0c0c0" # Color used for empty-state text.
-item_color = "#d0d0d0" # Color of popup event and birthday items.
-item_indent = 8 # Left indent for popup items under a section title.
 padding_x = 10 # Horizontal inner padding of the popup.
 padding_y = 8 # Vertical inner padding of the popup.
-section_title_color = "#ffffff" # Color of popup section titles.
 spacing = 8 # Vertical spacing between popup sections.
+item_indent = 8 # Left indent for popup items under a section title.
 
 [builtins.calendar.popup.birthdays]
-title_color = "#89CFEF"
-item_color = "#7285A5"
-empty_color = "#c0c0c0"
+title_color = "#89CFEF" # Section title color for birthdays.
+item_color = "#7285A5" # Item text color for birthdays.
+empty_color = "#c0c0c0" # Empty-state color for birthdays.
 
 [builtins.calendar.popup.today]
-title_color = "#5F9EA0"
-item_color = "#d0d0d0"
-empty_color = "#c0c0c0"
+title_color = "#5F9EA0" # Section title color for today's events.
+item_color = "#d0d0d0" # Item text color for today's events.
+empty_color = "#c0c0c0" # Empty-state color for today's events.
 
 [builtins.calendar.popup.tomorrow]
-title_color = "#8bd5ca"
-item_color = "#cfeee8"
-empty_color = "#c0c0c0"
+title_color = "#8bd5ca" # Section title color for tomorrow's events.
+item_color = "#cfeee8" # Item text color for tomorrow's events.
+empty_color = "#c0c0c0" # Empty-state color for tomorrow's events.
 
 [builtins.calendar.popup.future]
-title_color = "#91d7e3"
-item_color = "#d0d0d0"
-empty_color = "#c0c0c0"
+title_color = "#91d7e3" # Section title color for future events.
+item_color = "#d0d0d0" # Item text color for future events.
+empty_color = "#c0c0c0" # Empty-state color for future events.
 
 [builtins.time.style]
 enabled = false # Shows or hides the time widget.

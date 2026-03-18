@@ -46,7 +46,6 @@ struct SpacesWidgetView: View {
                                 }
                             }
                         }
-                        // Inner pill padding.
                         .padding(.horizontal, resolvedPaddingX(for: space))
                         .padding(.vertical, resolvedPaddingY(for: space))
                         .background(
@@ -72,18 +71,15 @@ struct SpacesWidgetView: View {
                     .buttonStyle(.plain)
                 }
             }
-            // Outer margin around the whole spaces block.
             .padding(.horizontal, Config.shared.spaceMarginX)
             .padding(.vertical, Config.shared.spaceMarginY)
         }
-        // Keep the spaces widget only as wide as its content,
-        // so other left-positioned widgets like front_app stay on the left.
         .fixedSize(horizontal: true, vertical: false)
     }
 
     /// Returns whether the space label should be shown.
     private func shouldShowLabel(for space: SpaceItem) -> Bool {
-        guard Config.shared.showSpaceNumber else { return false }
+        guard Config.shared.showSpaceLabel else { return false }
 
         if Config.shared.showOnlyFocusedLabel {
             return space.isFocused
@@ -151,12 +147,12 @@ private struct AppIconView: View {
 
     /// Returns the app icon size.
     private var resolvedSize: CGFloat {
-        isFocusedApp ? Config.shared.focusedIconSize : Config.shared.iconSize
+        isFocusedApp ? Config.shared.focusedAppIconSize : Config.shared.iconSize
     }
 
     /// Returns the app icon border width.
     private var resolvedBorderWidth: CGFloat {
-        isFocusedApp ? Config.shared.focusedIconBorderWidth : Config.shared.iconBorderWidth
+        isFocusedApp ? Config.shared.focusedAppIconBorderWidth : Config.shared.iconBorderWidth
     }
 
     var body: some View {

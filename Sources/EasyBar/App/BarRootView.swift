@@ -15,7 +15,7 @@ struct BarRootView: View {
 
             WidgetBar(position: .right)
         }
-        .padding(.horizontal, Config.shared.barPadding)
+        .padding(.horizontal, Config.shared.barPaddingX)
         .frame(height: Config.shared.barHeight)
         .background(Theme.barBackground)
         .overlay(alignment: .bottom) {

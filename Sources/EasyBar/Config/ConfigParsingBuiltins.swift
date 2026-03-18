@@ -157,10 +157,10 @@ extension Config {
                 layoutTable["max_icons"],
                 path: "builtins.spaces.layout.max_icons"
             ) ?? builtinSpaces.layout.maxIcons,
-            showNumber: try optionalBool(
-                layoutTable["show_number"],
-                path: "builtins.spaces.layout.show_number"
-            ) ?? builtinSpaces.layout.showNumber,
+            showLabel: try optionalBool(
+                layoutTable["show_label"],
+                path: "builtins.spaces.layout.show_label"
+            ) ?? builtinSpaces.layout.showLabel,
             showIcons: try optionalBool(
                 layoutTable["show_icons"],
                 path: "builtins.spaces.layout.show_icons"
@@ -215,18 +215,18 @@ extension Config {
                 iconsTable["corner_radius"],
                 path: "builtins.spaces.icons.corner_radius"
             ) ?? builtinSpaces.icons.cornerRadius,
-            focusedSize: try optionalNumber(
-                iconsTable["focused_size"],
-                path: "builtins.spaces.icons.focused_size"
-            ) ?? builtinSpaces.icons.focusedSize,
+            focusedAppSize: try optionalNumber(
+                iconsTable["focused_app_size"],
+                path: "builtins.spaces.icons.focused_app_size"
+            ) ?? builtinSpaces.icons.focusedAppSize,
             borderWidth: try optionalNumber(
                 iconsTable["border_width"],
                 path: "builtins.spaces.icons.border_width"
             ) ?? builtinSpaces.icons.borderWidth,
-            focusedBorderWidth: try optionalNumber(
-                iconsTable["focused_border_width"],
-                path: "builtins.spaces.icons.focused_border_width"
-            ) ?? builtinSpaces.icons.focusedBorderWidth
+            focusedAppBorderWidth: try optionalNumber(
+                iconsTable["focused_app_border_width"],
+                path: "builtins.spaces.icons.focused_app_border_width"
+            ) ?? builtinSpaces.icons.focusedAppBorderWidth
         )
 
         let colors = Config.SpacesBuiltinConfig.Colors(
@@ -435,10 +435,10 @@ extension Config {
         )
 
         let anchor = Config.CalendarBuiltinConfig.Anchor(
-            format: try optionalString(
-                anchorTable["format"],
-                path: "builtins.calendar.anchor.format"
-            ) ?? builtinCalendar.format,
+            itemFormat: try optionalString(
+                anchorTable["item_format"],
+                path: "builtins.calendar.anchor.item_format"
+            ) ?? builtinCalendar.itemFormat,
             layout: normalizedCalendarLayout(
                 try optionalString(
                     anchorTable["layout"],

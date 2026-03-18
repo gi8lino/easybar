@@ -92,7 +92,7 @@ extension Config {
             var focusedScale: Double
             var inactiveOpacity: Double
             var maxIcons: Int
-            var showNumber: Bool
+            var showLabel: Bool
             var showIcons: Bool
             var showOnlyFocusedLabel: Bool
             var collapseInactive: Bool
@@ -111,9 +111,9 @@ extension Config {
             var size: Double
             var spacing: Double
             var cornerRadius: Double
-            var focusedSize: Double
+            var focusedAppSize: Double
             var borderWidth: Double
-            var focusedBorderWidth: Double
+            var focusedAppBorderWidth: Double
         }
 
         struct Colors {
@@ -264,7 +264,7 @@ extension Config {
 
     struct CalendarBuiltinConfig {
         struct Anchor {
-            var format: String
+            var itemFormat: String
             var layout: CalendarAnchorLayout
             var topFormat: String
             var bottomFormat: String
@@ -313,9 +313,9 @@ extension Config {
         var birthdays: Birthdays
         var popup: Popup
 
-        var format: String {
-            get { anchor.format }
-            set { anchor.format = newValue }
+        var itemFormat: String {
+            get { anchor.itemFormat }
+            set { anchor.itemFormat = newValue }
         }
 
         var layout: CalendarAnchorLayout {
