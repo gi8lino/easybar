@@ -11,31 +11,50 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      BUNDLE_ID: com.gi8lino.EasyBar
+
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Build universal release artifacts
+      - name: Derive version from tag
+        id: version
+        shell: bash
         run: |
-          make bundle ARCH=universal VERSION="${GITHUB_REF_NAME}"
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
 
-      - name: Verify artifacts
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "Tag: $TAG"
+          echo "Version: $VERSION"
+
+      - name: Build universal release artifact
+        run: |
+          make release \
+            ARCH=universal \
+            VERSION="${{ steps.version.outputs.version }}" \
+            BUNDLE_ID="${BUNDLE_ID}"
+
+      - name: Verify bundled artifacts
         run: |
           file dist/EasyBar.app/Contents/MacOS/EasyBar
-          file dist/wifisnitchctl
+          file dist/EasyBar.app/Contents/MacOS/easybarctl
+          test -f dist/EasyBar.app/Contents/Info.plist
+          test -d dist/EasyBar.app/Contents/Resources/EasyBar_EasyBar.bundle
 
-      - name: Package assets
+      - name: Print package checksum
         run: |
-          mkdir -p dist
-          ditto -c -k --sequesterRsrc --keepParent dist/EasyBar.app dist/EasyBar.app.zip
+          shasum -a 256 "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            dist/EasyBar.app.zip \
-            dist/easybarctl \
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \
             --generate-notes

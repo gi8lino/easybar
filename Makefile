@@ -10,16 +10,22 @@ APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
-CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
+CLI_BIN := $(APP_MACOS)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
-APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
+APP_RESOURCE_BUNDLE_RES := $(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)
+APP_RESOURCE_BUNDLE_ROOT := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
+
+PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
+PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
 
 BUNDLE_ID ?= com.example.EasyBar
 VERSION ?= dev
 ARCH ?= universal
+SIGN_IDENTITY ?= -
+NOTARY_PROFILE ?=
 
 VERSION_PREFIX ?= v
 LATEST_TAG := $(shell git tag --list '$(VERSION_PREFIX)*' --sort=-v:refname | head -n 1)
@@ -44,13 +50,13 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package app cli clean clean-dist run dev \
-        build-app build-cli copy-resources verify stamp-plist sign \
-        print-arch print-version print-latest-tag \
+.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run dev \
+        build-app build-cli copy-resources create-bundle-layout copy-plist stamp-plist \
+        sign verify notarize staple print-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags
 
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*##/ { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Build
 
@@ -66,28 +72,40 @@ prepare-version: ## Generate Sources/shared/BuildInfo.swift with the selected VE
 	@printf '%s\n' '    public static let appVersion = "$(VERSION)"' >> "$(BUILD_INFO)"
 	@printf '%s\n' '}' >> "$(BUILD_INFO)"
 
-build: bundle ## Build the app bundle and CLI for the selected ARCH.
+build: bundle ## Build the app bundle for the selected ARCH.
 
-app: prepare-version ## Build only the app executable for the selected ARCH.
+app: prepare-version clean-dist ## Build only the app executable into the bundle layout.
+	@$(MAKE) --no-print-directory create-bundle-layout
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 
-cli: prepare-version ## Build only the CLI executable for the selected ARCH.
+cli: prepare-version clean-dist ## Build only the CLI executable into the bundle layout.
+	@$(MAKE) --no-print-directory create-bundle-layout
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 
-bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(DIST_DIR)"
+bundle: prepare-version clean-dist ## Build EasyBar.app with embedded easybarctl.
+	@$(MAKE) --no-print-directory create-bundle-layout
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
-	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
+	@$(MAKE) --no-print-directory copy-plist
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
 	@$(MAKE) --no-print-directory sign
 	@$(MAKE) --no-print-directory verify
 
-package: bundle ## Create dist/EasyBar.app.zip.
-	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(APP_BUNDLE).zip"
-	@echo "Created $(APP_BUNDLE).zip"
+package: bundle ## Create dist/EasyBar-<version>.zip.
+	@rm -f "$(PACKAGE_ZIP)"
+	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(PACKAGE_ZIP)"
+	@echo "Created $(PACKAGE_ZIP)"
+
+release: package ## Build the zipped release artifact.
+	@echo "Release artifact ready: $(PACKAGE_ZIP)"
+
+create-bundle-layout: ## Internal target: create the .app directory structure.
+	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)"
+
+copy-plist: ## Internal target: copy Info.plist into the bundle.
+	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 
 build-app: ## Internal target: build the app executable for ARCH.
 ifeq ($(ARCH),universal)
@@ -102,7 +120,7 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
 endif
 
-build-cli: ## Internal target: build the CLI executable for ARCH.
+build-cli: ## Internal target: build the CLI executable for ARCH and embed it in the app.
 ifeq ($(ARCH),universal)
 	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(CLI_PRODUCT)
 	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(CLI_PRODUCT)
@@ -115,31 +133,53 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle root.
+copy-resources: ## Internal target: copy SwiftPM resource bundles into the app.
+	@rm -rf "$(APP_RESOURCE_BUNDLE_RES)" "$(APP_RESOURCE_BUNDLE_ROOT)"
 ifeq ($(ARCH),universal)
-	@rm -rf "$(APP_RESOURCE_BUNDLE)"
-	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
+	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE_RES)"
 else
-	@rm -rf "$(APP_RESOURCE_BUNDLE)"
-	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
+	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE_RES)"
 endif
+	@ln -sfn "Contents/Resources/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE_ROOT)"
 
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(APP_EXEC)' "$(PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 
-sign: ## Ad-hoc sign the bundle for local launching.
-	@codesign --force --deep --sign - "$(APP_BUNDLE)" >/dev/null 2>&1 || true
+sign: ## Sign the bundle. Default is ad-hoc; override SIGN_IDENTITY for Developer ID.
+	@codesign --force --deep --timestamp=none --sign "$(SIGN_IDENTITY)" "$(APP_BUNDLE)"
 
-verify: ## Show the built binary architectures and packaged resources.
+verify: ## Verify bundle layout, signatures, and binary architectures.
+	@echo "Verifying codesign:"
+	@codesign --verify --deep --strict "$(APP_BUNDLE)"
+	@echo ""
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
 	@file "$(CLI_BIN)"
+	@echo ""
 	@echo "Packaged app root:"
 	@ls -1 "$(APP_BUNDLE)"
+	@echo ""
 	@echo "Packaged Contents:"
 	@ls -1 "$(APP_CONTENTS)"
+	@echo ""
+	@echo "Packaged MacOS:"
+	@ls -1 "$(APP_MACOS)"
+	@echo ""
+	@echo "Packaged Resources:"
+	@ls -1 "$(APP_RESOURCES)"
+
+notarize: package ## Submit the zip for notarization using notarytool.
+ifndef NOTARY_PROFILE
+	$(error NOTARY_PROFILE is required, e.g. make notarize NOTARY_PROFILE=easybar)
+endif
+	@xcrun notarytool submit "$(PACKAGE_ZIP)" --keychain-profile "$(NOTARY_PROFILE)" --wait
+
+staple: ## Staple a notarization ticket to the app bundle.
+	@xcrun stapler staple "$(APP_BUNDLE)"
 
 run: bundle ## Build and open the app bundle.
 	@open "$(APP_BUNDLE)"
@@ -167,6 +207,9 @@ print-version: ## Print the current version derived from the latest tag.
 
 print-latest-tag: ## Print the latest matching git tag.
 	@echo "$(LATEST_TAG)"
+
+print-package-sha256: package ## Print the SHA-256 of the packaged zip.
+	@shasum -a 256 "$(PACKAGE_ZIP)"
 
 ##@ Tagging
 

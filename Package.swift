@@ -25,6 +25,7 @@ let package = Package(
                 "EasyBarShared",
                 .product(name: "TOMLKit", package: "TOMLKit")
             ],
+            path: "Sources/EasyBar",
             resources: [
                 .copy("Lua/runtime.lua"),
                 .copy("Lua/easybar")
@@ -34,7 +35,8 @@ let package = Package(
             name: "easybarctl",
             dependencies: [
                 "EasyBarShared"
-            ]
+            ],
+            path: "Sources/easybarctl"
         )
     ]
 )
