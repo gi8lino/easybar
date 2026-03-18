@@ -2,30 +2,36 @@ import SwiftUI
 
 struct SettingsView: View {
 
-    @ObservedObject private var loginItemManager = LoginItemManager.shared
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Toggle("Start EasyBar at login", isOn: Binding(
-                get: {
-                    loginItemManager.isEnabled
-                },
-                set: { newValue in
-                    loginItemManager.setEnabled(newValue)
-                }
-            ))
+            Text("EasyBar startup is managed by Homebrew.")
+                .font(.system(size: 13, weight: .medium))
 
-            if let message = loginItemManager.statusMessage,
-               !message.isEmpty {
-                Text(message)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
+            Text("Enable automatic launch at login with:")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Text("brew services start easybar")
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
+
+            Text("Disable it with:")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Text("brew services stop easybar")
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
+
+            Text("You can also restart the service with:")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Text("brew services restart easybar")
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
         }
         .padding(16)
-        .frame(width: 320)
-        .onAppear {
-            loginItemManager.refresh()
-        }
+        .frame(width: 360)
     }
 }

@@ -89,7 +89,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory sign
 	@$(MAKE) --no-print-directory verify
 
-package: bundle ## Create dist/EasyBar-<version>.zip containing EasyBar.app and easybarctl.
+package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"

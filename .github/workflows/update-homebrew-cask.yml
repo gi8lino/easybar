@@ -1,4 +1,4 @@
-name: update-homebrew-cask
+name: update-homebrew-formula
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         type: string
 
 jobs:
-  update-cask:
+  update-formula:
     runs-on: ubuntu-latest
 
     steps:
@@ -44,44 +44,59 @@ jobs:
       - name: Checkout Homebrew tap
         uses: actions/checkout@v4
         with:
-          repository: gi8lino/homebrew-formulae
+          repository: gi8lino/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-formulae
+          path: homebrew-tap
 
-      - name: Update cask
+      - name: Update formula
         shell: bash
         run: |
-          CASK_FILE="homebrew-formulae/Casks/easybar.rb"
+          FORMULA_FILE="homebrew-tap/Formula/easybar.rb"
+          mkdir -p "$(dirname "${FORMULA_FILE}")"
 
-          cat > "${CASK_FILE}" <<EOF
-          cask "easybar" do
-            version "${{ steps.vars.outputs.version }}"
-            sha256 "${{ steps.sha.outputs.sha }}"
-
-            url "https://github.com/gi8lino/easybar/releases/download/v#{version}/EasyBar-#{version}.zip"
-            name "EasyBar"
+          cat > "${FORMULA_FILE}" <<'EOF'
+          class Easybar < Formula
             desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
             homepage "https://github.com/gi8lino/easybar"
+            url "https://github.com/gi8lino/easybar/releases/download/v${{ inputs.version }}/EasyBar-${{ inputs.version }}.zip"
+            sha256 "${{ steps.sha.outputs.sha }}"
+            version "${{ inputs.version }}"
 
             depends_on macos: ">= :sonoma"
 
-            app "EasyBar.app"
-            binary "easybarctl", target: "easybar"
+            def install
+              libexec.install "EasyBar.app"
+              bin.install "easybarctl"
 
-            zap trash: [
-              "~/Library/Logs/EasyBar.log",
-            ]
+              (bin/"easybar").write <<~SH
+                #!/bin/bash
+                exec "#{libexec}/EasyBar.app/Contents/MacOS/EasyBar" "$@"
+              SH
+            end
+
+            service do
+              run [opt_bin/"easybar"]
+              keep_alive true
+              require_root false
+              working_dir HOMEBREW_PREFIX
+              log_path var/"log/easybar.log"
+              error_log_path var/"log/easybar.log"
+            end
+
+            test do
+              assert_match "usage:", shell_output("#{bin}/easybarctl --help 2>&1")
+            end
           end
           EOF
 
       - name: Commit and push changes
         shell: bash
         run: |
-          cd homebrew-formulae
+          cd homebrew-tap
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add Casks/easybar.rb
+          git add Formula/easybar.rb
 
           if git diff --cached --quiet; then
             echo "No changes to commit."
