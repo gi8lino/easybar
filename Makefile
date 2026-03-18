@@ -13,7 +13,7 @@ APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
-APP_RESOURCE_BUNDLE := $(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)
+APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
@@ -127,7 +127,7 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles into Contents/Resources.
+copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle root.
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
 	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
