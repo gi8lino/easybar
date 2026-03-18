@@ -143,7 +143,6 @@ function M.new(log)
 		subscriptions = {},
 		routine_next_due = {},
 		needs_second_tick = false,
-		defaults = {},
 	}
 
 	local api = {}
@@ -195,13 +194,6 @@ function M.new(log)
 		end
 	end
 
-	local function merged_with_defaults(props)
-		local merged = {}
-		deep_merge(merged, state.defaults)
-		deep_merge(merged, normalize_props(props or {}))
-		return merged
-	end
-
 	local function log_widget(source, level, ...)
 		if not log or type(log.widget) ~= "function" then
 			return
@@ -210,27 +202,21 @@ function M.new(log)
 		log.widget(source or "widget", level or "INFO", join_message(...))
 	end
 
-	--- Sets defaults for future easybar.add(...) calls.
-	function api.default(props)
-		deep_merge(state.defaults, normalize_props(props or {}))
-	end
-
-	--- Resets all add(...) defaults.
-	function api.clear_defaults()
-		state.defaults = {}
-	end
-
-	--- Adds one item.
-	function api.add(kind, id, props)
+	--- Adds one item using the provided per-widget defaults.
+	function api.add(kind, id, props, defaults)
 		assert(type(kind) == "string" and kind ~= "", "easybar.add(kind, id, props) requires kind")
 		assert(type(id) == "string" and id ~= "", "easybar.add(kind, id, props) requires id")
+
+		local merged = {}
+		deep_merge(merged, normalize_props(defaults or {}))
+		deep_merge(merged, normalize_props(props or {}))
 
 		local is_new = state.items[id] == nil
 
 		state.items[id] = {
 			id = id,
 			kind = kind,
-			props = merged_with_defaults(props or {}),
+			props = merged,
 		}
 
 		if is_new then
@@ -462,24 +448,34 @@ function M.new(log)
 	end
 
 	--- Returns one widget-scoped EasyBar API.
+	--- Defaults are isolated to this widget instance.
 	function api.make_widget_api(source)
 		local widget_api = {}
+		local widget_defaults = {}
 
-		local function copy(name)
-			widget_api[name] = api[name]
+		--- Sets defaults for future add(...) calls in this widget only.
+		function widget_api.default(props)
+			deep_merge(widget_defaults, normalize_props(props or {}))
 		end
 
-		copy("default")
-		copy("clear_defaults")
-		copy("add")
-		copy("set")
-		copy("animate")
-		copy("get")
-		copy("remove")
-		copy("exec")
-		copy("subscribe")
-		copy("handle_event")
-		copy("required_events")
+		--- Clears defaults for this widget only.
+		function widget_api.clear_defaults()
+			widget_defaults = {}
+		end
+
+		--- Adds one item using this widget's scoped defaults.
+		function widget_api.add(kind, id, props)
+			api.add(kind, id, props, widget_defaults)
+		end
+
+		widget_api.set = api.set
+		widget_api.animate = api.animate
+		widget_api.get = api.get
+		widget_api.remove = api.remove
+		widget_api.exec = api.exec
+		widget_api.subscribe = api.subscribe
+		widget_api.handle_event = api.handle_event
+		widget_api.required_events = api.required_events
 
 		--- Writes one widget log line through the host logger.
 		function widget_api.log(level, ...)

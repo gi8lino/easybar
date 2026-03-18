@@ -23,7 +23,7 @@ end
 
 local function make_widget_env(registry, file)
 	local env = {
-		-- Each widget gets its own logging source.
+		-- Each widget gets its own scoped EasyBar API instance.
 		easybar = registry.make_widget_api(file),
 	}
 
