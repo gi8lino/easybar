@@ -13,6 +13,7 @@ final class LoginItemManager: ObservableObject {
         refresh()
     }
 
+    /// Refreshes current login item state from the system.
     func refresh() {
         if #available(macOS 13.0, *) {
             let service = SMAppService.mainApp
@@ -47,6 +48,7 @@ final class LoginItemManager: ObservableObject {
         statusMessage = "Start at login requires macOS 13 or newer."
     }
 
+    /// Enables or disables launch at login.
     func setEnabled(_ enabled: Bool) {
         if #available(macOS 13.0, *) {
             let service = SMAppService.mainApp
@@ -62,7 +64,7 @@ final class LoginItemManager: ObservableObject {
 
                 refresh()
             } catch {
-                Logger.info("failed to update start at login: \(error)")
+                Logger.error("failed to update start at login: \(error)")
                 refresh()
 
                 if enabled {

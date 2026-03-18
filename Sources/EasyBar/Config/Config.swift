@@ -46,7 +46,7 @@ final class Config {
             try load()
         } catch {
             let message = "invalid config at \(configPath): \(error)"
-            Logger.info(message)
+            Logger.error(message)
             fputs("easybar: \(message)\n", stderr)
             exit(1)
         }
@@ -66,7 +66,7 @@ final class Config {
             Logger.info("reload applied")
         } catch {
             apply(snapshot)
-            Logger.info("reload rejected: \(error)")
+            Logger.warn("reload rejected: \(error)")
         }
     }
 

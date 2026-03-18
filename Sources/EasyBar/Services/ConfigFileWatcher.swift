@@ -25,7 +25,7 @@ final class ConfigFileWatcher {
         let descriptor = open(path, O_EVTONLY)
 
         guard descriptor >= 0 else {
-            Logger.info("failed to watch config file at \(path)")
+            Logger.warn("failed to watch config file at \(path)")
             return
         }
 

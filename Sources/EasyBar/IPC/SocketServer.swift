@@ -17,7 +17,7 @@ final class SocketServer {
                 withIntermediateDirectories: true
             )
         } catch {
-            Logger.info("failed to create socket directory at \(socketDirectory): \(error)")
+            Logger.error("failed to create socket directory at \(socketDirectory): \(error)")
             return
         }
 
@@ -25,7 +25,7 @@ final class SocketServer {
 
         listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
         guard listenFD >= 0 else {
-            Logger.info("failed to create socket")
+            Logger.error("failed to create socket")
             return
         }
 
@@ -39,14 +39,14 @@ final class SocketServer {
         }
 
         guard bindResult >= 0 else {
-            Logger.info("failed to bind socket at \(socketPath)")
+            Logger.error("failed to bind socket at \(socketPath)")
             close(listenFD)
             listenFD = -1
             return
         }
 
         guard listen(listenFD, 5) >= 0 else {
-            Logger.info("failed to listen on socket at \(socketPath)")
+            Logger.error("failed to listen on socket at \(socketPath)")
             close(listenFD)
             listenFD = -1
             return
@@ -86,7 +86,7 @@ final class SocketServer {
                         handler(cmd)
                     }
                 } else {
-                    Logger.debug("unknown IPC command")
+                    Logger.warn("unknown IPC command")
                 }
             }
 

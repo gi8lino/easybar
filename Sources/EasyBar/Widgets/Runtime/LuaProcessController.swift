@@ -64,7 +64,11 @@ final class LuaProcessController {
         process.standardError = errPipe
 
         process.terminationHandler = { process in
-            Logger.info("lua runtime terminated status=\(process.terminationStatus)")
+            if process.terminationStatus == 0 {
+                Logger.info("lua runtime terminated status=\(process.terminationStatus)")
+            } else {
+                Logger.warn("lua runtime terminated status=\(process.terminationStatus)")
+            }
 
             if easyBarLuaProcessGroupPID == process.processIdentifier {
                 easyBarLuaProcessGroupPID = 0

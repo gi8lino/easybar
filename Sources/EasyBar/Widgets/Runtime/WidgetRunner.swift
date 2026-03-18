@@ -15,6 +15,7 @@ final class WidgetRunner {
 
     private init() {}
 
+    /// Starts the widget runtime and begins observing Lua stdout.
     func start() {
         guard !started else {
             Logger.debug("widget runner already started")
@@ -41,6 +42,7 @@ final class WidgetRunner {
         LuaRuntime.shared.start()
     }
 
+    /// Reloads the Lua runtime and clears rendered widget state.
     func reload() {
         Logger.debug("reloading widget runner")
 
@@ -49,6 +51,7 @@ final class WidgetRunner {
         start()
     }
 
+    /// Stops the widget runtime and related event sources.
     func shutdown() {
         Logger.debug("shutting down widget runner")
 
@@ -67,11 +70,12 @@ final class WidgetRunner {
         LuaRuntime.shared.shutdown()
     }
 
+    /// Handles one line of structured stdout from the Lua runtime.
     private func handleRuntimeOutput(_ line: String) {
         Logger.debug("lua stdout: \(line)")
 
         guard let data = line.data(using: .utf8) else {
-            Logger.debug("invalid utf8: \(line)")
+            Logger.warn("invalid utf8: \(line)")
             return
         }
 
@@ -103,13 +107,14 @@ final class WidgetRunner {
                 return
             }
 
-            Logger.debug("unknown lua message: \(line)")
+            Logger.warn("unknown lua message: \(line)")
         } catch {
-            Logger.debug("json decode failed: \(line)")
+            Logger.warn("json decode failed: \(line)")
             Logger.debug("decode error: \(error)")
         }
     }
 
+    /// Emits initial events after both subscriptions and readiness are known.
     private func emitInitialEventsIfPossible() {
         guard runtimeReady else { return }
         guard subscriptionsReady else { return }
@@ -119,6 +124,7 @@ final class WidgetRunner {
         emitInitialEvents()
     }
 
+    /// Emits initial state-refresh events required by subscribed widgets.
     private func emitInitialEvents() {
         Logger.debug("emitting initial widget events")
 
