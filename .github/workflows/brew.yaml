@@ -1,0 +1,87 @@
+name: update-homebrew-cask
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-cask:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout EasyBar repo
+        uses: actions/checkout@v4
+
+      - name: Derive version and asset URL
+        id: vars
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          ASSET_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/EasyBar-${VERSION}.zip"
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "asset_url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Download release archive
+        shell: bash
+        run: |
+          curl -L "${{ steps.vars.outputs.asset_url }}" -o EasyBar.zip
+
+      - name: Compute SHA-256
+        id: sha
+        shell: bash
+        run: |
+          SHA="$(sha256sum EasyBar.zip | awk '{print $1}')"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: gi8lino/homebrew-formulae
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-formulae
+
+      - name: Update cask
+        shell: bash
+        run: |
+          CASK_FILE="homebrew-formulae/Casks/easybar.rb"
+
+          cat > "${CASK_FILE}" <<EOF
+          cask "easybar" do
+            version "${{ steps.vars.outputs.version }}"
+            sha256 "${{ steps.sha.outputs.sha }}"
+
+            url "https://github.com/gi8lino/easybar/releases/download/v#{version}/EasyBar-#{version}.zip"
+            name "EasyBar"
+            desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
+            homepage "https://github.com/gi8lino/easybar"
+
+            depends_on macos: ">= :sonoma"
+
+            app "EasyBar.app"
+            binary "#{appdir}/EasyBar.app/Contents/MacOS/easybarctl", target: "easybar"
+
+            zap trash: [
+              "~/Library/Logs/EasyBar.log",
+            ]
+          end
+          EOF
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          cd homebrew-formulae
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Casks/easybar.rb
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "easybar ${{ steps.vars.outputs.version }}"
+          git push
