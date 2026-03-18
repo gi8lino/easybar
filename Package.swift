@@ -12,7 +12,7 @@ let package = Package(
         .executable(name: "easybarctl", targets: ["easybarctl"])
     ],
     dependencies: [
-        .package(url: "https://github.com/LebJe/TOMLKit", from: "0.2.0")
+        .package(url: "https://github.com/LebJe/TOMLKit", from: "0.6.0")
     ],
     targets: [
         .target(
