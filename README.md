@@ -50,9 +50,9 @@ brew install easybar
 This installs:
 
 - `EasyBar.app`
-- `easybarctl`
+- `easybar`
 
-The `easybarctl` command is linked from inside the installed app bundle, so it always matches the installed EasyBar version.
+The `easybar` command is linked from inside the installed app bundle, so it always matches the installed EasyBar version.
 
 If Homebrew asks for an explicit cask install, use:
 
@@ -393,6 +393,35 @@ The AeroSpace binary is resolved from common install paths, including:
 - `/Applications/AeroSpace.app/Contents/MacOS/aerospace`
 
 If AeroSpace is not installed, widgets that depend on it will not show useful state.
+
+## AeroSpace configuration
+
+To keep the `spaces` and `front_app` widgets in sync, AeroSpace should notify EasyBar when the focused workspace or focused window changes.
+
+AeroSpace runs `exec-and-forget` commands through `/bin/bash -c`, so using an absolute path for `easybar` is the safest option.
+
+If EasyBar was installed with Homebrew in the default prefix, the command path is usually:
+
+- Apple Silicon: `/opt/homebrew/bin/easybar`
+- Intel: `/usr/local/bin/easybar`
+
+Add this to your `~/.aerospace.toml`:
+
+```toml
+exec-on-workspace-change = [
+  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
+]
+
+on-focus-changed = [
+  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
+]
+```
+
+If your Homebrew installation uses a different prefix, replace the path accordingly. You can verify the correct path with:
+
+```bash
+command -v easybar
+```
 
 ## Events
 
