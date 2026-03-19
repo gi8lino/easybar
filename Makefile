@@ -23,7 +23,7 @@ PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
 
-BUNDLE_ID ?= com.example.EasyBar
+BUNDLE_ID ?= com.gi8lino.EasyBar
 VERSION ?= dev
 ARCH ?= universal
 CODESIGN_IDENTITY ?= -

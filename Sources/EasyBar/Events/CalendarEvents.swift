@@ -69,6 +69,12 @@ final class CalendarEvents {
                 }
 
                 Logger.info("calendar access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
+
+                guard granted else { return }
+
+                DispatchQueue.main.async {
+                    EventBus.shared.emit(.calendarChange)
+                }
             }
 
         case .denied, .restricted, .writeOnly:

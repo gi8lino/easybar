@@ -74,7 +74,7 @@ final class NativeCalendarStore: ObservableObject {
         let normalCalendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
 
         let predicate = eventStore.predicateForEvents(
-            withStart: now,
+            withStart: startOfToday,
             end: endDate,
             calendars: normalCalendars
         )
@@ -245,6 +245,12 @@ final class NativeCalendarStore: ObservableObject {
                 }
 
                 Logger.info("calendar popup access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
+
+                guard granted else { return }
+
+                DispatchQueue.main.async {
+                    self.refresh()
+                }
             }
 
         case .denied, .restricted, .writeOnly:
