@@ -117,9 +117,11 @@ struct WidgetNodeView: View {
         return Group {
             if node.root == "builtin_calendar" {
                 content
-            } else {
+            } else if node.parent == nil {
                 content
                     .overlay(WidgetMouseView(widgetID: node.root))
+            } else {
+                content
             }
         }
     }
