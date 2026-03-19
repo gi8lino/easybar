@@ -11,13 +11,4 @@ final class BarHostingView<Content: View>: NSHostingView<Content> {
     override var safeAreaRect: NSRect {
         bounds
     }
-
-    override var safeAreaLayoutGuide: NSLayoutGuide {
-        layoutGuide
-    }
-
-    override var additionalSafeAreaInsets: NSEdgeInsets {
-        get { .init(top: 0, left: 0, bottom: 0, right: 0) }
-        set { }
-    }
 }
