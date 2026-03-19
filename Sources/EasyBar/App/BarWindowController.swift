@@ -28,7 +28,7 @@ final class BarWindowController: NSWindowController {
             .fullScreenAuxiliary
         ]
 
-        window.contentView = NSHostingView(rootView: contentView)
+        window.contentView = BarHostingView(rootView: contentView)
 
         super.init(window: window)
     }
