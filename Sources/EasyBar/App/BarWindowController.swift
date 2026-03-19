@@ -8,6 +8,7 @@ final class BarWindowController: NSWindowController {
     init() {
         let screen = NSScreen.main ?? NSScreen.screens[0]
         let frame = Self.makeFrame(for: screen)
+        Logger.info("bar window initial target_frame=\(NSStringFromRect(frame))")
 
         let contentView = BarRootView()
 
@@ -41,6 +42,7 @@ final class BarWindowController: NSWindowController {
         hostingView.frame = NSRect(origin: .zero, size: frame.size)
         hostingView.autoresizingMask = [.width, .height]
         window.contentView = hostingView
+        window.setFrame(frame, display: false)
 
         super.init(window: window)
     }
@@ -62,6 +64,16 @@ final class BarWindowController: NSWindowController {
         window.minSize = frame.size
         window.maxSize = frame.size
         window.contentView?.frame = NSRect(origin: .zero, size: frame.size)
+        Logger.info("bar window reloaded frame=\(NSStringFromRect(window.frame))")
+    }
+
+    /// Shows the panel without asking AppKit to make it key.
+    func present() {
+        guard let window else { return }
+
+        window.setFrame(window.frame, display: true)
+        window.orderFrontRegardless()
+        Logger.info("bar window presented frame=\(NSStringFromRect(window.frame)) level=\(window.level.rawValue)")
     }
 
     /// Calculates the frame of the bar based on config.
@@ -86,5 +98,9 @@ private final class BarPanel: NSPanel {
 
     override var canBecomeMain: Bool {
         false
+    }
+
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
     }
 }

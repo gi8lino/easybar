@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logStartup()
 
         let controller = BarWindowController()
-        controller.showWindow(self)
+        controller.present()
         barWindowController = controller
 
         aeroSpaceService.start()
