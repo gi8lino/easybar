@@ -8,6 +8,7 @@ final class CalendarEvents {
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
     private var didRequestAccess = false
+    private(set) var accessGrantedInProcess = false
 
     private init() {}
 
@@ -49,6 +50,7 @@ final class CalendarEvents {
 
         switch status {
         case .fullAccess, .authorized:
+            accessGrantedInProcess = true
             Logger.info("calendar access already granted")
 
         case .notDetermined:
@@ -71,6 +73,7 @@ final class CalendarEvents {
                 Logger.info("calendar access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
 
                 guard granted else { return }
+                self.accessGrantedInProcess = true
 
                 DispatchQueue.main.async {
                     EventBus.shared.emit(.calendarChange)

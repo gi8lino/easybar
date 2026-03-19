@@ -12,36 +12,40 @@ final class NativeCalendarStore: ObservableObject {
 
     func refresh() {
         let status = EKEventStore.authorizationStatus(for: .event)
+        let hasAccess = status == .fullAccess
+            || status == .authorized
+            || CalendarEvents.shared.accessGrantedInProcess
 
-        Logger.debug("calendar popup refresh status=\(describeAuthorizationStatus(status))")
+        Logger.debug(
+            "calendar popup refresh status=\(describeAuthorizationStatus(status)) effective_access=\(hasAccess)"
+        )
 
-        switch status {
-        case .fullAccess, .authorized:
-            break
+        if !hasAccess {
+            switch status {
+            case .notDetermined:
+                Logger.info("calendar popup refresh waiting for calendar access")
 
-        case .notDetermined:
-            Logger.info("calendar popup refresh waiting for calendar access")
+                DispatchQueue.main.async {
+                    self.sections = []
+                }
+                return
 
-            DispatchQueue.main.async {
-                self.sections = []
+            case .denied, .restricted, .writeOnly:
+                Logger.warn("calendar popup refresh blocked status=\(describeAuthorizationStatus(status))")
+
+                DispatchQueue.main.async {
+                    self.sections = []
+                }
+                return
+
+            @unknown default:
+                Logger.warn("calendar popup refresh unknown status raw=\(status.rawValue)")
+
+                DispatchQueue.main.async {
+                    self.sections = []
+                }
+                return
             }
-            return
-
-        case .denied, .restricted, .writeOnly:
-            Logger.warn("calendar popup refresh blocked status=\(describeAuthorizationStatus(status))")
-
-            DispatchQueue.main.async {
-                self.sections = []
-            }
-            return
-
-        @unknown default:
-            Logger.warn("calendar popup refresh unknown status raw=\(status.rawValue)")
-
-            DispatchQueue.main.async {
-                self.sections = []
-            }
-            return
         }
 
         let config = Config.shared.builtinCalendar
