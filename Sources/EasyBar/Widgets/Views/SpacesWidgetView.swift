@@ -175,7 +175,7 @@ private struct AppIconView: View {
         .overlay {
             RoundedRectangle(cornerRadius: Config.shared.iconCornerRadius)
                 .stroke(
-                    isFocusedApp ? Theme.focusedAppBorder : Color.clear,
+                    isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear,
                     lineWidth: resolvedBorderWidth
                 )
         }

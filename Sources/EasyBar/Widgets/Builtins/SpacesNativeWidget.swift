@@ -25,20 +25,24 @@ final class SpacesNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
-    /// Publishes the container node consumed by `SpacesWidgetView`.
+    /// Publishes the spaces container node.
     private func publish() {
-        let style = Config.shared.builtinSpaces.style
+        let config = Config.shared.builtinSpaces
+        let placement = config.placement
+        let style = config.style
 
         let node = WidgetNodeState(
             id: rootID,
             root: rootID,
             kind: .spaces,
             parent: nil,
-            position: style.position,
-            order: style.order,
+            position: placement.position,
+            order: placement.order,
             icon: "",
             text: "",
             color: style.textColorHex,
+            iconColor: nil,
+            labelColor: nil,
             visible: true,
             role: nil,
             imagePath: nil,

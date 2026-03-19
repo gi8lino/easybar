@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Global color theme
+/// Global runtime theme helpers.
+///
+/// These values are derived from config where applicable, or provide
+/// one fixed fallback when a widget/node does not specify its own color.
 enum Theme {
 
     static var barBackground: Color {
@@ -11,12 +14,14 @@ enum Theme {
         Color(hex: Config.shared.barBorderHex)
     }
 
-    static var textColor: Color {
-        Color(hex: Config.shared.textColorHex)
+    /// Fallback text color for views and nodes that do not provide one.
+    static var defaultTextColor: Color {
+        Color.white
     }
 
-    static var focusedAppBorder: Color {
-        Color(hex: Config.shared.focusedAppBorderHex)
+    /// Border color for the focused app icon inside the spaces widget.
+    static var spaceFocusedAppBorder: Color {
+        Color(hex: Config.shared.spaceFocusedAppBorderHex)
     }
 
     static var spaceActiveBackground: Color {

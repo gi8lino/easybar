@@ -11,8 +11,6 @@ struct ConfigSnapshot {
 
     let barBackgroundHex: String
     let barBorderHex: String
-    let textColorHex: String
-    let focusedAppBorderHex: String
 
     let builtinCPU: Config.CPUBuiltinConfig
     let builtinBattery: Config.BatteryBuiltinConfig

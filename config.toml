@@ -10,13 +10,13 @@ padding_x = 10 # Horizontal left and right padding inside the bar.
 [bar.colors]
 background = "#111111" # Bar background color.
 border = "#222222" # Bottom border color of the bar.
-text = "#ffffff" # Default text color for widgets.
-focused_app_border = "#00000000" # Border color for the focused app icon in spaces.
 
-[builtins.spaces.style]
+[builtins.spaces]
 enabled = true # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
+
+[builtins.spaces.style]
 icon = "" # Unused fallback icon for the spaces root widget.
 text_color = "" # Fallback text color for the spaces root widget.
 background_color = "#00000000" # Background behind the whole spaces block.
@@ -66,11 +66,14 @@ active_background = "#2b2b2b" # Background color of the focused space pill.
 inactive_background = "#1a1a1a" # Background color of inactive space pills.
 active_border = "#444444" # Border color of the focused space pill.
 inactive_border = "#00000000" # Border color of inactive space pills.
+focused_app_border = "#00000000" # Border color for the focused app icon in spaces.
 
-[builtins.front_app.style]
+[builtins.front_app]
 enabled = true # Shows or hides the front-app widget.
 position = "left" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
+
+[builtins.front_app.style]
 icon = "􀈔" # Fallback icon when no app icon is available.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.
@@ -89,10 +92,12 @@ fallback_text = "No App" # Fallback text when no app name is available.
 icon_size = 14 # Display size of the app icon.
 icon_corner_radius = 4 # Corner radius of the displayed app icon.
 
-[builtins.cpu.style]
+[builtins.cpu]
 enabled = true # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 60 # Sort order among widgets in the same position.
+
+[builtins.cpu.style]
 icon = "󰍛" # Leading icon of the widget.
 text_color = "" # Text color of the widget when no content color is set.
 background_color = "" # Background color of the widget.
@@ -110,12 +115,14 @@ history_size = 10 # Number of samples kept in the sparkline history.
 line_width = 1.8 # Stroke width of the sparkline line.
 color = "#a6da95" # Color of the sparkline and label.
 
-[builtins.battery.style]
+[builtins.battery]
 enabled = true # Shows or hides the battery widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 10 # Sort order among widgets in the same position.
+
+[builtins.battery.style]
 icon = "🔋" # Fallback/default battery icon.
-text_color = "#ffffff" # Text color of the widget.
+text_color = "#ffffff" # Used when color_mode is fixed or data is unavailable.
 background_color = "#1a1a1a" # Background color of the widget.
 border_color = "#333333" # Border color of the widget.
 border_width = 1 # Border width of the widget.
@@ -129,11 +136,22 @@ opacity = 1.0 # Overall opacity of the widget.
 show_percentage = true # Shows the battery percentage text.
 unavailable_text = "n/a" # Fallback text when battery data is unavailable.
 icon_size = 18 # Font size of the battery icon.
+color_mode = "dynamic" # dynamic | fixed
+fixed_color = "#8aadf4" # Used only when color_mode = "fixed".
+display_mode = "tooltip" # none | tooltip | expand
 
-[builtins.volume.style]
+[builtins.battery.colors]
+high = "#8bd5ca" # Color for 70-100%.
+medium = "#eed49f" # Color for 50-69%.
+low = "#f5a97f" # Color for 30-49%.
+critical = "#ed8796" # Color for 0-29%.
+
+[builtins.volume]
 enabled = false # Shows or hides the volume widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
+
+[builtins.volume.style]
 icon = "" # Leading icon of the compact widget.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.
@@ -158,10 +176,12 @@ step = 1 # Slider step size.
 expand_to_slider_on_hover = true # Expands from compact mode to slider mode on hover.
 width = 80 # Width of the slider when shown.
 
-[builtins.calendar.style]
+[builtins.calendar]
 enabled = true # Shows or hides the calendar widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 30 # Sort order among widgets in the same position.
+
+[builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.
 text_color = "#ffffff" # Default text color of the anchor.
 background_color = "#1a1a1a" # Background color of the anchor widget.
@@ -224,10 +244,12 @@ title_color = "#91d7e3" # Section title color for future events.
 item_color = "#d0d0d0" # Item text color for future events.
 empty_color = "#c0c0c0" # Empty-state color for future events.
 
-[builtins.time.style]
+[builtins.time]
 enabled = false # Shows or hides the time widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 40 # Sort order among widgets in the same position.
+
+[builtins.time.style]
 icon = "🕒" # Leading icon of the widget.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.
@@ -242,10 +264,12 @@ opacity = 1.0 # Overall opacity of the widget.
 [builtins.time.content]
 format = "HH:mm" # Time format string.
 
-[builtins.date.style]
+[builtins.date]
 enabled = false # Shows or hides the date widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 50 # Sort order among widgets in the same position.
+
+[builtins.date.style]
 icon = "📅" # Leading icon of the widget.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.

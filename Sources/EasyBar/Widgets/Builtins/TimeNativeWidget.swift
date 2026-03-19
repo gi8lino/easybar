@@ -6,6 +6,7 @@ final class TimeNativeWidget: NativeWidget {
 
     private var timer: Timer?
 
+    /// Starts the time widget.
     func start() {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.publish()
@@ -14,6 +15,7 @@ final class TimeNativeWidget: NativeWidget {
         publish()
     }
 
+    /// Stops the time widget.
     func stop() {
         timer?.invalidate()
         timer = nil
@@ -21,6 +23,7 @@ final class TimeNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
+    /// Publishes the current time.
     private func publish() {
         let config = Config.shared.builtinTime
         let formatter = DateFormatter()
@@ -28,6 +31,7 @@ final class TimeNativeWidget: NativeWidget {
 
         let node = BuiltinNativeNodeFactory.makeItemNode(
             rootID: rootID,
+            placement: config.placement,
             style: config.style,
             text: formatter.string(from: Date())
         )

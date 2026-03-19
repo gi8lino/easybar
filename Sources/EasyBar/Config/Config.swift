@@ -9,29 +9,27 @@ final class Config {
     // MARK: - App
 
     var widgetsPath: String = ""
-    var luaPath: String = ConfigDefaults.luaPath
-    var watchConfigFile: Bool = ConfigDefaults.watchConfigFile
+    var luaPath: String = "/usr/local/bin/lua"
+    var watchConfigFile: Bool = true
 
     // MARK: - Bar
 
-    var barHeight: CGFloat = ConfigDefaults.barHeight
-    var barPaddingX: CGFloat = ConfigDefaults.barPaddingX
+    var barHeight: CGFloat = 36
+    var barPaddingX: CGFloat = 10
 
-    var barBackgroundHex: String = ConfigDefaults.barBackgroundHex
-    var barBorderHex: String = ConfigDefaults.barBorderHex
-    var textColorHex: String = ConfigDefaults.textColorHex
-    var focusedAppBorderHex: String = ConfigDefaults.focusedAppBorderHex
+    var barBackgroundHex: String = "#111111"
+    var barBorderHex: String = "#222222"
 
     // MARK: - Builtins
 
-    var builtinCPU: CPUBuiltinConfig = ConfigDefaults.builtinCPU
-    var builtinBattery: BatteryBuiltinConfig = ConfigDefaults.builtinBattery
-    var builtinSpaces: SpacesBuiltinConfig = ConfigDefaults.builtinSpaces
-    var builtinFrontApp: FrontAppBuiltinConfig = ConfigDefaults.builtinFrontApp
-    var builtinVolume: VolumeBuiltinConfig = ConfigDefaults.builtinVolume
-    var builtinCalendar: CalendarBuiltinConfig = ConfigDefaults.builtinCalendar
-    var builtinTime: TimeBuiltinConfig = ConfigDefaults.builtinTime
-    var builtinDate: DateBuiltinConfig = ConfigDefaults.builtinDate
+    var builtinCPU: CPUBuiltinConfig = .default
+    var builtinBattery: BatteryBuiltinConfig = .default
+    var builtinSpaces: SpacesBuiltinConfig = .default
+    var builtinFrontApp: FrontAppBuiltinConfig = .default
+    var builtinVolume: VolumeBuiltinConfig = .default
+    var builtinCalendar: CalendarBuiltinConfig = .default
+    var builtinTime: TimeBuiltinConfig = .default
+    var builtinDate: DateBuiltinConfig = .default
 
     private init() {
         resetDerivedDefaults()
@@ -263,6 +261,12 @@ final class Config {
         set { builtinSpaces.colors.inactiveBorderHex = newValue }
     }
 
+    /// Border color for the focused app icon.
+    var spaceFocusedAppBorderHex: String {
+        get { builtinSpaces.colors.focusedAppBorderHex }
+        set { builtinSpaces.colors.focusedAppBorderHex = newValue }
+    }
+
     /// Returns the configured font weight for space labels.
     var resolvedSpaceTextWeight: Font.Weight {
         switch spaceTextWeight.lowercased() {
@@ -287,25 +291,23 @@ final class Config {
 
     /// Restores all static defaults before parsing TOML again.
     func resetAllToDefaults() {
-        luaPath = ConfigDefaults.luaPath
-        watchConfigFile = ConfigDefaults.watchConfigFile
+        luaPath = "/usr/local/bin/lua"
+        watchConfigFile = true
 
-        barHeight = ConfigDefaults.barHeight
-        barPaddingX = ConfigDefaults.barPaddingX
+        barHeight = 36
+        barPaddingX = 10
 
-        barBackgroundHex = ConfigDefaults.barBackgroundHex
-        barBorderHex = ConfigDefaults.barBorderHex
-        textColorHex = ConfigDefaults.textColorHex
-        focusedAppBorderHex = ConfigDefaults.focusedAppBorderHex
+        barBackgroundHex = "#111111"
+        barBorderHex = "#222222"
 
-        builtinCPU = ConfigDefaults.builtinCPU
-        builtinBattery = ConfigDefaults.builtinBattery
-        builtinSpaces = ConfigDefaults.builtinSpaces
-        builtinFrontApp = ConfigDefaults.builtinFrontApp
-        builtinVolume = ConfigDefaults.builtinVolume
-        builtinCalendar = ConfigDefaults.builtinCalendar
-        builtinTime = ConfigDefaults.builtinTime
-        builtinDate = ConfigDefaults.builtinDate
+        builtinCPU = .default
+        builtinBattery = .default
+        builtinSpaces = .default
+        builtinFrontApp = .default
+        builtinVolume = .default
+        builtinCalendar = .default
+        builtinTime = .default
+        builtinDate = .default
     }
 
     /// Captures the current config state.
@@ -318,8 +320,6 @@ final class Config {
             barPaddingX: barPaddingX,
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
-            textColorHex: textColorHex,
-            focusedAppBorderHex: focusedAppBorderHex,
             builtinCPU: builtinCPU,
             builtinBattery: builtinBattery,
             builtinSpaces: builtinSpaces,
@@ -342,8 +342,6 @@ final class Config {
 
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex
-        textColorHex = snapshot.textColorHex
-        focusedAppBorderHex = snapshot.focusedAppBorderHex
 
         builtinCPU = snapshot.builtinCPU
         builtinBattery = snapshot.builtinBattery

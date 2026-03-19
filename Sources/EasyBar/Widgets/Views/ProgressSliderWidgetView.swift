@@ -111,7 +111,8 @@ struct ProgressSliderWidgetView: View {
         let ratio = Double(clampedX / max(width, 1))
         let rawValue = minValue + ratio * (maxValue - minValue)
 
-        let stepped = (rawValue / step).rounded() * step
+        let safeStep = max(step, 0.0001)
+        let stepped = (rawValue / safeStep).rounded() * safeStep
         return min(max(stepped, minValue), maxValue)
     }
 }

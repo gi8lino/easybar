@@ -9,6 +9,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     private var isHovered = false
     private var autoHideWorkItem: DispatchWorkItem?
 
+    /// Starts the volume widget.
     func start() {
         VolumeEvents.shared.subscribeVolume()
 
@@ -96,6 +97,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         publish()
     }
 
+    /// Stops the volume widget.
     func stop() {
         eventObserver.stop()
 
@@ -104,8 +106,12 @@ final class VolumeSliderNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
+    /// Publishes the current volume widget state.
     private func publish() {
         let config = Config.shared.builtinVolume
+        let placement = config.placement
+        var style = config.style
+
         let systemVolume = readSystemVolume()
         let isMuted = readMutedState()
         let clampedSystem = min(max(systemVolume, 0), 1)
@@ -114,7 +120,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
         let step = max(config.step, 0.0001)
         let roundedValue = (sliderValue / step).rounded() * step
 
-        var style = config.style
         style.icon = resolvedIcon(for: clampedSystem, muted: isMuted, config: config)
 
         let text = (config.showPercentage && isHovered)
@@ -125,7 +130,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
         if config.expandToSliderOnHover {
             nodes = makeExpandableNodes(
-                config: config,
+                placement: placement,
                 style: style,
                 text: text,
                 value: roundedValue,
@@ -137,6 +142,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
             nodes = [
                 BuiltinNativeNodeFactory.makeSliderNode(
                     rootID: rootID,
+                    placement: placement,
                     style: style,
                     text: text,
                     value: roundedValue,
@@ -150,8 +156,9 @@ final class VolumeSliderNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: nodes)
     }
 
+    /// Builds the expandable hover layout.
     private func makeExpandableNodes(
-        config: Config.VolumeBuiltinConfig,
+        placement: Config.BuiltinWidgetPlacement,
         style: Config.BuiltinWidgetStyle,
         text: String,
         value: Double,
@@ -159,137 +166,61 @@ final class VolumeSliderNativeWidget: NativeWidget {
         max: Double,
         step: Double
     ) -> [WidgetNodeState] {
-        var nodes: [WidgetNodeState] = []
-
-        nodes.append(
-            WidgetNodeState(
-                id: rootID,
-                root: rootID,
-                kind: .row,
-                parent: nil,
-                position: style.position,
-                order: style.order,
-                icon: "",
-                text: "",
-                color: nil,
-                visible: true,
-                role: nil,
-                fontSize: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: style.paddingX,
-                paddingY: style.paddingY,
-                spacing: style.spacing,
-                backgroundColor: style.backgroundColorHex,
-                borderColor: style.borderColorHex,
-                borderWidth: style.borderWidth,
-                cornerRadius: style.cornerRadius,
-                opacity: style.opacity
+        var nodes: [WidgetNodeState] = [
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
             )
-        )
+        ]
 
         if !style.icon.isEmpty {
             nodes.append(
-                WidgetNodeState(
-                    id: "\(rootID)_icon",
-                    root: rootID,
-                    kind: .item,
-                    parent: rootID,
-                    position: style.position,
+                BuiltinNativeNodeFactory.makeChildItemNode(
+                    rootID: rootID,
+                    parentID: rootID,
+                    childID: "\(rootID)_icon",
+                    position: placement.position,
                     order: 0,
                     icon: style.icon,
-                    text: "",
-                    color: style.textColorHex,
-                    visible: true,
-                    role: nil,
-                    fontSize: nil,
-                    value: nil,
-                    min: nil,
-                    max: nil,
-                    step: nil,
-                    values: nil,
-                    lineWidth: nil,
-                    paddingX: 0,
-                    paddingY: 0,
-                    spacing: 4,
-                    backgroundColor: nil,
-                    borderColor: nil,
-                    borderWidth: nil,
-                    cornerRadius: nil,
-                    opacity: 1
+                    color: style.textColorHex
                 )
             )
         }
 
         nodes.append(
-            WidgetNodeState(
-                id: "\(rootID)_label",
-                root: rootID,
-                kind: .item,
-                parent: rootID,
-                position: style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_label",
+                position: placement.position,
                 order: 1,
-                icon: "",
                 text: text,
                 color: style.textColorHex,
-                visible: isHovered && !text.isEmpty,
-                role: nil,
-                fontSize: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 4,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                visible: isHovered && !text.isEmpty
             )
         )
 
         nodes.append(
-            WidgetNodeState(
-                id: "\(rootID)_slider",
-                root: rootID,
-                kind: .slider,
-                parent: rootID,
-                position: style.position,
+            BuiltinNativeNodeFactory.makeChildSliderNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_slider",
+                position: placement.position,
                 order: 2,
-                icon: "",
-                text: "",
-                color: style.textColorHex,
-                visible: isHovered,
-                role: nil,
-                fontSize: nil,
                 value: value,
                 min: min,
                 max: max,
                 step: step,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 4,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                color: style.textColorHex,
+                visible: isHovered
             )
         )
 
         return nodes
     }
 
+    /// Schedules hiding the slider shortly after interaction.
     private func scheduleAutoHide() {
         cancelAutoHide()
 
@@ -303,11 +234,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
     }
 
+    /// Cancels a pending auto-hide.
     private func cancelAutoHide() {
         autoHideWorkItem?.cancel()
         autoHideWorkItem = nil
     }
 
+    /// Resolves the volume icon.
     private func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig) -> String {
         if muted {
             return config.mutedIcon
@@ -320,6 +253,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         return config.highIcon
     }
 
+    /// Reads the current system volume.
     private func readSystemVolume() -> Double {
         guard let deviceID = defaultOutputDeviceID() else {
             return 0
@@ -350,6 +284,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         return Double(value)
     }
 
+    /// Reads the current muted state.
     private func readMutedState() -> Bool {
         guard let deviceID = defaultOutputDeviceID() else {
             return false
@@ -380,6 +315,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         return muted != 0
     }
 
+    /// Sets the system volume.
     private func setSystemVolume(_ volume: Double) {
         guard let deviceID = defaultOutputDeviceID() else { return }
 
@@ -401,6 +337,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         )
     }
 
+    /// Returns the default output device.
     private func defaultOutputDeviceID() -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,

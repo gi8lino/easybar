@@ -18,11 +18,8 @@ extension Config {
         do {
             let toml = try TOMLTable(string: text)
 
-            // Core top-level sections.
             try parseApp(from: toml)
             try parseBar(from: toml)
-
-            // Built-in widgets.
             try parseBuiltins(from: toml)
         } catch let error as ConfigError {
             throw error

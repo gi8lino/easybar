@@ -147,13 +147,21 @@ The app boots through `EasyBarApp`, wires into AppKit with `AppDelegate`, and ho
 
 ### Config system
 
-Configuration is loaded from TOML through the `Config` type and its parsing helpers. EasyBar supports:
+Configuration is loaded from TOML through `Config` and the parsing files in `Sources/EasyBar/Config/`.
+
+EasyBar supports:
 
 - file-based config
 - live config reloads
-- built-in widget defaults
+- per-built-in defaults and overrides
 
-Default config values live in `ConfigDefaults.swift`.
+The config system is now split by concern, for example:
+
+- `Config.swift`
+- `ConfigLoader.swift`
+- `ConfigParsingCore.swift`
+- `ConfigParsingHelpers.swift`
+- `Config+Builtin*.swift`
 
 ### Event system
 
@@ -230,50 +238,15 @@ EASYBAR_CONFIG_PATH=/path/to/config.toml
 ## Minimal example config
 
 ```toml
-[app]
-widgets_dir = "~/.config/easybar/widgets"
-lua_path = "/usr/local/bin/lua"
-watch_config = true
-
-[bar]
-height = 36
-padding_x = 10
-
-[bar.colors]
-background = "#111111"
-border = "#222222"
-text = "#ffffff"
-focused_app_border = "#ff3b30"
-
-[builtins.spaces.style]
+[builtins.spaces]
 enabled = true
 position = "left"
 order = 10
 
-[builtins.front_app.style]
-enabled = true
-position = "left"
-order = 20
-
-[builtins.volume.style]
-enabled = true
-position = "right"
-order = 20
-
-[builtins.date.style]
+[builtins.calendar]
 enabled = true
 position = "right"
 order = 30
-
-[builtins.time.style]
-enabled = true
-position = "right"
-order = 40
-
-[builtins.calendar.style]
-enabled = true
-position = "right"
-order = 50
 ```
 
 ## Configuration structure
@@ -297,24 +270,28 @@ Bar layout settings:
 
 ### `[bar.colors]`
 
-Global bar colors:
+Bar colors:
 
 - `background`
 - `border`
-- `text`
-- `focused_app_border`
+
+There is no global `text` config anymore.
 
 ### `[builtins.<name>]`
 
-Each built-in widget has its own config section.
-
-Most built-ins use a shared style block:
+Each built-in widget has its own config section with shared placement fields:
 
 ```toml
-[builtins.<name>.style]
+[builtins.<name>]
 enabled = true
 position = "left"
 order = 10
+```
+
+Most built-ins also use a shared style block:
+
+```toml
+[builtins.<name>.style]
 icon = ""
 text_color = ""
 background_color = ""
@@ -359,6 +336,13 @@ It supports options for:
 - icon sizing and spacing
 - active and inactive colors
 
+The focused app icon border color is configured here:
+
+```toml
+[builtins.spaces.colors]
+focused_app_border = "#00000000"
+```
+
 ### Front app
 
 Shows the currently focused application name and optionally its icon.
@@ -384,6 +368,138 @@ The calendar widget supports:
 - today, tomorrow, and future event sections
 - birthdays as a separate section
 - per-section popup colors
+
+## Example config
+
+```toml
+[app]
+widgets_dir = "~/.config/easybar/widgets"
+lua_path = "/usr/local/bin/lua"
+watch_config = true
+
+[bar]
+height = 32
+padding_x = 10
+
+[bar.colors]
+background = "#111111"
+border = "#222222"
+
+[builtins.spaces]
+enabled = true
+position = "left"
+order = 10
+
+[builtins.spaces.style]
+background_color = "#00000000"
+border_color = "#00000000"
+border_width = 0
+corner_radius = 0
+padding_x = 0
+padding_y = 0
+spacing = 0
+opacity = 1
+
+[builtins.spaces.layout]
+spacing = 8
+hide_empty = true
+padding_x = 12
+padding_y = 2
+margin_x = 4
+margin_y = 8
+corner_radius = 8
+focused_corner_radius = 8
+focused_scale = 1.0
+inactive_opacity = 0.85
+max_icons = 4
+show_label = true
+show_icons = true
+show_only_focused_label = false
+collapse_inactive = false
+collapsed_padding_x = 6
+collapsed_padding_y = 4
+
+[builtins.spaces.text]
+size = 12
+weight = "semibold"
+focused_color = "#ffffff"
+inactive_color = "#d0d0d0"
+
+[builtins.spaces.icons]
+size = 20
+spacing = 4
+corner_radius = 3
+focused_app_size = 28
+border_width = 1
+focused_app_border_width = 1
+
+[builtins.spaces.colors]
+active_background = "#2b2b2b"
+inactive_background = "#1a1a1a"
+active_border = "#444444"
+inactive_border = "#00000000"
+focused_app_border = "#00000000"
+
+[builtins.front_app]
+enabled = true
+position = "left"
+order = 20
+
+[builtins.front_app.style]
+icon = "􀈔"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1.0
+
+[builtins.front_app.content]
+show_icon = true
+show_name = true
+fallback_text = "No App"
+icon_size = 14
+icon_corner_radius = 4
+
+[builtins.battery]
+enabled = true
+position = "right"
+order = 10
+
+[builtins.battery.style]
+icon = "🔋"
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 10
+opacity = 1.0
+
+[builtins.battery.content]
+show_percentage = true
+unavailable_text = "n/a"
+icon_size = 18
+color_mode = "dynamic"
+fixed_color = "#8aadf4"
+display_mode = "tooltip"
+
+[builtins.battery.colors]
+high = "#8bd5ca"
+medium = "#eed49f"
+low = "#f5a97f"
+critical = "#ed8796"
+
+[builtins.calendar]
+enabled = true
+position = "right"
+order = 30
+```
 
 ## AeroSpace integration
 
@@ -495,23 +611,6 @@ This is controlled by:
 ```toml
 [app]
 watch_config = true
-```
-
-## Project structure
-
-```text
-Sources/EasyBar/
-  App/         app lifecycle, window, settings
-  Config/      config models, defaults, parsing, reload
-  Core/        shared models, theme, logger
-  Events/      system and widget event bridge
-  IPC/         unix socket server for external triggers
-  Lua/         runtime and Lua-side framework
-  Services/    AeroSpace and file watching services
-  Widgets/     native widgets, runtime bridge, shared state, SwiftUI views
-
-Sources/shared/
-  shared code used by app and CLI
 ```
 
 ## IPC

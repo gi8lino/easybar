@@ -23,6 +23,6 @@ struct BarRootView: View {
                 .fill(Theme.barBorder)
                 .frame(height: 1)
         }
-        .foregroundStyle(Theme.textColor)
+        .foregroundStyle(Theme.defaultTextColor)
     }
 }

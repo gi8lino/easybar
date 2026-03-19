@@ -3,17 +3,28 @@ import TOMLKit
 
 extension Config {
 
+    /// Parses one placement block.
+    func parseBuiltinPlacement(
+        from table: TOMLTable,
+        path: String,
+        fallback: BuiltinWidgetPlacement
+    ) throws -> BuiltinWidgetPlacement {
+        BuiltinWidgetPlacement(
+            enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
+            position: normalizedPosition(
+                try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
+            ),
+            order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order
+        )
+    }
+
+    /// Parses one style block.
     func parseBuiltinStyle(
         from table: TOMLTable,
         path: String,
         fallback: BuiltinWidgetStyle
     ) throws -> BuiltinWidgetStyle {
         BuiltinWidgetStyle(
-            enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
-            position: normalizedPosition(
-                try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
-            ),
-            order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
             icon: try optionalString(table["icon"], path: "\(path).icon") ?? fallback.icon,
             textColorHex: try optionalString(table["text_color"], path: "\(path).text_color") ?? fallback.textColorHex,
             backgroundColorHex: try optionalString(table["background_color"], path: "\(path).background_color") ?? fallback.backgroundColorHex,
@@ -25,6 +36,16 @@ extension Config {
             spacing: try optionalNumber(table["spacing"], path: "\(path).spacing") ?? fallback.spacing,
             opacity: try optionalNumber(table["opacity"], path: "\(path).opacity") ?? fallback.opacity
         )
+    }
+
+    /// Parses one battery color mode.
+    func normalizedBatteryColorMode(_ value: String) -> BuiltinBatteryColorMode {
+        BuiltinBatteryColorMode(rawValue: value) ?? .dynamic
+    }
+
+    /// Parses one battery display mode.
+    func normalizedBatteryDisplayMode(_ value: String) -> BuiltinBatteryDisplayMode {
+        BuiltinBatteryDisplayMode(rawValue: value) ?? .expand
     }
 
     func normalizedPosition(_ value: String) -> WidgetPosition {

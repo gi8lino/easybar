@@ -2,8 +2,6 @@ import Foundation
 import Darwin.Mach
 
 /// Native CPU sparkline widget.
-///
-/// CPU usage is sampled in Swift, so no shelling out is needed every second.
 final class CPUSparklineNativeWidget: NativeWidget {
 
     let rootID = "builtin_cpu"
@@ -12,13 +10,11 @@ final class CPUSparklineNativeWidget: NativeWidget {
     private var samples: [Double] = []
     private var previousCPUInfo: host_cpu_load_info_data_t?
 
+    /// Starts CPU sampling.
     func start() {
         let historySize = max(2, Config.shared.builtinCPU.historySize)
 
-        // Start with a fixed-size history so the sparkline shape is stable.
         samples = Array(repeating: 0, count: historySize)
-
-        // Prime the CPU counters once.
         previousCPUInfo = readCPUInfo()
 
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -28,6 +24,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
         publish()
     }
 
+    /// Stops CPU sampling.
     func stop() {
         timer?.invalidate()
         timer = nil
@@ -37,16 +34,17 @@ final class CPUSparklineNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
-    /// Reads one CPU sample and publishes the updated sparkline.
+    /// Reads one CPU sample and republishes.
     private func sampleAndPublish() {
         let usage = readCPUUsagePercent() ?? 0
         pushSample(usage)
         publish()
     }
 
-    /// Publishes the current native CPU widget node.
+    /// Publishes the current sparkline node.
     private func publish() {
         let config = Config.shared.builtinCPU
+        let placement = config.placement
         let style = config.style
 
         let node = WidgetNodeState(
@@ -54,17 +52,21 @@ final class CPUSparklineNativeWidget: NativeWidget {
             root: rootID,
             kind: .sparkline,
             parent: nil,
-            position: style.position,
-            order: style.order,
+            position: placement.position,
+            order: placement.order,
             icon: style.icon,
             text: config.label,
             color: config.colorHex ?? style.textColorHex,
+            iconColor: nil,
+            labelColor: nil,
             visible: true,
             role: nil,
             imagePath: nil,
             imageSize: nil,
             imageCornerRadius: nil,
             fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
             value: nil,
             min: nil,
             max: nil,
@@ -73,18 +75,25 @@ final class CPUSparklineNativeWidget: NativeWidget {
             lineWidth: config.lineWidth,
             paddingX: style.paddingX,
             paddingY: style.paddingY,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
             spacing: style.spacing,
             backgroundColor: style.backgroundColorHex,
             borderColor: style.borderColorHex,
             borderWidth: style.borderWidth,
             cornerRadius: style.cornerRadius,
-            opacity: style.opacity
+            opacity: style.opacity,
+            width: nil,
+            height: nil,
+            yOffset: nil
         )
 
         WidgetStore.shared.apply(root: rootID, nodes: [node])
     }
 
-    /// Appends one sample while keeping the configured history length.
+    /// Appends one sample and keeps the configured history size.
     private func pushSample(_ value: Double) {
         let historySize = max(2, Config.shared.builtinCPU.historySize)
 
@@ -124,7 +133,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
         return info
     }
 
-    /// Computes CPU usage percentage from counter deltas.
+    /// Computes CPU usage from counter deltas.
     private func readCPUUsagePercent() -> Double? {
         guard let current = readCPUInfo() else {
             return nil

@@ -43,13 +43,5 @@ extension Config {
         if let value = colors["border"] {
             barBorderHex = try requiredString(value, path: "bar.colors.border")
         }
-
-        if let value = colors["text"] {
-            textColorHex = try requiredString(value, path: "bar.colors.text")
-        }
-
-        if let value = colors["focused_app_border"] {
-            focusedAppBorderHex = try requiredString(value, path: "bar.colors.focused_app_border")
-        }
     }
 }

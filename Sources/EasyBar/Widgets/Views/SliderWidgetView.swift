@@ -47,7 +47,7 @@ struct SliderWidgetView: View {
                 }
             ),
             in: minValue...maxValue,
-            step: step,
+            step: max(step, 0.0001),
             onEditingChanged: { editing in
                 isEditing = editing
 

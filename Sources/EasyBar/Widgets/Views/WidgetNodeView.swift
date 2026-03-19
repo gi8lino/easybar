@@ -312,7 +312,7 @@ struct WidgetNodeView: View {
 
     private func color(_ hex: String?) -> Color {
         guard let hex, !hex.isEmpty else {
-            return Theme.textColor
+            return Theme.defaultTextColor
         }
 
         return Color(hex: hex)

@@ -1,7 +1,7 @@
 import Foundation
 import IOKit.ps
 
-/// Native battery widget with hover-to-show percentage behavior.
+/// Native battery widget with configurable colors and hover display modes.
 final class BatteryNativeWidget: NativeWidget {
 
     let rootID = "builtin_battery"
@@ -11,7 +11,7 @@ final class BatteryNativeWidget: NativeWidget {
 
     private var isHovered = false
 
-    /// Starts the battery widget and subscribes to relevant events.
+    /// Starts the widget and listens for battery-related events.
     func start() {
         PowerEvents.shared.subscribePowerSource()
         SystemEvents.shared.subscribeSystemWake()
@@ -56,7 +56,7 @@ final class BatteryNativeWidget: NativeWidget {
         publish()
     }
 
-    /// Stops the widget and clears its rendered nodes.
+    /// Stops the widget and clears its nodes.
     func stop() {
         eventObserver.stop()
 
@@ -67,121 +67,110 @@ final class BatteryNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
-    /// Publishes the current battery widget tree.
+    /// Publishes the current widget tree.
     private func publish() {
         let snapshot = readBatterySnapshot()
+        let placement = snapshot.placement
         let style = snapshot.style
         let config = Config.shared.builtinBattery
 
+        let showInlineLabel = shouldShowInlineLabel(
+            mode: config.displayMode,
+            text: snapshot.text
+        )
+
+        let tooltipText = tooltipTextForDisplayMode(
+            mode: config.displayMode,
+            text: snapshot.text
+        )
+
         let nodes: [WidgetNodeState] = [
-            WidgetNodeState(
-                id: rootID,
-                root: rootID,
-                kind: .row,
-                parent: nil,
-                position: style.position,
-                order: style.order,
-                icon: "",
-                text: "",
-                color: nil,
-                visible: true,
-                role: nil,
-                imagePath: nil,
-                imageSize: nil,
-                imageCornerRadius: nil,
-                fontSize: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: style.paddingX,
-                paddingY: style.paddingY,
-                spacing: style.spacing,
-                backgroundColor: style.backgroundColorHex,
-                borderColor: style.borderColorHex,
-                borderWidth: style.borderWidth,
-                cornerRadius: style.cornerRadius,
-                opacity: style.opacity
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
             ),
 
-            WidgetNodeState(
-                id: "\(rootID)_icon",
-                root: rootID,
-                kind: .item,
-                parent: rootID,
-                position: style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_icon",
+                position: placement.position,
                 order: 0,
                 icon: snapshot.icon,
-                text: "",
                 color: snapshot.colorHex,
-                visible: true,
-                role: nil,
-                imagePath: nil,
-                imageSize: nil,
-                imageCornerRadius: nil,
-                fontSize: config.iconSize,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 0,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                fontSize: config.iconSize
             ),
 
-            WidgetNodeState(
-                id: "\(rootID)_label",
-                root: rootID,
-                kind: .item,
-                parent: rootID,
-                position: style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_label",
+                position: placement.position,
                 order: 1,
-                icon: "",
                 text: snapshot.text,
                 color: snapshot.colorHex,
-                visible: isHovered && !snapshot.text.isEmpty,
-                role: nil,
-                imagePath: nil,
-                imageSize: nil,
-                imageCornerRadius: nil,
-                fontSize: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 0,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                visible: showInlineLabel
             )
         ]
 
-        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+        // Tooltip text is attached to the root node text for the native hover tooltip path.
+        let tooltipRoot = WidgetNodeState(
+            id: rootID,
+            root: rootID,
+            kind: .row,
+            parent: nil,
+            position: placement.position,
+            order: placement.order,
+            icon: "",
+            text: tooltipText,
+            color: nil,
+            iconColor: nil,
+            labelColor: nil,
+            visible: true,
+            role: nil,
+            imagePath: nil,
+            imageSize: nil,
+            imageCornerRadius: nil,
+            fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
+            value: nil,
+            min: nil,
+            max: nil,
+            step: nil,
+            values: nil,
+            lineWidth: nil,
+            paddingX: style.paddingX,
+            paddingY: style.paddingY,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
+            spacing: style.spacing,
+            backgroundColor: style.backgroundColorHex,
+            borderColor: style.borderColorHex,
+            borderWidth: style.borderWidth,
+            cornerRadius: style.cornerRadius,
+            opacity: style.opacity,
+            width: nil,
+            height: nil,
+            yOffset: nil
+        )
+
+        WidgetStore.shared.apply(root: rootID, nodes: [tooltipRoot] + Array(nodes.dropFirst()))
     }
 
-    /// Reads the current battery state and resolves icon/text/colors.
+    /// Returns the current battery snapshot.
     private func readBatterySnapshot() -> (
+        placement: Config.BuiltinWidgetPlacement,
         style: Config.BuiltinWidgetStyle,
         icon: String,
         text: String,
         colorHex: String?
     ) {
         let config = Config.shared.builtinBattery
+        let placement = config.placement
         let style = config.style
 
         guard
@@ -189,10 +178,11 @@ final class BatteryNativeWidget: NativeWidget {
             let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
         else {
             return (
+                placement,
                 style,
                 style.icon,
                 config.unavailableText,
-                config.style.textColorHex
+                resolvedUnavailableColor(config: config)
             )
         }
 
@@ -215,31 +205,49 @@ final class BatteryNativeWidget: NativeWidget {
             let text = config.showPercentage ? "\(percentage)%" : ""
 
             return (
+                placement,
                 style,
-                resolvedBatteryIcon(for: percentage, charging: charging, fallback: style.icon),
+                resolvedBatteryIcon(for: percentage, charging: charging),
                 text,
-                resolvedBatteryColor(for: percentage, charging: charging, fallback: config.style.textColorHex)
+                resolvedBatteryColor(
+                    for: percentage,
+                    mode: config.colorMode,
+                    fixedColorHex: config.fixedColorHex ?? config.style.textColorHex,
+                    colors: config.colors
+                )
             )
         }
 
         return (
+            placement,
             style,
             style.icon,
             config.unavailableText,
-            config.style.textColorHex
+            resolvedUnavailableColor(config: config)
         )
     }
 
-    /// Resolves the displayed battery icon for the current state.
-    private func resolvedBatteryIcon(
-        for percentage: Int,
-        charging: Bool,
-        fallback: String
-    ) -> String {
-        if percentage <= 0 && !fallback.isEmpty {
-            return fallback
-        }
+    /// Returns true when the inline label should be shown.
+    private func shouldShowInlineLabel(
+        mode: Config.BuiltinBatteryDisplayMode,
+        text: String
+    ) -> Bool {
+        guard isHovered, !text.isEmpty else { return false }
+        return mode == .expand
+    }
 
+    /// Returns tooltip text when tooltip mode is active.
+    private func tooltipTextForDisplayMode(
+        mode: Config.BuiltinBatteryDisplayMode,
+        text: String
+    ) -> String {
+        guard isHovered, !text.isEmpty else { return "" }
+        guard mode == .tooltip else { return "" }
+        return text
+    }
+
+    /// Resolves the icon for the current battery state.
+    private func resolvedBatteryIcon(for percentage: Int, charging: Bool) -> String {
         if charging {
             switch percentage {
             case 100:      return "󰂅"
@@ -271,38 +279,36 @@ final class BatteryNativeWidget: NativeWidget {
         }
     }
 
-    /// Resolves the battery color, honoring explicit text color overrides.
+    /// Resolves the displayed battery color.
     private func resolvedBatteryColor(
         for percentage: Int,
-        charging: Bool,
-        fallback: String?
+        mode: Config.BuiltinBatteryColorMode,
+        fixedColorHex: String?,
+        colors: Config.BuiltinBatteryColors
     ) -> String? {
-        if let fallback, !fallback.isEmpty {
-            return fallback
-        }
-
-        if charging {
-            switch percentage {
-            case 70...100:
-                return "#8bd5ca"
-            case 50...69:
-                return "#eed49f"
-            case 30...49:
-                return "#f5a97f"
-            default:
-                return "#ed8796"
-            }
+        if mode == .fixed {
+            return fixedColorHex
         }
 
         switch percentage {
         case 70...100:
-            return "#8bd5ca"
+            return colors.highColorHex
         case 50...69:
-            return "#eed49f"
+            return colors.mediumColorHex
         case 30...49:
-            return "#f5a97f"
+            return colors.lowColorHex
         default:
-            return "#ed8796"
+            return colors.criticalColorHex
+        }
+    }
+
+    /// Resolves the color used when the battery is unavailable.
+    private func resolvedUnavailableColor(config: Config.BatteryBuiltinConfig) -> String? {
+        switch config.colorMode {
+        case .dynamic:
+            return config.style.textColorHex
+        case .fixed:
+            return config.fixedColorHex ?? config.style.textColorHex
         }
     }
 }

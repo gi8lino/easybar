@@ -7,6 +7,7 @@ final class CalendarNativeWidget: NativeWidget {
     private var timer: Timer?
     private let eventObserver = EasyBarEventObserver()
 
+    /// Starts the calendar widget.
     func start() {
         CalendarEvents.shared.subscribeCalendar()
 
@@ -27,6 +28,7 @@ final class CalendarNativeWidget: NativeWidget {
         publish()
     }
 
+    /// Stops the calendar widget.
     func stop() {
         eventObserver.stop()
 
@@ -37,6 +39,7 @@ final class CalendarNativeWidget: NativeWidget {
         NativeCalendarStore.shared.clear()
     }
 
+    /// Publishes the current calendar nodes.
     private func publish() {
         let config = Config.shared.builtinCalendar
         let now = Date()
@@ -57,6 +60,7 @@ final class CalendarNativeWidget: NativeWidget {
             nodes = [
                 BuiltinNativeNodeFactory.makeItemNode(
                     rootID: rootID,
+                    placement: config.placement,
                     style: config.style,
                     text: formatter.string(from: now)
                 )
@@ -67,65 +71,29 @@ final class CalendarNativeWidget: NativeWidget {
         NativeCalendarStore.shared.refresh()
     }
 
+    /// Builds stack-layout nodes.
     private func makeStackNodes(
         config: Config.CalendarBuiltinConfig,
         now: Date
     ) -> [WidgetNodeState] {
-        [
-            WidgetNodeState(
-                id: rootID,
-                root: rootID,
-                kind: .row,
-                parent: nil,
-                position: config.style.position,
-                order: config.style.order,
-                icon: "",
-                text: "",
-                color: nil,
-                visible: true,
-                role: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: config.style.paddingX,
-                paddingY: config.style.paddingY,
-                spacing: config.style.spacing,
-                backgroundColor: config.style.backgroundColorHex,
-                borderColor: config.style.borderColorHex,
-                borderWidth: config.style.borderWidth,
-                cornerRadius: config.style.cornerRadius,
-                opacity: config.style.opacity
+        let placement = config.placement
+        let style = config.style
+
+        return [
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
             ),
 
-            WidgetNodeState(
-                id: "\(rootID)_icon",
-                root: rootID,
-                kind: .item,
-                parent: rootID,
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_icon",
+                position: placement.position,
                 order: 0,
-                icon: config.style.icon,
-                text: "",
-                color: config.style.textColorHex,
-                visible: true,
-                role: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 4,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                icon: style.icon,
+                color: style.textColorHex
             ),
 
             WidgetNodeState(
@@ -133,13 +101,21 @@ final class CalendarNativeWidget: NativeWidget {
                 root: rootID,
                 kind: .column,
                 parent: rootID,
-                position: config.style.position,
+                position: placement.position,
                 order: 1,
                 icon: "",
                 text: "",
                 color: nil,
+                iconColor: nil,
+                labelColor: nil,
                 visible: true,
                 role: nil,
+                imagePath: nil,
+                imageSize: nil,
+                imageCornerRadius: nil,
+                fontSize: nil,
+                iconFontSize: nil,
+                labelFontSize: nil,
                 value: nil,
                 min: nil,
                 max: nil,
@@ -148,152 +124,91 @@ final class CalendarNativeWidget: NativeWidget {
                 lineWidth: nil,
                 paddingX: 0,
                 paddingY: 0,
+                paddingLeft: nil,
+                paddingRight: nil,
+                paddingTop: nil,
+                paddingBottom: nil,
                 spacing: config.lineSpacing,
                 backgroundColor: nil,
                 borderColor: nil,
                 borderWidth: nil,
                 cornerRadius: nil,
-                opacity: 1
+                opacity: 1,
+                width: nil,
+                height: nil,
+                yOffset: nil
             ),
 
-            makeTextNode(
-                id: "\(rootID)_top",
-                parent: "\(rootID)_text_column",
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: "\(rootID)_text_column",
+                childID: "\(rootID)_top",
+                position: placement.position,
                 order: 0,
                 text: formatDate(now, format: config.topFormat),
-                color: config.topTextColorHex ?? config.style.textColorHex
+                color: config.topTextColorHex ?? style.textColorHex
             ),
 
-            makeTextNode(
-                id: "\(rootID)_bottom",
-                parent: "\(rootID)_text_column",
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: "\(rootID)_text_column",
+                childID: "\(rootID)_bottom",
+                position: placement.position,
                 order: 1,
                 text: formatDate(now, format: config.bottomFormat),
-                color: config.bottomTextColorHex ?? config.style.textColorHex
+                color: config.bottomTextColorHex ?? style.textColorHex
             )
         ]
     }
 
+    /// Builds inline-layout nodes.
     private func makeInlineNodes(
         config: Config.CalendarBuiltinConfig,
         now: Date
     ) -> [WidgetNodeState] {
-        [
-            WidgetNodeState(
-                id: rootID,
-                root: rootID,
-                kind: .row,
-                parent: nil,
-                position: config.style.position,
-                order: config.style.order,
-                icon: "",
-                text: "",
-                color: nil,
-                visible: true,
-                role: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: config.style.paddingX,
-                paddingY: config.style.paddingY,
-                spacing: config.style.spacing,
-                backgroundColor: config.style.backgroundColorHex,
-                borderColor: config.style.borderColorHex,
-                borderWidth: config.style.borderWidth,
-                cornerRadius: config.style.cornerRadius,
-                opacity: config.style.opacity
+        let placement = config.placement
+        let style = config.style
+
+        return [
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
             ),
 
-            WidgetNodeState(
-                id: "\(rootID)_icon",
-                root: rootID,
-                kind: .item,
-                parent: rootID,
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_icon",
+                position: placement.position,
                 order: 0,
-                icon: config.style.icon,
-                text: "",
-                color: config.style.textColorHex,
-                visible: true,
-                role: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: 0,
-                paddingY: 0,
-                spacing: 4,
-                backgroundColor: nil,
-                borderColor: nil,
-                borderWidth: nil,
-                cornerRadius: nil,
-                opacity: 1
+                icon: style.icon,
+                color: style.textColorHex
             ),
 
-            makeTextNode(
-                id: "\(rootID)_left",
-                parent: rootID,
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_left",
+                position: placement.position,
                 order: 1,
                 text: formatDate(now, format: config.topFormat),
-                color: config.topTextColorHex ?? config.style.textColorHex
+                color: config.topTextColorHex ?? style.textColorHex
             ),
 
-            makeTextNode(
-                id: "\(rootID)_right",
-                parent: rootID,
-                position: config.style.position,
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_right",
+                position: placement.position,
                 order: 2,
                 text: formatDate(now, format: config.bottomFormat),
-                color: config.bottomTextColorHex ?? config.style.textColorHex
+                color: config.bottomTextColorHex ?? style.textColorHex
             )
         ]
     }
 
-    private func makeTextNode(
-        id: String,
-        parent: String,
-        position: WidgetPosition,
-        order: Int,
-        text: String,
-        color: String?
-    ) -> WidgetNodeState {
-        WidgetNodeState(
-            id: id,
-            root: rootID,
-            kind: .item,
-            parent: parent,
-            position: position,
-            order: order,
-            icon: "",
-            text: text,
-            color: color,
-            visible: true,
-            role: nil,
-            value: nil,
-            min: nil,
-            max: nil,
-            step: nil,
-            values: nil,
-            lineWidth: nil,
-            paddingX: 0,
-            paddingY: 0,
-            spacing: 4,
-            backgroundColor: nil,
-            borderColor: nil,
-            borderWidth: nil,
-            cornerRadius: nil,
-            opacity: 1
-        )
-    }
-
+    /// Formats one date string.
     private func formatDate(_ date: Date, format: String) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = format

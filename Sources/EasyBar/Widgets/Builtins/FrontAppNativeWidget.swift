@@ -11,7 +11,6 @@ final class FrontAppNativeWidget: NativeWidget {
     func start() {
         AeroSpaceService.shared.registerConsumer(rootID)
 
-        // Publish only after fresh AeroSpace data has been resolved.
         aeroSpaceObserver.start { [weak self] in
             self?.publish()
         }
@@ -26,145 +25,49 @@ final class FrontAppNativeWidget: NativeWidget {
         WidgetStore.shared.apply(root: rootID, nodes: [])
     }
 
-    /// Publishes the currently focused app from `AeroSpaceService`.
+    /// Publishes the currently focused app.
     private func publish() {
         let config = Config.shared.builtinFrontApp
-        let focused = currentFocusedApp()
+        let placement = config.placement
         let style = config.style
+        let focused = currentFocusedApp()
 
         var nodes: [WidgetNodeState] = [
-            WidgetNodeState(
-                id: rootID,
-                root: rootID,
-                kind: .row,
-                parent: nil,
-                position: style.position,
-                order: style.order,
-                icon: "",
-                text: "",
-                color: nil,
-                visible: true,
-                role: nil,
-                imagePath: nil,
-                imageSize: nil,
-                imageCornerRadius: nil,
-                fontSize: nil,
-                iconFontSize: nil,
-                labelFontSize: nil,
-                value: nil,
-                min: nil,
-                max: nil,
-                step: nil,
-                values: nil,
-                lineWidth: nil,
-                paddingX: style.paddingX,
-                paddingY: style.paddingY,
-                paddingLeft: nil,
-                paddingRight: nil,
-                paddingTop: nil,
-                paddingBottom: nil,
-                spacing: style.spacing,
-                backgroundColor: style.backgroundColorHex,
-                borderColor: style.borderColorHex,
-                borderWidth: style.borderWidth,
-                cornerRadius: style.cornerRadius,
-                opacity: style.opacity,
-                width: nil,
-                height: nil,
-                yOffset: nil
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
             )
         ]
 
         if config.showIcon {
             nodes.append(
-                WidgetNodeState(
-                    id: "\(rootID)_icon",
-                    root: rootID,
-                    kind: .item,
-                    parent: rootID,
-                    position: style.position,
+                BuiltinNativeNodeFactory.makeChildItemNode(
+                    rootID: rootID,
+                    parentID: rootID,
+                    childID: "\(rootID)_icon",
+                    position: placement.position,
                     order: 0,
                     icon: focused.bundlePath == nil ? style.icon : "",
                     text: "",
                     color: style.textColorHex,
-                    iconColor: nil,
-                    labelColor: nil,
-                    visible: true,
-                    role: nil,
                     imagePath: focused.bundlePath,
                     imageSize: config.iconSize,
-                    imageCornerRadius: config.iconCornerRadius,
-                    fontSize: nil,
-                    iconFontSize: nil,
-                    labelFontSize: nil,
-                    value: nil,
-                    min: nil,
-                    max: nil,
-                    step: nil,
-                    values: nil,
-                    lineWidth: nil,
-                    paddingX: 0,
-                    paddingY: 0,
-                    paddingLeft: nil,
-                    paddingRight: nil,
-                    paddingTop: nil,
-                    paddingBottom: nil,
-                    spacing: 4,
-                    backgroundColor: nil,
-                    borderColor: nil,
-                    borderWidth: nil,
-                    cornerRadius: nil,
-                    opacity: 1,
-                    width: nil,
-                    height: nil,
-                    yOffset: nil
+                    imageCornerRadius: config.iconCornerRadius
                 )
             )
         }
 
         if config.showName {
             nodes.append(
-                WidgetNodeState(
-                    id: "\(rootID)_label",
-                    root: rootID,
-                    kind: .item,
-                    parent: rootID,
-                    position: style.position,
+                BuiltinNativeNodeFactory.makeChildItemNode(
+                    rootID: rootID,
+                    parentID: rootID,
+                    childID: "\(rootID)_label",
+                    position: placement.position,
                     order: 1,
-                    icon: "",
                     text: focused.name.isEmpty ? config.fallbackText : focused.name,
-                    color: style.textColorHex,
-                    iconColor: nil,
-                    labelColor: nil,
-                    visible: true,
-                    role: nil,
-                    imagePath: nil,
-                    imageSize: nil,
-                    imageCornerRadius: nil,
-                    fontSize: nil,
-                    iconFontSize: nil,
-                    labelFontSize: nil,
-                    value: nil,
-                    min: nil,
-                    max: nil,
-                    step: nil,
-                    values: nil,
-                    lineWidth: nil,
-                    paddingX: 0,
-                    paddingY: 0,
-                    paddingLeft: nil,
-                    paddingRight: nil,
-                    paddingTop: nil,
-                    paddingBottom: nil,
-                    spacing: 4,
-                    backgroundColor: nil,
-                    borderColor: nil,
-                    borderWidth: nil,
-                    cornerRadius: nil,
-                    opacity: 1,
-                    width: nil,
-                    height: nil,
-                    yOffset: nil
+                    color: style.textColorHex
                 )
             )
         }
