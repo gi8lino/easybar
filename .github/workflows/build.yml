@@ -48,7 +48,7 @@ jobs:
           file "dist/EasyBar.app/Contents/MacOS/EasyBar"
           file "dist/easybarctl"
           test -f "dist/EasyBar.app/Contents/Info.plist"
-          test -d "dist/EasyBar.app/EasyBar_EasyBar.bundle"
+          test -d "dist/EasyBar_EasyBar.bundle"
           test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
 
       - name: Print package checksum
@@ -65,11 +65,11 @@ jobs:
             "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \
             --generate-notes
 
-      - name: Trigger Homebrew update workflow
+      - name: Trigger Homebrew cask update workflow
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh workflow run update-homebrew-formula.yml \
+          gh workflow run update-homebrew-cask.yml \
             -f tag="${{ steps.version.outputs.tag }}" \
             -f version="${{ steps.version.outputs.version }}"

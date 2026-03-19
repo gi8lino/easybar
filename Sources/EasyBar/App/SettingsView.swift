@@ -4,30 +4,38 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("EasyBar startup is managed by Homebrew.")
+            Text("EasyBar is installed and updated with Homebrew Cask.")
                 .font(.system(size: 13, weight: .medium))
 
-            Text("Enable automatic launch at login with:")
+            Text("Launch it from Applications or with:")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            Text("brew services start easybar")
+            Text("open -a EasyBar")
                 .font(.system(size: 12, design: .monospaced))
                 .textSelection(.enabled)
 
-            Text("Disable it with:")
+            Text("Update it with:")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            Text("brew services stop easybar")
+            Text("brew upgrade --cask easybar")
                 .font(.system(size: 12, design: .monospaced))
                 .textSelection(.enabled)
 
-            Text("You can also restart the service with:")
+            Text("Uninstall it with:")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            Text("brew services restart easybar")
+            Text("brew uninstall --cask easybar")
+                .font(.system(size: 12, design: .monospaced))
+                .textSelection(.enabled)
+
+            Text("The CLI is also installed:")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Text("easybarctl")
                 .font(.system(size: 12, design: .monospaced))
                 .textSelection(.enabled)
         }
