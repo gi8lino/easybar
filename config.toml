@@ -139,7 +139,7 @@ unavailable_text = "n/a" # Fallback text when battery data is unavailable.
 icon_size = 18 # Font size of the battery icon.
 color_mode = "dynamic" # dynamic | fixed
 fixed_color = "#8aadf4" # Used only when color_mode = "fixed".
-display_mode = "tooltip" # none | tooltip | expand
+display_mode = "expand" # none | tooltip | expand
 
 [builtins.battery.colors]
 high = "#8bd5ca" # Color for 70-100%.
