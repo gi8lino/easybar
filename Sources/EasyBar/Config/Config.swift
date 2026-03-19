@@ -12,11 +12,6 @@ final class Config {
     var luaPath: String = ConfigDefaults.luaPath
     var watchConfigFile: Bool = ConfigDefaults.watchConfigFile
 
-    // MARK: - App logging
-
-    var logToFile: Bool = ConfigDefaults.logToFile
-    var logFilePath: String = ConfigDefaults.logFilePath
-
     // MARK: - Bar
 
     var barHeight: CGFloat = ConfigDefaults.barHeight
@@ -295,9 +290,6 @@ final class Config {
         luaPath = ConfigDefaults.luaPath
         watchConfigFile = ConfigDefaults.watchConfigFile
 
-        logToFile = ConfigDefaults.logToFile
-        logFilePath = ConfigDefaults.logFilePath
-
         barHeight = ConfigDefaults.barHeight
         barPaddingX = ConfigDefaults.barPaddingX
 
@@ -322,8 +314,6 @@ final class Config {
             widgetsPath: widgetsPath,
             luaPath: luaPath,
             watchConfigFile: watchConfigFile,
-            logToFile: logToFile,
-            logFilePath: logFilePath,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
             barBackgroundHex: barBackgroundHex,
@@ -347,9 +337,6 @@ final class Config {
         luaPath = snapshot.luaPath
         watchConfigFile = snapshot.watchConfigFile
 
-        logToFile = snapshot.logToFile
-        logFilePath = snapshot.logFilePath
-
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX
 
@@ -366,7 +353,5 @@ final class Config {
         builtinCalendar = snapshot.builtinCalendar
         builtinTime = snapshot.builtinTime
         builtinDate = snapshot.builtinDate
-
-        Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 }

@@ -1,3 +1,6 @@
+## `docs/LUA_WIDGETS.md`
+
+````md
 # EasyBar Lua widgets
 
 EasyBar Lua widgets are item-based.
@@ -17,10 +20,12 @@ Kinds:
 - `row`
 - `column`
 - `group`
+- `popup`
 - `slider`
 - `progress`
 - `progress_slider`
 - `sparkline`
+- `spaces`
 
 Example:
 
@@ -36,6 +41,7 @@ easybar.add("item", "clock", {
 	},
 })
 ```
+````
 
 ---
 
@@ -153,7 +159,7 @@ easybar.clear_defaults()
 Subscribes one item to one or more events.
 
 ```lua
-easybar.subscribe("clock", { "minute_tick", "forced" }, function(env)
+easybar.subscribe("clock", { "minute_tick", "forced" }, function(event)
 	easybar.set("clock", {
 		label = {
 			string = os.date("%H:%M"),
@@ -162,11 +168,31 @@ easybar.subscribe("clock", { "minute_tick", "forced" }, function(env)
 end)
 ```
 
-`env` contains:
+The handler receives one normalized event table.
 
-- `env.NAME` item id
-- `env.SENDER` event name
-- `env.INFO` event payload table
+Useful fields include:
+
+- `event.name`
+- `event.widget_id`
+- `event.target_widget_id`
+- `event.app_name`
+- `event.interface_name`
+- `event.button`
+- `event.direction`
+- `event.charging`
+- `event.muted`
+- `event.value`
+- `event.delta_x`
+- `event.delta_y`
+- `event.raw`
+
+Example:
+
+```lua
+easybar.subscribe("calendar", "mouse.clicked", function(event)
+	print(event.name, event.button)
+end)
+```
 
 ---
 
@@ -184,6 +210,17 @@ easybar.exec("date +%H:%M", function(output)
 		},
 	})
 end)
+```
+
+---
+
+### `easybar.log(level, ...)`
+
+Writes one widget-scoped log line.
+
+```lua
+easybar.log("info", "refreshing widget")
+easybar.log("warn", "vpn name missing")
 ```
 
 ---
@@ -246,7 +283,7 @@ background = {
 
 ## Value widgets
 
-For `slider`, `progress`, `progress_slider`, `sparkline`:
+For `slider`, `progress`, `progress_slider`, and `sparkline`:
 
 - `value`
 - `min`
@@ -373,14 +410,16 @@ You can also subscribe to mouse events:
 Example:
 
 ```lua
-easybar.subscribe("calendar", "mouse.clicked", function(env)
-	print(env.NAME, env.SENDER)
+easybar.subscribe("calendar", "mouse.clicked", function(event)
+	print(event.name, event.button)
 end)
 ```
 
 For scroll events:
 
-- `env.INFO.direction` is `"up"` or `"down"`
+- `event.direction` is `"up"` or `"down"`
+- `event.delta_x`
+- `event.delta_y`
 
 For slider events:
 
@@ -389,7 +428,66 @@ For slider events:
 
 The value is in:
 
-- `env.INFO.value`
+- `event.value`
+
+---
+
+## Secrets and per-user config
+
+For widget-specific personal values, the recommended pattern is to store them in a local Lua module instead of relying on process environment variables.
+
+Create a file such as:
+
+```lua
+-- ~/.config/easybar/secrets.lua
+return {
+	vpn_name = "WireGuard",
+	api_token = "example-token",
+}
+```
+
+Then use it inside a widget:
+
+```lua
+local secrets = require("secrets")
+
+local vpn_name = secrets.vpn_name or ""
+```
+
+This is a good fit for:
+
+- VPN names
+- tokens
+- labels
+- hostnames
+- user-specific widget config
+
+It keeps the widget code clean and avoids depending on shell environment propagation through `brew services`.
+
+For path resolution, make sure the file is reachable through Lua's module search path in your setup. A common pattern is to keep `secrets.lua` next to your widget files.
+
+Example:
+
+```lua
+local secrets = require("secrets")
+
+easybar.add("item", "vpn_status", {
+	position = "right",
+	order = 20,
+	label = {
+		string = secrets.vpn_name or "vpn",
+	},
+})
+```
+
+If the module is optional, you can load it defensively:
+
+```lua
+local ok, secrets = pcall(require, "secrets")
+if not ok then
+	secrets = {}
+end
+```
 
 ---
 
@@ -481,4 +579,5 @@ For most widgets:
 Keep widget ids stable.
 Use `row` for grouped items.
 Use `popup.<id>` for popup content.
-Use `update_freq` + `routine` for polling.
+Use `update_freq` and `routine` for polling.
+Use `secrets.lua` for personal widget config.

@@ -8,11 +8,6 @@ enum ConfigDefaults {
     static let luaPath = "/usr/local/bin/lua"
     static let watchConfigFile = true
 
-    // MARK: - App logging
-
-    static let logToFile = false
-    static let logFilePath = "~/Library/Logs/EasyBar.log"
-
     // MARK: - Bar
 
     static let barHeight: CGFloat = 36

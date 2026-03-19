@@ -76,8 +76,14 @@ jobs:
 
             service do
               run [opt_bin/"easybar"]
+              environment_variables(
+                PATH: std_service_path_env,
+                LANG: "en_US.UTF-8",
+                EASYBAR_DEBUG: "0",
+                EASYBAR_CONFIG_PATH: "",
+              )
               keep_alive true
-              require_root false
+              process_type :interactive
               working_dir HOMEBREW_PREFIX
               log_path var/"log/easybar.log"
               error_log_path var/"log/easybar.log"

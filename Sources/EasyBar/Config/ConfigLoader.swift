@@ -12,8 +12,6 @@ extension Config {
             let text = String(data: data, encoding: .utf8)
         else {
             Logger.info("using default configuration from \(resolvedConfigPath)")
-            applyEnvironmentOverrides()
-            Logger.configure(logToFile: logToFile, filePath: logFilePath)
             return
         }
 
@@ -34,8 +32,5 @@ extension Config {
                 message: "parse failed: \(error)"
             )
         }
-
-        applyEnvironmentOverrides()
-        Logger.configure(logToFile: logToFile, filePath: logFilePath)
     }
 }

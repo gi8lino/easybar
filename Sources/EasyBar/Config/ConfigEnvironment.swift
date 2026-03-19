@@ -12,21 +12,6 @@ extension Config {
         boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
     }
 
-    /// Applies environment variable overrides after file parsing.
-    func applyEnvironmentOverrides() {
-        if let widgetsOverride = expandedEnvironmentPath(named: "EASYBAR_WIDGETS_PATH") {
-            widgetsPath = widgetsOverride
-        }
-
-        if let logEnabled = boolEnvironmentValue(named: "EASYBAR_LOG_ENABLED") {
-            logToFile = logEnabled
-        }
-
-        if let logFile = expandedEnvironmentPath(named: "EASYBAR_LOG_FILE") {
-            logFilePath = logFile
-        }
-    }
-
     /// Returns one expanded path-like environment variable when present and non-empty.
     private func expandedEnvironmentPath(named name: String) -> String? {
         guard let value = ProcessInfo.processInfo.environment[name]?

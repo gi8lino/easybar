@@ -6,9 +6,6 @@ struct ConfigSnapshot {
     let luaPath: String
     let watchConfigFile: Bool
 
-    let logToFile: Bool
-    let logFilePath: String
-
     let barHeight: CGFloat
     let barPaddingX: CGFloat
 

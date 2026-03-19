@@ -20,18 +20,6 @@ extension Config {
         if let value = app["watch_config"] {
             watchConfigFile = try requiredBool(value, path: "app.watch_config")
         }
-
-        guard let logging = app["logging"]?.table else { return }
-
-        if let value = logging["enabled"] {
-            logToFile = try requiredBool(value, path: "app.logging.enabled")
-        }
-
-        if let value = logging["file"] {
-            logFilePath = NSString(
-                string: try requiredString(value, path: "app.logging.file")
-            ).expandingTildeInPath
-        }
     }
 
     /// Parses bar-level settings.
