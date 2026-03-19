@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// Global runtime theme helpers.
-///
-/// These values are derived from config where applicable, or provide
-/// one fixed fallback when a widget/node does not specify its own color.
 enum Theme {
 
     static var barBackground: Color {
@@ -14,37 +11,37 @@ enum Theme {
         Color(hex: Config.shared.barBorderHex)
     }
 
-    /// Fallback text color for views and nodes that do not provide one.
+    /// Fallback text color for views and nodes without a color.
     static var defaultTextColor: Color {
         Color.white
     }
 
-    /// Border color for the focused app icon inside the spaces widget.
+    /// Border color for the focused app icon inside spaces.
     static var spaceFocusedAppBorder: Color {
-        Color(hex: Config.shared.spaceFocusedAppBorderHex)
+        Color(hex: Config.shared.builtinSpaces.colors.focusedAppBorderHex)
     }
 
     static var spaceActiveBackground: Color {
-        Color(hex: Config.shared.spaceActiveBackgroundHex)
+        Color(hex: Config.shared.builtinSpaces.colors.activeBackgroundHex)
     }
 
     static var spaceInactiveBackground: Color {
-        Color(hex: Config.shared.spaceInactiveBackgroundHex)
+        Color(hex: Config.shared.builtinSpaces.colors.inactiveBackgroundHex)
     }
 
     static var spaceActiveBorder: Color {
-        Color(hex: Config.shared.spaceActiveBorderHex)
+        Color(hex: Config.shared.builtinSpaces.colors.activeBorderHex)
     }
 
     static var spaceInactiveBorder: Color {
-        Color(hex: Config.shared.spaceInactiveBorderHex)
+        Color(hex: Config.shared.builtinSpaces.colors.inactiveBorderHex)
     }
 
     static var spaceFocusedText: Color {
-        Color(hex: Config.shared.spaceFocusedTextHex)
+        Color(hex: Config.shared.builtinSpaces.text.focusedColorHex)
     }
 
     static var spaceInactiveText: Color {
-        Color(hex: Config.shared.spaceInactiveTextHex)
+        Color(hex: Config.shared.builtinSpaces.text.inactiveColorHex)
     }
 }

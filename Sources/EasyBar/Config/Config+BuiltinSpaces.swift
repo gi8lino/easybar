@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import TOMLKit
 
 extension Config {
@@ -30,6 +31,21 @@ extension Config {
             var weight: String
             var focusedColorHex: String
             var inactiveColorHex: String
+
+            /// Resolved SwiftUI font weight.
+            var resolvedWeight: Font.Weight {
+                switch weight.lowercased() {
+                case "ultralight": return .ultraLight
+                case "thin": return .thin
+                case "light": return .light
+                case "regular": return .regular
+                case "medium": return .medium
+                case "bold": return .bold
+                case "heavy": return .heavy
+                case "black": return .black
+                default: return .semibold
+                }
+            }
         }
 
         struct Icons {
@@ -73,13 +89,13 @@ extension Config {
 
         static let `default` = SpacesBuiltinConfig(
             placement: .init(
-                enabled: false,
+                enabled: true,
                 position: .left,
                 order: 10
             ),
             style: .init(
                 icon: "",
-                textColorHex: nil,
+                textColorHex: "",
                 backgroundColorHex: "#00000000",
                 borderColorHex: "#00000000",
                 borderWidth: 0,
@@ -92,10 +108,10 @@ extension Config {
             layout: .init(
                 spacing: 8,
                 hideEmpty: true,
-                paddingX: 10,
-                paddingY: 6,
-                marginX: 0,
-                marginY: 0,
+                paddingX: 12,
+                paddingY: 2,
+                marginX: 4,
+                marginY: 8,
                 cornerRadius: 8,
                 focusedCornerRadius: 8,
                 focusedScale: 1.0,
@@ -111,14 +127,14 @@ extension Config {
             text: .init(
                 size: 12,
                 weight: "semibold",
-                focusedColorHex: "#ffffff",
+                focusedColorHex: "#d0d0d0",
                 inactiveColorHex: "#d0d0d0"
             ),
             icons: .init(
-                size: 14,
+                size: 20,
                 spacing: 4,
                 cornerRadius: 3,
-                focusedAppSize: 18,
+                focusedAppSize: 28,
                 borderWidth: 1,
                 focusedAppBorderWidth: 1
             ),
@@ -127,7 +143,7 @@ extension Config {
                 inactiveBackgroundHex: "#1a1a1a",
                 activeBorderHex: "#444444",
                 inactiveBorderHex: "#00000000",
-                focusedAppBorderHex: "#ff3b30"
+                focusedAppBorderHex: "#00000000"
             )
         )
     }

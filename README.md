@@ -155,7 +155,7 @@ EasyBar supports:
 - live config reloads
 - per-built-in defaults and overrides
 
-The config system is now split by concern, for example:
+The config system is split by concern, for example:
 
 - `Config.swift`
 - `ConfigLoader.swift`
@@ -233,89 +233,25 @@ You can override the config path with:
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
-`widgets_dir` is configured in `config.toml`.
-
-## Minimal example config
+A minimal example:
 
 ```toml
 [builtins.spaces]
 enabled = true
 position = "left"
-order = 10
 
 [builtins.calendar]
 enabled = true
 position = "right"
-order = 30
 ```
 
-## Configuration structure
+The complete current example config is in:
 
-The config is split into these main sections.
-
-### `[app]`
-
-App-level settings such as:
-
-- `widgets_dir`
-- `lua_path`
-- `watch_config`
-
-### `[bar]`
-
-Bar layout settings:
-
-- `height`
-- `padding_x`
-
-### `[bar.colors]`
-
-Bar colors:
-
-- `background`
-- `border`
-
-There is no global `text` config anymore.
-
-### `[builtins.<name>]`
-
-Each built-in widget has its own config section with shared placement fields:
-
-```toml
-[builtins.<name>]
-enabled = true
-position = "left"
-order = 10
+```text
+./config.toml
 ```
 
-Most built-ins also use a shared style block:
-
-```toml
-[builtins.<name>.style]
-icon = ""
-text_color = ""
-background_color = ""
-border_color = ""
-border_width = 0
-corner_radius = 0
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1
-```
-
-Some widgets also add content-specific sections like:
-
-- `content`
-- `layout`
-- `text`
-- `icons`
-- `colors`
-- `slider`
-- `anchor`
-- `events`
-- `birthdays`
-- `popup`
+That file is the source of truth for all supported config keys and defaults.
 
 ## Built-in widget notes
 
@@ -368,138 +304,6 @@ The calendar widget supports:
 - today, tomorrow, and future event sections
 - birthdays as a separate section
 - per-section popup colors
-
-## Example config
-
-```toml
-[app]
-widgets_dir = "~/.config/easybar/widgets"
-lua_path = "/usr/local/bin/lua"
-watch_config = true
-
-[bar]
-height = 32
-padding_x = 10
-
-[bar.colors]
-background = "#111111"
-border = "#222222"
-
-[builtins.spaces]
-enabled = true
-position = "left"
-order = 10
-
-[builtins.spaces.style]
-background_color = "#00000000"
-border_color = "#00000000"
-border_width = 0
-corner_radius = 0
-padding_x = 0
-padding_y = 0
-spacing = 0
-opacity = 1
-
-[builtins.spaces.layout]
-spacing = 8
-hide_empty = true
-padding_x = 12
-padding_y = 2
-margin_x = 4
-margin_y = 8
-corner_radius = 8
-focused_corner_radius = 8
-focused_scale = 1.0
-inactive_opacity = 0.85
-max_icons = 4
-show_label = true
-show_icons = true
-show_only_focused_label = false
-collapse_inactive = false
-collapsed_padding_x = 6
-collapsed_padding_y = 4
-
-[builtins.spaces.text]
-size = 12
-weight = "semibold"
-focused_color = "#ffffff"
-inactive_color = "#d0d0d0"
-
-[builtins.spaces.icons]
-size = 20
-spacing = 4
-corner_radius = 3
-focused_app_size = 28
-border_width = 1
-focused_app_border_width = 1
-
-[builtins.spaces.colors]
-active_background = "#2b2b2b"
-inactive_background = "#1a1a1a"
-active_border = "#444444"
-inactive_border = "#00000000"
-focused_app_border = "#00000000"
-
-[builtins.front_app]
-enabled = true
-position = "left"
-order = 20
-
-[builtins.front_app.style]
-icon = "􀈔"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1.0
-
-[builtins.front_app.content]
-show_icon = true
-show_name = true
-fallback_text = "No App"
-icon_size = 14
-icon_corner_radius = 4
-
-[builtins.battery]
-enabled = true
-position = "right"
-order = 10
-
-[builtins.battery.style]
-icon = "🔋"
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 10
-opacity = 1.0
-
-[builtins.battery.content]
-show_percentage = true
-unavailable_text = "n/a"
-icon_size = 18
-color_mode = "dynamic"
-fixed_color = "#8aadf4"
-display_mode = "tooltip"
-
-[builtins.battery.colors]
-high = "#8bd5ca"
-medium = "#eed49f"
-low = "#f5a97f"
-critical = "#ed8796"
-
-[builtins.calendar]
-enabled = true
-position = "right"
-order = 30
-```
 
 ## AeroSpace integration
 

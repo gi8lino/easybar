@@ -189,17 +189,17 @@ extension Config {
 
         static let `default` = CalendarBuiltinConfig(
             placement: .init(
-                enabled: false,
+                enabled: true,
                 position: .right,
-                order: 50
+                order: 30
             ),
             style: .init(
                 icon: "",
-                textColorHex: nil,
-                backgroundColorHex: nil,
-                borderColorHex: nil,
-                borderWidth: 0,
-                cornerRadius: 0,
+                textColorHex: "#ffffff",
+                backgroundColorHex: "#1a1a1a",
+                borderColorHex: "#333333",
+                borderWidth: 1,
+                cornerRadius: 8,
                 paddingX: 8,
                 paddingY: 4,
                 spacing: 6,
@@ -207,12 +207,12 @@ extension Config {
             ),
             anchor: .init(
                 itemFormat: "EEE, MMM d",
-                layout: .item,
+                layout: .stack,
                 topFormat: "HH:mm",
-                bottomFormat: "MMMM, d",
+                bottomFormat: "d. MMM",
                 lineSpacing: 0,
-                topTextColorHex: nil,
-                bottomTextColorHex: nil
+                topTextColorHex: "#ffffff",
+                bottomTextColorHex: "#d0d0d0"
             ),
             events: .init(
                 days: 3,
@@ -225,8 +225,8 @@ extension Config {
                 showAge: false
             ),
             popup: .init(
-                backgroundColorHex: "#1a1a1a",
-                borderColorHex: "#333333",
+                backgroundColorHex: "#111111",
+                borderColorHex: "#444444",
                 borderWidth: 1,
                 cornerRadius: 10,
                 paddingX: 10,
@@ -236,12 +236,12 @@ extension Config {
                 marginX: 8,
                 marginY: 8,
                 birthdays: .init(
-                    titleColorHex: "#f5a97f",
-                    itemColorHex: "#eed49f",
+                    titleColorHex: "#89CFEF",
+                    itemColorHex: "#7285A5",
                     emptyColorHex: "#c0c0c0"
                 ),
                 today: .init(
-                    titleColorHex: "#ffffff",
+                    titleColorHex: "#5F9EA0",
                     itemColorHex: "#d0d0d0",
                     emptyColorHex: "#c0c0c0"
                 ),
@@ -425,7 +425,7 @@ extension Config {
         )
     }
 
-    /// Parses one calendar popup section style block.
+    /// Parses one popup section style block.
     private func parseCalendarPopupSectionStyle(
         from table: TOMLTable,
         path: String,

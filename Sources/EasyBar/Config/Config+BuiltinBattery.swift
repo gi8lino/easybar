@@ -9,7 +9,7 @@ extension Config {
         case fixed
     }
 
-    /// Battery hover text mode.
+    /// Battery percentage display mode.
     enum BuiltinBatteryDisplayMode: String {
         case none
         case tooltip
@@ -93,29 +93,29 @@ extension Config {
 
         static let `default` = BatteryBuiltinConfig(
             placement: .init(
-                enabled: false,
+                enabled: true,
                 position: .right,
                 order: 10
             ),
             style: .init(
                 icon: "🔋",
-                textColorHex: nil,
-                backgroundColorHex: nil,
-                borderColorHex: nil,
-                borderWidth: 0,
-                cornerRadius: 0,
+                textColorHex: "#ffffff",
+                backgroundColorHex: "#1a1a1a",
+                borderColorHex: "#333333",
+                borderWidth: 1,
+                cornerRadius: 8,
                 paddingX: 8,
                 paddingY: 4,
-                spacing: 8,
+                spacing: 10,
                 opacity: 1
             ),
             content: .init(
                 showPercentage: true,
                 unavailableText: "n/a",
-                iconSize: 16,
+                iconSize: 18,
                 colorMode: .dynamic,
-                fixedColorHex: nil,
-                displayMode: .expand,
+                fixedColorHex: "#8aadf4",
+                displayMode: .tooltip,
                 colors: .init(
                     highColorHex: "#8bd5ca",
                     mediumColorHex: "#eed49f",

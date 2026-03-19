@@ -50,7 +50,7 @@ collapsed_padding_y = 4 # Vertical padding for collapsed inactive spaces.
 [builtins.spaces.text]
 size = 12 # Font size of the space label.
 weight = "semibold" # Font weight of the space label.
-focused_color = "#ffffff" # Text color of the focused space label.
+focused_color = "#d0d0d0" # Text color of the focused space label.
 inactive_color = "#d0d0d0" # Text color of inactive space labels.
 
 [builtins.spaces.icons]

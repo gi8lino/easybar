@@ -6,37 +6,39 @@ struct SpacesWidgetView: View {
     @ObservedObject private var aeroSpaceService = AeroSpaceService.shared
 
     var body: some View {
+        let config = Config.shared.builtinSpaces
+
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Config.shared.spaceSpacing) {
+            HStack(spacing: CGFloat(config.layout.spacing)) {
                 ForEach(aeroSpaceService.spaces) { space in
                     Button {
                         aeroSpaceService.focusWorkspace(space.name)
                     } label: {
                         HStack(spacing: 6) {
-                            if shouldShowLabel(for: space) {
+                            if shouldShowLabel(for: space, config: config) {
                                 Text(space.name)
                                     .font(.system(
-                                        size: Config.shared.spaceTextSize,
-                                        weight: Config.shared.resolvedSpaceTextWeight
+                                        size: CGFloat(config.text.size),
+                                        weight: config.text.resolvedWeight
                                     ))
                                     .foregroundStyle(
                                         space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
                                     )
                             }
 
-                            if shouldShowIcons(for: space) {
-                                HStack(spacing: Config.shared.iconSpacing) {
-                                    ForEach(visibleApps(for: space)) { app in
+                            if shouldShowIcons(for: space, config: config) {
+                                HStack(spacing: CGFloat(config.icons.spacing)) {
+                                    ForEach(visibleApps(for: space, config: config)) { app in
                                         AppIconView(
                                             app: app,
                                             isFocusedApp: app.id == aeroSpaceService.focusedAppID
                                         )
                                     }
 
-                                    if hiddenAppCount(for: space) > 0 {
-                                        Text("+\(hiddenAppCount(for: space))")
+                                    if hiddenAppCount(for: space, config: config) > 0 {
+                                        Text("+\(hiddenAppCount(for: space, config: config))")
                                             .font(.system(
-                                                size: max(10, Config.shared.spaceTextSize - 1),
+                                                size: max(10, CGFloat(config.text.size) - 1),
                                                 weight: .medium
                                             ))
                                             .foregroundStyle(
@@ -46,42 +48,45 @@ struct SpacesWidgetView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, resolvedPaddingX(for: space))
-                        .padding(.vertical, resolvedPaddingY(for: space))
+                        .padding(.horizontal, resolvedPaddingX(for: space, config: config))
+                        .padding(.vertical, resolvedPaddingY(for: space, config: config))
                         .background(
                             space.isFocused
-                            ? Theme.spaceActiveBackground
-                            : Theme.spaceInactiveBackground
+                                ? Theme.spaceActiveBackground
+                                : Theme.spaceInactiveBackground
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space))
+                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
                                 .stroke(
                                     space.isFocused
-                                    ? Theme.spaceActiveBorder
-                                    : Theme.spaceInactiveBorder,
+                                        ? Theme.spaceActiveBorder
+                                        : Theme.spaceInactiveBorder,
                                     lineWidth: 1
                                 )
                         }
                         .clipShape(
-                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space))
+                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
                         )
-                        .scaleEffect(space.isFocused ? Config.shared.spaceFocusedScale : 1.0)
-                        .opacity(space.isFocused ? 1.0 : Config.shared.spaceInactiveOpacity)
+                        .scaleEffect(space.isFocused ? CGFloat(config.layout.focusedScale) : 1.0)
+                        .opacity(space.isFocused ? 1.0 : config.layout.inactiveOpacity)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, Config.shared.spaceMarginX)
-            .padding(.vertical, Config.shared.spaceMarginY)
+            .padding(.horizontal, CGFloat(config.layout.marginX))
+            .padding(.vertical, CGFloat(config.layout.marginY))
         }
         .fixedSize(horizontal: true, vertical: false)
     }
 
     /// Returns whether the space label should be shown.
-    private func shouldShowLabel(for space: SpaceItem) -> Bool {
-        guard Config.shared.showSpaceLabel else { return false }
+    private func shouldShowLabel(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> Bool {
+        guard config.layout.showLabel else { return false }
 
-        if Config.shared.showOnlyFocusedLabel {
+        if config.layout.showOnlyFocusedLabel {
             return space.isFocused
         }
 
@@ -89,12 +94,15 @@ struct SpacesWidgetView: View {
     }
 
     /// Returns whether app icons should be shown for one space.
-    private func shouldShowIcons(for space: SpaceItem) -> Bool {
-        if !Config.shared.showSpaceIcons {
+    private func shouldShowIcons(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> Bool {
+        if !config.layout.showIcons {
             return false
         }
 
-        if Config.shared.collapseInactiveSpaces && !space.isFocused {
+        if config.layout.collapseInactive && !space.isFocused {
             return false
         }
 
@@ -102,40 +110,55 @@ struct SpacesWidgetView: View {
     }
 
     /// Returns the visible app icons for one space.
-    private func visibleApps(for space: SpaceItem) -> [SpaceApp] {
-        let limit = max(0, Config.shared.maxIconsPerSpace)
+    private func visibleApps(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> [SpaceApp] {
+        let limit = max(0, config.layout.maxIcons)
         guard space.apps.count > limit else { return space.apps }
         return Array(space.apps.prefix(limit))
     }
 
     /// Returns the number of hidden apps for one space.
-    private func hiddenAppCount(for space: SpaceItem) -> Int {
-        max(0, space.apps.count - visibleApps(for: space).count)
+    private func hiddenAppCount(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> Int {
+        max(0, space.apps.count - visibleApps(for: space, config: config).count)
     }
 
     /// Returns horizontal pill padding for one space.
-    private func resolvedPaddingX(for space: SpaceItem) -> CGFloat {
-        if Config.shared.collapseInactiveSpaces && !space.isFocused {
-            return Config.shared.collapsedSpacePaddingX
+    private func resolvedPaddingX(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> CGFloat {
+        if config.layout.collapseInactive && !space.isFocused {
+            return CGFloat(config.layout.collapsedPaddingX)
         }
 
-        return Config.shared.spacePaddingX
+        return CGFloat(config.layout.paddingX)
     }
 
     /// Returns vertical pill padding for one space.
-    private func resolvedPaddingY(for space: SpaceItem) -> CGFloat {
-        if Config.shared.collapseInactiveSpaces && !space.isFocused {
-            return Config.shared.collapsedSpacePaddingY
+    private func resolvedPaddingY(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> CGFloat {
+        if config.layout.collapseInactive && !space.isFocused {
+            return CGFloat(config.layout.collapsedPaddingY)
         }
 
-        return Config.shared.spacePaddingY
+        return CGFloat(config.layout.paddingY)
     }
 
     /// Returns the corner radius for one space.
-    private func resolvedCornerRadius(for space: SpaceItem) -> CGFloat {
+    private func resolvedCornerRadius(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> CGFloat {
         space.isFocused
-            ? Config.shared.spaceFocusedCornerRadius
-            : Config.shared.spaceCornerRadius
+            ? CGFloat(config.layout.focusedCornerRadius)
+            : CGFloat(config.layout.cornerRadius)
     }
 }
 
@@ -145,14 +168,22 @@ private struct AppIconView: View {
     let app: SpaceApp
     let isFocusedApp: Bool
 
+    private var config: Config.SpacesBuiltinConfig {
+        Config.shared.builtinSpaces
+    }
+
     /// Returns the app icon size.
     private var resolvedSize: CGFloat {
-        isFocusedApp ? Config.shared.focusedAppIconSize : Config.shared.iconSize
+        isFocusedApp
+            ? CGFloat(config.icons.focusedAppSize)
+            : CGFloat(config.icons.size)
     }
 
     /// Returns the app icon border width.
     private var resolvedBorderWidth: CGFloat {
-        isFocusedApp ? Config.shared.focusedAppIconBorderWidth : Config.shared.iconBorderWidth
+        isFocusedApp
+            ? CGFloat(config.icons.focusedAppBorderWidth)
+            : CGFloat(config.icons.borderWidth)
     }
 
     var body: some View {
@@ -170,10 +201,10 @@ private struct AppIconView: View {
         }
         .frame(width: resolvedSize, height: resolvedSize)
         .clipShape(
-            RoundedRectangle(cornerRadius: Config.shared.iconCornerRadius)
+            RoundedRectangle(cornerRadius: CGFloat(config.icons.cornerRadius))
         )
         .overlay {
-            RoundedRectangle(cornerRadius: Config.shared.iconCornerRadius)
+            RoundedRectangle(cornerRadius: CGFloat(config.icons.cornerRadius))
                 .stroke(
                     isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear,
                     lineWidth: resolvedBorderWidth

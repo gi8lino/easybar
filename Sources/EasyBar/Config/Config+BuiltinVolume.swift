@@ -92,12 +92,12 @@ extension Config {
                 order: 20
             ),
             style: .init(
-                icon: "🔊",
-                textColorHex: nil,
-                backgroundColorHex: nil,
-                borderColorHex: nil,
-                borderWidth: 0,
-                cornerRadius: 0,
+                icon: "",
+                textColorHex: "#ffffff",
+                backgroundColorHex: "#1a1a1a",
+                borderColorHex: "#333333",
+                borderWidth: 1,
+                cornerRadius: 8,
                 paddingX: 8,
                 paddingY: 4,
                 spacing: 8,
@@ -113,8 +113,8 @@ extension Config {
                 step: 1
             ),
             slider: .init(
-                expandToSliderOnHover: false,
-                width: 140
+                expandToSliderOnHover: true,
+                width: 80
             )
         )
     }

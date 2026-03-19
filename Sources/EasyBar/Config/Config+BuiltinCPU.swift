@@ -58,10 +58,10 @@ extension Config {
                 order: 60
             ),
             style: .init(
-                icon: "󰍛",
-                textColorHex: nil,
-                backgroundColorHex: nil,
-                borderColorHex: nil,
+                icon: "󰍛 ",
+                textColorHex: "",
+                backgroundColorHex: "",
+                borderColorHex: "",
                 borderWidth: 0,
                 cornerRadius: 0,
                 paddingX: 8,

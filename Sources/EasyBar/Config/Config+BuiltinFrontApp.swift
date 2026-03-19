@@ -61,15 +61,15 @@ extension Config {
             placement: .init(
                 enabled: false,
                 position: .left,
-                order: 15
+                order: 20
             ),
             style: .init(
                 icon: "􀈔",
-                textColorHex: nil,
-                backgroundColorHex: nil,
-                borderColorHex: nil,
-                borderWidth: 0,
-                cornerRadius: 0,
+                textColorHex: "#ffffff",
+                backgroundColorHex: "#1a1a1a",
+                borderColorHex: "#333333",
+                borderWidth: 1,
+                cornerRadius: 8,
                 paddingX: 8,
                 paddingY: 4,
                 spacing: 6,
