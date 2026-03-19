@@ -147,6 +147,17 @@ medium = "#eed49f" # Color for 50-69%.
 low = "#f5a97f" # Color for 30-49%.
 critical = "#ed8796" # Color for 0-29%.
 
+[builtins.battery.popup]
+text_color = "#ffffff"
+background_color = "#111111"
+border_color = "#555555"
+border_width = 1
+corner_radius = 8
+padding_x = 10
+padding_y = 6
+margin_x = 0
+margin_y = 8
+
 [builtins.volume]
 enabled = false # Shows or hides the volume widget.
 position = "right" # Places the widget on the left, center, or right side.

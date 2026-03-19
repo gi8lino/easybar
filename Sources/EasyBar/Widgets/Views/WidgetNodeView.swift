@@ -31,6 +31,7 @@ struct WidgetNodeView: View {
                 case .spaces:
                     SpacesWidgetView()
                         .modifier(WidgetNodeStyle(node: node))
+                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 case .popup:
                     popupAnchor
@@ -79,6 +80,7 @@ struct WidgetNodeView: View {
                     }
                 }
                 .modifier(WidgetNodeStyle(node: node))
+                .overlay(WidgetMouseView(widgetID: node.root))
             }
         }
     }
@@ -341,8 +343,6 @@ private struct WidgetNodeStyle: ViewModifier {
 
     let node: WidgetNodeState
 
-    /// Splits the layout values out first.
-    /// This avoids the SwiftUI type-checker issue from the chained optional math.
     func body(content: Content) -> some View {
         let leading = CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
         let trailing = CGFloat(node.paddingRight ?? node.paddingX ?? 0)

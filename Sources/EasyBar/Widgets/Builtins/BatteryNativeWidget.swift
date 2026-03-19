@@ -70,21 +70,49 @@ final class BatteryNativeWidget: NativeWidget {
     /// Publishes the current widget tree.
     private func publish() {
         let snapshot = readBatterySnapshot()
-        let placement = snapshot.placement
-        let style = snapshot.style
         let config = Config.shared.builtinBattery
 
-        let showInlineLabel = shouldShowInlineLabel(
-            mode: config.displayMode,
-            text: snapshot.text
-        )
+        let nodes: [WidgetNodeState]
 
-        let tooltipText = tooltipTextForDisplayMode(
-            mode: config.displayMode,
-            text: snapshot.text
-        )
+        switch config.displayMode {
+        case .tooltip:
+            nodes = makeTooltipPopupNodes(
+                placement: snapshot.placement,
+                style: snapshot.style,
+                icon: snapshot.icon,
+                text: snapshot.text,
+                colorHex: snapshot.colorHex
+            )
 
-        let nodes: [WidgetNodeState] = [
+        case .expand, .none:
+            nodes = makeInlineNodes(
+                placement: snapshot.placement,
+                style: snapshot.style,
+                text: snapshot.text,
+                icon: snapshot.icon,
+                colorHex: snapshot.colorHex,
+                showInlineLabel: shouldShowInlineLabel(
+                    mode: config.displayMode,
+                    text: snapshot.text
+                )
+            )
+        }
+
+        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+    }
+
+    /// Builds the normal inline battery layout.
+    private func makeInlineNodes(
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        text: String,
+        icon: String,
+        colorHex: String?,
+        showInlineLabel: Bool
+    ) -> [WidgetNodeState] {
+        let config = Config.shared.builtinBattery
+
+        return [
             BuiltinNativeNodeFactory.makeRowContainerNode(
                 rootID: rootID,
                 placement: placement,
@@ -97,8 +125,8 @@ final class BatteryNativeWidget: NativeWidget {
                 childID: "\(rootID)_icon",
                 position: placement.position,
                 order: 0,
-                icon: snapshot.icon,
-                color: snapshot.colorHex,
+                icon: icon,
+                color: colorHex,
                 fontSize: config.iconSize
             ),
 
@@ -108,22 +136,33 @@ final class BatteryNativeWidget: NativeWidget {
                 childID: "\(rootID)_label",
                 position: placement.position,
                 order: 1,
-                text: snapshot.text,
-                color: snapshot.colorHex,
+                text: text,
+                color: colorHex,
                 visible: showInlineLabel
             )
         ]
+    }
 
-        // Tooltip text is attached to the root node text for the native hover tooltip path.
-        let tooltipRoot = WidgetNodeState(
+    /// Builds the hover popup layout used for `display_mode = "tooltip"`.
+    private func makeTooltipPopupNodes(
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        icon: String,
+        text: String,
+        colorHex: String?
+    ) -> [WidgetNodeState] {
+        let config = Config.shared.builtinBattery
+        let popup = config.popup
+
+        let root = WidgetNodeState(
             id: rootID,
             root: rootID,
-            kind: .row,
+            kind: .popup,
             parent: nil,
             position: placement.position,
             order: placement.order,
             icon: "",
-            text: tooltipText,
+            text: "",
             color: nil,
             iconColor: nil,
             labelColor: nil,
@@ -158,7 +197,169 @@ final class BatteryNativeWidget: NativeWidget {
             yOffset: nil
         )
 
-        WidgetStore.shared.apply(root: rootID, nodes: [tooltipRoot] + Array(nodes.dropFirst()))
+        let anchorRow = WidgetNodeState(
+            id: "\(rootID)_anchor",
+            root: rootID,
+            kind: .row,
+            parent: rootID,
+            position: placement.position,
+            order: 0,
+            icon: "",
+            text: "",
+            color: nil,
+            iconColor: nil,
+            labelColor: nil,
+            visible: true,
+            role: .popupAnchor,
+            imagePath: nil,
+            imageSize: nil,
+            imageCornerRadius: nil,
+            fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
+            value: nil,
+            min: nil,
+            max: nil,
+            step: nil,
+            values: nil,
+            lineWidth: nil,
+            paddingX: 0,
+            paddingY: 0,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
+            spacing: style.spacing,
+            backgroundColor: nil,
+            borderColor: nil,
+            borderWidth: nil,
+            cornerRadius: nil,
+            opacity: 1,
+            width: nil,
+            height: nil,
+            yOffset: nil
+        )
+
+        let anchorIcon = BuiltinNativeNodeFactory.makeChildItemNode(
+            rootID: rootID,
+            parentID: "\(rootID)_anchor",
+            childID: "\(rootID)_icon",
+            position: placement.position,
+            order: 0,
+            icon: icon,
+            color: colorHex,
+            fontSize: config.iconSize
+        )
+
+        let popupColumn = WidgetNodeState(
+            id: "\(rootID)_popup",
+            root: rootID,
+            kind: .column,
+            parent: rootID,
+            position: placement.position,
+            order: 0,
+            icon: "",
+            text: "",
+            color: nil,
+            iconColor: nil,
+            labelColor: nil,
+            visible: !text.isEmpty,
+            role: nil,
+            imagePath: nil,
+            imageSize: nil,
+            imageCornerRadius: nil,
+            fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
+            value: nil,
+            min: nil,
+            max: nil,
+            step: nil,
+            values: nil,
+            lineWidth: nil,
+            paddingX: popup.paddingX,
+            paddingY: popup.paddingY,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
+            spacing: 4,
+            backgroundColor: popup.backgroundColorHex,
+            borderColor: popup.borderColorHex,
+            borderWidth: popup.borderWidth,
+            cornerRadius: popup.cornerRadius,
+            opacity: 1,
+            width: nil,
+            height: nil,
+            yOffset: nil
+        )
+
+        let popupText = BuiltinNativeNodeFactory.makeChildItemNode(
+            rootID: rootID,
+            parentID: "\(rootID)_popup",
+            childID: "\(rootID)_popup_text",
+            position: placement.position,
+            order: 0,
+            text: text,
+            color: resolvedPopupTextColor(
+                popupTextColorHex: popup.textColorHex,
+                fallbackColorHex: colorHex,
+                styleTextColorHex: style.textColorHex
+            ),
+            visible: !text.isEmpty
+        )
+
+        let popupSpacer = WidgetNodeState(
+            id: "\(rootID)_popup_spacer",
+            root: rootID,
+            kind: .item,
+            parent: rootID,
+            position: placement.position,
+            order: 1,
+            icon: "",
+            text: "",
+            color: nil,
+            iconColor: nil,
+            labelColor: nil,
+            visible: false,
+            role: nil,
+            imagePath: nil,
+            imageSize: nil,
+            imageCornerRadius: nil,
+            fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
+            value: nil,
+            min: nil,
+            max: nil,
+            step: nil,
+            values: nil,
+            lineWidth: nil,
+            paddingX: popup.marginX,
+            paddingY: popup.marginY,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
+            spacing: nil,
+            backgroundColor: nil,
+            borderColor: nil,
+            borderWidth: nil,
+            cornerRadius: nil,
+            opacity: 1,
+            width: nil,
+            height: nil,
+            yOffset: nil
+        )
+
+        return [
+            root,
+            anchorRow,
+            anchorIcon,
+            popupSpacer,
+            popupColumn,
+            popupText
+        ]
     }
 
     /// Returns the current battery snapshot.
@@ -233,17 +434,24 @@ final class BatteryNativeWidget: NativeWidget {
         text: String
     ) -> Bool {
         guard isHovered, !text.isEmpty else { return false }
-        return mode == .expand
+
+        switch mode {
+        case .none:
+            return false
+        case .tooltip:
+            return false
+        case .expand:
+            return true
+        }
     }
 
-    /// Returns tooltip text when tooltip mode is active.
-    private func tooltipTextForDisplayMode(
-        mode: Config.BuiltinBatteryDisplayMode,
-        text: String
-    ) -> String {
-        guard isHovered, !text.isEmpty else { return "" }
-        guard mode == .tooltip else { return "" }
-        return text
+    /// Resolves the popup text color.
+    private func resolvedPopupTextColor(
+        popupTextColorHex: String?,
+        fallbackColorHex: String?,
+        styleTextColorHex: String?
+    ) -> String? {
+        popupTextColorHex ?? fallbackColorHex ?? styleTextColorHex
     }
 
     /// Resolves the icon for the current battery state.

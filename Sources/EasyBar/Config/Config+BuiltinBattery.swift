@@ -24,6 +24,19 @@ extension Config {
         var criticalColorHex: String
     }
 
+    /// Battery hover popup style used for `display_mode = "tooltip"`.
+    struct BuiltinBatteryPopup {
+        var textColorHex: String?
+        var backgroundColorHex: String
+        var borderColorHex: String
+        var borderWidth: Double
+        var cornerRadius: Double
+        var paddingX: Double
+        var paddingY: Double
+        var marginX: Double
+        var marginY: Double
+    }
+
     /// Built-in battery widget config.
     struct BatteryBuiltinConfig {
 
@@ -40,6 +53,7 @@ extension Config {
         var placement: BuiltinWidgetPlacement
         var style: BuiltinWidgetStyle
         var content: Content
+        var popup: BuiltinBatteryPopup
 
         var enabled: Bool {
             get { placement.enabled }
@@ -115,13 +129,24 @@ extension Config {
                 iconSize: 18,
                 colorMode: .dynamic,
                 fixedColorHex: "#8aadf4",
-                displayMode: .tooltip,
+                displayMode: .expand,
                 colors: .init(
                     highColorHex: "#8bd5ca",
                     mediumColorHex: "#eed49f",
                     lowColorHex: "#f5a97f",
                     criticalColorHex: "#ed8796"
                 )
+            ),
+            popup: .init(
+                textColorHex: "#ffffff",
+                backgroundColorHex: "#111111",
+                borderColorHex: "#444444",
+                borderWidth: 1,
+                cornerRadius: 8,
+                paddingX: 8,
+                paddingY: 6,
+                marginX: 0,
+                marginY: 8
             )
         )
     }
@@ -139,6 +164,7 @@ extension Config {
         let styleTable = battery["style"]?.table ?? TOMLTable()
         let contentTable = battery["content"]?.table ?? TOMLTable()
         let colorsTable = battery["colors"]?.table ?? TOMLTable()
+        let popupTable = battery["popup"]?.table ?? TOMLTable()
 
         let style = try parseBuiltinStyle(
             from: styleTable,
@@ -195,10 +221,50 @@ extension Config {
             )
         )
 
+        let popup = BuiltinBatteryPopup(
+            textColorHex: try optionalString(
+                popupTable["text_color"],
+                path: "builtins.battery.popup.text_color"
+            ) ?? builtinBattery.popup.textColorHex,
+            backgroundColorHex: try optionalString(
+                popupTable["background_color"],
+                path: "builtins.battery.popup.background_color"
+            ) ?? builtinBattery.popup.backgroundColorHex,
+            borderColorHex: try optionalString(
+                popupTable["border_color"],
+                path: "builtins.battery.popup.border_color"
+            ) ?? builtinBattery.popup.borderColorHex,
+            borderWidth: try optionalNumber(
+                popupTable["border_width"],
+                path: "builtins.battery.popup.border_width"
+            ) ?? builtinBattery.popup.borderWidth,
+            cornerRadius: try optionalNumber(
+                popupTable["corner_radius"],
+                path: "builtins.battery.popup.corner_radius"
+            ) ?? builtinBattery.popup.cornerRadius,
+            paddingX: try optionalNumber(
+                popupTable["padding_x"],
+                path: "builtins.battery.popup.padding_x"
+            ) ?? builtinBattery.popup.paddingX,
+            paddingY: try optionalNumber(
+                popupTable["padding_y"],
+                path: "builtins.battery.popup.padding_y"
+            ) ?? builtinBattery.popup.paddingY,
+            marginX: try optionalNumber(
+                popupTable["margin_x"],
+                path: "builtins.battery.popup.margin_x"
+            ) ?? builtinBattery.popup.marginX,
+            marginY: try optionalNumber(
+                popupTable["margin_y"],
+                path: "builtins.battery.popup.margin_y"
+            ) ?? builtinBattery.popup.marginY
+        )
+
         builtinBattery = BatteryBuiltinConfig(
             placement: placement,
             style: style,
-            content: content
+            content: content,
+            popup: popup
         )
     }
 }
