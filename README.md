@@ -2,7 +2,7 @@
 
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.
 
-It combines fast native widgets with flexible Lua widgets, so you can use built-ins for common system data and write your own widgets when you want something custom. EasyBar is designed for a clean workflow on macOS and integrates especially well with AeroSpace.
+It combines fast native widgets with flexible Lua widgets, so you can use built-ins for common system data and add custom widgets when you need something more specific. EasyBar is designed for a clean workflow on macOS and integrates especially well with AeroSpace.
 
 ## Inspiration and scope
 
@@ -28,7 +28,6 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Event-driven widget updates
 - Hoverable popups and interactive widgets
 - Fast reload flow for config and widgets
-- Optional file logging
 - Homebrew-managed background service support
 
 ## Install
@@ -112,7 +111,7 @@ EasyBar renders one bar window split into three regions:
 
 Widgets are placed into one of these regions and ordered with an `order` value.
 
-There are two widget systems:
+There are two widget systems.
 
 ### Native widgets
 
@@ -132,9 +131,15 @@ Lua widgets are loaded from your widgets directory and rendered through the Easy
 - personal workflow widgets
 - event-driven status items
 
+Full Lua widget authoring documentation lives in:
+
+```text
+./docs/LUA_WIDGETS.md
+```
+
 ## Architecture overview
 
-EasyBar is split into a few clear parts:
+EasyBar is split into a few clear parts.
 
 ### App and window layer
 
@@ -145,7 +150,6 @@ The app boots through `EasyBarApp`, wires into AppKit with `AppDelegate`, and ho
 Configuration is loaded from TOML through the `Config` type and its parsing helpers. EasyBar supports:
 
 - file-based config
-- environment overrides
 - live config reloads
 - built-in widget defaults
 
@@ -221,11 +225,7 @@ You can override the config path with:
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
-You can override the widgets directory with:
-
-```bash
-EASYBAR_WIDGETS_PATH=/path/to/widgets
-```
+`widgets_dir` is configured in `config.toml`.
 
 ## Minimal example config
 
@@ -278,7 +278,7 @@ order = 50
 
 ## Configuration structure
 
-The config is split into these main sections:
+The config is split into these main sections.
 
 ### `[app]`
 
@@ -287,13 +287,6 @@ App-level settings such as:
 - `widgets_dir`
 - `lua_path`
 - `watch_config`
-
-### `[app.logging]`
-
-Optional file logging:
-
-- `enabled`
-- `file`
 
 ### `[bar]`
 
@@ -364,7 +357,7 @@ It supports options for:
 - showing labels only for the focused space
 - collapsing inactive spaces
 - icon sizing and spacing
-- active/inactive colors
+- active and inactive colors
 
 ### Front app
 
@@ -467,67 +460,18 @@ Examples of widget interaction events:
 - `slider.preview`
 - `slider.changed`
 
-## Creating your own widgets
-
-EasyBar supports custom Lua widgets loaded from your widgets directory.
-
-Each widget file is executed inside its own scoped EasyBar API environment. Widgets can:
-
-- add items and layouts
-- subscribe to events
-- run shell commands
-- update themselves dynamically
-- create popup content
-- define per-widget defaults
-
-The full widget authoring guide lives here:
-
-```text
-./docs/LUA_WIDGETS.md
-```
-
-That document should be the main reference for creating custom widgets.
-
-A very small example might look like this:
-
-```lua
-easybar.default({
-	position = "right",
-	padding_left = 8,
-	padding_right = 8,
-})
-
-easybar.add("item", "hello_widget", {
-	label = "Hello",
-	icon = "􀉉",
-})
-
-easybar.subscribe("hello_widget", "forced", function()
-	easybar.set("hello_widget", {
-		label = os.date("%H:%M:%S"),
-	})
-end)
-
-easybar.subscribe("hello_widget", "second_tick", function()
-	easybar.set("hello_widget", {
-		label = os.date("%H:%M:%S"),
-	})
-end)
-```
-
 ## Logging
 
-EasyBar logs through a central logger and can also write logs to a file.
+EasyBar logs through a central logger.
 
-You can enable file logging in config:
+By default, it writes:
 
-```toml
-[app.logging]
-enabled = true
-file = "~/Library/Logs/EasyBar.log"
-```
+- `DEBUG` and `INFO` to stdout
+- `WARN` and `ERROR` to stderr
 
-You can also enable debug logging with:
+When EasyBar runs through Homebrew services, Homebrew manages the log files for the service.
+
+You can enable debug logging with:
 
 ```bash
 EASYBAR_DEBUG=1 easybar

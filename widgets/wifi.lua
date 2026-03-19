@@ -1,3 +1,5 @@
+local secrets = require("secrets")
+
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -67,9 +69,9 @@ local function get_vpn_status()
 end
 
 local function toggle_vpn()
-	local vpn_name = trim(os.getenv("EASYBAR_VPN_NAME") or "")
+	local vpn_name = secrets.vpn_name or ""
 	if vpn_name == "" then
-		easybar.log("warn", "missing env EASYBAR_VPN_NAME")
+		easybar.log("warn", "missing vpn name")
 		return
 	end
 
