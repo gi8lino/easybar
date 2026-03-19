@@ -35,6 +35,9 @@
 	<key>LSUIElement</key>
 	<true/>
 
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>EasyBar needs calendar access to show upcoming events and birthdays in the calendar widget.</string>
+
 	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>
