@@ -8,11 +8,36 @@ final class NativeCalendarStore: ObservableObject {
     @Published private(set) var sections: [NativeCalendarPopupSection] = []
 
     private let eventStore = EKEventStore()
+    private var didRequestAccess = false
 
     private init() {}
 
     func refresh() {
-        requestAccessIfNeeded()
+        let status = EKEventStore.authorizationStatus(for: .event)
+
+        switch status {
+        case .fullAccess, .authorized:
+            break
+
+        case .notDetermined:
+            requestAccessIfNeeded()
+            DispatchQueue.main.async {
+                self.sections = []
+            }
+            return
+
+        case .denied, .restricted, .writeOnly:
+            DispatchQueue.main.async {
+                self.sections = []
+            }
+            return
+
+        @unknown default:
+            DispatchQueue.main.async {
+                self.sections = []
+            }
+            return
+        }
 
         let config = Config.shared.builtinCalendar
         let calendar = Calendar.current
@@ -76,7 +101,6 @@ final class NativeCalendarStore: ObservableObject {
             let items: [NativeCalendarPopupItem]
 
             if dayEvents.isEmpty {
-                // Show empty text for days without appointments.
                 items = [
                     NativeCalendarPopupItem(
                         id: "empty-\(dayOffset)",
@@ -166,8 +190,6 @@ final class NativeCalendarStore: ObservableObject {
     }
 
     private func extractedAge(from title: String) -> Int? {
-        // Apple birthday titles can already include age in some locales.
-        // Keep this conservative and only use a trailing "(NN)" pattern.
         guard let open = title.lastIndex(of: "("),
               let close = title.lastIndex(of: ")"),
               open < close else {
@@ -179,13 +201,30 @@ final class NativeCalendarStore: ObservableObject {
     }
 
     private func requestAccessIfNeeded() {
-        eventStore.requestFullAccessToEvents { granted, error in
-            if let error {
-                Logger.debug("calendar popup access request failed: \(error)")
-                return
+        let status = EKEventStore.authorizationStatus(for: .event)
+
+        switch status {
+        case .fullAccess, .authorized:
+            Logger.debug("calendar popup access already granted")
+
+        case .notDetermined:
+            guard !didRequestAccess else { return }
+            didRequestAccess = true
+
+            eventStore.requestFullAccessToEvents { granted, error in
+                if let error {
+                    Logger.debug("calendar popup access request failed: \(error)")
+                    return
+                }
+
+                Logger.debug("calendar popup access granted: \(granted)")
             }
 
-            Logger.debug("calendar popup access granted: \(granted)")
+        case .denied, .restricted, .writeOnly:
+            Logger.debug("calendar popup access unavailable status=\(status.rawValue)")
+
+        @unknown default:
+            Logger.debug("calendar popup access status unknown")
         }
     }
 
