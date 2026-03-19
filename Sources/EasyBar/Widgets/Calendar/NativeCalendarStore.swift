@@ -15,24 +15,32 @@ final class NativeCalendarStore: ObservableObject {
     func refresh() {
         let status = EKEventStore.authorizationStatus(for: .event)
 
+        Logger.debug("calendar popup refresh status=\(describeAuthorizationStatus(status))")
+
         switch status {
         case .fullAccess, .authorized:
             break
 
         case .notDetermined:
+            Logger.info("calendar popup refresh needs permission request")
             requestAccessIfNeeded()
+
             DispatchQueue.main.async {
                 self.sections = []
             }
             return
 
         case .denied, .restricted, .writeOnly:
+            Logger.warn("calendar popup refresh blocked status=\(describeAuthorizationStatus(status))")
+
             DispatchQueue.main.async {
                 self.sections = []
             }
             return
 
         @unknown default:
+            Logger.warn("calendar popup refresh unknown status raw=\(status.rawValue)")
+
             DispatchQueue.main.async {
                 self.sections = []
             }
@@ -49,6 +57,8 @@ final class NativeCalendarStore: ObservableObject {
             value: max(1, config.days),
             to: startOfToday
         ) else {
+            Logger.warn("calendar popup failed to compute end date")
+
             DispatchQueue.main.async {
                 self.sections = []
             }
@@ -57,12 +67,10 @@ final class NativeCalendarStore: ObservableObject {
 
         var newSections: [NativeCalendarPopupSection] = []
 
-        // Birthdays are rendered as their own independent section.
         if config.showBirthdays {
             newSections.append(makeBirthdaysSection(config: config, start: now, end: endDate))
         }
 
-        // Only normal event calendars count as appointments.
         let normalCalendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
 
         let predicate = eventStore.predicateForEvents(
@@ -73,6 +81,8 @@ final class NativeCalendarStore: ObservableObject {
 
         let events = eventStore.events(matching: predicate)
             .sorted { $0.startDate < $1.startDate }
+
+        Logger.debug("calendar popup fetched normal_calendars=\(normalCalendars.count) events=\(events.count) days=\(max(1, config.days))")
 
         for dayOffset in 0..<max(1, config.days) {
             guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday),
@@ -128,12 +138,16 @@ final class NativeCalendarStore: ObservableObject {
             )
         }
 
+        Logger.debug("calendar popup prepared sections=\(newSections.count)")
+
         DispatchQueue.main.async {
             self.sections = newSections
         }
     }
 
     func clear() {
+        Logger.debug("calendar popup cleared")
+
         DispatchQueue.main.async {
             self.sections = []
         }
@@ -147,6 +161,8 @@ final class NativeCalendarStore: ObservableObject {
         let birthdayCalendars = eventStore.calendars(for: .event).filter { $0.type == .birthday }
 
         guard !birthdayCalendars.isEmpty else {
+            Logger.debug("calendar popup found no birthday calendars")
+
             return NativeCalendarPopupSection(
                 id: "birthdays",
                 title: config.birthdaysTitle,
@@ -170,6 +186,8 @@ final class NativeCalendarStore: ObservableObject {
                     title: birthdayTitle(for: event, showAge: config.birthdaysShowAge)
                 )
             }
+
+        Logger.debug("calendar popup fetched birthday_calendars=\(birthdayCalendars.count) birthdays=\(items.count)")
 
         return NativeCalendarPopupSection(
             id: "birthdays",
@@ -203,28 +221,37 @@ final class NativeCalendarStore: ObservableObject {
     private func requestAccessIfNeeded() {
         let status = EKEventStore.authorizationStatus(for: .event)
 
+        Logger.info("calendar popup access status=\(describeAuthorizationStatus(status))")
+
         switch status {
         case .fullAccess, .authorized:
-            Logger.debug("calendar popup access already granted")
+            Logger.info("calendar popup access already granted")
 
         case .notDetermined:
-            guard !didRequestAccess else { return }
+            guard !didRequestAccess else {
+                Logger.debug("calendar popup access request already attempted")
+                return
+            }
+
             didRequestAccess = true
+            Logger.info("requesting calendar popup full access")
 
             eventStore.requestFullAccessToEvents { granted, error in
+                let newStatus = EKEventStore.authorizationStatus(for: .event)
+
                 if let error {
-                    Logger.debug("calendar popup access request failed: \(error)")
+                    Logger.error("calendar popup access request failed status=\(self.describeAuthorizationStatus(newStatus)) error=\(error)")
                     return
                 }
 
-                Logger.debug("calendar popup access granted: \(granted)")
+                Logger.info("calendar popup access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
             }
 
         case .denied, .restricted, .writeOnly:
-            Logger.debug("calendar popup access unavailable status=\(status.rawValue)")
+            Logger.warn("calendar popup access unavailable status=\(describeAuthorizationStatus(status))")
 
         @unknown default:
-            Logger.debug("calendar popup access status unknown")
+            Logger.warn("calendar popup access status unknown raw=\(status.rawValue)")
         }
     }
 
@@ -251,5 +278,24 @@ final class NativeCalendarStore: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+
+    private func describeAuthorizationStatus(_ status: EKAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined:
+            return "not_determined"
+        case .restricted:
+            return "restricted"
+        case .denied:
+            return "denied"
+        case .authorized:
+            return "authorized"
+        case .fullAccess:
+            return "full_access"
+        case .writeOnly:
+            return "write_only"
+        @unknown default:
+            return "unknown(\(status.rawValue))"
+        }
     }
 }

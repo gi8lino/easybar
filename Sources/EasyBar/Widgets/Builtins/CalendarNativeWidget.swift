@@ -9,6 +9,10 @@ final class CalendarNativeWidget: NativeWidget {
 
     /// Starts the calendar widget.
     func start() {
+        let config = Config.shared.builtinCalendar
+
+        Logger.info("starting native widget id=\(rootID) enabled=\(config.enabled) layout=\(config.layout.rawValue) position=\(config.position.rawValue) days=\(config.days) show_birthdays=\(config.showBirthdays)")
+
         CalendarEvents.shared.subscribeCalendar()
 
         eventObserver.start { [weak self] payload in
@@ -30,6 +34,8 @@ final class CalendarNativeWidget: NativeWidget {
 
     /// Stops the calendar widget.
     func stop() {
+        Logger.info("stopping native widget id=\(rootID)")
+
         eventObserver.stop()
 
         timer?.invalidate()
@@ -43,6 +49,8 @@ final class CalendarNativeWidget: NativeWidget {
     private func publish() {
         let config = Config.shared.builtinCalendar
         let now = Date()
+
+        Logger.debug("publishing native calendar widget layout=\(config.layout.rawValue)")
 
         let nodes: [WidgetNodeState]
 

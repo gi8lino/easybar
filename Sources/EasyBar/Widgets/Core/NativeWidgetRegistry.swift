@@ -25,6 +25,9 @@ final class NativeWidgetRegistry {
     private func registerAll() {
         stopAll()
 
+        Logger.info("registering native widgets")
+        Logger.info("native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)")
+
         var next: [NativeWidget] = []
 
         if Config.shared.builtinSpaces.enabled {
@@ -60,6 +63,8 @@ final class NativeWidgetRegistry {
         }
 
         widgets = next
+
+        Logger.info("native widgets registered count=\(widgets.count) ids=\(widgets.map(\.rootID).joined(separator: ","))")
 
         for widget in widgets {
             widget.start()
