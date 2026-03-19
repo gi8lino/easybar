@@ -3,10 +3,6 @@ widgets_dir = "~/.config/easybar/widgets" # Folder that contains your custom Lua
 lua_path = "/usr/local/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
 watch_config = true # Auto-reload EasyBar when config.toml changes.
 
-[app.logging]
-enabled = false # Enables or disables writing logs to a file.
-file = "~/Library/Logs/EasyBar.log" # Log file path used when logging is enabled.
-
 [bar]
 height = 32 # Total height of the bar.
 padding_x = 10 # Horizontal left and right padding inside the bar.
