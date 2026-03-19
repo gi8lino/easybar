@@ -112,3 +112,5 @@ end)
 easybar.subscribe("battery", "mouse.exited", function()
 	apply(false)
 end)
+
+apply(false)

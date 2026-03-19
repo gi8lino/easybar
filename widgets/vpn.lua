@@ -1,5 +1,39 @@
+local function trim(s)
+	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function shell(command)
+	local handle = io.popen(command .. " 2>/dev/null")
+	if not handle then
+		return ""
+	end
+
+	local output = handle:read("*a") or ""
+	handle:close()
+	return output
+end
+
+local function resolve_wifisnitchctl()
+	local candidates = {
+		os.getenv("WIFISNITCHCTL"),
+		"/opt/homebrew/bin/wifisnitchctl",
+		"/usr/local/bin/wifisnitchctl",
+		trim(shell("command -v wifisnitchctl")),
+	}
+
+	for _, path in ipairs(candidates) do
+		if path and path ~= "" then
+			return path
+		end
+	end
+
+	return "wifisnitchctl"
+end
+
+local wifisnitchctl = resolve_wifisnitchctl()
+
 local function read_vpn_status()
-	local handle = io.popen("scutil --nwi 2>/dev/null")
+	local handle = io.popen(wifisnitchctl .. " get network.primary_interface_is_tunnel --format=lines 2>/dev/null")
 	if not handle then
 		return {
 			icon = "󰌾",
@@ -11,7 +45,15 @@ local function read_vpn_status()
 	local output = handle:read("*a") or ""
 	handle:close()
 
-	local vpn_connected = output:match("utun") ~= nil
+	local vpn_connected = false
+
+	for line in output:gmatch("[^\r\n]+") do
+		local key, value = line:match("^([^=]+)=(.*)$")
+		if key == "network.primary_interface_is_tunnel" then
+			vpn_connected = trim(value) == "true"
+			break
+		end
+	end
 
 	if vpn_connected then
 		return {
@@ -53,3 +95,18 @@ easybar.subscribe("vpn", { "network_change", "wifi_change", "system_woke", "forc
 		},
 	})
 end)
+
+do
+	local state = read_vpn_status()
+
+	easybar.set("vpn", {
+		icon = {
+			string = state.icon,
+			color = state.color,
+		},
+		label = {
+			string = state.label,
+			color = state.color,
+		},
+	})
+end

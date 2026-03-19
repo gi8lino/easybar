@@ -52,3 +52,9 @@ easybar.subscribe("cpu_sparkline", { "routine", "forced" }, function()
 		values = history,
 	})
 end)
+
+push_value(read_cpu())
+
+easybar.set("cpu_sparkline", {
+	values = history,
+})

@@ -16,11 +16,11 @@ end
 easybar.add("item", "toggle_test", {
 	position = "right",
 	order = 1,
-	padding_left = 8,
-	padding_right = 8,
-	padding_top = 4,
-	padding_bottom = 4,
 	background = {
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
 		color = "#1a1a1a",
 		border_color = "#333333",
 		border_width = 1,
@@ -36,3 +36,5 @@ easybar.subscribe("toggle_test", "mouse.clicked", function()
 	enabled = not enabled
 	render()
 end)
+
+render()

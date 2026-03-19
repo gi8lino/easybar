@@ -46,12 +46,6 @@ end
 local function refresh()
 	local state = get_audio_state()
 
-	easybar.set("volume_progress", {
-		popup = {
-			drawing = true,
-		},
-	})
-
 	easybar.set("volume_progress_anchor", {
 		icon = {
 			string = icon_for_state(state),
@@ -150,19 +144,22 @@ easybar.subscribe("volume_progress", "mouse.exited", function()
 	})
 end)
 
-easybar.subscribe("volume_progress", "mouse.scrolled", function(env)
-	local delta = env.INFO.direction == "up" and 5 or -5
+easybar.subscribe("volume_progress", "mouse.scrolled", function(event)
+	local direction = event.direction
+	local delta = direction == "up" and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh()
 end)
 
-easybar.subscribe("volume_progress_popup_slider", "slider.preview", function(env)
+easybar.subscribe("volume_progress_popup_slider", "slider.preview", function(event)
 	easybar.set("volume_progress_popup_slider", {
-		value = tonumber(env.INFO.value) or get_audio_state().volume,
+		value = tonumber(event.value) or get_audio_state().volume,
 	})
 end)
 
-easybar.subscribe("volume_progress_popup_slider", "slider.changed", function(env)
-	set_volume(env.INFO.value)
+easybar.subscribe("volume_progress_popup_slider", "slider.changed", function(event)
+	set_volume(event.value)
 	refresh()
 end)
+
+refresh()

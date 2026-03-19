@@ -1,13 +1,21 @@
-local function get_volume()
-	local handle = io.popen("osascript -e 'output volume of (get volume settings)' 2>/dev/null")
+local function get_audio_state()
+	local handle = io.popen(
+		"osascript -e 'set s to get volume settings' -e 'return (output volume of s as string) & \",\" & (output muted of s as string)' 2>/dev/null"
+	)
+
 	if not handle then
-		return 0
+		return { volume = 0, muted = false }
 	end
 
-	local value = tonumber(handle:read("*a")) or 0
+	local output = handle:read("*a") or ""
 	handle:close()
 
-	return math.max(0, math.min(100, value))
+	local volume_string, muted_string = output:match("^%s*(.-)%s*,%s*(.-)%s*$")
+
+	return {
+		volume = math.max(0, math.min(100, tonumber(volume_string) or 0)),
+		muted = muted_string == "true",
+	}
 end
 
 local function set_volume(value)
@@ -16,45 +24,52 @@ local function set_volume(value)
 	return value
 end
 
-local function icon_for_volume(value)
-	if value <= 0 then
+local function icon_for_state(state)
+	if state.muted or state.volume <= 0 then
 		return "󰖁"
-	elseif value < 35 then
+	elseif state.volume < 35 then
 		return "󰕿"
-	elseif value < 70 then
+	elseif state.volume < 70 then
 		return "󰖀"
 	else
 		return "󰕾"
 	end
 end
 
+local function text_for_state(state)
+	if state.muted then
+		return "Muted"
+	end
+	return tostring(state.volume) .. "%"
+end
+
 local function refresh()
-	local value = get_volume()
+	local state = get_audio_state()
 
 	easybar.set("volume", {
 		icon = {
-			string = icon_for_volume(value),
+			string = icon_for_state(state),
 			color = "#8aadf4",
 		},
 		label = {
-			string = tostring(value) .. "%",
+			string = text_for_state(state),
 			color = "#8aadf4",
 		},
 	})
 
 	easybar.set("volume_popup_label", {
 		icon = {
-			string = "󰕾",
+			string = icon_for_state(state),
 			color = "#cad3f5",
 		},
 		label = {
-			string = "Volume " .. tostring(value) .. "%",
+			string = "Volume " .. text_for_state(state),
 			color = "#cad3f5",
 		},
 	})
 
 	easybar.set("volume_slider", {
-		value = value,
+		value = state.muted and 0 or state.volume,
 	})
 end
 
@@ -110,19 +125,22 @@ easybar.subscribe("volume", "mouse.exited", function()
 	})
 end)
 
-easybar.subscribe("volume", "mouse.scrolled", function(env)
-	local delta = env.INFO.direction == "up" and 5 or -5
-	set_volume(get_volume() + delta)
+easybar.subscribe("volume", "mouse.scrolled", function(event)
+	local direction = event.direction
+	local delta = direction == "up" and 5 or -5
+	set_volume(get_audio_state().volume + delta)
 	refresh()
 end)
 
-easybar.subscribe("volume_slider", "slider.preview", function(env)
+easybar.subscribe("volume_slider", "slider.preview", function(event)
 	easybar.set("volume_slider", {
-		value = tonumber(env.INFO.value) or get_volume(),
+		value = tonumber(event.value) or get_audio_state().volume,
 	})
 end)
 
-easybar.subscribe("volume_slider", "slider.changed", function(env)
-	set_volume(env.INFO.value)
+easybar.subscribe("volume_slider", "slider.changed", function(event)
+	set_volume(event.value)
 	refresh()
 end)
+
+refresh()

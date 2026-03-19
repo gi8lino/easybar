@@ -88,19 +88,22 @@ easybar.subscribe("volume_inline", "mouse.exited", function()
 	refresh(false)
 end)
 
-easybar.subscribe("volume_inline", "mouse.scrolled", function(env)
-	local delta = env.INFO.direction == "up" and 5 or -5
+easybar.subscribe("volume_inline", "mouse.scrolled", function(event)
+	local direction = event.direction
+	local delta = direction == "up" and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh(true)
 end)
 
-easybar.subscribe("volume_inline_slider", "slider.preview", function(env)
+easybar.subscribe("volume_inline_slider", "slider.preview", function(event)
 	easybar.set("volume_inline_slider", {
-		value = tonumber(env.INFO.value) or get_audio_state().volume,
+		value = tonumber(event.value) or get_audio_state().volume,
 	})
 end)
 
-easybar.subscribe("volume_inline_slider", "slider.changed", function(env)
-	set_volume(env.INFO.value)
+easybar.subscribe("volume_inline_slider", "slider.changed", function(event)
+	set_volume(event.value)
 	refresh(true)
 end)
+
+refresh(false)

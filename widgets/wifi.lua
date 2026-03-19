@@ -1,3 +1,6 @@
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/?.lua"
+
 local secrets = require("secrets")
 
 local function trim(s)
@@ -7,11 +10,13 @@ end
 local function shell(command)
 	local pipe = io.popen(command .. " 2>/dev/null")
 	if not pipe then
+		easybar.log("error", "shell popen failed")
 		return ""
 	end
 
 	local output = pipe:read("*a") or ""
 	pipe:close()
+
 	return output
 end
 
@@ -20,14 +25,15 @@ local function quote(s)
 end
 
 local function get_network_fields()
-	local home = os.getenv("HOME") or ""
-	local command = home .. "/.local/bin/wifisnitchctl get wifi.ssid,network.primary_interface --format=lines"
+	local command =
+		"wifisnitchctl get wifi.ssid,network.primary_interface,network.primary_interface_is_tunnel --format=lines"
 
 	local output = shell(command)
 
 	local result = {
 		ssid = "",
 		primary_interface = "",
+		primary_interface_is_tunnel = false,
 	}
 
 	for line in output:gmatch("[^\r\n]+") do
@@ -38,14 +44,15 @@ local function get_network_fields()
 			result.ssid = value
 		elseif key == "network.primary_interface" then
 			result.primary_interface = value
+		elseif key == "network.primary_interface_is_tunnel" then
+			result.primary_interface_is_tunnel = value == "true"
 		end
 	end
 
 	return result
 end
 
-local function get_wifi_status()
-	local fields = get_network_fields()
+local function get_wifi_status(fields)
 	local ssid = fields.ssid
 	local primary_interface = fields.primary_interface
 
@@ -60,18 +67,13 @@ local function get_wifi_status()
 	return "", false
 end
 
-local function get_vpn_status()
-	local fields = get_network_fields()
-	local primary_interface = fields.primary_interface
-
-	-- Show VPN only when the active primary route goes through a utun device.
-	return primary_interface:match("^utun%d+$") ~= nil
+local function get_vpn_status(fields)
+	return fields.primary_interface_is_tunnel
 end
 
 local function toggle_vpn()
 	local vpn_name = secrets.vpn_name or ""
 	if vpn_name == "" then
-		easybar.log("warn", "missing vpn name")
 		return
 	end
 
@@ -86,8 +88,9 @@ local function toggle_vpn()
 end
 
 local function refresh(show_label)
-	local ssid, wifi_connected = get_wifi_status()
-	local vpn_connected = get_vpn_status()
+	local fields = get_network_fields()
+	local ssid, wifi_connected = get_wifi_status(fields)
+	local vpn_connected = get_vpn_status(fields)
 
 	local wifi_icon = "􀙇"
 	local wifi_label = ""
@@ -154,18 +157,15 @@ easybar.add("item", "wifi_vpn_vpn", {
 local show_label = false
 
 easybar.subscribe("wifi_vpn", { "wifi_change", "network_change", "minute_tick", "forced" }, function(event)
-	local _ = event
 	refresh(show_label)
 end)
 
 easybar.subscribe("wifi_vpn", "mouse.entered", function(event)
-	local _ = event
 	show_label = true
 	refresh(true)
 end)
 
 easybar.subscribe("wifi_vpn", "mouse.exited", function(event)
-	local _ = event
 	show_label = false
 	refresh(false)
 end)
@@ -176,3 +176,5 @@ easybar.subscribe("wifi_vpn", "mouse.clicked", function(event)
 		refresh(show_label)
 	end
 end)
+
+refresh(show_label)
