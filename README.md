@@ -8,7 +8,7 @@ It combines fast native widgets with flexible Lua widgets, so you can use built-
 
 EasyBar is heavily inspired by [SketchyBar](https://github.com/FelixKratz/SketchyBar).
 
-I used SketchyBar for years and it is a great product. EasyBar is not meant as a replacement for it. It is a much more opinionated project that reflects my own preferred setup and trade-offs.
+I used SketchyBar for years and it is a great product. EasyBar is not meant as a replacement. It is a more opinionated project that reflects my own setup and trade-offs.
 
 A few choices are intentional:
 
@@ -28,11 +28,11 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Event-driven widget updates
 - Hoverable popups and interactive widgets
 - Fast reload flow for config and widgets
-- Homebrew-managed background service support
+- Homebrew Cask install and upgrade flow
 
 ## Install
 
-EasyBar is distributed through Homebrew in the `gi8lino/homebrew-tap` tap.
+EasyBar is distributed through Homebrew in the `gi8lino/tap` tap.
 
 Add the tap:
 
@@ -43,48 +43,43 @@ brew tap gi8lino/tap
 Install EasyBar:
 
 ```bash
-brew install gi8lino/tap/easybar
+brew install --cask gi8lino/tap/easybar
+```
+
+Launch it:
+
+```bash
+open -a EasyBar
 ```
 
 This installs:
 
-- `EasyBar.app` inside the Homebrew Cellar
-- `easybar` to launch EasyBar
-- `easybarctl` for CLI control and IPC commands
+- `EasyBar.app`
+- `easybarctl`
 
-## Start at login with Homebrew
-
-Start EasyBar as a Homebrew-managed user service:
+You can check the CLI path with:
 
 ```bash
-brew services start easybar
-```
-
-Stop it:
-
-```bash
-brew services stop easybar
-```
-
-Restart it:
-
-```bash
-brew services restart easybar
+command -v easybarctl
 ```
 
 ## Upgrade
 
 ```bash
-brew upgrade gi8lino/tap/easybar
-brew services restart easybar
+brew upgrade --cask gi8lino/tap/easybar
 ```
 
 ## Uninstall
 
 ```bash
-brew services stop easybar
-brew uninstall gi8lino/tap/easybar
+brew uninstall --cask gi8lino/tap/easybar
 ```
+
+## Start at login
+
+EasyBar is an app, not a Homebrew background service.
+
+After launching it once, add it to macOS login items if you want it to start automatically at login.
 
 ## Built-in widgets
 
@@ -113,7 +108,7 @@ Widgets are placed into one of these regions and ordered with an `order` value.
 
 There are two widget systems.
 
-### Native widgets
+## Native widgets
 
 Native widgets are implemented in Swift and are ideal for:
 
@@ -122,7 +117,7 @@ Native widgets are implemented in Swift and are ideal for:
 - richer platform-specific UI
 - tightly integrated features like spaces, volume, calendar, and focused app display
 
-### Lua widgets
+## Lua widgets
 
 Lua widgets are loaded from your widgets directory and rendered through the EasyBar Lua runtime. They are ideal for:
 
@@ -195,7 +190,7 @@ Lua widgets run in a separate Lua process. EasyBar:
 
 - starts the runtime
 - loads all widget files from your widgets directory
-- exchanges JSON messages over stdin/stdout
+- exchanges JSON messages over stdin and stdout
 - routes Lua logs back into the main logger
 - tracks required event subscriptions declared by widgets
 
@@ -251,7 +246,7 @@ The complete current example config is in:
 ./config.toml
 ```
 
-That file is the source of truth for all supported config keys and defaults.
+That file is the source of truth for supported config keys and defaults.
 
 ## Built-in widget notes
 
@@ -285,7 +280,7 @@ Shows the currently focused application name and optionally its icon.
 
 ### Battery
 
-Shows a battery icon and, on hover, optionally the percentage.
+Shows a battery icon and, depending on config, can show the percentage inline or in a popup.
 
 ### Volume
 
@@ -293,7 +288,7 @@ Supports both a standard slider and an expandable-on-hover slider mode.
 
 ### Date and time
 
-Simple native text widgets with configurable date format strings.
+Simple native text widgets with configurable format strings.
 
 ### Calendar
 
@@ -304,6 +299,10 @@ The calendar widget supports:
 - today, tomorrow, and future event sections
 - birthdays as a separate section
 - per-section popup colors
+
+### CPU
+
+Shows a native CPU sparkline with configurable history length, line width, and color.
 
 ## AeroSpace integration
 
@@ -389,12 +388,10 @@ By default, it writes:
 - `DEBUG` and `INFO` to stdout
 - `WARN` and `ERROR` to stderr
 
-When EasyBar runs through Homebrew services, Homebrew manages the log files for the service.
-
 You can enable debug logging with:
 
 ```bash
-EASYBAR_DEBUG=1 easybar
+EASYBAR_DEBUG=1 /Applications/EasyBar.app/Contents/MacOS/EasyBar
 ```
 
 Lua runtime logs are bridged back into the same logger.
