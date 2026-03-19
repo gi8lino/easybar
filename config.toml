@@ -6,6 +6,7 @@ watch_config = true # Auto-reload EasyBar when config.toml changes.
 [bar]
 height = 32 # Total height of the bar.
 padding_x = 10 # Horizontal left and right padding inside the bar.
+extend_behind_notch = false # When true, the bar window spans the full top edge, including behind the notch.
 
 [bar.colors]
 background = "#111111" # Bar background color.

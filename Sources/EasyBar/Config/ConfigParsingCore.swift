@@ -34,6 +34,13 @@ extension Config {
             barPaddingX = CGFloat(try requiredInt(value, path: "bar.padding_x"))
         }
 
+        if let value = bar["extend_behind_notch"] {
+            barExtendBehindNotch = try requiredBool(
+                value,
+                path: "bar.extend_behind_notch"
+            )
+        }
+
         guard let colors = bar["colors"]?.table else { return }
 
         if let value = colors["background"] {

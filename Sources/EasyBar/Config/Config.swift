@@ -16,6 +16,7 @@ final class Config {
 
     var barHeight: CGFloat = 32
     var barPaddingX: CGFloat = 10
+    var barExtendBehindNotch: Bool = false
 
     var barBackgroundHex: String = "#111111"
     var barBorderHex: String = "#222222"
@@ -87,6 +88,7 @@ final class Config {
 
         barHeight = 32
         barPaddingX = 10
+        barExtendBehindNotch = false
 
         barBackgroundHex = "#111111"
         barBorderHex = "#222222"
@@ -109,6 +111,7 @@ final class Config {
             watchConfigFile: watchConfigFile,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
+            barExtendBehindNotch: barExtendBehindNotch,
             barBackgroundHex: barBackgroundHex,
             barBorderHex: barBorderHex,
             builtinCPU: builtinCPU,
@@ -130,6 +133,7 @@ final class Config {
 
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX
+        barExtendBehindNotch = snapshot.barExtendBehindNotch
 
         barBackgroundHex = snapshot.barBackgroundHex
         barBorderHex = snapshot.barBorderHex

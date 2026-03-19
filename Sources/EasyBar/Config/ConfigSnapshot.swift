@@ -8,6 +8,7 @@ struct ConfigSnapshot {
 
     let barHeight: CGFloat
     let barPaddingX: CGFloat
+    let barExtendBehindNotch: Bool
 
     let barBackgroundHex: String
     let barBorderHex: String

@@ -41,12 +41,12 @@ final class BarWindowController: NSWindowController {
     /// Calculates the frame of the bar based on config.
     private static func makeFrame(for screen: NSScreen) -> NSRect {
         let height = Config.shared.barHeight
-        let visibleFrame = screen.visibleFrame
+        let baseFrame = Config.shared.barExtendBehindNotch ? screen.frame : screen.visibleFrame
 
         return NSRect(
-            x: visibleFrame.minX,
-            y: visibleFrame.maxY - height,
-            width: visibleFrame.width,
+            x: baseFrame.minX,
+            y: baseFrame.maxY - height,
+            width: baseFrame.width,
             height: height
         )
     }
