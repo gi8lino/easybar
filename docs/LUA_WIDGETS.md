@@ -1,6 +1,3 @@
-## `docs/LUA_WIDGETS.md`
-
-````md
 # EasyBar Lua widgets
 
 EasyBar Lua widgets are item-based.
@@ -41,7 +38,6 @@ easybar.add("item", "clock", {
 	},
 })
 ```
-````
 
 ---
 
@@ -436,22 +432,36 @@ The value is in:
 
 For widget-specific personal values, the recommended pattern is to store them in a local Lua module instead of relying on process environment variables.
 
-Create a file such as:
+EasyBar loads widget files from the widgets directory, but Lua `require(...)` uses its own module search path.
+That means a widget can load a module from outside the widgets directory as long as it updates `package.path` first.
+
+A good setup is:
+
+```text
+~/.config/easybar/
+└── widgets/
+    └── wifi.lua
+
+~/personal/private/easybar/
+└── secrets.lua
+```
+
+Example `secrets.lua`:
 
 ```lua
--- ~/.config/easybar/secrets.lua
 return {
 	vpn_name = "WireGuard",
 	api_token = "example-token",
 }
 ```
 
-Then use it inside a widget:
+Then at the top of your widget:
 
 ```lua
-local secrets = require("secrets")
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/personal/private/easybar/?.lua"
 
-local vpn_name = secrets.vpn_name or ""
+local secrets = require("secrets")
 ```
 
 This is a good fit for:
@@ -462,13 +472,16 @@ This is a good fit for:
 - hostnames
 - user-specific widget config
 
-It keeps the widget code clean and avoids depending on shell environment propagation through `brew services`.
+It keeps widget code clean and avoids depending on shell environment propagation through `brew services`.
 
-For path resolution, make sure the file is reachable through Lua's module search path in your setup. A common pattern is to keep `secrets.lua` next to your widget files.
+If you want to keep private modules outside the widgets directory, update `package.path` inside the widget before calling `require(...)`.
 
 Example:
 
 ```lua
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/personal/private/easybar/?.lua"
+
 local secrets = require("secrets")
 
 easybar.add("item", "vpn_status", {
@@ -483,11 +496,16 @@ easybar.add("item", "vpn_status", {
 If the module is optional, you can load it defensively:
 
 ```lua
+local home = os.getenv("HOME")
+package.path = package.path .. ";" .. home .. "/personal/private/easybar/?.lua"
+
 local ok, secrets = pcall(require, "secrets")
 if not ok then
 	secrets = {}
 end
 ```
+
+If you prefer, you can still keep `secrets.lua` next to your widgets, but it is not required.
 
 ---
 
@@ -580,4 +598,4 @@ Keep widget ids stable.
 Use `row` for grouped items.
 Use `popup.<id>` for popup content.
 Use `update_freq` and `routine` for polling.
-Use `secrets.lua` for personal widget config.
+Use a separate Lua module for personal widget config, and update `package.path` before `require(...)` when that module lives outside the widgets directory.
