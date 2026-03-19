@@ -14,7 +14,7 @@ enum Logger {
     private static var currentLogPath: String?
 
     static var debugEnabled: Bool {
-        ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
+        Config.shared.environmentDebugEnabled()
     }
 
     /// Configures optional file logging.
@@ -45,7 +45,10 @@ enum Logger {
             } catch {
                 fileHandle = nil
                 currentLogPath = nil
-                print("[\(formatter.string(from: Date()))] easybar [WARN] failed to open log file \(expandedPath): \(error)")
+                writeConsole(
+                    level: "WARN",
+                    line: "[\(formatter.string(from: Date()))] easybar [WARN] failed to open log file \(expandedPath): \(error)"
+                )
             }
         }
     }
@@ -74,7 +77,8 @@ enum Logger {
     /// Formats and writes one log line to console and optional file.
     private static func write(level: String, message: String) {
         let line = "[\(formatter.string(from: Date()))] easybar [\(level)] \(message)"
-        print(line)
+
+        writeConsole(level: level, line: line)
 
         queue.async {
             guard let fileHandle else { return }
@@ -83,8 +87,22 @@ enum Logger {
             do {
                 try fileHandle.write(contentsOf: data)
             } catch {
-                print("[\(formatter.string(from: Date()))] easybar [WARN] failed writing log file \(currentLogPath ?? ""): \(error)")
+                writeConsole(
+                    level: "WARN",
+                    line: "[\(formatter.string(from: Date()))] easybar [WARN] failed writing log file \(currentLogPath ?? ""): \(error)"
+                )
             }
+        }
+    }
+
+    /// Writes one log line to stdout or stderr depending on severity.
+    private static func writeConsole(level: String, line: String) {
+        if level == "ERROR" || level == "WARN" {
+            fputs(line + "\n", stderr)
+            fflush(stderr)
+        } else {
+            fputs(line + "\n", stdout)
+            fflush(stdout)
         }
     }
 

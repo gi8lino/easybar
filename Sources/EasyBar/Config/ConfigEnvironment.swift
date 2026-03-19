@@ -7,16 +7,19 @@ extension Config {
         expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
     }
 
+    /// Returns whether debug logging is enabled through the environment.
+    func environmentDebugEnabled() -> Bool {
+        boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
+    }
+
     /// Applies environment variable overrides after file parsing.
     func applyEnvironmentOverrides() {
         if let widgetsOverride = expandedEnvironmentPath(named: "EASYBAR_WIDGETS_PATH") {
             widgetsPath = widgetsOverride
         }
 
-        if let logEnabled = ProcessInfo.processInfo.environment["EASYBAR_LOG_ENABLED"]?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-           !logEnabled.isEmpty {
-            logToFile = ["1", "true", "yes", "on"].contains(logEnabled.lowercased())
+        if let logEnabled = boolEnvironmentValue(named: "EASYBAR_LOG_ENABLED") {
+            logToFile = logEnabled
         }
 
         if let logFile = expandedEnvironmentPath(named: "EASYBAR_LOG_FILE") {
@@ -33,5 +36,23 @@ extension Config {
         }
 
         return NSString(string: value).expandingTildeInPath
+    }
+
+    /// Returns one boolean environment variable when present and valid.
+    private func boolEnvironmentValue(named name: String) -> Bool? {
+        guard let value = ProcessInfo.processInfo.environment[name]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return nil
+        }
+
+        switch value.lowercased() {
+        case "1", "true", "yes", "on":
+            return true
+        case "0", "false", "no", "off":
+            return false
+        default:
+            return nil
+        }
     }
 }
