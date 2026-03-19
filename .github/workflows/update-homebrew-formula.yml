@@ -61,7 +61,7 @@ jobs:
           class Easybar < Formula
             desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
             homepage "https://github.com/gi8lino/easybar"
-            url "https://github.com/gi8lino/easybar/releases/download/v#{version}/EasyBar-#{version}.zip"
+            url "https://github.com/gi8lino/easybar/releases/download/v${VERSION}/EasyBar-${VERSION}.zip"
             sha256 "${SHA}"
             license "Apache-2.0"
             version "${VERSION}"
