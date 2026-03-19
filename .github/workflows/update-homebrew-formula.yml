@@ -90,7 +90,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "easybar ${{
-            steps.vars.outputs.version
-          }}"
+          git commit -m "easybar ${{ steps.vars.outputs.version }}"
           git push

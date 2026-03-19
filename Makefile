@@ -13,6 +13,8 @@ APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
+
+# SwiftPM places the copied resource bundle at the app bundle root in this setup.
 APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
@@ -89,7 +91,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory sign
 	@$(MAKE) --no-print-directory verify
 
-package: bundle ## Create the release ZIP consumed by the Homebrew formula.
+package: bundle ## Create the release ZIP consumed by the Homebrew cask.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
@@ -127,7 +129,7 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle root.
+copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
 	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
@@ -141,20 +143,25 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(APP_EXEC)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 
 sign: ## Ad-hoc sign the bundle for local launching.
 	@codesign --force --deep --sign - "$(APP_BUNDLE)" >/dev/null 2>&1 || true
 
-verify: ## Show the built binary architectures and packaged resources.
+verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
 	@file "$(CLI_BIN)"
+	@test -f "$(PLIST)"
+	@test -d "$(APP_RESOURCE_BUNDLE)"
+	@echo "Info.plist:"
+	@plutil -p "$(PLIST)"
 	@echo "Packaged app root:"
 	@ls -1 "$(APP_BUNDLE)"
 	@echo "Packaged Contents:"
 	@ls -1 "$(APP_CONTENTS)"
 	@echo "Packaged Resources:"
-	@ls -1 "$(APP_RESOURCES)"
+	@ls -1 "$(APP_RESOURCES)" 2>/dev/null || true
 
 run: bundle ## Build and open the app bundle.
 	@open "$(APP_BUNDLE)"

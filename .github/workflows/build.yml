@@ -48,8 +48,9 @@ jobs:
           file "dist/EasyBar.app/Contents/MacOS/EasyBar"
           file "dist/easybarctl"
           test -f "dist/EasyBar.app/Contents/Info.plist"
-          test -d "dist/EasyBar_EasyBar.bundle"
+          test -d "dist/EasyBar.app/EasyBar_EasyBar.bundle"
           test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+          plutil -p "dist/EasyBar.app/Contents/Info.plist"
 
       - name: Print package checksum
         shell: bash
