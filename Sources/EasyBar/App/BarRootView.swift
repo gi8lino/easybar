@@ -16,7 +16,12 @@ struct BarRootView: View {
             WidgetBar(position: .right)
         }
         .padding(.horizontal, Config.shared.barPaddingX)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: Config.shared.barHeight,
+            maxHeight: Config.shared.barHeight,
+            alignment: .center
+        )
         .background(Theme.barBackground)
         .overlay(alignment: .bottom) {
             Rectangle()

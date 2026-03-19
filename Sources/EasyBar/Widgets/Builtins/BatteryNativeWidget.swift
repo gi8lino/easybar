@@ -36,13 +36,15 @@ final class BatteryNativeWidget: NativeWidget {
             switch event {
             case .mouseEntered:
                 guard payload.widgetID == self.rootID else { return }
+                guard !self.isHovered else { return }
                 self.isHovered = true
-                self.publish()
+                self.publishIfHoverAffectsLayout()
 
             case .mouseExited:
                 guard payload.widgetID == self.rootID else { return }
+                guard self.isHovered else { return }
                 self.isHovered = false
-                self.publish()
+                self.publishIfHoverAffectsLayout()
 
             default:
                 break
@@ -130,15 +132,11 @@ final class BatteryNativeWidget: NativeWidget {
                 fontSize: config.iconSize
             ),
 
-            BuiltinNativeNodeFactory.makeChildItemNode(
-                rootID: rootID,
-                parentID: rootID,
-                childID: "\(rootID)_label",
-                position: placement.position,
-                order: 1,
+            inlineLabelNode(
+                placement: placement,
                 text: text,
-                color: colorHex,
-                visible: showInlineLabel
+                colorHex: colorHex,
+                showInlineLabel: showInlineLabel
             )
         ]
     }
@@ -443,6 +441,63 @@ final class BatteryNativeWidget: NativeWidget {
         case .expand:
             return true
         }
+    }
+
+    /// Hover only changes the rendered node tree for inline expand mode.
+    private func publishIfHoverAffectsLayout() {
+        guard Config.shared.builtinBattery.displayMode == .expand else { return }
+        publish()
+    }
+
+    /// Keeps the row width stable while toggling the label visually on hover.
+    private func inlineLabelNode(
+        placement: Config.BuiltinWidgetPlacement,
+        text: String,
+        colorHex: String?,
+        showInlineLabel: Bool
+    ) -> WidgetNodeState {
+        WidgetNodeState(
+            id: "\(rootID)_label",
+            root: rootID,
+            kind: .item,
+            parent: rootID,
+            position: placement.position,
+            order: 1,
+            icon: "",
+            text: showInlineLabel ? text : "",
+            color: colorHex,
+            iconColor: nil,
+            labelColor: nil,
+            visible: showInlineLabel && !text.isEmpty,
+            role: nil,
+            imagePath: nil,
+            imageSize: nil,
+            imageCornerRadius: nil,
+            fontSize: nil,
+            iconFontSize: nil,
+            labelFontSize: nil,
+            value: nil,
+            min: nil,
+            max: nil,
+            step: nil,
+            values: nil,
+            lineWidth: nil,
+            paddingX: 0,
+            paddingY: 0,
+            paddingLeft: nil,
+            paddingRight: nil,
+            paddingTop: nil,
+            paddingBottom: nil,
+            spacing: 4,
+            backgroundColor: nil,
+            borderColor: nil,
+            borderWidth: nil,
+            cornerRadius: nil,
+            opacity: 1,
+            width: nil,
+            height: nil,
+            yOffset: nil
+        )
     }
 
     /// Resolves the popup text color.

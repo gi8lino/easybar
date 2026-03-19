@@ -22,6 +22,8 @@ final class MouseTrackingNSView: NSView {
     var widgetID: String = ""
 
     private var trackingArea: NSTrackingArea?
+    private var isMouseInside = false
+    private static let hoverState = HoverState()
 
     /// Accept the first click even when EasyBar is not active.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
@@ -59,13 +61,20 @@ final class MouseTrackingNSView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) {
+        guard !isMouseInside else { return }
+        isMouseInside = true
+        guard Self.hoverState.enter(widgetID: widgetID) else { return }
         Logger.debug("mouse entered widget=\(widgetID)")
         EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: widgetID)
     }
 
     override func mouseExited(with event: NSEvent) {
-        Logger.debug("mouse exited widget=\(widgetID)")
-        EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: widgetID)
+        guard isMouseInside else { return }
+        isMouseInside = false
+        Self.hoverState.exit(widgetID: widgetID) {
+            Logger.debug("mouse exited widget=\(self.widgetID)")
+            EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: self.widgetID)
+        }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -119,5 +128,45 @@ final class MouseTrackingNSView: NSView {
             deltaX: Double(event.scrollingDeltaX),
             deltaY: Double(event.scrollingDeltaY)
         )
+    }
+}
+
+private final class HoverState {
+
+    private let lock = NSLock()
+    private var hoveredWidgetIDs = Set<String>()
+    private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]
+
+    func enter(widgetID: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+
+        pendingExitWorkItems[widgetID]?.cancel()
+        pendingExitWorkItems[widgetID] = nil
+
+        let inserted = hoveredWidgetIDs.insert(widgetID).inserted
+        return inserted
+    }
+
+    func exit(widgetID: String, handler: @escaping () -> Void) {
+        lock.lock()
+        pendingExitWorkItems[widgetID]?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+
+            self.lock.lock()
+            let removed = self.hoveredWidgetIDs.remove(widgetID) != nil
+            self.pendingExitWorkItems[widgetID] = nil
+            self.lock.unlock()
+
+            guard removed else { return }
+            handler()
+        }
+
+        pendingExitWorkItems[widgetID] = workItem
+        lock.unlock()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
     }
 }

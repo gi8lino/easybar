@@ -26,6 +26,10 @@ BUILD_INFO := Sources/shared/BuildInfo.swift
 BUNDLE_ID ?= com.example.EasyBar
 VERSION ?= dev
 ARCH ?= universal
+CODESIGN_IDENTITY ?= -
+NOTARYTOOL_PROFILE ?=
+NOTARY_SUBMIT ?= 0
+NOTARY_ZIP := $(DIST_DIR)/$(APP_NAME)-notarize.zip
 
 VERSION_PREFIX ?= v
 LATEST_TAG := $(shell git tag --list '$(VERSION_PREFIX)*' --sort=-v:refname | head -n 1)
@@ -51,7 +55,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package release app cli clean clean-dist run dev \
-        build-app build-cli copy-resources verify stamp-plist sign \
+        build-app build-cli copy-resources verify stamp-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags
 
@@ -88,7 +92,8 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
-	@$(MAKE) --no-print-directory sign
+	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
+	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
 	@$(MAKE) --no-print-directory verify
 
 package: bundle ## Create the release ZIP consumed by the Homebrew cask.
@@ -145,8 +150,32 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 
-sign: ## Ad-hoc sign the bundle for local launching.
-	@codesign --force --deep --sign - "$(APP_BUNDLE)" >/dev/null 2>&1 || true
+sign: ## Sign the app bundle and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
+	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
+		echo "Signing artifacts with ad-hoc identity"; \
+		codesign --force --deep --sign - "$(APP_BUNDLE)"; \
+		codesign --force --sign - "$(CLI_BIN)"; \
+	else \
+		echo "Signing artifacts with $(CODESIGN_IDENTITY)"; \
+		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(APP_BUNDLE)"; \
+		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CLI_BIN)"; \
+	fi
+
+notarize: ## Notarize the app bundle when NOTARY_SUBMIT=1 and a keychain profile is configured.
+	@if [ "$(NOTARY_SUBMIT)" != "1" ]; then \
+		echo "Skipping notarization (NOTARY_SUBMIT=$(NOTARY_SUBMIT))"; \
+	elif [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
+		echo "Skipping notarization for ad-hoc signed build"; \
+	elif [ -z "$(NOTARYTOOL_PROFILE)" ]; then \
+		echo "NOTARYTOOL_PROFILE is required when NOTARY_SUBMIT=1"; \
+		exit 1; \
+	else \
+		echo "Submitting $(APP_BUNDLE) for notarization"; \
+		rm -f "$(NOTARY_ZIP)"; \
+		ditto -c -k --keepParent "$(APP_BUNDLE)" "$(NOTARY_ZIP)"; \
+		xcrun notarytool submit "$(NOTARY_ZIP)" --keychain-profile "$(NOTARYTOOL_PROFILE)" --wait; \
+		xcrun stapler staple "$(APP_BUNDLE)"; \
+	fi
 
 verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Built $(ARCH) artifacts:"

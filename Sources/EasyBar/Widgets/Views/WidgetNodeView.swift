@@ -74,13 +74,19 @@ struct WidgetNodeView: View {
                     }
                 }
             } else {
-                HStack(spacing: CGFloat(node.spacing ?? 6)) {
+                let content = HStack(spacing: CGFloat(node.spacing ?? 6)) {
                     ForEach(store.children(of: node.id)) { child in
                         WidgetNodeView(node: child)
                     }
                 }
                 .modifier(WidgetNodeStyle(node: node))
-                .overlay(WidgetMouseView(widgetID: node.root))
+
+                if node.parent == nil {
+                    content
+                        .overlay(WidgetMouseView(widgetID: node.root))
+                } else {
+                    content
+                }
             }
         }
     }
@@ -132,9 +138,6 @@ struct WidgetNodeView: View {
         content()
             .foregroundStyle(color(node.color))
             .modifier(WidgetNodeStyle(node: node))
-            .overlay(
-                WidgetMouseView(widgetID: node.root)
-            )
             .onHover { hovering in
                 anchorHovered = hovering
 

@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             case .reloadConfig:
                 Config.shared.reload()
+                self?.barWindowController?.reloadLayout()
                 WidgetRunner.shared.reload()
                 NativeWidgetRegistry.shared.reload()
                 self?.configFileWatcher.restart()

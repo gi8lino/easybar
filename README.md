@@ -52,6 +52,13 @@ Launch it:
 open -a EasyBar
 ```
 
+If macOS blocks the app with a Gatekeeper or malware verification warning, remove the quarantine attribute once and launch it again:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/EasyBar.app
+open -a EasyBar
+```
+
 This installs:
 
 - `EasyBar.app`
@@ -80,6 +87,24 @@ brew uninstall --cask gi8lino/tap/easybar
 EasyBar is an app, not a Homebrew background service.
 
 After launching it once, add it to macOS login items if you want it to start automatically at login.
+
+## Gatekeeper
+
+EasyBar is currently distributed as a normal app bundle through a custom Homebrew cask, not as a notarized Mac App Store app and not as a `brew services` background process.
+
+If Gatekeeper blocks launch after install, run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/EasyBar.app
+```
+
+Then launch it normally:
+
+```bash
+open -a EasyBar
+```
+
+This keeps Calendar and other app permissions attached to the real `EasyBar.app` bundle instead of trying to run the app through `brew services`.
 
 ## Built-in widgets
 
