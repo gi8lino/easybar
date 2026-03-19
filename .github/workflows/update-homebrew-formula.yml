@@ -54,13 +54,16 @@ jobs:
           FORMULA_FILE="homebrew-tap/Formula/easybar.rb"
           mkdir -p "$(dirname "${FORMULA_FILE}")"
 
-          cat > "${FORMULA_FILE}" <<'EOF'
+          VERSION="${{ steps.vars.outputs.version }}"
+          SHA="${{ steps.sha.outputs.sha }}"
+
+          cat > "${FORMULA_FILE}" <<EOF
           class Easybar < Formula
             desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
             homepage "https://github.com/gi8lino/easybar"
             url "https://github.com/gi8lino/easybar/releases/download/v#{version}/EasyBar-#{version}.zip"
-            sha256 "YOUR_SHA256"
-            version "YOUR_VERSION"
+            sha256 "${SHA}"
+            version "${VERSION}"
 
             depends_on macos: :sonoma
 
