@@ -11,72 +11,80 @@ struct SpacesWidgetView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: CGFloat(config.layout.spacing)) {
                 ForEach(aeroSpaceService.spaces) { space in
-                    Button {
-                        aeroSpaceService.focusWorkspace(space.name)
-                    } label: {
-                        HStack(spacing: 6) {
-                            if shouldShowLabel(for: space, config: config) {
-                                Text(space.name)
-                                    .font(.system(
-                                        size: CGFloat(config.text.size),
-                                        weight: config.text.resolvedWeight
-                                    ))
-                                    .foregroundStyle(
-                                        space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
-                                    )
-                            }
-
-                            if shouldShowIcons(for: space, config: config) {
-                                HStack(spacing: CGFloat(config.icons.spacing)) {
-                                    ForEach(visibleApps(for: space, config: config)) { app in
-                                        AppIconView(
-                                            app: app,
-                                            isFocusedApp: app.id == aeroSpaceService.focusedAppID
-                                        )
-                                    }
-
-                                    if hiddenAppCount(for: space, config: config) > 0 {
-                                        Text("+\(hiddenAppCount(for: space, config: config))")
-                                            .font(.system(
-                                                size: max(10, CGFloat(config.text.size) - 1),
-                                                weight: .medium
-                                            ))
-                                            .foregroundStyle(
-                                                space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
-                                            )
-                                    }
-                                }
-                            }
+                    spacePill(for: space, config: config)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            aeroSpaceService.focusWorkspace(space.name)
                         }
-                        .padding(.horizontal, resolvedPaddingX(for: space, config: config))
-                        .padding(.vertical, resolvedPaddingY(for: space, config: config))
-                        .background(
-                            space.isFocused
-                                ? Theme.spaceActiveBackground
-                                : Theme.spaceInactiveBackground
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
-                                .stroke(
-                                    space.isFocused
-                                        ? Theme.spaceActiveBorder
-                                        : Theme.spaceInactiveBorder,
-                                    lineWidth: 1
-                                )
-                        }
-                        .clipShape(
-                            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
-                        )
-                        .scaleEffect(space.isFocused ? CGFloat(config.layout.focusedScale) : 1.0)
-                        .opacity(space.isFocused ? 1.0 : config.layout.inactiveOpacity)
-                    }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, CGFloat(config.layout.marginX))
             .padding(.vertical, CGFloat(config.layout.marginY))
         }
         .fixedSize(horizontal: true, vertical: false)
+    }
+
+    /// Builds one tappable space pill without using Button styling.
+    @ViewBuilder
+    private func spacePill(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> some View {
+        HStack(spacing: 6) {
+            if shouldShowLabel(for: space, config: config) {
+                Text(space.name)
+                    .font(.system(
+                        size: CGFloat(config.text.size),
+                        weight: config.text.resolvedWeight
+                    ))
+                    .foregroundStyle(
+                        space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+                    )
+            }
+
+            if shouldShowIcons(for: space, config: config) {
+                HStack(spacing: CGFloat(config.icons.spacing)) {
+                    ForEach(visibleApps(for: space, config: config)) { app in
+                        AppIconView(
+                            app: app,
+                            isFocusedApp: app.id == aeroSpaceService.focusedAppID
+                        )
+                    }
+
+                    if hiddenAppCount(for: space, config: config) > 0 {
+                        Text("+\(hiddenAppCount(for: space, config: config))")
+                            .font(.system(
+                                size: max(10, CGFloat(config.text.size) - 1),
+                                weight: .medium
+                            ))
+                            .foregroundStyle(
+                                space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+                            )
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, resolvedPaddingX(for: space, config: config))
+        .padding(.vertical, resolvedPaddingY(for: space, config: config))
+        .background(
+            space.isFocused
+                ? Theme.spaceActiveBackground
+                : Theme.spaceInactiveBackground
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
+                .stroke(
+                    space.isFocused
+                        ? Theme.spaceActiveBorder
+                        : Theme.spaceInactiveBorder,
+                    lineWidth: 1
+                )
+        }
+        .clipShape(
+            RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
+        )
+        .scaleEffect(space.isFocused ? CGFloat(config.layout.focusedScale) : 1.0)
+        .opacity(space.isFocused ? 1.0 : config.layout.inactiveOpacity)
     }
 
     /// Returns whether the space label should be shown.
