@@ -8,8 +8,6 @@ final class NativeCalendarStore: ObservableObject {
     @Published private(set) var sections: [NativeCalendarPopupSection] = []
 
     private let eventStore = EKEventStore()
-    private var didRequestAccess = false
-
     private init() {}
 
     func refresh() {
@@ -22,8 +20,7 @@ final class NativeCalendarStore: ObservableObject {
             break
 
         case .notDetermined:
-            Logger.info("calendar popup refresh needs permission request")
-            requestAccessIfNeeded()
+            Logger.info("calendar popup refresh waiting for calendar access")
 
             DispatchQueue.main.async {
                 self.sections = []
@@ -216,49 +213,6 @@ final class NativeCalendarStore: ObservableObject {
 
         let value = title[title.index(after: open)..<close].trimmingCharacters(in: .whitespacesAndNewlines)
         return Int(value)
-    }
-
-    private func requestAccessIfNeeded() {
-        let status = EKEventStore.authorizationStatus(for: .event)
-
-        Logger.info("calendar popup access status=\(describeAuthorizationStatus(status))")
-
-        switch status {
-        case .fullAccess, .authorized:
-            Logger.info("calendar popup access already granted")
-
-        case .notDetermined:
-            guard !didRequestAccess else {
-                Logger.debug("calendar popup access request already attempted")
-                return
-            }
-
-            didRequestAccess = true
-            Logger.info("requesting calendar popup full access")
-
-            eventStore.requestFullAccessToEvents { granted, error in
-                let newStatus = EKEventStore.authorizationStatus(for: .event)
-
-                if let error {
-                    Logger.error("calendar popup access request failed status=\(self.describeAuthorizationStatus(newStatus)) error=\(error)")
-                    return
-                }
-
-                Logger.info("calendar popup access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
-
-                guard granted else { return }
-
-                DispatchQueue.main.async {
-                    self.refresh()
-                }
-            }
-
-        case .denied, .restricted, .writeOnly:
-            Logger.warn("calendar popup access unavailable status=\(describeAuthorizationStatus(status))")
-
-        @unknown default:
-            Logger.warn("calendar popup access status unknown raw=\(status.rawValue)")
-        }
     }
 
     private func normalizedTitle(_ value: String?) -> String {

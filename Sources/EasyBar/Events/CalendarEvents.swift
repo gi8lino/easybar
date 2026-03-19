@@ -74,6 +74,7 @@ final class CalendarEvents {
 
                 DispatchQueue.main.async {
                     EventBus.shared.emit(.calendarChange)
+                    NativeCalendarStore.shared.refresh()
                 }
             }
 
