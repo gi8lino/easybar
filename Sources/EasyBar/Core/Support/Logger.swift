@@ -8,9 +8,56 @@ enum Logger {
         f.dateFormat = "HH:mm:ss.SSS"
         return f
     }()
+    private static let lock = NSLock()
+    private static var fileHandle: FileHandle?
 
     static var debugEnabled: Bool {
         Config.shared.environmentDebugEnabled()
+    }
+
+    /// Configures optional mirroring of logs into one file.
+    static func configureFileLogging(enabled: Bool, path: String) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        fileHandle?.closeFile()
+        fileHandle = nil
+
+        guard enabled, !path.isEmpty else { return }
+
+        let url = URL(fileURLWithPath: path)
+        let directoryURL = url.deletingLastPathComponent()
+
+        do {
+            try FileManager.default.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true,
+                attributes: nil
+            )
+
+            if !FileManager.default.fileExists(atPath: url.path) {
+                FileManager.default.createFile(atPath: url.path, contents: nil)
+            }
+
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.seekToEnd()
+            fileHandle = handle
+
+            let line = formattedLine(
+                level: "INFO",
+                message: "file logging enabled path=\(url.path)"
+            )
+            fputs(line + "\n", stdout)
+            fflush(stdout)
+            try handle.write(contentsOf: Data((line + "\n").utf8))
+        } catch {
+            let line = formattedLine(
+                level: "WARN",
+                message: "failed to open log file at \(path): \(error)"
+            )
+            fputs(line + "\n", stderr)
+            fflush(stderr)
+        }
     }
 
     /// Writes one debug message when debug logging is enabled.
@@ -39,6 +86,7 @@ enum Logger {
         let line = formattedLine(level: level, message: message)
         fputs(line + "\n", stdout)
         fflush(stdout)
+        writeFile(line)
     }
 
     /// Writes one formatted log line to stderr.
@@ -46,10 +94,27 @@ enum Logger {
         let line = formattedLine(level: level, message: message)
         fputs(line + "\n", stderr)
         fflush(stderr)
+        writeFile(line)
     }
 
     /// Returns one formatted log line.
     private static func formattedLine(level: String, message: String) -> String {
         "[\(formatter.string(from: Date()))] easybar [\(level)] \(message)"
+    }
+
+    private static func writeFile(_ line: String) {
+        guard let data = (line + "\n").data(using: .utf8) else { return }
+
+        lock.lock()
+        defer { lock.unlock() }
+
+        do {
+            try fileHandle?.write(contentsOf: data)
+        } catch {
+            fputs(formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n", stderr)
+            fflush(stderr)
+            fileHandle?.closeFile()
+            fileHandle = nil
+        }
     }
 }

@@ -11,6 +11,8 @@ final class Config {
     var widgetsPath: String = ""
     var luaPath: String = "/usr/local/bin/lua"
     var watchConfigFile: Bool = true
+    var loggingEnabled: Bool = false
+    var loggingPath: String = ""
 
     // MARK: - Bar
 
@@ -79,12 +81,16 @@ final class Config {
         widgetsPath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".config/easybar/widgets")
             .path
+        loggingPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/state/easybar/easybar.out")
+            .path
     }
 
     /// Restores all static defaults before parsing again.
     func resetAllToDefaults() {
         luaPath = "/usr/local/bin/lua"
         watchConfigFile = true
+        loggingEnabled = false
 
         barHeight = 32
         barPaddingX = 10
@@ -109,6 +115,8 @@ final class Config {
             widgetsPath: widgetsPath,
             luaPath: luaPath,
             watchConfigFile: watchConfigFile,
+            loggingEnabled: loggingEnabled,
+            loggingPath: loggingPath,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
             barExtendBehindNotch: barExtendBehindNotch,
@@ -130,6 +138,8 @@ final class Config {
         widgetsPath = snapshot.widgetsPath
         luaPath = snapshot.luaPath
         watchConfigFile = snapshot.watchConfigFile
+        loggingEnabled = snapshot.loggingEnabled
+        loggingPath = snapshot.loggingPath
 
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX

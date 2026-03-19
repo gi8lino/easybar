@@ -22,6 +22,21 @@ extension Config {
         }
     }
 
+    /// Parses logging settings.
+    func parseLogging(from toml: TOMLTable) throws {
+        guard let logging = toml["logging"]?.table else { return }
+
+        if let value = logging["enabled"] {
+            loggingEnabled = try requiredBool(value, path: "logging.enabled")
+        }
+
+        if let value = logging["path"] {
+            loggingPath = NSString(
+                string: try requiredString(value, path: "logging.path")
+            ).expandingTildeInPath
+        }
+    }
+
     /// Parses bar-level settings.
     func parseBar(from toml: TOMLTable) throws {
         guard let bar = toml["bar"]?.table else { return }

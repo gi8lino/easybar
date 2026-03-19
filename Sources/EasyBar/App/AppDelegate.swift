@@ -9,6 +9,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        Logger.configureFileLogging(
+            enabled: Config.shared.loggingEnabled,
+            path: Config.shared.loggingPath
+        )
 
         logStartup()
 
@@ -37,6 +41,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             case .reloadConfig:
                 Config.shared.reload()
+                Logger.configureFileLogging(
+                    enabled: Config.shared.loggingEnabled,
+                    path: Config.shared.loggingPath
+                )
                 self?.barWindowController?.reloadLayout()
                 WidgetRunner.shared.reload()
                 NativeWidgetRegistry.shared.reload()
