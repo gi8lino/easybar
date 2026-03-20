@@ -8,7 +8,7 @@ final class CalendarEvents {
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
     private var didRequestAccess = false
-    private(set) var accessGrantedInProcess = false
+    private let authState = CalendarAuthorizationState.shared
 
     private init() {}
 
@@ -19,7 +19,9 @@ final class CalendarEvents {
         }
 
         Logger.info("calendar events subscribe requested")
-        Logger.info("calendar events authorization status before subscribe=\(describeAuthorizationStatus(EKEventStore.authorizationStatus(for: .event)))")
+        let status = EKEventStore.authorizationStatus(for: .event)
+        authState.setStatus(status)
+        Logger.info("calendar events authorization status before subscribe=\(authState.describe(status))")
 
         requestAccessIfNeeded()
 
@@ -45,12 +47,12 @@ final class CalendarEvents {
 
     private func requestAccessIfNeeded() {
         let status = EKEventStore.authorizationStatus(for: .event)
+        authState.setStatus(status)
 
-        Logger.info("calendar access status=\(describeAuthorizationStatus(status))")
+        Logger.info("calendar access status=\(authState.describe(status))")
 
         switch status {
         case .fullAccess, .authorized:
-            accessGrantedInProcess = true
             Logger.info("calendar access already granted")
 
         case .notDetermined:
@@ -64,16 +66,17 @@ final class CalendarEvents {
 
             store.requestFullAccessToEvents { granted, error in
                 let newStatus = EKEventStore.authorizationStatus(for: .event)
+                self.authState.setStatus(newStatus)
 
                 if let error {
-                    Logger.error("calendar access request failed status=\(self.describeAuthorizationStatus(newStatus)) error=\(error)")
+                    Logger.error("calendar access request failed status=\(self.authState.describe(newStatus)) error=\(error)")
                     return
                 }
 
-                Logger.info("calendar access request completed granted=\(granted) status=\(self.describeAuthorizationStatus(newStatus))")
+                Logger.info("calendar access request completed granted=\(granted) status=\(self.authState.describe(newStatus))")
 
                 guard granted else { return }
-                self.accessGrantedInProcess = true
+                self.authState.markGrantedInProcess()
 
                 DispatchQueue.main.async {
                     EventBus.shared.emit(.calendarChange)
@@ -82,29 +85,10 @@ final class CalendarEvents {
             }
 
         case .denied, .restricted, .writeOnly:
-            Logger.warn("calendar access unavailable status=\(describeAuthorizationStatus(status))")
+            Logger.warn("calendar access unavailable status=\(authState.describe(status))")
 
         @unknown default:
             Logger.warn("calendar access status unknown raw=\(status.rawValue)")
-        }
-    }
-
-    private func describeAuthorizationStatus(_ status: EKAuthorizationStatus) -> String {
-        switch status {
-        case .notDetermined:
-            return "not_determined"
-        case .restricted:
-            return "restricted"
-        case .denied:
-            return "denied"
-        case .authorized:
-            return "authorized"
-        case .fullAccess:
-            return "full_access"
-        case .writeOnly:
-            return "write_only"
-        @unknown default:
-            return "unknown(\(status.rawValue))"
         }
     }
 }

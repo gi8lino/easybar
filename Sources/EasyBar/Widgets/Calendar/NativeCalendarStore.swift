@@ -8,16 +8,16 @@ final class NativeCalendarStore: ObservableObject {
     @Published private(set) var sections: [NativeCalendarPopupSection] = []
 
     private let eventStore = EKEventStore()
+    private let authState = CalendarAuthorizationState.shared
     private init() {}
 
     func refresh() {
         let status = EKEventStore.authorizationStatus(for: .event)
-        let hasAccess = status == .fullAccess
-            || status == .authorized
-            || CalendarEvents.shared.accessGrantedInProcess
+        authState.setStatus(status)
+        let hasAccess = authState.effectiveAccessGranted()
 
         Logger.debug(
-            "calendar popup refresh status=\(describeAuthorizationStatus(status)) effective_access=\(hasAccess)"
+            "calendar popup refresh status=\(authState.describeCurrentStatus()) effective_access=\(hasAccess)"
         )
 
         if !hasAccess {
@@ -31,7 +31,7 @@ final class NativeCalendarStore: ObservableObject {
                 return
 
             case .denied, .restricted, .writeOnly:
-                Logger.warn("calendar popup refresh blocked status=\(describeAuthorizationStatus(status))")
+                Logger.warn("calendar popup refresh blocked status=\(authState.describe(status))")
 
                 DispatchQueue.main.async {
                     self.sections = []
@@ -92,7 +92,7 @@ final class NativeCalendarStore: ObservableObject {
             }
 
             let dayEvents = events.filter { event in
-                event.startDate >= day && event.startDate < nextDay
+                event.startDate < nextDay && event.endDate > day
             }
 
             let title: String
@@ -242,24 +242,5 @@ final class NativeCalendarStore: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         return formatter.string(from: date)
-    }
-
-    private func describeAuthorizationStatus(_ status: EKAuthorizationStatus) -> String {
-        switch status {
-        case .notDetermined:
-            return "not_determined"
-        case .restricted:
-            return "restricted"
-        case .denied:
-            return "denied"
-        case .authorized:
-            return "authorized"
-        case .fullAccess:
-            return "full_access"
-        case .writeOnly:
-            return "write_only"
-        @unknown default:
-            return "unknown(\(status.rawValue))"
-        }
     }
 }
