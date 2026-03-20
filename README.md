@@ -28,7 +28,7 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Event-driven widget updates
 - Hoverable popups and interactive widgets
 - Fast reload flow for config and widgets
-- Homebrew Cask install and upgrade flow
+- Homebrew formula install and upgrade flow
 
 ## Install
 
@@ -43,26 +43,28 @@ brew tap gi8lino/tap
 Install EasyBar:
 
 ```bash
-brew install --cask gi8lino/tap/easybar
+brew install gi8lino/tap/easybar
 ```
 
-Launch it:
+Start it:
 
 ```bash
-open -a EasyBar
+brew services start gi8lino/tap/easybar
 ```
 
-If macOS blocks the app with a Gatekeeper or malware verification warning, remove the quarantine attribute once and launch it again:
+If macOS blocks the app or CLI with a Gatekeeper or malware verification warning, remove quarantine and start it again:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/EasyBar.app
-open -a EasyBar
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
+xattr -d com.apple.quarantine "$(command -v easybarctl)"
+brew services start gi8lino/tap/easybar
 ```
 
 This installs:
 
-- `EasyBar.app`
-- `easybarctl`
+- `EasyBar.app` under `$(brew --prefix)/opt/easybar/libexec/EasyBar.app`
+- `easybar` in your `PATH`
+- `easybarctl` in your `PATH`
 
 You can check the CLI path with:
 
@@ -73,38 +75,46 @@ command -v easybarctl
 ## Upgrade
 
 ```bash
-brew upgrade --cask gi8lino/tap/easybar
+brew upgrade gi8lino/tap/easybar
 ```
 
 ## Uninstall
 
 ```bash
-brew uninstall --cask gi8lino/tap/easybar
+brew services stop gi8lino/tap/easybar
+brew uninstall gi8lino/tap/easybar
 ```
 
 ## Start at login
 
-EasyBar is an app, not a Homebrew background service.
+EasyBar runs through Homebrew services in this install mode.
 
-After launching it once, add it to macOS login items if you want it to start automatically at login.
+Use:
+
+```bash
+brew services start gi8lino/tap/easybar
+brew services stop gi8lino/tap/easybar
+brew services restart gi8lino/tap/easybar
+```
 
 ## Gatekeeper
 
-EasyBar is currently distributed as a normal app bundle through a custom Homebrew cask, not as a notarized Mac App Store app and not as a `brew services` background process.
+EasyBar is currently distributed through a custom Homebrew formula and can run through `brew services`.
 
 If Gatekeeper blocks launch after install, run:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/EasyBar.app
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
+xattr -d com.apple.quarantine "$(command -v easybarctl)"
 ```
 
-Then launch it normally:
+Then start it again:
 
 ```bash
-open -a EasyBar
+brew services start gi8lino/tap/easybar
 ```
 
-This keeps Calendar and other app permissions attached to the real `EasyBar.app` bundle instead of trying to run the app through `brew services`.
+This installs the app bundle under Homebrew `libexec` and starts it through `brew services`.
 
 ## Built-in widgets
 

@@ -96,7 +96,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
 	@$(MAKE) --no-print-directory verify
 
-package: bundle ## Create the release ZIP consumed by the Homebrew cask.
+package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
