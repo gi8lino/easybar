@@ -84,7 +84,7 @@ struct WidgetNodeView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .foregroundStyle(color(node.color))
+            .foregroundStyle(nodeColor)
             .modifier(WidgetNodeStyle(node: node))
             .onHover { hovering in handleAnchorHover(hovering) }
             .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
@@ -108,7 +108,7 @@ struct WidgetNodeView: View {
                 }
             }
         }
-        .foregroundStyle(color(node.color))
+        .foregroundStyle(nodeColor)
         .modifier(WidgetNodeStyle(node: node))
         .overlay(
             WidgetMouseView(widgetID: node.root)
