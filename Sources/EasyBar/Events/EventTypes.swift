@@ -120,8 +120,8 @@ struct EasyBarEventPayload {
         put(&payload, key: "widget", value: widgetID)
         put(&payload, key: "app", value: appName)
         put(&payload, key: "interface", value: interfaceName)
-        put(&payload, key: "button", value: button?.rawValue)
-        put(&payload, key: "direction", value: direction?.rawValue)
+        put(&payload, key: "button", value: buttonName)
+        put(&payload, key: "direction", value: directionName)
         put(&payload, key: "charging", value: charging)
         put(&payload, key: "muted", value: muted)
         put(&payload, key: "value", value: value)
@@ -185,6 +185,16 @@ struct EasyBarEventPayload {
         let name = eventName
         guard !name.isEmpty else { return nil }
         return name
+    }
+
+    /// Returns the raw mouse button name.
+    private var buttonName: String? {
+        button?.rawValue
+    }
+
+    /// Returns the raw scroll direction name.
+    private var directionName: String? {
+        direction?.rawValue
     }
 }
 
