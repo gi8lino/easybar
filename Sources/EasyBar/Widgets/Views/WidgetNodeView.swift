@@ -16,24 +16,40 @@ struct WidgetNodeView: View {
             if !node.visible {
                 EmptyView()
             } else {
-                if node.kind.isRowLikeContainer {
-                    rowOrGroupView
-                } else if node.kind.isCustomRenderedKind {
-                    customRenderedNodeView
-                } else if node.kind.isDedicatedContainerKind {
-                    dedicatedContainerNodeView
-                } else if node.kind.isInteractiveKind {
-                    interactiveNodeView
-                } else {
-                    switch node.kind {
-                    case .item:
-                        itemView
-                    case .row, .group, .column, .spaces, .popup, .slider, .progressSlider, .progress, .sparkline:
-                        EmptyView()
-                    }
-                }
+                renderedNodeView
             }
         }
+    }
+
+    /// Returns the rendered view for the current node kind.
+    @ViewBuilder
+    private var renderedNodeView: some View {
+        if node.kind.isRowLikeContainer {
+            rowOrGroupView
+            return
+        }
+
+        if node.kind.isCustomRenderedKind {
+            customRenderedNodeView
+            return
+        }
+
+        if node.kind.isDedicatedContainerKind {
+            dedicatedContainerNodeView
+            return
+        }
+
+        if node.kind.isInteractiveKind {
+            interactiveNodeView
+            return
+        }
+
+        if node.kind == .item {
+            itemView
+            return
+        }
+
+        EmptyView()
     }
 
     /// Returns the custom-rendered view for the current node kind.
