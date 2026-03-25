@@ -36,24 +36,16 @@ struct WidgetNodeView: View {
                     popupAnchor
 
                 case .slider:
-                    sliderView
-                        .modifier(WidgetNodeStyle(node: node))
-                        .overlay(WidgetMouseView(widgetID: node.root))
+                    interactiveContent(sliderView)
 
                 case .progressSlider:
-                    progressSliderView
-                        .modifier(WidgetNodeStyle(node: node))
-                        .overlay(WidgetMouseView(widgetID: node.root))
+                    interactiveContent(progressSliderView)
 
                 case .progress:
-                    progressView
-                        .modifier(WidgetNodeStyle(node: node))
-                        .overlay(WidgetMouseView(widgetID: node.root))
+                    interactiveContent(progressView)
 
                 case .sparkline:
-                    sparklineView
-                        .modifier(WidgetNodeStyle(node: node))
-                        .overlay(WidgetMouseView(widgetID: node.root))
+                    interactiveContent(sparklineView)
 
                 case .item:
                     itemView
@@ -66,99 +58,23 @@ struct WidgetNodeView: View {
         Group {
             if node.id == "builtin_calendar" {
                 nativeCalendarAnchorView {
-                    HStack(spacing: CGFloat(node.spacing ?? 6)) {
-                        ForEach(store.children(of: node.id)) { child in
-                            WidgetNodeView(node: child)
-                        }
-                    }
+                    childRow
                 }
             } else {
-                let content = HStack(spacing: CGFloat(node.spacing ?? 6)) {
-                    ForEach(store.children(of: node.id)) { child in
-                        WidgetNodeView(node: child)
-                    }
-                }
-                .modifier(WidgetNodeStyle(node: node))
-
-                if node.parent == nil {
-                    content
-                        .overlay(WidgetMouseView(widgetID: node.root))
-                } else {
-                    content
-                }
+                maybeOverlayMouse(childRow.modifier(WidgetNodeStyle(node: node)))
             }
         }
     }
 
     private var itemView: some View {
         let content = HStack(spacing: CGFloat(node.spacing ?? 4)) {
-            if let imagePath = node.imagePath, !imagePath.isEmpty {
-                let customImage = NSImage(contentsOfFile: imagePath)
-                let image = customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
-                let tintedImage: NSImage? = {
-                    guard customImage != nil,
-                          let tint = node.iconColor ?? node.color,
-                          !tint.isEmpty else {
-                        return nil
-                    }
-
-                    let templated = image.copy() as? NSImage ?? image
-                    templated.isTemplate = true
-                    return templated
-                }()
-
-                if let tintedImage, let tint = node.iconColor ?? node.color, !tint.isEmpty {
-                    Image(nsImage: tintedImage)
-                        .renderingMode(.template)
-                        .resizable()
-                        .interpolation(.high)
-                        .foregroundStyle(color(tint))
-                        .frame(
-                            width: CGFloat(node.imageSize ?? 14),
-                            height: CGFloat(node.imageSize ?? 14)
-                        )
-                        .clipShape(
-                            RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
-                        )
-                } else {
-                    Image(nsImage: image)
-                        .renderingMode(.original)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(
-                            width: CGFloat(node.imageSize ?? 14),
-                            height: CGFloat(node.imageSize ?? 14)
-                        )
-                        .clipShape(
-                            RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
-                        )
-                }
-            }
-
-            if !node.icon.isEmpty {
-                Text(node.icon)
-                    .font(font(size: node.iconFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.iconColor ?? node.color))
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-                    .font(font(size: node.labelFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.labelColor ?? node.color))
-            }
+            imageView
+            iconText
+            labelText
         }
         .modifier(WidgetNodeStyle(node: node))
 
-        return Group {
-            if node.root == "builtin_calendar" {
-                content
-            } else if node.parent == nil {
-                content
-                    .overlay(WidgetMouseView(widgetID: node.root))
-            } else {
-                content
-            }
-        }
+        return maybeOverlayMouse(content)
     }
 
     private func nativeCalendarAnchorView<Content: View>(
@@ -194,13 +110,8 @@ struct WidgetNodeView: View {
         Group {
             if store.anchorChildren(of: node.id).isEmpty {
                 HStack(spacing: CGFloat(node.spacing ?? 4)) {
-                    if !node.icon.isEmpty {
-                        Text(node.icon)
-                    }
-
-                    if !node.text.isEmpty {
-                        Text(node.text)
-                    }
+                    iconText
+                    labelText
                 }
             } else {
                 VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 4)) {
@@ -249,17 +160,8 @@ struct WidgetNodeView: View {
 
     private var sliderView: some View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-                    .font(font(size: node.iconFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.iconColor ?? node.color))
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-                    .font(font(size: node.labelFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.labelColor ?? node.color))
-            }
+            iconText
+            labelText
 
             SliderWidgetView(
                 rootWidgetID: node.root,
@@ -275,17 +177,8 @@ struct WidgetNodeView: View {
 
     private var progressSliderView: some View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-                    .font(font(size: node.iconFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.iconColor ?? node.color))
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-                    .font(font(size: node.labelFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.labelColor ?? node.color))
-            }
+            iconText
+            labelText
 
             ProgressSliderWidgetView(
                 rootWidgetID: node.root,
@@ -301,17 +194,8 @@ struct WidgetNodeView: View {
 
     private var progressView: some View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-                    .font(font(size: node.iconFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.iconColor ?? node.color))
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-                    .font(font(size: node.labelFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.labelColor ?? node.color))
-            }
+            iconText
+            labelText
 
             ProgressBarCanvas(
                 value: node.value ?? 0,
@@ -325,17 +209,8 @@ struct WidgetNodeView: View {
 
     private var sparklineView: some View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
-            if !node.icon.isEmpty {
-                Text(node.icon)
-                    .font(font(size: node.iconFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.iconColor ?? node.color))
-            }
-
-            if !node.text.isEmpty {
-                Text(node.text)
-                    .font(font(size: node.labelFontSize ?? node.fontSize))
-                    .foregroundStyle(color(node.labelColor ?? node.color))
-            }
+            iconText
+            labelText
 
             SparklineCanvas(
                 values: node.values ?? [],
@@ -370,6 +245,96 @@ struct WidgetNodeView: View {
                 popupPresented = false
             }
         }
+    }
+
+    private var childRow: some View {
+        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+            ForEach(store.children(of: node.id)) { child in
+                WidgetNodeView(node: child)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var imageView: some View {
+        if let imagePath = node.imagePath, !imagePath.isEmpty {
+            let customImage = NSImage(contentsOfFile: imagePath)
+            let image = customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+
+            if let tintedImage = tintedImage(from: image, customImage: customImage) {
+                Image(nsImage: tintedImage)
+                    .renderingMode(.template)
+                    .resizable()
+                    .interpolation(.high)
+                    .foregroundStyle(color(node.iconColor ?? node.color))
+                    .frame(
+                        width: CGFloat(node.imageSize ?? 14),
+                        height: CGFloat(node.imageSize ?? 14)
+                    )
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
+                    )
+            } else {
+                Image(nsImage: image)
+                    .renderingMode(.original)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(
+                        width: CGFloat(node.imageSize ?? 14),
+                        height: CGFloat(node.imageSize ?? 14)
+                    )
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var iconText: some View {
+        if !node.icon.isEmpty {
+            Text(node.icon)
+                .font(font(size: node.iconFontSize ?? node.fontSize))
+                .foregroundStyle(color(node.iconColor ?? node.color))
+        }
+    }
+
+    @ViewBuilder
+    private var labelText: some View {
+        if !node.text.isEmpty {
+            Text(node.text)
+                .font(font(size: node.labelFontSize ?? node.fontSize))
+                .foregroundStyle(color(node.labelColor ?? node.color))
+        }
+    }
+
+    @ViewBuilder
+    private func interactiveContent<Content: View>(_ content: Content) -> some View {
+        content
+            .modifier(WidgetNodeStyle(node: node))
+            .overlay(WidgetMouseView(widgetID: node.root))
+    }
+
+    @ViewBuilder
+    private func maybeOverlayMouse<Content: View>(_ content: Content) -> some View {
+        if node.root == "builtin_calendar" || node.parent != nil {
+            content
+        } else {
+            content
+                .overlay(WidgetMouseView(widgetID: node.root))
+        }
+    }
+
+    private func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
+        guard customImage != nil,
+              let tint = node.iconColor ?? node.color,
+              !tint.isEmpty else {
+            return nil
+        }
+
+        let templated = image.copy() as? NSImage ?? image
+        templated.isTemplate = true
+        return templated
     }
 }
 
