@@ -21,7 +21,7 @@ struct WidgetNodeView: View {
                 } else {
                     switch node.kind {
                     case .column:
-                    VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
+                    VStack(alignment: .leading, spacing: stackSpacing) {
                         ForEach(store.children(of: node.id)) { child in
                             WidgetNodeView(node: child)
                         }
@@ -70,7 +70,7 @@ struct WidgetNodeView: View {
     }
 
     private var itemView: some View {
-        let content = HStack(spacing: CGFloat(node.spacing ?? 4)) {
+        let content = HStack(spacing: itemSpacing) {
             imageView
             iconText
             labelText
@@ -98,12 +98,12 @@ struct WidgetNodeView: View {
     private var popupAnchor: some View {
         Group {
             if anchorChildren.isEmpty {
-                HStack(spacing: CGFloat(node.spacing ?? 4)) {
+                HStack(spacing: itemSpacing) {
                     iconText
                     labelText
                 }
             } else {
-                VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 4)) {
+                VStack(alignment: .leading, spacing: itemSpacing) {
                     ForEach(anchorChildren) { child in
                         WidgetNodeView(node: child)
                     }
@@ -122,7 +122,7 @@ struct WidgetNodeView: View {
     }
 
     private var popupContent: some View {
-        VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
+        VStack(alignment: .leading, spacing: stackSpacing) {
             ForEach(children) { child in
                 WidgetNodeView(node: child)
             }
@@ -134,7 +134,7 @@ struct WidgetNodeView: View {
     }
 
     private var sliderView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+        HStack(spacing: stackSpacing) {
             iconText
             labelText
 
@@ -151,7 +151,7 @@ struct WidgetNodeView: View {
     }
 
     private var progressSliderView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+        HStack(spacing: stackSpacing) {
             iconText
             labelText
 
@@ -168,7 +168,7 @@ struct WidgetNodeView: View {
     }
 
     private var progressView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+        HStack(spacing: stackSpacing) {
             iconText
             labelText
 
@@ -183,7 +183,7 @@ struct WidgetNodeView: View {
     }
 
     private var sparklineView: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+        HStack(spacing: stackSpacing) {
             iconText
             labelText
 
@@ -248,11 +248,21 @@ struct WidgetNodeView: View {
     }
 
     private var childRow: some View {
-        HStack(spacing: CGFloat(node.spacing ?? 6)) {
+        HStack(spacing: stackSpacing) {
             ForEach(children) { child in
                 WidgetNodeView(node: child)
             }
         }
+    }
+
+    /// Returns the default stack spacing for this node.
+    private var stackSpacing: CGFloat {
+        CGFloat(node.spacing ?? 6)
+    }
+
+    /// Returns the default item spacing for this node.
+    private var itemSpacing: CGFloat {
+        CGFloat(node.spacing ?? 4)
     }
 
     /// Returns the non-anchor children for this node.
