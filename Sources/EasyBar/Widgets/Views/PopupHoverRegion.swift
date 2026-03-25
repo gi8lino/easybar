@@ -35,20 +35,7 @@ final class PopupHoverNSView: NSView {
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-
-        if let trackingArea {
-            removeTrackingArea(trackingArea)
-        }
-
-        let options: NSTrackingArea.Options = [
-            .mouseEnteredAndExited,
-            .activeAlways,
-            .inVisibleRect
-        ]
-
-        let area = NSTrackingArea(rect: .zero, options: options, owner: self, userInfo: nil)
-        addTrackingArea(area)
-        trackingArea = area
+        replaceTrackingArea()
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -57,5 +44,34 @@ final class PopupHoverNSView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         hoverChanged?(false)
+    }
+
+    /// Replaces the current tracking area with the standard hover configuration.
+    private func replaceTrackingArea() {
+        removeTrackingAreaIfNeeded()
+
+        let area = NSTrackingArea(
+            rect: .zero,
+            options: trackingOptions,
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    /// Removes the current tracking area when present.
+    private func removeTrackingAreaIfNeeded() {
+        guard let trackingArea else { return }
+        removeTrackingArea(trackingArea)
+    }
+
+    /// Returns the hover tracking options used by the popup region.
+    private var trackingOptions: NSTrackingArea.Options {
+        [
+            .mouseEnteredAndExited,
+            .activeAlways,
+            .inVisibleRect
+        ]
     }
 }
