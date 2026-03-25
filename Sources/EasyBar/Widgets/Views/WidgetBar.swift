@@ -7,9 +7,14 @@ struct WidgetBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(store.topLevelNodes(for: position)) { node in
+            ForEach(topLevelNodes) { node in
                 WidgetNodeView(node: node)
             }
         }
+    }
+
+    /// Returns the rendered top-level nodes for this bar position.
+    private var topLevelNodes: [WidgetNodeState] {
+        store.topLevelNodes(for: position)
     }
 }
