@@ -93,16 +93,46 @@ struct WidgetNodeView: View {
     private var itemView: some View {
         let content = HStack(spacing: CGFloat(node.spacing ?? 4)) {
             if let imagePath = node.imagePath, !imagePath.isEmpty {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: imagePath))
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(
-                        width: CGFloat(node.imageSize ?? 14),
-                        height: CGFloat(node.imageSize ?? 14)
-                    )
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
-                    )
+                let customImage = NSImage(contentsOfFile: imagePath)
+                let image = customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+                let tintedImage: NSImage? = {
+                    guard customImage != nil,
+                          let tint = node.iconColor ?? node.color,
+                          !tint.isEmpty else {
+                        return nil
+                    }
+
+                    let templated = image.copy() as? NSImage ?? image
+                    templated.isTemplate = true
+                    return templated
+                }()
+
+                if let tintedImage, let tint = node.iconColor ?? node.color, !tint.isEmpty {
+                    Image(nsImage: tintedImage)
+                        .renderingMode(.template)
+                        .resizable()
+                        .interpolation(.high)
+                        .foregroundStyle(color(tint))
+                        .frame(
+                            width: CGFloat(node.imageSize ?? 14),
+                            height: CGFloat(node.imageSize ?? 14)
+                        )
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
+                        )
+                } else {
+                    Image(nsImage: image)
+                        .renderingMode(.original)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(
+                            width: CGFloat(node.imageSize ?? 14),
+                            height: CGFloat(node.imageSize ?? 14)
+                        )
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
+                        )
+                }
             }
 
             if !node.icon.isEmpty {

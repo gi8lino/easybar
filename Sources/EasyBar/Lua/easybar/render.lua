@@ -82,6 +82,42 @@ local function resolve_icon_font_size(props)
 	return nil
 end
 
+local function resolve_image_path(props)
+	if type(props.icon) == "table" and type(props.icon.image) == "string" then
+		return props.icon.image
+	end
+
+	if type(props.image) == "table" and type(props.image.path) == "string" then
+		return props.image.path
+	end
+
+	return nil
+end
+
+local function resolve_image_size(props)
+	if type(props.icon) == "table" and props.icon.image_size ~= nil then
+		return tonumber(props.icon.image_size)
+	end
+
+	if type(props.image) == "table" and props.image.size ~= nil then
+		return tonumber(props.image.size)
+	end
+
+	return nil
+end
+
+local function resolve_image_corner_radius(props)
+	if type(props.icon) == "table" and props.icon.image_corner_radius ~= nil then
+		return tonumber(props.icon.image_corner_radius)
+	end
+
+	if type(props.image) == "table" and props.image.corner_radius ~= nil then
+		return tonumber(props.image.corner_radius)
+	end
+
+	return nil
+end
+
 local function resolve_spacing(props)
 	if props.spacing ~= nil then
 		return tonumber(props.spacing)
@@ -141,6 +177,9 @@ local function make_node(id, item, root_position, children)
 		color = resolve_color(props),
 		iconColor = resolve_icon_color(props),
 		labelColor = resolve_label_color(props),
+		imagePath = resolve_image_path(props),
+		imageSize = resolve_image_size(props),
+		imageCornerRadius = resolve_image_corner_radius(props),
 		iconFontSize = resolve_icon_font_size(props),
 		labelFontSize = resolve_label_font_size(props),
 		visible = resolve_drawing(props, true),
@@ -187,6 +226,9 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		color = node.color or "",
 		iconColor = node.iconColor,
 		labelColor = node.labelColor,
+		imagePath = node.imagePath,
+		imageSize = tonumber(node.imageSize),
+		imageCornerRadius = tonumber(node.imageCornerRadius),
 		iconFontSize = tonumber(node.iconFontSize),
 		labelFontSize = tonumber(node.labelFontSize),
 		visible = node.visible ~= false,

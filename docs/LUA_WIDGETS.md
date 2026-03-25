@@ -238,9 +238,22 @@ easybar.log("warn", "vpn name missing")
 ### `icon`
 
 - `icon.string`
+- `icon.image`
+- `icon.image_size`
+- `icon.image_corner_radius`
 - `icon.color`
 - `icon.font.size`
 - `icon.padding_right`
+
+Example:
+
+```lua
+icon = {
+	image = os.getenv("WIREGUARD_LOGO_PATH"),
+	image_size = 16,
+	image_corner_radius = 0,
+}
+```
 
 ### `label`
 
