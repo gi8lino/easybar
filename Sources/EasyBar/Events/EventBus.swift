@@ -64,12 +64,17 @@ final class EventBus {
 
     /// Encodes and forwards one payload to the Lua runtime.
     private func sendToLua(_ payload: EasyBarEventPayload) {
-        guard let encoded = encodeJSON(payload.toDictionary()) else {
+        guard let encoded = encodedPayload(payload) else {
             Logger.error("failed to encode lua event payload")
             return
         }
 
         runtime.send(encoded)
+    }
+
+    /// Returns the encoded Lua payload string.
+    private func encodedPayload(_ payload: EasyBarEventPayload) -> String? {
+        encodeJSON(payload.toDictionary())
     }
 
     /// Encodes one event payload as JSON for the Lua runtime.
