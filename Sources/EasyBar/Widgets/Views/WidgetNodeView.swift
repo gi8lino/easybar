@@ -89,9 +89,7 @@ struct WidgetNodeView: View {
             .onHover { hovering in handleAnchorHover(hovering) }
             .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
                 NativeCalendarPopupView()
-                    .background(
-                        PopupHoverRegion { hovering in handlePopupHover(hovering) }
-                    )
+                    .background(popupHoverBackground)
             }
     }
 
@@ -128,9 +126,7 @@ struct WidgetNodeView: View {
             }
         }
         .modifier(WidgetNodeStyle(node: node))
-        .background(
-            PopupHoverRegion { hovering in handlePopupHover(hovering) }
-        )
+        .background(popupHoverBackground)
     }
 
     private var sliderView: some View {
@@ -333,6 +329,11 @@ struct WidgetNodeView: View {
     /// Returns whether this node has popup anchor children.
     private var hasAnchorChildren: Bool {
         !anchorChildren.isEmpty
+    }
+
+    /// Returns the shared popup hover region.
+    private var popupHoverBackground: some View {
+        PopupHoverRegion { hovering in handlePopupHover(hovering) }
     }
 
     /// Returns whether the root mouse overlay should be skipped.
