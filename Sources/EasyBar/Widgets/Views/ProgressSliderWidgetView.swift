@@ -85,15 +85,11 @@ struct ProgressSliderWidgetView: View {
     }
 
     private var resolvedWidth: CGFloat {
-        if let width {
-            return width
-        }
-
-        if rootWidgetID == "builtin_volume" {
-            return CGFloat(Config.shared.builtinVolume.sliderWidth)
-        }
-
-        return 72
+        SliderWidthResolver.resolve(
+            explicitWidth: width,
+            rootWidgetID: rootWidgetID,
+            fallback: 72
+        )
     }
 
     private var normalizedValue: CGFloat {

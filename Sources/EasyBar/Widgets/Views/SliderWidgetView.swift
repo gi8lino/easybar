@@ -70,14 +70,10 @@ struct SliderWidgetView: View {
     }
 
     private var resolvedWidth: CGFloat {
-        if let width {
-            return width
-        }
-
-        if rootWidgetID == "builtin_volume" {
-            return CGFloat(Config.shared.builtinVolume.sliderWidth)
-        }
-
-        return 140
+        SliderWidthResolver.resolve(
+            explicitWidth: width,
+            rootWidgetID: rootWidgetID,
+            fallback: 140
+        )
     }
 }
