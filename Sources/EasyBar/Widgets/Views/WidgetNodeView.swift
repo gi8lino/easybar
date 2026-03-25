@@ -325,6 +325,16 @@ struct WidgetNodeView: View {
         node.root == "builtin_calendar" || node.hasParent
     }
 
+    /// Returns the resolved icon color.
+    private var iconResolvedColor: Color {
+        color(node.iconColor ?? node.color)
+    }
+
+    /// Returns the resolved label color.
+    private var labelResolvedColor: Color {
+        color(node.labelColor ?? node.color)
+    }
+
     @ViewBuilder
     private var imageView: some View {
         if let imagePath = node.imagePath, !imagePath.isEmpty {
@@ -333,7 +343,7 @@ struct WidgetNodeView: View {
 
             if let tintedImage = tintedImage(from: image, customImage: customImage) {
                 imageBaseView(image: tintedImage, renderingMode: .template)
-                    .foregroundStyle(color(node.iconColor ?? node.color))
+                    .foregroundStyle(iconResolvedColor)
                     .frame(width: imageSize, height: imageSize)
                     .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
             } else {
@@ -349,7 +359,7 @@ struct WidgetNodeView: View {
         if !node.icon.isEmpty {
             Text(node.icon)
                 .font(font(size: node.iconFontSize ?? node.fontSize))
-                .foregroundStyle(color(node.iconColor ?? node.color))
+                .foregroundStyle(iconResolvedColor)
         }
     }
 
@@ -358,7 +368,7 @@ struct WidgetNodeView: View {
         if !node.text.isEmpty {
             Text(node.text)
                 .font(font(size: node.labelFontSize ?? node.fontSize))
-                .foregroundStyle(color(node.labelColor ?? node.color))
+                .foregroundStyle(labelResolvedColor)
         }
     }
 
