@@ -8,10 +8,7 @@ final class DateNativeWidget: NativeWidget {
 
     /// Starts the date widget.
     func start() {
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.publish()
-        }
-
+        startTimer()
         publish()
     }
 
@@ -26,16 +23,28 @@ final class DateNativeWidget: NativeWidget {
     /// Publishes the current date.
     private func publish() {
         let config = Config.shared.builtinDate
-        let formatter = DateFormatter()
-        formatter.dateFormat = config.format
 
         let node = BuiltinNativeNodeFactory.makeItemNode(
             rootID: rootID,
             placement: config.placement,
             style: config.style,
-            text: formatter.string(from: Date())
+            text: makeFormatter(format: config.format).string(from: Date())
         )
 
         WidgetStore.shared.apply(root: rootID, nodes: [node])
+    }
+
+    /// Starts the timer that drives date updates.
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.publish()
+        }
+    }
+
+    /// Builds one formatter for the configured date format.
+    private func makeFormatter(format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        return formatter
     }
 }
