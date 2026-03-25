@@ -224,30 +224,44 @@ private struct AppIconView: View {
             : CGFloat(config.icons.borderWidth)
     }
 
+    /// Returns the app icon corner radius.
+    private var cornerRadius: CGFloat {
+        CGFloat(config.icons.cornerRadius)
+    }
+
+    /// Returns the app icon border color.
+    private var borderColor: Color {
+        isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear
+    }
+
     var body: some View {
-        Group {
-            if let icon = app.icon() {
-                Image(nsImage: icon)
-                    .resizable()
-                    .interpolation(.high)
-            } else {
-                Text(String(app.name.prefix(1)).uppercased())
-                    .font(.system(size: 9, weight: .bold))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.white.opacity(0.10))
-            }
-        }
+        content
         .frame(width: resolvedSize, height: resolvedSize)
         .clipShape(
-            RoundedRectangle(cornerRadius: CGFloat(config.icons.cornerRadius))
+            RoundedRectangle(cornerRadius: cornerRadius)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: CGFloat(config.icons.cornerRadius))
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(
-                    isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear,
+                    borderColor,
                     lineWidth: resolvedBorderWidth
                 )
         }
         .animation(.easeOut(duration: 0.12), value: isFocusedApp)
+    }
+
+    /// Returns the rendered app icon or fallback initial.
+    @ViewBuilder
+    private var content: some View {
+        if let icon = app.icon() {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+        } else {
+            Text(String(app.name.prefix(1)).uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white.opacity(0.10))
+        }
     }
 }
