@@ -335,6 +335,16 @@ struct WidgetNodeView: View {
         color(node.labelColor ?? node.color)
     }
 
+    /// Returns the resolved icon font.
+    private var iconResolvedFont: Font? {
+        font(size: node.iconFontSize ?? node.fontSize)
+    }
+
+    /// Returns the resolved label font.
+    private var labelResolvedFont: Font? {
+        font(size: node.labelFontSize ?? node.fontSize)
+    }
+
     @ViewBuilder
     private var imageView: some View {
         if let imagePath = node.imagePath, !imagePath.isEmpty {
@@ -358,7 +368,7 @@ struct WidgetNodeView: View {
     private var iconText: some View {
         if !node.icon.isEmpty {
             Text(node.icon)
-                .font(font(size: node.iconFontSize ?? node.fontSize))
+                .font(iconResolvedFont)
                 .foregroundStyle(iconResolvedColor)
         }
     }
@@ -367,7 +377,7 @@ struct WidgetNodeView: View {
     private var labelText: some View {
         if !node.text.isEmpty {
             Text(node.text)
-                .font(font(size: node.labelFontSize ?? node.fontSize))
+                .font(labelResolvedFont)
                 .foregroundStyle(labelResolvedColor)
         }
     }
