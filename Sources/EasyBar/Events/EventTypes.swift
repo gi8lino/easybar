@@ -104,7 +104,8 @@ struct EasyBarEventPayload {
 
     /// Returns the debug log line for this payload.
     var debugDescription: String? {
-        if let appEventName {
+        if isAppEvent {
+            guard let appEventName else { return nil }
             return "emit event \(appEventName)"
         }
 
@@ -190,6 +191,11 @@ struct EasyBarEventPayload {
     /// Returns the raw app event name.
     private var appEventName: String? {
         appEvent?.rawValue
+    }
+
+    /// Returns whether this payload carries an app event.
+    private var isAppEvent: Bool {
+        appEvent != nil
     }
 
     /// Returns the raw widget event name.
