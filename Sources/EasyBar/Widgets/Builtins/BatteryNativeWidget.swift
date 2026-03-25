@@ -19,36 +19,11 @@ final class BatteryNativeWidget: NativeWidget {
         eventObserver.start { [weak self] payload in
             guard let self else { return }
 
-            if let event = payload.appEvent {
-                switch event {
-                case .powerSourceChange, .chargingStateChange, .systemWoke:
-                    self.publish()
-                default:
-                    break
-                }
+            if self.handleAppEvent(payload) {
                 return
             }
 
-            guard let event = payload.widgetEvent else {
-                return
-            }
-
-            switch event {
-            case .mouseEntered:
-                guard payload.widgetID == self.rootID else { return }
-                guard !self.isHovered else { return }
-                self.isHovered = true
-                self.publishIfHoverAffectsLayout()
-
-            case .mouseExited:
-                guard payload.widgetID == self.rootID else { return }
-                guard self.isHovered else { return }
-                self.isHovered = false
-                self.publishIfHoverAffectsLayout()
-
-            default:
-                break
-            }
+            self.handleWidgetEvent(payload)
         }
 
         timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
@@ -74,33 +49,7 @@ final class BatteryNativeWidget: NativeWidget {
         let snapshot = readBatterySnapshot()
         let config = Config.shared.builtinBattery
 
-        let nodes: [WidgetNodeState]
-
-        switch config.displayMode {
-        case .tooltip:
-            nodes = makeTooltipPopupNodes(
-                placement: snapshot.placement,
-                style: snapshot.style,
-                icon: snapshot.icon,
-                text: snapshot.text,
-                colorHex: snapshot.colorHex
-            )
-
-        case .expand, .none:
-            nodes = makeInlineNodes(
-                placement: snapshot.placement,
-                style: snapshot.style,
-                text: snapshot.text,
-                icon: snapshot.icon,
-                colorHex: snapshot.colorHex,
-                showInlineLabel: shouldShowInlineLabel(
-                    mode: config.displayMode,
-                    text: snapshot.text
-                )
-            )
-        }
-
-        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+        WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot, config: config))
     }
 
     /// Builds the normal inline battery layout.
@@ -376,12 +325,10 @@ final class BatteryNativeWidget: NativeWidget {
             let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
             let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef]
         else {
-            return (
-                placement,
-                style,
-                style.icon,
-                config.unavailableText,
-                resolvedUnavailableColor(config: config)
+            return unavailableSnapshot(
+                placement: placement,
+                style: style,
+                config: config
             )
         }
 
@@ -417,7 +364,91 @@ final class BatteryNativeWidget: NativeWidget {
             )
         }
 
-        return (
+        return unavailableSnapshot(
+            placement: placement,
+            style: style,
+            config: config
+        )
+    }
+
+    private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+        guard let event = payload.appEvent else {
+            return false
+        }
+
+        guard event == .powerSourceChange || event == .chargingStateChange || event == .systemWoke else {
+            return false
+        }
+
+        publish()
+        return true
+    }
+
+    private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+        guard let event = payload.widgetEvent else { return }
+        guard payload.widgetID == rootID else { return }
+
+        switch event {
+        case .mouseEntered:
+            guard !isHovered else { return }
+            isHovered = true
+            publishIfHoverAffectsLayout()
+
+        case .mouseExited:
+            guard isHovered else { return }
+            isHovered = false
+            publishIfHoverAffectsLayout()
+
+        default:
+            break
+        }
+    }
+
+    private func makeNodes(
+        snapshot: (
+            placement: Config.BuiltinWidgetPlacement,
+            style: Config.BuiltinWidgetStyle,
+            icon: String,
+            text: String,
+            colorHex: String?
+        ),
+        config: Config.BatteryBuiltinConfig
+    ) -> [WidgetNodeState] {
+        guard config.displayMode != .tooltip else {
+            return makeTooltipPopupNodes(
+                placement: snapshot.placement,
+                style: snapshot.style,
+                icon: snapshot.icon,
+                text: snapshot.text,
+                colorHex: snapshot.colorHex
+            )
+        }
+
+        return makeInlineNodes(
+            placement: snapshot.placement,
+            style: snapshot.style,
+            text: snapshot.text,
+            icon: snapshot.icon,
+            colorHex: snapshot.colorHex,
+            showInlineLabel: shouldShowInlineLabel(
+                mode: config.displayMode,
+                text: snapshot.text
+            )
+        )
+    }
+
+    private func unavailableSnapshot(
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        config: Config.BatteryBuiltinConfig
+    ) -> (
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        icon: String,
+        text: String,
+        colorHex: String?
+    ) {
+        (
             placement,
             style,
             style.icon,
