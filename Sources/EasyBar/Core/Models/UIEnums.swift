@@ -37,6 +37,11 @@ enum WidgetNodeKind: String, Codable {
     var isCustomRenderedKind: Bool {
         self == .spaces
     }
+
+    /// Returns whether this kind renders through a dedicated container view.
+    var isDedicatedContainerKind: Bool {
+        self == .column || self == .popup
+    }
 }
 
 /// Internal role markers for special child nodes.

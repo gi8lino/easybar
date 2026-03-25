@@ -20,24 +20,15 @@ struct WidgetNodeView: View {
                     rowOrGroupView
                 } else if node.kind.isCustomRenderedKind {
                     customRenderedNodeView
+                } else if node.kind.isDedicatedContainerKind {
+                    dedicatedContainerNodeView
                 } else if node.kind.isInteractiveKind {
                     interactiveNodeView
                 } else {
                     switch node.kind {
-                    case .column:
-                    VStack(alignment: .leading, spacing: stackSpacing) {
-                        ForEach(store.children(of: node.id)) { child in
-                            WidgetNodeView(node: child)
-                        }
-                    }
-                    .modifier(WidgetNodeStyle(node: node))
-
-                case .popup:
-                    popupAnchor
-
                     case .item:
                         itemView
-                    case .row, .group, .spaces, .slider, .progressSlider, .progress, .sparkline:
+                    case .row, .group, .column, .spaces, .popup, .slider, .progressSlider, .progress, .sparkline:
                         EmptyView()
                     }
                 }
@@ -52,6 +43,24 @@ struct WidgetNodeView: View {
         case .spaces:
             SpacesWidgetView()
                 .modifier(nodeStyle)
+        default:
+            EmptyView()
+        }
+    }
+
+    /// Returns the dedicated container view for the current node kind.
+    @ViewBuilder
+    private var dedicatedContainerNodeView: some View {
+        switch node.kind {
+        case .column:
+            VStack(alignment: .leading, spacing: stackSpacing) {
+                ForEach(children) { child in
+                    WidgetNodeView(node: child)
+                }
+            }
+            .modifier(nodeStyle)
+        case .popup:
+            popupAnchor
         default:
             EmptyView()
         }
