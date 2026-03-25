@@ -67,19 +67,12 @@ struct EasyBarEventPayload {
         charging: Bool? = nil,
         muted: Bool? = nil
     ) -> EasyBarEventPayload {
-        EasyBarEventPayload(
+        makePayload(
             appEvent: event,
-            widgetEvent: nil,
-            widgetID: nil,
             appName: appName,
             interfaceName: interfaceName,
-            button: nil,
-            direction: nil,
             charging: charging,
             muted: muted,
-            value: nil,
-            deltaX: nil,
-            deltaY: nil
         )
     }
 
@@ -93,16 +86,11 @@ struct EasyBarEventPayload {
         deltaX: Double? = nil,
         deltaY: Double? = nil
     ) -> EasyBarEventPayload {
-        EasyBarEventPayload(
-            appEvent: nil,
+        makePayload(
             widgetEvent: event,
             widgetID: widgetID,
-            appName: nil,
-            interfaceName: nil,
             button: button,
             direction: direction,
-            charging: nil,
-            muted: nil,
             value: value,
             deltaX: deltaX,
             deltaY: deltaY
@@ -149,6 +137,37 @@ struct EasyBarEventPayload {
     private func put(_ payload: inout [String: String], key: String, value: Double?) {
         guard let value else { return }
         payload[key] = String(value)
+    }
+
+    /// Builds one strongly typed event payload.
+    private static func makePayload(
+        appEvent: AppEvent? = nil,
+        widgetEvent: WidgetEvent? = nil,
+        widgetID: String? = nil,
+        appName: String? = nil,
+        interfaceName: String? = nil,
+        button: MouseButton? = nil,
+        direction: ScrollDirection? = nil,
+        charging: Bool? = nil,
+        muted: Bool? = nil,
+        value: Double? = nil,
+        deltaX: Double? = nil,
+        deltaY: Double? = nil
+    ) -> EasyBarEventPayload {
+        EasyBarEventPayload(
+            appEvent: appEvent,
+            widgetEvent: widgetEvent,
+            widgetID: widgetID,
+            appName: appName,
+            interfaceName: interfaceName,
+            button: button,
+            direction: direction,
+            charging: charging,
+            muted: muted,
+            value: value,
+            deltaX: deltaX,
+            deltaY: deltaY
+        )
     }
 
     /// Returns the non-empty event name used at the Lua boundary.
