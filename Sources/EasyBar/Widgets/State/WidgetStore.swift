@@ -11,59 +11,40 @@ final class WidgetStore: ObservableObject {
     private var rootIndex: [String: Set<String>] = [:]
 
     func apply(root: String, nodes updates: [WidgetNodeState]) {
-        let oldIDs = rootIndex[root] ?? []
-
-        for id in oldIDs {
+        for id in existingIDs(for: root) {
             nodeMap.removeValue(forKey: id)
         }
 
-        var newIDs = Set<String>()
-
-        for node in updates {
-            nodeMap[node.id] = node
-            newIDs.insert(node.id)
-        }
-
-        rootIndex[root] = newIDs
-
+        rootIndex[root] = storeNodes(updates)
         render()
     }
 
     func clear() {
         nodeMap.removeAll()
         rootIndex.removeAll()
-
-        DispatchQueue.main.async {
-            self.nodes = []
-        }
+        publish(nodes: [])
     }
 
     func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
-        nodes
-            .filter { ($0.parent == nil || $0.parent == "") && $0.position == position }
-            .sorted(by: sortNodes)
+        sortedNodes {
+            ($0.parent == nil || $0.parent == "") && $0.position == position
+        }
     }
 
     func children(of parentID: String) -> [WidgetNodeState] {
-        nodes
-            .filter { $0.parent == parentID && $0.role != .popupAnchor }
-            .sorted(by: sortNodes)
+        sortedNodes {
+            $0.parent == parentID && $0.role != .popupAnchor
+        }
     }
 
     func anchorChildren(of parentID: String) -> [WidgetNodeState] {
-        nodes
-            .filter { $0.parent == parentID && $0.role == .popupAnchor }
-            .sorted(by: sortNodes)
+        sortedNodes {
+            $0.parent == parentID && $0.role == .popupAnchor
+        }
     }
 
     private func render() {
-        let sorted = nodeMap.values.sorted(by: sortNodes)
-
-        DispatchQueue.main.async {
-            withAnimation(.linear(duration: 0.08)) {
-                self.nodes = sorted
-            }
-        }
+        publish(nodes: nodeMap.values.sorted(by: sortNodes))
     }
 
     private func sortNodes(_ lhs: WidgetNodeState, _ rhs: WidgetNodeState) -> Bool {
@@ -76,5 +57,40 @@ final class WidgetStore: ObservableObject {
         }
 
         return lhs.id < rhs.id
+    }
+
+    /// Returns all stored node ids for one widget root.
+    private func existingIDs(for root: String) -> Set<String> {
+        rootIndex[root] ?? []
+    }
+
+    /// Stores updated nodes and returns their ids.
+    private func storeNodes(_ updates: [WidgetNodeState]) -> Set<String> {
+        var ids = Set<String>()
+
+        for node in updates {
+            nodeMap[node.id] = node
+            ids.insert(node.id)
+        }
+
+        return ids
+    }
+
+    /// Returns sorted nodes matching the given predicate.
+    private func sortedNodes(
+        matching predicate: (WidgetNodeState) -> Bool
+    ) -> [WidgetNodeState] {
+        nodes
+            .filter(predicate)
+            .sorted(by: sortNodes)
+    }
+
+    /// Publishes the current rendered nodes on the main queue.
+    private func publish(nodes: [WidgetNodeState]) {
+        DispatchQueue.main.async {
+            withAnimation(.linear(duration: 0.08)) {
+                self.nodes = nodes
+            }
+        }
     }
 }
