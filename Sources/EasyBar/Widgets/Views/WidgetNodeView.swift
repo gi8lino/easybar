@@ -26,30 +26,17 @@ struct WidgetNodeView: View {
     private var renderedNodeView: some View {
         if node.kind.isRowLikeContainer {
             rowOrGroupView
-            return
-        }
-
-        if node.kind.isCustomRenderedKind {
+        } else if node.kind.isCustomRenderedKind {
             customRenderedNodeView
-            return
-        }
-
-        if node.kind.isDedicatedContainerKind {
+        } else if node.kind.isDedicatedContainerKind {
             dedicatedContainerNodeView
-            return
-        }
-
-        if node.kind.isInteractiveKind {
+        } else if node.kind.isInteractiveKind {
             interactiveNodeView
-            return
-        }
-
-        if node.kind == .item {
+        } else if node.kind == .item {
             itemView
-            return
+        } else {
+            EmptyView()
         }
-
-        EmptyView()
     }
 
     /// Returns the custom-rendered view for the current node kind.
@@ -106,7 +93,7 @@ struct WidgetNodeView: View {
                     childRow
                 }
             } else {
-                maybeOverlayMouse(childRow.modifier(WidgetNodeStyle(node: node)))
+                maybeOverlayMouse(childRow.modifier(nodeStyle))
             }
         }
     }
@@ -527,7 +514,7 @@ private struct WidgetNodeStyle: ViewModifier {
     let node: WidgetNodeState
 
     func body(content: Content) -> some View {
-        return content
+        content
             .padding(.leading, leadingPadding)
             .padding(.trailing, trailingPadding)
             .padding(.top, topPadding)
