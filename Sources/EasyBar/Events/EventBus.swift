@@ -44,7 +44,7 @@ final class EventBus {
         deltaX: Double? = nil,
         deltaY: Double? = nil
     ) {
-        emit(.widget(
+        emitWidget(.widget(
             event,
             widgetID: widgetID,
             button: button,
@@ -89,6 +89,11 @@ final class EventBus {
 
     /// Emits one already-constructed app payload.
     private func emitApp(_ payload: EasyBarEventPayload) {
+        emit(payload)
+    }
+
+    /// Emits one already-constructed widget payload.
+    private func emitWidget(_ payload: EasyBarEventPayload) {
         emit(payload)
     }
 
