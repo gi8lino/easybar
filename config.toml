@@ -55,6 +55,8 @@ show_only_focused_label = false # Shows the label only on the focused space when
 collapse_inactive = false # Makes inactive spaces more compact when true.
 collapsed_padding_x = 6 # Horizontal padding for collapsed inactive spaces.
 collapsed_padding_y = 4 # Vertical padding for collapsed inactive spaces.
+click_to_focus_space = true # Switches to a workspace when its pill is clicked.
+click_to_focus_app = true # Activates an app when its icon is clicked.
 
 [builtins.spaces.text]
 size = 12 # Font size of the space label.

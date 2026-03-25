@@ -24,6 +24,8 @@ extension Config {
             var collapseInactive: Bool
             var collapsedPaddingX: Double
             var collapsedPaddingY: Double
+            var clickToFocusSpace: Bool
+            var clickToFocusApp: Bool
         }
 
         struct Text {
@@ -122,7 +124,9 @@ extension Config {
                 showOnlyFocusedLabel: false,
                 collapseInactive: false,
                 collapsedPaddingX: 6,
-                collapsedPaddingY: 4
+                collapsedPaddingY: 4,
+                clickToFocusSpace: true,
+                clickToFocusApp: true
             ),
             text: .init(
                 size: 12,
@@ -238,7 +242,15 @@ extension Config {
             collapsedPaddingY: try optionalNumber(
                 layoutTable["collapsed_padding_y"],
                 path: "builtins.spaces.layout.collapsed_padding_y"
-            ) ?? builtinSpaces.layout.collapsedPaddingY
+            ) ?? builtinSpaces.layout.collapsedPaddingY,
+            clickToFocusSpace: try optionalBool(
+                layoutTable["click_to_focus_space"],
+                path: "builtins.spaces.layout.click_to_focus_space"
+            ) ?? builtinSpaces.layout.clickToFocusSpace,
+            clickToFocusApp: try optionalBool(
+                layoutTable["click_to_focus_app"],
+                path: "builtins.spaces.layout.click_to_focus_app"
+            ) ?? builtinSpaces.layout.clickToFocusApp
         )
 
         let text = SpacesBuiltinConfig.Text(

@@ -69,6 +69,8 @@ final class AeroSpaceService: ObservableObject {
 
     /// Focuses the requested workspace.
     func focusWorkspace(_ workspace: String) {
+        Logger.info("aerospace focus workspace requested workspace=\(workspace)")
+
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
 
@@ -92,6 +94,30 @@ final class AeroSpaceService: ObservableObject {
             self.reloadState()
             Thread.sleep(forTimeInterval: 0.04)
             self.reloadState()
+        }
+    }
+
+    /// Activates one application shown inside a workspace.
+    func focusApp(_ app: SpaceApp) {
+        Logger.info("aerospace focus app requested app=\(app.name)")
+
+        guard let bundlePath = app.bundlePath, !bundlePath.isEmpty else {
+            Logger.debug("aerospace focus app skipped, missing bundle path app=\(app.name)")
+            return
+        }
+
+        DispatchQueue.main.async {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+
+            NSWorkspace.shared.openApplication(
+                at: URL(fileURLWithPath: bundlePath),
+                configuration: configuration
+            ) { _, error in
+                if let error {
+                    Logger.debug("failed to focus app \(app.name): \(error)")
+                }
+            }
         }
     }
 

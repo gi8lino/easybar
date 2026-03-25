@@ -14,6 +14,7 @@ struct SpacesWidgetView: View {
                     spacePill(for: space, config: config)
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            guard config.layout.clickToFocusSpace else { return }
                             aeroSpaceService.focusWorkspace(space.name)
                         }
                 }
@@ -49,6 +50,11 @@ struct SpacesWidgetView: View {
                             app: app,
                             isFocusedApp: app.id == aeroSpaceService.focusedAppID
                         )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard config.layout.clickToFocusApp else { return }
+                            aeroSpaceService.focusApp(app)
+                        }
                     }
 
                     if hiddenAppCount(for: space, config: config) > 0 {

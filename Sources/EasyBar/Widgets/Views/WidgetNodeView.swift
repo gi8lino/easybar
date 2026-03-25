@@ -31,7 +31,6 @@ struct WidgetNodeView: View {
                 case .spaces:
                     SpacesWidgetView()
                         .modifier(WidgetNodeStyle(node: node))
-                        .overlay(WidgetMouseView(widgetID: node.root))
 
                 case .popup:
                     popupAnchor
