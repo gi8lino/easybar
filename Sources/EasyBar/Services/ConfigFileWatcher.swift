@@ -22,9 +22,7 @@ final class ConfigFileWatcher {
         }
 
         let path = Config.shared.configPath
-        let descriptor = open(path, O_EVTONLY)
-
-        guard descriptor >= 0 else {
+        guard let descriptor = openDescriptor(path: path) else {
             Logger.warn("failed to watch config file at \(path)")
             return
         }
@@ -43,12 +41,7 @@ final class ConfigFileWatcher {
         }
 
         source.setCancelHandler { [weak self] in
-            guard let self else { return }
-
-            if self.fileDescriptor >= 0 {
-                close(self.fileDescriptor)
-                self.fileDescriptor = -1
-            }
+            self?.closeDescriptor()
         }
 
         self.source = source
@@ -70,21 +63,14 @@ final class ConfigFileWatcher {
 
         source?.cancel()
         source = nil
-
-        if fileDescriptor >= 0 {
-            close(fileDescriptor)
-            fileDescriptor = -1
-        }
+        closeDescriptor()
     }
 
     /// Schedules one debounced reload.
     private func scheduleReload() {
         debounceWorkItem?.cancel()
 
-        let work = DispatchWorkItem { [weak self] in
-            self?.performReload()
-        }
-
+        let work = DispatchWorkItem { [weak self] in self?.performReload() }
         debounceWorkItem = work
         queue.asyncAfter(deadline: .now() + 0.20, execute: work)
     }
@@ -102,5 +88,19 @@ final class ConfigFileWatcher {
             // Some editors replace the file atomically, so re-open the watcher.
             self.restart()
         }
+    }
+
+    /// Opens the config file for filesystem event watching.
+    private func openDescriptor(path: String) -> CInt? {
+        let descriptor = open(path, O_EVTONLY)
+        guard descriptor >= 0 else { return nil }
+        return descriptor
+    }
+
+    /// Closes the watched file descriptor when present.
+    private func closeDescriptor() {
+        guard fileDescriptor >= 0 else { return }
+        close(fileDescriptor)
+        fileDescriptor = -1
     }
 }
