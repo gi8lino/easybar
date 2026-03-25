@@ -12,16 +12,15 @@ final class CalendarNativeWidget: NativeWidget {
 
         Logger.info("starting native widget id=\(rootID) enabled=\(config.enabled) layout=\(config.layout.rawValue) position=\(config.position.rawValue) days=\(config.days) show_birthdays=\(config.showBirthdays)")
 
-        if Config.shared.calendarAgentEnabled {
-            CalendarAgentClient.shared.start()
-        } else {
+        guard Config.shared.calendarAgentEnabled else {
             Logger.info("calendar agent disabled in config")
+            startTimer()
+            publish()
+            return
         }
 
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            self?.publish()
-        }
-
+        CalendarAgentClient.shared.start()
+        startTimer()
         publish()
     }
 
@@ -45,31 +44,22 @@ final class CalendarNativeWidget: NativeWidget {
         let now = Date()
 
         Logger.debug("publishing native calendar widget layout=\(config.layout.rawValue)")
+        WidgetStore.shared.apply(root: rootID, nodes: makeNodes(config: config, now: now))
+    }
 
-        let nodes: [WidgetNodeState]
-
+    /// Builds nodes for the selected anchor layout.
+    private func makeNodes(
+        config: Config.CalendarBuiltinConfig,
+        now: Date
+    ) -> [WidgetNodeState] {
         switch config.layout {
         case .stack:
-            nodes = makeStackNodes(config: config, now: now)
-
+            return makeStackNodes(config: config, now: now)
         case .inline:
-            nodes = makeInlineNodes(config: config, now: now)
-
+            return makeInlineNodes(config: config, now: now)
         case .item:
-            let formatter = DateFormatter()
-            formatter.dateFormat = config.itemFormat
-
-            nodes = [
-                BuiltinNativeNodeFactory.makeItemNode(
-                    rootID: rootID,
-                    placement: config.placement,
-                    style: config.style,
-                    text: formatter.string(from: now)
-                )
-            ]
+            return makeItemNodes(config: config, now: now)
         }
-
-        WidgetStore.shared.apply(root: rootID, nodes: nodes)
     }
 
     /// Builds stack-layout nodes.
@@ -81,22 +71,10 @@ final class CalendarNativeWidget: NativeWidget {
         let style = config.style
 
         return [
-            BuiltinNativeNodeFactory.makeRowContainerNode(
-                rootID: rootID,
-                placement: placement,
-                style: style
-            ),
+            rootRowNode(placement: placement, style: style),
+            iconNode(placement: placement, style: style),
 
-            BuiltinNativeNodeFactory.makeChildItemNode(
-                rootID: rootID,
-                parentID: rootID,
-                childID: "\(rootID)_icon",
-                position: placement.position,
-                order: 0,
-                icon: style.icon,
-                color: style.textColorHex
-            ),
-
+            // Stack mode keeps both date strings in one nested column.
             WidgetNodeState(
                 id: "\(rootID)_text_column",
                 root: rootID,
@@ -171,21 +149,8 @@ final class CalendarNativeWidget: NativeWidget {
         let style = config.style
 
         return [
-            BuiltinNativeNodeFactory.makeRowContainerNode(
-                rootID: rootID,
-                placement: placement,
-                style: style
-            ),
-
-            BuiltinNativeNodeFactory.makeChildItemNode(
-                rootID: rootID,
-                parentID: rootID,
-                childID: "\(rootID)_icon",
-                position: placement.position,
-                order: 0,
-                icon: style.icon,
-                color: style.textColorHex
-            ),
+            rootRowNode(placement: placement, style: style),
+            iconNode(placement: placement, style: style),
 
             BuiltinNativeNodeFactory.makeChildItemNode(
                 rootID: rootID,
@@ -207,6 +172,56 @@ final class CalendarNativeWidget: NativeWidget {
                 color: config.bottomTextColorHex ?? style.textColorHex
             )
         ]
+    }
+
+    /// Builds item-layout nodes.
+    private func makeItemNodes(
+        config: Config.CalendarBuiltinConfig,
+        now: Date
+    ) -> [WidgetNodeState] {
+        [
+            BuiltinNativeNodeFactory.makeItemNode(
+                rootID: rootID,
+                placement: config.placement,
+                style: config.style,
+                text: formatDate(now, format: config.itemFormat)
+            )
+        ]
+    }
+
+    /// Builds the common root row.
+    private func rootRowNode(
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle
+    ) -> WidgetNodeState {
+        BuiltinNativeNodeFactory.makeRowContainerNode(
+            rootID: rootID,
+            placement: placement,
+            style: style
+        )
+    }
+
+    /// Builds the common leading icon.
+    private func iconNode(
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle
+    ) -> WidgetNodeState {
+        BuiltinNativeNodeFactory.makeChildItemNode(
+            rootID: rootID,
+            parentID: rootID,
+            childID: "\(rootID)_icon",
+            position: placement.position,
+            order: 0,
+            icon: style.icon,
+            color: style.textColorHex
+        )
+    }
+
+    /// Starts the periodic date refresh timer.
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.publish()
+        }
     }
 
     /// Formats one date string.
