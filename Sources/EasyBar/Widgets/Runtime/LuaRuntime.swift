@@ -14,16 +14,8 @@ final class LuaRuntime {
 
     /// Starts the Lua runtime if it is not already running.
     func start() {
-        guard let result = processController.start() else {
-            return
-        }
-
-        transport.attach(
-            input: result.input,
-            output: result.output,
-            error: result.error
-        )
-        transport.startReading()
+        guard let result = processController.start() else { return }
+        attachAndStartTransport(result)
     }
 
     /// Stops the Lua runtime and clears all pipe handlers.
@@ -35,5 +27,17 @@ final class LuaRuntime {
     /// Sends one encoded event line to the Lua runtime stdin.
     func send(_ string: String) {
         transport.send(string)
+    }
+
+    /// Attaches the process pipes to the transport and starts reading them.
+    private func attachAndStartTransport(
+        _ result: (process: Process, input: Pipe, output: Pipe, error: Pipe)
+    ) {
+        transport.attach(
+            input: result.input,
+            output: result.output,
+            error: result.error
+        )
+        transport.startReading()
     }
 }
