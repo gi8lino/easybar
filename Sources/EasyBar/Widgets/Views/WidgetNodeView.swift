@@ -434,18 +434,16 @@ private struct WidgetNodeStyle: ViewModifier {
     }
 
     private var backgroundColor: Color {
-        guard let background = node.backgroundColor, !background.isEmpty else {
-            return Color.clear
-        }
-
-        return Color(hex: background)
+        resolvedColor(node.backgroundColor)
     }
 
     private var borderColor: Color {
-        guard let border = node.borderColor, !border.isEmpty else {
-            return Color.clear
-        }
+        resolvedColor(node.borderColor)
+    }
 
-        return Color(hex: border)
+    /// Resolves one optional node color or clears it.
+    private func resolvedColor(_ hex: String?) -> Color {
+        guard let hex, !hex.isEmpty else { return Color.clear }
+        return Color(hex: hex)
     }
 }
