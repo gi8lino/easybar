@@ -35,9 +35,7 @@ struct SpacesWidgetView: View {
                         size: CGFloat(config.text.size),
                         weight: config.text.resolvedWeight
                     ))
-                    .foregroundStyle(
-                        space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
-                    )
+                    .foregroundStyle(spaceTextColor(for: space))
             }
 
             if shouldShowIcons(for: space, config: config) {
@@ -185,10 +183,13 @@ struct SpacesWidgetView: View {
                     size: max(10, CGFloat(config.text.size) - 1),
                     weight: .medium
                 ))
-                .foregroundStyle(
-                    space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
-                )
+                .foregroundStyle(spaceTextColor(for: space))
         }
+    }
+
+    /// Returns the text color for one space.
+    private func spaceTextColor(for space: SpaceItem) -> Color {
+        space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
     }
 
     /// Returns whether the space uses the collapsed inactive layout.
