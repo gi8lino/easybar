@@ -3,19 +3,19 @@ import Foundation
 /// Routes structured stderr lines from the Lua runtime into the normal logger.
 final class LuaLogBridge {
 
+    private let prefix = "EASYBAR_LOG\t"
+
     /// Handles one stderr line from the Lua runtime.
     func handle(_ line: String) {
-        let prefix = "EASYBAR_LOG\t"
-
         guard line.hasPrefix(prefix) else {
-            Logger.error("lua stderr: \(line)")
+            logRawStderr(line)
             return
         }
 
         let parts = line.split(separator: "\t", maxSplits: 3, omittingEmptySubsequences: false)
 
         guard parts.count == 4 else {
-            Logger.error("lua stderr: \(line)")
+            logRawStderr(line)
             return
         }
 
@@ -25,17 +25,27 @@ final class LuaLogBridge {
 
         let formatted = "lua[\(source)] \(message)"
 
+        logFormatted(level: level, message: formatted)
+    }
+
+    /// Logs one raw stderr line that does not follow the structured format.
+    private func logRawStderr(_ line: String) {
+        Logger.error("lua stderr: \(line)")
+    }
+
+    /// Logs one structured Lua message at the requested level.
+    private func logFormatted(level: String, message: String) {
         switch level {
         case "DEBUG":
-            Logger.debug(formatted)
+            Logger.debug(message)
         case "INFO":
-            Logger.info(formatted)
+            Logger.info(message)
         case "WARN":
-            Logger.warn(formatted)
+            Logger.warn(message)
         case "ERROR":
-            Logger.error(formatted)
+            Logger.error(message)
         default:
-            Logger.info(formatted)
+            Logger.info(message)
         }
     }
 }
