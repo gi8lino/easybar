@@ -55,17 +55,11 @@ struct SpacesWidgetView: View {
         }
         .padding(.horizontal, resolvedPaddingX(for: space, config: config))
         .padding(.vertical, resolvedPaddingY(for: space, config: config))
-        .background(
-            space.isFocused
-                ? Theme.spaceActiveBackground
-                : Theme.spaceInactiveBackground
-        )
+        .background(spaceBackgroundColor(for: space))
         .overlay {
             RoundedRectangle(cornerRadius: resolvedCornerRadius(for: space, config: config))
                 .stroke(
-                    space.isFocused
-                        ? Theme.spaceActiveBorder
-                        : Theme.spaceInactiveBorder,
+                    spaceBorderColor(for: space),
                     lineWidth: 1
                 )
         }
@@ -190,6 +184,16 @@ struct SpacesWidgetView: View {
     /// Returns the text color for one space.
     private func spaceTextColor(for space: SpaceItem) -> Color {
         space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+    }
+
+    /// Returns the background color for one space.
+    private func spaceBackgroundColor(for space: SpaceItem) -> Color {
+        space.isFocused ? Theme.spaceActiveBackground : Theme.spaceInactiveBackground
+    }
+
+    /// Returns the border color for one space.
+    private func spaceBorderColor(for space: SpaceItem) -> Color {
+        space.isFocused ? Theme.spaceActiveBorder : Theme.spaceInactiveBorder
     }
 
     /// Returns whether the space uses the collapsed inactive layout.
