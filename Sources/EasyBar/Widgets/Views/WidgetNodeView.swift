@@ -140,10 +140,10 @@ struct WidgetNodeView: View {
 
             SliderWidgetView(
                 rootWidgetID: node.root,
-                minValue: node.min ?? 0,
-                maxValue: node.max ?? 100,
-                step: node.step ?? 1,
-                value: node.value ?? 0,
+                minValue: minValue,
+                maxValue: maxValue,
+                step: stepValue,
+                value: currentValue,
                 tint: color(node.color),
                 width: cgFloat(node.width)
             )
@@ -157,10 +157,10 @@ struct WidgetNodeView: View {
 
             ProgressSliderWidgetView(
                 rootWidgetID: node.root,
-                minValue: node.min ?? 0,
-                maxValue: node.max ?? 100,
-                step: node.step ?? 1,
-                value: node.value ?? 0,
+                minValue: minValue,
+                maxValue: maxValue,
+                step: stepValue,
+                value: currentValue,
                 tint: color(node.color),
                 width: cgFloat(node.width)
             )
@@ -173,12 +173,12 @@ struct WidgetNodeView: View {
             labelText
 
             ProgressBarCanvas(
-                value: node.value ?? 0,
-                minValue: node.min ?? 0,
-                maxValue: node.max ?? 100,
+                value: currentValue,
+                minValue: minValue,
+                maxValue: maxValue,
                 tint: color(node.color)
             )
-            .frame(width: CGFloat(node.width ?? 64), height: CGFloat(node.height ?? 8))
+            .frame(width: progressWidth, height: progressHeight)
         }
     }
 
@@ -190,9 +190,9 @@ struct WidgetNodeView: View {
             SparklineCanvas(
                 values: node.values ?? [],
                 tint: color(node.color),
-                lineWidth: CGFloat(node.lineWidth ?? 1.5)
+                lineWidth: sparklineLineWidth
             )
-            .frame(width: CGFloat(node.width ?? 64), height: CGFloat(node.height ?? 18))
+            .frame(width: sparklineWidth, height: sparklineHeight)
         }
     }
 
@@ -263,6 +263,51 @@ struct WidgetNodeView: View {
     /// Returns the default item spacing for this node.
     private var itemSpacing: CGFloat {
         CGFloat(node.spacing ?? 4)
+    }
+
+    /// Returns the current scalar value.
+    private var currentValue: Double {
+        node.value ?? 0
+    }
+
+    /// Returns the minimum scalar value.
+    private var minValue: Double {
+        node.min ?? 0
+    }
+
+    /// Returns the maximum scalar value.
+    private var maxValue: Double {
+        node.max ?? 100
+    }
+
+    /// Returns the slider step value.
+    private var stepValue: Double {
+        node.step ?? 1
+    }
+
+    /// Returns the progress width.
+    private var progressWidth: CGFloat {
+        CGFloat(node.width ?? 64)
+    }
+
+    /// Returns the progress height.
+    private var progressHeight: CGFloat {
+        CGFloat(node.height ?? 8)
+    }
+
+    /// Returns the sparkline width.
+    private var sparklineWidth: CGFloat {
+        CGFloat(node.width ?? 64)
+    }
+
+    /// Returns the sparkline height.
+    private var sparklineHeight: CGFloat {
+        CGFloat(node.height ?? 18)
+    }
+
+    /// Returns the sparkline line width.
+    private var sparklineLineWidth: CGFloat {
+        CGFloat(node.lineWidth ?? 1.5)
     }
 
     /// Returns the non-anchor children for this node.
