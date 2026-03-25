@@ -561,12 +561,12 @@ private struct WidgetNodeStyle: ViewModifier {
 
     /// Returns the resolved frame width.
     private var frameWidth: CGFloat? {
-        node.width.map(CGFloat.init)
+        node.width.map { CGFloat($0) }
     }
 
     /// Returns the resolved frame height.
     private var frameHeight: CGFloat? {
-        node.height.map(CGFloat.init)
+        node.height.map { CGFloat($0) }
     }
 
     /// Returns the resolved node corner radius.
