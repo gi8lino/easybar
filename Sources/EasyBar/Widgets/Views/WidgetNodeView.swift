@@ -353,21 +353,11 @@ private struct WidgetNodeStyle: ViewModifier {
     let node: WidgetNodeState
 
     func body(content: Content) -> some View {
-        let leading = CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
-        let trailing = CGFloat(node.paddingRight ?? node.paddingX ?? 0)
-        let top = CGFloat(node.paddingTop ?? node.paddingY ?? 0)
-        let bottom = CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
-        let frameWidth = node.width.map { CGFloat($0) }
-        let frameHeight = node.height.map { CGFloat($0) }
-        let radius = CGFloat(node.cornerRadius ?? 0)
-        let lineWidth = CGFloat(node.borderWidth ?? 0)
-        let yOffset = CGFloat(node.yOffset ?? 0)
-
         return content
-            .padding(.leading, leading)
-            .padding(.trailing, trailing)
-            .padding(.top, top)
-            .padding(.bottom, bottom)
+            .padding(.leading, leadingPadding)
+            .padding(.trailing, trailingPadding)
+            .padding(.top, topPadding)
+            .padding(.bottom, bottomPadding)
             .frame(
                 width: frameWidth,
                 height: frameHeight,
@@ -375,17 +365,62 @@ private struct WidgetNodeStyle: ViewModifier {
             )
             .background(backgroundColor)
             .overlay {
-                RoundedRectangle(cornerRadius: radius)
+                RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(
                         borderColor,
-                        lineWidth: lineWidth
+                        lineWidth: borderWidth
                     )
             }
             .clipShape(
-                RoundedRectangle(cornerRadius: radius)
+                RoundedRectangle(cornerRadius: cornerRadius)
             )
             .opacity(node.opacity ?? 1.0)
-            .offset(y: yOffset)
+            .offset(y: verticalOffset)
+    }
+
+    /// Returns the resolved leading padding.
+    private var leadingPadding: CGFloat {
+        CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
+    }
+
+    /// Returns the resolved trailing padding.
+    private var trailingPadding: CGFloat {
+        CGFloat(node.paddingRight ?? node.paddingX ?? 0)
+    }
+
+    /// Returns the resolved top padding.
+    private var topPadding: CGFloat {
+        CGFloat(node.paddingTop ?? node.paddingY ?? 0)
+    }
+
+    /// Returns the resolved bottom padding.
+    private var bottomPadding: CGFloat {
+        CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
+    }
+
+    /// Returns the resolved frame width.
+    private var frameWidth: CGFloat? {
+        node.width.map(CGFloat.init)
+    }
+
+    /// Returns the resolved frame height.
+    private var frameHeight: CGFloat? {
+        node.height.map(CGFloat.init)
+    }
+
+    /// Returns the resolved node corner radius.
+    private var cornerRadius: CGFloat {
+        CGFloat(node.cornerRadius ?? 0)
+    }
+
+    /// Returns the resolved node border width.
+    private var borderWidth: CGFloat {
+        CGFloat(node.borderWidth ?? 0)
+    }
+
+    /// Returns the resolved vertical offset.
+    private var verticalOffset: CGFloat {
+        CGFloat(node.yOffset ?? 0)
     }
 
     private var backgroundColor: Color {
