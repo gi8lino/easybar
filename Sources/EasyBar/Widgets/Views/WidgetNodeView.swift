@@ -145,7 +145,7 @@ struct WidgetNodeView: View {
                 step: stepValue,
                 value: currentValue,
                 tint: color(node.color),
-                width: cgFloat(node.width)
+                width: nodeWidth
             )
         }
     }
@@ -162,7 +162,7 @@ struct WidgetNodeView: View {
                 step: stepValue,
                 value: currentValue,
                 tint: color(node.color),
-                width: cgFloat(node.width)
+                width: nodeWidth
             )
         }
     }
@@ -308,6 +308,11 @@ struct WidgetNodeView: View {
     /// Returns the sparkline line width.
     private var sparklineLineWidth: CGFloat {
         CGFloat(node.lineWidth ?? 1.5)
+    }
+
+    /// Returns the converted node width when present.
+    private var nodeWidth: CGFloat? {
+        cgFloat(node.width)
     }
 
     /// Returns the non-anchor children for this node.
