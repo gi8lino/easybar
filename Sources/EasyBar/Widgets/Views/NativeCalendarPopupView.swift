@@ -8,28 +8,8 @@ struct NativeCalendarPopupView: View {
         let config = Config.shared.builtinCalendar
 
         VStack(alignment: .leading, spacing: config.popupSpacing) {
-            if store.sections.isEmpty {
-                Text(config.emptyText)
-                    .foregroundStyle(color(config.popup.future.emptyColorHex))
-            } else {
-                ForEach(store.sections) { section in
-                    let style = style(for: section.kind)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(section.title):")
-                            .foregroundStyle(color(style.titleColorHex))
-
-                        ForEach(section.items) { item in
-                            Text(itemLine(for: item))
-                                .foregroundStyle(
-                                    color(item.time.isEmpty ? style.emptyColorHex : style.itemColorHex)
-                                )
-                                .padding(.leading, config.popupItemIndent)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
+            emptyStateView(config: config)
+            sectionsView(config: config)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, config.popupPaddingX)
@@ -48,6 +28,45 @@ struct NativeCalendarPopupView: View {
         .padding(.horizontal, config.popupMarginX)
         .padding(.vertical, config.popupMarginY)
         .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Builds the empty popup state when no sections are available.
+    @ViewBuilder
+    private func emptyStateView(config: Config.CalendarBuiltinConfig) -> some View {
+        if store.sections.isEmpty {
+            Text(config.emptyText)
+                .foregroundStyle(color(config.popup.future.emptyColorHex))
+        }
+    }
+
+    /// Builds the popup sections list when calendar data exists.
+    @ViewBuilder
+    private func sectionsView(config: Config.CalendarBuiltinConfig) -> some View {
+        if !store.sections.isEmpty {
+            ForEach(store.sections) { section in
+                sectionView(section, config: config)
+            }
+        }
+    }
+
+    /// Builds one calendar popup section.
+    private func sectionView(
+        _ section: NativeCalendarPopupSection,
+        config: Config.CalendarBuiltinConfig
+    ) -> some View {
+        let style = style(for: section.kind)
+
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("\(section.title):")
+                .foregroundStyle(color(style.titleColorHex))
+
+            ForEach(section.items) { item in
+                Text(itemLine(for: item))
+                    .foregroundStyle(color(itemColor(for: item, style: style)))
+                    .padding(.leading, config.popupItemIndent)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func style(
@@ -73,6 +92,18 @@ struct NativeCalendarPopupView: View {
         }
 
         return "\(item.time) \(item.title)"
+    }
+
+    /// Returns the effective text color for one popup item.
+    private func itemColor(
+        for item: NativeCalendarPopupItem,
+        style: Config.CalendarBuiltinConfig.PopupSectionStyle
+    ) -> String {
+        if item.time.isEmpty {
+            return style.emptyColorHex
+        }
+
+        return style.itemColorHex
     }
 
     private func color(_ hex: String) -> Color {
