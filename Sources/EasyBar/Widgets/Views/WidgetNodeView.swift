@@ -351,6 +351,22 @@ struct WidgetNodeView: View {
         node.root == "builtin_calendar" || node.hasParent
     }
 
+    /// Returns whether this node has a non-empty image path.
+    private var hasImage: Bool {
+        guard let imagePath = node.imagePath else { return false }
+        return !imagePath.isEmpty
+    }
+
+    /// Returns whether this node has a non-empty icon.
+    private var hasIcon: Bool {
+        !node.icon.isEmpty
+    }
+
+    /// Returns whether this node has a non-empty label.
+    private var hasLabel: Bool {
+        !node.text.isEmpty
+    }
+
     /// Returns the resolved icon color.
     private var iconResolvedColor: Color {
         color(node.iconColor ?? node.color)
@@ -373,7 +389,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private var imageView: some View {
-        if let imagePath = node.imagePath, !imagePath.isEmpty {
+        if hasImage, let imagePath = node.imagePath {
             let customImage = NSImage(contentsOfFile: imagePath)
             let image = resolvedImage(imagePath: imagePath, customImage: customImage)
 
@@ -392,7 +408,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private var iconText: some View {
-        if !node.icon.isEmpty {
+        if hasIcon {
             Text(node.icon)
                 .font(iconResolvedFont)
                 .foregroundStyle(iconResolvedColor)
@@ -401,7 +417,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private var labelText: some View {
-        if !node.text.isEmpty {
+        if hasLabel {
             Text(node.text)
                 .font(labelResolvedFont)
                 .foregroundStyle(labelResolvedColor)
