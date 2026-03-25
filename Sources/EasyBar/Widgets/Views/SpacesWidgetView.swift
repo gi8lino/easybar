@@ -97,14 +97,8 @@ struct SpacesWidgetView: View {
         for space: SpaceItem,
         config: Config.SpacesBuiltinConfig
     ) -> Bool {
-        if !config.layout.showIcons {
-            return false
-        }
-
-        if config.layout.collapseInactive && !space.isFocused {
-            return false
-        }
-
+        guard config.layout.showIcons else { return false }
+        guard !isCollapsedInactiveSpace(space, config: config) else { return false }
         return true
     }
 
@@ -131,11 +125,11 @@ struct SpacesWidgetView: View {
         for space: SpaceItem,
         config: Config.SpacesBuiltinConfig
     ) -> CGFloat {
-        if config.layout.collapseInactive && !space.isFocused {
-            return CGFloat(config.layout.collapsedPaddingX)
+        guard isCollapsedInactiveSpace(space, config: config) else {
+            return CGFloat(config.layout.paddingX)
         }
 
-        return CGFloat(config.layout.paddingX)
+        return CGFloat(config.layout.collapsedPaddingX)
     }
 
     /// Returns vertical pill padding for one space.
@@ -143,11 +137,11 @@ struct SpacesWidgetView: View {
         for space: SpaceItem,
         config: Config.SpacesBuiltinConfig
     ) -> CGFloat {
-        if config.layout.collapseInactive && !space.isFocused {
-            return CGFloat(config.layout.collapsedPaddingY)
+        guard isCollapsedInactiveSpace(space, config: config) else {
+            return CGFloat(config.layout.paddingY)
         }
 
-        return CGFloat(config.layout.paddingY)
+        return CGFloat(config.layout.collapsedPaddingY)
     }
 
     /// Returns the corner radius for one space.
@@ -195,6 +189,14 @@ struct SpacesWidgetView: View {
                     space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
                 )
         }
+    }
+
+    /// Returns whether the space uses the collapsed inactive layout.
+    private func isCollapsedInactiveSpace(
+        _ space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> Bool {
+        config.layout.collapseInactive && !space.isFocused
     }
 }
 
