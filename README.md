@@ -128,6 +128,16 @@ brew services start gi8lino/tap/easybar
 
 This installs the app bundle under Homebrew `libexec`, runs the calendar helper as its own service, and starts EasyBar through `brew services`.
 
+## Menu bar behavior
+
+If you want macOS to push EasyBar down when the system menu bar is shown, enable:
+
+- `System Settings`
+- `Menu Bar`
+- `Show menu bar background`
+
+With that enabled, macOS exposes the menu bar background/inset in a way EasyBar can follow more reliably.
+
 ## Built-in widgets
 
 EasyBar currently includes these native built-ins:
