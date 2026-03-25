@@ -75,7 +75,7 @@ struct WidgetNodeView: View {
             iconText
             labelText
         }
-        .modifier(WidgetNodeStyle(node: node))
+        .modifier(nodeStyle)
 
         return maybeOverlayMouse(content)
     }
@@ -85,7 +85,7 @@ struct WidgetNodeView: View {
     ) -> some View {
         content()
             .foregroundStyle(nodeColor)
-            .modifier(WidgetNodeStyle(node: node))
+            .modifier(nodeStyle)
             .onHover { hovering in handleAnchorHover(hovering) }
             .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
                 NativeCalendarPopupView()
@@ -109,7 +109,7 @@ struct WidgetNodeView: View {
             }
         }
         .foregroundStyle(nodeColor)
-        .modifier(WidgetNodeStyle(node: node))
+        .modifier(nodeStyle)
         .overlay(
             WidgetMouseView(widgetID: node.root)
         )
@@ -125,7 +125,7 @@ struct WidgetNodeView: View {
                 WidgetNodeView(node: child)
             }
         }
-        .modifier(WidgetNodeStyle(node: node))
+        .modifier(nodeStyle)
         .background(popupHoverBackground)
     }
 
@@ -334,6 +334,11 @@ struct WidgetNodeView: View {
     /// Returns the shared popup hover region.
     private var popupHoverBackground: some View {
         PopupHoverRegion { hovering in handlePopupHover(hovering) }
+    }
+
+    /// Returns the shared node style modifier.
+    private var nodeStyle: WidgetNodeStyle {
+        WidgetNodeStyle(node: node)
     }
 
     /// Returns whether the root mouse overlay should be skipped.
