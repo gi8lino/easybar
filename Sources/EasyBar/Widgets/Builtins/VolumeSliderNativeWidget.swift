@@ -16,82 +16,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
         eventObserver.start { [weak self] payload in
             guard let self else { return }
 
-            if let event = payload.appEvent {
-                switch event {
-                case .volumeChange, .muteChange:
-                    if Config.shared.builtinVolume.expandToSliderOnHover {
-                        self.isHovered = true
-                        self.scheduleAutoHide()
-                    }
-
-                    self.publish()
-
-                default:
-                    break
-                }
-
+            if self.handleAppEvent(payload) {
                 return
             }
 
-            guard let event = payload.widgetEvent else {
-                return
-            }
-
-            switch event {
-            case .mouseEntered:
-                guard payload.widgetID == self.rootID else { return }
-
-                self.isHovered = true
-                self.cancelAutoHide()
-                self.publish()
-
-            case .mouseExited:
-                guard payload.widgetID == self.rootID else { return }
-
-                self.isHovered = false
-                self.cancelAutoHide()
-                self.publish()
-
-            case .sliderPreview:
-                guard payload.widgetID == self.rootID,
-                      let value = payload.value else {
-                    return
-                }
-
-                let config = Config.shared.builtinVolume
-                let span = max(config.maxValue - config.minValue, 0.0001)
-                let normalized = (value - config.minValue) / span
-
-                if config.expandToSliderOnHover {
-                    self.isHovered = true
-                    self.cancelAutoHide()
-                }
-
-                self.setSystemVolume(normalized)
-                self.publish()
-
-            case .sliderChanged:
-                guard payload.widgetID == self.rootID,
-                      let value = payload.value else {
-                    return
-                }
-
-                let config = Config.shared.builtinVolume
-                let span = max(config.maxValue - config.minValue, 0.0001)
-                let normalized = (value - config.minValue) / span
-
-                self.setSystemVolume(normalized)
-
-                if config.expandToSliderOnHover {
-                    self.isHovered = true
-                    self.scheduleAutoHide()
-                }
-
-                self.publish()
-
-            default:
-                break
-            }
+            self.handleWidgetEvent(payload)
         }
 
         publish()
@@ -112,48 +41,148 @@ final class VolumeSliderNativeWidget: NativeWidget {
         let placement = config.placement
         var style = config.style
 
+        let volumeState = currentVolumeState(config: config)
+
+        style.icon = resolvedIcon(for: volumeState.clampedSystem, muted: volumeState.isMuted, config: config)
+
+        let text = config.showPercentage && isHovered
+            ? "\(Int((volumeState.clampedSystem * 100.0).rounded()))%"
+            : ""
+
+        let nodes = makeNodes(
+            config: config,
+            placement: placement,
+            style: style,
+            text: text,
+            value: volumeState.roundedValue,
+            step: volumeState.step
+        )
+
+        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+    }
+
+    private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+        guard let event = payload.appEvent else {
+            return false
+        }
+
+        guard event == .volumeChange || event == .muteChange else {
+            return false
+        }
+
+        applyExternalVolumeChange()
+        publish()
+        return true
+    }
+
+    private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+        guard let event = payload.widgetEvent else { return }
+        guard payload.widgetID == rootID else { return }
+
+        switch event {
+        case .mouseEntered:
+            isHovered = true
+            cancelAutoHide()
+            publish()
+
+        case .mouseExited:
+            isHovered = false
+            cancelAutoHide()
+            publish()
+
+        case .sliderPreview:
+            guard let value = payload.value else { return }
+            applySliderValue(value, shouldAutoHide: false)
+
+        case .sliderChanged:
+            guard let value = payload.value else { return }
+            applySliderValue(value, shouldAutoHide: true)
+
+        default:
+            break
+        }
+    }
+
+    private func applyExternalVolumeChange() {
+        guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
+
+        isHovered = true
+        scheduleAutoHide()
+    }
+
+    private func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
+        let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
+
+        guard Config.shared.builtinVolume.expandToSliderOnHover else {
+            setSystemVolume(normalized)
+            publish()
+            return
+        }
+
+        isHovered = true
+        cancelAutoHide()
+        setSystemVolume(normalized)
+
+        if shouldAutoHide {
+            scheduleAutoHide()
+        }
+
+        publish()
+    }
+
+    private func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig) -> Double {
+        let span = max(config.maxValue - config.minValue, 0.0001)
+        return (value - config.minValue) / span
+    }
+
+    private func currentVolumeState(config: Config.VolumeBuiltinConfig) -> (
+        clampedSystem: Double,
+        roundedValue: Double,
+        step: Double,
+        isMuted: Bool
+    ) {
         let systemVolume = readSystemVolume()
         let isMuted = readMutedState()
         let clampedSystem = min(max(systemVolume, 0), 1)
-
-        let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
         let step = max(config.step, 0.0001)
+        let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
         let roundedValue = (sliderValue / step).rounded() * step
 
-        style.icon = resolvedIcon(for: clampedSystem, muted: isMuted, config: config)
+        return (clampedSystem, roundedValue, step, isMuted)
+    }
 
-        let text = (config.showPercentage && isHovered)
-            ? "\(Int((clampedSystem * 100.0).rounded()))%"
-            : ""
-
-        let nodes: [WidgetNodeState]
-
-        if config.expandToSliderOnHover {
-            nodes = makeExpandableNodes(
+    private func makeNodes(
+        config: Config.VolumeBuiltinConfig,
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        text: String,
+        value: Double,
+        step: Double
+    ) -> [WidgetNodeState] {
+        guard !config.expandToSliderOnHover else {
+            return makeExpandableNodes(
                 placement: placement,
                 style: style,
                 text: text,
-                value: roundedValue,
+                value: value,
                 min: config.minValue,
                 max: config.maxValue,
                 step: step
             )
-        } else {
-            nodes = [
-                BuiltinNativeNodeFactory.makeSliderNode(
-                    rootID: rootID,
-                    placement: placement,
-                    style: style,
-                    text: text,
-                    value: roundedValue,
-                    min: config.minValue,
-                    max: config.maxValue,
-                    step: step
-                )
-            ]
         }
 
-        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+        return [
+            BuiltinNativeNodeFactory.makeSliderNode(
+                rootID: rootID,
+                placement: placement,
+                style: style,
+                text: text,
+                value: value,
+                min: config.minValue,
+                max: config.maxValue,
+                step: step
+            )
+        ]
     }
 
     /// Builds the expandable hover layout.
