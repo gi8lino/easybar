@@ -58,13 +58,7 @@ final class EventBus {
     /// Emits one typed event payload.
     func emit(_ payload: EasyBarEventPayload) {
         NotificationCenter.default.post(name: .easyBarEvent, object: payload)
-
-        if let appEvent = payload.appEvent {
-            Logger.debug("emit event \(appEvent.rawValue)")
-        } else if let widgetEvent = payload.widgetEvent {
-            Logger.debug("emit widget event \(widgetEvent.rawValue) widget=\(payload.widgetID ?? "")")
-        }
-
+        logEmission(payload)
         sendToLua(payload)
     }
 
@@ -86,6 +80,17 @@ final class EventBus {
         }
 
         return string
+    }
+
+    /// Logs one emitted payload for local debugging.
+    private func logEmission(_ payload: EasyBarEventPayload) {
+        if let appEvent = payload.appEvent {
+            Logger.debug("emit event \(appEvent.rawValue)")
+            return
+        }
+
+        guard let widgetEvent = payload.widgetEvent else { return }
+        Logger.debug("emit widget event \(widgetEvent.rawValue) widget=\(payload.widgetID ?? "")")
     }
 }
 
