@@ -109,6 +109,7 @@ struct EasyBarEventPayload {
             return "emit event \(appEventName)"
         }
 
+        guard isWidgetEvent else { return nil }
         guard let widgetEventName else { return nil }
         return "emit widget event \(widgetEventName) widget=\(resolvedWidgetID)"
     }
@@ -201,6 +202,11 @@ struct EasyBarEventPayload {
     /// Returns the raw widget event name.
     private var widgetEventName: String? {
         widgetEvent?.rawValue
+    }
+
+    /// Returns whether this payload carries a widget event.
+    private var isWidgetEvent: Bool {
+        widgetEvent != nil
     }
 
     /// Returns the raw mouse button name.
