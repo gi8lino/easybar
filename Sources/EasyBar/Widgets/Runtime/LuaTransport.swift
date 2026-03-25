@@ -25,12 +25,12 @@ final class LuaTransport {
 
     /// Stops all readability handlers and closes pipes.
     func shutdown() {
-        outputPipe?.fileHandleForReading.readabilityHandler = nil
-        errorPipe?.fileHandleForReading.readabilityHandler = nil
+        stopReadabilityHandler(for: outputPipe)
+        stopReadabilityHandler(for: errorPipe)
 
-        try? inputPipe?.fileHandleForWriting.close()
-        try? outputPipe?.fileHandleForReading.close()
-        try? errorPipe?.fileHandleForReading.close()
+        closeInputPipe()
+        closeReadPipe(outputPipe)
+        closeReadPipe(errorPipe)
 
         inputPipe = nil
         outputPipe = nil
@@ -108,6 +108,21 @@ final class LuaTransport {
         }
 
         return line
+    }
+
+    /// Stops the readability handler for one output pipe.
+    private func stopReadabilityHandler(for pipe: Pipe?) {
+        pipe?.fileHandleForReading.readabilityHandler = nil
+    }
+
+    /// Closes the stdin write pipe when present.
+    private func closeInputPipe() {
+        try? inputPipe?.fileHandleForWriting.close()
+    }
+
+    /// Closes one stdout/stderr read pipe when present.
+    private func closeReadPipe(_ pipe: Pipe?) {
+        try? pipe?.fileHandleForReading.close()
     }
 }
 
