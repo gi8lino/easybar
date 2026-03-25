@@ -109,7 +109,7 @@ struct EasyBarEventPayload {
         }
 
         guard let widgetEventName else { return nil }
-        return "emit widget event \(widgetEventName) widget=\(widgetID ?? "")"
+        return "emit widget event \(widgetEventName) widget=\(resolvedWidgetID)"
     }
 
     /// Encodes this payload for the Lua runtime boundary.
@@ -200,6 +200,11 @@ struct EasyBarEventPayload {
     /// Returns the raw mouse button name.
     private var buttonName: String? {
         button?.rawValue
+    }
+
+    /// Returns the widget id used in debug logs.
+    private var resolvedWidgetID: String {
+        widgetID ?? ""
     }
 
     /// Returns the raw scroll direction name.
