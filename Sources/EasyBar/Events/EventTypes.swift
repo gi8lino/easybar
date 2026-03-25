@@ -118,8 +118,7 @@ struct EasyBarEventPayload {
     func toDictionary() -> [String: String] {
         var payload: [String: String] = [:]
 
-        put(&payload, key: "event", value: appEvent?.rawValue)
-        put(&payload, key: "event", value: widgetEvent?.rawValue)
+        put(&payload, key: "event", value: resolvedEventName)
         put(&payload, key: "widget", value: widgetID)
         put(&payload, key: "app", value: appName)
         put(&payload, key: "interface", value: interfaceName)
@@ -150,6 +149,13 @@ struct EasyBarEventPayload {
     private func put(_ payload: inout [String: String], key: String, value: Double?) {
         guard let value else { return }
         payload[key] = String(value)
+    }
+
+    /// Returns the non-empty event name used at the Lua boundary.
+    private var resolvedEventName: String? {
+        let name = eventName
+        guard !name.isEmpty else { return nil }
+        return name
     }
 }
 
