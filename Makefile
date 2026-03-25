@@ -1,8 +1,12 @@
 APP_NAME := EasyBar
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
+CALENDAR_AGENT_NAME := EasyBarCalendarAgent
 CALENDAR_AGENT_PRODUCT := EasyBarCalendarAgent
+CALENDAR_AGENT_EXEC := EasyBarCalendarAgent
+NETWORK_AGENT_NAME := EasyBarNetworkAgent
 NETWORK_AGENT_PRODUCT := EasyBarNetworkAgent
+NETWORK_AGENT_EXEC := EasyBarNetworkAgent
 CLI_PRODUCT := easybarctl
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_PRODUCT).bundle
 
@@ -12,8 +16,18 @@ APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
-CALENDAR_AGENT_BIN := $(DIST_DIR)/$(CALENDAR_AGENT_PRODUCT)
-NETWORK_AGENT_BIN := $(DIST_DIR)/$(NETWORK_AGENT_PRODUCT)
+CALENDAR_AGENT_BUNDLE := $(DIST_DIR)/$(CALENDAR_AGENT_NAME).app
+CALENDAR_AGENT_CONTENTS := $(CALENDAR_AGENT_BUNDLE)/Contents
+CALENDAR_AGENT_MACOS := $(CALENDAR_AGENT_CONTENTS)/MacOS
+CALENDAR_AGENT_BIN := $(CALENDAR_AGENT_MACOS)/$(CALENDAR_AGENT_EXEC)
+CALENDAR_AGENT_PLIST_TEMPLATE := agents/calendar-agent/Info.plist
+CALENDAR_AGENT_PLIST := $(CALENDAR_AGENT_CONTENTS)/Info.plist
+NETWORK_AGENT_BUNDLE := $(DIST_DIR)/$(NETWORK_AGENT_NAME).app
+NETWORK_AGENT_CONTENTS := $(NETWORK_AGENT_BUNDLE)/Contents
+NETWORK_AGENT_MACOS := $(NETWORK_AGENT_CONTENTS)/MacOS
+NETWORK_AGENT_BIN := $(NETWORK_AGENT_MACOS)/$(NETWORK_AGENT_EXEC)
+NETWORK_AGENT_PLIST_TEMPLATE := agents/network-agent/Info.plist
+NETWORK_AGENT_PLIST := $(NETWORK_AGENT_CONTENTS)/Info.plist
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
@@ -59,7 +73,8 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package release app cli clean clean-dist run dev \
-        build-app build-calendar-agent build-network-agent build-cli copy-resources verify stamp-plist sign notarize \
+        build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
+        stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags
 
@@ -89,14 +104,18 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(DIST_DIR)"
+	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-calendar-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-network-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
+	@cp "$(CALENDAR_AGENT_PLIST_TEMPLATE)" "$(CALENDAR_AGENT_PLIST)"
+	@cp "$(NETWORK_AGENT_PLIST_TEMPLATE)" "$(NETWORK_AGENT_PLIST)"
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
+	@$(MAKE) --no-print-directory stamp-calendar-agent-plist VERSION=$(VERSION)
+	@$(MAKE) --no-print-directory stamp-network-agent-plist VERSION=$(VERSION)
 	@chmod +x "$(APP_BIN)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(CLI_BIN)"
 	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
 	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
@@ -106,10 +125,10 @@ package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
-	@cp "$(CALENDAR_AGENT_BIN)" "$(PACKAGE_STAGE)/EasyBarCalendarAgent"
-	@cp "$(NETWORK_AGENT_BIN)" "$(PACKAGE_STAGE)/EasyBarNetworkAgent"
+	@cp -R "$(CALENDAR_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarCalendarAgent.app"
+	@cp -R "$(NETWORK_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarNetworkAgent.app"
 	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybarctl"
-	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent" "EasyBarNetworkAgent" "easybarctl"
+	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent.app" "EasyBarNetworkAgent.app" "easybarctl"
 	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 
@@ -184,18 +203,32 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 
+stamp-calendar-agent-plist: ## Internal target: stamp version into the calendar agent Info.plist.
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(CALENDAR_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(CALENDAR_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(CALENDAR_AGENT_EXEC)' "$(CALENDAR_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
+
+stamp-network-agent-plist: ## Internal target: stamp version into the network agent Info.plist.
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(NETWORK_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(NETWORK_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(NETWORK_AGENT_EXEC)' "$(NETWORK_AGENT_PLIST)"
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
+
 sign: ## Sign the app bundle, calendar agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
 	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
 		echo "Signing artifacts with ad-hoc identity"; \
 		codesign --force --deep --sign - "$(APP_BUNDLE)"; \
-		codesign --force --sign - "$(CALENDAR_AGENT_BIN)"; \
-		codesign --force --sign - "$(NETWORK_AGENT_BIN)"; \
+		codesign --force --deep --sign - "$(CALENDAR_AGENT_BUNDLE)"; \
+		codesign --force --deep --sign - "$(NETWORK_AGENT_BUNDLE)"; \
 		codesign --force --sign - "$(CLI_BIN)"; \
 	else \
 		echo "Signing artifacts with $(CODESIGN_IDENTITY)"; \
 		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(APP_BUNDLE)"; \
-		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CALENDAR_AGENT_BIN)"; \
-		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(NETWORK_AGENT_BIN)"; \
+		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CALENDAR_AGENT_BUNDLE)"; \
+		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(NETWORK_AGENT_BUNDLE)"; \
 		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CLI_BIN)"; \
 	fi
 
@@ -222,9 +255,15 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@file "$(NETWORK_AGENT_BIN)"
 	@file "$(CLI_BIN)"
 	@test -f "$(PLIST)"
+	@test -f "$(CALENDAR_AGENT_PLIST)"
+	@test -f "$(NETWORK_AGENT_PLIST)"
 	@test -d "$(APP_RESOURCE_BUNDLE)"
 	@echo "Info.plist:"
 	@plutil -p "$(PLIST)"
+	@echo "Calendar agent Info.plist:"
+	@plutil -p "$(CALENDAR_AGENT_PLIST)"
+	@echo "Network agent Info.plist:"
+	@plutil -p "$(NETWORK_AGENT_PLIST)"
 	@echo "Packaged app root:"
 	@ls -1 "$(APP_BUNDLE)"
 	@echo "Packaged Contents:"

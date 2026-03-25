@@ -58,8 +58,8 @@ If macOS blocks the app or CLI with a Gatekeeper or malware verification warning
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
-xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
-xattr -d com.apple.quarantine "$(command -v easybar-network-agent)"
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar-network-agent
@@ -69,8 +69,10 @@ brew services start gi8lino/tap/easybar
 This installs:
 
 - `EasyBar.app` under `$(brew --prefix)/opt/easybar/libexec/EasyBar.app`
-- `easybar-calendar-agent` in your `PATH`
-- `easybar-network-agent` in your `PATH`
+- `EasyBarCalendarAgent.app` under `$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app`
+- `EasyBarNetworkAgent.app` under `$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app`
+- `easybar-calendar-agent` wrapper in your `PATH`
+- `easybar-network-agent` wrapper in your `PATH`
 - `easybar` in your `PATH`
 - `easybarctl` in your `PATH`
 
@@ -125,8 +127,8 @@ If Gatekeeper blocks launch after install, run:
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
-xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
-xattr -d com.apple.quarantine "$(command -v easybar-network-agent)"
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
+xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
 ```
 

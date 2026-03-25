@@ -112,7 +112,12 @@ jobs:
             depends_on macos: :sonoma
 
             def install
-              bin.install "EasyBarCalendarAgent" => "easybar-calendar-agent"
+              libexec.install "EasyBarCalendarAgent.app"
+
+              (bin/"easybar-calendar-agent").write <<~SH
+                #!/bin/bash
+                exec "#{libexec}/EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent" "\$@"
+              SH
 
               (var/"log/easybar-calendar-agent").mkpath
             end
@@ -128,7 +133,7 @@ jobs:
             end
 
             test do
-              assert_predicate bin/"easybar-calendar-agent", :exist?
+              assert_predicate libexec/"EasyBarCalendarAgent.app", :exist?
             end
           end
           EOF
@@ -145,7 +150,12 @@ jobs:
             depends_on macos: :sonoma
 
             def install
-              bin.install "EasyBarNetworkAgent" => "easybar-network-agent"
+              libexec.install "EasyBarNetworkAgent.app"
+
+              (bin/"easybar-network-agent").write <<~SH
+                #!/bin/bash
+                exec "#{libexec}/EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent" "\$@"
+              SH
 
               (var/"log/easybar-network-agent").mkpath
             end
@@ -161,7 +171,7 @@ jobs:
             end
 
             test do
-              assert_predicate bin/"easybar-network-agent", :exist?
+              assert_predicate libexec/"EasyBarNetworkAgent.app", :exist?
             end
           end
           EOF
