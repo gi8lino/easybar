@@ -59,11 +59,7 @@ final class AeroSpaceService: ObservableObject {
         debounceWorkItem?.cancel()
 
         refreshQueue.async { [weak self] in
-            guard let self else { return }
-
-            self.reloadState()
-            Thread.sleep(forTimeInterval: 0.04)
-            self.reloadState()
+            self?.reloadStateTwice()
         }
     }
 
@@ -90,10 +86,7 @@ final class AeroSpaceService: ObservableObject {
             guard let self else { return }
 
             _ = self.runAeroSpace(arguments: ["workspace", workspace])
-
-            self.reloadState()
-            Thread.sleep(forTimeInterval: 0.04)
-            self.reloadState()
+            self.reloadStateTwice()
         }
     }
 
@@ -178,8 +171,7 @@ final class AeroSpaceService: ObservableObject {
         focusedApp = focused
         focusedAppID = focused.id
 
-        Logger.debug("aerospace optimistic focus updated app=\(focused.name)")
-        NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
+        publishUpdate(logMessage: "aerospace optimistic focus updated app=\(focused.name)")
     }
 
     /// Reads current AeroSpace state and publishes it.
@@ -201,21 +193,23 @@ final class AeroSpaceService: ObservableObject {
             }
             .filter { !$0.apps.isEmpty }
 
-        let focusedAppID = focused?.id
-
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
 
             self.spaces = spaces
             self.focusedApp = focused
-            self.focusedAppID = focusedAppID
-
-            Logger.debug(
-                "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none")"
+            self.focusedAppID = focused?.id
+            self.publishUpdate(
+                logMessage: "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none")"
             )
-
-            NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
         }
+    }
+
+    /// Reloads twice to smooth over small AeroSpace timing gaps.
+    private func reloadStateTwice() {
+        reloadState()
+        Thread.sleep(forTimeInterval: 0.04)
+        reloadState()
     }
 
     /// Reads all known workspaces from AeroSpace.
@@ -398,6 +392,12 @@ final class AeroSpaceService: ObservableObject {
         }
 
         return bundlePath
+    }
+
+    /// Publishes one shared AeroSpace update notification.
+    private func publishUpdate(logMessage: String) {
+        Logger.debug(logMessage)
+        NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
     }
 }
 
