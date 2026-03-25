@@ -26,9 +26,8 @@ final class EasyBarEventObserver {
 
     /// Stops observing EasyBar events.
     func stop() {
-        if let token {
-            NotificationCenter.default.removeObserver(token)
-            self.token = nil
-        }
+        guard let token else { return }
+        NotificationCenter.default.removeObserver(token)
+        self.token = nil
     }
 }
