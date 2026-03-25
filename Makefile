@@ -72,7 +72,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run dev \
+.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run stop dev \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
@@ -275,6 +275,19 @@ run: bundle ## Build, start local agents, and open the app bundle.
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@open "$(APP_BUNDLE)"
+
+stop: ## Stop EasyBar and its agents from brew services and local dist runs.
+	@if command -v brew >/dev/null 2>&1; then \
+		brew services stop gi8lino/tap/easybar >/dev/null 2>&1 || true; \
+		brew services stop gi8lino/tap/easybar-calendar-agent >/dev/null 2>&1 || true; \
+		brew services stop gi8lino/tap/easybar-network-agent >/dev/null 2>&1 || true; \
+	fi
+	@pkill -x "$(APP_EXEC)" >/dev/null 2>&1 || true
+	@pkill -x "$(CALENDAR_AGENT_EXEC)" >/dev/null 2>&1 || true
+	@pkill -x "$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
+	@pkill -f "$(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)" >/dev/null 2>&1 || true
+	@pkill -f "$(CALENDAR_AGENT_BUNDLE)/Contents/MacOS/$(CALENDAR_AGENT_EXEC)" >/dev/null 2>&1 || true
+	@pkill -f "$(NETWORK_AGENT_BUNDLE)/Contents/MacOS/$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
 
 dev: prepare-version ## Fast debug run without bundling.
 	@EASYBAR_DEBUG=1 $(SWIFT_BUILD_DEBUG) --product $(APP_PRODUCT)
