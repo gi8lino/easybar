@@ -82,32 +82,7 @@ final class WidgetRunner {
         do {
             let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
 
-            if update.type == "subscriptions" {
-                requiredEvents = Set(update.events ?? [])
-                subscriptionsReady = true
-
-                Logger.debug("required events: \(requiredEvents)")
-                EventManager.shared.start(subscriptions: requiredEvents)
-                emitInitialEventsIfPossible()
-                return
-            }
-
-            if update.type == "ready" {
-                Logger.debug("lua runtime handshake received")
-                runtimeReady = true
-                emitInitialEventsIfPossible()
-                return
-            }
-
-            if update.type == "tree",
-               let root = update.root,
-               let nodes = update.nodes {
-                Logger.debug("decoded widget tree root=\(root) nodes=\(nodes.count)")
-                WidgetStore.shared.apply(root: root, nodes: nodes)
-                return
-            }
-
-            Logger.warn("unknown lua message: \(line)")
+            handleUpdate(update, rawLine: line)
         } catch {
             Logger.warn("json decode failed: \(line)")
             Logger.debug("decode error: \(error)")
@@ -128,54 +103,72 @@ final class WidgetRunner {
     private func emitInitialEvents() {
         Logger.debug("emitting initial widget events")
 
-        if requiredEvents.contains("system_woke") {
-            EventBus.shared.emit(.systemWoke)
-        }
-
-        if requiredEvents.contains("power_source_change") {
-            EventBus.shared.emit(.powerSourceChange)
-        }
-
-        if requiredEvents.contains("charging_state_change") {
-            EventBus.shared.emit(.chargingStateChange)
-        }
-
-        if requiredEvents.contains("wifi_change") {
-            EventBus.shared.emit(.wifiChange)
-        }
-
-        if requiredEvents.contains("network_change") {
-            EventBus.shared.emit(.networkChange)
-        }
-
-        if requiredEvents.contains("volume_change") {
-            EventBus.shared.emit(.volumeChange)
-        }
-
-        if requiredEvents.contains("mute_change") {
-            EventBus.shared.emit(.muteChange)
-        }
-
-        if requiredEvents.contains("calendar_change") {
-            EventBus.shared.emit(.calendarChange)
-        }
-
-        if requiredEvents.contains("minute_tick") {
-            EventBus.shared.emit(.minuteTick)
-        }
-
-        if requiredEvents.contains("second_tick") {
-            EventBus.shared.emit(.secondTick)
-        }
-
-        if requiredEvents.contains("focus_change") {
-            EventBus.shared.emit(.focusChange)
-        }
-
-        if requiredEvents.contains("workspace_change") {
-            EventBus.shared.emit(.workspaceChange)
-        }
-
+        emitInitialEvent(named: "system_woke", event: .systemWoke)
+        emitInitialEvent(named: "power_source_change", event: .powerSourceChange)
+        emitInitialEvent(named: "charging_state_change", event: .chargingStateChange)
+        emitInitialEvent(named: "wifi_change", event: .wifiChange)
+        emitInitialEvent(named: "network_change", event: .networkChange)
+        emitInitialEvent(named: "volume_change", event: .volumeChange)
+        emitInitialEvent(named: "mute_change", event: .muteChange)
+        emitInitialEvent(named: "calendar_change", event: .calendarChange)
+        emitInitialEvent(named: "minute_tick", event: .minuteTick)
+        emitInitialEvent(named: "second_tick", event: .secondTick)
+        emitInitialEvent(named: "focus_change", event: .focusChange)
+        emitInitialEvent(named: "workspace_change", event: .workspaceChange)
         EventBus.shared.emit(.forced)
+    }
+
+    /// Handles one decoded Lua runtime update.
+    private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) {
+        if update.type == "subscriptions" {
+            handleSubscriptions(update)
+            return
+        }
+
+        if update.type == "ready" {
+            handleReady()
+            return
+        }
+
+        if update.type == "tree" {
+            handleTree(update, rawLine: rawLine)
+            return
+        }
+
+        Logger.warn("unknown lua message: \(rawLine)")
+    }
+
+    /// Handles one subscription update from Lua.
+    private func handleSubscriptions(_ update: WidgetTreeUpdate) {
+        requiredEvents = Set(update.events ?? [])
+        subscriptionsReady = true
+
+        Logger.debug("required events: \(requiredEvents)")
+        EventManager.shared.start(subscriptions: requiredEvents)
+        emitInitialEventsIfPossible()
+    }
+
+    /// Handles the Lua runtime ready handshake.
+    private func handleReady() {
+        Logger.debug("lua runtime handshake received")
+        runtimeReady = true
+        emitInitialEventsIfPossible()
+    }
+
+    /// Handles one rendered widget tree update.
+    private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) {
+        guard let root = update.root, let nodes = update.nodes else {
+            Logger.warn("unknown lua message: \(rawLine)")
+            return
+        }
+
+        Logger.debug("decoded widget tree root=\(root) nodes=\(nodes.count)")
+        WidgetStore.shared.apply(root: root, nodes: nodes)
+    }
+
+    /// Emits one initial event when Lua subscribed to it.
+    private func emitInitialEvent(named name: String, event: EasyBarAppEvent) {
+        guard requiredEvents.contains(name) else { return }
+        EventBus.shared.emit(event)
     }
 }
