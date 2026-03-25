@@ -82,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Logger.info("lua path=\(Config.shared.luaPath)")
         Logger.info("watch config=\(Config.shared.watchConfigFile)")
         Logger.info("calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)")
-        Logger.info("network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath)")
+        Logger.info("network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)")
         Logger.info("calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) layout=\(Config.shared.builtinCalendar.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)")
         Logger.info("wifi builtin enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)")
         Logger.info("bar height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)")

@@ -14,6 +14,7 @@ socket_path = "/tmp/EasyBar/calendar-agent.sock" # Unix socket path used by Easy
 [agents.network]
 enabled = true # Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.
 socket_path = "/tmp/EasyBar/network-agent.sock" # Unix socket path used by EasyBar and the network agent.
+refresh_interval_seconds = 15 # Periodic fallback refresh interval for Wi-Fi state; set to 0 to disable polling.
 
 [bar]
 height = 32 # Total height of the bar.

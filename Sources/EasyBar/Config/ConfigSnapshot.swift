@@ -11,6 +11,7 @@ struct ConfigSnapshot {
     let calendarAgentSocketPath: String
     let networkAgentEnabled: Bool
     let networkAgentSocketPath: String
+    let networkAgentRefreshIntervalSeconds: Double
 
     let barHeight: CGFloat
     let barPaddingX: CGFloat

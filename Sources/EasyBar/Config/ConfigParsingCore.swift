@@ -63,6 +63,13 @@ extension Config {
                     string: try requiredString(value, path: "agents.network.socket_path")
                 ).expandingTildeInPath
             }
+
+            if let value = network["refresh_interval_seconds"] {
+                networkAgentRefreshIntervalSeconds = try requiredNumber(
+                    value,
+                    path: "agents.network.refresh_interval_seconds"
+                )
+            }
         }
     }
 

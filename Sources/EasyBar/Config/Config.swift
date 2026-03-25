@@ -17,6 +17,7 @@ final class Config {
     var calendarAgentSocketPath: String = ""
     var networkAgentEnabled: Bool = true
     var networkAgentSocketPath: String = ""
+    var networkAgentRefreshIntervalSeconds: Double = 15
 
     // MARK: - Bar
 
@@ -91,6 +92,7 @@ final class Config {
             .path
         calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
         networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
+        networkAgentRefreshIntervalSeconds = 15
     }
 
     /// Restores all static defaults before parsing again.
@@ -100,6 +102,7 @@ final class Config {
         loggingEnabled = false
         calendarAgentEnabled = true
         networkAgentEnabled = true
+        networkAgentRefreshIntervalSeconds = 15
 
         barHeight = 32
         barPaddingX = 10
@@ -131,6 +134,7 @@ final class Config {
             calendarAgentSocketPath: calendarAgentSocketPath,
             networkAgentEnabled: networkAgentEnabled,
             networkAgentSocketPath: networkAgentSocketPath,
+            networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
             barExtendBehindNotch: barExtendBehindNotch,
@@ -159,6 +163,7 @@ final class Config {
         calendarAgentSocketPath = snapshot.calendarAgentSocketPath
         networkAgentEnabled = snapshot.networkAgentEnabled
         networkAgentSocketPath = snapshot.networkAgentSocketPath
+        networkAgentRefreshIntervalSeconds = snapshot.networkAgentRefreshIntervalSeconds
 
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX

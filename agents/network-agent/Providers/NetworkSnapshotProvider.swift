@@ -14,6 +14,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
 
     private var store: SCDynamicStore?
     private var storeSource: CFRunLoopSource?
+    private let refreshIntervalSeconds = defaultNetworkAgentRefreshIntervalSeconds()
 
     func start(onChange: @escaping () -> Void) {
         self.onChange = onChange
@@ -26,8 +27,12 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
         startWiFiMonitoring()
         startNetworkMonitoring()
 
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
-            self?.onChange?()
+        AgentLogger.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
+
+        if refreshIntervalSeconds > 0 {
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshIntervalSeconds, repeats: true) { [weak self] _ in
+                self?.onChange?()
+            }
         }
 
         onChange()
