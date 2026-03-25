@@ -144,7 +144,7 @@ struct WidgetNodeView: View {
                 maxValue: maxValue,
                 step: stepValue,
                 value: currentValue,
-                tint: color(node.color),
+                tint: nodeColor,
                 width: nodeWidth
             )
         }
@@ -161,7 +161,7 @@ struct WidgetNodeView: View {
                 maxValue: maxValue,
                 step: stepValue,
                 value: currentValue,
-                tint: color(node.color),
+                tint: nodeColor,
                 width: nodeWidth
             )
         }
@@ -176,7 +176,7 @@ struct WidgetNodeView: View {
                 value: currentValue,
                 minValue: minValue,
                 maxValue: maxValue,
-                tint: color(node.color)
+                tint: nodeColor
             )
             .frame(width: progressWidth, height: progressHeight)
         }
@@ -189,11 +189,16 @@ struct WidgetNodeView: View {
 
             SparklineCanvas(
                 values: node.values ?? [],
-                tint: color(node.color),
+                tint: nodeColor,
                 lineWidth: sparklineLineWidth
             )
             .frame(width: sparklineWidth, height: sparklineHeight)
         }
+    }
+
+    /// Returns the resolved node color.
+    private var nodeColor: Color {
+        color(node.color)
     }
 
     private func color(_ hex: String?) -> Color {
