@@ -54,25 +54,8 @@ final class CalendarAgentClient {
         queue.async {
             guard self.isRunning() else { return }
 
-            let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-            guard fd >= 0 else {
-                Logger.warn("calendar agent client failed to create socket")
-                self.scheduleReconnect()
-                return
-            }
-
-            var addr = makeSockAddrUn(path: defaultCalendarAgentSocketPath())
-            let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-            let connectResult = withUnsafePointer(to: &addr) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    Darwin.connect(fd, $0, addrLen)
-                }
-            }
-
-            guard connectResult == 0 else {
-                Logger.info("calendar agent client connect failed socket=\(defaultCalendarAgentSocketPath())")
-                close(fd)
+            let socketPath = resolvedSocketPath()
+            guard let fd = self.openConnectedSocket(socketPath: socketPath) else {
                 self.scheduleReconnect()
                 return
             }
@@ -81,7 +64,7 @@ final class CalendarAgentClient {
             self.socketFD = fd
             self.lock.unlock()
 
-            Logger.info("calendar agent client connected socket=\(defaultCalendarAgentSocketPath())")
+            Logger.info("calendar agent client connected socket=\(socketPath)")
 
             let request = CalendarAgentRequest(
                 command: .subscribe,
@@ -229,5 +212,36 @@ final class CalendarAgentClient {
         lock.lock()
         defer { lock.unlock() }
         return running
+    }
+
+    /// Returns the configured calendar agent socket path.
+    private func resolvedSocketPath() -> String {
+        defaultCalendarAgentSocketPath()
+    }
+
+    /// Opens and connects one Unix socket to the calendar agent.
+    private func openConnectedSocket(socketPath: String) -> Int32? {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else {
+            Logger.warn("calendar agent client failed to create socket")
+            return nil
+        }
+
+        var addr = makeSockAddrUn(path: socketPath)
+        let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+        let connectResult = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(fd, $0, addrLen)
+            }
+        }
+
+        guard connectResult == 0 else {
+            Logger.info("calendar agent client connect failed socket=\(socketPath)")
+            close(fd)
+            return nil
+        }
+
+        return fd
     }
 }

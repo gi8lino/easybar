@@ -54,25 +54,8 @@ final class NetworkAgentClient {
         queue.async {
             guard self.isRunning() else { return }
 
-            let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-            guard fd >= 0 else {
-                Logger.warn("network agent client failed to create socket")
-                self.scheduleReconnect()
-                return
-            }
-
-            var addr = makeSockAddrUn(path: Config.shared.networkAgentSocketPath)
-            let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-            let connectResult = withUnsafePointer(to: &addr) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    Darwin.connect(fd, $0, addrLen)
-                }
-            }
-
-            guard connectResult == 0 else {
-                Logger.info("network agent client connect failed socket=\(Config.shared.networkAgentSocketPath)")
-                close(fd)
+            let socketPath = resolvedSocketPath()
+            guard let fd = self.openConnectedSocket(socketPath: socketPath) else {
                 self.scheduleReconnect()
                 return
             }
@@ -81,7 +64,7 @@ final class NetworkAgentClient {
             self.socketFD = fd
             self.lock.unlock()
 
-            Logger.info("network agent client connected socket=\(Config.shared.networkAgentSocketPath)")
+            Logger.info("network agent client connected socket=\(socketPath)")
 
             let request = NetworkAgentRequest(command: .subscribe)
             guard self.send(request, to: fd) else {
@@ -206,6 +189,37 @@ final class NetworkAgentClient {
         lock.lock()
         defer { lock.unlock() }
         return running
+    }
+
+    /// Returns the configured network agent socket path.
+    private func resolvedSocketPath() -> String {
+        Config.shared.networkAgentSocketPath
+    }
+
+    /// Opens and connects one Unix socket to the network agent.
+    private func openConnectedSocket(socketPath: String) -> Int32? {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else {
+            Logger.warn("network agent client failed to create socket")
+            return nil
+        }
+
+        var addr = makeSockAddrUn(path: socketPath)
+        let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+        let connectResult = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(fd, $0, addrLen)
+            }
+        }
+
+        guard connectResult == 0 else {
+            Logger.info("network agent client connect failed socket=\(socketPath)")
+            close(fd)
+            return nil
+        }
+
+        return fd
     }
 
     /// Publishes one snapshot to the shared store on the main queue.
