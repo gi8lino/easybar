@@ -13,10 +13,7 @@ struct SpacesWidgetView: View {
                 ForEach(aeroSpaceService.spaces) { space in
                     spacePill(for: space, config: config)
                         .contentShape(Rectangle())
-                        .onTapGesture {
-                            guard config.layout.clickToFocusSpace else { return }
-                            aeroSpaceService.focusWorkspace(space.name)
-                        }
+                        .onTapGesture { focusSpaceIfEnabled(space, config: config) }
                 }
             }
             .padding(.horizontal, CGFloat(config.layout.marginX))
@@ -51,22 +48,10 @@ struct SpacesWidgetView: View {
                             isFocusedApp: app.id == aeroSpaceService.focusedAppID
                         )
                         .contentShape(Rectangle())
-                        .onTapGesture {
-                            guard config.layout.clickToFocusApp else { return }
-                            aeroSpaceService.focusApp(app)
-                        }
+                        .onTapGesture { focusAppIfEnabled(app, config: config) }
                     }
 
-                    if hiddenAppCount(for: space, config: config) > 0 {
-                        Text("+\(hiddenAppCount(for: space, config: config))")
-                            .font(.system(
-                                size: max(10, CGFloat(config.text.size) - 1),
-                                weight: .medium
-                            ))
-                            .foregroundStyle(
-                                space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
-                            )
-                    }
+                    hiddenAppBadge(for: space, config: config)
                 }
             }
         }
@@ -173,6 +158,43 @@ struct SpacesWidgetView: View {
         space.isFocused
             ? CGFloat(config.layout.focusedCornerRadius)
             : CGFloat(config.layout.cornerRadius)
+    }
+
+    /// Focuses one space when click-to-focus is enabled.
+    private func focusSpaceIfEnabled(
+        _ space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) {
+        guard config.layout.clickToFocusSpace else { return }
+        aeroSpaceService.focusWorkspace(space.name)
+    }
+
+    /// Focuses one app when click-to-focus is enabled.
+    private func focusAppIfEnabled(
+        _ app: SpaceApp,
+        config: Config.SpacesBuiltinConfig
+    ) {
+        guard config.layout.clickToFocusApp else { return }
+        aeroSpaceService.focusApp(app)
+    }
+
+    /// Builds the hidden-app count badge for one space.
+    @ViewBuilder
+    private func hiddenAppBadge(
+        for space: SpaceItem,
+        config: Config.SpacesBuiltinConfig
+    ) -> some View {
+        let count = hiddenAppCount(for: space, config: config)
+        if count > 0 {
+            Text("+\(count)")
+                .font(.system(
+                    size: max(10, CGFloat(config.text.size) - 1),
+                    weight: .medium
+                ))
+                .foregroundStyle(
+                    space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+                )
+        }
     }
 }
 
