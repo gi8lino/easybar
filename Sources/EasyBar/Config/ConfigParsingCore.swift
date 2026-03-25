@@ -37,6 +37,24 @@ extension Config {
         }
     }
 
+    /// Parses agent settings.
+    func parseAgents(from toml: TOMLTable) throws {
+        guard let agents = toml["agents"]?.table,
+              let calendar = agents["calendar"]?.table else {
+            return
+        }
+
+        if let value = calendar["enabled"] {
+            calendarAgentEnabled = try requiredBool(value, path: "agents.calendar.enabled")
+        }
+
+        if let value = calendar["socket_path"] {
+            calendarAgentSocketPath = NSString(
+                string: try requiredString(value, path: "agents.calendar.socket_path")
+            ).expandingTildeInPath
+        }
+    }
+
     /// Parses bar-level settings.
     func parseBar(from toml: TOMLTable) throws {
         guard let bar = toml["bar"]?.table else { return }

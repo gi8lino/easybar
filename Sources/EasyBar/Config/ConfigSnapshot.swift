@@ -7,6 +7,8 @@ struct ConfigSnapshot {
     let watchConfigFile: Bool
     let loggingEnabled: Bool
     let loggingPath: String
+    let calendarAgentEnabled: Bool
+    let calendarAgentSocketPath: String
 
     let barHeight: CGFloat
     let barPaddingX: CGFloat

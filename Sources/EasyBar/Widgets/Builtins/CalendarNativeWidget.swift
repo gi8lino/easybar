@@ -12,7 +12,11 @@ final class CalendarNativeWidget: NativeWidget {
 
         Logger.info("starting native widget id=\(rootID) enabled=\(config.enabled) layout=\(config.layout.rawValue) position=\(config.position.rawValue) days=\(config.days) show_birthdays=\(config.showBirthdays)")
 
-        CalendarAgentClient.shared.start()
+        if Config.shared.calendarAgentEnabled {
+            CalendarAgentClient.shared.start()
+        } else {
+            Logger.info("calendar agent disabled in config")
+        }
 
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.publish()
@@ -28,7 +32,9 @@ final class CalendarNativeWidget: NativeWidget {
         timer?.invalidate()
         timer = nil
 
-        CalendarAgentClient.shared.stop()
+        if Config.shared.calendarAgentEnabled {
+            CalendarAgentClient.shared.stop()
+        }
         WidgetStore.shared.apply(root: rootID, nodes: [])
         NativeCalendarStore.shared.clear()
     }

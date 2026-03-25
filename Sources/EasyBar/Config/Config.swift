@@ -13,6 +13,8 @@ final class Config {
     var watchConfigFile: Bool = true
     var loggingEnabled: Bool = false
     var loggingPath: String = ""
+    var calendarAgentEnabled: Bool = true
+    var calendarAgentSocketPath: String = ""
 
     // MARK: - Bar
 
@@ -84,6 +86,7 @@ final class Config {
         loggingPath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".local/state/easybar/easybar.out")
             .path
+        calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
     }
 
     /// Restores all static defaults before parsing again.
@@ -91,6 +94,7 @@ final class Config {
         luaPath = "/usr/local/bin/lua"
         watchConfigFile = true
         loggingEnabled = false
+        calendarAgentEnabled = true
 
         barHeight = 32
         barPaddingX = 10
@@ -117,6 +121,8 @@ final class Config {
             watchConfigFile: watchConfigFile,
             loggingEnabled: loggingEnabled,
             loggingPath: loggingPath,
+            calendarAgentEnabled: calendarAgentEnabled,
+            calendarAgentSocketPath: calendarAgentSocketPath,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
             barExtendBehindNotch: barExtendBehindNotch,
@@ -140,6 +146,8 @@ final class Config {
         watchConfigFile = snapshot.watchConfigFile
         loggingEnabled = snapshot.loggingEnabled
         loggingPath = snapshot.loggingPath
+        calendarAgentEnabled = snapshot.calendarAgentEnabled
+        calendarAgentSocketPath = snapshot.calendarAgentSocketPath
 
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX

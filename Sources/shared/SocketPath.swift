@@ -23,10 +23,71 @@ public func defaultCalendarAgentSocketPath() -> String {
         return override
     }
 
+    if let configured = configuredCalendarAgentSocketPath(),
+       !configured.isEmpty {
+        return configured
+    }
+
     return "/tmp/EasyBar/calendar-agent.sock"
 }
 
 /// Returns the parent directory of the given Unix socket path.
 public func socketDirectoryPath(for socketPath: String) -> String {
     URL(fileURLWithPath: socketPath).deletingLastPathComponent().path
+}
+
+private func configuredCalendarAgentSocketPath() -> String? {
+    let configPath: String
+
+    if let override = ProcessInfo.processInfo.environment["EASYBAR_CONFIG_PATH"]?
+        .trimmingCharacters(in: .whitespacesAndNewlines),
+       !override.isEmpty {
+        configPath = NSString(string: override).expandingTildeInPath
+    } else {
+        configPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/easybar/config.toml")
+            .path
+    }
+
+    guard let text = try? String(contentsOfFile: configPath, encoding: .utf8) else {
+        return nil
+    }
+
+    var inCalendarAgentSection = false
+
+    for rawLine in text.components(separatedBy: .newlines) {
+        let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !line.isEmpty, !line.hasPrefix("#") else { continue }
+
+        if line.hasPrefix("[") && line.hasSuffix("]") {
+            inCalendarAgentSection = (line == "[agents.calendar]")
+            continue
+        }
+
+        guard inCalendarAgentSection,
+              line.hasPrefix("socket_path") else {
+            continue
+        }
+
+        guard let equals = line.firstIndex(of: "=") else { continue }
+
+        let rawValue = line[line.index(after: equals)...]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let unquoted = rawValue
+            .split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard unquoted.hasPrefix("\""), unquoted.hasSuffix("\""), unquoted.count >= 2 else {
+            continue
+        }
+
+        let start = unquoted.index(after: unquoted.startIndex)
+        let end = unquoted.index(before: unquoted.endIndex)
+        return NSString(string: String(unquoted[start..<end])).expandingTildeInPath
+    }
+
+    return nil
 }

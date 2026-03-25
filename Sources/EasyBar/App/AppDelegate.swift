@@ -81,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Logger.info("widgets path=\(Config.shared.widgetsPath)")
         Logger.info("lua path=\(Config.shared.luaPath)")
         Logger.info("watch config=\(Config.shared.watchConfigFile)")
+        Logger.info("calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)")
         Logger.info("calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) layout=\(Config.shared.builtinCalendar.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)")
         Logger.info("bar height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)")
 

@@ -20,6 +20,7 @@ extension Config {
 
             try parseApp(from: toml)
             try parseLogging(from: toml)
+            try parseAgents(from: toml)
             try parseBar(from: toml)
             try parseBuiltins(from: toml)
         } catch let error as ConfigError {
