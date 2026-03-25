@@ -18,6 +18,8 @@ struct WidgetNodeView: View {
             } else {
                 if node.kind.isRowLikeContainer {
                     rowOrGroupView
+                } else if node.kind.isCustomRenderedKind {
+                    customRenderedNodeView
                 } else if node.kind.isInteractiveKind {
                     interactiveNodeView
                 } else {
@@ -30,20 +32,28 @@ struct WidgetNodeView: View {
                     }
                     .modifier(WidgetNodeStyle(node: node))
 
-                case .spaces:
-                    SpacesWidgetView()
-                        .modifier(WidgetNodeStyle(node: node))
-
                 case .popup:
                     popupAnchor
 
                     case .item:
                         itemView
-                    case .row, .group, .slider, .progressSlider, .progress, .sparkline:
+                    case .row, .group, .spaces, .slider, .progressSlider, .progress, .sparkline:
                         EmptyView()
                     }
                 }
             }
+        }
+    }
+
+    /// Returns the custom-rendered view for the current node kind.
+    @ViewBuilder
+    private var customRenderedNodeView: some View {
+        switch node.kind {
+        case .spaces:
+            SpacesWidgetView()
+                .modifier(nodeStyle)
+        default:
+            EmptyView()
         }
     }
 

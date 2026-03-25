@@ -32,6 +32,11 @@ enum WidgetNodeKind: String, Codable {
             || self == .progress
             || self == .sparkline
     }
+
+    /// Returns whether this kind renders through a dedicated custom view.
+    var isCustomRenderedKind: Bool {
+        self == .spaces
+    }
 }
 
 /// Internal role markers for special child nodes.
