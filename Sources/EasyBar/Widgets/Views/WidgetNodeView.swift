@@ -16,11 +16,11 @@ struct WidgetNodeView: View {
             if !node.visible {
                 EmptyView()
             } else {
-                switch node.kind {
-                case .row, .group:
+                if node.kind.isRowLikeContainer {
                     rowOrGroupView
-
-                case .column:
+                } else {
+                    switch node.kind {
+                    case .column:
                     VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
                         ForEach(store.children(of: node.id)) { child in
                             WidgetNodeView(node: child)
@@ -47,8 +47,11 @@ struct WidgetNodeView: View {
                 case .sparkline:
                     interactiveContent(sparklineView)
 
-                case .item:
-                    itemView
+                    case .item:
+                        itemView
+                    case .row, .group:
+                        EmptyView()
+                    }
                 }
             }
         }

@@ -19,6 +19,11 @@ enum WidgetNodeKind: String, Codable {
     case progress
     case sparkline
     case spaces
+
+    /// Returns whether this kind renders as a horizontal child container.
+    var isRowLikeContainer: Bool {
+        self == .row || self == .group
+    }
 }
 
 /// Internal role markers for special child nodes.
