@@ -16,7 +16,6 @@ final class AeroSpaceService: ObservableObject {
     @Published private(set) var focusedApp: SpaceApp?
 
     private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
-    private var debounceWorkItem: DispatchWorkItem?
     private var consumers = Set<String>()
     private var appSwitchObserver: NSObjectProtocol?
 
@@ -56,10 +55,8 @@ final class AeroSpaceService: ObservableObject {
             return
         }
 
-        debounceWorkItem?.cancel()
-
-        refreshQueue.async { [weak self] in
-            self?.reloadStateTwice()
+        performRefreshQueueTask { service in
+            service.reloadStateTwice()
         }
     }
 
@@ -82,11 +79,9 @@ final class AeroSpaceService: ObservableObject {
             }
         }
 
-        refreshQueue.async { [weak self] in
-            guard let self else { return }
-
-            _ = self.runAeroSpace(arguments: ["workspace", workspace])
-            self.reloadStateTwice()
+        performRefreshQueueTask { service in
+            _ = service.runAeroSpace(arguments: ["workspace", workspace])
+            service.reloadStateTwice()
         }
     }
 
@@ -114,22 +109,10 @@ final class AeroSpaceService: ObservableObject {
         }
     }
 
-    /// Schedules a debounced refresh.
-    private func debounceRefresh() {
-        debounceWorkItem?.cancel()
-
-        let work = DispatchWorkItem { [weak self] in
-            self?.refresh()
-        }
-
-        debounceWorkItem = work
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.04, execute: work)
-    }
-
     /// Public refresh entry.
     func refresh() {
-        refreshQueue.async { [weak self] in
-            self?.reloadState()
+        performRefreshQueueTask { service in
+            service.reloadState()
         }
     }
 
@@ -210,6 +193,14 @@ final class AeroSpaceService: ObservableObject {
         reloadState()
         Thread.sleep(forTimeInterval: 0.04)
         reloadState()
+    }
+
+    /// Runs one task on the dedicated AeroSpace refresh queue.
+    private func performRefreshQueueTask(_ task: @escaping (AeroSpaceService) -> Void) {
+        refreshQueue.async { [weak self] in
+            guard let self else { return }
+            task(self)
+        }
     }
 
     /// Reads all known workspaces from AeroSpace.
