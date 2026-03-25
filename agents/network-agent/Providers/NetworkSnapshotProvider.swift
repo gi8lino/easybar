@@ -7,10 +7,12 @@ import EasyBarShared
 final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEventDelegate {
     private let locationManager = CLLocationManager()
     private let authState = NetworkAgentAuthorizationState()
+    private let smoothingFactor = 0.35
 
     private var onChange: (() -> Void)?
     private var wifiClient: CWWiFiClient?
     private var refreshTimer: Timer?
+    private var smoothedRSSI: Double?
 
     private var store: SCDynamicStore?
     private var storeSource: CFRunLoopSource?
@@ -81,6 +83,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
         let ssid = normalized(interface?.ssid())
         let interfaceName = normalized(interface?.interfaceName)
         let rssi = validMeasurement(interface?.rssiValue())
+        let displayRSSI = smoothedRSSIValue(from: rssi)
 
         return NetworkAgentSnapshot(
             accessGranted: true,
@@ -89,8 +92,8 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
             ssid: ssid,
             interfaceName: interfaceName,
             primaryInterfaceIsTunnel: currentPrimaryInterface().map(isTunnelInterface) ?? false,
-            signalBars: signalBars(for: rssi, connected: ssid != nil),
-            rssi: rssi
+            signalBars: signalBars(for: displayRSSI, connected: ssid != nil),
+            rssi: displayRSSI
         )
     }
 
@@ -194,17 +197,32 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
         guard connected, let rssi else { return 0 }
 
         switch rssi {
-        case let value where value >= -55:
+        case let value where value >= -58:
             return 4
         case let value where value >= -67:
             return 3
         case let value where value >= -75:
             return 2
-        case let value where value >= -85:
+        case let value where value >= -83:
             return 1
         default:
             return 0
         }
+    }
+
+    private func smoothedRSSIValue(from rssi: Int?) -> Int? {
+        guard let rssi else {
+            smoothedRSSI = nil
+            return nil
+        }
+
+        if let smoothedRSSI {
+            self.smoothedRSSI = (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
+        } else {
+            smoothedRSSI = Double(rssi)
+        }
+
+        return Int((self.smoothedRSSI ?? Double(rssi)).rounded())
     }
 
     private func validMeasurement(_ value: Int?) -> Int? {

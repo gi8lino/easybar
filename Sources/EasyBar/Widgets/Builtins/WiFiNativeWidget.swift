@@ -122,15 +122,15 @@ final class WiFiNativeWidget: NativeWidget {
 
         switch bars {
         case 4:
-            return "󰤨 "
+            return "󰤨"
         case 3:
-            return "󰤥 "
+            return "󰤥"
         case 2:
-            return "󰤢 "
+            return "󰤢"
         case 1:
-            return "󰤟 "
+            return "󰤟"
         default:
-            return "󰤮 "
+            return "󰤮"
         }
     }
 
