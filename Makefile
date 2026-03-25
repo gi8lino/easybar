@@ -16,18 +16,29 @@ APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
+APP_ICON_SVG := packaging/easybar-icon.svg
+APP_ICON_FILE := $(APP_NAME)
+APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
 CALENDAR_AGENT_BUNDLE := $(DIST_DIR)/$(CALENDAR_AGENT_NAME).app
 CALENDAR_AGENT_CONTENTS := $(CALENDAR_AGENT_BUNDLE)/Contents
 CALENDAR_AGENT_MACOS := $(CALENDAR_AGENT_CONTENTS)/MacOS
+CALENDAR_AGENT_RESOURCES := $(CALENDAR_AGENT_CONTENTS)/Resources
 CALENDAR_AGENT_BIN := $(CALENDAR_AGENT_MACOS)/$(CALENDAR_AGENT_EXEC)
 CALENDAR_AGENT_PLIST_TEMPLATE := agents/calendar-agent/Info.plist
 CALENDAR_AGENT_PLIST := $(CALENDAR_AGENT_CONTENTS)/Info.plist
+CALENDAR_AGENT_ICON_SVG := packaging/easybar-calendar-agent-icon.svg
+CALENDAR_AGENT_ICON_FILE := $(CALENDAR_AGENT_NAME)
+CALENDAR_AGENT_ICON_ICNS := $(CALENDAR_AGENT_RESOURCES)/$(CALENDAR_AGENT_ICON_FILE).icns
 NETWORK_AGENT_BUNDLE := $(DIST_DIR)/$(NETWORK_AGENT_NAME).app
 NETWORK_AGENT_CONTENTS := $(NETWORK_AGENT_BUNDLE)/Contents
 NETWORK_AGENT_MACOS := $(NETWORK_AGENT_CONTENTS)/MacOS
+NETWORK_AGENT_RESOURCES := $(NETWORK_AGENT_CONTENTS)/Resources
 NETWORK_AGENT_BIN := $(NETWORK_AGENT_MACOS)/$(NETWORK_AGENT_EXEC)
 NETWORK_AGENT_PLIST_TEMPLATE := agents/network-agent/Info.plist
 NETWORK_AGENT_PLIST := $(NETWORK_AGENT_CONTENTS)/Info.plist
+NETWORK_AGENT_ICON_SVG := packaging/easybar-network-agent-icon.svg
+NETWORK_AGENT_ICON_FILE := $(NETWORK_AGENT_NAME)
+NETWORK_AGENT_ICON_ICNS := $(NETWORK_AGENT_RESOURCES)/$(NETWORK_AGENT_ICON_FILE).icns
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
@@ -72,7 +83,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run stop dev \
+.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
@@ -104,12 +115,13 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_MACOS)" "$(NETWORK_AGENT_RESOURCES)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-calendar-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-network-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
+	@$(MAKE) --no-print-directory icons
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 	@cp "$(CALENDAR_AGENT_PLIST_TEMPLATE)" "$(CALENDAR_AGENT_PLIST)"
 	@cp "$(NETWORK_AGENT_PLIST_TEMPLATE)" "$(NETWORK_AGENT_PLIST)"
@@ -195,6 +207,37 @@ else
 	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 endif
 
+icons: ## Generate .icns files from the SVG icons and copy them into each app bundle.
+	@mkdir -p "$(APP_RESOURCES)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_RESOURCES)"
+	@set -e; \
+	for spec in \
+		"$(APP_ICON_SVG):$(APP_ICON_ICNS)" \
+		"$(CALENDAR_AGENT_ICON_SVG):$(CALENDAR_AGENT_ICON_ICNS)" \
+		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"; do \
+		svg="$${spec%%:*}"; \
+		icns="$${spec##*:}"; \
+		base="$$(basename "$$icns" .icns)"; \
+		tmp_dir="$(DIST_DIR)/.$$base.iconset"; \
+		render_dir="$(DIST_DIR)/.$$base.render"; \
+		rm -rf "$$tmp_dir" "$$render_dir"; \
+		mkdir -p "$$tmp_dir" "$$render_dir"; \
+		qlmanage -t -s 1024 -o "$$render_dir" "$$svg" >/dev/null 2>&1; \
+		rendered_png="$$render_dir/$$(basename "$$svg").png"; \
+		test -f "$$rendered_png"; \
+		cp "$$rendered_png" "$$tmp_dir/icon_512x512@2x.png"; \
+		sips -z 16 16 "$$rendered_png" --out "$$tmp_dir/icon_16x16.png" >/dev/null; \
+		sips -z 32 32 "$$rendered_png" --out "$$tmp_dir/icon_16x16@2x.png" >/dev/null; \
+		sips -z 32 32 "$$rendered_png" --out "$$tmp_dir/icon_32x32.png" >/dev/null; \
+		sips -z 64 64 "$$rendered_png" --out "$$tmp_dir/icon_32x32@2x.png" >/dev/null; \
+		sips -z 128 128 "$$rendered_png" --out "$$tmp_dir/icon_128x128.png" >/dev/null; \
+		sips -z 256 256 "$$rendered_png" --out "$$tmp_dir/icon_128x128@2x.png" >/dev/null; \
+		sips -z 256 256 "$$rendered_png" --out "$$tmp_dir/icon_256x256.png" >/dev/null; \
+		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_256x256@2x.png" >/dev/null; \
+		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_512x512.png" >/dev/null; \
+		iconutil -c icns "$$tmp_dir" -o "$$icns"; \
+		rm -rf "$$tmp_dir" "$$render_dir"; \
+	done
+
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
@@ -202,6 +245,8 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(APP_EXEC)' "$(PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(APP_ICON_FILE)' "$(PLIST)" >/dev/null 2>&1 || \
+		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(APP_ICON_FILE)' "$(PLIST)"
 
 stamp-calendar-agent-plist: ## Internal target: stamp version into the calendar agent Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(CALENDAR_AGENT_PLIST)"
@@ -209,6 +254,8 @@ stamp-calendar-agent-plist: ## Internal target: stamp version into the calendar 
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(CALENDAR_AGENT_EXEC)' "$(CALENDAR_AGENT_PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(CALENDAR_AGENT_ICON_FILE)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || \
+		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(CALENDAR_AGENT_ICON_FILE)' "$(CALENDAR_AGENT_PLIST)"
 
 stamp-network-agent-plist: ## Internal target: stamp version into the network agent Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(NETWORK_AGENT_PLIST)"
@@ -216,6 +263,8 @@ stamp-network-agent-plist: ## Internal target: stamp version into the network ag
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(NETWORK_AGENT_EXEC)' "$(NETWORK_AGENT_PLIST)"
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
+	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || \
+		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)"
 
 sign: ## Sign the app bundle, calendar agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
 	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
