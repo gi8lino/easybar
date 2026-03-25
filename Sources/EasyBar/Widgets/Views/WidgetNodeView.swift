@@ -97,7 +97,7 @@ struct WidgetNodeView: View {
 
     private var popupAnchor: some View {
         Group {
-            if anchorChildren.isEmpty {
+            if !hasAnchorChildren {
                 HStack(spacing: itemSpacing) {
                     iconText
                     labelText
@@ -328,6 +328,11 @@ struct WidgetNodeView: View {
     /// Returns the popup anchor children for this node.
     private var anchorChildren: [WidgetNodeState] {
         store.anchorChildren(of: node.id)
+    }
+
+    /// Returns whether this node has popup anchor children.
+    private var hasAnchorChildren: Bool {
+        !anchorChildren.isEmpty
     }
 
     /// Returns whether the root mouse overlay should be skipped.
