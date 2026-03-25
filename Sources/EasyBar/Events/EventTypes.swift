@@ -102,6 +102,11 @@ struct EasyBarEventPayload {
         appEventName ?? widgetEventName ?? ""
     }
 
+    /// Returns whether this payload has a non-empty event name.
+    private var hasEventName: Bool {
+        !eventName.isEmpty
+    }
+
     /// Returns the debug log line for this payload.
     var debugDescription: String? {
         if isAppEvent {
@@ -184,9 +189,8 @@ struct EasyBarEventPayload {
 
     /// Returns the non-empty event name used at the Lua boundary.
     private var resolvedEventName: String? {
-        let name = eventName
-        guard !name.isEmpty else { return nil }
-        return name
+        guard hasEventName else { return nil }
+        return eventName
     }
 
     /// Returns the raw app event name.
