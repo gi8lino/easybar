@@ -1,6 +1,7 @@
 APP_NAME := EasyBar
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
+CALENDAR_AGENT_PRODUCT := EasyBarCalendarAgent
 CLI_PRODUCT := easybarctl
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_PRODUCT).bundle
 
@@ -10,6 +11,7 @@ APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
+CALENDAR_AGENT_BIN := $(DIST_DIR)/$(CALENDAR_AGENT_PRODUCT)
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := packaging/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
@@ -55,7 +57,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package release app cli clean clean-dist run dev \
-        build-app build-cli copy-resources verify stamp-plist sign notarize \
+        build-app build-agent build-cli copy-resources verify stamp-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags
 
@@ -87,11 +89,12 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
+	@$(MAKE) --no-print-directory build-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
-	@chmod +x "$(APP_BIN)" "$(CLI_BIN)"
+	@chmod +x "$(APP_BIN)" "$(CALENDAR_AGENT_BIN)" "$(CLI_BIN)"
 	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
 	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
 	@$(MAKE) --no-print-directory verify
@@ -100,8 +103,9 @@ package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
 	@mkdir -p "$(PACKAGE_STAGE)"
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
+	@cp "$(CALENDAR_AGENT_BIN)" "$(PACKAGE_STAGE)/EasyBarCalendarAgent"
 	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybarctl"
-	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "easybarctl"
+	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent" "easybarctl"
 	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 
@@ -119,6 +123,19 @@ ifeq ($(ARCH),universal)
 else
 	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(APP_PRODUCT)
 	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+build-agent: ## Internal target: build the calendar agent executable for ARCH.
+ifeq ($(ARCH),universal)
+	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
+	@lipo -create \
+		".build/arm64-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" \
+		".build/x86_64-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" \
+		-output "$(CALENDAR_AGENT_BIN)"
+else
+	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(CALENDAR_AGENT_PRODUCT)
+	@cp ".build/$(ARCH)-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
 endif
 
 build-cli: ## Internal target: build the CLI executable for ARCH.
@@ -150,14 +167,16 @@ stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
 
-sign: ## Sign the app bundle and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
+sign: ## Sign the app bundle, calendar agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
 	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
 		echo "Signing artifacts with ad-hoc identity"; \
 		codesign --force --deep --sign - "$(APP_BUNDLE)"; \
+		codesign --force --sign - "$(CALENDAR_AGENT_BIN)"; \
 		codesign --force --sign - "$(CLI_BIN)"; \
 	else \
 		echo "Signing artifacts with $(CODESIGN_IDENTITY)"; \
 		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(APP_BUNDLE)"; \
+		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CALENDAR_AGENT_BIN)"; \
 		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CLI_BIN)"; \
 	fi
 
@@ -180,6 +199,7 @@ notarize: ## Notarize the app bundle when NOTARY_SUBMIT=1 and a keychain profile
 verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
+	@file "$(CALENDAR_AGENT_BIN)"
 	@file "$(CLI_BIN)"
 	@test -f "$(PLIST)"
 	@test -d "$(APP_RESOURCE_BUNDLE)"

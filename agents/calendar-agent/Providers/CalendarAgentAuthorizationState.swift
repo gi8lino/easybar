@@ -1,16 +1,10 @@
 import EventKit
 import Foundation
 
-/// Stores the in-process calendar authorization state.
-final class CalendarAuthorizationState {
-
-    static let shared = CalendarAuthorizationState()
-
+final class CalendarAgentAuthorizationState {
     private let lock = NSLock()
-    private var status: EKAuthorizationStatus = .notDetermined
+    private var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
     private var accessGrantedInProcess = false
-
-    private init() {}
 
     func setStatus(_ newStatus: EKAuthorizationStatus) {
         lock.lock()
@@ -24,25 +18,25 @@ final class CalendarAuthorizationState {
         lock.unlock()
     }
 
-    func currentStatus() -> EKAuthorizationStatus {
-        lock.lock()
-        defer { lock.unlock() }
-        return status
-    }
-
     func effectiveAccessGranted() -> Bool {
         lock.lock()
         defer { lock.unlock() }
 
         switch status {
-        case .fullAccess, .authorized:
+        case .authorized, .fullAccess:
             return true
         default:
             return accessGrantedInProcess
         }
     }
 
-    func describeCurrentStatus() -> String {
+    func currentStatus() -> EKAuthorizationStatus {
+        lock.lock()
+        defer { lock.unlock() }
+        return status
+    }
+
+    func permissionState() -> String {
         describe(currentStatus())
     }
 
@@ -61,7 +55,7 @@ final class CalendarAuthorizationState {
         case .writeOnly:
             return "write_only"
         @unknown default:
-            return "unknown(\(status.rawValue))"
+            return "unknown"
         }
     }
 }

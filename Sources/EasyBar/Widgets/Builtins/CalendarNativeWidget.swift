@@ -5,7 +5,6 @@ final class CalendarNativeWidget: NativeWidget {
     let rootID = "builtin_calendar"
 
     private var timer: Timer?
-    private let eventObserver = EasyBarEventObserver()
 
     /// Starts the calendar widget.
     func start() {
@@ -13,17 +12,7 @@ final class CalendarNativeWidget: NativeWidget {
 
         Logger.info("starting native widget id=\(rootID) enabled=\(config.enabled) layout=\(config.layout.rawValue) position=\(config.position.rawValue) days=\(config.days) show_birthdays=\(config.showBirthdays)")
 
-        CalendarEvents.shared.subscribeCalendar()
-
-        eventObserver.start { [weak self] payload in
-            guard let self, let event = payload.appEvent else {
-                return
-            }
-
-            if event == .calendarChange || event == .minuteTick {
-                self.publish()
-            }
-        }
+        CalendarAgentClient.shared.start()
 
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.publish()
@@ -36,11 +25,10 @@ final class CalendarNativeWidget: NativeWidget {
     func stop() {
         Logger.info("stopping native widget id=\(rootID)")
 
-        eventObserver.stop()
-
         timer?.invalidate()
         timer = nil
 
+        CalendarAgentClient.shared.stop()
         WidgetStore.shared.apply(root: rootID, nodes: [])
         NativeCalendarStore.shared.clear()
     }
@@ -76,7 +64,6 @@ final class CalendarNativeWidget: NativeWidget {
         }
 
         WidgetStore.shared.apply(root: rootID, nodes: nodes)
-        NativeCalendarStore.shared.refresh()
     }
 
     /// Builds stack-layout nodes.

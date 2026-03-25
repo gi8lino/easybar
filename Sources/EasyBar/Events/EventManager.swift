@@ -57,9 +57,6 @@ final class EventManager {
             TimerEvents.shared.startSecondTimer()
         }
 
-        if subscriptions.contains("calendar_change") {
-            CalendarEvents.shared.subscribeCalendar()
-        }
     }
 
     func stopAll() {
@@ -68,7 +65,6 @@ final class EventManager {
         NetworkEvents.shared.stopAll()
         PowerEvents.shared.stopAll()
         VolumeEvents.shared.stopAll()
-        CalendarEvents.shared.stopAll()
         activeSubscriptions.removeAll()
     }
 }

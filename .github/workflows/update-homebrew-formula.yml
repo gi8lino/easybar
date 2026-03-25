@@ -48,16 +48,17 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
 
-      - name: Update formula
+      - name: Update formulas
         shell: bash
         run: |
-          FORMULA_FILE="homebrew-tap/Formula/easybar.rb"
-          mkdir -p "$(dirname "${FORMULA_FILE}")"
+          EASYBAR_FORMULA_FILE="homebrew-tap/Formula/easybar.rb"
+          AGENT_FORMULA_FILE="homebrew-tap/Formula/easybar-calendar-agent.rb"
+          mkdir -p "$(dirname "${EASYBAR_FORMULA_FILE}")"
 
           VERSION="${{ steps.vars.outputs.version }}"
           SHA="${{ steps.sha.outputs.sha }}"
 
-          cat > "${FORMULA_FILE}" <<EOF
+          cat > "${EASYBAR_FORMULA_FILE}" <<EOF
           class Easybar < Formula
             desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
             homepage "https://github.com/gi8lino/easybar"
@@ -67,6 +68,7 @@ jobs:
             version "${VERSION}"
 
             depends_on macos: :sonoma
+            depends_on "easybar-calendar-agent"
 
             def install
               libexec.install "EasyBar.app"
@@ -96,6 +98,39 @@ jobs:
           end
           EOF
 
+          cat > "${AGENT_FORMULA_FILE}" <<EOF
+          class EasybarCalendarAgent < Formula
+            desc "Calendar EventKit helper service for EasyBar"
+            homepage "https://github.com/gi8lino/easybar"
+            url "https://github.com/gi8lino/easybar/releases/download/v${VERSION}/EasyBar-${VERSION}.zip"
+            sha256 "${SHA}"
+            license "Apache-2.0"
+            version "${VERSION}"
+
+            depends_on macos: :sonoma
+
+            def install
+              bin.install "EasyBarCalendarAgent" => "easybar-calendar-agent"
+
+              (var/"log/easybar-calendar-agent").mkpath
+            end
+
+            service do
+              run [opt_bin/"easybar-calendar-agent"]
+              environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
+              keep_alive true
+              process_type :interactive
+              working_dir HOMEBREW_PREFIX
+              log_path var/"log/easybar-calendar-agent/easybar-calendar-agent.out.log"
+              error_log_path var/"log/easybar-calendar-agent/easybar-calendar-agent.err.log"
+            end
+
+            test do
+              assert_predicate bin/"easybar-calendar-agent", :exist?
+            end
+          end
+          EOF
+
       - name: Commit and push changes
         shell: bash
         run: |
@@ -106,6 +141,7 @@ jobs:
           rm -f Casks/easybar.rb
 
           git add Formula/easybar.rb
+          git add Formula/easybar-calendar-agent.rb
           git add -u Casks/easybar.rb
 
           if git diff --cached --quiet; then

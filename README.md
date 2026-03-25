@@ -46,9 +46,10 @@ Install EasyBar:
 brew install gi8lino/tap/easybar
 ```
 
-Start it:
+This also installs the calendar agent dependency. Start both services:
 
 ```bash
+brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar
 ```
 
@@ -56,13 +57,16 @@ If macOS blocks the app or CLI with a Gatekeeper or malware verification warning
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
+xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
+brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar
 ```
 
 This installs:
 
 - `EasyBar.app` under `$(brew --prefix)/opt/easybar/libexec/EasyBar.app`
+- `easybar-calendar-agent` in your `PATH`
 - `easybar` in your `PATH`
 - `easybarctl` in your `PATH`
 
@@ -76,12 +80,15 @@ command -v easybarctl
 
 ```bash
 brew upgrade gi8lino/tap/easybar
+brew upgrade gi8lino/tap/easybar-calendar-agent
 ```
 
 ## Uninstall
 
 ```bash
+brew services stop gi8lino/tap/easybar-calendar-agent
 brew services stop gi8lino/tap/easybar
+brew uninstall gi8lino/tap/easybar-calendar-agent
 brew uninstall gi8lino/tap/easybar
 ```
 
@@ -92,6 +99,9 @@ EasyBar runs through Homebrew services in this install mode.
 Use:
 
 ```bash
+brew services start gi8lino/tap/easybar-calendar-agent
+brew services stop gi8lino/tap/easybar-calendar-agent
+brew services restart gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar
 brew services stop gi8lino/tap/easybar
 brew services restart gi8lino/tap/easybar
@@ -105,16 +115,18 @@ If Gatekeeper blocks launch after install, run:
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
+xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
 ```
 
 Then start it again:
 
 ```bash
+brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar
 ```
 
-This installs the app bundle under Homebrew `libexec` and starts it through `brew services`.
+This installs the app bundle under Homebrew `libexec`, runs the calendar helper as its own service, and starts EasyBar through `brew services`.
 
 ## Built-in widgets
 
@@ -130,6 +142,24 @@ EasyBar currently includes these native built-ins:
 - `cpu`
 
 These built-ins are configured in `config.toml` under the `builtins.*` sections.
+
+## Calendar agent
+
+The native calendar widget now reads data from a separate helper process: `easybar-calendar-agent`.
+
+This exists for two reasons:
+
+- Calendar access is handled more reliably when one dedicated process owns `EventKit`, permission state, and calendar change subscriptions.
+- EasyBar itself stays a UI client and only consumes cached calendar snapshots over a local Unix socket.
+
+The flow is:
+
+- `easybar-calendar-agent` requests Calendar permission
+- the agent subscribes to `EventKit` store changes
+- the agent caches the latest calendar snapshot
+- EasyBar subscribes to the agent and updates the calendar popup from pushed snapshots
+
+In the Homebrew setup, the calendar agent runs as its own `brew services` service and EasyBar depends on it.
 
 ## How it works
 

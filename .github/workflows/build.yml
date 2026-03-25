@@ -46,9 +46,11 @@ jobs:
         shell: bash
         run: |
           file "dist/EasyBar.app/Contents/MacOS/EasyBar"
+          file "dist/EasyBarCalendarAgent"
           file "dist/easybarctl"
           test -f "dist/EasyBar.app/Contents/Info.plist"
           test -d "dist/EasyBar.app/EasyBar_EasyBar.bundle"
+          test -f "dist/EasyBarCalendarAgent"
           test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
           plutil -p "dist/EasyBar.app/Contents/Info.plist"
 
