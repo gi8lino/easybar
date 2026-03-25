@@ -32,8 +32,14 @@ struct WidgetTreeUpdate: Codable {
         events ?? []
     }
 
+    /// Returns whether this update includes a decoded tree payload.
+    var hasTreePayload: Bool {
+        root != nil && nodes != nil
+    }
+
     /// Returns the decoded tree payload when present.
     var treePayload: (root: String, nodes: [WidgetNodeState])? {
+        guard hasTreePayload else { return nil }
         guard let root else { return nil }
         guard let nodes else { return nil }
         return (root: root, nodes: nodes)
