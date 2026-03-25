@@ -164,13 +164,7 @@ final class AeroSpaceService: ObservableObject {
     private func applyOptimisticFocusedApp(from app: NSRunningApplication) {
         let bundlePath = app.bundleURL?.path
         let name = app.localizedName ?? ""
-
-        let id: String
-        if let bundlePath, !bundlePath.isEmpty {
-            id = bundlePath
-        } else {
-            id = name
-        }
+        let id = resolvedAppID(name: name, bundlePath: bundlePath)
 
         guard !id.isEmpty else { return }
 
@@ -318,13 +312,7 @@ final class AeroSpaceService: ObservableObject {
 
         let bundlePath = parts.first.flatMap { $0.isEmpty ? nil : $0 }
         let name = parts.count > 1 ? parts[1] : ""
-
-        let id: String
-        if let bundlePath, !bundlePath.isEmpty {
-            id = bundlePath
-        } else {
-            id = name
-        }
+        let id = resolvedAppID(name: name, bundlePath: bundlePath)
 
         if id.isEmpty {
             return nil
@@ -344,7 +332,10 @@ final class AeroSpaceService: ObservableObject {
         var result: [SpaceApp] = []
 
         for window in windows {
-            let key = window.bundlePath.isEmpty ? window.name : window.bundlePath
+            let key = resolvedAppID(
+                name: window.name,
+                bundlePath: window.bundlePath.isEmpty ? nil : window.bundlePath
+            )
             guard !seen.contains(key) else { continue }
 
             seen.insert(key)
@@ -398,6 +389,15 @@ final class AeroSpaceService: ObservableObject {
 
         let fm = FileManager.default
         return candidates.first(where: { fm.isExecutableFile(atPath: $0) })
+    }
+
+    /// Resolves a stable app identity from bundle path or name.
+    private func resolvedAppID(name: String, bundlePath: String?) -> String {
+        guard let bundlePath, !bundlePath.isEmpty else {
+            return name
+        }
+
+        return bundlePath
     }
 }
 
