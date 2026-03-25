@@ -320,6 +320,11 @@ struct WidgetNodeView: View {
         store.anchorChildren(of: node.id)
     }
 
+    /// Returns whether the root mouse overlay should be skipped.
+    private var shouldSkipMouseOverlay: Bool {
+        node.root == "builtin_calendar" || node.hasParent
+    }
+
     @ViewBuilder
     private var imageView: some View {
         if let imagePath = node.imagePath, !imagePath.isEmpty {
@@ -366,7 +371,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private func maybeOverlayMouse<Content: View>(_ content: Content) -> some View {
-        if node.root == "builtin_calendar" || node.hasParent {
+        if shouldSkipMouseOverlay {
             content
         } else {
             content
