@@ -218,7 +218,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
 
         guard let smoothedRSSI else {
             smoothedRSSI = Double(rssi)
-            return Int(rssi.rounded())
+            return rssi
         }
 
         self.smoothedRSSI = (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
