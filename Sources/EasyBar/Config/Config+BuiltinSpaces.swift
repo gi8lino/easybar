@@ -91,7 +91,7 @@ extension Config {
 
         static let `default` = SpacesBuiltinConfig(
             placement: .init(
-                enabled: true,
+                enabled: false,
                 position: .left,
                 order: 10
             ),

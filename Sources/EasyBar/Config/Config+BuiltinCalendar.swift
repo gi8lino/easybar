@@ -189,7 +189,7 @@ extension Config {
 
         static let `default` = CalendarBuiltinConfig(
             placement: .init(
-                enabled: true,
+                enabled: false,
                 position: .right,
                 order: 60
             ),

@@ -64,7 +64,7 @@ extension Config {
 
         static let `default` = WiFiBuiltinConfig(
             placement: .init(
-                enabled: true,
+                enabled: false,
                 position: .right,
                 order: 30
             ),

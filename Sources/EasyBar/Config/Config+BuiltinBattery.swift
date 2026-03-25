@@ -107,7 +107,7 @@ extension Config {
 
         static let `default` = BatteryBuiltinConfig(
             placement: .init(
-                enabled: true,
+                enabled: false,
                 position: .right,
                 order: 20
             ),
