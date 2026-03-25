@@ -111,7 +111,7 @@ struct WidgetNodeView: View {
         .foregroundStyle(nodeColor)
         .modifier(nodeStyle)
         .overlay(
-            WidgetMouseView(widgetID: node.root)
+            mouseOverlay
         )
         .onHover { hovering in handleAnchorHover(hovering) }
         .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
@@ -341,6 +341,11 @@ struct WidgetNodeView: View {
         WidgetNodeStyle(node: node)
     }
 
+    /// Returns the shared root mouse overlay.
+    private var mouseOverlay: some View {
+        WidgetMouseView(widgetID: node.root)
+    }
+
     /// Returns whether the root mouse overlay should be skipped.
     private var shouldSkipMouseOverlay: Bool {
         node.root == "builtin_calendar" || node.hasParent
@@ -406,8 +411,8 @@ struct WidgetNodeView: View {
     @ViewBuilder
     private func interactiveContent<Content: View>(_ content: Content) -> some View {
         content
-            .modifier(WidgetNodeStyle(node: node))
-            .overlay(WidgetMouseView(widgetID: node.root))
+            .modifier(nodeStyle)
+            .overlay(mouseOverlay)
     }
 
     @ViewBuilder
@@ -416,7 +421,7 @@ struct WidgetNodeView: View {
             content
         } else {
             content
-                .overlay(WidgetMouseView(widgetID: node.root))
+                .overlay(mouseOverlay)
         }
     }
 
