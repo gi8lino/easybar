@@ -52,7 +52,8 @@ jobs:
         shell: bash
         run: |
           EASYBAR_FORMULA_FILE="homebrew-tap/Formula/easybar.rb"
-          AGENT_FORMULA_FILE="homebrew-tap/Formula/easybar-calendar-agent.rb"
+          CALENDAR_AGENT_FORMULA_FILE="homebrew-tap/Formula/easybar-calendar-agent.rb"
+          NETWORK_AGENT_FORMULA_FILE="homebrew-tap/Formula/easybar-network-agent.rb"
           mkdir -p "$(dirname "${EASYBAR_FORMULA_FILE}")"
 
           VERSION="${{ steps.vars.outputs.version }}"
@@ -69,6 +70,7 @@ jobs:
 
             depends_on macos: :sonoma
             depends_on "easybar-calendar-agent"
+            depends_on "easybar-network-agent"
 
             def install
               libexec.install "EasyBar.app"
@@ -98,7 +100,7 @@ jobs:
           end
           EOF
 
-          cat > "${AGENT_FORMULA_FILE}" <<EOF
+          cat > "${CALENDAR_AGENT_FORMULA_FILE}" <<EOF
           class EasybarCalendarAgent < Formula
             desc "Calendar EventKit helper service for EasyBar"
             homepage "https://github.com/gi8lino/easybar"
@@ -131,6 +133,39 @@ jobs:
           end
           EOF
 
+          cat > "${NETWORK_AGENT_FORMULA_FILE}" <<EOF
+          class EasybarNetworkAgent < Formula
+            desc "Wi-Fi and network helper service for EasyBar"
+            homepage "https://github.com/gi8lino/easybar"
+            url "https://github.com/gi8lino/easybar/releases/download/v${VERSION}/EasyBar-${VERSION}.zip"
+            sha256 "${SHA}"
+            license "Apache-2.0"
+            version "${VERSION}"
+
+            depends_on macos: :sonoma
+
+            def install
+              bin.install "EasyBarNetworkAgent" => "easybar-network-agent"
+
+              (var/"log/easybar-network-agent").mkpath
+            end
+
+            service do
+              run [opt_bin/"easybar-network-agent"]
+              environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
+              keep_alive true
+              process_type :interactive
+              working_dir HOMEBREW_PREFIX
+              log_path var/"log/easybar-network-agent/easybar-network-agent.out.log"
+              error_log_path var/"log/easybar-network-agent/easybar-network-agent.err.log"
+            end
+
+            test do
+              assert_predicate bin/"easybar-network-agent", :exist?
+            end
+          end
+          EOF
+
       - name: Commit and push changes
         shell: bash
         run: |
@@ -140,6 +175,7 @@ jobs:
 
           git add Formula/easybar.rb
           git add Formula/easybar-calendar-agent.rb
+          git add Formula/easybar-network-agent.rb
 
           if git diff --cached --quiet; then
             echo "No changes to commit."

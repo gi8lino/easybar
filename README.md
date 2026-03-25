@@ -46,10 +46,11 @@ Install EasyBar:
 brew install gi8lino/tap/easybar
 ```
 
-This also installs the calendar agent dependency. Start both services:
+This also installs the calendar and network agent dependencies. Start all services:
 
 ```bash
 brew services start gi8lino/tap/easybar-calendar-agent
+brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
@@ -58,8 +59,10 @@ If macOS blocks the app or CLI with a Gatekeeper or malware verification warning
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
+xattr -d com.apple.quarantine "$(command -v easybar-network-agent)"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
 brew services start gi8lino/tap/easybar-calendar-agent
+brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
@@ -67,6 +70,7 @@ This installs:
 
 - `EasyBar.app` under `$(brew --prefix)/opt/easybar/libexec/EasyBar.app`
 - `easybar-calendar-agent` in your `PATH`
+- `easybar-network-agent` in your `PATH`
 - `easybar` in your `PATH`
 - `easybarctl` in your `PATH`
 
@@ -81,14 +85,17 @@ command -v easybarctl
 ```bash
 brew upgrade gi8lino/tap/easybar
 brew upgrade gi8lino/tap/easybar-calendar-agent
+brew upgrade gi8lino/tap/easybar-network-agent
 ```
 
 ## Uninstall
 
 ```bash
 brew services stop gi8lino/tap/easybar-calendar-agent
+brew services stop gi8lino/tap/easybar-network-agent
 brew services stop gi8lino/tap/easybar
 brew uninstall gi8lino/tap/easybar-calendar-agent
+brew uninstall gi8lino/tap/easybar-network-agent
 brew uninstall gi8lino/tap/easybar
 ```
 
@@ -102,6 +109,9 @@ Use:
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services stop gi8lino/tap/easybar-calendar-agent
 brew services restart gi8lino/tap/easybar-calendar-agent
+brew services start gi8lino/tap/easybar-network-agent
+brew services stop gi8lino/tap/easybar-network-agent
+brew services restart gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 brew services stop gi8lino/tap/easybar
 brew services restart gi8lino/tap/easybar
@@ -116,6 +126,7 @@ If Gatekeeper blocks launch after install, run:
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 xattr -d com.apple.quarantine "$(command -v easybar-calendar-agent)"
+xattr -d com.apple.quarantine "$(command -v easybar-network-agent)"
 xattr -d com.apple.quarantine "$(command -v easybarctl)"
 ```
 
@@ -123,10 +134,11 @@ Then start it again:
 
 ```bash
 brew services start gi8lino/tap/easybar-calendar-agent
+brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
-This installs the app bundle under Homebrew `libexec`, runs the calendar helper as its own service, and starts EasyBar through `brew services`.
+This installs the app bundle under Homebrew `libexec`, runs the calendar and network helpers as their own services, and starts EasyBar through `brew services`.
 
 ## Menu bar behavior
 
@@ -233,6 +245,17 @@ The config system is split by concern, for example:
 - `ConfigParsingHelpers.swift`
 - `Config+Builtin*.swift`
 
+### Agents
+
+EasyBar can use small helper agents for permission-sensitive data sources.
+
+Current agents:
+
+- `EasyBarCalendarAgent` for EventKit/calendar access
+- `EasyBarNetworkAgent` for Wi-Fi and network state that depends on location permission
+
+EasyBar connects to them over Unix sockets and keeps the UI process separate from the permission-owning process.
+
 ### Event system
 
 EasyBar has a typed internal event bus that bridges:
@@ -247,6 +270,7 @@ App-wide events include things like:
 - focus changes
 - volume changes
 - power changes
+- Wi-Fi and network changes
 - timer ticks
 - calendar changes
 
@@ -338,6 +362,18 @@ It supports options for:
 
 - hiding empty spaces
 - showing labels only for the focused space
+
+### Wi-Fi
+
+The built-in Wi-Fi widget is backed by `EasyBarNetworkAgent`.
+
+It currently provides:
+
+- signal-strength bars
+- hover-to-show current SSID
+- live updates from the network agent socket
+
+The native widget is intended to replace the old `wifisnitchctl` dependency for EasyBar’s own Wi-Fi display path.
 - collapsing inactive spaces
 - icon sizing and spacing
 - active and inactive colors

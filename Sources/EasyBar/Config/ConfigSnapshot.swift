@@ -9,6 +9,8 @@ struct ConfigSnapshot {
     let loggingPath: String
     let calendarAgentEnabled: Bool
     let calendarAgentSocketPath: String
+    let networkAgentEnabled: Bool
+    let networkAgentSocketPath: String
 
     let barHeight: CGFloat
     let barPaddingX: CGFloat
@@ -22,6 +24,7 @@ struct ConfigSnapshot {
     let builtinSpaces: Config.SpacesBuiltinConfig
     let builtinFrontApp: Config.FrontAppBuiltinConfig
     let builtinVolume: Config.VolumeBuiltinConfig
+    let builtinWiFi: Config.WiFiBuiltinConfig
     let builtinCalendar: Config.CalendarBuiltinConfig
     let builtinTime: Config.TimeBuiltinConfig
     let builtinDate: Config.DateBuiltinConfig

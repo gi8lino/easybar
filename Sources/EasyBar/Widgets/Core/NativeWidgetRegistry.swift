@@ -26,7 +26,7 @@ final class NativeWidgetRegistry {
         stopAll()
 
         Logger.info("registering native widgets")
-        Logger.info("native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)")
+        Logger.info("native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) wifi=\(Config.shared.builtinWiFi.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)")
 
         var next: [NativeWidget] = []
 
@@ -44,6 +44,10 @@ final class NativeWidgetRegistry {
 
         if Config.shared.builtinVolume.enabled {
             next.append(VolumeSliderNativeWidget())
+        }
+
+        if Config.shared.builtinWiFi.enabled {
+            next.append(WiFiNativeWidget())
         }
 
         if Config.shared.builtinDate.enabled {

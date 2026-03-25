@@ -11,6 +11,10 @@ path = "~/.local/state/easybar/easybar.out" # File path for mirrored EasyBar log
 enabled = true # Starts the calendar socket client in EasyBar and enables the calendar helper contract.
 socket_path = "/tmp/EasyBar/calendar-agent.sock" # Unix socket path used by EasyBar and the calendar agent.
 
+[agents.network]
+enabled = true # Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.
+socket_path = "/tmp/EasyBar/network-agent.sock" # Unix socket path used by EasyBar and the network agent.
+
 [bar]
 height = 32 # Total height of the bar.
 padding_x = 10 # Horizontal left and right padding inside the bar.
@@ -106,7 +110,7 @@ icon_corner_radius = 4 # Corner radius of the displayed app icon.
 [builtins.cpu]
 enabled = true # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.
-order = 60 # Sort order among widgets in the same position.
+order = 10 # Sort order among widgets in the same position.
 
 [builtins.cpu.style]
 icon = "󰍛" # Leading icon of the widget.
@@ -129,7 +133,7 @@ color = "#a6da95" # Color of the sparkline and label.
 [builtins.battery]
 enabled = true # Shows or hides the battery widget.
 position = "right" # Places the widget on the left, center, or right side.
-order = 10 # Sort order among widgets in the same position.
+order = 20 # Sort order among widgets in the same position.
 
 [builtins.battery.style]
 icon = "🔋" # Fallback/default battery icon.
@@ -173,6 +177,31 @@ enabled = false # Shows or hides the volume widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
 
+[builtins.wifi]
+enabled = true # Shows or hides the built-in Wi-Fi widget.
+position = "right" # Places the widget on the left, center, or right side.
+order = 30 # Sort order among widgets in the same position.
+
+[builtins.wifi.style]
+icon = "" # Unused fallback icon for the Wi-Fi root widget.
+text_color = "#ffffff" # Default text color for Wi-Fi text.
+background_color = "#1a1a1a" # Background color of the widget.
+border_color = "#333333" # Border color of the widget.
+border_width = 1 # Border width of the widget.
+corner_radius = 8 # Corner radius of the widget.
+padding_x = 8 # Horizontal inner padding of the widget.
+padding_y = 4 # Vertical inner padding of the widget.
+spacing = 6 # Gap between signal bars and optional hover label.
+opacity = 1 # Overall opacity of the widget.
+
+[builtins.wifi.content]
+show_ssid_on_hover = true # Shows the connected SSID while hovering the widget.
+disconnected_text = "Wi-Fi" # Hover label shown when Wi-Fi is not connected.
+denied_text = "Location" # Hover label shown when Wi-Fi permission is unavailable.
+active_color = "#ffffff" # Color of active signal bars.
+inactive_color = "#6e738d" # Color of inactive signal bars.
+text_color = "#ffffff" # Color of the hover label text.
+
 [builtins.volume.style]
 icon = "" # Leading icon of the compact widget.
 text_color = "#ffffff" # Text color of the widget.
@@ -201,7 +230,7 @@ width = 80 # Width of the slider when shown.
 [builtins.calendar]
 enabled = true # Shows or hides the calendar widget.
 position = "right" # Places the widget on the left, center, or right side.
-order = 30 # Sort order among widgets in the same position.
+order = 60 # Sort order among widgets in the same position.
 
 [builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.

@@ -39,19 +39,30 @@ extension Config {
 
     /// Parses agent settings.
     func parseAgents(from toml: TOMLTable) throws {
-        guard let agents = toml["agents"]?.table,
-              let calendar = agents["calendar"]?.table else {
-            return
+        guard let agents = toml["agents"]?.table else { return }
+
+        if let calendar = agents["calendar"]?.table {
+            if let value = calendar["enabled"] {
+                calendarAgentEnabled = try requiredBool(value, path: "agents.calendar.enabled")
+            }
+
+            if let value = calendar["socket_path"] {
+                calendarAgentSocketPath = NSString(
+                    string: try requiredString(value, path: "agents.calendar.socket_path")
+                ).expandingTildeInPath
+            }
         }
 
-        if let value = calendar["enabled"] {
-            calendarAgentEnabled = try requiredBool(value, path: "agents.calendar.enabled")
-        }
+        if let network = agents["network"]?.table {
+            if let value = network["enabled"] {
+                networkAgentEnabled = try requiredBool(value, path: "agents.network.enabled")
+            }
 
-        if let value = calendar["socket_path"] {
-            calendarAgentSocketPath = NSString(
-                string: try requiredString(value, path: "agents.calendar.socket_path")
-            ).expandingTildeInPath
+            if let value = network["socket_path"] {
+                networkAgentSocketPath = NSString(
+                    string: try requiredString(value, path: "agents.network.socket_path")
+                ).expandingTildeInPath
+            }
         }
     }
 

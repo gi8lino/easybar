@@ -15,6 +15,8 @@ final class Config {
     var loggingPath: String = ""
     var calendarAgentEnabled: Bool = true
     var calendarAgentSocketPath: String = ""
+    var networkAgentEnabled: Bool = true
+    var networkAgentSocketPath: String = ""
 
     // MARK: - Bar
 
@@ -32,6 +34,7 @@ final class Config {
     var builtinSpaces: SpacesBuiltinConfig = .default
     var builtinFrontApp: FrontAppBuiltinConfig = .default
     var builtinVolume: VolumeBuiltinConfig = .default
+    var builtinWiFi: WiFiBuiltinConfig = .default
     var builtinCalendar: CalendarBuiltinConfig = .default
     var builtinTime: TimeBuiltinConfig = .default
     var builtinDate: DateBuiltinConfig = .default
@@ -87,6 +90,7 @@ final class Config {
             .appendingPathComponent(".local/state/easybar/easybar.out")
             .path
         calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
+        networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
     }
 
     /// Restores all static defaults before parsing again.
@@ -95,6 +99,7 @@ final class Config {
         watchConfigFile = true
         loggingEnabled = false
         calendarAgentEnabled = true
+        networkAgentEnabled = true
 
         barHeight = 32
         barPaddingX = 10
@@ -108,6 +113,7 @@ final class Config {
         builtinSpaces = .default
         builtinFrontApp = .default
         builtinVolume = .default
+        builtinWiFi = .default
         builtinCalendar = .default
         builtinTime = .default
         builtinDate = .default
@@ -123,6 +129,8 @@ final class Config {
             loggingPath: loggingPath,
             calendarAgentEnabled: calendarAgentEnabled,
             calendarAgentSocketPath: calendarAgentSocketPath,
+            networkAgentEnabled: networkAgentEnabled,
+            networkAgentSocketPath: networkAgentSocketPath,
             barHeight: barHeight,
             barPaddingX: barPaddingX,
             barExtendBehindNotch: barExtendBehindNotch,
@@ -133,6 +141,7 @@ final class Config {
             builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
             builtinVolume: builtinVolume,
+            builtinWiFi: builtinWiFi,
             builtinCalendar: builtinCalendar,
             builtinTime: builtinTime,
             builtinDate: builtinDate
@@ -148,6 +157,8 @@ final class Config {
         loggingPath = snapshot.loggingPath
         calendarAgentEnabled = snapshot.calendarAgentEnabled
         calendarAgentSocketPath = snapshot.calendarAgentSocketPath
+        networkAgentEnabled = snapshot.networkAgentEnabled
+        networkAgentSocketPath = snapshot.networkAgentSocketPath
 
         barHeight = snapshot.barHeight
         barPaddingX = snapshot.barPaddingX
@@ -161,6 +172,7 @@ final class Config {
         builtinSpaces = snapshot.builtinSpaces
         builtinFrontApp = snapshot.builtinFrontApp
         builtinVolume = snapshot.builtinVolume
+        builtinWiFi = snapshot.builtinWiFi
         builtinCalendar = snapshot.builtinCalendar
         builtinTime = snapshot.builtinTime
         builtinDate = snapshot.builtinDate
