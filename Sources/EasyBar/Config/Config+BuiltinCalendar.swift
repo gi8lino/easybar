@@ -191,7 +191,7 @@ extension Config {
             placement: .init(
                 enabled: true,
                 position: .right,
-                order: 30
+                order: 60
             ),
             style: .init(
                 icon: "",

@@ -109,7 +109,7 @@ extension Config {
             placement: .init(
                 enabled: true,
                 position: .right,
-                order: 10
+                order: 20
             ),
             style: .init(
                 icon: "🔋",

@@ -55,7 +55,7 @@ extension Config {
             placement: .init(
                 enabled: false,
                 position: .right,
-                order: 60
+                order: 10
             ),
             style: .init(
                 icon: "󰍛 ",

@@ -33,6 +33,7 @@ extension Config {
         try parseSpacesBuiltin(from: builtins)
         try parseFrontAppBuiltin(from: builtins)
         try parseVolumeBuiltin(from: builtins)
+        try parseWiFiBuiltin(from: builtins)
         try parseDateBuiltin(from: builtins)
         try parseTimeBuiltin(from: builtins)
         try parseCalendarBuiltin(from: builtins)
