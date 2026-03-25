@@ -12,14 +12,9 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
     /// Starts CPU sampling.
     func start() {
-        let historySize = max(2, Config.shared.builtinCPU.historySize)
-
         samples = Array(repeating: 0, count: historySize)
         previousCPUInfo = readCPUInfo()
-
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.sampleAndPublish()
-        }
+        startTimer()
 
         publish()
     }
@@ -43,11 +38,41 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
     /// Publishes the current sparkline node.
     private func publish() {
+        WidgetStore.shared.apply(root: rootID, nodes: [makeNode()])
+    }
+
+    /// Appends one sample and keeps the configured history size.
+    private func pushSample(_ value: Double) {
+        samples.append(min(max(value, 0), 100))
+
+        while samples.count > historySize {
+            samples.removeFirst()
+        }
+
+        while samples.count < historySize {
+            samples.insert(0, at: 0)
+        }
+    }
+
+    /// Returns the configured history size with the minimum enforced.
+    private var historySize: Int {
+        max(2, Config.shared.builtinCPU.historySize)
+    }
+
+    /// Starts the sampling timer.
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.sampleAndPublish()
+        }
+    }
+
+    /// Builds the sparkline node from the current samples.
+    private func makeNode() -> WidgetNodeState {
         let config = Config.shared.builtinCPU
         let placement = config.placement
         let style = config.style
 
-        let node = WidgetNodeState(
+        return WidgetNodeState(
             id: rootID,
             root: rootID,
             kind: .sparkline,
@@ -89,23 +114,6 @@ final class CPUSparklineNativeWidget: NativeWidget {
             height: nil,
             yOffset: nil
         )
-
-        WidgetStore.shared.apply(root: rootID, nodes: [node])
-    }
-
-    /// Appends one sample and keeps the configured history size.
-    private func pushSample(_ value: Double) {
-        let historySize = max(2, Config.shared.builtinCPU.historySize)
-
-        samples.append(min(max(value, 0), 100))
-
-        while samples.count > historySize {
-            samples.removeFirst()
-        }
-
-        while samples.count < historySize {
-            samples.insert(0, at: 0)
-        }
     }
 
     /// Reads current host CPU counters.
