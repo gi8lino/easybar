@@ -41,11 +41,13 @@ final class WiFiNativeWidget: NativeWidget {
             self?.publish()
         }
 
-        if Config.shared.networkAgentEnabled {
-            NetworkAgentClient.shared.start()
-        } else {
+        guard Config.shared.networkAgentEnabled else {
             Logger.info("network agent disabled in config")
+            publish()
+            return
         }
+
+        NetworkAgentClient.shared.start()
 
         publish()
     }

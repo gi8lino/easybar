@@ -76,19 +76,22 @@ private func configuredCalendarAgentSocketPath() -> String? {
 }
 
 private func configFileText() -> String? {
-    let configPath: String
+    return try? String(
+        contentsOfFile: resolvedConfigPath(),
+        encoding: .utf8
+    )
+}
 
-    if let override = ProcessInfo.processInfo.environment["EASYBAR_CONFIG_PATH"]?
+private func resolvedConfigPath() -> String {
+    guard let override = ProcessInfo.processInfo.environment["EASYBAR_CONFIG_PATH"]?
         .trimmingCharacters(in: .whitespacesAndNewlines),
-       !override.isEmpty {
-        configPath = NSString(string: override).expandingTildeInPath
-    } else {
-        configPath = FileManager.default.homeDirectoryForCurrentUser
+        !override.isEmpty else {
+        return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".config/easybar/config.toml")
             .path
     }
 
-    return try? String(contentsOfFile: configPath, encoding: .utf8)
+    return NSString(string: override).expandingTildeInPath
 }
 
 private func configuredAgentSocketPath(section: String) -> String? {
