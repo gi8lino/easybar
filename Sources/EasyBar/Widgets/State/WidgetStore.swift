@@ -27,19 +27,19 @@ final class WidgetStore: ObservableObject {
 
     func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
         sortedNodes {
-            ($0.parent == nil || $0.parent == "") && $0.position == position
+            $0.isTopLevel && $0.position == position
         }
     }
 
     func children(of parentID: String) -> [WidgetNodeState] {
         sortedNodes {
-            $0.parent == parentID && $0.role != .popupAnchor
+            $0.parent == parentID && !$0.isPopupAnchor
         }
     }
 
     func anchorChildren(of parentID: String) -> [WidgetNodeState] {
         sortedNodes {
-            $0.parent == parentID && $0.role == .popupAnchor
+            $0.parent == parentID && $0.isPopupAnchor
         }
     }
 

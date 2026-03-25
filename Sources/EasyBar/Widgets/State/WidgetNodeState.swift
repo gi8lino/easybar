@@ -49,4 +49,14 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var width: Double?
     var height: Double?
     var yOffset: Double?
+
+    /// Returns whether this node is attached directly to the bar.
+    var isTopLevel: Bool {
+        parent == nil || parent == ""
+    }
+
+    /// Returns whether this node is a popup anchor child.
+    var isPopupAnchor: Bool {
+        role == .popupAnchor
+    }
 }
