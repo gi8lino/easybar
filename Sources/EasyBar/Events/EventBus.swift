@@ -94,13 +94,8 @@ final class EventBus {
 
     /// Logs one emitted payload for local debugging.
     private func logEmission(_ payload: EasyBarEventPayload) {
-        if let appEvent = payload.appEvent {
-            Logger.debug("emit event \(appEvent.rawValue)")
-            return
-        }
-
-        guard let widgetEvent = payload.widgetEvent else { return }
-        Logger.debug("emit widget event \(widgetEvent.rawValue) widget=\(payload.widgetID ?? "")")
+        guard let line = payload.debugDescription else { return }
+        Logger.debug(line)
     }
 }
 

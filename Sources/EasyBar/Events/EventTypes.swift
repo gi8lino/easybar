@@ -102,6 +102,16 @@ struct EasyBarEventPayload {
         appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
     }
 
+    /// Returns the debug log line for this payload.
+    var debugDescription: String? {
+        if let appEvent {
+            return "emit event \(appEvent.rawValue)"
+        }
+
+        guard let widgetEvent else { return nil }
+        return "emit widget event \(widgetEvent.rawValue) widget=\(widgetID ?? "")"
+    }
+
     /// Encodes this payload for the Lua runtime boundary.
     func toDictionary() -> [String: String] {
         var payload: [String: String] = [:]
