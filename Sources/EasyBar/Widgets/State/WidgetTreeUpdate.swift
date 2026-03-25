@@ -12,6 +12,21 @@ struct WidgetTreeUpdate: Codable {
         case tree
     }
 
+    /// Returns whether this update contains subscriptions.
+    var isSubscriptions: Bool {
+        type == .subscriptions
+    }
+
+    /// Returns whether this update is the runtime ready signal.
+    var isReady: Bool {
+        type == .ready
+    }
+
+    /// Returns whether this update contains a widget tree.
+    var isTree: Bool {
+        type == .tree
+    }
+
     /// Returns the subscribed event names or an empty list.
     var subscribedEvents: [String] {
         events ?? []
