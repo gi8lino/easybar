@@ -83,25 +83,11 @@ struct WidgetNodeView: View {
         content()
             .foregroundStyle(color(node.color))
             .modifier(WidgetNodeStyle(node: node))
-            .onHover { hovering in
-                anchorHovered = hovering
-
-                if hovering {
-                    popupPresented = true
-                } else {
-                    schedulePopupCloseCheck()
-                }
-            }
+            .onHover { hovering in handleAnchorHover(hovering) }
             .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
                 NativeCalendarPopupView()
                     .background(
-                        PopupHoverRegion { hovering in
-                            popupHovered = hovering
-
-                            if !hovering {
-                                schedulePopupCloseCheck()
-                            }
-                        }
+                        PopupHoverRegion { hovering in handlePopupHover(hovering) }
                     )
             }
     }
@@ -126,15 +112,7 @@ struct WidgetNodeView: View {
         .overlay(
             WidgetMouseView(widgetID: node.root)
         )
-        .onHover { hovering in
-            anchorHovered = hovering
-
-            if hovering {
-                popupPresented = true
-            } else {
-                schedulePopupCloseCheck()
-            }
-        }
+        .onHover { hovering in handleAnchorHover(hovering) }
         .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
             popupContent
         }
@@ -148,13 +126,7 @@ struct WidgetNodeView: View {
         }
         .modifier(WidgetNodeStyle(node: node))
         .background(
-            PopupHoverRegion { hovering in
-                popupHovered = hovering
-
-                if !hovering {
-                    schedulePopupCloseCheck()
-                }
-            }
+            PopupHoverRegion { hovering in handlePopupHover(hovering) }
         )
     }
 
@@ -241,10 +213,35 @@ struct WidgetNodeView: View {
 
     private func schedulePopupCloseCheck() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            if !anchorHovered && !popupHovered {
-                popupPresented = false
-            }
+            closePopupIfIdle()
         }
+    }
+
+    /// Handles hover changes on the popup anchor.
+    private func handleAnchorHover(_ hovering: Bool) {
+        anchorHovered = hovering
+
+        if hovering {
+            popupPresented = true
+            return
+        }
+
+        schedulePopupCloseCheck()
+    }
+
+    /// Handles hover changes on the popup content.
+    private func handlePopupHover(_ hovering: Bool) {
+        popupHovered = hovering
+
+        guard !hovering else { return }
+        schedulePopupCloseCheck()
+    }
+
+    /// Closes the popup when neither anchor nor popup is hovered.
+    private func closePopupIfIdle() {
+        guard !anchorHovered else { return }
+        guard !popupHovered else { return }
+        popupPresented = false
     }
 
     private var childRow: some View {
