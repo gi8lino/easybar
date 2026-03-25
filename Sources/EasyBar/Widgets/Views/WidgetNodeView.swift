@@ -259,33 +259,17 @@ struct WidgetNodeView: View {
     private var imageView: some View {
         if let imagePath = node.imagePath, !imagePath.isEmpty {
             let customImage = NSImage(contentsOfFile: imagePath)
-            let image = customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+            let image = resolvedImage(imagePath: imagePath, customImage: customImage)
 
             if let tintedImage = tintedImage(from: image, customImage: customImage) {
-                Image(nsImage: tintedImage)
-                    .renderingMode(.template)
-                    .resizable()
-                    .interpolation(.high)
+                imageBaseView(image: tintedImage, renderingMode: .template)
                     .foregroundStyle(color(node.iconColor ?? node.color))
-                    .frame(
-                        width: CGFloat(node.imageSize ?? 14),
-                        height: CGFloat(node.imageSize ?? 14)
-                    )
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
-                    )
+                    .frame(width: imageSize, height: imageSize)
+                    .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
             } else {
-                Image(nsImage: image)
-                    .renderingMode(.original)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(
-                        width: CGFloat(node.imageSize ?? 14),
-                        height: CGFloat(node.imageSize ?? 14)
-                    )
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: CGFloat(node.imageCornerRadius ?? 4))
-                    )
+                imageBaseView(image: image, renderingMode: .original)
+                    .frame(width: imageSize, height: imageSize)
+                    .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
             }
         }
     }
@@ -335,6 +319,32 @@ struct WidgetNodeView: View {
         let templated = image.copy() as? NSImage ?? image
         templated.isTemplate = true
         return templated
+    }
+
+    /// Returns the rendered image size.
+    private var imageSize: CGFloat {
+        CGFloat(node.imageSize ?? 14)
+    }
+
+    /// Returns the rendered image corner radius.
+    private var imageCornerRadius: CGFloat {
+        CGFloat(node.imageCornerRadius ?? 4)
+    }
+
+    /// Resolves the image file or falls back to the file icon.
+    private func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
+        customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+    }
+
+    /// Builds the shared base image view.
+    private func imageBaseView(
+        image: NSImage,
+        renderingMode: Image.TemplateRenderingMode
+    ) -> some View {
+        Image(nsImage: image)
+            .renderingMode(renderingMode)
+            .resizable()
+            .interpolation(.high)
     }
 }
 
