@@ -233,25 +233,11 @@ final class AeroSpaceService: ObservableObject {
         let stateByWorkspace = Dictionary(uniqueKeysWithValues:
             stateOutput
                 .split(whereSeparator: \.isNewline)
-                .compactMap { line -> (String, WorkspaceState)? in
-                    let parts = line.split(separator: " ").map(String.init)
-                    guard parts.count >= 3 else { return nil }
-
-                    return (
-                        parts[0],
-                        WorkspaceState(
-                            isFocused: parts[1] == "true",
-                            isVisible: parts[2] == "true"
-                        )
-                    )
-                }
+                .compactMap(parseWorkspaceStateLine)
         )
 
         return names.map { name in
-            let state = stateByWorkspace[name] ?? WorkspaceState(
-                isFocused: false,
-                isVisible: false
-            )
+            let state = stateByWorkspace[name] ?? .default
 
             return WorkspaceDTO(
                 name: name,
@@ -274,19 +260,7 @@ final class AeroSpaceService: ObservableObject {
 
         return output
             .split(whereSeparator: \.isNewline)
-            .compactMap { line in
-                let parts = line
-                    .components(separatedBy: " | ")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
-
-                guard parts.count >= 3 else { return nil }
-
-                return WindowDTO(
-                    workspace: parts[0],
-                    name: parts[1],
-                    bundlePath: parts[2]
-                )
-            }
+            .compactMap(parseWindowLine)
     }
 
     /// Reads the currently focused app from AeroSpace.
@@ -300,9 +274,7 @@ final class AeroSpaceService: ObservableObject {
             return nil
         }
 
-        let parts = output
-            .components(separatedBy: " | ")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let parts = splitPipedLine(output)
 
         let bundlePath = parts.first.flatMap { $0.isEmpty ? nil : $0 }
         let name = parts.count > 1 ? parts[1] : ""
@@ -333,15 +305,7 @@ final class AeroSpaceService: ObservableObject {
             guard !seen.contains(key) else { continue }
 
             seen.insert(key)
-
-            result.append(
-                SpaceApp(
-                    id: key,
-                    bundleID: "",
-                    name: window.name,
-                    bundlePath: window.bundlePath.isEmpty ? nil : window.bundlePath
-                )
-            )
+            result.append(makeSpaceApp(name: window.name, bundlePath: window.bundlePath))
         }
 
         return result
@@ -399,6 +363,51 @@ final class AeroSpaceService: ObservableObject {
         Logger.debug(logMessage)
         NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
     }
+
+    /// Parses one workspace state line from AeroSpace output.
+    private func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
+        let parts = line.split(separator: " ").map(String.init)
+        guard parts.count >= 3 else { return nil }
+
+        return (
+            parts[0],
+            WorkspaceState(
+                isFocused: parts[1] == "true",
+                isVisible: parts[2] == "true"
+            )
+        )
+    }
+
+    /// Parses one window line from AeroSpace output.
+    private func parseWindowLine(_ line: Substring) -> WindowDTO? {
+        let parts = splitPipedLine(String(line))
+        guard parts.count >= 3 else { return nil }
+
+        return WindowDTO(
+            workspace: parts[0],
+            name: parts[1],
+            bundlePath: parts[2]
+        )
+    }
+
+    /// Splits one `a | b | c` line and trims each part.
+    private func splitPipedLine(_ line: String) -> [String] {
+        line
+            .components(separatedBy: " | ")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    /// Builds one `SpaceApp` from parsed AeroSpace window data.
+    private func makeSpaceApp(name: String, bundlePath: String) -> SpaceApp {
+        let normalizedBundlePath = bundlePath.isEmpty ? nil : bundlePath
+
+        return SpaceApp(
+            id: resolvedAppID(name: name, bundlePath: normalizedBundlePath),
+            bundleID: "",
+            name: name,
+            bundlePath: normalizedBundlePath
+        )
+    }
 }
 
 extension Notification.Name {
@@ -414,6 +423,11 @@ private struct WorkspaceDTO {
 private struct WorkspaceState {
     let isFocused: Bool
     let isVisible: Bool
+
+    static let `default` = WorkspaceState(
+        isFocused: false,
+        isVisible: false
+    )
 }
 
 private struct WindowDTO {
