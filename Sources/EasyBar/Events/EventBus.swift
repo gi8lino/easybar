@@ -11,27 +11,27 @@ final class EventBus {
 
     /// Emits one app-wide event to native widgets and the Lua runtime.
     func emit(_ event: AppEvent) {
-        emit(.app(event))
+        emitApp(.app(event))
     }
 
     /// Emits one app-wide event with app name context.
     func emit(_ event: AppEvent, appName: String) {
-        emit(.app(event, appName: appName))
+        emitApp(.app(event, appName: appName))
     }
 
     /// Emits one app-wide event with interface name context.
     func emit(_ event: AppEvent, interfaceName: String) {
-        emit(.app(event, interfaceName: interfaceName))
+        emitApp(.app(event, interfaceName: interfaceName))
     }
 
     /// Emits one app-wide event with charging state context.
     func emit(_ event: AppEvent, charging: Bool) {
-        emit(.app(event, charging: charging))
+        emitApp(.app(event, charging: charging))
     }
 
     /// Emits one app-wide event with muted state context.
     func emit(_ event: AppEvent, muted: Bool) {
-        emit(.app(event, muted: muted))
+        emitApp(.app(event, muted: muted))
     }
 
     /// Emits one widget-scoped event to native widgets and the Lua runtime.
@@ -80,6 +80,11 @@ final class EventBus {
         }
 
         return string
+    }
+
+    /// Emits one already-constructed app payload.
+    private func emitApp(_ payload: EasyBarEventPayload) {
+        emit(payload)
     }
 
     /// Logs one emitted payload for local debugging.
