@@ -48,6 +48,14 @@ local function get_wireguard_status(fields)
 	return fields.primary_interface_is_tunnel
 end
 
+local function status_label(wireguard_connected)
+	if wireguard_connected then
+		return "Active"
+	end
+
+	return "Inactive"
+end
+
 local function toggle_wireguard()
 	local vpn_name = secrets.vpn_name or ""
 	if vpn_name == "" then
@@ -63,6 +71,12 @@ local function toggle_wireguard()
 	else
 		shell("scutil --nc start " .. name)
 	end
+end
+
+local function set_popup_visible(visible)
+	easybar.set("wireguard", {
+		popup = { drawing = visible },
+	})
 end
 
 local function refresh()
@@ -91,6 +105,13 @@ local function refresh()
 		},
 		opacity = logo_opacity,
 	})
+
+	easybar.set("wireguard_popup_label", {
+		label = {
+			string = status_label(wireguard_connected),
+			color = "#cad3f5",
+		},
+	})
 end
 
 easybar.add("item", "wireguard", {
@@ -101,6 +122,20 @@ easybar.add("item", "wireguard", {
 		padding_right = 8,
 		padding_top = 4,
 		padding_bottom = 4,
+	},
+	popup = {
+		drawing = false,
+		background = {
+			color = "#1e2030",
+			border_color = "#494d64",
+			border_width = 1,
+			corner_radius = 10,
+		},
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 6,
+		padding_bottom = 6,
+		spacing = 0,
 	},
 	icon = {
 		string = "WG",
@@ -113,11 +148,34 @@ easybar.add("item", "wireguard", {
 	},
 })
 
+easybar.add("item", "wireguard_popup_label", {
+	position = "popup.wireguard",
+	label = {
+		string = "",
+	},
+})
+
 easybar.subscribe("wireguard", { "network_change", "wifi_change", "minute_tick", "forced" }, function(_)
 	refresh()
 end)
 
+easybar.subscribe("wireguard", "mouse.entered", function(_)
+	set_popup_visible(true)
+	refresh()
+end)
+
+easybar.subscribe("wireguard", "mouse.exited", function(_)
+	set_popup_visible(false)
+end)
+
 easybar.subscribe("wireguard", "mouse.clicked", function(event)
+	if event.button == nil or event.button == "left" then
+		toggle_wireguard()
+		refresh()
+	end
+end)
+
+easybar.subscribe("wireguard_popup_label", "mouse.clicked", function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
 		refresh()

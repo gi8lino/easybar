@@ -154,8 +154,8 @@ struct WidgetNodeView: View {
                 WidgetNodeView(node: child)
             }
         }
+        .fixedSize()
         .modifier(nodeStyle)
-        .background(popupHoverBackground)
     }
 
     private var sliderView: some View {
