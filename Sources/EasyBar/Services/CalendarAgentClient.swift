@@ -54,7 +54,7 @@ final class CalendarAgentClient {
         queue.async {
             guard self.isRunning() else { return }
 
-            let socketPath = resolvedSocketPath()
+            let socketPath = self.resolvedSocketPath()
             guard let fd = self.openConnectedSocket(socketPath: socketPath) else {
                 self.scheduleReconnect()
                 return

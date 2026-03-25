@@ -167,7 +167,7 @@ final class WidgetRunner {
     }
 
     /// Emits one initial event when Lua subscribed to it.
-    private func emitInitialEvent(named name: String, event: EasyBarAppEvent) {
+    private func emitInitialEvent(named name: String, event: AppEvent) {
         guard requiredEvents.contains(name) else { return }
         EventBus.shared.emit(event)
     }

@@ -147,7 +147,7 @@ enum BuiltinNativeNodeFactory {
     /// Builds one root node with the shared built-in style defaults.
     private static func makeRootNode(
         id: String,
-        kind: WidgetKind,
+        kind: WidgetNodeKind,
         placement: Config.BuiltinWidgetPlacement,
         style: Config.BuiltinWidgetStyle,
         icon: String = "",
@@ -206,7 +206,7 @@ enum BuiltinNativeNodeFactory {
     private static func makeChildNode(
         id: String,
         root: String,
-        kind: WidgetKind,
+        kind: WidgetNodeKind,
         parent: String,
         position: WidgetPosition,
         order: Int,

@@ -60,35 +60,9 @@ final class LuaTransport {
     private func installOutputReadabilityHandler() {
         guard let pipe = outputPipe else { return }
 
-        var buffer = Data()
-
-        pipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-
-            guard !data.isEmpty else {
-                return
-            }
-
-            buffer.append(data)
-
-            while let newlineIndex = buffer.firstIndex(of: 0x0A) {
-                let lineData = buffer.prefix(upTo: newlineIndex)
-                buffer.removeSubrange(...newlineIndex)
-
-                guard let line = String(data: lineData, encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                      !line.isEmpty
-                else {
-                    continue
-                }
-
-                Logger.debug("lua stdout raw: \(line)")
-
-                NotificationCenter.default.post(
-                    name: .easyBarLuaStdout,
-                    object: line
-                )
-            }
+        installReadabilityHandler(on: pipe) { line in
+            Logger.debug("lua stdout raw: \(line)")
+            NotificationCenter.default.post(name: .easyBarLuaStdout, object: line)
         }
     }
 
@@ -96,14 +70,21 @@ final class LuaTransport {
     private func installErrorReadabilityHandler() {
         guard let pipe = errorPipe else { return }
 
+        installReadabilityHandler(on: pipe) { [logBridge] line in
+            logBridge.handle(line)
+        }
+    }
+
+    /// Installs one buffered newline-delimited readability handler.
+    private func installReadabilityHandler(
+        on pipe: Pipe,
+        handleLine: @escaping (String) -> Void
+    ) {
         var buffer = Data()
 
-        pipe.fileHandleForReading.readabilityHandler = { [logBridge] handle in
+        pipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
-
-            guard !data.isEmpty else {
-                return
-            }
+            guard !data.isEmpty else { return }
 
             buffer.append(data)
 
@@ -111,16 +92,22 @@ final class LuaTransport {
                 let lineData = buffer.prefix(upTo: newlineIndex)
                 buffer.removeSubrange(...newlineIndex)
 
-                guard let line = String(data: lineData, encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                      !line.isEmpty
-                else {
-                    continue
-                }
-
-                logBridge.handle(line)
+                guard let line = self.decodeLine(from: lineData) else { continue }
+                handleLine(line)
             }
         }
+    }
+
+    /// Decodes one non-empty UTF-8 line.
+    private func decodeLine(from data: Data.SubSequence) -> String? {
+        guard let line = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !line.isEmpty
+        else {
+            return nil
+        }
+
+        return line
     }
 }
 
