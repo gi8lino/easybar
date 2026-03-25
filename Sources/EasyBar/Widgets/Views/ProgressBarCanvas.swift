@@ -9,27 +9,41 @@ struct ProgressBarCanvas: View {
 
     var body: some View {
         Canvas { context, size in
-            let radius = size.height / 2
-
-            let trackPath = Path(
-                roundedRect: CGRect(origin: .zero, size: size),
-                cornerRadius: radius
-            )
-
-            context.fill(trackPath, with: .color(.white.opacity(0.12)))
-
-            let normalized = normalizedValue
-            let fillWidth = max(0, min(size.width, size.width * normalized))
-
-            let fillRect = CGRect(x: 0, y: 0, width: fillWidth, height: size.height)
-            let fillPath = Path(
-                roundedRect: fillRect,
-                cornerRadius: radius
-            )
-
-            context.fill(fillPath, with: .color(tint))
+            context.fill(trackPath(size: size), with: .color(.white.opacity(0.12)))
+            context.fill(fillPath(size: size), with: .color(tint))
         }
         .drawingGroup()
+    }
+
+    /// Builds the background track path.
+    private func trackPath(size: CGSize) -> Path {
+        Path(
+            roundedRect: CGRect(origin: .zero, size: size),
+            cornerRadius: cornerRadius(size: size)
+        )
+    }
+
+    /// Builds the filled progress path.
+    private func fillPath(size: CGSize) -> Path {
+        Path(
+            roundedRect: fillRect(size: size),
+            cornerRadius: cornerRadius(size: size)
+        )
+    }
+
+    /// Returns the filled progress rect.
+    private func fillRect(size: CGSize) -> CGRect {
+        CGRect(x: 0, y: 0, width: fillWidth(size: size), height: size.height)
+    }
+
+    /// Returns the filled width clamped to the canvas width.
+    private func fillWidth(size: CGSize) -> CGFloat {
+        max(0, min(size.width, size.width * normalizedValue))
+    }
+
+    /// Returns the rounded track corner radius.
+    private func cornerRadius(size: CGSize) -> CGFloat {
+        size.height / 2
     }
 
     private var normalizedValue: Double {
