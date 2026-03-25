@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">EasyBar Calendar Agent icon</title>
+  <desc id="desc">A minimal calendar agent icon with a top bar and ec wordmark.</desc>
+
+  <rect width="512" height="512" rx="120" fill="#141414"/>
+  <rect x="108" y="104" width="296" height="16" rx="8" fill="#2b2b2b"/>
+  <text
+    x="256"
+    y="314"
+    fill="#f3f4f6"
+    font-family="Menlo, Monaco, Consolas, monospace"
+    font-size="168"
+    font-weight="700"
+    text-anchor="middle"
+  >ec</text>
+</svg>
