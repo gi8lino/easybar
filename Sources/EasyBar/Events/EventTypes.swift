@@ -99,17 +99,17 @@ struct EasyBarEventPayload {
 
     /// Returns the raw event name used by Lua.
     var eventName: String {
-        appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
+        appEventName ?? widgetEventName ?? ""
     }
 
     /// Returns the debug log line for this payload.
     var debugDescription: String? {
-        if let appEvent {
-            return "emit event \(appEvent.rawValue)"
+        if let appEventName {
+            return "emit event \(appEventName)"
         }
 
-        guard let widgetEvent else { return nil }
-        return "emit widget event \(widgetEvent.rawValue) widget=\(widgetID ?? "")"
+        guard let widgetEventName else { return nil }
+        return "emit widget event \(widgetEventName) widget=\(widgetID ?? "")"
     }
 
     /// Encodes this payload for the Lua runtime boundary.
@@ -185,6 +185,16 @@ struct EasyBarEventPayload {
         let name = eventName
         guard !name.isEmpty else { return nil }
         return name
+    }
+
+    /// Returns the raw app event name.
+    private var appEventName: String? {
+        appEvent?.rawValue
+    }
+
+    /// Returns the raw widget event name.
+    private var widgetEventName: String? {
+        widgetEvent?.rawValue
     }
 
     /// Returns the raw mouse button name.
