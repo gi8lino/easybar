@@ -97,14 +97,14 @@ struct WidgetNodeView: View {
 
     private var popupAnchor: some View {
         Group {
-            if store.anchorChildren(of: node.id).isEmpty {
+            if anchorChildren.isEmpty {
                 HStack(spacing: CGFloat(node.spacing ?? 4)) {
                     iconText
                     labelText
                 }
             } else {
                 VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 4)) {
-                    ForEach(store.anchorChildren(of: node.id)) { child in
+                    ForEach(anchorChildren) { child in
                         WidgetNodeView(node: child)
                     }
                 }
@@ -123,7 +123,7 @@ struct WidgetNodeView: View {
 
     private var popupContent: some View {
         VStack(alignment: .leading, spacing: CGFloat(node.spacing ?? 6)) {
-            ForEach(store.children(of: node.id)) { child in
+            ForEach(children) { child in
                 WidgetNodeView(node: child)
             }
         }
@@ -249,10 +249,20 @@ struct WidgetNodeView: View {
 
     private var childRow: some View {
         HStack(spacing: CGFloat(node.spacing ?? 6)) {
-            ForEach(store.children(of: node.id)) { child in
+            ForEach(children) { child in
                 WidgetNodeView(node: child)
             }
         }
+    }
+
+    /// Returns the non-anchor children for this node.
+    private var children: [WidgetNodeState] {
+        store.children(of: node.id)
+    }
+
+    /// Returns the popup anchor children for this node.
+    private var anchorChildren: [WidgetNodeState] {
+        store.anchorChildren(of: node.id)
     }
 
     @ViewBuilder
