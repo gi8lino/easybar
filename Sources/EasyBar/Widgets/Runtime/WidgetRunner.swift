@@ -140,7 +140,7 @@ final class WidgetRunner {
 
     /// Handles one subscription update from Lua.
     private func handleSubscriptions(_ update: WidgetTreeUpdate) {
-        requiredEvents = Set(update.events ?? [])
+        requiredEvents = Set(update.subscribedEvents)
         subscriptionsReady = true
 
         Logger.debug("required events: \(requiredEvents)")
@@ -157,13 +157,13 @@ final class WidgetRunner {
 
     /// Handles one rendered widget tree update.
     private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) {
-        guard let root = update.root, let nodes = update.nodes else {
+        guard let tree = update.treePayload else {
             Logger.warn("unknown lua message: \(rawLine)")
             return
         }
 
-        Logger.debug("decoded widget tree root=\(root) nodes=\(nodes.count)")
-        WidgetStore.shared.apply(root: root, nodes: nodes)
+        Logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+        WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
     }
 
     /// Emits one initial event when Lua subscribed to it.
