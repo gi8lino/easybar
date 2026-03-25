@@ -13,19 +13,19 @@ final class NativeWiFiStore: ObservableObject {
         Logger.debug(
             "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") signal_bars=\(snapshot.signalBars)"
         )
-
-        DispatchQueue.main.async {
-            self.snapshot = snapshot
-            NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
-        }
+        publish(snapshot: snapshot)
     }
 
     func clear() {
         Logger.debug("wifi widget cleared")
+        publish(snapshot: nil)
+    }
 
+    /// Publishes one snapshot change on the main queue.
+    private func publish(snapshot: NetworkAgentSnapshot?) {
         DispatchQueue.main.async {
-            self.snapshot = nil
-            NotificationCenter.default.post(name: Self.didChangeNotification, object: nil)
+            self.snapshot = snapshot
+            NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
         }
     }
 }

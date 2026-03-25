@@ -129,10 +129,7 @@ final class NetworkAgentClient {
 
             case .snapshot:
                 guard let snapshot = message.snapshot else { return }
-
-                DispatchQueue.main.async {
-                    NativeWiFiStore.shared.apply(snapshot: snapshot)
-                }
+                publish(snapshot: snapshot)
 
             case .pong:
                 break
@@ -155,9 +152,7 @@ final class NetworkAgentClient {
         shutdown(fd, SHUT_RDWR)
         close(fd)
 
-        DispatchQueue.main.async {
-            NativeWiFiStore.shared.clear()
-        }
+        clearPublishedState()
 
         guard isRunning() else { return }
 
@@ -211,5 +206,19 @@ final class NetworkAgentClient {
         lock.lock()
         defer { lock.unlock() }
         return running
+    }
+
+    /// Publishes one snapshot to the shared store on the main queue.
+    private func publish(snapshot: NetworkAgentSnapshot) {
+        DispatchQueue.main.async {
+            NativeWiFiStore.shared.apply(snapshot: snapshot)
+        }
+    }
+
+    /// Clears the published store state on the main queue.
+    private func clearPublishedState() {
+        DispatchQueue.main.async {
+            NativeWiFiStore.shared.clear()
+        }
     }
 }
