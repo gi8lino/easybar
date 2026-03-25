@@ -118,55 +118,38 @@ struct EasyBarEventPayload {
     func toDictionary() -> [String: String] {
         var payload: [String: String] = [:]
 
-        if let appEvent {
-            payload["event"] = appEvent.rawValue
-        }
-
-        if let widgetEvent {
-            payload["event"] = widgetEvent.rawValue
-        }
-
-        if let widgetID {
-            payload["widget"] = widgetID
-        }
-
-        if let appName {
-            payload["app"] = appName
-        }
-
-        if let interfaceName {
-            payload["interface"] = interfaceName
-        }
-
-        if let button {
-            payload["button"] = button.rawValue
-        }
-
-        if let direction {
-            payload["direction"] = direction.rawValue
-        }
-
-        if let charging {
-            payload["charging"] = charging ? "true" : "false"
-        }
-
-        if let muted {
-            payload["muted"] = muted ? "true" : "false"
-        }
-
-        if let value {
-            payload["value"] = String(value)
-        }
-
-        if let deltaX {
-            payload["delta_x"] = String(deltaX)
-        }
-
-        if let deltaY {
-            payload["delta_y"] = String(deltaY)
-        }
+        put(&payload, key: "event", value: appEvent?.rawValue)
+        put(&payload, key: "event", value: widgetEvent?.rawValue)
+        put(&payload, key: "widget", value: widgetID)
+        put(&payload, key: "app", value: appName)
+        put(&payload, key: "interface", value: interfaceName)
+        put(&payload, key: "button", value: button?.rawValue)
+        put(&payload, key: "direction", value: direction?.rawValue)
+        put(&payload, key: "charging", value: charging)
+        put(&payload, key: "muted", value: muted)
+        put(&payload, key: "value", value: value)
+        put(&payload, key: "delta_x", value: deltaX)
+        put(&payload, key: "delta_y", value: deltaY)
 
         return payload
+    }
+
+    /// Stores one optional string value in the Lua payload.
+    private func put(_ payload: inout [String: String], key: String, value: String?) {
+        guard let value else { return }
+        payload[key] = value
+    }
+
+    /// Stores one optional Bool value in the Lua payload.
+    private func put(_ payload: inout [String: String], key: String, value: Bool?) {
+        guard let value else { return }
+        payload[key] = value ? "true" : "false"
+    }
+
+    /// Stores one optional numeric value in the Lua payload.
+    private func put(_ payload: inout [String: String], key: String, value: Double?) {
+        guard let value else { return }
+        payload[key] = String(value)
     }
 }
 
