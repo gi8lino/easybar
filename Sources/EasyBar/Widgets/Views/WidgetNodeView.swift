@@ -317,7 +317,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private func maybeOverlayMouse<Content: View>(_ content: Content) -> some View {
-        if node.root == "builtin_calendar" || node.parent != nil {
+        if node.root == "builtin_calendar" || node.hasParent {
             content
         } else {
             content

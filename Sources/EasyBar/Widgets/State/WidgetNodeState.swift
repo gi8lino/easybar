@@ -55,6 +55,11 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
         parent == nil || parent == ""
     }
 
+    /// Returns whether this node has a non-empty parent id.
+    var hasParent: Bool {
+        !isTopLevel
+    }
+
     /// Returns whether this node is a popup anchor child.
     var isPopupAnchor: Bool {
         role == .popupAnchor
