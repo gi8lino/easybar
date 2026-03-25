@@ -26,15 +26,10 @@ final class NativeWidgetRegistry {
         stopAll()
 
         Logger.info("registering native widgets")
-        Logger.info("native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) wifi=\(Config.shared.builtinWiFi.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)")
-
+        logConfig()
         widgets = makeEnabledWidgets()
-
-        Logger.info("native widgets registered count=\(widgets.count) ids=\(widgets.map(\.rootID).joined(separator: ","))")
-
-        for widget in widgets {
-            widget.start()
-        }
+        logRegisteredWidgets()
+        startWidgets()
     }
 
     /// Stops and clears all widgets.
@@ -71,5 +66,22 @@ final class NativeWidgetRegistry {
     ) {
         guard enabled else { return }
         widgets.append(widget)
+    }
+
+    /// Logs the current built-in widget enablement snapshot.
+    private func logConfig() {
+        Logger.info("native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) wifi=\(Config.shared.builtinWiFi.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)")
+    }
+
+    /// Logs the final registered widget ids.
+    private func logRegisteredWidgets() {
+        Logger.info("native widgets registered count=\(widgets.count) ids=\(widgets.map(\.rootID).joined(separator: ","))")
+    }
+
+    /// Starts all currently registered widgets.
+    private func startWidgets() {
+        for widget in widgets {
+            widget.start()
+        }
     }
 }
