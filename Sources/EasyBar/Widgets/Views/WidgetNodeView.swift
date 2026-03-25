@@ -18,6 +18,8 @@ struct WidgetNodeView: View {
             } else {
                 if node.kind.isRowLikeContainer {
                     rowOrGroupView
+                } else if node.kind.isInteractiveKind {
+                    interactiveNodeView
                 } else {
                     switch node.kind {
                     case .column:
@@ -35,25 +37,30 @@ struct WidgetNodeView: View {
                 case .popup:
                     popupAnchor
 
-                case .slider:
-                    interactiveContent(sliderView)
-
-                case .progressSlider:
-                    interactiveContent(progressSliderView)
-
-                case .progress:
-                    interactiveContent(progressView)
-
-                case .sparkline:
-                    interactiveContent(sparklineView)
-
                     case .item:
                         itemView
-                    case .row, .group:
+                    case .row, .group, .slider, .progressSlider, .progress, .sparkline:
                         EmptyView()
                     }
                 }
             }
+        }
+    }
+
+    /// Returns the interactive view for the current node kind.
+    @ViewBuilder
+    private var interactiveNodeView: some View {
+        switch node.kind {
+        case .slider:
+            interactiveContent(sliderView)
+        case .progressSlider:
+            interactiveContent(progressSliderView)
+        case .progress:
+            interactiveContent(progressView)
+        case .sparkline:
+            interactiveContent(sparklineView)
+        default:
+            EmptyView()
         }
     }
 

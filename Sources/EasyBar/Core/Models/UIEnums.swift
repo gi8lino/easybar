@@ -24,6 +24,14 @@ enum WidgetNodeKind: String, Codable {
     var isRowLikeContainer: Bool {
         self == .row || self == .group
     }
+
+    /// Returns whether this kind renders inside the interactive content wrapper.
+    var isInteractiveKind: Bool {
+        self == .slider
+            || self == .progressSlider
+            || self == .progress
+            || self == .sparkline
+    }
 }
 
 /// Internal role markers for special child nodes.
