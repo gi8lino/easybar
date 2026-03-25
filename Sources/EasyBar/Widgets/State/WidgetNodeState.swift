@@ -60,6 +60,11 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
         !isTopLevel
     }
 
+    /// Returns whether this node is the built-in calendar root.
+    var isCalendarRoot: Bool {
+        root == "builtin_calendar"
+    }
+
     /// Returns whether this node is a popup anchor child.
     var isPopupAnchor: Bool {
         role == .popupAnchor

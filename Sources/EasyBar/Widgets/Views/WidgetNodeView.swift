@@ -59,7 +59,7 @@ struct WidgetNodeView: View {
 
     private var rowOrGroupView: some View {
         Group {
-            if node.id == "builtin_calendar" {
+            if node.isCalendarRoot {
                 nativeCalendarAnchorView {
                     childRow
                 }
@@ -348,7 +348,7 @@ struct WidgetNodeView: View {
 
     /// Returns whether the root mouse overlay should be skipped.
     private var shouldSkipMouseOverlay: Bool {
-        node.root == "builtin_calendar" || node.hasParent
+        node.isCalendarRoot || node.hasParent
     }
 
     /// Returns whether this node has a non-empty image path.
