@@ -13,17 +13,18 @@ final class NativeCalendarStore: ObservableObject {
         Logger.debug(
             "calendar popup applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) sections=\(snapshot.sections.count)"
         )
-
-        DispatchQueue.main.async {
-            self.sections = snapshot.sections
-        }
+        publish(sections: snapshot.sections)
     }
 
     func clear() {
         Logger.debug("calendar popup cleared")
+        publish(sections: [])
+    }
 
+    /// Publishes one sections update on the main queue.
+    private func publish(sections: [NativeCalendarPopupSection]) {
         DispatchQueue.main.async {
-            self.sections = []
+            self.sections = sections
         }
     }
 }
