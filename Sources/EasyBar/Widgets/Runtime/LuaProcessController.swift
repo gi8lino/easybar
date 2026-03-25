@@ -41,19 +41,18 @@ final class LuaProcessController {
 
         installSignalHandlersIfNeeded()
 
-        guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
-            Logger.error("runtime.lua not found")
+        guard let runtimePath = resolvedRuntimePath() else {
             return nil
         }
 
         Logger.debug("starting lua runtime")
         Logger.debug("lua binary: \(Config.shared.luaPath)")
-        Logger.debug("lua script: \(runtime.path)")
+        Logger.debug("lua script: \(runtimePath)")
         Logger.debug("widgets path: \(Config.shared.widgetsPath)")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: Config.shared.luaPath)
-        process.arguments = [runtime.path, Config.shared.widgetsPath]
+        process.arguments = [runtimePath, Config.shared.widgetsPath]
 
         let inPipe = Pipe()
         let outPipe = Pipe()
@@ -63,17 +62,7 @@ final class LuaProcessController {
         process.standardOutput = outPipe
         process.standardError = errPipe
 
-        process.terminationHandler = { process in
-            if process.terminationStatus == 0 {
-                Logger.info("lua runtime terminated status=\(process.terminationStatus)")
-            } else {
-                Logger.warn("lua runtime terminated status=\(process.terminationStatus)")
-            }
-
-            if easyBarLuaProcessGroupPID == process.processIdentifier {
-                easyBarLuaProcessGroupPID = 0
-            }
-        }
+        process.terminationHandler = handleTermination
 
         do {
             try process.run()
@@ -114,5 +103,34 @@ final class LuaProcessController {
         Darwin.signal(SIGHUP, easyBarSignalHandler)
         Darwin.signal(SIGABRT, easyBarSignalHandler)
         Darwin.signal(SIGQUIT, easyBarSignalHandler)
+    }
+
+    /// Resolves the bundled Lua runtime script path.
+    private func resolvedRuntimePath() -> String? {
+        guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
+            Logger.error("runtime.lua not found")
+            return nil
+        }
+
+        return runtime.path
+    }
+
+    /// Handles Lua process termination and related cleanup logging.
+    private func handleTermination(process: Process) {
+        logTerminationStatus(process.terminationStatus)
+
+        if easyBarLuaProcessGroupPID == process.processIdentifier {
+            easyBarLuaProcessGroupPID = 0
+        }
+    }
+
+    /// Logs one Lua runtime termination status.
+    private func logTerminationStatus(_ status: Int32) {
+        guard status != 0 else {
+            Logger.info("lua runtime terminated status=\(status)")
+            return
+        }
+
+        Logger.warn("lua runtime terminated status=\(status)")
     }
 }
