@@ -32,47 +32,15 @@ final class FrontAppNativeWidget: NativeWidget {
         let style = config.style
         let focused = currentFocusedApp()
 
-        var nodes: [WidgetNodeState] = [
-            BuiltinNativeNodeFactory.makeRowContainerNode(
-                rootID: rootID,
+        WidgetStore.shared.apply(
+            root: rootID,
+            nodes: makeNodes(
+                config: config,
                 placement: placement,
-                style: style
+                style: style,
+                focused: focused
             )
-        ]
-
-        if config.showIcon {
-            nodes.append(
-                BuiltinNativeNodeFactory.makeChildItemNode(
-                    rootID: rootID,
-                    parentID: rootID,
-                    childID: "\(rootID)_icon",
-                    position: placement.position,
-                    order: 0,
-                    icon: focused.bundlePath == nil ? style.icon : "",
-                    text: "",
-                    color: style.textColorHex,
-                    imagePath: focused.bundlePath,
-                    imageSize: config.iconSize,
-                    imageCornerRadius: config.iconCornerRadius
-                )
-            )
-        }
-
-        if config.showName {
-            nodes.append(
-                BuiltinNativeNodeFactory.makeChildItemNode(
-                    rootID: rootID,
-                    parentID: rootID,
-                    childID: "\(rootID)_label",
-                    position: placement.position,
-                    order: 1,
-                    text: focused.name.isEmpty ? config.fallbackText : focused.name,
-                    color: style.textColorHex
-                )
-            )
-        }
-
-        WidgetStore.shared.apply(root: rootID, nodes: nodes)
+        )
     }
 
     /// Returns the focused app already resolved by `AeroSpaceService`.
@@ -82,5 +50,89 @@ final class FrontAppNativeWidget: NativeWidget {
         }
 
         return (app.name, app.bundlePath)
+    }
+
+    /// Builds the widget node tree.
+    private func makeNodes(
+        config: Config.FrontAppBuiltinConfig,
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        focused: (name: String, bundlePath: String?)
+    ) -> [WidgetNodeState] {
+        var nodes = [
+            BuiltinNativeNodeFactory.makeRowContainerNode(
+                rootID: rootID,
+                placement: placement,
+                style: style
+            )
+        ]
+
+        appendIconNode(
+            to: &nodes,
+            config: config,
+            placement: placement,
+            style: style,
+            focused: focused
+        )
+
+        appendLabelNode(
+            to: &nodes,
+            config: config,
+            placement: placement,
+            style: style,
+            focused: focused
+        )
+
+        return nodes
+    }
+
+    /// Appends the icon node when enabled.
+    private func appendIconNode(
+        to nodes: inout [WidgetNodeState],
+        config: Config.FrontAppBuiltinConfig,
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        focused: (name: String, bundlePath: String?)
+    ) {
+        guard config.showIcon else { return }
+
+        nodes.append(
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_icon",
+                position: placement.position,
+                order: 0,
+                icon: focused.bundlePath == nil ? style.icon : "",
+                text: "",
+                color: style.textColorHex,
+                imagePath: focused.bundlePath,
+                imageSize: config.iconSize,
+                imageCornerRadius: config.iconCornerRadius
+            )
+        )
+    }
+
+    /// Appends the label node when enabled.
+    private func appendLabelNode(
+        to nodes: inout [WidgetNodeState],
+        config: Config.FrontAppBuiltinConfig,
+        placement: Config.BuiltinWidgetPlacement,
+        style: Config.BuiltinWidgetStyle,
+        focused: (name: String, bundlePath: String?)
+    ) {
+        guard config.showName else { return }
+
+        nodes.append(
+            BuiltinNativeNodeFactory.makeChildItemNode(
+                rootID: rootID,
+                parentID: rootID,
+                childID: "\(rootID)_label",
+                position: placement.position,
+                order: 1,
+                text: focused.name.isEmpty ? config.fallbackText : focused.name,
+                color: style.textColorHex
+            )
+        )
     }
 }
