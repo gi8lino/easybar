@@ -43,21 +43,7 @@ final class MouseTrackingNSView: NSView {
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-
-        if let trackingArea {
-            removeTrackingArea(trackingArea)
-        }
-
-        let options: NSTrackingArea.Options = [
-            .mouseEnteredAndExited,
-            .mouseMoved,
-            .activeAlways,
-            .inVisibleRect
-        ]
-
-        let area = NSTrackingArea(rect: .zero, options: options, owner: self, userInfo: nil)
-        addTrackingArea(area)
-        trackingArea = area
+        replaceTrackingArea()
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -78,42 +64,27 @@ final class MouseTrackingNSView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        Logger.debug("mouse down widget=\(widgetID) button=left")
-        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, button: .left)
+        emitMouseDown(button: .left)
     }
 
     override func mouseUp(with event: NSEvent) {
-        Logger.debug("mouse up widget=\(widgetID) button=left")
-        Logger.debug("mouse clicked widget=\(widgetID) button=left")
-
-        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, button: .left)
-        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, button: .left)
+        emitMouseUp(button: .left)
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        Logger.debug("mouse down widget=\(widgetID) button=right")
-        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, button: .right)
+        emitMouseDown(button: .right)
     }
 
     override func rightMouseUp(with event: NSEvent) {
-        Logger.debug("mouse up widget=\(widgetID) button=right")
-        Logger.debug("mouse clicked widget=\(widgetID) button=right")
-
-        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, button: .right)
-        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, button: .right)
+        emitMouseUp(button: .right)
     }
 
     override func otherMouseDown(with event: NSEvent) {
-        Logger.debug("mouse down widget=\(widgetID) button=middle")
-        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, button: .middle)
+        emitMouseDown(button: .middle)
     }
 
     override func otherMouseUp(with event: NSEvent) {
-        Logger.debug("mouse up widget=\(widgetID) button=middle")
-        Logger.debug("mouse clicked widget=\(widgetID) button=middle")
-
-        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, button: .middle)
-        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, button: .middle)
+        emitMouseUp(button: .middle)
     }
 
     override func scrollWheel(with event: NSEvent) {
@@ -128,6 +99,51 @@ final class MouseTrackingNSView: NSView {
             deltaX: Double(event.scrollingDeltaX),
             deltaY: Double(event.scrollingDeltaY)
         )
+    }
+
+    /// Replaces the current tracking area with the standard widget mouse options.
+    private func replaceTrackingArea() {
+        removeTrackingAreaIfNeeded()
+
+        let area = NSTrackingArea(
+            rect: .zero,
+            options: trackingOptions,
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    /// Removes the current tracking area when present.
+    private func removeTrackingAreaIfNeeded() {
+        guard let trackingArea else { return }
+        removeTrackingArea(trackingArea)
+    }
+
+    /// Returns the tracking options used for widget mouse handling.
+    private var trackingOptions: NSTrackingArea.Options {
+        [
+            .mouseEnteredAndExited,
+            .mouseMoved,
+            .activeAlways,
+            .inVisibleRect
+        ]
+    }
+
+    /// Emits one mouse down event for the given button.
+    private func emitMouseDown(button: MouseButton) {
+        Logger.debug("mouse down widget=\(widgetID) button=\(button.rawValue)")
+        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, button: button)
+    }
+
+    /// Emits one mouse up and click pair for the given button.
+    private func emitMouseUp(button: MouseButton) {
+        Logger.debug("mouse up widget=\(widgetID) button=\(button.rawValue)")
+        Logger.debug("mouse clicked widget=\(widgetID) button=\(button.rawValue)")
+
+        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, button: button)
+        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, button: button)
     }
 }
 
