@@ -273,6 +273,13 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		end
 	end
 
+	if type(node.popupChildren) == "table" then
+		for _, child in ipairs(node.popupChildren) do
+			child.role = "popup-content"
+			flatten_node(child, root_id, id, position, out)
+		end
+	end
+
 	if type(node.children) == "table" then
 		for _, child in ipairs(node.children) do
 			flatten_node(child, root_id, id, position, out)
@@ -376,44 +383,14 @@ local function build_tree(registry, id, root_position)
 		children = popup_child_nodes,
 	}
 
-	return {
-		id = id,
-		kind = "popup",
-		position = normalize_position(root_position),
-		order = tonumber(item.props.order or 0) or 0,
-		icon = icon_string(item.props.icon),
-		text = label_string(item.props.label),
-		color = resolve_color(item.props),
-		iconColor = resolve_icon_color(item.props),
-		labelColor = resolve_label_color(item.props),
-		imagePath = resolve_image_path(item.props),
-		imageSize = resolve_image_size(item.props),
-		imageCornerRadius = resolve_image_corner_radius(item.props),
-		iconFontSize = resolve_icon_font_size(item.props),
-		labelFontSize = resolve_label_font_size(item.props),
-		visible = resolve_drawing(item.props, true),
-		paddingX = tonumber(item.props.padding_x or item.props.paddingX),
-		paddingY = tonumber(item.props.padding_y or item.props.paddingY),
-		paddingLeft = tonumber(item.props.padding_left),
-		paddingRight = tonumber(item.props.padding_right),
-		paddingTop = tonumber(item.props.padding_top),
-		paddingBottom = tonumber(item.props.padding_bottom),
-		spacing = resolve_spacing(item.props),
-		backgroundColor = type(item.props.background) == "table" and item.props.background.color
-			or item.props.backgroundColor,
-		borderColor = type(item.props.background) == "table" and item.props.background.border_color
-			or item.props.borderColor,
-		borderWidth = type(item.props.background) == "table" and tonumber(item.props.background.border_width)
-			or tonumber(item.props.borderWidth),
-		cornerRadius = type(item.props.background) == "table" and tonumber(item.props.background.corner_radius)
-			or tonumber(item.props.cornerRadius),
-		opacity = tonumber(item.props.opacity),
-		width = tonumber(item.props.width),
-		height = tonumber(item.props.height),
-		yOffset = tonumber(item.props.y_offset),
-		anchorChildren = #child_nodes > 0 and { anchor } or {},
-		children = { popup_container },
-	}
+	local root = make_node(id, item, root_position, child_nodes)
+	root.popupChildren = { popup_container }
+
+	if #child_nodes > 0 then
+		root.anchorChildren = { anchor }
+	end
+
+	return root
 end
 
 local function root_ids(registry)

@@ -47,6 +47,7 @@ enum WidgetNodeKind: String, Codable {
 /// Internal role markers for special child nodes.
 enum WidgetNodeRole: String, Codable {
     case popupAnchor = "popup-anchor"
+    case popupContent = "popup-content"
 }
 
 /// Hit-testing modes for widget mouse input.

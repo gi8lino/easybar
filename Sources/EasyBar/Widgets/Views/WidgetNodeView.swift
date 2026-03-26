@@ -92,6 +92,8 @@ struct WidgetNodeView: View {
                 nativeCalendarAnchorView {
                     childRow
                 }
+            } else if hasPopupChildren {
+                popupAnchorSurface(childRow)
             } else {
                 maybeOverlayMouse(childRow.modifier(nodeStyle))
             }
@@ -105,7 +107,11 @@ struct WidgetNodeView: View {
             labelText
         }
 
-        return styledMouseContent(content)
+        if hasPopupChildren {
+            return AnyView(popupAnchorSurface(content))
+        }
+
+        return AnyView(styledMouseContent(content))
     }
 
     private func nativeCalendarAnchorView<Content: View>(
@@ -143,7 +149,7 @@ struct WidgetNodeView: View {
 
     private var popupContent: some View {
         VStack(alignment: .leading, spacing: stackSpacing) {
-            ForEach(children) { child in
+            ForEach(popupChildren) { child in
                 WidgetNodeView(node: child)
             }
         }
@@ -273,7 +279,7 @@ struct WidgetNodeView: View {
 
     /// Emits popup anchor hover events without using the AppKit mouse tracker.
     private func emitPopupAnchorHoverEvent(_ hovering: Bool) {
-        guard node.kind == .popup else { return }
+        guard node.kind == .popup || hasPopupChildren else { return }
 
         if hovering {
             EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: node.root)
@@ -361,9 +367,19 @@ struct WidgetNodeView: View {
         store.anchorChildren(of: node.id)
     }
 
+    /// Returns the popup content children for this node.
+    private var popupChildren: [WidgetNodeState] {
+        store.popupChildren(of: node.id)
+    }
+
     /// Returns whether this node has popup anchor children.
     private var hasAnchorChildren: Bool {
         !anchorChildren.isEmpty
+    }
+
+    /// Returns whether this node has popup content children.
+    private var hasPopupChildren: Bool {
+        !popupChildren.isEmpty
     }
 
     /// Returns the shared popup hover region.

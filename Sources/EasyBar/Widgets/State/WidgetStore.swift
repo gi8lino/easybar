@@ -33,13 +33,19 @@ final class WidgetStore: ObservableObject {
 
     func children(of parentID: String) -> [WidgetNodeState] {
         sortedNodes {
-            $0.parent == parentID && !$0.isPopupAnchor
+            $0.parent == parentID && !$0.isPopupAnchor && !$0.isPopupContent
         }
     }
 
     func anchorChildren(of parentID: String) -> [WidgetNodeState] {
         sortedNodes {
             $0.parent == parentID && $0.isPopupAnchor
+        }
+    }
+
+    func popupChildren(of parentID: String) -> [WidgetNodeState] {
+        sortedNodes {
+            $0.parent == parentID && $0.isPopupContent
         }
     }
 

@@ -71,6 +71,11 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
         role == .popupAnchor
     }
 
+    /// Returns whether this node is popup content.
+    var isPopupContent: Bool {
+        role == .popupContent
+    }
+
     /// Returns the resolved mouse target for this node.
     var resolvedMouseTarget: WidgetMouseTarget {
         mouseTarget ?? .content
