@@ -299,24 +299,6 @@ function M.new(log)
 		end
 	end
 
-	local function maybe_run_click_script(id, event_name)
-		if event_name ~= "mouse.clicked" then
-			return
-		end
-
-		local item = state.items[id]
-		if not item then
-			return
-		end
-
-		local command = item.props.click_script
-		if type(command) ~= "string" or command == "" then
-			return
-		end
-
-		api.exec(command)
-	end
-
 	local function make_handler_event(id, event)
 		return {
 			name = event.name,
@@ -345,8 +327,6 @@ function M.new(log)
 		if type(handlers) ~= "table" then
 			return
 		end
-
-		maybe_run_click_script(id, event.name)
 
 		local handler_event = make_handler_event(id, event)
 

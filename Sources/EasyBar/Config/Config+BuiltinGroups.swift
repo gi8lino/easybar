@@ -26,7 +26,7 @@ extension Config {
                     enabled: true,
                     position: .right,
                     order: 0,
-                    parent: nil
+                    group: nil
                 )
             )
 
@@ -41,6 +41,8 @@ extension Config {
                     borderColorHex: "#333333",
                     borderWidth: 1,
                     cornerRadius: 8,
+                    marginX: 0,
+                    marginY: 0,
                     paddingX: 8,
                     paddingY: 4,
                     spacing: 6,

@@ -252,6 +252,12 @@ easybar.log("warn", "vpn name missing")
 - `width = number`
 - `height = number`
 - `y_offset = number`
+- `margin_x = number`
+- `margin_y = number`
+- `margin_left = number`
+- `margin_right = number`
+- `margin_top = number`
+- `margin_bottom = number`
 - `update_freq = seconds`
 
 ## Text
@@ -331,6 +337,8 @@ background_color = "#1a1a1a"
 border_color = "#333333"
 border_width = 1
 corner_radius = 8
+margin_x = 0
+margin_y = 0
 padding_x = 8
 padding_y = 4
 spacing = 6
@@ -341,6 +349,14 @@ group = "system"
 ```
 
 The referenced native group must exist under `[builtins.groups.<id>]`.
+
+Built-in widget `style` blocks use the same box-model keys:
+
+- `margin_x`
+- `margin_y`
+- `padding_x`
+- `padding_y`
+- `spacing`
 
 ### `label`
 
@@ -375,6 +391,13 @@ background = {
 	padding_top = 4,
 	padding_bottom = 4,
 }
+```
+
+Margins live on the node itself:
+
+```lua
+margin_x = 4
+margin_y = 2
 ```
 
 ## Value widgets
@@ -486,17 +509,7 @@ end)
 
 ## Clicks
 
-Use `click_script` for simple shell actions.
-
-```lua
-easybar.add("item", "calendar", {
-	position = "right",
-	order = 30,
-	click_script = "open -a Calendar",
-})
-```
-
-You can also subscribe to mouse events:
+Subscribe to mouse events:
 
 - `mouse.entered`
 - `mouse.exited`

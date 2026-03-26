@@ -142,7 +142,6 @@ easybar.add("row", "wifi_vpn", {
 		padding_bottom = 4,
 	},
 	spacing = 15,
-	click_script = "",
 })
 
 easybar.add("item", "wifi_vpn_wifi", {

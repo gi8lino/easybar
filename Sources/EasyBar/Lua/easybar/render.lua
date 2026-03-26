@@ -132,13 +132,13 @@ local function resolve_spacing(props)
 	return nil
 end
 
-local function resolve_padding(props, key)
+local function resolve_box_value(props, key, box)
 	if props[key] ~= nil then
 		return tonumber(props[key])
 	end
 
-	if type(props.background) == "table" and props.background[key] ~= nil then
-		return tonumber(props.background[key])
+	if type(props[box]) == "table" and props[box][key] ~= nil then
+		return tonumber(props[box][key])
 	end
 
 	return nil
@@ -206,10 +206,16 @@ local function make_node(id, item, root_position, children)
 		lineWidth = tonumber(props.line_width or props.lineWidth),
 		paddingX = tonumber(props.padding_x or props.paddingX),
 		paddingY = tonumber(props.padding_y or props.paddingY),
-		paddingLeft = resolve_padding(props, "padding_left"),
-		paddingRight = resolve_padding(props, "padding_right"),
-		paddingTop = resolve_padding(props, "padding_top"),
-		paddingBottom = resolve_padding(props, "padding_bottom"),
+		paddingLeft = resolve_box_value(props, "padding_left", "background"),
+		paddingRight = resolve_box_value(props, "padding_right", "background"),
+		paddingTop = resolve_box_value(props, "padding_top", "background"),
+		paddingBottom = resolve_box_value(props, "padding_bottom", "background"),
+		marginX = tonumber(props.margin_x or props.marginX),
+		marginY = tonumber(props.margin_y or props.marginY),
+		marginLeft = resolve_box_value(props, "margin_left", "margin"),
+		marginRight = resolve_box_value(props, "margin_right", "margin"),
+		marginTop = resolve_box_value(props, "margin_top", "margin"),
+		marginBottom = resolve_box_value(props, "margin_bottom", "margin"),
 		spacing = resolve_spacing(props),
 		backgroundColor = type(props.background) == "table" and props.background.color or props.backgroundColor,
 		borderColor = type(props.background) == "table" and props.background.border_color or props.borderColor,
@@ -230,13 +236,13 @@ local function resolve_mouse_interaction(registry, id, item)
 	if type(subscriptions) ~= "table" then
 		return {
 			hover = false,
-			click = type(item.props.click_script) == "string" and item.props.click_script ~= "",
+			click = false,
 			scroll = false,
 		}
 	end
 
 	local hover = false
-	local click = type(item.props.click_script) == "string" and item.props.click_script ~= ""
+	local click = false
 	local scroll = false
 
 	for event_name in pairs(subscriptions) do
@@ -296,6 +302,12 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		paddingRight = node.paddingRight,
 		paddingTop = node.paddingTop,
 		paddingBottom = node.paddingBottom,
+		marginX = node.marginX,
+		marginY = node.marginY,
+		marginLeft = node.marginLeft,
+		marginRight = node.marginRight,
+		marginTop = node.marginTop,
+		marginBottom = node.marginBottom,
 		spacing = node.spacing,
 		backgroundColor = node.backgroundColor,
 		borderColor = node.borderColor,

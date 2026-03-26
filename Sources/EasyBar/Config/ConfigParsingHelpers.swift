@@ -9,16 +9,13 @@ extension Config {
         path: String,
         fallback: BuiltinWidgetPlacement
     ) throws -> BuiltinWidgetPlacement {
-        let groupParent = try optionalString(table["group"], path: "\(path).group")
-        let legacyParent = try optionalString(table["parent"], path: "\(path).parent")
-
         return BuiltinWidgetPlacement(
             enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
             position: normalizedPosition(
                 try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
             ),
             order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
-            parent: groupParent ?? legacyParent ?? fallback.parent
+            group: try optionalString(table["group"], path: "\(path).group") ?? fallback.group
         )
     }
 
@@ -35,6 +32,8 @@ extension Config {
             borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color") ?? fallback.borderColorHex,
             borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width") ?? fallback.borderWidth,
             cornerRadius: try optionalNumber(table["corner_radius"], path: "\(path).corner_radius") ?? fallback.cornerRadius,
+            marginX: try optionalNumber(table["margin_x"], path: "\(path).margin_x") ?? fallback.marginX,
+            marginY: try optionalNumber(table["margin_y"], path: "\(path).margin_y") ?? fallback.marginY,
             paddingX: try optionalNumber(table["padding_x"], path: "\(path).padding_x") ?? fallback.paddingX,
             paddingY: try optionalNumber(table["padding_y"], path: "\(path).padding_y") ?? fallback.paddingY,
             spacing: try optionalNumber(table["spacing"], path: "\(path).spacing") ?? fallback.spacing,

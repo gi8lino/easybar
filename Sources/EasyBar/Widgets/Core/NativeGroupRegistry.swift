@@ -65,6 +65,8 @@ final class NativeGroupRegistry {
             paddingRight: nil,
             paddingTop: nil,
             paddingBottom: nil,
+            marginX: group.style.marginX,
+            marginY: group.style.marginY,
             spacing: group.style.spacing,
             backgroundColor: group.style.backgroundColorHex,
             borderColor: group.style.borderColorHex,

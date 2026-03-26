@@ -64,6 +64,8 @@ extension Config {
                 borderColorHex: "",
                 borderWidth: 0,
                 cornerRadius: 0,
+                marginX: 0,
+                marginY: 0,
                 paddingX: 8,
                 paddingY: 4,
                 spacing: 6,

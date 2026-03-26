@@ -647,6 +647,10 @@ private struct WidgetNodeStyle: ViewModifier {
                 RoundedRectangle(cornerRadius: cornerRadius)
             )
             .opacity(node.opacity ?? 1.0)
+            .padding(.leading, leadingMargin)
+            .padding(.trailing, trailingMargin)
+            .padding(.top, topMargin)
+            .padding(.bottom, bottomMargin)
             .offset(y: verticalOffset)
     }
 
@@ -668,6 +672,26 @@ private struct WidgetNodeStyle: ViewModifier {
     /// Returns the resolved bottom padding.
     private var bottomPadding: CGFloat {
         CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
+    }
+
+    /// Returns the resolved leading margin.
+    private var leadingMargin: CGFloat {
+        CGFloat(node.marginLeft ?? node.marginX ?? 0)
+    }
+
+    /// Returns the resolved trailing margin.
+    private var trailingMargin: CGFloat {
+        CGFloat(node.marginRight ?? node.marginX ?? 0)
+    }
+
+    /// Returns the resolved top margin.
+    private var topMargin: CGFloat {
+        CGFloat(node.marginTop ?? node.marginY ?? 0)
+    }
+
+    /// Returns the resolved bottom margin.
+    private var bottomMargin: CGFloat {
+        CGFloat(node.marginBottom ?? node.marginY ?? 0)
     }
 
     /// Returns the resolved frame width.

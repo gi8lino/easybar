@@ -102,6 +102,8 @@ extension Config {
                 borderColorHex: "#00000000",
                 borderWidth: 0,
                 cornerRadius: 0,
+                marginX: 0,
+                marginY: 0,
                 paddingX: 0,
                 paddingY: 0,
                 spacing: 0,

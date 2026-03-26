@@ -136,6 +136,8 @@ final class BatteryNativeWidget: NativeWidget {
             paddingRight: nil,
             paddingTop: nil,
             paddingBottom: nil,
+            marginX: style.marginX,
+            marginY: style.marginY,
             spacing: style.spacing,
             backgroundColor: style.backgroundColorHex,
             borderColor: style.borderColorHex,

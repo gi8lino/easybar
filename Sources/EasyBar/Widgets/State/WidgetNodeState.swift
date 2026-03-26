@@ -41,6 +41,12 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var paddingRight: Double?
     var paddingTop: Double?
     var paddingBottom: Double?
+    var marginX: Double? = nil
+    var marginY: Double? = nil
+    var marginLeft: Double? = nil
+    var marginRight: Double? = nil
+    var marginTop: Double? = nil
+    var marginBottom: Double? = nil
     var spacing: Double?
 
     var backgroundColor: String?

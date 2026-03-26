@@ -8,12 +8,12 @@ extension Config {
         var enabled: Bool
         var position: WidgetPosition
         var order: Int
-        var parent: String? = nil
+        var group: String? = nil
 
         /// Returns the configured native group parent when present.
         var groupID: String? {
-            guard let parent, !parent.isEmpty else { return nil }
-            return Config.shared.builtinGroups.contains { $0.id == parent } ? parent : nil
+            guard let group, !group.isEmpty else { return nil }
+            return Config.shared.builtinGroups.contains { $0.id == group } ? group : nil
         }
     }
 
@@ -25,6 +25,8 @@ extension Config {
         var borderColorHex: String?
         var borderWidth: Double
         var cornerRadius: Double
+        var marginX: Double
+        var marginY: Double
         var paddingX: Double
         var paddingY: Double
         var spacing: Double
