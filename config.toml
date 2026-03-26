@@ -308,6 +308,8 @@ margin_x = 8 # Horizontal outer margin around the whole popup.
 margin_y = 8 # Vertical outer margin around the whole popup.
 spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
+show_calendar_name = false # Prefixes each event with its calendar name when available.
+use_calendar_colors = false # Colors each event line with its source calendar color when available.
 
 [builtins.calendar.popup.birthdays]
 title_color = "#89CFEF" # Section title color for birthdays.

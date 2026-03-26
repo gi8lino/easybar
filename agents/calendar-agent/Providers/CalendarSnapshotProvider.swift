@@ -113,7 +113,9 @@ final class CalendarSnapshotProvider {
                     CalendarAgentItem(
                         id: "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
                         time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
-                        title: normalizedTitle(event.title)
+                        title: normalizedTitle(event.title),
+                        calendarName: normalizedTitle(event.calendar.title),
+                        calendarColorHex: colorHex(for: event.calendar.cgColor)
                     )
                 }
             }
@@ -211,7 +213,9 @@ final class CalendarSnapshotProvider {
                 CalendarAgentItem(
                     id: "birthday-\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
                     time: formatBirthdayDate(event.startDate, format: query.birthdaysDateFormat),
-                    title: birthdayTitle(for: event, showAge: query.birthdaysShowAge)
+                    title: birthdayTitle(for: event, showAge: query.birthdaysShowAge),
+                    calendarName: normalizedTitle(event.calendar.title),
+                    calendarColorHex: colorHex(for: event.calendar.cgColor)
                 )
             }
 
@@ -267,5 +271,29 @@ final class CalendarSnapshotProvider {
         let formatter = DateFormatter()
         formatter.dateFormat = format
         return formatter.string(from: date)
+    }
+
+    private func colorHex(for cgColor: CGColor?) -> String? {
+        guard let cgColor else { return nil }
+        guard let color = cgColor.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil) else {
+            return nil
+        }
+
+        guard let components = color.components else { return nil }
+        let values: [CGFloat]
+
+        if components.count >= 3 {
+            values = components
+        } else if components.count == 2 {
+            values = [components[0], components[0], components[0], components[1]]
+        } else {
+            return nil
+        }
+
+        let red = Int(max(0, min(255, round(values[0] * 255))))
+        let green = Int(max(0, min(255, round(values[1] * 255))))
+        let blue = Int(max(0, min(255, round(values[2] * 255))))
+
+        return String(format: "#%02X%02X%02X", red, green, blue)
     }
 }

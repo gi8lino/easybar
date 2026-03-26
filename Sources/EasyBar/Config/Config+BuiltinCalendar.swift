@@ -44,6 +44,8 @@ extension Config {
             var itemIndent: Double
             var marginX: Double
             var marginY: Double
+            var showCalendarName: Bool
+            var useCalendarColors: Bool
             var birthdays: PopupSectionStyle
             var today: PopupSectionStyle
             var tomorrow: PopupSectionStyle
@@ -187,6 +189,16 @@ extension Config {
             set { popup.marginY = newValue }
         }
 
+        var popupShowCalendarName: Bool {
+            get { popup.showCalendarName }
+            set { popup.showCalendarName = newValue }
+        }
+
+        var popupUseCalendarColors: Bool {
+            get { popup.useCalendarColors }
+            set { popup.useCalendarColors = newValue }
+        }
+
         static let `default` = CalendarBuiltinConfig(
             placement: .init(
                 enabled: false,
@@ -237,6 +249,8 @@ extension Config {
                 itemIndent: 8,
                 marginX: 8,
                 marginY: 8,
+                showCalendarName: false,
+                useCalendarColors: false,
                 birthdays: .init(
                     titleColorHex: "#89CFEF",
                     itemColorHex: "#7285A5",
@@ -395,6 +409,14 @@ extension Config {
                 popupTable["margin_y"],
                 path: "builtins.calendar.popup.margin_y"
             ) ?? builtinCalendar.popupMarginY,
+            showCalendarName: try optionalBool(
+                popupTable["show_calendar_name"],
+                path: "builtins.calendar.popup.show_calendar_name"
+            ) ?? builtinCalendar.popupShowCalendarName,
+            useCalendarColors: try optionalBool(
+                popupTable["use_calendar_colors"],
+                path: "builtins.calendar.popup.use_calendar_colors"
+            ) ?? builtinCalendar.popupUseCalendarColors,
             birthdays: try parseCalendarPopupSectionStyle(
                 from: birthdaysPopupTable,
                 path: "builtins.calendar.popup.birthdays",

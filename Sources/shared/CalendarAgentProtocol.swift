@@ -52,11 +52,21 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable {
     public var id: String
     public var time: String
     public var title: String
+    public var calendarName: String?
+    public var calendarColorHex: String?
 
-    public init(id: String, time: String, title: String) {
+    public init(
+        id: String,
+        time: String,
+        title: String,
+        calendarName: String? = nil,
+        calendarColorHex: String? = nil
+    ) {
         self.id = id
         self.time = time
         self.title = title
+        self.calendarName = calendarName
+        self.calendarColorHex = calendarColorHex
     }
 }
 

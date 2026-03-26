@@ -87,11 +87,14 @@ struct NativeCalendarPopupView: View {
     }
 
     private func itemLine(for item: NativeCalendarPopupItem) -> String {
+        let config = Config.shared.builtinCalendar
+        let prefix = config.popupShowCalendarName ? calendarNamePrefix(for: item) : ""
+
         if item.time.isEmpty {
-            return item.title
+            return prefix + item.title
         }
 
-        return "\(item.time) \(item.title)"
+        return "\(item.time) \(prefix)\(item.title)"
     }
 
     /// Returns the effective text color for one popup item.
@@ -103,7 +106,24 @@ struct NativeCalendarPopupView: View {
             return style.emptyColorHex
         }
 
+        let config = Config.shared.builtinCalendar
+
+        if config.popupUseCalendarColors,
+           let calendarColorHex = item.calendarColorHex,
+           !calendarColorHex.isEmpty {
+            return calendarColorHex
+        }
+
         return style.itemColorHex
+    }
+
+    private func calendarNamePrefix(for item: NativeCalendarPopupItem) -> String {
+        guard let calendarName = item.calendarName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !calendarName.isEmpty else {
+            return ""
+        }
+
+        return "[\(calendarName)] "
     }
 
     private func color(_ hex: String) -> Color {
