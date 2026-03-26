@@ -125,16 +125,16 @@ end
 
 easybar.add("group", "wireguard", {
 	position = "right",
-	order = 42,
+	order = 2,
 	background = {
 		color = "#202020",
 		border_color = "#4a4a4a",
 		border_width = 1,
 		corner_radius = 8,
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
+		padding_left = 12,
+		padding_right = 12,
+		padding_top = 6,
+		padding_bottom = 6,
 	},
 	spacing = 0,
 	popup = {
@@ -147,7 +147,7 @@ easybar.add("item", "wireguard_icon", {
 	icon = {
 		string = "WG",
 		image = home .. "/.config/easybar/assets/wireguard.png",
-		image_size = 16,
+		image_size = 22,
 		image_corner_radius = 0,
 	},
 	label = {
