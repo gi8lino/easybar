@@ -9,13 +9,16 @@ extension Config {
         path: String,
         fallback: BuiltinWidgetPlacement
     ) throws -> BuiltinWidgetPlacement {
-        BuiltinWidgetPlacement(
+        let groupParent = try optionalString(table["group"], path: "\(path).group")
+        let legacyParent = try optionalString(table["parent"], path: "\(path).parent")
+
+        return BuiltinWidgetPlacement(
             enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
             position: normalizedPosition(
                 try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
             ),
             order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
-            parent: try optionalString(table["parent"], path: "\(path).parent") ?? fallback.parent
+            parent: groupParent ?? legacyParent ?? fallback.parent
         )
     }
 

@@ -32,6 +32,7 @@ final class Config {
 
     var builtinCPU: CPUBuiltinConfig = .default
     var builtinBattery: BatteryBuiltinConfig = .default
+    var builtinGroups: [BuiltinGroupConfig] = []
     var builtinSpaces: SpacesBuiltinConfig = .default
     var builtinFrontApp: FrontAppBuiltinConfig = .default
     var builtinVolume: VolumeBuiltinConfig = .default
@@ -113,6 +114,7 @@ final class Config {
 
         builtinCPU = .default
         builtinBattery = .default
+        builtinGroups = []
         builtinSpaces = .default
         builtinFrontApp = .default
         builtinVolume = .default
@@ -142,6 +144,7 @@ final class Config {
             barBorderHex: barBorderHex,
             builtinCPU: builtinCPU,
             builtinBattery: builtinBattery,
+            builtinGroups: builtinGroups,
             builtinSpaces: builtinSpaces,
             builtinFrontApp: builtinFrontApp,
             builtinVolume: builtinVolume,
@@ -174,6 +177,7 @@ final class Config {
 
         builtinCPU = snapshot.builtinCPU
         builtinBattery = snapshot.builtinBattery
+        builtinGroups = snapshot.builtinGroups
         builtinSpaces = snapshot.builtinSpaces
         builtinFrontApp = snapshot.builtinFrontApp
         builtinVolume = snapshot.builtinVolume

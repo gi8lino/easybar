@@ -27,6 +27,7 @@ final class NativeWidgetRegistry {
 
         Logger.info("registering native widgets")
         logConfig()
+        NativeGroupRegistry.shared.reload()
         widgets = makeEnabledWidgets()
         logRegisteredWidgets()
         startWidgets()
@@ -39,6 +40,7 @@ final class NativeWidgetRegistry {
         }
 
         widgets.removeAll()
+        NativeGroupRegistry.shared.clear()
     }
 
     /// Builds the enabled native widget list from the current config.

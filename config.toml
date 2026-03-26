@@ -113,6 +113,20 @@ enabled = true # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 10 # Sort order among widgets in the same position.
 
+[builtins.groups.system]
+position = "right" # Places the native group on the left, center, or right side.
+order = 20 # Sort order among widgets in the same position.
+
+[builtins.groups.system.style]
+background_color = "#1a1a1a" # Background color of the native group.
+border_color = "#333333" # Border color of the native group.
+border_width = 1 # Border width of the native group.
+corner_radius = 8 # Corner radius of the native group.
+padding_x = 8 # Horizontal inner padding of the native group.
+padding_y = 4 # Vertical inner padding of the native group.
+spacing = 6 # Gap between native children in the group.
+opacity = 1 # Overall opacity of the native group.
+
 [builtins.cpu.style]
 icon = "󰍛" # Leading icon of the widget.
 text_color = "" # Text color of the widget when no content color is set.
@@ -135,6 +149,7 @@ color = "#a6da95" # Color of the sparkline and label.
 enabled = true # Shows or hides the battery widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
+group = "system" # Optional native group id that should contain this widget.
 
 [builtins.battery.style]
 icon = "🔋" # Fallback/default battery icon.
@@ -182,7 +197,7 @@ order = 20 # Sort order among widgets in the same position.
 enabled = true # Shows or hides the built-in Wi-Fi widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 30 # Sort order among widgets in the same position.
-parent = "" # Optional Lua group id that should own this native widget.
+group = "system" # Optional native group id that should contain this widget.
 
 [builtins.wifi.style]
 icon = "" # Unused fallback icon for the Wi-Fi root widget.

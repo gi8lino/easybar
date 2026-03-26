@@ -9,6 +9,12 @@ extension Config {
         var position: WidgetPosition
         var order: Int
         var parent: String? = nil
+
+        /// Returns the configured native group parent when present.
+        var groupID: String? {
+            guard let parent, !parent.isEmpty else { return nil }
+            return Config.shared.builtinGroups.contains { $0.id == parent } ? parent : nil
+        }
     }
 
     /// Shared style block for built-in widgets.
@@ -29,6 +35,7 @@ extension Config {
     func parseBuiltins(from toml: TOMLTable) throws {
         guard let builtins = toml["builtins"]?.table else { return }
 
+        try parseBuiltinGroups(from: builtins)
         try parseCPUBuiltin(from: builtins)
         try parseBatteryBuiltin(from: builtins)
         try parseSpacesBuiltin(from: builtins)

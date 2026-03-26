@@ -319,16 +319,28 @@ This gives you:
 - click/hover on `vpn_group_icon` only for the icon
 - click/hover on `vpn_group_label` only for the label
 
-Native built-ins can also be attached under a Lua group by setting `parent` in `config.toml`:
+Native built-ins can also be attached under a native group in `config.toml`:
 
 ```toml
+[builtins.groups.system]
+position = "right"
+order = 20
+
+[builtins.groups.system.style]
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+
 [builtins.wifi]
 enabled = true
-parent = "vpn_group"
+group = "system"
 ```
 
-The parent node must already exist as a Lua/custom node id.
-If the target group does not exist, the native widget has nowhere to render.
+The referenced native group must exist under `[builtins.groups.<id>]`.
 
 ### `label`
 

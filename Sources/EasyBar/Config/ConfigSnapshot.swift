@@ -22,6 +22,7 @@ struct ConfigSnapshot {
 
     let builtinCPU: Config.CPUBuiltinConfig
     let builtinBattery: Config.BatteryBuiltinConfig
+    let builtinGroups: [Config.BuiltinGroupConfig]
     let builtinSpaces: Config.SpacesBuiltinConfig
     let builtinFrontApp: Config.FrontAppBuiltinConfig
     let builtinVolume: Config.VolumeBuiltinConfig
