@@ -20,6 +20,13 @@ final class CalendarAgentClient {
         decoder.dateDecodingStrategy = .iso8601
     }
 
+    /// Returns whether the client currently has an open socket.
+    var isConnected: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return socketFD >= 0
+    }
+
     func start() {
         lock.lock()
         if running {

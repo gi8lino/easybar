@@ -17,6 +17,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logStartup()
 
         let controller = BarWindowController()
+        controller.onReloadConfig = { [weak self] in
+            self?.reloadConfig()
+        }
+        controller.onRestartLuaRuntime = { [weak self] in
+            self?.restartLuaRuntime()
+        }
         controller.present()
         barWindowController = controller
 
@@ -40,16 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 EventBus.shared.emit(.forced)
 
             case .reloadConfig:
-                Config.shared.reload()
-                Logger.configureFileLogging(
-                    enabled: Config.shared.loggingEnabled,
-                    path: Config.shared.loggingPath
-                )
-                self?.barWindowController?.reloadLayout()
-                WidgetRunner.shared.reload()
-                NativeWidgetRegistry.shared.reload()
-                self?.configFileWatcher.restart()
-                self?.aeroSpaceService.triggerRefresh()
+                self?.reloadConfig()
             }
         }
     }
@@ -60,6 +57,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configFileWatcher.stop()
         NativeWidgetRegistry.shared.stop()
         WidgetRunner.shared.shutdown()
+    }
+
+    /// Reloads config and reapplies all dependent runtime state.
+    private func reloadConfig() {
+        Config.shared.reload()
+        Logger.configureFileLogging(
+            enabled: Config.shared.loggingEnabled,
+            path: Config.shared.loggingPath
+        )
+        barWindowController?.reloadLayout()
+        WidgetRunner.shared.reload()
+        NativeWidgetRegistry.shared.reload()
+        configFileWatcher.restart()
+        aeroSpaceService.triggerRefresh()
+    }
+
+    /// Restarts only the Lua runtime without reloading config.
+    private func restartLuaRuntime() {
+        WidgetRunner.shared.reload()
+        NativeWidgetRegistry.shared.reload()
+        aeroSpaceService.triggerRefresh()
     }
 
     /// Logs one startup snapshot so service-vs-local differences are visible.

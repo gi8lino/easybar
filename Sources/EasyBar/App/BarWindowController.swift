@@ -3,6 +3,8 @@ import SwiftUI
 
 /// Hosts the top-level borderless bar window.
 final class BarWindowController: NSWindowController {
+    var onReloadConfig: (() -> Void)?
+    var onRestartLuaRuntime: (() -> Void)?
 
     /// Creates a borderless bar window pinned to the top of the screen.
     init() {
@@ -45,6 +47,10 @@ final class BarWindowController: NSWindowController {
         window.setFrame(frame, display: false)
 
         super.init(window: window)
+
+        window.contextMenuProvider = { [weak self] in
+            self?.makeContextMenu() ?? NSMenu()
+        }
     }
 
     @available(*, unavailable)
@@ -88,9 +94,126 @@ final class BarWindowController: NSWindowController {
             height: height
         )
     }
+
+    /// Builds the right-click menu for the bar.
+    private func makeContextMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        menu.addItem(actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))))
+        menu.addItem(actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))))
+        menu.addItem(.separator())
+        menu.addItem(actionItem(title: "Open Config", action: #selector(openConfig(_:))))
+        menu.addItem(actionItem(title: "Open Widgets Folder", action: #selector(openWidgetsFolder(_:))))
+        menu.addItem(.separator())
+        menu.addItem(agentMenuItem(
+            title: "Calendar Agent",
+            status: connectionLabel(CalendarAgentClient.shared.isConnected),
+            permission: calendarPermissionLabel,
+            settingsAction: #selector(openCalendarSettings(_:)),
+            settingsTitle: "Open Calendar Settings"
+        ))
+        menu.addItem(agentMenuItem(
+            title: "Network Agent",
+            status: connectionLabel(NetworkAgentClient.shared.isConnected),
+            permission: wifiPermissionLabel,
+            settingsAction: #selector(openLocationSettings(_:)),
+            settingsTitle: "Open Location/Wi-Fi Settings"
+        ))
+
+        return menu
+    }
+
+    /// Creates one enabled action item.
+    private func actionItem(title: String, action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    /// Creates one agent submenu item with status, permission, and settings actions.
+    private func agentMenuItem(
+        title: String,
+        status: String,
+        permission: String,
+        settingsAction: Selector,
+        settingsTitle: String
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        let submenu = NSMenu(title: title)
+        submenu.addItem(readOnlyItem("Status: \(status)"))
+        submenu.addItem(readOnlyItem("Permission: \(permission)"))
+        submenu.addItem(.separator())
+        submenu.addItem(actionItem(title: settingsTitle, action: settingsAction))
+        item.submenu = submenu
+        return item
+    }
+
+    /// Creates one readable non-destructive status row.
+    private func readOnlyItem(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(ignoreMenuSelection(_:)), keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    /// Returns a human-readable connected/disconnected label.
+    private func connectionLabel(_ connected: Bool) -> String {
+        connected ? "Connected" : "Disconnected"
+    }
+
+    /// Returns the current calendar permission label.
+    private var calendarPermissionLabel: String {
+        NativeCalendarStore.shared.snapshot?.permissionState ?? "unknown"
+    }
+
+    /// Returns the current Wi-Fi/location permission label.
+    private var wifiPermissionLabel: String {
+        NativeWiFiStore.shared.snapshot?.permissionState ?? "unknown"
+    }
+
+    /// Reloads the app config through the app layer.
+    @objc private func reloadConfig(_ sender: Any?) {
+        onReloadConfig?()
+    }
+
+    /// Restarts only the Lua runtime through the app layer.
+    @objc private func restartLuaRuntime(_ sender: Any?) {
+        onRestartLuaRuntime?()
+    }
+
+    /// Opens the active config file in Finder/default app.
+    @objc private func openConfig(_ sender: Any?) {
+        let url = URL(fileURLWithPath: Config.shared.configPath)
+        NSWorkspace.shared.open(url)
+    }
+
+    /// Opens the configured widgets directory.
+    @objc private func openWidgetsFolder(_ sender: Any?) {
+        let url = URL(fileURLWithPath: Config.shared.widgetsPath, isDirectory: true)
+        NSWorkspace.shared.open(url)
+    }
+
+    /// Opens Calendar privacy settings so the user can grant access again.
+    @objc private func openCalendarSettings(_ sender: Any?) {
+        openSettingsURL("x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
+    }
+
+    /// Opens Location Services settings so the user can grant Wi-Fi access again.
+    @objc private func openLocationSettings(_ sender: Any?) {
+        openSettingsURL("x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices")
+    }
+
+    /// Ignores selection on read-only status rows.
+    @objc private func ignoreMenuSelection(_ sender: Any?) {}
+
+    /// Opens one System Settings deep link when available.
+    private func openSettingsURL(_ value: String) {
+        guard let url = URL(string: value) else { return }
+        NSWorkspace.shared.open(url)
+    }
 }
 
 private final class BarPanel: NSPanel {
+    var contextMenuProvider: (() -> NSMenu)?
 
     override var canBecomeKey: Bool {
         false
@@ -102,5 +225,20 @@ private final class BarPanel: NSPanel {
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         frameRect
+    }
+
+    /// Shows the dynamic bar context menu on right click.
+    override func rightMouseUp(with event: NSEvent) {
+        guard let menu = contextMenuProvider?() else {
+            super.rightMouseUp(with: event)
+            return
+        }
+
+        guard let targetView = contentView else {
+            super.rightMouseUp(with: event)
+            return
+        }
+
+        NSMenu.popUpContextMenu(menu, with: event, for: targetView)
     }
 }

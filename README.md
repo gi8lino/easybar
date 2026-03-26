@@ -161,6 +161,20 @@ If you want macOS to push EasyBar down when the system menu bar is shown, enable
 
 With that enabled, macOS exposes the menu bar background/inset in a way EasyBar can follow more reliably.
 
+## Bar menu
+
+Right-click the bar to open the built-in context menu.
+
+It includes:
+
+- `Reload Config`
+- `Restart Lua Runtime`
+- `Open Config`
+- `Open Widgets Folder`
+- live calendar and network agent status
+- current Calendar and Location/Wi-Fi permission state
+- shortcuts to the relevant macOS privacy settings panes
+
 ## Built-in widgets
 
 EasyBar currently includes these native built-ins:
