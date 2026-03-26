@@ -2,113 +2,113 @@ import SwiftUI
 
 struct ProgressSliderWidgetView: View {
 
-    let rootWidgetID: String
-    let minValue: Double
-    let maxValue: Double
-    let step: Double
-    let externalValue: Double
-    let tint: Color
-    let width: CGFloat?
+  let rootWidgetID: String
+  let minValue: Double
+  let maxValue: Double
+  let step: Double
+  let externalValue: Double
+  let tint: Color
+  let width: CGFloat?
 
-    @State private var value: Double
-    @State private var isDragging = false
+  @State private var value: Double
+  @State private var isDragging = false
 
-    init(
-        rootWidgetID: String,
-        minValue: Double,
-        maxValue: Double,
-        step: Double,
-        value: Double,
-        tint: Color,
-        width: CGFloat? = nil
-    ) {
-        self.rootWidgetID = rootWidgetID
-        self.minValue = minValue
-        self.maxValue = maxValue
-        self.step = step
-        self.externalValue = value
-        self.tint = tint
-        self.width = width
-        _value = State(initialValue: value)
-    }
+  init(
+    rootWidgetID: String,
+    minValue: Double,
+    maxValue: Double,
+    step: Double,
+    value: Double,
+    tint: Color,
+    width: CGFloat? = nil
+  ) {
+    self.rootWidgetID = rootWidgetID
+    self.minValue = minValue
+    self.maxValue = maxValue
+    self.step = step
+    self.externalValue = value
+    self.tint = tint
+    self.width = width
+    _value = State(initialValue: value)
+  }
 
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.12))
-                    .frame(height: 8)
+  var body: some View {
+    GeometryReader { geometry in
+      ZStack(alignment: .leading) {
+        Capsule()
+          .fill(Color.white.opacity(0.12))
+          .frame(height: 8)
 
-                Capsule()
-                    .fill(tint)
-                    .frame(width: max(0, geometry.size.width * normalizedValue), height: 8)
+        Capsule()
+          .fill(tint)
+          .frame(width: max(0, geometry.size.width * normalizedValue), height: 8)
 
-                Circle()
-                    .fill(tint)
-                    .frame(width: 12, height: 12)
-                    .offset(x: knobOffset(in: geometry.size.width) - 6)
-            }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { gesture in
-                        isDragging = true
+        Circle()
+          .fill(tint)
+          .frame(width: 12, height: 12)
+          .offset(x: knobOffset(in: geometry.size.width) - 6)
+      }
+      .contentShape(Rectangle())
+      .gesture(
+        DragGesture(minimumDistance: 0)
+          .onChanged { gesture in
+            isDragging = true
 
-                        let newValue = value(for: gesture.location.x, width: geometry.size.width)
-                        value = newValue
+            let newValue = value(for: gesture.location.x, width: geometry.size.width)
+            value = newValue
 
-                        EventBus.shared.emitWidgetEvent(
-                            .sliderPreview,
-                            widgetID: rootWidgetID,
-                            value: newValue
-                        )
-                    }
-                    .onEnded { gesture in
-                        let newValue = value(for: gesture.location.x, width: geometry.size.width)
-                        value = newValue
-                        isDragging = false
-
-                        EventBus.shared.emitWidgetEvent(
-                            .sliderChanged,
-                            widgetID: rootWidgetID,
-                            value: newValue
-                        )
-                    }
+            EventBus.shared.emitWidgetEvent(
+              .sliderPreview,
+              widgetID: rootWidgetID,
+              value: newValue
             )
-        }
-        .frame(width: resolvedWidth, height: 14)
-        .onChange(of: externalValue) { _, newValue in
-            if !isDragging {
-                value = newValue
-            }
-        }
-    }
+          }
+          .onEnded { gesture in
+            let newValue = value(for: gesture.location.x, width: geometry.size.width)
+            value = newValue
+            isDragging = false
 
-    private var resolvedWidth: CGFloat {
-        SliderWidthResolver.resolve(
-            explicitWidth: width,
-            rootWidgetID: rootWidgetID,
-            fallback: 72
-        )
+            EventBus.shared.emitWidgetEvent(
+              .sliderChanged,
+              widgetID: rootWidgetID,
+              value: newValue
+            )
+          }
+      )
     }
-
-    private var normalizedValue: CGFloat {
-        let span = max(maxValue - minValue, 0.0001)
-        let clamped = min(max(value, minValue), maxValue)
-        return CGFloat((clamped - minValue) / span)
+    .frame(width: resolvedWidth, height: 14)
+    .onChange(of: externalValue) { _, newValue in
+      if !isDragging {
+        value = newValue
+      }
     }
+  }
 
-    private func knobOffset(in width: CGFloat) -> CGFloat {
-        width * normalizedValue
-    }
+  private var resolvedWidth: CGFloat {
+    SliderWidthResolver.resolve(
+      explicitWidth: width,
+      rootWidgetID: rootWidgetID,
+      fallback: 72
+    )
+  }
 
-    private func value(for x: CGFloat, width: CGFloat) -> Double {
-        let clampedX = min(max(0, x), width)
-        let ratio = Double(clampedX / max(width, 1))
-        let rawValue = minValue + ratio * (maxValue - minValue)
+  private var normalizedValue: CGFloat {
+    let span = max(maxValue - minValue, 0.0001)
+    let clamped = min(max(value, minValue), maxValue)
+    return CGFloat((clamped - minValue) / span)
+  }
 
-        let safeStep = max(step, 0.0001)
-        let stepped = (rawValue / safeStep).rounded() * safeStep
-        return min(max(stepped, minValue), maxValue)
-    }
+  private func knobOffset(in width: CGFloat) -> CGFloat {
+    width * normalizedValue
+  }
+
+  private func value(for x: CGFloat, width: CGFloat) -> Double {
+    let clampedX = min(max(0, x), width)
+    let ratio = Double(clampedX / max(width, 1))
+    let rawValue = minValue + ratio * (maxValue - minValue)
+
+    let safeStep = max(step, 0.0001)
+    let stepped = (rawValue / safeStep).rounded() * safeStep
+    return min(max(stepped, minValue), maxValue)
+  }
 }

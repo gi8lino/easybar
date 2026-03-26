@@ -2,39 +2,39 @@ import Foundation
 
 final class TimerEvents {
 
-    static let shared = TimerEvents()
+  static let shared = TimerEvents()
 
-    private var timers: [Timer] = []
+  private var timers: [Timer] = []
 
-    private init() {}
+  private init() {}
 
-    func startMinuteTimer() {
+  func startMinuteTimer() {
 
-        let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            EventBus.shared.emit(.minuteTick)
-        }
-
-        timers.append(timer)
-
-        Logger.debug("minute timer started")
+    let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+      EventBus.shared.emit(.minuteTick)
     }
 
-    func startSecondTimer() {
+    timers.append(timer)
 
-        let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            EventBus.shared.emit(.secondTick)
-        }
+    Logger.debug("minute timer started")
+  }
 
-        timers.append(timer)
+  func startSecondTimer() {
 
-        Logger.debug("second timer started")
+    let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+      EventBus.shared.emit(.secondTick)
     }
 
-    func stopAll() {
-        for timer in timers {
-            timer.invalidate()
-        }
+    timers.append(timer)
 
-        timers.removeAll()
+    Logger.debug("second timer started")
+  }
+
+  func stopAll() {
+    for timer in timers {
+      timer.invalidate()
     }
+
+    timers.removeAll()
+  }
 }

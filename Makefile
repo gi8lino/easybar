@@ -83,7 +83,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package release app cli clean clean-dist run stop dev icons \
+.PHONY: help all prepare-version build bundle package release app cli fmt clean clean-dist run stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-version print-latest-tag print-package-sha256 \
@@ -113,6 +113,9 @@ app: prepare-version ## Build only the app executable for the selected ARCH.
 
 cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
+
+fmt: ## Format all Swift source files in the repository.
+	@swift format format --in-place --recursive --parallel .
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_MACOS)" "$(NETWORK_AGENT_RESOURCES)" "$(DIST_DIR)"

@@ -2,14 +2,14 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let controller = AppController()
+  private let controller = AppController()
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
-        controller.start()
-    }
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    NSApp.setActivationPolicy(.accessory)
+    controller.start()
+  }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        controller.stop()
-    }
+  func applicationWillTerminate(_ notification: Notification) {
+    controller.stop()
+  }
 }

@@ -1,205 +1,211 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// AppKit-backed event surface for widget mouse input.
 struct WidgetMouseView: NSViewRepresentable {
 
-    let widgetID: String
-    let targetWidgetID: String
-    let tracksHover: Bool
+  let widgetID: String
+  let targetWidgetID: String
+  let tracksHover: Bool
 
-    init(widgetID: String, targetWidgetID: String? = nil, tracksHover: Bool = true) {
-        self.widgetID = widgetID
-        self.targetWidgetID = targetWidgetID ?? widgetID
-        self.tracksHover = tracksHover
-    }
+  init(widgetID: String, targetWidgetID: String? = nil, tracksHover: Bool = true) {
+    self.widgetID = widgetID
+    self.targetWidgetID = targetWidgetID ?? widgetID
+    self.tracksHover = tracksHover
+  }
 
-    func makeNSView(context: Context) -> MouseTrackingNSView {
-        let view = MouseTrackingNSView()
-        view.widgetID = widgetID
-        view.targetWidgetID = targetWidgetID
-        view.tracksHover = tracksHover
-        return view
-    }
+  func makeNSView(context: Context) -> MouseTrackingNSView {
+    let view = MouseTrackingNSView()
+    view.widgetID = widgetID
+    view.targetWidgetID = targetWidgetID
+    view.tracksHover = tracksHover
+    return view
+  }
 
-    func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
-        nsView.widgetID = widgetID
-        nsView.targetWidgetID = targetWidgetID
-        nsView.tracksHover = tracksHover
-    }
+  func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
+    nsView.widgetID = widgetID
+    nsView.targetWidgetID = targetWidgetID
+    nsView.tracksHover = tracksHover
+  }
 }
 
 final class MouseTrackingNSView: NSView {
 
-    var widgetID: String = ""
-    var targetWidgetID: String = ""
-    var tracksHover = true
+  var widgetID: String = ""
+  var targetWidgetID: String = ""
+  var tracksHover = true
 
-    private var trackingArea: NSTrackingArea?
-    private var isMouseInside = false
-    private static let hoverState = HoverState()
+  private var trackingArea: NSTrackingArea?
+  private var isMouseInside = false
+  private static let hoverState = HoverState()
 
-    /// Accept the first click even when EasyBar is not active.
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
-        true
+  /// Accept the first click even when EasyBar is not active.
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+    true
+  }
+
+  /// Keep the view eligible for responder handling.
+  override var acceptsFirstResponder: Bool {
+    true
+  }
+
+  /// Make this transparent view participate in hit-testing.
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    bounds.contains(point) ? self : nil
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    replaceTrackingArea()
+  }
+
+  override func mouseEntered(with event: NSEvent) {
+    guard tracksHover else { return }
+    guard !isMouseInside else { return }
+    isMouseInside = true
+    guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
+    Logger.debug("mouse entered widget=\(widgetID) target=\(targetWidgetID)")
+    EventBus.shared.emitWidgetEvent(
+      .mouseEntered, widgetID: widgetID, targetWidgetID: targetWidgetID)
+  }
+
+  override func mouseExited(with event: NSEvent) {
+    guard tracksHover else { return }
+    guard isMouseInside else { return }
+    isMouseInside = false
+    Self.hoverState.exit(widgetID: self.targetWidgetID) {
+      Logger.debug("mouse exited widget=\(self.widgetID) target=\(self.targetWidgetID)")
+      EventBus.shared.emitWidgetEvent(
+        .mouseExited, widgetID: self.widgetID, targetWidgetID: self.targetWidgetID)
     }
+  }
 
-    /// Keep the view eligible for responder handling.
-    override var acceptsFirstResponder: Bool {
-        true
-    }
+  override func mouseDown(with event: NSEvent) {
+    emitMouseDown(button: .left)
+  }
 
-    /// Make this transparent view participate in hit-testing.
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        bounds.contains(point) ? self : nil
-    }
+  override func mouseUp(with event: NSEvent) {
+    emitMouseUp(button: .left)
+  }
 
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        replaceTrackingArea()
-    }
+  override func rightMouseDown(with event: NSEvent) {
+    emitMouseDown(button: .right)
+  }
 
-    override func mouseEntered(with event: NSEvent) {
-        guard tracksHover else { return }
-        guard !isMouseInside else { return }
-        isMouseInside = true
-        guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
-        Logger.debug("mouse entered widget=\(widgetID) target=\(targetWidgetID)")
-        EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: widgetID, targetWidgetID: targetWidgetID)
-    }
+  override func rightMouseUp(with event: NSEvent) {
+    emitMouseUp(button: .right)
+  }
 
-    override func mouseExited(with event: NSEvent) {
-        guard tracksHover else { return }
-        guard isMouseInside else { return }
-        isMouseInside = false
-        Self.hoverState.exit(widgetID: self.targetWidgetID) {
-            Logger.debug("mouse exited widget=\(self.widgetID) target=\(self.targetWidgetID)")
-            EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: self.widgetID, targetWidgetID: self.targetWidgetID)
-        }
-    }
+  override func otherMouseDown(with event: NSEvent) {
+    emitMouseDown(button: .middle)
+  }
 
-    override func mouseDown(with event: NSEvent) {
-        emitMouseDown(button: .left)
-    }
+  override func otherMouseUp(with event: NSEvent) {
+    emitMouseUp(button: .middle)
+  }
 
-    override func mouseUp(with event: NSEvent) {
-        emitMouseUp(button: .left)
-    }
+  override func scrollWheel(with event: NSEvent) {
+    let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
 
-    override func rightMouseDown(with event: NSEvent) {
-        emitMouseDown(button: .right)
-    }
+    Logger.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
 
-    override func rightMouseUp(with event: NSEvent) {
-        emitMouseUp(button: .right)
-    }
+    EventBus.shared.emitWidgetEvent(
+      .mouseScrolled,
+      widgetID: widgetID,
+      targetWidgetID: targetWidgetID,
+      direction: direction,
+      deltaX: Double(event.scrollingDeltaX),
+      deltaY: Double(event.scrollingDeltaY)
+    )
+  }
 
-    override func otherMouseDown(with event: NSEvent) {
-        emitMouseDown(button: .middle)
-    }
+  /// Replaces the current tracking area with the standard widget mouse options.
+  private func replaceTrackingArea() {
+    removeTrackingAreaIfNeeded()
+    guard tracksHover else { return }
 
-    override func otherMouseUp(with event: NSEvent) {
-        emitMouseUp(button: .middle)
-    }
+    let area = NSTrackingArea(
+      rect: .zero,
+      options: trackingOptions,
+      owner: self,
+      userInfo: nil
+    )
+    addTrackingArea(area)
+    trackingArea = area
+  }
 
-    override func scrollWheel(with event: NSEvent) {
-        let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
+  /// Removes the current tracking area when present.
+  private func removeTrackingAreaIfNeeded() {
+    guard let trackingArea else { return }
+    removeTrackingArea(trackingArea)
+  }
 
-        Logger.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
+  /// Returns the tracking options used for widget mouse handling.
+  private var trackingOptions: NSTrackingArea.Options {
+    [
+      .mouseEnteredAndExited,
+      .mouseMoved,
+      .activeAlways,
+      .inVisibleRect,
+    ]
+  }
 
-        EventBus.shared.emitWidgetEvent(
-            .mouseScrolled,
-            widgetID: widgetID,
-            targetWidgetID: targetWidgetID,
-            direction: direction,
-            deltaX: Double(event.scrollingDeltaX),
-            deltaY: Double(event.scrollingDeltaY)
-        )
-    }
+  /// Emits one mouse down event for the given button.
+  private func emitMouseDown(button: MouseButton) {
+    Logger.debug("mouse down widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+    EventBus.shared.emitWidgetEvent(
+      .mouseDown, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+  }
 
-    /// Replaces the current tracking area with the standard widget mouse options.
-    private func replaceTrackingArea() {
-        removeTrackingAreaIfNeeded()
-        guard tracksHover else { return }
+  /// Emits one mouse up and click pair for the given button.
+  private func emitMouseUp(button: MouseButton) {
+    Logger.debug("mouse up widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+    Logger.debug(
+      "mouse clicked widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
 
-        let area = NSTrackingArea(
-            rect: .zero,
-            options: trackingOptions,
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(area)
-        trackingArea = area
-    }
-
-    /// Removes the current tracking area when present.
-    private func removeTrackingAreaIfNeeded() {
-        guard let trackingArea else { return }
-        removeTrackingArea(trackingArea)
-    }
-
-    /// Returns the tracking options used for widget mouse handling.
-    private var trackingOptions: NSTrackingArea.Options {
-        [
-            .mouseEnteredAndExited,
-            .mouseMoved,
-            .activeAlways,
-            .inVisibleRect
-        ]
-    }
-
-    /// Emits one mouse down event for the given button.
-    private func emitMouseDown(button: MouseButton) {
-        Logger.debug("mouse down widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
-        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
-    }
-
-    /// Emits one mouse up and click pair for the given button.
-    private func emitMouseUp(button: MouseButton) {
-        Logger.debug("mouse up widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
-        Logger.debug("mouse clicked widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
-
-        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
-        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
-    }
+    EventBus.shared.emitWidgetEvent(
+      .mouseUp, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+    EventBus.shared.emitWidgetEvent(
+      .mouseClicked, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+  }
 }
 
 private final class HoverState {
 
-    private let lock = NSLock()
-    private var hoveredWidgetIDs = Set<String>()
-    private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]
+  private let lock = NSLock()
+  private var hoveredWidgetIDs = Set<String>()
+  private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]
 
-    func enter(widgetID: String) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
+  func enter(widgetID: String) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
 
-        pendingExitWorkItems[widgetID]?.cancel()
-        pendingExitWorkItems[widgetID] = nil
+    pendingExitWorkItems[widgetID]?.cancel()
+    pendingExitWorkItems[widgetID] = nil
 
-        let inserted = hoveredWidgetIDs.insert(widgetID).inserted
-        return inserted
+    let inserted = hoveredWidgetIDs.insert(widgetID).inserted
+    return inserted
+  }
+
+  func exit(widgetID: String, handler: @escaping () -> Void) {
+    lock.lock()
+    pendingExitWorkItems[widgetID]?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+
+      self.lock.lock()
+      let removed = self.hoveredWidgetIDs.remove(widgetID) != nil
+      self.pendingExitWorkItems[widgetID] = nil
+      self.lock.unlock()
+
+      guard removed else { return }
+      handler()
     }
 
-    func exit(widgetID: String, handler: @escaping () -> Void) {
-        lock.lock()
-        pendingExitWorkItems[widgetID]?.cancel()
+    pendingExitWorkItems[widgetID] = workItem
+    lock.unlock()
 
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-
-            self.lock.lock()
-            let removed = self.hoveredWidgetIDs.remove(widgetID) != nil
-            self.pendingExitWorkItems[widgetID] = nil
-            self.lock.unlock()
-
-            guard removed else { return }
-            handler()
-        }
-
-        pendingExitWorkItems[widgetID] = workItem
-        lock.unlock()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
-    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+  }
 }

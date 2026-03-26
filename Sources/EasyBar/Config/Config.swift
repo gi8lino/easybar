@@ -4,190 +4,192 @@ import SwiftUI
 /// Global EasyBar configuration loaded from disk.
 final class Config {
 
-    static let shared = Config()
+  static let shared = Config()
 
-    // MARK: - App
+  // MARK: - App
 
-    var widgetsPath: String = ""
-    var luaPath: String = "/usr/local/bin/lua"
-    var watchConfigFile: Bool = true
-    var loggingEnabled: Bool = false
-    var loggingDebugEnabled: Bool = false
-    var loggingPath: String = ""
-    var calendarAgentEnabled: Bool = true
-    var calendarAgentSocketPath: String = ""
-    var networkAgentEnabled: Bool = true
-    var networkAgentSocketPath: String = ""
-    var networkAgentRefreshIntervalSeconds: Double = 15
+  var widgetsPath: String = ""
+  var luaPath: String = "/usr/local/bin/lua"
+  var watchConfigFile: Bool = true
+  var loggingEnabled: Bool = false
+  var loggingDebugEnabled: Bool = false
+  var loggingPath: String = ""
+  var calendarAgentEnabled: Bool = true
+  var calendarAgentSocketPath: String = ""
+  var networkAgentEnabled: Bool = true
+  var networkAgentSocketPath: String = ""
+  var networkAgentRefreshIntervalSeconds: Double = 15
 
-    // MARK: - Bar
+  // MARK: - Bar
 
-    var barHeight: CGFloat = 32
-    var barPaddingX: CGFloat = 10
-    var barExtendBehindNotch: Bool = false
+  var barHeight: CGFloat = 32
+  var barPaddingX: CGFloat = 10
+  var barExtendBehindNotch: Bool = false
 
-    var barBackgroundHex: String = "#111111"
-    var barBorderHex: String = "#222222"
+  var barBackgroundHex: String = "#111111"
+  var barBorderHex: String = "#222222"
 
-    // MARK: - Builtins
+  // MARK: - Builtins
 
-    var builtinCPU: CPUBuiltinConfig = .default
-    var builtinBattery: BatteryBuiltinConfig = .default
-    var builtinGroups: [BuiltinGroupConfig] = []
-    var builtinSpaces: SpacesBuiltinConfig = .default
-    var builtinFrontApp: FrontAppBuiltinConfig = .default
-    var builtinVolume: VolumeBuiltinConfig = .default
-    var builtinWiFi: WiFiBuiltinConfig = .default
-    var builtinCalendar: CalendarBuiltinConfig = .default
-    var builtinTime: TimeBuiltinConfig = .default
-    var builtinDate: DateBuiltinConfig = .default
+  var builtinCPU: CPUBuiltinConfig = .default
+  var builtinBattery: BatteryBuiltinConfig = .default
+  var builtinGroups: [BuiltinGroupConfig] = []
+  var builtinSpaces: SpacesBuiltinConfig = .default
+  var builtinFrontApp: FrontAppBuiltinConfig = .default
+  var builtinVolume: VolumeBuiltinConfig = .default
+  var builtinWiFi: WiFiBuiltinConfig = .default
+  var builtinCalendar: CalendarBuiltinConfig = .default
+  var builtinTime: TimeBuiltinConfig = .default
+  var builtinDate: DateBuiltinConfig = .default
 
-    private init() {
-        resetDerivedDefaults()
+  private init() {
+    resetDerivedDefaults()
 
-        do {
-            try load()
-        } catch {
-            let message = "invalid config at \(configPath): \(error)"
-            Logger.error(message)
-            fputs("easybar: \(message)\n", stderr)
-            exit(1)
-        }
+    do {
+      try load()
+    } catch {
+      let message = "invalid config at \(configPath): \(error)"
+      Logger.error(message)
+      fputs("easybar: \(message)\n", stderr)
+      exit(1)
+    }
+  }
+
+  /// Reloads config from disk.
+  func reload() {
+    Logger.info("reloading configuration")
+
+    let snapshot = snapshot()
+
+    resetAllToDefaults()
+    resetDerivedDefaults()
+
+    do {
+      try load()
+      Logger.info("reload applied")
+    } catch {
+      apply(snapshot)
+      Logger.warn("reload rejected: \(error)")
+    }
+  }
+
+  /// Absolute path to the active config file.
+  var configPath: String {
+    if let override = environmentConfigPathOverride() {
+      return override
     }
 
-    /// Reloads config from disk.
-    func reload() {
-        Logger.info("reloading configuration")
+    return FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".config/easybar/config.toml")
+      .path
+  }
 
-        let snapshot = snapshot()
+  /// Restores defaults derived from the current home directory.
+  func resetDerivedDefaults() {
+    widgetsPath =
+      FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".config/easybar/widgets")
+      .path
+    loggingPath =
+      FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".local/state/easybar/easybar.out")
+      .path
+    calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
+    networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
+    networkAgentRefreshIntervalSeconds = 15
+  }
 
-        resetAllToDefaults()
-        resetDerivedDefaults()
+  /// Restores all static defaults before parsing again.
+  func resetAllToDefaults() {
+    luaPath = "/usr/local/bin/lua"
+    watchConfigFile = true
+    loggingEnabled = false
+    loggingDebugEnabled = false
+    calendarAgentEnabled = true
+    networkAgentEnabled = true
+    networkAgentRefreshIntervalSeconds = 15
 
-        do {
-            try load()
-            Logger.info("reload applied")
-        } catch {
-            apply(snapshot)
-            Logger.warn("reload rejected: \(error)")
-        }
-    }
+    barHeight = 32
+    barPaddingX = 10
+    barExtendBehindNotch = false
 
-    /// Absolute path to the active config file.
-    var configPath: String {
-        if let override = environmentConfigPathOverride() {
-            return override
-        }
+    barBackgroundHex = "#111111"
+    barBorderHex = "#222222"
 
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/easybar/config.toml")
-            .path
-    }
+    builtinCPU = .default
+    builtinBattery = .default
+    builtinGroups = []
+    builtinSpaces = .default
+    builtinFrontApp = .default
+    builtinVolume = .default
+    builtinWiFi = .default
+    builtinCalendar = .default
+    builtinTime = .default
+    builtinDate = .default
+  }
 
-    /// Restores defaults derived from the current home directory.
-    func resetDerivedDefaults() {
-        widgetsPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/easybar/widgets")
-            .path
-        loggingPath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/state/easybar/easybar.out")
-            .path
-        calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
-        networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
-        networkAgentRefreshIntervalSeconds = 15
-    }
+  /// Captures the current config state.
+  private func snapshot() -> ConfigSnapshot {
+    ConfigSnapshot(
+      widgetsPath: widgetsPath,
+      luaPath: luaPath,
+      watchConfigFile: watchConfigFile,
+      loggingEnabled: loggingEnabled,
+      loggingDebugEnabled: loggingDebugEnabled,
+      loggingPath: loggingPath,
+      calendarAgentEnabled: calendarAgentEnabled,
+      calendarAgentSocketPath: calendarAgentSocketPath,
+      networkAgentEnabled: networkAgentEnabled,
+      networkAgentSocketPath: networkAgentSocketPath,
+      networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
+      barHeight: barHeight,
+      barPaddingX: barPaddingX,
+      barExtendBehindNotch: barExtendBehindNotch,
+      barBackgroundHex: barBackgroundHex,
+      barBorderHex: barBorderHex,
+      builtinCPU: builtinCPU,
+      builtinBattery: builtinBattery,
+      builtinGroups: builtinGroups,
+      builtinSpaces: builtinSpaces,
+      builtinFrontApp: builtinFrontApp,
+      builtinVolume: builtinVolume,
+      builtinWiFi: builtinWiFi,
+      builtinCalendar: builtinCalendar,
+      builtinTime: builtinTime,
+      builtinDate: builtinDate
+    )
+  }
 
-    /// Restores all static defaults before parsing again.
-    func resetAllToDefaults() {
-        luaPath = "/usr/local/bin/lua"
-        watchConfigFile = true
-        loggingEnabled = false
-        loggingDebugEnabled = false
-        calendarAgentEnabled = true
-        networkAgentEnabled = true
-        networkAgentRefreshIntervalSeconds = 15
+  /// Restores one previous config snapshot.
+  private func apply(_ snapshot: ConfigSnapshot) {
+    widgetsPath = snapshot.widgetsPath
+    luaPath = snapshot.luaPath
+    watchConfigFile = snapshot.watchConfigFile
+    loggingEnabled = snapshot.loggingEnabled
+    loggingDebugEnabled = snapshot.loggingDebugEnabled
+    loggingPath = snapshot.loggingPath
+    calendarAgentEnabled = snapshot.calendarAgentEnabled
+    calendarAgentSocketPath = snapshot.calendarAgentSocketPath
+    networkAgentEnabled = snapshot.networkAgentEnabled
+    networkAgentSocketPath = snapshot.networkAgentSocketPath
+    networkAgentRefreshIntervalSeconds = snapshot.networkAgentRefreshIntervalSeconds
 
-        barHeight = 32
-        barPaddingX = 10
-        barExtendBehindNotch = false
+    barHeight = snapshot.barHeight
+    barPaddingX = snapshot.barPaddingX
+    barExtendBehindNotch = snapshot.barExtendBehindNotch
 
-        barBackgroundHex = "#111111"
-        barBorderHex = "#222222"
+    barBackgroundHex = snapshot.barBackgroundHex
+    barBorderHex = snapshot.barBorderHex
 
-        builtinCPU = .default
-        builtinBattery = .default
-        builtinGroups = []
-        builtinSpaces = .default
-        builtinFrontApp = .default
-        builtinVolume = .default
-        builtinWiFi = .default
-        builtinCalendar = .default
-        builtinTime = .default
-        builtinDate = .default
-    }
-
-    /// Captures the current config state.
-    private func snapshot() -> ConfigSnapshot {
-        ConfigSnapshot(
-            widgetsPath: widgetsPath,
-            luaPath: luaPath,
-            watchConfigFile: watchConfigFile,
-            loggingEnabled: loggingEnabled,
-            loggingDebugEnabled: loggingDebugEnabled,
-            loggingPath: loggingPath,
-            calendarAgentEnabled: calendarAgentEnabled,
-            calendarAgentSocketPath: calendarAgentSocketPath,
-            networkAgentEnabled: networkAgentEnabled,
-            networkAgentSocketPath: networkAgentSocketPath,
-            networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
-            barHeight: barHeight,
-            barPaddingX: barPaddingX,
-            barExtendBehindNotch: barExtendBehindNotch,
-            barBackgroundHex: barBackgroundHex,
-            barBorderHex: barBorderHex,
-            builtinCPU: builtinCPU,
-            builtinBattery: builtinBattery,
-            builtinGroups: builtinGroups,
-            builtinSpaces: builtinSpaces,
-            builtinFrontApp: builtinFrontApp,
-            builtinVolume: builtinVolume,
-            builtinWiFi: builtinWiFi,
-            builtinCalendar: builtinCalendar,
-            builtinTime: builtinTime,
-            builtinDate: builtinDate
-        )
-    }
-
-    /// Restores one previous config snapshot.
-    private func apply(_ snapshot: ConfigSnapshot) {
-        widgetsPath = snapshot.widgetsPath
-        luaPath = snapshot.luaPath
-        watchConfigFile = snapshot.watchConfigFile
-        loggingEnabled = snapshot.loggingEnabled
-        loggingDebugEnabled = snapshot.loggingDebugEnabled
-        loggingPath = snapshot.loggingPath
-        calendarAgentEnabled = snapshot.calendarAgentEnabled
-        calendarAgentSocketPath = snapshot.calendarAgentSocketPath
-        networkAgentEnabled = snapshot.networkAgentEnabled
-        networkAgentSocketPath = snapshot.networkAgentSocketPath
-        networkAgentRefreshIntervalSeconds = snapshot.networkAgentRefreshIntervalSeconds
-
-        barHeight = snapshot.barHeight
-        barPaddingX = snapshot.barPaddingX
-        barExtendBehindNotch = snapshot.barExtendBehindNotch
-
-        barBackgroundHex = snapshot.barBackgroundHex
-        barBorderHex = snapshot.barBorderHex
-
-        builtinCPU = snapshot.builtinCPU
-        builtinBattery = snapshot.builtinBattery
-        builtinGroups = snapshot.builtinGroups
-        builtinSpaces = snapshot.builtinSpaces
-        builtinFrontApp = snapshot.builtinFrontApp
-        builtinVolume = snapshot.builtinVolume
-        builtinWiFi = snapshot.builtinWiFi
-        builtinCalendar = snapshot.builtinCalendar
-        builtinTime = snapshot.builtinTime
-        builtinDate = snapshot.builtinDate
-    }
+    builtinCPU = snapshot.builtinCPU
+    builtinBattery = snapshot.builtinBattery
+    builtinGroups = snapshot.builtinGroups
+    builtinSpaces = snapshot.builtinSpaces
+    builtinFrontApp = snapshot.builtinFrontApp
+    builtinVolume = snapshot.builtinVolume
+    builtinWiFi = snapshot.builtinWiFi
+    builtinCalendar = snapshot.builtinCalendar
+    builtinTime = snapshot.builtinTime
+    builtinDate = snapshot.builtinDate
+  }
 }

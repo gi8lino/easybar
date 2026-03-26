@@ -2,88 +2,90 @@ import AppKit
 
 final class SystemEvents {
 
-    static let shared = SystemEvents()
+  static let shared = SystemEvents()
 
-    private var observers: [NSObjectProtocol] = []
+  private var observers: [NSObjectProtocol] = []
 
-    private init() {}
+  private init() {}
 
-    func subscribeSystemWake() {
-        let observer = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            EventBus.shared.emit(.systemWoke)
-        }
-
-        observers.append(observer)
-        Logger.debug("subscribed system_woke")
+  func subscribeSystemWake() {
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didWakeNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      EventBus.shared.emit(.systemWoke)
     }
 
-    func subscribeSleep() {
-        let observer = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.willSleepNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            EventBus.shared.emit(.sleep)
-        }
+    observers.append(observer)
+    Logger.debug("subscribed system_woke")
+  }
 
-        observers.append(observer)
-        Logger.debug("subscribed sleep")
+  func subscribeSleep() {
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.willSleepNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      EventBus.shared.emit(.sleep)
     }
 
-    func subscribeSpaceChange() {
-        let observer = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.activeSpaceDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            EventBus.shared.emit(.spaceChange)
-        }
+    observers.append(observer)
+    Logger.debug("subscribed sleep")
+  }
 
-        observers.append(observer)
-        Logger.debug("subscribed space_change")
+  func subscribeSpaceChange() {
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.activeSpaceDidChangeNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      EventBus.shared.emit(.spaceChange)
     }
 
-    func subscribeAppSwitch() {
-        let observer = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { notification in
-            if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
-                EventBus.shared.emit(.appSwitch, appName: app.localizedName ?? "")
-            }
-        }
+    observers.append(observer)
+    Logger.debug("subscribed space_change")
+  }
 
-        observers.append(observer)
-        Logger.debug("subscribed app_switch")
+  func subscribeAppSwitch() {
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didActivateApplicationNotification,
+      object: nil,
+      queue: .main
+    ) { notification in
+      if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+        as? NSRunningApplication
+      {
+        EventBus.shared.emit(.appSwitch, appName: app.localizedName ?? "")
+      }
     }
 
-    func subscribeDisplayChange() {
-        let observer = NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            EventBus.shared.emit(.displayChange)
-        }
+    observers.append(observer)
+    Logger.debug("subscribed app_switch")
+  }
 
-        observers.append(observer)
-        Logger.debug("subscribed display_change")
+  func subscribeDisplayChange() {
+    let observer = NotificationCenter.default.addObserver(
+      forName: NSApplication.didChangeScreenParametersNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      EventBus.shared.emit(.displayChange)
     }
 
-    func stopAll() {
-        let workspaceCenter = NSWorkspace.shared.notificationCenter
-        let defaultCenter = NotificationCenter.default
+    observers.append(observer)
+    Logger.debug("subscribed display_change")
+  }
 
-        for observer in observers {
-            workspaceCenter.removeObserver(observer)
-            defaultCenter.removeObserver(observer)
-        }
+  func stopAll() {
+    let workspaceCenter = NSWorkspace.shared.notificationCenter
+    let defaultCenter = NotificationCenter.default
 
-        observers.removeAll()
+    for observer in observers {
+      workspaceCenter.removeObserver(observer)
+      defaultCenter.removeObserver(observer)
     }
+
+    observers.removeAll()
+  }
 }

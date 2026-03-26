@@ -2,173 +2,173 @@ import Foundation
 
 final class WidgetRunner {
 
-    static let shared = WidgetRunner()
+  static let shared = WidgetRunner()
 
-    private let decoder = JSONDecoder()
+  private let decoder = JSONDecoder()
 
-    private var requiredEvents = Set<String>()
-    private var started = false
-    private var runtimeReady = false
-    private var subscriptionsReady = false
-    private var didEmitInitialEvents = false
-    private var stdoutObserver: NSObjectProtocol?
+  private var requiredEvents = Set<String>()
+  private var started = false
+  private var runtimeReady = false
+  private var subscriptionsReady = false
+  private var didEmitInitialEvents = false
+  private var stdoutObserver: NSObjectProtocol?
 
-    private init() {}
+  private init() {}
 
-    /// Starts the widget runtime and begins observing Lua stdout.
-    func start() {
-        guard !started else {
-            Logger.debug("widget runner already started")
-            return
-        }
-
-        started = true
-        runtimeReady = false
-        subscriptionsReady = false
-        didEmitInitialEvents = false
-        requiredEvents.removeAll()
-
-        Logger.debug("starting widget runner")
-
-        stdoutObserver = NotificationCenter.default.addObserver(
-            forName: .easyBarLuaStdout,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let line = notification.object as? String else { return }
-            self?.handleRuntimeOutput(line)
-        }
-
-        LuaRuntime.shared.start()
+  /// Starts the widget runtime and begins observing Lua stdout.
+  func start() {
+    guard !started else {
+      Logger.debug("widget runner already started")
+      return
     }
 
-    /// Reloads the Lua runtime and clears rendered widget state.
-    func reload() {
-        Logger.debug("reloading widget runner")
+    started = true
+    runtimeReady = false
+    subscriptionsReady = false
+    didEmitInitialEvents = false
+    requiredEvents.removeAll()
 
-        shutdown()
-        WidgetStore.shared.clear()
-        start()
+    Logger.debug("starting widget runner")
+
+    stdoutObserver = NotificationCenter.default.addObserver(
+      forName: .easyBarLuaStdout,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard let line = notification.object as? String else { return }
+      self?.handleRuntimeOutput(line)
     }
 
-    /// Stops the widget runtime and related event sources.
-    func shutdown() {
-        Logger.debug("shutting down widget runner")
+    LuaRuntime.shared.start()
+  }
 
-        if let stdoutObserver {
-            NotificationCenter.default.removeObserver(stdoutObserver)
-            self.stdoutObserver = nil
-        }
+  /// Reloads the Lua runtime and clears rendered widget state.
+  func reload() {
+    Logger.debug("reloading widget runner")
 
-        started = false
-        runtimeReady = false
-        subscriptionsReady = false
-        didEmitInitialEvents = false
-        requiredEvents.removeAll()
+    shutdown()
+    WidgetStore.shared.clear()
+    start()
+  }
 
-        EventManager.shared.stopAll()
-        LuaRuntime.shared.shutdown()
+  /// Stops the widget runtime and related event sources.
+  func shutdown() {
+    Logger.debug("shutting down widget runner")
+
+    if let stdoutObserver {
+      NotificationCenter.default.removeObserver(stdoutObserver)
+      self.stdoutObserver = nil
     }
 
-    /// Handles one line of structured stdout from the Lua runtime.
-    private func handleRuntimeOutput(_ line: String) {
-        Logger.debug("lua stdout: \(line)")
+    started = false
+    runtimeReady = false
+    subscriptionsReady = false
+    didEmitInitialEvents = false
+    requiredEvents.removeAll()
 
-        guard let data = line.data(using: .utf8) else {
-            Logger.warn("invalid utf8: \(line)")
-            return
-        }
+    EventManager.shared.stopAll()
+    LuaRuntime.shared.shutdown()
+  }
 
-        do {
-            let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
+  /// Handles one line of structured stdout from the Lua runtime.
+  private func handleRuntimeOutput(_ line: String) {
+    Logger.debug("lua stdout: \(line)")
 
-            handleUpdate(update, rawLine: line)
-        } catch {
-            Logger.warn("json decode failed: \(line)")
-            Logger.debug("decode error: \(error)")
-        }
+    guard let data = line.data(using: .utf8) else {
+      Logger.warn("invalid utf8: \(line)")
+      return
     }
 
-    /// Emits initial events after both subscriptions and readiness are known.
-    private func emitInitialEventsIfPossible() {
-        guard runtimeReady else { return }
-        guard subscriptionsReady else { return }
-        guard !didEmitInitialEvents else { return }
+    do {
+      let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
 
-        didEmitInitialEvents = true
-        emitInitialEvents()
+      handleUpdate(update, rawLine: line)
+    } catch {
+      Logger.warn("json decode failed: \(line)")
+      Logger.debug("decode error: \(error)")
+    }
+  }
+
+  /// Emits initial events after both subscriptions and readiness are known.
+  private func emitInitialEventsIfPossible() {
+    guard runtimeReady else { return }
+    guard subscriptionsReady else { return }
+    guard !didEmitInitialEvents else { return }
+
+    didEmitInitialEvents = true
+    emitInitialEvents()
+  }
+
+  /// Emits initial state-refresh events required by subscribed widgets.
+  private func emitInitialEvents() {
+    Logger.debug("emitting initial widget events")
+
+    emitInitialEvent(named: "system_woke", event: .systemWoke)
+    emitInitialEvent(named: "power_source_change", event: .powerSourceChange)
+    emitInitialEvent(named: "charging_state_change", event: .chargingStateChange)
+    emitInitialEvent(named: "wifi_change", event: .wifiChange)
+    emitInitialEvent(named: "network_change", event: .networkChange)
+    emitInitialEvent(named: "volume_change", event: .volumeChange)
+    emitInitialEvent(named: "mute_change", event: .muteChange)
+    emitInitialEvent(named: "calendar_change", event: .calendarChange)
+    emitInitialEvent(named: "minute_tick", event: .minuteTick)
+    emitInitialEvent(named: "second_tick", event: .secondTick)
+    emitInitialEvent(named: "focus_change", event: .focusChange)
+    emitInitialEvent(named: "workspace_change", event: .workspaceChange)
+    EventBus.shared.emit(.forced)
+  }
+
+  /// Handles one decoded Lua runtime update.
+  private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) {
+    if update.isSubscriptions {
+      handleSubscriptions(update)
+      return
     }
 
-    /// Emits initial state-refresh events required by subscribed widgets.
-    private func emitInitialEvents() {
-        Logger.debug("emitting initial widget events")
-
-        emitInitialEvent(named: "system_woke", event: .systemWoke)
-        emitInitialEvent(named: "power_source_change", event: .powerSourceChange)
-        emitInitialEvent(named: "charging_state_change", event: .chargingStateChange)
-        emitInitialEvent(named: "wifi_change", event: .wifiChange)
-        emitInitialEvent(named: "network_change", event: .networkChange)
-        emitInitialEvent(named: "volume_change", event: .volumeChange)
-        emitInitialEvent(named: "mute_change", event: .muteChange)
-        emitInitialEvent(named: "calendar_change", event: .calendarChange)
-        emitInitialEvent(named: "minute_tick", event: .minuteTick)
-        emitInitialEvent(named: "second_tick", event: .secondTick)
-        emitInitialEvent(named: "focus_change", event: .focusChange)
-        emitInitialEvent(named: "workspace_change", event: .workspaceChange)
-        EventBus.shared.emit(.forced)
+    if update.isReady {
+      handleReady()
+      return
     }
 
-    /// Handles one decoded Lua runtime update.
-    private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) {
-        if update.isSubscriptions {
-            handleSubscriptions(update)
-            return
-        }
-
-        if update.isReady {
-            handleReady()
-            return
-        }
-
-        if update.isTree {
-            handleTree(update, rawLine: rawLine)
-            return
-        }
-
-        Logger.warn("unknown lua message: \(rawLine)")
+    if update.isTree {
+      handleTree(update, rawLine: rawLine)
+      return
     }
 
-    /// Handles one subscription update from Lua.
-    private func handleSubscriptions(_ update: WidgetTreeUpdate) {
-        requiredEvents = Set(update.subscribedEvents)
-        subscriptionsReady = true
+    Logger.warn("unknown lua message: \(rawLine)")
+  }
 
-        Logger.debug("required events: \(requiredEvents)")
-        EventManager.shared.start(subscriptions: requiredEvents)
-        emitInitialEventsIfPossible()
+  /// Handles one subscription update from Lua.
+  private func handleSubscriptions(_ update: WidgetTreeUpdate) {
+    requiredEvents = Set(update.subscribedEvents)
+    subscriptionsReady = true
+
+    Logger.debug("required events: \(requiredEvents)")
+    EventManager.shared.start(subscriptions: requiredEvents)
+    emitInitialEventsIfPossible()
+  }
+
+  /// Handles the Lua runtime ready handshake.
+  private func handleReady() {
+    Logger.debug("lua runtime handshake received")
+    runtimeReady = true
+    emitInitialEventsIfPossible()
+  }
+
+  /// Handles one rendered widget tree update.
+  private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) {
+    guard let tree = update.treePayload else {
+      Logger.warn("unknown lua message: \(rawLine)")
+      return
     }
 
-    /// Handles the Lua runtime ready handshake.
-    private func handleReady() {
-        Logger.debug("lua runtime handshake received")
-        runtimeReady = true
-        emitInitialEventsIfPossible()
-    }
+    Logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+    WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
+  }
 
-    /// Handles one rendered widget tree update.
-    private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) {
-        guard let tree = update.treePayload else {
-            Logger.warn("unknown lua message: \(rawLine)")
-            return
-        }
-
-        Logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
-        WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
-    }
-
-    /// Emits one initial event when Lua subscribed to it.
-    private func emitInitialEvent(named name: String, event: AppEvent) {
-        guard requiredEvents.contains(name) else { return }
-        EventBus.shared.emit(event)
-    }
+  /// Emits one initial event when Lua subscribed to it.
+  private func emitInitialEvent(named name: String, event: AppEvent) {
+    guard requiredEvents.contains(name) else { return }
+    EventBus.shared.emit(event)
+  }
 }

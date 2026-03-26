@@ -1,267 +1,267 @@
-import Foundation
 import CoreAudio
+import Foundation
 
 final class VolumeEvents {
 
-    static let shared = VolumeEvents()
+  static let shared = VolumeEvents()
 
-    private var currentDeviceID: AudioDeviceID?
-    private var isSubscribed = false
+  private var currentDeviceID: AudioDeviceID?
+  private var isSubscribed = false
 
-    private var defaultDeviceListener: AudioObjectPropertyListenerBlock?
-    private var volumeListener: AudioObjectPropertyListenerBlock?
-    private var muteListener: AudioObjectPropertyListenerBlock?
+  private var defaultDeviceListener: AudioObjectPropertyListenerBlock?
+  private var volumeListener: AudioObjectPropertyListenerBlock?
+  private var muteListener: AudioObjectPropertyListenerBlock?
 
-    private var lastMutedState: Bool?
+  private var lastMutedState: Bool?
 
-    private init() {}
+  private init() {}
 
-    func subscribeVolume() {
-        guard !isSubscribed else { return }
+  func subscribeVolume() {
+    guard !isSubscribed else { return }
 
-        isSubscribed = true
-        installDefaultOutputDeviceListener()
-        refreshDeviceSubscription()
+    isSubscribed = true
+    installDefaultOutputDeviceListener()
+    refreshDeviceSubscription()
 
-        Logger.debug("subscribed volume_change")
-        Logger.debug("subscribed mute_change")
+    Logger.debug("subscribed volume_change")
+    Logger.debug("subscribed mute_change")
+  }
+
+  func stopAll() {
+    uninstallDeviceListeners()
+    uninstallDefaultOutputDeviceListener()
+
+    currentDeviceID = nil
+    isSubscribed = false
+    lastMutedState = nil
+  }
+
+  private func installDefaultOutputDeviceListener() {
+    guard defaultDeviceListener == nil else { return }
+
+    var address = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+
+    let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+      self?.refreshDeviceSubscription()
+      EventBus.shared.emit(.volumeChange)
     }
 
-    func stopAll() {
-        uninstallDeviceListeners()
-        uninstallDefaultOutputDeviceListener()
+    let status = AudioObjectAddPropertyListenerBlock(
+      AudioObjectID(kAudioObjectSystemObject),
+      &address,
+      DispatchQueue.main,
+      block
+    )
 
-        currentDeviceID = nil
-        isSubscribed = false
-        lastMutedState = nil
+    if status == noErr {
+      defaultDeviceListener = block
+    } else {
+      Logger.debug("failed to subscribe default output device changes status=\(status)")
+    }
+  }
+
+  private func uninstallDefaultOutputDeviceListener() {
+    guard let block = defaultDeviceListener else { return }
+
+    var address = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+
+    let status = AudioObjectRemovePropertyListenerBlock(
+      AudioObjectID(kAudioObjectSystemObject),
+      &address,
+      DispatchQueue.main,
+      block
+    )
+
+    if status != noErr {
+      Logger.debug("failed to remove default output device listener status=\(status)")
     }
 
-    private func installDefaultOutputDeviceListener() {
-        guard defaultDeviceListener == nil else { return }
+    defaultDeviceListener = nil
+  }
 
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
+  private func refreshDeviceSubscription() {
+    let newDeviceID = defaultOutputDeviceID()
 
-        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            self?.refreshDeviceSubscription()
-            EventBus.shared.emit(.volumeChange)
-        }
-
-        let status = AudioObjectAddPropertyListenerBlock(
-            AudioObjectID(kAudioObjectSystemObject),
-            &address,
-            DispatchQueue.main,
-            block
-        )
-
-        if status == noErr {
-            defaultDeviceListener = block
-        } else {
-            Logger.debug("failed to subscribe default output device changes status=\(status)")
-        }
+    guard let newDeviceID else {
+      Logger.debug("no default output device found")
+      return
     }
 
-    private func uninstallDefaultOutputDeviceListener() {
-        guard let block = defaultDeviceListener else { return }
-
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-
-        let status = AudioObjectRemovePropertyListenerBlock(
-            AudioObjectID(kAudioObjectSystemObject),
-            &address,
-            DispatchQueue.main,
-            block
-        )
-
-        if status != noErr {
-            Logger.debug("failed to remove default output device listener status=\(status)")
-        }
-
-        defaultDeviceListener = nil
+    if currentDeviceID == newDeviceID {
+      return
     }
 
-    private func refreshDeviceSubscription() {
-        let newDeviceID = defaultOutputDeviceID()
+    uninstallDeviceListeners()
+    currentDeviceID = newDeviceID
+    lastMutedState = readMutedState(for: newDeviceID)
+    installDeviceListeners()
 
-        guard let newDeviceID else {
-            Logger.debug("no default output device found")
-            return
-        }
+    EventBus.shared.emit(.volumeChange)
+    EventBus.shared.emit(.muteChange, muted: lastMutedState ?? false)
+  }
 
-        if currentDeviceID == newDeviceID {
-            return
-        }
+  private func installDeviceListeners() {
+    guard let deviceID = currentDeviceID else { return }
 
-        uninstallDeviceListeners()
-        currentDeviceID = newDeviceID
-        lastMutedState = readMutedState(for: newDeviceID)
-        installDeviceListeners()
+    var volumeAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyVolumeScalar,
+      mScope: kAudioDevicePropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
 
-        EventBus.shared.emit(.volumeChange)
-        EventBus.shared.emit(.muteChange, muted: lastMutedState ?? false)
+    let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
+      EventBus.shared.emit(.volumeChange)
     }
 
-    private func installDeviceListeners() {
-        guard let deviceID = currentDeviceID else { return }
+    let volumeStatus = AudioObjectAddPropertyListenerBlock(
+      deviceID,
+      &volumeAddress,
+      DispatchQueue.main,
+      volumeBlock
+    )
 
-        var volumeAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-
-        let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
-            EventBus.shared.emit(.volumeChange)
-        }
-
-        let volumeStatus = AudioObjectAddPropertyListenerBlock(
-            deviceID,
-            &volumeAddress,
-            DispatchQueue.main,
-            volumeBlock
-        )
-
-        if volumeStatus == noErr {
-            volumeListener = volumeBlock
-        } else {
-            Logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
-        }
-
-        var muteAddress = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyMute,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-
-        let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            EventBus.shared.emit(.volumeChange)
-
-            guard let self, let deviceID = self.currentDeviceID else { return }
-
-            let muted = self.readMutedState(for: deviceID)
-            if self.lastMutedState != muted {
-                self.lastMutedState = muted
-                EventBus.shared.emit(.muteChange, muted: muted)
-            }
-        }
-
-        let muteStatus = AudioObjectAddPropertyListenerBlock(
-            deviceID,
-            &muteAddress,
-            DispatchQueue.main,
-            muteBlock
-        )
-
-        if muteStatus == noErr {
-            muteListener = muteBlock
-        } else {
-            Logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
-        }
+    if volumeStatus == noErr {
+      volumeListener = volumeBlock
+    } else {
+      Logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
     }
 
-    private func uninstallDeviceListeners() {
-        guard let deviceID = currentDeviceID else { return }
+    var muteAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyMute,
+      mScope: kAudioDevicePropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
 
-        if let block = volumeListener {
-            var volumeAddress = AudioObjectPropertyAddress(
-                mSelector: kAudioDevicePropertyVolumeScalar,
-                mScope: kAudioDevicePropertyScopeOutput,
-                mElement: kAudioObjectPropertyElementMain
-            )
+    let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+      EventBus.shared.emit(.volumeChange)
 
-            let status = AudioObjectRemovePropertyListenerBlock(
-                deviceID,
-                &volumeAddress,
-                DispatchQueue.main,
-                block
-            )
+      guard let self, let deviceID = self.currentDeviceID else { return }
 
-            if status != noErr {
-                Logger.debug("failed to remove volume listener status=\(status)")
-            }
-
-            volumeListener = nil
-        }
-
-        if let block = muteListener {
-            var muteAddress = AudioObjectPropertyAddress(
-                mSelector: kAudioDevicePropertyMute,
-                mScope: kAudioDevicePropertyScopeOutput,
-                mElement: kAudioObjectPropertyElementMain
-            )
-
-            let status = AudioObjectRemovePropertyListenerBlock(
-                deviceID,
-                &muteAddress,
-                DispatchQueue.main,
-                block
-            )
-
-            if status != noErr {
-                Logger.debug("failed to remove mute listener status=\(status)")
-            }
-
-            muteListener = nil
-        }
+      let muted = self.readMutedState(for: deviceID)
+      if self.lastMutedState != muted {
+        self.lastMutedState = muted
+        EventBus.shared.emit(.muteChange, muted: muted)
+      }
     }
 
-    private func defaultOutputDeviceID() -> AudioDeviceID? {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
+    let muteStatus = AudioObjectAddPropertyListenerBlock(
+      deviceID,
+      &muteAddress,
+      DispatchQueue.main,
+      muteBlock
+    )
 
-        var deviceID = AudioDeviceID(0)
-        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+    if muteStatus == noErr {
+      muteListener = muteBlock
+    } else {
+      Logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
+    }
+  }
 
-        let status = AudioObjectGetPropertyData(
-            AudioObjectID(kAudioObjectSystemObject),
-            &address,
-            0,
-            nil,
-            &size,
-            &deviceID
-        )
+  private func uninstallDeviceListeners() {
+    guard let deviceID = currentDeviceID else { return }
 
-        guard status == noErr else {
-            Logger.debug("failed to read default output device status=\(status)")
-            return nil
-        }
+    if let block = volumeListener {
+      var volumeAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyVolumeScalar,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: kAudioObjectPropertyElementMain
+      )
 
-        return deviceID
+      let status = AudioObjectRemovePropertyListenerBlock(
+        deviceID,
+        &volumeAddress,
+        DispatchQueue.main,
+        block
+      )
+
+      if status != noErr {
+        Logger.debug("failed to remove volume listener status=\(status)")
+      }
+
+      volumeListener = nil
     }
 
-    private func readMutedState(for deviceID: AudioDeviceID) -> Bool {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyMute,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
+    if let block = muteListener {
+      var muteAddress = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyMute,
+        mScope: kAudioDevicePropertyScopeOutput,
+        mElement: kAudioObjectPropertyElementMain
+      )
 
-        var muted = UInt32(0)
-        var size = UInt32(MemoryLayout<UInt32>.size)
+      let status = AudioObjectRemovePropertyListenerBlock(
+        deviceID,
+        &muteAddress,
+        DispatchQueue.main,
+        block
+      )
 
-        let status = AudioObjectGetPropertyData(
-            deviceID,
-            &address,
-            0,
-            nil,
-            &size,
-            &muted
-        )
+      if status != noErr {
+        Logger.debug("failed to remove mute listener status=\(status)")
+      }
 
-        guard status == noErr else {
-            return false
-        }
-
-        return muted != 0
+      muteListener = nil
     }
+  }
+
+  private func defaultOutputDeviceID() -> AudioDeviceID? {
+    var address = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+
+    var deviceID = AudioDeviceID(0)
+    var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+
+    let status = AudioObjectGetPropertyData(
+      AudioObjectID(kAudioObjectSystemObject),
+      &address,
+      0,
+      nil,
+      &size,
+      &deviceID
+    )
+
+    guard status == noErr else {
+      Logger.debug("failed to read default output device status=\(status)")
+      return nil
+    }
+
+    return deviceID
+  }
+
+  private func readMutedState(for deviceID: AudioDeviceID) -> Bool {
+    var address = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyMute,
+      mScope: kAudioDevicePropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
+
+    var muted = UInt32(0)
+    var size = UInt32(MemoryLayout<UInt32>.size)
+
+    let status = AudioObjectGetPropertyData(
+      deviceID,
+      &address,
+      0,
+      nil,
+      &size,
+      &muted
+    )
+
+    guard status == noErr else {
+      return false
+    }
+
+    return muted != 0
+  }
 }

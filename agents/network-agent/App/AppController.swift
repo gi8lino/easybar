@@ -1,36 +1,42 @@
-import Foundation
 import EasyBarShared
+import Foundation
 
 @MainActor
 final class AppController {
-    private let snapshotProvider = NetworkSnapshotProvider()
-    private let socketServer = NetworkSocketServer()
+  private let snapshotProvider = NetworkSnapshotProvider()
+  private let socketServer = NetworkSocketServer()
 
-    func start() {
-        logStartup()
+  func start() {
+    logStartup()
 
-        snapshotProvider.start { [weak self] in
-            self?.socketServer.broadcastSnapshots()
-        }
-
-        socketServer.start(provider: snapshotProvider)
+    snapshotProvider.start { [weak self] in
+      self?.socketServer.broadcastSnapshots()
     }
 
-    func stop() {
-        socketServer.stop()
-        snapshotProvider.stop()
-    }
+    socketServer.start(provider: snapshotProvider)
+  }
 
-    /// Logs one startup snapshot for the network agent.
-    private func logStartup() {
-        let bundle = Bundle.main
-        let info = bundle.infoDictionary ?? [:]
+  func stop() {
+    socketServer.stop()
+    snapshotProvider.stop()
+  }
 
-        AgentLogger.info("network agent startup version=\(info["CFBundleShortVersionString"] as? String ?? "unknown") build=\(info["CFBundleVersion"] as? String ?? "unknown") bundle_id=\(bundle.bundleIdentifier ?? "unknown") pid=\(ProcessInfo.processInfo.processIdentifier)")
-        AgentLogger.info("app bundle_path=\(bundle.bundleURL.path)")
-        AgentLogger.info("app executable=\(bundle.executableURL?.path ?? "unknown")")
-        AgentLogger.info("config path=\(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/easybar/config.toml").path)")
-        AgentLogger.info("socket path=\(defaultNetworkAgentSocketPath()) refresh_interval_seconds=\(defaultNetworkAgentRefreshIntervalSeconds())")
-        AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
-    }
+  /// Logs one startup snapshot for the network agent.
+  private func logStartup() {
+    let bundle = Bundle.main
+    let info = bundle.infoDictionary ?? [:]
+
+    AgentLogger.info(
+      "network agent startup version=\(info["CFBundleShortVersionString"] as? String ?? "unknown") build=\(info["CFBundleVersion"] as? String ?? "unknown") bundle_id=\(bundle.bundleIdentifier ?? "unknown") pid=\(ProcessInfo.processInfo.processIdentifier)"
+    )
+    AgentLogger.info("app bundle_path=\(bundle.bundleURL.path)")
+    AgentLogger.info("app executable=\(bundle.executableURL?.path ?? "unknown")")
+    AgentLogger.info(
+      "config path=\(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/easybar/config.toml").path)"
+    )
+    AgentLogger.info(
+      "socket path=\(defaultNetworkAgentSocketPath()) refresh_interval_seconds=\(defaultNetworkAgentRefreshIntervalSeconds())"
+    )
+    AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
+  }
 }
