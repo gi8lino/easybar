@@ -7,9 +7,9 @@ extension Config {
         expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
     }
 
-    /// Returns whether debug logging is enabled through the environment.
-    func environmentDebugEnabled() -> Bool {
-        boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
+    /// Returns the debug logging override from the environment when present.
+    func environmentDebugOverride() -> Bool? {
+        boolEnvironmentValue(named: "EASYBAR_DEBUG")
     }
 
     /// Returns one expanded path-like environment variable when present and non-empty.

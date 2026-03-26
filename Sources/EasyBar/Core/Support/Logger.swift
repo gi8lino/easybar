@@ -12,7 +12,11 @@ enum Logger {
     private static var fileHandle: FileHandle?
 
     static var debugEnabled: Bool {
-        Config.shared.environmentDebugEnabled()
+        if let override = Config.shared.environmentDebugOverride() {
+            return override
+        }
+
+        return Config.shared.loggingDebugEnabled
     }
 
     /// Configures optional mirroring of logs into one file.

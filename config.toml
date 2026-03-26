@@ -5,6 +5,7 @@ watch_config = true # Auto-reload EasyBar when config.toml changes.
 
 [logging]
 enabled = false # Mirrors stdout and stderr log lines into the configured file when true.
+debug = false # Enables verbose debug logs without requiring EASYBAR_DEBUG in the service environment.
 path = "~/.local/state/easybar/easybar.out" # File path for mirrored EasyBar logs.
 
 [agents.calendar]

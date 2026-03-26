@@ -81,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Logger.info("widgets path=\(Config.shared.widgetsPath)")
         Logger.info("lua path=\(Config.shared.luaPath)")
         Logger.info("watch config=\(Config.shared.watchConfigFile)")
+        Logger.info("logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) path=\(Config.shared.loggingPath)")
         Logger.info("calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)")
         Logger.info("network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)")
         Logger.info("calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) layout=\(Config.shared.builtinCalendar.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)")

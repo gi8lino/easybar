@@ -6,6 +6,7 @@ struct ConfigSnapshot {
     let luaPath: String
     let watchConfigFile: Bool
     let loggingEnabled: Bool
+    let loggingDebugEnabled: Bool
     let loggingPath: String
     let calendarAgentEnabled: Bool
     let calendarAgentSocketPath: String

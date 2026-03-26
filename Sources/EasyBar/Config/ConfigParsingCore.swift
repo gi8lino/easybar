@@ -30,6 +30,10 @@ extension Config {
             loggingEnabled = try requiredBool(value, path: "logging.enabled")
         }
 
+        if let value = logging["debug"] {
+            loggingDebugEnabled = try requiredBool(value, path: "logging.debug")
+        }
+
         if let value = logging["path"] {
             loggingPath = NSString(
                 string: try requiredString(value, path: "logging.path")

@@ -12,6 +12,7 @@ final class Config {
     var luaPath: String = "/usr/local/bin/lua"
     var watchConfigFile: Bool = true
     var loggingEnabled: Bool = false
+    var loggingDebugEnabled: Bool = false
     var loggingPath: String = ""
     var calendarAgentEnabled: Bool = true
     var calendarAgentSocketPath: String = ""
@@ -101,6 +102,7 @@ final class Config {
         luaPath = "/usr/local/bin/lua"
         watchConfigFile = true
         loggingEnabled = false
+        loggingDebugEnabled = false
         calendarAgentEnabled = true
         networkAgentEnabled = true
         networkAgentRefreshIntervalSeconds = 15
@@ -131,6 +133,7 @@ final class Config {
             luaPath: luaPath,
             watchConfigFile: watchConfigFile,
             loggingEnabled: loggingEnabled,
+            loggingDebugEnabled: loggingDebugEnabled,
             loggingPath: loggingPath,
             calendarAgentEnabled: calendarAgentEnabled,
             calendarAgentSocketPath: calendarAgentSocketPath,
@@ -161,6 +164,7 @@ final class Config {
         luaPath = snapshot.luaPath
         watchConfigFile = snapshot.watchConfigFile
         loggingEnabled = snapshot.loggingEnabled
+        loggingDebugEnabled = snapshot.loggingDebugEnabled
         loggingPath = snapshot.loggingPath
         calendarAgentEnabled = snapshot.calendarAgentEnabled
         calendarAgentSocketPath = snapshot.calendarAgentSocketPath
