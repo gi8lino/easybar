@@ -8,6 +8,7 @@ extension Config {
         var enabled: Bool
         var position: WidgetPosition
         var order: Int
+        var parent: String? = nil
     }
 
     /// Shared style block for built-in widgets.

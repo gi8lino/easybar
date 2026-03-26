@@ -92,8 +92,8 @@ local function refresh()
 	local fields = get_network_fields()
 	local wireguard_connected = get_wireguard_status(fields)
 	local logo_path = home .. "/.config/easybar/assets/wireguard.png"
-	local logo_opacity = wireguard_connected and 1.0 or 0.45
 	local logo_exists = io.open(logo_path, "rb") ~= nil
+	local icon_opacity = wireguard_connected and 1.0 or 0.7
 
 	if logo_exists then
 		local handle = io.open(logo_path, "rb")
@@ -112,7 +112,7 @@ local function refresh()
 		label = {
 			string = "",
 		},
-		opacity = logo_opacity,
+		opacity = icon_opacity,
 	})
 
 	easybar.set("wireguard_popup_label", {
@@ -126,26 +126,15 @@ end
 easybar.add("item", "wireguard", {
 	position = "right",
 	order = 42,
-	mouse_target = "frame",
 	background = {
+		color = "#202020",
+		border_color = "#4a4a4a",
+		border_width = 1,
+		corner_radius = 8,
 		padding_left = 8,
 		padding_right = 8,
 		padding_top = 4,
 		padding_bottom = 4,
-	},
-	popup = {
-		drawing = true,
-		background = {
-			color = "#1e2030",
-			border_color = "#494d64",
-			border_width = 1,
-			corner_radius = 10,
-		},
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 6,
-		padding_bottom = 6,
-		spacing = 0,
 	},
 	icon = {
 		string = "WG",
@@ -155,6 +144,9 @@ easybar.add("item", "wireguard", {
 	},
 	label = {
 		string = "",
+	},
+	popup = {
+		drawing = true,
 	},
 })
 

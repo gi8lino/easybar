@@ -76,7 +76,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
             id: rootID,
             root: rootID,
             kind: .sparkline,
-            parent: nil,
+            parent: placement.parent,
             position: placement.position,
             order: placement.order,
             icon: style.icon,

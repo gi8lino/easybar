@@ -182,6 +182,7 @@ order = 20 # Sort order among widgets in the same position.
 enabled = true # Shows or hides the built-in Wi-Fi widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 30 # Sort order among widgets in the same position.
+parent = "" # Optional Lua group id that should own this native widget.
 
 [builtins.wifi.style]
 icon = "" # Unused fallback icon for the Wi-Fi root widget.

@@ -38,6 +38,7 @@ final class EventBus {
     func emitWidgetEvent(
         _ event: WidgetEvent,
         widgetID: String,
+        targetWidgetID: String? = nil,
         button: MouseButton? = nil,
         direction: ScrollDirection? = nil,
         value: Double? = nil,
@@ -47,6 +48,7 @@ final class EventBus {
         emitWidget(.widget(
             event,
             widgetID: widgetID,
+            targetWidgetID: targetWidgetID,
             button: button,
             direction: direction,
             value: value,

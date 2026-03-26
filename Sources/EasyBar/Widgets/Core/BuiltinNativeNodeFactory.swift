@@ -162,7 +162,7 @@ enum BuiltinNativeNodeFactory {
             id: id,
             root: id,
             kind: kind,
-            parent: nil,
+            parent: placement.parent,
             position: placement.position,
             order: placement.order,
             icon: icon,

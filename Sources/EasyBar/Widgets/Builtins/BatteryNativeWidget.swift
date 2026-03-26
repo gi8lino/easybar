@@ -105,7 +105,7 @@ final class BatteryNativeWidget: NativeWidget {
             id: rootID,
             root: rootID,
             kind: .popup,
-            parent: nil,
+            parent: placement.parent,
             position: placement.position,
             order: placement.order,
             icon: "",

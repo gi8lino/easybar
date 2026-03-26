@@ -132,20 +132,24 @@ local function resolve_spacing(props)
 	return nil
 end
 
+local function resolve_padding(props, key)
+	if props[key] ~= nil then
+		return tonumber(props[key])
+	end
+
+	if type(props.background) == "table" and props.background[key] ~= nil then
+		return tonumber(props.background[key])
+	end
+
+	return nil
+end
+
 local function resolve_drawing(props, default)
 	if props.drawing == nil then
 		return default
 	end
 
 	return props.drawing ~= false
-end
-
-local function resolve_mouse_target(props)
-	if props.mouse_target == "frame" then
-		return "frame"
-	end
-
-	return "content"
 end
 
 local function popup_parent_id(item)
@@ -191,7 +195,9 @@ local function make_node(id, item, root_position, children)
 		iconFontSize = resolve_icon_font_size(props),
 		labelFontSize = resolve_label_font_size(props),
 		visible = resolve_drawing(props, true),
-		mouseTarget = resolve_mouse_target(props),
+		receivesMouseHover = false,
+		receivesMouseClick = false,
+		receivesMouseScroll = false,
 		value = tonumber(props.value),
 		min = tonumber(props.min),
 		max = tonumber(props.max),
@@ -200,10 +206,10 @@ local function make_node(id, item, root_position, children)
 		lineWidth = tonumber(props.line_width or props.lineWidth),
 		paddingX = tonumber(props.padding_x or props.paddingX),
 		paddingY = tonumber(props.padding_y or props.paddingY),
-		paddingLeft = tonumber(props.padding_left),
-		paddingRight = tonumber(props.padding_right),
-		paddingTop = tonumber(props.padding_top),
-		paddingBottom = tonumber(props.padding_bottom),
+		paddingLeft = resolve_padding(props, "padding_left"),
+		paddingRight = resolve_padding(props, "padding_right"),
+		paddingTop = resolve_padding(props, "padding_top"),
+		paddingBottom = resolve_padding(props, "padding_bottom"),
 		spacing = resolve_spacing(props),
 		backgroundColor = type(props.background) == "table" and props.background.color or props.backgroundColor,
 		borderColor = type(props.background) == "table" and props.background.border_color or props.borderColor,
@@ -216,6 +222,39 @@ local function make_node(id, item, root_position, children)
 		height = tonumber(props.height),
 		yOffset = tonumber(props.y_offset),
 		children = children,
+	}
+end
+
+local function resolve_mouse_interaction(registry, id, item)
+	local subscriptions = registry._state.subscriptions[id]
+	if type(subscriptions) ~= "table" then
+		return {
+			hover = false,
+			click = type(item.props.click_script) == "string" and item.props.click_script ~= "",
+			scroll = false,
+		}
+	end
+
+	local hover = false
+	local click = type(item.props.click_script) == "string" and item.props.click_script ~= ""
+	local scroll = false
+
+	for event_name in pairs(subscriptions) do
+		if type(event_name) == "string" then
+			if event_name == "mouse.entered" or event_name == "mouse.exited" then
+				hover = true
+			elseif event_name == "mouse.clicked" then
+				click = true
+			elseif event_name == "mouse.scrolled" then
+				scroll = true
+			end
+		end
+	end
+
+	return {
+		hover = hover,
+		click = click,
+		scroll = scroll,
 	}
 end
 
@@ -241,8 +280,10 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		iconFontSize = tonumber(node.iconFontSize),
 		labelFontSize = tonumber(node.labelFontSize),
 		visible = node.visible ~= false,
+		receivesMouseHover = node.receivesMouseHover == true,
+		receivesMouseClick = node.receivesMouseClick == true,
+		receivesMouseScroll = node.receivesMouseScroll == true,
 		role = node.role,
-		mouseTarget = node.mouseTarget,
 		value = tonumber(node.value),
 		min = tonumber(node.min),
 		max = tonumber(node.max),
@@ -348,7 +389,12 @@ local function build_tree(registry, id, root_position)
 	local has_popup = type(item.props.popup) == "table" or #popup_child_nodes > 0
 
 	if not has_popup then
-		return make_node(id, item, root_position, child_nodes)
+		local node = make_node(id, item, root_position, child_nodes)
+		local interaction = resolve_mouse_interaction(registry, id, item)
+		node.receivesMouseHover = interaction.hover
+		node.receivesMouseClick = interaction.click
+		node.receivesMouseScroll = interaction.scroll
+		return node
 	end
 
 	local anchor = make_node(id .. "_anchor", item, root_position, child_nodes)
@@ -384,6 +430,10 @@ local function build_tree(registry, id, root_position)
 	}
 
 	local root = make_node(id, item, root_position, child_nodes)
+	local interaction = resolve_mouse_interaction(registry, id, item)
+	root.receivesMouseHover = interaction.hover
+	root.receivesMouseClick = interaction.click
+	root.receivesMouseScroll = interaction.scroll
 	root.popupChildren = { popup_container }
 
 	if #child_nodes > 0 then

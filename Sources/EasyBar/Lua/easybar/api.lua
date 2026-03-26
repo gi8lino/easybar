@@ -321,7 +321,7 @@ function M.new(log)
 		return {
 			name = event.name,
 			widget_id = id,
-			target_widget_id = event.widget_id,
+			target_widget_id = event.target_widget_id or event.widget_id,
 			app_name = event.app_name,
 			interface_name = event.interface_name,
 			button = event.button,
@@ -367,11 +367,18 @@ function M.new(log)
 	end
 
 	local function dispatch_targeted(event)
-		local target = event.widget_id
+		local owner = event.widget_id
+		local target = event.target_widget_id or owner
+		local dispatched = {}
 
 		for _, id in ipairs(state.item_order) do
 			if state.items[id] ~= nil then
 				if target == nil or target == id then
+					dispatch_handlers_for(id, event)
+					dispatched[id] = true
+				end
+
+				if owner ~= nil and owner ~= target and owner == id and not dispatched[id] then
 					dispatch_handlers_for(id, event)
 				end
 			end

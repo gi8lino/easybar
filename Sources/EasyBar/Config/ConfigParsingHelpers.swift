@@ -14,7 +14,8 @@ extension Config {
             position: normalizedPosition(
                 try optionalString(table["position"], path: "\(path).position") ?? fallback.position.rawValue
             ),
-            order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order
+            order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
+            parent: try optionalString(table["parent"], path: "\(path).parent") ?? fallback.parent
         )
     }
 

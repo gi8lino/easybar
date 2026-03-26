@@ -35,7 +35,7 @@ final class SpacesNativeWidget: NativeWidget {
             id: rootID,
             root: rootID,
             kind: .spaces,
-            parent: nil,
+            parent: placement.parent,
             position: placement.position,
             order: placement.order,
             icon: "",

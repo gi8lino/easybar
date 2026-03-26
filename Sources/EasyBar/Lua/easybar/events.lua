@@ -25,6 +25,7 @@ function M.normalize_event(payload)
 	return {
 		name = payload.event,
 		widget_id = payload.widget,
+		target_widget_id = payload.target_widget,
 		app_name = payload.app,
 		interface_name = payload.interface,
 		button = payload.button,

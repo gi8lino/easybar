@@ -95,7 +95,7 @@ struct WidgetNodeView: View {
             } else if hasPopupChildren {
                 popupAnchorSurface(childRow)
             } else {
-                maybeOverlayMouse(childRow.modifier(nodeStyle))
+                maybeOverlayMouse(childRow)
             }
         }
     }
@@ -108,7 +108,7 @@ struct WidgetNodeView: View {
         }
 
         if hasPopupChildren {
-            return AnyView(popupAnchorSurface(content))
+            return AnyView(popupItemSurface(content))
         }
 
         return AnyView(styledMouseContent(content))
@@ -282,11 +282,19 @@ struct WidgetNodeView: View {
         guard node.kind == .popup || hasPopupChildren else { return }
 
         if hovering {
-            EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: node.root)
+            EventBus.shared.emitWidgetEvent(
+                .mouseEntered,
+                widgetID: node.root,
+                targetWidgetID: node.id
+            )
             return
         }
 
-        EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: node.root)
+        EventBus.shared.emitWidgetEvent(
+            .mouseExited,
+            widgetID: node.root,
+            targetWidgetID: node.id
+        )
     }
 
     private var childRow: some View {
@@ -392,25 +400,6 @@ struct WidgetNodeView: View {
         WidgetNodeStyle(node: node)
     }
 
-    /// Returns the shared root mouse overlay.
-    private var mouseOverlay: some View {
-        WidgetMouseView(widgetID: node.root)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-    }
-
-    /// Returns the popup anchor mouse overlay.
-    private var popupAnchorMouseOverlay: some View {
-        WidgetMouseView(widgetID: node.root, tracksHover: false)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-    }
-
-    /// Returns whether the root mouse overlay should be skipped.
-    private var shouldSkipMouseOverlay: Bool {
-        node.isCalendarRoot || node.hasParent
-    }
-
     /// Returns whether this node has a non-empty image path.
     private var hasImage: Bool {
         guard let imagePath = node.imagePath else { return false }
@@ -491,52 +480,48 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private func maybeOverlayMouse<Content: View>(_ content: Content) -> some View {
-        if shouldSkipMouseOverlay {
-            content
-        } else {
-            styledMouseContent(content)
-        }
+        styledMouseContent(content)
     }
 
     /// Applies style and mouse handling using the configured hit target.
     private func styledMouseContent<Content: View>(_ content: Content) -> some View {
-        let styled = AnyView(content.modifier(nodeStyle))
-
-        if node.resolvedMouseTarget == .frame {
-            return AnyView(styled.overlay(mouseOverlay))
-        }
-
-        return AnyView(content.overlay(mouseOverlay).modifier(nodeStyle))
+        AnyView(
+            content
+                .modifier(nodeStyle)
+                .contentShape(Rectangle())
+                .onHover { hovering in
+                    guard node.isMouseHoverInteractive else { return }
+                    emitNodeHoverEvent(hovering)
+                }
+                .onTapGesture {
+                    guard node.isMouseClickInteractive else { return }
+                    emitNodeClickEvent()
+                }
+                .overlay(scrollOverlay)
+        )
     }
 
     /// Applies popup anchor styling and mouse handling using the configured hit target.
     private func popupAnchorSurface<Content: View>(_ content: Content) -> some View {
-        let overlay = AnyView(popupAnchorMouseOverlay)
         let base = AnyView(content.foregroundStyle(nodeColor))
-
-        if node.resolvedMouseTarget == .frame {
-            return AnyView(
-                base
-                    .modifier(nodeStyle)
-                    .contentShape(Rectangle())
-                    .overlay(overlay)
-                    .onHover { hovering in handleAnchorHover(hovering) }
-                    .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-                        popupContent
-                    }
-            )
-        }
+        let surfaced = popupAnchorInteractiveSurface(base)
 
         return AnyView(
-            base
-                .overlay(overlay)
-                .modifier(nodeStyle)
-                .contentShape(Rectangle())
+            surfaced
                 .onHover { hovering in handleAnchorHover(hovering) }
                 .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
                     popupContent
                 }
         )
+    }
+
+    /// Applies popup behavior to a normal styled item surface.
+    private func popupItemSurface<Content: View>(_ content: Content) -> some View {
+        styledMouseContent(content)
+            .onHover { hovering in handleAnchorHover(hovering) }
+            .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
+                popupContent
+            }
     }
 
     private func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
@@ -575,6 +560,59 @@ struct WidgetNodeView: View {
             .renderingMode(renderingMode)
             .resizable()
             .interpolation(.high)
+            .scaledToFit()
+    }
+
+    /// Returns a geometry-sized event surface for the current node.
+    private func nodeEventSurface(tracksHover: Bool = true) -> some View {
+        GeometryReader { proxy in
+            // Match the final rendered node bounds instead of the icon glyph bounds.
+            WidgetMouseView(
+                widgetID: node.root,
+                targetWidgetID: node.id,
+                tracksHover: tracksHover
+            )
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .contentShape(Rectangle())
+        }
+    }
+
+    /// Returns the scroll-only overlay when the node subscribed to mouse.scrolled.
+    @ViewBuilder
+    private var scrollOverlay: some View {
+        if node.isMouseScrollInteractive {
+            nodeEventSurface(tracksHover: false)
+        }
+    }
+
+    /// Applies click handling for popup anchors while leaving hover to SwiftUI.
+    private func popupAnchorInteractiveSurface<Content: View>(_ content: Content) -> some View {
+        AnyView(
+            content
+                .modifier(nodeStyle)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard node.isMouseClickInteractive else { return }
+                    emitNodeClickEvent()
+                }
+                .overlay(scrollOverlay)
+        )
+    }
+
+    /// Emits one node-scoped hover event.
+    private func emitNodeHoverEvent(_ hovering: Bool) {
+        let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
+        EventBus.shared.emitWidgetEvent(event, widgetID: node.root, targetWidgetID: node.id)
+    }
+
+    /// Emits one node-scoped click event.
+    private func emitNodeClickEvent() {
+        EventBus.shared.emitWidgetEvent(
+            .mouseClicked,
+            widgetID: node.root,
+            targetWidgetID: node.id,
+            button: .left
+        )
     }
 }
 

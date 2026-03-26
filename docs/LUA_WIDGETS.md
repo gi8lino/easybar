@@ -5,6 +5,13 @@ EasyBar Lua widgets are item-based.
 You do not return widget trees.
 You create items, style them, and update them by id.
 
+Interaction is node-based.
+
+- subscribe on a node id: that node owns hover, click, scroll, and popup behavior
+- the subscribed node frame is the interactive surface
+- use smaller child nodes when only part of a widget should be interactive
+- use `group` when multiple child nodes should share one styled container
+
 ## API
 
 ### `easybar.add(kind, id, props)`
@@ -23,6 +30,13 @@ Kinds:
 - `progress_slider`
 - `sparkline`
 - `spaces`
+
+`group` is the right container when you want:
+
+- a shared background
+- shared padding
+- shared popup ownership
+- parent-level interaction around multiple child items
 
 Example:
 
@@ -190,6 +204,12 @@ easybar.subscribe("calendar", "mouse.clicked", function(event)
 end)
 ```
 
+Event ownership rule:
+
+- subscribe on the parent item or `group`: the whole parent frame reacts
+- subscribe on a child item: only that child frame reacts
+- for icon-only behavior, make the icon its own child item
+
 ---
 
 ### `easybar.exec(command, callback)`
@@ -228,6 +248,7 @@ easybar.log("warn", "vpn name missing")
 - `position = "left" | "center" | "right"`
 - `order = number`
 - `drawing = true | false`
+- `parent = "other_id"`
 - `width = number`
 - `height = number`
 - `y_offset = number`
@@ -254,6 +275,60 @@ icon = {
 	image_corner_radius = 0,
 }
 ```
+
+## Grouping
+
+Use `group` when multiple child nodes should live inside one styled container.
+
+```lua
+easybar.add("group", "vpn_group", {
+	position = "right",
+	order = 40,
+	background = {
+		color = "#202020",
+		border_color = "#4a4a4a",
+		border_width = 1,
+		corner_radius = 8,
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
+	},
+	spacing = 6,
+})
+
+easybar.add("item", "vpn_group_icon", {
+	parent = "vpn_group",
+	icon = {
+		image = os.getenv("HOME") .. "/.config/easybar/assets/wireguard.png",
+		image_size = 16,
+	},
+})
+
+easybar.add("item", "vpn_group_label", {
+	parent = "vpn_group",
+	label = {
+		string = "VPN",
+	},
+})
+```
+
+This gives you:
+
+- click/hover on `vpn_group` for the whole pill
+- click/hover on `vpn_group_icon` only for the icon
+- click/hover on `vpn_group_label` only for the label
+
+Native built-ins can also be attached under a Lua group by setting `parent` in `config.toml`:
+
+```toml
+[builtins.wifi]
+enabled = true
+parent = "vpn_group"
+```
+
+The parent node must already exist as a Lua/custom node id.
+If the target group does not exist, the native widget has nowhere to render.
 
 ### `label`
 

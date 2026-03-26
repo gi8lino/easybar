@@ -16,7 +16,9 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var visible: Bool
 
     var role: WidgetNodeRole?
-    var mouseTarget: WidgetMouseTarget?
+    var receivesMouseHover: Bool?
+    var receivesMouseClick: Bool?
+    var receivesMouseScroll: Bool?
 
     var imagePath: String?
     var imageSize: Double?
@@ -76,8 +78,22 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
         role == .popupContent
     }
 
-    /// Returns the resolved mouse target for this node.
-    var resolvedMouseTarget: WidgetMouseTarget {
-        mouseTarget ?? .content
+    /// Returns whether this node should own hover interactions.
+    var isMouseHoverInteractive: Bool {
+        if let receivesMouseHover {
+            return receivesMouseHover
+        }
+
+        return id == root
+    }
+
+    /// Returns whether this node should own click interactions.
+    var isMouseClickInteractive: Bool {
+        receivesMouseClick == true
+    }
+
+    /// Returns whether this node should own scroll interactions.
+    var isMouseScrollInteractive: Bool {
+        receivesMouseScroll == true
     }
 }

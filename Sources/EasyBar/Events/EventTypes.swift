@@ -49,6 +49,7 @@ struct EasyBarEventPayload {
     let widgetEvent: WidgetEvent?
 
     let widgetID: String?
+    let targetWidgetID: String?
     let appName: String?
     let interfaceName: String?
     let button: MouseButton?
@@ -80,6 +81,7 @@ struct EasyBarEventPayload {
     static func widget(
         _ event: WidgetEvent,
         widgetID: String,
+        targetWidgetID: String? = nil,
         button: MouseButton? = nil,
         direction: ScrollDirection? = nil,
         value: Double? = nil,
@@ -89,6 +91,7 @@ struct EasyBarEventPayload {
         makePayload(
             widgetEvent: event,
             widgetID: widgetID,
+            targetWidgetID: targetWidgetID,
             button: button,
             direction: direction,
             value: value,
@@ -125,6 +128,7 @@ struct EasyBarEventPayload {
 
         put(&payload, key: "event", value: resolvedEventName)
         put(&payload, key: "widget", value: widgetID)
+        put(&payload, key: "target_widget", value: targetWidgetID)
         put(&payload, key: "app", value: appName)
         put(&payload, key: "interface", value: interfaceName)
         put(&payload, key: "button", value: buttonName)
@@ -161,6 +165,7 @@ struct EasyBarEventPayload {
         appEvent: AppEvent? = nil,
         widgetEvent: WidgetEvent? = nil,
         widgetID: String? = nil,
+        targetWidgetID: String? = nil,
         appName: String? = nil,
         interfaceName: String? = nil,
         button: MouseButton? = nil,
@@ -175,6 +180,7 @@ struct EasyBarEventPayload {
             appEvent: appEvent,
             widgetEvent: widgetEvent,
             widgetID: widgetID,
+            targetWidgetID: targetWidgetID,
             appName: appName,
             interfaceName: interfaceName,
             button: button,

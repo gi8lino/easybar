@@ -5,22 +5,26 @@ import AppKit
 struct WidgetMouseView: NSViewRepresentable {
 
     let widgetID: String
+    let targetWidgetID: String
     let tracksHover: Bool
 
-    init(widgetID: String, tracksHover: Bool = true) {
+    init(widgetID: String, targetWidgetID: String? = nil, tracksHover: Bool = true) {
         self.widgetID = widgetID
+        self.targetWidgetID = targetWidgetID ?? widgetID
         self.tracksHover = tracksHover
     }
 
     func makeNSView(context: Context) -> MouseTrackingNSView {
         let view = MouseTrackingNSView()
         view.widgetID = widgetID
+        view.targetWidgetID = targetWidgetID
         view.tracksHover = tracksHover
         return view
     }
 
     func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
         nsView.widgetID = widgetID
+        nsView.targetWidgetID = targetWidgetID
         nsView.tracksHover = tracksHover
     }
 }
@@ -28,6 +32,7 @@ struct WidgetMouseView: NSViewRepresentable {
 final class MouseTrackingNSView: NSView {
 
     var widgetID: String = ""
+    var targetWidgetID: String = ""
     var tracksHover = true
 
     private var trackingArea: NSTrackingArea?
@@ -46,8 +51,7 @@ final class MouseTrackingNSView: NSView {
 
     /// Make this transparent view participate in hit-testing.
     override func hitTest(_ point: NSPoint) -> NSView? {
-        let localPoint = convert(point, from: superview)
-        return bounds.contains(localPoint) ? self : nil
+        bounds.contains(point) ? self : nil
     }
 
     override func updateTrackingAreas() {
@@ -59,18 +63,18 @@ final class MouseTrackingNSView: NSView {
         guard tracksHover else { return }
         guard !isMouseInside else { return }
         isMouseInside = true
-        guard Self.hoverState.enter(widgetID: widgetID) else { return }
-        Logger.debug("mouse entered widget=\(widgetID)")
-        EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: widgetID)
+        guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
+        Logger.debug("mouse entered widget=\(widgetID) target=\(targetWidgetID)")
+        EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: widgetID, targetWidgetID: targetWidgetID)
     }
 
     override func mouseExited(with event: NSEvent) {
         guard tracksHover else { return }
         guard isMouseInside else { return }
         isMouseInside = false
-        Self.hoverState.exit(widgetID: widgetID) {
-            Logger.debug("mouse exited widget=\(self.widgetID)")
-            EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: self.widgetID)
+        Self.hoverState.exit(widgetID: self.targetWidgetID) {
+            Logger.debug("mouse exited widget=\(self.widgetID) target=\(self.targetWidgetID)")
+            EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: self.widgetID, targetWidgetID: self.targetWidgetID)
         }
     }
 
@@ -106,6 +110,7 @@ final class MouseTrackingNSView: NSView {
         EventBus.shared.emitWidgetEvent(
             .mouseScrolled,
             widgetID: widgetID,
+            targetWidgetID: targetWidgetID,
             direction: direction,
             deltaX: Double(event.scrollingDeltaX),
             deltaY: Double(event.scrollingDeltaY)
@@ -145,17 +150,17 @@ final class MouseTrackingNSView: NSView {
 
     /// Emits one mouse down event for the given button.
     private func emitMouseDown(button: MouseButton) {
-        Logger.debug("mouse down widget=\(widgetID) button=\(button.rawValue)")
-        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, button: button)
+        Logger.debug("mouse down widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+        EventBus.shared.emitWidgetEvent(.mouseDown, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
     }
 
     /// Emits one mouse up and click pair for the given button.
     private func emitMouseUp(button: MouseButton) {
-        Logger.debug("mouse up widget=\(widgetID) button=\(button.rawValue)")
-        Logger.debug("mouse clicked widget=\(widgetID) button=\(button.rawValue)")
+        Logger.debug("mouse up widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+        Logger.debug("mouse clicked widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
 
-        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, button: button)
-        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, button: button)
+        EventBus.shared.emitWidgetEvent(.mouseUp, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+        EventBus.shared.emitWidgetEvent(.mouseClicked, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
     }
 }
 
