@@ -102,7 +102,7 @@ local function refresh()
 		end
 	end
 
-	easybar.set("wireguard", {
+	easybar.set("wireguard_icon", {
 		icon = {
 			string = logo_exists and "" or "WG",
 			image = logo_path,
@@ -123,7 +123,7 @@ local function refresh()
 	})
 end
 
-easybar.add("item", "wireguard", {
+easybar.add("group", "wireguard", {
 	position = "right",
 	order = 42,
 	background = {
@@ -136,6 +136,14 @@ easybar.add("item", "wireguard", {
 		padding_top = 4,
 		padding_bottom = 4,
 	},
+	spacing = 0,
+	popup = {
+		drawing = true,
+	},
+})
+
+easybar.add("item", "wireguard_icon", {
+	parent = "wireguard",
 	icon = {
 		string = "WG",
 		image = home .. "/.config/easybar/assets/wireguard.png",
@@ -144,9 +152,6 @@ easybar.add("item", "wireguard", {
 	},
 	label = {
 		string = "",
-	},
-	popup = {
-		drawing = true,
 	},
 })
 
@@ -162,14 +167,6 @@ easybar.subscribe("wireguard", { "network_change", "wifi_change", "minute_tick",
 end)
 
 easybar.subscribe("wireguard", "mouse.clicked", function(event)
-	if event.button == nil or event.button == "left" then
-		toggle_wireguard()
-		refresh()
-	end
-end)
-
-easybar.subscribe("wireguard_popup_label", "mouse.clicked", function(event)
-	easybar.log("info", "wireguard_popup_label clicked")
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
 		refresh()

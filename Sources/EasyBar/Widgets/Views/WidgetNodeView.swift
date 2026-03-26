@@ -493,10 +493,12 @@ struct WidgetNodeView: View {
                     guard node.isMouseHoverInteractive else { return }
                     emitNodeHoverEvent(hovering)
                 }
-                .onTapGesture {
-                    guard node.isMouseClickInteractive else { return }
-                    emitNodeClickEvent()
-                }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        guard node.isMouseClickInteractive else { return }
+                        emitNodeClickEvent()
+                    }
+                )
                 .overlay(scrollOverlay)
         )
     }
@@ -591,10 +593,12 @@ struct WidgetNodeView: View {
             content
                 .modifier(nodeStyle)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    guard node.isMouseClickInteractive else { return }
-                    emitNodeClickEvent()
-                }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        guard node.isMouseClickInteractive else { return }
+                        emitNodeClickEvent()
+                    }
+                )
                 .overlay(scrollOverlay)
         )
     }
