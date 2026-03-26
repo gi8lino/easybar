@@ -46,6 +46,15 @@ Install EasyBar:
 brew install gi8lino/tap/easybar
 ```
 
+> [!NOTE]
+> By using EasyBar, you acknowledge that it is not notarized.
+>
+> Notarization is one of Apple's distribution checks. In practice, it means sending binaries to Apple and dealing with their packaging and approval flow.
+>
+> I do not mind the general idea of signing or notarization. I specifically do not want to spend time dealing with Apple's developer account, notarization pipeline, and release bureaucracy for this project.
+>
+> The Homebrew install is meant to work out of the box in the common case. If macOS still blocks EasyBar or one of its helper agents with a Gatekeeper or malware verification warning on your machine, remove the quarantine attribute and start the services again.
+
 This also installs the calendar and network agent dependencies. Start all services:
 
 ```bash
@@ -376,6 +385,7 @@ It currently provides:
 - live updates from the network agent socket
 
 The native widget is intended to replace the old `wifisnitchctl` dependency for EasyBar’s own Wi-Fi display path.
+
 - collapsing inactive spaces
 - icon sizing and spacing
 - active and inactive colors
