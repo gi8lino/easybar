@@ -340,44 +340,47 @@ local function build_tree(registry, id, root_position)
 	local popup_props = item.props.popup or {}
 	local popup_drawing = resolve_drawing(popup_props, false)
 
-	local popup_container = nil
-
-	if popup_drawing then
-		popup_container = {
-			id = id .. "_popup_content",
-			kind = "column",
-			position = normalize_position(root_position),
-			order = 0,
-			icon = "",
-			text = "",
-			color = "",
-			visible = true,
-			paddingLeft = tonumber(popup_props.padding_left),
-			paddingRight = tonumber(popup_props.padding_right),
-			paddingTop = tonumber(popup_props.padding_top),
-			paddingBottom = tonumber(popup_props.padding_bottom),
-			backgroundColor = type(popup_props.background) == "table" and popup_props.background.color or nil,
-			borderColor = type(popup_props.background) == "table" and popup_props.background.border_color or nil,
-			borderWidth = type(popup_props.background) == "table" and tonumber(popup_props.background.border_width)
-				or nil,
-			cornerRadius = type(popup_props.background) == "table" and tonumber(popup_props.background.corner_radius)
-				or nil,
-			width = tonumber(popup_props.width),
-			height = tonumber(popup_props.height),
-			yOffset = tonumber(popup_props.y_offset),
-			spacing = tonumber(popup_props.spacing),
-			children = popup_child_nodes,
-		}
-	end
+	local popup_container = {
+		id = id .. "_popup_content",
+		kind = "column",
+		position = normalize_position(root_position),
+		order = 0,
+		icon = "",
+		text = "",
+		color = "",
+		visible = popup_drawing,
+		paddingLeft = tonumber(popup_props.padding_left),
+		paddingRight = tonumber(popup_props.padding_right),
+		paddingTop = tonumber(popup_props.padding_top),
+		paddingBottom = tonumber(popup_props.padding_bottom),
+		backgroundColor = type(popup_props.background) == "table" and popup_props.background.color or nil,
+		borderColor = type(popup_props.background) == "table" and popup_props.background.border_color or nil,
+		borderWidth = type(popup_props.background) == "table" and tonumber(popup_props.background.border_width)
+			or nil,
+		cornerRadius = type(popup_props.background) == "table" and tonumber(popup_props.background.corner_radius)
+			or nil,
+		width = tonumber(popup_props.width),
+		height = tonumber(popup_props.height),
+		yOffset = tonumber(popup_props.y_offset),
+		spacing = tonumber(popup_props.spacing),
+		children = popup_child_nodes,
+	}
 
 	return {
 		id = id,
 		kind = "popup",
 		position = normalize_position(root_position),
 		order = tonumber(item.props.order or 0) or 0,
-		icon = "",
-		text = "",
-		color = "",
+		icon = icon_string(item.props.icon),
+		text = label_string(item.props.label),
+		color = resolve_color(item.props),
+		iconColor = resolve_icon_color(item.props),
+		labelColor = resolve_label_color(item.props),
+		imagePath = resolve_image_path(item.props),
+		imageSize = resolve_image_size(item.props),
+		imageCornerRadius = resolve_image_corner_radius(item.props),
+		iconFontSize = resolve_icon_font_size(item.props),
+		labelFontSize = resolve_label_font_size(item.props),
 		visible = resolve_drawing(item.props, true),
 		paddingX = tonumber(item.props.padding_x or item.props.paddingX),
 		paddingY = tonumber(item.props.padding_y or item.props.paddingY),
@@ -398,8 +401,8 @@ local function build_tree(registry, id, root_position)
 		width = tonumber(item.props.width),
 		height = tonumber(item.props.height),
 		yOffset = tonumber(item.props.y_offset),
-		anchorChildren = { anchor },
-		children = popup_container and { popup_container } or {},
+		anchorChildren = #child_nodes > 0 and { anchor } or {},
+		children = { popup_container },
 	}
 end
 

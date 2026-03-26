@@ -5,21 +5,30 @@ import AppKit
 struct WidgetMouseView: NSViewRepresentable {
 
     let widgetID: String
+    let tracksHover: Bool
+
+    init(widgetID: String, tracksHover: Bool = true) {
+        self.widgetID = widgetID
+        self.tracksHover = tracksHover
+    }
 
     func makeNSView(context: Context) -> MouseTrackingNSView {
         let view = MouseTrackingNSView()
         view.widgetID = widgetID
+        view.tracksHover = tracksHover
         return view
     }
 
     func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
         nsView.widgetID = widgetID
+        nsView.tracksHover = tracksHover
     }
 }
 
 final class MouseTrackingNSView: NSView {
 
     var widgetID: String = ""
+    var tracksHover = true
 
     private var trackingArea: NSTrackingArea?
     private var isMouseInside = false
@@ -47,6 +56,7 @@ final class MouseTrackingNSView: NSView {
     }
 
     override func mouseEntered(with event: NSEvent) {
+        guard tracksHover else { return }
         guard !isMouseInside else { return }
         isMouseInside = true
         guard Self.hoverState.enter(widgetID: widgetID) else { return }
@@ -55,6 +65,7 @@ final class MouseTrackingNSView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        guard tracksHover else { return }
         guard isMouseInside else { return }
         isMouseInside = false
         Self.hoverState.exit(widgetID: widgetID) {
@@ -104,6 +115,7 @@ final class MouseTrackingNSView: NSView {
     /// Replaces the current tracking area with the standard widget mouse options.
     private func replaceTrackingArea() {
         removeTrackingAreaIfNeeded()
+        guard tracksHover else { return }
 
         let area = NSTrackingArea(
             rect: .zero,

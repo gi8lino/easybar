@@ -126,6 +126,7 @@ struct WidgetNodeView: View {
         Group {
             if !hasAnchorChildren {
                 HStack(spacing: itemSpacing) {
+                    imageView
                     iconText
                     labelText
                 }
@@ -140,7 +141,7 @@ struct WidgetNodeView: View {
         .foregroundStyle(nodeColor)
         .modifier(nodeStyle)
         .overlay(
-            mouseOverlay
+            WidgetMouseView(widgetID: node.root, tracksHover: false)
         )
         .onHover { hovering in handleAnchorHover(hovering) }
         .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
@@ -253,6 +254,7 @@ struct WidgetNodeView: View {
     /// Handles hover changes on the popup anchor.
     private func handleAnchorHover(_ hovering: Bool) {
         anchorHovered = hovering
+        emitPopupAnchorHoverEvent(hovering)
 
         if hovering {
             popupPresented = true
@@ -275,6 +277,18 @@ struct WidgetNodeView: View {
         guard !anchorHovered else { return }
         guard !popupHovered else { return }
         popupPresented = false
+    }
+
+    /// Emits popup anchor hover events without using the AppKit mouse tracker.
+    private func emitPopupAnchorHoverEvent(_ hovering: Bool) {
+        guard node.kind == .popup else { return }
+
+        if hovering {
+            EventBus.shared.emitWidgetEvent(.mouseEntered, widgetID: node.root)
+            return
+        }
+
+        EventBus.shared.emitWidgetEvent(.mouseExited, widgetID: node.root)
     }
 
     private var childRow: some View {

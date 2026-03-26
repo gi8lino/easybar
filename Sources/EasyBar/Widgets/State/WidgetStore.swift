@@ -88,9 +88,7 @@ final class WidgetStore: ObservableObject {
     /// Publishes the current rendered nodes on the main queue.
     private func publish(nodes: [WidgetNodeState]) {
         DispatchQueue.main.async {
-            withAnimation(.linear(duration: 0.08)) {
-                self.nodes = nodes
-            }
+            self.nodes = nodes
         }
     }
 }
