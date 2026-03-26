@@ -16,6 +16,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     var visible: Bool
 
     var role: WidgetNodeRole?
+    var mouseTarget: WidgetMouseTarget?
 
     var imagePath: String?
     var imageSize: Double?
@@ -68,5 +69,10 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     /// Returns whether this node is a popup anchor child.
     var isPopupAnchor: Bool {
         role == .popupAnchor
+    }
+
+    /// Returns the resolved mouse target for this node.
+    var resolvedMouseTarget: WidgetMouseTarget {
+        mouseTarget ?? .content
     }
 }

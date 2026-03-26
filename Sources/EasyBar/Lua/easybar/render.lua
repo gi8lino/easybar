@@ -140,6 +140,14 @@ local function resolve_drawing(props, default)
 	return props.drawing ~= false
 end
 
+local function resolve_mouse_target(props)
+	if props.mouse_target == "frame" then
+		return "frame"
+	end
+
+	return "content"
+end
+
 local function popup_parent_id(item)
 	local position = item.props.position
 
@@ -183,6 +191,7 @@ local function make_node(id, item, root_position, children)
 		iconFontSize = resolve_icon_font_size(props),
 		labelFontSize = resolve_label_font_size(props),
 		visible = resolve_drawing(props, true),
+		mouseTarget = resolve_mouse_target(props),
 		value = tonumber(props.value),
 		min = tonumber(props.min),
 		max = tonumber(props.max),
@@ -233,6 +242,7 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		labelFontSize = tonumber(node.labelFontSize),
 		visible = node.visible ~= false,
 		role = node.role,
+		mouseTarget = node.mouseTarget,
 		value = tonumber(node.value),
 		min = tonumber(node.min),
 		max = tonumber(node.max),

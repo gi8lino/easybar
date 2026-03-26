@@ -104,9 +104,8 @@ struct WidgetNodeView: View {
             iconText
             labelText
         }
-        .modifier(nodeStyle)
 
-        return maybeOverlayMouse(content)
+        return styledMouseContent(content)
     }
 
     private func nativeCalendarAnchorView<Content: View>(
@@ -123,7 +122,7 @@ struct WidgetNodeView: View {
     }
 
     private var popupAnchor: some View {
-        Group {
+        let content = Group {
             if !hasAnchorChildren {
                 HStack(spacing: itemSpacing) {
                     imageView
@@ -138,15 +137,8 @@ struct WidgetNodeView: View {
                 }
             }
         }
-        .foregroundStyle(nodeColor)
-        .modifier(nodeStyle)
-        .overlay(
-            WidgetMouseView(widgetID: node.root, tracksHover: false)
-        )
-        .onHover { hovering in handleAnchorHover(hovering) }
-        .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-            popupContent
-        }
+
+        return popupAnchorSurface(content)
     }
 
     private var popupContent: some View {
@@ -387,6 +379,15 @@ struct WidgetNodeView: View {
     /// Returns the shared root mouse overlay.
     private var mouseOverlay: some View {
         WidgetMouseView(widgetID: node.root)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+    }
+
+    /// Returns the popup anchor mouse overlay.
+    private var popupAnchorMouseOverlay: some View {
+        WidgetMouseView(widgetID: node.root, tracksHover: false)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
     }
 
     /// Returns whether the root mouse overlay should be skipped.
@@ -469,9 +470,7 @@ struct WidgetNodeView: View {
 
     @ViewBuilder
     private func interactiveContent<Content: View>(_ content: Content) -> some View {
-        content
-            .modifier(nodeStyle)
-            .overlay(mouseOverlay)
+        styledMouseContent(content)
     }
 
     @ViewBuilder
@@ -479,9 +478,49 @@ struct WidgetNodeView: View {
         if shouldSkipMouseOverlay {
             content
         } else {
-            content
-                .overlay(mouseOverlay)
+            styledMouseContent(content)
         }
+    }
+
+    /// Applies style and mouse handling using the configured hit target.
+    private func styledMouseContent<Content: View>(_ content: Content) -> some View {
+        let styled = AnyView(content.modifier(nodeStyle))
+
+        if node.resolvedMouseTarget == .frame {
+            return AnyView(styled.overlay(mouseOverlay))
+        }
+
+        return AnyView(content.overlay(mouseOverlay).modifier(nodeStyle))
+    }
+
+    /// Applies popup anchor styling and mouse handling using the configured hit target.
+    private func popupAnchorSurface<Content: View>(_ content: Content) -> some View {
+        let overlay = AnyView(popupAnchorMouseOverlay)
+        let base = AnyView(content.foregroundStyle(nodeColor))
+
+        if node.resolvedMouseTarget == .frame {
+            return AnyView(
+                base
+                    .modifier(nodeStyle)
+                    .contentShape(Rectangle())
+                    .overlay(overlay)
+                    .onHover { hovering in handleAnchorHover(hovering) }
+                    .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
+                        popupContent
+                    }
+            )
+        }
+
+        return AnyView(
+            base
+                .overlay(overlay)
+                .modifier(nodeStyle)
+                .contentShape(Rectangle())
+                .onHover { hovering in handleAnchorHover(hovering) }
+                .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
+                    popupContent
+                }
+        )
     }
 
     private func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {

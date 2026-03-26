@@ -320,10 +320,10 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Packaged Resources:"
 	@ls -1 "$(APP_RESOURCES)" 2>/dev/null || true
 
-run: bundle ## Build, start local agents, and open the app bundle.
+run: bundle ## Build, start local agents, and run EasyBar in foreground with debug logging.
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@open "$(APP_BUNDLE)"
+	@EASYBAR_DEBUG=1 "$(APP_BIN)"
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@if command -v brew >/dev/null 2>&1; then \

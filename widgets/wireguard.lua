@@ -20,6 +20,20 @@ local function shell(command)
 	return output
 end
 
+local function debug_shell(command)
+	local pipe = io.popen(command .. " 2>&1")
+	if not pipe then
+		easybar.log("error", "debug shell popen failed", command)
+		return ""
+	end
+
+	local output = pipe:read("*a") or ""
+	pipe:close()
+
+	easybar.log("info", "command", command, "output", trim(output))
+	return output
+end
+
 local function quote(s)
 	return string.format("%q", s or "")
 end
@@ -64,19 +78,14 @@ local function toggle_wireguard()
 	end
 
 	local name = quote(vpn_name)
-	local status = trim(shell("scutil --nc status " .. name)):lower()
+	local status = trim(debug_shell("scutil --nc status " .. name)):lower()
+	easybar.log("info", "vpn_name", vpn_name, "status", status)
 
 	if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
-		shell("scutil --nc stop " .. name)
+		debug_shell("scutil --nc stop " .. name)
 	else
-		shell("scutil --nc start " .. name)
+		debug_shell("scutil --nc start " .. name)
 	end
-end
-
-local function set_popup_visible(visible)
-	easybar.set("wireguard", {
-		popup = { drawing = visible },
-	})
 end
 
 local function refresh()
@@ -117,6 +126,7 @@ end
 easybar.add("item", "wireguard", {
 	position = "right",
 	order = 42,
+	mouse_target = "frame",
 	background = {
 		padding_left = 8,
 		padding_right = 8,
@@ -124,7 +134,7 @@ easybar.add("item", "wireguard", {
 		padding_bottom = 4,
 	},
 	popup = {
-		drawing = false,
+		drawing = true,
 		background = {
 			color = "#1e2030",
 			border_color = "#494d64",
@@ -159,15 +169,6 @@ easybar.subscribe("wireguard", { "network_change", "wifi_change", "minute_tick",
 	refresh()
 end)
 
-easybar.subscribe("wireguard", "mouse.entered", function(_)
-	set_popup_visible(true)
-	refresh()
-end)
-
-easybar.subscribe("wireguard", "mouse.exited", function(_)
-	set_popup_visible(false)
-end)
-
 easybar.subscribe("wireguard", "mouse.clicked", function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
@@ -176,6 +177,7 @@ easybar.subscribe("wireguard", "mouse.clicked", function(event)
 end)
 
 easybar.subscribe("wireguard_popup_label", "mouse.clicked", function(event)
+	easybar.log("info", "wireguard_popup_label clicked")
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
 		refresh()

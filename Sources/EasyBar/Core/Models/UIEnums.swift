@@ -49,6 +49,12 @@ enum WidgetNodeRole: String, Codable {
     case popupAnchor = "popup-anchor"
 }
 
+/// Hit-testing modes for widget mouse input.
+enum WidgetMouseTarget: String, Codable {
+    case content
+    case frame
+}
+
 /// Supported layouts for the native calendar anchor.
 enum CalendarAnchorLayout: String, Codable {
     case item
