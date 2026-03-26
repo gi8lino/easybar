@@ -66,6 +66,19 @@ public func defaultNetworkAgentRefreshIntervalSeconds() -> TimeInterval {
     return 15
 }
 
+/// Returns whether debug logging is enabled for EasyBar processes.
+///
+/// EASYBAR_DEBUG overrides config when set.
+public func defaultDebugLoggingEnabled() -> Bool {
+    if let override = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"]?
+        .trimmingCharacters(in: .whitespacesAndNewlines),
+       let value = parseBool(override) {
+        return value
+    }
+
+    return configuredLoggingBoolValue(key: "debug") ?? false
+}
+
 /// Returns the parent directory of the given Unix socket path.
 public func socketDirectoryPath(for socketPath: String) -> String {
     URL(fileURLWithPath: socketPath).deletingLastPathComponent().path
@@ -170,4 +183,47 @@ private func configuredAgentIntValue(section: String, key: String) -> Int? {
     }
 
     return nil
+}
+
+private func configuredLoggingBoolValue(key: String) -> Bool? {
+    guard let text = configFileText() else { return nil }
+
+    var inLoggingSection = false
+
+    for rawLine in text.components(separatedBy: .newlines) {
+        let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !line.isEmpty, !line.hasPrefix("#") else { continue }
+
+        if line.hasPrefix("[") && line.hasSuffix("]") {
+            inLoggingSection = (line == "[logging]")
+            continue
+        }
+
+        guard inLoggingSection, line.hasPrefix(key) else { continue }
+        guard let equals = line.firstIndex(of: "=") else { continue }
+
+        let rawValue = line[line.index(after: equals)...]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let unquoted = rawValue
+            .split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        return parseBool(unquoted)
+    }
+
+    return nil
+}
+
+private func parseBool(_ value: String) -> Bool? {
+    switch value.lowercased() {
+    case "1", "true", "yes", "on":
+        return true
+    case "0", "false", "no", "off":
+        return false
+    default:
+        return nil
+    }
 }

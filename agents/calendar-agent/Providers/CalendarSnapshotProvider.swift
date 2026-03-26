@@ -43,6 +43,7 @@ final class CalendarSnapshotProvider {
         let permissionState = authState.permissionState()
 
         guard hasAccess else {
+            AgentLogger.debug("calendar snapshot access_granted=false permission_state=\(permissionState)")
             return CalendarAgentSnapshot(
                 accessGranted: false,
                 permissionState: permissionState,
@@ -127,12 +128,18 @@ final class CalendarSnapshotProvider {
             )
         }
 
-        return CalendarAgentSnapshot(
+        let snapshot = CalendarAgentSnapshot(
             accessGranted: true,
             permissionState: permissionState,
             generatedAt: now,
             sections: sections
         )
+
+        AgentLogger.debug(
+            "calendar snapshot access_granted=true permission_state=\(permissionState) days=\(query.days) show_birthdays=\(query.showBirthdays) sections=\(snapshot.sections.count)"
+        )
+
+        return snapshot
     }
 
     private func requestAccessIfNeeded() {

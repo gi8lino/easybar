@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import EasyBarShared
 
 enum AgentLogger {
     private static let formatter: DateFormatter = {
@@ -8,6 +9,15 @@ enum AgentLogger {
         return formatter
     }()
     private static let lock = NSLock()
+
+    static var debugEnabled: Bool {
+        defaultDebugLoggingEnabled()
+    }
+
+    static func debug(_ message: String) {
+        guard debugEnabled else { return }
+        write(level: "DEBUG", message: message)
+    }
 
     static func info(_ message: String) {
         write(level: "INFO", message: message)

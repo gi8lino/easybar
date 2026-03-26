@@ -138,6 +138,8 @@ final class NetworkSocketServer {
                 continue
             }
 
+            AgentLogger.debug("network agent accepted client fd=\(clientFD)")
+
             DispatchQueue.global(qos: .utility).async {
                 self.handleClient(clientFD)
             }
@@ -149,6 +151,8 @@ final class NetworkSocketServer {
             close(clientFD)
             return
         }
+
+        AgentLogger.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
         switch request.command {
         case .ping:
@@ -176,6 +180,7 @@ final class NetworkSocketServer {
             subscribersLock.lock()
             subscribers[clientFD] = Subscriber(fd: clientFD)
             subscribersLock.unlock()
+            AgentLogger.info("network agent subscriber added fd=\(clientFD)")
 
             if !send(NetworkAgentMessage(kind: .subscribed), to: clientFD) {
                 removeSubscriber(fd: clientFD)
@@ -241,6 +246,7 @@ final class NetworkSocketServer {
         subscribersLock.unlock()
 
         guard existing != nil else { return }
+        AgentLogger.info("network agent subscriber removed fd=\(fd)")
 
         shutdown(fd, SHUT_RDWR)
         close(fd)

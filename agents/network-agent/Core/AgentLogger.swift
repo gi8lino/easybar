@@ -1,4 +1,5 @@
 import Foundation
+import EasyBarShared
 
 enum AgentLogger {
     private static let formatter: DateFormatter = {
@@ -6,6 +7,16 @@ enum AgentLogger {
         f.dateFormat = "HH:mm:ss.SSS"
         return f
     }()
+    private static let lock = NSLock()
+
+    static var debugEnabled: Bool {
+        defaultDebugLoggingEnabled()
+    }
+
+    static func debug(_ message: String) {
+        guard debugEnabled else { return }
+        write(level: "DEBUG", message: message, stream: stdout)
+    }
 
     static func info(_ message: String) {
         write(level: "INFO", message: message, stream: stdout)
@@ -20,6 +31,8 @@ enum AgentLogger {
     }
 
     private static func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
+        lock.lock()
+        defer { lock.unlock() }
         fputs("[\(formatter.string(from: Date()))] easybar-network-agent [\(level)] \(message)\n", stream)
         fflush(stream)
     }

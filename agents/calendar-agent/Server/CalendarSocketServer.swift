@@ -138,6 +138,8 @@ final class CalendarSocketServer {
                 continue
             }
 
+            AgentLogger.debug("calendar agent accepted client fd=\(clientFD)")
+
             DispatchQueue.global(qos: .utility).async {
                 self.handleClient(clientFD)
             }
@@ -149,6 +151,8 @@ final class CalendarSocketServer {
             close(clientFD)
             return
         }
+
+        AgentLogger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
         switch request.command {
         case .ping:
@@ -176,6 +180,7 @@ final class CalendarSocketServer {
             subscribersLock.lock()
             subscribers[clientFD] = Subscriber(fd: clientFD, query: query)
             subscribersLock.unlock()
+            AgentLogger.info("calendar agent subscriber added fd=\(clientFD)")
 
             if !send(CalendarAgentMessage(kind: .subscribed), to: clientFD) {
                 removeSubscriber(fd: clientFD)
@@ -241,6 +246,7 @@ final class CalendarSocketServer {
         subscribersLock.unlock()
 
         guard existing != nil else { return }
+        AgentLogger.info("calendar agent subscriber removed fd=\(fd)")
 
         shutdown(fd, SHUT_RDWR)
         close(fd)

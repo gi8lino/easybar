@@ -84,6 +84,12 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
         let interfaceName = normalized(interface?.interfaceName)
         let rssi = validMeasurement(interface?.rssiValue())
         let displayRSSI = smoothedRSSIValue(from: rssi)
+        let primaryInterfaceIsTunnel = currentPrimaryInterface().map(isTunnelInterface) ?? false
+        let bars = signalBars(for: displayRSSI, connected: ssid != nil)
+
+        AgentLogger.debug(
+            "network snapshot access_granted=true permission_state=\(permissionState) ssid=\(ssid ?? "<none>") interface=\(interfaceName ?? "<none>") signal_bars=\(bars) rssi=\(displayRSSI.map(String.init) ?? "<none>") primary_is_tunnel=\(primaryInterfaceIsTunnel)"
+        )
 
         return NetworkAgentSnapshot(
             accessGranted: true,
@@ -91,8 +97,8 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
             generatedAt: now,
             ssid: ssid,
             interfaceName: interfaceName,
-            primaryInterfaceIsTunnel: currentPrimaryInterface().map(isTunnelInterface) ?? false,
-            signalBars: signalBars(for: displayRSSI, connected: ssid != nil),
+            primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
+            signalBars: bars,
             rssi: displayRSSI
         )
     }
@@ -213,6 +219,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     private func smoothedRSSIValue(from rssi: Int?) -> Int? {
         guard let rssi else {
             smoothedRSSI = nil
+            AgentLogger.debug("network RSSI unavailable")
             return nil
         }
 
