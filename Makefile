@@ -384,3 +384,7 @@ tag-major: ## Create the next major tag locally.
 
 push-tags: ## Push commits and tags to origin.
 	@git push --follow-tags
+
+tag: ## Show latest tag
+	@echo "Latest version: $(LATEST_TAG)"
+
