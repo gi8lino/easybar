@@ -30,8 +30,6 @@ border = "#222222" # Bottom border color of the bar.
 enabled = false # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
-
-[builtins.spaces.style]
 icon = "" # Unused fallback icon for the spaces root widget.
 text_color = "" # Fallback text color for the spaces root widget.
 background_color = "#00000000" # Background behind the whole spaces block.

@@ -164,15 +164,14 @@ extension Config {
       fallback: builtinSpaces.placement
     )
 
-    let styleTable = spaces["style"]?.table ?? TOMLTable()
     let layoutTable = spaces["layout"]?.table ?? TOMLTable()
     let textTable = spaces["text"]?.table ?? TOMLTable()
     let iconsTable = spaces["icons"]?.table ?? TOMLTable()
     let colorsTable = spaces["colors"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.spaces.style",
+      from: spaces,
+      path: "builtins.spaces",
       fallback: builtinSpaces.style
     )
 

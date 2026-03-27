@@ -68,3 +68,8 @@ Built-in widgets and native groups use the same shared box-model keys:
 - `padding_x`
 - `padding_y`
 - `spacing`
+
+For the native `spaces` widget:
+
+- `[builtins.spaces]` controls the outer container placement and shared box model
+- `[builtins.spaces.layout]` controls the internal workspace-pill layout
