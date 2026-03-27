@@ -39,7 +39,7 @@ local function quote(s)
 end
 
 local function get_network_fields()
-	local command = "wifisnitchctl get network.primary_interface_is_tunnel --format=lines"
+	local command = "wifisnitchctl field network.primary_interface_is_tunnel --format=lines"
 	local output = shell(command)
 
 	local result = {

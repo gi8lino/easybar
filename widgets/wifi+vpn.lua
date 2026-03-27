@@ -33,7 +33,7 @@ end
 local wifisnitchctl = resolve_wifisnitchctl()
 
 local function read_vpn_status()
-	local handle = io.popen(wifisnitchctl .. " get network.primary_interface_is_tunnel --format=lines 2>/dev/null")
+	local handle = io.popen(wifisnitchctl .. " field network.primary_interface_is_tunnel --format=lines 2>/dev/null")
 	if not handle then
 		return {
 			icon = "󰌾",

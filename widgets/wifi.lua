@@ -26,7 +26,7 @@ end
 
 local function get_network_fields()
 	local command =
-		"wifisnitchctl get wifi.ssid,network.primary_interface,network.primary_interface_is_tunnel --format=lines"
+		"wifisnitchctl field wifi.ssid,network.primary_interface,network.primary_interface_is_tunnel --format=lines"
 
 	local output = shell(command)
 

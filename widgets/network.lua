@@ -35,7 +35,7 @@ end
 local wifisnitchctl = resolve_wifisnitchctl()
 
 local function read_ssid()
-	local handle = io.popen(wifisnitchctl .. " get wifi.ssid --format=lines 2>/dev/null")
+	local handle = io.popen(wifisnitchctl .. " field wifi.ssid --format=lines 2>/dev/null")
 	if not handle then
 		return "offline"
 	end
