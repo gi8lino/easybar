@@ -24,6 +24,21 @@ This repository ships two config examples:
 Use `config.defaults.toml` when you want the complete reference.
 Use `config.minimal.toml` when you want a shorter starting point.
 
+## Logging
+
+EasyBar uses one shared log directory for all three processes:
+
+- `easybar.out`
+- `calendar-agent.out`
+- `network-agent.out`
+
+Configure that directory with:
+
+```toml
+[logging]
+directory = "~/.local/state/easybar"
+```
+
 ## Native groups
 
 EasyBar supports native built-in groups in `config.toml`.

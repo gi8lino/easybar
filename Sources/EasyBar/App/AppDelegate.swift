@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NSApp.setActivationPolicy(.accessory)
     Logger.configureFileLogging(
       enabled: Config.shared.loggingEnabled,
-      path: Config.shared.loggingPath
+      path: Logger.fileLoggingPath
     )
 
     logStartup()
@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     Config.shared.reload()
     Logger.configureFileLogging(
       enabled: Config.shared.loggingEnabled,
-      path: Config.shared.loggingPath
+      path: Logger.fileLoggingPath
     )
     barWindowController?.reloadLayout()
     WidgetRunner.shared.reload()
@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     Logger.info("lua path=\(Config.shared.luaPath)")
     Logger.info("watch config=\(Config.shared.watchConfigFile)")
     Logger.info(
-      "logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) path=\(Config.shared.loggingPath)"
+      "logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) directory=\(Config.shared.loggingDirectory) path=\(Logger.fileLoggingPath)"
     )
     Logger.info(
       "calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"

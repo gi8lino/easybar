@@ -4,9 +4,9 @@ lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for
 watch_config = false # Auto-reload EasyBar when config.toml changes.
 
 [logging]
-enabled = false # Mirrors stdout and stderr log lines into the configured file when true.
+enabled = false # Mirrors stdout and stderr log lines into per-process files when true.
 debug = false # Enables verbose debug logs without requiring EASYBAR_DEBUG in the service environment.
-path = "~/.local/state/easybar/easybar.out" # File path for mirrored EasyBar logs.
+directory = "~/.local/state/easybar" # Log directory. EasyBar writes easybar.out, calendar-agent.out, and network-agent.out here.
 
 [agents.calendar]
 enabled = true # Starts the calendar socket client in EasyBar and enables the calendar helper contract.

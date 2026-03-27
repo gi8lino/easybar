@@ -95,17 +95,35 @@ public func defaultFileLoggingEnabled() -> Bool {
 
 /// Returns the default log file path used by the EasyBar app.
 public func defaultEasyBarLogPath() -> String {
-  defaultLogPath(filename: "easybar.out")
+  defaultLogDirectoryPath()
+    .appendingPathComponent("easybar.out")
+    .path
 }
 
 /// Returns the default log file path used by the calendar agent.
 public func defaultCalendarAgentLogPath() -> String {
-  defaultLogPath(filename: "calendar-agent.out")
+  defaultLogDirectoryPath()
+    .appendingPathComponent("calendar-agent.out")
+    .path
 }
 
 /// Returns the default log file path used by the network agent.
 public func defaultNetworkAgentLogPath() -> String {
-  defaultLogPath(filename: "network-agent.out")
+  defaultLogDirectoryPath()
+    .appendingPathComponent("network-agent.out")
+    .path
+}
+
+/// Returns the configured log directory used by EasyBar processes.
+public func defaultLogDirectoryPath() -> URL {
+  if let configuredPath = configuredLoggingDirectoryValue(),
+    !configuredPath.isEmpty
+  {
+    return URL(fileURLWithPath: configuredPath)
+  }
+
+  return FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent(".local/state/easybar")
 }
 
 /// Returns the parent directory of the given Unix socket path.
@@ -253,7 +271,7 @@ private func configuredLoggingBoolValue(key: String) -> Bool? {
   return nil
 }
 
-private func configuredLoggingPathValue() -> String? {
+private func configuredLoggingDirectoryValue() -> String? {
   guard let text = configFileText() else { return nil }
 
   var inLoggingSection = false
@@ -268,7 +286,7 @@ private func configuredLoggingPathValue() -> String? {
       continue
     }
 
-    guard inLoggingSection, line.hasPrefix("path") else { continue }
+    guard inLoggingSection, line.hasPrefix("directory") else { continue }
     guard let equals = line.firstIndex(of: "=") else { continue }
 
     let rawValue = line[line.index(after: equals)...]
@@ -290,21 +308,6 @@ private func configuredLoggingPathValue() -> String? {
   }
 
   return nil
-}
-
-private func defaultLogPath(filename: String) -> String {
-  if let configuredPath = configuredLoggingPathValue(),
-    !configuredPath.isEmpty
-  {
-    return URL(fileURLWithPath: configuredPath)
-      .deletingLastPathComponent()
-      .appendingPathComponent(filename)
-      .path
-  }
-
-  return FileManager.default.homeDirectoryForCurrentUser
-    .appendingPathComponent(".local/state/easybar/\(filename)")
-    .path
 }
 
 private func parseBool(_ value: String) -> Bool? {

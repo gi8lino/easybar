@@ -11,10 +11,10 @@ final class Config {
 
   var widgetsPath: String = ""
     var luaPath: String = "/opt/homebrew/bin/lua"
-    var watchConfigFile: Bool = false
+  var watchConfigFile: Bool = false
   var loggingEnabled: Bool = false
   var loggingDebugEnabled: Bool = false
-  var loggingPath: String = ""
+  var loggingDirectory: String = ""
   var calendarAgentEnabled: Bool = true
   var calendarAgentSocketPath: String = ""
   var networkAgentEnabled: Bool = true
@@ -91,7 +91,7 @@ final class Config {
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
       .path
-    loggingPath = defaultEasyBarLogPath()
+    loggingDirectory = defaultLogDirectoryPath().path
     calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
     networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
         networkAgentRefreshIntervalSeconds = 60
@@ -134,7 +134,7 @@ final class Config {
       watchConfigFile: watchConfigFile,
       loggingEnabled: loggingEnabled,
       loggingDebugEnabled: loggingDebugEnabled,
-      loggingPath: loggingPath,
+      loggingDirectory: loggingDirectory,
       calendarAgentEnabled: calendarAgentEnabled,
       calendarAgentSocketPath: calendarAgentSocketPath,
       networkAgentEnabled: networkAgentEnabled,
@@ -165,7 +165,7 @@ final class Config {
     watchConfigFile = snapshot.watchConfigFile
     loggingEnabled = snapshot.loggingEnabled
     loggingDebugEnabled = snapshot.loggingDebugEnabled
-    loggingPath = snapshot.loggingPath
+    loggingDirectory = snapshot.loggingDirectory
     calendarAgentEnabled = snapshot.calendarAgentEnabled
     calendarAgentSocketPath = snapshot.calendarAgentSocketPath
     networkAgentEnabled = snapshot.networkAgentEnabled
