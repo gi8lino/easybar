@@ -7,6 +7,10 @@ final class AppController {
   private let socketServer = CalendarSocketServer()
 
   func start() {
+    AgentLogger.configureFileLogging(
+      enabled: AgentLogger.fileLoggingEnabled,
+      path: AgentLogger.fileLoggingPath
+    )
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -35,6 +39,9 @@ final class AppController {
       "config path=\(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/easybar/config.toml").path)"
     )
     AgentLogger.info("socket path=\(defaultCalendarAgentSocketPath())")
+    AgentLogger.info(
+      "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+    )
     AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
   }
 }

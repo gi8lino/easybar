@@ -7,6 +7,10 @@ final class AppController {
   private let socketServer = NetworkSocketServer()
 
   func start() {
+    AgentLogger.configureFileLogging(
+      enabled: AgentLogger.fileLoggingEnabled,
+      path: AgentLogger.fileLoggingPath
+    )
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -36,6 +40,9 @@ final class AppController {
     )
     AgentLogger.info(
       "socket path=\(defaultNetworkAgentSocketPath()) refresh_interval_seconds=\(defaultNetworkAgentRefreshIntervalSeconds())"
+    )
+    AgentLogger.info(
+      "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
     )
     AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
   }

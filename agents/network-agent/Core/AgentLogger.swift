@@ -5,8 +5,20 @@ enum AgentLogger {
     defaultDebugLoggingEnabled()
   }
 
+  static var fileLoggingEnabled: Bool {
+    defaultFileLoggingEnabled()
+  }
+
+  static var fileLoggingPath: String {
+    defaultNetworkAgentLogPath()
+  }
+
   static var debugEnabled: Bool {
     shared.debugEnabled
+  }
+
+  static func configureFileLogging(enabled: Bool, path: String) {
+    shared.configureFileLogging(enabled: enabled, path: path)
   }
 
   static func debug(_ message: String) {

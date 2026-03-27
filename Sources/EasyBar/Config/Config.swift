@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import SwiftUI
 
@@ -90,10 +91,7 @@ final class Config {
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
       .path
-    loggingPath =
-      FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".local/state/easybar/easybar.out")
-      .path
+    loggingPath = defaultEasyBarLogPath()
     calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
     networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
         networkAgentRefreshIntervalSeconds = 60

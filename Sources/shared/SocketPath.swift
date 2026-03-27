@@ -88,6 +88,26 @@ public func defaultDebugLoggingEnabled() -> Bool {
   return configuredLoggingBoolValue(key: "debug") ?? false
 }
 
+/// Returns whether file logging is enabled for EasyBar processes.
+public func defaultFileLoggingEnabled() -> Bool {
+  configuredLoggingBoolValue(key: "enabled") ?? false
+}
+
+/// Returns the default log file path used by the EasyBar app.
+public func defaultEasyBarLogPath() -> String {
+  defaultLogPath(filename: "easybar.out")
+}
+
+/// Returns the default log file path used by the calendar agent.
+public func defaultCalendarAgentLogPath() -> String {
+  defaultLogPath(filename: "calendar-agent.out")
+}
+
+/// Returns the default log file path used by the network agent.
+public func defaultNetworkAgentLogPath() -> String {
+  defaultLogPath(filename: "network-agent.out")
+}
+
 /// Returns the parent directory of the given Unix socket path.
 public func socketDirectoryPath(for socketPath: String) -> String {
   URL(fileURLWithPath: socketPath).deletingLastPathComponent().path
@@ -231,6 +251,60 @@ private func configuredLoggingBoolValue(key: String) -> Bool? {
   }
 
   return nil
+}
+
+private func configuredLoggingPathValue() -> String? {
+  guard let text = configFileText() else { return nil }
+
+  var inLoggingSection = false
+
+  for rawLine in text.components(separatedBy: .newlines) {
+    let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard !line.isEmpty, !line.hasPrefix("#") else { continue }
+
+    if line.hasPrefix("[") && line.hasSuffix("]") {
+      inLoggingSection = (line == "[logging]")
+      continue
+    }
+
+    guard inLoggingSection, line.hasPrefix("path") else { continue }
+    guard let equals = line.firstIndex(of: "=") else { continue }
+
+    let rawValue = line[line.index(after: equals)...]
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let unquoted =
+      rawValue
+      .split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+      .first?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+    guard unquoted.hasPrefix("\""), unquoted.hasSuffix("\""), unquoted.count >= 2 else {
+      continue
+    }
+
+    let start = unquoted.index(after: unquoted.startIndex)
+    let end = unquoted.index(before: unquoted.endIndex)
+    return NSString(string: String(unquoted[start..<end])).expandingTildeInPath
+  }
+
+  return nil
+}
+
+private func defaultLogPath(filename: String) -> String {
+  if let configuredPath = configuredLoggingPathValue(),
+    !configuredPath.isEmpty
+  {
+    return URL(fileURLWithPath: configuredPath)
+      .deletingLastPathComponent()
+      .appendingPathComponent(filename)
+      .path
+  }
+
+  return FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent(".local/state/easybar/\(filename)")
+    .path
 }
 
 private func parseBool(_ value: String) -> Bool? {

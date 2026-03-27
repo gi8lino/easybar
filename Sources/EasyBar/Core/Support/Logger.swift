@@ -20,6 +20,14 @@ enum Logger {
     shared.configureFileLogging(enabled: enabled, path: path)
   }
 
+  static var fileLoggingEnabled: Bool {
+    Config.shared.loggingEnabled
+  }
+
+  static var fileLoggingPath: String {
+    Config.shared.loggingPath
+  }
+
   /// Writes one debug message when debug logging is enabled.
   static func debug(_ msg: String) {
     shared.debug(msg)
