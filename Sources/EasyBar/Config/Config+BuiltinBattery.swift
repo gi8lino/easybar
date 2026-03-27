@@ -110,7 +110,7 @@ extension Config {
         enabled: false,
         position: .right,
         order: 20,
-        group: "system"
+        group: nil
       ),
       style: .init(
         icon: "🔋",

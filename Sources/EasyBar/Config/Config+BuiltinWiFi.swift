@@ -67,7 +67,7 @@ extension Config {
         enabled: false,
         position: .right,
         order: 30,
-        group: "system"
+        group: nil
       ),
       style: .init(
         icon: "",

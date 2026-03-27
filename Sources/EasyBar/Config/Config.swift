@@ -118,7 +118,7 @@ final class Config {
 
     builtinCPU = .default
     builtinBattery = .default
-        builtinGroups = [.systemDefault]
+        builtinGroups = []
     builtinSpaces = .default
     builtinFrontApp = .default
     builtinVolume = .default
