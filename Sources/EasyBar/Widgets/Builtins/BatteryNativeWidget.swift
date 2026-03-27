@@ -363,7 +363,7 @@ final class BatteryNativeWidget: NativeWidget {
       let isCharging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
       let charging = powerSourceState == kIOPSACPowerValue || isCharging
 
-      let text = config.showPercentage ? "\(percentage)%" : ""
+      let text = "\(percentage)%"
 
       return (
         placement,
@@ -478,7 +478,7 @@ final class BatteryNativeWidget: NativeWidget {
     mode: Config.BuiltinBatteryDisplayMode,
     text: String
   ) -> Bool {
-    guard isHovered, !text.isEmpty else { return false }
+    guard !text.isEmpty else { return false }
 
     switch mode {
     case .none:
@@ -486,11 +486,13 @@ final class BatteryNativeWidget: NativeWidget {
     case .tooltip:
       return false
     case .expand:
+      return isHovered
+    case .always:
       return true
     }
   }
 
-  /// Hover only changes the rendered node tree for inline expand mode.
+  /// Hover only changes the rendered node tree for inline hover-only mode.
   private func publishIfHoverAffectsLayout() {
     guard Config.shared.builtinBattery.displayMode == .expand else { return }
     publish()

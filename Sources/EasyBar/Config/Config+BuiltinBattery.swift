@@ -14,6 +14,7 @@ extension Config {
     case none
     case tooltip
     case expand
+    case always
   }
 
   /// Battery severity colors.
@@ -41,7 +42,6 @@ extension Config {
   struct BatteryBuiltinConfig {
 
     struct Content {
-      var showPercentage: Bool
       var unavailableText: String
       var iconSize: Double
       var colorMode: BuiltinBatteryColorMode
@@ -68,11 +68,6 @@ extension Config {
     var order: Int {
       get { placement.order }
       set { placement.order = newValue }
-    }
-
-    var showPercentage: Bool {
-      get { content.showPercentage }
-      set { content.showPercentage = newValue }
     }
 
     var unavailableText: String {
@@ -127,7 +122,6 @@ extension Config {
         opacity: 1
       ),
       content: .init(
-        showPercentage: true,
         unavailableText: "n/a",
         iconSize: 18,
         colorMode: .dynamic,
@@ -176,10 +170,6 @@ extension Config {
     )
 
     let content = BatteryBuiltinConfig.Content(
-      showPercentage: try optionalBool(
-        contentTable["show_percentage"],
-        path: "builtins.battery.content.show_percentage"
-      ) ?? builtinBattery.showPercentage,
       unavailableText: try optionalString(
         contentTable["unavailable_text"],
         path: "builtins.battery.content.unavailable_text"
