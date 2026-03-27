@@ -100,6 +100,8 @@ final class BarWindowController: NSWindowController {
   private func makeContextMenu() -> NSMenu {
     let menu = NSMenu()
 
+    menu.addItem(versionItem("EasyBar \(BuildInfo.appVersion)"))
+    menu.addItem(.separator())
     menu.addItem(actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))))
     menu.addItem(actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))))
     menu.addItem(.separator())
@@ -153,9 +155,23 @@ final class BarWindowController: NSWindowController {
 
   /// Creates one readable non-destructive status row.
   private func readOnlyItem(_ title: String) -> NSMenuItem {
-    let item = NSMenuItem(
-      title: title, action: #selector(ignoreMenuSelection(_:)), keyEquivalent: "")
-    item.target = self
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    item.isEnabled = false
+    item.attributedTitle = NSAttributedString(
+      string: title,
+      attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+    )
+    return item
+  }
+
+  /// Creates one inactive version row for the top of the menu.
+  private func versionItem(_ title: String) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    item.isEnabled = false
+    item.attributedTitle = NSAttributedString(
+      string: title,
+      attributes: [.foregroundColor: NSColor.tertiaryLabelColor]
+    )
     return item
   }
 
@@ -206,9 +222,6 @@ final class BarWindowController: NSWindowController {
     openSettingsURL(
       "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices")
   }
-
-  /// Ignores selection on read-only status rows.
-  @objc private func ignoreMenuSelection(_ sender: Any?) {}
 
   /// Opens one System Settings deep link when available.
   private func openSettingsURL(_ value: String) {

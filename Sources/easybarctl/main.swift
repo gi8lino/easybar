@@ -34,6 +34,7 @@ struct AppContext {
 
 enum AppError: Error {
   case showUsage
+  case showVersion
   case missingSocketValue(String)
   case emptySocketValue
   case duplicateCommand
@@ -74,6 +75,7 @@ func usage() {
 
   lines.append(formatOption("--socket, -s <path>", "Override socket path"))
   lines.append(formatOption("--debug, -d", "Enable debug output"))
+  lines.append(formatOption("--version, -v", "Show the easybarctl version"))
   lines.append(formatOption("--help, -h", "Show this help"))
 
   fputs(lines.joined(separator: "\n") + "\n", stderr)
@@ -91,6 +93,10 @@ func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
 
     if arg == "--help" || arg == "-h" {
       throw AppError.showUsage
+    }
+
+    if arg == "--version" || arg == "-v" {
+      throw AppError.showVersion
     }
 
     if arg == "--debug" || arg == "-d" {
@@ -194,6 +200,9 @@ func run() -> Int32 {
   } catch AppError.showUsage {
     usage()
     return 1
+  } catch AppError.showVersion {
+    fputs("easybarctl \(BuildInfo.appVersion)\n", stdout)
+    return 0
   } catch AppError.missingSocketValue(let flag) {
     fputs("easybarctl: missing value for \(flag)\n", stderr)
   } catch AppError.emptySocketValue {
