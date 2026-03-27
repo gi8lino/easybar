@@ -1,7 +1,7 @@
 [app]
 widgets_dir = "~/.config/easybar/widgets" # Folder that contains your custom Lua widget files.
-lua_path = "/usr/local/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
-watch_config = true # Auto-reload EasyBar when config.toml changes.
+lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
+watch_config = false # Auto-reload EasyBar when config.toml changes.
 
 [logging]
 enabled = false # Mirrors stdout and stderr log lines into the configured file when true.
@@ -15,19 +15,19 @@ socket_path = "/tmp/EasyBar/calendar-agent.sock" # Unix socket path used by Easy
 [agents.network]
 enabled = true # Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.
 socket_path = "/tmp/EasyBar/network-agent.sock" # Unix socket path used by EasyBar and the network agent.
-refresh_interval_seconds = 15 # Periodic fallback refresh interval for Wi-Fi state; set to 0 to disable polling.
+refresh_interval_seconds = 60 # Periodic fallback refresh interval for Wi-Fi state; set to 0 to disable polling.
 
 [bar]
 height = 32 # Total height of the bar.
 padding_x = 10 # Horizontal left and right padding inside the bar.
-extend_behind_notch = false # When true, the bar window spans the full top edge, including behind the notch.
+extend_behind_notch = true # When true, the bar window spans the full top edge, including behind the notch.
 
 [bar.colors]
 background = "#111111" # Bar background color.
 border = "#222222" # Bottom border color of the bar.
 
 [builtins.spaces]
-enabled = true # Shows or hides the built-in spaces widget.
+enabled = false # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
 
@@ -51,7 +51,7 @@ hide_empty = true # Hides spaces with no apps.
 padding_x = 12 # Horizontal inner padding inside each space pill.
 padding_y = 2 # Vertical inner padding inside each space pill.
 margin_x = 4 # Horizontal outer margin around the whole spaces row.
-margin_y = 8 # Vertical outer margin around the whole spaces row.
+margin_y = 4 # Vertical outer margin around the whole spaces row.
 corner_radius = 8 # Corner radius of inactive space pills.
 focused_corner_radius = 8 # Corner radius of the focused space pill.
 focused_scale = 1.0 # Scale multiplier applied to the focused space pill.
@@ -88,7 +88,7 @@ inactive_border = "#00000000" # Border color of inactive space pills.
 focused_app_border = "#00000000" # Border color for the focused app icon in spaces.
 
 [builtins.front_app]
-enabled = true # Shows or hides the front-app widget.
+enabled = false # Shows or hides the front-app widget.
 position = "left" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
 
@@ -114,7 +114,7 @@ icon_size = 14 # Display size of the app icon.
 icon_corner_radius = 4 # Corner radius of the displayed app icon.
 
 [builtins.cpu]
-enabled = true # Shows or hides the CPU widget.
+enabled = false # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 10 # Sort order among widgets in the same position.
 
@@ -127,10 +127,10 @@ background_color = "#1a1a1a" # Background color of the native group.
 border_color = "#333333" # Border color of the native group.
 border_width = 1 # Border width of the native group.
 corner_radius = 8 # Corner radius of the native group.
-margin_x = 2 # Horizontal outer margin around the native group.
-margin_y = 2 # Vertical outer margin around the native group.
+margin_x = 0 # Horizontal outer margin around the native group.
+margin_y = 0 # Vertical outer margin around the native group.
 padding_x = 8 # Horizontal inner padding of the native group.
-padding_y = 4 # Vertical inner padding of the native group.
+padding_y = 2 # Vertical inner padding of the native group.
 spacing = 6 # Gap between native children in the group.
 opacity = 1 # Overall opacity of the native group.
 
@@ -155,7 +155,7 @@ line_width = 1.8 # Stroke width of the sparkline line.
 color = "#a6da95" # Color of the sparkline and label.
 
 [builtins.battery]
-enabled = true # Shows or hides the battery widget.
+enabled = false # Shows or hides the battery widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
 group = "system" # Optional native group id that should contain this widget.
@@ -163,14 +163,14 @@ group = "system" # Optional native group id that should contain this widget.
 [builtins.battery.style]
 icon = "🔋" # Fallback/default battery icon.
 text_color = "#ffffff" # Used when color_mode is fixed or data is unavailable.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
-border_width = 1 # Border width of the widget.
+background_color = "#00000000" # Background color of the widget.
+border_color = "#00000000" # Border color of the widget.
+border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
-padding_y = 4 # Vertical inner padding of the widget.
+padding_y = 0 # Vertical inner padding of the widget.
 spacing = 10 # Gap between the battery icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
@@ -191,10 +191,10 @@ critical = "#ed8796" # Color for 0-29%.
 [builtins.battery.popup]
 text_color = "#ffffff" # Text color used in the tooltip popup.
 background_color = "#111111" # Background color of the tooltip popup.
-border_color = "#555555" # Border color of the tooltip popup.
+border_color = "#444444" # Border color of the tooltip popup.
 border_width = 1 # Border width of the tooltip popup.
 corner_radius = 8 # Corner radius of the tooltip popup.
-padding_x = 10 # Horizontal inner padding of the tooltip popup.
+padding_x = 8 # Horizontal inner padding of the tooltip popup.
 padding_y = 6 # Vertical inner padding of the tooltip popup.
 margin_x = 0 # Horizontal outer margin around the tooltip popup.
 margin_y = 8 # Vertical outer margin around the tooltip popup.
@@ -205,7 +205,7 @@ position = "right" # Places the widget on the left, center, or right side.
 order = 20 # Sort order among widgets in the same position.
 
 [builtins.wifi]
-enabled = true # Shows or hides the built-in Wi-Fi widget.
+enabled = false # Shows or hides the built-in Wi-Fi widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 30 # Sort order among widgets in the same position.
 group = "system" # Optional native group id that should contain this widget.
@@ -213,14 +213,14 @@ group = "system" # Optional native group id that should contain this widget.
 [builtins.wifi.style]
 icon = "" # Unused fallback icon for the Wi-Fi root widget.
 text_color = "#ffffff" # Default text color for Wi-Fi text.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
-border_width = 1 # Border width of the widget.
+background_color = "#00000000" # Background color of the widget.
+border_color = "#00000000" # Border color of the widget.
+border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget.
 margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
-padding_y = 4 # Vertical inner padding of the widget.
+padding_y = 0 # Vertical inner padding of the widget.
 spacing = 6 # Gap between signal bars and optional hover label.
 opacity = 1 # Overall opacity of the widget.
 
@@ -260,7 +260,7 @@ expand_to_slider_on_hover = true # Expands from compact mode to slider mode on h
 width = 80 # Width of the slider when shown.
 
 [builtins.calendar]
-enabled = true # Shows or hides the calendar widget.
+enabled = false # Shows or hides the calendar widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 60 # Sort order among widgets in the same position.
 
@@ -308,8 +308,8 @@ margin_x = 8 # Horizontal outer margin around the whole popup.
 margin_y = 8 # Vertical outer margin around the whole popup.
 spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
-show_calendar_name = false # Prefixes each event with its calendar name when available.
-use_calendar_colors = false # Colors each event line with its source calendar color when available.
+show_calendar_name = true # Prefixes each event with its calendar name when available.
+use_calendar_colors = true # Colors each event line with its source calendar color when available.
 
 [builtins.calendar.popup.birthdays]
 title_color = "#89CFEF" # Section title color for birthdays.

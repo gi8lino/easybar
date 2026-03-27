@@ -249,8 +249,8 @@ extension Config {
         itemIndent: 8,
         marginX: 8,
         marginY: 8,
-        showCalendarName: false,
-        useCalendarColors: false,
+        showCalendarName: true,
+        useCalendarColors: true,
         birthdays: .init(
           titleColorHex: "#89CFEF",
           itemColorHex: "#7285A5",

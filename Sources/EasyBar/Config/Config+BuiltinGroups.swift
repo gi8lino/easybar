@@ -8,6 +8,31 @@ extension Config {
     var id: String
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
+
+    /// Default shared native system group used by battery and Wi-Fi.
+    static let systemDefault = BuiltinGroupConfig(
+      id: "system",
+      placement: .init(
+        enabled: true,
+        position: .right,
+        order: 20,
+        group: nil
+      ),
+      style: .init(
+        icon: "",
+        textColorHex: nil,
+        backgroundColorHex: "#1a1a1a",
+        borderColorHex: "#333333",
+        borderWidth: 1,
+        cornerRadius: 8,
+        marginX: 0,
+        marginY: 0,
+        paddingX: 8,
+        paddingY: 2,
+        spacing: 6,
+        opacity: 1
+      )
+    )
   }
 
   /// Parses the built-in native groups.

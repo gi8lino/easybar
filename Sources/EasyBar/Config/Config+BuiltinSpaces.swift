@@ -115,7 +115,7 @@ extension Config {
         paddingX: 12,
         paddingY: 2,
         marginX: 4,
-        marginY: 8,
+        marginY: 4,
         cornerRadius: 8,
         focusedCornerRadius: 8,
         focusedScale: 1.0,

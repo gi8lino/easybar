@@ -109,19 +109,20 @@ extension Config {
       placement: .init(
         enabled: false,
         position: .right,
-        order: 20
+        order: 20,
+        group: "system"
       ),
       style: .init(
         icon: "🔋",
         textColorHex: "#ffffff",
-        backgroundColorHex: "#1a1a1a",
-        borderColorHex: "#333333",
-        borderWidth: 1,
+        backgroundColorHex: "#00000000",
+        borderColorHex: "#00000000",
+        borderWidth: 0,
         cornerRadius: 8,
         marginX: 0,
         marginY: 0,
         paddingX: 8,
-        paddingY: 4,
+        paddingY: 0,
         spacing: 10,
         opacity: 1
       ),
