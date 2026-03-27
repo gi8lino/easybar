@@ -22,13 +22,28 @@ struct ParsedArguments {
 }
 
 struct AppContext {
-  let debugEnabled: Bool
+  private let logger: ProcessLogger
+
+  init(debugEnabled: Bool) {
+    logger = ProcessLogger(label: "easybarctl") {
+      let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
+      return debugEnabled || envEnabled
+    }
+  }
 
   /// Writes one debug line when CLI debug logging is enabled.
   func debug(_ message: String) {
-    let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
-    guard debugEnabled || envEnabled else { return }
-    fputs("easybarctl: \(message)\n", stderr)
+    logger.debug(message)
+  }
+
+  /// Writes one plain error line without structured logger formatting.
+  func printError(_ message: String) {
+    logger.writeRaw("easybarctl: \(message)", to: stderr)
+  }
+
+  /// Writes one plain version line.
+  func printVersion() {
+    logger.writeRaw("easybarctl \(BuildInfo.appVersion)", to: stdout)
   }
 }
 
@@ -192,6 +207,11 @@ func sendCommand(_ command: String, to socketPath: String, context: AppContext) 
 
 /// Runs the CLI command flow and returns the process exit code.
 func run() -> Int32 {
+  let context = AppContext(
+    debugEnabled: CommandLine.arguments.contains("--debug")
+      || CommandLine.arguments.contains("-d")
+  )
+
   do {
     let parsed = try parseArguments(CommandLine.arguments)
     let context = AppContext(debugEnabled: parsed.debugEnabled)
@@ -201,20 +221,20 @@ func run() -> Int32 {
     usage()
     return 1
   } catch AppError.showVersion {
-    fputs("easybarctl \(BuildInfo.appVersion)\n", stdout)
+    context.printVersion()
     return 0
   } catch AppError.missingSocketValue(let flag) {
-    fputs("easybarctl: missing value for \(flag)\n", stderr)
+    context.printError("missing value for \(flag)")
   } catch AppError.emptySocketValue {
-    fputs("easybarctl: missing value for --socket\n", stderr)
+    context.printError("missing value for --socket")
   } catch AppError.duplicateCommand {
-    fputs("easybarctl: only one command flag may be specified\n", stderr)
+    context.printError("only one command flag may be specified")
   } catch AppError.unknownArgument(let arg) {
-    fputs("easybarctl: unknown argument '\(arg)'\n", stderr)
+    context.printError("unknown argument '\(arg)'")
   } catch AppError.missingCommand {
-    fputs("easybarctl: no command flag provided\n", stderr)
+    context.printError("no command flag provided")
   } catch {
-    fputs("easybarctl: \(error)\n", stderr)
+    context.printError("\(error)")
   }
 
   usage()

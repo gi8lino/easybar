@@ -1,40 +1,27 @@
 import EasyBarShared
-import Foundation
 
 enum AgentLogger {
-  private static let formatter: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "HH:mm:ss.SSS"
-    return f
-  }()
-  private static let lock = NSLock()
-
-  static var debugEnabled: Bool {
+  private static let shared = ProcessLogger(label: "easybar-network-agent") {
     defaultDebugLoggingEnabled()
   }
 
+  static var debugEnabled: Bool {
+    shared.debugEnabled
+  }
+
   static func debug(_ message: String) {
-    guard debugEnabled else { return }
-    write(level: "DEBUG", message: message, stream: stdout)
+    shared.debug(message)
   }
 
   static func info(_ message: String) {
-    write(level: "INFO", message: message, stream: stdout)
+    shared.info(message)
   }
 
   static func warn(_ message: String) {
-    write(level: "WARN", message: message, stream: stderr)
+    shared.warn(message)
   }
 
   static func error(_ message: String) {
-    write(level: "ERROR", message: message, stream: stderr)
-  }
-
-  private static func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
-    lock.lock()
-    defer { lock.unlock() }
-    fputs(
-      "[\(formatter.string(from: Date()))] easybar-network-agent [\(level)] \(message)\n", stream)
-    fflush(stream)
+    shared.error(message)
   }
 }
