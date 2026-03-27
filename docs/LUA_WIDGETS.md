@@ -330,7 +330,7 @@ Native built-ins can also be attached under a native group in `config.toml`:
 ```toml
 [builtins.groups.system]
 position = "right"
-order = 20
+order = 40
 
 [builtins.groups.system.style]
 background_color = "#1a1a1a"

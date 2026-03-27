@@ -106,20 +106,6 @@ A small example:
 [builtins.spaces]
 enabled = true
 
-[builtins.groups.system]
-position = "right"
-order = 20
-
-[builtins.groups.system.style]
-
-[builtins.battery]
-enabled = true
-group = "system"
-
-[builtins.wifi]
-enabled = true
-group = "system"
-
 [builtins.calendar]
 enabled = true
 ```

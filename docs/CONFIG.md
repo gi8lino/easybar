@@ -55,7 +55,7 @@ Example:
 ```toml
 [builtins.groups.system]
 position = "right"
-order = 20
+order = 40
 
 [builtins.groups.system.style]
 

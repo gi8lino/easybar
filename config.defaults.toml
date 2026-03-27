@@ -122,7 +122,7 @@ order = 10 # Sort order among widgets in the same position.
 #
 #[builtins.groups.system]
 #position = "right" # Places the native group on the left, center, or right side.
-#order = 20 # Sort order among widgets in the same position.
+#order = 40 # Sort order among widgets in the same position.
 #
 #[builtins.groups.system.style]
 #background_color = "#1a1a1a" # Background color of the native group.

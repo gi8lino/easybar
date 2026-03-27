@@ -25,7 +25,7 @@ extension Config {
         fallback: .init(
           enabled: true,
           position: .right,
-          order: 0,
+          order: 40,
           group: nil
         )
       )
