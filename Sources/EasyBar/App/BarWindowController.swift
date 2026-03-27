@@ -1,4 +1,5 @@
 import AppKit
+import EasyBarShared
 import SwiftUI
 
 /// Hosts the top-level borderless bar window.
