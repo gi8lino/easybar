@@ -87,6 +87,28 @@ private enum AppError: Error {
 }
 
 private enum CLI {
+  static let socketOption = CLIOption(
+    flag: "--socket",
+    short: "-s",
+    description: "Override socket path",
+    placeholder: "path"
+  )
+  static let debugOption = CLIOption(
+    flag: "--debug",
+    short: "-d",
+    description: "Enable debug output"
+  )
+  static let versionOption = CLIOption(
+    flag: "--version",
+    short: "-v",
+    description: "Show the easybarctl version"
+  )
+  static let helpOption = CLIOption(
+    flag: "--help",
+    short: "-h",
+    description: "Show this help"
+  )
+
   static let cmdOptions: [CLIOption] = [
     .init(
       flag: "--workspace-changed",
@@ -111,37 +133,15 @@ private enum CLI {
   ]
 
   static let appOptions: [CLIOption] = [
-    .init(
-      flag: "--socket",
-      short: "-s",
-      description: "Override socket path",
-      placeholder: "path"
-    ),
-    .init(
-      flag: "--debug",
-      short: "-d",
-      description: "Enable debug output"
-    ),
-    .init(
-      flag: "--version",
-      short: "-v",
-      description: "Show the easybarctl version"
-    ),
-    .init(
-      flag: "--help",
-      short: "-h",
-      description: "Show this help"
-    ),
+    socketOption,
+    debugOption,
+    versionOption,
+    helpOption,
   ]
 
   /// Formats one help row with aligned option text.
   static func formatOption(_ option: String, _ description: String) -> String {
     "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
-  }
-
-  /// Returns all options in help-display order.
-  static var options: [CLIOption] {
-    cmdOptions + appOptions
   }
 
   /// Returns the rendered text for one option, including short flag and placeholder.
@@ -159,10 +159,21 @@ private enum CLI {
     return text
   }
 
-  /// Returns the rendered placeholder suffix for one option.
-  static func placeholderText(for option: CLIOption) -> String {
-    guard let placeholder = option.placeholder else { return "" }
-    return " <\(placeholder)>"
+  /// Returns whether one argument matches an option's long or short flag.
+  static func matches(_ option: CLIOption, argument: String) -> Bool {
+    option.flag == argument || option.short == argument
+  }
+
+  /// Returns the inline `--flag=value` payload when present.
+  static func inlineValue(for option: CLIOption, argument: String) -> String? {
+    let prefix = "\(option.flag)="
+    guard argument.hasPrefix(prefix) else { return nil }
+    return String(argument.dropFirst(prefix.count))
+  }
+
+  /// Returns the command string associated with one argument when it is a command option.
+  static func command(for argument: String) -> String? {
+    cmdOptions.first { matches($0, argument: argument) }?.command
   }
 
   /// Writes one plain error line.
@@ -177,27 +188,23 @@ private enum CLI {
 
   /// Writes usage text.
   static func printUsage() {
-    let commandList = cmdOptions.map(\.flag).joined(separator: " | ")
-    let optionLines = options.map {
+    let commandLines = cmdOptions.map {
       formatOption(optionText(for: $0), $0.description)
     }
-
-    let usageLong = appOptions.map { option in
-      option.flag + placeholderText(for: option)
-    }.joined(separator: " ")
-    let usageShort = appOptions.compactMap { option in
-      guard let short = option.short else { return nil }
-      return short + placeholderText(for: option)
-    }.joined(separator: " ")
+    let appOptionLines = appOptions.map {
+      formatOption(optionText(for: $0), $0.description)
+    }
 
     let lines: [String] =
       [
         "usage:",
-        "  easybarctl <\(commandList)> [\(usageLong)]",
-        "  easybarctl <\(commandList)> [\(usageShort)]",
+        "  easybarctl <command> [options]",
+        "",
+        "commands:",
+      ] + commandLines + [
         "",
         "options:",
-      ] + optionLines
+      ] + appOptionLines
 
     fputs(lines.joined(separator: "\n") + "\n", stderr)
   }
@@ -213,21 +220,31 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   while i < arguments.count {
     let arg = arguments[i]
 
-    if arg == "--help" || arg == "-h" {
+    if CLI.matches(CLI.helpOption, argument: arg) {
       throw AppError.showUsage
     }
 
-    if arg == "--version" || arg == "-v" {
+    if CLI.matches(CLI.versionOption, argument: arg) {
       throw AppError.showVersion
     }
 
-    if arg == "--debug" || arg == "-d" {
+    if CLI.matches(CLI.debugOption, argument: arg) {
       debugEnabled = true
       i += 1
       continue
     }
 
-    if arg == "--socket" || arg == "-s" {
+    if let value = CLI.inlineValue(for: CLI.socketOption, argument: arg) {
+      guard !value.isEmpty else {
+        throw AppError.message("missing value for \(CLI.socketOption.flag)")
+      }
+
+      socketPath = value
+      i += 1
+      continue
+    }
+
+    if CLI.matches(CLI.socketOption, argument: arg) {
       i += 1
       guard i < arguments.count else {
         throw AppError.message("missing value for \(arg)")
@@ -242,24 +259,11 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
       continue
     }
 
-    if arg.hasPrefix("--socket=") {
-      socketPath = String(arg.dropFirst("--socket=".count))
-      guard !socketPath.isEmpty else {
-        throw AppError.message("missing value for --socket")
-      }
-
-      i += 1
-      continue
-    }
-
-    if let match = CLI.cmdOptions.first(where: { $0.flag == arg || $0.short == arg }) {
+    if let command = CLI.command(for: arg) {
       guard selectedCommand == nil else {
         throw AppError.message("only one command flag may be specified")
       }
 
-      guard let command = match.command else {
-        throw AppError.message("unknown argument '\(arg)'")
-      }
       selectedCommand = command
       i += 1
       continue
