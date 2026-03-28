@@ -13,9 +13,8 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     super.init()
   }
 
-  /// Subscribes to Wi-Fi SSID changes using CoreWLAN event monitoring.
+  /// Starts Wi-Fi SSID change observation.
   func subscribeWifi() {
-
     let client = CWWiFiClient.shared()
     client.delegate = self
 
@@ -28,9 +27,8 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     }
   }
 
-  /// Subscribes to general network reachability changes.
+  /// Starts general network reachability observation.
   func subscribeNetwork() {
-
     var context = SCNetworkReachabilityContext(
       version: 0,
       info: nil,
@@ -63,6 +61,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     Logger.debug("subscribed network_change")
   }
 
+  /// Stops Wi-Fi and network reachability observation.
   func stopAll() {
     if let reachability {
       SCNetworkReachabilitySetDispatchQueue(reachability, nil)
@@ -80,6 +79,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     wifiClient = nil
   }
 
+  /// Handles CoreWLAN SSID change callbacks.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
     EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
   }

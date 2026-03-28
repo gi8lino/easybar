@@ -8,8 +8,8 @@ final class TimerEvents {
 
   private init() {}
 
+  /// Starts the minute timer used by Lua `minute_tick` subscriptions.
   func startMinuteTimer() {
-
     let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
       EventBus.shared.emit(.minuteTick)
     }
@@ -19,8 +19,8 @@ final class TimerEvents {
     Logger.debug("minute timer started")
   }
 
+  /// Starts the second timer used by Lua `second_tick` and `routine` subscriptions.
   func startSecondTimer() {
-
     let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
       EventBus.shared.emit(.secondTick)
     }
@@ -30,6 +30,7 @@ final class TimerEvents {
     Logger.debug("second timer started")
   }
 
+  /// Stops and clears all active timers.
   func stopAll() {
     for timer in timers {
       timer.invalidate()

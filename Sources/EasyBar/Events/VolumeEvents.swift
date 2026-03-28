@@ -16,6 +16,7 @@ final class VolumeEvents {
 
   private init() {}
 
+  /// Starts observation for output-device, volume, and mute changes.
   func subscribeVolume() {
     guard !isSubscribed else { return }
 
@@ -27,6 +28,7 @@ final class VolumeEvents {
     Logger.debug("subscribed mute_change")
   }
 
+  /// Stops all active audio listeners and clears cached device state.
   func stopAll() {
     uninstallDeviceListeners()
     uninstallDefaultOutputDeviceListener()
@@ -36,6 +38,7 @@ final class VolumeEvents {
     lastMutedState = nil
   }
 
+  /// Starts listening for default output device changes.
   private func installDefaultOutputDeviceListener() {
     guard defaultDeviceListener == nil else { return }
 
@@ -46,6 +49,7 @@ final class VolumeEvents {
     )
 
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+      // Device changes can invalidate all per-device listeners, so rebuild them first.
       self?.refreshDeviceSubscription()
       EventBus.shared.emit(.volumeChange)
     }
@@ -64,6 +68,7 @@ final class VolumeEvents {
     }
   }
 
+  /// Removes the default output device listener.
   private func uninstallDefaultOutputDeviceListener() {
     guard let block = defaultDeviceListener else { return }
 
@@ -87,6 +92,7 @@ final class VolumeEvents {
     defaultDeviceListener = nil
   }
 
+  /// Rebinds per-device listeners to the current default output device.
   private func refreshDeviceSubscription() {
     let newDeviceID = defaultOutputDeviceID()
 
@@ -104,10 +110,12 @@ final class VolumeEvents {
     lastMutedState = readMutedState(for: newDeviceID)
     installDeviceListeners()
 
+    // Re-emit current state after switching devices so widgets refresh immediately.
     EventBus.shared.emit(.volumeChange)
     EventBus.shared.emit(.muteChange, muted: lastMutedState ?? false)
   }
 
+  /// Starts volume and mute listeners for the current output device.
   private func installDeviceListeners() {
     guard let deviceID = currentDeviceID else { return }
 
@@ -145,6 +153,7 @@ final class VolumeEvents {
 
       guard let self, let deviceID = self.currentDeviceID else { return }
 
+      // Only emit mute changes when the effective state actually changed.
       let muted = self.readMutedState(for: deviceID)
       if self.lastMutedState != muted {
         self.lastMutedState = muted
@@ -166,6 +175,7 @@ final class VolumeEvents {
     }
   }
 
+  /// Removes all listeners from the current output device.
   private func uninstallDeviceListeners() {
     guard let deviceID = currentDeviceID else { return }
 
@@ -212,6 +222,7 @@ final class VolumeEvents {
     }
   }
 
+  /// Returns the current default output device id.
   private func defaultOutputDeviceID() -> AudioDeviceID? {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
@@ -239,6 +250,7 @@ final class VolumeEvents {
     return deviceID
   }
 
+  /// Returns the current mute state for one output device.
   private func readMutedState(for deviceID: AudioDeviceID) -> Bool {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyMute,

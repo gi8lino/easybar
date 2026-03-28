@@ -10,6 +10,7 @@ final class PowerEvents {
 
   private init() {}
 
+  /// Starts power-source observation for power and charging events.
   func subscribePowerSource() {
     guard runLoopSource == nil else { return }
 
@@ -36,6 +37,7 @@ final class PowerEvents {
     Logger.debug("subscribed charging_state_change")
   }
 
+  /// Stops all power-source observation.
   func stopAll() {
     guard let runLoopSource else { return }
 
@@ -49,6 +51,7 @@ final class PowerEvents {
     self.lastChargingState = nil
   }
 
+  /// Emits `charging_state_change` only when the effective charging state flips.
   private func handlePowerSourceCallback() {
     let newState = readChargingState()
 
@@ -58,6 +61,7 @@ final class PowerEvents {
     }
   }
 
+  /// Returns whether the current active power source is charging.
   private func readChargingState() -> Bool {
     guard
       let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
@@ -75,6 +79,7 @@ final class PowerEvents {
         continue
       }
 
+      // AC power and explicit charging both count as "charging" for widgets.
       let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
       let isCharging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
 

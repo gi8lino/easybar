@@ -6,6 +6,7 @@ final class EventManager {
 
   private var activeSubscriptions = Set<String>()
 
+  /// Starts only the native event sources required by the current widget subscriptions.
   func start(subscriptions: Set<String>) {
     stopAll()
 
@@ -58,9 +59,9 @@ final class EventManager {
     if subscriptions.contains("second_tick") {
       TimerEvents.shared.startSecondTimer()
     }
-
   }
 
+  /// Stops all active native event sources.
   func stopAll() {
     TimerEvents.shared.stopAll()
     SystemEvents.shared.stopAll()
