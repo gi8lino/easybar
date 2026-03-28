@@ -39,14 +39,14 @@ private struct AppController {
 private struct CLIOption {
   let flag: String
   let short: String?
-  let command: String?
+  let command: IPCCommand?
   let description: String
   let placeholder: String?
 
   init(
     flag: String,
     short: String? = nil,
-    command: String? = nil,
+    command: IPCCommand? = nil,
     description: String,
     placeholder: String? = nil
   ) {
@@ -59,7 +59,7 @@ private struct CLIOption {
 }
 
 private struct ParsedArguments {
-  let command: String
+  let command: IPCCommand
   let socketPath: String
   let debugEnabled: Bool
 }
@@ -112,22 +112,22 @@ private enum CLI {
   static let cmdOptions: [CLIOption] = [
     .init(
       flag: "--workspace-changed",
-      command: "workspace_changed",
+      command: .workspaceChanged,
       description: "Send workspace_changed"
     ),
     .init(
       flag: "--focus-changed",
-      command: "focus_changed",
+      command: .focusChanged,
       description: "Send focus_changed"
     ),
     .init(
       flag: "--refresh",
-      command: "refresh",
+      command: .refresh,
       description: "Send refresh"
     ),
     .init(
       flag: "--reload-config",
-      command: "reload_config",
+      command: .reloadConfig,
       description: "Send reload_config"
     ),
   ]
@@ -172,7 +172,7 @@ private enum CLI {
   }
 
   /// Returns the command string associated with one argument when it is a command option.
-  static func command(for argument: String) -> String? {
+  static func command(for argument: String) -> IPCCommand? {
     cmdOptions.first { matches($0, argument: argument) }?.command
   }
 
@@ -212,7 +212,7 @@ private enum CLI {
 
 /// Parses CLI arguments into one validated command request.
 private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
-  var selectedCommand: String?
+  var selectedCommand: IPCCommand?
   var socketPath = defaultSocketPath()
   var debugEnabled = false
 
@@ -283,9 +283,9 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   )
 }
 
-/// Connects to the EasyBar socket and sends one command string.
-private func sendCommand(_ command: String, to socketPath: String, context: AppContext) throws {
-  context.debug("sending command '\(command)' to \(socketPath)")
+/// Connects to the EasyBar socket and sends one IPC command.
+private func sendCommand(_ command: IPCCommand, to socketPath: String, context: AppContext) throws {
+  context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
@@ -309,7 +309,7 @@ private func sendCommand(_ command: String, to socketPath: String, context: AppC
 
   context.debug("connected to socket")
 
-  let writeResult = command.withCString {
+  let writeResult = command.rawValue.withCString {
     write(fd, $0, strlen($0))
   }
 
