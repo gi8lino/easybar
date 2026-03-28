@@ -84,7 +84,7 @@ EasyBar uses two small helper agents:
 
 This keeps permission-sensitive APIs out of the main UI process and makes those widgets more reliable.
 
-More details live in [docs/AGENTS.md](/Users/qiwi/code/easybar/docs/AGENTS.md).
+More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
 ## Configuration
 
@@ -112,20 +112,20 @@ enabled = true
 
 The repository includes two config examples:
 
-- [config.defaults.toml](/Users/qiwi/code/easybar/config.defaults.toml)
+- [config.defaults.toml](./config.defaults.toml)
   full reference file with the current defaults and supported sections
-- [config.minimal.toml](/Users/qiwi/code/easybar/config.minimal.toml)
+- [config.minimal.toml](./config.minimal.toml)
   smaller starter example with a native `system` group
 
-Config details, native groups, and example layouts are documented in [docs/CONFIG.md](/Users/qiwi/code/easybar/docs/CONFIG.md).
+Config details, native groups, and example layouts are documented in [docs/CONFIG.md](./docs/CONFIG.md).
 
 ## Docs
 
-- [docs/CONFIG.md](/Users/qiwi/code/easybar/docs/CONFIG.md)
+- [docs/CONFIG.md](./docs/CONFIG.md)
   config structure, native groups, and box-model rules
-- [docs/AGENTS.md](/Users/qiwi/code/easybar/docs/AGENTS.md)
+- [docs/AGENTS.md](./docs/AGENTS.md)
   calendar and network agents, permissions, and how EasyBar uses them
-- [docs/LUA_WIDGETS.md](/Users/qiwi/code/easybar/docs/LUA_WIDGETS.md)
+- [docs/LUA_WIDGETS.md](./docs/LUA_WIDGETS.md)
   Lua widget authoring and interaction model
 
 ## License

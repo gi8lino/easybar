@@ -14,17 +14,13 @@ Interaction is node-based.
 
 ## Editor support
 
-If you edit widgets in `~/.config/easybar/widgets`, add an `init.lua` there.
-
-EasyBar installs a bundled `easybar_api.lua` into:
+EasyBar installs a bundled LuaLS stub into:
 
 - `~/.local/share/easybar/easybar_api.lua`
 
-This repo includes an example in:
+If your editor uses LuaLS, add a `.luarc.json` in the workspace where you edit widgets.
 
-- `widgets/init.lua`
-
-It loads that shipped stub, so LuaLS can use it for:
+That gives you:
 
 - no `unknown global 'easybar'` warning
 - hover documentation
@@ -32,12 +28,26 @@ It loads that shipped stub, so LuaLS can use it for:
 
 Suggested setup:
 
-1. copy `widgets/init.lua` to `~/.config/easybar/widgets/init.lua`
-2. start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`
-3. open `~/.config/easybar/widgets` as your editor workspace
+1. start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`
+2. add `~/.config/easybar/widgets/.luarc.json`
+3. open `~/.config/easybar/widgets` or `~/.config` as your editor workspace
 
-`init.lua` is okay in the widget directory as long as it stays side-effect free.
-EasyBar loads every `.lua` file there, so it should only load the stub and not create widgets.
+Example `.luarc.json`:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "Lua 5.4"
+  },
+  "workspace": {
+    "library": ["~/.local/share/easybar/easybar_api.lua"]
+  },
+  "diagnostics": {
+    "globals": ["easybar"]
+  }
+}
+```
 
 ## API
 
