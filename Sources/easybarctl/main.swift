@@ -6,13 +6,56 @@ import Foundation
 enum EasyBarCtlApp {
   /// Runs the CLI process.
   static func main() {
-    exit(run())
+    exit(AppController().run())
   }
 }
 
-private struct CommandFlag {
+/// Coordinates argument parsing, command dispatch, and CLI output.
+private struct AppController {
+  /// Runs the CLI command flow and returns the process exit code.
+  func run() -> Int32 {
+    do {
+      let parsed = try parseArguments(CommandLine.arguments)
+      let context = AppContext(debugEnabled: parsed.debugEnabled)
+      try sendCommand(parsed.command, to: parsed.socketPath, context: context)
+      return 0
+    } catch AppError.showUsage {
+      CLI.printUsage()
+      return 1
+    } catch AppError.showVersion {
+      CLI.printVersion()
+      return 0
+    } catch AppError.message(let message) {
+      CLI.printError(message)
+    } catch {
+      CLI.printError("\(error)")
+    }
+
+    CLI.printUsage()
+    return 1
+  }
+}
+
+private struct CLIOption {
   let flag: String
-  let command: String
+  let short: String?
+  let command: String?
+  let description: String
+  let placeholder: String?
+
+  init(
+    flag: String,
+    short: String? = nil,
+    command: String? = nil,
+    description: String,
+    placeholder: String? = nil
+  ) {
+    self.flag = flag
+    self.short = short
+    self.command = command
+    self.description = description
+    self.placeholder = placeholder
+  }
 }
 
 private struct ParsedArguments {
@@ -44,16 +87,82 @@ private enum AppError: Error {
 }
 
 private enum CLI {
-  static let commandFlags: [CommandFlag] = [
-    .init(flag: "--workspace-changed", command: "workspace_changed"),
-    .init(flag: "--focus-changed", command: "focus_changed"),
-    .init(flag: "--refresh", command: "refresh"),
-    .init(flag: "--reload-config", command: "reload_config"),
+  static let cmdOptions: [CLIOption] = [
+    .init(
+      flag: "--workspace-changed",
+      command: "workspace_changed",
+      description: "Send workspace_changed"
+    ),
+    .init(
+      flag: "--focus-changed",
+      command: "focus_changed",
+      description: "Send focus_changed"
+    ),
+    .init(
+      flag: "--refresh",
+      command: "refresh",
+      description: "Send refresh"
+    ),
+    .init(
+      flag: "--reload-config",
+      command: "reload_config",
+      description: "Send reload_config"
+    ),
+  ]
+
+  static let appOptions: [CLIOption] = [
+    .init(
+      flag: "--socket",
+      short: "-s",
+      description: "Override socket path",
+      placeholder: "path"
+    ),
+    .init(
+      flag: "--debug",
+      short: "-d",
+      description: "Enable debug output"
+    ),
+    .init(
+      flag: "--version",
+      short: "-v",
+      description: "Show the easybarctl version"
+    ),
+    .init(
+      flag: "--help",
+      short: "-h",
+      description: "Show this help"
+    ),
   ]
 
   /// Formats one help row with aligned option text.
   static func formatOption(_ option: String, _ description: String) -> String {
     "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
+  }
+
+  /// Returns all options in help-display order.
+  static var options: [CLIOption] {
+    cmdOptions + appOptions
+  }
+
+  /// Returns the rendered text for one option, including short flag and placeholder.
+  static func optionText(for option: CLIOption) -> String {
+    var text = option.flag
+
+    if let short = option.short {
+      text += ", \(short)"
+    }
+
+    if let placeholder = option.placeholder {
+      text += " <\(placeholder)>"
+    }
+
+    return text
+  }
+
+  /// Returns the rendered placeholder suffix for one option.
+  static func placeholderText(for option: CLIOption) -> String {
+    guard let placeholder = option.placeholder else { return "" }
+    return " <\(placeholder)>"
   }
 
   /// Writes one plain error line.
@@ -68,24 +177,27 @@ private enum CLI {
 
   /// Writes usage text.
   static func printUsage() {
-    let commandList = commandFlags.map(\.flag).joined(separator: " | ")
-
-    var lines: [String] = [
-      "usage:",
-      "  easybarctl <\(commandList)> [--socket <path>] [--debug]",
-      "  easybarctl <\(commandList)> [-s <path>] [-d]",
-      "",
-      "options:",
-    ]
-
-    for item in commandFlags {
-      lines.append(formatOption(item.flag, "Send \(item.command)"))
+    let commandList = cmdOptions.map(\.flag).joined(separator: " | ")
+    let optionLines = options.map {
+      formatOption(optionText(for: $0), $0.description)
     }
 
-    lines.append(formatOption("--socket, -s <path>", "Override socket path"))
-    lines.append(formatOption("--debug, -d", "Enable debug output"))
-    lines.append(formatOption("--version, -v", "Show the easybarctl version"))
-    lines.append(formatOption("--help, -h", "Show this help"))
+    let usageLong = appOptions.map { option in
+      option.flag + placeholderText(for: option)
+    }.joined(separator: " ")
+    let usageShort = appOptions.compactMap { option in
+      guard let short = option.short else { return nil }
+      return short + placeholderText(for: option)
+    }.joined(separator: " ")
+
+    let lines: [String] =
+      [
+        "usage:",
+        "  easybarctl <\(commandList)> [\(usageLong)]",
+        "  easybarctl <\(commandList)> [\(usageShort)]",
+        "",
+        "options:",
+      ] + optionLines
 
     fputs(lines.joined(separator: "\n") + "\n", stderr)
   }
@@ -140,12 +252,15 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
       continue
     }
 
-    if let match = CLI.commandFlags.first(where: { $0.flag == arg }) {
+    if let match = CLI.cmdOptions.first(where: { $0.flag == arg || $0.short == arg }) {
       guard selectedCommand == nil else {
         throw AppError.message("only one command flag may be specified")
       }
 
-      selectedCommand = match.command
+      guard let command = match.command else {
+        throw AppError.message("unknown argument '\(arg)'")
+      }
+      selectedCommand = command
       i += 1
       continue
     }
@@ -199,27 +314,4 @@ private func sendCommand(_ command: String, to socketPath: String, context: AppC
   }
 
   context.debug("command sent")
-}
-
-/// Runs the CLI command flow and returns the process exit code.
-private func run() -> Int32 {
-  do {
-    let parsed = try parseArguments(CommandLine.arguments)
-    let context = AppContext(debugEnabled: parsed.debugEnabled)
-    try sendCommand(parsed.command, to: parsed.socketPath, context: context)
-    return 0
-  } catch AppError.showUsage {
-    CLI.printUsage()
-    return 1
-  } catch AppError.showVersion {
-    CLI.printVersion()
-    return 0
-  } catch AppError.message(let message) {
-    CLI.printError(message)
-  } catch {
-    CLI.printError("\(error)")
-  }
-
-  CLI.printUsage()
-  return 1
 }
