@@ -51,6 +51,7 @@ PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
 PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUILD_INFO := Sources/shared/BuildInfo.swift
+LUA_API_STUB := Sources/EasyBar/Lua/easybar_api.lua
 
 BUNDLE_ID ?= com.gi8lino.EasyBar
 VERSION ?= dev
@@ -100,6 +101,9 @@ prepare-version: ## Update Sources/shared/BuildInfo.swift with the selected VERS
 	@mkdir -p "$(dir $(BUILD_INFO))"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \
+path.write_text(updated)'
+	@python3 -c 'from pathlib import Path; import re; path = Path("$(LUA_API_STUB)"); text = path.read_text(); \
+updated = re.sub(r"^-- EasyBar Lua API stub version: .*$", "-- EasyBar Lua API stub version: $(VERSION)", text, count=1, flags=re.MULTILINE); \
 path.write_text(updated)'
 
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
@@ -350,6 +354,9 @@ clean: ## Remove dist/, .build, and reset BuildInfo.swift to its placeholder ver
 	@rm -rf "$(DIST_DIR)" ".build"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"dev\"", text, count=1); \
+path.write_text(updated)'
+	@python3 -c 'from pathlib import Path; import re; path = Path("$(LUA_API_STUB)"); text = path.read_text(); \
+updated = re.sub(r"^-- EasyBar Lua API stub version: .*$", "-- EasyBar Lua API stub version: dev", text, count=1, flags=re.MULTILINE); \
 path.write_text(updated)'
 
 ##@ Info

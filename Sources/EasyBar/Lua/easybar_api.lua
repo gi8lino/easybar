@@ -1,3 +1,4 @@
+-- EasyBar Lua API stub version: dev
 ---@meta
 
 ---@alias EasyBarLevel
