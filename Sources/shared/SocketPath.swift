@@ -71,7 +71,7 @@ public func defaultNetworkAgentRefreshIntervalSeconds() -> TimeInterval {
     return TimeInterval(configured)
   }
 
-  return 15
+  return 60
 }
 
 /// Returns whether debug logging is enabled for EasyBar processes.
