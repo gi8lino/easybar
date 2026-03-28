@@ -1,4 +1,5 @@
 local M = {}
+local utf8lib = rawget(_G, "utf8")
 
 --- Encodes one Lua string as a JSON string literal.
 local function encode_string(value)
@@ -163,8 +164,8 @@ function Parser:parse_string()
 
 				local code = tonumber(hex, 16)
 
-				if utf8 and utf8.char then
-					out[#out + 1] = utf8.char(code)
+				if utf8lib and utf8lib.char then
+					out[#out + 1] = utf8lib.char(code)
 				else
 					out[#out + 1] = "?"
 				end
