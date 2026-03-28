@@ -96,15 +96,11 @@ help: ## Display this help.
 
 all: build ## Build the default artifacts.
 
-prepare-version: ## Generate Sources/shared/BuildInfo.swift with the selected VERSION.
+prepare-version: ## Update Sources/shared/BuildInfo.swift with the selected VERSION.
 	@mkdir -p "$(dir $(BUILD_INFO))"
-	@printf '%s\n' 'import Foundation' > "$(BUILD_INFO)"
-	@printf '\n' >> "$(BUILD_INFO)"
-	@printf '%s\n' '/// Build-time version information shared by the app and CLI.' >> "$(BUILD_INFO)"
-	@printf '%s\n' 'public enum BuildInfo {' >> "$(BUILD_INFO)"
-	@printf '%s\n' '    /// The application version embedded at build time.' >> "$(BUILD_INFO)"
-	@printf '%s\n' '    public static let appVersion = "$(VERSION)"' >> "$(BUILD_INFO)"
-	@printf '%s\n' '}' >> "$(BUILD_INFO)"
+	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
+updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \
+path.write_text(updated)'
 
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
 
@@ -350,9 +346,11 @@ dev: prepare-version ## Fast debug run without bundling.
 clean-dist: ## Remove dist/.
 	@rm -rf "$(DIST_DIR)"
 
-clean: ## Remove dist/, .build, and generated BuildInfo.swift.
+clean: ## Remove dist/, .build, and reset BuildInfo.swift to its placeholder version.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@rm -f "$(BUILD_INFO)"
+	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
+updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"dev\"", text, count=1); \
+path.write_text(updated)'
 
 ##@ Info
 
@@ -387,4 +385,3 @@ push-tags: ## Push commits and tags to origin.
 
 tag: ## Show latest tag
 	@echo "Latest version: $(LATEST_TAG)"
-
