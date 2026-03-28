@@ -10,7 +10,7 @@ final class Config {
   // MARK: - App
 
   var widgetsPath: String = ""
-    var luaPath: String = "/opt/homebrew/bin/lua"
+  var luaPath: String = "/opt/homebrew/bin/lua"
   var watchConfigFile: Bool = false
   var loggingEnabled: Bool = false
   var loggingDebugEnabled: Bool = false
@@ -25,7 +25,7 @@ final class Config {
 
   var barHeight: CGFloat = 32
   var barPaddingX: CGFloat = 10
-    var barExtendBehindNotch: Bool = true
+  var barExtendBehindNotch: Bool = true
 
   var barBackgroundHex: String = "#111111"
   var barBorderHex: String = "#222222"
@@ -94,29 +94,29 @@ final class Config {
     loggingDirectory = defaultLogDirectoryPath().path
     calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
     networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
-        networkAgentRefreshIntervalSeconds = 60
+    networkAgentRefreshIntervalSeconds = 60
   }
 
   /// Restores all static defaults before parsing again.
   func resetAllToDefaults() {
-        luaPath = "/opt/homebrew/bin/lua"
-        watchConfigFile = false
+    luaPath = "/opt/homebrew/bin/lua"
+    watchConfigFile = false
     loggingEnabled = false
     loggingDebugEnabled = false
     calendarAgentEnabled = true
     networkAgentEnabled = true
-        networkAgentRefreshIntervalSeconds = 60
+    networkAgentRefreshIntervalSeconds = 60
 
     barHeight = 32
     barPaddingX = 10
-        barExtendBehindNotch = true
+    barExtendBehindNotch = true
 
     barBackgroundHex = "#111111"
     barBorderHex = "#222222"
 
     builtinCPU = .default
     builtinBattery = .default
-        builtinGroups = []
+    builtinGroups = []
     builtinSpaces = .default
     builtinFrontApp = .default
     builtinVolume = .default
