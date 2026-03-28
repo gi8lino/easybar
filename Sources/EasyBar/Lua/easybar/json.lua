@@ -1,5 +1,6 @@
 local M = {}
 
+--- Encodes one Lua string as a JSON string literal.
 local function encode_string(value)
 	local replacements = {
 		['"'] = '\\"',
@@ -18,6 +19,7 @@ local function encode_string(value)
 		.. '"'
 end
 
+--- Returns whether a Lua table should be encoded as a JSON array.
 local function is_array(value)
 	local count = 0
 	local max_index = 0
@@ -37,6 +39,7 @@ local function is_array(value)
 	return max_index == count
 end
 
+--- Encodes one Lua value as JSON.
 local function encode_value(value)
 	local value_type = type(value)
 
@@ -76,6 +79,7 @@ local function encode_value(value)
 	error("unsupported json encode type: " .. value_type)
 end
 
+--- Encodes one Lua value tree into a JSON string.
 function M.encode(value)
 	return encode_value(value)
 end
@@ -330,6 +334,7 @@ function Parser:parse_value()
 	return self:parse_literal()
 end
 
+--- Decodes one JSON string into Lua values.
 function M.decode(text)
 	local parser = Parser:new(text)
 	local value = parser:parse_value()

@@ -2,6 +2,7 @@ local M = {}
 
 local last_emitted = {}
 
+--- Normalizes one root position into the supported bar positions.
 local function normalize_position(position)
 	if position == "left" or position == "center" or position == "right" then
 		return position
@@ -10,6 +11,7 @@ local function normalize_position(position)
 	return "right"
 end
 
+--- Extracts the rendered label text from one item prop table.
 local function label_string(label)
 	if type(label) == "table" then
 		return label.string or ""
@@ -22,6 +24,7 @@ local function label_string(label)
 	return ""
 end
 
+--- Extracts the rendered icon text from one item prop table.
 local function icon_string(icon)
 	if type(icon) == "table" then
 		return icon.string or ""
@@ -34,6 +37,7 @@ local function icon_string(icon)
 	return ""
 end
 
+--- Resolves the primary foreground color for one node.
 local function resolve_color(props)
 	if props.color ~= nil then
 		return props.color
@@ -50,6 +54,7 @@ local function resolve_color(props)
 	return ""
 end
 
+--- Resolves the label color override for one node.
 local function resolve_label_color(props)
 	if type(props.label) == "table" then
 		return props.label.color
@@ -58,6 +63,7 @@ local function resolve_label_color(props)
 	return nil
 end
 
+--- Resolves the icon color override for one node.
 local function resolve_icon_color(props)
 	if type(props.icon) == "table" then
 		return props.icon.color
@@ -66,6 +72,7 @@ local function resolve_icon_color(props)
 	return nil
 end
 
+--- Resolves the configured label font size.
 local function resolve_label_font_size(props)
 	if type(props.label) == "table" and type(props.label.font) == "table" then
 		return tonumber(props.label.font.size)
@@ -74,6 +81,7 @@ local function resolve_label_font_size(props)
 	return nil
 end
 
+--- Resolves the configured icon font size.
 local function resolve_icon_font_size(props)
 	if type(props.icon) == "table" and type(props.icon.font) == "table" then
 		return tonumber(props.icon.font.size)
@@ -82,6 +90,7 @@ local function resolve_icon_font_size(props)
 	return nil
 end
 
+--- Resolves the configured image path for one node.
 local function resolve_image_path(props)
 	if type(props.icon) == "table" and type(props.icon.image) == "string" then
 		return props.icon.image
@@ -94,6 +103,7 @@ local function resolve_image_path(props)
 	return nil
 end
 
+--- Resolves the configured image size for one node.
 local function resolve_image_size(props)
 	if type(props.icon) == "table" and props.icon.image_size ~= nil then
 		return tonumber(props.icon.image_size)
@@ -106,6 +116,7 @@ local function resolve_image_size(props)
 	return nil
 end
 
+--- Resolves the configured image corner radius for one node.
 local function resolve_image_corner_radius(props)
 	if type(props.icon) == "table" and props.icon.image_corner_radius ~= nil then
 		return tonumber(props.icon.image_corner_radius)
@@ -118,6 +129,7 @@ local function resolve_image_corner_radius(props)
 	return nil
 end
 
+--- Resolves child spacing for rows, groups, and popup content.
 local function resolve_spacing(props)
 	if props.spacing ~= nil then
 		return tonumber(props.spacing)
@@ -132,6 +144,7 @@ local function resolve_spacing(props)
 	return nil
 end
 
+--- Resolves one numeric box-model value from direct props or nested tables.
 local function resolve_box_value(props, key, box)
 	if props[key] ~= nil then
 		return tonumber(props[key])
@@ -144,6 +157,7 @@ local function resolve_box_value(props, key, box)
 	return nil
 end
 
+--- Resolves whether one node should be visible.
 local function resolve_drawing(props, default)
 	if props.drawing == nil then
 		return default
@@ -152,6 +166,7 @@ local function resolve_drawing(props, default)
 	return props.drawing ~= false
 end
 
+--- Returns the popup anchor parent id for popup-positioned items.
 local function popup_parent_id(item)
 	local position = item.props.position
 
@@ -162,6 +177,7 @@ local function popup_parent_id(item)
 	return nil
 end
 
+--- Returns the regular parent id for nested child items.
 local function regular_parent_id(item)
 	if type(item.props.parent) == "string" and item.props.parent ~= "" then
 		return item.props.parent
@@ -170,6 +186,7 @@ local function regular_parent_id(item)
 	return nil
 end
 
+--- Builds one render node from an item record and its child nodes.
 local function make_node(id, item, root_position, children)
 	local props = item.props
 
@@ -231,7 +248,8 @@ local function make_node(id, item, root_position, children)
 	}
 end
 
-local function resolve_mouse_interaction(registry, id, item)
+--- Resolves which mouse capabilities the node should expose.
+local function resolve_mouse_interaction(registry, id)
 	local subscriptions = registry._state.subscriptions[id]
 	if type(subscriptions) ~= "table" then
 		return {
@@ -264,6 +282,7 @@ local function resolve_mouse_interaction(registry, id, item)
 	}
 end
 
+--- Flattens one render tree into the payload expected by Swift.
 local function flatten_node(node, root_id, parent_id, inherited_position, out)
 	local id = node.id or (root_id .. "_" .. tostring(#out + 1))
 	local position = normalize_position(node.position or inherited_position or "right")
@@ -340,14 +359,17 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 	end
 end
 
+--- Returns item ids in their declared widget order.
 local function ordered_ids(registry)
 	return registry._state.item_order
 end
 
+--- Returns one registry item by id.
 local function item_by_id(registry, id)
 	return registry._state.items[id]
 end
 
+--- Returns direct non-popup child ids for one parent node.
 local function regular_children_of(registry, parent_id)
 	local children = {}
 
@@ -362,6 +384,7 @@ local function regular_children_of(registry, parent_id)
 	return children
 end
 
+--- Returns direct popup child ids for one popup anchor node.
 local function popup_children_of(registry, anchor_id)
 	local children = {}
 
@@ -376,6 +399,7 @@ local function popup_children_of(registry, anchor_id)
 	return children
 end
 
+--- Builds the render tree for one root widget id.
 local function build_tree(registry, id, root_position)
 	local item = item_by_id(registry, id)
 	if item == nil then
@@ -402,7 +426,7 @@ local function build_tree(registry, id, root_position)
 
 	if not has_popup then
 		local node = make_node(id, item, root_position, child_nodes)
-		local interaction = resolve_mouse_interaction(registry, id, item)
+		local interaction = resolve_mouse_interaction(registry, id)
 		node.receivesMouseHover = interaction.hover
 		node.receivesMouseClick = interaction.click
 		node.receivesMouseScroll = interaction.scroll
@@ -442,7 +466,7 @@ local function build_tree(registry, id, root_position)
 	}
 
 	local root = make_node(id, item, root_position, child_nodes)
-	local interaction = resolve_mouse_interaction(registry, id, item)
+	local interaction = resolve_mouse_interaction(registry, id)
 	root.receivesMouseHover = interaction.hover
 	root.receivesMouseClick = interaction.click
 	root.receivesMouseScroll = interaction.scroll
@@ -455,6 +479,7 @@ local function build_tree(registry, id, root_position)
 	return root
 end
 
+--- Returns root widget ids in render order.
 local function root_ids(registry)
 	local roots = {}
 
@@ -469,6 +494,7 @@ local function root_ids(registry)
 	return roots
 end
 
+--- Emits one root tree when it differs from the previous payload.
 local function emit_tree(tree, log, json)
 	local root_id = tree.id or "unknown"
 	local nodes = {}
@@ -500,6 +526,7 @@ local function emit_tree(tree, log, json)
 	end
 end
 
+--- Emits all root widget trees for the current registry state.
 function M.emit_all(registry, log, json)
 	for _, id in ipairs(root_ids(registry)) do
 		local item = item_by_id(registry, id)

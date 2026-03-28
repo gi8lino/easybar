@@ -79,14 +79,14 @@ Example:
 
 ```lua
 easybar.add("item", "clock", {
-	position = "right",
-	order = 10,
-	icon = {
-		string = "🕒",
-	},
-	label = {
-		string = "00:00",
-	},
+    position = "right",
+    order = 10,
+    icon = {
+        string = "🕒",
+    },
+    label = {
+        string = "00:00",
+    },
 })
 ```
 
@@ -98,9 +98,9 @@ Updates one item.
 
 ```lua
 easybar.set("clock", {
-	label = {
-		string = os.date("%H:%M"),
-	},
+    label = {
+        string = os.date("%H:%M"),
+    },
 })
 ```
 
@@ -115,9 +115,9 @@ EasyBar already animates visible UI state changes in SwiftUI, so this updates th
 
 ```lua
 easybar.animate("calendar", {
-	popup = {
-		drawing = true,
-	},
+    popup = {
+        drawing = true,
+    },
 })
 ```
 
@@ -125,11 +125,11 @@ You can still pass an options table for readability:
 
 ```lua
 easybar.animate("volume", {
-	label = {
-		string = "75%",
-	},
+    label = {
+        string = "75%",
+    },
 }, {
-	duration = 0.20,
+    duration = 0.20,
 })
 ```
 
@@ -163,15 +163,15 @@ Useful for shared padding, colors, or background.
 
 ```lua
 easybar.default({
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
-	label = {
-		color = "#cad3f5",
-	},
+    background = {
+        padding_left = 8,
+        padding_right = 8,
+        padding_top = 4,
+        padding_bottom = 4,
+    },
+    label = {
+        color = "#cad3f5",
+    },
 })
 ```
 
@@ -179,11 +179,11 @@ Then later:
 
 ```lua
 easybar.add("item", "clock", {
-	position = "right",
-	order = 10,
-	label = {
-		string = "--:--",
-	},
+    position = "right",
+    order = 10,
+    label = {
+        string = "--:--",
+    },
 })
 ```
 
@@ -207,11 +207,11 @@ Subscribes one item to one or more events.
 
 ```lua
 easybar.subscribe("clock", { easybar.events.minute_tick, easybar.events.forced }, function(event)
-	easybar.set("clock", {
-		label = {
-			string = os.date("%H:%M"),
-		},
-	})
+    easybar.set("clock", {
+        label = {
+            string = os.date("%H:%M"),
+        },
+    })
 end)
 ```
 
@@ -237,7 +237,7 @@ Example:
 
 ```lua
 easybar.subscribe("calendar", easybar.events.mouse.clicked, function(event)
-	print(event.name, event.button)
+    print(event.name, event.button)
 end)
 ```
 
@@ -283,11 +283,11 @@ Runs one shell command.
 local value = easybar.exec("date +%H:%M")
 
 easybar.exec("date +%H:%M", function(output)
-	easybar.set("clock", {
-		label = {
-			string = output,
-		},
-	})
+    easybar.set("clock", {
+        label = {
+            string = output,
+        },
+    })
 end)
 ```
 
@@ -339,9 +339,9 @@ Example:
 
 ```lua
 icon = {
-	image = os.getenv("WIREGUARD_LOGO_PATH"),
-	image_size = 16,
-	image_corner_radius = 0,
+    image = os.getenv("WIREGUARD_LOGO_PATH"),
+    image_size = 16,
+    image_corner_radius = 0,
 }
 ```
 
@@ -351,34 +351,34 @@ Use `group` when multiple child nodes should live inside one styled container.
 
 ```lua
 easybar.add("group", "vpn_group", {
-	position = "right",
-	order = 40,
-	background = {
-		color = "#202020",
-		border_color = "#4a4a4a",
-		border_width = 1,
-		corner_radius = 8,
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
-	spacing = 6,
+    position = "right",
+    order = 40,
+    background = {
+        color = "#202020",
+        border_color = "#4a4a4a",
+        border_width = 1,
+        corner_radius = 8,
+        padding_left = 8,
+        padding_right = 8,
+        padding_top = 4,
+        padding_bottom = 4,
+    },
+    spacing = 6,
 })
 
 easybar.add("item", "vpn_group_icon", {
-	parent = "vpn_group",
-	icon = {
-		image = os.getenv("HOME") .. "/.config/easybar/assets/wireguard.png",
-		image_size = 16,
-	},
+    parent = "vpn_group",
+    icon = {
+        image = os.getenv("HOME") .. "/.config/easybar/assets/wireguard.png",
+        image_size = 16,
+    },
 })
 
 easybar.add("item", "vpn_group_label", {
-	parent = "vpn_group",
-	label = {
-		string = "VPN",
-	},
+    parent = "vpn_group",
+    label = {
+        string = "VPN",
+    },
 })
 ```
 
@@ -433,11 +433,11 @@ Or a table:
 
 ```lua
 label = {
-	string = "Hello",
-	color = "#ffffff",
-	font = {
-		size = 13,
-	},
+    string = "Hello",
+    color = "#ffffff",
+    font = {
+        size = 13,
+    },
 }
 ```
 
@@ -445,14 +445,14 @@ label = {
 
 ```lua
 background = {
-	color = "#1a1a1a",
-	border_color = "#333333",
-	border_width = 1,
-	corner_radius = 8,
-	padding_left = 8,
-	padding_right = 8,
-	padding_top = 4,
-	padding_bottom = 4,
+    color = "#1a1a1a",
+    border_color = "#333333",
+    border_width = 1,
+    corner_radius = 8,
+    padding_left = 8,
+    padding_right = 8,
+    padding_top = 4,
+    padding_bottom = 4,
 }
 ```
 
@@ -482,19 +482,19 @@ Use `parent` for normal children.
 
 ```lua
 easybar.add("row", "weather", {
-	position = "right",
-	order = 20,
-	spacing = 8,
+    position = "right",
+    order = 20,
+    spacing = 8,
 })
 
 easybar.add("item", "weather_icon", {
-	parent = "weather",
-	icon = { string = "☀️" },
+    parent = "weather",
+    icon = { string = "☀️" },
 })
 
 easybar.add("item", "weather_label", {
-	parent = "weather",
-	label = "20°",
+    parent = "weather",
+    label = "20°",
 })
 ```
 
@@ -508,41 +508,41 @@ Use `position = "popup.<anchor_id>"` for popup items.
 
 ```lua
 easybar.add("item", "calendar", {
-	position = "right",
-	order = 30,
-	icon = { string = "🗓" },
-	label = "Today",
-	popup = {
-		drawing = false,
-		background = {
-			color = "#1e2030",
-			border_color = "#494d64",
-			border_width = 1,
-			corner_radius = 10,
-		},
-		padding_left = 12,
-		padding_right = 12,
-		padding_top = 12,
-		padding_bottom = 12,
-		spacing = 8,
-	},
+    position = "right",
+    order = 30,
+    icon = { string = "🗓" },
+    label = "Today",
+    popup = {
+        drawing = false,
+        background = {
+            color = "#1e2030",
+            border_color = "#494d64",
+            border_width = 1,
+            corner_radius = 10,
+        },
+        padding_left = 12,
+        padding_right = 12,
+        padding_top = 12,
+        padding_bottom = 12,
+        spacing = 8,
+    },
 })
 
 easybar.add("item", "calendar_event_1", {
-	position = "popup.calendar",
-	label = "09:00 Standup",
+    position = "popup.calendar",
+    label = "09:00 Standup",
 })
 
 easybar.subscribe("calendar", easybar.events.mouse.entered, function()
-	easybar.animate("calendar", {
-		popup = { drawing = true },
-	})
+    easybar.animate("calendar", {
+        popup = { drawing = true },
+    })
 end)
 
 easybar.subscribe("calendar", easybar.events.mouse.exited, function()
-	easybar.animate("calendar", {
-		popup = { drawing = false },
-	})
+    easybar.animate("calendar", {
+        popup = { drawing = false },
+    })
 end)
 ```
 
@@ -556,15 +556,15 @@ Subscribe to `easybar.events.routine`.
 
 ```lua
 easybar.add("item", "clock", {
-	position = "right",
-	order = 10,
-	update_freq = 30,
+    position = "right",
+    order = 10,
+    update_freq = 30,
 })
 
 easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
-	easybar.set("clock", {
-		label = os.date("%H:%M"),
-	})
+    easybar.set("clock", {
+        label = os.date("%H:%M"),
+    })
 end)
 ```
 
@@ -583,7 +583,7 @@ Example:
 
 ```lua
 easybar.subscribe("calendar", easybar.events.mouse.clicked, function(event)
-	print(event.name, event.button)
+    print(event.name, event.button)
 end)
 ```
 
@@ -626,8 +626,8 @@ Example `secrets.lua`:
 
 ```lua
 return {
-	vpn_name = "WireGuard",
-	api_token = "example-token",
+    vpn_name = "WireGuard",
+    api_token = "example-token",
 }
 ```
 
@@ -661,11 +661,11 @@ package.path = package.path .. ";" .. home .. "/personal/private/easybar/?.lua"
 local secrets = require("secrets")
 
 easybar.add("item", "vpn_status", {
-	position = "right",
-	order = 20,
-	label = {
-		string = secrets.vpn_name or "vpn",
-	},
+    position = "right",
+    order = 20,
+    label = {
+        string = secrets.vpn_name or "vpn",
+    },
 })
 ```
 
@@ -677,7 +677,7 @@ package.path = package.path .. ";" .. home .. "/personal/private/easybar/?.lua"
 
 local ok, secrets = pcall(require, "secrets")
 if not ok then
-	secrets = {}
+    secrets = {}
 end
 ```
 
@@ -691,35 +691,35 @@ Use defaults first, then add items.
 
 ```lua
 easybar.default({
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
-	label = {
-		color = "#cad3f5",
-	},
+    background = {
+        padding_left = 8,
+        padding_right = 8,
+        padding_top = 4,
+        padding_bottom = 4,
+    },
+    label = {
+        color = "#cad3f5",
+    },
 })
 
 easybar.add("item", "clock", {
-	position = "right",
-	order = 10,
-	update_freq = 30,
-	icon = {
-		string = "🕒",
-	},
-	label = {
-		string = "--:--",
-	},
+    position = "right",
+    order = 10,
+    update_freq = 30,
+    icon = {
+        string = "🕒",
+    },
+    label = {
+        string = "--:--",
+    },
 })
 
 easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
-	easybar.set("clock", {
-		label = {
-			string = os.date("%H:%M"),
-		},
-	})
+    easybar.set("clock", {
+        label = {
+            string = os.date("%H:%M"),
+        },
+    })
 end)
 ```
 
@@ -729,33 +729,33 @@ end)
 
 ```lua
 easybar.default({
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
+    background = {
+        padding_left = 8,
+        padding_right = 8,
+        padding_top = 4,
+        padding_bottom = 4,
+    },
 })
 
 easybar.add("item", "clock", {
-	position = "right",
-	order = 10,
-	update_freq = 30,
-	icon = {
-		string = "🕒",
-	},
-	label = {
-		string = "--:--",
-		color = "#ffffff",
-	},
+    position = "right",
+    order = 10,
+    update_freq = 30,
+    icon = {
+        string = "🕒",
+    },
+    label = {
+        string = "--:--",
+        color = "#ffffff",
+    },
 })
 
 easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
-	easybar.animate("clock", {
-		label = {
-			string = os.date("%H:%M"),
-		},
-	})
+    easybar.animate("clock", {
+        label = {
+            string = os.date("%H:%M"),
+        },
+    })
 end)
 ```
 

@@ -1,5 +1,6 @@
 local M = {}
 
+--- Converts JSON boolean strings into Lua booleans.
 local function normalize_boolean(value)
 	if value == "true" then
 		return true
@@ -12,6 +13,7 @@ local function normalize_boolean(value)
 	return nil
 end
 
+--- Converts numeric payload fields into Lua numbers.
 local function normalize_number(value)
 	if value == nil or value == "" then
 		return nil
@@ -39,7 +41,7 @@ function M.normalize_event(payload)
 	}
 end
 
---- Dispatches one normalized event into the registry and re-renders.
+--- Dispatches one normalized event and re-renders all affected trees.
 function M.dispatch_event(registry, event, render, log, json)
 	log.debug("runtime dispatch event=" .. tostring(event.name))
 	registry.handle_event(event)

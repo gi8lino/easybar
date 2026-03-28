@@ -20,6 +20,7 @@ local DRIVER_EVENTS = {
 	forced = true,
 }
 
+--- Wraps one runtime event name in a reusable subscribe token.
 local function make_event_token(name)
 	return {
 		name = name,
@@ -59,11 +60,13 @@ local EVENT_TOKENS = {
 	},
 }
 
+--- Extracts the runtime event name from one `easybar.events` token.
 local function normalize_event_token(event)
 	assert(type(event) == "table" and type(event.name) == "string" and event.name ~= "", "easybar.subscribe(...) requires easybar.events values")
 	return event.name
 end
 
+--- Deep-copies one Lua value tree.
 local function deep_copy(value)
 	if type(value) ~= "table" then
 		return value
@@ -78,6 +81,7 @@ local function deep_copy(value)
 	return copy
 end
 
+--- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
 	if type(source) ~= "table" then
 		return target
@@ -94,6 +98,7 @@ local function deep_merge(target, source)
 	return target
 end
 
+--- Normalizes one flexible boolean option into a real Lua boolean.
 local function normalize_bool(value, default)
 	if value == nil then
 		return default
@@ -110,6 +115,7 @@ local function normalize_bool(value, default)
 	return default
 end
 
+--- Normalizes shorthand label values into a label table.
 local function normalize_label(value)
 	if value == nil then
 		return nil
@@ -124,6 +130,7 @@ local function normalize_label(value)
 	}
 end
 
+--- Normalizes shorthand icon values into an icon table.
 local function normalize_icon(value)
 	if value == nil then
 		return nil
@@ -138,6 +145,7 @@ local function normalize_icon(value)
 	}
 end
 
+--- Normalizes item props into the shape expected by the renderer.
 local function normalize_props(props)
 	local normalized = deep_copy(props or {})
 
@@ -160,6 +168,7 @@ local function normalize_props(props)
 	return normalized
 end
 
+--- Trims command output for `easybar.exec(...)`.
 local function trim_trailing_newlines(value)
 	if not value then
 		return ""
@@ -170,6 +179,7 @@ local function trim_trailing_newlines(value)
 	return value
 end
 
+--- Joins log arguments into one message string.
 local function join_message(...)
 	local parts = {}
 
@@ -180,6 +190,7 @@ local function join_message(...)
 	return table.concat(parts, " ")
 end
 
+--- Builds one widget-scoped EasyBar API instance.
 function M.new(log)
 	local state = {
 		items = {},
@@ -506,8 +517,6 @@ function M.new(log)
 		widget_api.remove = api.remove
 		widget_api.exec = api.exec
 		widget_api.subscribe = api.subscribe
-		widget_api.handle_event = api.handle_event
-		widget_api.required_events = api.required_events
 		widget_api.events = EVENT_TOKENS
 
 		--- Writes one widget log line through the host logger.

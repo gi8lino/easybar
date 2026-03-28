@@ -68,38 +68,38 @@
 ---@field name EasyBarEventName The canonical runtime event name sent by EasyBar.
 
 ---@class EasyBarMouseEvents
----@field entered EasyBarEventToken Fired when the pointer enters the subscribed node frame.
----@field exited EasyBarEventToken Fired when the pointer leaves the subscribed node frame.
----@field clicked EasyBarEventToken Fired when the subscribed node is clicked.
----@field down EasyBarEventToken Fired on mouse button press over the subscribed node.
----@field up EasyBarEventToken Fired on mouse button release over the subscribed node.
----@field scrolled EasyBarEventToken Fired when the pointer scrolls over the subscribed node.
+---@field entered? EasyBarEventToken Fired when the pointer enters the subscribed node frame.
+---@field exited? EasyBarEventToken Fired when the pointer leaves the subscribed node frame.
+---@field clicked? EasyBarEventToken Fired when the subscribed node is clicked.
+---@field down? EasyBarEventToken Fired on mouse button press over the subscribed node.
+---@field up? EasyBarEventToken Fired on mouse button release over the subscribed node.
+---@field scrolled? EasyBarEventToken Fired when the pointer scrolls over the subscribed node.
 
 ---@class EasyBarSliderEvents
----@field preview EasyBarEventToken Fired while a slider is being previewed or dragged.
----@field changed EasyBarEventToken Fired when a slider value is committed.
+---@field preview? EasyBarEventToken Fired while a slider is being previewed or dragged.
+---@field changed? EasyBarEventToken Fired when a slider value is committed.
 
 ---@class EasyBarEvents
----@field routine EasyBarEventToken Fired from `update_freq` polling on subscribed widgets.
----@field forced EasyBarEventToken Fired when EasyBar or `easybarctl` triggers a manual refresh.
----@field system_woke EasyBarEventToken Fired after the system wakes from sleep.
----@field sleep EasyBarEventToken Fired before the system goes to sleep.
----@field space_change EasyBarEventToken Fired when the active macOS space changes.
----@field app_switch EasyBarEventToken Fired when the frontmost app changes.
----@field display_change EasyBarEventToken Fired when attached displays change.
----@field power_source_change EasyBarEventToken Fired when the power source changes.
----@field charging_state_change EasyBarEventToken Fired when charging starts or stops.
----@field wifi_change EasyBarEventToken Fired when Wi-Fi state or SSID changes.
----@field network_change EasyBarEventToken Fired when network routing or tunnel state changes.
----@field volume_change EasyBarEventToken Fired when output volume changes.
----@field mute_change EasyBarEventToken Fired when mute state changes.
----@field minute_tick EasyBarEventToken Fired once per minute.
----@field second_tick EasyBarEventToken Fired once per second.
----@field calendar_change EasyBarEventToken Fired when the calendar snapshot updates.
----@field focus_change EasyBarEventToken Fired when workspace focus changes.
----@field workspace_change EasyBarEventToken Fired when workspace layout or selection changes.
----@field mouse EasyBarMouseEvents Mouse interaction event tokens.
----@field slider EasyBarSliderEvents Slider interaction event tokens.
+---@field routine? EasyBarEventToken Fired from `update_freq` polling on subscribed widgets.
+---@field forced? EasyBarEventToken Fired when EasyBar or `easybarctl` triggers a manual refresh.
+---@field system_woke? EasyBarEventToken Fired after the system wakes from sleep.
+---@field sleep? EasyBarEventToken Fired before the system goes to sleep.
+---@field space_change? EasyBarEventToken Fired when the active macOS space changes.
+---@field app_switch? EasyBarEventToken Fired when the frontmost app changes.
+---@field display_change? EasyBarEventToken Fired when attached displays change.
+---@field power_source_change? EasyBarEventToken Fired when the power source changes.
+---@field charging_state_change? EasyBarEventToken Fired when charging starts or stops.
+---@field wifi_change? EasyBarEventToken Fired when Wi-Fi state or SSID changes.
+---@field network_change? EasyBarEventToken Fired when network routing or tunnel state changes.
+---@field volume_change? EasyBarEventToken Fired when output volume changes.
+---@field mute_change? EasyBarEventToken Fired when mute state changes.
+---@field minute_tick? EasyBarEventToken Fired once per minute.
+---@field second_tick? EasyBarEventToken Fired once per second.
+---@field calendar_change? EasyBarEventToken Fired when the calendar snapshot updates.
+---@field focus_change? EasyBarEventToken Fired when workspace focus changes.
+---@field workspace_change? EasyBarEventToken Fired when workspace layout or selection changes.
+---@field mouse? EasyBarMouseEvents Mouse interaction event tokens.
+---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
 ---@class EasyBar
 local EasyBar = {}

@@ -1,5 +1,6 @@
 local M = {}
 
+--- Flattens one log field into a single safe line.
 local function normalize_text(value)
 	value = tostring(value or "")
 	value = value:gsub("\r", " ")
@@ -8,7 +9,7 @@ local function normalize_text(value)
 	return value
 end
 
--- Writes one structured log line to stderr.
+--- Writes one structured log line to stderr.
 local function write(level, source, message)
 	io.stderr:write(
 		"EASYBAR_LOG\t"

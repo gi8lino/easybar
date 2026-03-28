@@ -1,3 +1,4 @@
+--- Returns the directory containing `runtime.lua`.
 local function runtime_dir()
 	local source = debug.getinfo(1, "S").source
 	if source:sub(1, 1) == "@" then
@@ -8,6 +9,7 @@ end
 
 local base_dir = runtime_dir()
 
+--- Loads one bundled runtime module by name.
 local function load_module(name)
 	local path = base_dir .. "/easybar/" .. name .. ".lua"
 	local chunk, err = loadfile(path)
@@ -38,6 +40,7 @@ local registry = api.new(log)
 io.stdout:setvbuf("line")
 io.stderr:setvbuf("line")
 
+-- Load every user widget before announcing subscriptions to the host.
 loader.load_widgets(widget_dir, registry, log)
 
 io.stdout:write(json.encode({
@@ -47,6 +50,7 @@ io.stdout:write(json.encode({
 io.stdout:write('{"type":"ready"}' .. "\n")
 io.stdout:flush()
 
+-- Emit the full initial widget trees once the runtime handshake is complete.
 render.emit_all(registry, log, json)
 
 while true do
@@ -63,6 +67,7 @@ while true do
 	if not ok or type(payload) ~= "table" or not payload.event then
 		log.error("runtime ignored invalid json payload=" .. tostring(line))
 	else
+		-- Event normalization keeps the registry and renderer free from raw JSON parsing.
 		local event = events.normalize_event(payload)
 		events.dispatch_event(registry, event, render, log, json)
 	end

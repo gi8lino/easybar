@@ -1,5 +1,6 @@
 local M = {}
 
+--- Lists all Lua widget files in one widget directory.
 local function list_widget_files(widget_dir)
 	local files = {}
 	local command = 'ls "' .. widget_dir .. '" 2>/dev/null'
@@ -21,6 +22,7 @@ local function list_widget_files(widget_dir)
 	return files
 end
 
+--- Builds one isolated environment for a widget file.
 local function make_widget_env(registry, file)
 	local env = {
 		-- Each widget gets its own scoped EasyBar API instance.
@@ -34,6 +36,7 @@ local function make_widget_env(registry, file)
 	return env
 end
 
+--- Loads and executes one widget file.
 local function load_widget_file(widget_dir, file, registry, log)
 	local path = widget_dir .. "/" .. file
 	local env = make_widget_env(registry, file)
@@ -54,6 +57,7 @@ local function load_widget_file(widget_dir, file, registry, log)
 	log.info("loader loaded file=" .. file)
 end
 
+--- Loads every widget file from the configured widget directory.
 function M.load_widgets(widget_dir, registry, log)
 	log.info("runtime started")
 	log.info("runtime widget_dir=" .. widget_dir)
