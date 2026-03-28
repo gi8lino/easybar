@@ -101,15 +101,15 @@ easybar.add("item", "battery", {
 	},
 })
 
-easybar.subscribe("battery", { "forced", "power_source_change", "system_woke" }, function()
+easybar.subscribe("battery", { easybar.events.forced, easybar.events.power_source_change, easybar.events.system_woke }, function()
 	apply(false)
 end)
 
-easybar.subscribe("battery", "mouse.entered", function()
+easybar.subscribe("battery", easybar.events.mouse.entered, function()
 	apply(true)
 end)
 
-easybar.subscribe("battery", "mouse.exited", function()
+easybar.subscribe("battery", easybar.events.mouse.exited, function()
 	apply(false)
 end)
 

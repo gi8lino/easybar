@@ -72,7 +72,7 @@ easybar.add("item", "network", {
 	},
 })
 
-easybar.subscribe("network", { "routine", "network_change", "wifi_change", "system_woke", "forced" }, function()
+easybar.subscribe("network", { easybar.events.routine, easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced }, function()
 	easybar.set("network", {
 		label = {
 			string = read_ssid(),

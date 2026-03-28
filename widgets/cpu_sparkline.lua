@@ -45,7 +45,7 @@ easybar.add("sparkline", "cpu_sparkline", {
 	},
 })
 
-easybar.subscribe("cpu_sparkline", { "routine", "forced" }, function()
+easybar.subscribe("cpu_sparkline", { easybar.events.routine, easybar.events.forced }, function()
 	push_value(read_cpu())
 
 	easybar.set("cpu_sparkline", {

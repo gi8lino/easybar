@@ -28,11 +28,11 @@ easybar.add("item", "toggle_test", {
 	},
 })
 
-easybar.subscribe("toggle_test", "forced", function()
+easybar.subscribe("toggle_test", easybar.events.forced, function()
 	render()
 end)
 
-easybar.subscribe("toggle_test", "mouse.clicked", function()
+easybar.subscribe("toggle_test", easybar.events.mouse.clicked, function()
 	enabled = not enabled
 	render()
 end)

@@ -81,7 +81,7 @@ easybar.add("item", "group_demo_popup", {
 	},
 })
 
-easybar.subscribe("group_demo", "mouse.entered", function()
+easybar.subscribe("group_demo", easybar.events.mouse.entered, function()
 	hovered = true
 	easybar.set("group_demo", {
 		popup = { drawing = true },
@@ -89,7 +89,7 @@ easybar.subscribe("group_demo", "mouse.entered", function()
 	render()
 end)
 
-easybar.subscribe("group_demo", "mouse.exited", function()
+easybar.subscribe("group_demo", easybar.events.mouse.exited, function()
 	hovered = false
 	easybar.set("group_demo", {
 		popup = { drawing = false },
@@ -97,7 +97,7 @@ easybar.subscribe("group_demo", "mouse.exited", function()
 	render()
 end)
 
-easybar.subscribe("group_demo", "mouse.clicked", function()
+easybar.subscribe("group_demo", easybar.events.mouse.clicked, function()
 	enabled = not enabled
 	render()
 end)

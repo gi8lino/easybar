@@ -12,6 +12,33 @@ Interaction is node-based.
 - use smaller child nodes when only part of a widget should be interactive
 - use `group` when multiple child nodes should share one styled container
 
+## Editor support
+
+If you edit widgets in `~/.config/easybar/widgets`, add an `init.lua` there.
+
+EasyBar installs a bundled `easybar_api.lua` into:
+
+- `~/.local/share/easybar/easybar_api.lua`
+
+This repo includes an example in:
+
+- `widgets/init.lua`
+
+It loads that shipped stub, so LuaLS can use it for:
+
+- no `unknown global 'easybar'` warning
+- hover documentation
+- basic autocomplete for the `easybar` API
+
+Suggested setup:
+
+1. copy `widgets/init.lua` to `~/.config/easybar/widgets/init.lua`
+2. start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`
+3. open `~/.config/easybar/widgets` as your editor workspace
+
+`init.lua` is okay in the widget directory as long as it stays side-effect free.
+EasyBar loads every `.lua` file there, so it should only load the stub and not create widgets.
+
 ## API
 
 ### `easybar.add(kind, id, props)`
@@ -169,7 +196,7 @@ easybar.clear_defaults()
 Subscribes one item to one or more events.
 
 ```lua
-easybar.subscribe("clock", { "minute_tick", "forced" }, function(event)
+easybar.subscribe("clock", { easybar.events.minute_tick, easybar.events.forced }, function(event)
 	easybar.set("clock", {
 		label = {
 			string = os.date("%H:%M"),
@@ -199,10 +226,36 @@ Useful fields include:
 Example:
 
 ```lua
-easybar.subscribe("calendar", "mouse.clicked", function(event)
+easybar.subscribe("calendar", easybar.events.mouse.clicked, function(event)
 	print(event.name, event.button)
 end)
 ```
+
+Common driver events include:
+
+- `easybar.events.forced`
+- `easybar.events.system_woke`
+- `easybar.events.sleep`
+- `easybar.events.space_change`
+- `easybar.events.app_switch`
+- `easybar.events.display_change`
+- `easybar.events.power_source_change`
+- `easybar.events.charging_state_change`
+- `easybar.events.wifi_change`
+- `easybar.events.network_change`
+- `easybar.events.volume_change`
+- `easybar.events.mute_change`
+- `easybar.events.minute_tick`
+- `easybar.events.second_tick`
+- `easybar.events.calendar_change`
+- `easybar.events.focus_change`
+- `easybar.events.workspace_change`
+- `easybar.events.mouse.entered`
+- `easybar.events.mouse.exited`
+- `easybar.events.mouse.clicked`
+- `easybar.events.mouse.scrolled`
+- `easybar.events.slider.preview`
+- `easybar.events.slider.changed`
 
 Event ownership rule:
 
@@ -470,13 +523,13 @@ easybar.add("item", "calendar_event_1", {
 	label = "09:00 Standup",
 })
 
-easybar.subscribe("calendar", "mouse.entered", function()
+easybar.subscribe("calendar", easybar.events.mouse.entered, function()
 	easybar.animate("calendar", {
 		popup = { drawing = true },
 	})
 end)
 
-easybar.subscribe("calendar", "mouse.exited", function()
+easybar.subscribe("calendar", easybar.events.mouse.exited, function()
 	easybar.animate("calendar", {
 		popup = { drawing = false },
 	})
@@ -489,7 +542,7 @@ end)
 
 Use `update_freq`.
 
-Subscribe to `"routine"`.
+Subscribe to `easybar.events.routine`.
 
 ```lua
 easybar.add("item", "clock", {
@@ -498,7 +551,7 @@ easybar.add("item", "clock", {
 	update_freq = 30,
 })
 
-easybar.subscribe("clock", { "routine", "forced" }, function()
+easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
 	easybar.set("clock", {
 		label = os.date("%H:%M"),
 	})
@@ -511,15 +564,15 @@ end)
 
 Subscribe to mouse events:
 
-- `mouse.entered`
-- `mouse.exited`
-- `mouse.clicked`
-- `mouse.scrolled`
+- `easybar.events.mouse.entered`
+- `easybar.events.mouse.exited`
+- `easybar.events.mouse.clicked`
+- `easybar.events.mouse.scrolled`
 
 Example:
 
 ```lua
-easybar.subscribe("calendar", "mouse.clicked", function(event)
+easybar.subscribe("calendar", easybar.events.mouse.clicked, function(event)
 	print(event.name, event.button)
 end)
 ```
@@ -532,8 +585,8 @@ For scroll events:
 
 For slider events:
 
-- `slider.preview`
-- `slider.changed`
+- `easybar.events.slider.preview`
+- `easybar.events.slider.changed`
 
 The value is in:
 
@@ -651,7 +704,7 @@ easybar.add("item", "clock", {
 	},
 })
 
-easybar.subscribe("clock", { "routine", "forced" }, function()
+easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
 	easybar.set("clock", {
 		label = {
 			string = os.date("%H:%M"),
@@ -687,7 +740,7 @@ easybar.add("item", "clock", {
 	},
 })
 
-easybar.subscribe("clock", { "routine", "forced" }, function()
+easybar.subscribe("clock", { easybar.events.routine, easybar.events.forced }, function()
 	easybar.animate("clock", {
 		label = {
 			string = os.date("%H:%M"),
@@ -710,5 +763,5 @@ For most widgets:
 Keep widget ids stable.
 Use `row` for grouped items.
 Use `popup.<id>` for popup content.
-Use `update_freq` and `routine` for polling.
+Use `update_freq` and `easybar.events.routine` for polling.
 Use a separate Lua module for personal widget config, and update `package.path` before `require(...)` when that module lives outside the widgets directory.

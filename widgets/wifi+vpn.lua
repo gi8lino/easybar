@@ -81,7 +81,7 @@ easybar.add("item", "vpn", {
 	},
 })
 
-easybar.subscribe("vpn", { "network_change", "wifi_change", "system_woke", "forced" }, function()
+easybar.subscribe("vpn", { easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced }, function()
 	local state = read_vpn_status()
 
 	easybar.set("vpn", {

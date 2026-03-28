@@ -30,6 +30,7 @@ let package = Package(
       path: "Sources/EasyBar",
       resources: [
         .copy("Lua/runtime.lua"),
+        .copy("Lua/easybar_api.lua"),
         .copy("Lua/easybar"),
       ]
     ),

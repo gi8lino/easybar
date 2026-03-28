@@ -74,34 +74,34 @@ easybar.add("slider", "volume_inline_slider", {
 
 local expanded = false
 
-easybar.subscribe("volume_inline", { "volume_change", "forced" }, function()
+easybar.subscribe("volume_inline", { easybar.events.volume_change, easybar.events.forced }, function()
 	refresh(expanded)
 end)
 
-easybar.subscribe("volume_inline", "mouse.entered", function()
+easybar.subscribe("volume_inline", easybar.events.mouse.entered, function()
 	expanded = true
 	refresh(true)
 end)
 
-easybar.subscribe("volume_inline", "mouse.exited", function()
+easybar.subscribe("volume_inline", easybar.events.mouse.exited, function()
 	expanded = false
 	refresh(false)
 end)
 
-easybar.subscribe("volume_inline", "mouse.scrolled", function(event)
+easybar.subscribe("volume_inline", easybar.events.mouse.scrolled, function(event)
 	local direction = event.direction
 	local delta = direction == "up" and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh(true)
 end)
 
-easybar.subscribe("volume_inline_slider", "slider.preview", function(event)
+easybar.subscribe("volume_inline_slider", easybar.events.slider.preview, function(event)
 	easybar.set("volume_inline_slider", {
 		value = tonumber(event.value) or get_audio_state().volume,
 	})
 end)
 
-easybar.subscribe("volume_inline_slider", "slider.changed", function(event)
+easybar.subscribe("volume_inline_slider", easybar.events.slider.changed, function(event)
 	set_volume(event.value)
 	refresh(true)
 end)

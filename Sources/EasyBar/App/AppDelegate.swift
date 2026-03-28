@@ -1,4 +1,6 @@
 import AppKit
+import EasyBarShared
+import Foundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -15,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
 
     logStartup()
+    installWidgetEditorStub()
 
     let controller = BarWindowController()
     controller.onReloadConfig = { [weak self] in
@@ -66,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       enabled: Config.shared.loggingEnabled,
       path: Logger.fileLoggingPath
     )
+    installWidgetEditorStub()
     barWindowController?.reloadLayout()
     WidgetRunner.shared.reload()
     NativeWidgetRegistry.shared.reload()
@@ -134,5 +138,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     Logger.info(
       "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)")
     Logger.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
+  }
+
+  /// Installs the bundled Lua editor stub into the active widget directory.
+  private func installWidgetEditorStub() {
+    guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua") else {
+      Logger.warn("easybar_api.lua not found in bundle resources")
+      return
+    }
+
+    let supportDirectory = defaultSupportDirectoryPath()
+    let installedStub = defaultWidgetEditorStubPath()
+    let fileManager = FileManager.default
+
+    do {
+      try fileManager.createDirectory(
+        at: supportDirectory,
+        withIntermediateDirectories: true
+      )
+
+      let bundledData = try Data(contentsOf: bundledStub)
+      let existingData = try? Data(contentsOf: installedStub)
+
+      guard bundledData != existingData else {
+        return
+      }
+
+      try bundledData.write(to: installedStub, options: .atomic)
+      Logger.info("installed widget editor stub path=\(installedStub.path)")
+    } catch {
+      Logger.warn("failed to install widget editor stub: \(error)")
+    }
   }
 }

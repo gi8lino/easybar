@@ -162,11 +162,11 @@ easybar.add("item", "wireguard_popup_label", {
 	},
 })
 
-easybar.subscribe("wireguard", { "network_change", "wifi_change", "minute_tick", "forced" }, function(_)
+easybar.subscribe("wireguard", { easybar.events.network_change, easybar.events.wifi_change, easybar.events.minute_tick, easybar.events.forced }, function(_)
 	refresh()
 end)
 
-easybar.subscribe("wireguard", "mouse.clicked", function(event)
+easybar.subscribe("wireguard", easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
 		refresh()

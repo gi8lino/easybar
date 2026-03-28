@@ -155,21 +155,21 @@ easybar.add("item", "wifi_vpn_vpn", {
 
 local show_label = false
 
-easybar.subscribe("wifi_vpn", { "wifi_change", "network_change", "minute_tick", "forced" }, function(event)
+easybar.subscribe("wifi_vpn", { easybar.events.wifi_change, easybar.events.network_change, easybar.events.minute_tick, easybar.events.forced }, function(event)
 	refresh(show_label)
 end)
 
-easybar.subscribe("wifi_vpn", "mouse.entered", function(event)
+easybar.subscribe("wifi_vpn", easybar.events.mouse.entered, function(event)
 	show_label = true
 	refresh(true)
 end)
 
-easybar.subscribe("wifi_vpn", "mouse.exited", function(event)
+easybar.subscribe("wifi_vpn", easybar.events.mouse.exited, function(event)
 	show_label = false
 	refresh(false)
 end)
 
-easybar.subscribe("wifi_vpn", "mouse.clicked", function(event)
+easybar.subscribe("wifi_vpn", easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_vpn()
 		refresh(show_label)

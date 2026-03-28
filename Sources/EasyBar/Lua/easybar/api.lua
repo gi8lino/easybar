@@ -20,6 +20,50 @@ local DRIVER_EVENTS = {
 	forced = true,
 }
 
+local function make_event_token(name)
+	return {
+		name = name,
+	}
+end
+
+local EVENT_TOKENS = {
+	routine = make_event_token("routine"),
+	forced = make_event_token("forced"),
+	system_woke = make_event_token("system_woke"),
+	sleep = make_event_token("sleep"),
+	space_change = make_event_token("space_change"),
+	app_switch = make_event_token("app_switch"),
+	display_change = make_event_token("display_change"),
+	power_source_change = make_event_token("power_source_change"),
+	charging_state_change = make_event_token("charging_state_change"),
+	wifi_change = make_event_token("wifi_change"),
+	network_change = make_event_token("network_change"),
+	volume_change = make_event_token("volume_change"),
+	mute_change = make_event_token("mute_change"),
+	minute_tick = make_event_token("minute_tick"),
+	second_tick = make_event_token("second_tick"),
+	calendar_change = make_event_token("calendar_change"),
+	focus_change = make_event_token("focus_change"),
+	workspace_change = make_event_token("workspace_change"),
+	mouse = {
+		entered = make_event_token("mouse.entered"),
+		exited = make_event_token("mouse.exited"),
+		clicked = make_event_token("mouse.clicked"),
+		down = make_event_token("mouse.down"),
+		up = make_event_token("mouse.up"),
+		scrolled = make_event_token("mouse.scrolled"),
+	},
+	slider = {
+		preview = make_event_token("slider.preview"),
+		changed = make_event_token("slider.changed"),
+	},
+}
+
+local function normalize_event_token(event)
+	assert(type(event) == "table" and type(event.name) == "string" and event.name ~= "", "easybar.subscribe(...) requires easybar.events values")
+	return event.name
+end
+
 local function deep_copy(value)
 	if type(value) ~= "table" then
 		return value
@@ -280,7 +324,7 @@ function M.new(log)
 		ensure_item_exists(id)
 		assert(type(handler) == "function", "easybar.subscribe(id, events, handler) requires handler")
 
-		if type(events) == "string" then
+		if type(events) == "table" and type(events.name) == "string" then
 			events = { events }
 		end
 
@@ -289,7 +333,8 @@ function M.new(log)
 		local bucket = state.subscriptions[id] or {}
 		state.subscriptions[id] = bucket
 
-		for _, event_name in ipairs(events) do
+		for _, event in ipairs(events) do
+			local event_name = normalize_event_token(event)
 			bucket[event_name] = bucket[event_name] or {}
 			bucket[event_name][#bucket[event_name] + 1] = handler
 
@@ -463,6 +508,7 @@ function M.new(log)
 		widget_api.subscribe = api.subscribe
 		widget_api.handle_event = api.handle_event
 		widget_api.required_events = api.required_events
+		widget_api.events = EVENT_TOKENS
 
 		--- Writes one widget log line through the host logger.
 		function widget_api.log(level, ...)
