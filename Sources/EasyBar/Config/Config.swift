@@ -62,8 +62,7 @@ final class Config {
 
     let snapshot = snapshot()
 
-    resetAllToDefaults()
-    resetDerivedDefaults()
+    resetToDefaults()
 
     do {
       try load()
@@ -85,8 +84,14 @@ final class Config {
       .path
   }
 
+  /// Restores all defaults before parsing again.
+  func resetToDefaults() {
+    resetStaticDefaults()
+    resetDerivedDefaults()
+  }
+
   /// Restores defaults derived from the current home directory.
-  func resetDerivedDefaults() {
+  private func resetDerivedDefaults() {
     widgetsPath =
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
@@ -99,7 +104,14 @@ final class Config {
   }
 
   /// Restores all static defaults before parsing again.
-  func resetAllToDefaults() {
+  private func resetStaticDefaults() {
+    resetAppDefaults()
+    resetBarDefaults()
+    resetBuiltinDefaults()
+  }
+
+  /// Restores app-level defaults.
+  private func resetAppDefaults() {
     luaPath = "/opt/homebrew/bin/lua"
     watchConfigFile = false
     loggingEnabled = false
@@ -107,14 +119,20 @@ final class Config {
     calendarAgentEnabled = true
     networkAgentEnabled = true
     networkAgentRefreshIntervalSeconds = 60
+  }
 
+  /// Restores bar defaults.
+  private func resetBarDefaults() {
     barHeight = 32
     barPaddingX = 10
     barExtendBehindNotch = true
 
     barBackgroundHex = "#111111"
     barBorderHex = "#222222"
+  }
 
+  /// Restores built-in widget defaults.
+  private func resetBuiltinDefaults() {
     builtinCPU = .default
     builtinBattery = .default
     builtinGroups = []
@@ -161,6 +179,13 @@ final class Config {
 
   /// Restores one previous config snapshot.
   private func apply(_ snapshot: ConfigSnapshot) {
+    applyAppSnapshot(snapshot)
+    applyBarSnapshot(snapshot)
+    applyBuiltinSnapshot(snapshot)
+  }
+
+  /// Restores the app-level config snapshot.
+  private func applyAppSnapshot(_ snapshot: ConfigSnapshot) {
     widgetsPath = snapshot.widgetsPath
     luaPath = snapshot.luaPath
     watchConfigFile = snapshot.watchConfigFile
@@ -172,14 +197,20 @@ final class Config {
     networkAgentEnabled = snapshot.networkAgentEnabled
     networkAgentSocketPath = snapshot.networkAgentSocketPath
     networkAgentRefreshIntervalSeconds = snapshot.networkAgentRefreshIntervalSeconds
+  }
 
+  /// Restores the bar config snapshot.
+  private func applyBarSnapshot(_ snapshot: ConfigSnapshot) {
     barHeight = snapshot.barHeight
     barPaddingX = snapshot.barPaddingX
     barExtendBehindNotch = snapshot.barExtendBehindNotch
 
     barBackgroundHex = snapshot.barBackgroundHex
     barBorderHex = snapshot.barBorderHex
+  }
 
+  /// Restores the built-in widget config snapshot.
+  private func applyBuiltinSnapshot(_ snapshot: ConfigSnapshot) {
     builtinCPU = snapshot.builtinCPU
     builtinBattery = snapshot.builtinBattery
     builtinGroups = snapshot.builtinGroups
