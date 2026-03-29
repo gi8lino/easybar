@@ -297,146 +297,24 @@ extension Config {
       fallback: builtinCalendar.style
     )
 
-    let anchor = CalendarBuiltinConfig.Anchor(
-      itemFormat: try optionalString(
-        anchorTable["item_format"],
-        path: "builtins.calendar.anchor.item_format"
-      ) ?? builtinCalendar.itemFormat,
-      layout: normalizedCalendarLayout(
-        try optionalString(
-          anchorTable["layout"],
-          path: "builtins.calendar.anchor.layout"
-        ) ?? builtinCalendar.layout.rawValue
-      ),
-      topFormat: try optionalString(
-        anchorTable["top_format"],
-        path: "builtins.calendar.anchor.top_format"
-      ) ?? builtinCalendar.topFormat,
-      bottomFormat: try optionalString(
-        anchorTable["bottom_format"],
-        path: "builtins.calendar.anchor.bottom_format"
-      ) ?? builtinCalendar.bottomFormat,
-      lineSpacing: try optionalNumber(
-        anchorTable["line_spacing"],
-        path: "builtins.calendar.anchor.line_spacing"
-      ) ?? builtinCalendar.lineSpacing,
-      topTextColorHex: try optionalString(
-        anchorTable["top_text_color"],
-        path: "builtins.calendar.anchor.top_text_color"
-      ) ?? builtinCalendar.topTextColorHex,
-      bottomTextColorHex: try optionalString(
-        anchorTable["bottom_text_color"],
-        path: "builtins.calendar.anchor.bottom_text_color"
-      ) ?? builtinCalendar.bottomTextColorHex
+    let anchor = try parseCalendarAnchor(
+      from: anchorTable,
+      fallback: builtinCalendar.anchor
     )
 
-    let events = CalendarBuiltinConfig.Events(
-      days: max(
-        1,
-        try optionalInt(
-          eventsTable["days"],
-          path: "builtins.calendar.events.days"
-        ) ?? builtinCalendar.days
-      ),
-      emptyText: try optionalString(
-        eventsTable["empty_text"],
-        path: "builtins.calendar.events.empty_text"
-      ) ?? builtinCalendar.emptyText
+    let events = try parseCalendarEvents(
+      from: eventsTable,
+      fallback: builtinCalendar.events
     )
 
-    let birthdays = CalendarBuiltinConfig.Birthdays(
-      show: try optionalBool(
-        birthdaysTable["show"],
-        path: "builtins.calendar.birthdays.show"
-      ) ?? builtinCalendar.showBirthdays,
-      title: try optionalString(
-        birthdaysTable["title"],
-        path: "builtins.calendar.birthdays.title"
-      ) ?? builtinCalendar.birthdaysTitle,
-      dateFormat: try optionalString(
-        birthdaysTable["date_format"],
-        path: "builtins.calendar.birthdays.date_format"
-      ) ?? builtinCalendar.birthdaysDateFormat,
-      showAge: try optionalBool(
-        birthdaysTable["show_age"],
-        path: "builtins.calendar.birthdays.show_age"
-      ) ?? builtinCalendar.birthdaysShowAge
+    let birthdays = try parseCalendarBirthdays(
+      from: birthdaysTable,
+      fallback: builtinCalendar.birthdays
     )
 
-    let birthdaysPopupTable = popupTable["birthdays"]?.table ?? TOMLTable()
-    let todayPopupTable = popupTable["today"]?.table ?? TOMLTable()
-    let tomorrowPopupTable = popupTable["tomorrow"]?.table ?? TOMLTable()
-    let futurePopupTable = popupTable["future"]?.table ?? TOMLTable()
-
-    let popup = CalendarBuiltinConfig.Popup(
-      backgroundColorHex: try optionalString(
-        popupTable["background_color"],
-        path: "builtins.calendar.popup.background_color"
-      ) ?? builtinCalendar.popupBackgroundColorHex,
-      borderColorHex: try optionalString(
-        popupTable["border_color"],
-        path: "builtins.calendar.popup.border_color"
-      ) ?? builtinCalendar.popupBorderColorHex,
-      borderWidth: try optionalNumber(
-        popupTable["border_width"],
-        path: "builtins.calendar.popup.border_width"
-      ) ?? builtinCalendar.popupBorderWidth,
-      cornerRadius: try optionalNumber(
-        popupTable["corner_radius"],
-        path: "builtins.calendar.popup.corner_radius"
-      ) ?? builtinCalendar.popupCornerRadius,
-      paddingX: try optionalNumber(
-        popupTable["padding_x"],
-        path: "builtins.calendar.popup.padding_x"
-      ) ?? builtinCalendar.popupPaddingX,
-      paddingY: try optionalNumber(
-        popupTable["padding_y"],
-        path: "builtins.calendar.popup.padding_y"
-      ) ?? builtinCalendar.popupPaddingY,
-      spacing: try optionalNumber(
-        popupTable["spacing"],
-        path: "builtins.calendar.popup.spacing"
-      ) ?? builtinCalendar.popupSpacing,
-      itemIndent: try optionalNumber(
-        popupTable["item_indent"],
-        path: "builtins.calendar.popup.item_indent"
-      ) ?? builtinCalendar.popupItemIndent,
-      marginX: try optionalNumber(
-        popupTable["margin_x"],
-        path: "builtins.calendar.popup.margin_x"
-      ) ?? builtinCalendar.popupMarginX,
-      marginY: try optionalNumber(
-        popupTable["margin_y"],
-        path: "builtins.calendar.popup.margin_y"
-      ) ?? builtinCalendar.popupMarginY,
-      showCalendarName: try optionalBool(
-        popupTable["show_calendar_name"],
-        path: "builtins.calendar.popup.show_calendar_name"
-      ) ?? builtinCalendar.popupShowCalendarName,
-      useCalendarColors: try optionalBool(
-        popupTable["use_calendar_colors"],
-        path: "builtins.calendar.popup.use_calendar_colors"
-      ) ?? builtinCalendar.popupUseCalendarColors,
-      birthdays: try parseCalendarPopupSectionStyle(
-        from: birthdaysPopupTable,
-        path: "builtins.calendar.popup.birthdays",
-        fallback: builtinCalendar.popup.birthdays
-      ),
-      today: try parseCalendarPopupSectionStyle(
-        from: todayPopupTable,
-        path: "builtins.calendar.popup.today",
-        fallback: builtinCalendar.popup.today
-      ),
-      tomorrow: try parseCalendarPopupSectionStyle(
-        from: tomorrowPopupTable,
-        path: "builtins.calendar.popup.tomorrow",
-        fallback: builtinCalendar.popup.tomorrow
-      ),
-      future: try parseCalendarPopupSectionStyle(
-        from: futurePopupTable,
-        path: "builtins.calendar.popup.future",
-        fallback: builtinCalendar.popup.future
-      )
+    let popup = try parseCalendarPopup(
+      from: popupTable,
+      fallback: builtinCalendar.popup
     )
 
     builtinCalendar = CalendarBuiltinConfig(
@@ -446,6 +324,172 @@ extension Config {
       events: events,
       birthdays: birthdays,
       popup: popup
+    )
+  }
+
+  /// Parses the calendar anchor block.
+  private func parseCalendarAnchor(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Anchor
+  ) throws -> CalendarBuiltinConfig.Anchor {
+    CalendarBuiltinConfig.Anchor(
+      itemFormat: try optionalString(
+        table["item_format"],
+        path: "builtins.calendar.anchor.item_format"
+      ) ?? fallback.itemFormat,
+      layout: normalizedCalendarLayout(
+        try optionalString(
+          table["layout"],
+          path: "builtins.calendar.anchor.layout"
+        ) ?? fallback.layout.rawValue
+      ),
+      topFormat: try optionalString(
+        table["top_format"],
+        path: "builtins.calendar.anchor.top_format"
+      ) ?? fallback.topFormat,
+      bottomFormat: try optionalString(
+        table["bottom_format"],
+        path: "builtins.calendar.anchor.bottom_format"
+      ) ?? fallback.bottomFormat,
+      lineSpacing: try optionalNumber(
+        table["line_spacing"],
+        path: "builtins.calendar.anchor.line_spacing"
+      ) ?? fallback.lineSpacing,
+      topTextColorHex: try optionalString(
+        table["top_text_color"],
+        path: "builtins.calendar.anchor.top_text_color"
+      ) ?? fallback.topTextColorHex,
+      bottomTextColorHex: try optionalString(
+        table["bottom_text_color"],
+        path: "builtins.calendar.anchor.bottom_text_color"
+      ) ?? fallback.bottomTextColorHex
+    )
+  }
+
+  /// Parses the calendar events block.
+  private func parseCalendarEvents(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Events
+  ) throws -> CalendarBuiltinConfig.Events {
+    CalendarBuiltinConfig.Events(
+      days: max(
+        1,
+        try optionalInt(
+          table["days"],
+          path: "builtins.calendar.events.days"
+        ) ?? fallback.days
+      ),
+      emptyText: try optionalString(
+        table["empty_text"],
+        path: "builtins.calendar.events.empty_text"
+      ) ?? fallback.emptyText
+    )
+  }
+
+  /// Parses the calendar birthdays block.
+  private func parseCalendarBirthdays(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Birthdays
+  ) throws -> CalendarBuiltinConfig.Birthdays {
+    CalendarBuiltinConfig.Birthdays(
+      show: try optionalBool(
+        table["show"],
+        path: "builtins.calendar.birthdays.show"
+      ) ?? fallback.show,
+      title: try optionalString(
+        table["title"],
+        path: "builtins.calendar.birthdays.title"
+      ) ?? fallback.title,
+      dateFormat: try optionalString(
+        table["date_format"],
+        path: "builtins.calendar.birthdays.date_format"
+      ) ?? fallback.dateFormat,
+      showAge: try optionalBool(
+        table["show_age"],
+        path: "builtins.calendar.birthdays.show_age"
+      ) ?? fallback.showAge
+    )
+  }
+
+  /// Parses the calendar popup block.
+  private func parseCalendarPopup(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Popup
+  ) throws -> CalendarBuiltinConfig.Popup {
+    let birthdaysTable = table["birthdays"]?.table ?? TOMLTable()
+    let todayTable = table["today"]?.table ?? TOMLTable()
+    let tomorrowTable = table["tomorrow"]?.table ?? TOMLTable()
+    let futureTable = table["future"]?.table ?? TOMLTable()
+
+    return CalendarBuiltinConfig.Popup(
+      backgroundColorHex: try optionalString(
+        table["background_color"],
+        path: "builtins.calendar.popup.background_color"
+      ) ?? fallback.backgroundColorHex,
+      borderColorHex: try optionalString(
+        table["border_color"],
+        path: "builtins.calendar.popup.border_color"
+      ) ?? fallback.borderColorHex,
+      borderWidth: try optionalNumber(
+        table["border_width"],
+        path: "builtins.calendar.popup.border_width"
+      ) ?? fallback.borderWidth,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.calendar.popup.corner_radius"
+      ) ?? fallback.cornerRadius,
+      paddingX: try optionalNumber(
+        table["padding_x"],
+        path: "builtins.calendar.popup.padding_x"
+      ) ?? fallback.paddingX,
+      paddingY: try optionalNumber(
+        table["padding_y"],
+        path: "builtins.calendar.popup.padding_y"
+      ) ?? fallback.paddingY,
+      spacing: try optionalNumber(
+        table["spacing"],
+        path: "builtins.calendar.popup.spacing"
+      ) ?? fallback.spacing,
+      itemIndent: try optionalNumber(
+        table["item_indent"],
+        path: "builtins.calendar.popup.item_indent"
+      ) ?? fallback.itemIndent,
+      marginX: try optionalNumber(
+        table["margin_x"],
+        path: "builtins.calendar.popup.margin_x"
+      ) ?? fallback.marginX,
+      marginY: try optionalNumber(
+        table["margin_y"],
+        path: "builtins.calendar.popup.margin_y"
+      ) ?? fallback.marginY,
+      showCalendarName: try optionalBool(
+        table["show_calendar_name"],
+        path: "builtins.calendar.popup.show_calendar_name"
+      ) ?? fallback.showCalendarName,
+      useCalendarColors: try optionalBool(
+        table["use_calendar_colors"],
+        path: "builtins.calendar.popup.use_calendar_colors"
+      ) ?? fallback.useCalendarColors,
+      birthdays: try parseCalendarPopupSectionStyle(
+        from: birthdaysTable,
+        path: "builtins.calendar.popup.birthdays",
+        fallback: fallback.birthdays
+      ),
+      today: try parseCalendarPopupSectionStyle(
+        from: todayTable,
+        path: "builtins.calendar.popup.today",
+        fallback: fallback.today
+      ),
+      tomorrow: try parseCalendarPopupSectionStyle(
+        from: tomorrowTable,
+        path: "builtins.calendar.popup.tomorrow",
+        fallback: fallback.tomorrow
+      ),
+      future: try parseCalendarPopupSectionStyle(
+        from: futureTable,
+        path: "builtins.calendar.popup.future",
+        fallback: fallback.future
+      )
     )
   }
 
