@@ -72,25 +72,26 @@ final class SocketServer {
       var buffer = [UInt8](repeating: 0, count: 256)
       let count = read(client, &buffer, 255)
 
-      if count > 0 {
-        let string = String(bytes: buffer.prefix(count), encoding: .utf8)?
-          .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        Logger.debug("socket received raw command '\(string ?? "unknown")'")
-
-        if let string,
-          let cmd = IPC.Command(rawValue: string)
-        {
-          Logger.debug("socket dispatching command '\(cmd.rawValue)'")
-
-          DispatchQueue.main.async {
-            handler(cmd)
-          }
-        } else {
-          Logger.warn("unknown IPC command")
-        }
+      if count < 0 {
+        close(client)
+        continue
       }
 
+      let rawCommand = String(bytes: buffer.prefix(count), encoding: .utf8)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+      Logger.debug("socket received raw command '\(rawCommand ?? "unknown")'")
+
+      guard let cmd = IPC.Command(rawValue: rawCommand ?? "") else {
+        Logger.warn("unknown IPC command")
+        close(client)
+        continue
+      }
+
+      Logger.debug("socket dispatching command '\(cmd.rawValue)'")
+      DispatchQueue.main.async {
+        handler(cmd)
+      }
       close(client)
     }
   }
