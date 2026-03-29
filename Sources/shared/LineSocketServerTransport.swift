@@ -44,48 +44,10 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
 
     guard !running else { return }
 
-    let socketDirectory = socketDirectoryPath(for: socketPath)
-
-    do {
-      try FileManager.default.createDirectory(
-        at: URL(fileURLWithPath: socketDirectory, isDirectory: true),
-        withIntermediateDirectories: true
-      )
-    } catch {
-      errorLog("failed to create \(serverLabel) socket directory at \(socketDirectory): \(error)")
-      return
-    }
-
-    unlink(socketPath)
-
-    listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard listenFD >= 0 else {
-      errorLog("failed to create \(serverLabel) socket")
-      return
-    }
-
-    var addr = makeSockAddrUn(path: socketPath)
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let bindResult = withUnsafePointer(to: &addr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        bind(self.listenFD, $0, addrLen)
-      }
-    }
-
-    guard bindResult == 0 else {
-      errorLog("failed to bind \(serverLabel) socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
-
-    guard listen(listenFD, 8) == 0 else {
-      errorLog("failed to listen on \(serverLabel) socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
+    guard prepareSocketDirectory() else { return }
+    guard openListeningSocket() else { return }
+    guard bindListeningSocket() else { return }
+    guard startListening() else { return }
 
     running = true
     infoLog("\(serverLabel) socket listening on \(socketPath)")
@@ -133,17 +95,17 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
 
   /// Stores one subscriber for future broadcasts.
   public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) {
-    subscribersLock.lock()
-    subscribers[fd] = subscriber
-    subscribersLock.unlock()
+    withSubscribersLock {
+      subscribers[fd] = subscriber
+    }
   }
 
   /// Removes one subscriber and closes its socket.
   @discardableResult
   public func removeSubscriber(fd: Int32) -> Subscriber? {
-    subscribersLock.lock()
-    let existing = subscribers.removeValue(forKey: fd)
-    subscribersLock.unlock()
+    let existing = withSubscribersLock {
+      subscribers.removeValue(forKey: fd)
+    }
 
     guard existing != nil else { return nil }
 
@@ -175,11 +137,12 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
       }
 
       debugLog("\(serverLabel) accepted client fd=\(clientFD)")
-      handleClient(clientFD, handleRequest: handleRequest)
+      readAndHandleClient(clientFD, handleRequest: handleRequest)
     }
   }
 
-  private func handleClient(_ clientFD: Int32, handleRequest: @escaping (Int32, Request) -> Void) {
+  /// Reads and dispatches one connected client request.
+  private func readAndHandleClient(_ clientFD: Int32, handleRequest: @escaping (Int32, Request) -> Void) {
     guard let request = readRequest(from: clientFD) else {
       close(clientFD)
       return
@@ -188,6 +151,7 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
     handleRequest(clientFD, request)
   }
 
+  /// Reads one newline-delimited request from one client socket.
   private func readRequest(from fd: Int32) -> Request? {
     var buffer = [UInt8](repeating: 0, count: 4096)
     let count = read(fd, &buffer, buffer.count)
@@ -206,6 +170,82 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
       return nil
     }
   }
+
+  /// Creates the socket directory when it does not exist yet.
+  private func prepareSocketDirectory() -> Bool {
+    let socketDirectory = socketDirectoryPath(for: socketPath)
+
+    do {
+      try FileManager.default.createDirectory(
+        at: URL(fileURLWithPath: socketDirectory, isDirectory: true),
+        withIntermediateDirectories: true
+      )
+      return true
+    } catch {
+      errorLog("failed to create \(serverLabel) socket directory at \(socketDirectory): \(error)")
+      return false
+    }
+  }
+
+  /// Opens the listening file descriptor for this transport.
+  private func openListeningSocket() -> Bool {
+    unlink(socketPath)
+
+    listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard listenFD >= 0 else {
+      errorLog("failed to create \(serverLabel) socket")
+      return false
+    }
+
+    return true
+  }
+
+  /// Binds the listening file descriptor to the configured path.
+  private func bindListeningSocket() -> Bool {
+    var addr = makeSockAddrUn(path: socketPath)
+    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    let bindResult = withUnsafePointer(to: &addr) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        bind(self.listenFD, $0, addrLen)
+      }
+    }
+
+    guard bindResult == 0 else {
+      errorLog("failed to bind \(serverLabel) socket at \(socketPath)")
+      closeListeningSocket()
+      return false
+    }
+
+    return true
+  }
+
+  /// Starts listening for client connections.
+  private func startListening() -> Bool {
+    guard listen(listenFD, 8) == 0 else {
+      errorLog("failed to listen on \(serverLabel) socket at \(socketPath)")
+      closeListeningSocket()
+      return false
+    }
+
+    return true
+  }
+
+  /// Closes the current listening socket and clears its state.
+  private func closeListeningSocket() {
+    guard listenFD >= 0 else { return }
+    close(listenFD)
+    listenFD = -1
+  }
+
+  /// Runs one closure while holding the subscribers lock.
+  private func withSubscribersLock<T>(_ body: () -> T) -> T {
+    subscribersLock.lock()
+    defer { subscribersLock.unlock() }
+    return body()
+  }
+
+  /// Returns whether the transport is still accepting clients.
   private func isRunning() -> Bool {
     stateLock.lock()
     defer { stateLock.unlock() }
