@@ -2,6 +2,11 @@ import Foundation
 
 final class NativeWidgetRegistry {
 
+  private struct Registration {
+    let enabled: Bool
+    let makeWidget: () -> NativeWidget
+  }
+
   static let shared = NativeWidgetRegistry()
 
   private var widgets: [NativeWidget] = []
@@ -45,38 +50,28 @@ final class NativeWidgetRegistry {
 
   /// Builds the enabled native widget list from the current config.
   private func makeEnabledWidgets() -> [NativeWidget] {
-    var widgets: [NativeWidget] = []
-
-    appendWidgetIfEnabled(
-      Config.shared.builtinSpaces.enabled, widget: SpacesNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinBattery.enabled, widget: BatteryNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinFrontApp.enabled, widget: FrontAppNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinVolume.enabled, widget: VolumeSliderNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinWiFi.enabled, widget: WiFiNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinDate.enabled, widget: DateNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinTime.enabled, widget: TimeNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinCalendar.enabled, widget: CalendarNativeWidget(), to: &widgets)
-    appendWidgetIfEnabled(
-      Config.shared.builtinCPU.enabled, widget: CPUSparklineNativeWidget(), to: &widgets)
-
-    return widgets
+    registrations().compactMap(makeWidgetIfEnabled)
   }
 
-  /// Appends one widget when its config flag is enabled.
-  private func appendWidgetIfEnabled(
-    _ enabled: Bool,
-    widget: NativeWidget,
-    to widgets: inout [NativeWidget]
-  ) {
-    guard enabled else { return }
-    widgets.append(widget)
+  /// Returns the native widget registration list for the current config.
+  private func registrations() -> [Registration] {
+    [
+      Registration(enabled: Config.shared.builtinSpaces.enabled) { SpacesNativeWidget() },
+      Registration(enabled: Config.shared.builtinBattery.enabled) { BatteryNativeWidget() },
+      Registration(enabled: Config.shared.builtinFrontApp.enabled) { FrontAppNativeWidget() },
+      Registration(enabled: Config.shared.builtinVolume.enabled) { VolumeSliderNativeWidget() },
+      Registration(enabled: Config.shared.builtinWiFi.enabled) { WiFiNativeWidget() },
+      Registration(enabled: Config.shared.builtinDate.enabled) { DateNativeWidget() },
+      Registration(enabled: Config.shared.builtinTime.enabled) { TimeNativeWidget() },
+      Registration(enabled: Config.shared.builtinCalendar.enabled) { CalendarNativeWidget() },
+      Registration(enabled: Config.shared.builtinCPU.enabled) { CPUSparklineNativeWidget() },
+    ]
+  }
+
+  /// Builds one native widget when its registration is enabled.
+  private func makeWidgetIfEnabled(_ registration: Registration) -> NativeWidget? {
+    guard registration.enabled else { return nil }
+    return registration.makeWidget()
   }
 
   /// Logs the current built-in widget enablement snapshot.
