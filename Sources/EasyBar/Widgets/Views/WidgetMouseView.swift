@@ -68,9 +68,7 @@ final class MouseTrackingNSView: NSView {
     guard !isMouseInside else { return }
     isMouseInside = true
     guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
-    Logger.debug("mouse entered widget=\(widgetID) target=\(targetWidgetID)")
-    EventBus.shared.emitWidgetEvent(
-      .mouseEntered, widgetID: widgetID, targetWidgetID: targetWidgetID)
+    emitMouseEvent(.mouseEntered)
   }
 
   /// Emits hover-exited when tracking is enabled.
@@ -79,9 +77,7 @@ final class MouseTrackingNSView: NSView {
     guard isMouseInside else { return }
     isMouseInside = false
     Self.hoverState.exit(widgetID: self.targetWidgetID) {
-      Logger.debug("mouse exited widget=\(self.widgetID) target=\(self.targetWidgetID)")
-      EventBus.shared.emitWidgetEvent(
-        .mouseExited, widgetID: self.widgetID, targetWidgetID: self.targetWidgetID)
+      self.emitMouseEvent(.mouseExited)
     }
   }
 
@@ -164,21 +160,27 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits one mouse down event for the given button.
   private func emitMouseDown(button: MouseButton) {
-    Logger.debug("mouse down widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
-    EventBus.shared.emitWidgetEvent(
-      .mouseDown, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+    emitMouseEvent(.mouseDown, button: button)
   }
 
   /// Emits one mouse up and click pair for the given button.
   private func emitMouseUp(button: MouseButton) {
-    Logger.debug("mouse up widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+    emitMouseEvent(.mouseUp, button: button)
+    emitMouseEvent(.mouseClicked, button: button)
+  }
+
+  /// Emits one widget mouse event with shared logging.
+  private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
+    let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
     Logger.debug(
-      "mouse clicked widget=\(widgetID) target=\(targetWidgetID) button=\(button.rawValue)")
+      "\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)")
 
     EventBus.shared.emitWidgetEvent(
-      .mouseUp, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
-    EventBus.shared.emitWidgetEvent(
-      .mouseClicked, widgetID: widgetID, targetWidgetID: targetWidgetID, button: button)
+      event,
+      widgetID: widgetID,
+      targetWidgetID: targetWidgetID,
+      button: button
+    )
   }
 }
 
