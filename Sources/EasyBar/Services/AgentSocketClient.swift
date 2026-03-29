@@ -179,20 +179,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private func send(_ request: Request, to fd: Int32) -> Bool {
     do {
       let data = try encoder.encode(request) + Data("\n".utf8)
-      return data.withUnsafeBytes { rawBuffer in
-        guard let base = rawBuffer.baseAddress else { return false }
-
-        var sent = 0
-        while sent < data.count {
-          let written = write(fd, base.advanced(by: sent), data.count - sent)
-          if written <= 0 {
-            return false
-          }
-          sent += written
-        }
-
-        return true
-      }
+      return writeAll(data, to: fd)
     } catch {
       Logger.warn("\(label) failed to encode request: \(error)")
       return false

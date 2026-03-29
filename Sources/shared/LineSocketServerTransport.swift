@@ -157,7 +157,7 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
   public func send(_ message: Message, to fd: Int32) -> Bool {
     do {
       let data = try encoder.encode(message) + Data("\n".utf8)
-      return sendAll(fd, data)
+      return writeAll(data, to: fd)
     } catch {
       warnLog("failed to encode \(serverLabel) message: \(error)")
       return false
@@ -206,24 +206,6 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
       return nil
     }
   }
-
-  private func sendAll(_ fd: Int32, _ data: Data) -> Bool {
-    data.withUnsafeBytes { rawBuffer in
-      guard let base = rawBuffer.baseAddress else { return false }
-
-      var sent = 0
-      while sent < data.count {
-        let written = write(fd, base.advanced(by: sent), data.count - sent)
-        if written <= 0 {
-          return false
-        }
-        sent += written
-      }
-
-      return true
-    }
-  }
-
   private func isRunning() -> Bool {
     stateLock.lock()
     defer { stateLock.unlock() }
