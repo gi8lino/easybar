@@ -2,33 +2,42 @@ import Foundation
 import SwiftUI
 
 struct ConfigSnapshot {
-  let widgetsPath: String
-  let luaPath: String
-  let watchConfigFile: Bool
-  let loggingEnabled: Bool
-  let loggingDebugEnabled: Bool
-  let loggingDirectory: String
-  let calendarAgentEnabled: Bool
-  let calendarAgentSocketPath: String
-  let networkAgentEnabled: Bool
-  let networkAgentSocketPath: String
-  let networkAgentRefreshIntervalSeconds: Double
+  struct App {
+    let widgetsPath: String
+    let luaPath: String
+    let watchConfigFile: Bool
+    let loggingEnabled: Bool
+    let loggingDebugEnabled: Bool
+    let loggingDirectory: String
+    let calendarAgentEnabled: Bool
+    let calendarAgentSocketPath: String
+    let networkAgentEnabled: Bool
+    let networkAgentSocketPath: String
+    let networkAgentRefreshIntervalSeconds: Double
+  }
 
-  let barHeight: CGFloat
-  let barPaddingX: CGFloat
-  let barExtendBehindNotch: Bool
+  struct Bar {
+    let height: CGFloat
+    let paddingX: CGFloat
+    let extendBehindNotch: Bool
+    let backgroundHex: String
+    let borderHex: String
+  }
 
-  let barBackgroundHex: String
-  let barBorderHex: String
+  struct Builtins {
+    let cpu: Config.CPUBuiltinConfig
+    let battery: Config.BatteryBuiltinConfig
+    let groups: [Config.BuiltinGroupConfig]
+    let spaces: Config.SpacesBuiltinConfig
+    let frontApp: Config.FrontAppBuiltinConfig
+    let volume: Config.VolumeBuiltinConfig
+    let wifi: Config.WiFiBuiltinConfig
+    let calendar: Config.CalendarBuiltinConfig
+    let time: Config.TimeBuiltinConfig
+    let date: Config.DateBuiltinConfig
+  }
 
-  let builtinCPU: Config.CPUBuiltinConfig
-  let builtinBattery: Config.BatteryBuiltinConfig
-  let builtinGroups: [Config.BuiltinGroupConfig]
-  let builtinSpaces: Config.SpacesBuiltinConfig
-  let builtinFrontApp: Config.FrontAppBuiltinConfig
-  let builtinVolume: Config.VolumeBuiltinConfig
-  let builtinWiFi: Config.WiFiBuiltinConfig
-  let builtinCalendar: Config.CalendarBuiltinConfig
-  let builtinTime: Config.TimeBuiltinConfig
-  let builtinDate: Config.DateBuiltinConfig
+  let app: App
+  let bar: Bar
+  let builtins: Builtins
 }

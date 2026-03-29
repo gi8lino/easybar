@@ -148,32 +148,38 @@ final class Config {
   /// Captures the current config state.
   private func snapshot() -> ConfigSnapshot {
     ConfigSnapshot(
-      widgetsPath: widgetsPath,
-      luaPath: luaPath,
-      watchConfigFile: watchConfigFile,
-      loggingEnabled: loggingEnabled,
-      loggingDebugEnabled: loggingDebugEnabled,
-      loggingDirectory: loggingDirectory,
-      calendarAgentEnabled: calendarAgentEnabled,
-      calendarAgentSocketPath: calendarAgentSocketPath,
-      networkAgentEnabled: networkAgentEnabled,
-      networkAgentSocketPath: networkAgentSocketPath,
-      networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
-      barHeight: barHeight,
-      barPaddingX: barPaddingX,
-      barExtendBehindNotch: barExtendBehindNotch,
-      barBackgroundHex: barBackgroundHex,
-      barBorderHex: barBorderHex,
-      builtinCPU: builtinCPU,
-      builtinBattery: builtinBattery,
-      builtinGroups: builtinGroups,
-      builtinSpaces: builtinSpaces,
-      builtinFrontApp: builtinFrontApp,
-      builtinVolume: builtinVolume,
-      builtinWiFi: builtinWiFi,
-      builtinCalendar: builtinCalendar,
-      builtinTime: builtinTime,
-      builtinDate: builtinDate
+      app: .init(
+        widgetsPath: widgetsPath,
+        luaPath: luaPath,
+        watchConfigFile: watchConfigFile,
+        loggingEnabled: loggingEnabled,
+        loggingDebugEnabled: loggingDebugEnabled,
+        loggingDirectory: loggingDirectory,
+        calendarAgentEnabled: calendarAgentEnabled,
+        calendarAgentSocketPath: calendarAgentSocketPath,
+        networkAgentEnabled: networkAgentEnabled,
+        networkAgentSocketPath: networkAgentSocketPath,
+        networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
+      ),
+      bar: .init(
+        height: barHeight,
+        paddingX: barPaddingX,
+        extendBehindNotch: barExtendBehindNotch,
+        backgroundHex: barBackgroundHex,
+        borderHex: barBorderHex
+      ),
+      builtins: .init(
+        cpu: builtinCPU,
+        battery: builtinBattery,
+        groups: builtinGroups,
+        spaces: builtinSpaces,
+        frontApp: builtinFrontApp,
+        volume: builtinVolume,
+        wifi: builtinWiFi,
+        calendar: builtinCalendar,
+        time: builtinTime,
+        date: builtinDate
+      )
     )
   }
 
@@ -186,40 +192,40 @@ final class Config {
 
   /// Restores the app-level config snapshot.
   private func applyAppSnapshot(_ snapshot: ConfigSnapshot) {
-    widgetsPath = snapshot.widgetsPath
-    luaPath = snapshot.luaPath
-    watchConfigFile = snapshot.watchConfigFile
-    loggingEnabled = snapshot.loggingEnabled
-    loggingDebugEnabled = snapshot.loggingDebugEnabled
-    loggingDirectory = snapshot.loggingDirectory
-    calendarAgentEnabled = snapshot.calendarAgentEnabled
-    calendarAgentSocketPath = snapshot.calendarAgentSocketPath
-    networkAgentEnabled = snapshot.networkAgentEnabled
-    networkAgentSocketPath = snapshot.networkAgentSocketPath
-    networkAgentRefreshIntervalSeconds = snapshot.networkAgentRefreshIntervalSeconds
+    widgetsPath = snapshot.app.widgetsPath
+    luaPath = snapshot.app.luaPath
+    watchConfigFile = snapshot.app.watchConfigFile
+    loggingEnabled = snapshot.app.loggingEnabled
+    loggingDebugEnabled = snapshot.app.loggingDebugEnabled
+    loggingDirectory = snapshot.app.loggingDirectory
+    calendarAgentEnabled = snapshot.app.calendarAgentEnabled
+    calendarAgentSocketPath = snapshot.app.calendarAgentSocketPath
+    networkAgentEnabled = snapshot.app.networkAgentEnabled
+    networkAgentSocketPath = snapshot.app.networkAgentSocketPath
+    networkAgentRefreshIntervalSeconds = snapshot.app.networkAgentRefreshIntervalSeconds
   }
 
   /// Restores the bar config snapshot.
   private func applyBarSnapshot(_ snapshot: ConfigSnapshot) {
-    barHeight = snapshot.barHeight
-    barPaddingX = snapshot.barPaddingX
-    barExtendBehindNotch = snapshot.barExtendBehindNotch
+    barHeight = snapshot.bar.height
+    barPaddingX = snapshot.bar.paddingX
+    barExtendBehindNotch = snapshot.bar.extendBehindNotch
 
-    barBackgroundHex = snapshot.barBackgroundHex
-    barBorderHex = snapshot.barBorderHex
+    barBackgroundHex = snapshot.bar.backgroundHex
+    barBorderHex = snapshot.bar.borderHex
   }
 
   /// Restores the built-in widget config snapshot.
   private func applyBuiltinSnapshot(_ snapshot: ConfigSnapshot) {
-    builtinCPU = snapshot.builtinCPU
-    builtinBattery = snapshot.builtinBattery
-    builtinGroups = snapshot.builtinGroups
-    builtinSpaces = snapshot.builtinSpaces
-    builtinFrontApp = snapshot.builtinFrontApp
-    builtinVolume = snapshot.builtinVolume
-    builtinWiFi = snapshot.builtinWiFi
-    builtinCalendar = snapshot.builtinCalendar
-    builtinTime = snapshot.builtinTime
-    builtinDate = snapshot.builtinDate
+    builtinCPU = snapshot.builtins.cpu
+    builtinBattery = snapshot.builtins.battery
+    builtinGroups = snapshot.builtins.groups
+    builtinSpaces = snapshot.builtins.spaces
+    builtinFrontApp = snapshot.builtins.frontApp
+    builtinVolume = snapshot.builtins.volume
+    builtinWiFi = snapshot.builtins.wifi
+    builtinCalendar = snapshot.builtins.calendar
+    builtinTime = snapshot.builtins.time
+    builtinDate = snapshot.builtins.date
   }
 }
