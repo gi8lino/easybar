@@ -3,14 +3,17 @@ import Foundation
 
 @MainActor
 final class AppController {
+  private let runtimeConfig: SharedRuntimeConfig
   private let snapshotProvider = CalendarSnapshotProvider()
-  private let socketServer = CalendarSocketServer()
+  private let socketServer: CalendarSocketServer
+
+  init(config: SharedRuntimeConfig = .current) {
+    runtimeConfig = config
+    socketServer = CalendarSocketServer(socketPath: config.calendarAgentSocketPath)
+  }
 
   func start() {
-    AgentLogger.configureFileLogging(
-      enabled: AgentLogger.fileLoggingEnabled,
-      path: AgentLogger.fileLoggingPath
-    )
+    AgentLogger.configure(using: runtimeConfig)
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -36,9 +39,9 @@ final class AppController {
     AgentLogger.info("app bundle_path=\(bundle.bundleURL.path)")
     AgentLogger.info("app executable=\(bundle.executableURL?.path ?? "unknown")")
     AgentLogger.info(
-      "config path=\(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/easybar/config.toml").path)"
+      "config path=\(runtimeConfig.configPath)"
     )
-    AgentLogger.info("socket path=\(defaultCalendarAgentSocketPath())")
+    AgentLogger.info("socket path=\(runtimeConfig.calendarAgentSocketPath)")
     AgentLogger.info(
       "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
     )

@@ -2,6 +2,8 @@ import EasyBarShared
 import SwiftUI
 
 struct SettingsView: View {
+  private let runtimeConfig = SharedRuntimeConfig.current
+
   var body: some View {
     Form {
       Text("EasyBar Calendar Agent")
@@ -10,7 +12,7 @@ struct SettingsView: View {
       Text("Socket path")
         .font(.subheadline)
 
-      Text(defaultCalendarAgentSocketPath())
+      Text(runtimeConfig.calendarAgentSocketPath)
         .font(.footnote)
         .textSelection(.enabled)
     }

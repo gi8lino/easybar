@@ -8,6 +8,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
   private let locationManager = CLLocationManager()
   private let authState = NetworkAgentAuthorizationState()
   private let smoothingFactor = 0.35
+  private let refreshIntervalSeconds: TimeInterval
 
   private var onChange: (() -> Void)?
   private var wifiClient: CWWiFiClient?
@@ -16,7 +17,10 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
 
   private var store: SCDynamicStore?
   private var storeSource: CFRunLoopSource?
-  private let refreshIntervalSeconds = defaultNetworkAgentRefreshIntervalSeconds()
+
+  init(refreshIntervalSeconds: TimeInterval) {
+    self.refreshIntervalSeconds = refreshIntervalSeconds
+  }
 
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange

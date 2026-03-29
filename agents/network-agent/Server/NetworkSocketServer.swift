@@ -7,7 +7,7 @@ final class NetworkSocketServer {
     let fd: Int32
   }
 
-  private let socketPath = defaultNetworkAgentSocketPath()
+  private let socketPath: String
   private let stateLock = NSLock()
   private let subscribersLock = NSLock()
   private let encoder = JSONEncoder()
@@ -18,7 +18,8 @@ final class NetworkSocketServer {
   private var running = false
   private var subscribers: [Int32: Subscriber] = [:]
 
-  init() {
+  init(socketPath: String) {
+    self.socketPath = socketPath
     encoder.dateEncodingStrategy = .iso8601
     decoder.dateDecodingStrategy = .iso8601
   }

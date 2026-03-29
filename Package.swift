@@ -19,6 +19,9 @@ let package = Package(
   targets: [
     .target(
       name: "EasyBarShared",
+      dependencies: [
+        .product(name: "TOMLKit", package: "TOMLKit")
+      ],
       path: "Sources/shared"
     ),
     .executableTarget(

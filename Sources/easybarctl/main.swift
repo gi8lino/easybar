@@ -213,7 +213,7 @@ private enum CLI {
 /// Parses CLI arguments into one validated command request.
 private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   var selectedCommand: IPCCommand?
-  var socketPath = defaultSocketPath()
+  var socketPath = SharedRuntimeConfig.current.easyBarSocketPath
   var debugEnabled = false
 
   var i = 1

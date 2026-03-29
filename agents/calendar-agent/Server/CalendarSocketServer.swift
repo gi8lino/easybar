@@ -8,7 +8,7 @@ final class CalendarSocketServer {
     let query: CalendarAgentQuery
   }
 
-  private let socketPath = defaultCalendarAgentSocketPath()
+  private let socketPath: String
   private let stateLock = NSLock()
   private let subscribersLock = NSLock()
   private let encoder = JSONEncoder()
@@ -19,7 +19,8 @@ final class CalendarSocketServer {
   private var running = false
   private var subscribers: [Int32: Subscriber] = [:]
 
-  init() {
+  init(socketPath: String) {
+    self.socketPath = socketPath
     encoder.dateEncodingStrategy = .iso8601
     decoder.dateDecodingStrategy = .iso8601
   }

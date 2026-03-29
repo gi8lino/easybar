@@ -3,14 +3,20 @@ import Foundation
 
 @MainActor
 final class AppController {
-  private let snapshotProvider = NetworkSnapshotProvider()
-  private let socketServer = NetworkSocketServer()
+  private let runtimeConfig: SharedRuntimeConfig
+  private let snapshotProvider: NetworkSnapshotProvider
+  private let socketServer: NetworkSocketServer
+
+  init(config: SharedRuntimeConfig = .current) {
+    runtimeConfig = config
+    snapshotProvider = NetworkSnapshotProvider(
+      refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds
+    )
+    socketServer = NetworkSocketServer(socketPath: config.networkAgentSocketPath)
+  }
 
   func start() {
-    AgentLogger.configureFileLogging(
-      enabled: AgentLogger.fileLoggingEnabled,
-      path: AgentLogger.fileLoggingPath
-    )
+    AgentLogger.configure(using: runtimeConfig)
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -36,10 +42,10 @@ final class AppController {
     AgentLogger.info("app bundle_path=\(bundle.bundleURL.path)")
     AgentLogger.info("app executable=\(bundle.executableURL?.path ?? "unknown")")
     AgentLogger.info(
-      "config path=\(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/easybar/config.toml").path)"
+      "config path=\(runtimeConfig.configPath)"
     )
     AgentLogger.info(
-      "socket path=\(defaultNetworkAgentSocketPath()) refresh_interval_seconds=\(defaultNetworkAgentRefreshIntervalSeconds())"
+      "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds)"
     )
     AgentLogger.info(
       "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"

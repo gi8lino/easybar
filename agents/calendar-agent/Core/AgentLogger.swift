@@ -1,24 +1,23 @@
 import EasyBarShared
 
 enum AgentLogger {
+  private static var debugFlag = false
+  private(set) static var fileLoggingEnabled = false
+  private(set) static var fileLoggingPath = ""
+
   private static let shared = ProcessLogger(label: "easybar-calendar-agent") {
-    defaultDebugLoggingEnabled()
+    debugFlag
   }
 
-  static var fileLoggingEnabled: Bool {
-    defaultFileLoggingEnabled()
-  }
-
-  static var fileLoggingPath: String {
-    defaultCalendarAgentLogPath()
+  static func configure(using config: SharedRuntimeConfig) {
+    debugFlag = config.loggingDebugEnabled
+    fileLoggingEnabled = config.loggingEnabled
+    fileLoggingPath = calendarAgentLogPath(in: config.loggingDirectory)
+    shared.configureFileLogging(enabled: fileLoggingEnabled, path: fileLoggingPath)
   }
 
   static var debugEnabled: Bool {
     shared.debugEnabled
-  }
-
-  static func configureFileLogging(enabled: Bool, path: String) {
-    shared.configureFileLogging(enabled: enabled, path: path)
   }
 
   static func debug(_ message: String) {

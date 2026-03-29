@@ -217,7 +217,7 @@ final class CalendarAgentClient {
 
   /// Returns the configured calendar agent socket path.
   private func resolvedSocketPath() -> String {
-    defaultCalendarAgentSocketPath()
+    Config.shared.calendarAgentSocketPath
   }
 
   /// Opens and connects one Unix socket to the calendar agent.

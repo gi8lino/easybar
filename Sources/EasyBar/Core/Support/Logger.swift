@@ -25,7 +25,7 @@ enum Logger {
   }
 
   static var fileLoggingPath: String {
-    defaultEasyBarLogPath()
+    easyBarLogPath(in: Config.shared.loggingDirectory)
   }
 
   /// Writes one debug message when debug logging is enabled.
