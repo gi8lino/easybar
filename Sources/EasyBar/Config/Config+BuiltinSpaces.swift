@@ -175,153 +175,10 @@ extension Config {
       fallback: builtinSpaces.style
     )
 
-    let layout = SpacesBuiltinConfig.Layout(
-      spacing: try optionalNumber(
-        layoutTable["spacing"],
-        path: "builtins.spaces.layout.spacing"
-      ) ?? builtinSpaces.layout.spacing,
-      hideEmpty: try optionalBool(
-        layoutTable["hide_empty"],
-        path: "builtins.spaces.layout.hide_empty"
-      ) ?? builtinSpaces.layout.hideEmpty,
-      paddingX: try optionalNumber(
-        layoutTable["padding_x"],
-        path: "builtins.spaces.layout.padding_x"
-      ) ?? builtinSpaces.layout.paddingX,
-      paddingY: try optionalNumber(
-        layoutTable["padding_y"],
-        path: "builtins.spaces.layout.padding_y"
-      ) ?? builtinSpaces.layout.paddingY,
-      marginX: try optionalNumber(
-        layoutTable["margin_x"],
-        path: "builtins.spaces.layout.margin_x"
-      ) ?? builtinSpaces.layout.marginX,
-      marginY: try optionalNumber(
-        layoutTable["margin_y"],
-        path: "builtins.spaces.layout.margin_y"
-      ) ?? builtinSpaces.layout.marginY,
-      cornerRadius: try optionalNumber(
-        layoutTable["corner_radius"],
-        path: "builtins.spaces.layout.corner_radius"
-      ) ?? builtinSpaces.layout.cornerRadius,
-      focusedCornerRadius: try optionalNumber(
-        layoutTable["focused_corner_radius"],
-        path: "builtins.spaces.layout.focused_corner_radius"
-      ) ?? builtinSpaces.layout.focusedCornerRadius,
-      focusedScale: try optionalNumber(
-        layoutTable["focused_scale"],
-        path: "builtins.spaces.layout.focused_scale"
-      ) ?? builtinSpaces.layout.focusedScale,
-      inactiveOpacity: try optionalNumber(
-        layoutTable["inactive_opacity"],
-        path: "builtins.spaces.layout.inactive_opacity"
-      ) ?? builtinSpaces.layout.inactiveOpacity,
-      maxIcons: try optionalInt(
-        layoutTable["max_icons"],
-        path: "builtins.spaces.layout.max_icons"
-      ) ?? builtinSpaces.layout.maxIcons,
-      showLabel: try optionalBool(
-        layoutTable["show_label"],
-        path: "builtins.spaces.layout.show_label"
-      ) ?? builtinSpaces.layout.showLabel,
-      showIcons: try optionalBool(
-        layoutTable["show_icons"],
-        path: "builtins.spaces.layout.show_icons"
-      ) ?? builtinSpaces.layout.showIcons,
-      showOnlyFocusedLabel: try optionalBool(
-        layoutTable["show_only_focused_label"],
-        path: "builtins.spaces.layout.show_only_focused_label"
-      ) ?? builtinSpaces.layout.showOnlyFocusedLabel,
-      collapseInactive: try optionalBool(
-        layoutTable["collapse_inactive"],
-        path: "builtins.spaces.layout.collapse_inactive"
-      ) ?? builtinSpaces.layout.collapseInactive,
-      collapsedPaddingX: try optionalNumber(
-        layoutTable["collapsed_padding_x"],
-        path: "builtins.spaces.layout.collapsed_padding_x"
-      ) ?? builtinSpaces.layout.collapsedPaddingX,
-      collapsedPaddingY: try optionalNumber(
-        layoutTable["collapsed_padding_y"],
-        path: "builtins.spaces.layout.collapsed_padding_y"
-      ) ?? builtinSpaces.layout.collapsedPaddingY,
-      clickToFocusSpace: try optionalBool(
-        layoutTable["click_to_focus_space"],
-        path: "builtins.spaces.layout.click_to_focus_space"
-      ) ?? builtinSpaces.layout.clickToFocusSpace,
-      clickToFocusApp: try optionalBool(
-        layoutTable["click_to_focus_app"],
-        path: "builtins.spaces.layout.click_to_focus_app"
-      ) ?? builtinSpaces.layout.clickToFocusApp
-    )
-
-    let text = SpacesBuiltinConfig.Text(
-      size: try optionalNumber(
-        textTable["size"],
-        path: "builtins.spaces.text.size"
-      ) ?? builtinSpaces.text.size,
-      weight: try optionalString(
-        textTable["weight"],
-        path: "builtins.spaces.text.weight"
-      ) ?? builtinSpaces.text.weight,
-      focusedColorHex: try optionalString(
-        textTable["focused_color"],
-        path: "builtins.spaces.text.focused_color"
-      ) ?? builtinSpaces.text.focusedColorHex,
-      inactiveColorHex: try optionalString(
-        textTable["inactive_color"],
-        path: "builtins.spaces.text.inactive_color"
-      ) ?? builtinSpaces.text.inactiveColorHex
-    )
-
-    let icons = SpacesBuiltinConfig.Icons(
-      size: try optionalNumber(
-        iconsTable["size"],
-        path: "builtins.spaces.icons.size"
-      ) ?? builtinSpaces.icons.size,
-      spacing: try optionalNumber(
-        iconsTable["spacing"],
-        path: "builtins.spaces.icons.spacing"
-      ) ?? builtinSpaces.icons.spacing,
-      cornerRadius: try optionalNumber(
-        iconsTable["corner_radius"],
-        path: "builtins.spaces.icons.corner_radius"
-      ) ?? builtinSpaces.icons.cornerRadius,
-      focusedAppSize: try optionalNumber(
-        iconsTable["focused_app_size"],
-        path: "builtins.spaces.icons.focused_app_size"
-      ) ?? builtinSpaces.icons.focusedAppSize,
-      borderWidth: try optionalNumber(
-        iconsTable["border_width"],
-        path: "builtins.spaces.icons.border_width"
-      ) ?? builtinSpaces.icons.borderWidth,
-      focusedAppBorderWidth: try optionalNumber(
-        iconsTable["focused_app_border_width"],
-        path: "builtins.spaces.icons.focused_app_border_width"
-      ) ?? builtinSpaces.icons.focusedAppBorderWidth
-    )
-
-    let colors = SpacesBuiltinConfig.Colors(
-      activeBackgroundHex: try optionalString(
-        colorsTable["active_background"],
-        path: "builtins.spaces.colors.active_background"
-      ) ?? builtinSpaces.colors.activeBackgroundHex,
-      inactiveBackgroundHex: try optionalString(
-        colorsTable["inactive_background"],
-        path: "builtins.spaces.colors.inactive_background"
-      ) ?? builtinSpaces.colors.inactiveBackgroundHex,
-      activeBorderHex: try optionalString(
-        colorsTable["active_border"],
-        path: "builtins.spaces.colors.active_border"
-      ) ?? builtinSpaces.colors.activeBorderHex,
-      inactiveBorderHex: try optionalString(
-        colorsTable["inactive_border"],
-        path: "builtins.spaces.colors.inactive_border"
-      ) ?? builtinSpaces.colors.inactiveBorderHex,
-      focusedAppBorderHex: try optionalString(
-        colorsTable["focused_app_border"],
-        path: "builtins.spaces.colors.focused_app_border"
-      ) ?? builtinSpaces.colors.focusedAppBorderHex
-    )
+    let layout = try parseSpacesLayout(from: layoutTable, fallback: builtinSpaces.layout)
+    let text = try parseSpacesText(from: textTable, fallback: builtinSpaces.text)
+    let icons = try parseSpacesIcons(from: iconsTable, fallback: builtinSpaces.icons)
+    let colors = try parseSpacesColors(from: colorsTable, fallback: builtinSpaces.colors)
 
     builtinSpaces = SpacesBuiltinConfig(
       placement: placement,
@@ -330,6 +187,154 @@ extension Config {
       text: text,
       icons: icons,
       colors: colors
+    )
+  }
+}
+
+private extension Config {
+  /// Parses the spaces layout block.
+  func parseSpacesLayout(
+    from table: TOMLTable,
+    fallback: SpacesBuiltinConfig.Layout
+  ) throws -> SpacesBuiltinConfig.Layout {
+    SpacesBuiltinConfig.Layout(
+      spacing: try optionalNumber(table["spacing"], path: "builtins.spaces.layout.spacing")
+        ?? fallback.spacing,
+      hideEmpty: try optionalBool(table["hide_empty"], path: "builtins.spaces.layout.hide_empty")
+        ?? fallback.hideEmpty,
+      paddingX: try optionalNumber(table["padding_x"], path: "builtins.spaces.layout.padding_x")
+        ?? fallback.paddingX,
+      paddingY: try optionalNumber(table["padding_y"], path: "builtins.spaces.layout.padding_y")
+        ?? fallback.paddingY,
+      marginX: try optionalNumber(table["margin_x"], path: "builtins.spaces.layout.margin_x")
+        ?? fallback.marginX,
+      marginY: try optionalNumber(table["margin_y"], path: "builtins.spaces.layout.margin_y")
+        ?? fallback.marginY,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.spaces.layout.corner_radius"
+      ) ?? fallback.cornerRadius,
+      focusedCornerRadius: try optionalNumber(
+        table["focused_corner_radius"],
+        path: "builtins.spaces.layout.focused_corner_radius"
+      ) ?? fallback.focusedCornerRadius,
+      focusedScale: try optionalNumber(
+        table["focused_scale"],
+        path: "builtins.spaces.layout.focused_scale"
+      ) ?? fallback.focusedScale,
+      inactiveOpacity: try optionalNumber(
+        table["inactive_opacity"],
+        path: "builtins.spaces.layout.inactive_opacity"
+      ) ?? fallback.inactiveOpacity,
+      maxIcons: try optionalInt(table["max_icons"], path: "builtins.spaces.layout.max_icons")
+        ?? fallback.maxIcons,
+      showLabel: try optionalBool(table["show_label"], path: "builtins.spaces.layout.show_label")
+        ?? fallback.showLabel,
+      showIcons: try optionalBool(table["show_icons"], path: "builtins.spaces.layout.show_icons")
+        ?? fallback.showIcons,
+      showOnlyFocusedLabel: try optionalBool(
+        table["show_only_focused_label"],
+        path: "builtins.spaces.layout.show_only_focused_label"
+      ) ?? fallback.showOnlyFocusedLabel,
+      collapseInactive: try optionalBool(
+        table["collapse_inactive"],
+        path: "builtins.spaces.layout.collapse_inactive"
+      ) ?? fallback.collapseInactive,
+      collapsedPaddingX: try optionalNumber(
+        table["collapsed_padding_x"],
+        path: "builtins.spaces.layout.collapsed_padding_x"
+      ) ?? fallback.collapsedPaddingX,
+      collapsedPaddingY: try optionalNumber(
+        table["collapsed_padding_y"],
+        path: "builtins.spaces.layout.collapsed_padding_y"
+      ) ?? fallback.collapsedPaddingY,
+      clickToFocusSpace: try optionalBool(
+        table["click_to_focus_space"],
+        path: "builtins.spaces.layout.click_to_focus_space"
+      ) ?? fallback.clickToFocusSpace,
+      clickToFocusApp: try optionalBool(
+        table["click_to_focus_app"],
+        path: "builtins.spaces.layout.click_to_focus_app"
+      ) ?? fallback.clickToFocusApp
+    )
+  }
+
+  /// Parses the spaces text block.
+  func parseSpacesText(
+    from table: TOMLTable,
+    fallback: SpacesBuiltinConfig.Text
+  ) throws -> SpacesBuiltinConfig.Text {
+    SpacesBuiltinConfig.Text(
+      size: try optionalNumber(table["size"], path: "builtins.spaces.text.size")
+        ?? fallback.size,
+      weight: try optionalString(table["weight"], path: "builtins.spaces.text.weight")
+        ?? fallback.weight,
+      focusedColorHex: try optionalString(
+        table["focused_color"],
+        path: "builtins.spaces.text.focused_color"
+      ) ?? fallback.focusedColorHex,
+      inactiveColorHex: try optionalString(
+        table["inactive_color"],
+        path: "builtins.spaces.text.inactive_color"
+      ) ?? fallback.inactiveColorHex
+    )
+  }
+
+  /// Parses the spaces icons block.
+  func parseSpacesIcons(
+    from table: TOMLTable,
+    fallback: SpacesBuiltinConfig.Icons
+  ) throws -> SpacesBuiltinConfig.Icons {
+    SpacesBuiltinConfig.Icons(
+      size: try optionalNumber(table["size"], path: "builtins.spaces.icons.size")
+        ?? fallback.size,
+      spacing: try optionalNumber(table["spacing"], path: "builtins.spaces.icons.spacing")
+        ?? fallback.spacing,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.spaces.icons.corner_radius"
+      ) ?? fallback.cornerRadius,
+      focusedAppSize: try optionalNumber(
+        table["focused_app_size"],
+        path: "builtins.spaces.icons.focused_app_size"
+      ) ?? fallback.focusedAppSize,
+      borderWidth: try optionalNumber(
+        table["border_width"],
+        path: "builtins.spaces.icons.border_width"
+      ) ?? fallback.borderWidth,
+      focusedAppBorderWidth: try optionalNumber(
+        table["focused_app_border_width"],
+        path: "builtins.spaces.icons.focused_app_border_width"
+      ) ?? fallback.focusedAppBorderWidth
+    )
+  }
+
+  /// Parses the spaces colors block.
+  func parseSpacesColors(
+    from table: TOMLTable,
+    fallback: SpacesBuiltinConfig.Colors
+  ) throws -> SpacesBuiltinConfig.Colors {
+    SpacesBuiltinConfig.Colors(
+      activeBackgroundHex: try optionalString(
+        table["active_background"],
+        path: "builtins.spaces.colors.active_background"
+      ) ?? fallback.activeBackgroundHex,
+      inactiveBackgroundHex: try optionalString(
+        table["inactive_background"],
+        path: "builtins.spaces.colors.inactive_background"
+      ) ?? fallback.inactiveBackgroundHex,
+      activeBorderHex: try optionalString(
+        table["active_border"],
+        path: "builtins.spaces.colors.active_border"
+      ) ?? fallback.activeBorderHex,
+      inactiveBorderHex: try optionalString(
+        table["inactive_border"],
+        path: "builtins.spaces.colors.inactive_border"
+      ) ?? fallback.inactiveBorderHex,
+      focusedAppBorderHex: try optionalString(
+        table["focused_app_border"],
+        path: "builtins.spaces.colors.focused_app_border"
+      ) ?? fallback.focusedAppBorderHex
     )
   }
 }
