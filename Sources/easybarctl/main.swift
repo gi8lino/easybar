@@ -20,18 +20,18 @@ private struct AppController {
       try sendCommand(parsed.command, to: parsed.socketPath, context: context)
       return 0
     } catch AppError.showUsage {
-      CLI.printUsage()
+      CLIOutput.printUsage()
       return 1
     } catch AppError.showVersion {
-      CLI.printVersion()
+      CLIOutput.printVersion()
       return 0
     } catch AppError.message(let message) {
-      CLI.printError(message)
+      CLIOutput.printError(message)
     } catch {
-      CLI.printError("\(error)")
+      CLIOutput.printError("\(error)")
     }
 
-    CLI.printUsage()
+    CLIOutput.printUsage()
     return 1
   }
 }
@@ -96,6 +96,41 @@ private enum AppError: Error {
   case showUsage
   case showVersion
   case message(String)
+}
+
+private enum CLIOutput {
+  /// Writes one plain error line.
+  static func printError(_ message: String) {
+    fputs("easybarctl: \(message)\n", stderr)
+  }
+
+  /// Writes one plain version line.
+  static func printVersion() {
+    fputs("easybarctl \(BuildInfo.appVersion)\n", stdout)
+  }
+
+  /// Writes usage text.
+  static func printUsage() {
+    let commandLines = CLI.cmdOptions.map {
+      CLI.formatOption(CLI.optionText(for: $0), $0.description)
+    }
+    let appOptionLines = CLI.appOptions.map {
+      CLI.formatOption(CLI.optionText(for: $0), $0.description)
+    }
+
+    let lines: [String] =
+      [
+        "usage:",
+        "  easybarctl <command> [options]",
+        "",
+        "commands:",
+      ] + commandLines + [
+        "",
+        "options:",
+      ] + appOptionLines
+
+    fputs(lines.joined(separator: "\n") + "\n", stderr)
+  }
 }
 
 private enum CLI {
@@ -187,39 +222,6 @@ private enum CLI {
   static func command(for argument: String) -> IPC.Command? {
     cmdOptions.first { matches($0, argument: argument) }?.command
   }
-
-  /// Writes one plain error line.
-  static func printError(_ message: String) {
-    fputs("easybarctl: \(message)\n", stderr)
-  }
-
-  /// Writes one plain version line.
-  static func printVersion() {
-    fputs("easybarctl \(BuildInfo.appVersion)\n", stdout)
-  }
-
-  /// Writes usage text.
-  static func printUsage() {
-    let commandLines = cmdOptions.map {
-      formatOption(optionText(for: $0), $0.description)
-    }
-    let appOptionLines = appOptions.map {
-      formatOption(optionText(for: $0), $0.description)
-    }
-
-    let lines: [String] =
-      [
-        "usage:",
-        "  easybarctl <command> [options]",
-        "",
-        "commands:",
-      ] + commandLines + [
-        "",
-        "options:",
-      ] + appOptionLines
-
-    fputs(lines.joined(separator: "\n") + "\n", stderr)
-  }
 }
 
 /// Parses CLI arguments into one validated command request.
@@ -232,27 +234,14 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   while i < arguments.count {
     let arg = arguments[i]
 
-    if CLI.matches(CLI.helpOption, argument: arg) {
-      throw AppError.showUsage
-    }
-
-    if CLI.matches(CLI.versionOption, argument: arg) {
-      throw AppError.showVersion
-    }
-
-    if CLI.matches(CLI.debugOption, argument: arg) {
-      debugEnabled = true
-      i += 1
-      continue
-    }
-
-    if let parsedSocketArgument = try parseSocketArgument(
+    if let nextIndex = try parseAppArgument(
       arg,
       arguments: arguments,
-      index: i
+      index: i,
+      socketPath: &socketPath,
+      debugEnabled: &debugEnabled
     ) {
-      socketPath = parsedSocketArgument.socketPath
-      i = parsedSocketArgument.nextIndex
+      i = nextIndex
       continue
     }
 
@@ -278,6 +267,39 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
     socketPath: socketPath,
     debugEnabled: debugEnabled
   )
+}
+
+/// Handles one app-level argument and returns the next parse index when matched.
+private func parseAppArgument(
+  _ argument: String,
+  arguments: [String],
+  index: Int,
+  socketPath: inout String,
+  debugEnabled: inout Bool
+) throws -> Int? {
+  if CLI.matches(CLI.helpOption, argument: argument) {
+    throw AppError.showUsage
+  }
+
+  if CLI.matches(CLI.versionOption, argument: argument) {
+    throw AppError.showVersion
+  }
+
+  if CLI.matches(CLI.debugOption, argument: argument) {
+    debugEnabled = true
+    return index + 1
+  }
+
+  if let parsedSocketArgument = try parseSocketArgument(
+    argument,
+    arguments: arguments,
+    index: index
+  ) {
+    socketPath = parsedSocketArgument.socketPath
+    return parsedSocketArgument.nextIndex
+  }
+
+  return nil
 }
 
 /// Parses one socket option and returns the resolved value plus next index.

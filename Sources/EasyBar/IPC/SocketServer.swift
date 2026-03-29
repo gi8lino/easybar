@@ -95,7 +95,11 @@ final class SocketServer {
   /// Accepts one connected client.
   private func acceptClient() -> Int32? {
     let client = accept(listenFD, nil, nil)
-    return client >= 0 ? client : nil
+    guard client >= 0 else { return nil }
+
+    var noSigPipe: Int32 = 1
+    setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+    return client
   }
 
   /// Handles one connected IPC client.
@@ -132,7 +136,15 @@ final class SocketServer {
       return nil
     }
 
-    return try? decoder.decode(IPC.Request.self, from: data)
+    if let request = try? decoder.decode(IPC.Request.self, from: data) {
+      return request
+    }
+
+    guard let command = IPC.Command(rawValue: rawRequest) else {
+      return nil
+    }
+
+    return IPC.Request(command: command)
   }
 
   /// Writes one IPC response to a connected client.
