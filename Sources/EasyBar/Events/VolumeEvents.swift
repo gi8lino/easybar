@@ -61,11 +61,12 @@ final class VolumeEvents {
       block
     )
 
-    if status == noErr {
-      defaultDeviceListener = block
-    } else {
+    guard status == noErr else {
       Logger.debug("failed to subscribe default output device changes status=\(status)")
+      return
     }
+
+    defaultDeviceListener = block
   }
 
   /// Removes the default output device listener.
@@ -136,11 +137,12 @@ final class VolumeEvents {
       volumeBlock
     )
 
-    if volumeStatus == noErr {
-      volumeListener = volumeBlock
-    } else {
+    guard volumeStatus == noErr else {
       Logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
+      return
     }
+
+    volumeListener = volumeBlock
 
     var muteAddress = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyMute,
@@ -168,11 +170,12 @@ final class VolumeEvents {
       muteBlock
     )
 
-    if muteStatus == noErr {
-      muteListener = muteBlock
-    } else {
+    guard muteStatus == noErr else {
       Logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
+      return
     }
+
+    muteListener = muteBlock
   }
 
   /// Removes all listeners from the current output device.
