@@ -40,16 +40,7 @@ final class WidgetRunner {
     resetRuntimeState()
 
     Logger.debug("starting widget runner")
-
-    stdoutObserver = NotificationCenter.default.addObserver(
-      forName: .easyBarLuaStdout,
-      object: nil,
-      queue: .main
-    ) { [weak self] notification in
-      guard let line = notification.object as? String else { return }
-      self?.handleRuntimeOutput(line)
-    }
-
+    startObservingRuntimeOutput()
     LuaRuntime.shared.start()
   }
 
@@ -65,11 +56,7 @@ final class WidgetRunner {
   /// Stops the widget runtime and related event sources.
   func shutdown() {
     Logger.debug("shutting down widget runner")
-
-    if let stdoutObserver {
-      NotificationCenter.default.removeObserver(stdoutObserver)
-      self.stdoutObserver = nil
-    }
+    stopObservingRuntimeOutput()
 
     started = false
     resetRuntimeState()
@@ -82,19 +69,45 @@ final class WidgetRunner {
   private func handleRuntimeOutput(_ line: String) {
     Logger.debug("lua stdout: \(line)")
 
-    guard let data = line.data(using: .utf8) else {
-      Logger.warn("invalid utf8: \(line)")
-      return
-    }
-
     do {
-      let update = try decoder.decode(WidgetTreeUpdate.self, from: data)
-
+      let update = try decodeUpdate(from: line)
       handleUpdate(update, rawLine: line)
+    } catch DecodingError.dataCorrupted {
+      Logger.warn("invalid utf8: \(line)")
     } catch {
       Logger.warn("json decode failed: \(line)")
       Logger.debug("decode error: \(error)")
     }
+  }
+
+  /// Starts observing structured stdout from the Lua runtime.
+  private func startObservingRuntimeOutput() {
+    stdoutObserver = NotificationCenter.default.addObserver(
+      forName: .easyBarLuaStdout,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard let line = notification.object as? String else { return }
+      self?.handleRuntimeOutput(line)
+    }
+  }
+
+  /// Stops observing structured stdout from the Lua runtime.
+  private func stopObservingRuntimeOutput() {
+    guard let stdoutObserver else { return }
+    NotificationCenter.default.removeObserver(stdoutObserver)
+    self.stdoutObserver = nil
+  }
+
+  /// Decodes one structured runtime update line.
+  private func decodeUpdate(from line: String) throws -> WidgetTreeUpdate {
+    guard let data = line.data(using: .utf8) else {
+      throw DecodingError.dataCorrupted(
+        .init(codingPath: [], debugDescription: "invalid utf8")
+      )
+    }
+
+    return try decoder.decode(WidgetTreeUpdate.self, from: data)
   }
 
   /// Emits initial events after both subscriptions and readiness are known.
