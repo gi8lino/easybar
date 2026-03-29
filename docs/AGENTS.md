@@ -15,13 +15,13 @@ EasyBar stays focused on:
 
 - rendering the bar
 - managing widgets
-- consuming snapshots from helper processes
+- consuming agent data and building UI state
 
 The agents stay focused on:
 
 - permission ownership
 - system observation
-- raw snapshot collection
+- raw data collection
 - socket delivery
 
 The important boundary is:
@@ -82,7 +82,6 @@ Both respond with a `kind` field:
 
 - `pong`
 - `subscribed`
-- `snapshot`
 - `error`
 
 Typical behavior:
@@ -90,11 +89,18 @@ Typical behavior:
 - `ping`
   returns one `pong`, then closes
 - `fetch`
-  returns one `snapshot`, then closes
+  returns one data payload, then closes
 - `subscribe`
   returns one `subscribed`
-  returns one immediate `snapshot`
-  keeps the socket open for later `snapshot` pushes
+  returns one immediate data payload
+  keeps the socket open for later pushes
+
+The payload shape depends on the agent:
+
+- calendar agent
+  returns one typed `snapshot`
+- network agent
+  returns one `fields` map with only the requested keys
 
 ---
 
@@ -228,9 +234,24 @@ Request shape:
 
 ```json
 {
-  "command": "ping | fetch | subscribe"
+  "command": "ping | fetch | subscribe",
+  "fields": [
+    "network.access_granted",
+    "network.permission_state",
+    "network.generated_at",
+    "wifi.ssid",
+    "wifi.interface",
+    "network.primary_interface_is_tunnel",
+    "wifi.rssi"
+  ]
 }
 ```
+
+Notes:
+
+- `fields` is optional for `ping`
+- `fields` is required for `fetch` and `subscribe`
+- the agent returns only the requested keys
 
 ## Network responses
 
@@ -238,27 +259,38 @@ Response shape:
 
 ```json
 {
-  "kind": "pong | subscribed | snapshot | error",
-  "snapshot": { ... },
+  "kind": "pong | subscribed | fields | error",
+  "fields": {
+    "network.access_granted": "true",
+    "network.permission_state": "authorized",
+    "network.generated_at": "2026-03-29T12:34:56Z",
+    "wifi.ssid": "Office WiFi",
+    "wifi.interface": "en0",
+    "network.primary_interface_is_tunnel": "false",
+    "wifi.rssi": "-64"
+  },
   "message": "optional error string"
 }
 ```
 
-## Network snapshot
+## Network fields
 
-Snapshot shape:
+Supported field keys:
 
-```json
-{
-  "accessGranted": true,
-  "permissionState": "authorized_when_in_use",
-  "generatedAt": "2026-03-29T12:34:56Z",
-  "ssid": "Office WiFi",
-  "interfaceName": "en0",
-  "primaryInterfaceIsTunnel": false,
-  "rssi": -64
-}
-```
+- `network.access_granted`
+- `network.permission_state`
+- `network.generated_at`
+- `wifi.ssid`
+- `wifi.interface`
+- `network.primary_interface_is_tunnel`
+- `wifi.rssi`
+
+Behavior notes:
+
+- the agent smooths RSSI before returning `wifi.rssi`
+- the agent does not map RSSI into Wi-Fi bars
+- EasyBar reconstructs its local typed Wi-Fi state from the returned field map
+- callers can use `fetch` for ad-hoc reads or `subscribe` for pushed updates
 
 Important fields:
 

@@ -3,11 +3,22 @@ import Foundation
 
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
+  private static let requestedFields: [NetworkAgentField] = [
+    .accessGranted,
+    .permissionState,
+    .generatedAt,
+    .ssid,
+    .interfaceName,
+    .primaryInterfaceIsTunnel,
+    .rssi,
+  ]
 
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
     socketPath: { Config.shared.networkAgentSocketPath },
-    subscribeRequest: { NetworkAgentRequest(command: .subscribe) },
+    subscribeRequest: {
+      NetworkAgentRequest(command: .subscribe, fields: Self.requestedFields)
+    },
     handleMessage: { [weak self] message in
       self?.handle(message)
     },
@@ -38,8 +49,12 @@ final class NetworkAgentClient {
     case .subscribed:
       Logger.info("network agent client subscribed")
 
-    case .snapshot:
-      guard let snapshot = message.snapshot else { return }
+    case .fields:
+      guard let fields = message.fields else { return }
+      guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
+        Logger.warn("network agent returned incomplete field set")
+        return
+      }
       publish(snapshot: snapshot)
 
     case .pong:

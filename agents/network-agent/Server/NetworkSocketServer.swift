@@ -3,8 +3,12 @@ import EasyBarShared
 import Foundation
 
 final class NetworkSocketServer {
+  private struct Subscriber {
+    let fields: [NetworkAgentField]
+  }
+
   private var provider: NetworkSnapshotProvider?
-  private let transport: LineSocketServerTransport<Int32, NetworkAgentRequest, NetworkAgentMessage>
+  private let transport: LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
   init(socketPath: String) {
@@ -31,14 +35,13 @@ final class NetworkSocketServer {
     transport.stop()
   }
 
-  /// Broadcasts the latest network snapshot to all subscribers.
+  /// Broadcasts the latest requested fields to all subscribers.
   func broadcastSnapshots() {
     guard let provider else { return }
 
-    let snapshot = provider.snapshot()
-
     for subscriber in transport.subscribersSnapshot() {
-      let message = NetworkAgentMessage(kind: .snapshot, snapshot: snapshot)
+      let values = provider.fieldValues(for: subscriber.subscriber.fields)
+      let message = NetworkAgentMessage(kind: .fields, fields: values)
 
       if !transport.send(message, to: subscriber.fd) {
         _ = transport.removeSubscriber(fd: subscriber.fd)
@@ -61,9 +64,14 @@ final class NetworkSocketServer {
         close(clientFD)
         return
       }
+      guard let fields = validatedFields(from: request) else {
+        _ = transport.send(NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+        close(clientFD)
+        return
+      }
 
-      let snapshot = provider.snapshot()
-      _ = transport.send(NetworkAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
+      let values = provider.fieldValues(for: fields)
+      _ = transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
       close(clientFD)
 
     case .subscribe:
@@ -72,9 +80,14 @@ final class NetworkSocketServer {
         close(clientFD)
         return
       }
+      guard let fields = validatedFields(from: request) else {
+        _ = transport.send(NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+        close(clientFD)
+        return
+      }
 
       // Keep the client open so future network changes can be pushed.
-      transport.addSubscriber(clientFD, for: clientFD)
+      transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
       AgentLogger.info("network agent subscriber added fd=\(clientFD)")
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
@@ -82,11 +95,17 @@ final class NetworkSocketServer {
         return
       }
 
-      let snapshot = provider.snapshot()
-      guard transport.send(NetworkAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) else {
+      let values = provider.fieldValues(for: fields)
+      guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
         return
       }
     }
+  }
+
+  /// Returns the validated field list for one request.
+  private func validatedFields(from request: NetworkAgentRequest) -> [NetworkAgentField]? {
+    guard let fields = request.fields, !fields.isEmpty else { return nil }
+    return fields
   }
 }

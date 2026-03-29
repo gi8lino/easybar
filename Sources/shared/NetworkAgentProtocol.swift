@@ -7,14 +7,28 @@ public enum NetworkAgentCommand: String, Codable {
   case subscribe
 }
 
+/// Field keys supported by the network agent.
+public enum NetworkAgentField: String, Codable, CaseIterable {
+  case accessGranted = "network.access_granted"
+  case permissionState = "network.permission_state"
+  case generatedAt = "network.generated_at"
+  case ssid = "wifi.ssid"
+  case interfaceName = "wifi.interface"
+  case primaryInterfaceIsTunnel = "network.primary_interface_is_tunnel"
+  case rssi = "wifi.rssi"
+}
+
 /// One request sent to the network agent.
 public struct NetworkAgentRequest: Codable {
   /// Command to execute on the agent.
   public var command: NetworkAgentCommand
+  /// Requested field keys for fetch and subscribe.
+  public var fields: [NetworkAgentField]?
 
   /// Creates one network agent request.
-  public init(command: NetworkAgentCommand) {
+  public init(command: NetworkAgentCommand, fields: [NetworkAgentField]? = nil) {
     self.command = command
+    self.fields = fields
   }
 }
 
@@ -53,13 +67,37 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     self.primaryInterfaceIsTunnel = primaryInterfaceIsTunnel
     self.rssi = rssi
   }
+
+  /// Builds one typed snapshot from field-query values.
+  public init?(fields: [String: String]) {
+    guard
+      let accessGranted = fields[NetworkAgentField.accessGranted.rawValue].flatMap(Bool.init),
+      let permissionState = fields[NetworkAgentField.permissionState.rawValue],
+      let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue],
+      let generatedAt = ISO8601DateFormatter().date(from: generatedAtRaw),
+      let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]
+        .flatMap(Bool.init)
+    else {
+      return nil
+    }
+
+    self.init(
+      accessGranted: accessGranted,
+      permissionState: permissionState,
+      generatedAt: generatedAt,
+      ssid: fields[NetworkAgentField.ssid.rawValue],
+      interfaceName: fields[NetworkAgentField.interfaceName.rawValue],
+      primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
+      rssi: fields[NetworkAgentField.rssi.rawValue].flatMap(Int.init)
+    )
+  }
 }
 
 /// Message kinds sent by the network agent.
 public enum NetworkAgentMessageKind: String, Codable {
   case pong
   case subscribed
-  case snapshot
+  case fields
   case error
 }
 
@@ -67,19 +105,19 @@ public enum NetworkAgentMessageKind: String, Codable {
 public struct NetworkAgentMessage: Codable {
   /// Message kind discriminator.
   public var kind: NetworkAgentMessageKind
-  /// Optional snapshot payload.
-  public var snapshot: NetworkAgentSnapshot?
+  /// Optional field values payload.
+  public var fields: [String: String]?
   /// Optional error message.
   public var message: String?
 
   /// Creates one network agent message.
   public init(
     kind: NetworkAgentMessageKind,
-    snapshot: NetworkAgentSnapshot? = nil,
+    fields: [String: String]? = nil,
     message: String? = nil
   ) {
     self.kind = kind
-    self.snapshot = snapshot
+    self.fields = fields
     self.message = message
   }
 }

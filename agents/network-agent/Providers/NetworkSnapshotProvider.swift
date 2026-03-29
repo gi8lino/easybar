@@ -5,6 +5,8 @@ import Foundation
 import SystemConfiguration
 
 final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEventDelegate {
+  private static let fieldDateFormatter = ISO8601DateFormatter()
+
   private let locationManager = CLLocationManager()
   private let authState = NetworkAgentAuthorizationState()
   private let smoothingFactor = 0.35
@@ -108,6 +110,39 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
       rssi: displayRSSI
     )
+  }
+
+  /// Returns the requested field values for the current network state.
+  func fieldValues(for fields: [NetworkAgentField]) -> [String: String] {
+    let snapshot = snapshot()
+    var values: [String: String] = [:]
+
+    for field in fields {
+      switch field {
+      case .accessGranted:
+        values[field.rawValue] = String(snapshot.accessGranted)
+      case .permissionState:
+        values[field.rawValue] = snapshot.permissionState
+      case .generatedAt:
+        values[field.rawValue] = Self.fieldDateFormatter.string(from: snapshot.generatedAt)
+      case .ssid:
+        if let ssid = snapshot.ssid {
+          values[field.rawValue] = ssid
+        }
+      case .interfaceName:
+        if let interfaceName = snapshot.interfaceName {
+          values[field.rawValue] = interfaceName
+        }
+      case .primaryInterfaceIsTunnel:
+        values[field.rawValue] = String(snapshot.primaryInterfaceIsTunnel)
+      case .rssi:
+        if let rssi = snapshot.rssi {
+          values[field.rawValue] = String(rssi)
+        }
+      }
+    }
+
+    return values
   }
 
   /// Handles one location authorization change.
