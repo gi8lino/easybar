@@ -92,11 +92,9 @@ final class Config {
       .appendingPathComponent(".config/easybar/widgets")
       .path
     loggingDirectory =
-      FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".local/state/easybar")
-      .path
-    calendarAgentSocketPath = "/tmp/EasyBar/calendar-agent.sock"
-    networkAgentSocketPath = "/tmp/EasyBar/network-agent.sock"
+      defaultLoggingDirectoryPath()
+    calendarAgentSocketPath = defaultCalendarAgentSocketPath()
+    networkAgentSocketPath = defaultNetworkAgentSocketPath()
     networkAgentRefreshIntervalSeconds = 60
   }
 

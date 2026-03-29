@@ -2,6 +2,13 @@ import Foundation
 
 /// Shared log file naming helpers used by EasyBar processes.
 
+/// Returns the default log directory used by EasyBar processes.
+public func defaultLoggingDirectoryPath() -> String {
+  FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent(".local/state/easybar")
+    .path
+}
+
 /// Returns the EasyBar app log path inside one logging directory.
 public func easyBarLogPath(in directory: String) -> String {
   URL(fileURLWithPath: directory)

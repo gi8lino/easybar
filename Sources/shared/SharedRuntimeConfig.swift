@@ -34,9 +34,7 @@ public struct SharedRuntimeConfig {
     let loggingDirectory =
       expandedPath(
         loggingTable?["directory"]?.string
-      ) ?? FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".local/state/easybar")
-        .path
+      ) ?? defaultLoggingDirectoryPath()
 
     let easyBarSocketPath =
       expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
@@ -45,12 +43,12 @@ public struct SharedRuntimeConfig {
     let calendarAgentSocketPath =
       expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
       ?? expandedPath(calendarTable?["socket_path"]?.string)
-      ?? "/tmp/EasyBar/calendar-agent.sock"
+      ?? defaultCalendarAgentSocketPath()
 
     let networkAgentSocketPath =
       expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
       ?? expandedPath(networkTable?["socket_path"]?.string)
-      ?? "/tmp/EasyBar/network-agent.sock"
+      ?? defaultNetworkAgentSocketPath()
 
     let networkAgentRefreshIntervalSeconds =
       timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
