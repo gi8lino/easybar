@@ -5,6 +5,7 @@ struct SpacesWidgetView: View {
 
   @ObservedObject private var aeroSpaceService = AeroSpaceService.shared
 
+  /// Renders the native spaces widget.
   var body: some View {
     let config = Config.shared.builtinSpaces
 
@@ -243,6 +244,7 @@ private struct AppIconView: View {
     isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear
   }
 
+  /// Renders one app icon slot.
   var body: some View {
     content
       .frame(width: resolvedSize, height: resolvedSize)

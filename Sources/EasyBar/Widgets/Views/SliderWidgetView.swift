@@ -32,6 +32,7 @@ struct SliderWidgetView: View {
     _value = State(initialValue: value)
   }
 
+  /// Renders the native slider control.
   var body: some View {
     Slider(
       value: Binding(
@@ -69,6 +70,7 @@ struct SliderWidgetView: View {
     }
   }
 
+  /// Returns the resolved slider width.
   private var resolvedWidth: CGFloat {
     SliderWidthResolver.resolve(
       explicitWidth: width,

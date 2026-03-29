@@ -7,6 +7,7 @@ struct ProgressBarCanvas: View {
   let maxValue: Double
   let tint: Color
 
+  /// Draws the progress track and fill.
   var body: some View {
     Canvas { context, size in
       context.fill(trackPath(size: size), with: .color(.white.opacity(0.12)))
@@ -46,6 +47,7 @@ struct ProgressBarCanvas: View {
     size.height / 2
   }
 
+  /// Returns the current value normalized into the 0...1 range.
   private var normalizedValue: Double {
     let span = max(maxValue - minValue, 0.0001)
     let clamped = min(max(value, minValue), maxValue)

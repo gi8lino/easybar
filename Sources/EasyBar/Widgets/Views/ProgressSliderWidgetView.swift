@@ -32,6 +32,7 @@ struct ProgressSliderWidgetView: View {
     _value = State(initialValue: value)
   }
 
+  /// Renders the draggable progress slider.
   var body: some View {
     GeometryReader { geometry in
       ZStack(alignment: .leading) {
@@ -84,6 +85,7 @@ struct ProgressSliderWidgetView: View {
     }
   }
 
+  /// Returns the resolved slider width.
   private var resolvedWidth: CGFloat {
     SliderWidthResolver.resolve(
       explicitWidth: width,
@@ -92,16 +94,19 @@ struct ProgressSliderWidgetView: View {
     )
   }
 
+  /// Returns the current value normalized into the 0...1 range.
   private var normalizedValue: CGFloat {
     let span = max(maxValue - minValue, 0.0001)
     let clamped = min(max(value, minValue), maxValue)
     return CGFloat((clamped - minValue) / span)
   }
 
+  /// Returns the knob offset inside the current width.
   private func knobOffset(in width: CGFloat) -> CGFloat {
     width * normalizedValue
   }
 
+  /// Converts one drag position into a stepped value.
   private func value(for x: CGFloat, width: CGFloat) -> Double {
     let clampedX = min(max(0, x), width)
     let ratio = Double(clampedX / max(width, 1))

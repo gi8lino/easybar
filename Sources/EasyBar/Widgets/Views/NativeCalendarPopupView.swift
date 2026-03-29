@@ -4,6 +4,7 @@ struct NativeCalendarPopupView: View {
 
   @ObservedObject private var store = NativeCalendarStore.shared
 
+  /// Renders the native calendar popup content.
   var body: some View {
     let config = Config.shared.builtinCalendar
 
@@ -69,6 +70,7 @@ struct NativeCalendarPopupView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  /// Returns the popup style for one section kind.
   private func style(
     for kind: NativeCalendarPopupSectionKind
   ) -> Config.CalendarBuiltinConfig.PopupSectionStyle {
@@ -86,6 +88,7 @@ struct NativeCalendarPopupView: View {
     }
   }
 
+  /// Builds the rendered line for one popup item.
   private func itemLine(for item: NativeCalendarPopupItem) -> String {
     let config = Config.shared.builtinCalendar
     let prefix = config.popupShowCalendarName ? calendarNamePrefix(for: item) : ""
@@ -118,6 +121,7 @@ struct NativeCalendarPopupView: View {
     return style.itemColorHex
   }
 
+  /// Returns the optional calendar-name prefix.
   private func calendarNamePrefix(for item: NativeCalendarPopupItem) -> String {
     guard let calendarName = item.calendarName?.trimmingCharacters(in: .whitespacesAndNewlines),
       !calendarName.isEmpty
@@ -128,6 +132,7 @@ struct NativeCalendarPopupView: View {
     return "[\(calendarName)] "
   }
 
+  /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
     Color(hex: hex)
   }

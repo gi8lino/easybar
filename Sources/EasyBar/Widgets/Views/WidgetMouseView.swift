@@ -14,6 +14,7 @@ struct WidgetMouseView: NSViewRepresentable {
     self.tracksHover = tracksHover
   }
 
+  /// Creates the AppKit-backed mouse surface.
   func makeNSView(context: Context) -> MouseTrackingNSView {
     let view = MouseTrackingNSView()
     view.widgetID = widgetID
@@ -22,6 +23,7 @@ struct WidgetMouseView: NSViewRepresentable {
     return view
   }
 
+  /// Updates the AppKit surface ids and hover flags.
   func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
     nsView.widgetID = widgetID
     nsView.targetWidgetID = targetWidgetID
@@ -54,11 +56,13 @@ final class MouseTrackingNSView: NSView {
     bounds.contains(point) ? self : nil
   }
 
+  /// Rebuilds tracking areas after layout updates.
   override func updateTrackingAreas() {
     super.updateTrackingAreas()
     replaceTrackingArea()
   }
 
+  /// Emits hover-entered when tracking is enabled.
   override func mouseEntered(with event: NSEvent) {
     guard tracksHover else { return }
     guard !isMouseInside else { return }
@@ -69,6 +73,7 @@ final class MouseTrackingNSView: NSView {
       .mouseEntered, widgetID: widgetID, targetWidgetID: targetWidgetID)
   }
 
+  /// Emits hover-exited when tracking is enabled.
   override func mouseExited(with event: NSEvent) {
     guard tracksHover else { return }
     guard isMouseInside else { return }
@@ -80,30 +85,37 @@ final class MouseTrackingNSView: NSView {
     }
   }
 
+  /// Emits a left-button mouse-down event.
   override func mouseDown(with event: NSEvent) {
     emitMouseDown(button: .left)
   }
 
+  /// Emits a left-button mouse-up and clicked event.
   override func mouseUp(with event: NSEvent) {
     emitMouseUp(button: .left)
   }
 
+  /// Emits a right-button mouse-down event.
   override func rightMouseDown(with event: NSEvent) {
     emitMouseDown(button: .right)
   }
 
+  /// Emits a right-button mouse-up and clicked event.
   override func rightMouseUp(with event: NSEvent) {
     emitMouseUp(button: .right)
   }
 
+  /// Emits a middle-button mouse-down event.
   override func otherMouseDown(with event: NSEvent) {
     emitMouseDown(button: .middle)
   }
 
+  /// Emits a middle-button mouse-up and clicked event.
   override func otherMouseUp(with event: NSEvent) {
     emitMouseUp(button: .middle)
   }
 
+  /// Emits one scroll-wheel event.
   override func scrollWheel(with event: NSEvent) {
     let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
 
@@ -176,6 +188,7 @@ private final class HoverState {
   private var hoveredWidgetIDs = Set<String>()
   private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]
 
+  /// Marks one widget as hovered and returns whether it was newly entered.
   func enter(widgetID: String) -> Bool {
     lock.lock()
     defer { lock.unlock() }
@@ -187,6 +200,7 @@ private final class HoverState {
     return inserted
   }
 
+  /// Delays the hover-exit slightly so overlapping surfaces do not flicker.
   func exit(widgetID: String, handler: @escaping () -> Void) {
     lock.lock()
     pendingExitWorkItems[widgetID]?.cancel()

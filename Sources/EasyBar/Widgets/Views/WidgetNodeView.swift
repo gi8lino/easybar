@@ -154,6 +154,7 @@ private extension WidgetNodeView {
 // MARK: - Node Content
 
 private extension WidgetNodeView {
+  /// Returns the row content for a plain item.
   var itemContent: some View {
     HStack(spacing: itemSpacing) {
       imageView
@@ -162,6 +163,7 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns the slider row for the current node.
   var sliderView: some View {
     HStack(spacing: stackSpacing) {
       iconText
@@ -179,6 +181,7 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns the progress-slider row for the current node.
   var progressSliderView: some View {
     HStack(spacing: stackSpacing) {
       iconText
@@ -196,6 +199,7 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns the progress row for the current node.
   var progressView: some View {
     HStack(spacing: stackSpacing) {
       iconText
@@ -211,6 +215,7 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns the sparkline row for the current node.
   var sparklineView: some View {
     HStack(spacing: stackSpacing) {
       iconText
@@ -234,6 +239,7 @@ private extension WidgetNodeView {
     color(node.color)
   }
 
+  /// Resolves one optional hex color.
   func color(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else {
       return Theme.defaultTextColor
@@ -242,16 +248,19 @@ private extension WidgetNodeView {
     return Color(hex: hex)
   }
 
+  /// Converts one optional font size into a SwiftUI font.
   func font(size: Double?) -> Font? {
     guard let size else { return nil }
     return .system(size: CGFloat(size))
   }
 
+  /// Converts one optional scalar into CGFloat.
   func cgFloat(_ value: Double?) -> CGFloat? {
     guard let value else { return nil }
     return CGFloat(value)
   }
 
+  /// Schedules one delayed popup-close check.
   func schedulePopupCloseCheck() {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
       closePopupIfIdle()
@@ -310,6 +319,7 @@ private extension WidgetNodeView {
 // MARK: - Layout Data
 
 private extension WidgetNodeView {
+  /// Returns the row of child nodes.
   var childRow: some View {
     HStack(spacing: stackSpacing) {
       ForEach(children) { child in
@@ -454,6 +464,7 @@ private extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Returns the optional image view.
   var imageView: some View {
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)
@@ -473,6 +484,7 @@ private extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Returns the optional icon text.
   var iconText: some View {
     if hasIcon {
       Text(node.icon)
@@ -482,6 +494,7 @@ private extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Returns the optional label text.
   var labelText: some View {
     if hasLabel {
       Text(node.text)
@@ -490,6 +503,7 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns a templated image when tinting is enabled.
   func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
     guard customImage != nil,
       let tint = node.iconColor ?? node.color,
@@ -636,6 +650,7 @@ private struct WidgetNodeStyle: ViewModifier {
 
   let node: WidgetNodeState
 
+  /// Applies the shared box-model styling for one widget node.
   func body(content: Content) -> some View {
     content
       .padding(.leading, leadingPadding)

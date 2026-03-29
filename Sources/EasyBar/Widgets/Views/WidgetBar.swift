@@ -5,6 +5,7 @@ struct WidgetBar: View {
   @ObservedObject private var store = WidgetStore.shared
   let position: WidgetPosition
 
+  /// Renders the widgets for one bar position.
   var body: some View {
     HStack(spacing: 10) {
       ForEach(topLevelNodes) { node in

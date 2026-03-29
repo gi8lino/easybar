@@ -6,6 +6,7 @@ struct SparklineCanvas: View {
   let tint: Color
   let lineWidth: CGFloat
 
+  /// Draws the sparkline path when enough points exist.
   var body: some View {
     Canvas { context, size in
       guard let path = makePath(size: size) else { return }
