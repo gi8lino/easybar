@@ -98,7 +98,7 @@ private extension WidgetNodeView {
       } else if hasPopupChildren {
         popupAnchorSurface(childRow)
       } else {
-        styledMouseContent(childRow)
+        styledNodeSurface(childRow)
       }
     }
   }
@@ -108,7 +108,7 @@ private extension WidgetNodeView {
       return AnyView(popupItemSurface(itemContent))
     }
 
-    return AnyView(styledMouseContent(itemContent))
+    return AnyView(styledNodeSurface(itemContent))
   }
 
   func nativeCalendarAnchorView<Content: View>(
@@ -270,7 +270,6 @@ private extension WidgetNodeView {
   /// Handles hover changes on the popup anchor.
   func handleAnchorHover(_ hovering: Bool) {
     anchorHovered = hovering
-    emitPopupAnchorHoverEvent(hovering)
 
     if hovering {
       popupPresented = true
@@ -295,25 +294,6 @@ private extension WidgetNodeView {
     popupPresented = false
   }
 
-  /// Emits popup anchor hover events without using the AppKit mouse tracker.
-  func emitPopupAnchorHoverEvent(_ hovering: Bool) {
-    guard node.kind == .popup || hasPopupChildren else { return }
-
-    if hovering {
-      EventBus.shared.emitWidgetEvent(
-        .mouseEntered,
-        widgetID: node.root,
-        targetWidgetID: node.id
-      )
-      return
-    }
-
-    EventBus.shared.emitWidgetEvent(
-      .mouseExited,
-      widgetID: node.root,
-      targetWidgetID: node.id
-    )
-  }
 }
 
 // MARK: - Layout Data
@@ -555,6 +535,16 @@ private extension WidgetNodeView {
 
 private extension WidgetNodeView {
   /// Applies style and mouse handling to one node surface.
+  func styledNodeSurface<Content: View>(_ content: Content) -> some View {
+    AnyView(
+      content
+        .modifier(nodeStyle)
+        .contentShape(Rectangle())
+        .overlay(nodeMouseOverlay)
+    )
+  }
+
+  /// Applies style and gesture-based mouse handling to one control surface.
   func styledMouseContent<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -590,7 +580,10 @@ private extension WidgetNodeView {
 
   /// Applies popup behavior to a normal styled item surface.
   func popupItemSurface<Content: View>(_ content: Content) -> some View {
-    styledMouseContent(content)
+    content
+      .modifier(nodeStyle)
+      .contentShape(Rectangle())
+      .overlay(popupAnchorMouseOverlay)
       .onHover { hovering in handleAnchorHover(hovering) }
       .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
         popupContent
@@ -619,29 +612,39 @@ private extension WidgetNodeView {
     }
   }
 
+  /// Returns the full-frame mouse overlay for non-control nodes.
+  @ViewBuilder
+  var nodeMouseOverlay: some View {
+    if node.isMouseHoverInteractive || node.isMouseClickInteractive || node.isMouseScrollInteractive {
+      nodeEventSurface(tracksHover: node.isMouseHoverInteractive)
+    }
+  }
+
   /// Applies click handling for popup anchors while leaving hover to SwiftUI.
   func popupAnchorInteractiveSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
         .modifier(nodeStyle)
         .contentShape(Rectangle())
-        .simultaneousGesture(
-          TapGesture().onEnded {
-            guard node.isMouseClickInteractive else { return }
-            emitNodeClickEvent()
-          }
-        )
-        .overlay(scrollOverlay)
+        .overlay(popupAnchorMouseOverlay)
     )
   }
 
-  /// Emits one node-scoped hover event.
+  /// Returns the full-frame mouse overlay for popup anchors.
+  @ViewBuilder
+  var popupAnchorMouseOverlay: some View {
+    if node.isMouseClickInteractive || node.isMouseScrollInteractive || hasPopupChildren || node.kind == .popup {
+      nodeEventSurface(tracksHover: true)
+    }
+  }
+
+  /// Emits one node-scoped hover event for control-backed nodes.
   func emitNodeHoverEvent(_ hovering: Bool) {
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
     EventBus.shared.emitWidgetEvent(event, widgetID: node.root, targetWidgetID: node.id)
   }
 
-  /// Emits one node-scoped click event.
+  /// Emits one node-scoped click event for control-backed nodes.
   func emitNodeClickEvent() {
     EventBus.shared.emitWidgetEvent(
       .mouseClicked,
