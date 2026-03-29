@@ -6,7 +6,6 @@ import Foundation
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
 /// runs when at least one native widget depends on that state.
 final class AeroSpaceService: ObservableObject {
-
   static let shared = AeroSpaceService()
 
   @Published private(set) var spaces: [SpaceItem] = []
@@ -20,6 +19,15 @@ final class AeroSpaceService: ObservableObject {
   private var appSwitchObserver: NSObjectProtocol?
 
   private init() {}
+}
+
+// MARK: - Public API
+
+private extension AeroSpaceService {
+  /// Returns whether any native widget currently needs AeroSpace state.
+  var hasConsumers: Bool {
+    !consumers.isEmpty
+  }
 
   /// Starts the service.
   func start() {
@@ -40,11 +48,6 @@ final class AeroSpaceService: ObservableObject {
     Logger.debug("aerospace consumer unregistered id=\(id) count=\(consumers.count)")
   }
 
-  /// Returns whether any native widget currently needs AeroSpace state.
-  private var hasConsumers: Bool {
-    !consumers.isEmpty
-  }
-
   /// Called by the socket server when an external AeroSpace event occurs.
   ///
   /// This path should feel immediate, so it skips the normal debounce and
@@ -55,8 +58,8 @@ final class AeroSpaceService: ObservableObject {
       return
     }
 
-    performRefreshQueueTask { service in
-      service.reloadStateTwice()
+    refreshQueue.async { [weak self] in
+      self?.reloadStateTwice()
     }
   }
 
@@ -79,9 +82,10 @@ final class AeroSpaceService: ObservableObject {
       }
     }
 
-    performRefreshQueueTask { service in
-      _ = service.runAeroSpace(arguments: ["workspace", workspace])
-      service.reloadStateTwice()
+    refreshQueue.async { [weak self] in
+      guard let self else { return }
+      _ = self.runAeroSpace(arguments: ["workspace", workspace])
+      self.reloadStateTwice()
     }
   }
 
@@ -111,13 +115,17 @@ final class AeroSpaceService: ObservableObject {
 
   /// Public refresh entry.
   func refresh() {
-    performRefreshQueueTask { service in
-      service.reloadState()
+    refreshQueue.async { [weak self] in
+      self?.reloadState()
     }
   }
+}
 
+// MARK: - App Switch Observation
+
+private extension AeroSpaceService {
   /// Listens for app activation so focused-app UI can update immediately.
-  private func subscribeAppSwitches() {
+  func subscribeAppSwitches() {
     guard appSwitchObserver == nil else { return }
 
     appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -138,7 +146,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
-  private func applyOptimisticFocusedApp(from app: NSRunningApplication) {
+  func applyOptimisticFocusedApp(from app: NSRunningApplication) {
     let bundlePath = app.bundleURL?.path
     let name = app.localizedName ?? ""
     let id = resolvedAppID(name: name, bundlePath: bundlePath)
@@ -157,9 +165,13 @@ final class AeroSpaceService: ObservableObject {
 
     publishUpdate(logMessage: "aerospace optimistic focus updated app=\(focused.name)")
   }
+}
 
+// MARK: - State Reloading
+
+private extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
-  private func reloadState() {
+  func reloadState() {
     let workspaces = loadWorkspaces()
     let windows = loadWindows()
     let groupedApps = Dictionary(grouping: windows, by: \.workspace)
@@ -192,22 +204,18 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Reloads twice to smooth over small AeroSpace timing gaps.
-  private func reloadStateTwice() {
+  func reloadStateTwice() {
     reloadState()
     Thread.sleep(forTimeInterval: 0.04)
     reloadState()
   }
+}
 
-  /// Runs one task on the dedicated AeroSpace refresh queue.
-  private func performRefreshQueueTask(_ task: @escaping (AeroSpaceService) -> Void) {
-    refreshQueue.async { [weak self] in
-      guard let self else { return }
-      task(self)
-    }
-  }
+// MARK: - AeroSpace Loading
 
+private extension AeroSpaceService {
   /// Reads all known workspaces from AeroSpace.
-  private func loadWorkspaces() -> [WorkspaceDTO] {
+  func loadWorkspaces() -> [WorkspaceDTO] {
     guard
       let namesOutput = runAeroSpace(arguments: [
         "list-workspaces", "--all", "--format", "%{workspace}",
@@ -246,7 +254,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Reads all windows from AeroSpace.
-  private func loadWindows() -> [WindowDTO] {
+  func loadWindows() -> [WindowDTO] {
     guard
       let output = runAeroSpace(arguments: [
         "list-windows",
@@ -265,7 +273,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Reads the currently focused app from AeroSpace.
-  private func loadFocusedApp() -> SpaceApp? {
+  func loadFocusedApp() -> SpaceApp? {
     guard
       let output = runAeroSpace(arguments: [
         "list-windows",
@@ -296,7 +304,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Deduplicates apps per workspace.
-  private func deduplicateApps(_ windows: [WindowDTO]) -> [SpaceApp] {
+  func deduplicateApps(_ windows: [WindowDTO]) -> [SpaceApp] {
     var seen = Set<String>()
     var result: [SpaceApp] = []
 
@@ -315,7 +323,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Runs the AeroSpace CLI.
-  private func runAeroSpace(arguments: [String]) -> String? {
+  func runAeroSpace(arguments: [String]) -> String? {
     guard let executable = resolveAeroSpacePath() else { return nil }
 
     let process = Process()
@@ -341,7 +349,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Resolves the AeroSpace binary.
-  private func resolveAeroSpacePath() -> String? {
+  func resolveAeroSpacePath() -> String? {
     let candidates = [
       "/opt/homebrew/bin/aerospace",
       "/usr/local/bin/aerospace",
@@ -353,7 +361,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Resolves a stable app identity from bundle path or name.
-  private func resolvedAppID(name: String, bundlePath: String?) -> String {
+  func resolvedAppID(name: String, bundlePath: String?) -> String {
     guard let bundlePath, !bundlePath.isEmpty else {
       return name
     }
@@ -362,13 +370,17 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Publishes one shared AeroSpace update notification.
-  private func publishUpdate(logMessage: String) {
+  func publishUpdate(logMessage: String) {
     Logger.debug(logMessage)
     NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
+}
 
+// MARK: - Parsing
+
+private extension AeroSpaceService {
   /// Parses one workspace state line from AeroSpace output.
-  private func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
+  func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
     let parts = line.split(separator: " ").map(String.init)
     guard parts.count >= 3 else { return nil }
 
@@ -382,7 +394,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Parses one window line from AeroSpace output.
-  private func parseWindowLine(_ line: Substring) -> WindowDTO? {
+  func parseWindowLine(_ line: Substring) -> WindowDTO? {
     let parts = splitPipedLine(String(line))
     guard parts.count >= 3 else { return nil }
 
@@ -394,14 +406,14 @@ final class AeroSpaceService: ObservableObject {
   }
 
   /// Splits one `a | b | c` line and trims each part.
-  private func splitPipedLine(_ line: String) -> [String] {
+  func splitPipedLine(_ line: String) -> [String] {
     line
       .components(separatedBy: " | ")
       .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
   }
 
   /// Builds one `SpaceApp` from parsed AeroSpace window data.
-  private func makeSpaceApp(name: String, bundlePath: String) -> SpaceApp {
+  func makeSpaceApp(name: String, bundlePath: String) -> SpaceApp {
     let normalizedBundlePath = bundlePath.isEmpty ? nil : bundlePath
 
     return SpaceApp(
