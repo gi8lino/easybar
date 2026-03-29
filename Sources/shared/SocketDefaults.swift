@@ -1,5 +1,7 @@
 import Foundation
 
+/// Shared defaults for EasyBar Unix socket endpoints and socket filesystem helpers.
+
 /// Returns the default Unix socket path used by EasyBar.
 ///
 /// EASYBAR_SOCKET_PATH overrides the default when set.

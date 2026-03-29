@@ -1,5 +1,7 @@
 import Foundation
 
+/// Shared log file naming helpers used by EasyBar processes.
+
 /// Returns the EasyBar app log path inside one logging directory.
 public func easyBarLogPath(in directory: String) -> String {
   URL(fileURLWithPath: directory)

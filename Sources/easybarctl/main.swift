@@ -39,14 +39,14 @@ private struct AppController {
 private struct CLIOption {
   let flag: String
   let short: String?
-  let command: IPCCommand?
+  let command: IPC.Command?
   let description: String
   let placeholder: String?
 
   init(
     flag: String,
     short: String? = nil,
-    command: IPCCommand? = nil,
+    command: IPC.Command? = nil,
     description: String,
     placeholder: String? = nil
   ) {
@@ -59,7 +59,7 @@ private struct CLIOption {
 }
 
 private struct ParsedArguments {
-  let command: IPCCommand
+  let command: IPC.Command
   let socketPath: String
   let debugEnabled: Bool
 }
@@ -172,7 +172,7 @@ private enum CLI {
   }
 
   /// Returns the command string associated with one argument when it is a command option.
-  static func command(for argument: String) -> IPCCommand? {
+  static func command(for argument: String) -> IPC.Command? {
     cmdOptions.first { matches($0, argument: argument) }?.command
   }
 
@@ -212,7 +212,7 @@ private enum CLI {
 
 /// Parses CLI arguments into one validated command request.
 private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
-  var selectedCommand: IPCCommand?
+  var selectedCommand: IPC.Command?
   var socketPath = SharedRuntimeConfig.current.easyBarSocketPath
   var debugEnabled = false
 
@@ -284,7 +284,7 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
 }
 
 /// Connects to the EasyBar socket and sends one IPC command.
-private func sendCommand(_ command: IPCCommand, to socketPath: String, context: AppContext) throws {
+private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws {
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)

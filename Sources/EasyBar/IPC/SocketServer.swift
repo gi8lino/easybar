@@ -8,7 +8,7 @@ final class SocketServer {
   private var listenFD: Int32 = -1
 
   /// Starts the socket listener.
-  func start(handler: @escaping (IPCCommand) -> Void) {
+  func start(handler: @escaping (IPC.Command) -> Void) {
     let socketDirectory = socketDirectoryPath(for: socketPath)
 
     do {
@@ -60,7 +60,7 @@ final class SocketServer {
   }
 
   /// Accepts incoming socket clients.
-  private func acceptLoop(handler: @escaping (IPCCommand) -> Void) {
+  private func acceptLoop(handler: @escaping (IPC.Command) -> Void) {
     while true {
       let client = accept(listenFD, nil, nil)
       if client < 0 {
@@ -79,7 +79,7 @@ final class SocketServer {
         Logger.debug("socket received raw command '\(string ?? "unknown")'")
 
         if let string,
-          let cmd = IPCCommand(rawValue: string)
+          let cmd = IPC.Command(rawValue: string)
         {
           Logger.debug("socket dispatching command '\(cmd.rawValue)'")
 
