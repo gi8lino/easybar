@@ -234,28 +234,13 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
       continue
     }
 
-    if let value = CLI.inlineValue(for: CLI.socketOption, argument: arg) {
-      guard !value.isEmpty else {
-        throw AppError.message("missing value for \(CLI.socketOption.flag)")
-      }
-
-      socketPath = value
-      i += 1
-      continue
-    }
-
-    if CLI.matches(CLI.socketOption, argument: arg) {
-      i += 1
-      guard i < arguments.count else {
-        throw AppError.message("missing value for \(arg)")
-      }
-
-      socketPath = arguments[i]
-      guard !socketPath.isEmpty else {
-        throw AppError.message("missing value for \(arg)")
-      }
-
-      i += 1
+    if let parsedSocketArgument = try parseSocketArgument(
+      arg,
+      arguments: arguments,
+      index: i
+    ) {
+      socketPath = parsedSocketArgument.socketPath
+      i = parsedSocketArgument.nextIndex
       continue
     }
 
@@ -281,6 +266,37 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
     socketPath: socketPath,
     debugEnabled: debugEnabled
   )
+}
+
+/// Parses one socket option and returns the resolved value plus next index.
+private func parseSocketArgument(
+  _ argument: String,
+  arguments: [String],
+  index: Int
+) throws -> (socketPath: String, nextIndex: Int)? {
+  if let value = CLI.inlineValue(for: CLI.socketOption, argument: argument) {
+    guard !value.isEmpty else {
+      throw AppError.message("missing value for \(CLI.socketOption.flag)")
+    }
+
+    return (value, index + 1)
+  }
+
+  guard CLI.matches(CLI.socketOption, argument: argument) else {
+    return nil
+  }
+
+  let nextIndex = index + 1
+  guard nextIndex < arguments.count else {
+    throw AppError.message("missing value for \(argument)")
+  }
+
+  let socketPath = arguments[nextIndex]
+  guard !socketPath.isEmpty else {
+    throw AppError.message("missing value for \(argument)")
+  }
+
+  return (socketPath, nextIndex + 1)
 }
 
 /// Connects to the EasyBar socket and sends one IPC command.
