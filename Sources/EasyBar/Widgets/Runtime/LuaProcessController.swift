@@ -29,6 +29,18 @@ private func easyBarSignalHandler(_ signal: Int32) {
 /// Owns Lua process lifecycle and process-group shutdown behavior.
 final class LuaProcessController {
 
+  private struct LaunchContext {
+    let runtimePath: String
+    let luaPath: String
+    let widgetsPath: String
+  }
+
+  private struct LaunchPipes {
+    let input = Pipe()
+    let output = Pipe()
+    let error = Pipe()
+  }
+
   private(set) var process: Process?
   private var signalHandlersInstalled = false
 
@@ -41,29 +53,12 @@ final class LuaProcessController {
 
     installSignalHandlersIfNeeded()
 
-    guard let runtimePath = resolvedRuntimePath() else {
-      return nil
-    }
+    guard let context = launchContext() else { return nil }
 
-    Logger.debug("starting lua runtime")
-    Logger.debug("lua binary: \(Config.shared.luaPath)")
-    Logger.debug("lua script: \(runtimePath)")
-    Logger.debug("widgets path: \(Config.shared.widgetsPath)")
+    logLaunch(context: context)
 
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: Config.shared.luaPath)
-    process.arguments = [runtimePath, Config.shared.widgetsPath]
-
-    let inPipe = Pipe()
-    let outPipe = Pipe()
-    let errPipe = Pipe()
-
-    process.standardInput = inPipe
-    process.standardOutput = outPipe
-    process.standardError = errPipe
-
-    process.terminationHandler = handleTermination
-
+    let pipes = LaunchPipes()
+    let process = makeProcess(context: context, pipes: pipes)
     do {
       try process.run()
     } catch {
@@ -81,7 +76,7 @@ final class LuaProcessController {
 
     Logger.debug("lua runtime started pid=\(pid)")
 
-    return (process, inPipe, outPipe, errPipe)
+    return (process, pipes.input, pipes.output, pipes.error)
   }
 
   /// Stops the Lua runtime process.
@@ -105,6 +100,17 @@ final class LuaProcessController {
     Darwin.signal(SIGQUIT, easyBarSignalHandler)
   }
 
+  /// Resolves the launch inputs for one Lua runtime process.
+  private func launchContext() -> LaunchContext? {
+    guard let runtimePath = resolvedRuntimePath() else { return nil }
+
+    return LaunchContext(
+      runtimePath: runtimePath,
+      luaPath: Config.shared.luaPath,
+      widgetsPath: Config.shared.widgetsPath
+    )
+  }
+
   /// Resolves the bundled Lua runtime script path.
   private func resolvedRuntimePath() -> String? {
     guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
@@ -113,6 +119,26 @@ final class LuaProcessController {
     }
 
     return runtime.path
+  }
+
+  /// Logs one Lua runtime launch request.
+  private func logLaunch(context: LaunchContext) {
+    Logger.debug("starting lua runtime")
+    Logger.debug("lua binary: \(context.luaPath)")
+    Logger.debug("lua script: \(context.runtimePath)")
+    Logger.debug("widgets path: \(context.widgetsPath)")
+  }
+
+  /// Builds one configured Lua runtime process.
+  private func makeProcess(context: LaunchContext, pipes: LaunchPipes) -> Process {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: context.luaPath)
+    process.arguments = [context.runtimePath, context.widgetsPath]
+    process.standardInput = pipes.input
+    process.standardOutput = pipes.output
+    process.standardError = pipes.error
+    process.terminationHandler = handleTermination
+    return process
   }
 
   /// Handles Lua process termination and related cleanup logging.
