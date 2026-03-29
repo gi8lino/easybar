@@ -1,6 +1,20 @@
 import Foundation
 
 final class WidgetRunner {
+  private static let initialEvents: [(name: String, event: AppEvent)] = [
+    ("system_woke", .systemWoke),
+    ("power_source_change", .powerSourceChange),
+    ("charging_state_change", .chargingStateChange),
+    ("wifi_change", .wifiChange),
+    ("network_change", .networkChange),
+    ("volume_change", .volumeChange),
+    ("mute_change", .muteChange),
+    ("calendar_change", .calendarChange),
+    ("minute_tick", .minuteTick),
+    ("second_tick", .secondTick),
+    ("focus_change", .focusChange),
+    ("workspace_change", .workspaceChange),
+  ]
 
   static let shared = WidgetRunner()
 
@@ -23,10 +37,7 @@ final class WidgetRunner {
     }
 
     started = true
-    runtimeReady = false
-    subscriptionsReady = false
-    didEmitInitialEvents = false
-    requiredEvents.removeAll()
+    resetRuntimeState()
 
     Logger.debug("starting widget runner")
 
@@ -61,10 +72,7 @@ final class WidgetRunner {
     }
 
     started = false
-    runtimeReady = false
-    subscriptionsReady = false
-    didEmitInitialEvents = false
-    requiredEvents.removeAll()
+    resetRuntimeState()
 
     EventManager.shared.stopAll()
     LuaRuntime.shared.shutdown()
@@ -103,18 +111,10 @@ final class WidgetRunner {
   private func emitInitialEvents() {
     Logger.debug("emitting initial widget events")
 
-    emitInitialEvent(named: "system_woke", event: .systemWoke)
-    emitInitialEvent(named: "power_source_change", event: .powerSourceChange)
-    emitInitialEvent(named: "charging_state_change", event: .chargingStateChange)
-    emitInitialEvent(named: "wifi_change", event: .wifiChange)
-    emitInitialEvent(named: "network_change", event: .networkChange)
-    emitInitialEvent(named: "volume_change", event: .volumeChange)
-    emitInitialEvent(named: "mute_change", event: .muteChange)
-    emitInitialEvent(named: "calendar_change", event: .calendarChange)
-    emitInitialEvent(named: "minute_tick", event: .minuteTick)
-    emitInitialEvent(named: "second_tick", event: .secondTick)
-    emitInitialEvent(named: "focus_change", event: .focusChange)
-    emitInitialEvent(named: "workspace_change", event: .workspaceChange)
+    for (name, event) in Self.initialEvents {
+      emitInitialEvent(named: name, event: event)
+    }
+
     EventBus.shared.emit(.forced)
   }
 
@@ -170,5 +170,13 @@ final class WidgetRunner {
   private func emitInitialEvent(named name: String, event: AppEvent) {
     guard requiredEvents.contains(name) else { return }
     EventBus.shared.emit(event)
+  }
+
+  /// Resets Lua runtime handshake and subscription state.
+  private func resetRuntimeState() {
+    runtimeReady = false
+    subscriptionsReady = false
+    didEmitInitialEvents = false
+    requiredEvents.removeAll()
   }
 }
