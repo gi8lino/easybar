@@ -3,13 +3,19 @@ import IOKit.ps
 
 /// Native battery widget with configurable colors and hover display modes.
 final class BatteryNativeWidget: NativeWidget {
-
   let rootID = "builtin_battery"
 
   private var timer: Timer?
   private let eventObserver = EasyBarEventObserver()
-
   private var isHovered = false
+
+  private struct Snapshot {
+    let placement: Config.BuiltinWidgetPlacement
+    let style: Config.BuiltinWidgetStyle
+    let icon: String
+    let text: String
+    let colorHex: String?
+  }
 
   /// Starts the widget and listens for battery-related events.
   func start() {
@@ -32,7 +38,11 @@ final class BatteryNativeWidget: NativeWidget {
 
     publish()
   }
+}
 
+// MARK: - Lifecycle
+
+private extension BatteryNativeWidget {
   /// Stops the widget and clears its nodes.
   func stop() {
     eventObserver.stop()
@@ -45,15 +55,17 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Publishes the current widget tree.
-  private func publish() {
+  func publish() {
     let snapshot = readBatterySnapshot()
-    let config = Config.shared.builtinBattery
-
-    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot, config: config))
+    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
   }
+}
 
+// MARK: - Node Building
+
+private extension BatteryNativeWidget {
   /// Builds the normal inline battery layout.
-  private func makeInlineNodes(
+  func makeInlineNodes(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     text: String,
@@ -91,7 +103,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Builds the hover popup layout used for `display_mode = "tooltip"`.
-  private func makeTooltipPopupNodes(
+  func makeTooltipPopupNodes(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     icon: String,
@@ -322,15 +334,13 @@ final class BatteryNativeWidget: NativeWidget {
       popupText,
     ]
   }
+}
 
+// MARK: - Snapshot And Events
+
+private extension BatteryNativeWidget {
   /// Returns the current battery snapshot.
-  private func readBatterySnapshot() -> (
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle,
-    icon: String,
-    text: String,
-    colorHex: String?
-  ) {
+  func readBatterySnapshot() -> Snapshot {
     let config = Config.shared.builtinBattery
     let placement = config.placement
     let style = config.style
@@ -365,12 +375,12 @@ final class BatteryNativeWidget: NativeWidget {
 
       let text = "\(percentage)%"
 
-      return (
-        placement,
-        style,
-        resolvedBatteryIcon(for: percentage, charging: charging),
-        text,
-        resolvedBatteryColor(
+      return Snapshot(
+        placement: placement,
+        style: style,
+        icon: resolvedBatteryIcon(for: percentage, charging: charging),
+        text: text,
+        colorHex: resolvedBatteryColor(
           for: percentage,
           mode: config.colorMode,
           fixedColorHex: config.fixedColorHex ?? config.style.textColorHex,
@@ -386,7 +396,7 @@ final class BatteryNativeWidget: NativeWidget {
     )
   }
 
-  private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+  func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else {
       return false
     }
@@ -400,7 +410,7 @@ final class BatteryNativeWidget: NativeWidget {
     return true
   }
 
-  private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+  func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
     guard payload.widgetID == rootID else { return }
 
@@ -420,16 +430,9 @@ final class BatteryNativeWidget: NativeWidget {
     }
   }
 
-  private func makeNodes(
-    snapshot: (
-      placement: Config.BuiltinWidgetPlacement,
-      style: Config.BuiltinWidgetStyle,
-      icon: String,
-      text: String,
-      colorHex: String?
-    ),
-    config: Config.BatteryBuiltinConfig
-  ) -> [WidgetNodeState] {
+  func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    let config = Config.shared.builtinBattery
+
     guard config.displayMode != .tooltip else {
       return makeTooltipPopupNodes(
         placement: snapshot.placement,
@@ -453,28 +456,26 @@ final class BatteryNativeWidget: NativeWidget {
     )
   }
 
-  private func unavailableSnapshot(
+  func unavailableSnapshot(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     config: Config.BatteryBuiltinConfig
-  ) -> (
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle,
-    icon: String,
-    text: String,
-    colorHex: String?
-  ) {
-    (
-      placement,
-      style,
-      style.icon,
-      config.unavailableText,
-      resolvedUnavailableColor(config: config)
+  ) -> Snapshot {
+    Snapshot(
+      placement: placement,
+      style: style,
+      icon: style.icon,
+      text: config.unavailableText,
+      colorHex: resolvedUnavailableColor(config: config)
     )
   }
+}
 
+// MARK: - Display Decisions
+
+private extension BatteryNativeWidget {
   /// Returns true when the inline label should be shown.
-  private func shouldShowInlineLabel(
+  func shouldShowInlineLabel(
     mode: Config.BuiltinBatteryDisplayMode,
     text: String
   ) -> Bool {
@@ -493,13 +494,13 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Hover only changes the rendered node tree for inline hover-only mode.
-  private func publishIfHoverAffectsLayout() {
+  func publishIfHoverAffectsLayout() {
     guard Config.shared.builtinBattery.displayMode == .expand else { return }
     publish()
   }
 
   /// Keeps the row width stable while toggling the label visually on hover.
-  private func inlineLabelNode(
+  func inlineLabelNode(
     placement: Config.BuiltinWidgetPlacement,
     text: String,
     colorHex: String?,
@@ -553,7 +554,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Resolves the popup text color.
-  private func resolvedPopupTextColor(
+  func resolvedPopupTextColor(
     popupTextColorHex: String?,
     fallbackColorHex: String?,
     styleTextColorHex: String?
@@ -562,7 +563,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Resolves the icon for the current battery state.
-  private func resolvedBatteryIcon(for percentage: Int, charging: Bool) -> String {
+  func resolvedBatteryIcon(for percentage: Int, charging: Bool) -> String {
     if charging {
       switch percentage {
       case 100: return "󰂅"
@@ -595,7 +596,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Resolves the displayed battery color.
-  private func resolvedBatteryColor(
+  func resolvedBatteryColor(
     for percentage: Int,
     mode: Config.BuiltinBatteryColorMode,
     fixedColorHex: String?,
@@ -618,7 +619,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Resolves the color used when the battery is unavailable.
-  private func resolvedUnavailableColor(config: Config.BatteryBuiltinConfig) -> String? {
+  func resolvedUnavailableColor(config: Config.BatteryBuiltinConfig) -> String? {
     switch config.colorMode {
     case .dynamic:
       return config.style.textColorHex
