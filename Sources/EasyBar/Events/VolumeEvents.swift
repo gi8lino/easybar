@@ -72,6 +72,7 @@ final class VolumeEvents {
   /// Removes the default output device listener.
   private func uninstallDefaultOutputDeviceListener() {
     guard let block = defaultDeviceListener else { return }
+    defer { defaultDeviceListener = nil }
 
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
@@ -86,11 +87,10 @@ final class VolumeEvents {
       block
     )
 
-    if status != noErr {
+    guard status == noErr else {
       Logger.debug("failed to remove default output device listener status=\(status)")
+      return
     }
-
-    defaultDeviceListener = nil
   }
 
   /// Rebinds per-device listeners to the current default output device.
@@ -183,6 +183,8 @@ final class VolumeEvents {
     guard let deviceID = currentDeviceID else { return }
 
     if let block = volumeListener {
+      defer { volumeListener = nil }
+
       var volumeAddress = AudioObjectPropertyAddress(
         mSelector: kAudioDevicePropertyVolumeScalar,
         mScope: kAudioDevicePropertyScopeOutput,
@@ -196,14 +198,15 @@ final class VolumeEvents {
         block
       )
 
-      if status != noErr {
+      guard status == noErr else {
         Logger.debug("failed to remove volume listener status=\(status)")
+        return
       }
-
-      volumeListener = nil
     }
 
     if let block = muteListener {
+      defer { muteListener = nil }
+
       var muteAddress = AudioObjectPropertyAddress(
         mSelector: kAudioDevicePropertyMute,
         mScope: kAudioDevicePropertyScopeOutput,
@@ -217,11 +220,10 @@ final class VolumeEvents {
         block
       )
 
-      if status != noErr {
+      guard status == noErr else {
         Logger.debug("failed to remove mute listener status=\(status)")
+        return
       }
-
-      muteListener = nil
     }
   }
 
