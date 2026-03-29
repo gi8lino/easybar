@@ -264,6 +264,12 @@ private struct AppIconView: View {
   /// Returns the rendered app icon or fallback initial.
   @ViewBuilder
   private var content: some View {
+    iconContent()
+  }
+
+  /// Returns the app icon image or the text fallback.
+  @ViewBuilder
+  private func iconContent() -> some View {
     if let icon = app.icon() {
       Image(nsImage: icon)
         .resizable()
