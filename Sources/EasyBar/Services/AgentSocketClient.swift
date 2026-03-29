@@ -50,7 +50,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   /// Starts the client connection loop.
   func start() {
     lock.lock()
-    if running {
+    guard !running else {
       lock.unlock()
       return
     }

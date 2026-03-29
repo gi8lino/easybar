@@ -71,14 +71,15 @@ final class NetworkSocketServer {
       transport.addSubscriber(clientFD, for: clientFD)
       AgentLogger.info("network agent subscriber added fd=\(clientFD)")
 
-      if !transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) {
+      guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
         return
       }
 
       let snapshot = provider.snapshot()
-      if !transport.send(NetworkAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) {
+      guard transport.send(NetworkAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
+        return
       }
     }
   }

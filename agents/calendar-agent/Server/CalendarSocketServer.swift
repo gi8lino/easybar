@@ -74,14 +74,15 @@ final class CalendarSocketServer {
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
       AgentLogger.info("calendar agent subscriber added fd=\(clientFD)")
 
-      if !transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) {
+      guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
         return
       }
 
       let snapshot = provider.snapshot(for: query)
-      if !transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) {
+      guard transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
+        return
       }
     }
   }

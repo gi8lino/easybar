@@ -120,22 +120,22 @@ final class WidgetRunner {
 
   /// Handles one decoded Lua runtime update.
   private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) {
-    if update.isSubscriptions {
+    guard !update.isSubscriptions else {
       handleSubscriptions(update)
       return
     }
 
-    if update.isReady {
+    guard !update.isReady else {
       handleReady()
       return
     }
 
-    if update.isTree {
-      handleTree(update, rawLine: rawLine)
+    guard update.isTree else {
+      Logger.warn("unknown lua message: \(rawLine)")
       return
     }
 
-    Logger.warn("unknown lua message: \(rawLine)")
+    handleTree(update, rawLine: rawLine)
   }
 
   /// Handles one subscription update from Lua.
