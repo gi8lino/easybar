@@ -101,32 +101,69 @@ final class BarWindowController: NSWindowController {
   private func makeContextMenu() -> NSMenu {
     let menu = NSMenu()
 
-    menu.addItem(versionItem("EasyBar \(BuildInfo.appVersion)"))
-    menu.addItem(.separator())
-    menu.addItem(actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))))
-    menu.addItem(actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))))
-    menu.addItem(.separator())
-    menu.addItem(actionItem(title: "Open Config", action: #selector(openConfig(_:))))
-    menu.addItem(actionItem(title: "Open Widgets Folder", action: #selector(openWidgetsFolder(_:))))
-    menu.addItem(.separator())
-    menu.addItem(
-      agentMenuItem(
-        title: "Calendar Agent",
-        status: connectionLabel(CalendarAgentClient.shared.isConnected),
-        permission: calendarPermissionLabel,
-        settingsAction: #selector(openCalendarSettings(_:)),
-        settingsTitle: "Open Calendar Settings"
-      ))
-    menu.addItem(
-      agentMenuItem(
-        title: "Network Agent",
-        status: connectionLabel(NetworkAgentClient.shared.isConnected),
-        permission: wifiPermissionLabel,
-        settingsAction: #selector(openLocationSettings(_:)),
-        settingsTitle: "Open Location/Wi-Fi Settings"
-      ))
+    appendItems([versionItem("EasyBar \(BuildInfo.appVersion)")], to: menu)
+    appendSection(runtimeMenuItems, to: menu)
+    appendSection(openMenuItems, to: menu)
+    appendItems(agentMenuItems, to: menu)
 
     return menu
+  }
+
+  /// Returns the runtime control menu items.
+  private var runtimeMenuItems: [NSMenuItem] {
+    [
+      actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))),
+      actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))),
+    ]
+  }
+
+  /// Returns the config and widgets folder menu items.
+  private var openMenuItems: [NSMenuItem] {
+    [
+      actionItem(title: "Open Config", action: #selector(openConfig(_:))),
+      actionItem(title: "Open Widgets Folder", action: #selector(openWidgetsFolder(_:))),
+    ]
+  }
+
+  /// Returns the per-agent status menu items.
+  private var agentMenuItems: [NSMenuItem] {
+    [
+      calendarAgentMenuItem,
+      networkAgentMenuItem,
+    ]
+  }
+
+  /// Returns the calendar agent status submenu item.
+  private var calendarAgentMenuItem: NSMenuItem {
+    agentMenuItem(
+      title: "Calendar Agent",
+      status: connectionLabel(CalendarAgentClient.shared.isConnected),
+      permission: calendarPermissionLabel,
+      settingsAction: #selector(openCalendarSettings(_:)),
+      settingsTitle: "Open Calendar Settings"
+    )
+  }
+
+  /// Returns the network agent status submenu item.
+  private var networkAgentMenuItem: NSMenuItem {
+    agentMenuItem(
+      title: "Network Agent",
+      status: connectionLabel(NetworkAgentClient.shared.isConnected),
+      permission: wifiPermissionLabel,
+      settingsAction: #selector(openLocationSettings(_:)),
+      settingsTitle: "Open Location/Wi-Fi Settings"
+    )
+  }
+
+  /// Appends one section of items and a trailing separator.
+  private func appendSection(_ items: [NSMenuItem], to menu: NSMenu) {
+    appendItems(items, to: menu)
+    menu.addItem(.separator())
+  }
+
+  /// Appends one or more menu items in order.
+  private func appendItems(_ items: [NSMenuItem], to menu: NSMenu) {
+    items.forEach(menu.addItem)
   }
 
   /// Creates one enabled action item.
