@@ -42,34 +42,33 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
   /// Returns whether the client currently has an open socket.
   var isConnected: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return socketFD >= 0
+    withLock { socketFD >= 0 }
   }
 
   /// Starts the client connection loop.
   func start() {
-    lock.lock()
-    guard !running else {
-      lock.unlock()
-      return
+    let shouldConnect = withLock { () -> Bool in
+      guard !running else { return false }
+      running = true
+      return true
     }
-    running = true
-    lock.unlock()
+
+    guard shouldConnect else { return }
 
     connect()
   }
 
   /// Stops the client and clears published state.
   func stop() {
-    lock.lock()
-    running = false
-    reconnectWorkItem?.cancel()
-    reconnectWorkItem = nil
+    let currentFD = withLock { () -> Int32 in
+      running = false
+      reconnectWorkItem?.cancel()
+      reconnectWorkItem = nil
 
-    let currentFD = socketFD
-    socketFD = -1
-    lock.unlock()
+      let currentFD = socketFD
+      socketFD = -1
+      return currentFD
+    }
 
     if currentFD >= 0 {
       shutdown(currentFD, SHUT_RDWR)
@@ -89,9 +88,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
         return
       }
 
-      self.lock.lock()
-      self.socketFD = fd
-      self.lock.unlock()
+      self.setConnectedSocketFD(fd)
 
       Logger.info("\(self.label) connected socket=\(socketPath)")
 
@@ -117,17 +114,21 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       pending.append(contentsOf: buffer.prefix(count))
-
-      while let newlineIndex = pending.firstIndex(of: 0x0A) {
-        let line = pending.prefix(upTo: newlineIndex)
-        pending.removeSubrange(...newlineIndex)
-
-        guard !line.isEmpty else { continue }
-        handleMessageData(Data(line))
-      }
+      processPendingLines(&pending)
     }
 
     handleDisconnect(fd: fd)
+  }
+
+  /// Decodes and handles one or more pending newline-delimited messages.
+  private func processPendingLines(_ pending: inout Data) {
+    while let newlineIndex = pending.firstIndex(of: 0x0A) {
+      let line = pending.prefix(upTo: newlineIndex)
+      pending.removeSubrange(...newlineIndex)
+
+      guard !line.isEmpty else { continue }
+      handleMessageData(Data(line))
+    }
   }
 
   private func handleMessageData(_ data: Data) {
@@ -140,11 +141,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   }
 
   private func handleDisconnect(fd: Int32) {
-    lock.lock()
-    if socketFD == fd {
-      socketFD = -1
-    }
-    lock.unlock()
+    clearConnectedSocketFD(fd)
 
     shutdown(fd, SHUT_RDWR)
     close(fd)
@@ -158,21 +155,17 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   }
 
   private func scheduleReconnect() {
-    lock.lock()
-    reconnectWorkItem?.cancel()
-
-    guard running else {
-      lock.unlock()
-      return
-    }
-
     let workItem = DispatchWorkItem { [weak self] in
       self?.connect()
     }
+    let shouldSchedule = withLock { () -> Bool in
+      reconnectWorkItem?.cancel()
+      guard running else { return false }
+      reconnectWorkItem = workItem
+      return true
+    }
 
-    reconnectWorkItem = workItem
-    lock.unlock()
-
+    guard shouldSchedule else { return }
     queue.asyncAfter(deadline: .now() + reconnectDelay, execute: workItem)
   }
 
@@ -187,9 +180,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   }
 
   private func isRunning() -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return running
+    withLock { running }
   }
 
   /// Opens and connects one Unix socket.
@@ -216,5 +207,27 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
 
     return fd
+  }
+
+  /// Stores one connected socket descriptor.
+  private func setConnectedSocketFD(_ fd: Int32) {
+    withLock {
+      socketFD = fd
+    }
+  }
+
+  /// Clears the current socket descriptor when it matches one disconnected client.
+  private func clearConnectedSocketFD(_ fd: Int32) {
+    withLock {
+      guard socketFD == fd else { return }
+      socketFD = -1
+    }
+  }
+
+  /// Runs one closure while holding the client lock.
+  private func withLock<T>(_ body: () -> T) -> T {
+    lock.lock()
+    defer { lock.unlock() }
+    return body()
   }
 }
