@@ -2,12 +2,18 @@ import CoreAudio
 import Foundation
 
 final class VolumeSliderNativeWidget: NativeWidget {
-
   let rootID = "builtin_volume"
 
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
   private var autoHideWorkItem: DispatchWorkItem?
+
+  private struct VolumeState {
+    let clampedSystem: Double
+    let roundedValue: Double
+    let step: Double
+    let isMuted: Bool
+  }
 
   /// Starts the volume widget.
   func start() {
@@ -25,7 +31,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     publish()
   }
+}
 
+// MARK: - Lifecycle
+
+extension VolumeSliderNativeWidget {
   /// Stops the volume widget.
   func stop() {
     eventObserver.stop()
@@ -40,7 +50,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let config = Config.shared.builtinVolume
     let placement = config.placement
     var style = config.style
-
     let volumeState = currentVolumeState(config: config)
 
     style.icon = resolvedIcon(
@@ -62,8 +71,12 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     WidgetStore.shared.apply(root: rootID, nodes: nodes)
   }
+}
 
-  private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+// MARK: - Event Handling
+
+private extension VolumeSliderNativeWidget {
+  func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else {
       return false
     }
@@ -77,7 +90,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     return true
   }
 
-  private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+  func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
     guard payload.widgetID == rootID else { return }
 
@@ -105,14 +118,14 @@ final class VolumeSliderNativeWidget: NativeWidget {
     }
   }
 
-  private func applyExternalVolumeChange() {
+  func applyExternalVolumeChange() {
     guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
 
     isHovered = true
     scheduleAutoHide()
   }
 
-  private func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
+  func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
     let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
 
     guard Config.shared.builtinVolume.expandToSliderOnHover else {
@@ -132,18 +145,14 @@ final class VolumeSliderNativeWidget: NativeWidget {
     publish()
   }
 
-  private func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig) -> Double
+  func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig) -> Double
   {
     let span = max(config.maxValue - config.minValue, 0.0001)
     return (value - config.minValue) / span
   }
 
-  private func currentVolumeState(config: Config.VolumeBuiltinConfig) -> (
-    clampedSystem: Double,
-    roundedValue: Double,
-    step: Double,
-    isMuted: Bool
-  ) {
+  /// Returns the current rendered volume state.
+  private func currentVolumeState(config: Config.VolumeBuiltinConfig) -> VolumeState {
     let systemVolume = readSystemVolume()
     let isMuted = readMutedState()
     let clampedSystem = min(max(systemVolume, 0), 1)
@@ -151,10 +160,19 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
     let roundedValue = (sliderValue / step).rounded() * step
 
-    return (clampedSystem, roundedValue, step, isMuted)
+    return VolumeState(
+      clampedSystem: clampedSystem,
+      roundedValue: roundedValue,
+      step: step,
+      isMuted: isMuted
+    )
   }
+}
 
-  private func makeNodes(
+// MARK: - Node Building
+
+private extension VolumeSliderNativeWidget {
+  func makeNodes(
     config: Config.VolumeBuiltinConfig,
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
@@ -189,7 +207,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Builds the expandable hover layout.
-  private func makeExpandableNodes(
+  func makeExpandableNodes(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     text: String,
@@ -251,9 +269,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     return nodes
   }
+}
 
+// MARK: - Hover Behavior
+
+private extension VolumeSliderNativeWidget {
   /// Schedules hiding the slider shortly after interaction.
-  private func scheduleAutoHide() {
+  func scheduleAutoHide() {
     cancelAutoHide()
 
     let work = DispatchWorkItem { [weak self] in
@@ -267,13 +289,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Cancels a pending auto-hide.
-  private func cancelAutoHide() {
+  func cancelAutoHide() {
     autoHideWorkItem?.cancel()
     autoHideWorkItem = nil
   }
 
   /// Resolves the volume icon.
-  private func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
+  func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
     -> String
   {
     if muted {
@@ -286,9 +308,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     return config.highIcon
   }
+}
 
+// MARK: - CoreAudio Access
+
+private extension VolumeSliderNativeWidget {
   /// Reads the current system volume.
-  private func readSystemVolume() -> Double {
+  func readSystemVolume() -> Double {
     guard let deviceID = defaultOutputDeviceID() else {
       return 0
     }
@@ -319,7 +345,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Reads the current muted state.
-  private func readMutedState() -> Bool {
+  func readMutedState() -> Bool {
     guard let deviceID = defaultOutputDeviceID() else {
       return false
     }
@@ -350,7 +376,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Sets the system volume.
-  private func setSystemVolume(_ volume: Double) {
+  func setSystemVolume(_ volume: Double) {
     guard let deviceID = defaultOutputDeviceID() else { return }
 
     var address = AudioObjectPropertyAddress(
@@ -372,7 +398,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Returns the default output device.
-  private func defaultOutputDeviceID() -> AudioDeviceID? {
+  func defaultOutputDeviceID() -> AudioDeviceID? {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
       mScope: kAudioObjectPropertyScopeGlobal,
