@@ -48,12 +48,12 @@ final class NetworkEvents: NSObject, CWEventDelegate {
       EventBus.shared.emit(.networkChange)
     }
 
-    if !SCNetworkReachabilitySetCallback(reachability, callback, &context) {
+    guard SCNetworkReachabilitySetCallback(reachability, callback, &context) else {
       Logger.debug("failed to set network reachability callback")
       return
     }
 
-    if !SCNetworkReachabilitySetDispatchQueue(reachability, DispatchQueue.main) {
+    guard SCNetworkReachabilitySetDispatchQueue(reachability, DispatchQueue.main) else {
       Logger.debug("failed to set network reachability dispatch queue")
       return
     }

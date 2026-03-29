@@ -10,14 +10,8 @@ struct SpaceApp: Identifiable, Hashable {
 
   /// Returns the application icon if the bundle path is known.
   func icon() -> NSImage? {
-    guard let resolvedBundlePath else { return nil }
-    return NSWorkspace.shared.icon(forFile: resolvedBundlePath)
-  }
-
-  /// Returns the non-empty bundle path when available.
-  private var resolvedBundlePath: String? {
     guard let bundlePath, !bundlePath.isEmpty else { return nil }
-    return bundlePath
+    return NSWorkspace.shared.icon(forFile: bundlePath)
   }
 }
 
