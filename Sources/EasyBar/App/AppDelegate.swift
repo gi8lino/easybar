@@ -91,27 +91,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func handleSocketCommand(_ command: IPC.Command) {
     switch command {
     case .workspaceChanged:
-      aeroSpaceService.triggerRefresh()
-      EventBus.shared.emit(.workspaceChange)
+      handleWorkspaceChanged()
 
     case .focusChanged:
-      aeroSpaceService.triggerRefresh()
-      EventBus.shared.emit(.focusChange)
+      handleFocusChanged()
 
     case .refresh:
-      aeroSpaceService.triggerRefresh()
-      EventBus.shared.emit(.forced)
+      handleForcedRefresh()
 
     case .reloadConfig:
       reloadConfig()
     }
   }
 
+  /// Handles one workspace-changed IPC trigger.
+  private func handleWorkspaceChanged() {
+    aeroSpaceService.triggerRefresh()
+    EventBus.shared.emit(.workspaceChange)
+  }
+
+  /// Handles one focus-changed IPC trigger.
+  private func handleFocusChanged() {
+    aeroSpaceService.triggerRefresh()
+    EventBus.shared.emit(.focusChange)
+  }
+
+  /// Handles one forced-refresh IPC trigger.
+  private func handleForcedRefresh() {
+    aeroSpaceService.triggerRefresh()
+    EventBus.shared.emit(.forced)
+  }
+
   /// Logs one startup snapshot so service-vs-local differences are visible.
   private func logStartup() {
+    logBundleDetails()
+    logConfigDetails()
+    logScreenDetails()
+    logEnvironmentDetails()
+  }
+
+  /// Logs app bundle and process identity details.
+  private func logBundleDetails() {
     let bundle = Bundle.main
     let info = bundle.infoDictionary ?? [:]
-
     let bundleID = bundle.bundleIdentifier ?? "unknown"
     let version = info["CFBundleShortVersionString"] as? String ?? "unknown"
     let build = info["CFBundleVersion"] as? String ?? "unknown"
@@ -123,6 +145,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       "easybar startup version=\(version) build=\(build) bundle_id=\(bundleID) pid=\(processID)")
     Logger.info("app bundle_path=\(bundlePath)")
     Logger.info("app executable=\(executable)")
+  }
+
+  /// Logs config-derived startup details.
+  private func logConfigDetails() {
     Logger.info("config path=\(Config.shared.configPath)")
     Logger.info("widgets path=\(Config.shared.widgetsPath)")
     Logger.info("lua path=\(Config.shared.luaPath)")
@@ -145,7 +171,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     Logger.info(
       "bar height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)"
     )
+  }
 
+  /// Logs screen geometry visible at startup.
+  private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
       Logger.info(
         "screen frame=\(NSStringFromRect(screen.frame)) visible=\(NSStringFromRect(screen.visibleFrame))"
@@ -153,7 +182,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     } else {
       Logger.warn("no screen available during startup logging")
     }
+  }
 
+  /// Logs relevant environment overrides.
+  private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
     let configOverride = env["EASYBAR_CONFIG_PATH"] ?? ""
     let debug = env["EASYBAR_DEBUG"] ?? ""
