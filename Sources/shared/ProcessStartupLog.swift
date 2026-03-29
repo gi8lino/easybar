@@ -39,6 +39,31 @@ public struct ProcessStartupSnapshot {
   }
 }
 
+/// Builds one startup snapshot from the main bundle plus process-specific details.
+public func makeProcessStartupSnapshot(
+  processName: String,
+  configPath: String,
+  socketSummary: String,
+  loggingSummary: String,
+  bundle: Bundle = .main,
+  processInfo: ProcessInfo = .processInfo
+) -> ProcessStartupSnapshot {
+  let info = bundle.infoDictionary ?? [:]
+
+  return ProcessStartupSnapshot(
+    processName: processName,
+    bundlePath: bundle.bundleURL.path,
+    executablePath: bundle.executableURL?.path ?? "unknown",
+    version: info["CFBundleShortVersionString"] as? String ?? "unknown",
+    build: info["CFBundleVersion"] as? String ?? "unknown",
+    bundleIdentifier: bundle.bundleIdentifier ?? "unknown",
+    processIdentifier: processInfo.processIdentifier,
+    configPath: configPath,
+    socketSummary: socketSummary,
+    loggingSummary: loggingSummary
+  )
+}
+
 /// Writes one standard startup log block.
 public func logProcessStartup(
   snapshot: ProcessStartupSnapshot,

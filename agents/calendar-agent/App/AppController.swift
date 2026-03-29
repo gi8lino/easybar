@@ -30,18 +30,9 @@ final class AppController {
 
   /// Logs one startup snapshot for the calendar agent.
   private func logStartup() {
-    let bundle = Bundle.main
-    let info = bundle.infoDictionary ?? [:]
-
     logProcessStartup(
-      snapshot: ProcessStartupSnapshot(
+      snapshot: makeProcessStartupSnapshot(
         processName: "calendar agent",
-        bundlePath: bundle.bundleURL.path,
-        executablePath: bundle.executableURL?.path ?? "unknown",
-        version: info["CFBundleShortVersionString"] as? String ?? "unknown",
-        build: info["CFBundleVersion"] as? String ?? "unknown",
-        bundleIdentifier: bundle.bundleIdentifier ?? "unknown",
-        processIdentifier: ProcessInfo.processInfo.processIdentifier,
         configPath: runtimeConfig.configPath,
         socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
         loggingSummary: "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
