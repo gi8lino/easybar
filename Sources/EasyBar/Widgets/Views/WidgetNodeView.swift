@@ -6,6 +6,7 @@ struct WidgetNodeView: View {
 
   @ObservedObject private var store = WidgetStore.shared
 
+  @StateObject private var popupPanel = WidgetPopupPanelController()
   @State private var popupPresented = false
   @State private var anchorHovered = false
   @State private var popupHovered = false
@@ -17,6 +18,12 @@ struct WidgetNodeView: View {
       } else {
         renderedNodeView
       }
+    }
+    .onChange(of: popupPresented, initial: true) { _, presented in
+      updatePopupPanel(isPresented: presented)
+    }
+    .onDisappear {
+      popupPanel.close()
     }
   }
 }
@@ -118,9 +125,10 @@ private extension WidgetNodeView {
       .foregroundStyle(nodeColor)
       .modifier(nodeStyle)
       .onHover { hovering in handleAnchorHover(hovering) }
-      .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-        NativeCalendarPopupView()
-          .background(popupHoverBackground)
+      .background {
+        WidgetPopupAnchorView { anchor in
+          popupPanel.updateAnchorView(anchor)
+        }
       }
   }
 
@@ -294,6 +302,12 @@ private extension WidgetNodeView {
     popupPresented = false
   }
 
+  /// Updates the AppKit popup panel for popup-capable nodes.
+  func updatePopupPanel(isPresented: Bool) {
+    guard node.isCalendarRoot || node.kind == .popup || hasPopupChildren else { return }
+    popupPanel.update(isPresented: isPresented, content: popupPanelContent)
+  }
+
 }
 
 // MARK: - Layout Data
@@ -396,6 +410,21 @@ private extension WidgetNodeView {
   /// Returns the shared popup hover region.
   var popupHoverBackground: some View {
     PopupHoverRegion { hovering in handlePopupHover(hovering) }
+  }
+
+  /// Returns the shared popup content hosted in the AppKit panel.
+  var popupPanelContent: AnyView {
+    if node.isCalendarRoot {
+      return AnyView(
+        NativeCalendarPopupView()
+          .background(popupHoverBackground)
+      )
+    }
+
+    return AnyView(
+      popupContent
+        .background(popupHoverBackground)
+    )
   }
 
   /// Returns the shared node style modifier.
@@ -572,8 +601,10 @@ private extension WidgetNodeView {
     return AnyView(
       surfaced
         .onHover { hovering in handleAnchorHover(hovering) }
-        .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-          popupContent
+        .background {
+          WidgetPopupAnchorView { anchor in
+            popupPanel.updateAnchorView(anchor)
+          }
         }
     )
   }
@@ -585,8 +616,10 @@ private extension WidgetNodeView {
       .contentShape(Rectangle())
       .overlay(popupAnchorMouseOverlay)
       .onHover { hovering in handleAnchorHover(hovering) }
-      .popover(isPresented: $popupPresented, arrowEdge: .bottom) {
-        popupContent
+      .background {
+        WidgetPopupAnchorView { anchor in
+          popupPanel.updateAnchorView(anchor)
+        }
       }
   }
 
