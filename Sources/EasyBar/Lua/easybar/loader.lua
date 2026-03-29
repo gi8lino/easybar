@@ -1,3 +1,6 @@
+--- Module contract:
+--- Owns widget file discovery, isolated load environments, and widget startup.
+--- Returns one helper that loads every widget in one directory.
 local M = {}
 
 --- Lists all Lua widget files in one widget directory.

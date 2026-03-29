@@ -1,3 +1,6 @@
+--- Module contract:
+--- Owns registry-to-render-tree conversion and change-aware tree emission.
+--- Returns helpers that emit flattened widget trees for the Swift host.
 local M = {}
 
 local last_emitted = {}
@@ -186,6 +189,56 @@ local function regular_parent_id(item)
 	return nil
 end
 
+--- Builds one minimal render node with shared defaults applied.
+local function base_node(id, kind, root_position, order, visible)
+	return {
+		id = id,
+		kind = kind,
+		position = normalize_position(root_position),
+		order = tonumber(order or 0) or 0,
+		visible = visible ~= false,
+		receivesMouseHover = false,
+		receivesMouseClick = false,
+		receivesMouseScroll = false,
+	}
+end
+
+--- Applies shared box-model and frame styling props to one node.
+local function apply_box_style(node, props)
+	node.paddingX = tonumber(props.padding_x or props.paddingX)
+	node.paddingY = tonumber(props.padding_y or props.paddingY)
+	node.paddingLeft = resolve_box_value(props, "padding_left", "background")
+	node.paddingRight = resolve_box_value(props, "padding_right", "background")
+	node.paddingTop = resolve_box_value(props, "padding_top", "background")
+	node.paddingBottom = resolve_box_value(props, "padding_bottom", "background")
+	node.marginX = tonumber(props.margin_x or props.marginX)
+	node.marginY = tonumber(props.margin_y or props.marginY)
+	node.marginLeft = resolve_box_value(props, "margin_left", "margin")
+	node.marginRight = resolve_box_value(props, "margin_right", "margin")
+	node.marginTop = resolve_box_value(props, "margin_top", "margin")
+	node.marginBottom = resolve_box_value(props, "margin_bottom", "margin")
+	node.spacing = resolve_spacing(props)
+	node.backgroundColor = type(props.background) == "table" and props.background.color or props.backgroundColor
+	node.borderColor = type(props.background) == "table" and props.background.border_color or props.borderColor
+	node.borderWidth = type(props.background) == "table" and tonumber(props.background.border_width)
+		or tonumber(props.borderWidth)
+	node.cornerRadius = type(props.background) == "table" and tonumber(props.background.corner_radius)
+		or tonumber(props.cornerRadius)
+	node.opacity = tonumber(props.opacity)
+	node.width = tonumber(props.width)
+	node.height = tonumber(props.height)
+	node.yOffset = tonumber(props.y_offset)
+	return node
+end
+
+--- Applies resolved mouse interaction flags to one node.
+local function apply_interaction(node, interaction)
+	node.receivesMouseHover = interaction.hover
+	node.receivesMouseClick = interaction.click
+	node.receivesMouseScroll = interaction.scroll
+	return node
+end
+
 --- Builds one render node from an item record and its child nodes.
 local function make_node(id, item, root_position, children)
 	local props = item.props
@@ -196,56 +249,35 @@ local function make_node(id, item, root_position, children)
 		kind = "row"
 	end
 
-	return {
-		id = id,
-		kind = kind,
-		position = normalize_position(root_position),
-		order = tonumber(props.order or 0) or 0,
-		icon = icon_string(props.icon),
-		text = label_string(props.label),
-		color = resolve_color(props),
-		iconColor = resolve_icon_color(props),
-		labelColor = resolve_label_color(props),
-		imagePath = resolve_image_path(props),
-		imageSize = resolve_image_size(props),
-		imageCornerRadius = resolve_image_corner_radius(props),
-		iconFontSize = resolve_icon_font_size(props),
-		labelFontSize = resolve_label_font_size(props),
-		visible = resolve_drawing(props, true),
-		receivesMouseHover = false,
-		receivesMouseClick = false,
-		receivesMouseScroll = false,
-		value = tonumber(props.value),
-		min = tonumber(props.min),
-		max = tonumber(props.max),
-		step = tonumber(props.step),
-		values = props.values,
-		lineWidth = tonumber(props.line_width or props.lineWidth),
-		paddingX = tonumber(props.padding_x or props.paddingX),
-		paddingY = tonumber(props.padding_y or props.paddingY),
-		paddingLeft = resolve_box_value(props, "padding_left", "background"),
-		paddingRight = resolve_box_value(props, "padding_right", "background"),
-		paddingTop = resolve_box_value(props, "padding_top", "background"),
-		paddingBottom = resolve_box_value(props, "padding_bottom", "background"),
-		marginX = tonumber(props.margin_x or props.marginX),
-		marginY = tonumber(props.margin_y or props.marginY),
-		marginLeft = resolve_box_value(props, "margin_left", "margin"),
-		marginRight = resolve_box_value(props, "margin_right", "margin"),
-		marginTop = resolve_box_value(props, "margin_top", "margin"),
-		marginBottom = resolve_box_value(props, "margin_bottom", "margin"),
-		spacing = resolve_spacing(props),
-		backgroundColor = type(props.background) == "table" and props.background.color or props.backgroundColor,
-		borderColor = type(props.background) == "table" and props.background.border_color or props.borderColor,
-		borderWidth = type(props.background) == "table" and tonumber(props.background.border_width)
-			or tonumber(props.borderWidth),
-		cornerRadius = type(props.background) == "table" and tonumber(props.background.corner_radius)
-			or tonumber(props.cornerRadius),
-		opacity = tonumber(props.opacity),
-		width = tonumber(props.width),
-		height = tonumber(props.height),
-		yOffset = tonumber(props.y_offset),
-		children = children,
-	}
+	local node = base_node(id, kind, root_position, props.order, resolve_drawing(props, true))
+	node.icon = icon_string(props.icon)
+	node.text = label_string(props.label)
+	node.color = resolve_color(props)
+	node.iconColor = resolve_icon_color(props)
+	node.labelColor = resolve_label_color(props)
+	node.imagePath = resolve_image_path(props)
+	node.imageSize = resolve_image_size(props)
+	node.imageCornerRadius = resolve_image_corner_radius(props)
+	node.iconFontSize = resolve_icon_font_size(props)
+	node.labelFontSize = resolve_label_font_size(props)
+	node.value = tonumber(props.value)
+	node.min = tonumber(props.min)
+	node.max = tonumber(props.max)
+	node.step = tonumber(props.step)
+	node.values = props.values
+	node.lineWidth = tonumber(props.line_width or props.lineWidth)
+	node.children = children
+	return apply_box_style(node, props)
+end
+
+--- Builds the popup content container for one popup-enabled item.
+local function make_popup_container(id, root_position, popup_props, children)
+	local node = base_node(id, "column", root_position, 0, resolve_drawing(popup_props, false))
+	node.icon = ""
+	node.text = ""
+	node.color = ""
+	node.children = children
+	return apply_box_style(node, popup_props)
 end
 
 --- Resolves which mouse capabilities the node should expose.
@@ -425,51 +457,20 @@ local function build_tree(registry, id, root_position)
 	local has_popup = type(item.props.popup) == "table" or #popup_child_nodes > 0
 
 	if not has_popup then
-		local node = make_node(id, item, root_position, child_nodes)
-		local interaction = resolve_mouse_interaction(registry, id)
-		node.receivesMouseHover = interaction.hover
-		node.receivesMouseClick = interaction.click
-		node.receivesMouseScroll = interaction.scroll
-		return node
+		return apply_interaction(
+			make_node(id, item, root_position, child_nodes),
+			resolve_mouse_interaction(registry, id)
+		)
 	end
 
 	local anchor = make_node(id .. "_anchor", item, root_position, child_nodes)
 	anchor.order = 0
 
 	local popup_props = item.props.popup or {}
-	local popup_drawing = resolve_drawing(popup_props, false)
-
-	local popup_container = {
-		id = id .. "_popup_content",
-		kind = "column",
-		position = normalize_position(root_position),
-		order = 0,
-		icon = "",
-		text = "",
-		color = "",
-		visible = popup_drawing,
-		paddingLeft = tonumber(popup_props.padding_left),
-		paddingRight = tonumber(popup_props.padding_right),
-		paddingTop = tonumber(popup_props.padding_top),
-		paddingBottom = tonumber(popup_props.padding_bottom),
-		backgroundColor = type(popup_props.background) == "table" and popup_props.background.color or nil,
-		borderColor = type(popup_props.background) == "table" and popup_props.background.border_color or nil,
-		borderWidth = type(popup_props.background) == "table" and tonumber(popup_props.background.border_width)
-			or nil,
-		cornerRadius = type(popup_props.background) == "table" and tonumber(popup_props.background.corner_radius)
-			or nil,
-		width = tonumber(popup_props.width),
-		height = tonumber(popup_props.height),
-		yOffset = tonumber(popup_props.y_offset),
-		spacing = tonumber(popup_props.spacing),
-		children = popup_child_nodes,
-	}
+	local popup_container = make_popup_container(id .. "_popup_content", root_position, popup_props, popup_child_nodes)
 
 	local root = make_node(id, item, root_position, child_nodes)
-	local interaction = resolve_mouse_interaction(registry, id)
-	root.receivesMouseHover = interaction.hover
-	root.receivesMouseClick = interaction.click
-	root.receivesMouseScroll = interaction.scroll
+	apply_interaction(root, resolve_mouse_interaction(registry, id))
 	root.popupChildren = { popup_container }
 
 	if #child_nodes > 0 then

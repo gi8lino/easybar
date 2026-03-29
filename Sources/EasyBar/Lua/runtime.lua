@@ -1,3 +1,6 @@
+--- Module contract:
+--- Owns Lua process startup, host handshake, and stdin event processing.
+--- Returns nothing and runs the EasyBar Lua runtime loop.
 --- Returns the directory containing `runtime.lua`.
 local function runtime_dir()
 	local source = debug.getinfo(1, "S").source

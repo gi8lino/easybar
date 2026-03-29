@@ -1,3 +1,6 @@
+--- Module contract:
+--- Owns JSON encoding and decoding for Swift-Lua process messages.
+--- Returns one table with `encode(...)` and `decode(...)`.
 local M = {}
 local utf8lib = rawget(_G, "utf8")
 

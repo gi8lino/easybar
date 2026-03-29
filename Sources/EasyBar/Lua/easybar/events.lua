@@ -1,3 +1,6 @@
+--- Module contract:
+--- Owns raw host-event normalization and runtime dispatch into the registry.
+--- Returns helpers that normalize payloads and trigger re-renders.
 local M = {}
 
 --- Converts JSON boolean strings into Lua booleans.
