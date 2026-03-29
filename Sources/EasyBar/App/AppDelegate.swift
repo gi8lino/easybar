@@ -11,47 +11,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.accessory)
-    Logger.configureFileLogging(
-      enabled: Config.shared.loggingEnabled,
-      path: Logger.fileLoggingPath
-    )
+    configureLogging()
 
     logStartup()
     installWidgetEditorStub()
-
-    let controller = BarWindowController()
-    controller.onReloadConfig = { [weak self] in
-      self?.reloadConfig()
-    }
-    controller.onRestartLuaRuntime = { [weak self] in
-      self?.restartLuaRuntime()
-    }
-    controller.present()
-    barWindowController = controller
-
-    aeroSpaceService.start()
-    WidgetRunner.shared.start()
-    NativeWidgetRegistry.shared.start()
-    configFileWatcher.start()
-
-    socketServer.start { [weak self] command in
-      switch command {
-      case .workspaceChanged:
-        self?.aeroSpaceService.triggerRefresh()
-        EventBus.shared.emit(.workspaceChange)
-
-      case .focusChanged:
-        self?.aeroSpaceService.triggerRefresh()
-        EventBus.shared.emit(.focusChange)
-
-      case .refresh:
-        self?.aeroSpaceService.triggerRefresh()
-        EventBus.shared.emit(.forced)
-
-      case .reloadConfig:
-        self?.reloadConfig()
-      }
-    }
+    setupBarWindowController()
+    startRuntimeServices()
+    startSocketServer()
   }
 
   func applicationWillTerminate(_ notification: Notification) {
@@ -65,23 +31,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Reloads config and reapplies all dependent runtime state.
   private func reloadConfig() {
     Config.shared.reload()
-    Logger.configureFileLogging(
-      enabled: Config.shared.loggingEnabled,
-      path: Logger.fileLoggingPath
-    )
+    configureLogging()
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
-    WidgetRunner.shared.reload()
-    NativeWidgetRegistry.shared.reload()
+    reloadRuntimeServices()
     configFileWatcher.restart()
     aeroSpaceService.triggerRefresh()
   }
 
   /// Restarts only the Lua runtime without reloading config.
   private func restartLuaRuntime() {
+    reloadRuntimeServices()
+    aeroSpaceService.triggerRefresh()
+  }
+
+  /// Configures file logging from the current app config.
+  private func configureLogging() {
+    Logger.configureFileLogging(
+      enabled: Config.shared.loggingEnabled,
+      path: Logger.fileLoggingPath
+    )
+  }
+
+  /// Creates and presents the main bar window controller.
+  private func setupBarWindowController() {
+    let controller = BarWindowController()
+    controller.onReloadConfig = { [weak self] in
+      self?.reloadConfig()
+    }
+    controller.onRestartLuaRuntime = { [weak self] in
+      self?.restartLuaRuntime()
+    }
+    controller.present()
+    barWindowController = controller
+  }
+
+  /// Starts the shared runtime services used by the app.
+  private func startRuntimeServices() {
+    aeroSpaceService.start()
+    WidgetRunner.shared.start()
+    NativeWidgetRegistry.shared.start()
+    configFileWatcher.start()
+  }
+
+  /// Reloads the Lua and native widget runtime services.
+  private func reloadRuntimeServices() {
     WidgetRunner.shared.reload()
     NativeWidgetRegistry.shared.reload()
-    aeroSpaceService.triggerRefresh()
+  }
+
+  /// Starts the IPC server used by easybarctl and external triggers.
+  private func startSocketServer() {
+    socketServer.start { [weak self] command in
+      self?.handleSocketCommand(command)
+    }
+  }
+
+  /// Handles one incoming IPC command from the socket server.
+  private func handleSocketCommand(_ command: IPC.Command) {
+    switch command {
+    case .workspaceChanged:
+      aeroSpaceService.triggerRefresh()
+      EventBus.shared.emit(.workspaceChange)
+
+    case .focusChanged:
+      aeroSpaceService.triggerRefresh()
+      EventBus.shared.emit(.focusChange)
+
+    case .refresh:
+      aeroSpaceService.triggerRefresh()
+      EventBus.shared.emit(.forced)
+
+    case .reloadConfig:
+      reloadConfig()
+    }
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.
