@@ -42,7 +42,7 @@ final class BatteryNativeWidget: NativeWidget {
 
 // MARK: - Lifecycle
 
-private extension BatteryNativeWidget {
+extension BatteryNativeWidget {
   /// Stops the widget and clears its nodes.
   func stop() {
     eventObserver.stop()
@@ -55,7 +55,7 @@ private extension BatteryNativeWidget {
   }
 
   /// Publishes the current widget tree.
-  func publish() {
+  private func publish() {
     let snapshot = readBatterySnapshot()
     WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
   }
@@ -340,7 +340,7 @@ private extension BatteryNativeWidget {
 
 private extension BatteryNativeWidget {
   /// Returns the current battery snapshot.
-  func readBatterySnapshot() -> Snapshot {
+  private func readBatterySnapshot() -> Snapshot {
     let config = Config.shared.builtinBattery
     let placement = config.placement
     let style = config.style
@@ -396,7 +396,7 @@ private extension BatteryNativeWidget {
     )
   }
 
-  func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+  private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else {
       return false
     }
@@ -410,7 +410,7 @@ private extension BatteryNativeWidget {
     return true
   }
 
-  func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+  private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
     guard payload.widgetID == rootID else { return }
 
@@ -430,7 +430,7 @@ private extension BatteryNativeWidget {
     }
   }
 
-  func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     let config = Config.shared.builtinBattery
 
     guard config.displayMode != .tooltip else {
@@ -456,7 +456,7 @@ private extension BatteryNativeWidget {
     )
   }
 
-  func unavailableSnapshot(
+  private func unavailableSnapshot(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     config: Config.BatteryBuiltinConfig

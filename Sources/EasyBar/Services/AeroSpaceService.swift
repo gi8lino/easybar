@@ -23,9 +23,9 @@ final class AeroSpaceService: ObservableObject {
 
 // MARK: - Public API
 
-private extension AeroSpaceService {
+extension AeroSpaceService {
   /// Returns whether any native widget currently needs AeroSpace state.
-  var hasConsumers: Bool {
+  private var hasConsumers: Bool {
     !consumers.isEmpty
   }
 
