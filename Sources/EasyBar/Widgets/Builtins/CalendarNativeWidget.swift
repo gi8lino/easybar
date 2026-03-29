@@ -5,13 +5,17 @@ final class CalendarNativeWidget: NativeWidget {
   let rootID = "builtin_calendar"
 
   private var timer: Timer?
+  private struct Snapshot {
+    let config: Config.CalendarBuiltinConfig
+    let now: Date
+  }
 
   /// Starts the calendar widget.
   func start() {
-    let config = Config.shared.builtinCalendar
+    let snapshot = currentSnapshot()
 
     Logger.info(
-      "starting native widget id=\(rootID) enabled=\(config.enabled) layout=\(config.layout.rawValue) position=\(config.position.rawValue) days=\(config.days) show_birthdays=\(config.showBirthdays)"
+      "starting native widget id=\(rootID) enabled=\(snapshot.config.enabled) layout=\(snapshot.config.layout.rawValue) position=\(snapshot.config.position.rawValue) days=\(snapshot.config.days) show_birthdays=\(snapshot.config.showBirthdays)"
     )
 
     guard Config.shared.calendarAgentEnabled else {
@@ -42,33 +46,43 @@ final class CalendarNativeWidget: NativeWidget {
 
   /// Publishes the current calendar nodes.
   private func publish() {
-    let config = Config.shared.builtinCalendar
-    let now = Date()
+    let snapshot = currentSnapshot()
 
-    Logger.debug("publishing native calendar widget layout=\(config.layout.rawValue)")
-    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(config: config, now: now))
+    Logger.debug("publishing native calendar widget layout=\(snapshot.config.layout.rawValue)")
+    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
   }
+}
 
+// MARK: - Snapshot
+
+private extension CalendarNativeWidget {
+  /// Returns the current calendar render snapshot.
+  private func currentSnapshot() -> Snapshot {
+    Snapshot(
+      config: Config.shared.builtinCalendar,
+      now: Date()
+    )
+  }
+}
+
+// MARK: - Node Building
+
+private extension CalendarNativeWidget {
   /// Builds nodes for the selected anchor layout.
-  private func makeNodes(
-    config: Config.CalendarBuiltinConfig,
-    now: Date
-  ) -> [WidgetNodeState] {
-    switch config.layout {
+  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    switch snapshot.config.layout {
     case .stack:
-      return makeStackNodes(config: config, now: now)
+      return makeStackNodes(snapshot: snapshot)
     case .inline:
-      return makeInlineNodes(config: config, now: now)
+      return makeInlineNodes(snapshot: snapshot)
     case .item:
-      return makeItemNodes(config: config, now: now)
+      return makeItemNodes(snapshot: snapshot)
     }
   }
 
   /// Builds stack-layout nodes.
-  private func makeStackNodes(
-    config: Config.CalendarBuiltinConfig,
-    now: Date
-  ) -> [WidgetNodeState] {
+  private func makeStackNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    let config = snapshot.config
     let placement = config.placement
     let style = config.style
 
@@ -129,7 +143,7 @@ final class CalendarNativeWidget: NativeWidget {
         childID: "\(rootID)_top",
         position: placement.position,
         order: 0,
-        text: formatDate(now, format: config.topFormat),
+        text: formatDate(snapshot.now, format: config.topFormat),
         color: config.topTextColorHex ?? style.textColorHex
       ),
 
@@ -139,17 +153,15 @@ final class CalendarNativeWidget: NativeWidget {
         childID: "\(rootID)_bottom",
         position: placement.position,
         order: 1,
-        text: formatDate(now, format: config.bottomFormat),
+        text: formatDate(snapshot.now, format: config.bottomFormat),
         color: config.bottomTextColorHex ?? style.textColorHex
       ),
     ]
   }
 
   /// Builds inline-layout nodes.
-  private func makeInlineNodes(
-    config: Config.CalendarBuiltinConfig,
-    now: Date
-  ) -> [WidgetNodeState] {
+  private func makeInlineNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    let config = snapshot.config
     let placement = config.placement
     let style = config.style
 
@@ -163,7 +175,7 @@ final class CalendarNativeWidget: NativeWidget {
         childID: "\(rootID)_left",
         position: placement.position,
         order: 1,
-        text: formatDate(now, format: config.topFormat),
+        text: formatDate(snapshot.now, format: config.topFormat),
         color: config.topTextColorHex ?? style.textColorHex
       ),
 
@@ -173,23 +185,20 @@ final class CalendarNativeWidget: NativeWidget {
         childID: "\(rootID)_right",
         position: placement.position,
         order: 2,
-        text: formatDate(now, format: config.bottomFormat),
+        text: formatDate(snapshot.now, format: config.bottomFormat),
         color: config.bottomTextColorHex ?? style.textColorHex
       ),
     ]
   }
 
   /// Builds item-layout nodes.
-  private func makeItemNodes(
-    config: Config.CalendarBuiltinConfig,
-    now: Date
-  ) -> [WidgetNodeState] {
+  private func makeItemNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     [
       BuiltinNativeNodeFactory.makeItemNode(
         rootID: rootID,
-        placement: config.placement,
-        style: config.style,
-        text: formatDate(now, format: config.itemFormat)
+        placement: snapshot.config.placement,
+        style: snapshot.config.style,
+        text: formatDate(snapshot.now, format: snapshot.config.itemFormat)
       )
     ]
   }
@@ -221,16 +230,21 @@ final class CalendarNativeWidget: NativeWidget {
       color: style.textColorHex
     )
   }
+}
+
+// MARK: - Timer And Formatting
+
+private extension CalendarNativeWidget {
 
   /// Starts the periodic date refresh timer.
-  private func startTimer() {
+  func startTimer() {
     timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
       self?.publish()
     }
   }
 
   /// Formats one date string.
-  private func formatDate(_ date: Date, format: String) -> String {
+  func formatDate(_ date: Date, format: String) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = format
     return formatter.string(from: date)
