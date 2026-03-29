@@ -11,48 +11,10 @@ final class SocketServer {
 
   /// Starts the socket listener.
   func start(handler: @escaping (IPC.Command) -> Void) {
-    let socketDirectory = socketDirectoryPath(for: socketPath)
+    guard prepareSocketDirectory() else { return }
+    guard let listenFD = makeListeningSocket() else { return }
 
-    do {
-      try FileManager.default.createDirectory(
-        at: URL(fileURLWithPath: socketDirectory, isDirectory: true),
-        withIntermediateDirectories: true
-      )
-    } catch {
-      Logger.error("failed to create socket directory at \(socketDirectory): \(error)")
-      return
-    }
-
-    unlink(socketPath)
-
-    listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard listenFD >= 0 else {
-      Logger.error("failed to create socket")
-      return
-    }
-
-    var addr = makeSockAddrUn(path: socketPath)
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let bindResult = withUnsafePointer(to: &addr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        bind(listenFD, $0, addrLen)
-      }
-    }
-
-    guard bindResult >= 0 else {
-      Logger.error("failed to bind socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
-
-    guard listen(listenFD, 5) >= 0 else {
-      Logger.error("failed to listen on socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
+    self.listenFD = listenFD
 
     Logger.info("socket listening on \(socketPath)")
 
@@ -64,44 +26,113 @@ final class SocketServer {
   /// Accepts incoming socket clients.
   private func acceptLoop(handler: @escaping (IPC.Command) -> Void) {
     while true {
-      let client = accept(listenFD, nil, nil)
-      if client < 0 {
-        continue
-      }
+      guard let client = acceptClient() else { continue }
 
       Logger.debug("socket accepted client")
-
-      var buffer = [UInt8](repeating: 0, count: 256)
-      let count = read(client, &buffer, 255)
-
-      if count < 0 {
-        close(client)
-        continue
-      }
-
-      let rawCommand = String(bytes: buffer.prefix(count), encoding: .utf8)?
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-
-      Logger.debug("socket received raw command '\(rawCommand ?? "unknown")'")
-
-      guard
-        let rawCommand,
-        let data = rawCommand.data(using: .utf8),
-        let request = try? decoder.decode(IPC.Request.self, from: data)
-      else {
-        Logger.warn("invalid IPC request")
-        writeResponse(IPC.Response(accepted: false, message: "invalid_request"), to: client)
-        close(client)
-        continue
-      }
-
-      Logger.debug("socket dispatching command '\(request.command.rawValue)'")
-      writeResponse(IPC.Response(accepted: true), to: client)
-      DispatchQueue.main.async {
-        handler(request.command)
-      }
-      close(client)
+      handleClient(client, handler: handler)
     }
+  }
+
+  /// Creates the socket directory when needed.
+  private func prepareSocketDirectory() -> Bool {
+    let socketDirectory = socketDirectoryPath(for: socketPath)
+
+    do {
+      try FileManager.default.createDirectory(
+        at: URL(fileURLWithPath: socketDirectory, isDirectory: true),
+        withIntermediateDirectories: true
+      )
+      return true
+    } catch {
+      Logger.error("failed to create socket directory at \(socketDirectory): \(error)")
+      return false
+    }
+  }
+
+  /// Creates, binds, and starts listening on the IPC socket.
+  private func makeListeningSocket() -> Int32? {
+    unlink(socketPath)
+
+    let listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard listenFD >= 0 else {
+      Logger.error("failed to create socket")
+      return nil
+    }
+
+    guard bindSocket(listenFD) else {
+      close(listenFD)
+      return nil
+    }
+
+    guard listen(listenFD, 5) >= 0 else {
+      Logger.error("failed to listen on socket at \(socketPath)")
+      close(listenFD)
+      return nil
+    }
+
+    return listenFD
+  }
+
+  /// Binds one socket FD to the configured path.
+  private func bindSocket(_ listenFD: Int32) -> Bool {
+    var addr = makeSockAddrUn(path: socketPath)
+    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    let bindResult = withUnsafePointer(to: &addr) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        bind(listenFD, $0, addrLen)
+      }
+    }
+
+    guard bindResult >= 0 else {
+      Logger.error("failed to bind socket at \(socketPath)")
+      return false
+    }
+
+    return true
+  }
+
+  /// Accepts one connected client.
+  private func acceptClient() -> Int32? {
+    let client = accept(listenFD, nil, nil)
+    return client >= 0 ? client : nil
+  }
+
+  /// Handles one connected IPC client.
+  private func handleClient(_ client: Int32, handler: @escaping (IPC.Command) -> Void) {
+    defer { close(client) }
+
+    guard let request = readRequest(from: client) else {
+      Logger.warn("invalid IPC request")
+      writeResponse(IPC.Response(accepted: false, message: "invalid_request"), to: client)
+      return
+    }
+
+    Logger.debug("socket dispatching command '\(request.command.rawValue)'")
+    writeResponse(IPC.Response(accepted: true), to: client)
+    DispatchQueue.main.async {
+      handler(request.command)
+    }
+  }
+
+  /// Reads and decodes one IPC request from a client.
+  private func readRequest(from client: Int32) -> IPC.Request? {
+    var buffer = [UInt8](repeating: 0, count: 256)
+    let count = read(client, &buffer, 255)
+    guard count >= 0 else { return nil }
+
+    let rawRequest = String(bytes: buffer.prefix(count), encoding: .utf8)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    Logger.debug("socket received raw command '\(rawRequest ?? "unknown")'")
+
+    guard
+      let rawRequest,
+      let data = rawRequest.data(using: .utf8)
+    else {
+      return nil
+    }
+
+    return try? decoder.decode(IPC.Request.self, from: data)
   }
 
   /// Writes one IPC response to a connected client.
