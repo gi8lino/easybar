@@ -169,95 +169,119 @@ extension Config {
       fallback: builtinBattery.style
     )
 
-    let content = BatteryBuiltinConfig.Content(
-      unavailableText: try optionalString(
-        contentTable["unavailable_text"],
-        path: "builtins.battery.content.unavailable_text"
-      ) ?? builtinBattery.unavailableText,
-      iconSize: try optionalNumber(
-        contentTable["icon_size"],
-        path: "builtins.battery.content.icon_size"
-      ) ?? builtinBattery.iconSize,
-      colorMode: normalizedBatteryColorMode(
-        try optionalString(
-          contentTable["color_mode"],
-          path: "builtins.battery.content.color_mode"
-        ) ?? builtinBattery.colorMode.rawValue
-      ),
-      fixedColorHex: try optionalString(
-        contentTable["fixed_color"],
-        path: "builtins.battery.content.fixed_color"
-      ) ?? builtinBattery.fixedColorHex,
-      displayMode: normalizedBatteryDisplayMode(
-        try optionalString(
-          contentTable["display_mode"],
-          path: "builtins.battery.content.display_mode"
-        ) ?? builtinBattery.displayMode.rawValue
-      ),
-      colors: .init(
-        highColorHex: try optionalString(
-          colorsTable["high"],
-          path: "builtins.battery.colors.high"
-        ) ?? builtinBattery.colors.highColorHex,
-        mediumColorHex: try optionalString(
-          colorsTable["medium"],
-          path: "builtins.battery.colors.medium"
-        ) ?? builtinBattery.colors.mediumColorHex,
-        lowColorHex: try optionalString(
-          colorsTable["low"],
-          path: "builtins.battery.colors.low"
-        ) ?? builtinBattery.colors.lowColorHex,
-        criticalColorHex: try optionalString(
-          colorsTable["critical"],
-          path: "builtins.battery.colors.critical"
-        ) ?? builtinBattery.colors.criticalColorHex
-      )
+    let content = try parseBatteryContent(
+      from: contentTable,
+      colorsTable: colorsTable,
+      fallback: builtinBattery.content
     )
-
-    let popup = BuiltinBatteryPopup(
-      textColorHex: try optionalString(
-        popupTable["text_color"],
-        path: "builtins.battery.popup.text_color"
-      ) ?? builtinBattery.popup.textColorHex,
-      backgroundColorHex: try optionalString(
-        popupTable["background_color"],
-        path: "builtins.battery.popup.background_color"
-      ) ?? builtinBattery.popup.backgroundColorHex,
-      borderColorHex: try optionalString(
-        popupTable["border_color"],
-        path: "builtins.battery.popup.border_color"
-      ) ?? builtinBattery.popup.borderColorHex,
-      borderWidth: try optionalNumber(
-        popupTable["border_width"],
-        path: "builtins.battery.popup.border_width"
-      ) ?? builtinBattery.popup.borderWidth,
-      cornerRadius: try optionalNumber(
-        popupTable["corner_radius"],
-        path: "builtins.battery.popup.corner_radius"
-      ) ?? builtinBattery.popup.cornerRadius,
-      paddingX: try optionalNumber(
-        popupTable["padding_x"],
-        path: "builtins.battery.popup.padding_x"
-      ) ?? builtinBattery.popup.paddingX,
-      paddingY: try optionalNumber(
-        popupTable["padding_y"],
-        path: "builtins.battery.popup.padding_y"
-      ) ?? builtinBattery.popup.paddingY,
-      marginX: try optionalNumber(
-        popupTable["margin_x"],
-        path: "builtins.battery.popup.margin_x"
-      ) ?? builtinBattery.popup.marginX,
-      marginY: try optionalNumber(
-        popupTable["margin_y"],
-        path: "builtins.battery.popup.margin_y"
-      ) ?? builtinBattery.popup.marginY
-    )
+    let popup = try parseBatteryPopup(from: popupTable, fallback: builtinBattery.popup)
 
     builtinBattery = BatteryBuiltinConfig(
       placement: placement,
       style: style,
       content: content,
       popup: popup
+    )
+  }
+}
+
+private extension Config {
+  /// Parses the battery content and severity color settings.
+  func parseBatteryContent(
+    from table: TOMLTable,
+    colorsTable: TOMLTable,
+    fallback: BatteryBuiltinConfig.Content
+  ) throws -> BatteryBuiltinConfig.Content {
+    BatteryBuiltinConfig.Content(
+      unavailableText: try optionalString(
+        table["unavailable_text"],
+        path: "builtins.battery.content.unavailable_text"
+      ) ?? fallback.unavailableText,
+      iconSize: try optionalNumber(
+        table["icon_size"],
+        path: "builtins.battery.content.icon_size"
+      ) ?? fallback.iconSize,
+      colorMode: normalizedBatteryColorMode(
+        try optionalString(
+          table["color_mode"],
+          path: "builtins.battery.content.color_mode"
+        ) ?? fallback.colorMode.rawValue
+      ),
+      fixedColorHex: try optionalString(
+        table["fixed_color"],
+        path: "builtins.battery.content.fixed_color"
+      ) ?? fallback.fixedColorHex,
+      displayMode: normalizedBatteryDisplayMode(
+        try optionalString(
+          table["display_mode"],
+          path: "builtins.battery.content.display_mode"
+        ) ?? fallback.displayMode.rawValue
+      ),
+      colors: try parseBatteryColors(from: colorsTable, fallback: fallback.colors)
+    )
+  }
+
+  /// Parses the battery severity color settings.
+  func parseBatteryColors(
+    from table: TOMLTable,
+    fallback: BuiltinBatteryColors
+  ) throws -> BuiltinBatteryColors {
+    BuiltinBatteryColors(
+      highColorHex: try optionalString(table["high"], path: "builtins.battery.colors.high")
+        ?? fallback.highColorHex,
+      mediumColorHex: try optionalString(table["medium"], path: "builtins.battery.colors.medium")
+        ?? fallback.mediumColorHex,
+      lowColorHex: try optionalString(table["low"], path: "builtins.battery.colors.low")
+        ?? fallback.lowColorHex,
+      criticalColorHex: try optionalString(
+        table["critical"],
+        path: "builtins.battery.colors.critical"
+      ) ?? fallback.criticalColorHex
+    )
+  }
+
+  /// Parses the battery tooltip popup settings.
+  func parseBatteryPopup(
+    from table: TOMLTable,
+    fallback: BuiltinBatteryPopup
+  ) throws -> BuiltinBatteryPopup {
+    BuiltinBatteryPopup(
+      textColorHex: try optionalString(
+        table["text_color"],
+        path: "builtins.battery.popup.text_color"
+      ) ?? fallback.textColorHex,
+      backgroundColorHex: try optionalString(
+        table["background_color"],
+        path: "builtins.battery.popup.background_color"
+      ) ?? fallback.backgroundColorHex,
+      borderColorHex: try optionalString(
+        table["border_color"],
+        path: "builtins.battery.popup.border_color"
+      ) ?? fallback.borderColorHex,
+      borderWidth: try optionalNumber(
+        table["border_width"],
+        path: "builtins.battery.popup.border_width"
+      ) ?? fallback.borderWidth,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.battery.popup.corner_radius"
+      ) ?? fallback.cornerRadius,
+      paddingX: try optionalNumber(
+        table["padding_x"],
+        path: "builtins.battery.popup.padding_x"
+      ) ?? fallback.paddingX,
+      paddingY: try optionalNumber(
+        table["padding_y"],
+        path: "builtins.battery.popup.padding_y"
+      ) ?? fallback.paddingY,
+      marginX: try optionalNumber(
+        table["margin_x"],
+        path: "builtins.battery.popup.margin_x"
+      ) ?? fallback.marginX,
+      marginY: try optionalNumber(
+        table["margin_y"],
+        path: "builtins.battery.popup.margin_y"
+      ) ?? fallback.marginY
     )
   }
 }
