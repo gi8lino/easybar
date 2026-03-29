@@ -6,6 +6,7 @@ final class NetworkSocketServer {
   private var provider: NetworkSnapshotProvider?
   private let transport: LineSocketServerTransport<Int32, NetworkAgentRequest, NetworkAgentMessage>
 
+  /// Builds the network socket server for one socket path.
   init(socketPath: String) {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
@@ -17,6 +18,7 @@ final class NetworkSocketServer {
     )
   }
 
+  /// Starts accepting network agent requests.
   func start(provider: NetworkSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
@@ -24,10 +26,12 @@ final class NetworkSocketServer {
     }
   }
 
+  /// Stops the network socket server.
   func stop() {
     transport.stop()
   }
 
+  /// Broadcasts the latest network snapshot to all subscribers.
   func broadcastSnapshots() {
     guard let provider else { return }
 
@@ -42,6 +46,7 @@ final class NetworkSocketServer {
     }
   }
 
+  /// Handles one network agent client request.
   private func handleClient(_ clientFD: Int32, request: NetworkAgentRequest) {
     AgentLogger.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
@@ -68,6 +73,7 @@ final class NetworkSocketServer {
         return
       }
 
+      // Keep the client open so future network changes can be pushed.
       transport.addSubscriber(clientFD, for: clientFD)
       AgentLogger.info("network agent subscriber added fd=\(clientFD)")
 

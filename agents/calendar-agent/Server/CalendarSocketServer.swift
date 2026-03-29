@@ -10,6 +10,7 @@ final class CalendarSocketServer {
   private var provider: CalendarSnapshotProvider?
   private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
+  /// Builds the calendar socket server for one socket path.
   init(socketPath: String) {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
@@ -21,6 +22,7 @@ final class CalendarSocketServer {
     )
   }
 
+  /// Starts accepting calendar agent requests.
   func start(provider: CalendarSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
@@ -28,10 +30,12 @@ final class CalendarSocketServer {
     }
   }
 
+  /// Stops the calendar socket server.
   func stop() {
     transport.stop()
   }
 
+  /// Broadcasts fresh snapshots to all subscribers.
   func broadcastSnapshots() {
     guard let provider else { return }
 
@@ -45,6 +49,7 @@ final class CalendarSocketServer {
     }
   }
 
+  /// Handles one calendar agent client request.
   private func handleClient(_ clientFD: Int32, request: CalendarAgentRequest) {
     AgentLogger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
@@ -71,6 +76,7 @@ final class CalendarSocketServer {
         return
       }
 
+      // Keep the client open so future calendar changes can be pushed.
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
       AgentLogger.info("calendar agent subscriber added fd=\(clientFD)")
 

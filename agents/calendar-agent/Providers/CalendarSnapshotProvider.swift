@@ -9,6 +9,7 @@ final class CalendarSnapshotProvider {
   private var observer: NSObjectProtocol?
   private var onChange: (() -> Void)?
 
+  /// Starts calendar access, observation, and change callbacks.
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
@@ -29,6 +30,7 @@ final class CalendarSnapshotProvider {
     }
   }
 
+  /// Stops observing calendar store changes.
   func stop() {
     if let observer {
       NotificationCenter.default.removeObserver(observer)
@@ -36,6 +38,7 @@ final class CalendarSnapshotProvider {
     }
   }
 
+  /// Builds one calendar snapshot for the requested query.
   func snapshot(for query: CalendarAgentQuery) -> CalendarAgentSnapshot {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
@@ -109,6 +112,7 @@ final class CalendarSnapshotProvider {
         kind = .future
       }
 
+      // Keep empty days visible so the popup layout stays stable.
       guard !dayEvents.isEmpty else {
         sections.append(
           CalendarAgentSection(
@@ -156,6 +160,7 @@ final class CalendarSnapshotProvider {
     return snapshot
   }
 
+  /// Requests calendar access when the current state allows it.
   private func requestAccessIfNeeded() {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
@@ -201,6 +206,7 @@ final class CalendarSnapshotProvider {
     }
   }
 
+  /// Builds the birthdays section for one query window.
   private func makeBirthdaysSection(
     query: CalendarAgentQuery,
     start: Date,
@@ -244,6 +250,7 @@ final class CalendarSnapshotProvider {
     )
   }
 
+  /// Returns one birthday title, optionally with age appended.
   private func birthdayTitle(for event: EKEvent, showAge: Bool) -> String {
     let title = normalizedTitle(event.title)
 
@@ -254,6 +261,7 @@ final class CalendarSnapshotProvider {
     return "\(title) (\(age))"
   }
 
+  /// Extracts an age suffix from one birthday event title.
   private func extractedAge(from title: String) -> Int? {
     guard let open = title.lastIndex(of: "("),
       let close = title.lastIndex(of: ")"),
@@ -267,6 +275,7 @@ final class CalendarSnapshotProvider {
     return Int(value)
   }
 
+  /// Normalizes one optional title into display text.
   private func normalizedTitle(_ value: String?) -> String {
     guard let value else { return "Untitled" }
 
@@ -274,24 +283,28 @@ final class CalendarSnapshotProvider {
     return trimmed.isEmpty ? "Untitled" : trimmed
   }
 
+  /// Formats one event time for popup display.
   private func formatEventTime(_ date: Date) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "HH:mm"
     return formatter.string(from: date)
   }
 
+  /// Formats one day header for popup display.
   private func formatDayTitle(_ date: Date) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "dd.MM.yyyy"
     return formatter.string(from: date)
   }
 
+  /// Formats one birthday date using the configured format.
   private func formatBirthdayDate(_ date: Date, format: String) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = format
     return formatter.string(from: date)
   }
 
+  /// Converts one calendar color into a hex string.
   private func colorHex(for cgColor: CGColor?) -> String? {
     guard let cgColor else { return nil }
     guard

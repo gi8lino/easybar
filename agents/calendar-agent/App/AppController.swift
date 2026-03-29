@@ -7,11 +7,13 @@ final class AppController {
   private let snapshotProvider = CalendarSnapshotProvider()
   private let socketServer: CalendarSocketServer
 
+  /// Builds the calendar agent controller from one runtime config.
   init(config: SharedRuntimeConfig = .current) {
     runtimeConfig = config
     socketServer = CalendarSocketServer(socketPath: config.calendarAgentSocketPath)
   }
 
+  /// Starts logging, snapshot delivery, and the calendar socket server.
   func start() {
     AgentLogger.configure(using: runtimeConfig)
     logStartup()
@@ -23,6 +25,7 @@ final class AppController {
     socketServer.start(provider: snapshotProvider)
   }
 
+  /// Stops the calendar socket server and snapshot provider.
   func stop() {
     socketServer.stop()
     snapshotProvider.stop()

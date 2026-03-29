@@ -18,10 +18,12 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
   private var store: SCDynamicStore?
   private var storeSource: CFRunLoopSource?
 
+  /// Builds the network snapshot provider with one refresh interval.
   init(refreshIntervalSeconds: TimeInterval) {
     self.refreshIntervalSeconds = refreshIntervalSeconds
   }
 
+  /// Starts permission, Wi-Fi, and network monitoring.
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
@@ -46,6 +48,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     onChange()
   }
 
+  /// Stops timers and all active monitoring.
   func stop() {
     refreshTimer?.invalidate()
     refreshTimer = nil
@@ -68,6 +71,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     onChange = nil
   }
 
+  /// Builds one network snapshot from current system state.
   func snapshot() -> NetworkAgentSnapshot {
     let now = Date()
     let permissionState = authState.permissionState()
@@ -109,6 +113,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     )
   }
 
+  /// Handles one location authorization change.
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     let status = manager.authorizationStatus
 
@@ -122,11 +127,13 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     }
   }
 
+  /// Handles one Wi-Fi SSID change callback.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
     AgentLogger.info("network agent Wi-Fi changed interface=\(interfaceName)")
     onChange?()
   }
 
+  /// Starts listening for Wi-Fi SSID changes.
   private func startWiFiMonitoring() {
     let client = CWWiFiClient.shared()
     client.delegate = self
@@ -140,6 +147,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     }
   }
 
+  /// Starts listening for primary network interface changes.
   private func startNetworkMonitoring() {
     var context = SCDynamicStoreContext(
       version: 0,
@@ -185,11 +193,13 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     AgentLogger.info("network agent subscribed network_change")
   }
 
+  /// Handles one dynamic store change callback.
   private func handleNetworkStoreChange() {
     AgentLogger.info("network agent dynamic store changed")
     onChange?()
   }
 
+  /// Returns the current primary network interface name.
   private func currentPrimaryInterface() -> String? {
     guard let store else { return nil }
 
@@ -202,6 +212,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
       ?? normalized(globalIPv6?["PrimaryInterface"] as? String)
   }
 
+  /// Returns whether one interface name represents a tunnel.
   private func isTunnelInterface(_ name: String) -> Bool {
     name.hasPrefix("utun")
       || name.hasPrefix("ppp")
@@ -210,6 +221,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
       || name.hasPrefix("tun")
   }
 
+  /// Maps one RSSI value into signal bars.
   private func signalBars(for rssi: Int?, connected: Bool) -> Int {
     guard connected, let rssi else { return 0 }
 
@@ -227,6 +239,7 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     }
   }
 
+  /// Smooths RSSI so the UI does not jump on every sample.
   private func smoothedRSSIValue(from rssi: Int?) -> Int? {
     guard let rssi else {
       smoothedRSSI = nil
@@ -243,11 +256,13 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     return Int((self.smoothedRSSI ?? Double(rssi)).rounded())
   }
 
+  /// Filters out unusable measurements from system APIs.
   private func validMeasurement(_ value: Int?) -> Int? {
     guard let value, value != 0 else { return nil }
     return value
   }
 
+  /// Trims one optional string and drops empty values.
   private func normalized(_ value: String?) -> String? {
     guard let value else { return nil }
 

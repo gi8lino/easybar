@@ -7,6 +7,7 @@ final class AppController {
   private let snapshotProvider: NetworkSnapshotProvider
   private let socketServer: NetworkSocketServer
 
+  /// Builds the network agent controller from one runtime config.
   init(config: SharedRuntimeConfig = .current) {
     runtimeConfig = config
     snapshotProvider = NetworkSnapshotProvider(
@@ -15,6 +16,7 @@ final class AppController {
     socketServer = NetworkSocketServer(socketPath: config.networkAgentSocketPath)
   }
 
+  /// Starts logging, snapshot delivery, and the network socket server.
   func start() {
     AgentLogger.configure(using: runtimeConfig)
     logStartup()
@@ -26,6 +28,7 @@ final class AppController {
     socketServer.start(provider: snapshotProvider)
   }
 
+  /// Stops the network socket server and snapshot provider.
   func stop() {
     socketServer.stop()
     snapshotProvider.stop()

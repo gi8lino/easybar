@@ -6,18 +6,21 @@ final class CalendarAgentAuthorizationState {
   private var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
   private var accessGrantedInProcess = false
 
+  /// Stores the latest calendar authorization status.
   func setStatus(_ newStatus: EKAuthorizationStatus) {
     lock.lock()
     status = newStatus
     lock.unlock()
   }
 
+  /// Marks access as granted after an in-process prompt succeeds.
   func markGrantedInProcess() {
     lock.lock()
     accessGrantedInProcess = true
     lock.unlock()
   }
 
+  /// Returns whether calendar access is currently effective.
   func effectiveAccessGranted() -> Bool {
     lock.lock()
     defer { lock.unlock() }
@@ -30,16 +33,19 @@ final class CalendarAgentAuthorizationState {
     }
   }
 
+  /// Returns the last known authorization status.
   func currentStatus() -> EKAuthorizationStatus {
     lock.lock()
     defer { lock.unlock() }
     return status
   }
 
+  /// Returns the current permission state as a stable string.
   func permissionState() -> String {
     describe(currentStatus())
   }
 
+  /// Converts one authorization status into a stable string.
   func describe(_ status: EKAuthorizationStatus) -> String {
     switch status {
     case .notDetermined:
