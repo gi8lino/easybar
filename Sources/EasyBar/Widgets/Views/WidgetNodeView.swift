@@ -466,21 +466,7 @@ private extension WidgetNodeView {
   @ViewBuilder
   /// Returns the optional image view.
   var imageView: some View {
-    if hasImage, let imagePath = node.imagePath {
-      let customImage = NSImage(contentsOfFile: imagePath)
-      let image = resolvedImage(imagePath: imagePath, customImage: customImage)
-
-      if let tintedImage = tintedImage(from: image, customImage: customImage) {
-        imageBaseView(image: tintedImage, renderingMode: .template)
-          .foregroundStyle(iconResolvedColor)
-          .frame(width: imageSize, height: imageSize)
-          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
-      } else {
-        imageBaseView(image: image, renderingMode: .original)
-          .frame(width: imageSize, height: imageSize)
-          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
-      }
-    }
+    renderedImageView()
   }
 
   @ViewBuilder
@@ -530,6 +516,26 @@ private extension WidgetNodeView {
   /// Resolves the image file or falls back to the file icon.
   func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
     customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+  }
+
+  /// Returns the rendered image or nothing when no image path exists.
+  @ViewBuilder
+  func renderedImageView() -> some View {
+    if hasImage, let imagePath = node.imagePath {
+      let customImage = NSImage(contentsOfFile: imagePath)
+      let image = resolvedImage(imagePath: imagePath, customImage: customImage)
+
+      if let tintedImage = tintedImage(from: image, customImage: customImage) {
+        imageBaseView(image: tintedImage, renderingMode: .template)
+          .foregroundStyle(iconResolvedColor)
+          .frame(width: imageSize, height: imageSize)
+          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
+      } else {
+        imageBaseView(image: image, renderingMode: .original)
+          .frame(width: imageSize, height: imageSize)
+          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
+      }
+    }
   }
 
   /// Builds the shared base image view.
