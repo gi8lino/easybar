@@ -18,54 +18,35 @@ public struct SharedRuntimeConfig {
   public static func load() -> SharedRuntimeConfig {
     let configPath = resolvedConfigPath()
     let toml = parsedConfig(at: configPath)
-
-    let loggingTable = toml["logging"]?.table
-    let calendarTable = toml["agents"]?["calendar"]?.table
-    let networkTable = toml["agents"]?["network"]?.table
-
-    let loggingEnabled = boolEnvironmentValue(named: "EASYBAR_LOGGING_ENABLED")
-      ?? loggingTable?["enabled"]?.bool
-      ?? false
-
-    let loggingDebugEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG")
-      ?? loggingTable?["debug"]?.bool
-      ?? false
-
-    let loggingDirectory =
-      expandedPath(
-        loggingTable?["directory"]?.string
-      ) ?? defaultLoggingDirectoryPath()
-
-    let easyBarSocketPath =
-      expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
-      ?? "/tmp/EasyBar/easybar.sock"
-
-    let calendarAgentSocketPath =
-      expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
-      ?? expandedPath(calendarTable?["socket_path"]?.string)
-      ?? defaultCalendarAgentSocketPath()
-
-    let networkAgentSocketPath =
-      expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
-      ?? expandedPath(networkTable?["socket_path"]?.string)
-      ?? defaultNetworkAgentSocketPath()
-
-    let networkAgentRefreshIntervalSeconds =
-      timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
-      ?? networkTable?["refresh_interval_seconds"]?.double
-      ?? 60
+    let logging = resolvedLoggingConfig(from: toml)
+    let sockets = resolvedSocketConfig(from: toml)
 
     return SharedRuntimeConfig(
       configPath: configPath,
-      loggingEnabled: loggingEnabled,
-      loggingDebugEnabled: loggingDebugEnabled,
-      loggingDirectory: loggingDirectory,
-      easyBarSocketPath: easyBarSocketPath,
-      calendarAgentSocketPath: calendarAgentSocketPath,
-      networkAgentSocketPath: networkAgentSocketPath,
-      networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
+      loggingEnabled: logging.enabled,
+      loggingDebugEnabled: logging.debugEnabled,
+      loggingDirectory: logging.directory,
+      easyBarSocketPath: sockets.easyBarSocketPath,
+      calendarAgentSocketPath: sockets.calendarAgentSocketPath,
+      networkAgentSocketPath: sockets.networkAgentSocketPath,
+      networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds
     )
   }
+}
+
+/// Resolved logging values shared by helper processes.
+private struct SharedLoggingConfig {
+  let enabled: Bool
+  let debugEnabled: Bool
+  let directory: String
+}
+
+/// Resolved socket values shared by helper processes.
+private struct SharedSocketConfig {
+  let easyBarSocketPath: String
+  let calendarAgentSocketPath: String
+  let networkAgentSocketPath: String
+  let networkAgentRefreshIntervalSeconds: TimeInterval
 }
 
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
@@ -86,4 +67,55 @@ private func parsedConfig(at path: String) -> TOMLTable {
   }
 
   return table
+}
+
+/// Returns the resolved logging config from env, TOML, and defaults.
+private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingConfig {
+  let loggingTable = toml["logging"]?.table
+
+  let enabled = boolEnvironmentValue(named: "EASYBAR_LOGGING_ENABLED")
+    ?? loggingTable?["enabled"]?.bool
+    ?? false
+
+  let debugEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG")
+    ?? loggingTable?["debug"]?.bool
+    ?? false
+
+  let directory = expandedPath(loggingTable?["directory"]?.string)
+    ?? defaultLoggingDirectoryPath()
+
+  return SharedLoggingConfig(
+    enabled: enabled,
+    debugEnabled: debugEnabled,
+    directory: directory
+  )
+}
+
+/// Returns the resolved socket and agent config from env, TOML, and defaults.
+private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
+  let calendarTable = toml["agents"]?["calendar"]?.table
+  let networkTable = toml["agents"]?["network"]?.table
+
+  let easyBarSocketPath = expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
+    ?? "/tmp/EasyBar/easybar.sock"
+
+  let calendarAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
+    ?? expandedPath(calendarTable?["socket_path"]?.string)
+    ?? defaultCalendarAgentSocketPath()
+
+  let networkAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
+    ?? expandedPath(networkTable?["socket_path"]?.string)
+    ?? defaultNetworkAgentSocketPath()
+
+  let networkAgentRefreshIntervalSeconds =
+    timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
+    ?? networkTable?["refresh_interval_seconds"]?.double
+    ?? 60
+
+  return SharedSocketConfig(
+    easyBarSocketPath: easyBarSocketPath,
+    calendarAgentSocketPath: calendarAgentSocketPath,
+    networkAgentSocketPath: networkAgentSocketPath,
+    networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
+  )
 }
