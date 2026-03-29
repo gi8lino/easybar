@@ -108,12 +108,12 @@ final class SocketServer {
 
     guard let request = readRequest(from: client) else {
       Logger.warn("invalid IPC request")
-      writeResponse(IPC.Response(accepted: false, message: "invalid_request"), to: client)
+      writeResponse(IPC.Response(status: .rejected, message: "invalid_request"), to: client)
       return
     }
 
     Logger.debug("socket dispatching command '\(request.command.rawValue)'")
-    writeResponse(IPC.Response(accepted: true), to: client)
+    writeResponse(IPC.Response(status: .accepted), to: client)
     DispatchQueue.main.async {
       handler(request.command)
     }

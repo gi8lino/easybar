@@ -377,7 +377,7 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
 
   let responseData = Data(buffer.prefix(readResult))
   let response = try context.decodeResponse(from: responseData)
-  guard response.accepted else {
+  guard response.status == .accepted else {
     throw AppError.message(response.message ?? "command rejected")
   }
 

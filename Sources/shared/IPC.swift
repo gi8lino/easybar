@@ -24,12 +24,17 @@ extension IPC {
 
   /// One IPC response returned by the EasyBar socket.
   public struct Response: Codable {
-    public let accepted: Bool
+    public enum Status: String, Codable {
+      case accepted
+      case rejected
+    }
+
+    public let status: Status
     public let message: String?
 
     /// Builds one IPC response.
-    public init(accepted: Bool, message: String? = nil) {
-      self.accepted = accepted
+    public init(status: Status, message: String? = nil) {
+      self.status = status
       self.message = message
     }
   }
