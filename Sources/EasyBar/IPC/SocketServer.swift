@@ -6,6 +6,8 @@ final class SocketServer {
 
   private let socketPath = defaultSocketPath()
   private var listenFD: Int32 = -1
+  private let decoder = JSONDecoder()
+  private let encoder = JSONEncoder()
 
   /// Starts the socket listener.
   func start(handler: @escaping (IPC.Command) -> Void) {
@@ -82,17 +84,33 @@ final class SocketServer {
 
       Logger.debug("socket received raw command '\(rawCommand ?? "unknown")'")
 
-      guard let cmd = IPC.Command(rawValue: rawCommand ?? "") else {
-        Logger.warn("unknown IPC command")
+      guard
+        let rawCommand,
+        let data = rawCommand.data(using: .utf8),
+        let request = try? decoder.decode(IPC.Request.self, from: data)
+      else {
+        Logger.warn("invalid IPC request")
+        writeResponse(IPC.Response(accepted: false, message: "invalid_request"), to: client)
         close(client)
         continue
       }
 
-      Logger.debug("socket dispatching command '\(cmd.rawValue)'")
+      Logger.debug("socket dispatching command '\(request.command.rawValue)'")
+      writeResponse(IPC.Response(accepted: true), to: client)
       DispatchQueue.main.async {
-        handler(cmd)
+        handler(request.command)
       }
       close(client)
+    }
+  }
+
+  /// Writes one IPC response to a connected client.
+  private func writeResponse(_ response: IPC.Response, to client: Int32) {
+    guard let data = try? encoder.encode(response) else { return }
+
+    _ = data.withUnsafeBytes { buffer in
+      guard let baseAddress = buffer.baseAddress else { return -1 }
+      return write(client, baseAddress, buffer.count)
     }
   }
 }

@@ -66,6 +66,8 @@ private struct ParsedArguments {
 
 private struct AppContext {
   private let logger: ProcessLogger
+  private let decoder = JSONDecoder()
+  private let encoder = JSONEncoder()
 
   init(debugEnabled: Bool) {
     logger = ProcessLogger(label: "easybarctl") {
@@ -77,6 +79,16 @@ private struct AppContext {
   /// Writes one debug line when CLI debug logging is enabled.
   func debug(_ message: String) {
     logger.debug(message)
+  }
+
+  /// Encodes one IPC request.
+  func encode(_ request: IPC.Request) throws -> Data {
+    try encoder.encode(request)
+  }
+
+  /// Decodes one IPC response.
+  func decodeResponse(from data: Data) throws -> IPC.Response {
+    try decoder.decode(IPC.Response.self, from: data)
   }
 }
 
@@ -325,12 +337,26 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
 
   context.debug("connected to socket")
 
-  let writeResult = command.rawValue.withCString {
-    write(fd, $0, strlen($0))
+  let requestData = try context.encode(IPC.Request(command: command))
+  let writeResult = requestData.withUnsafeBytes {
+    guard let baseAddress = $0.baseAddress else { return -1 }
+    return write(fd, baseAddress, $0.count)
   }
 
   guard writeResult >= 0 else {
     throw AppError.message("failed to send command")
+  }
+
+  var buffer = [UInt8](repeating: 0, count: 256)
+  let readResult = read(fd, &buffer, 255)
+  guard readResult >= 0 else {
+    throw AppError.message("failed to read IPC response")
+  }
+
+  let responseData = Data(buffer.prefix(readResult))
+  let response = try context.decodeResponse(from: responseData)
+  guard response.accepted else {
+    throw AppError.message(response.message ?? "command rejected")
   }
 
   context.debug("command sent")
