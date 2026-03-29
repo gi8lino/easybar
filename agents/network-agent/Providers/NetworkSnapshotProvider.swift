@@ -84,7 +84,6 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
         ssid: nil,
         interfaceName: nil,
         primaryInterfaceIsTunnel: currentPrimaryInterface().map(isTunnelInterface) ?? false,
-        signalBars: 0,
         rssi: nil
       )
     }
@@ -95,10 +94,9 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     let rssi = validMeasurement(interface?.rssiValue())
     let displayRSSI = smoothedRSSIValue(from: rssi)
     let primaryInterfaceIsTunnel = currentPrimaryInterface().map(isTunnelInterface) ?? false
-    let bars = signalBars(for: displayRSSI, connected: ssid != nil)
 
     AgentLogger.debug(
-      "network snapshot access_granted=true permission_state=\(permissionState) ssid=\(ssid ?? "<none>") interface=\(interfaceName ?? "<none>") signal_bars=\(bars) rssi=\(displayRSSI.map(String.init) ?? "<none>") primary_is_tunnel=\(primaryInterfaceIsTunnel)"
+      "network snapshot access_granted=true permission_state=\(permissionState) ssid=\(ssid ?? "<none>") interface=\(interfaceName ?? "<none>") rssi=\(displayRSSI.map(String.init) ?? "<none>") primary_is_tunnel=\(primaryInterfaceIsTunnel)"
     )
 
     return NetworkAgentSnapshot(
@@ -108,7 +106,6 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
       ssid: ssid,
       interfaceName: interfaceName,
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
-      signalBars: bars,
       rssi: displayRSSI
     )
   }
@@ -219,24 +216,6 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
       || name.hasPrefix("ipsec")
       || name.hasPrefix("tap")
       || name.hasPrefix("tun")
-  }
-
-  /// Maps one RSSI value into signal bars.
-  private func signalBars(for rssi: Int?, connected: Bool) -> Int {
-    guard connected, let rssi else { return 0 }
-
-    switch rssi {
-    case let value where value >= -58:
-      return 4
-    case let value where value >= -67:
-      return 3
-    case let value where value >= -75:
-      return 2
-    case let value where value >= -83:
-      return 1
-    default:
-      return 0
-    }
   }
 
   /// Smooths RSSI so the UI does not jump on every sample.

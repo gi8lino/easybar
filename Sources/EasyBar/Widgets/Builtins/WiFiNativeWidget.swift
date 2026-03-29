@@ -145,8 +145,27 @@ final class WiFiNativeWidget: NativeWidget {
   }
 
   private func resolvedSignalBars(snapshot: NetworkAgentSnapshot?) -> Int {
-    guard let snapshot, snapshot.accessGranted else { return 0 }
-    return max(0, min(4, snapshot.signalBars))
+    guard
+      let snapshot,
+      snapshot.accessGranted,
+      snapshot.ssid != nil,
+      let rssi = snapshot.rssi
+    else {
+      return 0
+    }
+
+    switch rssi {
+    case let value where value >= -58:
+      return 4
+    case let value where value >= -67:
+      return 3
+    case let value where value >= -75:
+      return 2
+    case let value where value >= -83:
+      return 1
+    default:
+      return 0
+    }
   }
 
   private func resolvedSignalIcon(snapshot: NetworkAgentSnapshot?) -> String {

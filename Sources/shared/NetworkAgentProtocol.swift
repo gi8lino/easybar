@@ -32,8 +32,6 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
   public var interfaceName: String?
   /// Whether the current primary interface is a tunnel.
   public var primaryInterfaceIsTunnel: Bool
-  /// Render-ready Wi-Fi signal bar count.
-  public var signalBars: Int
   /// Raw or smoothed RSSI value when available.
   public var rssi: Int?
 
@@ -45,7 +43,6 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     ssid: String?,
     interfaceName: String?,
     primaryInterfaceIsTunnel: Bool,
-    signalBars: Int,
     rssi: Int?
   ) {
     self.accessGranted = accessGranted
@@ -54,7 +51,6 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     self.ssid = ssid
     self.interfaceName = interfaceName
     self.primaryInterfaceIsTunnel = primaryInterfaceIsTunnel
-    self.signalBars = signalBars
     self.rssi = rssi
   }
 }

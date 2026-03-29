@@ -14,7 +14,6 @@ final class NativeWiFiStore: ObservableObject {
     let ssid: String?
     let interfaceName: String?
     let primaryInterfaceIsTunnel: Bool
-    let signalBars: Int
     let rssi: Int?
   }
 
@@ -26,7 +25,7 @@ final class NativeWiFiStore: ObservableObject {
 
     lastPublishedSignature = signature
     Logger.debug(
-      "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") signal_bars=\(snapshot.signalBars)"
+      "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") rssi=\(snapshot.rssi.map(String.init) ?? "<none>")"
     )
     publish(snapshot: snapshot)
   }
@@ -46,7 +45,6 @@ final class NativeWiFiStore: ObservableObject {
       ssid: snapshot.ssid,
       interfaceName: snapshot.interfaceName,
       primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel,
-      signalBars: snapshot.signalBars,
       rssi: snapshot.rssi
     )
   }
