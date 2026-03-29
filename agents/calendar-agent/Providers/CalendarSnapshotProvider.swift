@@ -109,20 +109,27 @@ final class CalendarSnapshotProvider {
         kind = .future
       }
 
-      let items: [CalendarAgentItem]
-      if dayEvents.isEmpty {
-        items = [CalendarAgentItem(id: "empty-\(dayOffset)", time: "", title: query.emptyText)]
-      } else {
-        items = dayEvents.map { event in
-          CalendarAgentItem(
-            id:
-              "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-            time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
-            title: normalizedTitle(event.title),
-            calendarName: normalizedTitle(event.calendar.title),
-            calendarColorHex: colorHex(for: event.calendar.cgColor)
+      guard !dayEvents.isEmpty else {
+        sections.append(
+          CalendarAgentSection(
+            id: "events-\(dayOffset)",
+            title: title,
+            kind: kind,
+            items: [CalendarAgentItem(id: "empty-\(dayOffset)", time: "", title: query.emptyText)]
           )
-        }
+        )
+        continue
+      }
+
+      let items = dayEvents.map { event in
+        CalendarAgentItem(
+          id:
+            "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
+          time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
+          title: normalizedTitle(event.title),
+          calendarName: normalizedTitle(event.calendar.title),
+          calendarColorHex: colorHex(for: event.calendar.cgColor)
+        )
       }
 
       sections.append(
