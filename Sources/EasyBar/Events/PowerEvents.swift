@@ -83,15 +83,7 @@ final class PowerEvents {
       let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
       let isCharging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
 
-      if powerSourceState == kIOPSACPowerValue {
-        return true
-      }
-
-      if isCharging {
-        return true
-      }
-
-      return false
+      return powerSourceState == kIOPSACPowerValue || isCharging
     }
 
     return false
