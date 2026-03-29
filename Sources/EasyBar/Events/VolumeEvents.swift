@@ -42,23 +42,16 @@ final class VolumeEvents {
   private func installDefaultOutputDeviceListener() {
     guard defaultDeviceListener == nil else { return }
 
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       // Device changes can invalidate all per-device listeners, so rebuild them first.
       self?.refreshDeviceSubscription()
       EventBus.shared.emit(.volumeChange)
     }
 
-    let status = AudioObjectAddPropertyListenerBlock(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      DispatchQueue.main,
-      block
+    let status = addListener(
+      objectID: AudioObjectID(kAudioObjectSystemObject),
+      address: defaultOutputDeviceAddress(),
+      block: block
     )
 
     guard status == noErr else {
@@ -74,17 +67,10 @@ final class VolumeEvents {
     guard let block = defaultDeviceListener else { return }
     defer { defaultDeviceListener = nil }
 
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
-    let status = AudioObjectRemovePropertyListenerBlock(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      DispatchQueue.main,
-      block
+    let status = removeListener(
+      objectID: AudioObjectID(kAudioObjectSystemObject),
+      address: defaultOutputDeviceAddress(),
+      block: block
     )
 
     guard status == noErr else {
@@ -120,21 +106,14 @@ final class VolumeEvents {
   private func installDeviceListeners() {
     guard let deviceID = currentDeviceID else { return }
 
-    var volumeAddress = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyVolumeScalar,
-      mScope: kAudioDevicePropertyScopeOutput,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
     let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
       EventBus.shared.emit(.volumeChange)
     }
 
-    let volumeStatus = AudioObjectAddPropertyListenerBlock(
-      deviceID,
-      &volumeAddress,
-      DispatchQueue.main,
-      volumeBlock
+    let volumeStatus = addListener(
+      objectID: deviceID,
+      address: volumeAddress(),
+      block: volumeBlock
     )
 
     guard volumeStatus == noErr else {
@@ -143,12 +122,6 @@ final class VolumeEvents {
     }
 
     volumeListener = volumeBlock
-
-    var muteAddress = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyMute,
-      mScope: kAudioDevicePropertyScopeOutput,
-      mElement: kAudioObjectPropertyElementMain
-    )
 
     let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       EventBus.shared.emit(.volumeChange)
@@ -163,11 +136,10 @@ final class VolumeEvents {
       }
     }
 
-    let muteStatus = AudioObjectAddPropertyListenerBlock(
-      deviceID,
-      &muteAddress,
-      DispatchQueue.main,
-      muteBlock
+    let muteStatus = addListener(
+      objectID: deviceID,
+      address: muteAddress(),
+      block: muteBlock
     )
 
     guard muteStatus == noErr else {
@@ -185,17 +157,10 @@ final class VolumeEvents {
     if let block = volumeListener {
       defer { volumeListener = nil }
 
-      var volumeAddress = AudioObjectPropertyAddress(
-        mSelector: kAudioDevicePropertyVolumeScalar,
-        mScope: kAudioDevicePropertyScopeOutput,
-        mElement: kAudioObjectPropertyElementMain
-      )
-
-      let status = AudioObjectRemovePropertyListenerBlock(
-        deviceID,
-        &volumeAddress,
-        DispatchQueue.main,
-        block
+      let status = removeListener(
+        objectID: deviceID,
+        address: volumeAddress(),
+        block: block
       )
 
       guard status == noErr else {
@@ -207,17 +172,10 @@ final class VolumeEvents {
     if let block = muteListener {
       defer { muteListener = nil }
 
-      var muteAddress = AudioObjectPropertyAddress(
-        mSelector: kAudioDevicePropertyMute,
-        mScope: kAudioDevicePropertyScopeOutput,
-        mElement: kAudioObjectPropertyElementMain
-      )
-
-      let status = AudioObjectRemovePropertyListenerBlock(
-        deviceID,
-        &muteAddress,
-        DispatchQueue.main,
-        block
+      let status = removeListener(
+        objectID: deviceID,
+        address: muteAddress(),
+        block: block
       )
 
       guard status == noErr else {
@@ -229,11 +187,7 @@ final class VolumeEvents {
 
   /// Returns the current default output device id.
   private func defaultOutputDeviceID() -> AudioDeviceID? {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
+    var address = defaultOutputDeviceAddress()
 
     var deviceID = AudioDeviceID(0)
     var size = UInt32(MemoryLayout<AudioDeviceID>.size)
@@ -257,11 +211,7 @@ final class VolumeEvents {
 
   /// Returns the current mute state for one output device.
   private func readMutedState(for deviceID: AudioDeviceID) -> Bool {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyMute,
-      mScope: kAudioDevicePropertyScopeOutput,
-      mElement: kAudioObjectPropertyElementMain
-    )
+    var address = muteAddress()
 
     var muted = UInt32(0)
     var size = UInt32(MemoryLayout<UInt32>.size)
@@ -280,5 +230,62 @@ final class VolumeEvents {
     }
 
     return muted != 0
+  }
+
+  /// Returns the CoreAudio address for the default output device property.
+  private func defaultOutputDeviceAddress() -> AudioObjectPropertyAddress {
+    AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+  }
+
+  /// Returns the CoreAudio address for output volume.
+  private func volumeAddress() -> AudioObjectPropertyAddress {
+    AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyVolumeScalar,
+      mScope: kAudioDevicePropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
+  }
+
+  /// Returns the CoreAudio address for output mute state.
+  private func muteAddress() -> AudioObjectPropertyAddress {
+    AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyMute,
+      mScope: kAudioDevicePropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
+  }
+
+  /// Installs one property listener block on one audio object.
+  private func addListener(
+    objectID: AudioObjectID,
+    address: AudioObjectPropertyAddress,
+    block: @escaping AudioObjectPropertyListenerBlock
+  ) -> OSStatus {
+    var address = address
+    return AudioObjectAddPropertyListenerBlock(
+      objectID,
+      &address,
+      DispatchQueue.main,
+      block
+    )
+  }
+
+  /// Removes one property listener block from one audio object.
+  private func removeListener(
+    objectID: AudioObjectID,
+    address: AudioObjectPropertyAddress,
+    block: @escaping AudioObjectPropertyListenerBlock
+  ) -> OSStatus {
+    var address = address
+    return AudioObjectRemovePropertyListenerBlock(
+      objectID,
+      &address,
+      DispatchQueue.main,
+      block
+    )
   }
 }
