@@ -175,10 +175,7 @@ public final class LineSocketServerTransport<Subscriber, Request: Decodable, Mes
       }
 
       debugLog("\(serverLabel) accepted client fd=\(clientFD)")
-
-      DispatchQueue.global(qos: .utility).async {
-        self.handleClient(clientFD, handleRequest: handleRequest)
-      }
+      handleClient(clientFD, handleRequest: handleRequest)
     }
   }
 
