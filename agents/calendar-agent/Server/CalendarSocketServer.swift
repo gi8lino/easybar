@@ -4,259 +4,85 @@ import Foundation
 
 final class CalendarSocketServer {
   private struct Subscriber {
-    let fd: Int32
     let query: CalendarAgentQuery
   }
 
-  private let socketPath: String
-  private let stateLock = NSLock()
-  private let subscribersLock = NSLock()
-  private let encoder = JSONEncoder()
-  private let decoder = JSONDecoder()
-
   private var provider: CalendarSnapshotProvider?
-  private var listenFD: Int32 = -1
-  private var running = false
-  private var subscribers: [Int32: Subscriber] = [:]
+  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   init(socketPath: String) {
-    self.socketPath = socketPath
-    encoder.dateEncodingStrategy = .iso8601
-    decoder.dateDecodingStrategy = .iso8601
+    transport = LineSocketServerTransport(
+      socketPath: socketPath,
+      serverLabel: "calendar agent",
+      debugLog: AgentLogger.debug,
+      infoLog: AgentLogger.info,
+      warnLog: AgentLogger.warn,
+      errorLog: AgentLogger.error
+    )
   }
 
   func start(provider: CalendarSnapshotProvider) {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-
-    guard !running else { return }
-
     self.provider = provider
-
-    let socketDirectory = socketDirectoryPath(for: socketPath)
-
-    do {
-      try FileManager.default.createDirectory(
-        at: URL(fileURLWithPath: socketDirectory, isDirectory: true),
-        withIntermediateDirectories: true
-      )
-    } catch {
-      AgentLogger.error(
-        "failed to create calendar socket directory at \(socketDirectory): \(error)")
-      return
-    }
-
-    unlink(socketPath)
-
-    listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard listenFD >= 0 else {
-      AgentLogger.error("failed to create calendar agent socket")
-      return
-    }
-
-    var addr = makeSockAddrUn(path: socketPath)
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let bindResult = withUnsafePointer(to: &addr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        bind(self.listenFD, $0, addrLen)
-      }
-    }
-
-    guard bindResult == 0 else {
-      AgentLogger.error("failed to bind calendar agent socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
-
-    guard listen(listenFD, 8) == 0 else {
-      AgentLogger.error("failed to listen on calendar agent socket at \(socketPath)")
-      close(listenFD)
-      listenFD = -1
-      return
-    }
-
-    running = true
-    AgentLogger.info("calendar agent socket listening on \(socketPath)")
-
-    DispatchQueue.global(qos: .userInitiated).async {
-      self.acceptLoop()
+    transport.start { [weak self] clientFD, request in
+      self?.handleClient(clientFD, request: request)
     }
   }
 
   func stop() {
-    stateLock.lock()
-    let currentListenFD = listenFD
-    let wasRunning = running
-    running = false
-    listenFD = -1
-    stateLock.unlock()
-
-    guard wasRunning else { return }
-
-    if currentListenFD >= 0 {
-      shutdown(currentListenFD, SHUT_RDWR)
-      close(currentListenFD)
-    }
-
-    subscribersLock.lock()
-    let currentSubscribers = subscribers.values
-    subscribers.removeAll()
-    subscribersLock.unlock()
-
-    for subscriber in currentSubscribers {
-      shutdown(subscriber.fd, SHUT_RDWR)
-      close(subscriber.fd)
-    }
-
-    unlink(socketPath)
+    transport.stop()
   }
 
   func broadcastSnapshots() {
     guard let provider else { return }
 
-    subscribersLock.lock()
-    let currentSubscribers = Array(subscribers.values)
-    subscribersLock.unlock()
-
-    for subscriber in currentSubscribers {
-      let snapshot = provider.snapshot(for: subscriber.query)
+    for subscriber in transport.subscribersSnapshot() {
+      let snapshot = provider.snapshot(for: subscriber.subscriber.query)
       let message = CalendarAgentMessage(kind: .snapshot, snapshot: snapshot)
 
-      if !send(message, to: subscriber.fd) {
-        removeSubscriber(fd: subscriber.fd)
+      if !transport.send(message, to: subscriber.fd) {
+        _ = transport.removeSubscriber(fd: subscriber.fd)
       }
     }
   }
 
-  private func acceptLoop() {
-    while isRunning() {
-      let clientFD = accept(listenFD, nil, nil)
-      if clientFD < 0 {
-        if !isRunning() {
-          break
-        }
-        continue
-      }
-
-      AgentLogger.debug("calendar agent accepted client fd=\(clientFD)")
-
-      DispatchQueue.global(qos: .utility).async {
-        self.handleClient(clientFD)
-      }
-    }
-  }
-
-  private func handleClient(_ clientFD: Int32) {
-    guard let request = readRequest(from: clientFD) else {
-      close(clientFD)
-      return
-    }
-
+  private func handleClient(_ clientFD: Int32, request: CalendarAgentRequest) {
     AgentLogger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
-      _ = send(CalendarAgentMessage(kind: .pong), to: clientFD)
+      _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
       close(clientFD)
 
     case .fetch:
       guard let provider, let query = request.query else {
-        _ = send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+        _ = transport.send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
         close(clientFD)
         return
       }
 
       let snapshot = provider.snapshot(for: query)
-      _ = send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
+      _ = transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
       close(clientFD)
 
     case .subscribe:
       guard let provider, let query = request.query else {
-        _ = send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+        _ = transport.send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
         close(clientFD)
         return
       }
 
-      subscribersLock.lock()
-      subscribers[clientFD] = Subscriber(fd: clientFD, query: query)
-      subscribersLock.unlock()
+      transport.addSubscriber(Subscriber(query: query), for: clientFD)
       AgentLogger.info("calendar agent subscriber added fd=\(clientFD)")
 
-      if !send(CalendarAgentMessage(kind: .subscribed), to: clientFD) {
-        removeSubscriber(fd: clientFD)
+      if !transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) {
+        _ = transport.removeSubscriber(fd: clientFD)
         return
       }
 
       let snapshot = provider.snapshot(for: query)
-      if !send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) {
-        removeSubscriber(fd: clientFD)
+      if !transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) {
+        _ = transport.removeSubscriber(fd: clientFD)
       }
     }
-  }
-
-  private func readRequest(from fd: Int32) -> CalendarAgentRequest? {
-    var buffer = [UInt8](repeating: 0, count: 4096)
-    let count = read(fd, &buffer, buffer.count)
-
-    guard count > 0 else { return nil }
-
-    let raw = String(decoding: buffer.prefix(count), as: UTF8.self)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard let data = raw.data(using: .utf8) else { return nil }
-
-    do {
-      return try decoder.decode(CalendarAgentRequest.self, from: data)
-    } catch {
-      AgentLogger.warn("failed to decode calendar agent request: \(error)")
-      return nil
-    }
-  }
-
-  private func send(_ message: CalendarAgentMessage, to fd: Int32) -> Bool {
-    do {
-      let data = try encoder.encode(message) + Data("\n".utf8)
-      return sendAll(fd, data)
-    } catch {
-      AgentLogger.warn("failed to encode calendar agent message: \(error)")
-      return false
-    }
-  }
-
-  private func sendAll(_ fd: Int32, _ data: Data) -> Bool {
-    data.withUnsafeBytes { rawBuffer in
-      guard let base = rawBuffer.baseAddress else { return false }
-
-      var sent = 0
-      while sent < data.count {
-        let written = write(fd, base.advanced(by: sent), data.count - sent)
-        if written <= 0 {
-          return false
-        }
-        sent += written
-      }
-
-      return true
-    }
-  }
-
-  private func removeSubscriber(fd: Int32) {
-    subscribersLock.lock()
-    let existing = subscribers.removeValue(forKey: fd)
-    subscribersLock.unlock()
-
-    guard existing != nil else { return }
-    AgentLogger.info("calendar agent subscriber removed fd=\(fd)")
-
-    shutdown(fd, SHUT_RDWR)
-    close(fd)
-  }
-
-  private func isRunning() -> Bool {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-    return running
   }
 }

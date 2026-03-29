@@ -33,17 +33,20 @@ final class AppController {
     let bundle = Bundle.main
     let info = bundle.infoDictionary ?? [:]
 
-    AgentLogger.info(
-      "calendar agent startup version=\(info["CFBundleShortVersionString"] as? String ?? "unknown") build=\(info["CFBundleVersion"] as? String ?? "unknown") bundle_id=\(bundle.bundleIdentifier ?? "unknown") pid=\(ProcessInfo.processInfo.processIdentifier)"
-    )
-    AgentLogger.info("app bundle_path=\(bundle.bundleURL.path)")
-    AgentLogger.info("app executable=\(bundle.executableURL?.path ?? "unknown")")
-    AgentLogger.info(
-      "config path=\(runtimeConfig.configPath)"
-    )
-    AgentLogger.info("socket path=\(runtimeConfig.calendarAgentSocketPath)")
-    AgentLogger.info(
-      "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+    logProcessStartup(
+      snapshot: ProcessStartupSnapshot(
+        processName: "calendar agent",
+        bundlePath: bundle.bundleURL.path,
+        executablePath: bundle.executableURL?.path ?? "unknown",
+        version: info["CFBundleShortVersionString"] as? String ?? "unknown",
+        build: info["CFBundleVersion"] as? String ?? "unknown",
+        bundleIdentifier: bundle.bundleIdentifier ?? "unknown",
+        processIdentifier: ProcessInfo.processInfo.processIdentifier,
+        configPath: runtimeConfig.configPath,
+        socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
+        loggingSummary: "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+      ),
+      write: AgentLogger.info
     )
     AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
   }
