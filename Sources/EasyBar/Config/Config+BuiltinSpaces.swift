@@ -191,9 +191,9 @@ extension Config {
   }
 }
 
-private extension Config {
+extension Config {
   /// Parses the spaces layout block.
-  func parseSpacesLayout(
+  fileprivate func parseSpacesLayout(
     from table: TOMLTable,
     fallback: SpacesBuiltinConfig.Layout
   ) throws -> SpacesBuiltinConfig.Layout {
@@ -260,7 +260,7 @@ private extension Config {
   }
 
   /// Parses the spaces text block.
-  func parseSpacesText(
+  fileprivate func parseSpacesText(
     from table: TOMLTable,
     fallback: SpacesBuiltinConfig.Text
   ) throws -> SpacesBuiltinConfig.Text {
@@ -281,7 +281,7 @@ private extension Config {
   }
 
   /// Parses the spaces icons block.
-  func parseSpacesIcons(
+  fileprivate func parseSpacesIcons(
     from table: TOMLTable,
     fallback: SpacesBuiltinConfig.Icons
   ) throws -> SpacesBuiltinConfig.Icons {
@@ -310,7 +310,7 @@ private extension Config {
   }
 
   /// Parses the spaces colors block.
-  func parseSpacesColors(
+  fileprivate func parseSpacesColors(
     from table: TOMLTable,
     fallback: SpacesBuiltinConfig.Colors
   ) throws -> SpacesBuiltinConfig.Colors {

@@ -490,8 +490,12 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     let tunnelInterfaces = allInterfaces.filter(isTunnelInterface)
     let primaryInterfaceIsTunnel = primaryInterface.map(isTunnelInterface) ?? false
     let activeTunnelInterface = primaryInterfaceIsTunnel ? primaryInterface : nil
-    let primaryIPv4 = primaryServiceID.flatMap { raw["State:/Network/Service/\($0)/IPv4"] as? [String: Any] }
-    let primaryIPv6 = primaryServiceID.flatMap { raw["State:/Network/Service/\($0)/IPv6"] as? [String: Any] }
+    let primaryIPv4 = primaryServiceID.flatMap {
+      raw["State:/Network/Service/\($0)/IPv4"] as? [String: Any]
+    }
+    let primaryIPv6 = primaryServiceID.flatMap {
+      raw["State:/Network/Service/\($0)/IPv6"] as? [String: Any]
+    }
     let ipv4Address = firstString(in: primaryIPv4?["Addresses"])
     let ipv6Address = firstString(in: primaryIPv6?["Addresses"])
     let defaultGateway =

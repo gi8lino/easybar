@@ -197,7 +197,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Installs the bundled Lua editor stub into the active widget directory.
   private func installWidgetEditorStub() {
-    guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua") else {
+    guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua")
+    else {
       Logger.warn("easybar_api.lua not found in bundle resources")
       return
     }

@@ -163,7 +163,8 @@ final class Config {
         networkAgentEnabled: networkAgentEnabled,
         networkAgentSocketPath: networkAgentSocketPath,
         networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
-        networkAgentAllowUnauthorizedNonSensitiveFields: networkAgentAllowUnauthorizedNonSensitiveFields
+        networkAgentAllowUnauthorizedNonSensitiveFields:
+          networkAgentAllowUnauthorizedNonSensitiveFields
       ),
       bar: .init(
         height: barHeight,

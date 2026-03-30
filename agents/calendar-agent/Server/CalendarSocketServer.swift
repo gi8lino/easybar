@@ -8,7 +8,8 @@ final class CalendarSocketServer {
   }
 
   private var provider: CalendarSnapshotProvider?
-  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+  private let transport:
+    LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
   init(socketPath: String) {
@@ -60,7 +61,8 @@ final class CalendarSocketServer {
 
     case .fetch:
       guard let provider, let query = request.query else {
-        _ = transport.send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
         close(clientFD)
         return
       }
@@ -71,7 +73,8 @@ final class CalendarSocketServer {
 
     case .subscribe:
       guard let provider, let query = request.query else {
-        _ = transport.send(CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
         close(clientFD)
         return
       }
@@ -86,7 +89,8 @@ final class CalendarSocketServer {
       }
 
       let snapshot = provider.snapshot(for: query)
-      guard transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD) else {
+      guard transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
+      else {
         _ = transport.removeSubscriber(fd: clientFD)
         return
       }

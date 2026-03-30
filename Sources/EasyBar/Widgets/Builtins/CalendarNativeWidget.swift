@@ -55,7 +55,7 @@ final class CalendarNativeWidget: NativeWidget {
 
 // MARK: - Snapshot
 
-private extension CalendarNativeWidget {
+extension CalendarNativeWidget {
   /// Returns the current calendar render snapshot.
   private func currentSnapshot() -> Snapshot {
     Snapshot(
@@ -67,7 +67,7 @@ private extension CalendarNativeWidget {
 
 // MARK: - Node Building
 
-private extension CalendarNativeWidget {
+extension CalendarNativeWidget {
   /// Builds nodes for the selected anchor layout.
   private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     switch snapshot.config.layout {
@@ -234,17 +234,17 @@ private extension CalendarNativeWidget {
 
 // MARK: - Timer And Formatting
 
-private extension CalendarNativeWidget {
+extension CalendarNativeWidget {
 
   /// Starts the periodic date refresh timer.
-  func startTimer() {
+  fileprivate func startTimer() {
     timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
       self?.publish()
     }
   }
 
   /// Formats one date string.
-  func formatDate(_ date: Date, format: String) -> String {
+  fileprivate func formatDate(_ date: Date, format: String) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = format
     return formatter.string(from: date)

@@ -334,7 +334,8 @@ private func parseSocketArgument(
 }
 
 /// Connects to the EasyBar socket and sends one IPC command.
-private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws {
+private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws
+{
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)

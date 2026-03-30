@@ -185,9 +185,9 @@ extension Config {
   }
 }
 
-private extension Config {
+extension Config {
   /// Parses the battery content and severity color settings.
-  func parseBatteryContent(
+  fileprivate func parseBatteryContent(
     from table: TOMLTable,
     colorsTable: TOMLTable,
     fallback: BatteryBuiltinConfig.Content
@@ -222,7 +222,7 @@ private extension Config {
   }
 
   /// Parses the battery severity color settings.
-  func parseBatteryColors(
+  fileprivate func parseBatteryColors(
     from table: TOMLTable,
     fallback: BuiltinBatteryColors
   ) throws -> BuiltinBatteryColors {
@@ -241,7 +241,7 @@ private extension Config {
   }
 
   /// Parses the battery tooltip popup settings.
-  func parseBatteryPopup(
+  fileprivate func parseBatteryPopup(
     from table: TOMLTable,
     fallback: BuiltinBatteryPopup
   ) throws -> BuiltinBatteryPopup {

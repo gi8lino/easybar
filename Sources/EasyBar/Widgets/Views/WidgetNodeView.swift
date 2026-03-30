@@ -30,10 +30,10 @@ struct WidgetNodeView: View {
 
 // MARK: - Top-Level Rendering
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Returns the rendered view for the current node kind.
   @ViewBuilder
-  var renderedNodeView: some View {
+  fileprivate var renderedNodeView: some View {
     if node.kind.isRowLikeContainer {
       rowOrGroupView
     } else if node.kind.isCustomRenderedKind {
@@ -51,7 +51,7 @@ private extension WidgetNodeView {
 
   /// Returns the custom-rendered view for the current node kind.
   @ViewBuilder
-  var customRenderedNodeView: some View {
+  fileprivate var customRenderedNodeView: some View {
     switch node.kind {
     case .spaces:
       SpacesWidgetView()
@@ -63,7 +63,7 @@ private extension WidgetNodeView {
 
   /// Returns the dedicated container view for the current node kind.
   @ViewBuilder
-  var dedicatedContainerNodeView: some View {
+  fileprivate var dedicatedContainerNodeView: some View {
     switch node.kind {
     case .column:
       VStack(alignment: .leading, spacing: stackSpacing) {
@@ -81,7 +81,7 @@ private extension WidgetNodeView {
 
   /// Returns the interactive view for the current node kind.
   @ViewBuilder
-  var interactiveNodeView: some View {
+  fileprivate var interactiveNodeView: some View {
     switch node.kind {
     case .slider:
       styledMouseContent(sliderView)
@@ -96,7 +96,7 @@ private extension WidgetNodeView {
     }
   }
 
-  var rowOrGroupView: some View {
+  fileprivate var rowOrGroupView: some View {
     Group {
       if node.isCalendarRoot {
         nativeCalendarAnchorView {
@@ -110,7 +110,7 @@ private extension WidgetNodeView {
     }
   }
 
-  var itemView: some View {
+  fileprivate var itemView: some View {
     if hasPopupChildren {
       return AnyView(popupItemSurface(itemContent))
     }
@@ -118,7 +118,7 @@ private extension WidgetNodeView {
     return AnyView(styledNodeSurface(itemContent))
   }
 
-  func nativeCalendarAnchorView<Content: View>(
+  fileprivate func nativeCalendarAnchorView<Content: View>(
     @ViewBuilder content: () -> Content
   ) -> some View {
     content()
@@ -132,7 +132,7 @@ private extension WidgetNodeView {
       }
   }
 
-  var popupAnchor: some View {
+  fileprivate var popupAnchor: some View {
     let content = Group {
       if !hasAnchorChildren {
         itemContent
@@ -148,7 +148,7 @@ private extension WidgetNodeView {
     return popupAnchorSurface(content)
   }
 
-  var popupContent: some View {
+  fileprivate var popupContent: some View {
     VStack(alignment: .leading, spacing: stackSpacing) {
       ForEach(popupChildren) { child in
         WidgetNodeView(node: child)
@@ -161,9 +161,9 @@ private extension WidgetNodeView {
 
 // MARK: - Node Content
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Returns the row content for a plain item.
-  var itemContent: some View {
+  fileprivate var itemContent: some View {
     HStack(spacing: itemSpacing) {
       imageView
       iconText
@@ -172,7 +172,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns the slider row for the current node.
-  var sliderView: some View {
+  fileprivate var sliderView: some View {
     HStack(spacing: stackSpacing) {
       iconText
       labelText
@@ -190,7 +190,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns the progress-slider row for the current node.
-  var progressSliderView: some View {
+  fileprivate var progressSliderView: some View {
     HStack(spacing: stackSpacing) {
       iconText
       labelText
@@ -208,7 +208,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns the progress row for the current node.
-  var progressView: some View {
+  fileprivate var progressView: some View {
     HStack(spacing: stackSpacing) {
       iconText
       labelText
@@ -224,7 +224,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns the sparkline row for the current node.
-  var sparklineView: some View {
+  fileprivate var sparklineView: some View {
     HStack(spacing: stackSpacing) {
       iconText
       labelText
@@ -241,14 +241,14 @@ private extension WidgetNodeView {
 
 // MARK: - Popup State
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Returns the resolved node color.
-  var nodeColor: Color {
+  fileprivate var nodeColor: Color {
     color(node.color)
   }
 
   /// Resolves one optional hex color.
-  func color(_ hex: String?) -> Color {
+  fileprivate func color(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else {
       return Theme.defaultTextColor
     }
@@ -257,26 +257,26 @@ private extension WidgetNodeView {
   }
 
   /// Converts one optional font size into a SwiftUI font.
-  func font(size: Double?) -> Font? {
+  fileprivate func font(size: Double?) -> Font? {
     guard let size else { return nil }
     return .system(size: CGFloat(size))
   }
 
   /// Converts one optional scalar into CGFloat.
-  func cgFloat(_ value: Double?) -> CGFloat? {
+  fileprivate func cgFloat(_ value: Double?) -> CGFloat? {
     guard let value else { return nil }
     return CGFloat(value)
   }
 
   /// Schedules one delayed popup-close check.
-  func schedulePopupCloseCheck() {
+  fileprivate func schedulePopupCloseCheck() {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
       closePopupIfIdle()
     }
   }
 
   /// Handles hover changes on the popup anchor.
-  func handleAnchorHover(_ hovering: Bool) {
+  fileprivate func handleAnchorHover(_ hovering: Bool) {
     anchorHovered = hovering
 
     if hovering {
@@ -288,7 +288,7 @@ private extension WidgetNodeView {
   }
 
   /// Handles hover changes on the popup content.
-  func handlePopupHover(_ hovering: Bool) {
+  fileprivate func handlePopupHover(_ hovering: Bool) {
     popupHovered = hovering
 
     guard !hovering else { return }
@@ -296,14 +296,14 @@ private extension WidgetNodeView {
   }
 
   /// Closes the popup when neither anchor nor popup is hovered.
-  func closePopupIfIdle() {
+  fileprivate func closePopupIfIdle() {
     guard !anchorHovered else { return }
     guard !popupHovered else { return }
     popupPresented = false
   }
 
   /// Updates the AppKit popup panel for popup-capable nodes.
-  func updatePopupPanel(isPresented: Bool) {
+  fileprivate func updatePopupPanel(isPresented: Bool) {
     guard node.isCalendarRoot || node.kind == .popup || hasPopupChildren else { return }
     popupPanel.update(isPresented: isPresented, content: popupPanelContent)
   }
@@ -312,9 +312,9 @@ private extension WidgetNodeView {
 
 // MARK: - Layout Data
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Returns the row of child nodes.
-  var childRow: some View {
+  fileprivate var childRow: some View {
     HStack(spacing: stackSpacing) {
       ForEach(children) { child in
         WidgetNodeView(node: child)
@@ -323,97 +323,97 @@ private extension WidgetNodeView {
   }
 
   /// Returns the default stack spacing for this node.
-  var stackSpacing: CGFloat {
+  fileprivate var stackSpacing: CGFloat {
     CGFloat(node.spacing ?? 6)
   }
 
   /// Returns the default item spacing for this node.
-  var itemSpacing: CGFloat {
+  fileprivate var itemSpacing: CGFloat {
     CGFloat(node.spacing ?? 4)
   }
 
   /// Returns the current scalar value.
-  var currentValue: Double {
+  fileprivate var currentValue: Double {
     node.value ?? 0
   }
 
   /// Returns the minimum scalar value.
-  var minValue: Double {
+  fileprivate var minValue: Double {
     node.min ?? 0
   }
 
   /// Returns the maximum scalar value.
-  var maxValue: Double {
+  fileprivate var maxValue: Double {
     node.max ?? 100
   }
 
   /// Returns the slider step value.
-  var stepValue: Double {
+  fileprivate var stepValue: Double {
     node.step ?? 1
   }
 
   /// Returns the progress width.
-  var progressWidth: CGFloat {
+  fileprivate var progressWidth: CGFloat {
     CGFloat(node.width ?? 64)
   }
 
   /// Returns the progress height.
-  var progressHeight: CGFloat {
+  fileprivate var progressHeight: CGFloat {
     CGFloat(node.height ?? 8)
   }
 
   /// Returns the sparkline width.
-  var sparklineWidth: CGFloat {
+  fileprivate var sparklineWidth: CGFloat {
     CGFloat(node.width ?? 64)
   }
 
   /// Returns the sparkline height.
-  var sparklineHeight: CGFloat {
+  fileprivate var sparklineHeight: CGFloat {
     CGFloat(node.height ?? 18)
   }
 
   /// Returns the sparkline line width.
-  var sparklineLineWidth: CGFloat {
+  fileprivate var sparklineLineWidth: CGFloat {
     CGFloat(node.lineWidth ?? 1.5)
   }
 
   /// Returns the converted node width when present.
-  var nodeWidth: CGFloat? {
+  fileprivate var nodeWidth: CGFloat? {
     cgFloat(node.width)
   }
 
   /// Returns the non-anchor children for this node.
-  var children: [WidgetNodeState] {
+  fileprivate var children: [WidgetNodeState] {
     store.children(of: node.id)
   }
 
   /// Returns the popup anchor children for this node.
-  var anchorChildren: [WidgetNodeState] {
+  fileprivate var anchorChildren: [WidgetNodeState] {
     store.anchorChildren(of: node.id)
   }
 
   /// Returns the popup content children for this node.
-  var popupChildren: [WidgetNodeState] {
+  fileprivate var popupChildren: [WidgetNodeState] {
     store.popupChildren(of: node.id)
   }
 
   /// Returns whether this node has popup anchor children.
-  var hasAnchorChildren: Bool {
+  fileprivate var hasAnchorChildren: Bool {
     !anchorChildren.isEmpty
   }
 
   /// Returns whether this node has popup content children.
-  var hasPopupChildren: Bool {
+  fileprivate var hasPopupChildren: Bool {
     !popupChildren.isEmpty
   }
 
   /// Returns the shared popup hover region.
-  var popupHoverBackground: some View {
+  fileprivate var popupHoverBackground: some View {
     PopupHoverRegion { hovering in handlePopupHover(hovering) }
   }
 
   /// Returns the shared popup content hosted in the AppKit panel.
-  var popupPanelContent: AnyView {
+  fileprivate var popupPanelContent: AnyView {
     if node.isCalendarRoot {
       return AnyView(
         NativeCalendarPopupView()
@@ -428,59 +428,59 @@ private extension WidgetNodeView {
   }
 
   /// Returns the shared node style modifier.
-  var nodeStyle: WidgetNodeStyle {
+  fileprivate var nodeStyle: WidgetNodeStyle {
     WidgetNodeStyle(node: node)
   }
 }
 
 // MARK: - Image And Text
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Returns whether this node has a non-empty image path.
-  var hasImage: Bool {
+  fileprivate var hasImage: Bool {
     guard let imagePath = node.imagePath else { return false }
     return !imagePath.isEmpty
   }
 
   /// Returns whether this node has a non-empty icon.
-  var hasIcon: Bool {
+  fileprivate var hasIcon: Bool {
     !node.icon.isEmpty
   }
 
   /// Returns whether this node has a non-empty label.
-  var hasLabel: Bool {
+  fileprivate var hasLabel: Bool {
     !node.text.isEmpty
   }
 
   /// Returns the resolved icon color.
-  var iconResolvedColor: Color {
+  fileprivate var iconResolvedColor: Color {
     color(node.iconColor ?? node.color)
   }
 
   /// Returns the resolved label color.
-  var labelResolvedColor: Color {
+  fileprivate var labelResolvedColor: Color {
     color(node.labelColor ?? node.color)
   }
 
   /// Returns the resolved icon font.
-  var iconResolvedFont: Font? {
+  fileprivate var iconResolvedFont: Font? {
     font(size: node.iconFontSize ?? node.fontSize)
   }
 
   /// Returns the resolved label font.
-  var labelResolvedFont: Font? {
+  fileprivate var labelResolvedFont: Font? {
     font(size: node.labelFontSize ?? node.fontSize)
   }
 
   @ViewBuilder
   /// Returns the optional image view.
-  var imageView: some View {
+  fileprivate var imageView: some View {
     renderedImageView()
   }
 
   @ViewBuilder
   /// Returns the optional icon text.
-  var iconText: some View {
+  fileprivate var iconText: some View {
     if hasIcon {
       Text(node.icon)
         .font(iconResolvedFont)
@@ -490,7 +490,7 @@ private extension WidgetNodeView {
 
   @ViewBuilder
   /// Returns the optional label text.
-  var labelText: some View {
+  fileprivate var labelText: some View {
     if hasLabel {
       Text(node.text)
         .font(labelResolvedFont)
@@ -499,7 +499,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns a templated image when tinting is enabled.
-  func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
+  fileprivate func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
     guard customImage != nil,
       let tint = node.iconColor ?? node.color,
       !tint.isEmpty
@@ -513,23 +513,23 @@ private extension WidgetNodeView {
   }
 
   /// Returns the rendered image size.
-  var imageSize: CGFloat {
+  fileprivate var imageSize: CGFloat {
     CGFloat(node.imageSize ?? 14)
   }
 
   /// Returns the rendered image corner radius.
-  var imageCornerRadius: CGFloat {
+  fileprivate var imageCornerRadius: CGFloat {
     CGFloat(node.imageCornerRadius ?? 4)
   }
 
   /// Resolves the image file or falls back to the file icon.
-  func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
+  fileprivate func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
     customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
   }
 
   /// Returns the rendered image or nothing when no image path exists.
   @ViewBuilder
-  func renderedImageView() -> some View {
+  fileprivate func renderedImageView() -> some View {
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)
       let image = resolvedImage(imagePath: imagePath, customImage: customImage)
@@ -548,7 +548,7 @@ private extension WidgetNodeView {
   }
 
   /// Builds the shared base image view.
-  func imageBaseView(
+  fileprivate func imageBaseView(
     image: NSImage,
     renderingMode: Image.TemplateRenderingMode
   ) -> some View {
@@ -562,9 +562,9 @@ private extension WidgetNodeView {
 
 // MARK: - Interaction
 
-private extension WidgetNodeView {
+extension WidgetNodeView {
   /// Applies style and mouse handling to one node surface.
-  func styledNodeSurface<Content: View>(_ content: Content) -> some View {
+  fileprivate func styledNodeSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
         .modifier(nodeStyle)
@@ -574,7 +574,7 @@ private extension WidgetNodeView {
   }
 
   /// Applies style and gesture-based mouse handling to one control surface.
-  func styledMouseContent<Content: View>(_ content: Content) -> some View {
+  fileprivate func styledMouseContent<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
         .modifier(nodeStyle)
@@ -594,7 +594,7 @@ private extension WidgetNodeView {
   }
 
   /// Applies popup anchor styling and mouse handling to one anchor surface.
-  func popupAnchorSurface<Content: View>(_ content: Content) -> some View {
+  fileprivate func popupAnchorSurface<Content: View>(_ content: Content) -> some View {
     let base = AnyView(content.foregroundStyle(nodeColor))
     let surfaced = popupAnchorInteractiveSurface(base)
 
@@ -610,7 +610,7 @@ private extension WidgetNodeView {
   }
 
   /// Applies popup behavior to a normal styled item surface.
-  func popupItemSurface<Content: View>(_ content: Content) -> some View {
+  fileprivate func popupItemSurface<Content: View>(_ content: Content) -> some View {
     content
       .modifier(nodeStyle)
       .contentShape(Rectangle())
@@ -624,7 +624,7 @@ private extension WidgetNodeView {
   }
 
   /// Returns a geometry-sized event surface for the current node.
-  func nodeEventSurface(tracksHover: Bool = true) -> some View {
+  fileprivate func nodeEventSurface(tracksHover: Bool = true) -> some View {
     GeometryReader { proxy in
       // Match the final rendered node bounds instead of the icon glyph bounds.
       WidgetMouseView(
@@ -639,7 +639,7 @@ private extension WidgetNodeView {
 
   /// Returns the scroll-only overlay when the node subscribed to mouse.scrolled.
   @ViewBuilder
-  var scrollOverlay: some View {
+  fileprivate var scrollOverlay: some View {
     if node.isMouseScrollInteractive {
       nodeEventSurface(tracksHover: false)
     }
@@ -647,14 +647,15 @@ private extension WidgetNodeView {
 
   /// Returns the full-frame mouse overlay for non-control nodes.
   @ViewBuilder
-  var nodeMouseOverlay: some View {
-    if node.isMouseHoverInteractive || node.isMouseClickInteractive || node.isMouseScrollInteractive {
+  fileprivate var nodeMouseOverlay: some View {
+    if node.isMouseHoverInteractive || node.isMouseClickInteractive || node.isMouseScrollInteractive
+    {
       nodeEventSurface(tracksHover: node.isMouseHoverInteractive)
     }
   }
 
   /// Applies click handling for popup anchors while leaving hover to SwiftUI.
-  func popupAnchorInteractiveSurface<Content: View>(_ content: Content) -> some View {
+  fileprivate func popupAnchorInteractiveSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
         .modifier(nodeStyle)
@@ -665,20 +666,22 @@ private extension WidgetNodeView {
 
   /// Returns the full-frame mouse overlay for popup anchors.
   @ViewBuilder
-  var popupAnchorMouseOverlay: some View {
-    if node.isMouseClickInteractive || node.isMouseScrollInteractive || hasPopupChildren || node.kind == .popup {
+  fileprivate var popupAnchorMouseOverlay: some View {
+    if node.isMouseClickInteractive || node.isMouseScrollInteractive || hasPopupChildren
+      || node.kind == .popup
+    {
       nodeEventSurface(tracksHover: true)
     }
   }
 
   /// Emits one node-scoped hover event for control-backed nodes.
-  func emitNodeHoverEvent(_ hovering: Bool) {
+  fileprivate func emitNodeHoverEvent(_ hovering: Bool) {
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
     EventBus.shared.emitWidgetEvent(event, widgetID: node.root, targetWidgetID: node.id)
   }
 
   /// Emits one node-scoped click event for control-backed nodes.
-  func emitNodeClickEvent() {
+  fileprivate func emitNodeClickEvent() {
     EventBus.shared.emitWidgetEvent(
       .mouseClicked,
       widgetID: node.root,

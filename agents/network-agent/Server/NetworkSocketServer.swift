@@ -9,7 +9,8 @@ final class NetworkSocketServer {
 
   private var provider: NetworkSnapshotProvider?
   private let allowUnauthorizedNonSensitiveFields: Bool
-  private let transport: LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
+  private let transport:
+    LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
   init(socketPath: String, allowUnauthorizedNonSensitiveFields: Bool) {
@@ -42,7 +43,9 @@ final class NetworkSocketServer {
     guard let provider else { return }
 
     for subscriber in transport.subscribersSnapshot() {
-      guard let values = responseFields(for: subscriber.subscriber.fields, provider: provider).fields else {
+      guard
+        let values = responseFields(for: subscriber.subscriber.fields, provider: provider).fields
+      else {
         continue
       }
       let message = NetworkAgentMessage(kind: .fields, fields: values)
@@ -64,12 +67,14 @@ final class NetworkSocketServer {
 
     case .fetch:
       guard let provider else {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
+        _ = transport.send(
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
         close(clientFD)
         return
       }
       guard let fields = validatedFields(from: request) else {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+        _ = transport.send(
+          NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
         close(clientFD)
         return
       }
@@ -84,12 +89,14 @@ final class NetworkSocketServer {
 
     case .subscribe:
       guard let provider else {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
+        _ = transport.send(
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
         close(clientFD)
         return
       }
       guard let fields = validatedFields(from: request) else {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+        _ = transport.send(
+          NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
         close(clientFD)
         return
       }
@@ -105,7 +112,8 @@ final class NetworkSocketServer {
 
       let response = responseFields(for: fields, provider: provider)
       if let values = response.fields {
-        guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD) else {
+        guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
+        else {
           _ = transport.removeSubscriber(fd: clientFD)
           return
         }

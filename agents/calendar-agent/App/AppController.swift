@@ -50,7 +50,8 @@ final class AppController {
         processName: "calendar agent",
         configPath: runtimeConfig.configPath,
         socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
-        loggingSummary: "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+        loggingSummary:
+          "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
       ),
       write: AgentLogger.info
     )

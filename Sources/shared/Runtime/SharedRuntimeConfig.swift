@@ -35,7 +35,8 @@ public struct SharedRuntimeConfig {
       networkAgentEnabled: sockets.networkAgentEnabled,
       networkAgentSocketPath: sockets.networkAgentSocketPath,
       networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds,
-      networkAgentAllowUnauthorizedNonSensitiveFields: sockets.networkAgentAllowUnauthorizedNonSensitiveFields
+      networkAgentAllowUnauthorizedNonSensitiveFields: sockets
+        .networkAgentAllowUnauthorizedNonSensitiveFields
     )
   }
 }
@@ -62,8 +63,8 @@ private struct SharedSocketConfig {
 private func resolvedConfigPath() -> String {
   expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
     ?? FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".config/easybar/config.toml")
-      .path
+    .appendingPathComponent(".config/easybar/config.toml")
+    .path
 }
 
 /// Returns one parsed TOML table or an empty table when loading fails.
@@ -82,15 +83,18 @@ private func parsedConfig(at path: String) -> TOMLTable {
 private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingConfig {
   let loggingTable = toml["logging"]?.table
 
-  let enabled = boolEnvironmentValue(named: "EASYBAR_LOGGING_ENABLED")
+  let enabled =
+    boolEnvironmentValue(named: "EASYBAR_LOGGING_ENABLED")
     ?? loggingTable?["enabled"]?.bool
     ?? false
 
-  let debugEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG")
+  let debugEnabled =
+    boolEnvironmentValue(named: "EASYBAR_DEBUG")
     ?? loggingTable?["debug"]?.bool
     ?? false
 
-  let directory = expandedPath(loggingTable?["directory"]?.string)
+  let directory =
+    expandedPath(loggingTable?["directory"]?.string)
     ?? defaultLoggingDirectoryPath()
 
   return SharedLoggingConfig(
@@ -105,16 +109,19 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
   let calendarTable = toml["agents"]?["calendar"]?.table
   let networkTable = toml["agents"]?["network"]?.table
 
-  let easyBarSocketPath = expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
+  let easyBarSocketPath =
+    expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
     ?? "/tmp/EasyBar/easybar.sock"
 
   let calendarAgentEnabled = calendarTable?["enabled"]?.bool ?? true
-  let calendarAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
+  let calendarAgentSocketPath =
+    expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
     ?? expandedPath(calendarTable?["socket_path"]?.string)
     ?? defaultCalendarAgentSocketPath()
 
   let networkAgentEnabled = networkTable?["enabled"]?.bool ?? true
-  let networkAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
+  let networkAgentSocketPath =
+    expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
     ?? expandedPath(networkTable?["socket_path"]?.string)
     ?? defaultNetworkAgentSocketPath()
 

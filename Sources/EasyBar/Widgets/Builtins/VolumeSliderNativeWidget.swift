@@ -75,8 +75,8 @@ extension VolumeSliderNativeWidget {
 
 // MARK: - Event Handling
 
-private extension VolumeSliderNativeWidget {
-  func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+extension VolumeSliderNativeWidget {
+  fileprivate func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else {
       return false
     }
@@ -90,7 +90,7 @@ private extension VolumeSliderNativeWidget {
     return true
   }
 
-  func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+  fileprivate func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
     guard payload.widgetID == rootID else { return }
 
@@ -118,14 +118,14 @@ private extension VolumeSliderNativeWidget {
     }
   }
 
-  func applyExternalVolumeChange() {
+  fileprivate func applyExternalVolumeChange() {
     guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
 
     isHovered = true
     scheduleAutoHide()
   }
 
-  func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
+  fileprivate func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
     let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
 
     guard Config.shared.builtinVolume.expandToSliderOnHover else {
@@ -145,7 +145,8 @@ private extension VolumeSliderNativeWidget {
     publish()
   }
 
-  func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig) -> Double
+  fileprivate func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig)
+    -> Double
   {
     let span = max(config.maxValue - config.minValue, 0.0001)
     return (value - config.minValue) / span
@@ -171,8 +172,8 @@ private extension VolumeSliderNativeWidget {
 
 // MARK: - Node Building
 
-private extension VolumeSliderNativeWidget {
-  func makeNodes(
+extension VolumeSliderNativeWidget {
+  fileprivate func makeNodes(
     config: Config.VolumeBuiltinConfig,
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
@@ -207,7 +208,7 @@ private extension VolumeSliderNativeWidget {
   }
 
   /// Builds the expandable hover layout.
-  func makeExpandableNodes(
+  fileprivate func makeExpandableNodes(
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle,
     text: String,
@@ -273,9 +274,9 @@ private extension VolumeSliderNativeWidget {
 
 // MARK: - Hover Behavior
 
-private extension VolumeSliderNativeWidget {
+extension VolumeSliderNativeWidget {
   /// Schedules hiding the slider shortly after interaction.
-  func scheduleAutoHide() {
+  fileprivate func scheduleAutoHide() {
     cancelAutoHide()
 
     let work = DispatchWorkItem { [weak self] in
@@ -289,13 +290,13 @@ private extension VolumeSliderNativeWidget {
   }
 
   /// Cancels a pending auto-hide.
-  func cancelAutoHide() {
+  fileprivate func cancelAutoHide() {
     autoHideWorkItem?.cancel()
     autoHideWorkItem = nil
   }
 
   /// Resolves the volume icon.
-  func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
+  fileprivate func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
     -> String
   {
     if muted {
@@ -312,9 +313,9 @@ private extension VolumeSliderNativeWidget {
 
 // MARK: - CoreAudio Access
 
-private extension VolumeSliderNativeWidget {
+extension VolumeSliderNativeWidget {
   /// Reads the current system volume.
-  func readSystemVolume() -> Double {
+  fileprivate func readSystemVolume() -> Double {
     guard let deviceID = defaultOutputDeviceID() else {
       return 0
     }
@@ -345,7 +346,7 @@ private extension VolumeSliderNativeWidget {
   }
 
   /// Reads the current muted state.
-  func readMutedState() -> Bool {
+  fileprivate func readMutedState() -> Bool {
     guard let deviceID = defaultOutputDeviceID() else {
       return false
     }
@@ -376,7 +377,7 @@ private extension VolumeSliderNativeWidget {
   }
 
   /// Sets the system volume.
-  func setSystemVolume(_ volume: Double) {
+  fileprivate func setSystemVolume(_ volume: Double) {
     guard let deviceID = defaultOutputDeviceID() else { return }
 
     var address = AudioObjectPropertyAddress(
@@ -398,7 +399,7 @@ private extension VolumeSliderNativeWidget {
   }
 
   /// Returns the default output device.
-  func defaultOutputDeviceID() -> AudioDeviceID? {
+  fileprivate func defaultOutputDeviceID() -> AudioDeviceID? {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
       mScope: kAudioObjectPropertyScopeGlobal,
