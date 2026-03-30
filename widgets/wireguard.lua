@@ -38,21 +38,23 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
+local function network_agent_socket_path()
+	return os.getenv("EASYBAR_NETWORK_AGENT_SOCKET") or "/tmp/EasyBar/network-agent.sock"
+end
+
 local function get_network_fields()
-	local command = "wifisnitchctl field network.primary_interface_is_tunnel --format=lines"
+	local socket_path = quote(network_agent_socket_path())
+	local payload = quote('{"command":"fetch","fields":["network.primary_interface_is_tunnel"]}\n')
+	local command = "printf %s " .. payload .. " | nc -U " .. socket_path
 	local output = shell(command)
 
 	local result = {
 		primary_interface_is_tunnel = false,
 	}
 
-	for line in output:gmatch("[^\r\n]+") do
-		local key, value = line:match("^([^=]+)=(.*)$")
-		value = trim(value)
-
-		if key == "network.primary_interface_is_tunnel" then
-			result.primary_interface_is_tunnel = value == "true"
-		end
+	local value = output:match('"network%.primary_interface_is_tunnel"%s*:%s*"([^"]+)"')
+	if value ~= nil then
+		result.primary_interface_is_tunnel = trim(value) == "true"
 	end
 
 	return result
