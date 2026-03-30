@@ -8,10 +8,12 @@ final class NetworkSocketServer {
   }
 
   private var provider: NetworkSnapshotProvider?
+  private let allowUnauthorizedNonSensitiveFields: Bool
   private let transport: LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
-  init(socketPath: String) {
+  init(socketPath: String, allowUnauthorizedNonSensitiveFields: Bool) {
+    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "network agent",
@@ -40,7 +42,9 @@ final class NetworkSocketServer {
     guard let provider else { return }
 
     for subscriber in transport.subscribersSnapshot() {
-      let values = provider.fieldValues(for: subscriber.subscriber.fields)
+      guard let values = responseFields(for: subscriber.subscriber.fields, provider: provider).fields else {
+        continue
+      }
       let message = NetworkAgentMessage(kind: .fields, fields: values)
 
       if !transport.send(message, to: subscriber.fd) {
@@ -70,8 +74,12 @@ final class NetworkSocketServer {
         return
       }
 
-      let values = provider.fieldValues(for: fields)
-      _ = transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
+      let response = responseFields(for: fields, provider: provider)
+      if let values = response.fields {
+        _ = transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
+      } else if let message = response.errorMessage {
+        _ = transport.send(NetworkAgentMessage(kind: .error, message: message), to: clientFD)
+      }
       close(clientFD)
 
     case .subscribe:
@@ -95,10 +103,15 @@ final class NetworkSocketServer {
         return
       }
 
-      let values = provider.fieldValues(for: fields)
-      guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD) else {
+      let response = responseFields(for: fields, provider: provider)
+      if let values = response.fields {
+        guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD) else {
+          _ = transport.removeSubscriber(fd: clientFD)
+          return
+        }
+      } else if let message = response.errorMessage {
+        _ = transport.send(NetworkAgentMessage(kind: .error, message: message), to: clientFD)
         _ = transport.removeSubscriber(fd: clientFD)
-        return
       }
     }
   }
@@ -107,5 +120,38 @@ final class NetworkSocketServer {
   private func validatedFields(from request: NetworkAgentRequest) -> [NetworkAgentField]? {
     guard let fields = request.fields, !fields.isEmpty else { return nil }
     return fields
+  }
+
+  /// Returns one field response or a permission error for the current auth state.
+  private func responseFields(
+    for fields: [NetworkAgentField],
+    provider: NetworkSnapshotProvider
+  ) -> (fields: [String: String]?, errorMessage: String?) {
+    guard !provider.isLocationAuthorized() else {
+      return (provider.fieldValues(for: fields), nil)
+    }
+
+    let permissionState = provider.locationPermissionState()
+    let hasPermissionGatedFields = fields.contains(where: requiresLocationAuthorization)
+
+    guard hasPermissionGatedFields else {
+      return (provider.fieldValues(for: fields), nil)
+    }
+
+    guard allowUnauthorizedNonSensitiveFields else {
+      return (nil, "permission_denied:\(permissionState)")
+    }
+
+    let allowedFields = fields.filter { !requiresLocationAuthorization($0) }
+    guard !allowedFields.isEmpty else {
+      return (nil, "permission_denied:\(permissionState)")
+    }
+
+    return (provider.fieldValues(for: allowedFields), nil)
+  }
+
+  /// Returns whether the field should be hidden without location authorization.
+  private func requiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
+    field.rawValue.hasPrefix("wifi.")
   }
 }

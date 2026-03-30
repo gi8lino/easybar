@@ -3,6 +3,7 @@ import Foundation
 
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
+  private let permissionDeniedReconnectDelay: TimeInterval = 60
   private static let requestedFields: [NetworkAgentField] = [
     .locationAuthorized,
     .locationPermissionState,
@@ -50,6 +51,7 @@ final class NetworkAgentClient {
       Logger.info("network agent client subscribed")
 
     case .fields:
+      client.setNextReconnectDelay(nil)
       guard let fields = message.fields else { return }
       guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
         Logger.warn("network agent returned incomplete field set")
@@ -61,8 +63,31 @@ final class NetworkAgentClient {
       break
 
     case .error:
-      Logger.warn("network agent error=\(message.message ?? "unknown")")
+      handleError(message.message ?? "unknown")
     }
+  }
+
+  /// Handles one network-agent error message.
+  private func handleError(_ message: String) {
+    Logger.warn("network agent error=\(message)")
+
+    guard message.hasPrefix("permission_denied") else { return }
+    client.setNextReconnectDelay(permissionDeniedReconnectDelay)
+
+    let permissionState =
+      message.split(separator: ":", maxSplits: 1).dropFirst().first.map(String.init) ?? "denied"
+
+    publish(
+      snapshot: NetworkAgentSnapshot(
+        accessGranted: false,
+        permissionState: permissionState,
+        generatedAt: Date(),
+        ssid: nil,
+        interfaceName: nil,
+        primaryInterfaceIsTunnel: false,
+        rssi: nil
+      )
+    )
   }
 
   /// Publishes one snapshot to the shared store on the main queue.

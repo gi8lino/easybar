@@ -13,6 +13,7 @@ public struct SharedRuntimeConfig {
   public let networkAgentEnabled: Bool
   public let networkAgentSocketPath: String
   public let networkAgentRefreshIntervalSeconds: TimeInterval
+  public let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
 
   public static let current = load()
 
@@ -33,7 +34,8 @@ public struct SharedRuntimeConfig {
       calendarAgentSocketPath: sockets.calendarAgentSocketPath,
       networkAgentEnabled: sockets.networkAgentEnabled,
       networkAgentSocketPath: sockets.networkAgentSocketPath,
-      networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds
+      networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds,
+      networkAgentAllowUnauthorizedNonSensitiveFields: sockets.networkAgentAllowUnauthorizedNonSensitiveFields
     )
   }
 }
@@ -53,6 +55,7 @@ private struct SharedSocketConfig {
   let networkAgentEnabled: Bool
   let networkAgentSocketPath: String
   let networkAgentRefreshIntervalSeconds: TimeInterval
+  let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
 }
 
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
@@ -119,6 +122,9 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
     timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
     ?? networkTable?["refresh_interval_seconds"]?.double
     ?? 60
+  let networkAgentAllowUnauthorizedNonSensitiveFields =
+    networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
+    ?? false
 
   return SharedSocketConfig(
     easyBarSocketPath: easyBarSocketPath,
@@ -126,6 +132,7 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
     calendarAgentSocketPath: calendarAgentSocketPath,
     networkAgentEnabled: networkAgentEnabled,
     networkAgentSocketPath: networkAgentSocketPath,
-    networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
+    networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
+    networkAgentAllowUnauthorizedNonSensitiveFields: networkAgentAllowUnauthorizedNonSensitiveFields
   )
 }

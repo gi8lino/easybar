@@ -281,6 +281,16 @@ final class NetworkSnapshotProvider: NSObject, CLLocationManagerDelegate, CWEven
     return values
   }
 
+  /// Returns whether location access is currently authorized.
+  func isLocationAuthorized() -> Bool {
+    authState.isAuthorized()
+  }
+
+  /// Returns the current location permission label.
+  func locationPermissionState() -> String {
+    authState.permissionState()
+  }
+
   /// Handles one location authorization change.
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     let status = manager.authorizationStatus

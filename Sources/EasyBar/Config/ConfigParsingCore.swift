@@ -78,6 +78,13 @@ extension Config {
           path: "agents.network.refresh_interval_seconds"
         )
       }
+
+      if let value = network["allow_unauthorized_non_sensitive_fields"] {
+        networkAgentAllowUnauthorizedNonSensitiveFields = try requiredBool(
+          value,
+          path: "agents.network.allow_unauthorized_non_sensitive_fields"
+        )
+      }
     }
   }
 

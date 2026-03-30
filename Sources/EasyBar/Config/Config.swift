@@ -20,6 +20,7 @@ final class Config {
   var networkAgentEnabled: Bool = true
   var networkAgentSocketPath: String = ""
   var networkAgentRefreshIntervalSeconds: Double = 15
+  var networkAgentAllowUnauthorizedNonSensitiveFields: Bool = false
 
   // MARK: - Bar
 
@@ -101,6 +102,7 @@ final class Config {
     calendarAgentSocketPath = defaultCalendarAgentSocketPath()
     networkAgentSocketPath = defaultNetworkAgentSocketPath()
     networkAgentRefreshIntervalSeconds = 60
+    networkAgentAllowUnauthorizedNonSensitiveFields = false
   }
 
   /// Restores all static defaults before parsing again.
@@ -119,6 +121,7 @@ final class Config {
     calendarAgentEnabled = true
     networkAgentEnabled = true
     networkAgentRefreshIntervalSeconds = 60
+    networkAgentAllowUnauthorizedNonSensitiveFields = false
   }
 
   /// Restores bar defaults.
@@ -159,7 +162,8 @@ final class Config {
         calendarAgentSocketPath: calendarAgentSocketPath,
         networkAgentEnabled: networkAgentEnabled,
         networkAgentSocketPath: networkAgentSocketPath,
-        networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
+        networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
+        networkAgentAllowUnauthorizedNonSensitiveFields: networkAgentAllowUnauthorizedNonSensitiveFields
       ),
       bar: .init(
         height: barHeight,
@@ -203,6 +207,8 @@ final class Config {
     networkAgentEnabled = snapshot.app.networkAgentEnabled
     networkAgentSocketPath = snapshot.app.networkAgentSocketPath
     networkAgentRefreshIntervalSeconds = snapshot.app.networkAgentRefreshIntervalSeconds
+    networkAgentAllowUnauthorizedNonSensitiveFields =
+      snapshot.app.networkAgentAllowUnauthorizedNonSensitiveFields
   }
 
   /// Restores the bar config snapshot.

@@ -53,6 +53,7 @@ socket_path = "/tmp/EasyBar/calendar-agent.sock"
 enabled = true
 socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
+allow_unauthorized_non_sensitive_fields = false
 ```
 
 The agents also respect environment overrides for:
@@ -255,6 +256,8 @@ Notes:
 - `fields` is optional for `ping`
 - `fields` is required for `fetch` and `subscribe`
 - the agent returns only the requested keys
+- when location permission is denied, requests for Wi-Fi fields fail by default
+- `allow_unauthorized_non_sensitive_fields = true` allows non-Wi-Fi fields to keep working
 
 ## Network responses
 

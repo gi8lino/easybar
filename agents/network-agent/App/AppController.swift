@@ -13,7 +13,10 @@ final class AppController {
     snapshotProvider = NetworkSnapshotProvider(
       refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds
     )
-    socketServer = NetworkSocketServer(socketPath: config.networkAgentSocketPath)
+    socketServer = NetworkSocketServer(
+      socketPath: config.networkAgentSocketPath,
+      allowUnauthorizedNonSensitiveFields: config.networkAgentAllowUnauthorizedNonSensitiveFields
+    )
   }
 
   /// Returns whether the network agent should run.
@@ -52,7 +55,7 @@ final class AppController {
       snapshot: makeProcessStartupSnapshot(
         processName: "network agent",
         configPath: runtimeConfig.configPath,
-        socketSummary: "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds)",
+        socketSummary: "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(runtimeConfig.networkAgentAllowUnauthorizedNonSensitiveFields)",
         loggingSummary: "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
       ),
       write: AgentLogger.info

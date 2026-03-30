@@ -51,9 +51,17 @@ enabled = true
 
 [agents.network]
 enabled = true
+allow_unauthorized_non_sensitive_fields = false
 ```
 
 When an agent is disabled, its helper app exits without opening its socket.
+
+For the network agent:
+
+- `allow_unauthorized_non_sensitive_fields = false`
+  Wi-Fi field requests fail while location permission is denied
+- `allow_unauthorized_non_sensitive_fields = true`
+  non-Wi-Fi fields may still be returned without location access
 
 ## Native groups
 

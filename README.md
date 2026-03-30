@@ -94,6 +94,15 @@ enabled = true
 enabled = true
 ```
 
+For the network agent, you can also decide what happens when location permission is denied:
+
+```toml
+[agents.network]
+allow_unauthorized_non_sensitive_fields = false
+```
+
+The default is privacy-first: requests for Wi-Fi fields fail until location access is granted.
+
 More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
 ## Configuration

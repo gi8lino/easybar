@@ -14,6 +14,7 @@ struct ConfigSnapshot {
     let networkAgentEnabled: Bool
     let networkAgentSocketPath: String
     let networkAgentRefreshIntervalSeconds: Double
+    let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
   }
 
   struct Bar {

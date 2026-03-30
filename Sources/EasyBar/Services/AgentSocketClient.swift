@@ -18,6 +18,7 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private var socketFD: Int32 = -1
   private var running = false
   private var reconnectWorkItem: DispatchWorkItem?
+  private var nextReconnectDelayOverride: TimeInterval?
 
   /// Creates one shared agent client transport.
   init(
@@ -76,6 +77,13 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
 
     clearState()
+  }
+
+  /// Overrides the delay used for the next reconnect attempt.
+  func setNextReconnectDelay(_ delay: TimeInterval?) {
+    withLock {
+      nextReconnectDelayOverride = delay
+    }
   }
 
   private func connect() {
@@ -158,15 +166,17 @@ final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     let workItem = DispatchWorkItem { [weak self] in
       self?.connect()
     }
-    let shouldSchedule = withLock { () -> Bool in
+    let (shouldSchedule, scheduledDelay) = withLock { () -> (Bool, TimeInterval) in
       reconnectWorkItem?.cancel()
-      guard running else { return false }
+      guard running else { return (false, self.reconnectDelay) }
       reconnectWorkItem = workItem
-      return true
+      let delay = nextReconnectDelayOverride ?? self.reconnectDelay
+      nextReconnectDelayOverride = nil
+      return (true, delay)
     }
 
     guard shouldSchedule else { return }
-    queue.asyncAfter(deadline: .now() + reconnectDelay, execute: workItem)
+    queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
   }
 
   private func send(_ request: Request, to fd: Int32) -> Bool {
