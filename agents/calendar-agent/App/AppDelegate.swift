@@ -7,7 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Starts the calendar agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.accessory)
-    controller.start()
+    guard controller.start() else {
+      NSApp.terminate(nil)
+      return
+    }
   }
 
   /// Stops the calendar agent before termination.

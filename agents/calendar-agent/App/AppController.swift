@@ -13,9 +13,20 @@ final class AppController {
     socketServer = CalendarSocketServer(socketPath: config.calendarAgentSocketPath)
   }
 
+  /// Returns whether the calendar agent should run.
+  var isEnabled: Bool {
+    runtimeConfig.calendarAgentEnabled
+  }
+
   /// Starts logging, snapshot delivery, and the calendar socket server.
-  func start() {
+  @discardableResult
+  func start() -> Bool {
     AgentLogger.configure(using: runtimeConfig)
+    guard isEnabled else {
+      AgentLogger.info("calendar agent disabled in config")
+      return false
+    }
+
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -23,6 +34,7 @@ final class AppController {
     }
 
     socketServer.start(provider: snapshotProvider)
+    return true
   }
 
   /// Stops the calendar socket server and snapshot provider.

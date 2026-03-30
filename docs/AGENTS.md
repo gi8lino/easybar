@@ -47,6 +47,7 @@ debug = false
 directory = "~/.local/state/easybar"
 
 [agents.calendar]
+enabled = true
 socket_path = "/tmp/EasyBar/calendar-agent.sock"
 
 [agents.network]
