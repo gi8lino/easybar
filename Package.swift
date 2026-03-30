@@ -8,6 +8,7 @@ let package = Package(
     .macOS(.v14)
   ],
   products: [
+    .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
     .executable(name: "EasyBar", targets: ["EasyBar"]),
     .executable(name: "easybarctl", targets: ["easybarctl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
