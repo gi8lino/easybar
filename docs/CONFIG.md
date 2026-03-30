@@ -39,6 +39,22 @@ Configure that directory with:
 directory = "~/.local/state/easybar"
 ```
 
+## Agents
+
+Both helper agents are enabled by default.
+
+You can turn them off independently with:
+
+```toml
+[agents.calendar]
+enabled = true
+
+[agents.network]
+enabled = true
+```
+
+When an agent is disabled, its helper app exits without opening its socket.
+
 ## Native groups
 
 EasyBar supports native built-in groups in `config.toml`.

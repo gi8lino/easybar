@@ -50,6 +50,7 @@ directory = "~/.local/state/easybar"
 socket_path = "/tmp/EasyBar/calendar-agent.sock"
 
 [agents.network]
+enabled = true
 socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
 ```
@@ -60,6 +61,8 @@ The agents also respect environment overrides for:
 - debug logging
 - socket paths
 - network refresh interval
+
+If an agent is disabled in config, the helper app exits immediately without opening its socket.
 
 ## Socket paths
 

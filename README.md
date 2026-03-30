@@ -84,6 +84,16 @@ EasyBar uses two small helper agents:
 
 This keeps permission-sensitive APIs out of the main UI process and makes those widgets more reliable.
 
+Both agents are enabled by default and can be turned off independently in `config.toml` with:
+
+```toml
+[agents.calendar]
+enabled = true
+
+[agents.network]
+enabled = true
+```
+
 More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
 ## Configuration

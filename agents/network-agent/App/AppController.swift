@@ -16,9 +16,20 @@ final class AppController {
     socketServer = NetworkSocketServer(socketPath: config.networkAgentSocketPath)
   }
 
+  /// Returns whether the network agent should run.
+  var isEnabled: Bool {
+    runtimeConfig.networkAgentEnabled
+  }
+
   /// Starts logging, snapshot delivery, and the network socket server.
-  func start() {
+  @discardableResult
+  func start() -> Bool {
     AgentLogger.configure(using: runtimeConfig)
+    guard isEnabled else {
+      AgentLogger.info("network agent disabled in config")
+      return false
+    }
+
     logStartup()
 
     snapshotProvider.start { [weak self] in
@@ -26,6 +37,7 @@ final class AppController {
     }
 
     socketServer.start(provider: snapshotProvider)
+    return true
   }
 
   /// Stops the network socket server and snapshot provider.

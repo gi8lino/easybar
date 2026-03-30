@@ -7,7 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Starts the network agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.accessory)
-    controller.start()
+    guard controller.start() else {
+      NSApp.terminate(nil)
+      return
+    }
   }
 
   /// Stops the network agent before termination.

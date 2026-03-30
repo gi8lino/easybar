@@ -8,7 +8,9 @@ public struct SharedRuntimeConfig {
   public let loggingDebugEnabled: Bool
   public let loggingDirectory: String
   public let easyBarSocketPath: String
+  public let calendarAgentEnabled: Bool
   public let calendarAgentSocketPath: String
+  public let networkAgentEnabled: Bool
   public let networkAgentSocketPath: String
   public let networkAgentRefreshIntervalSeconds: TimeInterval
 
@@ -27,7 +29,9 @@ public struct SharedRuntimeConfig {
       loggingDebugEnabled: logging.debugEnabled,
       loggingDirectory: logging.directory,
       easyBarSocketPath: sockets.easyBarSocketPath,
+      calendarAgentEnabled: sockets.calendarAgentEnabled,
       calendarAgentSocketPath: sockets.calendarAgentSocketPath,
+      networkAgentEnabled: sockets.networkAgentEnabled,
       networkAgentSocketPath: sockets.networkAgentSocketPath,
       networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds
     )
@@ -44,7 +48,9 @@ private struct SharedLoggingConfig {
 /// Resolved socket values shared by helper processes.
 private struct SharedSocketConfig {
   let easyBarSocketPath: String
+  let calendarAgentEnabled: Bool
   let calendarAgentSocketPath: String
+  let networkAgentEnabled: Bool
   let networkAgentSocketPath: String
   let networkAgentRefreshIntervalSeconds: TimeInterval
 }
@@ -99,10 +105,12 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
   let easyBarSocketPath = expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
     ?? "/tmp/EasyBar/easybar.sock"
 
+  let calendarAgentEnabled = calendarTable?["enabled"]?.bool ?? true
   let calendarAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
     ?? expandedPath(calendarTable?["socket_path"]?.string)
     ?? defaultCalendarAgentSocketPath()
 
+  let networkAgentEnabled = networkTable?["enabled"]?.bool ?? true
   let networkAgentSocketPath = expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
     ?? expandedPath(networkTable?["socket_path"]?.string)
     ?? defaultNetworkAgentSocketPath()
@@ -114,7 +122,9 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
 
   return SharedSocketConfig(
     easyBarSocketPath: easyBarSocketPath,
+    calendarAgentEnabled: calendarAgentEnabled,
     calendarAgentSocketPath: calendarAgentSocketPath,
+    networkAgentEnabled: networkAgentEnabled,
     networkAgentSocketPath: networkAgentSocketPath,
     networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds
   )
