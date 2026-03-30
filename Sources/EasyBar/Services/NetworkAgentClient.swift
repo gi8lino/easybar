@@ -4,8 +4,8 @@ import Foundation
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
   private static let requestedFields: [NetworkAgentField] = [
-    .accessGranted,
-    .permissionState,
+    .locationAuthorized,
+    .locationPermissionState,
     .generatedAt,
     .ssid,
     .interfaceName,

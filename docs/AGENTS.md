@@ -224,7 +224,7 @@ It is responsible for:
 - observing Wi-Fi SSID changes
 - observing primary interface changes
 - smoothing RSSI samples
-- pushing network snapshots to EasyBar
+- serving field-query responses to EasyBar and other clients
 
 It is not responsible for UI rendering decisions like Wi-Fi bar mapping.
 
@@ -236,8 +236,8 @@ Request shape:
 {
   "command": "ping | fetch | subscribe",
   "fields": [
-    "network.access_granted",
-    "network.permission_state",
+    "auth.location_authorized",
+    "auth.location_permission_state",
     "network.generated_at",
     "wifi.ssid",
     "wifi.interface",
@@ -261,8 +261,8 @@ Response shape:
 {
   "kind": "pong | subscribed | fields | error",
   "fields": {
-    "network.access_granted": "true",
-    "network.permission_state": "authorized",
+    "auth.location_authorized": "true",
+    "auth.location_permission_state": "authorized",
     "network.generated_at": "2026-03-29T12:34:56Z",
     "wifi.ssid": "Office WiFi",
     "wifi.interface": "en0",
@@ -277,13 +277,40 @@ Response shape:
 
 Supported field keys:
 
-- `network.access_granted`
-- `network.permission_state`
-- `network.generated_at`
 - `wifi.ssid`
+- `wifi.bssid`
 - `wifi.interface`
-- `network.primary_interface_is_tunnel`
+- `wifi.hardware_address`
+- `wifi.power`
+- `wifi.service_active`
 - `wifi.rssi`
+- `wifi.noise`
+- `wifi.snr`
+- `wifi.link_quality`
+- `wifi.tx_rate`
+- `wifi.channel`
+- `wifi.channel_band`
+- `wifi.channel_width`
+- `wifi.security`
+- `wifi.phy_mode`
+- `wifi.interface_mode`
+- `wifi.country_code`
+- `wifi.roaming`
+- `wifi.ssid_changed_at`
+- `wifi.interface_changed_at`
+- `network.primary_interface`
+- `network.active_tunnel_interface`
+- `network.active_tunnel_interfaces`
+- `network.primary_interface_is_tunnel`
+- `network.ipv4_address`
+- `network.ipv6_address`
+- `network.default_gateway`
+- `network.dns_servers`
+- `network.internet_reachable`
+- `network.captive_portal`
+- `auth.location_authorized`
+- `auth.location_permission_state`
+- `network.generated_at`
 
 Behavior notes:
 
@@ -291,23 +318,7 @@ Behavior notes:
 - the agent does not map RSSI into Wi-Fi bars
 - EasyBar reconstructs its local typed Wi-Fi state from the returned field map
 - callers can use `fetch` for ad-hoc reads or `subscribe` for pushed updates
-
-Important fields:
-
-- `accessGranted`
-  whether Wi-Fi details are available
-- `permissionState`
-  current Core Location permission state
-- `generatedAt`
-  snapshot timestamp
-- `ssid`
-  current Wi-Fi SSID when available
-- `interfaceName`
-  current Wi-Fi interface name, for example `en0`
-- `primaryInterfaceIsTunnel`
-  whether the current primary interface looks like a tunnel
-- `rssi`
-  optional smoothed RSSI value
+- the shared field registry in code is the source of truth for field help text
 
 Tunnel detection currently matches interface names starting with:
 
@@ -319,9 +330,8 @@ Tunnel detection currently matches interface names starting with:
 
 Behavior notes:
 
-- if access is unavailable, the agent still returns a snapshot
-- in that state, `ssid`, `interfaceName`, and `rssi` are `null`
-- the agent smooths RSSI before publishing it
+- if location access is unavailable, Wi-Fi-specific fields may be absent
+- network fields can still be returned when they do not depend on Wi-Fi permission
 - EasyBar maps RSSI into visible Wi-Fi bars in the native widget layer
 - the agent also supports a periodic fallback refresh interval
 
