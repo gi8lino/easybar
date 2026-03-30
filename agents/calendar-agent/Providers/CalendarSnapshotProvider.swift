@@ -39,12 +39,24 @@ final class CalendarSnapshotProvider {
   }
 
   /// Builds one calendar snapshot for the requested query.
+  ///
+  /// `query.days` is interpreted as a symmetric window around today:
+  /// - past `days`
+  /// - future `days`
+  ///
+  /// This is required for the month calendar popup so it can:
+  /// - mark days with events in the past and future
+  /// - show appointments when a user clicks on a past day
+  ///
+  /// The rendered popup sections remain future-oriented for the regular
+  /// calendar widget, but the raw event payload is symmetric.
   func snapshot(for query: CalendarAgentQuery) -> CalendarAgentSnapshot {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
 
     let hasAccess = authState.effectiveAccessGranted()
     let permissionState = authState.permissionState()
+    let now = Date()
 
     guard hasAccess else {
       AgentLogger.debug(
@@ -52,109 +64,53 @@ final class CalendarSnapshotProvider {
       return CalendarAgentSnapshot(
         accessGranted: false,
         permissionState: permissionState,
-        generatedAt: Date(),
+        generatedAt: now,
+        events: [],
         sections: []
       )
     }
 
     let calendar = Calendar.current
-    let now = Date()
     let startOfToday = calendar.startOfDay(for: now)
+    let safeDays = max(1, query.days)
 
-    guard let endDate = calendar.date(byAdding: .day, value: max(1, query.days), to: startOfToday)
+    guard
+      let fetchStart = calendar.date(byAdding: .day, value: -safeDays, to: startOfToday),
+      let fetchEndExclusive = calendar.date(byAdding: .day, value: safeDays + 1, to: startOfToday),
+      let sectionsEndExclusive = calendar.date(byAdding: .day, value: safeDays, to: startOfToday)
     else {
       return CalendarAgentSnapshot(
         accessGranted: true,
         permissionState: permissionState,
         generatedAt: now,
+        events: [],
         sections: []
       )
     }
 
-    var sections: [CalendarAgentSection] = []
-
-    if query.showBirthdays {
-      sections.append(makeBirthdaysSection(query: query, start: now, end: endDate))
-    }
-
-    let normalCalendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
-    let predicate = eventStore.predicateForEvents(
-      withStart: startOfToday,
-      end: endDate,
-      calendars: normalCalendars
+    let events = makeNormalizedEvents(
+      query: query,
+      fetchStart: fetchStart,
+      fetchEndExclusive: fetchEndExclusive
     )
 
-    let events = eventStore.events(matching: predicate)
-      .sorted { $0.startDate < $1.startDate }
-
-    for dayOffset in 0..<max(1, query.days) {
-      guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday),
-        let nextDay = calendar.date(byAdding: .day, value: 1, to: day)
-      else {
-        continue
-      }
-
-      let dayEvents = events.filter { event in
-        event.startDate < nextDay && event.endDate > day
-      }
-
-      let title: String
-      let kind: CalendarAgentSectionKind
-
-      if calendar.isDateInToday(day) {
-        title = "Today"
-        kind = .today
-      } else if calendar.isDateInTomorrow(day) {
-        title = "Tomorrow"
-        kind = .tomorrow
-      } else {
-        title = formatDayTitle(day)
-        kind = .future
-      }
-
-      // Keep empty days visible so the popup layout stays stable.
-      guard !dayEvents.isEmpty else {
-        sections.append(
-          CalendarAgentSection(
-            id: "events-\(dayOffset)",
-            title: title,
-            kind: kind,
-            items: [CalendarAgentItem(id: "empty-\(dayOffset)", time: "", title: query.emptyText)]
-          )
-        )
-        continue
-      }
-
-      let items = dayEvents.map { event in
-        CalendarAgentItem(
-          id:
-            "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-          time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
-          title: normalizedTitle(event.title),
-          calendarName: normalizedTitle(event.calendar.title),
-          calendarColorHex: colorHex(for: event.calendar.cgColor)
-        )
-      }
-
-      sections.append(
-        CalendarAgentSection(
-          id: "events-\(dayOffset)",
-          title: title,
-          kind: kind,
-          items: items
-        )
-      )
-    }
+    let sections = makeSections(
+      query: query,
+      events: events,
+      startOfToday: startOfToday,
+      endExclusive: sectionsEndExclusive
+    )
 
     let snapshot = CalendarAgentSnapshot(
       accessGranted: true,
       permissionState: permissionState,
       generatedAt: now,
+      events: events,
       sections: sections
     )
 
     AgentLogger.debug(
-      "calendar snapshot access_granted=true permission_state=\(permissionState) days=\(query.days) show_birthdays=\(query.showBirthdays) sections=\(snapshot.sections.count)"
+      "calendar snapshot access_granted=true permission_state=\(permissionState) days=\(query.days) show_birthdays=\(query.showBirthdays) fetch_start=\(fetchStart) fetch_end=\(fetchEndExclusive) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
     )
 
     return snapshot
@@ -170,6 +126,7 @@ final class CalendarSnapshotProvider {
     case .authorized, .fullAccess:
       AgentLogger.info("calendar agent access already granted")
       onChange?()
+
     case .notDetermined:
       guard !didRequestAccess else { return }
       didRequestAccess = true
@@ -199,29 +156,105 @@ final class CalendarSnapshotProvider {
           self.onChange?()
         }
       }
+
     case .denied, .restricted, .writeOnly:
       AgentLogger.warn("calendar agent access unavailable status=\(authState.describe(status))")
+
     @unknown default:
       AgentLogger.warn("calendar agent access status unknown raw=\(status.rawValue)")
     }
   }
+}
 
-  /// Builds the birthdays section for one query window.
-  private func makeBirthdaysSection(
+// MARK: - Event Building
+
+extension CalendarSnapshotProvider {
+  /// Builds normalized events for the requested symmetric window.
+  private func makeNormalizedEvents(
+    query: CalendarAgentQuery,
+    fetchStart: Date,
+    fetchEndExclusive: Date
+  ) -> [CalendarAgentEvent] {
+    var result: [CalendarAgentEvent] = []
+
+    result.append(
+      contentsOf: makeBirthdayEvents(
+        query: query,
+        start: fetchStart,
+        end: fetchEndExclusive
+      )
+    )
+
+    result.append(
+      contentsOf: makeRegularEvents(
+        start: fetchStart,
+        end: fetchEndExclusive
+      )
+    )
+
+    return result.sorted { lhs, rhs in
+      if lhs.startDate != rhs.startDate {
+        return lhs.startDate < rhs.startDate
+      }
+
+      if lhs.endDate != rhs.endDate {
+        return lhs.endDate < rhs.endDate
+      }
+
+      return lhs.id < rhs.id
+    }
+  }
+
+  /// Builds normalized regular calendar events.
+  ///
+  /// This loads all event calendars except the special birthday calendars,
+  /// which are handled separately.
+  private func makeRegularEvents(start: Date, end: Date) -> [CalendarAgentEvent] {
+    let normalCalendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
+    let predicate = eventStore.predicateForEvents(
+      withStart: start,
+      end: end,
+      calendars: normalCalendars
+    )
+
+    return eventStore.events(matching: predicate)
+      .sorted { lhs, rhs in
+        if lhs.startDate != rhs.startDate {
+          return lhs.startDate < rhs.startDate
+        }
+
+        if lhs.endDate != rhs.endDate {
+          return lhs.endDate < rhs.endDate
+        }
+
+        return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
+      }
+      .map { event in
+        CalendarAgentEvent(
+          id:
+            "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
+          title: normalizedTitle(event.title),
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: event.isAllDay,
+          calendarName: normalizedTitle(event.calendar.title),
+          calendarColorHex: colorHex(for: event.calendar.cgColor),
+          location: normalizedOptionalText(event.location),
+          travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
+        )
+      }
+  }
+
+  /// Builds normalized birthday events when enabled.
+  private func makeBirthdayEvents(
     query: CalendarAgentQuery,
     start: Date,
     end: Date
-  ) -> CalendarAgentSection {
-    let birthdayCalendars = eventStore.calendars(for: .event).filter { $0.type == .birthday }
+  ) -> [CalendarAgentEvent] {
+    guard query.showBirthdays else { return [] }
 
-    guard !birthdayCalendars.isEmpty else {
-      return CalendarAgentSection(
-        id: "birthdays",
-        title: query.birthdaysTitle,
-        kind: .birthdays,
-        items: []
-      )
-    }
+    let birthdayCalendars = eventStore.calendars(for: .event).filter { $0.type == .birthday }
+    guard !birthdayCalendars.isEmpty else { return [] }
 
     let predicate = eventStore.predicateForEvents(
       withStart: start,
@@ -229,27 +262,187 @@ final class CalendarSnapshotProvider {
       calendars: birthdayCalendars
     )
 
-    let items = eventStore.events(matching: predicate)
-      .sorted { $0.startDate < $1.startDate }
+    return eventStore.events(matching: predicate)
+      .sorted { lhs, rhs in
+        if lhs.startDate != rhs.startDate {
+          return lhs.startDate < rhs.startDate
+        }
+
+        if lhs.endDate != rhs.endDate {
+          return lhs.endDate < rhs.endDate
+        }
+
+        return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
+      }
       .map { event in
-        CalendarAgentItem(
+        CalendarAgentEvent(
           id:
             "birthday-\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
-          time: formatBirthdayDate(event.startDate, format: query.birthdaysDateFormat),
           title: birthdayTitle(for: event, showAge: query.birthdaysShowAge),
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: true,
           calendarName: normalizedTitle(event.calendar.title),
-          calendarColorHex: colorHex(for: event.calendar.cgColor)
+          calendarColorHex: colorHex(for: event.calendar.cgColor),
+          location: normalizedOptionalText(event.location),
+          travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
         )
       }
-
-    return CalendarAgentSection(
-      id: "birthdays",
-      title: query.birthdaysTitle,
-      kind: .birthdays,
-      items: items
-    )
   }
 
+  /// Resolves travel time from the best available source.
+  ///
+  /// Some SDK/target combinations don't surface `EKEvent.travelTime` to Swift
+  /// even when the runtime may still provide it. This first tries KVC on the
+  /// Objective-C object, then falls back to inferring travel time from alarms.
+  private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
+    if let direct = directTravelTimeSeconds(for: event) {
+      return direct
+    }
+
+    return inferredTravelTimeSecondsFromAlarms(for: event)
+  }
+
+  /// Reads `travelTime` dynamically when the Objective-C runtime exposes it.
+  private func directTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
+    let selector = NSSelectorFromString("travelTime")
+    guard event.responds(to: selector) else { return nil }
+
+    if let value = event.value(forKey: "travelTime") as? NSNumber {
+      let seconds = value.doubleValue
+      return seconds > 0 ? seconds : nil
+    }
+
+    return nil
+  }
+
+  /// Infers travel time from alarms when available.
+  ///
+  /// This treats a negative relative alarm offset as lead time before the event.
+  private func inferredTravelTimeSecondsFromAlarms(for event: EKEvent) -> TimeInterval? {
+    guard let alarms = event.alarms, !alarms.isEmpty else { return nil }
+
+    let candidates = alarms.compactMap { alarm -> TimeInterval? in
+      let offset = alarm.relativeOffset
+      guard offset < 0 else { return nil }
+      return abs(offset)
+    }
+
+    return candidates.min()
+  }
+}
+
+// MARK: - Section Building
+
+extension CalendarSnapshotProvider {
+  /// Builds simple rendered sections from normalized events.
+  ///
+  /// Sections remain future-oriented for the regular calendar popup, beginning
+  /// with today and continuing for `query.days`. The month calendar popup does
+  /// not use these sections; it uses the raw normalized events above.
+  private func makeSections(
+    query: CalendarAgentQuery,
+    events: [CalendarAgentEvent],
+    startOfToday: Date,
+    endExclusive: Date
+  ) -> [CalendarAgentSection] {
+    let calendar = Calendar.current
+    var sections: [CalendarAgentSection] = []
+
+    let birthdayEvents = events.filter { event in
+      event.isAllDay && event.id.hasPrefix("birthday-")
+    }
+
+    if query.showBirthdays {
+      sections.append(
+        CalendarAgentSection(
+          id: "birthdays",
+          title: query.birthdaysTitle,
+          kind: .birthdays,
+          items: birthdayEvents.map { event in
+            CalendarAgentItem(
+              id: event.id,
+              time: formatBirthdayDate(event.startDate, format: query.birthdaysDateFormat),
+              title: event.title,
+              calendarName: event.calendarName,
+              calendarColorHex: event.calendarColorHex,
+              location: event.location,
+              travelTimeSeconds: event.travelTimeSeconds
+            )
+          }
+        )
+      )
+    }
+
+    let regularEvents = events.filter { !$0.id.hasPrefix("birthday-") }
+    let safeDays = max(1, query.days)
+
+    for dayOffset in 0..<safeDays {
+      guard
+        let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday),
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: day),
+        day < endExclusive
+      else {
+        continue
+      }
+
+      let dayEvents = regularEvents.filter { event in
+        event.startDate < nextDay && event.endDate > day
+      }
+
+      let title: String
+      let kind: CalendarAgentSectionKind
+
+      if calendar.isDateInToday(day) {
+        title = "Today"
+        kind = .today
+      } else if calendar.isDateInTomorrow(day) {
+        title = "Tomorrow"
+        kind = .tomorrow
+      } else {
+        title = formatDayTitle(day)
+        kind = .future
+      }
+
+      guard !dayEvents.isEmpty else {
+        sections.append(
+          CalendarAgentSection(
+            id: "events-\(dayOffset)",
+            title: title,
+            kind: kind,
+            items: [CalendarAgentItem(id: "empty-\(dayOffset)", time: "", title: query.emptyText)]
+          )
+        )
+        continue
+      }
+
+      sections.append(
+        CalendarAgentSection(
+          id: "events-\(dayOffset)",
+          title: title,
+          kind: kind,
+          items: dayEvents.map { event in
+            CalendarAgentItem(
+              id: event.id,
+              time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
+              title: event.title,
+              calendarName: event.calendarName,
+              calendarColorHex: event.calendarColorHex,
+              location: event.location,
+              travelTimeSeconds: event.travelTimeSeconds
+            )
+          }
+        )
+      )
+    }
+
+    return sections
+  }
+}
+
+// MARK: - Formatting
+
+extension CalendarSnapshotProvider {
   /// Returns one birthday title, optionally with age appended.
   private func birthdayTitle(for event: EKEvent, showAge: Bool) -> String {
     let title = normalizedTitle(event.title)
@@ -283,6 +476,13 @@ final class CalendarSnapshotProvider {
     return trimmed.isEmpty ? "Untitled" : trimmed
   }
 
+  /// Normalizes optional text and drops empty strings.
+  private func normalizedOptionalText(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
   /// Formats one event time for popup display.
   private func formatEventTime(_ date: Date) -> String {
     let formatter = DateFormatter()
@@ -303,13 +503,20 @@ final class CalendarSnapshotProvider {
     formatter.dateFormat = format
     return formatter.string(from: date)
   }
+}
 
+// MARK: - Color Conversion
+
+extension CalendarSnapshotProvider {
   /// Converts one calendar color into a hex string.
   private func colorHex(for cgColor: CGColor?) -> String? {
     guard let cgColor else { return nil }
     guard
       let color = cgColor.converted(
-        to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil)
+        to: CGColorSpace(name: CGColorSpace.sRGB)!,
+        intent: .defaultIntent,
+        options: nil
+      )
     else {
       return nil
     }

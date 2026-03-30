@@ -47,5 +47,6 @@ extension Config {
     try parseDateBuiltin(from: builtins)
     try parseTimeBuiltin(from: builtins)
     try parseCalendarBuiltin(from: builtins)
+    try parseMonthCalendarBuiltin(from: builtins)
   }
 }

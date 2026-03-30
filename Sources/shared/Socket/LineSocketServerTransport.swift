@@ -28,6 +28,7 @@ public final class LineSocketServerTransport<
   private let stateLock = NSLock()
   private let acceptQueue: DispatchQueue
   private let clientQueue: DispatchQueue
+  private let responseEncoder: JSONEncoder
 
   private var serverFD: Int32 = -1
   private var running = false
@@ -55,6 +56,10 @@ public final class LineSocketServerTransport<
       qos: .utility,
       attributes: .concurrent
     )
+
+    responseEncoder = JSONEncoder()
+    responseEncoder.outputFormatting = [.sortedKeys]
+    responseEncoder.dateEncodingStrategy = .iso8601
   }
 
   deinit {
@@ -155,10 +160,7 @@ public final class LineSocketServerTransport<
   /// Sends one encoded response to the given client file descriptor.
   @discardableResult
   public func send(_ response: Response, to clientFD: Int32) -> Bool {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-
-    guard let data = try? encoder.encode(response) else {
+    guard let data = try? responseEncoder.encode(response) else {
       errorLog("\(serverLabel) response encode failed")
       return false
     }

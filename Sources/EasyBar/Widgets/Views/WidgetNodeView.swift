@@ -102,6 +102,10 @@ extension WidgetNodeView {
         nativeCalendarAnchorView {
           childRow
         }
+      } else if node.isMonthCalendarRoot {
+        nativeMonthCalendarAnchorView {
+          childRow
+        }
       } else if hasPopupChildren {
         popupAnchorSurface(childRow)
       } else {
@@ -119,6 +123,20 @@ extension WidgetNodeView {
   }
 
   fileprivate func nativeCalendarAnchorView<Content: View>(
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    content()
+      .foregroundStyle(nodeColor)
+      .modifier(nodeStyle)
+      .onHover { hovering in handleAnchorHover(hovering) }
+      .background {
+        WidgetPopupAnchorView { anchor in
+          popupPanel.updateAnchorView(anchor)
+        }
+      }
+  }
+
+  fileprivate func nativeMonthCalendarAnchorView<Content: View>(
     @ViewBuilder content: () -> Content
   ) -> some View {
     content()
@@ -304,7 +322,15 @@ extension WidgetNodeView {
 
   /// Updates the AppKit popup panel for popup-capable nodes.
   fileprivate func updatePopupPanel(isPresented: Bool) {
-    guard node.isCalendarRoot || node.kind == .popup || hasPopupChildren else { return }
+    guard
+      node.isCalendarRoot
+        || node.isMonthCalendarRoot
+        || node.kind == .popup
+        || hasPopupChildren
+    else {
+      return
+    }
+
     popupPanel.update(isPresented: isPresented, content: popupPanelContent)
   }
 
@@ -417,6 +443,13 @@ extension WidgetNodeView {
     if node.isCalendarRoot {
       return AnyView(
         NativeCalendarPopupView()
+          .background(popupHoverBackground)
+      )
+    }
+
+    if node.isMonthCalendarRoot {
+      return AnyView(
+        NativeMonthCalendarPopupView()
           .background(popupHoverBackground)
       )
     }
@@ -626,7 +659,6 @@ extension WidgetNodeView {
   /// Returns a geometry-sized event surface for the current node.
   fileprivate func nodeEventSurface(tracksHover: Bool = true) -> some View {
     GeometryReader { proxy in
-      // Match the final rendered node bounds instead of the icon glyph bounds.
       WidgetMouseView(
         widgetID: node.root,
         targetWidgetID: node.id,

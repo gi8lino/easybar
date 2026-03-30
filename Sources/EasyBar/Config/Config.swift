@@ -41,6 +41,7 @@ final class Config {
   var builtinVolume: VolumeBuiltinConfig = .default
   var builtinWiFi: WiFiBuiltinConfig = .default
   var builtinCalendar: CalendarBuiltinConfig = .default
+  var builtinMonthCalendar: MonthCalendarBuiltinConfig = .default
   var builtinTime: TimeBuiltinConfig = .default
   var builtinDate: DateBuiltinConfig = .default
 
@@ -144,6 +145,7 @@ final class Config {
     builtinVolume = .default
     builtinWiFi = .default
     builtinCalendar = .default
+    builtinMonthCalendar = .default
     builtinTime = .default
     builtinDate = .default
   }
@@ -182,6 +184,7 @@ final class Config {
         volume: builtinVolume,
         wifi: builtinWiFi,
         calendar: builtinCalendar,
+        monthCalendar: builtinMonthCalendar,
         time: builtinTime,
         date: builtinDate
       )
@@ -232,6 +235,7 @@ final class Config {
     builtinVolume = snapshot.builtins.volume
     builtinWiFi = snapshot.builtins.wifi
     builtinCalendar = snapshot.builtins.calendar
+    builtinMonthCalendar = snapshot.builtins.monthCalendar
     builtinTime = snapshot.builtins.time
     builtinDate = snapshot.builtins.date
   }

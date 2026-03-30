@@ -21,6 +21,10 @@ public struct CalendarAgentQuery: Codable, Equatable {
   public var birthdaysDateFormat: String
   /// Whether birthday ages should be shown.
   public var birthdaysShowAge: Bool
+  /// Optional allowlist of calendar names. Empty means all calendars.
+  public var includedCalendarNames: [String]
+  /// Optional denylist of calendar names.
+  public var excludedCalendarNames: [String]
 
   /// Creates one calendar agent query.
   public init(
@@ -29,7 +33,9 @@ public struct CalendarAgentQuery: Codable, Equatable {
     emptyText: String,
     birthdaysTitle: String,
     birthdaysDateFormat: String,
-    birthdaysShowAge: Bool
+    birthdaysShowAge: Bool,
+    includedCalendarNames: [String] = [],
+    excludedCalendarNames: [String] = []
   ) {
     self.days = days
     self.showBirthdays = showBirthdays
@@ -37,6 +43,8 @@ public struct CalendarAgentQuery: Codable, Equatable {
     self.birthdaysTitle = birthdaysTitle
     self.birthdaysDateFormat = birthdaysDateFormat
     self.birthdaysShowAge = birthdaysShowAge
+    self.includedCalendarNames = includedCalendarNames
+    self.excludedCalendarNames = excludedCalendarNames
   }
 }
 
@@ -62,6 +70,51 @@ public enum CalendarAgentSectionKind: String, Codable, Equatable {
   case future
 }
 
+/// One normalized calendar event returned by the agent.
+public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
+  /// Stable event identifier.
+  public var id: String
+  /// Event title.
+  public var title: String
+  /// Event start date.
+  public var startDate: Date
+  /// Event end date.
+  public var endDate: Date
+  /// Whether the event is all day.
+  public var isAllDay: Bool
+  /// Optional source calendar name.
+  public var calendarName: String?
+  /// Optional source calendar color.
+  public var calendarColorHex: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
+
+  /// Creates one normalized calendar event.
+  public init(
+    id: String,
+    title: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    calendarName: String? = nil,
+    calendarColorHex: String? = nil,
+    location: String? = nil,
+    travelTimeSeconds: TimeInterval? = nil
+  ) {
+    self.id = id
+    self.title = title
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
+    self.calendarName = calendarName
+    self.calendarColorHex = calendarColorHex
+    self.location = location
+    self.travelTimeSeconds = travelTimeSeconds
+  }
+}
+
 /// One rendered event or birthday row in a calendar section.
 public struct CalendarAgentItem: Codable, Identifiable, Equatable {
   /// Stable item identifier.
@@ -74,6 +127,10 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable {
   public var calendarName: String?
   /// Optional source calendar color.
   public var calendarColorHex: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
 
   /// Creates one calendar section item.
   public init(
@@ -81,13 +138,17 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable {
     time: String,
     title: String,
     calendarName: String? = nil,
-    calendarColorHex: String? = nil
+    calendarColorHex: String? = nil,
+    location: String? = nil,
+    travelTimeSeconds: TimeInterval? = nil
   ) {
     self.id = id
     self.time = time
     self.title = title
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
+    self.location = location
+    self.travelTimeSeconds = travelTimeSeconds
   }
 }
 
@@ -120,7 +181,9 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
   public var permissionState: String
   /// Snapshot generation time.
   public var generatedAt: Date
-  /// Sections included in the snapshot.
+  /// Normalized events included in the snapshot window.
+  public var events: [CalendarAgentEvent]
+  /// Optional rendered sections for simpler consumers.
   public var sections: [CalendarAgentSection]
 
   /// Creates one calendar snapshot payload.
@@ -128,11 +191,13 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
     accessGranted: Bool,
     permissionState: String,
     generatedAt: Date,
+    events: [CalendarAgentEvent],
     sections: [CalendarAgentSection]
   ) {
     self.accessGranted = accessGranted
     self.permissionState = permissionState
     self.generatedAt = generatedAt
+    self.events = events
     self.sections = sections
   }
 }

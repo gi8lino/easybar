@@ -74,6 +74,11 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     root == "builtin_calendar"
   }
 
+  /// Returns whether this node is the built-in month-calendar root.
+  var isMonthCalendarRoot: Bool {
+    root == "builtin_month_calendar"
+  }
+
   /// Returns whether this node is a popup anchor child.
   var isPopupAnchor: Bool {
     role == .popupAnchor

@@ -119,6 +119,20 @@ extension Config {
     )
   }
 
+  func requiredStringArray(_ value: any TOMLValueConvertible, path: String) throws -> [String] {
+    guard let array = value.array else {
+      throw ConfigError.invalidType(
+        path: path,
+        expected: "array",
+        actual: describe(value)
+      )
+    }
+
+    return try array.enumerated().map { index, entry in
+      try requiredString(entry, path: "\(path)[\(index)]")
+    }
+  }
+
   func describe(_ value: any TOMLValueConvertible) -> String {
     if let string = value.string {
       return "string(\(string.debugDescription))"
@@ -165,5 +179,10 @@ extension Config {
   func optionalNumber(_ value: (any TOMLValueConvertible)?, path: String) throws -> Double? {
     guard let value else { return nil }
     return try requiredNumber(value, path: path)
+  }
+
+  func optionalStringArray(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String]? {
+    guard let value else { return nil }
+    return try requiredStringArray(value, path: path)
   }
 }
