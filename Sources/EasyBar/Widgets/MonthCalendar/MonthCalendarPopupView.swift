@@ -41,6 +41,10 @@ struct NativeMonthCalendarPopupView: View {
 
   @State var isDragSelecting = false
   @State var dragAnchorDate: Date?
+  @State var dragCurrentDate: Date?
+  @State var didDragBeyondAnchor = false
+  @State var monthGridFrame: CGRect = .zero
+  @State var dayCellFrames: [Date: CGRect] = [:]
 
   /// Renders the month calendar popup.
   var body: some View {

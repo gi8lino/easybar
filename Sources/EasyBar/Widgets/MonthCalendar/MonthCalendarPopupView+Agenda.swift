@@ -187,78 +187,124 @@ extension NativeMonthCalendarPopupView {
   var agendaRows: [AgendaRow] {
     guard !selectedEvents.isEmpty else { return [] }
 
-    guard selectionSpansMultipleDays else {
-      return selectedEvents.map { event in
-        AgendaRow(id: event.id, kind: .event(event))
-      }
-    }
+    guard !selectionSpansMultipleDays else {
+      let grouped = Dictionary(grouping: selectedEvents, by: displayDate(for:))
+      let sortedDates = grouped.keys.sorted()
 
-    let grouped = Dictionary(grouping: selectedEvents, by: displayDate(for:))
-    let sortedDates = grouped.keys.sorted()
+      var rows: [AgendaRow] = []
 
-    var rows: [AgendaRow] = []
-
-    for date in sortedDates {
-      rows.append(
-        AgendaRow(
-          id: "header-\(resolvedCalendar.startOfDay(for: date).timeIntervalSince1970)",
-          kind: .dayHeader(date)
+      for date in sortedDates {
+        rows.append(
+          AgendaRow(
+            id: "header-\(resolvedCalendar.startOfDay(for: date).timeIntervalSince1970)",
+            kind: .dayHeader(date)
+          )
         )
-      )
 
-      let dayEvents =
-        (grouped[date] ?? [])
-        .sorted { lhs, rhs in
-          let lhsIsBirthday = isBirthdayEvent(lhs)
-          let rhsIsBirthday = isBirthdayEvent(rhs)
+        let dayEvents =
+          (grouped[date] ?? [])
+          .sorted { lhs, rhs in
+            let lhsIsBirthday = isBirthdayEvent(lhs)
+            let rhsIsBirthday = isBirthdayEvent(rhs)
 
-          if lhsIsBirthday != rhsIsBirthday {
-            return lhsIsBirthday && !rhsIsBirthday
+            if lhsIsBirthday != rhsIsBirthday {
+              return lhsIsBirthday && !rhsIsBirthday
+            }
+
+            if lhs.isAllDay != rhs.isAllDay {
+              return lhs.isAllDay && !rhs.isAllDay
+            }
+
+            if lhs.startDate != rhs.startDate {
+              return lhs.startDate < rhs.startDate
+            }
+
+            if lhs.endDate != rhs.endDate {
+              return lhs.endDate < rhs.endDate
+            }
+
+            return lhs.id < rhs.id
           }
 
-          if lhs.isAllDay != rhs.isAllDay {
-            return lhs.isAllDay && !rhs.isAllDay
-          }
+        rows.append(
+          contentsOf: dayEvents.map { event in
+            AgendaRow(id: event.id, kind: .event(event))
+          })
+      }
 
-          if lhs.startDate != rhs.startDate {
-            return lhs.startDate < rhs.startDate
-          }
-
-          if lhs.endDate != rhs.endDate {
-            return lhs.endDate < rhs.endDate
-          }
-
-          return lhs.id < rhs.id
-        }
-
-      rows.append(
-        contentsOf: dayEvents.map { event in
-          AgendaRow(id: event.id, kind: .event(event))
-        })
+      return rows
     }
 
-    return rows
+    return selectedEvents.map { event in
+      AgendaRow(id: event.id, kind: .event(event))
+    }
   }
 
-  /// Handles one pointer-down or drag update on a day.
-  func handlePointerDownOrDrag(on date: Date, translation: CGSize) {
+  /// Handles one grid drag update using one shared month-grid gesture.
+  func handleGridDragChanged(_ value: DragGesture.Value) {
+    guard let hoveredDate = date(at: value.location) else { return }
+
     if !isDragSelecting {
-      beginPointerInteraction(on: date)
-      selectedStartDate = date
-      selectedEndDate = date
+      beginPointerInteraction(on: hoveredDate)
+      selectedStartDate = hoveredDate
+      selectedEndDate = hoveredDate
+      dragCurrentDate = hoveredDate
+      return
     }
 
-    let movedEnough = abs(translation.width) > 2 || abs(translation.height) > 2
-    guard movedEnough else { return }
+    dragCurrentDate = hoveredDate
+
+    let movedEnough = abs(value.translation.width) > 3 || abs(value.translation.height) > 3
+    if movedEnough {
+      didDragBeyondAnchor = true
+    }
+
+    guard didDragBeyondAnchor else { return }
     guard config.allowsRangeSelection else { return }
 
-    updateDragSelection(to: date)
+    updateDragSelection(to: hoveredDate)
+  }
+
+  /// Finishes one shared month-grid pointer interaction.
+  func handleGridDragEnded(_ value: DragGesture.Value) {
+    let resolvedDate = date(at: value.location) ?? dragCurrentDate ?? dragAnchorDate
+
+    defer {
+      isDragSelecting = false
+      dragAnchorDate = nil
+      dragCurrentDate = nil
+      didDragBeyondAnchor = false
+    }
+
+    guard let resolvedDate else { return }
+    guard let dragAnchorDate else {
+      selectedStartDate = resolvedDate
+      selectedEndDate = resolvedDate
+      return
+    }
+
+    if !didDragBeyondAnchor || dragAnchorDate == resolvedDate {
+      selectedStartDate = resolvedDate
+      selectedEndDate = resolvedDate
+
+      Logger.debug("month calendar popup click_select date=\(debugDate(resolvedDate))")
+      return
+    }
+
+    selectedStartDate = min(dragAnchorDate, resolvedDate)
+    selectedEndDate = max(dragAnchorDate, resolvedDate)
+
+    Logger.debug(
+      "month calendar popup drag_end start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
+    )
   }
 
   /// Starts one pointer interaction.
   func beginPointerInteraction(on date: Date) {
     isDragSelecting = true
     dragAnchorDate = date
+    dragCurrentDate = date
+    didDragBeyondAnchor = false
 
     Logger.debug("month calendar popup pointer_begin date=\(debugDate(date))")
   }
@@ -275,39 +321,13 @@ extension NativeMonthCalendarPopupView {
     )
   }
 
-  /// Updates the current drag selection while hovering across days.
-  func handleHover(on date: Date, hovering: Bool) {
-    guard hovering else { return }
-    guard isDragSelecting else { return }
-    guard config.allowsRangeSelection else { return }
-
-    updateDragSelection(to: date)
-  }
-
-  /// Finishes one pointer interaction.
-  func finishPointerInteraction(on date: Date) {
-    defer {
-      isDragSelecting = false
-      dragAnchorDate = nil
+  /// Returns the date at one month-grid pointer location.
+  func date(at location: CGPoint) -> Date? {
+    let match = dayCellFrames.first { _, frame in
+      frame.contains(location)
     }
 
-    guard let dragAnchorDate else {
-      selectedStartDate = date
-      selectedEndDate = date
-      return
-    }
-
-    if dragAnchorDate == date {
-      selectedStartDate = date
-      selectedEndDate = date
-
-      Logger.debug("month calendar popup click_select date=\(debugDate(date))")
-      return
-    }
-
-    Logger.debug(
-      "month calendar popup drag_end start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
-    )
+    return match?.key
   }
 
   /// Returns the rendered prefix shown before the title when needed.

@@ -1,5 +1,21 @@
 import SwiftUI
 
+private struct MonthCalendarGridFramePreferenceKey: PreferenceKey {
+  static var defaultValue: CGRect = .zero
+
+  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+    value = nextValue()
+  }
+}
+
+private struct MonthCalendarDayFramePreferenceKey: PreferenceKey {
+  static var defaultValue: [Date: CGRect] = [:]
+
+  static func reduce(value: inout [Date: CGRect], nextValue: () -> [Date: CGRect]) {
+    value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+  }
+}
+
 // MARK: - Top-Level Layout
 
 extension NativeMonthCalendarPopupView {
@@ -215,38 +231,22 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the visible month grid.
   var monthGridView: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      ForEach(weekRows) { row in
-        HStack(spacing: 6) {
-          if config.showWeekNumbers {
-            Text("\(row.weekNumber)")
-              .frame(width: 20, alignment: .trailing)
-              .foregroundStyle(color(config.outsideMonthTextColorHex))
-          }
+    ZStack {
+      VStack(alignment: .leading, spacing: 6) {
+        ForEach(weekRows) { row in
+          HStack(spacing: 6) {
+            if config.showWeekNumbers {
+              Text("\(row.weekNumber)")
+                .frame(width: 20, alignment: .trailing)
+                .foregroundStyle(color(config.outsideMonthTextColorHex))
+            }
 
-          ForEach(row.days) { day in
-            dayCellView(day)
+            ForEach(row.days) { day in
+              dayCellView(day)
+            }
           }
         }
       }
-    }
-  }
-
-  /// Builds one interactive day cell.
-  func dayCellView(_ day: DayCell) -> some View {
-    let normalizedDate = resolvedCalendar.startOfDay(for: day.date)
-
-    return ZStack {
-      VStack(spacing: 2) {
-        Text("\(resolvedCalendar.component(.day, from: day.date))")
-          .frame(width: 28, height: 22)
-          .background(dayBackground(day))
-          .clipShape(RoundedRectangle(cornerRadius: 6))
-
-        dayIndicatorBar(for: day.date)
-      }
-      .frame(maxWidth: .infinity)
-      .foregroundStyle(dayForeground(day))
 
       Rectangle()
         .fill(Color.clear)
@@ -254,20 +254,52 @@ extension NativeMonthCalendarPopupView {
         .gesture(
           DragGesture(minimumDistance: 0)
             .onChanged { value in
-              handlePointerDownOrDrag(
-                on: normalizedDate,
-                translation: value.translation
-              )
+              handleGridDragChanged(value)
             }
-            .onEnded { _ in
-              finishPointerInteraction(on: normalizedDate)
+            .onEnded { value in
+              handleGridDragEnded(value)
             }
         )
-        .onHover { hovering in
-          handleHover(on: normalizedDate, hovering: hovering)
-        }
+    }
+    .coordinateSpace(name: "MonthCalendarGrid")
+    .background {
+      GeometryReader { proxy in
+        Color.clear.preference(
+          key: MonthCalendarGridFramePreferenceKey.self,
+          value: proxy.frame(in: .named("MonthCalendarGrid"))
+        )
+      }
+    }
+    .onPreferenceChange(MonthCalendarGridFramePreferenceKey.self) { frame in
+      monthGridFrame = frame
+    }
+    .onPreferenceChange(MonthCalendarDayFramePreferenceKey.self) { frames in
+      dayCellFrames = frames
+    }
+  }
+
+  /// Builds one day cell.
+  func dayCellView(_ day: DayCell) -> some View {
+    let normalizedDate = resolvedCalendar.startOfDay(for: day.date)
+
+    return VStack(spacing: 2) {
+      Text("\(resolvedCalendar.component(.day, from: day.date))")
+        .frame(width: 28, height: 22)
+        .background(dayBackground(day))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+      dayIndicatorBar(for: day.date)
     }
     .frame(maxWidth: .infinity, minHeight: 30)
+    .foregroundStyle(dayForeground(day))
+    .background {
+      GeometryReader { proxy in
+        Color.clear.preference(
+          key: MonthCalendarDayFramePreferenceKey.self,
+          value: [normalizedDate: proxy.frame(in: .named("MonthCalendarGrid"))]
+        )
+      }
+    }
   }
 
   /// Builds the appointment-indicator bar for one day.
