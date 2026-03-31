@@ -349,6 +349,11 @@ show_week_numbers = true # Shows the week numbers in the calendar grid.
 show_event_indicators = true # Shows dots under days that contain events.
 header_text_color = "#ffffff" # Text color of the month header and appointments title.
 weekday_text_color = "#91d7e3" # Text color of the weekday labels.
+weekday_text_color = "#91d7e3" # Text color of the weekday labels.
+first_weekday = 2 # First weekday used by the month grid. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting.
+weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
+# weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels for Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
+day_text_color = "#d0d0d0" # Text color of days in the current month.
 day_text_color = "#d0d0d0" # Text color of days in the current month.
 outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
 selected_text_color = "#111111" # Text color of selected day cells.

@@ -89,6 +89,7 @@ extension Config {
         var showEventIndicators: Bool
         var headerTextColorHex: String
         var weekdayTextColorHex: String
+        var firstWeekday: Int?
         var dayTextColorHex: String
         var outsideMonthTextColorHex: String
         var selectedTextColorHex: String
@@ -114,6 +115,8 @@ extension Config {
         var anchorDateFormat: String
         var anchorTextColorHex: String?
         var anchorShowDateText: Bool
+        var weekdayFormat: String
+        var weekdaySymbols: [String]?
       }
 
       var popup: Popup
@@ -233,6 +236,7 @@ extension Config {
           showEventIndicators: true,
           headerTextColorHex: "#ffffff",
           weekdayTextColorHex: "#91d7e3",
+          firstWeekday: nil,
           dayTextColorHex: "#d0d0d0",
           outsideMonthTextColorHex: "#6e738d",
           selectedTextColorHex: "#111111",
@@ -257,7 +261,9 @@ extension Config {
           excludedCalendarNames: [],
           anchorDateFormat: "EEE d MMM",
           anchorTextColorHex: "#ffffff",
-          anchorShowDateText: true
+          anchorShowDateText: true,
+          weekdayFormat: "dd",
+          weekdaySymbols: nil
         )
       )
     )
@@ -568,6 +574,34 @@ extension Config {
     let minHeight = max(0, min(parsedMinHeight, parsedMaxHeight))
     let maxHeight = max(parsedMinHeight, parsedMaxHeight)
 
+    let weekdayFormat = try validatedMonthWeekdayFormat(
+      try optionalString(
+        table["weekday_format"],
+        path: "builtins.calendar.month.popup.weekday_format"
+      ) ?? fallback.weekdayFormat,
+      path: "builtins.calendar.month.popup.weekday_format"
+    )
+    let weekdaySymbols = try validatedMonthWeekdaySymbols(
+      try optionalStringArray(
+        table["weekday_symbols"],
+        path: "builtins.calendar.month.popup.weekday_symbols"
+      ) ?? fallback.weekdaySymbols,
+      path: "builtins.calendar.month.popup.weekday_symbols"
+    )
+
+    let parsedFirstWeekday =
+      try optionalInt(
+        table["first_weekday"],
+        path: "builtins.calendar.month.popup.first_weekday"
+      ) ?? fallback.firstWeekday
+
+    if let parsedFirstWeekday, !(1...7).contains(parsedFirstWeekday) {
+      throw ConfigError.invalidValue(
+        path: "builtins.calendar.month.popup.first_weekday",
+        message: "expected integer from 1 to 7"
+      )
+    }
+
     return CalendarBuiltinConfig.Month.Popup(
       backgroundColorHex: try optionalString(
         table["background_color"],
@@ -625,6 +659,7 @@ extension Config {
         table["weekday_text_color"],
         path: "builtins.calendar.month.popup.weekday_text_color"
       ) ?? fallback.weekdayTextColorHex,
+      firstWeekday: parsedFirstWeekday,
       dayTextColorHex: try optionalString(
         table["day_text_color"],
         path: "builtins.calendar.month.popup.day_text_color"
@@ -723,7 +758,57 @@ extension Config {
       anchorShowDateText: try optionalBool(
         table["anchor_show_date_text"],
         path: "builtins.calendar.month.popup.anchor_show_date_text"
-      ) ?? fallback.anchorShowDateText
+      ) ?? fallback.anchorShowDateText,
+      weekdayFormat: weekdayFormat,
+      weekdaySymbols: weekdaySymbols
     )
+  }
+
+  /// Validates the configured localized weekday format.
+  private func validatedMonthWeekdayFormat(
+    _ value: String,
+    path: String
+  ) throws -> String {
+    switch value {
+    case "d", "dd", "ddd":
+      return value
+    case "dddd":
+      throw ConfigError.invalidValue(
+        path: path,
+        message:
+          "dddd is not allowed because full weekday names are too wide; use d, dd, ddd, or weekday_symbols"
+      )
+    default:
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one of d, dd, or ddd"
+      )
+    }
+  }
+
+  /// Validates the optional manual weekday labels in Monday-to-Sunday order.
+  private func validatedMonthWeekdaySymbols(
+    _ value: [String]?,
+    path: String
+  ) throws -> [String]? {
+    guard let value else { return nil }
+
+    guard value.count == 7 else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected exactly 7 weekday symbols ordered Monday through Sunday"
+      )
+    }
+
+    let trimmed = value.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    guard trimmed.allSatisfy({ !$0.isEmpty }) else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "weekday symbols must not be empty"
+      )
+    }
+
+    return trimmed
   }
 }

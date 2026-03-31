@@ -208,11 +208,11 @@ extension NativeMonthCalendarPopupView {
 
   /// Shows the previous visible month.
   private func showPreviousMonth() {
-    guard let newMonth = calendar.date(byAdding: .month, value: -1, to: visibleMonth) else {
+    guard let newMonth = resolvedCalendar.date(byAdding: .month, value: -1, to: visibleMonth) else {
       return
     }
 
-    visibleMonth = Self.startOfMonth(newMonth)
+    visibleMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
     selectedStartDate = visibleMonth
     selectedEndDate = visibleMonth
 
@@ -222,9 +222,11 @@ extension NativeMonthCalendarPopupView {
 
   /// Shows the next visible month.
   private func showNextMonth() {
-    guard let newMonth = calendar.date(byAdding: .month, value: 1, to: visibleMonth) else { return }
+    guard let newMonth = resolvedCalendar.date(byAdding: .month, value: 1, to: visibleMonth) else {
+      return
+    }
 
-    visibleMonth = Self.startOfMonth(newMonth)
+    visibleMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
     selectedStartDate = visibleMonth
     selectedEndDate = visibleMonth
 
@@ -234,6 +236,7 @@ extension NativeMonthCalendarPopupView {
   /// Returns the visible month title.
   private var monthTitle: String {
     let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
     formatter.dateFormat = "LLLL yyyy"
     return formatter.string(from: visibleMonth)
   }
@@ -259,15 +262,79 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
-  /// Returns the weekday symbols in locale order.
+  /// Returns the weekday symbols in calendar order.
   private var weekdaySymbols: [String] {
-    let formatter = DateFormatter()
-    let symbols =
-      formatter.shortStandaloneWeekdaySymbols
-      ?? ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+    if let configured = config.weekdaySymbols {
+      return reorderMondayFirstWeekdaySymbolsToCalendarOrder(configured)
+    }
 
-    let startIndex = max(0, calendar.firstWeekday - 1)
-    return Array(symbols[startIndex...] + symbols[..<startIndex])
+    return reorderMondayFirstWeekdaySymbolsToCalendarOrder(
+      localizedMondayFirstWeekdaySymbols()
+    )
+  }
+
+  /// Returns localized weekday labels in Monday-to-Sunday order.
+  private func localizedMondayFirstWeekdaySymbols() -> [String] {
+    let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
+
+    let sundayFirstSymbols: [String]
+    switch config.weekdayFormat {
+    case "d":
+      sundayFirstSymbols =
+        formatter.veryShortStandaloneWeekdaySymbols
+        ?? formatter.veryShortWeekdaySymbols
+        ?? ["S", "M", "T", "W", "T", "F", "S"]
+
+    case "dd":
+      let baseSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      sundayFirstSymbols = baseSymbols.map { String($0.prefix(2)) }
+
+    case "ddd":
+      sundayFirstSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    default:
+      sundayFirstSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    }
+
+    return normalizeSundayFirstSymbolsToMondayFirst(sundayFirstSymbols)
+  }
+
+  /// Converts Sunday-first weekday symbols into Monday-first order.
+  private func normalizeSundayFirstSymbolsToMondayFirst(_ symbols: [String]) -> [String] {
+    guard symbols.count == 7 else {
+      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    }
+
+    return Array(symbols[1...6]) + [symbols[0]]
+  }
+
+  /// Reorders Monday-first weekday symbols into the current calendar order.
+  private func reorderMondayFirstWeekdaySymbolsToCalendarOrder(_ symbols: [String]) -> [String] {
+    guard symbols.count == 7 else { return symbols }
+
+    let mondayFirstIndex = mondayFirstWeekdayIndex(for: resolvedCalendar.firstWeekday)
+    return Array(symbols[mondayFirstIndex...]) + Array(symbols[..<mondayFirstIndex])
+  }
+
+  /// Converts `Calendar.firstWeekday` into a Monday-first zero-based index.
+  private func mondayFirstWeekdayIndex(for firstWeekday: Int) -> Int {
+    let normalized = ((firstWeekday - 1) % 7 + 7) % 7
+
+    if normalized == 0 {
+      return 6
+    }
+
+    return normalized - 1
   }
 }
 
@@ -295,11 +362,11 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds one interactive day cell.
   private func dayCellView(_ day: DayCell) -> some View {
-    let normalizedDate = calendar.startOfDay(for: day.date)
+    let normalizedDate = resolvedCalendar.startOfDay(for: day.date)
 
     return ZStack {
       VStack(spacing: 2) {
-        Text("\(calendar.component(.day, from: day.date))")
+        Text("\(resolvedCalendar.component(.day, from: day.date))")
           .frame(width: 28, height: 22)
           .background(dayBackground(day))
           .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -383,7 +450,7 @@ extension NativeMonthCalendarPopupView {
       guard let count = countsByColor[colorHex], count > 0 else { return nil }
 
       return DayIndicatorSegment(
-        id: "\(calendar.startOfDay(for: date).timeIntervalSince1970)-\(colorHex)",
+        id: "\(resolvedCalendar.startOfDay(for: date).timeIntervalSince1970)-\(colorHex)",
         colorHex: colorHex,
         fraction: CGFloat(count) / CGFloat(total)
       )
@@ -403,34 +470,41 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the computed week rows for the visible month.
   private var weekRows: [WeekRow] {
-    guard let monthRange = calendar.dateInterval(of: .month, for: visibleMonth) else { return [] }
+    guard let monthRange = resolvedCalendar.dateInterval(of: .month, for: visibleMonth) else {
+      return []
+    }
 
     let firstWeekStart =
-      calendar.dateInterval(of: .weekOfMonth, for: monthRange.start)?.start
+      resolvedCalendar.dateInterval(of: .weekOfMonth, for: monthRange.start)?.start
       ?? monthRange.start
 
     let lastVisibleDay =
-      calendar.date(byAdding: .day, value: -1, to: monthRange.end)
+      resolvedCalendar.date(byAdding: .day, value: -1, to: monthRange.end)
       ?? monthRange.end
 
     let lastWeekEnd =
-      calendar.dateInterval(of: .weekOfMonth, for: lastVisibleDay)?.end
+      resolvedCalendar.dateInterval(of: .weekOfMonth, for: lastVisibleDay)?.end
       ?? monthRange.end
 
     var rows: [WeekRow] = []
     var currentWeekStart = firstWeekStart
 
     while currentWeekStart < lastWeekEnd {
-      let weekNumber = calendar.component(.weekOfYear, from: currentWeekStart)
+      let weekNumber = resolvedCalendar.component(.weekOfYear, from: currentWeekStart)
 
       let days = (0..<7).compactMap { offset -> DayCell? in
-        guard let date = calendar.date(byAdding: .day, value: offset, to: currentWeekStart) else {
+        guard let date = resolvedCalendar.date(byAdding: .day, value: offset, to: currentWeekStart)
+        else {
           return nil
         }
 
         return DayCell(
           date: date,
-          isCurrentMonth: calendar.isDate(date, equalTo: visibleMonth, toGranularity: .month)
+          isCurrentMonth: resolvedCalendar.isDate(
+            date,
+            equalTo: visibleMonth,
+            toGranularity: .month
+          )
         )
       }
 
@@ -441,7 +515,8 @@ extension NativeMonthCalendarPopupView {
         )
       )
 
-      guard let nextWeek = calendar.date(byAdding: .day, value: 7, to: currentWeekStart) else {
+      guard let nextWeek = resolvedCalendar.date(byAdding: .day, value: 7, to: currentWeekStart)
+      else {
         break
       }
 
@@ -577,7 +652,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns whether only one day is selected.
   private var isSingleDaySelection: Bool {
-    calendar.isDate(selectedStartDate, inSameDayAs: selectedEndDate)
+    resolvedCalendar.isDate(selectedStartDate, inSameDayAs: selectedEndDate)
   }
 
   /// Handles one pointer-down or drag update on a day.
@@ -652,6 +727,7 @@ extension NativeMonthCalendarPopupView {
   /// Formats one selected day label.
   private func formattedSelectionDay(_ date: Date) -> String {
     let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
     formatter.dateFormat = "EEE d MMM"
     return formatter.string(from: date)
   }
@@ -686,6 +762,7 @@ extension NativeMonthCalendarPopupView {
   /// Formats one event time.
   private func formattedEventTime(_ date: Date) -> String {
     let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
     formatter.dateFormat = "HH:mm"
     return formatter.string(from: date)
   }
@@ -713,7 +790,7 @@ extension NativeMonthCalendarPopupView {
       return color(config.selectedBackgroundColorHex)
     }
 
-    if calendar.isDateInToday(day.date) {
+    if resolvedCalendar.isDateInToday(day.date) {
       return color(config.todayBackgroundColorHex)
     }
 
@@ -722,9 +799,9 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns whether one day is inside the active selection.
   private func isSelected(_ date: Date) -> Bool {
-    let normalizedDate = calendar.startOfDay(for: date)
-    let start = calendar.startOfDay(for: min(selectedStartDate, selectedEndDate))
-    let end = calendar.startOfDay(for: max(selectedStartDate, selectedEndDate))
+    let normalizedDate = resolvedCalendar.startOfDay(for: date)
+    let start = resolvedCalendar.startOfDay(for: min(selectedStartDate, selectedEndDate))
+    let end = resolvedCalendar.startOfDay(for: max(selectedStartDate, selectedEndDate))
     return normalizedDate >= start && normalizedDate <= end
   }
 
@@ -737,9 +814,20 @@ extension NativeMonthCalendarPopupView {
 // MARK: - Logging And Helpers
 
 extension NativeMonthCalendarPopupView {
+  /// Returns the calendar resolved for month popup rendering.
+  private var resolvedCalendar: Calendar {
+    var resolved = calendar
+
+    if let firstWeekday = config.firstWeekday {
+      resolved.firstWeekday = firstWeekday
+    }
+
+    return resolved
+  }
+
   /// Keeps the selection inside the current visible month on first show.
   private func syncSelectionIntoVisibleMonth() {
-    if !calendar.isDate(selectedStartDate, equalTo: visibleMonth, toGranularity: .month) {
+    if !resolvedCalendar.isDate(selectedStartDate, equalTo: visibleMonth, toGranularity: .month) {
       selectedStartDate = visibleMonth
       selectedEndDate = visibleMonth
     }
@@ -760,8 +848,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the first day of one month.
-  private static func startOfMonth(_ date: Date) -> Date {
-    let calendar = Calendar.current
+  private static func startOfMonth(_ date: Date, calendar: Calendar = Calendar.current) -> Date {
     let components = calendar.dateComponents([.year, .month], from: date)
     return calendar.date(from: components) ?? calendar.startOfDay(for: date)
   }
