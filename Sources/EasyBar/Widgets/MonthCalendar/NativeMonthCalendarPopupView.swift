@@ -143,7 +143,6 @@ extension NativeMonthCalendarPopupView {
   /// Builds the agenda container.
   private var agendaContainerView: some View {
     VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
-      selectionSummaryView
       appointmentsContainerView
     }
     .frame(
@@ -264,58 +263,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the weekday symbols in calendar order.
   private var weekdaySymbols: [String] {
-    if let configured = config.weekdaySymbols {
-      return reorderMondayFirstWeekdaySymbolsToCalendarOrder(configured)
-    }
-
-    return reorderMondayFirstWeekdaySymbolsToCalendarOrder(
-      localizedMondayFirstWeekdaySymbols()
-    )
-  }
-
-  /// Returns localized weekday labels in Monday-to-Sunday order.
-  private func localizedMondayFirstWeekdaySymbols() -> [String] {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-
-    let sundayFirstSymbols: [String]
-    switch config.weekdayFormat {
-    case "d":
-      sundayFirstSymbols =
-        formatter.veryShortStandaloneWeekdaySymbols
-        ?? formatter.veryShortWeekdaySymbols
-        ?? ["S", "M", "T", "W", "T", "F", "S"]
-
-    case "dd":
-      let baseSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-      sundayFirstSymbols = baseSymbols.map { String($0.prefix(2)) }
-
-    case "ddd":
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-    default:
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    }
-
-    return normalizeSundayFirstSymbolsToMondayFirst(sundayFirstSymbols)
-  }
-
-  /// Converts Sunday-first weekday symbols into Monday-first order.
-  private func normalizeSundayFirstSymbolsToMondayFirst(_ symbols: [String]) -> [String] {
-    guard symbols.count == 7 else {
-      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    }
-
-    return Array(symbols[1...6]) + [symbols[0]]
+    reorderMondayFirstWeekdaySymbolsToCalendarOrder(config.resolvedWeekdaySymbols)
   }
 
   /// Reorders Monday-first weekday symbols into the current calendar order.
@@ -530,13 +478,6 @@ extension NativeMonthCalendarPopupView {
 // MARK: - Selection And Agenda
 
 extension NativeMonthCalendarPopupView {
-  /// Builds the current selection summary.
-  private var selectionSummaryView: some View {
-    Text(selectionSummaryText)
-      .foregroundStyle(color(config.headerTextColorHex))
-      .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
   /// Builds the appointments container, optionally scrollable.
   @ViewBuilder
   private var appointmentsContainerView: some View {
@@ -640,21 +581,6 @@ extension NativeMonthCalendarPopupView {
     return Array(selectedEvents.prefix(config.maxVisibleAppointments))
   }
 
-  /// Returns the current selection summary text.
-  private var selectionSummaryText: String {
-    if isSingleDaySelection {
-      return "Selected: \(formattedSelectionDay(selectedStartDate))"
-    }
-
-    return
-      "Selected: \(formattedSelectionDay(selectedStartDate)) – \(formattedSelectionDay(selectedEndDate))"
-  }
-
-  /// Returns whether only one day is selected.
-  private var isSingleDaySelection: Bool {
-    resolvedCalendar.isDate(selectedStartDate, inSameDayAs: selectedEndDate)
-  }
-
   /// Handles one pointer-down or drag update on a day.
   private func handlePointerDownOrDrag(on date: Date, translation: CGSize) {
     if !isDragSelecting {
@@ -722,14 +648,6 @@ extension NativeMonthCalendarPopupView {
     Logger.debug(
       "month calendar popup drag_end start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
     )
-  }
-
-  /// Formats one selected day label.
-  private func formattedSelectionDay(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = "EEE d MMM"
-    return formatter.string(from: date)
   }
 
   /// Builds one rendered appointment line.
@@ -836,7 +754,7 @@ extension NativeMonthCalendarPopupView {
   /// Logs the current selection.
   private func logSelection(_ reason: String) {
     Logger.debug(
-      "month calendar popup selection reason=\(reason) start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate)) single_day=\(isSingleDaySelection)"
+      "month calendar popup selection reason=\(reason) start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
     )
   }
 
