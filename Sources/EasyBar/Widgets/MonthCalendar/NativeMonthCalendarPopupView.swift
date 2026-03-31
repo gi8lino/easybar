@@ -21,7 +21,7 @@ struct NativeMonthCalendarPopupView: View {
     let fraction: CGFloat
   }
 
-  @ObservedObject private var store = NativeCalendarStore.shared
+  @ObservedObject private var store = NativeMonthCalendarStore.shared
   private let config = Config.shared.builtinMonthCalendar
   private let calendar = Calendar.current
 
@@ -55,7 +55,11 @@ struct NativeMonthCalendarPopupView: View {
       .frame(minWidth: minimumPopupWidth, maxWidth: .infinity, alignment: .leading)
       .onAppear {
         syncSelectionIntoVisibleMonth()
+        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: visibleMonth)
         logSelection("on_appear")
+      }
+      .onChange(of: visibleMonth) { _, newValue in
+        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: newValue)
       }
       .onChange(of: selectedStartDate) { _, _ in
         logSelection("selected_start_changed")
@@ -346,7 +350,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the per-calendar indicator segments for one day.
   private func dayIndicatorSegments(for date: Date) -> [DayIndicatorSegment] {
-    let events = store.events(on: date)
+    let events = store.eventsForDay(date)
     guard !events.isEmpty else { return [] }
 
     var countsByColor: [String: Int] = [:]
@@ -377,7 +381,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the indicator color for one event, falling back to the configured default.
-  private func normalizedIndicatorColorHex(for event: NativeCalendarEvent) -> String {
+  private func normalizedIndicatorColorHex(for event: NativeMonthCalendarEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
       !hex.isEmpty
     {
@@ -485,7 +489,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Builds one appointment row.
-  private func appointmentRow(_ event: NativeCalendarEvent) -> some View {
+  private func appointmentRow(_ event: NativeMonthCalendarEvent) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Rectangle()
         .fill(color(normalizedIndicatorColorHex(for: event)))
@@ -512,8 +516,8 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the currently selected events.
-  private var selectedEvents: [NativeCalendarEvent] {
-    store.events(from: selectedStartDate, to: selectedEndDate)
+  private var selectedEvents: [NativeMonthCalendarEvent] {
+    store.eventsInRange(from: selectedStartDate, to: selectedEndDate)
       .sorted { lhs, rhs in
         if lhs.startDate != rhs.startDate {
           return lhs.startDate < rhs.startDate
@@ -528,7 +532,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the visible selected events limited by config when scrolling is disabled.
-  private var visibleSelectedEvents: [NativeCalendarEvent] {
+  private var visibleSelectedEvents: [NativeMonthCalendarEvent] {
     if config.popupAppointmentsScrollable {
       return selectedEvents
     }
@@ -628,7 +632,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Builds one rendered appointment line.
-  private func appointmentLine(for event: NativeCalendarEvent) -> String {
+  private func appointmentLine(for event: NativeMonthCalendarEvent) -> String {
     let prefix: String
 
     if event.isAllDay {
@@ -645,7 +649,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the rendered travel-time text when available.
-  private func travelTimeText(for event: NativeCalendarEvent) -> String? {
+  private func travelTimeText(for event: NativeMonthCalendarEvent) -> String? {
     guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
 
     let minutes = Int((travelTimeSeconds / 60).rounded())

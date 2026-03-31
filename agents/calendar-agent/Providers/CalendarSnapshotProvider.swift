@@ -16,7 +16,8 @@ final class CalendarSnapshotProvider {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
     AgentLogger.info(
-      "calendar agent authorization status before start=\(authState.describe(status))")
+      "calendar agent authorization status before start=\(authState.describe(status))"
+    )
 
     requestAccessIfNeeded()
 
@@ -40,16 +41,9 @@ final class CalendarSnapshotProvider {
 
   /// Builds one calendar snapshot for the requested query.
   ///
-  /// `query.days` is interpreted as a symmetric window around today:
-  /// - past `days`
-  /// - future `days`
-  ///
-  /// This is required for the month calendar popup so it can:
-  /// - mark days with events in the past and future
-  /// - show appointments when a user clicks on a past day
-  ///
-  /// The rendered popup sections remain future-oriented for the regular
-  /// calendar widget, but the raw event payload is symmetric.
+  /// The agent now fetches exactly the requested start/end range.
+  /// The regular calendar popup sections are controlled separately through
+  /// `sectionStartDate` and `sectionDayCount`.
   func snapshot(for query: CalendarAgentQuery) -> CalendarAgentSnapshot {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
@@ -60,7 +54,8 @@ final class CalendarSnapshotProvider {
 
     guard hasAccess else {
       AgentLogger.debug(
-        "calendar snapshot access_granted=false permission_state=\(permissionState)")
+        "calendar snapshot access_granted=false permission_state=\(permissionState)"
+      )
       return CalendarAgentSnapshot(
         accessGranted: false,
         permissionState: permissionState,
@@ -70,15 +65,8 @@ final class CalendarSnapshotProvider {
       )
     }
 
-    let calendar = Calendar.current
-    let startOfToday = calendar.startOfDay(for: now)
-    let safeDays = max(1, query.days)
-
-    guard
-      let fetchStart = calendar.date(byAdding: .day, value: -safeDays, to: startOfToday),
-      let fetchEndExclusive = calendar.date(byAdding: .day, value: safeDays + 1, to: startOfToday),
-      let sectionsEndExclusive = calendar.date(byAdding: .day, value: safeDays, to: startOfToday)
-    else {
+    guard let fetchRange = normalizedFetchRange(from: query) else {
+      AgentLogger.warn("calendar snapshot invalid fetch range")
       return CalendarAgentSnapshot(
         accessGranted: true,
         permissionState: permissionState,
@@ -90,15 +78,13 @@ final class CalendarSnapshotProvider {
 
     let events = makeNormalizedEvents(
       query: query,
-      fetchStart: fetchStart,
-      fetchEndExclusive: fetchEndExclusive
+      fetchStart: fetchRange.start,
+      fetchEndExclusive: fetchRange.end
     )
 
     let sections = makeSections(
       query: query,
-      events: events,
-      startOfToday: startOfToday,
-      endExclusive: sectionsEndExclusive
+      events: events
     )
 
     let snapshot = CalendarAgentSnapshot(
@@ -110,10 +96,31 @@ final class CalendarSnapshotProvider {
     )
 
     AgentLogger.debug(
-      "calendar snapshot access_granted=true permission_state=\(permissionState) days=\(query.days) show_birthdays=\(query.showBirthdays) fetch_start=\(fetchStart) fetch_end=\(fetchEndExclusive) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
+      """
+      calendar snapshot access_granted=true \
+      permission_state=\(permissionState) \
+      fetch_start=\(fetchRange.start) \
+      fetch_end=\(fetchRange.end) \
+      section_start=\(String(describing: query.sectionStartDate)) \
+      section_day_count=\(String(describing: query.sectionDayCount)) \
+      show_birthdays=\(query.showBirthdays) \
+      included=\(query.includedCalendarNames) \
+      excluded=\(query.excludedCalendarNames) \
+      events=\(snapshot.events.count) \
+      sections=\(snapshot.sections.count)
+      """
     )
 
     return snapshot
+  }
+
+  /// Returns one normalized fetch range when valid.
+  private func normalizedFetchRange(from query: CalendarAgentQuery) -> DateInterval? {
+    let start = min(query.startDate, query.endDate)
+    let end = max(query.startDate, query.endDate)
+
+    guard start < end else { return nil }
+    return DateInterval(start: start, end: end)
   }
 
   /// Requests calendar access when the current state allows it.
@@ -169,7 +176,7 @@ final class CalendarSnapshotProvider {
 // MARK: - Event Building
 
 extension CalendarSnapshotProvider {
-  /// Builds normalized events for the requested symmetric window.
+  /// Builds normalized events for the requested fetch range.
   private func makeNormalizedEvents(
     query: CalendarAgentQuery,
     fetchStart: Date,
@@ -187,6 +194,7 @@ extension CalendarSnapshotProvider {
 
     result.append(
       contentsOf: makeRegularEvents(
+        query: query,
         start: fetchStart,
         end: fetchEndExclusive
       )
@@ -206,11 +214,12 @@ extension CalendarSnapshotProvider {
   }
 
   /// Builds normalized regular calendar events.
-  ///
-  /// This loads all event calendars except the special birthday calendars,
-  /// which are handled separately.
-  private func makeRegularEvents(start: Date, end: Date) -> [CalendarAgentEvent] {
-    let normalCalendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
+  private func makeRegularEvents(
+    query: CalendarAgentQuery,
+    start: Date,
+    end: Date
+  ) -> [CalendarAgentEvent] {
+    let normalCalendars = filteredRegularCalendars(query: query)
     let predicate = eventStore.predicateForEvents(
       withStart: start,
       end: end,
@@ -290,11 +299,44 @@ extension CalendarSnapshotProvider {
       }
   }
 
+  /// Returns the filtered non-birthday calendars for the query.
+  private func filteredRegularCalendars(query: CalendarAgentQuery) -> [EKCalendar] {
+    let calendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
+    let included = normalizedNameSet(query.includedCalendarNames)
+    let excluded = normalizedNameSet(query.excludedCalendarNames)
+
+    return calendars.filter { calendar in
+      let normalizedTitle = normalizedCalendarName(calendar.title)
+
+      if excluded.contains(normalizedTitle) {
+        return false
+      }
+
+      if included.isEmpty {
+        return true
+      }
+
+      return included.contains(normalizedTitle)
+    }
+  }
+
+  /// Returns one normalized calendar-name set.
+  private func normalizedNameSet(_ values: [String]) -> Set<String> {
+    Set(
+      values
+        .map { normalizedCalendarName($0) }
+        .filter { !$0.isEmpty }
+    )
+  }
+
+  /// Normalizes one calendar name for matching.
+  private func normalizedCalendarName(_ value: String) -> String {
+    value
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+  }
+
   /// Resolves travel time from the best available source.
-  ///
-  /// Some SDK/target combinations don't surface `EKEvent.travelTime` to Swift
-  /// even when the runtime may still provide it. This first tries KVC on the
-  /// Objective-C object, then falls back to inferring travel time from alarms.
   private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
     if let direct = directTravelTimeSeconds(for: event) {
       return direct
@@ -317,8 +359,6 @@ extension CalendarSnapshotProvider {
   }
 
   /// Infers travel time from alarms when available.
-  ///
-  /// This treats a negative relative alarm offset as lead time before the event.
   private func inferredTravelTimeSecondsFromAlarms(for event: EKEvent) -> TimeInterval? {
     guard let alarms = event.alarms, !alarms.isEmpty else { return nil }
 
@@ -337,20 +377,32 @@ extension CalendarSnapshotProvider {
 extension CalendarSnapshotProvider {
   /// Builds simple rendered sections from normalized events.
   ///
-  /// Sections remain future-oriented for the regular calendar popup, beginning
-  /// with today and continuing for `query.days`. The month calendar popup does
-  /// not use these sections; it uses the raw normalized events above.
+  /// These sections are only for the regular calendar popup.
   private func makeSections(
     query: CalendarAgentQuery,
-    events: [CalendarAgentEvent],
-    startOfToday: Date,
-    endExclusive: Date
+    events: [CalendarAgentEvent]
   ) -> [CalendarAgentSection] {
+    guard
+      let sectionStartDate = query.sectionStartDate,
+      let sectionDayCount = query.sectionDayCount,
+      sectionDayCount > 0
+    else {
+      return []
+    }
+
     let calendar = Calendar.current
+    let startOfSections = calendar.startOfDay(for: sectionStartDate)
     var sections: [CalendarAgentSection] = []
 
+    let endOfSections =
+      calendar.date(byAdding: .day, value: sectionDayCount, to: startOfSections)
+      ?? startOfSections.addingTimeInterval(TimeInterval(sectionDayCount * 86_400))
+
     let birthdayEvents = events.filter { event in
-      event.isAllDay && event.id.hasPrefix("birthday-")
+      event.isAllDay
+        && event.id.hasPrefix("birthday-")
+        && event.startDate < endOfSections
+        && event.endDate > startOfSections
     }
 
     if query.showBirthdays {
@@ -375,13 +427,11 @@ extension CalendarSnapshotProvider {
     }
 
     let regularEvents = events.filter { !$0.id.hasPrefix("birthday-") }
-    let safeDays = max(1, query.days)
 
-    for dayOffset in 0..<safeDays {
+    for dayOffset in 0..<sectionDayCount {
       guard
-        let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday),
-        let nextDay = calendar.date(byAdding: .day, value: 1, to: day),
-        day < endExclusive
+        let day = calendar.date(byAdding: .day, value: dayOffset, to: startOfSections),
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: day)
       else {
         continue
       }
@@ -464,7 +514,8 @@ extension CalendarSnapshotProvider {
     }
 
     let value = title[title.index(after: open)..<close].trimmingCharacters(
-      in: .whitespacesAndNewlines)
+      in: .whitespacesAndNewlines
+    )
     return Int(value)
   }
 

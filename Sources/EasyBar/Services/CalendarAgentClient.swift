@@ -15,7 +15,7 @@ final class CalendarAgentClient {
     },
     clearState: {
       DispatchQueue.main.async {
-        NativeCalendarStore.shared.clear()
+        NativeUpcomingCalendarStore.shared.clear()
       }
     }
   )
@@ -56,43 +56,38 @@ final class CalendarAgentClient {
   }
 
   /// Returns the current calendar-agent query.
-  ///
-  /// The month calendar needs a wide symmetric event window so it can mark past
-  /// and future days and resolve appointments when the user clicks old dates.
   private func currentQuery() -> CalendarAgentQuery {
-    let calendarConfig = Config.shared.builtinCalendar
-    let monthConfig = Config.shared.builtinMonthCalendar
-
-    let requestedDays = max(
-      calendarConfig.days,
-      monthCalendarFetchDays(monthConfig: monthConfig)
+    let now = Date()
+    let config = Config.shared.builtinCalendar
+    let requestedRange = UpcomingCalendarNativeWidget.requestedDateRange(
+      config: config,
+      now: now
     )
 
     Logger.debug(
-      "calendar agent client query days=\(requestedDays) show_birthdays=\(calendarConfig.showBirthdays) included=\(monthConfig.includedCalendarNames) excluded=\(monthConfig.excludedCalendarNames)"
+      """
+      calendar agent client query \
+      start=\(debugDate(requestedRange.start)) \
+      end=\(debugDate(requestedRange.end)) \
+      section_start=\(debugDate(requestedRange.start)) \
+      section_days=\(max(1, config.days)) \
+      show_birthdays=\(config.showBirthdays)
+      """
     )
 
     return CalendarAgentQuery(
-      days: requestedDays,
-      showBirthdays: calendarConfig.showBirthdays,
-      emptyText: calendarConfig.emptyText,
-      birthdaysTitle: calendarConfig.birthdaysTitle,
-      birthdaysDateFormat: calendarConfig.birthdaysDateFormat,
-      birthdaysShowAge: calendarConfig.birthdaysShowAge,
-      includedCalendarNames: monthConfig.includedCalendarNames,
-      excludedCalendarNames: monthConfig.excludedCalendarNames
+      startDate: requestedRange.start,
+      endDate: requestedRange.end,
+      sectionStartDate: requestedRange.start,
+      sectionDayCount: max(1, config.days),
+      showBirthdays: config.showBirthdays,
+      emptyText: config.emptyText,
+      birthdaysTitle: config.birthdaysTitle,
+      birthdaysDateFormat: config.birthdaysDateFormat,
+      birthdaysShowAge: config.birthdaysShowAge,
+      includedCalendarNames: [],
+      excludedCalendarNames: []
     )
-  }
-
-  /// Returns the fetch window needed for the month calendar popup.
-  ///
-  /// `days` is interpreted by the updated agent as a symmetric window around
-  /// today, so 400 means roughly 400 days in the past and 400 in the future.
-  private func monthCalendarFetchDays(
-    monthConfig: Config.MonthCalendarBuiltinConfig
-  ) -> Int {
-    guard monthConfig.enabled else { return 0 }
-    return 400
   }
 
   /// Publishes one snapshot to the shared store on the main queue.
@@ -101,8 +96,14 @@ final class CalendarAgentClient {
       Logger.debug(
         "calendar agent client publish snapshot events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
       )
-      NativeCalendarStore.shared.apply(snapshot: snapshot)
+      NativeUpcomingCalendarStore.shared.apply(snapshot: snapshot)
       EventBus.shared.emit(.calendarChange)
     }
+  }
+
+  /// Formats one debug date string.
+  private func debugDate(_ date: Date) -> String {
+    let formatter = ISO8601DateFormatter()
+    return formatter.string(from: date)
   }
 }

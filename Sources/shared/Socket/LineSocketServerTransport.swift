@@ -28,6 +28,7 @@ public final class LineSocketServerTransport<
   private let stateLock = NSLock()
   private let acceptQueue: DispatchQueue
   private let clientQueue: DispatchQueue
+  private let requestDecoder: JSONDecoder
   private let responseEncoder: JSONEncoder
 
   private var serverFD: Int32 = -1
@@ -56,6 +57,9 @@ public final class LineSocketServerTransport<
       qos: .utility,
       attributes: .concurrent
     )
+
+    requestDecoder = JSONDecoder()
+    requestDecoder.dateDecodingStrategy = .iso8601
 
     responseEncoder = JSONEncoder()
     responseEncoder.outputFormatting = [.sortedKeys]
@@ -230,7 +234,7 @@ public final class LineSocketServerTransport<
     }
 
     do {
-      let request = try JSONDecoder().decode(Request.self, from: data)
+      let request = try requestDecoder.decode(Request.self, from: data)
       handler(clientFD, request)
     } catch {
       warnLog("\(serverLabel) request decode failed error=\(error)")

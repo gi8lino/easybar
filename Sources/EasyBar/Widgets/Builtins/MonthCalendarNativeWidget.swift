@@ -20,7 +20,10 @@ final class MonthCalendarNativeWidget: NativeWidget {
       return
     }
 
-    CalendarAgentClient.shared.start()
+    let snapshot = currentSnapshot()
+    _ = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(for: snapshot.now)
+
+    MonthCalendarAgentClient.shared.start()
     startTimer()
     publish()
   }
@@ -31,10 +34,11 @@ final class MonthCalendarNativeWidget: NativeWidget {
     timer = nil
 
     if Config.shared.calendarAgentEnabled {
-      CalendarAgentClient.shared.stop()
+      MonthCalendarAgentClient.shared.stop()
     }
 
     WidgetStore.shared.apply(root: rootID, nodes: [])
+    NativeMonthCalendarStore.shared.clear()
   }
 
   /// Publishes the current widget tree.
@@ -53,6 +57,30 @@ extension MonthCalendarNativeWidget {
       config: Config.shared.builtinMonthCalendar,
       now: Date()
     )
+  }
+
+  /// Returns the fetch range required by the month-calendar widget.
+  ///
+  /// This loads the previous, current, and next visible month around `referenceDate`.
+  static func requestedDateRange(
+    config: Config.MonthCalendarBuiltinConfig,
+    referenceDate: Date
+  ) -> DateInterval {
+    let calendar = Calendar.current
+
+    let currentMonthStart =
+      calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate))
+      ?? calendar.startOfDay(for: referenceDate)
+
+    let start =
+      calendar.date(byAdding: .month, value: -1, to: currentMonthStart)
+      ?? currentMonthStart
+
+    let end =
+      calendar.date(byAdding: .month, value: 2, to: currentMonthStart)
+      ?? referenceDate.addingTimeInterval(90 * 86_400)
+
+    return DateInterval(start: start, end: end)
   }
 }
 

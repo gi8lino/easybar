@@ -9,8 +9,14 @@ public enum CalendarAgentCommand: String, Codable {
 
 /// Query payload that shapes one calendar snapshot request.
 public struct CalendarAgentQuery: Codable, Equatable {
-  /// Number of days to include in the snapshot.
-  public var days: Int
+  /// Inclusive fetch start date.
+  public var startDate: Date
+  /// Exclusive fetch end date.
+  public var endDate: Date
+  /// Optional section start date used for the regular calendar popup.
+  public var sectionStartDate: Date?
+  /// Optional number of section days used for the regular calendar popup.
+  public var sectionDayCount: Int?
   /// Whether birthdays should be included.
   public var showBirthdays: Bool
   /// Text shown when no events are available.
@@ -28,7 +34,10 @@ public struct CalendarAgentQuery: Codable, Equatable {
 
   /// Creates one calendar agent query.
   public init(
-    days: Int,
+    startDate: Date,
+    endDate: Date,
+    sectionStartDate: Date? = nil,
+    sectionDayCount: Int? = nil,
     showBirthdays: Bool,
     emptyText: String,
     birthdaysTitle: String,
@@ -37,7 +46,10 @@ public struct CalendarAgentQuery: Codable, Equatable {
     includedCalendarNames: [String] = [],
     excludedCalendarNames: [String] = []
   ) {
-    self.days = days
+    self.startDate = startDate
+    self.endDate = endDate
+    self.sectionStartDate = sectionStartDate
+    self.sectionDayCount = sectionDayCount
     self.showBirthdays = showBirthdays
     self.emptyText = emptyText
     self.birthdaysTitle = birthdaysTitle

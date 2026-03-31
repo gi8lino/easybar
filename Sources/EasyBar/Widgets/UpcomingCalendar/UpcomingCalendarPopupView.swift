@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct NativeCalendarPopupView: View {
+struct NativeUpcomingCalendarPopupView: View {
 
-  @ObservedObject private var store = NativeCalendarStore.shared
+  @ObservedObject private var store = NativeUpcomingCalendarStore.shared
   private let config = Config.shared.builtinCalendar
 
-  /// Renders the native calendar popup content.
+  /// Renders the native upcoming-calendar popup content.
   var body: some View {
     VStack(alignment: .leading, spacing: config.popupSpacing) {
       emptyStateView
@@ -50,7 +50,7 @@ struct NativeCalendarPopupView: View {
   }
 
   /// Builds one calendar popup section.
-  private func sectionView(_ section: NativeCalendarPopupSection) -> some View {
+  private func sectionView(_ section: NativeUpcomingCalendarPopupSection) -> some View {
     let style = style(for: section.kind)
 
     return VStack(alignment: .leading, spacing: 4) {
@@ -68,7 +68,7 @@ struct NativeCalendarPopupView: View {
 
   /// Returns the popup style for one section kind.
   private func style(
-    for kind: NativeCalendarPopupSectionKind
+    for kind: NativeUpcomingCalendarPopupSectionKind
   ) -> Config.CalendarBuiltinConfig.PopupSectionStyle {
     switch kind {
     case .birthdays:
@@ -83,7 +83,7 @@ struct NativeCalendarPopupView: View {
   }
 
   /// Builds the rendered line for one popup item.
-  private func itemLine(for item: NativeCalendarPopupItem) -> String {
+  private func itemLine(for item: NativeUpcomingCalendarPopupItem) -> String {
     let prefix = calendarNamePrefix(for: item)
 
     if item.time.isEmpty {
@@ -95,7 +95,7 @@ struct NativeCalendarPopupView: View {
 
   /// Returns the effective text color for one popup item.
   private func itemTextColor(
-    for item: NativeCalendarPopupItem,
+    for item: NativeUpcomingCalendarPopupItem,
     style: Config.CalendarBuiltinConfig.PopupSectionStyle
   ) -> String {
     if item.time.isEmpty {
@@ -113,7 +113,7 @@ struct NativeCalendarPopupView: View {
   }
 
   /// Returns the optional calendar-name prefix.
-  private func calendarNamePrefix(for item: NativeCalendarPopupItem) -> String {
+  private func calendarNamePrefix(for item: NativeUpcomingCalendarPopupItem) -> String {
     guard config.popupShowCalendarName else { return "" }
     guard let calendarName = item.calendarName?.trimmingCharacters(in: .whitespacesAndNewlines),
       !calendarName.isEmpty

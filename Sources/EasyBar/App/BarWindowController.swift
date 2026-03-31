@@ -219,8 +219,23 @@ final class BarWindowController: NSWindowController {
   }
 
   /// Returns the current calendar permission label.
+  ///
+  /// Both calendar widgets use the same calendar agent, so prefer whichever
+  /// store already has a snapshot. If both are available and disagree, show
+  /// the more informative non-unknown value first.
   private var calendarPermissionLabel: String {
-    NativeCalendarStore.shared.snapshot?.permissionState ?? "unknown"
+    let upcoming = NativeUpcomingCalendarStore.shared.snapshot?.permissionState
+    let month = NativeMonthCalendarStore.shared.snapshot?.permissionState
+
+    if let upcoming, upcoming != "unknown" {
+      return upcoming
+    }
+
+    if let month, month != "unknown" {
+      return month
+    }
+
+    return upcoming ?? month ?? "unknown"
   }
 
   /// Returns the current Wi-Fi/location permission label.

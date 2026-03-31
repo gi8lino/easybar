@@ -1,0 +1,5 @@
+import EasyBarShared
+
+typealias NativeMonthCalendarPopupSection = CalendarAgentSection
+typealias NativeMonthCalendarPopupItem = CalendarAgentItem
+typealias NativeMonthCalendarEvent = CalendarAgentEvent

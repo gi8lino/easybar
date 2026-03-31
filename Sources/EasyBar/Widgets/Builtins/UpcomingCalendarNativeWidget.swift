@@ -1,16 +1,17 @@
 import Foundation
 
-final class CalendarNativeWidget: NativeWidget {
+final class UpcomingCalendarNativeWidget: NativeWidget {
 
   let rootID = "builtin_calendar"
 
   private var timer: Timer?
+
   private struct Snapshot {
     let config: Config.CalendarBuiltinConfig
     let now: Date
   }
 
-  /// Starts the calendar widget.
+  /// Starts the upcoming-calendar widget.
   func start() {
     let snapshot = currentSnapshot()
 
@@ -30,7 +31,7 @@ final class CalendarNativeWidget: NativeWidget {
     publish()
   }
 
-  /// Stops the calendar widget.
+  /// Stops the upcoming-calendar widget.
   func stop() {
     Logger.info("stopping native widget id=\(rootID)")
 
@@ -40,34 +41,51 @@ final class CalendarNativeWidget: NativeWidget {
     if Config.shared.calendarAgentEnabled {
       CalendarAgentClient.shared.stop()
     }
+
     WidgetStore.shared.apply(root: rootID, nodes: [])
-    NativeCalendarStore.shared.clear()
+    NativeUpcomingCalendarStore.shared.clear()
   }
 
   /// Publishes the current calendar nodes.
   private func publish() {
     let snapshot = currentSnapshot()
 
-    Logger.debug("publishing native calendar widget layout=\(snapshot.config.layout.rawValue)")
+    Logger.debug(
+      "publishing native upcoming calendar widget layout=\(snapshot.config.layout.rawValue)")
     WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
   }
 }
 
 // MARK: - Snapshot
 
-extension CalendarNativeWidget {
-  /// Returns the current calendar render snapshot.
+extension UpcomingCalendarNativeWidget {
+  /// Returns the current upcoming-calendar render snapshot.
   private func currentSnapshot() -> Snapshot {
     Snapshot(
       config: Config.shared.builtinCalendar,
       now: Date()
     )
   }
+
+  /// Returns the fetch range required by the upcoming-calendar widget.
+  static func requestedDateRange(
+    config: Config.CalendarBuiltinConfig,
+    now: Date
+  ) -> DateInterval {
+    let calendar = Calendar.current
+    let start = calendar.startOfDay(for: now)
+    let dayCount = max(1, config.days)
+    let end =
+      calendar.date(byAdding: .day, value: dayCount, to: start)
+      ?? now.addingTimeInterval(TimeInterval(dayCount * 86_400))
+
+    return DateInterval(start: start, end: end)
+  }
 }
 
 // MARK: - Node Building
 
-extension CalendarNativeWidget {
+extension UpcomingCalendarNativeWidget {
   /// Builds nodes for the selected anchor layout.
   private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     switch snapshot.config.layout {
@@ -90,7 +108,6 @@ extension CalendarNativeWidget {
       rootRowNode(placement: placement, style: style),
       iconNode(placement: placement, style: style),
 
-      // Stack mode keeps both date strings in one nested column.
       WidgetNodeState(
         id: "\(rootID)_text_column",
         root: rootID,
@@ -234,7 +251,7 @@ extension CalendarNativeWidget {
 
 // MARK: - Timer And Formatting
 
-extension CalendarNativeWidget {
+extension UpcomingCalendarNativeWidget {
 
   /// Starts the periodic date refresh timer.
   fileprivate func startTimer() {
