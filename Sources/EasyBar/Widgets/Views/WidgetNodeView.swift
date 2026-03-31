@@ -99,12 +99,12 @@ extension WidgetNodeView {
   fileprivate var rowOrGroupView: some View {
     Group {
       if node.isCalendarRoot {
-        nativeCalendarAnchorView {
-          childRow
-        }
-      } else if node.isMonthCalendarRoot {
-        nativeMonthCalendarAnchorView {
-          childRow
+        if calendarRootHasPopup {
+          nativeCalendarAnchorView {
+            childRow
+          }
+        } else {
+          styledNodeSurface(childRow)
         }
       } else if hasPopupChildren {
         popupAnchorSurface(childRow)
@@ -123,20 +123,6 @@ extension WidgetNodeView {
   }
 
   fileprivate func nativeCalendarAnchorView<Content: View>(
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    content()
-      .foregroundStyle(nodeColor)
-      .modifier(nodeStyle)
-      .onHover { hovering in handleAnchorHover(hovering) }
-      .background {
-        WidgetPopupAnchorView { anchor in
-          popupPanel.updateAnchorView(anchor)
-        }
-      }
-  }
-
-  fileprivate func nativeMonthCalendarAnchorView<Content: View>(
     @ViewBuilder content: () -> Content
   ) -> some View {
     content()
@@ -287,6 +273,7 @@ extension WidgetNodeView {
     anchorHovered = hovering
 
     if hovering {
+      guard nodeCanPresentPopup else { return }
       popupPresented = true
       return
     }
@@ -308,12 +295,8 @@ extension WidgetNodeView {
   }
 
   fileprivate func updatePopupPanel(isPresented: Bool) {
-    guard
-      node.isCalendarRoot
-        || node.isMonthCalendarRoot
-        || node.kind == .popup
-        || hasPopupChildren
-    else {
+    guard nodeCanPresentPopup else {
+      popupPanel.close()
       return
     }
 
@@ -400,23 +383,42 @@ extension WidgetNodeView {
     !popupChildren.isEmpty
   }
 
+  fileprivate var calendarRootPopupMode: Config.CalendarPopupMode {
+    Config.shared.builtinCalendar.popupMode
+  }
+
+  fileprivate var calendarRootHasPopup: Bool {
+    calendarRootPopupMode != .none
+  }
+
+  fileprivate var nodeCanPresentPopup: Bool {
+    if node.isCalendarRoot {
+      return calendarRootHasPopup
+    }
+
+    return node.kind == .popup || hasPopupChildren
+  }
+
   fileprivate var popupHoverBackground: some View {
     PopupHoverRegion { hovering in handlePopupHover(hovering) }
   }
 
   fileprivate var popupPanelContent: AnyView {
     if node.isCalendarRoot {
-      return AnyView(
-        NativeUpcomingCalendarPopupView()
-          .background(popupHoverBackground)
-      )
-    }
-
-    if node.isMonthCalendarRoot {
-      return AnyView(
-        NativeMonthCalendarPopupView()
-          .background(popupHoverBackground)
-      )
+      switch calendarRootPopupMode {
+      case .none:
+        return AnyView(EmptyView())
+      case .upcoming:
+        return AnyView(
+          NativeUpcomingCalendarPopupView()
+            .background(popupHoverBackground)
+        )
+      case .month:
+        return AnyView(
+          NativeMonthCalendarPopupView()
+            .background(popupHoverBackground)
+        )
+      }
     }
 
     return AnyView(

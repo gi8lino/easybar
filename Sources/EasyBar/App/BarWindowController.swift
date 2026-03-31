@@ -137,7 +137,7 @@ final class BarWindowController: NSWindowController {
   private var calendarAgentMenuItem: NSMenuItem {
     agentMenuItem(
       title: "Calendar Agent",
-      status: connectionLabel(CalendarAgentClient.shared.isConnected),
+      status: connectionLabel(calendarAgentConnected),
       permission: calendarPermissionLabel,
       settingsAction: #selector(openCalendarSettings(_:)),
       settingsTitle: "Open Calendar Settings"
@@ -153,6 +153,11 @@ final class BarWindowController: NSWindowController {
       settingsAction: #selector(openLocationSettings(_:)),
       settingsTitle: "Open Location/Wi-Fi Settings"
     )
+  }
+
+  /// Returns whether either calendar popup client is currently connected.
+  private var calendarAgentConnected: Bool {
+    UpcomingCalendarAgentClient.shared.isConnected || MonthCalendarAgentClient.shared.isConnected
   }
 
   /// Appends one section of items and a trailing separator.
@@ -220,7 +225,7 @@ final class BarWindowController: NSWindowController {
 
   /// Returns the current calendar permission label.
   ///
-  /// Both calendar widgets use the same calendar agent, so prefer whichever
+  /// Both calendar popups use the same calendar agent, so prefer whichever
   /// store already has a snapshot. If both are available and disagree, show
   /// the more informative non-unknown value first.
   private var calendarPermissionLabel: String {

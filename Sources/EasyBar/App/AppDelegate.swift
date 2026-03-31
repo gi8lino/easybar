@@ -163,7 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       "network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)"
     )
     Logger.info(
-      "calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) layout=\(Config.shared.builtinCalendar.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
+      "calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
     )
     Logger.info(
       "wifi builtin enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)"

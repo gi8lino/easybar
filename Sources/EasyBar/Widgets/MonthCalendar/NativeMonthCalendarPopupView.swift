@@ -22,7 +22,7 @@ struct NativeMonthCalendarPopupView: View {
   }
 
   @ObservedObject private var store = NativeMonthCalendarStore.shared
-  private let config = Config.shared.builtinMonthCalendar
+  private let config = Config.shared.builtinCalendar.month.popup
   private let calendar = Calendar.current
 
   @State private var visibleMonth = Self.startOfMonth(Date())
@@ -37,21 +37,21 @@ struct NativeMonthCalendarPopupView: View {
   var body: some View {
     popupLayoutView
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, CGFloat(config.popupPaddingX))
-      .padding(.vertical, CGFloat(config.popupPaddingY))
-      .background(color(config.popupBackgroundColorHex))
+      .padding(.horizontal, CGFloat(config.paddingX))
+      .padding(.vertical, CGFloat(config.paddingY))
+      .background(color(config.backgroundColorHex))
       .overlay {
-        RoundedRectangle(cornerRadius: CGFloat(config.popupCornerRadius))
+        RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
           .stroke(
-            color(config.popupBorderColorHex),
-            lineWidth: CGFloat(config.popupBorderWidth)
+            color(config.borderColorHex),
+            lineWidth: CGFloat(config.borderWidth)
           )
       }
       .clipShape(
-        RoundedRectangle(cornerRadius: CGFloat(config.popupCornerRadius))
+        RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
       )
-      .padding(.horizontal, CGFloat(config.popupMarginX))
-      .padding(.vertical, CGFloat(config.popupMarginY))
+      .padding(.horizontal, CGFloat(config.marginX))
+      .padding(.vertical, CGFloat(config.marginY))
       .frame(minWidth: minimumPopupWidth, maxWidth: .infinity, alignment: .leading)
       .onAppear {
         syncSelectionIntoVisibleMonth()
@@ -82,27 +82,27 @@ extension NativeMonthCalendarPopupView {
   /// Builds the configured popup layout.
   @ViewBuilder
   private var popupLayoutView: some View {
-    switch config.popupLayout {
+    switch config.layout {
     case .calendarAppointmentsHorizontal:
-      HStack(alignment: .top, spacing: CGFloat(config.popupSpacing)) {
+      HStack(alignment: .top, spacing: CGFloat(config.spacing)) {
         calendarContainerView
         agendaContainerView
       }
 
     case .appointmentsCalendarHorizontal:
-      HStack(alignment: .top, spacing: CGFloat(config.popupSpacing)) {
+      HStack(alignment: .top, spacing: CGFloat(config.spacing)) {
         agendaContainerView
         calendarContainerView
       }
 
     case .calendarAppointmentsVertical:
-      VStack(alignment: .leading, spacing: CGFloat(config.popupSpacing)) {
+      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
         calendarContainerView
         agendaContainerView
       }
 
     case .appointmentsCalendarVertical:
-      VStack(alignment: .leading, spacing: CGFloat(config.popupSpacing)) {
+      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
         agendaContainerView
         calendarContainerView
       }
@@ -111,7 +111,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the minimum popup width for the current layout.
   private var minimumPopupWidth: CGFloat {
-    switch config.popupLayout {
+    switch config.layout {
     case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
       return 560
     case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
@@ -126,7 +126,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds the calendar container.
   private var calendarContainerView: some View {
-    VStack(alignment: .leading, spacing: CGFloat(config.popupSpacing)) {
+    VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
       headerView
       weekdayHeaderView
       monthGridView
@@ -142,7 +142,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds the agenda container.
   private var agendaContainerView: some View {
-    VStack(alignment: .leading, spacing: CGFloat(config.popupSpacing)) {
+    VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
       selectionSummaryView
       appointmentsContainerView
     }
@@ -155,7 +155,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns whether the current popup layout is horizontal.
   private var isHorizontalLayout: Bool {
-    switch config.popupLayout {
+    switch config.layout {
     case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
       return true
     case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
@@ -167,6 +167,16 @@ extension NativeMonthCalendarPopupView {
   private var isVerticalLayout: Bool {
     !isHorizontalLayout
   }
+
+  /// Returns the minimum height of the appointments area.
+  private var appointmentsMinHeight: CGFloat {
+    CGFloat(min(config.appointmentsMinHeight, config.appointmentsMaxHeight))
+  }
+
+  /// Returns the maximum height of the appointments area.
+  private var appointmentsMaxHeight: CGFloat {
+    CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
+  }
 }
 
 // MARK: - Header
@@ -177,20 +187,20 @@ extension NativeMonthCalendarPopupView {
     HStack(spacing: 10) {
       Button(action: showPreviousMonth) {
         Text("‹")
-          .foregroundStyle(color(config.popupHeaderTextColorHex))
+          .foregroundStyle(color(config.headerTextColorHex))
       }
       .buttonStyle(.plain)
 
       Spacer()
 
       Text(monthTitle)
-        .foregroundStyle(color(config.popupHeaderTextColorHex))
+        .foregroundStyle(color(config.headerTextColorHex))
 
       Spacer()
 
       Button(action: showNextMonth) {
         Text("›")
-          .foregroundStyle(color(config.popupHeaderTextColorHex))
+          .foregroundStyle(color(config.headerTextColorHex))
       }
       .buttonStyle(.plain)
     }
@@ -238,13 +248,13 @@ extension NativeMonthCalendarPopupView {
       if config.showWeekNumbers {
         Text("W")
           .frame(width: 20, alignment: .trailing)
-          .foregroundStyle(color(config.popupWeekdayTextColorHex))
+          .foregroundStyle(color(config.weekdayTextColorHex))
       }
 
       ForEach(weekdaySymbols, id: \.self) { symbol in
         Text(symbol)
           .frame(maxWidth: .infinity)
-          .foregroundStyle(color(config.popupWeekdayTextColorHex))
+          .foregroundStyle(color(config.weekdayTextColorHex))
       }
     }
   }
@@ -272,7 +282,7 @@ extension NativeMonthCalendarPopupView {
           if config.showWeekNumbers {
             Text("\(row.weekNumber)")
               .frame(width: 20, alignment: .trailing)
-              .foregroundStyle(color(config.popupOutsideMonthTextColorHex))
+              .foregroundStyle(color(config.outsideMonthTextColorHex))
           }
 
           ForEach(row.days) { day in
@@ -388,7 +398,7 @@ extension NativeMonthCalendarPopupView {
       return hex
     }
 
-    return config.popupIndicatorColorHex
+    return config.indicatorColorHex
   }
 
   /// Returns the computed week rows for the visible month.
@@ -448,24 +458,31 @@ extension NativeMonthCalendarPopupView {
   /// Builds the current selection summary.
   private var selectionSummaryView: some View {
     Text(selectionSummaryText)
-      .foregroundStyle(color(config.popupHeaderTextColorHex))
+      .foregroundStyle(color(config.headerTextColorHex))
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   /// Builds the appointments container, optionally scrollable.
   @ViewBuilder
   private var appointmentsContainerView: some View {
-    if config.popupAppointmentsScrollable {
+    if config.appointmentsScrollable {
       ScrollView(.vertical, showsIndicators: true) {
         appointmentsView
       }
       .frame(
         maxWidth: .infinity,
-        maxHeight: isHorizontalLayout ? 240 : 180,
+        minHeight: appointmentsMinHeight,
+        maxHeight: appointmentsMaxHeight,
         alignment: .topLeading
       )
     } else {
       appointmentsView
+        .frame(
+          maxWidth: .infinity,
+          minHeight: appointmentsMinHeight,
+          maxHeight: appointmentsMaxHeight,
+          alignment: .topLeading
+        )
     }
   }
 
@@ -474,11 +491,11 @@ extension NativeMonthCalendarPopupView {
   private var appointmentsView: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(config.agendaTitle)
-        .foregroundStyle(color(config.popupHeaderTextColorHex))
+        .foregroundStyle(color(config.headerTextColorHex))
 
       if selectedEvents.isEmpty {
         Text(config.emptyText)
-          .foregroundStyle(color(config.popupEmptyTextColorHex))
+          .foregroundStyle(color(config.emptyTextColorHex))
       } else {
         ForEach(visibleSelectedEvents) { event in
           appointmentRow(event)
@@ -499,20 +516,28 @@ extension NativeMonthCalendarPopupView {
       VStack(alignment: .leading, spacing: 2) {
         if let travelTimeText = travelTimeText(for: event) {
           Text(travelTimeText)
-            .foregroundStyle(color(config.popupSecondaryTextColorHex))
+            .foregroundStyle(color(config.secondaryTextColorHex))
         }
 
         Text(appointmentLine(for: event))
-          .foregroundStyle(color(config.popupEventTextColorHex))
+          .foregroundStyle(color(config.eventTextColorHex))
+
+        if config.showCalendarName,
+          let calendarName = event.calendarName,
+          !calendarName.isEmpty
+        {
+          Text(calendarName)
+            .foregroundStyle(color(config.secondaryTextColorHex))
+        }
 
         if let locationText = event.location, !locationText.isEmpty {
           Text(locationText)
-            .foregroundStyle(color(config.popupSecondaryTextColorHex))
+            .foregroundStyle(color(config.secondaryTextColorHex))
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .padding(.leading, CGFloat(config.popupItemIndent))
+    .padding(.leading, CGFloat(config.itemIndent))
   }
 
   /// Returns the currently selected events.
@@ -533,7 +558,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the visible selected events limited by config when scrolling is disabled.
   private var visibleSelectedEvents: [NativeMonthCalendarEvent] {
-    if config.popupAppointmentsScrollable {
+    if config.appointmentsScrollable {
       return selectedEvents
     }
 
@@ -672,24 +697,24 @@ extension NativeMonthCalendarPopupView {
   /// Returns the foreground color for one day cell.
   private func dayForeground(_ day: DayCell) -> Color {
     if isSelected(day.date) {
-      return color(config.popupSelectedTextColorHex)
+      return color(config.selectedTextColorHex)
     }
 
     if day.isCurrentMonth {
-      return color(config.popupDayTextColorHex)
+      return color(config.dayTextColorHex)
     }
 
-    return color(config.popupOutsideMonthTextColorHex)
+    return color(config.outsideMonthTextColorHex)
   }
 
   /// Returns the background for one day cell.
   private func dayBackground(_ day: DayCell) -> Color {
     if isSelected(day.date) {
-      return color(config.popupSelectedBackgroundColorHex)
+      return color(config.selectedBackgroundColorHex)
     }
 
     if calendar.isDateInToday(day.date) {
-      return color(config.popupTodayBackgroundColorHex)
+      return color(config.todayBackgroundColorHex)
     }
 
     return .clear

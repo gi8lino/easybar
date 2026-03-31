@@ -59,6 +59,11 @@ extension Config {
     BuiltinBatteryDisplayMode(rawValue: value) ?? .expand
   }
 
+  /// Parses one calendar popup mode.
+  func normalizedCalendarPopupMode(_ value: String) -> CalendarPopupMode {
+    CalendarPopupMode(rawValue: value) ?? .upcoming
+  }
+
   func normalizedPosition(_ value: String) -> WidgetPosition {
     WidgetPosition(rawValue: value) ?? .right
   }

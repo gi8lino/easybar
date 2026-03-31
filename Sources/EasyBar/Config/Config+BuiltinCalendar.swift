@@ -3,6 +3,21 @@ import TOMLKit
 
 extension Config {
 
+  /// Popup mode used by the unified calendar widget.
+  enum CalendarPopupMode: String {
+    case none
+    case upcoming
+    case month
+  }
+
+  /// Popup layout variants for the month calendar popup.
+  enum MonthCalendarPopupLayout: String {
+    case calendarAppointmentsHorizontal = "calendar_appointments_horizontal"
+    case appointmentsCalendarHorizontal = "appointments_calendar_horizontal"
+    case calendarAppointmentsVertical = "calendar_appointments_vertical"
+    case appointmentsCalendarVertical = "appointments_calendar_vertical"
+  }
+
   /// Built-in calendar widget config.
   struct CalendarBuiltinConfig {
     struct Anchor {
@@ -15,49 +30,101 @@ extension Config {
       var bottomTextColorHex: String?
     }
 
-    struct Events {
-      var days: Int
-      var emptyText: String
+    struct Upcoming {
+      struct Events {
+        var days: Int
+        var emptyText: String
+      }
+
+      struct Birthdays {
+        var show: Bool
+        var title: String
+        var dateFormat: String
+        var showAge: Bool
+      }
+
+      struct PopupSectionStyle {
+        var titleColorHex: String
+        var itemColorHex: String
+        var emptyColorHex: String
+      }
+
+      struct Popup {
+        var backgroundColorHex: String
+        var borderColorHex: String
+        var borderWidth: Double
+        var cornerRadius: Double
+        var paddingX: Double
+        var paddingY: Double
+        var spacing: Double
+        var itemIndent: Double
+        var marginX: Double
+        var marginY: Double
+        var showCalendarName: Bool
+        var useCalendarColors: Bool
+        var birthdays: PopupSectionStyle
+        var today: PopupSectionStyle
+        var tomorrow: PopupSectionStyle
+        var future: PopupSectionStyle
+      }
+
+      var events: Events
+      var birthdays: Birthdays
+      var popup: Popup
     }
 
-    struct Birthdays {
-      var show: Bool
-      var title: String
-      var dateFormat: String
-      var showAge: Bool
-    }
+    struct Month {
+      struct Popup {
+        var backgroundColorHex: String
+        var borderColorHex: String
+        var borderWidth: Double
+        var cornerRadius: Double
+        var paddingX: Double
+        var paddingY: Double
+        var spacing: Double
+        var itemIndent: Double
+        var marginX: Double
+        var marginY: Double
+        var showWeekNumbers: Bool
+        var showEventIndicators: Bool
+        var headerTextColorHex: String
+        var weekdayTextColorHex: String
+        var dayTextColorHex: String
+        var outsideMonthTextColorHex: String
+        var selectedTextColorHex: String
+        var selectedBackgroundColorHex: String
+        var todayBackgroundColorHex: String
+        var indicatorColorHex: String
+        var eventTextColorHex: String
+        var emptyTextColorHex: String
+        var secondaryTextColorHex: String
+        var layout: MonthCalendarPopupLayout
+        var appointmentsScrollable: Bool
+        var appointmentsMinHeight: Double
+        var appointmentsMaxHeight: Double
+        var emptyText: String
+        var agendaTitle: String
+        var showCalendarName: Bool
+        var showAllDayLabel: Bool
+        var allowsRangeSelection: Bool
+        var resetSelectionOnThirdTap: Bool
+        var maxVisibleAppointments: Int
+        var includedCalendarNames: [String]
+        var excludedCalendarNames: [String]
+        var anchorDateFormat: String
+        var anchorTextColorHex: String?
+        var anchorShowDateText: Bool
+      }
 
-    struct PopupSectionStyle {
-      var titleColorHex: String
-      var itemColorHex: String
-      var emptyColorHex: String
-    }
-
-    struct Popup {
-      var backgroundColorHex: String
-      var borderColorHex: String
-      var borderWidth: Double
-      var cornerRadius: Double
-      var paddingX: Double
-      var paddingY: Double
-      var spacing: Double
-      var itemIndent: Double
-      var marginX: Double
-      var marginY: Double
-      var showCalendarName: Bool
-      var useCalendarColors: Bool
-      var birthdays: PopupSectionStyle
-      var today: PopupSectionStyle
-      var tomorrow: PopupSectionStyle
-      var future: PopupSectionStyle
+      var popup: Popup
     }
 
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
+    var popupMode: CalendarPopupMode
     var anchor: Anchor
-    var events: Events
-    var birthdays: Birthdays
-    var popup: Popup
+    var upcoming: Upcoming
+    var month: Month
 
     var enabled: Bool {
       get { placement.enabled }
@@ -72,131 +139,6 @@ extension Config {
     var order: Int {
       get { placement.order }
       set { placement.order = newValue }
-    }
-
-    var itemFormat: String {
-      get { anchor.itemFormat }
-      set { anchor.itemFormat = newValue }
-    }
-
-    var layout: CalendarAnchorLayout {
-      get { anchor.layout }
-      set { anchor.layout = newValue }
-    }
-
-    var topFormat: String {
-      get { anchor.topFormat }
-      set { anchor.topFormat = newValue }
-    }
-
-    var bottomFormat: String {
-      get { anchor.bottomFormat }
-      set { anchor.bottomFormat = newValue }
-    }
-
-    var lineSpacing: Double {
-      get { anchor.lineSpacing }
-      set { anchor.lineSpacing = newValue }
-    }
-
-    var topTextColorHex: String? {
-      get { anchor.topTextColorHex }
-      set { anchor.topTextColorHex = newValue }
-    }
-
-    var bottomTextColorHex: String? {
-      get { anchor.bottomTextColorHex }
-      set { anchor.bottomTextColorHex = newValue }
-    }
-
-    var days: Int {
-      get { events.days }
-      set { events.days = newValue }
-    }
-
-    var emptyText: String {
-      get { events.emptyText }
-      set { events.emptyText = newValue }
-    }
-
-    var showBirthdays: Bool {
-      get { birthdays.show }
-      set { birthdays.show = newValue }
-    }
-
-    var birthdaysTitle: String {
-      get { birthdays.title }
-      set { birthdays.title = newValue }
-    }
-
-    var birthdaysDateFormat: String {
-      get { birthdays.dateFormat }
-      set { birthdays.dateFormat = newValue }
-    }
-
-    var birthdaysShowAge: Bool {
-      get { birthdays.showAge }
-      set { birthdays.showAge = newValue }
-    }
-
-    var popupBackgroundColorHex: String {
-      get { popup.backgroundColorHex }
-      set { popup.backgroundColorHex = newValue }
-    }
-
-    var popupBorderColorHex: String {
-      get { popup.borderColorHex }
-      set { popup.borderColorHex = newValue }
-    }
-
-    var popupBorderWidth: Double {
-      get { popup.borderWidth }
-      set { popup.borderWidth = newValue }
-    }
-
-    var popupCornerRadius: Double {
-      get { popup.cornerRadius }
-      set { popup.cornerRadius = newValue }
-    }
-
-    var popupPaddingX: Double {
-      get { popup.paddingX }
-      set { popup.paddingX = newValue }
-    }
-
-    var popupPaddingY: Double {
-      get { popup.paddingY }
-      set { popup.paddingY = newValue }
-    }
-
-    var popupSpacing: Double {
-      get { popup.spacing }
-      set { popup.spacing = newValue }
-    }
-
-    var popupItemIndent: Double {
-      get { popup.itemIndent }
-      set { popup.itemIndent = newValue }
-    }
-
-    var popupMarginX: Double {
-      get { popup.marginX }
-      set { popup.marginX = newValue }
-    }
-
-    var popupMarginY: Double {
-      get { popup.marginY }
-      set { popup.marginY = newValue }
-    }
-
-    var popupShowCalendarName: Bool {
-      get { popup.showCalendarName }
-      set { popup.showCalendarName = newValue }
-    }
-
-    var popupUseCalendarColors: Bool {
-      get { popup.useCalendarColors }
-      set { popup.useCalendarColors = newValue }
     }
 
     static let `default` = CalendarBuiltinConfig(
@@ -219,6 +161,7 @@ extension Config {
         spacing: 6,
         opacity: 1
       ),
+      popupMode: .upcoming,
       anchor: .init(
         itemFormat: "EEE, MMM d",
         layout: .stack,
@@ -228,48 +171,93 @@ extension Config {
         topTextColorHex: "#ffffff",
         bottomTextColorHex: "#d0d0d0"
       ),
-      events: .init(
-        days: 3,
-        emptyText: "No upcoming events"
-      ),
-      birthdays: .init(
-        show: true,
-        title: "Birthdays",
-        dateFormat: "dd.MM.yyyy",
-        showAge: false
-      ),
-      popup: .init(
-        backgroundColorHex: "#111111",
-        borderColorHex: "#444444",
-        borderWidth: 1,
-        cornerRadius: 10,
-        paddingX: 10,
-        paddingY: 8,
-        spacing: 8,
-        itemIndent: 8,
-        marginX: 8,
-        marginY: 8,
-        showCalendarName: true,
-        useCalendarColors: true,
+      upcoming: .init(
+        events: .init(
+          days: 3,
+          emptyText: "No upcoming events"
+        ),
         birthdays: .init(
-          titleColorHex: "#89CFEF",
-          itemColorHex: "#7285A5",
-          emptyColorHex: "#c0c0c0"
+          show: true,
+          title: "Birthdays",
+          dateFormat: "dd.MM.yyyy",
+          showAge: false
         ),
-        today: .init(
-          titleColorHex: "#5F9EA0",
-          itemColorHex: "#d0d0d0",
-          emptyColorHex: "#c0c0c0"
-        ),
-        tomorrow: .init(
-          titleColorHex: "#8bd5ca",
-          itemColorHex: "#cfeee8",
-          emptyColorHex: "#c0c0c0"
-        ),
-        future: .init(
-          titleColorHex: "#91d7e3",
-          itemColorHex: "#d0d0d0",
-          emptyColorHex: "#c0c0c0"
+        popup: .init(
+          backgroundColorHex: "#111111",
+          borderColorHex: "#444444",
+          borderWidth: 1,
+          cornerRadius: 10,
+          paddingX: 10,
+          paddingY: 8,
+          spacing: 8,
+          itemIndent: 8,
+          marginX: 8,
+          marginY: 8,
+          showCalendarName: true,
+          useCalendarColors: true,
+          birthdays: .init(
+            titleColorHex: "#89CFEF",
+            itemColorHex: "#7285A5",
+            emptyColorHex: "#c0c0c0"
+          ),
+          today: .init(
+            titleColorHex: "#5F9EA0",
+            itemColorHex: "#d0d0d0",
+            emptyColorHex: "#c0c0c0"
+          ),
+          tomorrow: .init(
+            titleColorHex: "#8bd5ca",
+            itemColorHex: "#cfeee8",
+            emptyColorHex: "#c0c0c0"
+          ),
+          future: .init(
+            titleColorHex: "#91d7e3",
+            itemColorHex: "#d0d0d0",
+            emptyColorHex: "#c0c0c0"
+          )
+        )
+      ),
+      month: .init(
+        popup: .init(
+          backgroundColorHex: "#111111",
+          borderColorHex: "#444444",
+          borderWidth: 1,
+          cornerRadius: 10,
+          paddingX: 10,
+          paddingY: 8,
+          spacing: 8,
+          itemIndent: 8,
+          marginX: 8,
+          marginY: 8,
+          showWeekNumbers: true,
+          showEventIndicators: true,
+          headerTextColorHex: "#ffffff",
+          weekdayTextColorHex: "#91d7e3",
+          dayTextColorHex: "#d0d0d0",
+          outsideMonthTextColorHex: "#6e738d",
+          selectedTextColorHex: "#111111",
+          selectedBackgroundColorHex: "#8bd5ca",
+          todayBackgroundColorHex: "#8bd5ca33",
+          indicatorColorHex: "#8bd5ca",
+          eventTextColorHex: "#d0d0d0",
+          emptyTextColorHex: "#c0c0c0",
+          secondaryTextColorHex: "#91d7e3",
+          layout: .calendarAppointmentsVertical,
+          appointmentsScrollable: true,
+          appointmentsMinHeight: 180,
+          appointmentsMaxHeight: 240,
+          emptyText: "No appointments",
+          agendaTitle: "Appointments",
+          showCalendarName: false,
+          showAllDayLabel: true,
+          allowsRangeSelection: true,
+          resetSelectionOnThirdTap: true,
+          maxVisibleAppointments: 8,
+          includedCalendarNames: [],
+          excludedCalendarNames: [],
+          anchorDateFormat: "EEE d MMM",
+          anchorTextColorHex: "#ffffff",
+          anchorShowDateText: true
         )
       )
     )
@@ -287,9 +275,14 @@ extension Config {
 
     let styleTable = calendar["style"]?.table ?? TOMLTable()
     let anchorTable = calendar["anchor"]?.table ?? TOMLTable()
-    let eventsTable = calendar["events"]?.table ?? TOMLTable()
-    let birthdaysTable = calendar["birthdays"]?.table ?? TOMLTable()
-    let popupTable = calendar["popup"]?.table ?? TOMLTable()
+
+    let upcomingTable = calendar["upcoming"]?.table ?? TOMLTable()
+    let upcomingEventsTable = upcomingTable["events"]?.table ?? TOMLTable()
+    let upcomingBirthdaysTable = upcomingTable["birthdays"]?.table ?? TOMLTable()
+    let upcomingPopupTable = upcomingTable["popup"]?.table ?? TOMLTable()
+
+    let monthTable = calendar["month"]?.table ?? TOMLTable()
+    let monthPopupTable = monthTable["popup"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
       from: styleTable,
@@ -297,33 +290,37 @@ extension Config {
       fallback: builtinCalendar.style
     )
 
+    let popupMode = normalizedCalendarPopupMode(
+      try optionalString(
+        calendar["popup_mode"],
+        path: "builtins.calendar.popup_mode"
+      ) ?? builtinCalendar.popupMode.rawValue
+    )
+
     let anchor = try parseCalendarAnchor(
       from: anchorTable,
       fallback: builtinCalendar.anchor
     )
 
-    let events = try parseCalendarEvents(
-      from: eventsTable,
-      fallback: builtinCalendar.events
+    let upcoming = try parseCalendarUpcoming(
+      eventsTable: upcomingEventsTable,
+      birthdaysTable: upcomingBirthdaysTable,
+      popupTable: upcomingPopupTable,
+      fallback: builtinCalendar.upcoming
     )
 
-    let birthdays = try parseCalendarBirthdays(
-      from: birthdaysTable,
-      fallback: builtinCalendar.birthdays
-    )
-
-    let popup = try parseCalendarPopup(
-      from: popupTable,
-      fallback: builtinCalendar.popup
+    let month = try parseCalendarMonth(
+      popupTable: monthPopupTable,
+      fallback: builtinCalendar.month
     )
 
     builtinCalendar = CalendarBuiltinConfig(
       placement: placement,
       style: style,
+      popupMode: popupMode,
       anchor: anchor,
-      events: events,
-      birthdays: birthdays,
-      popup: popup
+      upcoming: upcoming,
+      month: month
     )
   }
 
@@ -366,140 +363,163 @@ extension Config {
     )
   }
 
-  /// Parses the calendar events block.
-  private func parseCalendarEvents(
+  /// Parses the upcoming calendar mode.
+  private func parseCalendarUpcoming(
+    eventsTable: TOMLTable,
+    birthdaysTable: TOMLTable,
+    popupTable: TOMLTable,
+    fallback: CalendarBuiltinConfig.Upcoming
+  ) throws -> CalendarBuiltinConfig.Upcoming {
+    CalendarBuiltinConfig.Upcoming(
+      events: try parseCalendarUpcomingEvents(
+        from: eventsTable,
+        fallback: fallback.events
+      ),
+      birthdays: try parseCalendarUpcomingBirthdays(
+        from: birthdaysTable,
+        fallback: fallback.birthdays
+      ),
+      popup: try parseCalendarUpcomingPopup(
+        from: popupTable,
+        fallback: fallback.popup
+      )
+    )
+  }
+
+  /// Parses the upcoming events block.
+  private func parseCalendarUpcomingEvents(
     from table: TOMLTable,
-    fallback: CalendarBuiltinConfig.Events
-  ) throws -> CalendarBuiltinConfig.Events {
-    CalendarBuiltinConfig.Events(
+    fallback: CalendarBuiltinConfig.Upcoming.Events
+  ) throws -> CalendarBuiltinConfig.Upcoming.Events {
+    CalendarBuiltinConfig.Upcoming.Events(
       days: max(
         1,
         try optionalInt(
           table["days"],
-          path: "builtins.calendar.events.days"
+          path: "builtins.calendar.upcoming.events.days"
         ) ?? fallback.days
       ),
       emptyText: try optionalString(
         table["empty_text"],
-        path: "builtins.calendar.events.empty_text"
+        path: "builtins.calendar.upcoming.events.empty_text"
       ) ?? fallback.emptyText
     )
   }
 
-  /// Parses the calendar birthdays block.
-  private func parseCalendarBirthdays(
+  /// Parses the upcoming birthdays block.
+  private func parseCalendarUpcomingBirthdays(
     from table: TOMLTable,
-    fallback: CalendarBuiltinConfig.Birthdays
-  ) throws -> CalendarBuiltinConfig.Birthdays {
-    CalendarBuiltinConfig.Birthdays(
+    fallback: CalendarBuiltinConfig.Upcoming.Birthdays
+  ) throws -> CalendarBuiltinConfig.Upcoming.Birthdays {
+    CalendarBuiltinConfig.Upcoming.Birthdays(
       show: try optionalBool(
         table["show"],
-        path: "builtins.calendar.birthdays.show"
+        path: "builtins.calendar.upcoming.birthdays.show"
       ) ?? fallback.show,
       title: try optionalString(
         table["title"],
-        path: "builtins.calendar.birthdays.title"
+        path: "builtins.calendar.upcoming.birthdays.title"
       ) ?? fallback.title,
       dateFormat: try optionalString(
         table["date_format"],
-        path: "builtins.calendar.birthdays.date_format"
+        path: "builtins.calendar.upcoming.birthdays.date_format"
       ) ?? fallback.dateFormat,
       showAge: try optionalBool(
         table["show_age"],
-        path: "builtins.calendar.birthdays.show_age"
+        path: "builtins.calendar.upcoming.birthdays.show_age"
       ) ?? fallback.showAge
     )
   }
 
-  /// Parses the calendar popup block.
-  private func parseCalendarPopup(
+  /// Parses the upcoming popup block.
+  private func parseCalendarUpcomingPopup(
     from table: TOMLTable,
-    fallback: CalendarBuiltinConfig.Popup
-  ) throws -> CalendarBuiltinConfig.Popup {
+    fallback: CalendarBuiltinConfig.Upcoming.Popup
+  ) throws -> CalendarBuiltinConfig.Upcoming.Popup {
     let birthdaysTable = table["birthdays"]?.table ?? TOMLTable()
     let todayTable = table["today"]?.table ?? TOMLTable()
     let tomorrowTable = table["tomorrow"]?.table ?? TOMLTable()
     let futureTable = table["future"]?.table ?? TOMLTable()
 
-    return CalendarBuiltinConfig.Popup(
+    return CalendarBuiltinConfig.Upcoming.Popup(
       backgroundColorHex: try optionalString(
         table["background_color"],
-        path: "builtins.calendar.popup.background_color"
+        path: "builtins.calendar.upcoming.popup.background_color"
       ) ?? fallback.backgroundColorHex,
       borderColorHex: try optionalString(
         table["border_color"],
-        path: "builtins.calendar.popup.border_color"
+        path: "builtins.calendar.upcoming.popup.border_color"
       ) ?? fallback.borderColorHex,
       borderWidth: try optionalNumber(
         table["border_width"],
-        path: "builtins.calendar.popup.border_width"
+        path: "builtins.calendar.upcoming.popup.border_width"
       ) ?? fallback.borderWidth,
       cornerRadius: try optionalNumber(
         table["corner_radius"],
-        path: "builtins.calendar.popup.corner_radius"
+        path: "builtins.calendar.upcoming.popup.corner_radius"
       ) ?? fallback.cornerRadius,
       paddingX: try optionalNumber(
         table["padding_x"],
-        path: "builtins.calendar.popup.padding_x"
+        path: "builtins.calendar.upcoming.popup.padding_x"
       ) ?? fallback.paddingX,
       paddingY: try optionalNumber(
         table["padding_y"],
-        path: "builtins.calendar.popup.padding_y"
+        path: "builtins.calendar.upcoming.popup.padding_y"
       ) ?? fallback.paddingY,
       spacing: try optionalNumber(
         table["spacing"],
-        path: "builtins.calendar.popup.spacing"
+        path: "builtins.calendar.upcoming.popup.spacing"
       ) ?? fallback.spacing,
       itemIndent: try optionalNumber(
         table["item_indent"],
-        path: "builtins.calendar.popup.item_indent"
+        path: "builtins.calendar.upcoming.popup.item_indent"
       ) ?? fallback.itemIndent,
       marginX: try optionalNumber(
         table["margin_x"],
-        path: "builtins.calendar.popup.margin_x"
+        path: "builtins.calendar.upcoming.popup.margin_x"
       ) ?? fallback.marginX,
       marginY: try optionalNumber(
         table["margin_y"],
-        path: "builtins.calendar.popup.margin_y"
+        path: "builtins.calendar.upcoming.popup.margin_y"
       ) ?? fallback.marginY,
       showCalendarName: try optionalBool(
         table["show_calendar_name"],
-        path: "builtins.calendar.popup.show_calendar_name"
+        path: "builtins.calendar.upcoming.popup.show_calendar_name"
       ) ?? fallback.showCalendarName,
       useCalendarColors: try optionalBool(
         table["use_calendar_colors"],
-        path: "builtins.calendar.popup.use_calendar_colors"
+        path: "builtins.calendar.upcoming.popup.use_calendar_colors"
       ) ?? fallback.useCalendarColors,
-      birthdays: try parseCalendarPopupSectionStyle(
+      birthdays: try parseCalendarUpcomingPopupSectionStyle(
         from: birthdaysTable,
-        path: "builtins.calendar.popup.birthdays",
+        path: "builtins.calendar.upcoming.popup.birthdays",
         fallback: fallback.birthdays
       ),
-      today: try parseCalendarPopupSectionStyle(
+      today: try parseCalendarUpcomingPopupSectionStyle(
         from: todayTable,
-        path: "builtins.calendar.popup.today",
+        path: "builtins.calendar.upcoming.popup.today",
         fallback: fallback.today
       ),
-      tomorrow: try parseCalendarPopupSectionStyle(
+      tomorrow: try parseCalendarUpcomingPopupSectionStyle(
         from: tomorrowTable,
-        path: "builtins.calendar.popup.tomorrow",
+        path: "builtins.calendar.upcoming.popup.tomorrow",
         fallback: fallback.tomorrow
       ),
-      future: try parseCalendarPopupSectionStyle(
+      future: try parseCalendarUpcomingPopupSectionStyle(
         from: futureTable,
-        path: "builtins.calendar.popup.future",
+        path: "builtins.calendar.upcoming.popup.future",
         fallback: fallback.future
       )
     )
   }
 
-  /// Parses one popup section style block.
-  private func parseCalendarPopupSectionStyle(
+  /// Parses one upcoming popup section style block.
+  private func parseCalendarUpcomingPopupSectionStyle(
     from table: TOMLTable,
     path: String,
-    fallback: CalendarBuiltinConfig.PopupSectionStyle
-  ) throws -> CalendarBuiltinConfig.PopupSectionStyle {
-    CalendarBuiltinConfig.PopupSectionStyle(
+    fallback: CalendarBuiltinConfig.Upcoming.PopupSectionStyle
+  ) throws -> CalendarBuiltinConfig.Upcoming.PopupSectionStyle {
+    CalendarBuiltinConfig.Upcoming.PopupSectionStyle(
       titleColorHex: try optionalString(
         table["title_color"],
         path: "\(path).title_color"
@@ -512,6 +532,198 @@ extension Config {
         table["empty_color"],
         path: "\(path).empty_color"
       ) ?? fallback.emptyColorHex
+    )
+  }
+
+  /// Parses the month calendar mode.
+  private func parseCalendarMonth(
+    popupTable: TOMLTable,
+    fallback: CalendarBuiltinConfig.Month
+  ) throws -> CalendarBuiltinConfig.Month {
+    CalendarBuiltinConfig.Month(
+      popup: try parseCalendarMonthPopup(
+        from: popupTable,
+        fallback: fallback.popup
+      )
+    )
+  }
+
+  /// Parses the month popup block.
+  private func parseCalendarMonthPopup(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Month.Popup
+  ) throws -> CalendarBuiltinConfig.Month.Popup {
+    let parsedMinHeight =
+      try optionalNumber(
+        table["appointments_min_height"],
+        path: "builtins.calendar.month.popup.appointments_min_height"
+      ) ?? fallback.appointmentsMinHeight
+
+    let parsedMaxHeight =
+      try optionalNumber(
+        table["appointments_max_height"],
+        path: "builtins.calendar.month.popup.appointments_max_height"
+      ) ?? fallback.appointmentsMaxHeight
+
+    let minHeight = max(0, min(parsedMinHeight, parsedMaxHeight))
+    let maxHeight = max(parsedMinHeight, parsedMaxHeight)
+
+    return CalendarBuiltinConfig.Month.Popup(
+      backgroundColorHex: try optionalString(
+        table["background_color"],
+        path: "builtins.calendar.month.popup.background_color"
+      ) ?? fallback.backgroundColorHex,
+      borderColorHex: try optionalString(
+        table["border_color"],
+        path: "builtins.calendar.month.popup.border_color"
+      ) ?? fallback.borderColorHex,
+      borderWidth: try optionalNumber(
+        table["border_width"],
+        path: "builtins.calendar.month.popup.border_width"
+      ) ?? fallback.borderWidth,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.calendar.month.popup.corner_radius"
+      ) ?? fallback.cornerRadius,
+      paddingX: try optionalNumber(
+        table["padding_x"],
+        path: "builtins.calendar.month.popup.padding_x"
+      ) ?? fallback.paddingX,
+      paddingY: try optionalNumber(
+        table["padding_y"],
+        path: "builtins.calendar.month.popup.padding_y"
+      ) ?? fallback.paddingY,
+      spacing: try optionalNumber(
+        table["spacing"],
+        path: "builtins.calendar.month.popup.spacing"
+      ) ?? fallback.spacing,
+      itemIndent: try optionalNumber(
+        table["item_indent"],
+        path: "builtins.calendar.month.popup.item_indent"
+      ) ?? fallback.itemIndent,
+      marginX: try optionalNumber(
+        table["margin_x"],
+        path: "builtins.calendar.month.popup.margin_x"
+      ) ?? fallback.marginX,
+      marginY: try optionalNumber(
+        table["margin_y"],
+        path: "builtins.calendar.month.popup.margin_y"
+      ) ?? fallback.marginY,
+      showWeekNumbers: try optionalBool(
+        table["show_week_numbers"],
+        path: "builtins.calendar.month.popup.show_week_numbers"
+      ) ?? fallback.showWeekNumbers,
+      showEventIndicators: try optionalBool(
+        table["show_event_indicators"],
+        path: "builtins.calendar.month.popup.show_event_indicators"
+      ) ?? fallback.showEventIndicators,
+      headerTextColorHex: try optionalString(
+        table["header_text_color"],
+        path: "builtins.calendar.month.popup.header_text_color"
+      ) ?? fallback.headerTextColorHex,
+      weekdayTextColorHex: try optionalString(
+        table["weekday_text_color"],
+        path: "builtins.calendar.month.popup.weekday_text_color"
+      ) ?? fallback.weekdayTextColorHex,
+      dayTextColorHex: try optionalString(
+        table["day_text_color"],
+        path: "builtins.calendar.month.popup.day_text_color"
+      ) ?? fallback.dayTextColorHex,
+      outsideMonthTextColorHex: try optionalString(
+        table["outside_month_text_color"],
+        path: "builtins.calendar.month.popup.outside_month_text_color"
+      ) ?? fallback.outsideMonthTextColorHex,
+      selectedTextColorHex: try optionalString(
+        table["selected_text_color"],
+        path: "builtins.calendar.month.popup.selected_text_color"
+      ) ?? fallback.selectedTextColorHex,
+      selectedBackgroundColorHex: try optionalString(
+        table["selected_background_color"],
+        path: "builtins.calendar.month.popup.selected_background_color"
+      ) ?? fallback.selectedBackgroundColorHex,
+      todayBackgroundColorHex: try optionalString(
+        table["today_background_color"],
+        path: "builtins.calendar.month.popup.today_background_color"
+      ) ?? fallback.todayBackgroundColorHex,
+      indicatorColorHex: try optionalString(
+        table["indicator_color"],
+        path: "builtins.calendar.month.popup.indicator_color"
+      ) ?? fallback.indicatorColorHex,
+      eventTextColorHex: try optionalString(
+        table["event_text_color"],
+        path: "builtins.calendar.month.popup.event_text_color"
+      ) ?? fallback.eventTextColorHex,
+      emptyTextColorHex: try optionalString(
+        table["empty_text_color"],
+        path: "builtins.calendar.month.popup.empty_text_color"
+      ) ?? fallback.emptyTextColorHex,
+      secondaryTextColorHex: try optionalString(
+        table["secondary_text_color"],
+        path: "builtins.calendar.month.popup.secondary_text_color"
+      ) ?? fallback.secondaryTextColorHex,
+      layout: MonthCalendarPopupLayout(
+        rawValue: try optionalString(
+          table["layout"],
+          path: "builtins.calendar.month.popup.layout"
+        ) ?? fallback.layout.rawValue
+      ) ?? fallback.layout,
+      appointmentsScrollable: try optionalBool(
+        table["appointments_scrollable"],
+        path: "builtins.calendar.month.popup.appointments_scrollable"
+      ) ?? fallback.appointmentsScrollable,
+      appointmentsMinHeight: minHeight,
+      appointmentsMaxHeight: maxHeight,
+      emptyText: try optionalString(
+        table["empty_text"],
+        path: "builtins.calendar.month.popup.empty_text"
+      ) ?? fallback.emptyText,
+      agendaTitle: try optionalString(
+        table["agenda_title"],
+        path: "builtins.calendar.month.popup.agenda_title"
+      ) ?? fallback.agendaTitle,
+      showCalendarName: try optionalBool(
+        table["show_calendar_name"],
+        path: "builtins.calendar.month.popup.show_calendar_name"
+      ) ?? fallback.showCalendarName,
+      showAllDayLabel: try optionalBool(
+        table["show_all_day_label"],
+        path: "builtins.calendar.month.popup.show_all_day_label"
+      ) ?? fallback.showAllDayLabel,
+      allowsRangeSelection: try optionalBool(
+        table["allows_range_selection"],
+        path: "builtins.calendar.month.popup.allows_range_selection"
+      ) ?? fallback.allowsRangeSelection,
+      resetSelectionOnThirdTap: try optionalBool(
+        table["reset_selection_on_third_tap"],
+        path: "builtins.calendar.month.popup.reset_selection_on_third_tap"
+      ) ?? fallback.resetSelectionOnThirdTap,
+      maxVisibleAppointments: max(
+        1,
+        try optionalInt(
+          table["max_visible_appointments"],
+          path: "builtins.calendar.month.popup.max_visible_appointments"
+        ) ?? fallback.maxVisibleAppointments
+      ),
+      includedCalendarNames: try optionalStringArray(
+        table["included_calendar_names"],
+        path: "builtins.calendar.month.popup.included_calendar_names"
+      ) ?? fallback.includedCalendarNames,
+      excludedCalendarNames: try optionalStringArray(
+        table["excluded_calendar_names"],
+        path: "builtins.calendar.month.popup.excluded_calendar_names"
+      ) ?? fallback.excludedCalendarNames,
+      anchorDateFormat: try optionalString(
+        table["anchor_date_format"],
+        path: "builtins.calendar.month.popup.anchor_date_format"
+      ) ?? fallback.anchorDateFormat,
+      anchorTextColorHex: try optionalString(
+        table["anchor_text_color"],
+        path: "builtins.calendar.month.popup.anchor_text_color"
+      ) ?? fallback.anchorTextColorHex,
+      anchorShowDateText: try optionalBool(
+        table["anchor_show_date_text"],
+        path: "builtins.calendar.month.popup.anchor_show_date_text"
+      ) ?? fallback.anchorShowDateText
     )
   }
 }

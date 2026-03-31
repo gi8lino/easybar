@@ -34,7 +34,6 @@ struct ConfigSnapshot {
     let volume: Config.VolumeBuiltinConfig
     let wifi: Config.WiFiBuiltinConfig
     let calendar: Config.CalendarBuiltinConfig
-    let monthCalendar: Config.MonthCalendarBuiltinConfig
     let time: Config.TimeBuiltinConfig
     let date: Config.DateBuiltinConfig
   }

@@ -63,12 +63,7 @@ final class NativeWidgetRegistry {
       Registration(enabled: Config.shared.builtinWiFi.enabled) { WiFiNativeWidget() },
       Registration(enabled: Config.shared.builtinDate.enabled) { DateNativeWidget() },
       Registration(enabled: Config.shared.builtinTime.enabled) { TimeNativeWidget() },
-      Registration(enabled: Config.shared.builtinCalendar.enabled) {
-        UpcomingCalendarNativeWidget()
-      },
-      Registration(enabled: Config.shared.builtinMonthCalendar.enabled) {
-        MonthCalendarNativeWidget()
-      },
+      Registration(enabled: Config.shared.builtinCalendar.enabled) { CalendarNativeWidget() },
       Registration(enabled: Config.shared.builtinCPU.enabled) { CPUSparklineNativeWidget() },
     ]
   }
@@ -82,7 +77,19 @@ final class NativeWidgetRegistry {
   /// Logs the current built-in widget enablement snapshot.
   private func logConfig() {
     Logger.info(
-      "native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) wifi=\(Config.shared.builtinWiFi.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) upcoming_calendar=\(Config.shared.builtinCalendar.enabled) month_calendar=\(Config.shared.builtinMonthCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)"
+      """
+      native widget config \
+      spaces=\(Config.shared.builtinSpaces.enabled) \
+      battery=\(Config.shared.builtinBattery.enabled) \
+      front_app=\(Config.shared.builtinFrontApp.enabled) \
+      volume=\(Config.shared.builtinVolume.enabled) \
+      wifi=\(Config.shared.builtinWiFi.enabled) \
+      date=\(Config.shared.builtinDate.enabled) \
+      time=\(Config.shared.builtinTime.enabled) \
+      calendar=\(Config.shared.builtinCalendar.enabled) \
+      calendar_popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) \
+      cpu=\(Config.shared.builtinCPU.enabled)
+      """
     )
   }
 

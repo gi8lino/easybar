@@ -262,9 +262,10 @@ expand_to_slider_on_hover = true # Expands from compact mode to slider mode on h
 width = 80 # Width of the slider when shown.
 
 [builtins.calendar]
-enabled = false # Shows or hides the calendar widget.
+enabled = false # Shows or hides the unified calendar widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 60 # Sort order among widgets in the same position.
+popup_mode = "upcoming" # none | upcoming | month
 
 [builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.
@@ -289,49 +290,90 @@ line_spacing = 0 # Vertical spacing between top and bottom lines in stack layout
 top_text_color = "#ffffff" # Color of the top line text.
 bottom_text_color = "#d0d0d0" # Color of the bottom line text.
 
-[builtins.calendar.events]
+[builtins.calendar.upcoming.events]
 days = 3 # Number of days of upcoming events to show in the popup.
 empty_text = "No upcoming events" # Text shown when no events exist for a day.
 
-[builtins.calendar.birthdays]
-show = true # Shows or hides the birthdays section in the popup.
+[builtins.calendar.upcoming.birthdays]
+show = true # Shows or hides the birthdays section in the upcoming popup.
 title = "Birthdays" # Title of the birthdays section.
 date_format = "dd.MM.yyyy" # Date format used for birthday items.
 show_age = false # Shows parsed ages for birthdays when available.
 
-[builtins.calendar.popup]
-background_color = "#111111" # Background color of the popup.
-border_color = "#444444" # Border color of the popup.
-border_width = 1 # Border width of the popup.
-corner_radius = 10 # Corner radius of the popup.
-padding_x = 10 # Horizontal inner padding of the popup.
-padding_y = 8 # Vertical inner padding of the popup.
+[builtins.calendar.upcoming.popup]
+background_color = "#111111" # Background color of the upcoming popup.
+border_color = "#444444" # Border color of the upcoming popup.
+border_width = 1 # Border width of the upcoming popup.
+corner_radius = 10 # Corner radius of the upcoming popup.
+padding_x = 10 # Horizontal inner padding of the upcoming popup.
+padding_y = 8 # Vertical inner padding of the upcoming popup.
 margin_x = 8 # Horizontal outer margin around the whole popup.
 margin_y = 8 # Vertical outer margin around the whole popup.
 spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
-show_calendar_name = true # Prefixes each event with its calendar name when available.
+show_calendar_name = false  # Prefixes each event with its calendar name when available.
 use_calendar_colors = true # Colors each event line with its source calendar color when available.
 
-[builtins.calendar.popup.birthdays]
+[builtins.calendar.upcoming.popup.birthdays]
 title_color = "#89CFEF" # Section title color for birthdays.
 item_color = "#7285A5" # Item text color for birthdays.
 empty_color = "#c0c0c0" # Empty-state color for birthdays.
 
-[builtins.calendar.popup.today]
+[builtins.calendar.upcoming.popup.today]
 title_color = "#5F9EA0" # Section title color for today's events.
 item_color = "#d0d0d0" # Item text color for today's events.
 empty_color = "#c0c0c0" # Empty-state color for today's events.
 
-[builtins.calendar.popup.tomorrow]
+[builtins.calendar.upcoming.popup.tomorrow]
 title_color = "#8bd5ca" # Section title color for tomorrow's events.
 item_color = "#cfeee8" # Item text color for tomorrow's events.
 empty_color = "#c0c0c0" # Empty-state color for tomorrow's events.
 
-[builtins.calendar.popup.future]
+[builtins.calendar.upcoming.popup.future]
 title_color = "#91d7e3" # Section title color for future events.
 item_color = "#d0d0d0" # Item text color for future events.
 empty_color = "#c0c0c0" # Empty-state color for future events.
+
+[builtins.calendar.month.popup]
+background_color = "#111111" # Background color of the month popup.
+border_color = "#444444" # Border color of the month popup.
+border_width = 1 # Border width of the month popup.
+corner_radius = 10 # Corner radius of the month popup.
+padding_x = 10 # Horizontal inner padding of the month popup.
+padding_y = 8 # Vertical inner padding of the month popup.
+spacing = 8 # Gap between calendar and appointments areas and internal popup sections.
+item_indent = 8 # Left indent for appointment details under the title line.
+margin_x = 8 # Horizontal outer margin around the whole month popup.
+margin_y = 8 # Vertical outer margin around the whole month popup.
+show_week_numbers = true # Shows the week numbers in the calendar grid.
+show_event_indicators = true # Shows dots under days that contain events.
+header_text_color = "#ffffff" # Text color of the month header and appointments title.
+weekday_text_color = "#91d7e3" # Text color of the weekday labels.
+day_text_color = "#d0d0d0" # Text color of days in the current month.
+outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
+selected_text_color = "#111111" # Text color of selected day cells.
+selected_background_color = "#8bd5ca" # Background color of selected day cells.
+today_background_color = "#8bd5ca33" # Background color of today's day cell when not selected.
+indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
+event_text_color = "#d0d0d0" # Text color of appointment rows.
+empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
+secondary_text_color = "#91d7e3" # Text color of secondary appointment details.
+layout = "calendar_appointments_vertical" # Popup layout: calendar_appointments_horizontal | appointments_calendar_horizontal | calendar_appointments_vertical | appointments_calendar_vertical
+appointments_scrollable = true # Makes the appointments area scroll vertically when true.
+appointments_min_height = 180 # Minimum height of the appointments area. Set equal to appointments_max_height for a fixed height.
+appointments_max_height = 240 # Maximum height of the appointments area. Set equal to appointments_min_height for a fixed height.
+empty_text = "No appointments" # Text shown when the selected day or range has no appointments.
+agenda_title = "Appointments" # Title shown above the appointments list.
+show_calendar_name = true # Shows the source calendar name for appointments.
+show_all_day_label = true # Shows "All day" for all-day events.
+allows_range_selection = true # Allows selecting a date range by dragging across days.
+reset_selection_on_third_tap = true # Reserved selection behavior flag for the month popup.
+max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
+included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
+excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
+anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".
+anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month".
+anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
 
 [builtins.time]
 enabled = false # Shows or hides the time widget.
@@ -376,69 +418,3 @@ opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
 format = "yyyy-MM-dd" # Date format string.
-
-[builtins.month_calendar]
-enabled = true # Shows or hides the built-in month-calendar widget.
-position = "right" # Places the widget on the left, center, or right side.
-order = 70 # Sort order among widgets in the same position.
-
-[builtins.month_calendar.style]
-icon = "📆" # Leading icon of the widget.
-text_color = "#ffffff" # Text color of the widget anchor.
-background_color = "#1a1a1a" # Background color of the widget anchor.
-border_color = "#333333" # Border color of the widget anchor.
-border_width = 1 # Border width of the widget anchor.
-corner_radius = 8 # Corner radius of the widget anchor.
-margin_x = 0 # Horizontal outer margin around the widget anchor.
-margin_y = 0 # Vertical outer margin around the widget anchor.
-padding_x = 8 # Horizontal inner padding of the widget anchor.
-padding_y = 4 # Vertical inner padding of the widget anchor.
-spacing = 6 # Gap between anchor contents.
-opacity = 1.0 # Overall opacity of the widget anchor.
-
-[builtins.month_calendar.content]
-show_date_text = true # Shows the selected date text in the anchor.
-date_format = "EEE d MMM" # Date format string used in the anchor.
-text_color = "#ffffff" # Text color of the selected date label in the anchor.
-empty_text = "No appointments" # Text shown when the selected day or range has no appointments.
-agenda_title = "Appointments" # Title shown above the appointments list.
-show_calendar_name = true # Shows the source calendar name below each appointment.
-show_all_day_label = true # Shows "All day" for all-day events.
-allows_range_selection = true # Allows selecting a date range by dragging across days.
-reset_selection_on_third_tap = true # Resets range selection behavior on repeated taps when supported.
-max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
-show_date_text = true # Shows the selected date text.
-included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
-excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
-
-[builtins.month_calendar.popup]
-background_color = "#111111" # Background color of the popup.
-border_color = "#444444" # Border color of the popup.
-border_width = 1 # Border width of the popup.
-corner_radius = 10 # Corner radius of the popup.
-padding_x = 10 # Horizontal inner padding of the popup.
-padding_y = 8 # Vertical inner padding of the popup.
-spacing = 8 # Gap between calendar and appointments areas and internal popup sections.
-item_indent = 8 # Left indent for appointment details under the title line.
-margin_x = 8 # Horizontal outer margin around the whole popup.
-margin_y = 8 # Vertical outer margin around the whole popup.
-show_week_numbers = true # Shows the week numbers in the calendar grid.
-show_event_indicators = true # Shows dots under days that contain events.
-header_text_color = "#ffffff" # Text color of the month header and appointments title.
-weekday_text_color = "#91d7e3" # Text color of the weekday labels.
-day_text_color = "#d0d0d0" # Text color of days in the current month.
-outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
-selected_text_color = "#111111" # Text color of selected day cells.
-selected_background_color = "#8bd5ca" # Background color of selected day cells.
-today_background_color = "#8bd5ca33" # Background color of today's day cell when not selected.
-indicator_color = "#8bd5ca" # Color of the day event indicator dots.
-event_text_color = "#d0d0d0" # Text color of appointment rows.
-empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
-secondary_text_color = "#91d7e3" # Text color of secondary appointment details like calendar names.
-layout = "calendarAppointmentsVertical" # Popup layout: calendar_appointments_horizontal | appointments_calendar_horizontal | calendar_appointments_vertical | appointments_calendar_vertical
-appointments_scrollable = true # Makes the appointments area scroll vertically when true.
-
-[builtins.time]
-enabled = false # Shows or hides the time widget.
-position = "right" # Places the widget on the left, center, or right side.
-order = 40 # Sort order among widgets in the same position.
