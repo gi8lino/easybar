@@ -3,6 +3,11 @@ import SwiftUI
 /// Global runtime theme helpers.
 enum Theme {
 
+  /// Global icon font family used for Nerd Font / symbol-style icons.
+  ///
+  /// Change this in one place when you want to switch the app-wide icon font.
+  private static let iconFontFamily = "Symbols Nerd Font Mono"
+
   static var barBackground: Color {
     Color(hex: Config.shared.barBackgroundHex)
   }
@@ -14,6 +19,11 @@ enum Theme {
   /// Fallback text color for views and nodes without a color.
   static var defaultTextColor: Color {
     Color.white
+  }
+
+  /// Returns the shared icon font used by popups and other icon-only text.
+  static func iconFont(size: CGFloat) -> Font {
+    .custom(iconFontFamily, size: size)
   }
 
   /// Border color for the focused app icon inside spaces.

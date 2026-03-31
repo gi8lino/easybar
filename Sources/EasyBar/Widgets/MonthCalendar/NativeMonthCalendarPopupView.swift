@@ -535,8 +535,7 @@ extension NativeMonthCalendarPopupView {
             .foregroundStyle(color(config.secondaryTextColorHex))
         }
 
-        Text(appointmentLine(for: event))
-          .foregroundStyle(color(config.eventTextColorHex))
+        appointmentTitleView(for: event)
 
         if config.showCalendarName,
           let calendarName = event.calendarName,
@@ -554,6 +553,28 @@ extension NativeMonthCalendarPopupView {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.leading, CGFloat(config.itemIndent))
+  }
+
+  /// Builds the primary appointment title line.
+  @ViewBuilder
+  private func appointmentTitleView(for event: NativeMonthCalendarEvent) -> some View {
+    let prefix = appointmentPrefix(for: event)
+
+    HStack(alignment: .firstTextBaseline, spacing: 4) {
+      if !prefix.isEmpty {
+        Text(prefix)
+          .foregroundStyle(color(config.eventTextColorHex))
+      }
+
+      if isBirthdayEvent(event) {
+        Text(config.birthdayIcon)
+          .font(Theme.iconFont(size: 13))
+          .foregroundStyle(color(config.birthdayIconColorHex ?? config.eventTextColorHex))
+      }
+
+      Text(event.title)
+        .foregroundStyle(color(config.eventTextColorHex))
+    }
   }
 
   /// Returns the currently selected events.
@@ -650,21 +671,22 @@ extension NativeMonthCalendarPopupView {
     )
   }
 
-  /// Builds one rendered appointment line.
-  private func appointmentLine(for event: NativeMonthCalendarEvent) -> String {
-    let prefix: String
-
+  /// Returns the rendered prefix shown before the title when needed.
+  private func appointmentPrefix(for event: NativeMonthCalendarEvent) -> String {
     if event.isAllDay {
-      prefix = config.showAllDayLabel ? "All day" : ""
-    } else {
-      prefix = formattedEventTime(event.startDate)
+      if isBirthdayEvent(event) {
+        return ""
+      }
+
+      return config.showAllDayLabel ? "All day" : ""
     }
 
-    if prefix.isEmpty {
-      return event.title
-    }
+    return formattedEventTime(event.startDate)
+  }
 
-    return "\(prefix) \(event.title)"
+  /// Returns whether the given event is a birthday event.
+  private func isBirthdayEvent(_ event: NativeMonthCalendarEvent) -> Bool {
+    event.id.hasPrefix("birthday-")
   }
 
   /// Returns the rendered travel-time text when available.

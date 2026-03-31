@@ -118,6 +118,10 @@ extension Config {
         var weekdayFormat: String
         var weekdaySymbols: [String]?
         var resolvedWeekdaySymbols: [String]
+        var showBirthdays: Bool
+        var birthdaysShowAge: Bool
+        var birthdayIcon: String
+        var birthdayIconColorHex: String?
       }
 
       var popup: Popup
@@ -268,7 +272,11 @@ extension Config {
           resolvedWeekdaySymbols: Config.resolveMonthWeekdaySymbols(
             format: "dd",
             manualSymbols: nil
-          )
+          ),
+          showBirthdays: true,
+          birthdaysShowAge: true,
+          birthdayIcon: "",
+          birthdayIconColorHex: nil
         )
       )
     )
@@ -772,7 +780,23 @@ extension Config {
       ) ?? fallback.anchorShowDateText,
       weekdayFormat: weekdayFormat,
       weekdaySymbols: weekdaySymbols,
-      resolvedWeekdaySymbols: resolvedWeekdaySymbols
+      resolvedWeekdaySymbols: resolvedWeekdaySymbols,
+      showBirthdays: try optionalBool(
+        table["show_birthdays"],
+        path: "builtins.calendar.month.popup.show_birthdays"
+      ) ?? fallback.showBirthdays,
+      birthdaysShowAge: try optionalBool(
+        table["birthdays_show_age"],
+        path: "builtins.calendar.month.popup.birthdays_show_age"
+      ) ?? fallback.birthdaysShowAge,
+      birthdayIcon: try optionalString(
+        table["birthday_icon"],
+        path: "builtins.calendar.month.popup.birthday_icon"
+      ) ?? fallback.birthdayIcon,
+      birthdayIconColorHex: try optionalString(
+        table["birthday_icon_color"],
+        path: "builtins.calendar.month.popup.birthday_icon_color"
+      ) ?? fallback.birthdayIconColorHex
     )
   }
 

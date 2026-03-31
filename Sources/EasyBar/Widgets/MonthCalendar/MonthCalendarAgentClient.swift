@@ -56,15 +56,31 @@ final class MonthCalendarAgentClient {
       requestedRange = defaultRequestedDateRange(referenceDate: Date())
     }
 
+    let calendarConfig = Config.shared.builtinCalendar
+    let monthConfig = calendarConfig.month.popup
+    let upcomingBirthdays = calendarConfig.upcoming.birthdays
+
     Logger.debug(
-      "requesting month calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970)"
+      "requesting month calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) show_birthdays=\(monthConfig.showBirthdays) birthdays_show_age=\(monthConfig.birthdaysShowAge)"
     )
 
-    return .fetch(
-      query: .month(
-        config: Config.shared.builtinCalendar.month.popup,
-        requestedRange: requestedRange
-      )
+    let query = CalendarAgentQueryEnvelope(
+      startDate: requestedRange.start,
+      endDate: requestedRange.end,
+      sectionStartDate: nil,
+      sectionDayCount: nil,
+      showBirthdays: monthConfig.showBirthdays,
+      birthdaysShowAge: monthConfig.birthdaysShowAge,
+      birthdaysTitle: upcomingBirthdays.title,
+      birthdaysDateFormat: upcomingBirthdays.dateFormat,
+      includedCalendarNames: monthConfig.includedCalendarNames,
+      excludedCalendarNames: monthConfig.excludedCalendarNames,
+      emptyText: monthConfig.emptyText
+    )
+
+    return CalendarAgentRequestEnvelope(
+      command: "fetch",
+      query: query
     )
   }
 
