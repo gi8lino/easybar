@@ -581,6 +581,13 @@ extension NativeMonthCalendarPopupView {
   private var selectedEvents: [NativeMonthCalendarEvent] {
     store.eventsInRange(from: selectedStartDate, to: selectedEndDate)
       .sorted { lhs, rhs in
+        let lhsIsBirthday = isBirthdayEvent(lhs)
+        let rhsIsBirthday = isBirthdayEvent(rhs)
+
+        if lhsIsBirthday != rhsIsBirthday {
+          return lhsIsBirthday && !rhsIsBirthday
+        }
+
         if lhs.startDate != rhs.startDate {
           return lhs.startDate < rhs.startDate
         }
