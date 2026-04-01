@@ -1,6 +1,6 @@
 import AppKit
+import Combine
 import EasyBarShared
-import EventKit
 import Foundation
 
 @MainActor
@@ -9,7 +9,6 @@ final class MonthCalendarEventComposer: ObservableObject {
   struct CalendarOption: Identifiable, Equatable {
     let id: String
     let title: String
-    let calendar: EKCalendar
 
     static func == (lhs: CalendarOption, rhs: CalendarOption) -> Bool {
       lhs.id == rhs.id
@@ -161,9 +160,22 @@ final class MonthCalendarEventComposer: ObservableObject {
   @Published var errorMessage: String?
   @Published var infoMessage: String?
 
-  private let eventStore = EKEventStore()
   private let calendar = Calendar.current
   private let popupConfig = Config.shared.builtinCalendar.month.popup
+
+  private var cancellables: Set<AnyCancellable> = []
+  private var preferredCalendarName: String?
+
+  init() {
+    NativeMonthCalendarStore.shared.$snapshot
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] snapshot in
+        self?.applySnapshot(snapshot)
+      }
+      .store(in: &cancellables)
+
+    applySnapshot(NativeMonthCalendarStore.shared.snapshot)
+  }
 
   /// Returns whether the composer currently has the minimum data to save.
   var canSave: Bool {
@@ -202,16 +214,18 @@ final class MonthCalendarEventComposer: ObservableObject {
     }
   }
 
-  /// Prepares the composer for the given date and loads writable calendars.
+  /// Prepares the composer for the given date using agent-backed state.
   func prepare(defaultDate: Date) {
     mode = .create
+    preferredCalendarName = normalizedOptionalText(popupConfig.composerDefaultCalendarName)
 
     let normalizedDate = calendar.startOfDay(for: defaultDate)
-    requestAccessIfNeeded(defaultDate: normalizedDate)
     reset(using: normalizedDate)
+    applySnapshot(NativeMonthCalendarStore.shared.snapshot)
+    MonthCalendarAgentClient.shared.refresh()
   }
 
-  /// Prepares the composer for editing one existing event.
+  /// Prepares the composer for editing one existing event using agent-backed state.
   func prepare(event: NativeMonthCalendarEvent) {
     let normalizedStartDate = calendar.startOfDay(for: event.startDate)
     let normalizedEndReference =
@@ -220,7 +234,6 @@ final class MonthCalendarEventComposer: ObservableObject {
       : event.endDate
     let normalizedEndDate = calendar.startOfDay(for: normalizedEndReference)
 
-    requestAccessIfNeeded(defaultDate: normalizedStartDate)
     reset(using: normalizedStartDate)
 
     guard let eventIdentifier = resolvedEventIdentifier(from: event) else {
@@ -237,7 +250,10 @@ final class MonthCalendarEventComposer: ObservableObject {
     isAllDay = event.isAllDay
     location = event.location ?? ""
     travelTime = resolvedTravelTimeOption(from: event.travelTimeSeconds)
-    applyCalendarSelection(named: event.calendarName)
+    preferredCalendarName = normalizedOptionalText(event.calendarName)
+
+    applySnapshot(NativeMonthCalendarStore.shared.snapshot)
+    MonthCalendarAgentClient.shared.refresh()
   }
 
   /// Resets the form fields to a clean state using one selected date.
@@ -256,8 +272,6 @@ final class MonthCalendarEventComposer: ObservableObject {
     errorMessage = nil
     infoMessage = nil
     isSaving = false
-
-    applyDefaultCalendarSelectionIfNeeded()
   }
 
   /// Saves the current appointment through the calendar agent.
@@ -377,102 +391,51 @@ final class MonthCalendarEventComposer: ObservableObject {
   }
 }
 
-// MARK: - Access And Calendars
+// MARK: - Agent Snapshot
 
 extension MonthCalendarEventComposer {
-  /// Requests calendar access when needed and refreshes writable calendars.
-  private func requestAccessIfNeeded(defaultDate: Date) {
-    let status = EKEventStore.authorizationStatus(for: .event)
-
-    switch status {
-    case .authorized, .fullAccess:
-      accessGranted = true
-      loadWritableCalendars()
-      applyDefaultCalendarSelectionIfNeeded()
-
-    case .notDetermined:
-      eventStore.requestFullAccessToEvents { [weak self] granted, error in
-        DispatchQueue.main.async {
-          guard let self else { return }
-
-          if let error {
-            self.accessGranted = false
-            self.errorMessage = "Calendar access request failed: \(error.localizedDescription)"
-            return
-          }
-
-          self.accessGranted = granted
-
-          if granted {
-            self.loadWritableCalendars()
-            self.applyDefaultCalendarSelectionIfNeeded()
-          } else {
-            self.errorMessage = "Calendar access was not granted."
-          }
-
-          if self.title.isEmpty {
-            self.reset(using: defaultDate)
-          }
-        }
-      }
-
-    case .denied, .restricted, .writeOnly:
+  /// Applies one agent snapshot to composer state.
+  private func applySnapshot(_ snapshot: EasyBarShared.CalendarAgentSnapshot?) {
+    guard let snapshot else {
       accessGranted = false
-      errorMessage = "Calendar access was not granted to EasyBar."
-
-    @unknown default:
-      accessGranted = false
-      errorMessage = "Calendar access state is unknown."
+      calendars = []
+      selectedCalendarID = ""
+      return
     }
+
+    accessGranted = snapshot.accessGranted
+
+    calendars = snapshot.writableCalendars.map { calendar in
+      CalendarOption(
+        id: calendar.id,
+        title: calendar.title
+      )
+    }
+
+    applyPreferredCalendarSelectionIfNeeded()
   }
 
-  /// Loads writable non-birthday calendars into the calendar picker.
-  private func loadWritableCalendars() {
-    calendars = eventStore.calendars(for: .event)
-      .filter { $0.type != .birthday && $0.allowsContentModifications }
-      .sorted { lhs, rhs in
-        lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-      }
-      .map { calendar in
-        CalendarOption(
-          id: calendar.calendarIdentifier,
-          title: calendar.title,
-          calendar: calendar
-        )
-      }
-
-    applyDefaultCalendarSelectionIfNeeded()
-  }
-
-  /// Applies the configured default calendar when available.
-  private func applyDefaultCalendarSelectionIfNeeded() {
-    if let configuredDefaultName = normalizedOptionalText(popupConfig.composerDefaultCalendarName),
-      let configuredMatch = calendars.first(where: {
-        $0.title.compare(configuredDefaultName, options: [.caseInsensitive, .diacriticInsensitive])
-          == .orderedSame
+  /// Applies the preferred or configured calendar when available.
+  private func applyPreferredCalendarSelectionIfNeeded() {
+    if let preferredCalendarName,
+      let preferred = calendars.first(where: {
+        $0.title.compare(
+          preferredCalendarName,
+          options: [.caseInsensitive, .diacriticInsensitive]
+        ) == .orderedSame
       })
     {
-      if selectedCalendarID.isEmpty {
-        selectedCalendarID = configuredMatch.id
-      }
+      selectedCalendarID = preferred.id
       return
     }
 
     if selectedCalendarID.isEmpty, let firstCalendar = calendars.first {
       selectedCalendarID = firstCalendar.id
-    } else if !calendars.contains(where: { $0.id == selectedCalendarID }) {
-      selectedCalendarID = calendars.first?.id ?? ""
+      return
     }
-  }
 
-  /// Applies one calendar selection by calendar name.
-  private func applyCalendarSelection(named value: String?) {
-    guard let value = normalizedOptionalText(value) else { return }
-
-    if let match = calendars.first(where: {
-      $0.title.compare(value, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
-    }) {
-      selectedCalendarID = match.id
+    if !calendars.contains(where: { $0.id == selectedCalendarID }) {
+      selectedCalendarID = calendars.first?.id ?? ""
     }
   }
 

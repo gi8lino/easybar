@@ -56,6 +56,7 @@ final class CalendarSnapshotProvider {
         accessGranted: false,
         permissionState: permissionState,
         generatedAt: now,
+        writableCalendars: [],
         events: [],
         sections: []
       )
@@ -67,6 +68,7 @@ final class CalendarSnapshotProvider {
         accessGranted: true,
         permissionState: permissionState,
         generatedAt: now,
+        writableCalendars: writableCalendars(),
         events: [],
         sections: []
       )
@@ -87,6 +89,7 @@ final class CalendarSnapshotProvider {
       accessGranted: true,
       permissionState: permissionState,
       generatedAt: now,
+      writableCalendars: writableCalendars(),
       events: events,
       sections: sections
     )
@@ -102,6 +105,7 @@ final class CalendarSnapshotProvider {
       show_birthdays=\(query.showBirthdays) \
       included=\(query.includedCalendarNames) \
       excluded=\(query.excludedCalendarNames) \
+      writable_calendars=\(snapshot.writableCalendars.count) \
       events=\(snapshot.events.count) \
       sections=\(snapshot.sections.count)
       """
@@ -422,6 +426,21 @@ extension CalendarSnapshotProvider {
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
           travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
+        )
+      }
+  }
+
+  /// Returns writable non-birthday calendars for the composer.
+  private func writableCalendars() -> [CalendarAgentWritableCalendar] {
+    eventStore.calendars(for: .event)
+      .filter { $0.type != .birthday && $0.allowsContentModifications }
+      .sorted { lhs, rhs in
+        lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+      }
+      .map { calendar in
+        CalendarAgentWritableCalendar(
+          id: calendar.calendarIdentifier,
+          title: calendar.title
         )
       }
   }

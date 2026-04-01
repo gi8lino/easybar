@@ -189,6 +189,20 @@ public struct CalendarAgentRequest: Codable {
   }
 }
 
+/// One writable calendar returned by the agent for the composer.
+public struct CalendarAgentWritableCalendar: Codable, Identifiable, Equatable {
+  /// Stable calendar identifier.
+  public var id: String
+  /// User-visible calendar title.
+  public var title: String
+
+  /// Creates one writable calendar entry.
+  public init(id: String, title: String) {
+    self.id = id
+    self.title = title
+  }
+}
+
 /// Section kinds returned by the calendar agent snapshot.
 public enum CalendarAgentSectionKind: String, Codable, Equatable {
   case birthdays
@@ -308,6 +322,8 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
   public var permissionState: String
   /// Snapshot generation time.
   public var generatedAt: Date
+  /// Writable non-birthday calendars available for create and update operations.
+  public var writableCalendars: [CalendarAgentWritableCalendar]
   /// Normalized events included in the snapshot window.
   public var events: [CalendarAgentEvent]
   /// Optional rendered sections for simpler consumers.
@@ -318,12 +334,14 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
     accessGranted: Bool,
     permissionState: String,
     generatedAt: Date,
+    writableCalendars: [CalendarAgentWritableCalendar],
     events: [CalendarAgentEvent],
     sections: [CalendarAgentSection]
   ) {
     self.accessGranted = accessGranted
     self.permissionState = permissionState
     self.generatedAt = generatedAt
+    self.writableCalendars = writableCalendars
     self.events = events
     self.sections = sections
   }
@@ -360,12 +378,3 @@ public struct CalendarAgentMessage: Codable {
     self.message = message
   }
 }
-
-// MARK: - Backward Compatibility Aliases
-
-public typealias CalendarAgentQueryEnvelope = CalendarAgentQuery
-public typealias CalendarAgentCreateEventEnvelope = CalendarAgentCreateEvent
-public typealias CalendarAgentUpdateEventEnvelope = CalendarAgentUpdateEvent
-public typealias CalendarAgentDeleteEventEnvelope = CalendarAgentDeleteEvent
-public typealias CalendarAgentRequestEnvelope = CalendarAgentRequest
-public typealias CalendarAgentResponseEnvelope = CalendarAgentMessage
