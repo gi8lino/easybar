@@ -103,8 +103,8 @@ extension NativeMonthCalendarPopupView {
           .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
               .stroke(
-                color(config.borderColorHex).opacity(0.9),
-                lineWidth: max(CGFloat(config.borderWidth), 1)
+                color(config.todayButtonBorderColorHex).opacity(0.9),
+                lineWidth: max(CGFloat(config.todayButtonBorderWidth), 1)
               )
           }
       }

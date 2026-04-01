@@ -100,6 +100,8 @@ extension Config {
           var dayTextColorHex: String
           var outsideMonthTextColorHex: String
           var todayBackgroundColorHex: String
+          var todayBorderColorHex: String
+          var todayBorderWidth: Double
           var indicatorColorHex: String
         }
 
@@ -278,6 +280,16 @@ extension Config {
         var todayBackgroundColorHex: String {
           get { calendar.todayBackgroundColorHex }
           set { calendar.todayBackgroundColorHex = newValue }
+        }
+
+        var todayBorderColorHex: String {
+          get { calendar.todayBorderColorHex }
+          set { calendar.todayBorderColorHex = newValue }
+        }
+
+        var todayBorderWidth: Double {
+          get { calendar.todayBorderWidth }
+          set { calendar.todayBorderWidth = newValue }
         }
 
         var indicatorColorHex: String {
@@ -480,12 +492,12 @@ extension Config {
           set { todayButton.title = newValue }
         }
 
-        var todayBorderColorHex: String {
+        var todayButtonBorderColorHex: String {
           get { todayButton.borderColorHex }
           set { todayButton.borderColorHex = newValue }
         }
 
-        var todayBorderWidth: Double {
+        var todayButtonBorderWidth: Double {
           get { todayButton.borderWidth }
           set { todayButton.borderWidth = newValue }
         }
@@ -536,7 +548,7 @@ extension Config {
         spacing: 6,
         opacity: 1
       ),
-      popupMode: .upcoming,
+      popupMode: .month,
       anchor: .init(
         itemFormat: "EEE, MMM d",
         layout: .stack,
@@ -620,7 +632,9 @@ extension Config {
             ),
             dayTextColorHex: "#d0d0d0",
             outsideMonthTextColorHex: "#6e738d",
-            todayBackgroundColorHex: "#8bd5ca33",
+            todayBackgroundColorHex: "#3F2F6B",
+            todayBorderColorHex: "#3F2F6B",
+            todayBorderWidth: 3.0,
             indicatorColorHex: "#8bd5ca"
           ),
           selection: .init(
@@ -675,7 +689,7 @@ extension Config {
           ),
           todayButton: .init(
             title: "Today",
-            borderColorHex: "#ed8796",
+            borderColorHex: "#3F2F6B",
             borderWidth: 1.5
           )
         )

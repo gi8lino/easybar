@@ -156,6 +156,14 @@ extension Config {
           calendarTable["today_background_color"] ?? table["today_background_color"],
           path: "builtins.calendar.month.popup.calendar.today_background_color"
         ) ?? fallback.todayBackgroundColorHex,
+        todayBorderColorHex: try optionalString(
+          calendarTable["today_border_color"] ?? table["today_border_color"],
+          path: "builtins.calendar.month.popup.calendar.today_border_color"
+        ) ?? fallback.todayBorderColorHex,
+        todayBorderWidth: try optionalNumber(
+          calendarTable["today_border_width"] ?? table["today_border_width"],
+          path: "builtins.calendar.month.popup.calendar.today_border_width"
+        ) ?? fallback.todayBorderWidth,
         indicatorColorHex: try optionalString(
           calendarTable["indicator_color"] ?? table["indicator_color"],
           path: "builtins.calendar.month.popup.calendar.indicator_color"
@@ -332,11 +340,11 @@ extension Config {
         borderColorHex: try optionalString(
           todayButtonTable["border_color"] ?? table["today_border_color"],
           path: "builtins.calendar.month.popup.today_button.border_color"
-        ) ?? fallback.todayBorderColorHex,
+        ) ?? fallback.todayButtonBorderColorHex,
         borderWidth: try optionalNumber(
           todayButtonTable["border_width"] ?? table["today_border_width"],
           path: "builtins.calendar.month.popup.today_button.border_width"
-        ) ?? fallback.todayBorderWidth
+        ) ?? fallback.todayButtonBorderWidth
       )
     )
   }

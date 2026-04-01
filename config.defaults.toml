@@ -265,7 +265,7 @@ width = 80 # Width of the slider when shown.
 enabled = false # Shows or hides the unified calendar widget.
 position = "right" # Places the widget on the left, center, or right side.
 order = 60 # Sort order among widgets in the same position.
-popup_mode = "upcoming" # none | upcoming | month
+popup_mode = "month" # none | upcoming | month
 
 [builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.
@@ -356,7 +356,9 @@ weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
 # weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels for Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
 day_text_color = "#d0d0d0" # Text color of days in the current month.
 outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
-today_background_color = "#8bd5ca33" # Background color of today's day cell when not selected.
+today_background_color = "#5C4A8F" # Background color of today's day cell when not selected.
+today_border_color = "#3F2F6B" # Border color of today's day cell when not selected.
+today_border_width = 3.0 # Border width of today's day cell when not selected.
 indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
 
 [builtins.calendar.month.popup.selection]
@@ -411,7 +413,7 @@ default_travel_time = "none" # Default travel-time: none | 5_minutes | 10_minute
 
 [builtins.calendar.month.popup.today_button]
 title = "Today" # Title of the today button.
-border_color = "#ed8796" # Border color of the today button.
+border_color = "#3F2F6B" # Border color of the today button.
 border_width = 1.5 # Border width of the today button.
 
 [builtins.time]
