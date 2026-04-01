@@ -228,6 +228,10 @@ extension Config {
           agendaTable["show_all_day_label"] ?? table["show_all_day_label"],
           path: "builtins.calendar.month.popup.agenda.show_all_day_label"
         ) ?? fallback.showAllDayLabel,
+        allDayLabel: try optionalString(
+          agendaTable["all_day_label"] ?? table["all_day_label"],
+          path: "builtins.calendar.month.popup.agenda.all_day_label"
+        ) ?? fallback.allDayLabel,
         maxVisibleAppointments: max(
           1,
           try optionalInt(
@@ -298,7 +302,19 @@ extension Config {
         defaultTravelTime: try optionalString(
           composerTable["default_travel_time"] ?? table["composer_default_travel_time"],
           path: "builtins.calendar.month.popup.composer.default_travel_time"
-        ) ?? fallback.composerDefaultTravelTime
+        ) ?? fallback.composerDefaultTravelTime,
+        startLabel: try optionalString(
+          composerTable["start_label"] ?? table["composer_start_label"],
+          path: "builtins.calendar.month.popup.composer.start_label"
+        ) ?? fallback.composerStartLabel,
+        endLabel: try optionalString(
+          composerTable["end_label"] ?? table["composer_end_label"],
+          path: "builtins.calendar.month.popup.composer.end_label"
+        ) ?? fallback.composerEndLabel,
+        allDayLabel: try optionalString(
+          composerTable["all_day_label"] ?? table["composer_all_day_label"],
+          path: "builtins.calendar.month.popup.composer.all_day_label"
+        ) ?? fallback.composerAllDayLabel
       ),
       todayButton: .init(
         title: try optionalString(

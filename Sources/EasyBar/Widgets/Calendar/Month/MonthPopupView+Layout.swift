@@ -8,29 +8,39 @@ extension NativeMonthCalendarPopupView {
   var popupLayoutView: some View {
     switch config.layout {
     case .calendarAppointmentsHorizontal:
-      HStack(alignment: .top, spacing: CGFloat(config.spacing)) {
-        calendarContainerView
+      HStack(alignment: .top, spacing: horizontalContentSpacing) {
+        calendarSectionView
         agendaContainerView
       }
 
     case .appointmentsCalendarHorizontal:
-      HStack(alignment: .top, spacing: CGFloat(config.spacing)) {
+      HStack(alignment: .top, spacing: horizontalContentSpacing) {
         agendaContainerView
-        calendarContainerView
+        calendarSectionView
       }
 
     case .calendarAppointmentsVertical:
-      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
-        calendarContainerView
+      VStack(alignment: .leading, spacing: verticalContentSpacing) {
+        calendarSectionView
         agendaContainerView
       }
 
     case .appointmentsCalendarVertical:
-      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
+      VStack(alignment: .leading, spacing: verticalContentSpacing) {
         agendaContainerView
-        calendarContainerView
+        calendarSectionView
       }
     }
+  }
+
+  /// Returns the spacing used in horizontal layouts.
+  var horizontalContentSpacing: CGFloat {
+    CGFloat(config.spacing)
+  }
+
+  /// Returns the spacing used in vertical layouts.
+  var verticalContentSpacing: CGFloat {
+    CGFloat(config.spacing + 6)
   }
 
   /// Returns the minimum popup width for the current layout.
@@ -50,7 +60,15 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the fixed height used by the calendar pane in vertical layouts.
   var verticalCalendarHeight: CGFloat {
-    250
+    238
+  }
+
+  /// Builds the full calendar section with grid and today helper.
+  var calendarSectionView: some View {
+    VStack(alignment: .leading, spacing: 1) {
+      calendarContainerView
+      todayContainerView
+    }
   }
 
   /// Builds the calendar container.
@@ -67,6 +85,34 @@ extension NativeMonthCalendarPopupView {
       maxHeight: isVerticalLayout ? verticalCalendarHeight : nil,
       alignment: .topLeading
     )
+  }
+
+  /// Builds the standalone today helper container.
+  var todayContainerView: some View {
+    HStack {
+      Button(action: showToday) {
+        Text(config.todayButtonTitle)
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(color(config.headerTextColorHex))
+          .padding(.horizontal, 10)
+          .padding(.vertical, 5)
+          .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+              .fill(color(config.todayBackgroundColorHex).opacity(0.18))
+          )
+          .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+              .stroke(
+                color(config.borderColorHex).opacity(0.9),
+                lineWidth: max(CGFloat(config.borderWidth), 1)
+              )
+          }
+      }
+      .buttonStyle(.plain)
+
+      Spacer()
+    }
+    .frame(width: calendarContainerWidth, alignment: .leading)
   }
 
   /// Builds the agenda container.
@@ -115,6 +161,7 @@ extension NativeMonthCalendarPopupView {
     HStack(spacing: 10) {
       Button(action: showPreviousMonth) {
         Text("‹")
+          .font(.system(size: 17, weight: .semibold))
           .foregroundStyle(color(config.headerTextColorHex))
       }
       .buttonStyle(.plain)
@@ -122,48 +169,18 @@ extension NativeMonthCalendarPopupView {
       Spacer()
 
       Text(monthTitle)
+        .font(.system(size: 18, weight: .semibold))
         .foregroundStyle(color(config.headerTextColorHex))
 
       Spacer()
 
-      headerButtonsContainerView
-
       Button(action: showNextMonth) {
         Text("›")
+          .font(.system(size: 17, weight: .semibold))
           .foregroundStyle(color(config.headerTextColorHex))
       }
       .buttonStyle(.plain)
     }
-  }
-
-  /// Builds the grouped header action buttons.
-  var headerButtonsContainerView: some View {
-    HStack(spacing: 8) {
-      Button(action: showToday) {
-        Text(config.todayButtonTitle)
-          .foregroundStyle(color(config.headerTextColorHex))
-      }
-      .buttonStyle(.plain)
-
-      Button(action: openComposer) {
-        Image(systemName: "plus")
-          .foregroundStyle(color(config.headerTextColorHex))
-      }
-      .buttonStyle(.plain)
-    }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 4)
-    .background(color(config.todayBackgroundColorHex))
-    .overlay {
-      RoundedRectangle(cornerRadius: 8)
-        .stroke(
-          color(config.borderColorHex),
-          lineWidth: max(CGFloat(config.borderWidth), 1)
-        )
-    }
-    .clipShape(
-      RoundedRectangle(cornerRadius: 8)
-    )
   }
 
   /// Shows the current month and selects today.
@@ -220,12 +237,14 @@ extension NativeMonthCalendarPopupView {
     HStack(spacing: 6) {
       if config.showWeekNumbers {
         Text("W")
+          .font(.system(size: 10, weight: .semibold))
           .frame(width: 20, alignment: .trailing)
           .foregroundStyle(color(config.weekdayTextColorHex))
       }
 
       ForEach(weekdaySymbols, id: \.self) { symbol in
         Text(symbol)
+          .font(.system(size: 10, weight: .semibold))
           .frame(maxWidth: .infinity)
           .foregroundStyle(color(config.weekdayTextColorHex))
       }
@@ -267,6 +286,7 @@ extension NativeMonthCalendarPopupView {
         HStack(spacing: 6) {
           if config.showWeekNumbers {
             Text("\(row.weekNumber)")
+              .font(.system(size: 10, weight: .medium))
               .frame(width: 20, alignment: .trailing)
               .foregroundStyle(color(config.outsideMonthTextColorHex))
           }
@@ -309,16 +329,17 @@ extension NativeMonthCalendarPopupView {
 
     return VStack(spacing: 2) {
       Text("\(resolvedCalendar.component(.day, from: day.date))")
+        .font(.system(size: 12, weight: fontWeight(for: day)))
         .frame(width: 28, height: 22)
         .background(dayBackground(day))
         .overlay {
-          RoundedRectangle(cornerRadius: 6)
+          RoundedRectangle(cornerRadius: 6, style: .continuous)
             .stroke(
               dayBorderColor(day),
               lineWidth: dayBorderWidth(day)
             )
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
       dayIndicatorBar(for: day.date)
     }
@@ -334,6 +355,15 @@ extension NativeMonthCalendarPopupView {
     )
   }
 
+  /// Returns the font weight for one day cell.
+  func fontWeight(for day: DayCell) -> Font.Weight {
+    if isSelected(day.date) || resolvedCalendar.isDateInToday(day.date) {
+      return .semibold
+    }
+
+    return .medium
+  }
+
   /// Builds the appointment-indicator bar for one day.
   @ViewBuilder
   func dayIndicatorBar(for date: Date) -> some View {
@@ -342,7 +372,7 @@ extension NativeMonthCalendarPopupView {
     if config.showEventIndicators, !segments.isEmpty {
       HStack(spacing: 1) {
         ForEach(segments) { segment in
-          Rectangle()
+          RoundedRectangle(cornerRadius: 1.5, style: .continuous)
             .fill(color(segment.colorHex))
             .frame(
               width: max(1, floor(18 * segment.fraction)),
@@ -351,10 +381,10 @@ extension NativeMonthCalendarPopupView {
         }
       }
       .frame(width: 18, height: 3, alignment: .center)
-      .clipShape(RoundedRectangle(cornerRadius: 1.5))
+      .clipShape(RoundedRectangle(cornerRadius: 1.5, style: .continuous))
       .opacity(1)
     } else {
-      RoundedRectangle(cornerRadius: 1.5)
+      RoundedRectangle(cornerRadius: 1.5, style: .continuous)
         .fill(Color.clear)
         .frame(width: 18, height: 3)
         .opacity(0)

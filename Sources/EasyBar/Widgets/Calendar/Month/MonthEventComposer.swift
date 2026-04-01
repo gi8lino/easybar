@@ -148,7 +148,8 @@ final class MonthCalendarEventComposer: ObservableObject {
   @Published private(set) var mode: Mode = .create
 
   @Published var title = ""
-  @Published var date = Date()
+  @Published var startDate = Date()
+  @Published var endDate = Date()
   @Published var startTime = Date()
   @Published var endTime = Date()
   @Published var isAllDay = false
@@ -212,9 +213,15 @@ final class MonthCalendarEventComposer: ObservableObject {
 
   /// Prepares the composer for editing one existing event.
   func prepare(event: NativeMonthCalendarEvent) {
-    let normalizedDate = calendar.startOfDay(for: event.startDate)
-    requestAccessIfNeeded(defaultDate: normalizedDate)
-    reset(using: normalizedDate)
+    let normalizedStartDate = calendar.startOfDay(for: event.startDate)
+    let normalizedEndReference =
+      event.isAllDay
+      ? calendar.date(byAdding: .day, value: -1, to: event.endDate) ?? event.startDate
+      : event.endDate
+    let normalizedEndDate = calendar.startOfDay(for: normalizedEndReference)
+
+    requestAccessIfNeeded(defaultDate: normalizedStartDate)
+    reset(using: normalizedStartDate)
 
     guard let eventIdentifier = resolvedEventIdentifier(from: event) else {
       errorMessage = "This appointment cannot be edited."
@@ -223,7 +230,8 @@ final class MonthCalendarEventComposer: ObservableObject {
 
     mode = .edit(eventIdentifier: eventIdentifier)
     title = event.title
-    date = normalizedDate
+    startDate = normalizedStartDate
+    endDate = normalizedEndDate
     startTime = event.startDate
     endTime = event.endDate
     isAllDay = event.isAllDay
@@ -237,7 +245,8 @@ final class MonthCalendarEventComposer: ObservableObject {
     let normalizedDate = calendar.startOfDay(for: defaultDate)
 
     title = ""
-    date = normalizedDate
+    startDate = normalizedDate
+    endDate = normalizedDate
     startTime = defaultStartTime(on: normalizedDate)
     endTime = defaultEndTime(on: normalizedDate)
     isAllDay = false
@@ -521,16 +530,17 @@ extension MonthCalendarEventComposer {
   /// Returns the final start and end dates for the current form values.
   private func resolvedEventDates() -> (start: Date, end: Date) {
     if isAllDay {
-      let startOfDay = calendar.startOfDay(for: date)
-      let endOfDay =
-        calendar.date(byAdding: .day, value: 1, to: startOfDay)
-        ?? startOfDay.addingTimeInterval(86_400)
+      let startOfDay = calendar.startOfDay(for: startDate)
+      let endDayStart = calendar.startOfDay(for: endDate)
+      let endExclusive =
+        calendar.date(byAdding: .day, value: 1, to: endDayStart)
+        ?? endDayStart.addingTimeInterval(86_400)
 
-      return (start: startOfDay, end: endOfDay)
+      return (start: startOfDay, end: endExclusive)
     }
 
-    let start = combinedDate(day: date, time: startTime)
-    var end = combinedDate(day: date, time: endTime)
+    let start = combinedDate(day: startDate, time: startTime)
+    var end = combinedDate(day: endDate, time: endTime)
 
     if end <= start {
       end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3600)

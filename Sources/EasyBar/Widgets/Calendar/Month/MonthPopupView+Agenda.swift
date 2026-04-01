@@ -6,35 +6,64 @@ extension NativeMonthCalendarPopupView {
   /// Builds the appointments container, optionally scrollable.
   @ViewBuilder
   var appointmentsContainerView: some View {
-    if config.appointmentsScrollable {
-      ScrollView(.vertical, showsIndicators: true) {
-        appointmentsView
-      }
-      .frame(
-        maxWidth: .infinity,
-        minHeight: appointmentsMinHeight,
-        maxHeight: appointmentsMaxHeight,
-        alignment: .topLeading
-      )
-    } else {
-      appointmentsView
+    VStack(alignment: .leading, spacing: 8) {
+      appointmentsHeaderView
+
+      if config.appointmentsScrollable {
+        ScrollView(.vertical, showsIndicators: true) {
+          appointmentsContentView
+        }
         .frame(
           maxWidth: .infinity,
           minHeight: appointmentsMinHeight,
           maxHeight: appointmentsMaxHeight,
           alignment: .topLeading
         )
+      } else {
+        appointmentsContentView
+          .frame(
+            maxWidth: .infinity,
+            minHeight: appointmentsMinHeight,
+            maxHeight: appointmentsMaxHeight,
+            alignment: .topLeading
+          )
+      }
     }
   }
 
-  /// Builds the selected appointments list.
-  @ViewBuilder
-  var appointmentsView: some View {
-    VStack(alignment: .leading, spacing: 4) {
+  /// Builds the appointments header row with section title and create action.
+  var appointmentsHeaderView: some View {
+    HStack(alignment: .center, spacing: 10) {
       Text(config.agendaTitle)
+        .font(.system(size: 15, weight: .medium))
         .foregroundStyle(color(config.headerTextColorHex))
-        .padding(.top, agendaTitleTopPadding)
 
+      Spacer()
+
+      Button(action: openComposer) {
+        Image(systemName: "plus")
+          .font(.system(size: 12, weight: .medium))
+          .foregroundStyle(color(config.headerTextColorHex))
+          .frame(width: 24, height: 24)
+          .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+              .fill(Color.white.opacity(0.05))
+          )
+          .overlay {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+              .stroke(color(config.borderColorHex).opacity(0.8), lineWidth: 1)
+          }
+      }
+      .buttonStyle(.plain)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.top, agendaTitleTopPadding)
+  }
+
+  /// Builds the selected appointments content.
+  @ViewBuilder
+  var appointmentsContentView: some View {
+    VStack(alignment: .leading, spacing: 4) {
       if visibleAgendaRows.isEmpty {
         Text(config.emptyText)
           .foregroundStyle(color(config.emptyTextColorHex))
@@ -57,7 +86,7 @@ extension NativeMonthCalendarPopupView {
   var agendaTitleTopPadding: CGFloat {
     switch config.layout {
     case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
-      return 6
+      return 2
     case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
       return 0
     }
@@ -66,8 +95,10 @@ extension NativeMonthCalendarPopupView {
   /// Builds one selected-day header row.
   func selectionDayHeaderView(for date: Date) -> some View {
     Text(formattedSelectionDate(date))
+      .font(.system(size: 11, weight: .medium))
       .foregroundStyle(color(config.secondaryTextColorHex))
       .padding(.top, 2)
+      .padding(.bottom, 1)
   }
 
   /// Builds one appointment row.
@@ -81,6 +112,7 @@ extension NativeMonthCalendarPopupView {
       VStack(alignment: .leading, spacing: 2) {
         if let travelTimeText = travelTimeText(for: event) {
           Text(travelTimeText)
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(color(config.secondaryTextColorHex))
         }
 
@@ -91,19 +123,27 @@ extension NativeMonthCalendarPopupView {
           !calendarName.isEmpty
         {
           Text(calendarName)
+            .font(.system(size: 11, weight: .regular))
             .foregroundStyle(color(config.secondaryTextColorHex))
         }
 
         if let locationText = event.location, !locationText.isEmpty {
           Text(locationText)
+            .font(.system(size: 11, weight: .regular))
             .foregroundStyle(color(config.secondaryTextColorHex))
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
+
+      Image(systemName: "chevron.right")
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(color(config.secondaryTextColorHex).opacity(0.8))
+        .padding(.top, 3)
     }
     .padding(.leading, CGFloat(config.itemIndent))
+    .padding(.vertical, 4)
     .contentShape(Rectangle())
-    .onTapGesture(count: 2) {
+    .onTapGesture {
       openComposer(for: event)
     }
   }
@@ -113,10 +153,11 @@ extension NativeMonthCalendarPopupView {
   func appointmentTitleView(for event: NativeMonthCalendarEvent) -> some View {
     let prefix = appointmentPrefix(for: event)
 
-    HStack(alignment: .firstTextBaseline, spacing: 4) {
+    HStack(alignment: .firstTextBaseline, spacing: 6) {
       if !prefix.isEmpty {
         Text(prefix)
-          .foregroundStyle(color(config.eventTextColorHex))
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(color(config.secondaryTextColorHex))
       }
 
       if isBirthdayEvent(event) {
@@ -126,7 +167,10 @@ extension NativeMonthCalendarPopupView {
       }
 
       Text(event.title)
+        .font(.system(size: 13, weight: .medium))
         .foregroundStyle(color(config.eventTextColorHex))
+        .lineLimit(2)
+        .multilineTextAlignment(.leading)
     }
   }
 
@@ -337,7 +381,7 @@ extension NativeMonthCalendarPopupView {
         return ""
       }
 
-      return config.showAllDayLabel ? "All day" : ""
+      return config.showAllDayLabel ? config.allDayLabel : ""
     }
 
     return formattedEventTime(event.startDate)

@@ -13,30 +13,27 @@ struct MonthCalendarEventComposerView: View {
 
   /// Renders the standalone appointment composer.
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: 12) {
       headerView
       messageView
-      titleFieldView
-      dateAndTimeView
-      calendarPickerView
-      locationFieldView
-      alertPickerView
-      travelTimePickerView
+      detailsSectionView
+      scheduleSectionView
+      preferencesSectionView
       footerView
     }
-    .frame(width: 360, alignment: .leading)
-    .padding(.horizontal, CGFloat(config.paddingX))
-    .padding(.vertical, CGFloat(config.paddingY))
+    .frame(width: 388, alignment: .leading)
+    .padding(.horizontal, 14)
+    .padding(.vertical, 14)
     .background(color(config.backgroundColorHex))
     .overlay {
-      RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
+      RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
         .stroke(
           color(config.borderColorHex),
-          lineWidth: CGFloat(config.borderWidth)
+          lineWidth: max(CGFloat(config.borderWidth), 1)
         )
     }
     .clipShape(
-      RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
+      RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
     )
     .alert("Remove appointment?", isPresented: $showsDeleteConfirmation) {
       Button("Cancel", role: .cancel) {}
@@ -57,8 +54,25 @@ struct MonthCalendarEventComposerView: View {
 extension MonthCalendarEventComposerView {
   /// Builds the composer header.
   private var headerView: some View {
-    Text(composer.panelTitle)
-      .foregroundStyle(color(config.headerTextColorHex))
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(alignment: .center) {
+        Text(composer.panelTitle)
+          .font(.system(size: 24, weight: .medium))
+          .foregroundStyle(color(config.headerTextColorHex))
+
+        Spacer()
+
+        if composer.isSaving {
+          ProgressView()
+            .controlSize(.small)
+            .tint(color(config.headerTextColorHex))
+        }
+      }
+
+      Rectangle()
+        .fill(color(config.borderColorHex).opacity(0.9))
+        .frame(height: 1)
+    }
   }
 
   /// Builds the optional status or error message area.
@@ -66,180 +80,308 @@ extension MonthCalendarEventComposerView {
   private var messageView: some View {
     if let errorMessage = composer.errorMessage, !errorMessage.isEmpty {
       Text(errorMessage)
+        .font(.system(size: 12, weight: .regular))
         .foregroundStyle(.red)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(0.03))
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .stroke(Color.red.opacity(0.35), lineWidth: 1)
+        }
     } else if let infoMessage = composer.infoMessage, !infoMessage.isEmpty {
       Text(infoMessage)
+        .font(.system(size: 12, weight: .regular))
         .foregroundStyle(color(config.secondaryTextColorHex))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.white.opacity(0.03))
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .stroke(color(config.borderColorHex).opacity(0.8), lineWidth: 1)
+        }
     }
   }
 
-  /// Builds the title input field.
-  private var titleFieldView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      fieldLabel("Title")
-
-      TextField(config.composerTitlePlaceholder, text: $composer.title)
-        .textFieldStyle(.roundedBorder)
-    }
-  }
-
-  /// Builds the date and time fields.
-  private var dateAndTimeView: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 10) {
+  /// Builds the details section.
+  private var detailsSectionView: some View {
+    sectionContainer {
+      VStack(alignment: .leading, spacing: 10) {
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Date")
+          fieldLabel("Title")
 
+          TextField(config.composerTitlePlaceholder, text: $composer.title)
+            .textFieldStyle(.roundedBorder)
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+          fieldLabel("Location")
+
+          TextField(config.composerLocationPlaceholder, text: $composer.location)
+            .textFieldStyle(.roundedBorder)
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+          fieldLabel("Calendar")
+
+          Picker("", selection: $composer.selectedCalendarID) {
+            ForEach(composer.calendars) { option in
+              Text(option.title).tag(option.id)
+            }
+          }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .frame(width: 170, alignment: .leading)
+        }
+      }
+    }
+  }
+
+  /// Builds the schedule section.
+  private var scheduleSectionView: some View {
+    sectionContainer {
+      VStack(alignment: .leading, spacing: 10) {
+        scheduleRowView(
+          label: config.composerStartLabel,
+          date: $composer.startDate,
+          time: $composer.startTime,
+          showsAllDayToggle: true
+        )
+
+        scheduleRowView(
+          label: config.composerEndLabel,
+          date: $composer.endDate,
+          time: $composer.endTime,
+          showsAllDayToggle: false
+        )
+      }
+    }
+  }
+
+  /// Builds one start or end schedule row.
+  private func scheduleRowView(
+    label: String,
+    date: Binding<Date>,
+    time: Binding<Date>,
+    showsAllDayToggle: Bool
+  ) -> some View {
+    HStack(alignment: .center, spacing: 10) {
+      Text(label)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(color(config.secondaryTextColorHex))
+        .frame(width: 44, alignment: .leading)
+
+      DatePicker(
+        "",
+        selection: date,
+        displayedComponents: .date
+      )
+      .labelsHidden()
+      .frame(width: 150, alignment: .leading)
+
+      Group {
+        if composer.isAllDay {
+          Color.clear
+        } else {
           DatePicker(
             "",
-            selection: $composer.date,
-            displayedComponents: .date
+            selection: time,
+            displayedComponents: .hourAndMinute
           )
           .labelsHidden()
         }
+      }
+      .frame(width: 92, alignment: .leading)
 
+      Group {
+        if showsAllDayToggle {
+          Toggle(config.composerAllDayLabel, isOn: $composer.isAllDay)
+            .toggleStyle(.checkbox)
+            .foregroundStyle(color(config.eventTextColorHex))
+            .fixedSize(horizontal: true, vertical: false)
+        } else {
+          Color.clear
+        }
+      }
+      .frame(width: 72, alignment: .leading)
+    }
+  }
+
+  /// Builds the preferences section.
+  private var preferencesSectionView: some View {
+    sectionContainer {
+      VStack(alignment: .leading, spacing: 10) {
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Time")
+          fieldLabel("Alert")
 
-          if composer.isAllDay {
-            Text("All day")
-              .foregroundStyle(color(config.secondaryTextColorHex))
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.top, 6)
-          } else {
-            HStack(spacing: 6) {
-              DatePicker(
-                "",
-                selection: $composer.startTime,
-                displayedComponents: .hourAndMinute
-              )
-              .labelsHidden()
-
-              Text("to")
-                .foregroundStyle(color(config.secondaryTextColorHex))
-
-              DatePicker(
-                "",
-                selection: $composer.endTime,
-                displayedComponents: .hourAndMinute
-              )
-              .labelsHidden()
+          Picker("", selection: $composer.alert) {
+            ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
+              Text(option.title).tag(option)
             }
           }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .frame(width: 170, alignment: .leading)
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+          fieldLabel("Travel time")
+
+          Picker("", selection: $composer.travelTime) {
+            ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
+              Text(option.title).tag(option)
+            }
+          }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .frame(width: 170, alignment: .leading)
         }
       }
-
-      Toggle("All day", isOn: $composer.isAllDay)
-        .toggleStyle(.checkbox)
-        .foregroundStyle(color(config.eventTextColorHex))
-    }
-  }
-
-  /// Builds the calendar picker.
-  private var calendarPickerView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      fieldLabel("Calendar")
-
-      Picker("", selection: $composer.selectedCalendarID) {
-        ForEach(composer.calendars) { option in
-          Text(option.title).tag(option.id)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-  }
-
-  /// Builds the location input field.
-  private var locationFieldView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      fieldLabel("Location")
-
-      TextField(config.composerLocationPlaceholder, text: $composer.location)
-        .textFieldStyle(.roundedBorder)
-    }
-  }
-
-  /// Builds the alert picker.
-  private var alertPickerView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      fieldLabel("Alert")
-
-      Picker("", selection: $composer.alert) {
-        ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
-          Text(option.title).tag(option)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-  }
-
-  /// Builds the travel-time picker.
-  private var travelTimePickerView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      fieldLabel("Travel time")
-
-      Picker("", selection: $composer.travelTime) {
-        ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
-          Text(option.title).tag(option)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
 
   /// Builds the footer action row.
   private var footerView: some View {
-    HStack {
-      Button("Open in Calendar") {
-        composer.openCalendarApp()
-      }
-      .buttonStyle(.plain)
-      .foregroundStyle(color(config.secondaryTextColorHex))
+    VStack(spacing: 10) {
+      Rectangle()
+        .fill(color(config.borderColorHex).opacity(0.9))
+        .frame(height: 1)
 
-      if composer.canDelete {
-        Button("Remove") {
-          showsDeleteConfirmation = true
+      HStack(spacing: 8) {
+        Button {
+          composer.openCalendarApp()
+        } label: {
+          Label("Calendar", systemImage: "calendar")
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(.red)
-      }
+        .buttonStyle(SecondaryFooterButtonStyle())
 
-      Spacer()
-
-      Button("Cancel") {
-        onCancel()
-      }
-      .buttonStyle(.plain)
-      .foregroundStyle(color(config.secondaryTextColorHex))
-
-      Button(composer.saveButtonTitle) {
-        composer.save {
-          onSaved()
+        if composer.canDelete {
+          Button("Remove") {
+            showsDeleteConfirmation = true
+          }
+          .buttonStyle(DangerFooterButtonStyle())
         }
+
+        Spacer()
+
+        Button("Cancel") {
+          onCancel()
+        }
+        .buttonStyle(SecondaryFooterButtonStyle())
+
+        Button(composer.saveButtonTitle) {
+          composer.save {
+            onSaved()
+          }
+        }
+        .buttonStyle(PrimaryFooterButtonStyle())
+        .disabled(!composer.canSave)
       }
-      .disabled(!composer.canSave)
     }
-    .padding(.top, 4)
+    .padding(.top, 2)
   }
 }
 
 // MARK: - Helpers
 
 extension MonthCalendarEventComposerView {
+  /// Returns the corner radius used by the panel.
+  private var panelCornerRadius: CGFloat {
+    max(CGFloat(config.cornerRadius), 12)
+  }
+
+  /// Builds one subtle grouped section container.
+  private func sectionContainer<Content: View>(
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    content()
+      .padding(12)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .fill(Color.white.opacity(0.025))
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .stroke(color(config.borderColorHex).opacity(0.8), lineWidth: 1)
+      }
+  }
+
   /// Builds one field label in the popup style.
   private func fieldLabel(_ value: String) -> some View {
     Text(value)
+      .font(.system(size: 12, weight: .medium))
       .foregroundStyle(color(config.secondaryTextColorHex))
   }
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
     Color(hex: hex)
+  }
+}
+
+// MARK: - Button Styles
+
+private struct PrimaryFooterButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 13, weight: .medium))
+      .foregroundStyle(.black.opacity(0.92))
+      .padding(.horizontal, 18)
+      .padding(.vertical, 8)
+      .background(
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .fill(Color.white.opacity(configuration.isPressed ? 0.85 : 0.96))
+      )
+      .scaleEffect(configuration.isPressed ? 0.985 : 1)
+      .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+  }
+}
+
+private struct SecondaryFooterButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 13, weight: .regular))
+      .foregroundStyle(Color.white.opacity(configuration.isPressed ? 0.78 : 0.9))
+      .padding(.horizontal, 14)
+      .padding(.vertical, 8)
+      .background(
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .fill(Color.white.opacity(configuration.isPressed ? 0.06 : 0.035))
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .stroke(Color.white.opacity(0.08), lineWidth: 1)
+      }
+      .scaleEffect(configuration.isPressed ? 0.985 : 1)
+      .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+  }
+}
+
+private struct DangerFooterButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 13, weight: .regular))
+      .foregroundStyle(.red.opacity(configuration.isPressed ? 0.8 : 1))
+      .padding(.horizontal, 14)
+      .padding(.vertical, 8)
+      .background(
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .fill(Color.red.opacity(configuration.isPressed ? 0.1 : 0.06))
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .stroke(Color.red.opacity(0.22), lineWidth: 1)
+      }
+      .scaleEffect(configuration.isPressed ? 0.985 : 1)
+      .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
   }
 }

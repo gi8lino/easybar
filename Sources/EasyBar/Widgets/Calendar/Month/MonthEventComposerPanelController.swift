@@ -114,17 +114,27 @@ final class MonthCalendarEventComposerPanelController: ObservableObject {
   private func makePanel() -> NSPanel {
     let panel = NSPanel(
       contentRect: .zero,
-      styleMask: [.titled, .closable, .fullSizeContentView],
+      styleMask: [.titled, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
     panel.title = "Appointment"
+    panel.titleVisibility = .hidden
+    panel.titlebarAppearsTransparent = true
+    panel.isMovableByWindowBackground = true
     panel.isFloatingPanel = true
     panel.level = .floating
     panel.hasShadow = true
     panel.hidesOnDeactivate = false
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+    panel.backgroundColor = .clear
+    panel.isOpaque = false
     panel.contentViewController = hostingController
+
+    panel.standardWindowButton(.closeButton)?.isHidden = true
+    panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    panel.standardWindowButton(.zoomButton)?.isHidden = true
+
     return panel
   }
 }

@@ -379,6 +379,7 @@ empty_text = "No appointments" # Text shown when the selected day or range has n
 agenda_title = "Appointments" # Title shown above the appointments list.
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
+all_day_label = "All day" # Text shown for all-day events when show_all_day_label is true
 max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
 
 [builtins.calendar.month.popup.birthdays]
@@ -397,6 +398,9 @@ anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month"
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
 
 [builtins.calendar.month.popup.composer]
+start_label = "Begin" # Labels shown for the start and end times.
+end_label = "End" # Labels shown for the start and end times.
+all_day_label = "All day" # Label shown for all-day events.
 title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
 location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
 default_calendar_name = "Personal" # Default calendar name used when creating new appointments.

@@ -124,6 +124,7 @@ extension Config {
           var agendaTitle: String
           var showCalendarName: Bool
           var showAllDayLabel: Bool
+          var allDayLabel: String
           var maxVisibleAppointments: Int
         }
 
@@ -151,6 +152,9 @@ extension Config {
           var defaultCalendarName: String?
           var defaultAlert: String
           var defaultTravelTime: String
+          var startLabel: String
+          var endLabel: String
+          var allDayLabel: String
         }
 
         struct TodayButtonStyle {
@@ -364,6 +368,11 @@ extension Config {
           set { agenda.showAllDayLabel = newValue }
         }
 
+        var allDayLabel: String {
+          get { agenda.allDayLabel }
+          set { agenda.allDayLabel = newValue }
+        }
+
         var maxVisibleAppointments: Int {
           get { agenda.maxVisibleAppointments }
           set { agenda.maxVisibleAppointments = newValue }
@@ -437,6 +446,21 @@ extension Config {
         var composerDefaultTravelTime: String {
           get { composer.defaultTravelTime }
           set { composer.defaultTravelTime = newValue }
+        }
+
+        var composerStartLabel: String {
+          get { composer.startLabel }
+          set { composer.startLabel = newValue }
+        }
+
+        var composerEndLabel: String {
+          get { composer.endLabel }
+          set { composer.endLabel = newValue }
+        }
+
+        var composerAllDayLabel: String {
+          get { composer.allDayLabel }
+          set { composer.allDayLabel = newValue }
         }
 
         var todayButtonTitle: String {
@@ -601,12 +625,13 @@ extension Config {
             secondaryTextColorHex: "#91d7e3",
             layout: .calendarAppointmentsVertical,
             appointmentsScrollable: true,
-            appointmentsMinHeight: 180,
+            appointmentsMinHeight: 140,
             appointmentsMaxHeight: 240,
             emptyText: "No appointments",
             agendaTitle: "Appointments",
             showCalendarName: false,
             showAllDayLabel: true,
+            allDayLabel: "All day",
             maxVisibleAppointments: 8
           ),
           birthdays: .init(
@@ -629,7 +654,10 @@ extension Config {
             locationPlaceholder: "Where are you going?",
             defaultCalendarName: nil,
             defaultAlert: "1_hour",
-            defaultTravelTime: "none"
+            defaultTravelTime: "none",
+            startLabel: "Begin",
+            endLabel: "End",
+            allDayLabel: "All day"
           ),
           todayButton: .init(
             title: "Today",

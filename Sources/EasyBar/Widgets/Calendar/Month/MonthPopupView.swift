@@ -52,23 +52,22 @@ struct NativeMonthCalendarPopupView: View {
   /// Renders the month calendar popup.
   var body: some View {
     popupLayoutView
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .frame(width: popupWidth, alignment: .leading)
       .padding(.horizontal, CGFloat(config.paddingX))
       .padding(.vertical, CGFloat(config.paddingY))
       .background(color(config.backgroundColorHex))
       .overlay {
-        RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
+        RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
           .stroke(
             color(config.borderColorHex),
-            lineWidth: CGFloat(config.borderWidth)
+            lineWidth: max(CGFloat(config.borderWidth), 1)
           )
       }
       .clipShape(
-        RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
+        RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
       )
       .padding(.horizontal, CGFloat(config.marginX))
       .padding(.vertical, CGFloat(config.marginY))
-      .frame(minWidth: minimumPopupWidth, maxWidth: .infinity, alignment: .leading)
       .onAppear {
         syncSelectionIntoVisibleMonth()
         MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: visibleMonth)
@@ -92,5 +91,24 @@ struct NativeMonthCalendarPopupView: View {
         Logger.debug("month calendar popup store events changed count=\(count)")
         logResolvedAppointments("store_events_changed")
       }
+  }
+}
+
+// MARK: - Styling
+
+extension NativeMonthCalendarPopupView {
+  /// Returns the popup corner radius.
+  var popupCornerRadius: CGFloat {
+    max(CGFloat(config.cornerRadius), 12)
+  }
+
+  /// Returns the fixed popup width for the active layout.
+  var popupWidth: CGFloat {
+    switch config.layout {
+    case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
+      return 560
+    case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
+      return 260
+    }
   }
 }
