@@ -77,13 +77,13 @@ EasyBar connects to those sockets directly.
 
 ## Common protocol shape
 
-Both agents support the same command flow:
+Both agents support the same basic command flow:
 
 - `ping`
 - `fetch`
 - `subscribe`
 
-Both respond with a `kind` field:
+Both respond with a `kind` field such as:
 
 - `pong`
 - `subscribed`
@@ -107,6 +107,19 @@ The payload shape depends on the agent:
 - network agent
   returns one `fields` map with only the requested keys
 
+The calendar agent also supports event mutations and additional response kinds:
+
+- `create_event`
+- `update_event`
+- `delete_event`
+
+Mutation responses use:
+
+- `created`
+- `updated`
+- `deleted`
+- `error`
+
 ---
 
 # Calendar Agent
@@ -117,8 +130,10 @@ It is responsible for:
 
 - requesting calendar access
 - observing `EKEventStore` changes
-- building sectioned calendar snapshots
-- pushing those snapshots to EasyBar
+- building normalized event snapshots
+- building sectioned popup data
+- creating, updating, and deleting events
+- pushing snapshots to EasyBar subscribers
 
 ## Calendar requests
 
@@ -126,15 +141,23 @@ Request shape:
 
 ```json
 {
-  "command": "ping | fetch | subscribe",
+  "command": "ping | fetch | subscribe | create_event | update_event | delete_event",
   "query": {
-    "days": 3,
+    "startDate": "2026-03-29T00:00:00Z",
+    "endDate": "2026-04-01T00:00:00Z",
+    "sectionStartDate": "2026-03-29T12:34:56Z",
+    "sectionDayCount": 3,
     "showBirthdays": true,
     "emptyText": "No upcoming events",
     "birthdaysTitle": "Birthdays",
     "birthdaysDateFormat": "dd.MM.yyyy",
-    "birthdaysShowAge": false
-  }
+    "birthdaysShowAge": false,
+    "includedCalendarNames": [],
+    "excludedCalendarNames": []
+  },
+  "createEvent": null,
+  "updateEvent": null,
+  "deleteEvent": null
 }
 ```
 
@@ -142,6 +165,60 @@ Notes:
 
 - `query` is optional for `ping`
 - `query` is required for `fetch` and `subscribe`
+- `startDate` is the inclusive fetch start
+- `endDate` is the exclusive fetch end
+- `sectionStartDate` and `sectionDayCount` are optional and only used to build popup sections
+- `includedCalendarNames` acts as an allowlist when non-empty
+- `excludedCalendarNames` acts as a denylist
+- birthday calendars are handled separately from normal calendars
+
+### Create event request
+
+```json
+{
+  "command": "create_event",
+  "createEvent": {
+    "title": "Team Sync",
+    "startDate": "2026-03-29T09:00:00Z",
+    "endDate": "2026-03-29T10:00:00Z",
+    "isAllDay": false,
+    "calendarName": "Work",
+    "location": "Meeting Room",
+    "alertOffsetSeconds": 600,
+    "travelTimeSeconds": 900
+  }
+}
+```
+
+### Update event request
+
+```json
+{
+  "command": "update_event",
+  "updateEvent": {
+    "eventIdentifier": "ABC123",
+    "title": "Team Sync",
+    "startDate": "2026-03-29T09:30:00Z",
+    "endDate": "2026-03-29T10:30:00Z",
+    "isAllDay": false,
+    "calendarName": "Work",
+    "location": "Meeting Room",
+    "alertOffsetSeconds": 600,
+    "travelTimeSeconds": 900
+  }
+}
+```
+
+### Delete event request
+
+```json
+{
+  "command": "delete_event",
+  "deleteEvent": {
+    "eventIdentifier": "ABC123"
+  }
+}
+```
 
 ## Calendar responses
 
@@ -149,11 +226,17 @@ Response shape:
 
 ```json
 {
-  "kind": "pong | subscribed | snapshot | error",
+  "kind": "pong | subscribed | snapshot | created | updated | deleted | error",
   "snapshot": { ... },
   "message": "optional error string"
 }
 ```
+
+Notes:
+
+- `snapshot` is present for `snapshot`
+- `message` is typically only present for `error`
+- mutation commands return `created`, `updated`, or `deleted` on success
 
 ## Calendar snapshot
 
@@ -164,6 +247,19 @@ Snapshot shape:
   "accessGranted": true,
   "permissionState": "authorized",
   "generatedAt": "2026-03-29T12:34:56Z",
+  "events": [
+    {
+      "id": "ABC123-1774774800",
+      "title": "Team Sync",
+      "startDate": "2026-03-29T09:00:00Z",
+      "endDate": "2026-03-29T10:00:00Z",
+      "isAllDay": false,
+      "calendarName": "Work",
+      "calendarColorHex": "#0A84FF",
+      "location": "Meeting Room",
+      "travelTimeSeconds": 900
+    }
+  ],
   "sections": [
     {
       "id": "birthdays",
@@ -175,7 +271,9 @@ Snapshot shape:
           "time": "31.03.2026",
           "title": "Jane Doe",
           "calendarName": "Birthdays",
-          "calendarColorHex": "#FF9500"
+          "calendarColorHex": "#FF9500",
+          "location": null,
+          "travelTimeSeconds": null
         }
       ]
     }
@@ -191,8 +289,10 @@ Important fields:
   current EventKit permission state
 - `generatedAt`
   snapshot timestamp
+- `events`
+  normalized events in the requested fetch window
 - `sections`
-  already grouped logical popup sections
+  optional pre-grouped popup sections
 
 Section kinds:
 
@@ -201,21 +301,38 @@ Section kinds:
 - `tomorrow`
 - `future`
 
-Item fields:
+### Calendar event fields
+
+- `id`
+- `title`
+- `startDate`
+- `endDate`
+- `isAllDay`
+- `calendarName`
+- `calendarColorHex`
+- `location`
+- `travelTimeSeconds`
+
+### Calendar section item fields
 
 - `id`
 - `time`
 - `title`
 - `calendarName`
 - `calendarColorHex`
+- `location`
+- `travelTimeSeconds`
 
 Behavior notes:
 
-- if access is unavailable, the agent returns `accessGranted = false` and `sections = []`
+- if access is unavailable, the agent returns `accessGranted = false`, `events = []`, and `sections = []`
 - birthdays come only from birthday calendars
 - normal events come only from non-birthday calendars
 - empty day sections are kept so popup layout stays stable
 - title normalization happens in the agent
+- sections are only built when `sectionStartDate` and `sectionDayCount` are provided
+- `fetch` and `subscribe` can be used both for the upcoming popup and the month popup
+- create, update, and delete are handled by the agent so EventKit mutation stays out of the main app process
 
 ---
 
@@ -335,7 +452,7 @@ Tunnel detection currently matches interface names starting with:
 - `tap`
 - `tun`
 
-Behavior notes:
+Additional behavior notes:
 
 - if location access is unavailable, Wi-Fi-specific fields may be absent
 - network fields can still be returned when they do not depend on Wi-Fi permission
