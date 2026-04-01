@@ -123,6 +123,11 @@ extension Config {
         var birthdayIcon: String
         var birthdayIconColorHex: String?
         var selectionDateFormat: String
+        var composerTitlePlaceholder: String
+        var composerLocationPlaceholder: String
+        var composerDefaultCalendarName: String?
+        var composerDefaultAlert: String
+        var composerDefaultTravelTime: String
       }
 
       var popup: Popup
@@ -278,7 +283,12 @@ extension Config {
           birthdaysShowAge: true,
           birthdayIcon: "",
           birthdayIconColorHex: nil,
-          selectionDateFormat: "yyyy-MM-dd"
+          selectionDateFormat: "yyyy-MM-dd",
+          composerTitlePlaceholder: "What are you doing?",
+          composerLocationPlaceholder: "Where are you going?",
+          composerDefaultCalendarName: nil,
+          composerDefaultAlert: "1_hour",
+          composerDefaultTravelTime: "none"
         )
       )
     )

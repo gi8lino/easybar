@@ -22,6 +22,38 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
+  /// Opens the separate event composer popup for a new appointment.
+  func openComposer() {
+    let defaultDate = resolvedCalendar.startOfDay(for: min(selectedStartDate, selectedEndDate))
+    composerPanel.present(defaultDate: defaultDate) {
+      refreshCalendarViews()
+    }
+  }
+
+  /// Opens the separate event composer popup for one existing appointment.
+  func openComposer(for event: NativeMonthCalendarEvent) {
+    composerPanel.present(event: event) {
+      refreshCalendarViews()
+    }
+  }
+
+  /// Refreshes calendar-backed views after a create, update, or delete.
+  func refreshCalendarViews() {
+    MonthCalendarAgentClient.shared.refresh()
+    UpcomingCalendarAgentClient.shared.refresh()
+  }
+
+  /// Resolves one normalized day from the recorded day-cell frames.
+  func resolvedDay(at location: CGPoint) -> Date? {
+    for (date, frame) in dayCellFrames {
+      if frame.contains(location) {
+        return resolvedCalendar.startOfDay(for: date)
+      }
+    }
+
+    return nil
+  }
+
   /// Logs the current selection.
   func logSelection(_ reason: String) {
     Logger.debug(

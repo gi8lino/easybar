@@ -2,10 +2,9 @@ import EasyBarShared
 import Foundation
 
 final class NativeUpcomingCalendarStore: ObservableObject {
-
   static let shared = NativeUpcomingCalendarStore()
 
-  @Published private(set) var snapshot: CalendarAgentSnapshot?
+  @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var sections: [NativeUpcomingCalendarPopupSection] = []
   @Published private(set) var events: [NativeUpcomingCalendarEvent] = []
 
@@ -14,7 +13,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   private init() {}
 
   /// Applies one calendar snapshot to the shared store.
-  func apply(snapshot: CalendarAgentSnapshot) {
+  func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
     Logger.debug(
       "upcoming calendar popup applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
     )
@@ -32,7 +31,8 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     let startOfDay = calendar.startOfDay(for: date)
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       Logger.debug(
-        "upcoming calendar store overlappingEvents(on:) failed date=\(startOfDay)")
+        "upcoming calendar store overlappingEvents(on:) failed date=\(startOfDay)"
+      )
       return []
     }
 
@@ -76,7 +76,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   }
 
   /// Publishes one calendar snapshot update on the main queue.
-  private func publish(snapshot: CalendarAgentSnapshot?) {
+  private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     DispatchQueue.main.async {
       self.snapshot = snapshot
       self.sections = snapshot?.sections ?? []

@@ -1,6 +1,6 @@
 import EasyBarShared
 
-typealias NativeUpcomingCalendarPopupSectionKind = CalendarAgentSectionKind
-typealias NativeUpcomingCalendarPopupSection = CalendarAgentSection
-typealias NativeUpcomingCalendarPopupItem = CalendarAgentItem
-typealias NativeUpcomingCalendarEvent = CalendarAgentEvent
+typealias NativeUpcomingCalendarPopupSectionKind = EasyBarShared.CalendarAgentSectionKind
+typealias NativeUpcomingCalendarPopupSection = EasyBarShared.CalendarAgentSection
+typealias NativeUpcomingCalendarPopupItem = EasyBarShared.CalendarAgentItem
+typealias NativeUpcomingCalendarEvent = EasyBarShared.CalendarAgentEvent

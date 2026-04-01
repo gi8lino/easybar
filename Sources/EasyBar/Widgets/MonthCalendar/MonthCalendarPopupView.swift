@@ -35,14 +35,17 @@ struct NativeMonthCalendarPopupView: View {
   let config = Config.shared.builtinCalendar.month.popup
   let calendar = Calendar.current
 
+  let composerPanel = MonthCalendarEventComposerPanelController()
+
   @State var visibleMonth = Self.startOfMonth(Date())
   @State var selectedStartDate = Date()
   @State var selectedEndDate = Date()
 
   @State var isDragSelecting = false
   @State var dragAnchorDate: Date?
-  @State var dragCurrentDate: Date?
-  @State var didDragBeyondAnchor = false
+  @State var dragDidCrossIntoAnotherDay = false
+  @State var lastResolvedDragDate: Date?
+
   @State var monthGridFrame: CGRect = .zero
   @State var dayCellFrames: [Date: CGRect] = [:]
 
@@ -70,6 +73,9 @@ struct NativeMonthCalendarPopupView: View {
         syncSelectionIntoVisibleMonth()
         MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: visibleMonth)
         logSelection("on_appear")
+      }
+      .onDisappear {
+        composerPanel.close()
       }
       .onChange(of: visibleMonth) { _, newValue in
         MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: newValue)

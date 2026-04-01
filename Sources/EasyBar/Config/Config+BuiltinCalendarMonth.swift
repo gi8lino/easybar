@@ -249,7 +249,27 @@ extension Config {
       selectionDateFormat: try optionalString(
         table["selection_date_format"],
         path: "builtins.calendar.month.popup.selection_date_format"
-      ) ?? fallback.selectionDateFormat
+      ) ?? fallback.selectionDateFormat,
+      composerTitlePlaceholder: try optionalString(
+        table["composer_title_placeholder"],
+        path: "builtins.calendar.month.popup.composer_title_placeholder"
+      ) ?? fallback.composerTitlePlaceholder,
+      composerLocationPlaceholder: try optionalString(
+        table["composer_location_placeholder"],
+        path: "builtins.calendar.month.popup.composer_location_placeholder"
+      ) ?? fallback.composerLocationPlaceholder,
+      composerDefaultCalendarName: try optionalString(
+        table["composer_default_calendar_name"],
+        path: "builtins.calendar.month.popup.composer_default_calendar_name"
+      ) ?? fallback.composerDefaultCalendarName,
+      composerDefaultAlert: try optionalString(
+        table["composer_default_alert"],
+        path: "builtins.calendar.month.popup.composer_default_alert"
+      ) ?? fallback.composerDefaultAlert,
+      composerDefaultTravelTime: try optionalString(
+        table["composer_default_travel_time"],
+        path: "builtins.calendar.month.popup.composer_default_travel_time"
+      ) ?? fallback.composerDefaultTravelTime
     )
   }
 

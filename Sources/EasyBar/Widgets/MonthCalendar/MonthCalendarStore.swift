@@ -2,10 +2,9 @@ import EasyBarShared
 import Foundation
 
 final class NativeMonthCalendarStore: ObservableObject {
-
   static let shared = NativeMonthCalendarStore()
 
-  @Published private(set) var snapshot: CalendarAgentSnapshot?
+  @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var sections: [NativeMonthCalendarPopupSection] = []
   @Published private(set) var events: [NativeMonthCalendarEvent] = []
 
@@ -17,7 +16,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   private init() {}
 
   /// Applies one calendar snapshot to the shared store.
-  func apply(snapshot: CalendarAgentSnapshot) {
+  func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
     Logger.debug(
       "month calendar popup applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
     )
@@ -31,46 +30,37 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping one day.
+  ///
+  /// This method is used frequently during SwiftUI rendering, so it should stay
+  /// free of debug logging to avoid noisy output and unnecessary overhead while
+  /// typing or hovering in the popup.
   func eventsForDay(_ date: Date) -> [NativeMonthCalendarEvent] {
     let startOfDay = calendar.startOfDay(for: date)
+
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-      Logger.debug(
-        "month calendar store eventsForDay failed to build end_of_day date=\(startOfDay)")
       return []
     }
 
-    let matches = events.filter { event in
+    return events.filter { event in
       event.startDate < endOfDay && event.endDate > startOfDay
     }
-
-    Logger.debug(
-      "month calendar store eventsForDay date=\(debugDate(startOfDay)) matches=\(matches.count)"
-    )
-
-    return matches
   }
 
   /// Returns all events overlapping the inclusive day range.
+  ///
+  /// This method is also used from view updates, so it intentionally avoids
+  /// debug logging for the same reason as `eventsForDay(_:)`.
   func eventsInRange(from startDate: Date, to endDate: Date) -> [NativeMonthCalendarEvent] {
     let startOfRange = calendar.startOfDay(for: startDate)
     let endDayStart = calendar.startOfDay(for: endDate)
 
     guard let endOfRange = calendar.date(byAdding: .day, value: 1, to: endDayStart) else {
-      Logger.debug(
-        "month calendar store eventsInRange failed to build end_of_range start=\(debugDate(startOfRange)) end=\(debugDate(endDayStart))"
-      )
       return []
     }
 
-    let matches = events.filter { event in
+    return events.filter { event in
       event.startDate < endOfRange && event.endDate > startOfRange
     }
-
-    Logger.debug(
-      "month calendar store eventsInRange start=\(debugDate(startOfRange)) end=\(debugDate(endDayStart)) matches=\(matches.count)"
-    )
-
-    return matches
   }
 
   /// Returns whether one day has at least one event.
@@ -118,7 +108,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Publishes one calendar snapshot update on the main queue.
-  private func publish(snapshot: CalendarAgentSnapshot?) {
+  private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     DispatchQueue.main.async {
       self.snapshot = snapshot
       self.sections = snapshot?.sections ?? []

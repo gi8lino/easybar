@@ -1,2 +1,1 @@
-- allow multi select
-
+- move CalendarAgentOneShotClient.swift into shared

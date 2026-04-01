@@ -5,11 +5,10 @@ import Foundation
 ///
 /// Concrete wrappers only provide the request builder and snapshot sink.
 final class CalendarAgentStreamController {
-
   private let label: String
   private let socketPath: () -> String
-  private let makeRequest: () -> CalendarAgentRequestEnvelope?
-  private let applySnapshot: (CalendarAgentSnapshot) -> Void
+  private let makeRequest: () -> CalendarAgentRequest?
+  private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
 
   private let decoder = JSONDecoder()
   private var client: CalendarAgentSocketClient?
@@ -19,8 +18,8 @@ final class CalendarAgentStreamController {
   init(
     label: String,
     socketPath: @escaping () -> String,
-    makeRequest: @escaping () -> CalendarAgentRequestEnvelope?,
-    applySnapshot: @escaping (CalendarAgentSnapshot) -> Void
+    makeRequest: @escaping () -> CalendarAgentRequest?,
+    applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void
   ) {
     self.label = label
     self.socketPath = socketPath
@@ -72,7 +71,7 @@ final class CalendarAgentStreamController {
     client = nil
   }
 
-  /// Sends one fresh fetch request built from current config/state.
+  /// Sends one fresh request built from current config and state.
   func refresh() {
     guard let client, let request = makeRequest() else { return }
     client.send(request)
@@ -88,17 +87,17 @@ final class CalendarAgentStreamController {
     }
 
     do {
-      let response = try decoder.decode(CalendarAgentResponseEnvelope.self, from: data)
+      let response = try decoder.decode(CalendarAgentMessage.self, from: data)
       handleResponse(response)
     } catch {
       Logger.warn("\(label) failed decoding response error=\(error)")
     }
   }
 
-  /// Handles one decoded calendar-agent response envelope.
-  private func handleResponse(_ response: CalendarAgentResponseEnvelope) {
+  /// Handles one decoded calendar-agent response.
+  private func handleResponse(_ response: CalendarAgentMessage) {
     switch response.kind {
-    case "snapshot":
+    case .snapshot:
       guard let snapshot = response.snapshot else {
         Logger.warn("\(label) received snapshot without payload")
         return
@@ -109,14 +108,11 @@ final class CalendarAgentStreamController {
       )
       applySnapshot(snapshot)
 
-    case "error":
+    case .error:
       Logger.warn("\(label) received error message=\(response.message ?? "unknown")")
 
-    case "pong", "subscribed":
+    case .pong, .subscribed, .created, .updated, .deleted:
       break
-
-    default:
-      Logger.warn("\(label) received unknown kind=\(response.kind)")
     }
   }
 

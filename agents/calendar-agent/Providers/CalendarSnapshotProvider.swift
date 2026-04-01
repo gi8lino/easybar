@@ -40,10 +40,6 @@ final class CalendarSnapshotProvider {
   }
 
   /// Builds one calendar snapshot for the requested query.
-  ///
-  /// The agent now fetches exactly the requested start/end range.
-  /// The regular calendar popup sections are controlled separately through
-  /// `sectionStartDate` and `sectionDayCount`.
   func snapshot(for query: CalendarAgentQuery) -> CalendarAgentSnapshot {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
@@ -112,6 +108,137 @@ final class CalendarSnapshotProvider {
     )
 
     return snapshot
+  }
+
+  /// Creates one new calendar event through EventKit.
+  @discardableResult
+  func createEvent(_ draft: CalendarAgentCreateEvent) throws -> String {
+    let status = EKEventStore.authorizationStatus(for: .event)
+    authState.setStatus(status)
+
+    guard authState.effectiveAccessGranted() else {
+      throw CalendarAgentCreateError.accessDenied
+    }
+
+    guard draft.startDate < draft.endDate else {
+      throw CalendarAgentCreateError.invalidDateRange
+    }
+
+    let event = EKEvent(eventStore: eventStore)
+    event.calendar = resolvedCalendar(named: draft.calendarName)
+    event.title = normalizedTitle(draft.title)
+    event.startDate = draft.startDate
+    event.endDate = draft.endDate
+    event.isAllDay = draft.isAllDay
+    event.location = normalizedOptionalText(draft.location)
+
+    if let travelTimeSeconds = draft.travelTimeSeconds, travelTimeSeconds > 0 {
+      event.setValue(NSNumber(value: travelTimeSeconds), forKey: "travelTime")
+    }
+
+    if let alertOffsetSeconds = draft.alertOffsetSeconds {
+      event.alarms = [EKAlarm(relativeOffset: -abs(alertOffsetSeconds))]
+    }
+
+    try eventStore.save(event, span: .thisEvent, commit: true)
+
+    AgentLogger.info(
+      """
+      calendar event created \
+      title=\(event.title ?? "Untitled") \
+      start=\(draft.startDate) \
+      end=\(draft.endDate) \
+      all_day=\(draft.isAllDay) \
+      calendar=\(event.calendar.title) \
+      location=\(event.location ?? "")
+      """
+    )
+
+    DispatchQueue.main.async { [weak self] in
+      self?.onChange?()
+    }
+
+    return event.eventIdentifier ?? ""
+  }
+
+  /// Updates one existing calendar event through EventKit.
+  func updateEvent(_ draft: CalendarAgentUpdateEvent) throws {
+    let status = EKEventStore.authorizationStatus(for: .event)
+    authState.setStatus(status)
+
+    guard authState.effectiveAccessGranted() else {
+      throw CalendarAgentCreateError.accessDenied
+    }
+
+    guard let event = resolvedEvent(id: draft.eventIdentifier) else {
+      throw CalendarAgentMutationError.eventNotFound
+    }
+
+    guard draft.startDate < draft.endDate else {
+      throw CalendarAgentCreateError.invalidDateRange
+    }
+
+    event.calendar = resolvedCalendar(named: draft.calendarName)
+    event.title = normalizedTitle(draft.title)
+    event.startDate = draft.startDate
+    event.endDate = draft.endDate
+    event.isAllDay = draft.isAllDay
+    event.location = normalizedOptionalText(draft.location)
+
+    if let travelTimeSeconds = draft.travelTimeSeconds, travelTimeSeconds > 0 {
+      event.setValue(NSNumber(value: travelTimeSeconds), forKey: "travelTime")
+    } else {
+      event.setValue(Optional<NSNumber>.none, forKey: "travelTime")
+    }
+
+    if let alertOffsetSeconds = draft.alertOffsetSeconds {
+      event.alarms = [EKAlarm(relativeOffset: -abs(alertOffsetSeconds))]
+    } else {
+      event.alarms = nil
+    }
+
+    try eventStore.save(event, span: .thisEvent, commit: true)
+
+    AgentLogger.info(
+      """
+      calendar event updated \
+      event_id=\(draft.eventIdentifier) \
+      title=\(event.title ?? "Untitled") \
+      start=\(draft.startDate) \
+      end=\(draft.endDate) \
+      all_day=\(draft.isAllDay) \
+      calendar=\(event.calendar.title) \
+      location=\(event.location ?? "")
+      """
+    )
+
+    DispatchQueue.main.async { [weak self] in
+      self?.onChange?()
+    }
+  }
+
+  /// Deletes one existing calendar event through EventKit.
+  func deleteEvent(_ draft: CalendarAgentDeleteEvent) throws {
+    let status = EKEventStore.authorizationStatus(for: .event)
+    authState.setStatus(status)
+
+    guard authState.effectiveAccessGranted() else {
+      throw CalendarAgentCreateError.accessDenied
+    }
+
+    guard let event = resolvedEvent(id: draft.eventIdentifier) else {
+      throw CalendarAgentMutationError.eventNotFound
+    }
+
+    try eventStore.remove(event, span: .thisEvent, commit: true)
+
+    AgentLogger.info(
+      "calendar event deleted event_id=\(draft.eventIdentifier) title=\(event.title ?? "Untitled")"
+    )
+
+    DispatchQueue.main.async { [weak self] in
+      self?.onChange?()
+    }
   }
 
   /// Returns one normalized fetch range when valid.
@@ -318,6 +445,47 @@ extension CalendarSnapshotProvider {
 
       return included.contains(normalizedTitle)
     }
+  }
+
+  /// Resolves one writable calendar for creation or update.
+  private func resolvedCalendar(named name: String?) -> EKCalendar {
+    let writableCalendars = eventStore.calendars(for: .event).filter { calendar in
+      calendar.allowsContentModifications && calendar.type != .birthday
+    }
+
+    if let name = normalizedOptionalText(name) {
+      let normalized = normalizedCalendarName(name)
+
+      if let match = writableCalendars.first(where: {
+        normalizedCalendarName($0.title) == normalized
+      }) {
+        return match
+      }
+    }
+
+    if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
+      defaultCalendar.allowsContentModifications
+    {
+      return defaultCalendar
+    }
+
+    if let firstWritable = writableCalendars.first {
+      return firstWritable
+    }
+
+    if let anyCalendar = eventStore.calendars(for: .event).first {
+      return anyCalendar
+    }
+
+    fatalError("No EventKit calendar available for event creation")
+  }
+
+  /// Resolves one event by EventKit identifier.
+  private func resolvedEvent(id: String) -> EKEvent? {
+    let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    return eventStore.event(withIdentifier: trimmed)
   }
 
   /// Returns one normalized calendar-name set.
@@ -589,4 +757,13 @@ extension CalendarSnapshotProvider {
 
     return String(format: "#%02X%02X%02X", red, green, blue)
   }
+}
+
+enum CalendarAgentCreateError: Error {
+  case accessDenied
+  case invalidDateRange
+}
+
+enum CalendarAgentMutationError: Error {
+  case eventNotFound
 }

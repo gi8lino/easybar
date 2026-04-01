@@ -5,7 +5,7 @@ final class MonthCalendarAgentClient {
 
   static let shared = MonthCalendarAgentClient()
 
-  private lazy var stream = CalendarAgentStreamController(
+  private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "month calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
     makeRequest: { [weak self] in
@@ -46,8 +46,90 @@ final class MonthCalendarAgentClient {
     stream.refresh()
   }
 
+  /// Sends one create-event request through the calendar agent.
+  func createEvent(
+    _ event: CalendarAgentCreateEvent,
+    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+  ) {
+    let request = CalendarAgentRequest(
+      command: .createEvent,
+      createEvent: event
+    )
+
+    sendOneShot(request: request, successKind: .created, completion: completion)
+  }
+
+  /// Sends one update-event request through the calendar agent.
+  func updateEvent(
+    _ event: CalendarAgentUpdateEvent,
+    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+  ) {
+    let request = CalendarAgentRequest(
+      command: .updateEvent,
+      updateEvent: event
+    )
+
+    sendOneShot(request: request, successKind: .updated, completion: completion)
+  }
+
+  /// Sends one delete-event request through the calendar agent.
+  func deleteEvent(
+    _ event: CalendarAgentDeleteEvent,
+    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+  ) {
+    let request = CalendarAgentRequest(
+      command: .deleteEvent,
+      deleteEvent: event
+    )
+
+    sendOneShot(request: request, successKind: .deleted, completion: completion)
+  }
+
+  /// Sends one mutating request through the calendar agent.
+  private func sendOneShot(
+    request: CalendarAgentRequest,
+    successKind: CalendarAgentMessageKind,
+    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+  ) {
+    let socketPath = Config.shared.calendarAgentSocketPath
+
+    DispatchQueue.global(qos: .userInitiated).async {
+      do {
+        let response = try CalendarAgentOneShotClient.send(
+          request: request,
+          socketPath: socketPath
+        )
+
+        DispatchQueue.main.async {
+          switch response.kind {
+          case successKind:
+            self.refresh()
+            UpcomingCalendarAgentClient.shared.refresh()
+            completion(true, nil)
+
+          case .error:
+            let message = response.message ?? "unknown"
+            Logger.error("month calendar mutation failed message=\(message)")
+            completion(false, message)
+
+          default:
+            Logger.error(
+              "month calendar mutation unexpected response=\(response.kind.rawValue)"
+            )
+            completion(false, "unexpected_response")
+          }
+        }
+      } catch {
+        DispatchQueue.main.async {
+          Logger.error("month calendar mutation failed error=\(error)")
+          completion(false, error.localizedDescription)
+        }
+      }
+    }
+  }
+
   /// Builds the current month-calendar fetch request.
-  private func makeRequest() -> CalendarAgentRequestEnvelope {
+  private func makeRequest() -> CalendarAgentRequest {
     let requestedRange: DateInterval
 
     if let prepared = NativeMonthCalendarStore.shared.monthSubscriptionRange() {
@@ -64,22 +146,22 @@ final class MonthCalendarAgentClient {
       "requesting month calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) show_birthdays=\(monthConfig.showBirthdays) birthdays_show_age=\(monthConfig.birthdaysShowAge)"
     )
 
-    let query = CalendarAgentQueryEnvelope(
+    let query = CalendarAgentQuery(
       startDate: requestedRange.start,
       endDate: requestedRange.end,
       sectionStartDate: nil,
       sectionDayCount: nil,
       showBirthdays: monthConfig.showBirthdays,
-      birthdaysShowAge: monthConfig.birthdaysShowAge,
+      emptyText: monthConfig.emptyText,
       birthdaysTitle: upcomingBirthdays.title,
       birthdaysDateFormat: upcomingBirthdays.dateFormat,
+      birthdaysShowAge: monthConfig.birthdaysShowAge,
       includedCalendarNames: monthConfig.includedCalendarNames,
-      excludedCalendarNames: monthConfig.excludedCalendarNames,
-      emptyText: monthConfig.emptyText
+      excludedCalendarNames: monthConfig.excludedCalendarNames
     )
 
-    return CalendarAgentRequestEnvelope(
-      command: "fetch",
+    return CalendarAgentRequest(
+      command: .subscribe,
       query: query
     )
   }

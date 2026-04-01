@@ -5,7 +5,7 @@ final class UpcomingCalendarAgentClient {
 
   static let shared = UpcomingCalendarAgentClient()
 
-  private lazy var stream = CalendarAgentStreamController(
+  private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
     makeRequest: { [weak self] in
@@ -38,13 +38,13 @@ final class UpcomingCalendarAgentClient {
     stream.refresh()
   }
 
-  /// Builds the current upcoming-calendar fetch request.
-  private func makeRequest() -> CalendarAgentRequestEnvelope {
+  /// Builds the current upcoming-calendar request.
+  private func makeRequest() -> CalendarAgentRequest {
     let now = Date()
-    let config = Config.shared.builtinCalendar
-    let upcoming = config.upcoming
+    let calendarConfig = Config.shared.builtinCalendar
+    let upcoming = calendarConfig.upcoming
     let requestedRange = CalendarNativeWidget.requestedDateRange(
-      config: config,
+      config: calendarConfig,
       now: now
     )
 
@@ -52,12 +52,23 @@ final class UpcomingCalendarAgentClient {
       "requesting upcoming calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) days=\(upcoming.events.days) show_birthdays=\(upcoming.birthdays.show)"
     )
 
-    return .fetch(
-      query: .upcoming(
-        config: config,
-        now: now,
-        requestedRange: requestedRange
-      )
+    let query = CalendarAgentQuery(
+      startDate: requestedRange.start,
+      endDate: requestedRange.end,
+      sectionStartDate: now,
+      sectionDayCount: upcoming.events.days,
+      showBirthdays: upcoming.birthdays.show,
+      emptyText: upcoming.events.emptyText,
+      birthdaysTitle: upcoming.birthdays.title,
+      birthdaysDateFormat: upcoming.birthdays.dateFormat,
+      birthdaysShowAge: upcoming.birthdays.showAge,
+      includedCalendarNames: [],
+      excludedCalendarNames: []
+    )
+
+    return CalendarAgentRequest(
+      command: .subscribe,
+      query: query
     )
   }
 }

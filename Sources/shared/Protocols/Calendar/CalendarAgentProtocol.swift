@@ -5,6 +5,9 @@ public enum CalendarAgentCommand: String, Codable {
   case ping
   case fetch
   case subscribe
+  case createEvent = "create_event"
+  case updateEvent = "update_event"
+  case deleteEvent = "delete_event"
 }
 
 /// Query payload that shapes one calendar snapshot request.
@@ -60,17 +63,129 @@ public struct CalendarAgentQuery: Codable, Equatable {
   }
 }
 
+/// One create-event payload sent to the calendar agent.
+public struct CalendarAgentCreateEvent: Codable, Equatable {
+  /// Event title.
+  public var title: String
+  /// Event start date.
+  public var startDate: Date
+  /// Event end date.
+  public var endDate: Date
+  /// Whether the event is all day.
+  public var isAllDay: Bool
+  /// Optional calendar name to create the event in.
+  public var calendarName: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional alert lead time in seconds before the event.
+  public var alertOffsetSeconds: TimeInterval?
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
+
+  /// Creates one calendar agent create-event payload.
+  public init(
+    title: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    calendarName: String? = nil,
+    location: String? = nil,
+    alertOffsetSeconds: TimeInterval? = nil,
+    travelTimeSeconds: TimeInterval? = nil
+  ) {
+    self.title = title
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
+    self.calendarName = calendarName
+    self.location = location
+    self.alertOffsetSeconds = alertOffsetSeconds
+    self.travelTimeSeconds = travelTimeSeconds
+  }
+}
+
+/// One update-event payload sent to the calendar agent.
+public struct CalendarAgentUpdateEvent: Codable, Equatable {
+  /// Stable EventKit event identifier.
+  public var eventIdentifier: String
+  /// Updated event title.
+  public var title: String
+  /// Updated event start date.
+  public var startDate: Date
+  /// Updated event end date.
+  public var endDate: Date
+  /// Whether the event is all day.
+  public var isAllDay: Bool
+  /// Optional calendar name to move the event to.
+  public var calendarName: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional alert lead time in seconds before the event.
+  public var alertOffsetSeconds: TimeInterval?
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
+
+  /// Creates one calendar agent update-event payload.
+  public init(
+    eventIdentifier: String,
+    title: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    calendarName: String? = nil,
+    location: String? = nil,
+    alertOffsetSeconds: TimeInterval? = nil,
+    travelTimeSeconds: TimeInterval? = nil
+  ) {
+    self.eventIdentifier = eventIdentifier
+    self.title = title
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
+    self.calendarName = calendarName
+    self.location = location
+    self.alertOffsetSeconds = alertOffsetSeconds
+    self.travelTimeSeconds = travelTimeSeconds
+  }
+}
+
+/// One delete-event payload sent to the calendar agent.
+public struct CalendarAgentDeleteEvent: Codable, Equatable {
+  /// Stable EventKit event identifier.
+  public var eventIdentifier: String
+
+  /// Creates one calendar agent delete-event payload.
+  public init(eventIdentifier: String) {
+    self.eventIdentifier = eventIdentifier
+  }
+}
+
 /// One request sent to the calendar agent.
 public struct CalendarAgentRequest: Codable {
   /// Command to execute on the agent.
   public var command: CalendarAgentCommand
   /// Optional query used for fetch and subscribe requests.
   public var query: CalendarAgentQuery?
+  /// Optional create-event payload used for event creation.
+  public var createEvent: CalendarAgentCreateEvent?
+  /// Optional update-event payload used for event updates.
+  public var updateEvent: CalendarAgentUpdateEvent?
+  /// Optional delete-event payload used for event deletion.
+  public var deleteEvent: CalendarAgentDeleteEvent?
 
   /// Creates one calendar agent request.
-  public init(command: CalendarAgentCommand, query: CalendarAgentQuery? = nil) {
+  public init(
+    command: CalendarAgentCommand,
+    query: CalendarAgentQuery? = nil,
+    createEvent: CalendarAgentCreateEvent? = nil,
+    updateEvent: CalendarAgentUpdateEvent? = nil,
+    deleteEvent: CalendarAgentDeleteEvent? = nil
+  ) {
     self.command = command
     self.query = query
+    self.createEvent = createEvent
+    self.updateEvent = updateEvent
+    self.deleteEvent = deleteEvent
   }
 }
 
@@ -219,6 +334,9 @@ public enum CalendarAgentMessageKind: String, Codable {
   case pong
   case subscribed
   case snapshot
+  case created
+  case updated
+  case deleted
   case error
 }
 
@@ -242,3 +360,12 @@ public struct CalendarAgentMessage: Codable {
     self.message = message
   }
 }
+
+// MARK: - Backward Compatibility Aliases
+
+public typealias CalendarAgentQueryEnvelope = CalendarAgentQuery
+public typealias CalendarAgentCreateEventEnvelope = CalendarAgentCreateEvent
+public typealias CalendarAgentUpdateEventEnvelope = CalendarAgentUpdateEvent
+public typealias CalendarAgentDeleteEventEnvelope = CalendarAgentDeleteEvent
+public typealias CalendarAgentRequestEnvelope = CalendarAgentRequest
+public typealias CalendarAgentResponseEnvelope = CalendarAgentMessage

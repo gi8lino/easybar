@@ -1,21 +1,5 @@
 import SwiftUI
 
-private struct MonthCalendarGridFramePreferenceKey: PreferenceKey {
-  static var defaultValue: CGRect = .zero
-
-  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-    value = nextValue()
-  }
-}
-
-private struct MonthCalendarDayFramePreferenceKey: PreferenceKey {
-  static var defaultValue: [Date: CGRect] = [:]
-
-  static func reduce(value: inout [Date: CGRect], nextValue: () -> [Date: CGRect]) {
-    value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-  }
-}
-
 // MARK: - Top-Level Layout
 
 extension NativeMonthCalendarPopupView {
@@ -59,6 +43,11 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
+  /// Returns the fixed width used by the calendar pane.
+  var calendarContainerWidth: CGFloat {
+    260
+  }
+
   /// Returns the fixed height used by the calendar pane in vertical layouts.
   var verticalCalendarHeight: CGFloat {
     250
@@ -72,8 +61,8 @@ extension NativeMonthCalendarPopupView {
       monthGridView
     }
     .frame(
-      minWidth: isHorizontalLayout ? 220 : nil,
-      maxWidth: .infinity,
+      minWidth: calendarContainerWidth,
+      maxWidth: calendarContainerWidth,
       minHeight: isVerticalLayout ? verticalCalendarHeight : nil,
       maxHeight: isVerticalLayout ? verticalCalendarHeight : nil,
       alignment: .topLeading
@@ -136,6 +125,12 @@ extension NativeMonthCalendarPopupView {
         .foregroundStyle(color(config.headerTextColorHex))
 
       Spacer()
+
+      Button(action: openComposer) {
+        Image(systemName: "plus")
+          .foregroundStyle(color(config.headerTextColorHex))
+      }
+      .buttonStyle(.plain)
 
       Button(action: showNextMonth) {
         Text("›")
@@ -231,54 +226,48 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the visible month grid.
   var monthGridView: some View {
-    ZStack {
-      VStack(alignment: .leading, spacing: 6) {
-        ForEach(weekRows) { row in
-          HStack(spacing: 6) {
-            if config.showWeekNumbers {
-              Text("\(row.weekNumber)")
-                .frame(width: 20, alignment: .trailing)
-                .foregroundStyle(color(config.outsideMonthTextColorHex))
-            }
+    VStack(alignment: .leading, spacing: 6) {
+      ForEach(weekRows) { row in
+        HStack(spacing: 6) {
+          if config.showWeekNumbers {
+            Text("\(row.weekNumber)")
+              .frame(width: 20, alignment: .trailing)
+              .foregroundStyle(color(config.outsideMonthTextColorHex))
+          }
 
-            ForEach(row.days) { day in
-              dayCellView(day)
-            }
+          ForEach(row.days) { day in
+            dayCellView(day)
           }
         }
       }
-
-      Rectangle()
-        .fill(Color.clear)
-        .contentShape(Rectangle())
-        .gesture(
-          DragGesture(minimumDistance: 0)
-            .onChanged { value in
-              handleGridDragChanged(value)
-            }
-            .onEnded { value in
-              handleGridDragEnded(value)
-            }
-        )
     }
-    .coordinateSpace(name: "MonthCalendarGrid")
-    .background {
+    .background(
       GeometryReader { proxy in
         Color.clear.preference(
           key: MonthCalendarGridFramePreferenceKey.self,
-          value: proxy.frame(in: .named("MonthCalendarGrid"))
+          value: proxy.frame(in: .named("month-calendar-grid"))
         )
       }
-    }
+    )
+    .gesture(
+      DragGesture(minimumDistance: 0)
+        .onChanged { value in
+          handleGridDragChanged(value)
+        }
+        .onEnded { value in
+          handleGridDragEnded(value)
+        }
+    )
     .onPreferenceChange(MonthCalendarGridFramePreferenceKey.self) { frame in
       monthGridFrame = frame
     }
     .onPreferenceChange(MonthCalendarDayFramePreferenceKey.self) { frames in
       dayCellFrames = frames
     }
+    .coordinateSpace(name: "month-calendar-grid")
   }
 
-  /// Builds one day cell.
+  /// Builds one interactive day cell.
   func dayCellView(_ day: DayCell) -> some View {
     let normalizedDate = resolvedCalendar.startOfDay(for: day.date)
 
@@ -292,14 +281,14 @@ extension NativeMonthCalendarPopupView {
     }
     .frame(maxWidth: .infinity, minHeight: 30)
     .foregroundStyle(dayForeground(day))
-    .background {
+    .background(
       GeometryReader { proxy in
         Color.clear.preference(
           key: MonthCalendarDayFramePreferenceKey.self,
-          value: [normalizedDate: proxy.frame(in: .named("MonthCalendarGrid"))]
+          value: [normalizedDate: proxy.frame(in: .named("month-calendar-grid"))]
         )
       }
-    }
+    )
   }
 
   /// Builds the appointment-indicator bar for one day.
