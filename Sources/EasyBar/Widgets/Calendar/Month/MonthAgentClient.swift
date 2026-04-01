@@ -9,10 +9,13 @@ final class MonthCalendarAgentClient {
     label: "month calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
     makeRequest: { [weak self] in
-      self?.makeRequest()
+      self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
     applySnapshot: { snapshot in
       NativeMonthCalendarStore.shared.apply(snapshot: snapshot)
+    },
+    clearState: {
+      NativeMonthCalendarStore.shared.clear()
     }
   )
 

@@ -9,10 +9,13 @@ final class UpcomingCalendarAgentClient {
     label: "upcoming calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
     makeRequest: { [weak self] in
-      self?.makeRequest()
+      self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
     applySnapshot: { snapshot in
       NativeUpcomingCalendarStore.shared.apply(snapshot: snapshot)
+    },
+    clearState: {
+      NativeUpcomingCalendarStore.shared.clear()
     }
   )
 

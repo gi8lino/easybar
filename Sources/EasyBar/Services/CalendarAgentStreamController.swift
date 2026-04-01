@@ -7,30 +7,48 @@ import Foundation
 final class CalendarAgentStreamController {
   private let label: String
   private let socketPath: () -> String
-  private let makeRequest: () -> CalendarAgentRequest?
+  private let makeRequest: () -> CalendarAgentRequest
   private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
+  private let clearState: () -> Void
 
-  private let decoder = JSONDecoder()
-  private var client: CalendarAgentSocketClient?
   private var started = false
+
+  private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
+    label: label,
+    socketPath: socketPath,
+    subscribeRequest: { [weak self] in
+      self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
+    },
+    handleMessage: { [weak self] message in
+      self?.handle(message)
+    },
+    clearState: { [weak self] in
+      self?.clearState()
+    },
+    debugLog: Logger.debug,
+    infoLog: Logger.info,
+    warnLog: Logger.warn,
+    errorLog: Logger.error
+  )
 
   /// Creates one shared calendar-agent stream controller.
   init(
     label: String,
     socketPath: @escaping () -> String,
-    makeRequest: @escaping () -> CalendarAgentRequest?,
-    applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void
+    makeRequest: @escaping () -> CalendarAgentRequest,
+    applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void,
+    clearState: @escaping () -> Void = {}
   ) {
     self.label = label
     self.socketPath = socketPath
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
-    decoder.dateDecodingStrategy = .iso8601
+    self.clearState = clearState
   }
 
-  /// Returns whether the stream currently has an active client.
+  /// Returns whether the stream currently has an active connection.
   var isConnected: Bool {
-    started && client != nil
+    started && client.isConnected
   }
 
   /// Starts the stream when the calendar agent is enabled.
@@ -43,59 +61,27 @@ final class CalendarAgentStreamController {
     }
 
     started = true
-
-    let resolvedSocketPath = socketPath()
-    Logger.info("starting \(label) socket=\(resolvedSocketPath)")
-
-    let client = CalendarAgentSocketClient(socketPath: resolvedSocketPath)
-    client.onMessage = { [weak self] line in
-      self?.handleMessage(line)
-    }
-    client.onDisconnect = { [weak self] in
-      self?.handleDisconnect()
-    }
-
-    self.client = client
+    Logger.info("starting \(label) socket=\(socketPath())")
     client.start()
-
-    refresh()
   }
 
-  /// Stops the stream and releases the current socket client.
+  /// Stops the stream and clears published state.
   func stop() {
     guard started else { return }
 
     Logger.info("stopping \(label)")
     started = false
-    client?.stop()
-    client = nil
+    client.stop()
   }
 
   /// Sends one fresh request built from current config and state.
   func refresh() {
-    guard let client, let request = makeRequest() else { return }
-    client.send(request)
-  }
-
-  /// Handles one raw line received from the calendar agent.
-  private func handleMessage(_ line: String) {
-    Logger.debug("\(label) received line=\(line)")
-
-    guard let data = line.data(using: .utf8) else {
-      Logger.warn("\(label) received invalid utf8")
-      return
-    }
-
-    do {
-      let response = try decoder.decode(CalendarAgentMessage.self, from: data)
-      handleResponse(response)
-    } catch {
-      Logger.warn("\(label) failed decoding response error=\(error)")
-    }
+    guard started else { return }
+    client.refresh()
   }
 
   /// Handles one decoded calendar-agent response.
-  private func handleResponse(_ response: CalendarAgentMessage) {
+  private func handle(_ response: CalendarAgentMessage) {
     switch response.kind {
     case .snapshot:
       guard let snapshot = response.snapshot else {
@@ -114,12 +100,5 @@ final class CalendarAgentStreamController {
     case .pong, .subscribed, .created, .updated, .deleted:
       break
     }
-  }
-
-  /// Handles one stream disconnect.
-  private func handleDisconnect() {
-    Logger.warn("\(label) disconnected")
-    started = false
-    client = nil
   }
 }

@@ -1,9 +1,8 @@
 import Darwin
-import EasyBarShared
 import Foundation
 
 /// Sends one newline-delimited request to the calendar agent and reads one response.
-enum CalendarAgentOneShotClient {
+public enum CalendarAgentOneShotClient {
   private static let encoder: JSONEncoder = {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
@@ -17,7 +16,7 @@ enum CalendarAgentOneShotClient {
   }()
 
   /// Sends one request and returns the first decoded response.
-  static func send(
+  public static func send(
     request: CalendarAgentRequest,
     socketPath: String
   ) throws -> CalendarAgentMessage {
@@ -102,7 +101,8 @@ enum CalendarAgentOneShotClient {
   }
 }
 
-enum CalendarAgentOneShotError: Error {
+/// Errors produced by the one-shot calendar agent client.
+public enum CalendarAgentOneShotError: Error {
   case socketCreationFailed
   case connectionFailed
   case writeFailed
