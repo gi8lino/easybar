@@ -1,1 +1,5 @@
 - move CalendarAgentOneShotClient.swift into shared
+
+- mark today maybe with a red round border?
+- add a new container for buttons and put the + inside it. add there also a "Today" button, let the user configure the button name
+

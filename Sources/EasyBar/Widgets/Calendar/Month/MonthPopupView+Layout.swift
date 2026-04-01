@@ -126,11 +126,7 @@ extension NativeMonthCalendarPopupView {
 
       Spacer()
 
-      Button(action: openComposer) {
-        Image(systemName: "plus")
-          .foregroundStyle(color(config.headerTextColorHex))
-      }
-      .buttonStyle(.plain)
+      headerButtonsContainerView
 
       Button(action: showNextMonth) {
         Text("›")
@@ -138,6 +134,46 @@ extension NativeMonthCalendarPopupView {
       }
       .buttonStyle(.plain)
     }
+  }
+
+  /// Builds the grouped header action buttons.
+  var headerButtonsContainerView: some View {
+    HStack(spacing: 8) {
+      Button(action: showToday) {
+        Text(config.todayButtonTitle)
+          .foregroundStyle(color(config.headerTextColorHex))
+      }
+      .buttonStyle(.plain)
+
+      Button(action: openComposer) {
+        Image(systemName: "plus")
+          .foregroundStyle(color(config.headerTextColorHex))
+      }
+      .buttonStyle(.plain)
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 4)
+    .background(color(config.todayBackgroundColorHex))
+    .overlay {
+      RoundedRectangle(cornerRadius: 8)
+        .stroke(
+          color(config.borderColorHex),
+          lineWidth: max(CGFloat(config.borderWidth), 1)
+        )
+    }
+    .clipShape(
+      RoundedRectangle(cornerRadius: 8)
+    )
+  }
+
+  /// Shows the current month and selects today.
+  func showToday() {
+    let today = resolvedCalendar.startOfDay(for: Date())
+    visibleMonth = Self.startOfMonth(today, calendar: resolvedCalendar)
+    selectedStartDate = today
+    selectedEndDate = today
+
+    Logger.debug("month calendar popup show_today visible_month=\(debugDate(visibleMonth))")
   }
 
   /// Shows the previous visible month.
@@ -275,6 +311,13 @@ extension NativeMonthCalendarPopupView {
       Text("\(resolvedCalendar.component(.day, from: day.date))")
         .frame(width: 28, height: 22)
         .background(dayBackground(day))
+        .overlay {
+          RoundedRectangle(cornerRadius: 6)
+            .stroke(
+              dayBorderColor(day),
+              lineWidth: dayBorderWidth(day)
+            )
+        }
         .clipShape(RoundedRectangle(cornerRadius: 6))
 
       dayIndicatorBar(for: day.date)
@@ -447,6 +490,24 @@ extension NativeMonthCalendarPopupView {
     }
 
     return .clear
+  }
+
+  /// Returns the border color for one day cell.
+  func dayBorderColor(_ day: DayCell) -> Color {
+    if resolvedCalendar.isDateInToday(day.date) {
+      return color(config.todayBorderColorHex)
+    }
+
+    return .clear
+  }
+
+  /// Returns the border width for one day cell.
+  func dayBorderWidth(_ day: DayCell) -> CGFloat {
+    if resolvedCalendar.isDateInToday(day.date) {
+      return CGFloat(max(config.todayBorderWidth, 0))
+    }
+
+    return 0
   }
 
   /// Returns whether one day is inside the active selection.

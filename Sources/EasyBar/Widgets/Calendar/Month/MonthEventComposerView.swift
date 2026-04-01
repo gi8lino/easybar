@@ -9,6 +9,8 @@ struct MonthCalendarEventComposerView: View {
 
   private let config = Config.shared.builtinCalendar.month.popup
 
+  @State private var showsDeleteConfirmation = false
+
   /// Renders the standalone appointment composer.
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -36,6 +38,17 @@ struct MonthCalendarEventComposerView: View {
     .clipShape(
       RoundedRectangle(cornerRadius: CGFloat(config.cornerRadius))
     )
+    .alert("Remove appointment?", isPresented: $showsDeleteConfirmation) {
+      Button("Cancel", role: .cancel) {}
+
+      Button("Remove", role: .destructive) {
+        composer.delete {
+          onDeleted()
+        }
+      }
+    } message: {
+      Text("This action cannot be undone.")
+    }
   }
 }
 
@@ -191,9 +204,7 @@ extension MonthCalendarEventComposerView {
 
       if composer.canDelete {
         Button("Remove") {
-          composer.delete {
-            onDeleted()
-          }
+          showsDeleteConfirmation = true
         }
         .buttonStyle(.plain)
         .foregroundStyle(.red)

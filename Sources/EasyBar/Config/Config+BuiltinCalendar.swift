@@ -95,6 +95,8 @@ extension Config {
         var selectedTextColorHex: String
         var selectedBackgroundColorHex: String
         var todayBackgroundColorHex: String
+        var todayBorderColorHex: String
+        var todayBorderWidth: Double
         var indicatorColorHex: String
         var eventTextColorHex: String
         var emptyTextColorHex: String
@@ -123,6 +125,7 @@ extension Config {
         var birthdayIcon: String
         var birthdayIconColorHex: String?
         var selectionDateFormat: String
+        var todayButtonTitle: String
         var composerTitlePlaceholder: String
         var composerLocationPlaceholder: String
         var composerDefaultCalendarName: String?
@@ -253,6 +256,8 @@ extension Config {
           selectedTextColorHex: "#111111",
           selectedBackgroundColorHex: "#8bd5ca",
           todayBackgroundColorHex: "#8bd5ca33",
+          todayBorderColorHex: "#ed8796",
+          todayBorderWidth: 1.5,
           indicatorColorHex: "#8bd5ca",
           eventTextColorHex: "#d0d0d0",
           emptyTextColorHex: "#c0c0c0",
@@ -284,6 +289,7 @@ extension Config {
           birthdayIcon: "",
           birthdayIconColorHex: nil,
           selectionDateFormat: "yyyy-MM-dd",
+          todayButtonTitle: "Today",
           composerTitlePlaceholder: "What are you doing?",
           composerLocationPlaceholder: "Where are you going?",
           composerDefaultCalendarName: nil,

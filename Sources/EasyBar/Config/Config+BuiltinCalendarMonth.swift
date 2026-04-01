@@ -148,6 +148,14 @@ extension Config {
         table["today_background_color"],
         path: "builtins.calendar.month.popup.today_background_color"
       ) ?? fallback.todayBackgroundColorHex,
+      todayBorderColorHex: try optionalString(
+        table["today_border_color"],
+        path: "builtins.calendar.month.popup.today_border_color"
+      ) ?? fallback.todayBorderColorHex,
+      todayBorderWidth: try optionalNumber(
+        table["today_border_width"],
+        path: "builtins.calendar.month.popup.today_border_width"
+      ) ?? fallback.todayBorderWidth,
       indicatorColorHex: try optionalString(
         table["indicator_color"],
         path: "builtins.calendar.month.popup.indicator_color"
@@ -250,6 +258,10 @@ extension Config {
         table["selection_date_format"],
         path: "builtins.calendar.month.popup.selection_date_format"
       ) ?? fallback.selectionDateFormat,
+      todayButtonTitle: try optionalString(
+        table["today_button_title"],
+        path: "builtins.calendar.month.popup.today_button_title"
+      ) ?? fallback.todayButtonTitle,
       composerTitlePlaceholder: try optionalString(
         table["composer_title_placeholder"],
         path: "builtins.calendar.month.popup.composer_title_placeholder"

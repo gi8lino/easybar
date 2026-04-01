@@ -388,6 +388,9 @@ excluded_calendar_names = [] # Optional denylist of calendar names applied after
 anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".
 anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month".
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
+today_button_title = "Today" # Title of the today button.
+today_border_color = "#ed8796" # Border color of the today button.
+today_border_width = 1.5 # Border width of the today button.
 
 [builtins.time]
 enabled = false # Shows or hides the time widget.
