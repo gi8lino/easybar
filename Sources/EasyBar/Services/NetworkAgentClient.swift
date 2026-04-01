@@ -3,7 +3,9 @@ import Foundation
 
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
+
   private let permissionDeniedReconnectDelay: TimeInterval = 60
+
   private static let requestedFields: [NetworkAgentField] = [
     .locationAuthorized,
     .locationPermissionState,
@@ -27,7 +29,11 @@ final class NetworkAgentClient {
       DispatchQueue.main.async {
         NativeWiFiStore.shared.clear()
       }
-    }
+    },
+    debugLog: Logger.debug,
+    infoLog: Logger.info,
+    warnLog: Logger.warn,
+    errorLog: Logger.error
   )
 
   private init() {}
@@ -37,14 +43,17 @@ final class NetworkAgentClient {
     client.isConnected
   }
 
+  /// Starts the network agent client.
   func start() {
     client.start()
   }
 
+  /// Stops the network agent client.
   func stop() {
     client.stop()
   }
 
+  /// Handles one decoded network agent message.
   private func handle(_ message: NetworkAgentMessage) {
     switch message.kind {
     case .subscribed:
@@ -52,11 +61,13 @@ final class NetworkAgentClient {
 
     case .fields:
       client.setNextReconnectDelay(nil)
+
       guard let fields = message.fields else { return }
       guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
         Logger.warn("network agent returned incomplete field set")
         return
       }
+
       publish(snapshot: snapshot)
 
     case .pong:

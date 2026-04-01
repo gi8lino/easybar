@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Root SwiftUI view of the EasyBar window.
 struct BarRootView: View {
+  private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
 
   var body: some View {
     HStack(spacing: 8) {
@@ -15,6 +16,7 @@ struct BarRootView: View {
 
       WidgetBar(position: .right)
     }
+    .font(globalBarFont)
     .padding(.horizontal, Config.shared.barPaddingX)
     .frame(
       maxWidth: .infinity,

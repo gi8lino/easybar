@@ -9,9 +9,15 @@ public func writeAll(_ data: Data, to fd: Int32) -> Bool {
     var sent = 0
     while sent < data.count {
       let written = write(fd, base.advanced(by: sent), data.count - sent)
+
       if written <= 0 {
+        if errno == EINTR {
+          continue
+        }
+
         return false
       }
+
       sent += written
     }
 

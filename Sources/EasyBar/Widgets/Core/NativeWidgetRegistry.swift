@@ -77,7 +77,19 @@ final class NativeWidgetRegistry {
   /// Logs the current built-in widget enablement snapshot.
   private func logConfig() {
     Logger.info(
-      "native widget config spaces=\(Config.shared.builtinSpaces.enabled) battery=\(Config.shared.builtinBattery.enabled) front_app=\(Config.shared.builtinFrontApp.enabled) volume=\(Config.shared.builtinVolume.enabled) wifi=\(Config.shared.builtinWiFi.enabled) date=\(Config.shared.builtinDate.enabled) time=\(Config.shared.builtinTime.enabled) calendar=\(Config.shared.builtinCalendar.enabled) cpu=\(Config.shared.builtinCPU.enabled)"
+      """
+      native widget config \
+      spaces=\(Config.shared.builtinSpaces.enabled) \
+      battery=\(Config.shared.builtinBattery.enabled) \
+      front_app=\(Config.shared.builtinFrontApp.enabled) \
+      volume=\(Config.shared.builtinVolume.enabled) \
+      wifi=\(Config.shared.builtinWiFi.enabled) \
+      date=\(Config.shared.builtinDate.enabled) \
+      time=\(Config.shared.builtinTime.enabled) \
+      calendar=\(Config.shared.builtinCalendar.enabled) \
+      calendar_popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) \
+      cpu=\(Config.shared.builtinCPU.enabled)
+      """
     )
   }
 

@@ -62,24 +62,30 @@ final class CalendarSocketServer {
     case .fetch:
       guard let provider, let query = request.query else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+          CalendarAgentMessage(kind: .error, message: "missing_query"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
 
       let snapshot = provider.snapshot(for: query)
-      _ = transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
+      _ = transport.send(
+        CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
+        to: clientFD
+      )
       close(clientFD)
 
     case .subscribe:
       guard let provider, let query = request.query else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_query"), to: clientFD)
+          CalendarAgentMessage(kind: .error, message: "missing_query"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
 
-      // Keep the client open so future calendar changes can be pushed.
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
       AgentLogger.info("calendar agent subscriber added fd=\(clientFD)")
 
@@ -89,11 +95,84 @@ final class CalendarSocketServer {
       }
 
       let snapshot = provider.snapshot(for: query)
-      guard transport.send(CalendarAgentMessage(kind: .snapshot, snapshot: snapshot), to: clientFD)
+      guard
+        transport.send(
+          CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
+          to: clientFD
+        )
       else {
         _ = transport.removeSubscriber(fd: clientFD)
         return
       }
+
+    case .createEvent:
+      guard let provider, let createEvent = request.createEvent else {
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "missing_create_event"),
+          to: clientFD
+        )
+        close(clientFD)
+        return
+      }
+
+      do {
+        _ = try provider.createEvent(createEvent)
+        _ = transport.send(CalendarAgentMessage(kind: .created), to: clientFD)
+      } catch {
+        AgentLogger.error("calendar event creation failed error=\(error)")
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "create_event_failed"),
+          to: clientFD
+        )
+      }
+
+      close(clientFD)
+
+    case .updateEvent:
+      guard let provider, let updateEvent = request.updateEvent else {
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "missing_update_event"),
+          to: clientFD
+        )
+        close(clientFD)
+        return
+      }
+
+      do {
+        try provider.updateEvent(updateEvent)
+        _ = transport.send(CalendarAgentMessage(kind: .updated), to: clientFD)
+      } catch {
+        AgentLogger.error("calendar event update failed error=\(error)")
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "update_event_failed"),
+          to: clientFD
+        )
+      }
+
+      close(clientFD)
+
+    case .deleteEvent:
+      guard let provider, let deleteEvent = request.deleteEvent else {
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "missing_delete_event"),
+          to: clientFD
+        )
+        close(clientFD)
+        return
+      }
+
+      do {
+        try provider.deleteEvent(deleteEvent)
+        _ = transport.send(CalendarAgentMessage(kind: .deleted), to: clientFD)
+      } catch {
+        AgentLogger.error("calendar event delete failed error=\(error)")
+        _ = transport.send(
+          CalendarAgentMessage(kind: .error, message: "delete_event_failed"),
+          to: clientFD
+        )
+      }
+
+      close(clientFD)
     }
   }
 }

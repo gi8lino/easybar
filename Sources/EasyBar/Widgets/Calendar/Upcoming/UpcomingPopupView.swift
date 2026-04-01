@@ -1,32 +1,33 @@
 import SwiftUI
 
-struct NativeCalendarPopupView: View {
+struct NativeUpcomingCalendarPopupView: View {
 
-  @ObservedObject private var store = NativeCalendarStore.shared
-  private let config = Config.shared.builtinCalendar
+  @ObservedObject private var store = NativeUpcomingCalendarStore.shared
+  private let upcoming = Config.shared.builtinCalendar.upcoming
+  private let popup = Config.shared.builtinCalendar.upcoming.popup
 
-  /// Renders the native calendar popup content.
+  /// Renders the native upcoming-calendar popup content.
   var body: some View {
-    VStack(alignment: .leading, spacing: config.popupSpacing) {
+    VStack(alignment: .leading, spacing: popup.spacing) {
       emptyStateView
       sectionsView
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, config.popupPaddingX)
-    .padding(.vertical, config.popupPaddingY)
-    .background(color(config.popupBackgroundColorHex))
+    .padding(.horizontal, popup.paddingX)
+    .padding(.vertical, popup.paddingY)
+    .background(color(popup.backgroundColorHex))
     .overlay {
-      RoundedRectangle(cornerRadius: config.popupCornerRadius)
+      RoundedRectangle(cornerRadius: popup.cornerRadius)
         .stroke(
-          color(config.popupBorderColorHex),
-          lineWidth: config.popupBorderWidth
+          color(popup.borderColorHex),
+          lineWidth: popup.borderWidth
         )
     }
     .clipShape(
-      RoundedRectangle(cornerRadius: config.popupCornerRadius)
+      RoundedRectangle(cornerRadius: popup.cornerRadius)
     )
-    .padding(.horizontal, config.popupMarginX)
-    .padding(.vertical, config.popupMarginY)
+    .padding(.horizontal, popup.marginX)
+    .padding(.vertical, popup.marginY)
     .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
   }
 
@@ -34,8 +35,8 @@ struct NativeCalendarPopupView: View {
   @ViewBuilder
   private var emptyStateView: some View {
     if store.sections.isEmpty {
-      Text(config.emptyText)
-        .foregroundStyle(color(config.popup.future.emptyColorHex))
+      Text(upcoming.events.emptyText)
+        .foregroundStyle(color(popup.future.emptyColorHex))
     }
   }
 
@@ -50,7 +51,7 @@ struct NativeCalendarPopupView: View {
   }
 
   /// Builds one calendar popup section.
-  private func sectionView(_ section: NativeCalendarPopupSection) -> some View {
+  private func sectionView(_ section: NativeUpcomingCalendarPopupSection) -> some View {
     let style = style(for: section.kind)
 
     return VStack(alignment: .leading, spacing: 4) {
@@ -60,7 +61,7 @@ struct NativeCalendarPopupView: View {
       ForEach(section.items) { item in
         Text(itemLine(for: item))
           .foregroundStyle(color(itemTextColor(for: item, style: style)))
-          .padding(.leading, config.popupItemIndent)
+          .padding(.leading, popup.itemIndent)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,22 +69,22 @@ struct NativeCalendarPopupView: View {
 
   /// Returns the popup style for one section kind.
   private func style(
-    for kind: NativeCalendarPopupSectionKind
-  ) -> Config.CalendarBuiltinConfig.PopupSectionStyle {
+    for kind: NativeUpcomingCalendarPopupSectionKind
+  ) -> Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle {
     switch kind {
     case .birthdays:
-      return config.popup.birthdays
+      return popup.birthdays
     case .today:
-      return config.popup.today
+      return popup.today
     case .tomorrow:
-      return config.popup.tomorrow
+      return popup.tomorrow
     case .future:
-      return config.popup.future
+      return popup.future
     }
   }
 
   /// Builds the rendered line for one popup item.
-  private func itemLine(for item: NativeCalendarPopupItem) -> String {
+  private func itemLine(for item: NativeUpcomingCalendarPopupItem) -> String {
     let prefix = calendarNamePrefix(for: item)
 
     if item.time.isEmpty {
@@ -95,14 +96,14 @@ struct NativeCalendarPopupView: View {
 
   /// Returns the effective text color for one popup item.
   private func itemTextColor(
-    for item: NativeCalendarPopupItem,
-    style: Config.CalendarBuiltinConfig.PopupSectionStyle
+    for item: NativeUpcomingCalendarPopupItem,
+    style: Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle
   ) -> String {
     if item.time.isEmpty {
       return style.emptyColorHex
     }
 
-    if config.popupUseCalendarColors,
+    if popup.useCalendarColors,
       let calendarColorHex = item.calendarColorHex,
       !calendarColorHex.isEmpty
     {
@@ -113,8 +114,8 @@ struct NativeCalendarPopupView: View {
   }
 
   /// Returns the optional calendar-name prefix.
-  private func calendarNamePrefix(for item: NativeCalendarPopupItem) -> String {
-    guard config.popupShowCalendarName else { return "" }
+  private func calendarNamePrefix(for item: NativeUpcomingCalendarPopupItem) -> String {
+    guard popup.showCalendarName else { return "" }
     guard let calendarName = item.calendarName?.trimmingCharacters(in: .whitespacesAndNewlines),
       !calendarName.isEmpty
     else {
