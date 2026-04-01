@@ -173,11 +173,11 @@ extension MonthCalendarEventComposerView {
     time: Binding<Date>,
     showsAllDayToggle: Bool
   ) -> some View {
-    HStack(alignment: .center, spacing: 10) {
+    HStack(alignment: .center, spacing: 8) {
       Text(label)
         .font(.system(size: 12, weight: .medium))
         .foregroundStyle(color(config.secondaryTextColorHex))
-        .frame(width: 44, alignment: .leading)
+        .frame(width: 40, alignment: .leading)
 
       DatePicker(
         "",
@@ -185,7 +185,7 @@ extension MonthCalendarEventComposerView {
         displayedComponents: .date
       )
       .labelsHidden()
-      .frame(width: 150, alignment: .leading)
+      .frame(width: 136, alignment: .leading)
 
       Group {
         if composer.isAllDay {
@@ -199,7 +199,7 @@ extension MonthCalendarEventComposerView {
           .labelsHidden()
         }
       }
-      .frame(width: 92, alignment: .leading)
+      .frame(width: 78, alignment: .leading)
 
       Group {
         if showsAllDayToggle {
@@ -211,7 +211,7 @@ extension MonthCalendarEventComposerView {
           Color.clear
         }
       }
-      .frame(width: 72, alignment: .leading)
+      .frame(width: 66, alignment: .leading)
     }
   }
 
