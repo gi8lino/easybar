@@ -311,7 +311,7 @@ margin_x = 8 # Horizontal outer margin around the whole popup.
 margin_y = 8 # Vertical outer margin around the whole popup.
 spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
-show_calendar_name = false  # Prefixes each event with its calendar name when available.
+show_calendar_name = false # Prefixes each event with its calendar name when available.
 use_calendar_colors = true # Colors each event line with its source calendar color when available.
 
 [builtins.calendar.upcoming.popup.birthdays]
@@ -334,7 +334,7 @@ title_color = "#91d7e3" # Section title color for future events.
 item_color = "#d0d0d0" # Item text color for future events.
 empty_color = "#c0c0c0" # Empty-state color for future events.
 
-[builtins.calendar.month.popup]
+[builtins.calendar.month.popup.style]
 background_color = "#111111" # Background color of the month popup.
 border_color = "#444444" # Border color of the month popup.
 border_width = 1 # Border width of the month popup.
@@ -345,6 +345,8 @@ spacing = 8 # Gap between calendar and appointments areas and internal popup sec
 item_indent = 8 # Left indent for appointment details under the title line.
 margin_x = 8 # Horizontal outer margin around the whole month popup.
 margin_y = 8 # Vertical outer margin around the whole month popup.
+
+[builtins.calendar.month.popup.calendar]
 show_week_numbers = true # Shows the week numbers in the calendar grid.
 show_event_indicators = true # Shows dots under days that contain events.
 header_text_color = "#ffffff" # Text color of the month header and appointments title.
@@ -354,12 +356,18 @@ weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
 # weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels for Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
 day_text_color = "#d0d0d0" # Text color of days in the current month.
 outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
-selected_text_color = "#111111" # Text color of selected day cells.
-selected_background_color = "#8bd5ca" # Background color of selected day cells.
-selection_date_format = "yyyy-MM-dd" # Date header format used in the agenda when a multi-day range is selected.
-selection_date_separator = " - " # Separator used between start and end dates when a date range is selected.
 today_background_color = "#8bd5ca33" # Background color of today's day cell when not selected.
 indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
+
+[builtins.calendar.month.popup.selection]
+selected_text_color = "#0B1020" # Text color of selected day cells.
+selected_background_color = "#89B4FA" # Background color of selected day cells.
+selection_date_format = "yyyy-MM-dd" # Date header format used in the agenda when a multi-day range is selected.
+selection_date_separator = " - " # Separator used between start and end dates when a date range is selected.
+allows_range_selection = true # Allows selecting a date range by dragging across days.
+reset_selection_on_third_tap = true # Reserved selection behavior flag for the month popup.
+
+[builtins.calendar.month.popup.agenda]
 event_text_color = "#d0d0d0" # Text color of appointment rows.
 empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
 secondary_text_color = "#91d7e3" # Text color of secondary appointment details.
@@ -369,28 +377,36 @@ appointments_min_height = 180 # Minimum height of the appointments area. Set equ
 appointments_max_height = 240 # Maximum height of the appointments area. Set equal to appointments_min_height for a fixed height.
 empty_text = "No appointments" # Text shown when the selected day or range has no appointments.
 agenda_title = "Appointments" # Title shown above the appointments list.
-composer_title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
-composer_location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
-composer_default_calendar_name = "Personal" # Default calendar name used when creating new appointments.
-composer_default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day
-composer_default_travel_time = "none" # Default travel-time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
+max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
+
+[builtins.calendar.month.popup.birthdays]
 show_birthdays = false # Includes birthday calendars in the month popup as regular appointments.
 birthdays_show_age = false # Shows parsed ages for birthday appointments when available.
 birthday_icon = "" # Leading icon shown for birthday appointments.
 birthday_icon_color = "" # Color of the birthday icon. When omitted, event_text_color is used.
-allows_range_selection = true # Allows selecting a date range by dragging across days.
-reset_selection_on_third_tap = true # Reserved selection behavior flag for the month popup.
-max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
+
+[builtins.calendar.month.popup.filters]
 included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
 excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
+
+[builtins.calendar.month.popup.anchor]
 anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".
 anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month".
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
-today_button_title = "Today" # Title of the today button.
-today_border_color = "#ed8796" # Border color of the today button.
-today_border_width = 1.5 # Border width of the today button.
+
+[builtins.calendar.month.popup.composer]
+title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
+location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
+default_calendar_name = "Personal" # Default calendar name used when creating new appointments.
+default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day
+default_travel_time = "none" # Default travel-time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours
+
+[builtins.calendar.month.popup.today_button]
+title = "Today" # Title of the today button.
+border_color = "#ed8796" # Border color of the today button.
+border_width = 1.5 # Border width of the today button.
 
 [builtins.time]
 enabled = false # Shows or hides the time widget.
