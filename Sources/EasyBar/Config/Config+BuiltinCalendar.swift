@@ -125,6 +125,8 @@ extension Config {
           var showCalendarName: Bool
           var showAllDayLabel: Bool
           var allDayLabel: String
+          var showLocation: Bool
+          var showTravelTime: Bool
           var maxVisibleAppointments: Int
         }
 
@@ -371,6 +373,16 @@ extension Config {
         var allDayLabel: String {
           get { agenda.allDayLabel }
           set { agenda.allDayLabel = newValue }
+        }
+
+        var showLocation: Bool {
+          get { agenda.showLocation }
+          set { agenda.showLocation = newValue }
+        }
+
+        var showTravelTime: Bool {
+          get { agenda.showTravelTime }
+          set { agenda.showTravelTime = newValue }
         }
 
         var maxVisibleAppointments: Int {
@@ -632,6 +644,8 @@ extension Config {
             showCalendarName: false,
             showAllDayLabel: true,
             allDayLabel: "All day",
+            showLocation: true,
+            showTravelTime: true,
             maxVisibleAppointments: 8
           ),
           birthdays: .init(

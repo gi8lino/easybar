@@ -110,7 +110,7 @@ extension NativeMonthCalendarPopupView {
         .clipShape(RoundedRectangle(cornerRadius: 1.5))
 
       VStack(alignment: .leading, spacing: 2) {
-        if let travelTimeText = travelTimeText(for: event) {
+        if config.showTravelTime, let travelTimeText = travelTimeText(for: event) {
           Text(travelTimeText)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(color(config.secondaryTextColorHex))
@@ -127,7 +127,10 @@ extension NativeMonthCalendarPopupView {
             .foregroundStyle(color(config.secondaryTextColorHex))
         }
 
-        if let locationText = event.location, !locationText.isEmpty {
+        if config.showLocation,
+          let locationText = event.location,
+          !locationText.isEmpty
+        {
           Text(locationText)
             .font(.system(size: 11, weight: .regular))
             .foregroundStyle(color(config.secondaryTextColorHex))

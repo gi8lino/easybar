@@ -232,6 +232,14 @@ extension Config {
           agendaTable["all_day_label"] ?? table["all_day_label"],
           path: "builtins.calendar.month.popup.agenda.all_day_label"
         ) ?? fallback.allDayLabel,
+        showLocation: try optionalBool(
+          agendaTable["show_location"] ?? table["show_location"],
+          path: "builtins.calendar.month.popup.agenda.show_location"
+        ) ?? fallback.showLocation,
+        showTravelTime: try optionalBool(
+          agendaTable["show_travel_time"] ?? table["show_travel_time"],
+          path: "builtins.calendar.month.popup.agenda.show_travel_time"
+        ) ?? fallback.showTravelTime,
         maxVisibleAppointments: max(
           1,
           try optionalInt(

@@ -380,6 +380,8 @@ agenda_title = "Appointments" # Title shown above the appointments list.
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
 all_day_label = "All day" # Text shown for all-day events when show_all_day_label is true
+show_location = true # Shows the event location line when present.
+show_travel_time = true # Shows the travel-time line when present.
 max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
 
 [builtins.calendar.month.popup.birthdays]
