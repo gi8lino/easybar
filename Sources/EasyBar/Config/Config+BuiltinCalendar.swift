@@ -168,6 +168,8 @@ extension Config {
           var defaultCalendarName: String?
           var defaultAlert: String
           var defaultTravelTime: String
+          var alertLabels: [String: String]
+          var travelTimeLabels: [String: String]
           var startLabel: String
           var endLabel: String
           var allDayLabel: String
@@ -554,6 +556,16 @@ extension Config {
           set { composer.defaultTravelTime = newValue }
         }
 
+        var composerAlertLabels: [String: String] {
+          get { composer.alertLabels }
+          set { composer.alertLabels = newValue }
+        }
+
+        var composerTravelTimeLabels: [String: String] {
+          get { composer.travelTimeLabels }
+          set { composer.travelTimeLabels = newValue }
+        }
+
         var composerStartLabel: String {
           get { composer.startLabel }
           set { composer.startLabel = newValue }
@@ -827,6 +839,28 @@ extension Config {
             defaultCalendarName: nil,
             defaultAlert: "1_hour",
             defaultTravelTime: "none",
+            alertLabels: [
+              "none": "None",
+              "at_time": "At time of event",
+              "5_minutes": "5 minutes before",
+              "10_minutes": "10 minutes before",
+              "15_minutes": "15 minutes before",
+              "30_minutes": "30 minutes before",
+              "1_hour": "1 hour before",
+              "1_day": "1 day before",
+            ],
+            travelTimeLabels: [
+              "none": "None",
+              "5_minutes": "5 minutes",
+              "10_minutes": "10 minutes",
+              "15_minutes": "15 minutes",
+              "20_minutes": "20 minutes",
+              "30_minutes": "30 minutes",
+              "45_minutes": "45 minutes",
+              "1_hour": "1 hour",
+              "90_minutes": "1.5 hours",
+              "2_hours": "2 hours",
+            ],
             startLabel: "Begin",
             endLabel: "End",
             allDayLabel: "All day",

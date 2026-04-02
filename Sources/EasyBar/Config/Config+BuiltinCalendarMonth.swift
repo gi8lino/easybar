@@ -29,6 +29,8 @@ extension Config {
     let filtersTable = table["filters"]?.table ?? TOMLTable()
     let anchorTable = table["anchor"]?.table ?? TOMLTable()
     let composerTable = table["composer"]?.table ?? TOMLTable()
+    let composerAlertLabelsTable = composerTable["alert_labels"]?.table ?? TOMLTable()
+    let composerTravelTimeLabelsTable = composerTable["travel_time_labels"]?.table ?? TOMLTable()
     let todayButtonTable = table["today_button"]?.table ?? TOMLTable()
 
     let parsedMinHeight =
@@ -367,6 +369,16 @@ extension Config {
           composerTable["default_travel_time"] ?? table["composer_default_travel_time"],
           path: "builtins.calendar.month.popup.composer.default_travel_time"
         ) ?? fallback.composerDefaultTravelTime,
+        alertLabels: try parseMonthComposerOptionLabels(
+          from: composerAlertLabelsTable,
+          path: "builtins.calendar.month.popup.composer.alert_labels",
+          fallback: fallback.composerAlertLabels
+        ),
+        travelTimeLabels: try parseMonthComposerOptionLabels(
+          from: composerTravelTimeLabelsTable,
+          path: "builtins.calendar.month.popup.composer.travel_time_labels",
+          fallback: fallback.composerTravelTimeLabels
+        ),
         startLabel: try optionalString(
           composerTable["start_label"] ?? table["composer_start_label"],
           path: "builtins.calendar.month.popup.composer.start_label"
@@ -536,5 +548,21 @@ extension Config {
     }
 
     return Array(symbols[1...6]) + [symbols[0]]
+  }
+
+  /// Parses one composer option-label map from a TOML table.
+  private func parseMonthComposerOptionLabels(
+    from table: TOMLTable,
+    path: String,
+    fallback: [String: String]
+  ) throws -> [String: String] {
+    guard !table.isEmpty else { return fallback }
+
+    var labels = fallback
+    for (key, value) in table {
+      labels[key] = try optionalString(value, path: "\(path).\(key)") ?? labels[key]
+    }
+
+    return labels
   }
 }

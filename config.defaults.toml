@@ -433,6 +433,28 @@ default_calendar_name = "Personal" # Default calendar name used when creating ne
 default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day
 default_travel_time = "none" # Default travel-time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours
 
+[builtins.calendar.month.popup.composer.alert_labels]
+none = "None" # Label shown for no alert.
+at_time = "At time of event" # Label shown for alerts at event time.
+5_minutes = "5 minutes before" # Label shown for a 5-minute alert.
+10_minutes = "10 minutes before" # Label shown for a 10-minute alert.
+15_minutes = "15 minutes before" # Label shown for a 15-minute alert.
+30_minutes = "30 minutes before" # Label shown for a 30-minute alert.
+1_hour = "1 hour before" # Label shown for a 1-hour alert.
+1_day = "1 day before" # Label shown for a 1-day alert.
+
+[builtins.calendar.month.popup.composer.travel_time_labels]
+none = "None" # Label shown when no travel time is set.
+5_minutes = "5 minutes" # Label shown for 5 minutes of travel time.
+10_minutes = "10 minutes" # Label shown for 10 minutes of travel time.
+15_minutes = "15 minutes" # Label shown for 15 minutes of travel time.
+20_minutes = "20 minutes" # Label shown for 20 minutes of travel time.
+30_minutes = "30 minutes" # Label shown for 30 minutes of travel time.
+45_minutes = "45 minutes" # Label shown for 45 minutes of travel time.
+1_hour = "1 hour" # Label shown for 1 hour of travel time.
+90_minutes = "1.5 hours" # Label shown for 90 minutes of travel time.
+2_hours = "2 hours" # Label shown for 2 hours of travel time.
+
 [builtins.calendar.month.popup.today_button]
 title = "Today" # Title of the today button.
 border_color = "#3F2F6B" # Border color of the today button.

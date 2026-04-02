@@ -42,7 +42,7 @@ final class MonthCalendarEventComposer: ObservableObject {
 
     var id: String { rawValue }
 
-    var title: String {
+    var fallbackTitle: String {
       switch self {
       case .none:
         return "None"
@@ -100,7 +100,7 @@ final class MonthCalendarEventComposer: ObservableObject {
 
     var id: String { rawValue }
 
-    var title: String {
+    var fallbackTitle: String {
       switch self {
       case .none:
         return "None"
@@ -650,5 +650,15 @@ extension MonthCalendarEventComposer {
   func setAlert(_ option: AlertOption, id: UUID) {
     guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
     alertRows[index].option = option
+  }
+
+  /// Returns the configured title for one alert option.
+  func title(for option: AlertOption) -> String {
+    popupConfig.composerAlertLabels[option.rawValue] ?? option.fallbackTitle
+  }
+
+  /// Returns the configured title for one travel-time option.
+  func title(for option: TravelTimeOption) -> String {
+    popupConfig.composerTravelTimeLabels[option.rawValue] ?? option.fallbackTitle
   }
 }

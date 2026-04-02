@@ -171,7 +171,7 @@ extension MonthCalendarEventComposerView {
 
           Picker("", selection: $composer.travelTime) {
             ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
-              Text(option.title).tag(option)
+              Text(composer.title(for: option)).tag(option)
             }
           }
           .labelsHidden()
@@ -251,7 +251,7 @@ extension MonthCalendarEventComposerView {
               )
             ) {
               ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
-                Text(option.title).tag(option)
+                Text(composer.title(for: option)).tag(option)
               }
             }
             .labelsHidden()
@@ -362,7 +362,7 @@ extension MonthCalendarEventComposerView {
   private var fieldSpacing: CGFloat { 4 }
 
   /// Returns the date picker width used in schedule rows.
-  private var dateFieldWidth: CGFloat { 142 }
+  private var dateFieldWidth: CGFloat { menuFieldWidth }
 
   /// Returns the time picker width used in schedule rows.
   private var timeFieldWidth: CGFloat { 72 }
