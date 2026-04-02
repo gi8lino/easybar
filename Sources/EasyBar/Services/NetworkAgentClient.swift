@@ -6,21 +6,11 @@ final class NetworkAgentClient {
 
   private let permissionDeniedReconnectDelay: TimeInterval = 60
 
-  private static let requestedFields: [NetworkAgentField] = [
-    .locationAuthorized,
-    .locationPermissionState,
-    .generatedAt,
-    .ssid,
-    .interfaceName,
-    .primaryInterfaceIsTunnel,
-    .rssi,
-  ]
-
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
     socketPath: { Config.shared.networkAgentSocketPath },
     subscribeRequest: {
-      NetworkAgentRequest(command: .subscribe, fields: Self.requestedFields)
+      NetworkAgentRequest(command: .subscribe, fields: NativeWiFiRequestedFields.snapshot)
     },
     handleMessage: { [weak self] message in
       self?.handle(message)
