@@ -428,7 +428,8 @@ extension Config {
           path: "builtins.calendar.month.popup.composer.delete_confirmation_title"
         ) ?? fallback.composerDeleteConfirmationTitle,
         deleteConfirmationMessage: try optionalString(
-          composerTable["delete_confirmation_message"] ?? table["composer_delete_confirmation_message"],
+          composerTable["delete_confirmation_message"]
+            ?? table["composer_delete_confirmation_message"],
           path: "builtins.calendar.month.popup.composer.delete_confirmation_message"
         ) ?? fallback.composerDeleteConfirmationMessage
       ),

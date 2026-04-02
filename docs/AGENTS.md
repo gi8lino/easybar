@@ -196,7 +196,7 @@ Notes:
     "isAllDay": false,
     "calendarName": "Work",
     "location": "Meeting Room",
-    "alertOffsetSeconds": 600,
+    "alertOffsetsSeconds": [3600, 600],
     "travelTimeSeconds": 900
   }
 }
@@ -215,7 +215,7 @@ Notes:
     "isAllDay": false,
     "calendarName": "Work",
     "location": "Meeting Room",
-    "alertOffsetSeconds": 600,
+    "alertOffsetsSeconds": [3600, 600],
     "travelTimeSeconds": 900
   }
 }
@@ -349,6 +349,7 @@ Behavior notes:
 - holiday calendars are tagged in the agent so EasyBar can make display choices without talking to EventKit
 - empty day sections are kept so popup layout stays stable
 - title normalization happens in the agent
+- when calendar permission is `not_determined`, the agent retries access requests with an incremental backoff until the state resolves
 - sections are only built when `sectionStartDate` and `sectionDayCount` are provided
 - `fetch` and `subscribe` can be used both for the upcoming popup and the month popup
 - create, update, and delete are handled by the agent so EventKit mutation stays out of the main app process
@@ -405,6 +406,7 @@ Notes:
 - when location permission is denied, requests for Wi-Fi fields fail by default
 - `allow_unauthorized_non_sensitive_fields = true` allows non-Wi-Fi fields to keep working
 - field values are typed on the wire, not stringified
+- when location permission is `not_determined`, the agent retries authorization checks with an incremental backoff until the state resolves
 
 ## Network responses
 
@@ -499,6 +501,7 @@ Additional behavior notes:
 - network fields can still be returned when they do not depend on Wi-Fi permission
 - EasyBar maps RSSI into visible Wi-Fi bars in the native widget layer
 - the agent also supports a periodic fallback refresh interval
+- the permission bootstrap retry sequence is `1, 2, 3, 5, 8, 13, 21, 34, 55, 60` seconds and then repeats every `60s`
 
 ---
 

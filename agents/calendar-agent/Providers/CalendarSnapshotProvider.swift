@@ -5,7 +5,7 @@ import Foundation
 final class CalendarSnapshotProvider {
   private let eventStore = EKEventStore()
   private let authState = CalendarAgentAuthorizationState()
-  private var didRequestAccess = false
+  private let retryBackoff = AuthorizationRetryBackoff(debugLog: AgentLogger.debug)
   private var observer: NSObjectProtocol?
   private var onChange: (() -> Void)?
 
@@ -33,10 +33,14 @@ final class CalendarSnapshotProvider {
 
   /// Stops observing calendar store changes.
   func stop() {
+    retryBackoff.reset()
+
     if let observer {
       NotificationCenter.default.removeObserver(observer)
       self.observer = nil
     }
+
+    onChange = nil
   }
 
   /// Builds one calendar snapshot for the requested query.
@@ -260,13 +264,11 @@ final class CalendarSnapshotProvider {
 
     switch status {
     case .authorized, .fullAccess:
+      retryBackoff.reset()
       AgentLogger.info("calendar agent access already granted")
       onChange?()
 
     case .notDetermined:
-      guard !didRequestAccess else { return }
-      didRequestAccess = true
-
       AgentLogger.info("requesting calendar full access")
       eventStore.requestFullAccessToEvents { [weak self] granted, error in
         guard let self else { return }
@@ -278,6 +280,7 @@ final class CalendarSnapshotProvider {
           AgentLogger.error(
             "calendar agent access request failed status=\(self.authState.describe(newStatus)) error=\(error)"
           )
+          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
           return
         }
 
@@ -285,19 +288,38 @@ final class CalendarSnapshotProvider {
           "calendar agent access request completed granted=\(granted) status=\(self.authState.describe(newStatus))"
         )
 
-        guard granted else { return }
+        guard granted else {
+          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
+          return
+        }
 
+        self.retryBackoff.reset()
         self.authState.markGrantedInProcess()
         DispatchQueue.main.async {
           self.onChange?()
         }
       }
+      scheduleAuthorizationRetryIfNeeded(for: status)
 
     case .denied, .restricted, .writeOnly:
+      retryBackoff.reset()
       AgentLogger.warn("calendar agent access unavailable status=\(authState.describe(status))")
 
     @unknown default:
+      retryBackoff.reset()
       AgentLogger.warn("calendar agent access status unknown raw=\(status.rawValue)")
+    }
+  }
+
+  /// Schedules one follow-up access request while authorization is unresolved.
+  private func scheduleAuthorizationRetryIfNeeded(for status: EKAuthorizationStatus) {
+    guard status == .notDetermined else {
+      retryBackoff.reset()
+      return
+    }
+
+    retryBackoff.schedule { [weak self] in
+      self?.requestAccessIfNeeded()
     }
   }
 }
