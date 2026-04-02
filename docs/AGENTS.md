@@ -105,7 +105,7 @@ The payload shape depends on the agent:
 - calendar agent
   returns one typed `snapshot`
 - network agent
-  returns one `fields` map with only the requested keys
+  returns one typed `fields` map with only the requested keys
 
 The calendar agent also supports event mutations and additional response kinds:
 
@@ -376,6 +376,7 @@ Notes:
 - the agent returns only the requested keys
 - when location permission is denied, requests for Wi-Fi fields fail by default
 - `allow_unauthorized_non_sensitive_fields = true` allows non-Wi-Fi fields to keep working
+- field values are typed on the wire, not stringified
 
 ## Network responses
 
@@ -385,17 +386,29 @@ Response shape:
 {
   "kind": "pong | subscribed | fields | error",
   "fields": {
-    "auth.location_authorized": "true",
+    "auth.location_authorized": true,
     "auth.location_permission_state": "authorized",
     "network.generated_at": "2026-03-29T12:34:56Z",
     "wifi.ssid": "Office WiFi",
     "wifi.interface": "en0",
-    "network.primary_interface_is_tunnel": "false",
-    "wifi.rssi": "-64"
+    "network.primary_interface_is_tunnel": false,
+    "wifi.rssi": -64,
+    "network.dns_servers": ["1.1.1.1", "8.8.8.8"]
   },
   "message": "optional error string"
 }
 ```
+
+Field value types:
+
+- strings
+  names, identifiers, timestamps, labels, addresses
+- booleans
+  auth and reachability flags
+- integers
+  RSSI, noise, SNR, link quality, channel, tx rate
+- string arrays
+  DNS servers and active tunnel interfaces
 
 ## Network fields
 
@@ -440,7 +453,7 @@ Behavior notes:
 
 - the agent smooths RSSI before returning `wifi.rssi`
 - the agent does not map RSSI into Wi-Fi bars
-- EasyBar reconstructs its local typed Wi-Fi state from the returned field map
+- EasyBar reconstructs its local typed Wi-Fi state from the returned typed field map
 - callers can use `fetch` for ad-hoc reads or `subscribe` for pushed updates
 - the shared field registry in code is the source of truth for field help text
 
@@ -454,7 +467,7 @@ Tunnel detection currently matches interface names starting with:
 
 Additional behavior notes:
 
-- if location access is unavailable, Wi-Fi-specific fields may be absent
+- if location access is unavailable, Wi-Fi-specific requests fail by default with `permission_denied:<state>`
 - network fields can still be returned when they do not depend on Wi-Fi permission
 - EasyBar maps RSSI into visible Wi-Fi bars in the native widget layer
 - the agent also supports a periodic fallback refresh interval

@@ -105,6 +105,36 @@ The default is privacy-first: requests for Wi-Fi fields fail until location acce
 
 More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
+## Control socket
+
+EasyBar exposes one local Unix control socket for `easybarctl` and other clients.
+
+Commands are sent as typed JSON requests, not raw strings:
+
+```json
+{
+  "command": "refresh"
+}
+```
+
+Responses are typed too:
+
+```json
+{
+  "status": "accepted",
+  "message": null
+}
+```
+
+Supported commands:
+
+- `workspace_changed`
+- `focus_changed`
+- `refresh`
+- `reload_config`
+
+`easybarctl` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
+
 ## Configuration
 
 EasyBar reads its runtime config from:
