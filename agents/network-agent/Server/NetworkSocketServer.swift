@@ -43,12 +43,8 @@ final class NetworkSocketServer {
     guard let provider else { return }
 
     for subscriber in transport.subscribersSnapshot() {
-      guard
-        let values = responseFields(for: subscriber.subscriber.fields, provider: provider).fields
-      else {
-        continue
-      }
-      let message = NetworkAgentMessage(kind: .fields, fields: values)
+      let response = responseFields(for: subscriber.subscriber.fields, provider: provider)
+      let message = makeResponseMessage(from: response)
 
       if !transport.send(message, to: subscriber.fd) {
         _ = transport.removeSubscriber(fd: subscriber.fd)
@@ -80,11 +76,7 @@ final class NetworkSocketServer {
       }
 
       let response = responseFields(for: fields, provider: provider)
-      if let values = response.fields {
-        _ = transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
-      } else if let message = response.errorMessage {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: message), to: clientFD)
-      }
+      _ = transport.send(makeResponseMessage(from: response), to: clientFD)
       close(clientFD)
 
     case .subscribe:
@@ -111,15 +103,9 @@ final class NetworkSocketServer {
       }
 
       let response = responseFields(for: fields, provider: provider)
-      if let values = response.fields {
-        guard transport.send(NetworkAgentMessage(kind: .fields, fields: values), to: clientFD)
-        else {
-          _ = transport.removeSubscriber(fd: clientFD)
-          return
-        }
-      } else if let message = response.errorMessage {
-        _ = transport.send(NetworkAgentMessage(kind: .error, message: message), to: clientFD)
+      guard transport.send(makeResponseMessage(from: response), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
+        return
       }
     }
   }
@@ -140,5 +126,16 @@ final class NetworkSocketServer {
       allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
     )
     return (response.values, response.errorMessage)
+  }
+
+  /// Builds one network-agent message from a field response result.
+  private func makeResponseMessage(
+    from response: (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?)
+  ) -> NetworkAgentMessage {
+    if let fields = response.fields {
+      return NetworkAgentMessage(kind: .fields, fields: fields)
+    }
+
+    return NetworkAgentMessage(kind: .error, message: response.errorMessage ?? "unknown")
   }
 }

@@ -93,7 +93,9 @@ final class NetworkSnapshotProvider {
   }
 
   /// Returns the requested field values for the current network state.
-  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String: NetworkAgentFieldValue] {
+  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String:
+    NetworkAgentFieldValue]
+  {
     let now = Date()
     let permissionState = authorizer.permissionState()
     let locationAuthorized = authorizer.isAuthorized()

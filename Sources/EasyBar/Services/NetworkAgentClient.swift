@@ -4,8 +4,6 @@ import Foundation
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
 
-  private let permissionDeniedReconnectDelay: TimeInterval = 60
-
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
     socketPath: { Config.shared.networkAgentSocketPath },
@@ -50,8 +48,6 @@ final class NetworkAgentClient {
       Logger.info("network agent client subscribed")
 
     case .fields:
-      client.setNextReconnectDelay(nil)
-
       guard let fields = message.fields else { return }
       guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
         Logger.warn("network agent returned incomplete field set")
@@ -73,7 +69,6 @@ final class NetworkAgentClient {
     Logger.warn("network agent error=\(message)")
 
     guard message.hasPrefix("permission_denied") else { return }
-    client.setNextReconnectDelay(permissionDeniedReconnectDelay)
 
     let permissionState =
       message.split(separator: ":", maxSplits: 1).dropFirst().first.map(String.init) ?? "denied"
