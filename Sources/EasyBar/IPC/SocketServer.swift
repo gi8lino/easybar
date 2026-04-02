@@ -127,7 +127,7 @@ final class SocketServer {
 
     let rawRequest = String(bytes: buffer.prefix(count), encoding: .utf8)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    Logger.debug("socket received raw command '\(rawRequest ?? "unknown")'")
+    Logger.debug("socket received raw request '\(rawRequest ?? "unknown")'")
 
     guard
       let rawRequest,
@@ -136,15 +136,7 @@ final class SocketServer {
       return nil
     }
 
-    if let request = try? decoder.decode(IPC.Request.self, from: data) {
-      return request
-    }
-
-    guard let command = IPC.Command(rawValue: rawRequest) else {
-      return nil
-    }
-
-    return IPC.Request(command: command)
+    return try? decoder.decode(IPC.Request.self, from: data)
   }
 
   /// Writes one IPC response to a connected client.
