@@ -110,13 +110,9 @@ extension NativeMonthCalendarPopupView {
         .clipShape(RoundedRectangle(cornerRadius: 1.5))
 
       VStack(alignment: .leading, spacing: 2) {
-        if config.showTravelTime, let travelTimeText = travelTimeText(for: event) {
-          Text(travelTimeText)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(color(config.secondaryTextColorHex))
-        }
-
+        appointmentMetaTopView(for: event)
         appointmentTitleView(for: event)
+        appointmentEndTimeView(for: event)
 
         if config.showCalendarName,
           let calendarName = event.calendarName,
@@ -154,13 +150,19 @@ extension NativeMonthCalendarPopupView {
   /// Builds the primary appointment title line.
   @ViewBuilder
   func appointmentTitleView(for event: NativeMonthCalendarEvent) -> some View {
-    let prefix = appointmentPrefix(for: event)
-
     HStack(alignment: .firstTextBaseline, spacing: 6) {
-      if !prefix.isEmpty {
-        Text(prefix)
-          .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(color(config.secondaryTextColorHex))
+      if event.isAllDay {
+        let prefix = appointmentPrefix(for: event)
+
+        if !prefix.isEmpty {
+          Text(prefix)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(color(config.secondaryTextColorHex))
+        }
+      } else {
+        Text(formattedEventTime(event.startDate))
+          .font(.system(size: 13, weight: .medium))
+          .foregroundStyle(color(config.eventTextColorHex))
       }
 
       if isBirthdayEvent(event) {
@@ -174,7 +176,84 @@ extension NativeMonthCalendarPopupView {
         .foregroundStyle(color(config.eventTextColorHex))
         .lineLimit(2)
         .multilineTextAlignment(.leading)
+
+      if !event.isAllDay {
+        Spacer(minLength: 0)
+
+        if config.showAlertIcon, event.hasAlert {
+          Text(config.alertIcon)
+            .font(Theme.iconFont(size: 11))
+            .foregroundStyle(color(config.alertIconColorHex ?? config.travelTextColorHex))
+        }
+      }
     }
+  }
+
+  /// Builds the top metadata line for timed appointments.
+  @ViewBuilder
+  func appointmentMetaTopView(for event: NativeMonthCalendarEvent) -> some View {
+    if !event.isAllDay,
+      config.showTravelTime,
+      let travelTimeText = travelTimeText(for: event),
+      let departureTimeText = travelDepartureTimeText(for: event)
+    {
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
+        Text(departureTimeText)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(color(config.travelTextColorHex))
+
+        Text(config.travelIcon)
+          .font(Theme.iconFont(size: 11))
+          .foregroundStyle(color(config.travelIconColorHex ?? config.travelTextColorHex))
+
+        Text(travelTimeText)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(color(config.travelTextColorHex))
+      }
+    }
+  }
+
+  /// Builds the end-time line for timed appointments.
+  @ViewBuilder
+  func appointmentEndTimeView(for event: NativeMonthCalendarEvent) -> some View {
+    if let endTimeText = appointmentEndTimeText(for: event) {
+      Text(endTimeText)
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(color(config.travelTextColorHex))
+    }
+  }
+
+  /// Returns the rendered end time for timed appointments.
+  func appointmentEndTimeText(for event: NativeMonthCalendarEvent) -> String? {
+    guard !event.isAllDay, event.endDate > event.startDate else { return nil }
+
+    let startTime = formattedEventTime(event.startDate)
+    let endTime = formattedEventTime(event.endDate)
+    guard startTime != endTime else { return nil }
+
+    return endTime
+  }
+
+  /// Returns the rendered departure time when travel time is present.
+  func travelDepartureTimeText(for event: NativeMonthCalendarEvent) -> String? {
+    guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
+
+    let departureDate = event.startDate.addingTimeInterval(-travelTimeSeconds)
+    return formattedEventTime(departureDate)
+  }
+
+  /// Returns the rendered travel-time text when available.
+  func travelTimeText(for event: NativeMonthCalendarEvent) -> String? {
+    guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
+
+    let minutes = Int((travelTimeSeconds / 60).rounded())
+    guard minutes > 0 else { return nil }
+
+    if minutes == 1 {
+      return "1 min"
+    }
+
+    return "\(minutes) min"
   }
 
   /// Returns the currently selected events.
@@ -379,30 +458,15 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the rendered prefix shown before the title when needed.
   func appointmentPrefix(for event: NativeMonthCalendarEvent) -> String {
-    if event.isAllDay {
-      if isBirthdayEvent(event) {
-        return ""
-      }
-
-      return config.showAllDayLabel ? config.allDayLabel : ""
-    }
-
-    return formattedEventTime(event.startDate)
+    guard event.isAllDay else { return "" }
+    guard !isBirthdayEvent(event) else { return "" }
+    guard !event.isHoliday || config.showHolidayAllDayLabel else { return "" }
+    return config.showAllDayLabel ? config.allDayLabel : ""
   }
 
   /// Returns whether the given event is a birthday event.
   func isBirthdayEvent(_ event: NativeMonthCalendarEvent) -> Bool {
     event.id.hasPrefix("birthday-")
-  }
-
-  /// Returns the rendered travel-time text when available.
-  func travelTimeText(for event: NativeMonthCalendarEvent) -> String? {
-    guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
-
-    let minutes = Int((travelTimeSeconds / 60).rounded())
-    guard minutes > 0 else { return nil }
-
-    return "\(minutes) min"
   }
 
   /// Formats one event time.

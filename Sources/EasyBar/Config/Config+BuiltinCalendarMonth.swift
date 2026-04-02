@@ -208,6 +208,10 @@ extension Config {
           agendaTable["secondary_text_color"] ?? table["secondary_text_color"],
           path: "builtins.calendar.month.popup.agenda.secondary_text_color"
         ) ?? fallback.secondaryTextColorHex,
+        travelTextColorHex: try optionalString(
+          agendaTable["travel_text_color"] ?? table["travel_text_color"],
+          path: "builtins.calendar.month.popup.agenda.travel_text_color"
+        ) ?? fallback.travelTextColorHex,
         layout: MonthCalendarPopupLayout(
           rawValue: try optionalString(
             agendaTable["layout"] ?? table["layout"],
@@ -236,6 +240,10 @@ extension Config {
           agendaTable["show_all_day_label"] ?? table["show_all_day_label"],
           path: "builtins.calendar.month.popup.agenda.show_all_day_label"
         ) ?? fallback.showAllDayLabel,
+        showHolidayAllDayLabel: try optionalBool(
+          agendaTable["show_holiday_all_day_label"] ?? table["show_holiday_all_day_label"],
+          path: "builtins.calendar.month.popup.agenda.show_holiday_all_day_label"
+        ) ?? fallback.showHolidayAllDayLabel,
         allDayLabel: try optionalString(
           agendaTable["all_day_label"] ?? table["all_day_label"],
           path: "builtins.calendar.month.popup.agenda.all_day_label"
@@ -248,6 +256,26 @@ extension Config {
           agendaTable["show_travel_time"] ?? table["show_travel_time"],
           path: "builtins.calendar.month.popup.agenda.show_travel_time"
         ) ?? fallback.showTravelTime,
+        travelIcon: try optionalString(
+          agendaTable["travel_icon"] ?? table["travel_icon"],
+          path: "builtins.calendar.month.popup.agenda.travel_icon"
+        ) ?? fallback.travelIcon,
+        travelIconColorHex: try optionalString(
+          agendaTable["travel_icon_color"] ?? table["travel_icon_color"],
+          path: "builtins.calendar.month.popup.agenda.travel_icon_color"
+        ) ?? fallback.travelIconColorHex,
+        showAlertIcon: try optionalBool(
+          agendaTable["show_alert_icon"] ?? table["show_alert_icon"],
+          path: "builtins.calendar.month.popup.agenda.show_alert_icon"
+        ) ?? fallback.showAlertIcon,
+        alertIcon: try optionalString(
+          agendaTable["alert_icon"] ?? table["alert_icon"],
+          path: "builtins.calendar.month.popup.agenda.alert_icon"
+        ) ?? fallback.alertIcon,
+        alertIconColorHex: try optionalString(
+          agendaTable["alert_icon_color"] ?? table["alert_icon_color"],
+          path: "builtins.calendar.month.popup.agenda.alert_icon_color"
+        ) ?? fallback.alertIconColorHex,
         maxVisibleAppointments: max(
           1,
           try optionalInt(

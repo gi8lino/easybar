@@ -118,6 +118,7 @@ extension Config {
           var eventTextColorHex: String
           var emptyTextColorHex: String
           var secondaryTextColorHex: String
+          var travelTextColorHex: String
           var layout: MonthCalendarPopupLayout
           var appointmentsScrollable: Bool
           var appointmentsMinHeight: Double
@@ -126,9 +127,15 @@ extension Config {
           var agendaTitle: String
           var showCalendarName: Bool
           var showAllDayLabel: Bool
+          var showHolidayAllDayLabel: Bool
           var allDayLabel: String
           var showLocation: Bool
           var showTravelTime: Bool
+          var travelIcon: String
+          var travelIconColorHex: String?
+          var showAlertIcon: Bool
+          var alertIcon: String
+          var alertIconColorHex: String?
           var maxVisibleAppointments: Int
         }
 
@@ -347,6 +354,11 @@ extension Config {
           set { agenda.layout = newValue }
         }
 
+        var travelTextColorHex: String {
+          get { agenda.travelTextColorHex }
+          set { agenda.travelTextColorHex = newValue }
+        }
+
         var appointmentsScrollable: Bool {
           get { agenda.appointmentsScrollable }
           set { agenda.appointmentsScrollable = newValue }
@@ -382,6 +394,11 @@ extension Config {
           set { agenda.showAllDayLabel = newValue }
         }
 
+        var showHolidayAllDayLabel: Bool {
+          get { agenda.showHolidayAllDayLabel }
+          set { agenda.showHolidayAllDayLabel = newValue }
+        }
+
         var allDayLabel: String {
           get { agenda.allDayLabel }
           set { agenda.allDayLabel = newValue }
@@ -395,6 +412,31 @@ extension Config {
         var showTravelTime: Bool {
           get { agenda.showTravelTime }
           set { agenda.showTravelTime = newValue }
+        }
+
+        var travelIcon: String {
+          get { agenda.travelIcon }
+          set { agenda.travelIcon = newValue }
+        }
+
+        var travelIconColorHex: String? {
+          get { agenda.travelIconColorHex }
+          set { agenda.travelIconColorHex = newValue }
+        }
+
+        var showAlertIcon: Bool {
+          get { agenda.showAlertIcon }
+          set { agenda.showAlertIcon = newValue }
+        }
+
+        var alertIcon: String {
+          get { agenda.alertIcon }
+          set { agenda.alertIcon = newValue }
+        }
+
+        var alertIconColorHex: String? {
+          get { agenda.alertIconColorHex }
+          set { agenda.alertIconColorHex = newValue }
         }
 
         var maxVisibleAppointments: Int {
@@ -649,6 +691,7 @@ extension Config {
             eventTextColorHex: "#d0d0d0",
             emptyTextColorHex: "#c0c0c0",
             secondaryTextColorHex: "#91d7e3",
+            travelTextColorHex: "#8a8a8a",
             layout: .calendarAppointmentsVertical,
             appointmentsScrollable: true,
             appointmentsMinHeight: 140,
@@ -657,9 +700,15 @@ extension Config {
             agendaTitle: "Appointments",
             showCalendarName: false,
             showAllDayLabel: true,
+            showHolidayAllDayLabel: false,
             allDayLabel: "All day",
             showLocation: true,
             showTravelTime: true,
+            travelIcon: "",
+            travelIconColorHex: "#8a8a8a",
+            showAlertIcon: false,
+            alertIcon: "",
+            alertIconColorHex: "#8a8a8a",
             maxVisibleAppointments: 8
           ),
           birthdays: .init(

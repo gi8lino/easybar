@@ -380,6 +380,8 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          isHoliday: isHolidayCalendar(event.calendar),
+          hasAlert: hasVisibleAlert(for: event),
           travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
         )
       }
@@ -425,6 +427,8 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          isHoliday: isHolidayCalendar(event.calendar),
+          hasAlert: hasVisibleAlert(for: event),
           travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
         )
       }
@@ -525,11 +529,7 @@ extension CalendarSnapshotProvider {
 
   /// Resolves travel time from the best available source.
   private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
-    if let direct = directTravelTimeSeconds(for: event) {
-      return direct
-    }
-
-    return inferredTravelTimeSecondsFromAlarms(for: event)
+    directTravelTimeSeconds(for: event)
   }
 
   /// Reads `travelTime` dynamically when the Objective-C runtime exposes it.
@@ -545,17 +545,36 @@ extension CalendarSnapshotProvider {
     return nil
   }
 
-  /// Infers travel time from alarms when available.
-  private func inferredTravelTimeSecondsFromAlarms(for event: EKEvent) -> TimeInterval? {
-    guard let alarms = event.alarms, !alarms.isEmpty else { return nil }
+  /// Returns whether the event has at least one visible non-travel alert.
+  private func hasVisibleAlert(for event: EKEvent) -> Bool {
+    guard let alarms = event.alarms, !alarms.isEmpty else { return false }
 
-    let candidates = alarms.compactMap { alarm -> TimeInterval? in
+    let travelTimeSeconds = directTravelTimeSeconds(for: event)
+    return alarms.contains { alarm in
       let offset = alarm.relativeOffset
-      guard offset < 0 else { return nil }
-      return abs(offset)
-    }
+      guard offset < 0 else { return false }
 
-    return candidates.min()
+      if let travelTimeSeconds {
+        return abs(offset) != travelTimeSeconds
+      }
+
+      return true
+    }
+  }
+
+  /// Returns whether one calendar should be treated as a holiday calendar.
+  private func isHolidayCalendar(_ calendar: EKCalendar) -> Bool {
+    let candidates = [calendar.title, calendar.source.title]
+      .map(normalizedCalendarName(_:))
+
+    return candidates.contains { name in
+      name.contains("holiday")
+        || name.contains("holidays")
+        || name.contains("feiertag")
+        || name.contains("feiertage")
+        || name.contains("jour ferie")
+        || name.contains("jours feries")
+    }
   }
 }
 

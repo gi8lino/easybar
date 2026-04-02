@@ -373,6 +373,7 @@ reset_selection_on_third_tap = true # Reserved selection behavior flag for the m
 event_text_color = "#d0d0d0" # Text color of appointment rows.
 empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
 secondary_text_color = "#91d7e3" # Text color of secondary appointment details.
+travel_text_color = "#8a8a8a" # Muted text color used for travel-time and end-time rows.
 layout = "calendar_appointments_vertical" # Popup layout: calendar_appointments_horizontal | appointments_calendar_horizontal | calendar_appointments_vertical | appointments_calendar_vertical
 appointments_scrollable = true # Makes the appointments area scroll vertically when true.
 appointments_min_height = 180 # Minimum height of the appointments area. Set equal to appointments_max_height for a fixed height.
@@ -381,9 +382,15 @@ empty_text = "No appointments" # Text shown when the selected day or range has n
 agenda_title = "Appointments" # Title shown above the appointments list.
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
+show_holiday_all_day_label = false # Shows "All day" for holiday-calendar events when they are all day.
 all_day_label = "All day" # Text shown for all-day events when show_all_day_label is true
 show_location = true # Shows the event location line when present.
-show_travel_time = true # Shows the travel-time line when present.
+show_travel_time = true # Shows the travel-time line when present. Regular alerts are not shown here.
+travel_icon = "" # Leading icon shown for travel-time rows.
+travel_icon_color = "#8a8a8a" # Color of the travel-time icon.
+show_alert_icon = false # Shows a small alert icon on timed appointments with at least one non-travel alert.
+alert_icon = "" # Optional icon shown when show_alert_icon is true and the event has an alert.
+alert_icon_color = "#8a8a8a" # Color of the alert icon.
 max_visible_appointments = 8 # Maximum number of visible appointments when scrolling is disabled.
 
 [builtins.calendar.month.popup.birthdays]

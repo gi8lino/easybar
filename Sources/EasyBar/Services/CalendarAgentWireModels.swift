@@ -122,6 +122,8 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
   public let calendarName: String?
   public let calendarColorHex: String?
   public let location: String?
+  public let isHoliday: Bool
+  public let hasAlert: Bool
   public let travelTimeSeconds: TimeInterval?
 
   public init(
@@ -133,6 +135,8 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
     calendarName: String?,
     calendarColorHex: String?,
     location: String?,
+    isHoliday: Bool = false,
+    hasAlert: Bool = false,
     travelTimeSeconds: TimeInterval?
   ) {
     self.id = id
@@ -143,6 +147,8 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location
+    self.isHoliday = isHoliday
+    self.hasAlert = hasAlert
     self.travelTimeSeconds = travelTimeSeconds
   }
 }

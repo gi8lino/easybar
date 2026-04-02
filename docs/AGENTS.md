@@ -132,8 +132,20 @@ It is responsible for:
 - observing `EKEventStore` changes
 - building normalized event snapshots
 - building sectioned popup data
+- separating travel time from regular alerts
+- tagging holiday-calendar events for UI decisions
 - creating, updating, and deleting events
 - pushing snapshots to EasyBar subscribers
+
+Calendar data exposed by the agent includes:
+
+- normalized event windows for the month popup and upcoming popup
+- birthday calendar events
+- per-event travel time
+- per-event alert presence
+- per-event holiday-calendar tagging
+- writable calendar lists for the composer
+- mutation support for create, update, and delete
 
 ## Calendar requests
 
@@ -257,6 +269,8 @@ Snapshot shape:
       "calendarName": "Work",
       "calendarColorHex": "#0A84FF",
       "location": "Meeting Room",
+      "isHoliday": false,
+      "hasAlert": true,
       "travelTimeSeconds": 900
     }
   ],
@@ -311,6 +325,8 @@ Section kinds:
 - `calendarName`
 - `calendarColorHex`
 - `location`
+- `isHoliday`
+- `hasAlert`
 - `travelTimeSeconds`
 
 ### Calendar section item fields
@@ -328,6 +344,9 @@ Behavior notes:
 - if access is unavailable, the agent returns `accessGranted = false`, `events = []`, and `sections = []`
 - birthdays come only from birthday calendars
 - normal events come only from non-birthday calendars
+- travel time only comes from real EventKit travel-time data
+- regular alerts are tracked separately from travel time
+- holiday calendars are tagged in the agent so EasyBar can make display choices without talking to EventKit
 - empty day sections are kept so popup layout stays stable
 - title normalization happens in the agent
 - sections are only built when `sectionStartDate` and `sectionDayCount` are provided
@@ -347,6 +366,15 @@ It is responsible for:
 - observing primary interface changes
 - smoothing RSSI samples
 - serving field-query responses to EasyBar and other clients
+
+Network data exposed by the agent includes:
+
+- Wi-Fi identity and radio metrics
+- primary interface and tunnel state
+- IP, gateway, and DNS details
+- reachability and captive-portal state
+- location authorization state
+- ad-hoc fetch and long-lived subscribe responses over the same field-query protocol
 
 It is not responsible for UI rendering decisions like Wi-Fi bar mapping.
 

@@ -229,6 +229,10 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
   public var calendarColorHex: String?
   /// Optional event location.
   public var location: String?
+  /// Whether the event belongs to a holiday calendar.
+  public var isHoliday: Bool
+  /// Whether the event has at least one visible non-travel alert.
+  public var hasAlert: Bool
   /// Optional travel time in seconds.
   public var travelTimeSeconds: TimeInterval?
 
@@ -242,6 +246,8 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
     calendarName: String? = nil,
     calendarColorHex: String? = nil,
     location: String? = nil,
+    isHoliday: Bool = false,
+    hasAlert: Bool = false,
     travelTimeSeconds: TimeInterval? = nil
   ) {
     self.id = id
@@ -252,6 +258,8 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location
+    self.isHoliday = isHoliday
+    self.hasAlert = hasAlert
     self.travelTimeSeconds = travelTimeSeconds
   }
 }
