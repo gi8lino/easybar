@@ -12,6 +12,8 @@ final class NativeMonthCalendarStore: ObservableObject {
 
   private var subscribedMonthRangeStart: Date?
   private var subscribedMonthRangeEnd: Date?
+  private var focusedVisibleMonth: Date?
+  private var subscribedMonthRadius: Int?
 
   private init() {}
 
@@ -68,33 +70,47 @@ final class NativeMonthCalendarStore: ObservableObject {
     !eventsForDay(date).isEmpty
   }
 
-  /// Prepares the subscribed month preload range for one visible month.
+  /// Prepares the subscribed month preload range for one visible month and radius.
   ///
-  /// The range always covers the previous, current, and next month relative to
-  /// the visible month. Returns true when the caller should refresh the socket
-  /// subscription because the active preload range changed.
-  func prepareMonthSubscriptionRange(for visibleMonth: Date) -> Bool {
+  /// Radius `0` means the visible month only, `1` adds previous and next month,
+  /// and larger values expand outward symmetrically. Returns true when the
+  /// active preload range changed.
+  func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int) -> Bool {
     let startOfVisibleMonth = startOfMonth(visibleMonth)
+    let normalizedRadius = max(radius, 0)
 
     guard
-      let start = calendar.date(byAdding: .month, value: -1, to: startOfVisibleMonth),
-      let afterNextMonth = calendar.date(byAdding: .month, value: 2, to: startOfVisibleMonth)
+      let start = calendar.date(
+        byAdding: .month,
+        value: -normalizedRadius,
+        to: startOfVisibleMonth
+      ),
+      let afterEndMonth = calendar.date(
+        byAdding: .month,
+        value: normalizedRadius + 1,
+        to: startOfVisibleMonth
+      )
     else {
       return false
     }
 
     let normalizedStart = calendar.startOfDay(for: start)
-    let normalizedEnd = calendar.startOfDay(for: afterNextMonth)
+    let normalizedEnd = calendar.startOfDay(for: afterEndMonth)
 
     let changed =
-      subscribedMonthRangeStart != normalizedStart || subscribedMonthRangeEnd != normalizedEnd
+      subscribedMonthRangeStart != normalizedStart
+      || subscribedMonthRangeEnd != normalizedEnd
+      || focusedVisibleMonth != startOfVisibleMonth
+      || subscribedMonthRadius != normalizedRadius
 
     if changed {
       subscribedMonthRangeStart = normalizedStart
       subscribedMonthRangeEnd = normalizedEnd
+      focusedVisibleMonth = startOfVisibleMonth
+      subscribedMonthRadius = normalizedRadius
 
       Logger.debug(
-        "month calendar store prepared subscription range start=\(debugDate(normalizedStart)) end=\(debugDate(normalizedEnd))"
+        "month calendar store prepared subscription range month=\(debugDate(startOfVisibleMonth)) radius=\(normalizedRadius) start=\(debugDate(normalizedStart)) end=\(debugDate(normalizedEnd))"
       )
     }
 

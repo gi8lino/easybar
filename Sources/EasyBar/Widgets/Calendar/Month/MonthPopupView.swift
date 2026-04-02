@@ -48,6 +48,9 @@ struct NativeMonthCalendarPopupView: View {
 
   @State var monthGridFrame: CGRect = .zero
   @State var dayCellFrames: [Date: CGRect] = [:]
+  @State var isYearPickerPresented = false
+  @State var yearPickerPageStart = 0
+  @State var shouldAutoSelectVisibleMonthEvent = false
 
   /// Renders the month calendar popup.
   var body: some View {
@@ -70,14 +73,14 @@ struct NativeMonthCalendarPopupView: View {
       .padding(.vertical, CGFloat(config.marginY))
       .onAppear {
         syncSelectionIntoVisibleMonth()
-        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: visibleMonth)
+        MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
         logSelection("on_appear")
       }
       .onDisappear {
         composerPanel.close()
       }
       .onChange(of: visibleMonth) { _, newValue in
-        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(for: newValue)
+        MonthCalendarAgentClient.shared.focusVisibleMonth(newValue)
       }
       .onChange(of: selectedStartDate) { _, _ in
         logSelection("selected_start_changed")
@@ -87,9 +90,12 @@ struct NativeMonthCalendarPopupView: View {
         logSelection("selected_end_changed")
         logResolvedAppointments("selected_end_changed")
       }
-      .onChange(of: store.events.count) { _, count in
-        Logger.debug("month calendar popup store events changed count=\(count)")
-        logResolvedAppointments("store_events_changed")
+      .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
+        Logger.debug(
+          "month calendar popup snapshot changed generated_at=\(generatedAt?.description ?? "nil")"
+        )
+        resolveVisibleMonthAutoSelection()
+        logResolvedAppointments("snapshot_changed")
       }
   }
 }

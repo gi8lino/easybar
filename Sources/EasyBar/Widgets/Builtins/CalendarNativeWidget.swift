@@ -102,8 +102,8 @@ extension CalendarNativeWidget {
     case .upcoming:
       UpcomingCalendarAgentClient.shared.start()
     case .month:
-      _ = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(for: snapshot.now)
       MonthCalendarAgentClient.shared.start()
+      MonthCalendarAgentClient.shared.focusVisibleMonth(snapshot.now)
     }
   }
 

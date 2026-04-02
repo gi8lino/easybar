@@ -226,19 +226,22 @@ public final class LineSocketServerTransport<
     }
   }
 
-  /// Reads one request, decodes it, and invokes the handler.
+  /// Reads requests until the client disconnects and invokes the handler for each line.
   private func handleClient(_ clientFD: Int32, handler: @escaping (Int32, Request) -> Void) {
-    guard let data = readOneLine(from: clientFD), !data.isEmpty else {
-      close(clientFD)
-      return
-    }
+    while true {
+      guard let data = readOneLine(from: clientFD), !data.isEmpty else {
+        close(clientFD)
+        return
+      }
 
-    do {
-      let request = try requestDecoder.decode(Request.self, from: data)
-      handler(clientFD, request)
-    } catch {
-      warnLog("\(serverLabel) request decode failed error=\(error)")
-      close(clientFD)
+      do {
+        let request = try requestDecoder.decode(Request.self, from: data)
+        handler(clientFD, request)
+      } catch {
+        warnLog("\(serverLabel) request decode failed error=\(error)")
+        close(clientFD)
+        return
+      }
     }
   }
 

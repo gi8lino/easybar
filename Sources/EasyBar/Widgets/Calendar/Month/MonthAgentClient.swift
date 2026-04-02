@@ -5,6 +5,14 @@ final class MonthCalendarAgentClient {
 
   static let shared = MonthCalendarAgentClient()
 
+  private let preloadQueue = DispatchQueue(
+    label: "easybar.month-calendar.preload",
+    qos: .utility
+  )
+  private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
+  private let preloadDelays: [TimeInterval] = [0.0, 0.20, 0.75, 1.75, 3.5, 6.5, 10.0]
+  private var preloadWorkItems: [DispatchWorkItem] = []
+
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "month calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
@@ -33,12 +41,31 @@ final class MonthCalendarAgentClient {
 
   /// Stops the month-calendar agent socket client.
   func stop() {
+    cancelStagedPreload()
     stream.stop()
   }
 
+  /// Starts staged month loading centered on the visible month.
+  func focusVisibleMonth(_ visibleMonth: Date) {
+    cancelStagedPreload()
+
+    for (index, radius) in preloadRadii.enumerated() {
+      let delay = preloadDelays[min(index, preloadDelays.count - 1)]
+      let workItem = DispatchWorkItem { [weak self] in
+        self?.refreshMonthSubscriptionIfNeeded(for: visibleMonth, radius: radius)
+      }
+
+      preloadWorkItems.append(workItem)
+      preloadQueue.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+  }
+
   /// Refreshes the active month subscription if the preload window changed.
-  func refreshMonthSubscriptionIfNeeded(for visibleMonth: Date) {
-    let changed = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(for: visibleMonth)
+  func refreshMonthSubscriptionIfNeeded(for visibleMonth: Date, radius: Int) {
+    let changed = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(
+      for: visibleMonth,
+      radius: radius
+    )
     guard changed else { return }
 
     refresh()
@@ -177,14 +204,18 @@ final class MonthCalendarAgentClient {
       calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate))
       ?? calendar.startOfDay(for: referenceDate)
 
-    let start =
-      calendar.date(byAdding: .month, value: -1, to: currentMonthStart)
-      ?? currentMonthStart
+    let start = currentMonthStart
 
     let end =
-      calendar.date(byAdding: .month, value: 2, to: currentMonthStart)
-      ?? referenceDate.addingTimeInterval(90 * 86_400)
+      calendar.date(byAdding: .month, value: 1, to: currentMonthStart)
+      ?? referenceDate.addingTimeInterval(31 * 86_400)
 
     return DateInterval(start: start, end: end)
+  }
+
+  /// Cancels any pending staged month expansion.
+  private func cancelStagedPreload() {
+    preloadWorkItems.forEach { $0.cancel() }
+    preloadWorkItems.removeAll()
   }
 }
