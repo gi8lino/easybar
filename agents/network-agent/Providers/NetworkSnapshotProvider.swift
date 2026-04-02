@@ -77,8 +77,23 @@ final class NetworkSnapshotProvider {
     )
   }
 
+  /// Returns the requested field values, applying the current privacy policy.
+  func responseFields(
+    for fields: [NetworkAgentField],
+    allowUnauthorizedNonSensitiveFields: Bool
+  ) -> (values: [String: String]?, errorMessage: String?) {
+    guard authorizer.isAuthorized() else {
+      return unauthorizedFieldResponse(
+        for: fields,
+        allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
+      )
+    }
+
+    return (resolvedFieldValues(for: fields), nil)
+  }
+
   /// Returns the requested field values for the current network state.
-  func fieldValues(for fields: [NetworkAgentField]) -> [String: String] {
+  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String: String] {
     let now = Date()
     let permissionState = authorizer.permissionState()
     let locationAuthorized = authorizer.isAuthorized()
@@ -246,13 +261,32 @@ final class NetworkSnapshotProvider {
     return values
   }
 
-  /// Returns whether location access is currently authorized.
-  func isLocationAuthorized() -> Bool {
-    authorizer.isAuthorized()
+  /// Returns the unauthorized response for one requested field list.
+  private func unauthorizedFieldResponse(
+    for fields: [NetworkAgentField],
+    allowUnauthorizedNonSensitiveFields: Bool
+  ) -> (values: [String: String]?, errorMessage: String?) {
+    let permissionState = authorizer.permissionState()
+    let hasPermissionGatedFields = fields.contains(where: requiresLocationAuthorization)
+
+    guard hasPermissionGatedFields else {
+      return (resolvedFieldValues(for: fields), nil)
+    }
+
+    guard allowUnauthorizedNonSensitiveFields else {
+      return (nil, "permission_denied:\(permissionState)")
+    }
+
+    let allowedFields = fields.filter { !requiresLocationAuthorization($0) }
+    guard !allowedFields.isEmpty else {
+      return (nil, "permission_denied:\(permissionState)")
+    }
+
+    return (resolvedFieldValues(for: allowedFields), nil)
   }
 
-  /// Returns the current location permission label.
-  func locationPermissionState() -> String {
-    authorizer.permissionState()
+  /// Returns whether the field should be hidden without location authorization.
+  private func requiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
+    field.rawValue.hasPrefix("wifi.")
   }
 }

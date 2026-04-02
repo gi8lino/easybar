@@ -135,31 +135,10 @@ final class NetworkSocketServer {
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
   ) -> (fields: [String: String]?, errorMessage: String?) {
-    guard !provider.isLocationAuthorized() else {
-      return (provider.fieldValues(for: fields), nil)
-    }
-
-    let permissionState = provider.locationPermissionState()
-    let hasPermissionGatedFields = fields.contains(where: requiresLocationAuthorization)
-
-    guard hasPermissionGatedFields else {
-      return (provider.fieldValues(for: fields), nil)
-    }
-
-    guard allowUnauthorizedNonSensitiveFields else {
-      return (nil, "permission_denied:\(permissionState)")
-    }
-
-    let allowedFields = fields.filter { !requiresLocationAuthorization($0) }
-    guard !allowedFields.isEmpty else {
-      return (nil, "permission_denied:\(permissionState)")
-    }
-
-    return (provider.fieldValues(for: allowedFields), nil)
-  }
-
-  /// Returns whether the field should be hidden without location authorization.
-  private func requiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
-    field.rawValue.hasPrefix("wifi.")
+    let response = provider.responseFields(
+      for: fields,
+      allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
+    )
+    return (response.values, response.errorMessage)
   }
 }
