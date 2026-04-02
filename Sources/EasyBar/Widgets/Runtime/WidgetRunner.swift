@@ -20,11 +20,8 @@ final class WidgetRunner {
 
   private let decoder = JSONDecoder()
 
-  private var requiredEvents = Set<String>()
+  private var runtimeState = WidgetRuntimeState()
   private var started = false
-  private var runtimeReady = false
-  private var subscriptionsReady = false
-  private var didEmitInitialEvents = false
   private var stdoutObserver: NSObjectProtocol?
 
   private init() {}
@@ -112,11 +109,8 @@ final class WidgetRunner {
 
   /// Emits initial events after both subscriptions and readiness are known.
   private func emitInitialEventsIfPossible() {
-    guard runtimeReady else { return }
-    guard subscriptionsReady else { return }
-    guard !didEmitInitialEvents else { return }
-
-    didEmitInitialEvents = true
+    guard runtimeState.canEmitInitialEvents else { return }
+    runtimeState.didEmitInitialEvents = true
     emitInitialEvents()
   }
 
@@ -153,18 +147,18 @@ final class WidgetRunner {
 
   /// Handles one subscription update from Lua.
   private func handleSubscriptions(_ update: WidgetTreeUpdate) {
-    requiredEvents = Set(update.subscribedEvents)
-    subscriptionsReady = true
+    runtimeState.requiredEvents = Set(update.subscribedEvents)
+    runtimeState.hasSubscriptions = true
 
-    Logger.debug("required events: \(requiredEvents)")
-    EventManager.shared.start(subscriptions: requiredEvents)
+    Logger.debug("required events: \(runtimeState.requiredEvents)")
+    EventManager.shared.start(subscriptions: runtimeState.requiredEvents)
     emitInitialEventsIfPossible()
   }
 
   /// Handles the Lua runtime ready handshake.
   private func handleReady() {
     Logger.debug("lua runtime handshake received")
-    runtimeReady = true
+    runtimeState.isReady = true
     emitInitialEventsIfPossible()
   }
 
@@ -181,15 +175,12 @@ final class WidgetRunner {
 
   /// Emits one initial event when Lua subscribed to it.
   private func emitInitialEvent(named name: String, event: AppEvent) {
-    guard requiredEvents.contains(name) else { return }
+    guard runtimeState.requiredEvents.contains(name) else { return }
     EventBus.shared.emit(event)
   }
 
   /// Resets Lua runtime handshake and subscription state.
   private func resetRuntimeState() {
-    runtimeReady = false
-    subscriptionsReady = false
-    didEmitInitialEvents = false
-    requiredEvents.removeAll()
+    runtimeState.reset()
   }
 }
