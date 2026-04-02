@@ -96,6 +96,7 @@ final class CalendarAgentStreamController {
 
     case .error:
       Logger.warn("\(label) received error message=\(response.message ?? "unknown")")
+      clearState()
 
     case .pong, .subscribed, .created, .updated, .deleted:
       break
