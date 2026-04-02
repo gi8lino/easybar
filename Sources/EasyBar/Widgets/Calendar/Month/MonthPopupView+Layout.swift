@@ -73,10 +73,35 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds the calendar container.
   var calendarContainerView: some View {
-    VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
-      headerView
-      weekdayHeaderView
-      monthGridView
+    ZStack(alignment: .top) {
+      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
+        headerView
+        weekdayHeaderView
+        monthGridView
+      }
+
+      if isYearPickerPresented {
+        VStack {
+          MonthYearPickerPopover(
+            currentYear: visibleYear,
+            pageStartYear: $yearPickerPageStart,
+            onSelectYear: selectYear(_:),
+            onClose: { isYearPickerPresented = false },
+            headerColor: color(config.headerTextColorHex),
+            backgroundColor: color(config.backgroundColorHex),
+            borderColor: color(config.borderColorHex),
+            currentYearTextColor: color(config.headerTextColorHex),
+            currentYearBackgroundColor: color(config.todayBackgroundColorHex),
+            currentYearBorderColor: color(config.todayBorderColorHex)
+          )
+          .padding(.top, 34)
+          .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
+
+          Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .zIndex(2)
+      }
     }
     .frame(
       minWidth: calendarContainerWidth,
@@ -168,9 +193,22 @@ extension NativeMonthCalendarPopupView {
 
       Spacer()
 
-      Text(monthTitle)
-        .font(.system(size: 18, weight: .semibold))
-        .foregroundStyle(color(config.headerTextColorHex))
+      HStack(spacing: 6) {
+        Text(visibleMonthName)
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundStyle(color(config.headerTextColorHex))
+
+        Button(action: openYearPicker) {
+          HStack(spacing: 4) {
+            Text(String(visibleYear))
+              .font(.system(size: 18, weight: .semibold))
+            Image(systemName: "chevron.down")
+              .font(.system(size: 10, weight: .semibold))
+          }
+          .foregroundStyle(color(config.headerTextColorHex))
+        }
+        .buttonStyle(.plain)
+      }
 
       Spacer()
 
@@ -186,7 +224,8 @@ extension NativeMonthCalendarPopupView {
   /// Shows the current month and selects today.
   func showToday() {
     let today = resolvedCalendar.startOfDay(for: Date())
-    visibleMonth = Self.startOfMonth(today, calendar: resolvedCalendar)
+    let targetMonth = Self.startOfMonth(today, calendar: resolvedCalendar)
+    visibleMonth = targetMonth
     selectedStartDate = today
     selectedEndDate = today
 
@@ -199,9 +238,12 @@ extension NativeMonthCalendarPopupView {
       return
     }
 
-    visibleMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
-    selectedStartDate = visibleMonth
-    selectedEndDate = visibleMonth
+    let targetMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
+    let targetSelectionDate = matchingSelectionDate(in: targetMonth)
+    visibleMonth = targetMonth
+    selectedStartDate = targetSelectionDate
+    selectedEndDate = targetSelectionDate
+    shouldAutoSelectVisibleMonthEvent = true
 
     Logger.debug(
       "month calendar popup show_previous_month visible_month=\(debugDate(visibleMonth))")
@@ -213,20 +255,16 @@ extension NativeMonthCalendarPopupView {
       return
     }
 
-    visibleMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
-    selectedStartDate = visibleMonth
-    selectedEndDate = visibleMonth
+    let targetMonth = Self.startOfMonth(newMonth, calendar: resolvedCalendar)
+    let targetSelectionDate = matchingSelectionDate(in: targetMonth)
+    visibleMonth = targetMonth
+    selectedStartDate = targetSelectionDate
+    selectedEndDate = targetSelectionDate
+    shouldAutoSelectVisibleMonthEvent = true
 
     Logger.debug("month calendar popup show_next_month visible_month=\(debugDate(visibleMonth))")
   }
 
-  /// Returns the visible month title.
-  var monthTitle: String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = "LLLL yyyy"
-    return formatter.string(from: visibleMonth)
-  }
 }
 
 // MARK: - Weekday Header
