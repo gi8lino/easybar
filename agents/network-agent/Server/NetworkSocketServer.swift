@@ -134,7 +134,7 @@ final class NetworkSocketServer {
   private func responseFields(
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
-  ) -> (fields: [String: String]?, errorMessage: String?) {
+  ) -> (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     let response = provider.responseFields(
       for: fields,
       allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields

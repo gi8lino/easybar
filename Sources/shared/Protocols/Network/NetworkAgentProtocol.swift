@@ -148,14 +148,14 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
   }
 
   /// Builds one typed snapshot from field-query values.
-  public init?(fields: [String: String]) {
+  public init?(fields: [String: NetworkAgentFieldValue]) {
     guard
-      let accessGranted = fields[NetworkAgentField.locationAuthorized.rawValue].flatMap(Bool.init),
-      let permissionState = fields[NetworkAgentField.locationPermissionState.rawValue],
-      let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue],
+      let accessGranted = fields[NetworkAgentField.locationAuthorized.rawValue]?.boolValue,
+      let permissionState = fields[NetworkAgentField.locationPermissionState.rawValue]?.stringValue,
+      let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue]?.stringValue,
       let generatedAt = ISO8601DateFormatter().date(from: generatedAtRaw),
-      let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]
-        .flatMap(Bool.init)
+      let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]?
+        .boolValue
     else {
       return nil
     }
@@ -164,10 +164,10 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
       accessGranted: accessGranted,
       permissionState: permissionState,
       generatedAt: generatedAt,
-      ssid: fields[NetworkAgentField.ssid.rawValue],
-      interfaceName: fields[NetworkAgentField.interfaceName.rawValue],
+      ssid: fields[NetworkAgentField.ssid.rawValue]?.stringValue,
+      interfaceName: fields[NetworkAgentField.interfaceName.rawValue]?.stringValue,
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
-      rssi: fields[NetworkAgentField.rssi.rawValue].flatMap(Int.init)
+      rssi: fields[NetworkAgentField.rssi.rawValue]?.intValue
     )
   }
 }
@@ -185,14 +185,14 @@ public struct NetworkAgentMessage: Codable {
   /// Message kind discriminator.
   public var kind: NetworkAgentMessageKind
   /// Optional field values payload.
-  public var fields: [String: String]?
+  public var fields: [String: NetworkAgentFieldValue]?
   /// Optional error message.
   public var message: String?
 
   /// Creates one network agent message.
   public init(
     kind: NetworkAgentMessageKind,
-    fields: [String: String]? = nil,
+    fields: [String: NetworkAgentFieldValue]? = nil,
     message: String? = nil
   ) {
     self.kind = kind

@@ -81,7 +81,7 @@ final class NetworkSnapshotProvider {
   func responseFields(
     for fields: [NetworkAgentField],
     allowUnauthorizedNonSensitiveFields: Bool
-  ) -> (values: [String: String]?, errorMessage: String?) {
+  ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     guard authorizer.isAuthorized() else {
       return unauthorizedFieldResponse(
         for: fields,
@@ -93,168 +93,168 @@ final class NetworkSnapshotProvider {
   }
 
   /// Returns the requested field values for the current network state.
-  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String: String] {
+  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String: NetworkAgentFieldValue] {
     let now = Date()
     let permissionState = authorizer.permissionState()
     let locationAuthorized = authorizer.isAuthorized()
     let wifi = wifiMonitor.currentState(now: now)
     let network = systemMonitor.currentState()
 
-    var values: [String: String] = [:]
+    var values: [String: NetworkAgentFieldValue] = [:]
 
     for field in fields {
       switch field {
       case .generatedAt:
-        values[field.rawValue] = NetworkWiFiSnapshot.fieldDateFormatter.string(from: now)
+        values[field.rawValue] = .string(NetworkWiFiSnapshot.fieldDateFormatter.string(from: now))
 
       case .ssid:
         if let ssid = wifi.ssid {
-          values[field.rawValue] = ssid
+          values[field.rawValue] = .string(ssid)
         }
 
       case .bssid:
         if let bssid = wifi.bssid {
-          values[field.rawValue] = bssid
+          values[field.rawValue] = .string(bssid)
         }
 
       case .interfaceName:
         if let interfaceName = wifi.interfaceName {
-          values[field.rawValue] = interfaceName
+          values[field.rawValue] = .string(interfaceName)
         }
 
       case .hardwareAddress:
         if let hardwareAddress = wifi.hardwareAddress {
-          values[field.rawValue] = hardwareAddress
+          values[field.rawValue] = .string(hardwareAddress)
         }
 
       case .power:
         if let power = wifi.power {
-          values[field.rawValue] = String(power)
+          values[field.rawValue] = .bool(power)
         }
 
       case .serviceActive:
         if let serviceActive = wifi.serviceActive {
-          values[field.rawValue] = String(serviceActive)
+          values[field.rawValue] = .bool(serviceActive)
         }
 
       case .primaryInterfaceIsTunnel:
-        values[field.rawValue] = String(network.primaryInterfaceIsTunnel)
+        values[field.rawValue] = .bool(network.primaryInterfaceIsTunnel)
 
       case .rssi:
         if let rssi = wifi.rssi {
-          values[field.rawValue] = String(rssi)
+          values[field.rawValue] = .int(rssi)
         }
 
       case .noise:
         if let noise = wifi.noise {
-          values[field.rawValue] = String(noise)
+          values[field.rawValue] = .int(noise)
         }
 
       case .snr:
         if let snr = wifi.snr {
-          values[field.rawValue] = String(snr)
+          values[field.rawValue] = .int(snr)
         }
 
       case .linkQuality:
         if let linkQuality = wifi.linkQuality {
-          values[field.rawValue] = String(linkQuality)
+          values[field.rawValue] = .int(linkQuality)
         }
 
       case .txRate:
         if let txRate = wifi.txRate {
-          values[field.rawValue] = String(txRate)
+          values[field.rawValue] = .int(txRate)
         }
 
       case .channel:
         if let channel = wifi.channel {
-          values[field.rawValue] = String(channel)
+          values[field.rawValue] = .int(channel)
         }
 
       case .channelBand:
         if let channelBand = wifi.channelBand {
-          values[field.rawValue] = channelBand
+          values[field.rawValue] = .string(channelBand)
         }
 
       case .channelWidth:
         if let channelWidth = wifi.channelWidth {
-          values[field.rawValue] = channelWidth
+          values[field.rawValue] = .string(channelWidth)
         }
 
       case .security:
         if let security = wifi.security {
-          values[field.rawValue] = security
+          values[field.rawValue] = .string(security)
         }
 
       case .phyMode:
         if let phyMode = wifi.phyMode {
-          values[field.rawValue] = phyMode
+          values[field.rawValue] = .string(phyMode)
         }
 
       case .interfaceMode:
         if let interfaceMode = wifi.interfaceMode {
-          values[field.rawValue] = interfaceMode
+          values[field.rawValue] = .string(interfaceMode)
         }
 
       case .countryCode:
         if let countryCode = wifi.countryCode {
-          values[field.rawValue] = countryCode
+          values[field.rawValue] = .string(countryCode)
         }
 
       case .roaming:
-        values[field.rawValue] = String(wifi.roaming)
+        values[field.rawValue] = .bool(wifi.roaming)
 
       case .ssidChangedAt:
         if let ssidChangedAt = wifi.ssidChangedAt {
-          values[field.rawValue] = ssidChangedAt
+          values[field.rawValue] = .string(ssidChangedAt)
         }
 
       case .interfaceChangedAt:
         if let interfaceChangedAt = wifi.interfaceChangedAt {
-          values[field.rawValue] = interfaceChangedAt
+          values[field.rawValue] = .string(interfaceChangedAt)
         }
 
       case .primaryInterface:
         if let primaryInterface = network.primaryInterface {
-          values[field.rawValue] = primaryInterface
+          values[field.rawValue] = .string(primaryInterface)
         }
 
       case .activeTunnelInterface:
         if let activeTunnelInterface = network.activeTunnelInterface {
-          values[field.rawValue] = activeTunnelInterface
+          values[field.rawValue] = .string(activeTunnelInterface)
         }
 
       case .activeTunnelInterfaces:
-        values[field.rawValue] = network.activeTunnelInterfaces.joined(separator: ",")
+        values[field.rawValue] = .stringList(network.activeTunnelInterfaces)
 
       case .ipv4Address:
         if let ipv4Address = network.ipv4Address {
-          values[field.rawValue] = ipv4Address
+          values[field.rawValue] = .string(ipv4Address)
         }
 
       case .ipv6Address:
         if let ipv6Address = network.ipv6Address {
-          values[field.rawValue] = ipv6Address
+          values[field.rawValue] = .string(ipv6Address)
         }
 
       case .defaultGateway:
         if let defaultGateway = network.defaultGateway {
-          values[field.rawValue] = defaultGateway
+          values[field.rawValue] = .string(defaultGateway)
         }
 
       case .dnsServers:
-        values[field.rawValue] = network.dnsServers.joined(separator: ",")
+        values[field.rawValue] = .stringList(network.dnsServers)
 
       case .internetReachable:
-        values[field.rawValue] = String(network.internetReachable)
+        values[field.rawValue] = .bool(network.internetReachable)
 
       case .captivePortal:
-        values[field.rawValue] = String(network.captivePortal)
+        values[field.rawValue] = .bool(network.captivePortal)
 
       case .locationAuthorized:
-        values[field.rawValue] = String(locationAuthorized)
+        values[field.rawValue] = .bool(locationAuthorized)
 
       case .locationPermissionState:
-        values[field.rawValue] = permissionState
+        values[field.rawValue] = .string(permissionState)
       }
     }
 
@@ -265,7 +265,7 @@ final class NetworkSnapshotProvider {
   private func unauthorizedFieldResponse(
     for fields: [NetworkAgentField],
     allowUnauthorizedNonSensitiveFields: Bool
-  ) -> (values: [String: String]?, errorMessage: String?) {
+  ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     let permissionState = authorizer.permissionState()
     let hasPermissionGatedFields = fields.contains(where: requiresLocationAuthorization)
 
