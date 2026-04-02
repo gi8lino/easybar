@@ -327,6 +327,26 @@ extension Config {
         ) ?? fallback.anchorShowDateText
       ),
       composer: .init(
+        createTitle: try optionalString(
+          composerTable["create_title"] ?? table["composer_create_title"],
+          path: "builtins.calendar.month.popup.composer.create_title"
+        ) ?? fallback.composerCreateTitle,
+        editTitle: try optionalString(
+          composerTable["edit_title"] ?? table["composer_edit_title"],
+          path: "builtins.calendar.month.popup.composer.edit_title"
+        ) ?? fallback.composerEditTitle,
+        titleLabel: try optionalString(
+          composerTable["title_label"] ?? table["composer_title_label"],
+          path: "builtins.calendar.month.popup.composer.title_label"
+        ) ?? fallback.composerTitleLabel,
+        locationLabel: try optionalString(
+          composerTable["location_label"] ?? table["composer_location_label"],
+          path: "builtins.calendar.month.popup.composer.location_label"
+        ) ?? fallback.composerLocationLabel,
+        calendarLabel: try optionalString(
+          composerTable["calendar_label"] ?? table["composer_calendar_label"],
+          path: "builtins.calendar.month.popup.composer.calendar_label"
+        ) ?? fallback.composerCalendarLabel,
         titlePlaceholder: try optionalString(
           composerTable["title_placeholder"] ?? table["composer_title_placeholder"],
           path: "builtins.calendar.month.popup.composer.title_placeholder"
@@ -358,7 +378,47 @@ extension Config {
         allDayLabel: try optionalString(
           composerTable["all_day_label"] ?? table["composer_all_day_label"],
           path: "builtins.calendar.month.popup.composer.all_day_label"
-        ) ?? fallback.composerAllDayLabel
+        ) ?? fallback.composerAllDayLabel,
+        travelTimeLabel: try optionalString(
+          composerTable["travel_time_label"] ?? table["composer_travel_time_label"],
+          path: "builtins.calendar.month.popup.composer.travel_time_label"
+        ) ?? fallback.composerTravelTimeLabel,
+        alertLabel: try optionalString(
+          composerTable["alert_label"] ?? table["composer_alert_label"],
+          path: "builtins.calendar.month.popup.composer.alert_label"
+        ) ?? fallback.composerAlertLabel,
+        addAlertLabel: try optionalString(
+          composerTable["add_alert_label"] ?? table["composer_add_alert_label"],
+          path: "builtins.calendar.month.popup.composer.add_alert_label"
+        ) ?? fallback.composerAddAlertLabel,
+        openCalendarLabel: try optionalString(
+          composerTable["open_calendar_label"] ?? table["composer_open_calendar_label"],
+          path: "builtins.calendar.month.popup.composer.open_calendar_label"
+        ) ?? fallback.composerOpenCalendarLabel,
+        cancelLabel: try optionalString(
+          composerTable["cancel_label"] ?? table["composer_cancel_label"],
+          path: "builtins.calendar.month.popup.composer.cancel_label"
+        ) ?? fallback.composerCancelLabel,
+        saveLabel: try optionalString(
+          composerTable["save_label"] ?? table["composer_save_label"],
+          path: "builtins.calendar.month.popup.composer.save_label"
+        ) ?? fallback.composerSaveLabel,
+        updateLabel: try optionalString(
+          composerTable["update_label"] ?? table["composer_update_label"],
+          path: "builtins.calendar.month.popup.composer.update_label"
+        ) ?? fallback.composerUpdateLabel,
+        removeLabel: try optionalString(
+          composerTable["remove_label"] ?? table["composer_remove_label"],
+          path: "builtins.calendar.month.popup.composer.remove_label"
+        ) ?? fallback.composerRemoveLabel,
+        deleteConfirmationTitle: try optionalString(
+          composerTable["delete_confirmation_title"] ?? table["composer_delete_confirmation_title"],
+          path: "builtins.calendar.month.popup.composer.delete_confirmation_title"
+        ) ?? fallback.composerDeleteConfirmationTitle,
+        deleteConfirmationMessage: try optionalString(
+          composerTable["delete_confirmation_message"] ?? table["composer_delete_confirmation_message"],
+          path: "builtins.calendar.month.popup.composer.delete_confirmation_message"
+        ) ?? fallback.composerDeleteConfirmationMessage
       ),
       todayButton: .init(
         title: try optionalString(

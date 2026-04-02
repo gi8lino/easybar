@@ -409,9 +409,24 @@ anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month"
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
 
 [builtins.calendar.month.popup.composer]
+create_title = "New Appointment" # Panel title shown when creating an appointment.
+edit_title = "Edit Appointment" # Panel title shown when editing an appointment.
+title_label = "Title" # Label shown above the title field.
+location_label = "Location" # Label shown above the location field.
+calendar_label = "Calendar" # Label shown above the calendar picker.
 start_label = "Begin" # Labels shown for the start and end times.
 end_label = "End" # Labels shown for the start and end times.
 all_day_label = "All day" # Label shown for all-day events.
+travel_time_label = "Travel time" # Label shown for the travel-time picker.
+alert_label = "Alert" # Label shown above the alerts section.
+add_alert_label = "Add alert" # Button label used to add another alert row.
+open_calendar_label = "Calendar" # Footer button label used to open Calendar.app.
+cancel_label = "Cancel" # Footer cancel button label.
+save_label = "Save" # Footer primary button label when creating.
+update_label = "Update" # Footer primary button label when editing.
+remove_label = "Remove" # Footer destructive button label.
+delete_confirmation_title = "Remove appointment?" # Delete confirmation title.
+delete_confirmation_message = "This action cannot be undone." # Delete confirmation message.
 title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
 location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
 default_calendar_name = "Personal" # Default calendar name used when creating new appointments.

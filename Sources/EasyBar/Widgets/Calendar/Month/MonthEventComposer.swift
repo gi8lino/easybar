@@ -208,9 +208,9 @@ final class MonthCalendarEventComposer: ObservableObject {
   var panelTitle: String {
     switch mode {
     case .create:
-      return "New Appointment"
+      return popupConfig.composerCreateTitle
     case .edit:
-      return "Edit Appointment"
+      return popupConfig.composerEditTitle
     }
   }
 
@@ -218,9 +218,9 @@ final class MonthCalendarEventComposer: ObservableObject {
   var saveButtonTitle: String {
     switch mode {
     case .create:
-      return isSaving ? "Saving..." : "Save"
+      return isSaving ? "\(popupConfig.composerSaveLabel)..." : popupConfig.composerSaveLabel
     case .edit:
-      return isSaving ? "Saving..." : "Update"
+      return isSaving ? "\(popupConfig.composerUpdateLabel)..." : popupConfig.composerUpdateLabel
     }
   }
 

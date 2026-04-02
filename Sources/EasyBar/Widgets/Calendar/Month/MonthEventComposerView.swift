@@ -35,16 +35,16 @@ struct MonthCalendarEventComposerView: View {
     .clipShape(
       RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
     )
-    .alert("Remove appointment?", isPresented: $showsDeleteConfirmation) {
-      Button("Cancel", role: .cancel) {}
+    .alert(config.composerDeleteConfirmationTitle, isPresented: $showsDeleteConfirmation) {
+      Button(config.composerCancelLabel, role: .cancel) {}
 
-      Button("Remove", role: .destructive) {
+      Button(config.composerRemoveLabel, role: .destructive) {
         composer.delete {
           onDeleted()
         }
       }
     } message: {
-      Text("This action cannot be undone.")
+      Text(config.composerDeleteConfirmationMessage)
     }
   }
 }
@@ -116,21 +116,21 @@ extension MonthCalendarEventComposerView {
     sectionContainer {
       VStack(alignment: .leading, spacing: 10) {
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Title")
+          fieldLabel(config.composerTitleLabel)
 
           TextField(config.composerTitlePlaceholder, text: $composer.title)
             .textFieldStyle(.roundedBorder)
         }
 
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Location")
+          fieldLabel(config.composerLocationLabel)
 
           TextField(config.composerLocationPlaceholder, text: $composer.location)
             .textFieldStyle(.roundedBorder)
         }
 
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Calendar")
+          fieldLabel(config.composerCalendarLabel)
 
           Picker("", selection: $composer.selectedCalendarID) {
             ForEach(composer.calendars) { option in
@@ -165,19 +165,20 @@ extension MonthCalendarEventComposerView {
           showsTimePicker: !composer.isAllDay
         )
 
-        VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Travel time")
+        HStack(alignment: .center, spacing: fieldSpacing) {
+          fieldLabel(config.composerTravelTimeLabel)
+            .frame(width: fieldLabelWidth, alignment: .leading)
 
-          alignedFieldRow {
-            Picker("", selection: $composer.travelTime) {
-              ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
-                Text(option.title).tag(option)
-              }
+          Picker("", selection: $composer.travelTime) {
+            ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
+              Text(option.title).tag(option)
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(width: menuFieldWidth, alignment: .leading)
           }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .frame(width: menuFieldWidth, alignment: .leading)
+
+          Spacer(minLength: 0)
         }
       }
     }
@@ -238,7 +239,7 @@ extension MonthCalendarEventComposerView {
   private var alertsSectionView: some View {
     sectionContainer {
       VStack(alignment: .leading, spacing: 8) {
-        fieldLabel("Alert")
+        fieldLabel(config.composerAlertLabel)
 
         ForEach(composer.alertRows) { row in
           HStack(alignment: .center, spacing: 8) {
@@ -271,7 +272,7 @@ extension MonthCalendarEventComposerView {
         Button {
           composer.addAlert()
         } label: {
-          Label("Add alert", systemImage: "plus")
+          Label(config.composerAddAlertLabel, systemImage: "plus")
             .font(.system(size: 12, weight: .medium))
         }
         .buttonStyle(.plain)
@@ -291,12 +292,12 @@ extension MonthCalendarEventComposerView {
         Button {
           composer.openCalendarApp()
         } label: {
-          Label("Calendar", systemImage: "calendar")
+          Label(config.composerOpenCalendarLabel, systemImage: "calendar")
         }
         .buttonStyle(SecondaryFooterButtonStyle())
 
         if composer.canDelete {
-          Button("Remove") {
+          Button(config.composerRemoveLabel) {
             showsDeleteConfirmation = true
           }
           .buttonStyle(DangerFooterButtonStyle())
@@ -304,7 +305,7 @@ extension MonthCalendarEventComposerView {
 
         Spacer()
 
-        Button("Cancel") {
+        Button(config.composerCancelLabel) {
           onCancel()
         }
         .buttonStyle(SecondaryFooterButtonStyle())
@@ -352,20 +353,6 @@ extension MonthCalendarEventComposerView {
     Text(value)
       .font(.system(size: 12, weight: .medium))
       .foregroundStyle(color(config.secondaryTextColorHex))
-  }
-
-  /// Aligns one schedule field below the date rows.
-  private func alignedFieldRow<Content: View>(
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    HStack(alignment: .center, spacing: fieldSpacing) {
-      Color.clear
-        .frame(width: fieldLabelWidth, alignment: .leading)
-
-      content()
-
-      Spacer(minLength: 0)
-    }
   }
 
   /// Returns the shared label width used in the schedule section.

@@ -158,6 +158,11 @@ extension Config {
         }
 
         struct ComposerStyle {
+          var createTitle: String
+          var editTitle: String
+          var titleLabel: String
+          var locationLabel: String
+          var calendarLabel: String
           var titlePlaceholder: String
           var locationPlaceholder: String
           var defaultCalendarName: String?
@@ -166,6 +171,16 @@ extension Config {
           var startLabel: String
           var endLabel: String
           var allDayLabel: String
+          var travelTimeLabel: String
+          var alertLabel: String
+          var addAlertLabel: String
+          var openCalendarLabel: String
+          var cancelLabel: String
+          var saveLabel: String
+          var updateLabel: String
+          var removeLabel: String
+          var deleteConfirmationTitle: String
+          var deleteConfirmationMessage: String
         }
 
         struct TodayButtonStyle {
@@ -494,6 +509,31 @@ extension Config {
           set { composer.titlePlaceholder = newValue }
         }
 
+        var composerCreateTitle: String {
+          get { composer.createTitle }
+          set { composer.createTitle = newValue }
+        }
+
+        var composerEditTitle: String {
+          get { composer.editTitle }
+          set { composer.editTitle = newValue }
+        }
+
+        var composerTitleLabel: String {
+          get { composer.titleLabel }
+          set { composer.titleLabel = newValue }
+        }
+
+        var composerLocationLabel: String {
+          get { composer.locationLabel }
+          set { composer.locationLabel = newValue }
+        }
+
+        var composerCalendarLabel: String {
+          get { composer.calendarLabel }
+          set { composer.calendarLabel = newValue }
+        }
+
         var composerLocationPlaceholder: String {
           get { composer.locationPlaceholder }
           set { composer.locationPlaceholder = newValue }
@@ -527,6 +567,56 @@ extension Config {
         var composerAllDayLabel: String {
           get { composer.allDayLabel }
           set { composer.allDayLabel = newValue }
+        }
+
+        var composerTravelTimeLabel: String {
+          get { composer.travelTimeLabel }
+          set { composer.travelTimeLabel = newValue }
+        }
+
+        var composerAlertLabel: String {
+          get { composer.alertLabel }
+          set { composer.alertLabel = newValue }
+        }
+
+        var composerAddAlertLabel: String {
+          get { composer.addAlertLabel }
+          set { composer.addAlertLabel = newValue }
+        }
+
+        var composerOpenCalendarLabel: String {
+          get { composer.openCalendarLabel }
+          set { composer.openCalendarLabel = newValue }
+        }
+
+        var composerCancelLabel: String {
+          get { composer.cancelLabel }
+          set { composer.cancelLabel = newValue }
+        }
+
+        var composerSaveLabel: String {
+          get { composer.saveLabel }
+          set { composer.saveLabel = newValue }
+        }
+
+        var composerUpdateLabel: String {
+          get { composer.updateLabel }
+          set { composer.updateLabel = newValue }
+        }
+
+        var composerRemoveLabel: String {
+          get { composer.removeLabel }
+          set { composer.removeLabel = newValue }
+        }
+
+        var composerDeleteConfirmationTitle: String {
+          get { composer.deleteConfirmationTitle }
+          set { composer.deleteConfirmationTitle = newValue }
+        }
+
+        var composerDeleteConfirmationMessage: String {
+          get { composer.deleteConfirmationMessage }
+          set { composer.deleteConfirmationMessage = newValue }
         }
 
         var todayButtonTitle: String {
@@ -727,6 +817,11 @@ extension Config {
             showDateText: true
           ),
           composer: .init(
+            createTitle: "New Appointment",
+            editTitle: "Edit Appointment",
+            titleLabel: "Title",
+            locationLabel: "Location",
+            calendarLabel: "Calendar",
             titlePlaceholder: "What are you doing?",
             locationPlaceholder: "Where are you going?",
             defaultCalendarName: nil,
@@ -734,7 +829,17 @@ extension Config {
             defaultTravelTime: "none",
             startLabel: "Begin",
             endLabel: "End",
-            allDayLabel: "All day"
+            allDayLabel: "All day",
+            travelTimeLabel: "Travel time",
+            alertLabel: "Alert",
+            addAlertLabel: "Add alert",
+            openCalendarLabel: "Calendar",
+            cancelLabel: "Cancel",
+            saveLabel: "Save",
+            updateLabel: "Update",
+            removeLabel: "Remove",
+            deleteConfirmationTitle: "Remove appointment?",
+            deleteConfirmationMessage: "This action cannot be undone."
           ),
           todayButton: .init(
             title: "Today",
