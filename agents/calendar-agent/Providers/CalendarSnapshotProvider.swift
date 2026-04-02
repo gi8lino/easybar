@@ -140,9 +140,7 @@ final class CalendarSnapshotProvider {
       event.setValue(NSNumber(value: travelTimeSeconds), forKey: "travelTime")
     }
 
-    if let alertOffsetSeconds = draft.alertOffsetSeconds {
-      event.alarms = [EKAlarm(relativeOffset: -abs(alertOffsetSeconds))]
-    }
+    event.alarms = draft.alertOffsetsSeconds.map { EKAlarm(relativeOffset: -abs($0)) }
 
     try eventStore.save(event, span: .thisEvent, commit: true)
 
@@ -195,10 +193,10 @@ final class CalendarSnapshotProvider {
       event.setValue(Optional<NSNumber>.none, forKey: "travelTime")
     }
 
-    if let alertOffsetSeconds = draft.alertOffsetSeconds {
-      event.alarms = [EKAlarm(relativeOffset: -abs(alertOffsetSeconds))]
-    } else {
+    if draft.alertOffsetsSeconds.isEmpty {
       event.alarms = nil
+    } else {
+      event.alarms = draft.alertOffsetsSeconds.map { EKAlarm(relativeOffset: -abs($0)) }
     }
 
     try eventStore.save(event, span: .thisEvent, commit: true)
@@ -380,6 +378,7 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          alertOffsetsSeconds: visibleAlertOffsetsSeconds(for: event),
           isHoliday: isHolidayCalendar(event.calendar),
           hasAlert: hasVisibleAlert(for: event),
           travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
@@ -427,6 +426,7 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          alertOffsetsSeconds: visibleAlertOffsetsSeconds(for: event),
           isHoliday: isHolidayCalendar(event.calendar),
           hasAlert: hasVisibleAlert(for: event),
           travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
@@ -547,18 +547,24 @@ extension CalendarSnapshotProvider {
 
   /// Returns whether the event has at least one visible non-travel alert.
   private func hasVisibleAlert(for event: EKEvent) -> Bool {
-    guard let alarms = event.alarms, !alarms.isEmpty else { return false }
+    !visibleAlertOffsetsSeconds(for: event).isEmpty
+  }
+
+  /// Returns visible non-travel alert lead times.
+  private func visibleAlertOffsetsSeconds(for event: EKEvent) -> [TimeInterval] {
+    guard let alarms = event.alarms, !alarms.isEmpty else { return [] }
 
     let travelTimeSeconds = directTravelTimeSeconds(for: event)
-    return alarms.contains { alarm in
+    return alarms.compactMap { alarm in
       let offset = alarm.relativeOffset
-      guard offset < 0 else { return false }
+      guard offset <= 0 else { return nil }
+      let seconds = abs(offset)
 
       if let travelTimeSeconds {
-        return abs(offset) != travelTimeSeconds
+        guard seconds != travelTimeSeconds else { return nil }
       }
 
-      return true
+      return seconds
     }
   }
 

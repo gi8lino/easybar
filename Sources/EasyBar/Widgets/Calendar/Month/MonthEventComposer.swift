@@ -15,6 +15,16 @@ final class MonthCalendarEventComposer: ObservableObject {
     }
   }
 
+  struct AlertRow: Identifiable, Equatable {
+    let id: UUID
+    var option: AlertOption
+
+    init(id: UUID = UUID(), option: AlertOption) {
+      self.id = id
+      self.option = option
+    }
+  }
+
   enum Mode {
     case create
     case edit(eventIdentifier: String)
@@ -154,7 +164,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   @Published var isAllDay = false
   @Published var selectedCalendarID = ""
   @Published var location = ""
-  @Published var alert: AlertOption = .tenMinutes
+  @Published var alertRows: [AlertRow] = [.init(option: .tenMinutes)]
   @Published var travelTime: TravelTimeOption = .none
 
   @Published var errorMessage: String?
@@ -249,6 +259,7 @@ final class MonthCalendarEventComposer: ObservableObject {
     endTime = event.endDate
     isAllDay = event.isAllDay
     location = event.location ?? ""
+    alertRows = resolvedAlertRows(from: event.alertOffsetsSeconds)
     travelTime = resolvedTravelTimeOption(from: event.travelTimeSeconds)
     preferredCalendarName = normalizedOptionalText(event.calendarName)
 
@@ -267,7 +278,7 @@ final class MonthCalendarEventComposer: ObservableObject {
     endTime = defaultEndTime(on: normalizedDate)
     isAllDay = false
     location = ""
-    alert = resolvedDefaultAlert()
+    alertRows = resolvedDefaultAlertRows()
     travelTime = resolvedDefaultTravelTime()
     errorMessage = nil
     infoMessage = nil
@@ -311,7 +322,7 @@ final class MonthCalendarEventComposer: ObservableObject {
         isAllDay: isAllDay,
         calendarName: selectedCalendar.title,
         location: normalizedOptionalText(location),
-        alertOffsetSeconds: alert.leadTimeSeconds,
+        alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
         travelTimeSeconds: travelTime.seconds
       )
 
@@ -334,7 +345,7 @@ final class MonthCalendarEventComposer: ObservableObject {
         isAllDay: isAllDay,
         calendarName: selectedCalendar.title,
         location: normalizedOptionalText(location),
-        alertOffsetSeconds: alert.leadTimeSeconds,
+        alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
         travelTimeSeconds: travelTime.seconds
       )
 
@@ -453,6 +464,42 @@ extension MonthCalendarEventComposer {
     AlertOption(rawValue: popupConfig.composerDefaultAlert) ?? .tenMinutes
   }
 
+  /// Returns the configured default alert rows.
+  private func resolvedDefaultAlertRows() -> [AlertRow] {
+    let option = resolvedDefaultAlert()
+    return option == .none ? [] : [.init(option: option)]
+  }
+
+  /// Resolves alert rows from saved lead times.
+  private func resolvedAlertRows(from offsetsSeconds: [TimeInterval]) -> [AlertRow] {
+    let resolved = offsetsSeconds.compactMap(resolvedAlertOption(from:)).map {
+      AlertRow(option: $0)
+    }
+    return resolved.isEmpty ? [] : resolved
+  }
+
+  /// Resolves one alert option from one saved lead time.
+  private func resolvedAlertOption(from seconds: TimeInterval) -> AlertOption? {
+    switch Int(seconds.rounded()) {
+    case 0:
+      return .atTime
+    case 300:
+      return .fiveMinutes
+    case 600:
+      return .tenMinutes
+    case 900:
+      return .fifteenMinutes
+    case 1800:
+      return .thirtyMinutes
+    case 3600:
+      return .oneHour
+    case 86_400:
+      return .oneDay
+    default:
+      return nil
+    }
+  }
+
   /// Returns the configured default travel-time option.
   private func resolvedDefaultTravelTime() -> TravelTimeOption {
     TravelTimeOption(rawValue: popupConfig.composerDefaultTravelTime) ?? .none
@@ -484,6 +531,11 @@ extension MonthCalendarEventComposer {
     default:
       return .none
     }
+  }
+
+  /// Returns the current alert lead times in seconds.
+  private func resolvedAlertOffsetsSeconds() -> [TimeInterval] {
+    alertRows.compactMap(\.option.leadTimeSeconds)
   }
 }
 
@@ -582,5 +634,21 @@ extension MonthCalendarEventComposer {
   private func clearMessages() {
     errorMessage = nil
     infoMessage = nil
+  }
+
+  /// Adds one new alert row to the composer.
+  func addAlert() {
+    alertRows.append(.init(option: resolvedDefaultAlert()))
+  }
+
+  /// Removes one alert row from the composer.
+  func removeAlert(id: UUID) {
+    alertRows.removeAll { $0.id == id }
+  }
+
+  /// Updates one alert row selection.
+  func setAlert(_ option: AlertOption, id: UUID) {
+    guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
+    alertRows[index].option = option
   }
 }

@@ -18,7 +18,7 @@ struct MonthCalendarEventComposerView: View {
       messageView
       detailsSectionView
       scheduleSectionView
-      preferencesSectionView
+      alertsSectionView
       footerView
     }
     .frame(width: 388, alignment: .leading)
@@ -149,20 +149,51 @@ extension MonthCalendarEventComposerView {
   private var scheduleSectionView: some View {
     sectionContainer {
       VStack(alignment: .leading, spacing: 10) {
+        allDayRowView
+
         scheduleRowView(
           label: config.composerStartLabel,
           date: $composer.startDate,
           time: $composer.startTime,
-          showsAllDayToggle: true
+          showsTimePicker: !composer.isAllDay
         )
 
         scheduleRowView(
           label: config.composerEndLabel,
           date: $composer.endDate,
           time: $composer.endTime,
-          showsAllDayToggle: false
+          showsTimePicker: !composer.isAllDay
         )
+
+        VStack(alignment: .leading, spacing: 4) {
+          fieldLabel("Travel time")
+
+          alignedFieldRow {
+            Picker("", selection: $composer.travelTime) {
+              ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
+                Text(option.title).tag(option)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(width: menuFieldWidth, alignment: .leading)
+          }
+        }
       }
+    }
+  }
+
+  /// Builds the all-day toggle row.
+  private var allDayRowView: some View {
+    HStack(alignment: .center, spacing: fieldSpacing) {
+      fieldLabel(config.composerAllDayLabel)
+        .frame(width: fieldLabelWidth, alignment: .leading)
+
+      Toggle("", isOn: $composer.isAllDay)
+        .toggleStyle(.checkbox)
+        .labelsHidden()
+
+      Spacer(minLength: 0)
     }
   }
 
@@ -171,13 +202,13 @@ extension MonthCalendarEventComposerView {
     label: String,
     date: Binding<Date>,
     time: Binding<Date>,
-    showsAllDayToggle: Bool
+    showsTimePicker: Bool
   ) -> some View {
-    HStack(alignment: .center, spacing: 8) {
+    HStack(alignment: .center, spacing: fieldSpacing) {
       Text(label)
         .font(.system(size: 12, weight: .medium))
         .foregroundStyle(color(config.secondaryTextColorHex))
-        .frame(width: 40, alignment: .leading)
+        .frame(width: fieldLabelWidth, alignment: .leading)
 
       DatePicker(
         "",
@@ -185,65 +216,66 @@ extension MonthCalendarEventComposerView {
         displayedComponents: .date
       )
       .labelsHidden()
-      .frame(width: 136, alignment: .leading)
+      .frame(width: dateFieldWidth, alignment: .leading)
 
       Group {
-        if composer.isAllDay {
-          Color.clear
-        } else {
+        if showsTimePicker {
           DatePicker(
             "",
             selection: time,
             displayedComponents: .hourAndMinute
           )
           .labelsHidden()
-        }
-      }
-      .frame(width: 78, alignment: .leading)
-
-      Group {
-        if showsAllDayToggle {
-          Toggle(config.composerAllDayLabel, isOn: $composer.isAllDay)
-            .toggleStyle(.checkbox)
-            .foregroundStyle(color(config.eventTextColorHex))
-            .fixedSize(horizontal: true, vertical: false)
         } else {
           Color.clear
         }
       }
-      .frame(width: 66, alignment: .leading)
+      .frame(width: timeFieldWidth, alignment: .leading)
     }
   }
 
-  /// Builds the preferences section.
-  private var preferencesSectionView: some View {
+  /// Builds the alerts section.
+  private var alertsSectionView: some View {
     sectionContainer {
-      VStack(alignment: .leading, spacing: 10) {
-        VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Alert")
+      VStack(alignment: .leading, spacing: 8) {
+        fieldLabel("Alert")
 
-          Picker("", selection: $composer.alert) {
-            ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
-              Text(option.title).tag(option)
+        ForEach(composer.alertRows) { row in
+          HStack(alignment: .center, spacing: 8) {
+            Picker(
+              "",
+              selection: Binding(
+                get: { row.option },
+                set: { composer.setAlert($0, id: row.id) }
+              )
+            ) {
+              ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
+                Text(option.title).tag(option)
+              }
             }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(width: 170, alignment: .leading)
+
+            Button {
+              composer.removeAlert(id: row.id)
+            } label: {
+              Image(systemName: "minus.circle.fill")
+                .font(.system(size: 14, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.white.opacity(0.75))
           }
-          .labelsHidden()
-          .pickerStyle(.menu)
-          .frame(width: 170, alignment: .leading)
         }
 
-        VStack(alignment: .leading, spacing: 4) {
-          fieldLabel("Travel time")
-
-          Picker("", selection: $composer.travelTime) {
-            ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
-              Text(option.title).tag(option)
-            }
-          }
-          .labelsHidden()
-          .pickerStyle(.menu)
-          .frame(width: 170, alignment: .leading)
+        Button {
+          composer.addAlert()
+        } label: {
+          Label("Add alert", systemImage: "plus")
+            .font(.system(size: 12, weight: .medium))
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(color(config.secondaryTextColorHex))
       }
     }
   }
@@ -321,6 +353,35 @@ extension MonthCalendarEventComposerView {
       .font(.system(size: 12, weight: .medium))
       .foregroundStyle(color(config.secondaryTextColorHex))
   }
+
+  /// Aligns one schedule field below the date rows.
+  private func alignedFieldRow<Content: View>(
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    HStack(alignment: .center, spacing: fieldSpacing) {
+      Color.clear
+        .frame(width: fieldLabelWidth, alignment: .leading)
+
+      content()
+
+      Spacer(minLength: 0)
+    }
+  }
+
+  /// Returns the shared label width used in the schedule section.
+  private var fieldLabelWidth: CGFloat { 82 }
+
+  /// Returns the shared spacing between schedule columns.
+  private var fieldSpacing: CGFloat { 4 }
+
+  /// Returns the date picker width used in schedule rows.
+  private var dateFieldWidth: CGFloat { 142 }
+
+  /// Returns the time picker width used in schedule rows.
+  private var timeFieldWidth: CGFloat { 72 }
+
+  /// Returns the menu width used by aligned schedule rows.
+  private var menuFieldWidth: CGFloat { 170 }
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {

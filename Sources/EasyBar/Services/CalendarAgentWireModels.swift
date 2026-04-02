@@ -47,7 +47,7 @@ public struct CalendarAgentCreateEventEnvelope: Codable, Equatable {
   public let isAllDay: Bool
   public let calendarName: String?
   public let location: String?
-  public let alertOffsetSeconds: TimeInterval?
+  public let alertOffsetsSeconds: [TimeInterval]
   public let travelTimeSeconds: TimeInterval?
 
   public init(
@@ -57,7 +57,7 @@ public struct CalendarAgentCreateEventEnvelope: Codable, Equatable {
     isAllDay: Bool,
     calendarName: String?,
     location: String?,
-    alertOffsetSeconds: TimeInterval?,
+    alertOffsetsSeconds: [TimeInterval] = [],
     travelTimeSeconds: TimeInterval?
   ) {
     self.title = title
@@ -66,7 +66,7 @@ public struct CalendarAgentCreateEventEnvelope: Codable, Equatable {
     self.isAllDay = isAllDay
     self.calendarName = calendarName
     self.location = location
-    self.alertOffsetSeconds = alertOffsetSeconds
+    self.alertOffsetsSeconds = alertOffsetsSeconds
     self.travelTimeSeconds = travelTimeSeconds
   }
 }
@@ -79,7 +79,7 @@ public struct CalendarAgentUpdateEventEnvelope: Codable, Equatable {
   public let isAllDay: Bool
   public let calendarName: String?
   public let location: String?
-  public let alertOffsetSeconds: TimeInterval?
+  public let alertOffsetsSeconds: [TimeInterval]
   public let travelTimeSeconds: TimeInterval?
 
   public init(
@@ -90,7 +90,7 @@ public struct CalendarAgentUpdateEventEnvelope: Codable, Equatable {
     isAllDay: Bool,
     calendarName: String?,
     location: String?,
-    alertOffsetSeconds: TimeInterval?,
+    alertOffsetsSeconds: [TimeInterval] = [],
     travelTimeSeconds: TimeInterval?
   ) {
     self.eventIdentifier = eventIdentifier
@@ -100,7 +100,7 @@ public struct CalendarAgentUpdateEventEnvelope: Codable, Equatable {
     self.isAllDay = isAllDay
     self.calendarName = calendarName
     self.location = location
-    self.alertOffsetSeconds = alertOffsetSeconds
+    self.alertOffsetsSeconds = alertOffsetsSeconds
     self.travelTimeSeconds = travelTimeSeconds
   }
 }
@@ -122,6 +122,7 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
   public let calendarName: String?
   public let calendarColorHex: String?
   public let location: String?
+  public let alertOffsetsSeconds: [TimeInterval]
   public let isHoliday: Bool
   public let hasAlert: Bool
   public let travelTimeSeconds: TimeInterval?
@@ -135,6 +136,7 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
     calendarName: String?,
     calendarColorHex: String?,
     location: String?,
+    alertOffsetsSeconds: [TimeInterval] = [],
     isHoliday: Bool = false,
     hasAlert: Bool = false,
     travelTimeSeconds: TimeInterval?
@@ -147,6 +149,7 @@ public struct CalendarAgentEvent: Codable, Equatable, Identifiable {
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location
+    self.alertOffsetsSeconds = alertOffsetsSeconds
     self.isHoliday = isHoliday
     self.hasAlert = hasAlert
     self.travelTimeSeconds = travelTimeSeconds
