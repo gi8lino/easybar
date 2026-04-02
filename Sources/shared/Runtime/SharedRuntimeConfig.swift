@@ -111,7 +111,7 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
 
   let easyBarSocketPath =
     expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
-    ?? "/tmp/EasyBar/easybar.sock"
+    ?? defaultSocketPath()
 
   let calendarAgentEnabled = calendarTable?["enabled"]?.bool ?? true
   let calendarAgentSocketPath =
