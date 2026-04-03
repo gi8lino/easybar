@@ -1,6 +1,6 @@
 import Foundation
 
-/// Shared support-file locations used by EasyBar for editor-facing assets.
+/// Shared support-path locations used by EasyBar for editor-facing assets.
 
 /// Returns the shared support directory used by EasyBar for editor-facing assets.
 public func defaultSupportDirectoryPath() -> URL {
