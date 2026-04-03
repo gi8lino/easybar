@@ -1,3 +1,4 @@
+import AppKit
 import CoreLocation
 import EasyBarShared
 import Foundation
@@ -8,6 +9,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
   private let retryBackoff = AuthorizationRetryBackoff(debugLog: AgentLogger.debug)
 
   private var onChange: (() -> Void)?
+  private var presentedAuthorizationPrompt = false
 
   /// Starts tracking and requesting location authorization when needed.
   func start(onChange: @escaping () -> Void) {
@@ -27,6 +29,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
   /// Stops authorization callbacks.
   func stop() {
     retryBackoff.reset()
+    restoreAccessoryModeIfNeeded()
     locationManager.delegate = nil
     onChange = nil
   }
@@ -66,20 +69,24 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
       retryBackoff.reset()
+      restoreAccessoryModeIfNeeded()
       AgentLogger.info("network agent access already granted")
       onChange?()
 
     case .notDetermined:
+      prepareAuthorizationPromptIfNeeded()
       AgentLogger.info("requesting network when-in-use access")
       locationManager.requestWhenInUseAuthorization()
       scheduleRetry()
 
     case .denied, .restricted:
       retryBackoff.reset()
+      restoreAccessoryModeIfNeeded()
       AgentLogger.warn("network agent access unavailable status=\(authState.permissionState())")
 
     @unknown default:
       retryBackoff.reset()
+      restoreAccessoryModeIfNeeded()
       AgentLogger.warn("network agent access status unknown raw=\(status.rawValue)")
     }
   }
@@ -89,6 +96,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse, .denied, .restricted:
       retryBackoff.reset()
+      restoreAccessoryModeIfNeeded()
 
     case .notDetermined:
       scheduleRetry()
@@ -103,5 +111,24 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
     retryBackoff.schedule { [weak self] in
       self?.requestAccessIfNeeded()
     }
+  }
+
+  /// Temporarily promotes the helper app so macOS can surface the permission prompt.
+  private func prepareAuthorizationPromptIfNeeded() {
+    guard !presentedAuthorizationPrompt else { return }
+    presentedAuthorizationPrompt = true
+
+    let changed = NSApp.setActivationPolicy(.regular)
+    AgentLogger.info("network agent promoted for authorization prompt changed=\(changed)")
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  /// Restores accessory mode after the location permission state resolves.
+  private func restoreAccessoryModeIfNeeded() {
+    guard presentedAuthorizationPrompt else { return }
+    presentedAuthorizationPrompt = false
+
+    let changed = NSApp.setActivationPolicy(.accessory)
+    AgentLogger.info("network agent restored accessory mode changed=\(changed)")
   }
 }
