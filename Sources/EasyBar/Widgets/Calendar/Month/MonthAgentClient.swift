@@ -62,9 +62,11 @@ final class MonthCalendarAgentClient {
 
   /// Refreshes the active month subscription if the preload window changed.
   func refreshMonthSubscriptionIfNeeded(for visibleMonth: Date, radius: Int) {
+    let calendar = resolvedCalendar()
     let changed = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(
       for: visibleMonth,
-      radius: radius
+      radius: radius,
+      calendar: calendar
     )
     guard changed else { return }
 
@@ -198,24 +200,57 @@ final class MonthCalendarAgentClient {
 
   /// Returns the default month preload range around the given reference date.
   private func defaultRequestedDateRange(referenceDate: Date) -> DateInterval {
-    let calendar = Calendar.current
+    let calendar = resolvedCalendar()
 
     let currentMonthStart =
       calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate))
       ?? calendar.startOfDay(for: referenceDate)
 
-    let start = currentMonthStart
-
-    let end =
-      calendar.date(byAdding: .month, value: 1, to: currentMonthStart)
-      ?? referenceDate.addingTimeInterval(31 * 86_400)
-
-    return DateInterval(start: start, end: end)
+    return visibleGridRange(for: currentMonthStart, calendar: calendar)
+      ?? DateInterval(
+        start: currentMonthStart,
+        end:
+          calendar.date(byAdding: .month, value: 1, to: currentMonthStart)
+          ?? referenceDate.addingTimeInterval(31 * 86_400)
+      )
   }
 
   /// Cancels any pending staged month expansion.
   private func cancelStagedPreload() {
     preloadWorkItems.forEach { $0.cancel() }
     preloadWorkItems.removeAll()
+  }
+
+  /// Returns the calendar resolved for month-grid subscription ranges.
+  private func resolvedCalendar() -> Calendar {
+    var calendar = Calendar.current
+
+    if let firstWeekday = Config.shared.builtinCalendar.month.popup.firstWeekday {
+      calendar.firstWeekday = firstWeekday
+    }
+
+    return calendar
+  }
+
+  /// Returns the exact displayed grid range for one visible month.
+  private func visibleGridRange(for visibleMonth: Date, calendar: Calendar) -> DateInterval? {
+    let monthStart =
+      calendar.date(from: calendar.dateComponents([.year, .month], from: visibleMonth))
+      ?? calendar.startOfDay(for: visibleMonth)
+
+    guard
+      let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart),
+      let monthInterval = calendar.dateInterval(of: .month, for: monthStart),
+      let firstWeek = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
+      let lastVisibleDay = calendar.date(byAdding: .day, value: -1, to: monthEnd),
+      let lastWeek = calendar.dateInterval(of: .weekOfYear, for: lastVisibleDay)
+    else {
+      return nil
+    }
+
+    return DateInterval(
+      start: calendar.startOfDay(for: firstWeek.start),
+      end: calendar.startOfDay(for: lastWeek.end)
+    )
   }
 }

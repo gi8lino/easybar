@@ -58,14 +58,9 @@ extension NativeMonthCalendarPopupView {
     260
   }
 
-  /// Returns the fixed height used by the calendar pane in vertical layouts.
-  var verticalCalendarHeight: CGFloat {
-    238
-  }
-
   /// Builds the full calendar section with grid and today helper.
   var calendarSectionView: some View {
-    VStack(alignment: .leading, spacing: 1) {
+    VStack(alignment: .leading, spacing: 8) {
       calendarContainerView
       todayContainerView
     }
@@ -78,6 +73,7 @@ extension NativeMonthCalendarPopupView {
         headerView
         weekdayHeaderView
         monthGridView
+          .frame(height: monthGridContainerHeight, alignment: .topLeading)
       }
 
       if isYearPickerPresented {
@@ -106,8 +102,6 @@ extension NativeMonthCalendarPopupView {
     .frame(
       minWidth: calendarContainerWidth,
       maxWidth: calendarContainerWidth,
-      minHeight: isVerticalLayout ? verticalCalendarHeight : nil,
-      maxHeight: isVerticalLayout ? verticalCalendarHeight : nil,
       alignment: .topLeading
     )
   }
@@ -137,6 +131,7 @@ extension NativeMonthCalendarPopupView {
 
       Spacer()
     }
+    .frame(height: todayContainerHeight, alignment: .leading)
     .frame(width: calendarContainerWidth, alignment: .leading)
   }
 
@@ -175,6 +170,16 @@ extension NativeMonthCalendarPopupView {
   /// Returns the maximum height of the appointments area.
   var appointmentsMaxHeight: CGFloat {
     CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
+  }
+
+  /// Returns the fixed height reserved for the month grid.
+  var monthGridContainerHeight: CGFloat {
+    (30 * 6) + (6 * 5)
+  }
+
+  /// Returns the fixed height reserved for the standalone today row.
+  var todayContainerHeight: CGFloat {
+    28
   }
 }
 

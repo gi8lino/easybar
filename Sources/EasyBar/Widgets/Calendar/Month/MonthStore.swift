@@ -8,8 +8,6 @@ final class NativeMonthCalendarStore: ObservableObject {
   @Published private(set) var sections: [NativeMonthCalendarPopupSection] = []
   @Published private(set) var events: [NativeMonthCalendarEvent] = []
 
-  private let calendar = Calendar.current
-
   private var subscribedMonthRangeStart: Date?
   private var subscribedMonthRangeEnd: Date?
   private var focusedVisibleMonth: Date?
@@ -37,6 +35,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   /// free of debug logging to avoid noisy output and unnecessary overhead while
   /// typing or hovering in the popup.
   func eventsForDay(_ date: Date) -> [NativeMonthCalendarEvent] {
+    let calendar = Calendar.current
     let startOfDay = calendar.startOfDay(for: date)
 
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
@@ -53,6 +52,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   /// This method is also used from view updates, so it intentionally avoids
   /// debug logging for the same reason as `eventsForDay(_:)`.
   func eventsInRange(from startDate: Date, to endDate: Date) -> [NativeMonthCalendarEvent] {
+    let calendar = Calendar.current
     let startOfRange = calendar.startOfDay(for: startDate)
     let endDayStart = calendar.startOfDay(for: endDate)
 
@@ -75,42 +75,51 @@ final class NativeMonthCalendarStore: ObservableObject {
   /// Radius `0` means the visible month only, `1` adds previous and next month,
   /// and larger values expand outward symmetrically. Returns true when the
   /// active preload range changed.
-  func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int) -> Bool {
-    let startOfVisibleMonth = startOfMonth(visibleMonth)
+  func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar) -> Bool {
+    let startOfVisibleMonth = startOfMonth(visibleMonth, calendar: calendar)
     let normalizedRadius = max(radius, 0)
 
-    guard
-      let start = calendar.date(
-        byAdding: .month,
-        value: -normalizedRadius,
-        to: startOfVisibleMonth
-      ),
-      let afterEndMonth = calendar.date(
-        byAdding: .month,
-        value: normalizedRadius + 1,
-        to: startOfVisibleMonth
-      )
-    else {
-      return false
+    let preparedRange: DateInterval?
+
+    if normalizedRadius == 0 {
+      preparedRange = visibleGridRange(for: startOfVisibleMonth, calendar: calendar)
+    } else {
+      guard
+        let start = calendar.date(
+          byAdding: .month,
+          value: -normalizedRadius,
+          to: startOfVisibleMonth
+        ),
+        let afterEndMonth = calendar.date(
+          byAdding: .month,
+          value: normalizedRadius + 1,
+          to: startOfVisibleMonth
+        )
+      else {
+        return false
+      }
+
+      let normalizedStart = calendar.startOfDay(for: start)
+      let normalizedEnd = calendar.startOfDay(for: afterEndMonth)
+      preparedRange = DateInterval(start: normalizedStart, end: normalizedEnd)
     }
 
-    let normalizedStart = calendar.startOfDay(for: start)
-    let normalizedEnd = calendar.startOfDay(for: afterEndMonth)
+    guard let preparedRange else { return false }
 
     let changed =
-      subscribedMonthRangeStart != normalizedStart
-      || subscribedMonthRangeEnd != normalizedEnd
+      subscribedMonthRangeStart != preparedRange.start
+      || subscribedMonthRangeEnd != preparedRange.end
       || focusedVisibleMonth != startOfVisibleMonth
       || subscribedMonthRadius != normalizedRadius
 
     if changed {
-      subscribedMonthRangeStart = normalizedStart
-      subscribedMonthRangeEnd = normalizedEnd
+      subscribedMonthRangeStart = preparedRange.start
+      subscribedMonthRangeEnd = preparedRange.end
       focusedVisibleMonth = startOfVisibleMonth
       subscribedMonthRadius = normalizedRadius
 
       Logger.debug(
-        "month calendar store prepared subscription range month=\(debugDate(startOfVisibleMonth)) radius=\(normalizedRadius) start=\(debugDate(normalizedStart)) end=\(debugDate(normalizedEnd))"
+        "month calendar store prepared subscription range month=\(debugDate(startOfVisibleMonth)) radius=\(normalizedRadius) start=\(debugDate(preparedRange.start)) end=\(debugDate(preparedRange.end))"
       )
     }
 
@@ -137,9 +146,29 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns the first day of one month.
-  private func startOfMonth(_ date: Date) -> Date {
+  private func startOfMonth(_ date: Date, calendar: Calendar) -> Date {
     let components = calendar.dateComponents([.year, .month], from: date)
     return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+  }
+
+  /// Returns the exact displayed grid range for one visible month.
+  private func visibleGridRange(for visibleMonth: Date, calendar: Calendar) -> DateInterval? {
+    let monthStart = startOfMonth(visibleMonth, calendar: calendar)
+
+    guard
+      let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart),
+      let monthInterval = calendar.dateInterval(of: .month, for: monthStart),
+      let firstWeek = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
+      let lastVisibleDay = calendar.date(byAdding: .day, value: -1, to: monthEnd),
+      let lastWeek = calendar.dateInterval(of: .weekOfYear, for: lastVisibleDay)
+    else {
+      return nil
+    }
+
+    return DateInterval(
+      start: calendar.startOfDay(for: firstWeek.start),
+      end: calendar.startOfDay(for: lastWeek.end)
+    )
   }
 
   /// Formats one debug date string.
