@@ -10,7 +10,7 @@ let package = Package(
   products: [
     .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
     .executable(name: "EasyBar", targets: ["EasyBar"]),
-    .executable(name: "easybarctl", targets: ["easybarctl"]),
+    .executable(name: "easybarctl", targets: ["EasyBarCtl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
     .executable(name: "EasyBarNetworkAgent", targets: ["EasyBarNetworkAgent"]),
   ],
@@ -23,7 +23,7 @@ let package = Package(
       dependencies: [
         .product(name: "TOMLKit", package: "TOMLKit")
       ],
-      path: "Sources/shared"
+      path: "Sources/EasyBarShared"
     ),
     .executableTarget(
       name: "EasyBar",
@@ -39,11 +39,11 @@ let package = Package(
       ]
     ),
     .executableTarget(
-      name: "easybarctl",
+      name: "EasyBarCtl",
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/easybarctl"
+      path: "Sources/EasyBarCtl"
     ),
     .executableTarget(
       name: "EasyBarCalendarAgent",

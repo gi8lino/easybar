@@ -50,7 +50,7 @@ PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
 PACKAGE_STAGE := $(DIST_DIR)/package
 
-BUILD_INFO := Sources/shared/Build/BuildInfo.swift
+BUILD_INFO := Sources/EasyBarShared/Build/BuildInfo.swift
 LUA_API_STUB := Sources/EasyBar/Lua/easybar_api.lua
 
 BUNDLE_ID ?= com.gi8lino.EasyBar
@@ -97,7 +97,7 @@ help: ## Display this help.
 
 all: build ## Build the default artifacts.
 
-prepare-version: ## Update Sources/shared/Build/BuildInfo.swift with the selected VERSION.
+prepare-version: ## Update Sources/EasyBarShared/Build/BuildInfo.swift with the selected VERSION.
 	@mkdir -p "$(dir $(BUILD_INFO))"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \
