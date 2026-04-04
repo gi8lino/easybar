@@ -25,9 +25,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     do {
       try client.startMonitoringEvent(with: .ssidDidChange)
       wifiClient = client
-      AgentLogger.info("network agent subscribed wifi_change")
+      networkAgentLog.info("network agent subscribed wifi_change")
     } catch {
-      AgentLogger.warn("failed to subscribe network agent Wi-Fi events: \(error)")
+      networkAgentLog.warn("failed to subscribe network agent Wi-Fi events: \(error)")
     }
   }
 
@@ -37,7 +37,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       do {
         try wifiClient.stopMonitoringAllEvents()
       } catch {
-        AgentLogger.warn("failed to stop Wi-Fi monitoring: \(error)")
+        networkAgentLog.warn("failed to stop Wi-Fi monitoring: \(error)")
       }
     }
 
@@ -96,7 +96,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
   /// Handles one Wi-Fi SSID change callback.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    AgentLogger.info("network agent Wi-Fi changed interface=\(interfaceName)")
+    networkAgentLog.info("network agent Wi-Fi changed interface=\(interfaceName)")
     onChange?()
   }
 
@@ -107,7 +107,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
     guard let rssi else {
       smoothedRSSI = nil
-      AgentLogger.debug("network RSSI unavailable")
+      networkAgentLog.debug("network RSSI unavailable")
       return nil
     }
 

@@ -6,7 +6,7 @@ import Foundation
 final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
   private let locationManager = CLLocationManager()
   private let authState = NetworkAgentAuthorizationState()
-  private let retryBackoff = AuthorizationRetryBackoff(debugLog: AgentLogger.debug)
+  private let retryBackoff = AuthorizationRetryBackoff(debugLog: networkAgentLog.debug)
 
   private var onChange: (() -> Void)?
   private var presentedAuthorizationPrompt = false
@@ -19,7 +19,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
 
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
-    AgentLogger.info(
+    networkAgentLog.info(
       "network agent authorization status before start=\(authState.permissionState())"
     )
 
@@ -52,7 +52,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
       guard let self else { return }
 
       self.authState.setStatus(status)
-      AgentLogger.info(
+      networkAgentLog.info(
         "network agent authorization changed status=\(self.authState.permissionState())"
       )
       self.handleAuthorizationStateChange(status)
@@ -64,30 +64,30 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
   private func requestAccessIfNeeded() {
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
-    AgentLogger.info("network agent access status=\(authState.permissionState())")
+    networkAgentLog.info("network agent access status=\(authState.permissionState())")
 
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      AgentLogger.info("network agent access already granted")
+      networkAgentLog.info("network agent access already granted")
       onChange?()
 
     case .notDetermined:
       prepareAuthorizationPromptIfNeeded()
-      AgentLogger.info("requesting network when-in-use access")
+      networkAgentLog.info("requesting network when-in-use access")
       locationManager.requestWhenInUseAuthorization()
       scheduleRetry()
 
     case .denied, .restricted:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      AgentLogger.warn("network agent access unavailable status=\(authState.permissionState())")
+      networkAgentLog.warn("network agent access unavailable status=\(authState.permissionState())")
 
     @unknown default:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      AgentLogger.warn("network agent access status unknown raw=\(status.rawValue)")
+      networkAgentLog.warn("network agent access status unknown raw=\(status.rawValue)")
     }
   }
 
@@ -119,7 +119,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
     presentedAuthorizationPrompt = true
 
     let changed = NSApp.setActivationPolicy(.regular)
-    AgentLogger.info("network agent promoted for authorization prompt changed=\(changed)")
+    networkAgentLog.info("network agent promoted for authorization prompt changed=\(changed)")
     NSApp.activate(ignoringOtherApps: true)
   }
 
@@ -129,6 +129,6 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
     presentedAuthorizationPrompt = false
 
     let changed = NSApp.setActivationPolicy(.accessory)
-    AgentLogger.info("network agent restored accessory mode changed=\(changed)")
+    networkAgentLog.info("network agent restored accessory mode changed=\(changed)")
   }
 }

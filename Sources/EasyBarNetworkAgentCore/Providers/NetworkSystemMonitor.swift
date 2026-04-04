@@ -40,14 +40,14 @@ final class NetworkSystemMonitor {
         &context
       )
     else {
-      AgentLogger.warn("failed to create network dynamic store")
+      networkAgentLog.warn("failed to create network dynamic store")
       return
     }
 
     SCDynamicStoreSetNotificationKeys(store, nil, Self.watchedNetworkPatterns as CFArray)
 
     guard let source = SCDynamicStoreCreateRunLoopSource(nil, store, 0) else {
-      AgentLogger.warn("failed to create network dynamic store source")
+      networkAgentLog.warn("failed to create network dynamic store source")
       return
     }
 
@@ -55,7 +55,7 @@ final class NetworkSystemMonitor {
     storeSource = source
 
     CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-    AgentLogger.info("network agent subscribed network_change")
+    networkAgentLog.info("network agent subscribed network_change")
   }
 
   /// Stops network monitoring.
@@ -171,7 +171,7 @@ final class NetworkSystemMonitor {
 
   /// Handles one dynamic store change callback.
   private func handleNetworkStoreChange() {
-    AgentLogger.info("network agent dynamic store changed")
+    networkAgentLog.info("network agent dynamic store changed")
     onChange?()
   }
 

@@ -18,10 +18,10 @@ final class NetworkSocketServer {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "network agent",
-      debugLog: AgentLogger.debug,
-      infoLog: AgentLogger.info,
-      warnLog: AgentLogger.warn,
-      errorLog: AgentLogger.error
+      debugLog: networkAgentLog.debug,
+      infoLog: networkAgentLog.info,
+      warnLog: networkAgentLog.warn,
+      errorLog: networkAgentLog.error
     )
   }
 
@@ -54,7 +54,7 @@ final class NetworkSocketServer {
 
   /// Handles one network agent client request.
   private func handleClient(_ clientFD: Int32, request: NetworkAgentRequest) {
-    AgentLogger.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
+    networkAgentLog.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
@@ -95,7 +95,7 @@ final class NetworkSocketServer {
 
       // Keep the client open so future network changes can be pushed.
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
-      AgentLogger.info("network agent subscriber added fd=\(clientFD)")
+      networkAgentLog.info("network agent subscriber added fd=\(clientFD)")
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)

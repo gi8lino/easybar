@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // private let startupLogger = ProcessLogger(label: "easybar-calendar-agent")
     guard instanceGuard.acquireLock(at: lockPath) else {
-      AgentLogger.warn("easybar-calendar-agent already running lock_path=\(lockPath)")
+      calendarAgentLog.warn("easybar-calendar-agent already running lock_path=\(lockPath)")
       NSApp.terminate(nil)
       return
     }

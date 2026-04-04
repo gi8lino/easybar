@@ -27,9 +27,13 @@ public final class NetworkAgentController {
   /// Starts logging, snapshot delivery, and the network socket server.
   @discardableResult
   public func start() -> Bool {
-    AgentLogger.configure(using: runtimeConfig)
+    networkAgentLog.configureRuntimeLogging(
+      debugEnabled: runtimeConfig.loggingDebugEnabled,
+      fileLoggingEnabled: runtimeConfig.loggingEnabled,
+      fileLoggingPath: networkAgentLogPath(in: runtimeConfig.loggingDirectory)
+    )
     guard isEnabled else {
-      AgentLogger.info("network agent disabled in config")
+      networkAgentLog.info("network agent disabled in config")
       return false
     }
 
@@ -58,10 +62,10 @@ public final class NetworkAgentController {
         socketSummary:
           "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(runtimeConfig.networkAgentAllowUnauthorizedNonSensitiveFields)",
         loggingSummary:
-          "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+          "logging enabled=\(networkAgentLog.fileLoggingEnabled) debug=\(networkAgentLog.debugEnabled) path=\(networkAgentLog.fileLoggingPath)"
       ),
-      write: AgentLogger.info
+      write: networkAgentLog.info
     )
-    AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
+    networkAgentLog.info("debug logging=\(networkAgentLog.debugEnabled)")
   }
 }

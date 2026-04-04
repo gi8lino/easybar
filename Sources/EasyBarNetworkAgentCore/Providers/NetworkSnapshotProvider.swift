@@ -31,7 +31,7 @@ public final class NetworkSnapshotProvider {
       self?.onChange?()
     }
 
-    AgentLogger.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
+    networkAgentLog.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
 
     if refreshIntervalSeconds > 0 {
       refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshIntervalSeconds, repeats: true) {
@@ -62,7 +62,7 @@ public final class NetworkSnapshotProvider {
     let wifi = wifiMonitor.currentState(now: now)
     let network = systemMonitor.currentState()
 
-    AgentLogger.debug(
+    networkAgentLog.debug(
       "network snapshot access_granted=\(authorizer.isAuthorized()) permission_state=\(permissionState) ssid=\(wifi.ssid ?? "<none>") interface=\(wifi.interfaceName ?? "<none>") rssi=\(wifi.rssi.map(String.init) ?? "<none>") primary_is_tunnel=\(network.primaryInterfaceIsTunnel)"
     )
 

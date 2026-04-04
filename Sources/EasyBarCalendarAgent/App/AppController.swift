@@ -21,9 +21,13 @@ final class AppController {
   /// Starts logging, snapshot delivery, and the calendar socket server.
   @discardableResult
   func start() -> Bool {
-    AgentLogger.configure(using: runtimeConfig)
+    calendarAgentLog.configureRuntimeLogging(
+      debugEnabled: runtimeConfig.loggingDebugEnabled,
+      fileLoggingEnabled: runtimeConfig.loggingEnabled,
+      fileLoggingPath: calendarAgentLogPath(in: runtimeConfig.loggingDirectory)
+    )
     guard isEnabled else {
-      AgentLogger.info("calendar agent disabled in config")
+      calendarAgentLog.info("calendar agent disabled in config")
       return false
     }
 
@@ -51,10 +55,10 @@ final class AppController {
         configPath: runtimeConfig.configPath,
         socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
         loggingSummary:
-          "logging enabled=\(AgentLogger.fileLoggingEnabled) debug=\(AgentLogger.debugEnabled) path=\(AgentLogger.fileLoggingPath)"
+          "logging enabled=\(calendarAgentLog.fileLoggingEnabled) debug=\(calendarAgentLog.debugEnabled) path=\(calendarAgentLog.fileLoggingPath)"
       ),
-      write: AgentLogger.info
+      write: calendarAgentLog.info
     )
-    AgentLogger.info("debug logging=\(AgentLogger.debugEnabled)")
+    calendarAgentLog.info("debug logging=\(calendarAgentLog.debugEnabled)")
   }
 }

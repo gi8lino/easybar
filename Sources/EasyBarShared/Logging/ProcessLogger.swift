@@ -10,17 +10,50 @@ public final class ProcessLogger {
   }()
 
   private let label: String
-  private let debugEnabledProvider: () -> Bool
   private let lock = NSLock()
   private var fileHandle: FileHandle?
+  private var debugEnabledFlag: Bool
+  private var fileLoggingEnabledFlag = false
+  private var fileLoggingPathValue = ""
 
-  public init(label: String, debugEnabled: @escaping () -> Bool = { false }) {
+  public init(label: String, debugEnabled: Bool = false) {
     self.label = label
-    debugEnabledProvider = debugEnabled
+    debugEnabledFlag = debugEnabled
   }
 
   public var debugEnabled: Bool {
-    debugEnabledProvider()
+    lock.lock()
+    defer { lock.unlock() }
+    return debugEnabledFlag
+  }
+
+  public var fileLoggingEnabled: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return fileLoggingEnabledFlag
+  }
+
+  public var fileLoggingPath: String {
+    lock.lock()
+    defer { lock.unlock() }
+    return fileLoggingPathValue
+  }
+
+  /// Updates the current debug logging flag.
+  public func setDebugEnabled(_ enabled: Bool) {
+    lock.lock()
+    debugEnabledFlag = enabled
+    lock.unlock()
+  }
+
+  /// Configures debug and optional file logging in one step.
+  public func configureRuntimeLogging(
+    debugEnabled: Bool,
+    fileLoggingEnabled: Bool,
+    fileLoggingPath: String
+  ) {
+    setDebugEnabled(debugEnabled)
+    configureFileLogging(enabled: fileLoggingEnabled, path: fileLoggingPath)
   }
 
   /// Configures optional mirroring of log lines into one file.
@@ -30,6 +63,8 @@ public final class ProcessLogger {
 
     fileHandle?.closeFile()
     fileHandle = nil
+    fileLoggingEnabledFlag = enabled
+    fileLoggingPathValue = path
 
     guard enabled, !path.isEmpty else { return }
 

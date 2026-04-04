@@ -70,10 +70,8 @@ private struct AppContext {
   private let encoder = JSONEncoder()
 
   init(debugEnabled: Bool) {
-    logger = ProcessLogger(label: "easybarctl") {
-      let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
-      return debugEnabled || envEnabled
-    }
+    let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
+    logger = ProcessLogger(label: "easybarctl", debugEnabled: debugEnabled || envEnabled)
   }
 
   /// Writes one debug line when CLI debug logging is enabled.
