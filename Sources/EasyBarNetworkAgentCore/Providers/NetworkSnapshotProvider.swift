@@ -1,7 +1,7 @@
 import EasyBarShared
 import Foundation
 
-final class NetworkSnapshotProvider {
+public final class NetworkSnapshotProvider {
   private let authorizer = NetworkLocationAuthorizer()
   private let wifiMonitor = NetworkWiFiMonitor()
   private let systemMonitor = NetworkSystemMonitor()
@@ -11,12 +11,12 @@ final class NetworkSnapshotProvider {
   private var refreshTimer: Timer?
 
   /// Builds the network snapshot provider with one refresh interval.
-  init(refreshIntervalSeconds: TimeInterval) {
+  public init(refreshIntervalSeconds: TimeInterval) {
     self.refreshIntervalSeconds = refreshIntervalSeconds
   }
 
   /// Starts permission, Wi-Fi, and network monitoring.
-  func start(onChange: @escaping () -> Void) {
+  public func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
     authorizer.start { [weak self] in
@@ -44,7 +44,7 @@ final class NetworkSnapshotProvider {
   }
 
   /// Stops timers and all active monitoring.
-  func stop() {
+  public func stop() {
     refreshTimer?.invalidate()
     refreshTimer = nil
 
@@ -56,7 +56,7 @@ final class NetworkSnapshotProvider {
   }
 
   /// Builds one network snapshot from current system state.
-  func snapshot() -> NetworkAgentSnapshot {
+  public func snapshot() -> NetworkAgentSnapshot {
     let now = Date()
     let permissionState = authorizer.permissionState()
     let wifi = wifiMonitor.currentState(now: now)
@@ -78,7 +78,7 @@ final class NetworkSnapshotProvider {
   }
 
   /// Returns the requested field values, applying the current privacy policy.
-  func responseFields(
+  public func responseFields(
     for fields: [NetworkAgentField],
     allowUnauthorizedNonSensitiveFields: Bool
   ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
