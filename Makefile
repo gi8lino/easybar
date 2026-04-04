@@ -7,7 +7,7 @@ CALENDAR_AGENT_EXEC := EasyBarCalendarAgent
 NETWORK_AGENT_NAME := EasyBarNetworkAgent
 NETWORK_AGENT_PRODUCT := EasyBarNetworkAgent
 NETWORK_AGENT_EXEC := EasyBarNetworkAgent
-CLI_PRODUCT := easybarctl
+CLI_PRODUCT := easybar
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_PRODUCT).bundle
 
 DIST_DIR := dist
@@ -142,8 +142,8 @@ package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
 	@cp -R "$(CALENDAR_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarCalendarAgent.app"
 	@cp -R "$(NETWORK_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarNetworkAgent.app"
-	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybarctl"
-	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent.app" "EasyBarNetworkAgent.app" "easybarctl"
+	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybar"
+	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent.app" "EasyBarNetworkAgent.app" "easybar"
 	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 

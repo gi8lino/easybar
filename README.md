@@ -40,13 +40,13 @@ brew tap gi8lino/tap
 
 Install EasyBar:
 
-```bash
+```bash id="2oiult"
 brew install gi8lino/tap/easybar
 ```
 
 This also installs the calendar and network helper agents. Start all services:
 
-```bash
+```bash id="611h1k"
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
@@ -63,11 +63,11 @@ brew services start gi8lino/tap/easybar
 
 If macOS blocks the app or CLI with a Gatekeeper or malware verification warning, remove quarantine and start it again:
 
-```bash
+```bash id="lsfxtz"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
-xattr -d com.apple.quarantine "$(command -v easybarctl)"
+xattr -d com.apple.quarantine "$(command -v easybar)"
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
@@ -86,7 +86,7 @@ This keeps permission-sensitive APIs out of the main UI process and makes those 
 
 Both agents are enabled by default and can be turned off independently in `config.toml` with:
 
-```toml
+```toml id="qasjvt"
 [agents.calendar]
 enabled = true
 
@@ -96,7 +96,7 @@ enabled = true
 
 For the network agent, you can also decide what happens when location permission is denied:
 
-```toml
+```toml id="u3prg6"
 [agents.network]
 allow_unauthorized_non_sensitive_fields = false
 ```
@@ -107,11 +107,11 @@ More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
 ## Control socket
 
-EasyBar exposes one local Unix control socket for `easybarctl` and other clients.
+EasyBar exposes one local Unix control socket for `easybar` and other clients.
 
 Commands are sent as typed JSON requests, not raw strings:
 
-```json
+```json id="kkxspw"
 {
   "command": "refresh"
 }
@@ -119,7 +119,7 @@ Commands are sent as typed JSON requests, not raw strings:
 
 Responses are typed too:
 
-```json
+```json id="f1z11s"
 {
   "status": "accepted",
   "message": null
@@ -133,25 +133,25 @@ Supported commands:
 - `refresh`
 - `reload_config`
 
-`easybarctl` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
+`easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
 
 ## Configuration
 
 EasyBar reads its runtime config from:
 
-```text
+```text id="e2r6ce"
 ~/.config/easybar/config.toml
 ```
 
 You can override that path with:
 
-```bash
+```bash id="pb278u"
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
 A small example:
 
-```toml
+```toml id="jlwmdd"
 [builtins.spaces]
 enabled = true
 

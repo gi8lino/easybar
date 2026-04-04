@@ -48,7 +48,7 @@ jobs:
           file "dist/EasyBar.app/Contents/MacOS/EasyBar"
           file "dist/EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"
           file "dist/EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"
-          file "dist/easybarctl"
+          file "dist/easybar"
           test -f "dist/EasyBar.app/Contents/Info.plist"
           test -f "dist/EasyBarCalendarAgent.app/Contents/Info.plist"
           test -f "dist/EasyBarNetworkAgent.app/Contents/Info.plist"

@@ -74,18 +74,13 @@ jobs:
 
             def install
               libexec.install "EasyBar.app"
-              bin.install "easybarctl"
-
-              (bin/"easybar").write <<~SH
-                #!/bin/bash
-                exec "#{libexec}/EasyBar.app/Contents/MacOS/EasyBar" "\$@"
-              SH
+              bin.install "easybar"
 
               (var/"log/easybar").mkpath
             end
 
             service do
-              run [opt_bin/"easybar"]
+              run [opt_libexec/"EasyBar.app/Contents/MacOS/EasyBar"]
               environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
               keep_alive true
               process_type :interactive
@@ -95,7 +90,7 @@ jobs:
             end
 
             test do
-              assert_match "easybarctl", shell_output("#{bin}/easybarctl --help 2>&1")
+              assert_match "easybar", shell_output("#{bin}/easybar --help 2>&1")
             end
           end
           EOF
@@ -114,16 +109,11 @@ jobs:
             def install
               libexec.install "EasyBarCalendarAgent.app"
 
-              (bin/"easybar-calendar-agent").write <<~SH
-                #!/bin/bash
-                exec "#{libexec}/EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent" "\$@"
-              SH
-
               (var/"log/easybar-calendar-agent").mkpath
             end
 
             service do
-              run [opt_bin/"easybar-calendar-agent"]
+              run [opt_libexec/"EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"]
               environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
               keep_alive true
               process_type :interactive
@@ -152,16 +142,11 @@ jobs:
             def install
               libexec.install "EasyBarNetworkAgent.app"
 
-              (bin/"easybar-network-agent").write <<~SH
-                #!/bin/bash
-                exec "#{libexec}/EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent" "\$@"
-              SH
-
               (var/"log/easybar-network-agent").mkpath
             end
 
             service do
-              run [opt_bin/"easybar-network-agent"]
+              run [opt_libexec/"EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"]
               environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
               keep_alive true
               process_type :interactive
