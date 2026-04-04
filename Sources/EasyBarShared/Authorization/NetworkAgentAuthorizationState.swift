@@ -1,26 +1,30 @@
 import CoreLocation
 import Foundation
 
-final class NetworkAgentAuthorizationState {
+/// Stores the current CoreLocation authorization status for network agents.
+public final class NetworkAgentAuthorizationState {
   private let lock = NSLock()
   private var status: CLAuthorizationStatus = .notDetermined
 
+  /// Creates one authorization state wrapper.
+  public init() {}
+
   /// Stores the latest location authorization status.
-  func setStatus(_ newStatus: CLAuthorizationStatus) {
+  public func setStatus(_ newStatus: CLAuthorizationStatus) {
     lock.lock()
     status = newStatus
     lock.unlock()
   }
 
   /// Returns the last known authorization status.
-  func currentStatus() -> CLAuthorizationStatus {
+  public func currentStatus() -> CLAuthorizationStatus {
     lock.lock()
     defer { lock.unlock() }
     return status
   }
 
   /// Returns whether Wi-Fi access is currently authorized.
-  func isAuthorized() -> Bool {
+  public func isAuthorized() -> Bool {
     switch currentStatus() {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
       return true
@@ -30,7 +34,7 @@ final class NetworkAgentAuthorizationState {
   }
 
   /// Returns the current permission state as a stable string.
-  func permissionState() -> String {
+  public func permissionState() -> String {
     switch currentStatus() {
     case .notDetermined:
       return "not_determined"
