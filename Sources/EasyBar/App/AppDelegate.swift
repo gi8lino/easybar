@@ -1,4 +1,4 @@
-import AppKit
+vimport AppKit
 import EasyBarShared
 import Foundation
 
@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     configureLogging()
 
     logStartup()
+    validateRequiredFonts()
     installWidgetEditorStub()
     setupBarWindowController()
     startRuntimeServices()
@@ -193,6 +194,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     Logger.info(
       "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)")
     Logger.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
+  }
+
+  /// Logs whether required custom fonts are available at runtime.
+  private func validateRequiredFonts() {
+    validateFont(named: "Symbols Nerd Font Mono")
+  }
+
+  /// Logs one warning when a required font is missing.
+  private func validateFont(named fontName: String) {
+    if NSFont(name: fontName, size: 12) != nil {
+      Logger.info("font available name=\(fontName)")
+      return
+    }
+
+    Logger.warn(
+      "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped"
+    )
   }
 
   /// Installs the bundled Lua editor stub into the active widget directory.
