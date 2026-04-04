@@ -58,7 +58,7 @@ let package = Package(
       dependencies: [
         "EasyBarShared"
       ],
-      path: "agents/calendar-agent",
+      path: "Sources/EasyBarCalendarAgent",
       exclude: [
         "Info.plist"
       ]
@@ -69,7 +69,10 @@ let package = Package(
         "EasyBarShared",
         "EasyBarNetworkAgentCore",
       ],
-      path: "agents/network-agent/App"
+      path: "Sources/EasyBarNetworkAgent",
+      exclude: [
+        "Info.plist"
+      ]
     ),
   ]
 )
