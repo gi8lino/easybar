@@ -40,13 +40,13 @@ brew tap gi8lino/tap
 
 Install EasyBar:
 
-```bash id="2oiult"
+```bash
 brew install gi8lino/tap/easybar
 ```
 
 This also installs the calendar and network helper agents. Start all services:
 
-```bash id="611h1k"
+```bash
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
@@ -63,7 +63,7 @@ brew services start gi8lino/tap/easybar
 
 If macOS blocks the app or CLI with a Gatekeeper or malware verification warning, remove quarantine and start it again:
 
-```bash id="lsfxtz"
+```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
@@ -86,7 +86,7 @@ This keeps permission-sensitive APIs out of the main UI process and makes those 
 
 Both agents are enabled by default and can be turned off independently in `config.toml` with:
 
-```toml id="qasjvt"
+```toml
 [agents.calendar]
 enabled = true
 
@@ -96,7 +96,7 @@ enabled = true
 
 For the network agent, you can also decide what happens when location permission is denied:
 
-```toml id="u3prg6"
+```toml
 [agents.network]
 allow_unauthorized_non_sensitive_fields = false
 ```
@@ -111,7 +111,7 @@ EasyBar exposes one local Unix control socket for `easybar` and other clients.
 
 Commands are sent as typed JSON requests, not raw strings:
 
-```json id="kkxspw"
+```json
 {
   "command": "refresh"
 }
@@ -119,7 +119,7 @@ Commands are sent as typed JSON requests, not raw strings:
 
 Responses are typed too:
 
-```json id="f1z11s"
+```json
 {
   "status": "accepted",
   "message": null
@@ -139,19 +139,19 @@ Supported commands:
 
 EasyBar reads its runtime config from:
 
-```text id="e2r6ce"
+```text
 ~/.config/easybar/config.toml
 ```
 
 You can override that path with:
 
-```bash id="pb278u"
+```bash
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
 A small example:
 
-```toml id="jlwmdd"
+```toml
 [builtins.spaces]
 enabled = true
 
