@@ -75,7 +75,9 @@ final class NativeMonthCalendarStore: ObservableObject {
   /// Radius `0` means the visible month only, `1` adds previous and next month,
   /// and larger values expand outward symmetrically. Returns true when the
   /// active preload range changed.
-  func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar) -> Bool {
+  func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar)
+    -> Bool
+  {
     let startOfVisibleMonth = startOfMonth(visibleMonth, calendar: calendar)
     let normalizedRadius = max(radius, 0)
 

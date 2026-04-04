@@ -459,6 +459,7 @@ none = "None" # Label shown when no travel time is set.
 title = "Today" # Title of the today button.
 border_color = "#3F2F6B" # Border color of the today button.
 border_width = 1.5 # Border width of the today button.
+icon = "󰃭" # Optional leading icon of the today button.
 
 [builtins.time]
 enabled = false # Shows or hides the time widget.

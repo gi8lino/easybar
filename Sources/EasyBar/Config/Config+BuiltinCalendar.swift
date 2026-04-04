@@ -187,6 +187,7 @@ extension Config {
 
         struct TodayButtonStyle {
           var title: String
+          var icon: String
           var borderColorHex: String
           var borderWidth: Double
         }
@@ -636,6 +637,11 @@ extension Config {
           set { todayButton.title = newValue }
         }
 
+        var todayButtonIcon: String {
+          get { todayButton.icon }
+          set { todayButton.icon = newValue }
+        }
+
         var todayButtonBorderColorHex: String {
           get { todayButton.borderColorHex }
           set { todayButton.borderColorHex = newValue }
@@ -877,6 +883,7 @@ extension Config {
           ),
           todayButton: .init(
             title: "Today",
+            icon: "󰃭",
             borderColorHex: "#3F2F6B",
             borderWidth: 1.5
           )

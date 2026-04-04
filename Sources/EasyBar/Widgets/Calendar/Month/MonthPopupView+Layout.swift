@@ -60,10 +60,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds the full calendar section with grid and today helper.
   var calendarSectionView: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      calendarContainerView
-      todayContainerView
-    }
+    calendarContainerView
   }
 
   /// Builds the calendar container.
@@ -71,6 +68,7 @@ extension NativeMonthCalendarPopupView {
     ZStack(alignment: .top) {
       VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
         headerView
+        todayContainerView
         weekdayHeaderView
         monthGridView
           .frame(height: monthGridContainerHeight, alignment: .topLeading)
@@ -110,29 +108,48 @@ extension NativeMonthCalendarPopupView {
   var todayContainerView: some View {
     HStack {
       Button(action: showToday) {
-        Text(config.todayButtonTitle)
-          .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(color(config.headerTextColorHex))
-          .padding(.horizontal, 10)
-          .padding(.vertical, 5)
-          .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-              .fill(color(config.todayBackgroundColorHex).opacity(0.18))
-          )
-          .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-              .stroke(
-                color(config.todayButtonBorderColorHex).opacity(0.9),
-                lineWidth: max(CGFloat(config.todayButtonBorderWidth), 1)
-              )
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          if let icon = todayButtonIconText {
+            Text(icon)
+              .font(.custom("Symbols Nerd Font Mono", size: 12))
+              .lineLimit(1)
+              .fixedSize()
+              .frame(minWidth: 12, minHeight: 16, alignment: .center)
+              .baselineOffset(-0.5)
           }
+
+          Text(config.todayButtonTitle)
+            .font(.system(size: 11, weight: .medium))
+            .lineLimit(1)
+            .fixedSize()
+        }
+        .foregroundStyle(color(config.headerTextColorHex))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+          RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(color(config.todayBackgroundColorHex).opacity(0.18))
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .stroke(
+              color(config.todayButtonBorderColorHex).opacity(0.9),
+              lineWidth: max(CGFloat(config.todayButtonBorderWidth), 1)
+            )
+        }
       }
       .buttonStyle(.plain)
 
       Spacer()
     }
-    .frame(height: todayContainerHeight, alignment: .leading)
+    .frame(minHeight: todayContainerHeight, alignment: .leading)
     .frame(width: calendarContainerWidth, alignment: .leading)
+  }
+
+  /// Returns the configured today-button icon when present.
+  var todayButtonIconText: String? {
+    let trimmed = config.todayButtonIcon.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
   }
 
   /// Builds the agenda container.
@@ -179,7 +196,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the fixed height reserved for the standalone today row.
   var todayContainerHeight: CGFloat {
-    28
+    34
   }
 }
 

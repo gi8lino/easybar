@@ -438,6 +438,10 @@ extension Config {
           todayButtonTable["title"] ?? table["today_button_title"],
           path: "builtins.calendar.month.popup.today_button.title"
         ) ?? fallback.todayButtonTitle,
+        icon: try optionalString(
+          todayButtonTable["icon"] ?? table["today_button_icon"],
+          path: "builtins.calendar.month.popup.today_button.icon"
+        ) ?? fallback.todayButtonIcon,
         borderColorHex: try optionalString(
           todayButtonTable["border_color"] ?? table["today_border_color"],
           path: "builtins.calendar.month.popup.today_button.border_color"
