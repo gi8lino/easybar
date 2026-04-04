@@ -1,8 +1,9 @@
 import AppKit
+import EasyBarNetworkAgentCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-  private let controller = AppController()
+  private let controller = NetworkAgentController()
 
   /// Starts the network agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {

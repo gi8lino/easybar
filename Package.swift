@@ -9,6 +9,7 @@ let package = Package(
   ],
   products: [
     .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
+    .library(name: "EasyBarNetworkAgentCore", targets: ["EasyBarNetworkAgentCore"]),
     .executable(name: "EasyBar", targets: ["EasyBar"]),
     .executable(name: "easybarctl", targets: ["EasyBarCtl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
@@ -24,6 +25,13 @@ let package = Package(
         .product(name: "TOMLKit", package: "TOMLKit")
       ],
       path: "Sources/EasyBarShared"
+    ),
+    .target(
+      name: "EasyBarNetworkAgentCore",
+      dependencies: [
+        "EasyBarShared"
+      ],
+      path: "Sources/EasyBarNetworkAgentCore"
     ),
     .executableTarget(
       name: "EasyBar",
@@ -58,12 +66,10 @@ let package = Package(
     .executableTarget(
       name: "EasyBarNetworkAgent",
       dependencies: [
-        "EasyBarShared"
+        "EasyBarShared",
+        "EasyBarNetworkAgentCore",
       ],
-      path: "agents/network-agent",
-      exclude: [
-        "Info.plist"
-      ]
+      path: "agents/network-agent/App"
     ),
   ]
 )

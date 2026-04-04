@@ -2,13 +2,13 @@ import EasyBarShared
 import Foundation
 
 @MainActor
-final class AppController {
+public final class NetworkAgentController {
   private let runtimeConfig: SharedRuntimeConfig
   private let snapshotProvider: NetworkSnapshotProvider
   private let socketServer: NetworkSocketServer
 
   /// Builds the network agent controller from one runtime config.
-  init(config: SharedRuntimeConfig = .current) {
+  public init(config: SharedRuntimeConfig = .current) {
     runtimeConfig = config
     snapshotProvider = NetworkSnapshotProvider(
       refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds
@@ -20,13 +20,13 @@ final class AppController {
   }
 
   /// Returns whether the network agent should run.
-  var isEnabled: Bool {
+  public var isEnabled: Bool {
     runtimeConfig.networkAgentEnabled
   }
 
   /// Starts logging, snapshot delivery, and the network socket server.
   @discardableResult
-  func start() -> Bool {
+  public func start() -> Bool {
     AgentLogger.configure(using: runtimeConfig)
     guard isEnabled else {
       AgentLogger.info("network agent disabled in config")
@@ -44,7 +44,7 @@ final class AppController {
   }
 
   /// Stops the network socket server and snapshot provider.
-  func stop() {
+  public func stop() {
     socketServer.stop()
     snapshotProvider.stop()
   }
