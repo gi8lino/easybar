@@ -81,7 +81,7 @@
 
 ---@class EasyBarEvents
 ---@field routine? EasyBarEventToken Fired from `update_freq` polling on subscribed widgets.
----@field forced? EasyBarEventToken Fired when EasyBar or `easybarctl` triggers a manual refresh.
+---@field forced? EasyBarEventToken Fired when EasyBar or `easybar` triggers a manual refresh.
 ---@field system_woke? EasyBarEventToken Fired after the system wakes from sleep.
 ---@field sleep? EasyBarEventToken Fired before the system goes to sleep.
 ---@field space_change? EasyBarEventToken Fired when the active macOS space changes.

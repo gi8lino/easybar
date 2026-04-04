@@ -35,7 +35,7 @@ struct SettingsView: View {
         .font(.system(size: 12))
         .foregroundStyle(.secondary)
 
-      Text("easybarctl")
+      Text("easybar")
         .font(.system(size: 12, design: .monospaced))
         .textSelection(.enabled)
     }

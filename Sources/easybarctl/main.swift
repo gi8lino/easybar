@@ -101,12 +101,12 @@ private enum AppError: Error {
 private enum CLIOutput {
   /// Writes one plain error line.
   static func printError(_ message: String) {
-    fputs("easybarctl: \(message)\n", stderr)
+    fputs("easybar: \(message)\n", stderr)
   }
 
   /// Writes one plain version line.
   static func printVersion() {
-    fputs("easybarctl \(BuildInfo.appVersion)\n", stdout)
+    fputs("easybar \(BuildInfo.appVersion)\n", stdout)
   }
 
   /// Writes usage text.
@@ -121,7 +121,7 @@ private enum CLIOutput {
     let lines: [String] =
       [
         "usage:",
-        "  easybarctl <command> [options]",
+        "  easybar <command> [options]",
         "",
         "commands:",
       ] + commandLines + [
@@ -148,7 +148,7 @@ private enum CLI {
   static let versionOption = CLIOption(
     flag: "--version",
     short: "-v",
-    description: "Show the easybarctl version"
+    description: "Show the easybar version"
   )
   static let helpOption = CLIOption(
     flag: "--help",

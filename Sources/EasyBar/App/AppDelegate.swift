@@ -90,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NativeWidgetRegistry.shared.reload()
   }
 
-  /// Starts the IPC server used by easybarctl and external triggers.
+  /// Starts the IPC server used by easybar and external triggers.
   private func startSocketServer() {
     socketServer.start { [weak self] command in
       self?.handleSocketCommand(command)
