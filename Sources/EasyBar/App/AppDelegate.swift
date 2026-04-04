@@ -1,4 +1,4 @@
-vimport AppKit
+import AppKit
 import EasyBarShared
 import Foundation
 
@@ -8,8 +8,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let aeroSpaceService = AeroSpaceService.shared
   private let socketServer = SocketServer()
   private let configFileWatcher = ConfigFileWatcher.shared
+  private let instanceGuard = SingleInstanceGuard()
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    let lockPath = defaultSingleInstanceLockPath()
+
+    guard instanceGuard.acquireLock(at: lockPath) else {
+      Logger.warn("easybar already running lock_path=\(lockPath)")
+      NSApp.terminate(nil)
+      return
+    }
+
     NSApp.setActivationPolicy(.accessory)
     configureLogging()
 
