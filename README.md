@@ -329,7 +329,7 @@ brew services restart gi8lino/tap/easybar
 If `watch_config = false`, EasyBar will not automatically reload config changes. Either enable config watching or reload manually:
 
 ```bash
-easybar reload-config
+easybar --reload-config
 ```
 
 If a reload is rejected, EasyBar keeps the last valid config and logs the parse or validation error. Check the logs instead of assuming the new file was accepted.
@@ -339,7 +339,7 @@ If a reload is rejected, EasyBar keeps the last valid config and logs the parse 
 Restart the Lua runtime:
 
 ```bash
-easybar refresh
+easybar --refresh
 ```
 
 or use the bar context menu item:
