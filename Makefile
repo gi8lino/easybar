@@ -40,7 +40,7 @@ NETWORK_AGENT_ICON_SVG := packaging/easybar-network-agent-icon.svg
 NETWORK_AGENT_ICON_FILE := $(NETWORK_AGENT_NAME)
 NETWORK_AGENT_ICON_ICNS := $(NETWORK_AGENT_RESOURCES)/$(NETWORK_AGENT_ICON_FILE).icns
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
-PLIST_TEMPLATE := packaging/Info.plist
+PLIST_TEMPLATE := Sources/EasyBar/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
 
 # SwiftPM places the copied resource bundle at the app bundle root in this setup.

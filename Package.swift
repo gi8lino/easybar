@@ -40,6 +40,9 @@ let package = Package(
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBar",
+      exclude: [
+        "Info.plist"
+      ],
       resources: [
         .copy("Lua/runtime.lua"),
         .copy("Lua/easybar_api.lua"),
