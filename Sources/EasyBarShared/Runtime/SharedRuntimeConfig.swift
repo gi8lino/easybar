@@ -152,7 +152,7 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
 }
 
 /// Returns one resolved socket path from env, TOML, and fallback defaults.
-private func resolvedSocketPath(
+public func resolvedSocketPath(
   environmentName: String,
   tomlValue: String?,
   fallback: () -> String
