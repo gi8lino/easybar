@@ -68,10 +68,8 @@ extension NativeMonthCalendarPopupView {
     ZStack(alignment: .top) {
       VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
         headerView
-        todayContainerView
         weekdayHeaderView
         monthGridView
-          .frame(height: monthGridContainerHeight, alignment: .topLeading)
       }
 
       if isYearPickerPresented {
@@ -102,54 +100,6 @@ extension NativeMonthCalendarPopupView {
       maxWidth: calendarContainerWidth,
       alignment: .topLeading
     )
-  }
-
-  /// Builds the standalone today helper container.
-  var todayContainerView: some View {
-    HStack {
-      Button(action: showToday) {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-          if let icon = todayButtonIconText {
-            Text(icon)
-              .font(.custom("Symbols Nerd Font Mono", size: 12))
-              .lineLimit(1)
-              .fixedSize()
-              .frame(minWidth: 12, minHeight: 16, alignment: .center)
-              .baselineOffset(-0.5)
-          }
-
-          Text(config.todayButtonTitle)
-            .font(.system(size: 11, weight: .medium))
-            .lineLimit(1)
-            .fixedSize()
-        }
-        .foregroundStyle(color(config.headerTextColorHex))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(color(config.todayBackgroundColorHex).opacity(0.18))
-        )
-        .overlay {
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .stroke(
-              color(config.todayButtonBorderColorHex).opacity(0.9),
-              lineWidth: max(CGFloat(config.todayButtonBorderWidth), 1)
-            )
-        }
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-    }
-    .frame(minHeight: todayContainerHeight, alignment: .leading)
-    .frame(width: calendarContainerWidth, alignment: .leading)
-  }
-
-  /// Returns the configured today-button icon when present.
-  var todayButtonIconText: String? {
-    let trimmed = config.todayButtonIcon.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed.isEmpty ? nil : trimmed
   }
 
   /// Builds the agenda container.
@@ -188,16 +138,6 @@ extension NativeMonthCalendarPopupView {
   var appointmentsMaxHeight: CGFloat {
     CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
   }
-
-  /// Returns the fixed height reserved for the month grid.
-  var monthGridContainerHeight: CGFloat {
-    (30 * 6) + (6 * 5)
-  }
-
-  /// Returns the fixed height reserved for the standalone today row.
-  var todayContainerHeight: CGFloat {
-    34
-  }
 }
 
 // MARK: - Header
@@ -205,41 +145,65 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the popup month header.
   var headerView: some View {
-    HStack(spacing: 10) {
-      Button(action: showPreviousMonth) {
-        Text("‹")
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(color(config.headerTextColorHex))
-      }
-      .buttonStyle(.plain)
+    VStack(spacing: 6) {
+      HStack {
+        Spacer()
 
-      Spacer()
+        HStack(spacing: 6) {
+          Text(visibleMonthName)
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(color(config.headerTextColorHex))
 
-      HStack(spacing: 6) {
-        Text(visibleMonthName)
-          .font(.system(size: 18, weight: .semibold))
-          .foregroundStyle(color(config.headerTextColorHex))
-
-        Button(action: openYearPicker) {
-          HStack(spacing: 4) {
-            Text(String(visibleYear))
-              .font(.system(size: 18, weight: .semibold))
-            Image(systemName: "chevron.down")
-              .font(.system(size: 10, weight: .semibold))
+          Button(action: openYearPicker) {
+            HStack(spacing: 4) {
+              Text(String(visibleYear))
+                .font(.system(size: 18, weight: .semibold))
+              Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(color(config.headerTextColorHex))
           }
-          .foregroundStyle(color(config.headerTextColorHex))
+          .buttonStyle(.plain)
+        }
+
+        Spacer()
+      }
+
+      HStack(spacing: 18) {
+        Button(action: showPreviousMonth) {
+          Text("‹")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(color(config.headerTextColorHex))
+            .frame(minWidth: 18)
+        }
+        .buttonStyle(.plain)
+
+        Button(action: showToday) {
+          HStack(spacing: 4) {
+            let icon = config.todayButtonIcon.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if !icon.isEmpty {
+              Text(icon)
+                .font(Theme.iconFont(size: 11))
+                .foregroundStyle(color(config.headerTextColorHex))
+            }
+
+            Text(config.todayButtonTitle)
+              .font(.system(size: 12, weight: .medium))
+              .foregroundStyle(color(config.headerTextColorHex))
+          }
+        }
+        .buttonStyle(.plain)
+
+        Button(action: showNextMonth) {
+          Text("›")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(color(config.headerTextColorHex))
+            .frame(minWidth: 18)
         }
         .buttonStyle(.plain)
       }
-
-      Spacer()
-
-      Button(action: showNextMonth) {
-        Text("›")
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(color(config.headerTextColorHex))
-      }
-      .buttonStyle(.plain)
+      .frame(maxWidth: .infinity, alignment: .center)
     }
   }
 
@@ -284,7 +248,8 @@ extension NativeMonthCalendarPopupView {
     selectedEndDate = targetSelectionDate
     shouldAutoSelectVisibleMonthEvent = true
 
-    easybarLog.debug("month calendar popup show_next_month visible_month=\(debugDate(visibleMonth))")
+    easybarLog.debug(
+      "month calendar popup show_next_month visible_month=\(debugDate(visibleMonth))")
   }
 
 }
@@ -296,10 +261,8 @@ extension NativeMonthCalendarPopupView {
   var weekdayHeaderView: some View {
     HStack(spacing: 6) {
       if config.showWeekNumbers {
-        Text("W")
-          .font(.system(size: 10, weight: .semibold))
-          .frame(width: 20, alignment: .trailing)
-          .foregroundStyle(color(config.weekdayTextColorHex))
+        Color.clear
+          .frame(width: 20)
       }
 
       ForEach(weekdaySymbols, id: \.self) { symbol in

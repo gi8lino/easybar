@@ -883,7 +883,7 @@ extension Config {
           ),
           todayButton: .init(
             title: "Today",
-            icon: "󰃭",
+            icon: "",
             borderColorHex: "#3F2F6B",
             borderWidth: 1.5
           )
