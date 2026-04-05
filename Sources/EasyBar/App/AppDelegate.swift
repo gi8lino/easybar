@@ -59,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func configureLogging() {
     Logger.configureFileLogging(
       enabled: Config.shared.loggingEnabled,
-      path: Logger.fileLoggingPath
+      path: easyBarLogPath(in: Config.shared.loggingDirectory)
     )
   }
 

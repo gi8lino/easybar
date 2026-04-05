@@ -46,3 +46,10 @@ enum Logger {
     shared.error(msg)
   }
 }
+
+/// Returns the EasyBar app log path inside one logging directory.
+func easyBarLogPath(in directory: String) -> String {
+  URL(fileURLWithPath: directory)
+    .appendingPathComponent("easybar.out")
+    .path
+}
