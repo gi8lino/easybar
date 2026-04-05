@@ -83,8 +83,8 @@ extension NativeMonthCalendarPopupView {
             backgroundColor: color(config.backgroundColorHex),
             borderColor: color(config.borderColorHex),
             currentYearTextColor: color(config.headerTextColorHex),
-            currentYearBackgroundColor: color(config.todayBackgroundColorHex),
-            currentYearBorderColor: color(config.todayBorderColorHex)
+            currentYearBackgroundColor: color(config.todayCellBackgroundColorHex),
+            currentYearBorderColor: color(config.todayCellBorderColorHex)
           )
           .padding(.top, 34)
           .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
@@ -356,11 +356,14 @@ extension NativeMonthCalendarPopupView {
         .frame(width: 28, height: 22)
         .background(dayBackground(day))
         .overlay {
-          RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .stroke(
-              dayBorderColor(day),
-              lineWidth: dayBorderWidth(day)
-            )
+          if resolvedCalendar.isDateInToday(day.date) {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+              .inset(by: 1.5)
+              .stroke(
+                color(config.todayCellBorderColorHex).opacity(0.9),
+                lineWidth: CGFloat(max(config.todayCellBorderWidth, 0.8))
+              )
+          }
         }
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
@@ -539,7 +542,7 @@ extension NativeMonthCalendarPopupView {
     }
 
     if resolvedCalendar.isDateInToday(day.date) {
-      return color(config.todayBackgroundColorHex)
+      return color(config.todayCellBackgroundColorHex)
     }
 
     return .clear
@@ -548,7 +551,7 @@ extension NativeMonthCalendarPopupView {
   /// Returns the border color for one day cell.
   func dayBorderColor(_ day: DayCell) -> Color {
     if resolvedCalendar.isDateInToday(day.date) {
-      return color(config.todayBorderColorHex)
+      return color(config.todayCellBorderColorHex)
     }
 
     return .clear
@@ -557,7 +560,7 @@ extension NativeMonthCalendarPopupView {
   /// Returns the border width for one day cell.
   func dayBorderWidth(_ day: DayCell) -> CGFloat {
     if resolvedCalendar.isDateInToday(day.date) {
-      return CGFloat(max(config.todayBorderWidth, 0))
+      return CGFloat(max(config.todayCellBorderWidth, 0))
     }
 
     return 0

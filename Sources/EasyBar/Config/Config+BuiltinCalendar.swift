@@ -99,9 +99,9 @@ extension Config {
           var resolvedWeekdaySymbols: [String]
           var dayTextColorHex: String
           var outsideMonthTextColorHex: String
-          var todayBackgroundColorHex: String
-          var todayBorderColorHex: String
-          var todayBorderWidth: Double
+          var todayCellBackgroundColorHex: String
+          var todayCellBorderColorHex: String
+          var todayCellBorderWidth: Double
           var indicatorColorHex: String
         }
 
@@ -302,19 +302,19 @@ extension Config {
           set { calendar.outsideMonthTextColorHex = newValue }
         }
 
-        var todayBackgroundColorHex: String {
-          get { calendar.todayBackgroundColorHex }
-          set { calendar.todayBackgroundColorHex = newValue }
+        var todayCellBackgroundColorHex: String {
+          get { calendar.todayCellBackgroundColorHex }
+          set { calendar.todayCellBackgroundColorHex = newValue }
         }
 
-        var todayBorderColorHex: String {
-          get { calendar.todayBorderColorHex }
-          set { calendar.todayBorderColorHex = newValue }
+        var todayCellBorderColorHex: String {
+          get { calendar.todayCellBorderColorHex }
+          set { calendar.todayCellBorderColorHex = newValue }
         }
 
-        var todayBorderWidth: Double {
-          get { calendar.todayBorderWidth }
-          set { calendar.todayBorderWidth = newValue }
+        var todayCellBorderWidth: Double {
+          get { calendar.todayCellBorderWidth }
+          set { calendar.todayCellBorderWidth = newValue }
         }
 
         var indicatorColorHex: String {
@@ -782,9 +782,9 @@ extension Config {
             ),
             dayTextColorHex: "#d0d0d0",
             outsideMonthTextColorHex: "#6e738d",
-            todayBackgroundColorHex: "#3F2F6B",
-            todayBorderColorHex: "#3F2F6B",
-            todayBorderWidth: 3.0,
+            todayCellBackgroundColorHex: "#00000000",
+            todayCellBorderColorHex: "#FF0000",
+            todayCellBorderWidth: 3.0,
             indicatorColorHex: "#8bd5ca"
           ),
           selection: .init(

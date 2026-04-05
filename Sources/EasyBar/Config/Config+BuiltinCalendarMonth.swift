@@ -154,18 +154,18 @@ extension Config {
           calendarTable["outside_month_text_color"] ?? table["outside_month_text_color"],
           path: "builtins.calendar.month.popup.calendar.outside_month_text_color"
         ) ?? fallback.outsideMonthTextColorHex,
-        todayBackgroundColorHex: try optionalString(
-          calendarTable["today_background_color"] ?? table["today_background_color"],
-          path: "builtins.calendar.month.popup.calendar.today_background_color"
-        ) ?? fallback.todayBackgroundColorHex,
-        todayBorderColorHex: try optionalString(
-          calendarTable["today_border_color"] ?? table["today_border_color"],
-          path: "builtins.calendar.month.popup.calendar.today_border_color"
-        ) ?? fallback.todayBorderColorHex,
-        todayBorderWidth: try optionalNumber(
-          calendarTable["today_border_width"] ?? table["today_border_width"],
-          path: "builtins.calendar.month.popup.calendar.today_border_width"
-        ) ?? fallback.todayBorderWidth,
+        todayCellBackgroundColorHex: try optionalString(
+          calendarTable["today_cell_background_color"] ?? table["today_cell_background_color"],
+          path: "builtins.calendar.month.popup.calendar.today_cell_background_color"
+        ) ?? fallback.todayCellBackgroundColorHex,
+        todayCellBorderColorHex: try optionalString(
+          calendarTable["today_cell_border_color"] ?? table["today_cell_border_color"],
+          path: "builtins.calendar.month.popup.calendar.today_cell_border_color"
+        ) ?? fallback.todayCellBorderColorHex,
+        todayCellBorderWidth: try optionalNumber(
+          calendarTable["today_cell_border_width"] ?? table["today_cell_border_width"],
+          path: "builtins.calendar.month.popup.calendar.today_cell_border_width"
+        ) ?? fallback.todayCellBorderWidth,
         indicatorColorHex: try optionalString(
           calendarTable["indicator_color"] ?? table["indicator_color"],
           path: "builtins.calendar.month.popup.calendar.indicator_color"

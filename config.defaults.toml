@@ -356,9 +356,9 @@ weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
 # weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels for Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
 day_text_color = "#d0d0d0" # Text color of days in the current month.
 outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
-today_background_color = "#5C4A8F" # Background color of today's day cell when not selected.
-today_border_color = "#3F2F6B" # Border color of today's day cell when not selected.
-today_border_width = 3.0 # Border width of today's day cell when not selected.
+today_cell_background_color = "" # Background color of today's day cell when not selected.
+today_cell_border_color = "#FF0000" # Border color of today's day cell when not selected.
+today_cell_border_width = 3.0 # Border width of today's day cell when not selected.
 indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
 
 [builtins.calendar.month.popup.selection]
