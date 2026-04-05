@@ -236,3 +236,13 @@ final class Config {
     builtinDate = snapshot.builtins.date
   }
 }
+
+/// Returns the default Unix socket path used by the calendar agent.
+private func defaultCalendarAgentSocketPath() -> String {
+  "/tmp/EasyBar/calendar-agent.sock"
+}
+
+/// Returns the default Unix socket path used by the network agent.
+private func defaultNetworkAgentSocketPath() -> String {
+  "/tmp/EasyBar/network-agent.sock"
+}

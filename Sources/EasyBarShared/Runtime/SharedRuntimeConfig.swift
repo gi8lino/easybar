@@ -110,20 +110,27 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
   let networkTable = toml["agents"]?["network"]?.table
 
   let easyBarSocketPath =
-    expandedEnvironmentPath(named: "EASYBAR_SOCKET_PATH")
-    ?? defaultSocketPath()
+    resolvedSocketPath(
+      environmentName: "EASYBAR_SOCKET_PATH",
+      tomlValue: nil,
+      fallback: defaultEasyBarSocketPath
+    )
 
   let calendarAgentEnabled = calendarTable?["enabled"]?.bool ?? true
   let calendarAgentSocketPath =
-    expandedEnvironmentPath(named: "EASYBAR_CALENDAR_AGENT_SOCKET")
-    ?? expandedPath(calendarTable?["socket_path"]?.string)
-    ?? defaultCalendarAgentSocketPath()
+    resolvedSocketPath(
+      environmentName: "EASYBAR_CALENDAR_AGENT_SOCKET",
+      tomlValue: calendarTable?["socket_path"]?.string,
+      fallback: defaultCalendarAgentSocketPath
+    )
 
   let networkAgentEnabled = networkTable?["enabled"]?.bool ?? true
   let networkAgentSocketPath =
-    expandedEnvironmentPath(named: "EASYBAR_NETWORK_AGENT_SOCKET")
-    ?? expandedPath(networkTable?["socket_path"]?.string)
-    ?? defaultNetworkAgentSocketPath()
+    resolvedSocketPath(
+      environmentName: "EASYBAR_NETWORK_AGENT_SOCKET",
+      tomlValue: networkTable?["socket_path"]?.string,
+      fallback: defaultNetworkAgentSocketPath
+    )
 
   let networkAgentRefreshIntervalSeconds =
     timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
@@ -142,4 +149,30 @@ private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
     networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
     networkAgentAllowUnauthorizedNonSensitiveFields: networkAgentAllowUnauthorizedNonSensitiveFields
   )
+}
+
+/// Returns one resolved socket path from env, TOML, and fallback defaults.
+private func resolvedSocketPath(
+  environmentName: String,
+  tomlValue: String?,
+  fallback: () -> String
+) -> String {
+  expandedEnvironmentPath(named: environmentName)
+    ?? expandedPath(tomlValue)
+    ?? fallback()
+}
+
+/// Returns the default Unix socket path used by EasyBar.
+private func defaultEasyBarSocketPath() -> String {
+  "/tmp/EasyBar/easybar.sock"
+}
+
+/// Returns the default Unix socket path used by the calendar agent.
+private func defaultCalendarAgentSocketPath() -> String {
+  "/tmp/EasyBar/calendar-agent.sock"
+}
+
+/// Returns the default Unix socket path used by the network agent.
+private func defaultNetworkAgentSocketPath() -> String {
+  "/tmp/EasyBar/network-agent.sock"
 }

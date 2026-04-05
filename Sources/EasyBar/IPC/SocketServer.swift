@@ -4,7 +4,7 @@ import Foundation
 /// Unix socket server used to receive external triggers.
 final class SocketServer {
 
-  private let socketPath = defaultSocketPath()
+  private let socketPath = defaultEasyBarSocketPath()
   private var listenFD: Int32 = -1
   private let decoder = JSONDecoder()
   private let encoder = JSONEncoder()
@@ -148,4 +148,16 @@ final class SocketServer {
       return write(client, baseAddress, buffer.count)
     }
   }
+}
+
+/// Returns the default Unix socket path used by EasyBar.
+private func defaultEasyBarSocketPath() -> String {
+  if let override = ProcessInfo.processInfo.environment["EASYBAR_SOCKET_PATH"]?
+    .trimmingCharacters(in: .whitespacesAndNewlines),
+    !override.isEmpty
+  {
+    return override
+  }
+
+  return "/tmp/EasyBar/easybar.sock"
 }
