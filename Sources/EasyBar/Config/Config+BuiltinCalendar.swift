@@ -784,7 +784,7 @@ extension Config {
             outsideMonthTextColorHex: "#6e738d",
             todayCellBackgroundColorHex: "#00000000",
             todayCellBorderColorHex: "#FF0000",
-            todayCellBorderWidth: 3.0,
+            todayCellBorderWidth: 1.4,
             indicatorColorHex: "#8bd5ca"
           ),
           selection: .init(
