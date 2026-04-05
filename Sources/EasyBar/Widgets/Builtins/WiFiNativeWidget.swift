@@ -10,7 +10,7 @@ final class WiFiNativeWidget: NativeWidget {
 
   func start() {
     let config = Config.shared.builtinWiFi
-    Logger.info(
+    easybarLog.info(
       "starting native widget id=\(rootID) enabled=\(config.enabled) position=\(config.position.rawValue)"
     )
 
@@ -18,7 +18,7 @@ final class WiFiNativeWidget: NativeWidget {
     startStoreObserver()
 
     guard Config.shared.networkAgentEnabled else {
-      Logger.info("network agent disabled in config")
+      easybarLog.info("network agent disabled in config")
       publish()
       return
     }
@@ -29,7 +29,7 @@ final class WiFiNativeWidget: NativeWidget {
   }
 
   func stop() {
-    Logger.info("stopping native widget id=\(rootID)")
+    easybarLog.info("stopping native widget id=\(rootID)")
 
     eventObserver.stop()
     if let storeToken {

@@ -16,7 +16,7 @@ final class TimerEvents {
 
     timers.append(timer)
 
-    Logger.debug("minute timer started")
+    easybarLog.debug("minute timer started")
   }
 
   /// Starts the second timer used by Lua `second_tick` and `routine` subscriptions.
@@ -27,7 +27,7 @@ final class TimerEvents {
 
     timers.append(timer)
 
-    Logger.debug("second timer started")
+    easybarLog.debug("second timer started")
   }
 
   /// Stops and clears all active timers.

@@ -30,7 +30,7 @@ final class NativeWidgetRegistry {
   private func registerAll() {
     stopAll()
 
-    Logger.info("registering native widgets")
+    easybarLog.info("registering native widgets")
     logConfig()
     NativeGroupRegistry.shared.reload()
     widgets = makeEnabledWidgets()
@@ -76,7 +76,7 @@ final class NativeWidgetRegistry {
 
   /// Logs the current built-in widget enablement snapshot.
   private func logConfig() {
-    Logger.info(
+    easybarLog.info(
       """
       native widget config \
       spaces=\(Config.shared.builtinSpaces.enabled) \
@@ -95,7 +95,7 @@ final class NativeWidgetRegistry {
 
   /// Logs the final registered widget ids.
   private func logRegisteredWidgets() {
-    Logger.info(
+    easybarLog.info(
       "native widgets registered count=\(widgets.count) ids=\(widgets.map(\.rootID).joined(separator: ","))"
     )
   }

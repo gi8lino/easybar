@@ -16,7 +16,7 @@ final class SocketServer {
 
     self.listenFD = listenFD
 
-    Logger.info("socket listening on \(socketPath)")
+    easybarLog.info("socket listening on \(socketPath)")
 
     DispatchQueue.global(qos: .userInitiated).async {
       self.acceptLoop(handler: handler)
@@ -28,7 +28,7 @@ final class SocketServer {
     while true {
       guard let client = acceptClient() else { continue }
 
-      Logger.debug("socket accepted client")
+      easybarLog.debug("socket accepted client")
       handleClient(client, handler: handler)
     }
   }
@@ -44,7 +44,7 @@ final class SocketServer {
       )
       return true
     } catch {
-      Logger.error("failed to create socket directory at \(socketDirectory): \(error)")
+      easybarLog.error("failed to create socket directory at \(socketDirectory): \(error)")
       return false
     }
   }
@@ -55,7 +55,7 @@ final class SocketServer {
 
     let listenFD = socket(AF_UNIX, SOCK_STREAM, 0)
     guard listenFD >= 0 else {
-      Logger.error("failed to create socket")
+      easybarLog.error("failed to create socket")
       return nil
     }
 
@@ -65,7 +65,7 @@ final class SocketServer {
     }
 
     guard listen(listenFD, 5) >= 0 else {
-      Logger.error("failed to listen on socket at \(socketPath)")
+      easybarLog.error("failed to listen on socket at \(socketPath)")
       close(listenFD)
       return nil
     }
@@ -85,7 +85,7 @@ final class SocketServer {
     }
 
     guard bindResult >= 0 else {
-      Logger.error("failed to bind socket at \(socketPath)")
+      easybarLog.error("failed to bind socket at \(socketPath)")
       return false
     }
 
@@ -107,12 +107,12 @@ final class SocketServer {
     defer { close(client) }
 
     guard let request = readRequest(from: client) else {
-      Logger.warn("invalid IPC request")
+      easybarLog.warn("invalid IPC request")
       writeResponse(IPC.Response(status: .rejected, message: "invalid_request"), to: client)
       return
     }
 
-    Logger.debug("socket dispatching command '\(request.command.rawValue)'")
+    easybarLog.debug("socket dispatching command '\(request.command.rawValue)'")
     writeResponse(IPC.Response(status: .accepted), to: client)
     DispatchQueue.main.async {
       handler(request.command)
@@ -127,7 +127,7 @@ final class SocketServer {
 
     let rawRequest = String(bytes: buffer.prefix(count), encoding: .utf8)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    Logger.debug("socket received raw request '\(rawRequest ?? "unknown")'")
+    easybarLog.debug("socket received raw request '\(rawRequest ?? "unknown")'")
 
     guard
       let rawRequest,

@@ -38,14 +38,14 @@ extension AeroSpaceService {
   /// Registers one widget that depends on AeroSpace state.
   func registerConsumer(_ id: String) {
     consumers.insert(id)
-    Logger.debug("aerospace consumer registered id=\(id) count=\(consumers.count)")
+    easybarLog.debug("aerospace consumer registered id=\(id) count=\(consumers.count)")
     refresh()
   }
 
   /// Unregisters one widget that no longer depends on AeroSpace state.
   func unregisterConsumer(_ id: String) {
     consumers.remove(id)
-    Logger.debug("aerospace consumer unregistered id=\(id) count=\(consumers.count)")
+    easybarLog.debug("aerospace consumer unregistered id=\(id) count=\(consumers.count)")
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
@@ -54,7 +54,7 @@ extension AeroSpaceService {
   /// performs one fast reload plus a short follow-up reload for consistency.
   func triggerRefresh() {
     guard hasConsumers else {
-      Logger.debug("aerospace refresh skipped, no registered consumers")
+      easybarLog.debug("aerospace refresh skipped, no registered consumers")
       return
     }
 
@@ -65,7 +65,7 @@ extension AeroSpaceService {
 
   /// Focuses the requested workspace.
   func focusWorkspace(_ workspace: String) {
-    Logger.info("aerospace focus workspace requested workspace=\(workspace)")
+    easybarLog.info("aerospace focus workspace requested workspace=\(workspace)")
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
@@ -91,10 +91,10 @@ extension AeroSpaceService {
 
   /// Activates one application shown inside a workspace.
   func focusApp(_ app: SpaceApp) {
-    Logger.info("aerospace focus app requested app=\(app.name)")
+    easybarLog.info("aerospace focus app requested app=\(app.name)")
 
     guard let bundlePath = app.bundlePath, !bundlePath.isEmpty else {
-      Logger.debug("aerospace focus app skipped, missing bundle path app=\(app.name)")
+      easybarLog.debug("aerospace focus app skipped, missing bundle path app=\(app.name)")
       return
     }
 
@@ -107,7 +107,7 @@ extension AeroSpaceService {
         configuration: configuration
       ) { _, error in
         if let error {
-          Logger.debug("failed to focus app \(app.name): \(error)")
+          easybarLog.debug("failed to focus app \(app.name): \(error)")
         }
       }
     }
@@ -336,7 +336,7 @@ extension AeroSpaceService {
     do {
       try process.run()
     } catch {
-      Logger.debug("failed to run aerospace \(arguments.joined(separator: " ")): \(error)")
+      easybarLog.debug("failed to run aerospace \(arguments.joined(separator: " ")): \(error)")
       return nil
     }
 
@@ -371,7 +371,7 @@ extension AeroSpaceService {
 
   /// Publishes one shared AeroSpace update notification.
   fileprivate func publishUpdate(logMessage: String) {
-    Logger.debug(logMessage)
+    easybarLog.debug(logMessage)
     NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
 }

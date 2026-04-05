@@ -14,7 +14,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
   /// Applies one calendar snapshot to the shared store.
   func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
-    Logger.debug(
+    easybarLog.debug(
       "upcoming calendar popup applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
     )
     publish(snapshot: snapshot)
@@ -22,7 +22,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
   /// Clears the current calendar snapshot.
   func clear() {
-    Logger.debug("upcoming calendar popup cleared")
+    easybarLog.debug("upcoming calendar popup cleared")
     publish(snapshot: nil)
   }
 
@@ -30,7 +30,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   func overlappingEvents(on date: Date) -> [NativeUpcomingCalendarEvent] {
     let startOfDay = calendar.startOfDay(for: date)
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-      Logger.debug(
+      easybarLog.debug(
         "upcoming calendar store overlappingEvents(on:) failed date=\(startOfDay)"
       )
       return []
@@ -40,7 +40,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
       event.startDate < endOfDay && event.endDate > startOfDay
     }
 
-    Logger.debug(
+    easybarLog.debug(
       "upcoming calendar store overlappingEvents(on:) date=\(debugDate(startOfDay)) matches=\(matches.count)"
     )
 
@@ -53,7 +53,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     let endDayStart = calendar.startOfDay(for: endDate)
 
     guard let endOfRange = calendar.date(byAdding: .day, value: 1, to: endDayStart) else {
-      Logger.debug(
+      easybarLog.debug(
         "upcoming calendar store overlappingEvents(from:to:) failed start=\(debugDate(startOfRange)) end=\(debugDate(endDayStart))"
       )
       return []
@@ -63,7 +63,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
       event.startDate < endOfRange && event.endDate > startOfRange
     }
 
-    Logger.debug(
+    easybarLog.debug(
       "upcoming calendar store overlappingEvents(from:to:) start=\(debugDate(startOfRange)) end=\(debugDate(endDayStart)) matches=\(matches.count)"
     )
 
@@ -82,7 +82,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
       self.sections = snapshot?.sections ?? []
       self.events = snapshot?.events ?? []
 
-      Logger.debug(
+      easybarLog.debug(
         "upcoming calendar store published snapshot_present=\(snapshot != nil) events=\(self.events.count) sections=\(self.sections.count)"
       )
     }

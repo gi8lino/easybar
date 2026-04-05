@@ -20,7 +20,7 @@ final class PowerEvents {
     }
 
     guard let source = IOPSNotificationCreateRunLoopSource(callback, nil) else {
-      Logger.debug("failed to create power source run loop source")
+      easybarLog.debug("failed to create power source run loop source")
       return
     }
 
@@ -33,8 +33,8 @@ final class PowerEvents {
       .defaultMode
     )
 
-    Logger.debug("subscribed power_source_change")
-    Logger.debug("subscribed charging_state_change")
+    easybarLog.debug("subscribed power_source_change")
+    easybarLog.debug("subscribed charging_state_change")
   }
 
   /// Stops all power-source observation.

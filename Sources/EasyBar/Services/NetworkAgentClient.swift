@@ -18,10 +18,10 @@ final class NetworkAgentClient {
         NativeWiFiStore.shared.clear()
       }
     },
-    debugLog: Logger.debug,
-    infoLog: Logger.info,
-    warnLog: Logger.warn,
-    errorLog: Logger.error
+    debugLog: easybarLog.debug,
+    infoLog: easybarLog.info,
+    warnLog: easybarLog.warn,
+    errorLog: easybarLog.error
   )
 
   private init() {}
@@ -45,12 +45,12 @@ final class NetworkAgentClient {
   private func handle(_ message: NetworkAgentMessage) {
     switch message.kind {
     case .subscribed:
-      Logger.info("network agent client subscribed")
+      easybarLog.info("network agent client subscribed")
 
     case .fields:
       guard let fields = message.fields else { return }
       guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
-        Logger.warn("network agent returned incomplete field set")
+        easybarLog.warn("network agent returned incomplete field set")
         return
       }
 
@@ -66,7 +66,7 @@ final class NetworkAgentClient {
 
   /// Handles one network-agent error message.
   private func handleError(_ message: String) {
-    Logger.warn("network agent error=\(message)")
+    easybarLog.warn("network agent error=\(message)")
 
     guard message.hasPrefix("permission_denied") else { return }
 

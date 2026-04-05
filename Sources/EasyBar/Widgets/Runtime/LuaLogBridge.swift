@@ -30,22 +30,22 @@ final class LuaLogBridge {
 
   /// Logs one raw stderr line that does not follow the structured format.
   private func logRawStderr(_ line: String) {
-    Logger.error("lua stderr: \(line)")
+    easybarLog.error("lua stderr: \(line)")
   }
 
   /// Logs one structured Lua message at the requested level.
   private func logFormatted(level: String, message: String) {
     switch level {
     case "DEBUG":
-      Logger.debug(message)
+      easybarLog.debug(message)
     case "INFO":
-      Logger.info(message)
+      easybarLog.info(message)
     case "WARN":
-      Logger.warn(message)
+      easybarLog.warn(message)
     case "ERROR":
-      Logger.error(message)
+      easybarLog.error(message)
     default:
-      Logger.info(message)
+      easybarLog.info(message)
     }
   }
 }

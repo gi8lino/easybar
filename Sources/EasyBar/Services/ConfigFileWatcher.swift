@@ -17,13 +17,13 @@ final class ConfigFileWatcher {
     stop()
 
     guard Config.shared.watchConfigFile else {
-      Logger.debug("config file watcher disabled")
+      easybarLog.debug("config file watcher disabled")
       return
     }
 
     let path = Config.shared.configPath
     guard let descriptor = openDescriptor(path: path) else {
-      Logger.warn("failed to watch config file at \(path)")
+      easybarLog.warn("failed to watch config file at \(path)")
       return
     }
 
@@ -47,7 +47,7 @@ final class ConfigFileWatcher {
     self.source = source
     source.resume()
 
-    Logger.debug("config file watcher started path=\(path)")
+    easybarLog.debug("config file watcher started path=\(path)")
   }
 
   /// Restarts the watcher after config reload or file replacement.
@@ -78,7 +78,7 @@ final class ConfigFileWatcher {
   /// Reloads config and refreshes all dependent systems.
   private func performReload() {
     DispatchQueue.main.async {
-      Logger.info("config file changed, reloading")
+      easybarLog.info("config file changed, reloading")
 
       Config.shared.reload()
       WidgetRunner.shared.reload()

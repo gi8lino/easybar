@@ -51,7 +51,7 @@ final class Config {
       try load()
     } catch {
       let message = "invalid config at \(configPath): \(error)"
-      Logger.error(message)
+      easybarLog.error(message)
       fputs("easybar: \(message)\n", stderr)
       exit(1)
     }
@@ -59,7 +59,7 @@ final class Config {
 
   /// Reloads config from disk.
   func reload() {
-    Logger.info("reloading configuration")
+    easybarLog.info("reloading configuration")
 
     let snapshot = snapshot()
 
@@ -67,10 +67,10 @@ final class Config {
 
     do {
       try load()
-      Logger.info("reload applied")
+      easybarLog.info("reload applied")
     } catch {
       apply(snapshot)
-      Logger.warn("reload rejected: \(error)")
+      easybarLog.warn("reload rejected: \(error)")
     }
   }
 

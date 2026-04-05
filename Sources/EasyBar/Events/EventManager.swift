@@ -12,7 +12,7 @@ final class EventManager {
 
     activeSubscriptions = subscriptions
 
-    Logger.debug("required events: \(subscriptions)")
+    easybarLog.debug("required events: \(subscriptions)")
 
     if subscriptions.contains("system_woke") {
       SystemEvents.shared.subscribeSystemWake()

@@ -47,7 +47,7 @@ final class LuaProcessController {
   /// Starts the Lua runtime process and returns its pipes.
   func start() -> (process: Process, input: Pipe, output: Pipe, error: Pipe)? {
     guard process == nil else {
-      Logger.debug("lua runtime already started")
+      easybarLog.debug("lua runtime already started")
       return nil
     }
 
@@ -62,7 +62,7 @@ final class LuaProcessController {
     do {
       try process.run()
     } catch {
-      Logger.error("failed to start lua runtime: \(error)")
+      easybarLog.error("failed to start lua runtime: \(error)")
       return nil
     }
 
@@ -74,7 +74,7 @@ final class LuaProcessController {
 
     self.process = process
 
-    Logger.debug("lua runtime started pid=\(pid)")
+    easybarLog.debug("lua runtime started pid=\(pid)")
 
     return (process, pipes.input, pipes.output, pipes.error)
   }
@@ -83,7 +83,7 @@ final class LuaProcessController {
   func shutdown() {
     guard let process else { return }
 
-    Logger.debug("shutting down lua runtime pid=\(process.processIdentifier)")
+    easybarLog.debug("shutting down lua runtime pid=\(process.processIdentifier)")
     easyBarTerminateLuaProcessGroup()
     self.process = nil
   }
@@ -114,7 +114,7 @@ final class LuaProcessController {
   /// Resolves the bundled Lua runtime script path.
   private func resolvedRuntimePath() -> String? {
     guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
-      Logger.error("runtime.lua not found")
+      easybarLog.error("runtime.lua not found")
       return nil
     }
 
@@ -123,10 +123,10 @@ final class LuaProcessController {
 
   /// Logs one Lua runtime launch request.
   private func logLaunch(context: LaunchContext) {
-    Logger.debug("starting lua runtime")
-    Logger.debug("lua binary: \(context.luaPath)")
-    Logger.debug("lua script: \(context.runtimePath)")
-    Logger.debug("widgets path: \(context.widgetsPath)")
+    easybarLog.debug("starting lua runtime")
+    easybarLog.debug("lua binary: \(context.luaPath)")
+    easybarLog.debug("lua script: \(context.runtimePath)")
+    easybarLog.debug("widgets path: \(context.widgetsPath)")
   }
 
   /// Builds one configured Lua runtime process.
@@ -153,10 +153,10 @@ final class LuaProcessController {
   /// Logs one Lua runtime termination status.
   private func logTerminationStatus(_ status: Int32) {
     guard status != 0 else {
-      Logger.info("lua runtime terminated status=\(status)")
+      easybarLog.info("lua runtime terminated status=\(status)")
       return
     }
 
-    Logger.warn("lua runtime terminated status=\(status)")
+    easybarLog.warn("lua runtime terminated status=\(status)")
   }
 }

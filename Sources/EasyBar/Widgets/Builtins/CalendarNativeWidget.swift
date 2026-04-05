@@ -20,12 +20,12 @@ final class CalendarNativeWidget: NativeWidget {
     let snapshot = currentSnapshot()
     let upcoming = snapshot.config.upcoming
 
-    Logger.info(
+    easybarLog.info(
       "starting native widget id=\(rootID) enabled=\(snapshot.config.enabled) layout=\(snapshot.config.anchor.layout.rawValue) position=\(snapshot.config.position.rawValue) popup_mode=\(snapshot.config.popupMode.rawValue) days=\(upcoming.events.days) show_birthdays=\(upcoming.birthdays.show)"
     )
 
     guard Config.shared.calendarAgentEnabled else {
-      Logger.info("calendar agent disabled in config")
+      easybarLog.info("calendar agent disabled in config")
       startTimer()
       publish()
       return
@@ -38,7 +38,7 @@ final class CalendarNativeWidget: NativeWidget {
 
   /// Stops the calendar widget.
   func stop() {
-    Logger.info("stopping native widget id=\(rootID)")
+    easybarLog.info("stopping native widget id=\(rootID)")
 
     timer?.invalidate()
     timer = nil
@@ -56,7 +56,7 @@ final class CalendarNativeWidget: NativeWidget {
   private func publish() {
     let snapshot = currentSnapshot()
 
-    Logger.debug(
+    easybarLog.debug(
       "publishing native calendar widget layout=\(snapshot.config.anchor.layout.rawValue) popup_mode=\(snapshot.config.popupMode.rawValue)"
     )
     WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))

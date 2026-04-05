@@ -11,7 +11,7 @@ extension Config {
       let data = try? Data(contentsOf: URL(fileURLWithPath: resolvedConfigPath)),
       let text = String(data: data, encoding: .utf8)
     else {
-      Logger.info("using default configuration from \(resolvedConfigPath)")
+      easybarLog.info("using default configuration from \(resolvedConfigPath)")
       return
     }
 

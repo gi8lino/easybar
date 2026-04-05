@@ -251,7 +251,7 @@ extension NativeMonthCalendarPopupView {
     selectedStartDate = today
     selectedEndDate = today
 
-    Logger.debug("month calendar popup show_today visible_month=\(debugDate(visibleMonth))")
+    easybarLog.debug("month calendar popup show_today visible_month=\(debugDate(visibleMonth))")
   }
 
   /// Shows the previous visible month.
@@ -267,7 +267,7 @@ extension NativeMonthCalendarPopupView {
     selectedEndDate = targetSelectionDate
     shouldAutoSelectVisibleMonthEvent = true
 
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup show_previous_month visible_month=\(debugDate(visibleMonth))")
   }
 
@@ -284,7 +284,7 @@ extension NativeMonthCalendarPopupView {
     selectedEndDate = targetSelectionDate
     shouldAutoSelectVisibleMonthEvent = true
 
-    Logger.debug("month calendar popup show_next_month visible_month=\(debugDate(visibleMonth))")
+    easybarLog.debug("month calendar popup show_next_month visible_month=\(debugDate(visibleMonth))")
   }
 
 }

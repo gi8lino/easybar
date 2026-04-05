@@ -110,7 +110,7 @@ extension NativeMonthCalendarPopupView {
     shouldAutoSelectVisibleMonthEvent = true
     isYearPickerPresented = false
 
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup select_year year=\(year) visible_month=\(debugDate(visibleMonth))")
   }
 
@@ -165,14 +165,14 @@ extension NativeMonthCalendarPopupView {
 
   /// Logs the current selection.
   func logSelection(_ reason: String) {
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup selection reason=\(reason) start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
     )
   }
 
   /// Logs the appointments resolved for the current selection.
   func logResolvedAppointments(_ reason: String) {
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup appointments reason=\(reason) count=\(selectedEvents.count)"
     )
   }

@@ -68,7 +68,7 @@ final class EventBus {
   /// Encodes and forwards one payload to the Lua runtime.
   private func sendToLua(_ payload: EasyBarEventPayload) {
     guard let encoded = encodedPayload(payload) else {
-      Logger.error("failed to encode lua event payload")
+      easybarLog.error("failed to encode lua event payload")
       return
     }
 
@@ -104,7 +104,7 @@ final class EventBus {
   /// Logs one emitted payload for local debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard let line = payload.debugDescription else { return }
-    Logger.debug(line)
+    easybarLog.debug(line)
   }
 }
 

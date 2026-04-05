@@ -115,7 +115,7 @@ final class MouseTrackingNSView: NSView {
   override func scrollWheel(with event: NSEvent) {
     let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
 
-    Logger.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
+    easybarLog.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
 
     EventBus.shared.emitWidgetEvent(
       .mouseScrolled,
@@ -172,7 +172,7 @@ final class MouseTrackingNSView: NSView {
   /// Emits one widget mouse event with shared logging.
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
-    Logger.debug(
+    easybarLog.debug(
       "\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)")
 
     EventBus.shared.emitWidgetEvent(

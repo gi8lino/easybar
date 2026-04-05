@@ -91,7 +91,7 @@ struct NativeMonthCalendarPopupView: View {
         logResolvedAppointments("selected_end_changed")
       }
       .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
-        Logger.debug(
+        easybarLog.debug(
           "month calendar popup snapshot changed generated_at=\(generatedAt?.description ?? "nil")"
         )
         resolveVisibleMonthAutoSelection()

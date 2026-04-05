@@ -25,10 +25,10 @@ final class CalendarAgentStreamController {
     clearState: { [weak self] in
       self?.clearState()
     },
-    debugLog: Logger.debug,
-    infoLog: Logger.info,
-    warnLog: Logger.warn,
-    errorLog: Logger.error
+    debugLog: easybarLog.debug,
+    infoLog: easybarLog.info,
+    warnLog: easybarLog.warn,
+    errorLog: easybarLog.error
   )
 
   /// Creates one shared calendar-agent stream controller.
@@ -56,12 +56,12 @@ final class CalendarAgentStreamController {
     guard !started else { return }
 
     guard enabled else {
-      Logger.info("\(label) start skipped because agent is disabled")
+      easybarLog.info("\(label) start skipped because agent is disabled")
       return
     }
 
     started = true
-    Logger.info("starting \(label) socket=\(socketPath())")
+    easybarLog.info("starting \(label) socket=\(socketPath())")
     client.start()
   }
 
@@ -69,7 +69,7 @@ final class CalendarAgentStreamController {
   func stop() {
     guard started else { return }
 
-    Logger.info("stopping \(label)")
+    easybarLog.info("stopping \(label)")
     started = false
     client.stop()
   }
@@ -85,17 +85,17 @@ final class CalendarAgentStreamController {
     switch response.kind {
     case .snapshot:
       guard let snapshot = response.snapshot else {
-        Logger.warn("\(label) received snapshot without payload")
+        easybarLog.warn("\(label) received snapshot without payload")
         return
       }
 
-      Logger.debug(
+      easybarLog.debug(
         "\(label) applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
       )
       applySnapshot(snapshot)
 
     case .error:
-      Logger.warn("\(label) received error message=\(response.message ?? "unknown")")
+      easybarLog.warn("\(label) received error message=\(response.message ?? "unknown")")
       clearState()
 
     case .pong, .subscribed, .created, .updated, .deleted:

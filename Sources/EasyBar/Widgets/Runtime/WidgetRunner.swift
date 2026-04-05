@@ -29,21 +29,21 @@ final class WidgetRunner {
   /// Starts the widget runtime and begins observing Lua stdout.
   func start() {
     guard !started else {
-      Logger.debug("widget runner already started")
+      easybarLog.debug("widget runner already started")
       return
     }
 
     started = true
     resetRuntimeState()
 
-    Logger.debug("starting widget runner")
+    easybarLog.debug("starting widget runner")
     startObservingRuntimeOutput()
     LuaRuntime.shared.start()
   }
 
   /// Reloads the Lua runtime and clears rendered widget state.
   func reload() {
-    Logger.debug("reloading widget runner")
+    easybarLog.debug("reloading widget runner")
 
     shutdown()
     WidgetStore.shared.clear()
@@ -52,7 +52,7 @@ final class WidgetRunner {
 
   /// Stops the widget runtime and related event sources.
   func shutdown() {
-    Logger.debug("shutting down widget runner")
+    easybarLog.debug("shutting down widget runner")
     stopObservingRuntimeOutput()
 
     started = false
@@ -64,16 +64,16 @@ final class WidgetRunner {
 
   /// Handles one line of structured stdout from the Lua runtime.
   private func handleRuntimeOutput(_ line: String) {
-    Logger.debug("lua stdout: \(line)")
+    easybarLog.debug("lua stdout: \(line)")
 
     do {
       let update = try decodeUpdate(from: line)
       handleUpdate(update, rawLine: line)
     } catch DecodingError.dataCorrupted {
-      Logger.warn("invalid utf8: \(line)")
+      easybarLog.warn("invalid utf8: \(line)")
     } catch {
-      Logger.warn("json decode failed: \(line)")
-      Logger.debug("decode error: \(error)")
+      easybarLog.warn("json decode failed: \(line)")
+      easybarLog.debug("decode error: \(error)")
     }
   }
 
@@ -116,7 +116,7 @@ final class WidgetRunner {
 
   /// Emits initial state-refresh events required by subscribed widgets.
   private func emitInitialEvents() {
-    Logger.debug("emitting initial widget events")
+    easybarLog.debug("emitting initial widget events")
 
     for (name, event) in Self.initialEvents {
       emitInitialEvent(named: name, event: event)
@@ -138,7 +138,7 @@ final class WidgetRunner {
     }
 
     guard update.isTree else {
-      Logger.warn("unknown lua message: \(rawLine)")
+      easybarLog.warn("unknown lua message: \(rawLine)")
       return
     }
 
@@ -150,14 +150,14 @@ final class WidgetRunner {
     runtimeState.requiredEvents = Set(update.subscribedEvents)
     runtimeState.hasSubscriptions = true
 
-    Logger.debug("required events: \(runtimeState.requiredEvents)")
+    easybarLog.debug("required events: \(runtimeState.requiredEvents)")
     EventManager.shared.start(subscriptions: runtimeState.requiredEvents)
     emitInitialEventsIfPossible()
   }
 
   /// Handles the Lua runtime ready handshake.
   private func handleReady() {
-    Logger.debug("lua runtime handshake received")
+    easybarLog.debug("lua runtime handshake received")
     runtimeState.isReady = true
     emitInitialEventsIfPossible()
   }
@@ -165,11 +165,11 @@ final class WidgetRunner {
   /// Handles one rendered widget tree update.
   private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) {
     guard let tree = update.treePayload else {
-      Logger.warn("unknown lua message: \(rawLine)")
+      easybarLog.warn("unknown lua message: \(rawLine)")
       return
     }
 
-    Logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+    easybarLog.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
     WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
   }
 

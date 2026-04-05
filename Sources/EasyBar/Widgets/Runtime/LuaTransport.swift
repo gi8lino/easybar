@@ -40,7 +40,7 @@ final class LuaTransport {
   /// Sends one encoded event line to the Lua runtime stdin.
   func send(_ string: String) {
     guard let pipe = inputPipe else {
-      Logger.debug("cannot send event, lua stdin not available")
+      easybarLog.debug("cannot send event, lua stdin not available")
       return
     }
 
@@ -49,9 +49,9 @@ final class LuaTransport {
 
       do {
         try pipe.fileHandleForWriting.write(contentsOf: data)
-        Logger.debug("sent to lua stdin: \(string)")
+        easybarLog.debug("sent to lua stdin: \(string)")
       } catch {
-        Logger.error("failed writing to lua stdin: \(error)")
+        easybarLog.error("failed writing to lua stdin: \(error)")
       }
     }
   }
@@ -61,7 +61,7 @@ final class LuaTransport {
     guard let pipe = outputPipe else { return }
 
     installReadabilityHandler(on: pipe) { line in
-      Logger.debug("lua stdout raw: \(line)")
+      easybarLog.debug("lua stdout raw: \(line)")
       NotificationCenter.default.post(name: .easyBarLuaStdout, object: line)
     }
   }

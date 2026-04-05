@@ -21,9 +21,9 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     do {
       try client.startMonitoringEvent(with: .ssidDidChange)
       wifiClient = client
-      Logger.debug("subscribed wifi_change")
+      easybarLog.debug("subscribed wifi_change")
     } catch {
-      Logger.debug("failed to subscribe wifi_change: \(error)")
+      easybarLog.debug("failed to subscribe wifi_change: \(error)")
     }
   }
 
@@ -40,7 +40,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     reachability = SCNetworkReachabilityCreateWithName(nil, "apple.com")
 
     guard let reachability else {
-      Logger.debug("failed to create network reachability reference")
+      easybarLog.debug("failed to create network reachability reference")
       return
     }
 
@@ -49,16 +49,16 @@ final class NetworkEvents: NSObject, CWEventDelegate {
     }
 
     guard SCNetworkReachabilitySetCallback(reachability, callback, &context) else {
-      Logger.debug("failed to set network reachability callback")
+      easybarLog.debug("failed to set network reachability callback")
       return
     }
 
     guard SCNetworkReachabilitySetDispatchQueue(reachability, DispatchQueue.main) else {
-      Logger.debug("failed to set network reachability dispatch queue")
+      easybarLog.debug("failed to set network reachability dispatch queue")
       return
     }
 
-    Logger.debug("subscribed network_change")
+    easybarLog.debug("subscribed network_change")
   }
 
   /// Stops Wi-Fi and network reachability observation.
@@ -71,7 +71,7 @@ final class NetworkEvents: NSObject, CWEventDelegate {
       do {
         try wifiClient.stopMonitoringAllEvents()
       } catch {
-        Logger.debug("failed to stop wifi monitoring: \(error)")
+        easybarLog.debug("failed to stop wifi monitoring: \(error)")
       }
     }
 

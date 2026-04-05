@@ -24,8 +24,8 @@ final class VolumeEvents {
     installDefaultOutputDeviceListener()
     refreshDeviceSubscription()
 
-    Logger.debug("subscribed volume_change")
-    Logger.debug("subscribed mute_change")
+    easybarLog.debug("subscribed volume_change")
+    easybarLog.debug("subscribed mute_change")
   }
 
   /// Stops all active audio listeners and clears cached device state.
@@ -55,7 +55,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      Logger.debug("failed to subscribe default output device changes status=\(status)")
+      easybarLog.debug("failed to subscribe default output device changes status=\(status)")
       return
     }
 
@@ -74,7 +74,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      Logger.debug("failed to remove default output device listener status=\(status)")
+      easybarLog.debug("failed to remove default output device listener status=\(status)")
       return
     }
   }
@@ -84,7 +84,7 @@ final class VolumeEvents {
     let newDeviceID = defaultOutputDeviceID()
 
     guard let newDeviceID else {
-      Logger.debug("no default output device found")
+      easybarLog.debug("no default output device found")
       return
     }
 
@@ -117,7 +117,7 @@ final class VolumeEvents {
     )
 
     guard volumeStatus == noErr else {
-      Logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
+      easybarLog.debug("failed to subscribe volume listener status=\(volumeStatus)")
       return
     }
 
@@ -143,7 +143,7 @@ final class VolumeEvents {
     )
 
     guard muteStatus == noErr else {
-      Logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
+      easybarLog.debug("mute listener unavailable on current output device status=\(muteStatus)")
       return
     }
 
@@ -164,7 +164,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        Logger.debug("failed to remove volume listener status=\(status)")
+        easybarLog.debug("failed to remove volume listener status=\(status)")
         return
       }
     }
@@ -179,7 +179,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        Logger.debug("failed to remove mute listener status=\(status)")
+        easybarLog.debug("failed to remove mute listener status=\(status)")
         return
       }
     }
@@ -202,7 +202,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      Logger.debug("failed to read default output device status=\(status)")
+      easybarLog.debug("failed to read default output device status=\(status)")
       return nil
     }
 

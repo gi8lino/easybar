@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let lockPath = defaultSingleInstanceLockPath(processName: "easybar")
 
     guard instanceGuard.acquireLock(at: lockPath) else {
-      Logger.warn("easybar already running lock_path=\(lockPath)")
+      easybarLog.warn("easybar already running lock_path=\(lockPath)")
       NSApp.terminate(nil)
       return
     }
@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationWillTerminate(_ notification: Notification) {
-    Logger.info("easybar shutting down")
+    easybarLog.info("easybar shutting down")
 
     configFileWatcher.stop()
     NativeWidgetRegistry.shared.stop()
@@ -57,9 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Configures file logging from the current app config.
   private func configureLogging() {
-    Logger.configureFileLogging(
-      enabled: Config.shared.loggingEnabled,
-      path: easyBarLogPath(in: Config.shared.loggingDirectory)
+    easybarLog.configureRuntimeLogging(
+      debugEnabled: Config.shared.environmentDebugOverride() ?? Config.shared.loggingDebugEnabled,
+      fileLoggingEnabled: Config.shared.loggingEnabled,
+      fileLoggingPath: easyBarLogPath(in: Config.shared.loggingDirectory)
     )
   }
 
@@ -151,34 +152,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let bundlePath = bundle.bundleURL.path
     let processID = ProcessInfo.processInfo.processIdentifier
 
-    Logger.info(
+    easybarLog.info(
       "easybar startup version=\(version) build=\(build) bundle_id=\(bundleID) pid=\(processID)")
-    Logger.info("app bundle_path=\(bundlePath)")
-    Logger.info("app executable=\(executable)")
+    easybarLog.info("app bundle_path=\(bundlePath)")
+    easybarLog.info("app executable=\(executable)")
   }
 
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    Logger.info("config path=\(Config.shared.configPath)")
-    Logger.info("widgets path=\(Config.shared.widgetsPath)")
-    Logger.info("lua path=\(Config.shared.luaPath)")
-    Logger.info("watch config=\(Config.shared.watchConfigFile)")
-    Logger.info(
-      "logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) directory=\(Config.shared.loggingDirectory) path=\(Logger.fileLoggingPath)"
+    easybarLog.info("config path=\(Config.shared.configPath)")
+    easybarLog.info("widgets path=\(Config.shared.widgetsPath)")
+    easybarLog.info("lua path=\(Config.shared.luaPath)")
+    easybarLog.info("watch config=\(Config.shared.watchConfigFile)")
+    easybarLog.info(
+      "logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) directory=\(Config.shared.loggingDirectory) path=\(easybarLog.fileLoggingPath)"
     )
-    Logger.info(
+    easybarLog.info(
       "calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"
     )
-    Logger.info(
+    easybarLog.info(
       "network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)"
     )
-    Logger.info(
+    easybarLog.info(
       "calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
     )
-    Logger.info(
+    easybarLog.info(
       "wifi builtin enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)"
     )
-    Logger.info(
+    easybarLog.info(
       "bar height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)"
     )
   }
@@ -186,11 +187,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Logs screen geometry visible at startup.
   private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
-      Logger.info(
+      easybarLog.info(
         "screen frame=\(NSStringFromRect(screen.frame)) visible=\(NSStringFromRect(screen.visibleFrame))"
       )
     } else {
-      Logger.warn("no screen available during startup logging")
+      easybarLog.warn("no screen available during startup logging")
     }
   }
 
@@ -200,9 +201,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let configOverride = env["EASYBAR_CONFIG_PATH"] ?? ""
     let debug = env["EASYBAR_DEBUG"] ?? ""
 
-    Logger.info(
+    easybarLog.info(
       "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)")
-    Logger.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
+    easybarLog.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
   }
 
   /// Logs whether required custom fonts are available at runtime.
@@ -213,11 +214,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Logs one warning when a required font is missing.
   private func validateFont(named fontName: String) {
     if NSFont(name: fontName, size: 12) != nil {
-      Logger.info("font available name=\(fontName)")
+      easybarLog.info("font available name=\(fontName)")
       return
     }
 
-    Logger.warn(
+    easybarLog.warn(
       "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped"
     )
   }
@@ -226,7 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func installWidgetEditorStub() {
     guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua")
     else {
-      Logger.warn("easybar_api.lua not found in bundle resources")
+      easybarLog.warn("easybar_api.lua not found in bundle resources")
       return
     }
 
@@ -248,9 +249,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       }
 
       try bundledData.write(to: installedStub, options: .atomic)
-      Logger.info("installed widget editor stub path=\(installedStub.path)")
+      easybarLog.info("installed widget editor stub path=\(installedStub.path)")
     } catch {
-      Logger.warn("failed to install widget editor stub: \(error)")
+      easybarLog.warn("failed to install widget editor stub: \(error)")
     }
   }
 }

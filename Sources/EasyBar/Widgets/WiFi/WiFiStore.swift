@@ -24,7 +24,7 @@ final class NativeWiFiStore: ObservableObject {
     guard signature != lastPublishedSignature else { return }
 
     lastPublishedSignature = signature
-    Logger.debug(
+    easybarLog.debug(
       "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") rssi=\(snapshot.rssi.map(String.init) ?? "<none>")"
     )
     publish(snapshot: snapshot)
@@ -33,7 +33,7 @@ final class NativeWiFiStore: ObservableObject {
   func clear() {
     guard snapshot != nil else { return }
     lastPublishedSignature = nil
-    Logger.debug("wifi widget cleared")
+    easybarLog.debug("wifi widget cleared")
     publish(snapshot: nil)
   }
 

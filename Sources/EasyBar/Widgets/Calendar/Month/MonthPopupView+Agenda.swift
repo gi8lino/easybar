@@ -388,7 +388,7 @@ extension NativeMonthCalendarPopupView {
     dragDidCrossIntoAnotherDay = false
     lastResolvedDragDate = date
 
-    Logger.debug("month calendar popup pointer_begin date=\(debugDate(date))")
+    easybarLog.debug("month calendar popup pointer_begin date=\(debugDate(date))")
   }
 
   /// Updates the current drag selection.
@@ -405,7 +405,7 @@ extension NativeMonthCalendarPopupView {
     selectedStartDate = min(dragAnchorDate, date)
     selectedEndDate = max(dragAnchorDate, date)
 
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup drag_update anchor=\(debugDate(dragAnchorDate)) current=\(debugDate(date)) start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
     )
   }
@@ -444,14 +444,14 @@ extension NativeMonthCalendarPopupView {
     if !dragDidCrossIntoAnotherDay || startDate == endDate {
       selectedStartDate = startDate
       selectedEndDate = startDate
-      Logger.debug("month calendar popup click_select date=\(debugDate(startDate))")
+      easybarLog.debug("month calendar popup click_select date=\(debugDate(startDate))")
       return
     }
 
     selectedStartDate = min(startDate, endDate)
     selectedEndDate = max(startDate, endDate)
 
-    Logger.debug(
+    easybarLog.debug(
       "month calendar popup drag_end start=\(debugDate(selectedStartDate)) end=\(debugDate(selectedEndDate))"
     )
   }

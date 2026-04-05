@@ -11,7 +11,7 @@ final class BarWindowController: NSWindowController {
   init() {
     let screen = NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen)
-    Logger.info("bar window initial target_frame=\(NSStringFromRect(frame))")
+    easybarLog.info("bar window initial target_frame=\(NSStringFromRect(frame))")
 
     let contentView = BarRootView()
 
@@ -71,7 +71,7 @@ final class BarWindowController: NSWindowController {
     window.minSize = frame.size
     window.maxSize = frame.size
     window.contentView?.frame = NSRect(origin: .zero, size: frame.size)
-    Logger.info("bar window reloaded frame=\(NSStringFromRect(window.frame))")
+    easybarLog.info("bar window reloaded frame=\(NSStringFromRect(window.frame))")
   }
 
   /// Shows the panel without asking AppKit to make it key.
@@ -80,7 +80,7 @@ final class BarWindowController: NSWindowController {
 
     window.setFrame(window.frame, display: true)
     window.orderFrontRegardless()
-    Logger.info(
+    easybarLog.info(
       "bar window presented frame=\(NSStringFromRect(window.frame)) level=\(window.level.rawValue)")
   }
 

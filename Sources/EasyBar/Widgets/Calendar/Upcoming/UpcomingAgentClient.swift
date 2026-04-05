@@ -51,7 +51,7 @@ final class UpcomingCalendarAgentClient {
       now: now
     )
 
-    Logger.debug(
+    easybarLog.debug(
       "requesting upcoming calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) days=\(upcoming.events.days) show_birthdays=\(upcoming.birthdays.show)"
     )
 

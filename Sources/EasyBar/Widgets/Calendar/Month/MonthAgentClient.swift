@@ -141,11 +141,11 @@ final class MonthCalendarAgentClient {
 
           case .error:
             let message = response.message ?? "unknown"
-            Logger.error("month calendar mutation failed message=\(message)")
+            easybarLog.error("month calendar mutation failed message=\(message)")
             completion(false, message)
 
           default:
-            Logger.error(
+            easybarLog.error(
               "month calendar mutation unexpected response=\(response.kind.rawValue)"
             )
             completion(false, "unexpected_response")
@@ -153,7 +153,7 @@ final class MonthCalendarAgentClient {
         }
       } catch {
         DispatchQueue.main.async {
-          Logger.error("month calendar mutation failed error=\(error)")
+          easybarLog.error("month calendar mutation failed error=\(error)")
           completion(false, error.localizedDescription)
         }
       }
@@ -174,7 +174,7 @@ final class MonthCalendarAgentClient {
     let monthConfig = calendarConfig.month.popup
     let upcomingBirthdays = calendarConfig.upcoming.birthdays
 
-    Logger.debug(
+    easybarLog.debug(
       "requesting month calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) show_birthdays=\(monthConfig.showBirthdays) birthdays_show_age=\(monthConfig.birthdaysShowAge)"
     )
 

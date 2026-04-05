@@ -19,7 +19,7 @@ final class SystemEvents {
     }
 
     observers.append(observer)
-    Logger.debug("subscribed system_woke")
+    easybarLog.debug("subscribed system_woke")
   }
 
   /// Starts observation for system sleep notifications.
@@ -33,7 +33,7 @@ final class SystemEvents {
     }
 
     observers.append(observer)
-    Logger.debug("subscribed sleep")
+    easybarLog.debug("subscribed sleep")
   }
 
   /// Starts observation for active space changes.
@@ -47,7 +47,7 @@ final class SystemEvents {
     }
 
     observers.append(observer)
-    Logger.debug("subscribed space_change")
+    easybarLog.debug("subscribed space_change")
   }
 
   /// Starts observation for frontmost app changes.
@@ -65,7 +65,7 @@ final class SystemEvents {
     }
 
     observers.append(observer)
-    Logger.debug("subscribed app_switch")
+    easybarLog.debug("subscribed app_switch")
   }
 
   /// Starts observation for display configuration changes.
@@ -79,7 +79,7 @@ final class SystemEvents {
     }
 
     observers.append(observer)
-    Logger.debug("subscribed display_change")
+    easybarLog.debug("subscribed display_change")
   }
 
   /// Removes every registered system observer.
