@@ -123,20 +123,34 @@ final class SocketServer {
   private func readRequest(from client: Int32) -> IPC.Request? {
     var buffer = [UInt8](repeating: 0, count: 256)
     let count = read(client, &buffer, 255)
-    guard count >= 0 else { return nil }
 
-    let rawRequest = String(bytes: buffer.prefix(count), encoding: .utf8)?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    easybarLog.debug("socket received raw request '\(rawRequest ?? "unknown")'")
-
-    guard
-      let rawRequest,
-      let data = rawRequest.data(using: .utf8)
-    else {
+    guard count >= 0 else {
+      easybarLog.warn("socket failed to read request")
       return nil
     }
 
-    return try? decoder.decode(IPC.Request.self, from: data)
+    let rawBytes = Array(buffer.prefix(count))
+    let rawRequest = String(bytes: rawBytes, encoding: .utf8)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    easybarLog.debug("socket received raw request '\(rawRequest ?? "unknown")'")
+
+    guard let rawRequest, !rawRequest.isEmpty else {
+      easybarLog.warn("socket received empty or non-utf8 request")
+      return nil
+    }
+
+    guard let data = rawRequest.data(using: .utf8) else {
+      easybarLog.warn("socket failed to convert request to utf8 data raw='\(rawRequest)'")
+      return nil
+    }
+
+    do {
+      return try decoder.decode(IPC.Request.self, from: data)
+    } catch {
+      easybarLog.warn("socket invalid IPC request raw='\(rawRequest)' error=\(error)")
+      return nil
+    }
   }
 
   /// Writes one IPC response to a connected client.

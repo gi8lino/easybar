@@ -343,7 +343,7 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
-    throw AppError.message("failed to create socket")
+    throw AppError.message("failed to create socket \(socketPath)")
   }
 
   defer { close(fd) }
@@ -370,7 +370,7 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
   }
 
   guard writeResult >= 0 else {
-    throw AppError.message("failed to send command")
+    throw AppError.message("failed to send command \"\(command)\"")
   }
 
   var buffer = [UInt8](repeating: 0, count: 256)
@@ -380,7 +380,14 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
   }
 
   let responseData = Data(buffer.prefix(readResult))
+  let rawResponse = String(data: responseData, encoding: .utf8) ?? "<invalid_utf8>"
+  context.debug("received raw response '\(rawResponse)'")
+
   let response = try context.decodeResponse(from: responseData)
+  context.debug(
+    "decoded response status='\(response.status.rawValue)' message='\(response.message ?? "<nil>")'"
+  )
+
   guard response.status == .accepted else {
     throw AppError.message(response.message ?? "command rejected")
   }
