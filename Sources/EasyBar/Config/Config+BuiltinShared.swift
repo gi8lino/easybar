@@ -42,6 +42,7 @@ extension Config {
     try parseBatteryBuiltin(from: builtins)
     try parseSpacesBuiltin(from: builtins)
     try parseFrontAppBuiltin(from: builtins)
+    try parseAeroSpaceModeBuiltin(from: builtins)
     try parseVolumeBuiltin(from: builtins)
     try parseWiFiBuiltin(from: builtins)
     try parseDateBuiltin(from: builtins)

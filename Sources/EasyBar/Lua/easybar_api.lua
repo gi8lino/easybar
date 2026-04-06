@@ -38,6 +38,7 @@
 ---| '"charging_state_change"'
 ---| '"workspace_change"'
 ---| '"focus_change"'
+---| '"space_mode_change"'
 ---| '"mouse.entered"'
 ---| '"mouse.exited"'
 ---| '"mouse.clicked"'
@@ -98,6 +99,7 @@
 ---@field calendar_change? EasyBarEventToken Fired when the calendar snapshot updates.
 ---@field focus_change? EasyBarEventToken Fired when workspace focus changes.
 ---@field workspace_change? EasyBarEventToken Fired when workspace layout or selection changes.
+---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 

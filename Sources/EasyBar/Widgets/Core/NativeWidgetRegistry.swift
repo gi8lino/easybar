@@ -59,6 +59,9 @@ final class NativeWidgetRegistry {
       Registration(enabled: Config.shared.builtinSpaces.enabled) { SpacesNativeWidget() },
       Registration(enabled: Config.shared.builtinBattery.enabled) { BatteryNativeWidget() },
       Registration(enabled: Config.shared.builtinFrontApp.enabled) { FrontAppNativeWidget() },
+      Registration(enabled: Config.shared.builtinAeroSpaceMode.enabled) {
+        AeroSpaceModeNativeWidget()
+      },
       Registration(enabled: Config.shared.builtinVolume.enabled) { VolumeSliderNativeWidget() },
       Registration(enabled: Config.shared.builtinWiFi.enabled) { WiFiNativeWidget() },
       Registration(enabled: Config.shared.builtinDate.enabled) { DateNativeWidget() },
@@ -82,6 +85,7 @@ final class NativeWidgetRegistry {
       spaces=\(Config.shared.builtinSpaces.enabled) \
       battery=\(Config.shared.builtinBattery.enabled) \
       front_app=\(Config.shared.builtinFrontApp.enabled) \
+      aerospace_mode=\(Config.shared.builtinAeroSpaceMode.enabled) \
       volume=\(Config.shared.builtinVolume.enabled) \
       wifi=\(Config.shared.builtinWiFi.enabled) \
       date=\(Config.shared.builtinDate.enabled) \

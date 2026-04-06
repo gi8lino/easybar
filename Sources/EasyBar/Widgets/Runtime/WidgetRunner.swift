@@ -14,6 +14,7 @@ final class WidgetRunner {
     ("second_tick", .secondTick),
     ("focus_change", .focusChange),
     ("workspace_change", .workspaceChange),
+    ("space_mode_change", .spaceModeChange),
   ]
 
   static let shared = WidgetRunner()

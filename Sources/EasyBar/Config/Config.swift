@@ -124,6 +124,7 @@ final class Config {
   var builtinGroups: [BuiltinGroupConfig] = []
   var builtinSpaces: SpacesBuiltinConfig = .default
   var builtinFrontApp: FrontAppBuiltinConfig = .default
+  var builtinAeroSpaceMode: AeroSpaceModeBuiltinConfig = .default
   var builtinVolume: VolumeBuiltinConfig = .default
   var builtinWiFi: WiFiBuiltinConfig = .default
   var builtinCalendar: CalendarBuiltinConfig = .default
@@ -263,6 +264,7 @@ final class Config {
     builtinGroups = []
     builtinSpaces = .default
     builtinFrontApp = .default
+    builtinAeroSpaceMode = .default
     builtinVolume = .default
     builtinWiFi = .default
     builtinCalendar = .default
@@ -308,6 +310,7 @@ final class Config {
         groups: builtinGroups,
         spaces: builtinSpaces,
         frontApp: builtinFrontApp,
+        aerospaceMode: builtinAeroSpaceMode,
         volume: builtinVolume,
         wifi: builtinWiFi,
         calendar: builtinCalendar,
@@ -370,6 +373,7 @@ final class Config {
     builtinGroups = snapshot.builtins.groups
     builtinSpaces = snapshot.builtins.spaces
     builtinFrontApp = snapshot.builtins.frontApp
+    builtinAeroSpaceMode = snapshot.builtins.aerospaceMode
     builtinVolume = snapshot.builtins.volume
     builtinWiFi = snapshot.builtins.wifi
     builtinCalendar = snapshot.builtins.calendar

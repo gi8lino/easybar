@@ -110,6 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     case .focusChanged:
       handleFocusChanged()
 
+    case .spaceModeChanged:
+      handleSpaceModeChanged()
+
     case .refresh:
       handleForcedRefresh()
 
@@ -128,6 +131,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func handleFocusChanged() {
     aeroSpaceService.triggerRefresh()
     EventBus.shared.emit(.focusChange)
+  }
+
+  /// Handles one space-mode-changed IPC trigger.
+  private func handleSpaceModeChanged() {
+    aeroSpaceService.triggerRefresh()
+    EventBus.shared.emit(.spaceModeChange)
   }
 
   /// Handles one forced-refresh IPC trigger.

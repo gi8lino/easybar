@@ -20,6 +20,7 @@ local DRIVER_EVENTS = {
 	calendar_change = true,
 	focus_change = true,
 	workspace_change = true,
+	space_mode_change = true,
 	forced = true,
 }
 
@@ -49,6 +50,7 @@ M.tokens = {
 	calendar_change = make_event_token("calendar_change"),
 	focus_change = make_event_token("focus_change"),
 	workspace_change = make_event_token("workspace_change"),
+	space_mode_change = make_event_token("space_mode_change"),
 	mouse = {
 		entered = make_event_token("mouse.entered"),
 		exited = make_event_token("mouse.exited"),
@@ -67,7 +69,10 @@ M.driver_events = DRIVER_EVENTS
 
 --- Extracts the runtime event name from one `easybar.events` token.
 function M.normalize(event)
-	assert(type(event) == "table" and type(event.name) == "string" and event.name ~= "", "easybar.subscribe(...) requires easybar.events values")
+	assert(
+		type(event) == "table" and type(event.name) == "string" and event.name ~= "",
+		"easybar.subscribe(...) requires easybar.events values"
+	)
 	return event.name
 end
 

@@ -113,6 +113,51 @@ fallback_text = "No App" # Fallback text when no app name is available.
 icon_size = 14 # Display size of the app icon.
 icon_corner_radius = 4 # Corner radius of the displayed app icon.
 
+[builtins.aerospace_mode]
+enabled = true
+position = "left"
+order = 30
+
+[builtins.aerospace_mode.style]
+text_color = "#ffffff"
+background_color = "#1a1a1a"
+border_color = "#333333"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 4
+spacing = 6
+opacity = 1
+
+[builtins.aerospace_mode.content]
+show_icon = true
+show_text = false
+
+# Horizontal tiling
+h_tiles_icon = "󰕴"
+
+# Vertical tiling
+v_tiles_icon = "󰕳"
+
+# Horizontal accordion
+h_accordion_icon = "󰖲"
+
+# Vertical accordion
+v_accordion_icon = "󰖳"
+
+# Floating window/container
+floating_icon = "󰹙"
+
+# Fallback when layout cannot be detected
+unknown_icon = "󰘎"
+
+h_tiles_text = "h_tiles"
+v_tiles_text = "v_tiles"
+h_accordion_text = "h_accordion"
+v_accordion_text = "v_accordion"
+floating_text = "floating"
+unknown_text = "unknown"
+
 [builtins.cpu]
 enabled = false # Shows or hides the CPU widget.
 position = "right" # Places the widget on the left, center, or right side.

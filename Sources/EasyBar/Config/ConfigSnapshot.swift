@@ -41,6 +41,7 @@ struct ConfigSnapshot {
     let groups: [Config.BuiltinGroupConfig]
     let spaces: Config.SpacesBuiltinConfig
     let frontApp: Config.FrontAppBuiltinConfig
+    let aerospaceMode: Config.AeroSpaceModeBuiltinConfig
     let volume: Config.VolumeBuiltinConfig
     let wifi: Config.WiFiBuiltinConfig
     let calendar: Config.CalendarBuiltinConfig

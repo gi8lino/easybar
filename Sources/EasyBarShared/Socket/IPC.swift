@@ -8,6 +8,7 @@ extension IPC {
   public enum Command: String, Codable {
     case workspaceChanged = "workspace_changed"
     case focusChanged = "focus_changed"
+    case spaceModeChanged = "space_mode_changed"
     case refresh = "refresh"
     case reloadConfig = "reload_config"
   }

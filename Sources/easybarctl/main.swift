@@ -166,6 +166,11 @@ private enum CLI {
       description: "Send focus_changed"
     ),
     .init(
+      flag: "--space-mode-changed",
+      command: .spaceModeChanged,
+      description: "Send space_mode_changed"
+    ),
+    .init(
       flag: "--refresh",
       command: .refresh,
       description: "Send refresh"

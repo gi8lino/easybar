@@ -14,6 +14,9 @@ final class AeroSpaceService: ObservableObject {
   /// Resolved focused app used by `FrontAppNativeWidget`.
   @Published private(set) var focusedApp: SpaceApp?
 
+  /// Resolved layout mode used by `AeroSpaceModeNativeWidget`.
+  @Published private(set) var focusedLayoutMode: AeroSpaceLayoutMode = .unknown
+
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
   private var consumers = Set<String>()
   private var appSwitchObserver: NSObjectProtocol?
@@ -176,6 +179,7 @@ extension AeroSpaceService {
     let windows = loadWindows()
     let groupedApps = Dictionary(grouping: windows, by: \.workspace)
     let focused = loadFocusedApp()
+    let layoutMode = loadFocusedLayoutMode()
 
     let spaces =
       workspaces
@@ -196,9 +200,10 @@ extension AeroSpaceService {
       self.spaces = spaces
       self.focusedApp = focused
       self.focusedAppID = focused?.id
+      self.focusedLayoutMode = layoutMode
       self.publishUpdate(
         logMessage:
-          "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none")"
+          "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none") layout=\(layoutMode.rawValue)"
       )
     }
   }
@@ -303,6 +308,22 @@ extension AeroSpaceService {
     )
   }
 
+  /// Reads the currently focused AeroSpace layout mode.
+  fileprivate func loadFocusedLayoutMode() -> AeroSpaceLayoutMode {
+    guard
+      let output = runAeroSpace(arguments: [
+        "list-windows",
+        "--focused",
+        "--format",
+        "%{window-layout}",
+      ])
+    else {
+      return .unknown
+    }
+
+    return parseLayoutMode(output)
+  }
+
   /// Deduplicates apps per workspace.
   fileprivate func deduplicateApps(_ windows: [WindowDTO]) -> [SpaceApp] {
     var seen = Set<String>()
@@ -403,6 +424,26 @@ extension AeroSpaceService {
       name: parts[1],
       bundlePath: parts[2]
     )
+  }
+
+  /// Parses one focused layout mode from AeroSpace output.
+  fileprivate func parseLayoutMode(_ output: String) -> AeroSpaceLayoutMode {
+    let normalized = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    switch normalized {
+    case AeroSpaceLayoutMode.hTiles.rawValue:
+      return .hTiles
+    case AeroSpaceLayoutMode.vTiles.rawValue:
+      return .vTiles
+    case AeroSpaceLayoutMode.hAccordion.rawValue:
+      return .hAccordion
+    case AeroSpaceLayoutMode.vAccordion.rawValue:
+      return .vAccordion
+    case AeroSpaceLayoutMode.floating.rawValue:
+      return .floating
+    default:
+      return .unknown
+    }
   }
 
   /// Splits one `a | b | c` line and trims each part.

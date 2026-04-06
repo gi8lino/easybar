@@ -1,6 +1,16 @@
 import AppKit
 import Foundation
 
+/// The current AeroSpace layout mode resolved from the focused window/container.
+enum AeroSpaceLayoutMode: String, Codable {
+  case hTiles = "h_tiles"
+  case vTiles = "v_tiles"
+  case hAccordion = "h_accordion"
+  case vAccordion = "v_accordion"
+  case floating
+  case unknown
+}
+
 /// A single running application shown inside a workspace.
 struct SpaceApp: Identifiable, Hashable {
   let id: String

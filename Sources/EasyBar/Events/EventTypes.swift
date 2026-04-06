@@ -26,6 +26,7 @@ enum AppEvent: String {
 
   case focusChange = "focus_change"
   case workspaceChange = "workspace_change"
+  case spaceModeChange = "space_mode_change"
 }
 
 /// Widget-scoped interaction events emitted by EasyBar.
