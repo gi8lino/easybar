@@ -5,9 +5,16 @@ import Foundation
 final class CalendarSnapshotProvider {
   private let eventStore = EKEventStore()
   private let authState = CalendarAgentAuthorizationState()
-  private let retryBackoff = AuthorizationRetryBackoff(debugLog: calendarAgentLog.debug)
+  private let logger: ProcessLogger
+  private let retryBackoff: AuthorizationRetryBackoff
   private var observer: NSObjectProtocol?
   private var onChange: (() -> Void)?
+
+  /// Creates one calendar snapshot provider that logs through the provided logger.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    retryBackoff = AuthorizationRetryBackoff(debugLog: logger.debug)
+  }
 
   /// Starts calendar access, observation, and change callbacks.
   func start(onChange: @escaping () -> Void) {
@@ -15,7 +22,7 @@ final class CalendarSnapshotProvider {
 
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
-    calendarAgentLog.info(
+    logger.info(
       "calendar agent authorization status before start=\(authState.describe(status))"
     )
 
@@ -26,7 +33,7 @@ final class CalendarSnapshotProvider {
       object: eventStore,
       queue: .main
     ) { [weak self] _ in
-      calendarAgentLog.info("calendar store changed")
+      self?.logger.info("calendar store changed")
       self?.onChange?()
     }
   }
@@ -53,7 +60,7 @@ final class CalendarSnapshotProvider {
     let now = Date()
 
     guard hasAccess else {
-      calendarAgentLog.debug(
+      logger.debug(
         "calendar snapshot access_granted=false permission_state=\(permissionState)"
       )
       return CalendarAgentSnapshot(
@@ -67,7 +74,7 @@ final class CalendarSnapshotProvider {
     }
 
     guard let fetchRange = normalizedFetchRange(from: query) else {
-      calendarAgentLog.warn("calendar snapshot invalid fetch range")
+      logger.warn("calendar snapshot invalid fetch range")
       return CalendarAgentSnapshot(
         accessGranted: true,
         permissionState: permissionState,
@@ -98,7 +105,7 @@ final class CalendarSnapshotProvider {
       sections: sections
     )
 
-    calendarAgentLog.debug(
+    logger.debug(
       """
       calendar snapshot access_granted=true \
       permission_state=\(permissionState) \
@@ -148,7 +155,7 @@ final class CalendarSnapshotProvider {
 
     try eventStore.save(event, span: .thisEvent, commit: true)
 
-    calendarAgentLog.info(
+    logger.info(
       """
       calendar event created \
       title=\(event.title ?? "Untitled") \
@@ -205,7 +212,7 @@ final class CalendarSnapshotProvider {
 
     try eventStore.save(event, span: .thisEvent, commit: true)
 
-    calendarAgentLog.info(
+    logger.info(
       """
       calendar event updated \
       event_id=\(draft.eventIdentifier) \
@@ -238,7 +245,7 @@ final class CalendarSnapshotProvider {
 
     try eventStore.remove(event, span: .thisEvent, commit: true)
 
-    calendarAgentLog.info(
+    logger.info(
       "calendar event deleted event_id=\(draft.eventIdentifier) title=\(event.title ?? "Untitled")"
     )
 
@@ -260,16 +267,16 @@ final class CalendarSnapshotProvider {
   private func requestAccessIfNeeded() {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
-    calendarAgentLog.info("calendar agent access status=\(authState.describe(status))")
+    logger.info("calendar agent access status=\(authState.describe(status))")
 
     switch status {
     case .authorized, .fullAccess:
       retryBackoff.reset()
-      calendarAgentLog.info("calendar agent access already granted")
+      logger.info("calendar agent access already granted")
       onChange?()
 
     case .notDetermined:
-      calendarAgentLog.info("requesting calendar full access")
+      logger.info("requesting calendar full access")
       eventStore.requestFullAccessToEvents { [weak self] granted, error in
         guard let self else { return }
 
@@ -277,14 +284,14 @@ final class CalendarSnapshotProvider {
         self.authState.setStatus(newStatus)
 
         if let error {
-          calendarAgentLog.error(
+          self.logger.error(
             "calendar agent access request failed status=\(self.authState.describe(newStatus)) error=\(error)"
           )
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
           return
         }
 
-        calendarAgentLog.info(
+        self.logger.info(
           "calendar agent access request completed granted=\(granted) status=\(self.authState.describe(newStatus))"
         )
 
@@ -303,11 +310,11 @@ final class CalendarSnapshotProvider {
 
     case .denied, .restricted, .writeOnly:
       retryBackoff.reset()
-      calendarAgentLog.warn("calendar agent access unavailable status=\(authState.describe(status))")
+      logger.warn("calendar agent access unavailable status=\(authState.describe(status))")
 
     @unknown default:
       retryBackoff.reset()
-      calendarAgentLog.warn("calendar agent access status unknown raw=\(status.rawValue)")
+      logger.warn("calendar agent access status unknown raw=\(status.rawValue)")
     }
   }
 

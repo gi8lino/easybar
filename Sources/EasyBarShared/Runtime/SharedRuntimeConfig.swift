@@ -4,6 +4,7 @@ import TOMLKit
 /// Resolved runtime config shared by helper processes and the CLI.
 public struct SharedRuntimeConfig {
   public let configPath: String
+  public let lockDirectory: String
   public let loggingEnabled: Bool
   public let loggingDebugEnabled: Bool
   public let loggingDirectory: String
@@ -21,11 +22,13 @@ public struct SharedRuntimeConfig {
   public static func load() -> SharedRuntimeConfig {
     let configPath = resolvedConfigPath()
     let toml = parsedConfig(at: configPath)
+    let app = resolvedAppConfig(from: toml)
     let logging = resolvedLoggingConfig(from: toml)
     let sockets = resolvedSocketConfig(from: toml)
 
     return SharedRuntimeConfig(
       configPath: configPath,
+      lockDirectory: app.lockDirectory,
       loggingEnabled: logging.enabled,
       loggingDebugEnabled: logging.debugEnabled,
       loggingDirectory: logging.directory,
@@ -39,6 +42,11 @@ public struct SharedRuntimeConfig {
         .networkAgentAllowUnauthorizedNonSensitiveFields
     )
   }
+}
+
+/// Resolved app-level values shared by helper processes.
+private struct SharedAppConfig {
+  let lockDirectory: String
 }
 
 /// Resolved logging values shared by helper processes.
@@ -77,6 +85,20 @@ private func parsedConfig(at path: String) -> TOMLTable {
   }
 
   return table
+}
+
+/// Returns the resolved app config from env, TOML, and defaults.
+private func resolvedAppConfig(from toml: TOMLTable) -> SharedAppConfig {
+  let appTable = toml["app"]?.table
+
+  let lockDirectory =
+    expandedEnvironmentPath(named: "EASYBAR_LOCK_DIR")
+    ?? expandedPath(appTable?["lock_dir"]?.string)
+    ?? defaultSingleInstanceLockDirectoryPath()
+
+  return SharedAppConfig(
+    lockDirectory: lockDirectory
+  )
 }
 
 /// Returns the resolved logging config from env, TOML, and defaults.
@@ -175,4 +197,9 @@ private func defaultCalendarAgentSocketPath() -> String {
 /// Returns the default Unix socket path used by the network agent.
 private func defaultNetworkAgentSocketPath() -> String {
   "/tmp/EasyBar/network-agent.sock"
+}
+
+/// Returns the default directory used for single-instance lock files.
+private func defaultSingleInstanceLockDirectoryPath() -> String {
+  "/tmp/EasyBar"
 }

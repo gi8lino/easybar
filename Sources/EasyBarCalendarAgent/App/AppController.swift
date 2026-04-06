@@ -4,13 +4,22 @@ import Foundation
 @MainActor
 final class AppController {
   private let runtimeConfig: SharedRuntimeConfig
-  private let snapshotProvider = CalendarSnapshotProvider()
+  private let snapshotProvider: CalendarSnapshotProvider
   private let socketServer: CalendarSocketServer
+  private let logger: ProcessLogger
 
   /// Builds the calendar agent controller from one runtime config.
-  init(config: SharedRuntimeConfig = .current) {
+  init(
+    config: SharedRuntimeConfig = .current,
+    logger: ProcessLogger
+  ) {
     runtimeConfig = config
-    socketServer = CalendarSocketServer(socketPath: config.calendarAgentSocketPath)
+    self.logger = logger
+    snapshotProvider = CalendarSnapshotProvider(logger: logger)
+    socketServer = CalendarSocketServer(
+      socketPath: config.calendarAgentSocketPath,
+      logger: logger
+    )
   }
 
   /// Returns whether the calendar agent should run.
@@ -18,16 +27,11 @@ final class AppController {
     runtimeConfig.calendarAgentEnabled
   }
 
-  /// Starts logging, snapshot delivery, and the calendar socket server.
+  /// Starts snapshot delivery and the calendar socket server.
   @discardableResult
   func start() -> Bool {
-    calendarAgentLog.configureRuntimeLogging(
-      debugEnabled: runtimeConfig.loggingDebugEnabled,
-      fileLoggingEnabled: runtimeConfig.loggingEnabled,
-      fileLoggingPath: calendarAgentLogPath(in: runtimeConfig.loggingDirectory)
-    )
     guard isEnabled else {
-      calendarAgentLog.info("calendar agent disabled in config")
+      logger.info("calendar agent disabled in config")
       return false
     }
 
@@ -55,10 +59,10 @@ final class AppController {
         configPath: runtimeConfig.configPath,
         socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
         loggingSummary:
-          "logging enabled=\(calendarAgentLog.fileLoggingEnabled) debug=\(calendarAgentLog.debugEnabled) path=\(calendarAgentLog.fileLoggingPath)"
+          "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) path=\(logger.fileLoggingPath)"
       ),
-      write: calendarAgentLog.info
+      write: logger.info
     )
-    calendarAgentLog.info("debug logging=\(calendarAgentLog.debugEnabled)")
+    logger.info("debug logging=\(logger.debugEnabled)")
   }
 }

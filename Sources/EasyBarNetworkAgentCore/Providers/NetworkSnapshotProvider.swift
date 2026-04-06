@@ -14,7 +14,7 @@ public final class NetworkSnapshotProvider {
   /// Builds the network snapshot provider with one refresh interval.
   public init(
     refreshIntervalSeconds: TimeInterval,
-    logger: ProcessLogger = ProcessLogger(label: "easybar-network-agent")
+    logger: ProcessLogger
   ) {
     self.refreshIntervalSeconds = refreshIntervalSeconds
     self.logger = logger

@@ -8,18 +8,20 @@ final class CalendarSocketServer {
   }
 
   private var provider: CalendarSnapshotProvider?
+  private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
-  init(socketPath: String) {
+  init(socketPath: String, logger: ProcessLogger) {
+    self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "calendar agent",
-      debugLog: calendarAgentLog.debug,
-      infoLog: calendarAgentLog.info,
-      warnLog: calendarAgentLog.warn,
-      errorLog: calendarAgentLog.error
+      debugLog: logger.debug,
+      infoLog: logger.info,
+      warnLog: logger.warn,
+      errorLog: logger.error
     )
   }
 
@@ -52,7 +54,7 @@ final class CalendarSocketServer {
 
   /// Handles one calendar agent client request.
   private func handleClient(_ clientFD: Int32, request: CalendarAgentRequest) {
-    calendarAgentLog.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
+    logger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
@@ -87,7 +89,7 @@ final class CalendarSocketServer {
       }
 
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
-      calendarAgentLog.info("calendar agent subscriber added fd=\(clientFD)")
+      logger.info("calendar agent subscriber added fd=\(clientFD)")
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
@@ -119,7 +121,7 @@ final class CalendarSocketServer {
         _ = try provider.createEvent(createEvent)
         _ = transport.send(CalendarAgentMessage(kind: .created), to: clientFD)
       } catch {
-        calendarAgentLog.error("calendar event creation failed error=\(error)")
+        logger.error("calendar event creation failed error=\(error)")
         _ = transport.send(
           CalendarAgentMessage(kind: .error, message: "create_event_failed"),
           to: clientFD
@@ -142,7 +144,7 @@ final class CalendarSocketServer {
         try provider.updateEvent(updateEvent)
         _ = transport.send(CalendarAgentMessage(kind: .updated), to: clientFD)
       } catch {
-        calendarAgentLog.error("calendar event update failed error=\(error)")
+        logger.error("calendar event update failed error=\(error)")
         _ = transport.send(
           CalendarAgentMessage(kind: .error, message: "update_event_failed"),
           to: clientFD
@@ -165,7 +167,7 @@ final class CalendarSocketServer {
         try provider.deleteEvent(deleteEvent)
         _ = transport.send(CalendarAgentMessage(kind: .deleted), to: clientFD)
       } catch {
-        calendarAgentLog.error("calendar event delete failed error=\(error)")
+        logger.error("calendar event delete failed error=\(error)")
         _ = transport.send(
           CalendarAgentMessage(kind: .error, message: "delete_event_failed"),
           to: clientFD
