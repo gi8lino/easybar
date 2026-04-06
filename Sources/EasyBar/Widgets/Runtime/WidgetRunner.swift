@@ -123,7 +123,7 @@ final class WidgetRunner {
       emitInitialEvent(named: name, event: event)
     }
 
-    EventBus.shared.emit(.forced)
+    EventBus.shared.emit(.manualRefresh)
   }
 
   /// Handles one decoded Lua runtime update.

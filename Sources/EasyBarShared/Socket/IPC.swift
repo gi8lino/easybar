@@ -9,7 +9,7 @@ extension IPC {
     case workspaceChanged = "workspace_changed"
     case focusChanged = "focus_changed"
     case spaceModeChanged = "space_mode_changed"
-    case refresh = "refresh"
+    case manualRefresh = "manual_refresh"
     case reloadConfig = "reload_config"
   }
 

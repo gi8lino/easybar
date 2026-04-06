@@ -172,7 +172,7 @@ private enum CLI {
     ),
     .init(
       flag: "--refresh",
-      command: .refresh,
+      command: .manualRefresh,
       description: "Send refresh"
     ),
     .init(

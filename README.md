@@ -222,7 +222,7 @@ Check that only one main EasyBar process is running. EasyBar now refuses to star
 Check the control socket with the CLI:
 
 ```bash
-easybar refresh
+easybar --refresh
 ```
 
 If that fails, EasyBar may not be running, may have been blocked by macOS, or may have failed during startup.

@@ -2,7 +2,7 @@ import Foundation
 
 /// App-wide events emitted by EasyBar.
 enum AppEvent: String {
-  case forced = "forced"
+  case manualRefresh = "manual_refresh"
 
   case systemWoke = "system_woke"
   case sleep = "sleep"

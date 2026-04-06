@@ -113,8 +113,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     case .spaceModeChanged:
       handleSpaceModeChanged()
 
-    case .refresh:
-      handleForcedRefresh()
+    case .manualRefresh:
+      handleManualRefresh()
 
     case .reloadConfig:
       reloadConfig()
@@ -139,10 +139,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     EventBus.shared.emit(.spaceModeChange)
   }
 
-  /// Handles one forced-refresh IPC trigger.
-  private func handleForcedRefresh() {
+  /// Handles one manual-refresh IPC trigger.
+  private func handleManualRefresh() {
     aeroSpaceService.triggerRefresh()
-    EventBus.shared.emit(.forced)
+    EventBus.shared.emit(.manualRefresh)
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.
