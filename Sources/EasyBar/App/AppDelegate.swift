@@ -11,7 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let instanceGuard = SingleInstanceGuard()
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let lockPath = defaultSingleInstanceLockPath(processName: "easybar")
+    let lockPath = defaultSingleInstanceLockPath(
+      processName: "easybar",
+      directory: Config.shared.lockDirectory
+    )
 
     guard instanceGuard.acquireLock(at: lockPath) else {
       easybarLog.warn("easybar already running lock_path=\(lockPath)")

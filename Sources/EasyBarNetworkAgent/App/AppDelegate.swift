@@ -20,7 +20,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         .path
     )
 
-    let lockPath = defaultSingleInstanceLockPath(processName: "easybar-network-agent")
+    let lockPath = defaultSingleInstanceLockPath(
+      processName: "easybar-network-agent",
+      directory: Config.shared.lockDirectory
+    )
 
     guard instanceGuard.acquireLock(at: lockPath) else {
       logger.warn("already running lock_path=\(lockPath)")

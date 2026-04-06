@@ -8,6 +8,19 @@ public final class SingleInstanceGuard {
 
   /// Tries to acquire an exclusive non-blocking lock for the current process.
   public func acquireLock(at path: String) -> Bool {
+    let url = URL(fileURLWithPath: path)
+    let directoryURL = url.deletingLastPathComponent()
+
+    do {
+      try FileManager.default.createDirectory(
+        at: directoryURL,
+        withIntermediateDirectories: true,
+        attributes: nil
+      )
+    } catch {
+      return false
+    }
+
     FileManager.default.createFile(atPath: path, contents: nil)
 
     guard let handle = FileHandle(forWritingAtPath: path) else {
@@ -25,9 +38,9 @@ public final class SingleInstanceGuard {
   }
 }
 
-/// Returns the default lock path for one named process.
-public func defaultSingleInstanceLockPath(processName: String) -> String {
-  FileManager.default.temporaryDirectory
+/// Returns the default lock path for one named process inside the given directory.
+public func defaultSingleInstanceLockPath(processName: String, directory: String) -> String {
+  URL(fileURLWithPath: directory, isDirectory: true)
     .appendingPathComponent("\(processName).lock")
     .path
 }

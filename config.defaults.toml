@@ -2,6 +2,7 @@
 widgets_dir = "~/.config/easybar/widgets" # Folder that contains your custom Lua widget files.
 lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
 watch_config = false # Auto-reload EasyBar when config.toml changes.
+lock_dir = "/tmp/EasyBar" # Folder that contains lock files for EasyBar.
 
 [logging]
 enabled = false # Mirrors stdout and stderr log lines into per-process files when true.

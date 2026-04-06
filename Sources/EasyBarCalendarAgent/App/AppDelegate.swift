@@ -8,8 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Starts the calendar agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let lockPath = defaultSingleInstanceLockPath(processName: "easybar-calendar-agent")
-
+    let lockPath = defaultSingleInstanceLockPath(
+      processName: "easybar-calendar-agent",
+      directory: Config.shared.lockDirectory
+    )
     guard instanceGuard.acquireLock(at: lockPath) else {
       calendarAgentLog.warn("easybar-calendar-agent already running lock_path=\(lockPath)")
       NSApp.terminate(nil)

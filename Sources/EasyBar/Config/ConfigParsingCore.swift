@@ -21,6 +21,13 @@ extension Config {
     if let value = app["watch_config"] {
       watchConfigFile = try requiredBool(value, path: "app.watch_config")
     }
+
+    if let value = app["lock_dir"] {
+      lockDirectory =
+        NSString(
+          string: try requiredString(value, path: "app.lock_dir")
+        ).expandingTildeInPath
+    }
   }
 
   /// Parses logging settings.

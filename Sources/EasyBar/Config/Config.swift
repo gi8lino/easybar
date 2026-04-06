@@ -12,6 +12,7 @@ final class Config {
   var widgetsPath: String = ""
   var luaPath: String = "/opt/homebrew/bin/lua"
   var watchConfigFile: Bool = false
+  var lockDirectory: String = ""
   var loggingEnabled: Bool = false
   var loggingDebugEnabled: Bool = false
   var loggingDirectory: String = ""
@@ -97,6 +98,7 @@ final class Config {
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
       .path
+    lockDirectory = defaultSingleInstanceLockDirectory()
     loggingDirectory =
       defaultLoggingDirectoryPath()
     calendarAgentSocketPath = defaultCalendarAgentSocketPath()
@@ -155,6 +157,7 @@ final class Config {
         widgetsPath: widgetsPath,
         luaPath: luaPath,
         watchConfigFile: watchConfigFile,
+        lockDirectory: lockDirectory,
         loggingEnabled: loggingEnabled,
         loggingDebugEnabled: loggingDebugEnabled,
         loggingDirectory: loggingDirectory,
@@ -200,6 +203,7 @@ final class Config {
     widgetsPath = snapshot.app.widgetsPath
     luaPath = snapshot.app.luaPath
     watchConfigFile = snapshot.app.watchConfigFile
+    lockDirectory = snapshot.app.lockDirectory
     loggingEnabled = snapshot.app.loggingEnabled
     loggingDebugEnabled = snapshot.app.loggingDebugEnabled
     loggingDirectory = snapshot.app.loggingDirectory
@@ -235,6 +239,11 @@ final class Config {
     builtinTime = snapshot.builtins.time
     builtinDate = snapshot.builtins.date
   }
+}
+
+/// Returns the default directory used for single-instance lock files.
+private func defaultSingleInstanceLockDirectory() -> String {
+  "/tmp/EasyBar"
 }
 
 /// Returns the default Unix socket path used by the calendar agent.

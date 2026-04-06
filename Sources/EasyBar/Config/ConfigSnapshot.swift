@@ -6,6 +6,7 @@ struct ConfigSnapshot {
     let widgetsPath: String
     let luaPath: String
     let watchConfigFile: Bool
+    let lockDirectory: String
     let loggingEnabled: Bool
     let loggingDebugEnabled: Bool
     let loggingDirectory: String
