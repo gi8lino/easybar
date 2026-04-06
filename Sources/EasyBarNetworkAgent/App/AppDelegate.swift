@@ -4,15 +4,26 @@ import EasyBarShared
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-  private let controller = NetworkAgentController()
+  private let logger = ProcessLogger(label: "easybar-network-agent")
+  private lazy var controller = NetworkAgentController(logger: logger)
   private let instanceGuard = SingleInstanceGuard()
 
   /// Starts the network agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
+    let runtimeConfig = SharedRuntimeConfig.current
+
+    logger.configureRuntimeLogging(
+      debugEnabled: runtimeConfig.loggingDebugEnabled,
+      fileLoggingEnabled: runtimeConfig.loggingEnabled,
+      fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
+        .appendingPathComponent("network-agent.out")
+        .path
+    )
+
     let lockPath = defaultSingleInstanceLockPath(processName: "easybar-network-agent")
 
     guard instanceGuard.acquireLock(at: lockPath) else {
-      networkAgentLog.warn("already running lock_path=\(lockPath)")
+      logger.warn("already running lock_path=\(lockPath)")
       NSApp.terminate(nil)
       return
     }

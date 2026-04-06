@@ -9,19 +9,21 @@ final class NetworkSocketServer {
 
   private var provider: NetworkSnapshotProvider?
   private let allowUnauthorizedNonSensitiveFields: Bool
+  private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
-  init(socketPath: String, allowUnauthorizedNonSensitiveFields: Bool) {
+  init(socketPath: String, allowUnauthorizedNonSensitiveFields: Bool, logger: ProcessLogger) {
     self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
+    self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "network agent",
-      debugLog: networkAgentLog.debug,
-      infoLog: networkAgentLog.info,
-      warnLog: networkAgentLog.warn,
-      errorLog: networkAgentLog.error
+      debugLog: logger.debug,
+      infoLog: logger.info,
+      warnLog: logger.warn,
+      errorLog: logger.error
     )
   }
 
@@ -54,7 +56,7 @@ final class NetworkSocketServer {
 
   /// Handles one network agent client request.
   private func handleClient(_ clientFD: Int32, request: NetworkAgentRequest) {
-    networkAgentLog.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
+    logger.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
@@ -93,9 +95,8 @@ final class NetworkSocketServer {
         return
       }
 
-      // Keep the client open so future network changes can be pushed.
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
-      networkAgentLog.info("network agent subscriber added fd=\(clientFD)")
+      logger.info("network agent subscriber added fd=\(clientFD)")
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)

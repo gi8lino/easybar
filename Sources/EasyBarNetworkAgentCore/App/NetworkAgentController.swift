@@ -6,16 +6,23 @@ public final class NetworkAgentController {
   private let runtimeConfig: SharedRuntimeConfig
   private let snapshotProvider: NetworkSnapshotProvider
   private let socketServer: NetworkSocketServer
+  private let logger: ProcessLogger
 
   /// Builds the network agent controller from one runtime config.
-  public init(config: SharedRuntimeConfig = .current) {
+  public init(
+    config: SharedRuntimeConfig = .current,
+    logger: ProcessLogger
+  ) {
     runtimeConfig = config
+    self.logger = logger
     snapshotProvider = NetworkSnapshotProvider(
-      refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds
+      refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds,
+      logger: logger
     )
     socketServer = NetworkSocketServer(
       socketPath: config.networkAgentSocketPath,
-      allowUnauthorizedNonSensitiveFields: config.networkAgentAllowUnauthorizedNonSensitiveFields
+      allowUnauthorizedNonSensitiveFields: config.networkAgentAllowUnauthorizedNonSensitiveFields,
+      logger: logger
     )
   }
 
@@ -24,16 +31,11 @@ public final class NetworkAgentController {
     runtimeConfig.networkAgentEnabled
   }
 
-  /// Starts logging, snapshot delivery, and the network socket server.
+  /// Starts snapshot delivery and the network socket server.
   @discardableResult
   public func start() -> Bool {
-    networkAgentLog.configureRuntimeLogging(
-      debugEnabled: runtimeConfig.loggingDebugEnabled,
-      fileLoggingEnabled: runtimeConfig.loggingEnabled,
-      fileLoggingPath: networkAgentLogPath(in: runtimeConfig.loggingDirectory)
-    )
     guard isEnabled else {
-      networkAgentLog.info("network agent disabled in config")
+      logger.info("network agent disabled in config")
       return false
     }
 
@@ -62,10 +64,10 @@ public final class NetworkAgentController {
         socketSummary:
           "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(runtimeConfig.networkAgentAllowUnauthorizedNonSensitiveFields)",
         loggingSummary:
-          "logging enabled=\(networkAgentLog.fileLoggingEnabled) debug=\(networkAgentLog.debugEnabled) path=\(networkAgentLog.fileLoggingPath)"
+          "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) path=\(logger.fileLoggingPath)"
       ),
-      write: networkAgentLog.info
+      write: logger.info
     )
-    networkAgentLog.info("debug logging=\(networkAgentLog.debugEnabled)")
+    logger.info("debug logging=\(logger.debugEnabled)")
   }
 }

@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import SystemConfiguration
 
@@ -10,9 +11,15 @@ final class NetworkSystemMonitor {
     "State:/Network/Service/.*/IPv6" as CFString,
   ]
 
+  private let logger: ProcessLogger
   private var onChange: (() -> Void)?
   private var store: SCDynamicStore?
   private var storeSource: CFRunLoopSource?
+
+  /// Creates one network system monitor that logs through the provided logger.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts listening for primary network interface changes.
   func start(onChange: @escaping () -> Void) {
@@ -40,14 +47,14 @@ final class NetworkSystemMonitor {
         &context
       )
     else {
-      networkAgentLog.warn("failed to create network dynamic store")
+      logger.warn("failed to create network dynamic store")
       return
     }
 
     SCDynamicStoreSetNotificationKeys(store, nil, Self.watchedNetworkPatterns as CFArray)
 
     guard let source = SCDynamicStoreCreateRunLoopSource(nil, store, 0) else {
-      networkAgentLog.warn("failed to create network dynamic store source")
+      logger.warn("failed to create network dynamic store source")
       return
     }
 
@@ -55,7 +62,7 @@ final class NetworkSystemMonitor {
     storeSource = source
 
     CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-    networkAgentLog.info("network agent subscribed network_change")
+    logger.info("network agent subscribed network_change")
   }
 
   /// Stops network monitoring.
@@ -171,7 +178,7 @@ final class NetworkSystemMonitor {
 
   /// Handles one dynamic store change callback.
   private func handleNetworkStoreChange() {
-    networkAgentLog.info("network agent dynamic store changed")
+    logger.info("network agent dynamic store changed")
     onChange?()
   }
 

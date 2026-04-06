@@ -2,17 +2,25 @@ import EasyBarShared
 import Foundation
 
 public final class NetworkSnapshotProvider {
-  private let authorizer = NetworkLocationAuthorizer()
-  private let wifiMonitor = NetworkWiFiMonitor()
-  private let systemMonitor = NetworkSystemMonitor()
+  private let authorizer: NetworkLocationAuthorizer
+  private let wifiMonitor: NetworkWiFiMonitor
+  private let systemMonitor: NetworkSystemMonitor
   private let refreshIntervalSeconds: TimeInterval
+  private let logger: ProcessLogger
 
   private var onChange: (() -> Void)?
   private var refreshTimer: Timer?
 
   /// Builds the network snapshot provider with one refresh interval.
-  public init(refreshIntervalSeconds: TimeInterval) {
+  public init(
+    refreshIntervalSeconds: TimeInterval,
+    logger: ProcessLogger = ProcessLogger(label: "easybar-network-agent")
+  ) {
     self.refreshIntervalSeconds = refreshIntervalSeconds
+    self.logger = logger
+    authorizer = NetworkLocationAuthorizer(logger: logger)
+    wifiMonitor = NetworkWiFiMonitor(logger: logger)
+    systemMonitor = NetworkSystemMonitor(logger: logger)
   }
 
   /// Starts permission, Wi-Fi, and network monitoring.
@@ -31,7 +39,7 @@ public final class NetworkSnapshotProvider {
       self?.onChange?()
     }
 
-    networkAgentLog.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
+    logger.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
 
     if refreshIntervalSeconds > 0 {
       refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshIntervalSeconds, repeats: true) {
@@ -62,7 +70,7 @@ public final class NetworkSnapshotProvider {
     let wifi = wifiMonitor.currentState(now: now)
     let network = systemMonitor.currentState()
 
-    networkAgentLog.debug(
+    logger.debug(
       "network snapshot access_granted=\(authorizer.isAuthorized()) permission_state=\(permissionState) ssid=\(wifi.ssid ?? "<none>") interface=\(wifi.interfaceName ?? "<none>") rssi=\(wifi.rssi.map(String.init) ?? "<none>") primary_is_tunnel=\(network.primaryInterfaceIsTunnel)"
     )
 

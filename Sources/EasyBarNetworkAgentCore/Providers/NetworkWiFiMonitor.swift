@@ -1,9 +1,11 @@
 import CoreWLAN
+import EasyBarShared
 import Foundation
 
 final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private let smoothingFactor = 0.35
   private let stateLock = NSLock()
+  private let logger: ProcessLogger
 
   private var onChange: (() -> Void)?
   private var wifiClient: CWWiFiClient?
@@ -15,6 +17,12 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private var interfaceChangedAt: Date?
   private var roaming = false
 
+  /// Creates one Wi-Fi monitor that logs through the provided logger.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    super.init()
+  }
+
   /// Starts listening for Wi-Fi changes.
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
@@ -25,9 +33,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     do {
       try client.startMonitoringEvent(with: .ssidDidChange)
       wifiClient = client
-      networkAgentLog.info("network agent subscribed wifi_change")
+      logger.info("network agent subscribed wifi_change")
     } catch {
-      networkAgentLog.warn("failed to subscribe network agent Wi-Fi events: \(error)")
+      logger.warn("failed to subscribe network agent Wi-Fi events: \(error)")
     }
   }
 
@@ -37,7 +45,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       do {
         try wifiClient.stopMonitoringAllEvents()
       } catch {
-        networkAgentLog.warn("failed to stop Wi-Fi monitoring: \(error)")
+        logger.warn("failed to stop Wi-Fi monitoring: \(error)")
       }
     }
 
@@ -96,7 +104,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
   /// Handles one Wi-Fi SSID change callback.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    networkAgentLog.info("network agent Wi-Fi changed interface=\(interfaceName)")
+    logger.info("network agent Wi-Fi changed interface=\(interfaceName)")
     onChange?()
   }
 
@@ -107,7 +115,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
     guard let rssi else {
       smoothedRSSI = nil
-      networkAgentLog.debug("network RSSI unavailable")
+      logger.debug("network RSSI unavailable")
       return nil
     }
 
