@@ -7,21 +7,106 @@ final class Config {
 
   static let shared = Config()
 
-  // MARK: - App
+  // MARK: - Sections
 
-  var widgetsPath: String = ""
-  var luaPath: String = "/opt/homebrew/bin/lua"
-  var watchConfigFile: Bool = false
-  var lockDirectory: String = ""
-  var loggingEnabled: Bool = false
-  var loggingDebugEnabled: Bool = false
-  var loggingDirectory: String = ""
-  var calendarAgentEnabled: Bool = true
-  var calendarAgentSocketPath: String = ""
-  var networkAgentEnabled: Bool = true
-  var networkAgentSocketPath: String = ""
-  var networkAgentRefreshIntervalSeconds: Double = 15
-  var networkAgentAllowUnauthorizedNonSensitiveFields: Bool = false
+  struct AppSection {
+    var widgetsPath: String
+    var luaPath: String
+    var watchConfigFile: Bool
+    var lockDirectory: String
+  }
+
+  struct LoggingSection {
+    var enabled: Bool
+    var debugEnabled: Bool
+    var directory: String
+  }
+
+  struct CalendarAgentSection {
+    var enabled: Bool
+    var socketPath: String
+  }
+
+  struct NetworkAgentSection {
+    var enabled: Bool
+    var socketPath: String
+    var refreshIntervalSeconds: Double
+    var allowUnauthorizedNonSensitiveFields: Bool
+  }
+
+  // MARK: - Stored config sections
+
+  private var appSection: AppSection
+  private var loggingSection: LoggingSection
+  private var calendarAgentSection: CalendarAgentSection
+  private var networkAgentSection: NetworkAgentSection
+
+  // MARK: - App compatibility accessors
+
+  var widgetsPath: String {
+    get { appSection.widgetsPath }
+    set { appSection.widgetsPath = newValue }
+  }
+
+  var luaPath: String {
+    get { appSection.luaPath }
+    set { appSection.luaPath = newValue }
+  }
+
+  var watchConfigFile: Bool {
+    get { appSection.watchConfigFile }
+    set { appSection.watchConfigFile = newValue }
+  }
+
+  var lockDirectory: String {
+    get { appSection.lockDirectory }
+    set { appSection.lockDirectory = newValue }
+  }
+
+  var loggingEnabled: Bool {
+    get { loggingSection.enabled }
+    set { loggingSection.enabled = newValue }
+  }
+
+  var loggingDebugEnabled: Bool {
+    get { loggingSection.debugEnabled }
+    set { loggingSection.debugEnabled = newValue }
+  }
+
+  var loggingDirectory: String {
+    get { loggingSection.directory }
+    set { loggingSection.directory = newValue }
+  }
+
+  var calendarAgentEnabled: Bool {
+    get { calendarAgentSection.enabled }
+    set { calendarAgentSection.enabled = newValue }
+  }
+
+  var calendarAgentSocketPath: String {
+    get { calendarAgentSection.socketPath }
+    set { calendarAgentSection.socketPath = newValue }
+  }
+
+  var networkAgentEnabled: Bool {
+    get { networkAgentSection.enabled }
+    set { networkAgentSection.enabled = newValue }
+  }
+
+  var networkAgentSocketPath: String {
+    get { networkAgentSection.socketPath }
+    set { networkAgentSection.socketPath = newValue }
+  }
+
+  var networkAgentRefreshIntervalSeconds: Double {
+    get { networkAgentSection.refreshIntervalSeconds }
+    set { networkAgentSection.refreshIntervalSeconds = newValue }
+  }
+
+  var networkAgentAllowUnauthorizedNonSensitiveFields: Bool {
+    get { networkAgentSection.allowUnauthorizedNonSensitiveFields }
+    set { networkAgentSection.allowUnauthorizedNonSensitiveFields = newValue }
+  }
 
   // MARK: - Bar
 
@@ -46,6 +131,28 @@ final class Config {
   var builtinDate: DateBuiltinConfig = .default
 
   private init() {
+    appSection = .init(
+      widgetsPath: "",
+      luaPath: "/opt/homebrew/bin/lua",
+      watchConfigFile: false,
+      lockDirectory: ""
+    )
+    loggingSection = .init(
+      enabled: false,
+      debugEnabled: false,
+      directory: ""
+    )
+    calendarAgentSection = .init(
+      enabled: true,
+      socketPath: ""
+    )
+    networkAgentSection = .init(
+      enabled: true,
+      socketPath: "",
+      refreshIntervalSeconds: 15,
+      allowUnauthorizedNonSensitiveFields: false
+    )
+
     resetDerivedDefaults()
 
     do {
@@ -94,36 +201,49 @@ final class Config {
 
   /// Restores defaults derived from the current home directory.
   private func resetDerivedDefaults() {
-    widgetsPath =
+    appSection.widgetsPath =
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
       .path
-    lockDirectory = defaultSingleInstanceLockDirectory()
-    loggingDirectory =
-      defaultLoggingDirectoryPath()
-    calendarAgentSocketPath = defaultCalendarAgentSocketPath()
-    networkAgentSocketPath = defaultNetworkAgentSocketPath()
-    networkAgentRefreshIntervalSeconds = 60
-    networkAgentAllowUnauthorizedNonSensitiveFields = false
+    appSection.lockDirectory = defaultSingleInstanceLockDirectory()
+
+    loggingSection.directory = defaultLoggingDirectoryPath()
+
+    calendarAgentSection.socketPath = defaultCalendarAgentSocketPath()
+
+    networkAgentSection.socketPath = defaultNetworkAgentSocketPath()
+    networkAgentSection.refreshIntervalSeconds = 60
+    networkAgentSection.allowUnauthorizedNonSensitiveFields = false
   }
 
   /// Restores all static defaults before parsing again.
   private func resetStaticDefaults() {
     resetAppDefaults()
+    resetLoggingDefaults()
+    resetAgentDefaults()
     resetBarDefaults()
     resetBuiltinDefaults()
   }
 
   /// Restores app-level defaults.
   private func resetAppDefaults() {
-    luaPath = "/opt/homebrew/bin/lua"
-    watchConfigFile = false
-    loggingEnabled = false
-    loggingDebugEnabled = false
-    calendarAgentEnabled = true
-    networkAgentEnabled = true
-    networkAgentRefreshIntervalSeconds = 60
-    networkAgentAllowUnauthorizedNonSensitiveFields = false
+    appSection.luaPath = "/opt/homebrew/bin/lua"
+    appSection.watchConfigFile = false
+  }
+
+  /// Restores logging defaults.
+  private func resetLoggingDefaults() {
+    loggingSection.enabled = false
+    loggingSection.debugEnabled = false
+  }
+
+  /// Restores agent defaults.
+  private func resetAgentDefaults() {
+    calendarAgentSection.enabled = true
+
+    networkAgentSection.enabled = true
+    networkAgentSection.refreshIntervalSeconds = 60
+    networkAgentSection.allowUnauthorizedNonSensitiveFields = false
   }
 
   /// Restores bar defaults.
@@ -154,20 +274,26 @@ final class Config {
   private func snapshot() -> ConfigSnapshot {
     ConfigSnapshot(
       app: .init(
-        widgetsPath: widgetsPath,
-        luaPath: luaPath,
-        watchConfigFile: watchConfigFile,
-        lockDirectory: lockDirectory,
-        loggingEnabled: loggingEnabled,
-        loggingDebugEnabled: loggingDebugEnabled,
-        loggingDirectory: loggingDirectory,
-        calendarAgentEnabled: calendarAgentEnabled,
-        calendarAgentSocketPath: calendarAgentSocketPath,
-        networkAgentEnabled: networkAgentEnabled,
-        networkAgentSocketPath: networkAgentSocketPath,
-        networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
-        networkAgentAllowUnauthorizedNonSensitiveFields:
-          networkAgentAllowUnauthorizedNonSensitiveFields
+        widgetsPath: appSection.widgetsPath,
+        luaPath: appSection.luaPath,
+        watchConfigFile: appSection.watchConfigFile,
+        lockDirectory: appSection.lockDirectory
+      ),
+      logging: .init(
+        enabled: loggingSection.enabled,
+        debugEnabled: loggingSection.debugEnabled,
+        directory: loggingSection.directory
+      ),
+      calendarAgent: .init(
+        enabled: calendarAgentSection.enabled,
+        socketPath: calendarAgentSection.socketPath
+      ),
+      networkAgent: .init(
+        enabled: networkAgentSection.enabled,
+        socketPath: networkAgentSection.socketPath,
+        refreshIntervalSeconds: networkAgentSection.refreshIntervalSeconds,
+        allowUnauthorizedNonSensitiveFields:
+          networkAgentSection.allowUnauthorizedNonSensitiveFields
       ),
       bar: .init(
         height: barHeight,
@@ -200,20 +326,31 @@ final class Config {
 
   /// Restores the app-level config snapshot.
   private func applyAppSnapshot(_ snapshot: ConfigSnapshot) {
-    widgetsPath = snapshot.app.widgetsPath
-    luaPath = snapshot.app.luaPath
-    watchConfigFile = snapshot.app.watchConfigFile
-    lockDirectory = snapshot.app.lockDirectory
-    loggingEnabled = snapshot.app.loggingEnabled
-    loggingDebugEnabled = snapshot.app.loggingDebugEnabled
-    loggingDirectory = snapshot.app.loggingDirectory
-    calendarAgentEnabled = snapshot.app.calendarAgentEnabled
-    calendarAgentSocketPath = snapshot.app.calendarAgentSocketPath
-    networkAgentEnabled = snapshot.app.networkAgentEnabled
-    networkAgentSocketPath = snapshot.app.networkAgentSocketPath
-    networkAgentRefreshIntervalSeconds = snapshot.app.networkAgentRefreshIntervalSeconds
-    networkAgentAllowUnauthorizedNonSensitiveFields =
-      snapshot.app.networkAgentAllowUnauthorizedNonSensitiveFields
+    appSection = .init(
+      widgetsPath: snapshot.app.widgetsPath,
+      luaPath: snapshot.app.luaPath,
+      watchConfigFile: snapshot.app.watchConfigFile,
+      lockDirectory: snapshot.app.lockDirectory
+    )
+
+    loggingSection = .init(
+      enabled: snapshot.logging.enabled,
+      debugEnabled: snapshot.logging.debugEnabled,
+      directory: snapshot.logging.directory
+    )
+
+    calendarAgentSection = .init(
+      enabled: snapshot.calendarAgent.enabled,
+      socketPath: snapshot.calendarAgent.socketPath
+    )
+
+    networkAgentSection = .init(
+      enabled: snapshot.networkAgent.enabled,
+      socketPath: snapshot.networkAgent.socketPath,
+      refreshIntervalSeconds: snapshot.networkAgent.refreshIntervalSeconds,
+      allowUnauthorizedNonSensitiveFields:
+        snapshot.networkAgent.allowUnauthorizedNonSensitiveFields
+    )
   }
 
   /// Restores the bar config snapshot.

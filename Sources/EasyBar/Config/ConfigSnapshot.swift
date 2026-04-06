@@ -7,15 +7,24 @@ struct ConfigSnapshot {
     let luaPath: String
     let watchConfigFile: Bool
     let lockDirectory: String
-    let loggingEnabled: Bool
-    let loggingDebugEnabled: Bool
-    let loggingDirectory: String
-    let calendarAgentEnabled: Bool
-    let calendarAgentSocketPath: String
-    let networkAgentEnabled: Bool
-    let networkAgentSocketPath: String
-    let networkAgentRefreshIntervalSeconds: Double
-    let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
+  }
+
+  struct Logging {
+    let enabled: Bool
+    let debugEnabled: Bool
+    let directory: String
+  }
+
+  struct CalendarAgent {
+    let enabled: Bool
+    let socketPath: String
+  }
+
+  struct NetworkAgent {
+    let enabled: Bool
+    let socketPath: String
+    let refreshIntervalSeconds: Double
+    let allowUnauthorizedNonSensitiveFields: Bool
   }
 
   struct Bar {
@@ -40,6 +49,9 @@ struct ConfigSnapshot {
   }
 
   let app: App
+  let logging: Logging
+  let calendarAgent: CalendarAgent
+  let networkAgent: NetworkAgent
   let bar: Bar
   let builtins: Builtins
 }

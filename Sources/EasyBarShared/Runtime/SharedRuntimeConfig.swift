@@ -4,17 +4,11 @@ import TOMLKit
 /// Resolved runtime config shared by helper processes and the CLI.
 public struct SharedRuntimeConfig {
   public let configPath: String
-  public let lockDirectory: String
-  public let loggingEnabled: Bool
-  public let loggingDebugEnabled: Bool
-  public let loggingDirectory: String
-  public let easyBarSocketPath: String
-  public let calendarAgentEnabled: Bool
-  public let calendarAgentSocketPath: String
-  public let networkAgentEnabled: Bool
-  public let networkAgentSocketPath: String
-  public let networkAgentRefreshIntervalSeconds: TimeInterval
-  public let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
+  public let app: SharedAppRuntimeConfig
+  public let logging: SharedLoggingRuntimeConfig
+  public let easyBar: SharedEasyBarRuntimeConfig
+  public let calendarAgent: SharedCalendarAgentRuntimeConfig
+  public let networkAgent: SharedNetworkAgentRuntimeConfig
 
   public static let current = load()
 
@@ -22,49 +16,137 @@ public struct SharedRuntimeConfig {
   public static func load() -> SharedRuntimeConfig {
     let configPath = resolvedConfigPath()
     let toml = parsedConfig(at: configPath)
+
     let app = resolvedAppConfig(from: toml)
     let logging = resolvedLoggingConfig(from: toml)
-    let sockets = resolvedSocketConfig(from: toml)
+    let easyBar = resolvedEasyBarConfig(from: toml)
+    let calendarAgent = resolvedCalendarAgentConfig(from: toml)
+    let networkAgent = resolvedNetworkAgentConfig(from: toml)
 
     return SharedRuntimeConfig(
       configPath: configPath,
-      lockDirectory: app.lockDirectory,
-      loggingEnabled: logging.enabled,
-      loggingDebugEnabled: logging.debugEnabled,
-      loggingDirectory: logging.directory,
-      easyBarSocketPath: sockets.easyBarSocketPath,
-      calendarAgentEnabled: sockets.calendarAgentEnabled,
-      calendarAgentSocketPath: sockets.calendarAgentSocketPath,
-      networkAgentEnabled: sockets.networkAgentEnabled,
-      networkAgentSocketPath: sockets.networkAgentSocketPath,
-      networkAgentRefreshIntervalSeconds: sockets.networkAgentRefreshIntervalSeconds,
-      networkAgentAllowUnauthorizedNonSensitiveFields: sockets
-        .networkAgentAllowUnauthorizedNonSensitiveFields
+      app: app,
+      logging: logging,
+      easyBar: easyBar,
+      calendarAgent: calendarAgent,
+      networkAgent: networkAgent
     )
+  }
+
+  // MARK: - Compatibility accessors
+
+  public var lockDirectory: String {
+    app.lockDirectory
+  }
+
+  public var loggingEnabled: Bool {
+    logging.enabled
+  }
+
+  public var loggingDebugEnabled: Bool {
+    logging.debugEnabled
+  }
+
+  public var loggingDirectory: String {
+    logging.directory
+  }
+
+  public var easyBarSocketPath: String {
+    easyBar.socketPath
+  }
+
+  public var calendarAgentEnabled: Bool {
+    calendarAgent.enabled
+  }
+
+  public var calendarAgentSocketPath: String {
+    calendarAgent.socketPath
+  }
+
+  public var networkAgentEnabled: Bool {
+    networkAgent.enabled
+  }
+
+  public var networkAgentSocketPath: String {
+    networkAgent.socketPath
+  }
+
+  public var networkAgentRefreshIntervalSeconds: TimeInterval {
+    networkAgent.refreshIntervalSeconds
+  }
+
+  public var networkAgentAllowUnauthorizedNonSensitiveFields: Bool {
+    networkAgent.allowUnauthorizedNonSensitiveFields
   }
 }
 
 /// Resolved app-level values shared by helper processes.
-private struct SharedAppConfig {
-  let lockDirectory: String
+public struct SharedAppRuntimeConfig {
+  public let lockDirectory: String
+
+  public init(lockDirectory: String) {
+    self.lockDirectory = lockDirectory
+  }
 }
 
 /// Resolved logging values shared by helper processes.
-private struct SharedLoggingConfig {
-  let enabled: Bool
-  let debugEnabled: Bool
-  let directory: String
+public struct SharedLoggingRuntimeConfig {
+  public let enabled: Bool
+  public let debugEnabled: Bool
+  public let directory: String
+
+  public init(
+    enabled: Bool,
+    debugEnabled: Bool,
+    directory: String
+  ) {
+    self.enabled = enabled
+    self.debugEnabled = debugEnabled
+    self.directory = directory
+  }
 }
 
-/// Resolved socket values shared by helper processes.
-private struct SharedSocketConfig {
-  let easyBarSocketPath: String
-  let calendarAgentEnabled: Bool
-  let calendarAgentSocketPath: String
-  let networkAgentEnabled: Bool
-  let networkAgentSocketPath: String
-  let networkAgentRefreshIntervalSeconds: TimeInterval
-  let networkAgentAllowUnauthorizedNonSensitiveFields: Bool
+/// Resolved EasyBar socket values shared by helper processes.
+public struct SharedEasyBarRuntimeConfig {
+  public let socketPath: String
+
+  public init(socketPath: String) {
+    self.socketPath = socketPath
+  }
+}
+
+/// Resolved calendar-agent values shared by helper processes.
+public struct SharedCalendarAgentRuntimeConfig {
+  public let enabled: Bool
+  public let socketPath: String
+
+  public init(
+    enabled: Bool,
+    socketPath: String
+  ) {
+    self.enabled = enabled
+    self.socketPath = socketPath
+  }
+}
+
+/// Resolved network-agent values shared by helper processes.
+public struct SharedNetworkAgentRuntimeConfig {
+  public let enabled: Bool
+  public let socketPath: String
+  public let refreshIntervalSeconds: TimeInterval
+  public let allowUnauthorizedNonSensitiveFields: Bool
+
+  public init(
+    enabled: Bool,
+    socketPath: String,
+    refreshIntervalSeconds: TimeInterval,
+    allowUnauthorizedNonSensitiveFields: Bool
+  ) {
+    self.enabled = enabled
+    self.socketPath = socketPath
+    self.refreshIntervalSeconds = refreshIntervalSeconds
+    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
+  }
 }
 
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
@@ -88,7 +170,7 @@ private func parsedConfig(at path: String) -> TOMLTable {
 }
 
 /// Returns the resolved app config from env, TOML, and defaults.
-private func resolvedAppConfig(from toml: TOMLTable) -> SharedAppConfig {
+private func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   let appTable = toml["app"]?.table
 
   let lockDirectory =
@@ -96,13 +178,13 @@ private func resolvedAppConfig(from toml: TOMLTable) -> SharedAppConfig {
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
 
-  return SharedAppConfig(
+  return SharedAppRuntimeConfig(
     lockDirectory: lockDirectory
   )
 }
 
 /// Returns the resolved logging config from env, TOML, and defaults.
-private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingConfig {
+private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
   let loggingTable = toml["logging"]?.table
 
   let enabled =
@@ -119,57 +201,68 @@ private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingConfig 
     expandedPath(loggingTable?["directory"]?.string)
     ?? defaultLoggingDirectoryPath()
 
-  return SharedLoggingConfig(
+  return SharedLoggingRuntimeConfig(
     enabled: enabled,
     debugEnabled: debugEnabled,
     directory: directory
   )
 }
 
-/// Returns the resolved socket and agent config from env, TOML, and defaults.
-private func resolvedSocketConfig(from toml: TOMLTable) -> SharedSocketConfig {
-  let calendarTable = toml["agents"]?["calendar"]?.table
-  let networkTable = toml["agents"]?["network"]?.table
-
-  let easyBarSocketPath =
-    resolvedSocketPath(
+/// Returns the resolved EasyBar socket config from env, TOML, and defaults.
+private func resolvedEasyBarConfig(from toml: TOMLTable) -> SharedEasyBarRuntimeConfig {
+  SharedEasyBarRuntimeConfig(
+    socketPath: resolvedSocketPath(
       environmentName: "EASYBAR_SOCKET_PATH",
       tomlValue: nil,
       fallback: defaultEasyBarSocketPath
     )
+  )
+}
 
-  let calendarAgentEnabled = calendarTable?["enabled"]?.bool ?? true
-  let calendarAgentSocketPath =
+/// Returns the resolved calendar-agent config from env, TOML, and defaults.
+private func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRuntimeConfig {
+  let calendarTable = toml["agents"]?["calendar"]?.table
+
+  let enabled = calendarTable?["enabled"]?.bool ?? true
+  let socketPath =
     resolvedSocketPath(
       environmentName: "EASYBAR_CALENDAR_AGENT_SOCKET",
       tomlValue: calendarTable?["socket_path"]?.string,
       fallback: defaultCalendarAgentSocketPath
     )
 
-  let networkAgentEnabled = networkTable?["enabled"]?.bool ?? true
-  let networkAgentSocketPath =
+  return SharedCalendarAgentRuntimeConfig(
+    enabled: enabled,
+    socketPath: socketPath
+  )
+}
+
+/// Returns the resolved network-agent config from env, TOML, and defaults.
+private func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRuntimeConfig {
+  let networkTable = toml["agents"]?["network"]?.table
+
+  let enabled = networkTable?["enabled"]?.bool ?? true
+  let socketPath =
     resolvedSocketPath(
       environmentName: "EASYBAR_NETWORK_AGENT_SOCKET",
       tomlValue: networkTable?["socket_path"]?.string,
       fallback: defaultNetworkAgentSocketPath
     )
 
-  let networkAgentRefreshIntervalSeconds =
+  let refreshIntervalSeconds =
     timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
     ?? networkTable?["refresh_interval_seconds"]?.double
     ?? 60
-  let networkAgentAllowUnauthorizedNonSensitiveFields =
+
+  let allowUnauthorizedNonSensitiveFields =
     networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
     ?? false
 
-  return SharedSocketConfig(
-    easyBarSocketPath: easyBarSocketPath,
-    calendarAgentEnabled: calendarAgentEnabled,
-    calendarAgentSocketPath: calendarAgentSocketPath,
-    networkAgentEnabled: networkAgentEnabled,
-    networkAgentSocketPath: networkAgentSocketPath,
-    networkAgentRefreshIntervalSeconds: networkAgentRefreshIntervalSeconds,
-    networkAgentAllowUnauthorizedNonSensitiveFields: networkAgentAllowUnauthorizedNonSensitiveFields
+  return SharedNetworkAgentRuntimeConfig(
+    enabled: enabled,
+    socketPath: socketPath,
+    refreshIntervalSeconds: refreshIntervalSeconds,
+    allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
   )
 }
 
