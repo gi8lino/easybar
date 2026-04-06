@@ -23,7 +23,7 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 
 - Native macOS bar window built with SwiftUI
 - Native built-in widgets plus Lua widgets
-- AeroSpace integration for spaces and focused app state
+- AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
 - Calendar and network helper agents for permission-sensitive data
 - Homebrew install and service workflow
@@ -131,10 +131,38 @@ Supported commands:
 
 - `workspace_changed`
 - `focus_changed`
+- `space_mode_changed`
 - `refresh`
 - `reload_config`
 
 `easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
+
+### AeroSpace layout mode example
+
+If you use the built-in AeroSpace mode widget, you should trigger EasyBar whenever you change the current layout mode in AeroSpace.
+
+For example:
+
+```toml
+alt-e = [
+  'layout tiles horizontal',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-v = [
+  'layout tiles vertical',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-s = [
+  'layout v_accordion',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-shift-space = [
+  'layout floating tiling',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+```
+
+That tells EasyBar to refresh its AeroSpace-derived state after the layout mode changes, so widgets like the built-in AeroSpace mode widget update immediately.
 
 ## Configuration
 
@@ -323,6 +351,16 @@ Restart the network agent after changing permission settings:
 brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
+
+#### AeroSpace mode widget does not update
+
+If your AeroSpace mode widget does not change after switching layouts, make sure your AeroSpace bindings call:
+
+```bash
+easybar --space-mode-changed
+```
+
+For example, after every `layout ...` command in your AeroSpace config, add an `exec-and-forget` call to EasyBar. Without that trigger, EasyBar may not know that the layout mode changed yet.
 
 #### Config changes do not apply
 
