@@ -16,13 +16,17 @@ public final class NetworkSnapshotProvider {
   public init(
     componentName: String,
     refreshIntervalSeconds: TimeInterval,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    promptPresenter: NetworkAuthorizationPromptPresenter? = nil
   ) {
     self.componentName = componentName
     self.refreshIntervalSeconds = refreshIntervalSeconds
     self.logger = logger
     authorizer = NetworkLocationAuthorizationController(
-      componentName: componentName, logger: logger)
+      componentName: componentName,
+      logger: logger,
+      promptPresenter: promptPresenter
+    )
     wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger)
     systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger)
   }
@@ -92,12 +96,12 @@ public final class NetworkSnapshotProvider {
   /// Returns the requested field values, applying the current privacy policy.
   public func responseFields(
     for fields: [NetworkAgentField],
-    allowUnauthorizedNonSensitiveFields: Bool
+    allowUnauthorizedFieldsWithoutLocation: Bool
   ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     guard authorizer.isAuthorized() else {
       return unauthorizedFieldResponse(
         for: fields,
-        allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
+        allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
       )
     }
 
@@ -278,29 +282,29 @@ public final class NetworkSnapshotProvider {
   /// Returns the unauthorized response for one requested field list.
   private func unauthorizedFieldResponse(
     for fields: [NetworkAgentField],
-    allowUnauthorizedNonSensitiveFields: Bool
+    allowUnauthorizedFieldsWithoutLocation: Bool
   ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     let permissionState = authorizer.permissionState()
-    let hasPermissionGatedFields = fields.contains(where: requiresLocationAuthorization)
+    let hasLocationProtectedFields = fields.contains(where: fieldRequiresLocationAuthorization)
 
-    guard hasPermissionGatedFields else {
+    guard hasLocationProtectedFields else {
       return (resolvedFieldValues(for: fields), nil)
     }
 
-    guard allowUnauthorizedNonSensitiveFields else {
-      return (nil, "permission_denied:\(permissionState)")
+    guard allowUnauthorizedFieldsWithoutLocation else {
+      return (nil, "permission_denied")
     }
 
-    let allowedFields = fields.filter { !requiresLocationAuthorization($0) }
+    let allowedFields = fields.filter { !fieldRequiresLocationAuthorization($0) }
     guard !allowedFields.isEmpty else {
-      return (nil, "permission_denied:\(permissionState)")
+      return (nil, "permission_denied")
     }
 
     return (resolvedFieldValues(for: allowedFields), nil)
   }
 
   /// Returns whether the field should be hidden without location authorization.
-  private func requiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
-    field.rawValue.hasPrefix("wifi.")
+  private func fieldRequiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
+    networkAgentFieldSpecByField[field]?.requiresLocationAuthorization ?? false
   }
 }

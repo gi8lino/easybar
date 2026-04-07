@@ -11,20 +11,22 @@ public final class NetworkAgentController {
   /// Builds the network agent controller from one host-provided config.
   public init(
     config: NetworkAgentControllerConfig,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    promptPresenter: NetworkAuthorizationPromptPresenter? = nil
   ) {
     self.config = config
     self.logger = logger
     snapshotProvider = NetworkSnapshotProvider(
       componentName: config.componentName,
       refreshIntervalSeconds: config.refreshIntervalSeconds,
-      logger: logger
+      logger: logger,
+      promptPresenter: promptPresenter
     )
     socketServer = NetworkSocketServer(
       componentName: config.componentName,
       socketPath: config.socketPath,
       appVersion: config.appVersion,
-      allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedNonSensitiveFields,
+      allowUnauthorizedFieldsWithoutLocation: config.allowUnauthorizedFieldsWithoutLocation,
       logger: logger
     )
   }
@@ -65,7 +67,7 @@ public final class NetworkAgentController {
         processName: config.processName,
         configPath: config.configPath,
         socketSummary:
-          "socket path=\(config.socketPath) refresh_interval_seconds=\(config.refreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(config.allowUnauthorizedNonSensitiveFields)",
+          "socket path=\(config.socketPath) refresh_interval_seconds=\(config.refreshIntervalSeconds) allow_unauthorized_fields_without_location=\(config.allowUnauthorizedFieldsWithoutLocation)",
         loggingSummary:
           "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) path=\(logger.fileLoggingPath)"
       ),

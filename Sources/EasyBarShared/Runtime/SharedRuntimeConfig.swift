@@ -75,8 +75,12 @@ public struct SharedRuntimeConfig {
     networkAgent.refreshIntervalSeconds
   }
 
+  public var networkAgentAllowUnauthorizedFieldsWithoutLocation: Bool {
+    networkAgent.allowUnauthorizedFieldsWithoutLocation
+  }
+
   public var networkAgentAllowUnauthorizedNonSensitiveFields: Bool {
-    networkAgent.allowUnauthorizedNonSensitiveFields
+    networkAgent.allowUnauthorizedFieldsWithoutLocation
   }
 }
 
@@ -134,18 +138,18 @@ public struct SharedNetworkAgentRuntimeConfig {
   public let enabled: Bool
   public let socketPath: String
   public let refreshIntervalSeconds: TimeInterval
-  public let allowUnauthorizedNonSensitiveFields: Bool
+  public let allowUnauthorizedFieldsWithoutLocation: Bool
 
   public init(
     enabled: Bool,
     socketPath: String,
     refreshIntervalSeconds: TimeInterval,
-    allowUnauthorizedNonSensitiveFields: Bool
+    allowUnauthorizedFieldsWithoutLocation: Bool
   ) {
     self.enabled = enabled
     self.socketPath = socketPath
     self.refreshIntervalSeconds = refreshIntervalSeconds
-    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
+    self.allowUnauthorizedFieldsWithoutLocation = allowUnauthorizedFieldsWithoutLocation
   }
 }
 
@@ -263,7 +267,7 @@ private func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAg
     ?? networkTable?["refresh_interval_seconds"]?.double
     ?? 60
 
-  let allowUnauthorizedNonSensitiveFields =
+  let allowUnauthorizedFieldsWithoutLocation =
     boolEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_ALLOW_UNAUTHORIZED_NON_SENSITIVE_FIELDS")
     ?? networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
     ?? false
@@ -272,7 +276,7 @@ private func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAg
     enabled: enabled,
     socketPath: socketPath,
     refreshIntervalSeconds: refreshIntervalSeconds,
-    allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
+    allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
   )
 }
 

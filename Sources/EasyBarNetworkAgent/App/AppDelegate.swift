@@ -3,10 +3,11 @@ import EasyBarNetworkAgentCore
 import EasyBarShared
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPromptPresenter {
   private let logger = ProcessLogger(label: "easybar-network-agent")
   private var controller: NetworkAgentController?
   private let instanceGuard = SingleInstanceGuard()
+  private var presentedAuthorizationPrompt = false
 
   /// Starts the network agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -34,9 +35,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       NSApp.terminate(nil)
       return
 
-    case .failed(let message):
+    case .failed(let reason):
       logger.error(
-        "easybar-network-agent failed to acquire single-instance lock lock_path=\(lockPath) error=\(message)"
+        "easybar-network-agent failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
       )
       NSApp.terminate(nil)
       return
@@ -46,7 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       runtimeConfig: runtimeConfig,
       appVersion: BuildInfo.appVersion
     )
-    controller = NetworkAgentController(config: controllerConfig, logger: logger)
+    controller = NetworkAgentController(
+      config: controllerConfig,
+      logger: logger,
+      promptPresenter: self
+    )
 
     NSApp.setActivationPolicy(.accessory)
     guard controller?.start() == true else {
@@ -58,5 +63,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Stops the network agent before termination.
   func applicationWillTerminate(_ notification: Notification) {
     controller?.stop()
+  }
+
+  /// Prepares the app so the system location prompt can surface.
+  func preparePrompt() {
+    guard !presentedAuthorizationPrompt else { return }
+    presentedAuthorizationPrompt = true
+
+    let changed = NSApp.setActivationPolicy(.regular)
+    logger.info("network agent promoted for authorization prompt changed=\(changed)")
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  /// Restores accessory mode after authorization resolves.
+  func restoreUI() {
+    guard presentedAuthorizationPrompt else { return }
+    presentedAuthorizationPrompt = false
+
+    let changed = NSApp.setActivationPolicy(.accessory)
+    logger.info("network agent restored accessory mode changed=\(changed)")
   }
 }

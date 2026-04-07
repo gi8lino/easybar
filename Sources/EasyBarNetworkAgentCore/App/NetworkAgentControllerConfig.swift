@@ -9,7 +9,7 @@ public struct NetworkAgentControllerConfig {
   public let configPath: String
   public let socketPath: String
   public let refreshIntervalSeconds: TimeInterval
-  public let allowUnauthorizedNonSensitiveFields: Bool
+  public let allowUnauthorizedFieldsWithoutLocation: Bool
 
   public init(
     isEnabled: Bool,
@@ -19,7 +19,7 @@ public struct NetworkAgentControllerConfig {
     configPath: String,
     socketPath: String,
     refreshIntervalSeconds: TimeInterval,
-    allowUnauthorizedNonSensitiveFields: Bool
+    allowUnauthorizedFieldsWithoutLocation: Bool
   ) {
     self.isEnabled = isEnabled
     self.processName = processName
@@ -28,7 +28,7 @@ public struct NetworkAgentControllerConfig {
     self.configPath = configPath
     self.socketPath = socketPath
     self.refreshIntervalSeconds = refreshIntervalSeconds
-    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
+    self.allowUnauthorizedFieldsWithoutLocation = allowUnauthorizedFieldsWithoutLocation
   }
 
   public static func easyBar(
@@ -43,8 +43,8 @@ public struct NetworkAgentControllerConfig {
       configPath: runtimeConfig.configPath,
       socketPath: runtimeConfig.networkAgentSocketPath,
       refreshIntervalSeconds: runtimeConfig.networkAgentRefreshIntervalSeconds,
-      allowUnauthorizedNonSensitiveFields: runtimeConfig
-        .networkAgentAllowUnauthorizedNonSensitiveFields
+      allowUnauthorizedFieldsWithoutLocation: runtimeConfig
+        .networkAgentAllowUnauthorizedFieldsWithoutLocation
     )
   }
 }

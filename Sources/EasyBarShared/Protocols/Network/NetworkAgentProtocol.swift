@@ -47,6 +47,17 @@ public enum NetworkAgentField: String, Codable, CaseIterable {
   case captivePortal = "network.captive_portal"
   case locationAuthorized = "auth.location_authorized"
   case locationPermissionState = "auth.location_permission_state"
+
+  /// Standard field set needed to construct a typed network snapshot.
+  public static let snapshotFieldSet: [NetworkAgentField] = [
+    .locationAuthorized,
+    .locationPermissionState,
+    .generatedAt,
+    .ssid,
+    .interfaceName,
+    .primaryInterfaceIsTunnel,
+    .rssi,
+  ]
 }
 
 /// Describes one shared network-agent field.
@@ -55,51 +66,116 @@ public struct NetworkAgentFieldSpec {
   public let field: NetworkAgentField
   /// Short help text for humans.
   public let help: String
+  /// Whether this field requires location authorization.
+  public let requiresLocationAuthorization: Bool
 
   /// Creates one network-agent field spec.
-  public init(field: NetworkAgentField, help: String) {
+  public init(
+    field: NetworkAgentField,
+    help: String,
+    requiresLocationAuthorization: Bool
+  ) {
     self.field = field
     self.help = help
+    self.requiresLocationAuthorization = requiresLocationAuthorization
   }
 }
 
 /// Ordered network-agent field metadata shared by clients and the agent.
 public let networkAgentFieldRegistry: [NetworkAgentFieldSpec] = [
-  .init(field: .ssid, help: "Current Wi-Fi network name"),
-  .init(field: .bssid, help: "Current access point BSSID"),
-  .init(field: .interfaceName, help: "Wi-Fi interface name"),
-  .init(field: .hardwareAddress, help: "Wi-Fi hardware MAC address"),
-  .init(field: .power, help: "Wi-Fi power state"),
-  .init(field: .serviceActive, help: "CoreWLAN service availability"),
-  .init(field: .rssi, help: "Received signal strength"),
-  .init(field: .noise, help: "Noise floor"),
-  .init(field: .snr, help: "Signal-to-noise ratio"),
-  .init(field: .linkQuality, help: "Derived link quality percent"),
-  .init(field: .txRate, help: "Transmit rate in Mbps"),
-  .init(field: .channel, help: "Current Wi-Fi channel"),
-  .init(field: .channelBand, help: "Channel band label"),
-  .init(field: .channelWidth, help: "Channel width label"),
-  .init(field: .security, help: "Current security mode"),
-  .init(field: .phyMode, help: "PHY mode label"),
-  .init(field: .interfaceMode, help: "Interface mode label"),
-  .init(field: .countryCode, help: "Current country code"),
-  .init(field: .roaming, help: "Roaming state"),
-  .init(field: .ssidChangedAt, help: "Last SSID change time"),
-  .init(field: .interfaceChangedAt, help: "Last interface change time"),
-  .init(field: .primaryInterface, help: "Primary network interface"),
-  .init(field: .activeTunnelInterface, help: "First active tunnel interface"),
-  .init(field: .activeTunnelInterfaces, help: "All active tunnel interfaces"),
-  .init(field: .primaryInterfaceIsTunnel, help: "Whether the primary interface is a tunnel"),
-  .init(field: .ipv4Address, help: "Primary IPv4 address"),
-  .init(field: .ipv6Address, help: "Primary IPv6 address"),
-  .init(field: .defaultGateway, help: "Default gateway address"),
-  .init(field: .dnsServers, help: "Configured DNS servers"),
-  .init(field: .internetReachable, help: "Internet reachability state"),
-  .init(field: .captivePortal, help: "Captive portal state"),
-  .init(field: .locationAuthorized, help: "Location authorization state"),
-  .init(field: .locationPermissionState, help: "Location permission label"),
-  .init(field: .generatedAt, help: "Snapshot generation time"),
+  .init(field: .ssid, help: "Current Wi-Fi network name", requiresLocationAuthorization: true),
+  .init(field: .bssid, help: "Current access point BSSID", requiresLocationAuthorization: true),
+  .init(field: .interfaceName, help: "Wi-Fi interface name", requiresLocationAuthorization: true),
+  .init(
+    field: .hardwareAddress,
+    help: "Wi-Fi hardware MAC address",
+    requiresLocationAuthorization: true
+  ),
+  .init(field: .power, help: "Wi-Fi power state", requiresLocationAuthorization: true),
+  .init(
+    field: .serviceActive,
+    help: "CoreWLAN service availability",
+    requiresLocationAuthorization: true
+  ),
+  .init(field: .rssi, help: "Received signal strength", requiresLocationAuthorization: true),
+  .init(field: .noise, help: "Noise floor", requiresLocationAuthorization: true),
+  .init(field: .snr, help: "Signal-to-noise ratio", requiresLocationAuthorization: true),
+  .init(
+    field: .linkQuality,
+    help: "Derived link quality percent",
+    requiresLocationAuthorization: true
+  ),
+  .init(field: .txRate, help: "Transmit rate in Mbps", requiresLocationAuthorization: true),
+  .init(field: .channel, help: "Current Wi-Fi channel", requiresLocationAuthorization: true),
+  .init(field: .channelBand, help: "Channel band label", requiresLocationAuthorization: true),
+  .init(field: .channelWidth, help: "Channel width label", requiresLocationAuthorization: true),
+  .init(field: .security, help: "Current security mode", requiresLocationAuthorization: true),
+  .init(field: .phyMode, help: "PHY mode label", requiresLocationAuthorization: true),
+  .init(field: .interfaceMode, help: "Interface mode label", requiresLocationAuthorization: true),
+  .init(field: .countryCode, help: "Current country code", requiresLocationAuthorization: true),
+  .init(field: .roaming, help: "Roaming state", requiresLocationAuthorization: true),
+  .init(
+    field: .ssidChangedAt,
+    help: "Last SSID change time",
+    requiresLocationAuthorization: true
+  ),
+  .init(
+    field: .interfaceChangedAt,
+    help: "Last interface change time",
+    requiresLocationAuthorization: true
+  ),
+  .init(
+    field: .primaryInterface,
+    help: "Primary network interface",
+    requiresLocationAuthorization: false
+  ),
+  .init(
+    field: .activeTunnelInterface,
+    help: "First active tunnel interface",
+    requiresLocationAuthorization: false
+  ),
+  .init(
+    field: .activeTunnelInterfaces,
+    help: "All active tunnel interfaces",
+    requiresLocationAuthorization: false
+  ),
+  .init(
+    field: .primaryInterfaceIsTunnel,
+    help: "Whether the primary interface is a tunnel",
+    requiresLocationAuthorization: false
+  ),
+  .init(field: .ipv4Address, help: "Primary IPv4 address", requiresLocationAuthorization: false),
+  .init(field: .ipv6Address, help: "Primary IPv6 address", requiresLocationAuthorization: false),
+  .init(
+    field: .defaultGateway,
+    help: "Default gateway address",
+    requiresLocationAuthorization: false
+  ),
+  .init(field: .dnsServers, help: "Configured DNS servers", requiresLocationAuthorization: false),
+  .init(
+    field: .internetReachable,
+    help: "Internet reachability state",
+    requiresLocationAuthorization: false
+  ),
+  .init(field: .captivePortal, help: "Captive portal state", requiresLocationAuthorization: false),
+  .init(
+    field: .locationAuthorized,
+    help: "Location authorization state",
+    requiresLocationAuthorization: false
+  ),
+  .init(
+    field: .locationPermissionState,
+    help: "Location permission label",
+    requiresLocationAuthorization: false
+  ),
+  .init(
+    field: .generatedAt, help: "Snapshot generation time", requiresLocationAuthorization: false),
 ]
+
+/// Lookup table for field metadata by field key.
+public let networkAgentFieldSpecByField: [NetworkAgentField: NetworkAgentFieldSpec] = Dictionary(
+  uniqueKeysWithValues: networkAgentFieldRegistry.map { ($0.field, $0) }
+)
 
 /// One request sent to the network agent.
 public struct NetworkAgentRequest: Codable {
@@ -131,6 +207,8 @@ public struct NetworkAgentVersion: Codable, Equatable {
 
 /// Full network snapshot returned by the agent.
 public struct NetworkAgentSnapshot: Codable, Equatable {
+  private static let fieldDateFormatter = ISO8601DateFormatter()
+
   /// Whether location/Wi-Fi access is currently granted.
   public var accessGranted: Bool
   /// Current permission state string.
@@ -165,13 +243,13 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     self.rssi = rssi
   }
 
-  /// Builds one typed snapshot from field-query values.
+  /// Builds one typed snapshot from the standard snapshot field set.
   public init?(fields: [String: NetworkAgentFieldValue]) {
     guard
       let accessGranted = fields[NetworkAgentField.locationAuthorized.rawValue]?.boolValue,
       let permissionState = fields[NetworkAgentField.locationPermissionState.rawValue]?.stringValue,
       let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue]?.stringValue,
-      let generatedAt = ISO8601DateFormatter().date(from: generatedAtRaw),
+      let generatedAt = Self.fieldDateFormatter.date(from: generatedAtRaw),
       let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]?
         .boolValue
     else {
@@ -207,11 +285,7 @@ public struct NetworkAgentMessage: Codable {
   public var version: NetworkAgentVersion?
   /// Optional field values payload.
   public var fields: [String: NetworkAgentFieldValue]?
-  /// Stable machine-readable error code for error messages.
-  public var errorCode: String?
-  /// Optional permission state associated with an authorization error.
-  public var permissionState: String?
-  /// Optional legacy/human-readable message.
+  /// Optional error message.
   public var message: String?
 
   /// Creates one network agent message.
@@ -219,15 +293,11 @@ public struct NetworkAgentMessage: Codable {
     kind: NetworkAgentMessageKind,
     version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
-    errorCode: String? = nil,
-    permissionState: String? = nil,
     message: String? = nil
   ) {
     self.kind = kind
     self.version = version
     self.fields = fields
-    self.errorCode = errorCode
-    self.permissionState = permissionState
     self.message = message
   }
 }

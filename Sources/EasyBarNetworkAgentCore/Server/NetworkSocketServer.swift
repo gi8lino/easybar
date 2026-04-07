@@ -11,7 +11,7 @@ final class NetworkSocketServer {
   private let componentName: String
   private let socketPath: String
   private let appVersion: String
-  private let allowUnauthorizedNonSensitiveFields: Bool
+  private let allowUnauthorizedFieldsWithoutLocation: Bool
   private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
@@ -21,13 +21,13 @@ final class NetworkSocketServer {
     componentName: String,
     socketPath: String,
     appVersion: String,
-    allowUnauthorizedNonSensitiveFields: Bool,
+    allowUnauthorizedFieldsWithoutLocation: Bool,
     logger: ProcessLogger
   ) {
     self.componentName = componentName
     self.socketPath = socketPath
     self.appVersion = appVersion
-    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
+    self.allowUnauthorizedFieldsWithoutLocation = allowUnauthorizedFieldsWithoutLocation
     self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
@@ -173,7 +173,7 @@ final class NetworkSocketServer {
   ) -> (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     let response = provider.responseFields(
       for: fields,
-      allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
+      allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
     )
     return (response.values, response.errorMessage)
   }

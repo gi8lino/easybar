@@ -1,4 +1,3 @@
-import AppKit
 import CoreLocation
 import EasyBarShared
 import Foundation
@@ -9,14 +8,20 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   private let componentName: String
   private let logger: ProcessLogger
   private let retryBackoff: AuthorizationRetryBackoff
+  private weak var promptPresenter: NetworkAuthorizationPromptPresenter?
 
   private var onChange: (() -> Void)?
   private var presentedAuthorizationPrompt = false
 
   /// Creates one location authorization controller that logs through the provided logger.
-  init(componentName: String, logger: ProcessLogger) {
+  init(
+    componentName: String,
+    logger: ProcessLogger,
+    promptPresenter: NetworkAuthorizationPromptPresenter? = nil
+  ) {
     self.componentName = componentName
     self.logger = logger
+    self.promptPresenter = promptPresenter
     retryBackoff = AuthorizationRetryBackoff(debugLog: logger.debug)
     super.init()
   }
@@ -123,22 +128,21 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     }
   }
 
-  /// Temporarily promotes the helper app so macOS can surface the permission prompt.
+  /// Temporarily prepares the host so macOS can surface the permission prompt.
   private func prepareAuthorizationPromptIfNeeded() {
     guard !presentedAuthorizationPrompt else { return }
     presentedAuthorizationPrompt = true
 
-    let changed = NSApp.setActivationPolicy(.regular)
-    logger.info("\(componentName) promoted for authorization prompt changed=\(changed)")
-    NSApp.activate(ignoringOtherApps: true)
+    logger.info("\(componentName) preparing authorization prompt")
+    promptPresenter?.preparePrompt()
   }
 
-  /// Restores accessory mode after the location permission state resolves.
+  /// Restores host UI after the location permission state resolves.
   private func restoreAccessoryModeIfNeeded() {
     guard presentedAuthorizationPrompt else { return }
     presentedAuthorizationPrompt = false
 
-    let changed = NSApp.setActivationPolicy(.accessory)
-    logger.info("\(componentName) restored accessory mode changed=\(changed)")
+    logger.info("\(componentName) restoring UI after authorization prompt")
+    promptPresenter?.restoreUI()
   }
 }
