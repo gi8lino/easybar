@@ -10,6 +10,14 @@ final class CalendarAuthorizationState {
   func setStatus(_ newStatus: EKAuthorizationStatus) {
     lock.lock()
     status = newStatus
+
+    switch newStatus {
+    case .authorized, .fullAccess:
+      break
+    default:
+      accessGrantedInProcess = false
+    }
+
     lock.unlock()
   }
 
