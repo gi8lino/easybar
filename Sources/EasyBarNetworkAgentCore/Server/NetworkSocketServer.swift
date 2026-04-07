@@ -43,7 +43,7 @@ final class NetworkSocketServer {
   func start(provider: NetworkSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
-      self?.handleClient(clientFD, request: request)
+      self?.handleClient(clientFD, request: request) ?? .close
     }
   }
 
@@ -67,13 +67,22 @@ final class NetworkSocketServer {
   }
 
   /// Handles one network agent client request.
-  private func handleClient(_ clientFD: Int32, request: NetworkAgentRequest) {
+  private func handleClient(
+    _ clientFD: Int32,
+    request: NetworkAgentRequest
+  )
+    -> LineSocketServerTransport<
+      Subscriber,
+      NetworkAgentRequest,
+      NetworkAgentMessage
+    >.ClientDisposition
+  {
     logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
       _ = transport.send(NetworkAgentMessage(kind: .pong), to: clientFD)
-      close(clientFD)
+      return .close
 
     case .version:
       _ = transport.send(
@@ -86,7 +95,7 @@ final class NetworkSocketServer {
         ),
         to: clientFD
       )
-      close(clientFD)
+      return .close
 
     case .fetch:
       guard let provider else {
@@ -94,8 +103,7 @@ final class NetworkSocketServer {
           NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       guard let fields = validatedFields(from: request) else {
@@ -103,13 +111,12 @@ final class NetworkSocketServer {
           NetworkAgentMessage(kind: .error, message: "missing_fields"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       let response = responseFields(for: fields, provider: provider)
       _ = transport.send(makeResponseMessage(from: response), to: clientFD)
-      close(clientFD)
+      return .close
 
     case .subscribe:
       guard let provider else {
@@ -117,8 +124,7 @@ final class NetworkSocketServer {
           NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       guard let fields = validatedFields(from: request) else {
@@ -126,8 +132,7 @@ final class NetworkSocketServer {
           NetworkAgentMessage(kind: .error, message: "missing_fields"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
@@ -135,14 +140,16 @@ final class NetworkSocketServer {
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return
+        return .close
       }
 
       let response = responseFields(for: fields, provider: provider)
       guard transport.send(makeResponseMessage(from: response), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return
+        return .close
       }
+
+      return .keepOpen
     }
   }
 

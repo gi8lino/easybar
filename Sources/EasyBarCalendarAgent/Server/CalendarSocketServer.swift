@@ -29,7 +29,7 @@ final class CalendarSocketServer {
   func start(provider: CalendarSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
-      self?.handleClient(clientFD, request: request)
+      self?.handleClient(clientFD, request: request) ?? .close
     }
   }
 
@@ -53,7 +53,16 @@ final class CalendarSocketServer {
   }
 
   /// Handles one calendar agent client request.
-  private func handleClient(_ clientFD: Int32, request: CalendarAgentRequest) {
+  private func handleClient(
+    _ clientFD: Int32,
+    request: CalendarAgentRequest
+  )
+    -> LineSocketServerTransport<
+      Subscriber,
+      CalendarAgentRequest,
+      CalendarAgentMessage
+    >.ClientDisposition
+  {
     logger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
@@ -68,11 +77,11 @@ final class CalendarSocketServer {
         ),
         to: clientFD
       )
-      close(clientFD)
+      return .close
 
     case .ping:
       _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
-      close(clientFD)
+      return .close
 
     case .fetch:
       guard let provider, let query = request.query else {
@@ -80,8 +89,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_query"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       let snapshot = provider.snapshot(for: query)
@@ -89,7 +97,7 @@ final class CalendarSocketServer {
         CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
         to: clientFD
       )
-      close(clientFD)
+      return .close
 
     case .subscribe:
       guard let provider, let query = request.query else {
@@ -97,8 +105,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_query"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
@@ -106,7 +113,7 @@ final class CalendarSocketServer {
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return
+        return .close
       }
 
       let snapshot = provider.snapshot(for: query)
@@ -117,8 +124,10 @@ final class CalendarSocketServer {
         )
       else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return
+        return .close
       }
+
+      return .keepOpen
 
     case .createEvent:
       guard let provider, let createEvent = request.createEvent else {
@@ -126,8 +135,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_create_event"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       do {
@@ -141,7 +149,7 @@ final class CalendarSocketServer {
         )
       }
 
-      close(clientFD)
+      return .close
 
     case .updateEvent:
       guard let provider, let updateEvent = request.updateEvent else {
@@ -149,8 +157,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_update_event"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       do {
@@ -164,7 +171,7 @@ final class CalendarSocketServer {
         )
       }
 
-      close(clientFD)
+      return .close
 
     case .deleteEvent:
       guard let provider, let deleteEvent = request.deleteEvent else {
@@ -172,8 +179,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_delete_event"),
           to: clientFD
         )
-        close(clientFD)
-        return
+        return .close
       }
 
       do {
@@ -187,7 +193,7 @@ final class CalendarSocketServer {
         )
       }
 
-      close(clientFD)
+      return .close
     }
   }
 }

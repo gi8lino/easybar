@@ -7,6 +7,12 @@ public final class LineSocketServerTransport<
   Request: Decodable,
   Response: Encodable
 > {
+  /// Describes whether the transport should close the client or keep it open.
+  public enum ClientDisposition {
+    case close
+    case keepOpen
+  }
+
   /// One currently connected subscriber entry.
   public struct SubscriberEntry {
     public let fd: Int32
@@ -71,7 +77,7 @@ public final class LineSocketServerTransport<
   }
 
   /// Starts listening and dispatches decoded requests to the handler.
-  public func start(_ handler: @escaping (Int32, Request) -> Void) {
+  public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) {
     stateLock.lock()
     defer { stateLock.unlock() }
 
@@ -198,6 +204,14 @@ public final class LineSocketServerTransport<
     return existed
   }
 
+  /// Returns whether the given file descriptor is currently tracked as a subscriber.
+  public func isSubscriber(fd: Int32) -> Bool {
+    stateLock.lock()
+    let isTracked = subscribers[fd] != nil
+    stateLock.unlock()
+    return isTracked
+  }
+
   /// Returns a stable snapshot of current subscribers.
   public func subscribersSnapshot() -> [SubscriberEntry] {
     stateLock.lock()
@@ -207,7 +221,7 @@ public final class LineSocketServerTransport<
   }
 
   /// Accepts client connections until the server stops.
-  private func acceptLoop(handler: @escaping (Int32, Request) -> Void) {
+  private func acceptLoop(handler: @escaping (Int32, Request) -> ClientDisposition) {
     while isRunning() {
       let fd = currentServerFD()
       if fd < 0 { break }
@@ -227,19 +241,35 @@ public final class LineSocketServerTransport<
   }
 
   /// Reads requests until the client disconnects and invokes the handler for each line.
-  private func handleClient(_ clientFD: Int32, handler: @escaping (Int32, Request) -> Void) {
+  private func handleClient(
+    _ clientFD: Int32,
+    handler: @escaping (Int32, Request) -> ClientDisposition
+  ) {
     while true {
       guard let data = readOneLine(from: clientFD), !data.isEmpty else {
-        close(clientFD)
+        if !isSubscriber(fd: clientFD) {
+          close(clientFD)
+        }
         return
       }
 
       do {
         let request = try requestDecoder.decode(Request.self, from: data)
-        handler(clientFD, request)
+        let disposition = handler(clientFD, request)
+
+        switch disposition {
+        case .close:
+          close(clientFD)
+          return
+
+        case .keepOpen:
+          return
+        }
       } catch {
         warnLog("\(serverLabel) request decode failed error=\(error)")
-        close(clientFD)
+        if !isSubscriber(fd: clientFD) {
+          close(clientFD)
+        }
         return
       }
     }
