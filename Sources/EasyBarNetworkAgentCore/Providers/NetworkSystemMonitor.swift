@@ -11,13 +11,15 @@ final class NetworkSystemMonitor {
     "State:/Network/Service/.*/IPv6" as CFString,
   ]
 
+  private let componentName: String
   private let logger: ProcessLogger
   private var onChange: (() -> Void)?
   private var store: SCDynamicStore?
   private var storeSource: CFRunLoopSource?
 
   /// Creates one network system monitor that logs through the provided logger.
-  init(logger: ProcessLogger) {
+  init(componentName: String, logger: ProcessLogger) {
+    self.componentName = componentName
     self.logger = logger
   }
 
@@ -36,7 +38,7 @@ final class NetworkSystemMonitor {
     guard
       let store = SCDynamicStoreCreate(
         nil,
-        "easybar-network-agent" as CFString,
+        componentName as CFString,
         { _, _, info in
           guard let info else { return }
           let monitor = Unmanaged<NetworkSystemMonitor>.fromOpaque(info).takeUnretainedValue()
@@ -47,14 +49,14 @@ final class NetworkSystemMonitor {
         &context
       )
     else {
-      logger.warn("failed to create network dynamic store")
+      logger.warn("failed to create \(componentName) dynamic store")
       return
     }
 
     SCDynamicStoreSetNotificationKeys(store, nil, Self.watchedNetworkPatterns as CFArray)
 
     guard let source = SCDynamicStoreCreateRunLoopSource(nil, store, 0) else {
-      logger.warn("failed to create network dynamic store source")
+      logger.warn("failed to create \(componentName) dynamic store source")
       return
     }
 
@@ -62,7 +64,7 @@ final class NetworkSystemMonitor {
     storeSource = source
 
     CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-    logger.info("network agent subscribed network_change")
+    logger.info("\(componentName) subscribed network_change")
   }
 
   /// Stops network monitoring.
@@ -178,7 +180,7 @@ final class NetworkSystemMonitor {
 
   /// Handles one dynamic store change callback.
   private func handleNetworkStoreChange() {
-    logger.info("network agent dynamic store changed")
+    logger.info("\(componentName) dynamic store changed")
     onChange?()
   }
 

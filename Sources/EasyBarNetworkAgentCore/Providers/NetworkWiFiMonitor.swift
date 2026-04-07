@@ -5,6 +5,7 @@ import Foundation
 final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private let smoothingFactor = 0.35
   private let stateLock = NSLock()
+  private let componentName: String
   private let logger: ProcessLogger
 
   private var onChange: (() -> Void)?
@@ -18,7 +19,8 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private var roaming = false
 
   /// Creates one Wi-Fi monitor that logs through the provided logger.
-  init(logger: ProcessLogger) {
+  init(componentName: String, logger: ProcessLogger) {
+    self.componentName = componentName
     self.logger = logger
     super.init()
   }
@@ -33,9 +35,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     do {
       try client.startMonitoringEvent(with: .ssidDidChange)
       wifiClient = client
-      logger.info("network agent subscribed wifi_change")
+      logger.info("\(componentName) subscribed wifi_change")
     } catch {
-      logger.warn("failed to subscribe network agent Wi-Fi events: \(error)")
+      logger.warn("failed to subscribe \(componentName) Wi-Fi events: \(error)")
     }
   }
 
@@ -104,7 +106,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
   /// Handles one Wi-Fi SSID change callback.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("network agent Wi-Fi changed interface=\(interfaceName)")
+    logger.info("\(componentName) Wi-Fi changed interface=\(interfaceName)")
     onChange?()
   }
 
@@ -115,7 +117,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
     guard let rssi else {
       smoothedRSSI = nil
-      logger.debug("network RSSI unavailable")
+      logger.debug("\(componentName) RSSI unavailable")
       return nil
     }
 

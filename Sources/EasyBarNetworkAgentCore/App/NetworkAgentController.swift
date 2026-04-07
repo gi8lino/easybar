@@ -3,39 +3,42 @@ import Foundation
 
 @MainActor
 public final class NetworkAgentController {
-  private let runtimeConfig: SharedRuntimeConfig
+  private let config: NetworkAgentControllerConfig
   private let snapshotProvider: NetworkSnapshotProvider
   private let socketServer: NetworkSocketServer
   private let logger: ProcessLogger
 
-  /// Builds the network agent controller from one runtime config.
+  /// Builds the network agent controller from one host-provided config.
   public init(
-    config: SharedRuntimeConfig = .current,
+    config: NetworkAgentControllerConfig,
     logger: ProcessLogger
   ) {
-    runtimeConfig = config
+    self.config = config
     self.logger = logger
     snapshotProvider = NetworkSnapshotProvider(
-      refreshIntervalSeconds: config.networkAgentRefreshIntervalSeconds,
+      componentName: config.componentName,
+      refreshIntervalSeconds: config.refreshIntervalSeconds,
       logger: logger
     )
     socketServer = NetworkSocketServer(
-      socketPath: config.networkAgentSocketPath,
-      allowUnauthorizedNonSensitiveFields: config.networkAgentAllowUnauthorizedNonSensitiveFields,
+      componentName: config.componentName,
+      socketPath: config.socketPath,
+      appVersion: config.appVersion,
+      allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedNonSensitiveFields,
       logger: logger
     )
   }
 
   /// Returns whether the network agent should run.
   public var isEnabled: Bool {
-    runtimeConfig.networkAgentEnabled
+    config.isEnabled
   }
 
   /// Starts snapshot delivery and the network socket server.
   @discardableResult
   public func start() -> Bool {
     guard isEnabled else {
-      logger.info("network agent disabled in config")
+      logger.info("\(config.componentName) disabled in config")
       return false
     }
 
@@ -59,10 +62,10 @@ public final class NetworkAgentController {
   private func logStartup() {
     logProcessStartup(
       snapshot: makeProcessStartupSnapshot(
-        processName: "network agent",
-        configPath: runtimeConfig.configPath,
+        processName: config.processName,
+        configPath: config.configPath,
         socketSummary:
-          "socket path=\(runtimeConfig.networkAgentSocketPath) refresh_interval_seconds=\(runtimeConfig.networkAgentRefreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(runtimeConfig.networkAgentAllowUnauthorizedNonSensitiveFields)",
+          "socket path=\(config.socketPath) refresh_interval_seconds=\(config.refreshIntervalSeconds) allow_unauthorized_non_sensitive_fields=\(config.allowUnauthorizedNonSensitiveFields)",
         loggingSummary:
           "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) path=\(logger.fileLoggingPath)"
       ),

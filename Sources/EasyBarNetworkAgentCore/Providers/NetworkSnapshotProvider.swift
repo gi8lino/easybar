@@ -2,6 +2,7 @@ import EasyBarShared
 import Foundation
 
 public final class NetworkSnapshotProvider {
+  private let componentName: String
   private let authorizer: NetworkLocationAuthorizer
   private let wifiMonitor: NetworkWiFiMonitor
   private let systemMonitor: NetworkSystemMonitor
@@ -13,14 +14,16 @@ public final class NetworkSnapshotProvider {
 
   /// Builds the network snapshot provider with one refresh interval.
   public init(
+    componentName: String,
     refreshIntervalSeconds: TimeInterval,
     logger: ProcessLogger
   ) {
+    self.componentName = componentName
     self.refreshIntervalSeconds = refreshIntervalSeconds
     self.logger = logger
-    authorizer = NetworkLocationAuthorizer(logger: logger)
-    wifiMonitor = NetworkWiFiMonitor(logger: logger)
-    systemMonitor = NetworkSystemMonitor(logger: logger)
+    authorizer = NetworkLocationAuthorizer(componentName: componentName, logger: logger)
+    wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger)
+    systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger)
   }
 
   /// Starts permission, Wi-Fi, and network monitoring.
@@ -39,7 +42,7 @@ public final class NetworkSnapshotProvider {
       self?.onChange?()
     }
 
-    logger.info("network agent refresh_interval_seconds=\(refreshIntervalSeconds)")
+    logger.info("\(componentName) refresh_interval_seconds=\(refreshIntervalSeconds)")
 
     if refreshIntervalSeconds > 0 {
       refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshIntervalSeconds, repeats: true) {
@@ -71,7 +74,7 @@ public final class NetworkSnapshotProvider {
     let network = systemMonitor.currentState()
 
     logger.debug(
-      "network snapshot access_granted=\(authorizer.isAuthorized()) permission_state=\(permissionState) ssid=\(wifi.ssid ?? "<none>") interface=\(wifi.interfaceName ?? "<none>") rssi=\(wifi.rssi.map(String.init) ?? "<none>") primary_is_tunnel=\(network.primaryInterfaceIsTunnel)"
+      "\(componentName) snapshot access_granted=\(authorizer.isAuthorized()) permission_state=\(permissionState) ssid=\(wifi.ssid ?? "<none>") interface=\(wifi.interfaceName ?? "<none>") rssi=\(wifi.rssi.map(String.init) ?? "<none>") primary_is_tunnel=\(network.primaryInterfaceIsTunnel)"
     )
 
     return NetworkAgentSnapshot(

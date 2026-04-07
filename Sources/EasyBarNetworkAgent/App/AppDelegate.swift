@@ -5,7 +5,7 @@ import EasyBarShared
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private let logger = ProcessLogger(label: "easybar-network-agent")
-  private lazy var controller = NetworkAgentController(logger: logger)
+  private var controller: NetworkAgentController?
   private let instanceGuard = SingleInstanceGuard()
 
   /// Starts the network agent after launch.
@@ -31,8 +31,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       return
     }
 
+    let controllerConfig = NetworkAgentControllerConfig.easyBar(
+      runtimeConfig: runtimeConfig,
+      appVersion: BuildInfo.appVersion
+    )
+    controller = NetworkAgentController(config: controllerConfig, logger: logger)
+
     NSApp.setActivationPolicy(.accessory)
-    guard controller.start() else {
+    guard controller?.start() == true else {
       NSApp.terminate(nil)
       return
     }
@@ -40,6 +46,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Stops the network agent before termination.
   func applicationWillTerminate(_ notification: Notification) {
-    controller.stop()
+    controller?.stop()
   }
 }

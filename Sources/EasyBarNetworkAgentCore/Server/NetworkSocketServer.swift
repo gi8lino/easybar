@@ -8,18 +8,30 @@ final class NetworkSocketServer {
   }
 
   private var provider: NetworkSnapshotProvider?
+  private let componentName: String
+  private let socketPath: String
+  private let appVersion: String
   private let allowUnauthorizedNonSensitiveFields: Bool
   private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
-  init(socketPath: String, allowUnauthorizedNonSensitiveFields: Bool, logger: ProcessLogger) {
+  init(
+    componentName: String,
+    socketPath: String,
+    appVersion: String,
+    allowUnauthorizedNonSensitiveFields: Bool,
+    logger: ProcessLogger
+  ) {
+    self.componentName = componentName
+    self.socketPath = socketPath
+    self.appVersion = appVersion
     self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
     self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
-      serverLabel: "network agent",
+      serverLabel: componentName,
       debugLog: logger.debug,
       infoLog: logger.info,
       warnLog: logger.warn,
@@ -56,7 +68,7 @@ final class NetworkSocketServer {
 
   /// Handles one network agent client request.
   private func handleClient(_ clientFD: Int32, request: NetworkAgentRequest) {
-    logger.debug("network agent request fd=\(clientFD) command=\(request.command.rawValue)")
+    logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
@@ -68,7 +80,7 @@ final class NetworkSocketServer {
         NetworkAgentMessage(
           kind: .version,
           version: NetworkAgentVersion(
-            appVersion: BuildInfo.appVersion,
+            appVersion: appVersion,
             protocolVersion: networkAgentProtocolVersion
           )
         ),
@@ -79,13 +91,18 @@ final class NetworkSocketServer {
     case .fetch:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
+
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
@@ -97,19 +114,24 @@ final class NetworkSocketServer {
     case .subscribe:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"), to: clientFD)
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
+
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"), to: clientFD)
+          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          to: clientFD
+        )
         close(clientFD)
         return
       }
 
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
-      logger.info("network agent subscriber added fd=\(clientFD)")
+      logger.info("\(componentName) subscriber added fd=\(clientFD)")
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
