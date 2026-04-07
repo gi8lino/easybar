@@ -1,8 +1,12 @@
 import Foundation
 
+/// Stable protocol version used by the network agent socket.
+public let networkAgentProtocolVersion = "1"
+
 /// Commands supported by the network agent socket.
 public enum NetworkAgentCommand: String, Codable {
   case ping
+  case version
   case fetch
   case subscribe
 }
@@ -111,6 +115,20 @@ public struct NetworkAgentRequest: Codable {
   }
 }
 
+/// One version payload returned by the network agent.
+public struct NetworkAgentVersion: Codable, Equatable {
+  /// The application version embedded in the network-agent build.
+  public var appVersion: String
+  /// Stable socket protocol version.
+  public var protocolVersion: String
+
+  /// Creates one network-agent version payload.
+  public init(appVersion: String, protocolVersion: String) {
+    self.appVersion = appVersion
+    self.protocolVersion = protocolVersion
+  }
+}
+
 /// Full network snapshot returned by the agent.
 public struct NetworkAgentSnapshot: Codable, Equatable {
   /// Whether location/Wi-Fi access is currently granted.
@@ -175,6 +193,7 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
 /// Message kinds sent by the network agent.
 public enum NetworkAgentMessageKind: String, Codable {
   case pong
+  case version
   case subscribed
   case fields
   case error
@@ -184,6 +203,8 @@ public enum NetworkAgentMessageKind: String, Codable {
 public struct NetworkAgentMessage: Codable {
   /// Message kind discriminator.
   public var kind: NetworkAgentMessageKind
+  /// Optional version payload.
+  public var version: NetworkAgentVersion?
   /// Optional field values payload.
   public var fields: [String: NetworkAgentFieldValue]?
   /// Optional error message.
@@ -192,10 +213,12 @@ public struct NetworkAgentMessage: Codable {
   /// Creates one network agent message.
   public init(
     kind: NetworkAgentMessageKind,
+    version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
     message: String? = nil
   ) {
     self.kind = kind
+    self.version = version
     self.fields = fields
     self.message = message
   }

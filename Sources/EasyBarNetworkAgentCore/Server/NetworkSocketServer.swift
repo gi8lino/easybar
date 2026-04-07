@@ -63,6 +63,19 @@ final class NetworkSocketServer {
       _ = transport.send(NetworkAgentMessage(kind: .pong), to: clientFD)
       close(clientFD)
 
+    case .version:
+      _ = transport.send(
+        NetworkAgentMessage(
+          kind: .version,
+          version: NetworkAgentVersion(
+            appVersion: BuildInfo.appVersion,
+            protocolVersion: networkAgentProtocolVersion
+          )
+        ),
+        to: clientFD
+      )
+      close(clientFD)
+
     case .fetch:
       guard let provider else {
         _ = transport.send(

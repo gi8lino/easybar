@@ -44,6 +44,9 @@ final class NetworkAgentClient {
   /// Handles one decoded network agent message.
   private func handle(_ message: NetworkAgentMessage) {
     switch message.kind {
+    case .version:
+      break
+
     case .subscribed:
       easybarLog.info("network agent client subscribed")
 
@@ -61,6 +64,7 @@ final class NetworkAgentClient {
 
     case .error:
       handleError(message.message ?? "unknown")
+
     }
   }
 
