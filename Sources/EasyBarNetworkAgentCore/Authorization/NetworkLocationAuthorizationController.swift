@@ -3,9 +3,9 @@ import CoreLocation
 import EasyBarShared
 import Foundation
 
-final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
+final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerDelegate {
   private let locationManager = CLLocationManager()
-  private let authState = NetworkAgentAuthorizationState()
+  private let authState = NetworkAuthorizationState()
   private let componentName: String
   private let logger: ProcessLogger
   private let retryBackoff: AuthorizationRetryBackoff
@@ -13,7 +13,7 @@ final class NetworkLocationAuthorizer: NSObject, CLLocationManagerDelegate {
   private var onChange: (() -> Void)?
   private var presentedAuthorizationPrompt = false
 
-  /// Creates one location authorizer that logs through the provided logger.
+  /// Creates one location authorization controller that logs through the provided logger.
   init(componentName: String, logger: ProcessLogger) {
     self.componentName = componentName
     self.logger = logger

@@ -4,29 +4,29 @@ import Foundation
 
 final class CalendarSnapshotProvider {
   private let eventStore = EKEventStore()
-  private let authState = CalendarAgentAuthorizationState()
+  private let authState = CalendarAuthorizationState()
   private let logger: ProcessLogger
-  private let retryBackoff: AuthorizationRetryBackoff
+  private let authorizationController: CalendarAuthorizationController
   private var observer: NSObjectProtocol?
   private var onChange: (() -> Void)?
 
   /// Creates one calendar snapshot provider that logs through the provided logger.
   init(logger: ProcessLogger) {
     self.logger = logger
-    retryBackoff = AuthorizationRetryBackoff(debugLog: logger.debug)
+    self.authorizationController = CalendarAuthorizationController(
+      eventStore: eventStore,
+      authState: authState,
+      logger: logger
+    )
   }
 
   /// Starts calendar access, observation, and change callbacks.
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
-    logger.info(
-      "calendar agent authorization status before start=\(authState.describe(status))"
-    )
-
-    requestAccessIfNeeded()
+    authorizationController.start { [weak self] in
+      self?.onChange?()
+    }
 
     observer = NotificationCenter.default.addObserver(
       forName: .EKEventStoreChanged,
@@ -40,7 +40,7 @@ final class CalendarSnapshotProvider {
 
   /// Stops observing calendar store changes.
   func stop() {
-    retryBackoff.reset()
+    authorizationController.stop()
 
     if let observer {
       NotificationCenter.default.removeObserver(observer)
@@ -52,11 +52,10 @@ final class CalendarSnapshotProvider {
 
   /// Builds one calendar snapshot for the requested query.
   func snapshot(for query: CalendarAgentQuery) -> CalendarAgentSnapshot {
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
+    authorizationController.refreshStatus()
 
-    let hasAccess = authState.effectiveAccessGranted()
-    let permissionState = authState.permissionState()
+    let hasAccess = authorizationController.effectiveAccessGranted()
+    let permissionState = authorizationController.permissionState()
     let now = Date()
 
     guard hasAccess else {
@@ -128,10 +127,9 @@ final class CalendarSnapshotProvider {
   /// Creates one new calendar event through EventKit.
   @discardableResult
   func createEvent(_ draft: CalendarAgentCreateEvent) throws -> String {
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
+    authorizationController.refreshStatus()
 
-    guard authState.effectiveAccessGranted() else {
+    guard authorizationController.effectiveAccessGranted() else {
       throw CalendarAgentCreateError.accessDenied
     }
 
@@ -176,10 +174,9 @@ final class CalendarSnapshotProvider {
 
   /// Updates one existing calendar event through EventKit.
   func updateEvent(_ draft: CalendarAgentUpdateEvent) throws {
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
+    authorizationController.refreshStatus()
 
-    guard authState.effectiveAccessGranted() else {
+    guard authorizationController.effectiveAccessGranted() else {
       throw CalendarAgentCreateError.accessDenied
     }
 
@@ -232,10 +229,9 @@ final class CalendarSnapshotProvider {
 
   /// Deletes one existing calendar event through EventKit.
   func deleteEvent(_ draft: CalendarAgentDeleteEvent) throws {
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
+    authorizationController.refreshStatus()
 
-    guard authState.effectiveAccessGranted() else {
+    guard authorizationController.effectiveAccessGranted() else {
       throw CalendarAgentCreateError.accessDenied
     }
 
@@ -261,73 +257,6 @@ final class CalendarSnapshotProvider {
 
     guard start < end else { return nil }
     return DateInterval(start: start, end: end)
-  }
-
-  /// Requests calendar access when the current state allows it.
-  private func requestAccessIfNeeded() {
-    let status = EKEventStore.authorizationStatus(for: .event)
-    authState.setStatus(status)
-    logger.info("calendar agent access status=\(authState.describe(status))")
-
-    switch status {
-    case .authorized, .fullAccess:
-      retryBackoff.reset()
-      logger.info("calendar agent access already granted")
-      onChange?()
-
-    case .notDetermined:
-      logger.info("requesting calendar full access")
-      eventStore.requestFullAccessToEvents { [weak self] granted, error in
-        guard let self else { return }
-
-        let newStatus = EKEventStore.authorizationStatus(for: .event)
-        self.authState.setStatus(newStatus)
-
-        if let error {
-          self.logger.error(
-            "calendar agent access request failed status=\(self.authState.describe(newStatus)) error=\(error)"
-          )
-          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
-          return
-        }
-
-        self.logger.info(
-          "calendar agent access request completed granted=\(granted) status=\(self.authState.describe(newStatus))"
-        )
-
-        guard granted else {
-          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
-          return
-        }
-
-        self.retryBackoff.reset()
-        self.authState.markGrantedInProcess()
-        DispatchQueue.main.async {
-          self.onChange?()
-        }
-      }
-      scheduleAuthorizationRetryIfNeeded(for: status)
-
-    case .denied, .restricted, .writeOnly:
-      retryBackoff.reset()
-      logger.warn("calendar agent access unavailable status=\(authState.describe(status))")
-
-    @unknown default:
-      retryBackoff.reset()
-      logger.warn("calendar agent access status unknown raw=\(status.rawValue)")
-    }
-  }
-
-  /// Schedules one follow-up access request while authorization is unresolved.
-  private func scheduleAuthorizationRetryIfNeeded(for status: EKAuthorizationStatus) {
-    guard status == .notDetermined else {
-      retryBackoff.reset()
-      return
-    }
-
-    retryBackoff.schedule { [weak self] in
-      self?.requestAccessIfNeeded()
-    }
   }
 }
 

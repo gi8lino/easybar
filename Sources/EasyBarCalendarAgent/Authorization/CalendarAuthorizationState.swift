@@ -1,7 +1,7 @@
 import EventKit
 import Foundation
 
-final class CalendarAgentAuthorizationState {
+final class CalendarAuthorizationState {
   private let lock = NSLock()
   private var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
   private var accessGrantedInProcess = false

@@ -3,7 +3,7 @@ import Foundation
 
 public final class NetworkSnapshotProvider {
   private let componentName: String
-  private let authorizer: NetworkLocationAuthorizer
+  private let authorizer: NetworkLocationAuthorizationController
   private let wifiMonitor: NetworkWiFiMonitor
   private let systemMonitor: NetworkSystemMonitor
   private let refreshIntervalSeconds: TimeInterval
@@ -21,7 +21,8 @@ public final class NetworkSnapshotProvider {
     self.componentName = componentName
     self.refreshIntervalSeconds = refreshIntervalSeconds
     self.logger = logger
-    authorizer = NetworkLocationAuthorizer(componentName: componentName, logger: logger)
+    authorizer = NetworkLocationAuthorizationController(
+      componentName: componentName, logger: logger)
     wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger)
     systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger)
   }

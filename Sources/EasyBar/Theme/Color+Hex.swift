@@ -2,6 +2,7 @@ import SwiftUI
 
 extension Color {
 
+  /// Creates a color from `RRGGBB` or `RRGGBBAA` hex text.
   init(hex: String) {
 
     var hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
