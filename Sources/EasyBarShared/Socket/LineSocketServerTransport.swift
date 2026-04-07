@@ -7,12 +7,6 @@ public final class LineSocketServerTransport<
   Request: Decodable,
   Response: Encodable
 > {
-  /// Describes whether the transport should close the client or keep it open.
-  public enum ClientDisposition {
-    case close
-    case keepOpen
-  }
-
   /// One currently connected subscriber entry.
   public struct SubscriberEntry {
     public let fd: Int32
@@ -22,6 +16,11 @@ public final class LineSocketServerTransport<
       self.fd = fd
       self.subscriber = subscriber
     }
+  }
+
+  public enum ClientDisposition {
+    case close
+    case keepOpen
   }
 
   private let socketPath: String
@@ -100,6 +99,12 @@ public final class LineSocketServerTransport<
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
       errorLog("\(serverLabel) failed to create socket")
+      return
+    }
+
+    guard configureNoSigPipe(fd: fd) else {
+      errorLog("\(serverLabel) failed to configure server socket no-sigpipe")
+      close(fd)
       return
     }
 
@@ -204,14 +209,6 @@ public final class LineSocketServerTransport<
     return existed
   }
 
-  /// Returns whether the given file descriptor is currently tracked as a subscriber.
-  public func isSubscriber(fd: Int32) -> Bool {
-    stateLock.lock()
-    let isTracked = subscribers[fd] != nil
-    stateLock.unlock()
-    return isTracked
-  }
-
   /// Returns a stable snapshot of current subscribers.
   public func subscribersSnapshot() -> [SubscriberEntry] {
     stateLock.lock()
@@ -234,56 +231,54 @@ public final class LineSocketServerTransport<
         continue
       }
 
+      guard configureNoSigPipe(fd: clientFD) else {
+        errorLog("\(serverLabel) failed to configure client socket no-sigpipe fd=\(clientFD)")
+        close(clientFD)
+        continue
+      }
+
       clientQueue.async { [weak self] in
         self?.handleClient(clientFD, handler: handler)
       }
     }
   }
 
-  /// Reads requests until the client disconnects and invokes the handler for each complete line.
+  /// Reads requests until the client disconnects and invokes the handler for each line.
   private func handleClient(
-    _ clientFD: Int32,
-    handler: @escaping (Int32, Request) -> ClientDisposition
+    _ clientFD: Int32, handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
-    var buffer = [UInt8](repeating: 0, count: 1024)
     var pending = Data()
+    var buffer = [UInt8](repeating: 0, count: 4096)
 
     while true {
-      if let line = nextLine(from: &pending) {
-        guard !line.isEmpty else { continue }
-
+      if let requestData = nextLine(from: &pending) {
         do {
-          let request = try requestDecoder.decode(Request.self, from: line)
+          let request = try requestDecoder.decode(Request.self, from: requestData)
           let disposition = handler(clientFD, request)
 
           switch disposition {
           case .close:
-            close(clientFD)
-            return
+            continue
 
           case .keepOpen:
             return
           }
         } catch {
           warnLog("\(serverLabel) request decode failed error=\(error)")
-          if !isSubscriber(fd: clientFD) {
-            close(clientFD)
-          }
+          close(clientFD)
           return
         }
       }
 
-      let n = read(clientFD, &buffer, buffer.count)
+      let count = read(clientFD, &buffer, buffer.count)
 
-      if n > 0 {
-        pending.append(contentsOf: buffer.prefix(n))
+      if count > 0 {
+        pending.append(contentsOf: buffer.prefix(count))
         continue
       }
 
-      if n == 0 {
-        if !isSubscriber(fd: clientFD) {
-          close(clientFD)
-        }
+      if count == 0 {
+        close(clientFD)
         return
       }
 
@@ -291,20 +286,20 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      if !isSubscriber(fd: clientFD) {
-        close(clientFD)
-      }
+      close(clientFD)
       return
     }
   }
 
   /// Returns the next complete line from the pending buffer when available.
   private func nextLine(from pending: inout Data) -> Data? {
-    guard let newlineIndex = pending.firstIndex(of: 0x0A) else { return nil }
+    guard let newlineIndex = pending.firstIndex(of: 0x0A) else {
+      return nil
+    }
 
-    let line = pending.prefix(upTo: newlineIndex)
+    let line = Data(pending.prefix(upTo: newlineIndex))
     pending.removeSubrange(...newlineIndex)
-    return Data(line)
+    return line.isEmpty ? nil : line
   }
 
   /// Returns whether the server is running.

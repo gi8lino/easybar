@@ -1,3 +1,4 @@
+import Darwin
 import EasyBarShared
 import Foundation
 
@@ -70,14 +71,18 @@ final class NetworkSocketServer {
     _ clientFD: Int32,
     request: NetworkAgentRequest
   )
-    -> LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
-    .ClientDisposition
+    -> LineSocketServerTransport<
+      Subscriber,
+      NetworkAgentRequest,
+      NetworkAgentMessage
+    >.ClientDisposition
   {
     logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
       _ = transport.send(NetworkAgentMessage(kind: .pong), to: clientFD)
+      close(clientFD)
       return .close
 
     case .version:
@@ -91,55 +96,49 @@ final class NetworkSocketServer {
         ),
         to: clientFD
       )
+      close(clientFD)
       return .close
 
     case .fetch:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(
-            kind: .error,
-            errorCode: "provider_unavailable"
-          ),
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(
-            kind: .error,
-            errorCode: "missing_fields"
-          ),
+          NetworkAgentMessage(kind: .error, message: "missing_fields"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
       let response = responseFields(for: fields, provider: provider)
       _ = transport.send(makeResponseMessage(from: response), to: clientFD)
+      close(clientFD)
       return .close
 
     case .subscribe:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(
-            kind: .error,
-            errorCode: "provider_unavailable"
-          ),
+          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(
-            kind: .error,
-            errorCode: "missing_fields"
-          ),
+          NetworkAgentMessage(kind: .error, message: "missing_fields"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -171,63 +170,22 @@ final class NetworkSocketServer {
   private func responseFields(
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
-  ) -> (fields: [String: NetworkAgentFieldValue]?, errorCode: String?, permissionState: String?) {
+  ) -> (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
     let response = provider.responseFields(
       for: fields,
       allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
     )
-
-    if let values = response.values {
-      return (values, nil, nil)
-    }
-
-    let mapped = mappedError(from: response.errorMessage)
-    return (nil, mapped.errorCode, mapped.permissionState)
+    return (response.values, response.errorMessage)
   }
 
   /// Builds one network-agent message from a field response result.
   private func makeResponseMessage(
-    from response: (
-      fields: [String: NetworkAgentFieldValue]?, errorCode: String?, permissionState: String?
-    )
+    from response: (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?)
   ) -> NetworkAgentMessage {
     if let fields = response.fields {
       return NetworkAgentMessage(kind: .fields, fields: fields)
     }
 
-    return NetworkAgentMessage(
-      kind: .error,
-      errorCode: response.errorCode ?? "unknown",
-      permissionState: response.permissionState
-    )
-  }
-
-  /// Maps one provider error string to a stable wire-level error payload.
-  private func mappedError(from errorMessage: String?) -> (
-    errorCode: String, permissionState: String?
-  ) {
-    guard let errorMessage else { return ("unknown", nil) }
-
-    if let permissionState = permissionState(from: errorMessage) {
-      return ("permission_denied", permissionState)
-    }
-
-    switch errorMessage {
-    case "missing_fields":
-      return ("missing_fields", nil)
-    case "provider_unavailable":
-      return ("provider_unavailable", nil)
-    default:
-      return (errorMessage, nil)
-    }
-  }
-
-  /// Extracts the permission state suffix from one permission-denied error string.
-  private func permissionState(from errorMessage: String) -> String? {
-    let prefix = "permission_denied:"
-    guard errorMessage.hasPrefix(prefix) else { return nil }
-
-    let value = String(errorMessage.dropFirst(prefix.count))
-    return value.isEmpty ? nil : value
+    return NetworkAgentMessage(kind: .error, message: response.errorMessage ?? "unknown")
   }
 }

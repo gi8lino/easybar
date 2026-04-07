@@ -1,21 +1,16 @@
+import Darwin
 import Foundation
 
 /// Sends one newline-delimited request to the calendar agent and reads one response.
 public enum CalendarAgentOneShotClient {
   private static let encoder: JSONEncoder = {
-    let encoder = LineSocketClientTransport<
-      CalendarAgentRequest,
-      CalendarAgentMessage
-    >.makeDefaultEncoder()
+    let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
     return encoder
   }()
 
   private static let decoder: JSONDecoder = {
-    let decoder = LineSocketClientTransport<
-      CalendarAgentRequest,
-      CalendarAgentMessage
-    >.makeDefaultDecoder()
+    let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
     return decoder
   }()
@@ -25,10 +20,78 @@ public enum CalendarAgentOneShotClient {
     request: CalendarAgentRequest,
     socketPath: String
   ) throws -> CalendarAgentMessage {
-    try LineSocketClientTransport<CalendarAgentRequest, CalendarAgentMessage>(
-      socketPath: socketPath,
-      encoder: encoder,
-      decoder: decoder
-    ).send(request: request)
+    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard fd >= 0 else {
+      throw CalendarAgentOneShotError.socketCreationFailed
+    }
+
+    defer {
+      shutdown(fd, SHUT_RDWR)
+      close(fd)
+    }
+
+    guard configureNoSigPipe(fd: fd) else {
+      throw CalendarAgentOneShotError.connectionFailed
+    }
+
+    guard connectSocket(fd: fd, path: socketPath) else {
+      throw CalendarAgentOneShotError.connectionFailed
+    }
+
+    let encoded = try encoder.encode(request) + Data("\n".utf8)
+    guard writeAll(encoded, to: fd) else {
+      throw CalendarAgentOneShotError.writeFailed
+    }
+
+    var buffer = Data()
+    var chunk = [UInt8](repeating: 0, count: 4096)
+
+    while true {
+      let count = read(fd, &chunk, chunk.count)
+
+      if count > 0 {
+        buffer.append(contentsOf: chunk.prefix(count))
+
+        if let newlineIndex = buffer.firstIndex(of: 0x0A) {
+          let line = buffer.prefix(upTo: newlineIndex)
+          return try decoder.decode(CalendarAgentMessage.self, from: Data(line))
+        }
+
+        continue
+      }
+
+      if count == 0 {
+        break
+      }
+
+      if errno == EINTR {
+        continue
+      }
+
+      throw CalendarAgentOneShotError.readFailed
+    }
+
+    throw CalendarAgentOneShotError.emptyResponse
   }
+
+  /// Connects one Unix-domain socket to the given filesystem path.
+  private static func connectSocket(fd: Int32, path: String) -> Bool {
+    var address = makeSockAddrUn(path: path)
+    let length = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    return withUnsafePointer(to: &address) { pointer in
+      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+        Darwin.connect(fd, sockaddrPointer, length) == 0
+      }
+    }
+  }
+}
+
+/// Errors produced by the one-shot calendar agent client.
+public enum CalendarAgentOneShotError: Error {
+  case socketCreationFailed
+  case connectionFailed
+  case writeFailed
+  case readFailed
+  case emptyResponse
 }

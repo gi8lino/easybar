@@ -31,18 +31,10 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
 /// Sends one line-delimited JSON request and decodes one JSON response.
 public struct LineSocketClientTransport<Request: Encodable, Response: Decodable> {
   public let socketPath: String
-  public let encoder: JSONEncoder
-  public let decoder: JSONDecoder
 
   /// Creates a new client transport for the given socket path.
-  public init(
-    socketPath: String,
-    encoder: JSONEncoder = LineSocketClientTransport.makeDefaultEncoder(),
-    decoder: JSONDecoder = LineSocketClientTransport.makeDefaultDecoder()
-  ) {
+  public init(socketPath: String) {
     self.socketPath = socketPath
-    self.encoder = encoder
-    self.decoder = decoder
   }
 
   /// Sends one request and returns one decoded response.
@@ -52,9 +44,10 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.socketFailed
     }
 
-    defer {
-      shutdown(fd, SHUT_RDWR)
-      close(fd)
+    defer { close(fd) }
+
+    guard configureNoSigPipe(fd: fd) else {
+      throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
     }
 
     var addr = makeSockAddrUn(path: socketPath)
@@ -70,6 +63,9 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
     }
 
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+
     guard let payload = try? encoder.encode(request) else {
       throw LineSocketClientTransportError.encodeFailed
     }
@@ -81,22 +77,10 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
 
     do {
-      return try decoder.decode(Response.self, from: replyData)
+      return try JSONDecoder().decode(Response.self, from: replyData)
     } catch {
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }
-  }
-
-  /// Builds a fresh default request encoder.
-  public static func makeDefaultEncoder() -> JSONEncoder {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-    return encoder
-  }
-
-  /// Builds a fresh default response decoder.
-  public static func makeDefaultDecoder() -> JSONDecoder {
-    JSONDecoder()
   }
 
   /// Writes all bytes to the socket.
@@ -108,11 +92,17 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       while sent < data.count {
         let n = write(fd, base.advanced(by: sent), data.count - sent)
         if n < 0 {
+          if errno == EINTR {
+            continue
+          }
+
           throw LineSocketClientTransportError.writeFailed(String(cString: strerror(errno)))
         }
+
         if n == 0 {
           break
         }
+
         sent += n
       }
     }
@@ -125,7 +115,13 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
     while true {
       let n = read(fd, &buffer, buffer.count)
-      if n < 0 { return nil }
+      if n < 0 {
+        if errno == EINTR {
+          continue
+        }
+        return nil
+      }
+
       if n == 0 { break }
 
       if let newlineIndex = buffer[..<n].firstIndex(of: 0x0A) {

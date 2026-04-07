@@ -250,6 +250,12 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       return nil
     }
 
+    guard configureNoSigPipe(fd: fd) else {
+      errorLog("\(label) failed to configure socket no-sigpipe")
+      close(fd)
+      return nil
+    }
+
     var addr = makeSockAddrUn(path: socketPath)
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
