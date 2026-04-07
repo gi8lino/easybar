@@ -72,30 +72,12 @@ public enum CalendarAgentOneShotClient {
 
   /// Connects one Unix-domain socket to the given filesystem path.
   private static func connectSocket(fd: Int32, path: String) -> Bool {
-    var address = sockaddr_un()
-    address.sun_family = sa_family_t(AF_UNIX)
-
-    let maxLength = MemoryLayout.size(ofValue: address.sun_path)
-    let utf8 = Array(path.utf8)
-
-    guard utf8.count < maxLength else {
-      return false
-    }
-
-    withUnsafeMutablePointer(to: &address.sun_path) { pointer in
-      let raw = UnsafeMutableRawPointer(pointer).assumingMemoryBound(to: UInt8.self)
-      raw.initialize(repeating: 0, count: maxLength)
-
-      for (index, byte) in utf8.enumerated() {
-        raw[index] = byte
-      }
-    }
-
-    let length = socklen_t(MemoryLayout<sa_family_t>.size + utf8.count + 1)
+    var address = makeSockAddrUn(path: path)
+    let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
 
     return withUnsafePointer(to: &address) { pointer in
       pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
-        Darwin.connect(fd, sockaddrPointer, length) == 0
+        Darwin.connect(fd, sockaddrPointer, addressLength) == 0
       }
     }
   }
