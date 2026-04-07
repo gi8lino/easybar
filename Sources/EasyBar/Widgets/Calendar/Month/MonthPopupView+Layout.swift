@@ -86,7 +86,7 @@ extension NativeMonthCalendarPopupView {
             currentYearBackgroundColor: color(config.todayCellBackgroundColorHex),
             currentYearBorderColor: color(config.todayCellBorderColorHex)
           )
-          .padding(.top, 34)
+          .padding(.top, 40)
           .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
 
           Spacer(minLength: 0)
@@ -145,29 +145,29 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the popup month header.
   var headerView: some View {
-    VStack(spacing: 6) {
+    VStack(spacing: 8) {
       HStack {
         Spacer()
 
-        HStack(spacing: 6) {
-          Text(visibleMonthName)
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(color(config.headerTextColorHex))
+        Button(action: openYearPicker) {
+          HStack(spacing: 4) {
+            Text(visibleMonthTitle)
+              .font(.system(size: 18, weight: .semibold))
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
 
-          Button(action: openYearPicker) {
-            HStack(spacing: 4) {
-              Text(String(visibleYear))
-                .font(.system(size: 18, weight: .semibold))
-              Image(systemName: "chevron.down")
-                .font(.system(size: 10, weight: .semibold))
-            }
-            .foregroundStyle(color(config.headerTextColorHex))
+            Image(systemName: "chevron.down")
+              .font(.system(size: 10, weight: .semibold))
           }
-          .buttonStyle(.plain)
+          .foregroundStyle(color(config.headerTextColorHex))
+          .frame(maxWidth: .infinity, alignment: .center)
         }
+        .buttonStyle(.plain)
 
         Spacer()
       }
+      .frame(maxWidth: .infinity)
+      .padding(.top, 4)
 
       HStack(spacing: 18) {
         Button(action: showPreviousMonth) {

@@ -73,11 +73,12 @@ extension NativeMonthCalendarPopupView {
     resolvedCalendar.component(.year, from: visibleMonth)
   }
 
-  /// Returns the visible month name without the year.
-  var visibleMonthName: String {
+  /// Returns the visible month title including year.
+  var visibleMonthTitle: String {
     let formatter = DateFormatter()
     formatter.calendar = resolvedCalendar
-    formatter.dateFormat = "LLLL"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
     return formatter.string(from: visibleMonth)
   }
 
