@@ -31,10 +31,18 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
 /// Sends one line-delimited JSON request and decodes one JSON response.
 public struct LineSocketClientTransport<Request: Encodable, Response: Decodable> {
   public let socketPath: String
+  public let encoder: JSONEncoder
+  public let decoder: JSONDecoder
 
   /// Creates a new client transport for the given socket path.
-  public init(socketPath: String) {
+  public init(
+    socketPath: String,
+    encoder: JSONEncoder = LineSocketClientTransport.defaultEncoder(),
+    decoder: JSONDecoder = LineSocketClientTransport.defaultDecoder()
+  ) {
     self.socketPath = socketPath
+    self.encoder = encoder
+    self.decoder = decoder
   }
 
   /// Sends one request and returns one decoded response.
@@ -44,7 +52,10 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.socketFailed
     }
 
-    defer { close(fd) }
+    defer {
+      shutdown(fd, SHUT_RDWR)
+      close(fd)
+    }
 
     var addr = makeSockAddrUn(path: socketPath)
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
@@ -59,9 +70,6 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
     }
 
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-
     guard let payload = try? encoder.encode(request) else {
       throw LineSocketClientTransportError.encodeFailed
     }
@@ -73,10 +81,22 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
 
     do {
-      return try JSONDecoder().decode(Response.self, from: replyData)
+      return try decoder.decode(Response.self, from: replyData)
     } catch {
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }
+  }
+
+  /// Builds the default request encoder.
+  public static func defaultEncoder() -> JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    return encoder
+  }
+
+  /// Builds the default response decoder.
+  public static func defaultDecoder() -> JSONDecoder {
+    JSONDecoder()
   }
 
   /// Writes all bytes to the socket.
