@@ -16,8 +16,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       directory: Config.shared.lockDirectory
     )
 
-    guard instanceGuard.acquireLock(at: lockPath) else {
+    switch instanceGuard.acquireLock(at: lockPath) {
+    case .acquired:
+      break
+
+    case .alreadyRunning:
       easybarLog.warn("easybar already running lock_path=\(lockPath)")
+      NSApp.terminate(nil)
+      return
+
+    case .failed(let reason):
+      easybarLog.error(
+        "easybar failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
+      )
       NSApp.terminate(nil)
       return
     }
@@ -165,7 +176,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let processID = ProcessInfo.processInfo.processIdentifier
 
     easybarLog.info(
-      "easybar startup version=\(version) build=\(build) bundle_id=\(bundleID) pid=\(processID)")
+      "easybar startup version=\(version) build=\(build) bundle_id=\(bundleID) pid=\(processID)"
+    )
     easybarLog.info("app bundle_path=\(bundlePath)")
     easybarLog.info("app executable=\(executable)")
   }
@@ -214,7 +226,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let debug = env["EASYBAR_DEBUG"] ?? ""
 
     easybarLog.info(
-      "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)")
+      "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)"
+    )
     easybarLog.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
   }
 

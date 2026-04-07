@@ -34,9 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       NSApp.terminate(nil)
       return
 
-    case .failed(let reason):
+    case .failed(let message):
       logger.error(
-        "easybar-network-agent failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
+        "easybar-network-agent failed to acquire single-instance lock lock_path=\(lockPath) error=\(message)"
       )
       NSApp.terminate(nil)
       return
