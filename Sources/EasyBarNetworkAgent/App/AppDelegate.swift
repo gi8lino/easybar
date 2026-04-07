@@ -25,8 +25,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       directory: runtimeConfig.lockDirectory
     )
 
-    guard instanceGuard.acquireLock(at: lockPath) else {
+    switch instanceGuard.acquireLock(at: lockPath) {
+    case .acquired:
+      break
+
+    case .alreadyRunning:
       logger.warn("easybar-network-agent already running lock_path=\(lockPath)")
+      NSApp.terminate(nil)
+      return
+
+    case .failed(let reason):
+      logger.error(
+        "easybar-network-agent failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
+      )
       NSApp.terminate(nil)
       return
     }
