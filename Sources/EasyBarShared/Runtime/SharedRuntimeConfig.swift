@@ -198,7 +198,8 @@ private func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntime
     ?? false
 
   let directory =
-    expandedPath(loggingTable?["directory"]?.string)
+    expandedEnvironmentPath(named: "EASYBAR_LOGGING_DIRECTORY")
+    ?? expandedPath(loggingTable?["directory"]?.string)
     ?? defaultLoggingDirectoryPath()
 
   return SharedLoggingRuntimeConfig(
@@ -223,7 +224,11 @@ private func resolvedEasyBarConfig(from toml: TOMLTable) -> SharedEasyBarRuntime
 private func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRuntimeConfig {
   let calendarTable = toml["agents"]?["calendar"]?.table
 
-  let enabled = calendarTable?["enabled"]?.bool ?? true
+  let enabled =
+    boolEnvironmentValue(named: "EASYBAR_CALENDAR_AGENT_ENABLED")
+    ?? calendarTable?["enabled"]?.bool
+    ?? true
+
   let socketPath =
     resolvedSocketPath(
       environmentName: "EASYBAR_CALENDAR_AGENT_SOCKET",
@@ -241,7 +246,11 @@ private func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendar
 private func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRuntimeConfig {
   let networkTable = toml["agents"]?["network"]?.table
 
-  let enabled = networkTable?["enabled"]?.bool ?? true
+  let enabled =
+    boolEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_ENABLED")
+    ?? networkTable?["enabled"]?.bool
+    ?? true
+
   let socketPath =
     resolvedSocketPath(
       environmentName: "EASYBAR_NETWORK_AGENT_SOCKET",
@@ -255,7 +264,8 @@ private func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAg
     ?? 60
 
   let allowUnauthorizedNonSensitiveFields =
-    networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
+    boolEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_ALLOW_UNAUTHORIZED_NON_SENSITIVE_FIELDS")
+    ?? networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
     ?? false
 
   return SharedNetworkAgentRuntimeConfig(
