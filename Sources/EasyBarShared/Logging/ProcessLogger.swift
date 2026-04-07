@@ -119,12 +119,15 @@ public final class ProcessLogger {
     write(level: "ERROR", message: message, stream: stderr)
   }
 
-  /// Writes one message without timestamped logger formatting.
+  /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
   public func writeRaw(_ message: String, to stream: UnsafeMutablePointer<FILE>?) {
     lock.lock()
     defer { lock.unlock() }
-    fputs(message + "\n", stream)
+
+    let line = message + "\n"
+    fputs(line, stream)
     fflush(stream)
+    writeFileUnlocked(message)
   }
 
   private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
