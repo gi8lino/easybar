@@ -17,7 +17,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   init(
     componentName: String,
     logger: ProcessLogger,
-    promptPresenter: NetworkAuthorizationPromptPresenter? = nil
+    promptPresenter: NetworkAuthorizationPromptPresenter?
   ) {
     self.componentName = componentName
     self.logger = logger
@@ -134,7 +134,9 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     presentedAuthorizationPrompt = true
 
     logger.info("\(componentName) preparing authorization prompt")
-    promptPresenter?.preparePrompt()
+    Task { @MainActor [weak promptPresenter] in
+      promptPresenter?.preparePrompt()
+    }
   }
 
   /// Restores host UI after the location permission state resolves.
@@ -143,6 +145,8 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     presentedAuthorizationPrompt = false
 
     logger.info("\(componentName) restoring UI after authorization prompt")
-    promptPresenter?.restoreUI()
+    Task { @MainActor [weak promptPresenter] in
+      promptPresenter?.restoreUI()
+    }
   }
 }
