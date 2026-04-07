@@ -90,6 +90,7 @@ public final class ProcessLogger {
       fileHandle = handle
       writeUnlocked(level: "INFO", message: "file logging enabled path=\(url.path)", stream: stdout)
     } catch {
+      fileLoggingEnabledFlag = false
       writeUnlocked(
         level: "WARN",
         message: "failed to open log file at \(path): \(error)",
@@ -157,6 +158,7 @@ public final class ProcessLogger {
     do {
       try fileHandle?.write(contentsOf: data)
     } catch {
+      fileLoggingEnabledFlag = false
       fputs(
         formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n",
         stderr
