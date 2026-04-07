@@ -105,8 +105,6 @@ final class CalendarAuthorizationController {
         }
       }
 
-      scheduleAuthorizationRetryIfNeeded(for: status)
-
     case .denied, .restricted, .writeOnly:
       retryBackoff.reset()
       logger.warn("calendar agent access unavailable status=\(authState.describe(status))")
