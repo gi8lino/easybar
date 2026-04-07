@@ -1,3 +1,4 @@
+import Darwin
 import EasyBarShared
 import Foundation
 
@@ -56,8 +57,11 @@ final class CalendarSocketServer {
     _ clientFD: Int32,
     request: CalendarAgentRequest
   )
-    -> LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
-    .ClientDisposition
+    -> LineSocketServerTransport<
+      Subscriber,
+      CalendarAgentRequest,
+      CalendarAgentMessage
+    >.ClientDisposition
   {
     logger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
@@ -73,10 +77,12 @@ final class CalendarSocketServer {
         ),
         to: clientFD
       )
+      close(clientFD)
       return .close
 
     case .ping:
       _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
+      close(clientFD)
       return .close
 
     case .fetch:
@@ -85,6 +91,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_query"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -93,6 +100,7 @@ final class CalendarSocketServer {
         CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
         to: clientFD
       )
+      close(clientFD)
       return .close
 
     case .subscribe:
@@ -101,6 +109,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_query"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -109,7 +118,7 @@ final class CalendarSocketServer {
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       let snapshot = provider.snapshot(for: query)
@@ -120,7 +129,7 @@ final class CalendarSocketServer {
         )
       else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       return .keepOpen
@@ -131,6 +140,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_create_event"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -148,6 +158,7 @@ final class CalendarSocketServer {
         )
       }
 
+      close(clientFD)
       return .close
 
     case .updateEvent:
@@ -156,6 +167,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_update_event"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -173,6 +185,7 @@ final class CalendarSocketServer {
         )
       }
 
+      close(clientFD)
       return .close
 
     case .deleteEvent:
@@ -181,6 +194,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(kind: .error, message: "missing_delete_event"),
           to: clientFD
         )
+        close(clientFD)
         return .close
       }
 
@@ -198,6 +212,7 @@ final class CalendarSocketServer {
         )
       }
 
+      close(clientFD)
       return .close
     }
   }
