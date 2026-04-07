@@ -1,4 +1,3 @@
-import Darwin
 import EasyBarShared
 import Foundation
 

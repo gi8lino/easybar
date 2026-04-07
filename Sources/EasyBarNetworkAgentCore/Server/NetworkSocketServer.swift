@@ -1,4 +1,3 @@
-import Darwin
 import EasyBarShared
 import Foundation
 
@@ -97,7 +96,10 @@ final class NetworkSocketServer {
     case .fetch:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          NetworkAgentMessage(
+            kind: .error,
+            errorCode: "provider_unavailable"
+          ),
           to: clientFD
         )
         return .close
@@ -105,7 +107,10 @@ final class NetworkSocketServer {
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          NetworkAgentMessage(
+            kind: .error,
+            errorCode: "missing_fields"
+          ),
           to: clientFD
         )
         return .close
@@ -118,7 +123,10 @@ final class NetworkSocketServer {
     case .subscribe:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          NetworkAgentMessage(
+            kind: .error,
+            errorCode: "provider_unavailable"
+          ),
           to: clientFD
         )
         return .close
@@ -126,7 +134,10 @@ final class NetworkSocketServer {
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          NetworkAgentMessage(
+            kind: .error,
+            errorCode: "missing_fields"
+          ),
           to: clientFD
         )
         return .close
@@ -160,17 +171,25 @@ final class NetworkSocketServer {
   private func responseFields(
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
-  ) -> (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
+  ) -> (fields: [String: NetworkAgentFieldValue]?, errorCode: String?, permissionState: String?) {
     let response = provider.responseFields(
       for: fields,
       allowUnauthorizedNonSensitiveFields: allowUnauthorizedNonSensitiveFields
     )
-    return (response.values, response.errorMessage)
+
+    if let values = response.values {
+      return (values, nil, nil)
+    }
+
+    let mapped = mappedError(from: response.errorMessage)
+    return (nil, mapped.errorCode, mapped.permissionState)
   }
 
   /// Builds one network-agent message from a field response result.
   private func makeResponseMessage(
-    from response: (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?)
+    from response: (
+      fields: [String: NetworkAgentFieldValue]?, errorCode: String?, permissionState: String?
+    )
   ) -> NetworkAgentMessage {
     if let fields = response.fields {
       return NetworkAgentMessage(kind: .fields, fields: fields)
@@ -178,25 +197,37 @@ final class NetworkSocketServer {
 
     return NetworkAgentMessage(
       kind: .error,
-      message: stableErrorMessage(from: response.errorMessage)
+      errorCode: response.errorCode ?? "unknown",
+      permissionState: response.permissionState
     )
   }
 
-  /// Maps one provider error string to a stable wire-level error code.
-  private func stableErrorMessage(from errorMessage: String?) -> String {
-    guard let errorMessage else { return "unknown" }
+  /// Maps one provider error string to a stable wire-level error payload.
+  private func mappedError(from errorMessage: String?) -> (
+    errorCode: String, permissionState: String?
+  ) {
+    guard let errorMessage else { return ("unknown", nil) }
 
-    if errorMessage.hasPrefix("permission_denied") {
-      return "permission_denied"
+    if let permissionState = permissionState(from: errorMessage) {
+      return ("permission_denied", permissionState)
     }
 
     switch errorMessage {
     case "missing_fields":
-      return "missing_fields"
+      return ("missing_fields", nil)
     case "provider_unavailable":
-      return "provider_unavailable"
+      return ("provider_unavailable", nil)
     default:
-      return errorMessage
+      return (errorMessage, nil)
     }
+  }
+
+  /// Extracts the permission state suffix from one permission-denied error string.
+  private func permissionState(from errorMessage: String) -> String? {
+    let prefix = "permission_denied:"
+    guard errorMessage.hasPrefix(prefix) else { return nil }
+
+    let value = String(errorMessage.dropFirst(prefix.count))
+    return value.isEmpty ? nil : value
   }
 }

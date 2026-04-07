@@ -207,7 +207,11 @@ public struct NetworkAgentMessage: Codable {
   public var version: NetworkAgentVersion?
   /// Optional field values payload.
   public var fields: [String: NetworkAgentFieldValue]?
-  /// Optional error message.
+  /// Stable machine-readable error code for error messages.
+  public var errorCode: String?
+  /// Optional permission state associated with an authorization error.
+  public var permissionState: String?
+  /// Optional legacy/human-readable message.
   public var message: String?
 
   /// Creates one network agent message.
@@ -215,11 +219,15 @@ public struct NetworkAgentMessage: Codable {
     kind: NetworkAgentMessageKind,
     version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
+    errorCode: String? = nil,
+    permissionState: String? = nil,
     message: String? = nil
   ) {
     self.kind = kind
     self.version = version
     self.fields = fields
+    self.errorCode = errorCode
+    self.permissionState = permissionState
     self.message = message
   }
 }
