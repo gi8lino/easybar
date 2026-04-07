@@ -138,7 +138,7 @@ final class CalendarSnapshotProvider {
     }
 
     let event = EKEvent(eventStore: eventStore)
-    event.calendar = resolvedCalendar(named: draft.calendarName)
+    event.calendar = try resolvedCalendar(named: draft.calendarName)
     event.title = normalizedTitle(draft.title)
     event.startDate = draft.startDate
     event.endDate = draft.endDate
@@ -188,7 +188,7 @@ final class CalendarSnapshotProvider {
       throw CalendarAgentCreateError.invalidDateRange
     }
 
-    event.calendar = resolvedCalendar(named: draft.calendarName)
+    event.calendar = try resolvedCalendar(named: draft.calendarName)
     event.title = normalizedTitle(draft.title)
     event.startDate = draft.startDate
     event.endDate = draft.endDate
@@ -429,7 +429,7 @@ extension CalendarSnapshotProvider {
   }
 
   /// Resolves one writable calendar for creation or update.
-  private func resolvedCalendar(named name: String?) -> EKCalendar {
+  private func resolvedCalendar(named name: String?) throws -> EKCalendar {
     let writableCalendars = eventStore.calendars(for: .event).filter { calendar in
       calendar.allowsContentModifications && calendar.type != .birthday
     }
@@ -445,7 +445,8 @@ extension CalendarSnapshotProvider {
     }
 
     if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
-      defaultCalendar.allowsContentModifications
+      defaultCalendar.allowsContentModifications,
+      defaultCalendar.type != .birthday
     {
       return defaultCalendar
     }
@@ -454,11 +455,7 @@ extension CalendarSnapshotProvider {
       return firstWritable
     }
 
-    if let anyCalendar = eventStore.calendars(for: .event).first {
-      return anyCalendar
-    }
-
-    fatalError("No EventKit calendar available for event creation")
+    throw CalendarAgentCreateError.noWritableCalendar
   }
 
   /// Resolves one event by EventKit identifier.
@@ -764,6 +761,7 @@ extension CalendarSnapshotProvider {
 enum CalendarAgentCreateError: Error {
   case accessDenied
   case invalidDateRange
+  case noWritableCalendar
 }
 
 enum CalendarAgentMutationError: Error {
