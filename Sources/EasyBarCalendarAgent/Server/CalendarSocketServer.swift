@@ -57,6 +57,19 @@ final class CalendarSocketServer {
     logger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
+    case .version:
+      _ = transport.send(
+        CalendarAgentMessage(
+          kind: .version,
+          version: CalendarAgentVersion(
+            appVersion: BuildInfo.appVersion,
+            protocolVersion: calendarAgentProtocolVersion
+          )
+        ),
+        to: clientFD
+      )
+      close(clientFD)
+
     case .ping:
       _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
       close(clientFD)

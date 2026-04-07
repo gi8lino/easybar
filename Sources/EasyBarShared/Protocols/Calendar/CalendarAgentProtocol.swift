@@ -1,8 +1,12 @@
 import Foundation
 
+/// Stable protocol version used by the calendar agent socket.
+public let calendarAgentProtocolVersion = "1"
+
 /// Commands supported by the calendar agent socket.
 public enum CalendarAgentCommand: String, Codable {
   case ping
+  case version
   case fetch
   case subscribe
   case createEvent = "create_event"
@@ -189,6 +193,20 @@ public struct CalendarAgentRequest: Codable {
   }
 }
 
+/// One version payload returned by the calendar agent.
+public struct CalendarAgentVersion: Codable, Equatable {
+  /// The application version embedded in the calendar-agent build.
+  public var appVersion: String
+  /// Stable socket protocol version.
+  public var protocolVersion: String
+
+  /// Creates one calendar-agent version payload.
+  public init(appVersion: String, protocolVersion: String) {
+    self.appVersion = appVersion
+    self.protocolVersion = protocolVersion
+  }
+}
+
 /// One writable calendar returned by the agent for the composer.
 public struct CalendarAgentWritableCalendar: Codable, Identifiable, Equatable {
   /// Stable calendar identifier.
@@ -362,6 +380,7 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
 /// Message kinds sent by the calendar agent.
 public enum CalendarAgentMessageKind: String, Codable {
   case pong
+  case version
   case subscribed
   case snapshot
   case created
@@ -374,6 +393,8 @@ public enum CalendarAgentMessageKind: String, Codable {
 public struct CalendarAgentMessage: Codable {
   /// Message kind discriminator.
   public var kind: CalendarAgentMessageKind
+  /// Optional version payload.
+  public var version: CalendarAgentVersion?
   /// Optional snapshot payload.
   public var snapshot: CalendarAgentSnapshot?
   /// Optional error message.
@@ -382,10 +403,12 @@ public struct CalendarAgentMessage: Codable {
   /// Creates one calendar agent message.
   public init(
     kind: CalendarAgentMessageKind,
+    version: CalendarAgentVersion? = nil,
     snapshot: CalendarAgentSnapshot? = nil,
     message: String? = nil
   ) {
     self.kind = kind
+    self.version = version
     self.snapshot = snapshot
     self.message = message
   }

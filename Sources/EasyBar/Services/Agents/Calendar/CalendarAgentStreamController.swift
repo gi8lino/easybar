@@ -98,6 +98,9 @@ final class CalendarAgentStreamController {
       easybarLog.warn("\(label) received error message=\(response.message ?? "unknown")")
       clearState()
 
+    case .version:
+      break
+
     case .pong, .subscribed, .created, .updated, .deleted:
       break
     }
