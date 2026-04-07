@@ -57,11 +57,8 @@ final class CalendarSocketServer {
     _ clientFD: Int32,
     request: CalendarAgentRequest
   )
-    -> LineSocketServerTransport<
-      Subscriber,
-      CalendarAgentRequest,
-      CalendarAgentMessage
-    >.ClientDisposition
+    -> LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+    .ClientDisposition
   {
     logger.debug("calendar agent request fd=\(clientFD) command=\(request.command.rawValue)")
 
@@ -113,7 +110,7 @@ final class CalendarSocketServer {
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .close
+        return .keepOpen
       }
 
       let snapshot = provider.snapshot(for: query)
@@ -124,7 +121,7 @@ final class CalendarSocketServer {
         )
       else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .close
+        return .keepOpen
       }
 
       return .keepOpen
@@ -144,7 +141,10 @@ final class CalendarSocketServer {
       } catch {
         logger.error("calendar event creation failed error=\(error)")
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "create_event_failed"),
+          CalendarAgentMessage(
+            kind: .error,
+            message: errorMessage(for: error, fallback: "create_event_failed")
+          ),
           to: clientFD
         )
       }
@@ -166,7 +166,10 @@ final class CalendarSocketServer {
       } catch {
         logger.error("calendar event update failed error=\(error)")
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "update_event_failed"),
+          CalendarAgentMessage(
+            kind: .error,
+            message: errorMessage(for: error, fallback: "update_event_failed")
+          ),
           to: clientFD
         )
       }
@@ -188,12 +191,38 @@ final class CalendarSocketServer {
       } catch {
         logger.error("calendar event delete failed error=\(error)")
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "delete_event_failed"),
+          CalendarAgentMessage(
+            kind: .error,
+            message: errorMessage(for: error, fallback: "delete_event_failed")
+          ),
           to: clientFD
         )
       }
 
       return .close
     }
+  }
+
+  /// Maps one calendar-domain error to a stable wire-level error code.
+  private func errorMessage(for error: Error, fallback: String) -> String {
+    if let createError = error as? CalendarAgentCreateError {
+      switch createError {
+      case .accessDenied:
+        return "access_denied"
+      case .invalidDateRange:
+        return "invalid_date_range"
+      case .noWritableCalendar:
+        return "no_writable_calendar"
+      }
+    }
+
+    if let mutationError = error as? CalendarAgentMutationError {
+      switch mutationError {
+      case .eventNotFound:
+        return "event_not_found"
+      }
+    }
+
+    return fallback
   }
 }

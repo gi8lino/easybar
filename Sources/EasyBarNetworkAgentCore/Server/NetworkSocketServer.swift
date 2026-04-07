@@ -71,11 +71,8 @@ final class NetworkSocketServer {
     _ clientFD: Int32,
     request: NetworkAgentRequest
   )
-    -> LineSocketServerTransport<
-      Subscriber,
-      NetworkAgentRequest,
-      NetworkAgentMessage
-    >.ClientDisposition
+    -> LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
+    .ClientDisposition
   {
     logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
 
@@ -140,13 +137,13 @@ final class NetworkSocketServer {
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .close
+        return .keepOpen
       }
 
       let response = responseFields(for: fields, provider: provider)
       guard transport.send(makeResponseMessage(from: response), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .close
+        return .keepOpen
       }
 
       return .keepOpen
@@ -179,6 +176,27 @@ final class NetworkSocketServer {
       return NetworkAgentMessage(kind: .fields, fields: fields)
     }
 
-    return NetworkAgentMessage(kind: .error, message: response.errorMessage ?? "unknown")
+    return NetworkAgentMessage(
+      kind: .error,
+      message: stableErrorMessage(from: response.errorMessage)
+    )
+  }
+
+  /// Maps one provider error string to a stable wire-level error code.
+  private func stableErrorMessage(from errorMessage: String?) -> String {
+    guard let errorMessage else { return "unknown" }
+
+    if errorMessage.hasPrefix("permission_denied") {
+      return "permission_denied"
+    }
+
+    switch errorMessage {
+    case "missing_fields":
+      return "missing_fields"
+    case "provider_unavailable":
+      return "provider_unavailable"
+    default:
+      return errorMessage
+    }
   }
 }
