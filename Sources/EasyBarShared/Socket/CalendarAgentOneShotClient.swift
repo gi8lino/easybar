@@ -6,7 +6,7 @@ public enum CalendarAgentOneShotClient {
     let encoder = LineSocketClientTransport<
       CalendarAgentRequest,
       CalendarAgentMessage
-    >.defaultEncoder()
+    >.makeDefaultEncoder()
     encoder.dateEncodingStrategy = .iso8601
     return encoder
   }()
@@ -15,7 +15,7 @@ public enum CalendarAgentOneShotClient {
     let decoder = LineSocketClientTransport<
       CalendarAgentRequest,
       CalendarAgentMessage
-    >.defaultDecoder()
+    >.makeDefaultDecoder()
     decoder.dateDecodingStrategy = .iso8601
     return decoder
   }()

@@ -37,8 +37,8 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
   /// Creates a new client transport for the given socket path.
   public init(
     socketPath: String,
-    encoder: JSONEncoder = LineSocketClientTransport.defaultEncoder(),
-    decoder: JSONDecoder = LineSocketClientTransport.defaultDecoder()
+    encoder: JSONEncoder = LineSocketClientTransport.makeDefaultEncoder(),
+    decoder: JSONDecoder = LineSocketClientTransport.makeDefaultDecoder()
   ) {
     self.socketPath = socketPath
     self.encoder = encoder
@@ -87,15 +87,15 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
   }
 
-  /// Builds the default request encoder.
-  public static func defaultEncoder() -> JSONEncoder {
+  /// Builds a fresh default request encoder.
+  public static func makeDefaultEncoder() -> JSONEncoder {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     return encoder
   }
 
-  /// Builds the default response decoder.
-  public static func defaultDecoder() -> JSONDecoder {
+  /// Builds a fresh default response decoder.
+  public static func makeDefaultDecoder() -> JSONDecoder {
     JSONDecoder()
   }
 
