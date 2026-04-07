@@ -240,39 +240,71 @@ public final class LineSocketServerTransport<
     }
   }
 
-  /// Reads requests until the client disconnects and invokes the handler for each line.
+  /// Reads requests until the client disconnects and invokes the handler for each complete line.
   private func handleClient(
     _ clientFD: Int32,
     handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
+    var buffer = [UInt8](repeating: 0, count: 1024)
+    var pending = Data()
+
     while true {
-      guard let data = readOneLine(from: clientFD), !data.isEmpty else {
+      if let line = nextLine(from: &pending) {
+        guard !line.isEmpty else { continue }
+
+        do {
+          let request = try requestDecoder.decode(Request.self, from: line)
+          let disposition = handler(clientFD, request)
+
+          switch disposition {
+          case .close:
+            close(clientFD)
+            return
+
+          case .keepOpen:
+            return
+          }
+        } catch {
+          warnLog("\(serverLabel) request decode failed error=\(error)")
+          if !isSubscriber(fd: clientFD) {
+            close(clientFD)
+          }
+          return
+        }
+      }
+
+      let n = read(clientFD, &buffer, buffer.count)
+
+      if n > 0 {
+        pending.append(contentsOf: buffer.prefix(n))
+        continue
+      }
+
+      if n == 0 {
         if !isSubscriber(fd: clientFD) {
           close(clientFD)
         }
         return
       }
 
-      do {
-        let request = try requestDecoder.decode(Request.self, from: data)
-        let disposition = handler(clientFD, request)
-
-        switch disposition {
-        case .close:
-          close(clientFD)
-          return
-
-        case .keepOpen:
-          return
-        }
-      } catch {
-        warnLog("\(serverLabel) request decode failed error=\(error)")
-        if !isSubscriber(fd: clientFD) {
-          close(clientFD)
-        }
-        return
+      if errno == EINTR {
+        continue
       }
+
+      if !isSubscriber(fd: clientFD) {
+        close(clientFD)
+      }
+      return
     }
+  }
+
+  /// Returns the next complete line from the pending buffer when available.
+  private func nextLine(from pending: inout Data) -> Data? {
+    guard let newlineIndex = pending.firstIndex(of: 0x0A) else { return nil }
+
+    let line = pending.prefix(upTo: newlineIndex)
+    pending.removeSubrange(...newlineIndex)
+    return Data(line)
   }
 
   /// Returns whether the server is running.
@@ -287,27 +319,5 @@ public final class LineSocketServerTransport<
     stateLock.lock()
     defer { stateLock.unlock() }
     return serverFD
-  }
-
-  /// Reads bytes until a newline or EOF is reached.
-  private func readOneLine(from fd: Int32) -> Data? {
-    var data = Data()
-    var buffer = [UInt8](repeating: 0, count: 1024)
-
-    while true {
-      let n = read(fd, &buffer, buffer.count)
-      if n < 0 { return nil }
-      if n == 0 { break }
-
-      if let newlineIndex = buffer[..<n].firstIndex(of: 0x0A) {
-        let count = buffer.distance(from: 0, to: newlineIndex)
-        data.append(buffer, count: count)
-        break
-      }
-
-      data.append(buffer, count: n)
-    }
-
-    return data
   }
 }
