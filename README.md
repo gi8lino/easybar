@@ -412,6 +412,25 @@ brew services start gi8lino/tap/easybar
 
 That clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
 
+## Packages and targets
+
+EasyBar is split into a few Swift packages/targets:
+
+- `EasyBarShared`
+  shared models, config loading, IPC types, and common utilities
+- `EasyBar`
+  the main macOS status bar app
+- `EasyBarCtl`
+  the `easybar` command-line client for talking to the control socket
+- `EasyBarCalendarAgent`
+  helper app that owns EventKit and calendar snapshots
+- `EasyBarNetworkAgent`
+  helper app that owns Wi-Fi and network observation
+- `EasyBarNetworkAgentCore`
+  shared network-agent implementation used by EasyBarNetworkAgent and also reused by the standalone wifi-snitch project
+
+For implementation details, see the docs in [`docs/`](./docs/).
+
 ## Docs
 
 - [docs/CONFIG.md](./docs/CONFIG.md)
