@@ -97,7 +97,7 @@ public final class NetworkSnapshotProvider {
   public func responseFields(
     for fields: [NetworkAgentField],
     allowUnauthorizedFieldsWithoutLocation: Bool
-  ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
+  ) -> (values: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
     guard authorizer.isAuthorized() else {
       return unauthorizedFieldResponse(
         for: fields,
@@ -123,7 +123,7 @@ public final class NetworkSnapshotProvider {
     for field in fields {
       switch field {
       case .generatedAt:
-        values[field.rawValue] = .string(NetworkWiFiSnapshot.fieldDateFormatter.string(from: now))
+        values[field.rawValue] = .string(NetworkAgentSnapshot.dateFormatter.string(from: now))
 
       case .ssid:
         if let ssid = wifi.ssid {
@@ -283,8 +283,7 @@ public final class NetworkSnapshotProvider {
   private func unauthorizedFieldResponse(
     for fields: [NetworkAgentField],
     allowUnauthorizedFieldsWithoutLocation: Bool
-  ) -> (values: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
-    let permissionState = authorizer.permissionState()
+  ) -> (values: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
     let hasLocationProtectedFields = fields.contains(where: fieldRequiresLocationAuthorization)
 
     guard hasLocationProtectedFields else {
@@ -292,12 +291,12 @@ public final class NetworkSnapshotProvider {
     }
 
     guard allowUnauthorizedFieldsWithoutLocation else {
-      return (nil, "permission_denied")
+      return (nil, .permissionDenied)
     }
 
     let allowedFields = fields.filter { !fieldRequiresLocationAuthorization($0) }
     guard !allowedFields.isEmpty else {
-      return (nil, "permission_denied")
+      return (nil, .permissionDenied)
     }
 
     return (resolvedFieldValues(for: allowedFields), nil)
@@ -305,6 +304,7 @@ public final class NetworkSnapshotProvider {
 
   /// Returns whether the field should be hidden without location authorization.
   private func fieldRequiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
-    networkAgentFieldSpecByField[field]?.requiresLocationAuthorization ?? false
+    networkAgentFieldRegistry.first(where: { $0.field == field })?.requiresLocationAuthorization
+      ?? false
   }
 }

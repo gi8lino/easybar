@@ -11,7 +11,7 @@ final class NetworkSocketServer {
   private let componentName: String
   private let socketPath: String
   private let appVersion: String
-  private let allowUnauthorizedFieldsWithoutLocation: Bool
+  private let allowUnauthorizedNonSensitiveFields: Bool
   private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
@@ -21,13 +21,13 @@ final class NetworkSocketServer {
     componentName: String,
     socketPath: String,
     appVersion: String,
-    allowUnauthorizedFieldsWithoutLocation: Bool,
+    allowUnauthorizedNonSensitiveFields: Bool,
     logger: ProcessLogger
   ) {
     self.componentName = componentName
     self.socketPath = socketPath
     self.appVersion = appVersion
-    self.allowUnauthorizedFieldsWithoutLocation = allowUnauthorizedFieldsWithoutLocation
+    self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
     self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
@@ -71,18 +71,14 @@ final class NetworkSocketServer {
     _ clientFD: Int32,
     request: NetworkAgentRequest
   )
-    -> LineSocketServerTransport<
-      Subscriber,
-      NetworkAgentRequest,
-      NetworkAgentMessage
-    >.ClientDisposition
+    -> LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
+    .ClientDisposition
   {
     logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
 
     switch request.command {
     case .ping:
       _ = transport.send(NetworkAgentMessage(kind: .pong), to: clientFD)
-      close(clientFD)
       return .close
 
     case .version:
@@ -96,49 +92,43 @@ final class NetworkSocketServer {
         ),
         to: clientFD
       )
-      close(clientFD)
       return .close
 
     case .fetch:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          NetworkAgentMessage(kind: .error, errorCode: .providerUnavailable),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          NetworkAgentMessage(kind: .error, errorCode: .missingFields),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
       let response = responseFields(for: fields, provider: provider)
       _ = transport.send(makeResponseMessage(from: response), to: clientFD)
-      close(clientFD)
       return .close
 
     case .subscribe:
       guard let provider else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "provider_unavailable"),
+          NetworkAgentMessage(kind: .error, errorCode: .providerUnavailable),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
       guard let fields = validatedFields(from: request) else {
         _ = transport.send(
-          NetworkAgentMessage(kind: .error, message: "missing_fields"),
+          NetworkAgentMessage(kind: .error, errorCode: .missingFields),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -147,13 +137,13 @@ final class NetworkSocketServer {
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       let response = responseFields(for: fields, provider: provider)
       guard transport.send(makeResponseMessage(from: response), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       return .keepOpen
@@ -170,22 +160,22 @@ final class NetworkSocketServer {
   private func responseFields(
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
-  ) -> (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?) {
+  ) -> (fields: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
     let response = provider.responseFields(
       for: fields,
-      allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
+      allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedNonSensitiveFields
     )
-    return (response.values, response.errorMessage)
+    return (response.values, response.errorCode)
   }
 
   /// Builds one network-agent message from a field response result.
   private func makeResponseMessage(
-    from response: (fields: [String: NetworkAgentFieldValue]?, errorMessage: String?)
+    from response: (fields: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?)
   ) -> NetworkAgentMessage {
     if let fields = response.fields {
       return NetworkAgentMessage(kind: .fields, fields: fields)
     }
 
-    return NetworkAgentMessage(kind: .error, message: response.errorMessage ?? "unknown")
+    return NetworkAgentMessage(kind: .error, errorCode: response.errorCode ?? .unknown)
   }
 }

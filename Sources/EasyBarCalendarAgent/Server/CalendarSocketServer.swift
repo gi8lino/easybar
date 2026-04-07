@@ -72,26 +72,28 @@ final class CalendarSocketServer {
           kind: .version,
           version: CalendarAgentVersion(
             appVersion: BuildInfo.appVersion,
-            protocolVersion: calendarAgentProtocolVersion
+            protocolVersion: calendarAgentProtocolVersion,
+            capabilities: .default
           )
         ),
         to: clientFD
       )
-      close(clientFD)
       return .close
 
     case .ping:
       _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
-      close(clientFD)
       return .close
 
     case .fetch:
       guard let provider, let query = request.query else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_query"),
+          CalendarAgentMessage(
+            kind: .error,
+            errorCode: .missingQuery,
+            message: CalendarAgentErrorCode.missingQuery.rawValue
+          ),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -100,16 +102,18 @@ final class CalendarSocketServer {
         CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
         to: clientFD
       )
-      close(clientFD)
       return .close
 
     case .subscribe:
       guard let provider, let query = request.query else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_query"),
+          CalendarAgentMessage(
+            kind: .error,
+            errorCode: .missingQuery,
+            message: CalendarAgentErrorCode.missingQuery.rawValue
+          ),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -137,10 +141,13 @@ final class CalendarSocketServer {
     case .createEvent:
       guard let provider, let createEvent = request.createEvent else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_create_event"),
+          CalendarAgentMessage(
+            kind: .error,
+            errorCode: .missingCreateEvent,
+            message: CalendarAgentErrorCode.missingCreateEvent.rawValue
+          ),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -148,26 +155,30 @@ final class CalendarSocketServer {
         _ = try provider.createEvent(createEvent)
         _ = transport.send(CalendarAgentMessage(kind: .created), to: clientFD)
       } catch {
-        logger.error("calendar event creation failed error=\(error)")
+        let code = errorCode(for: error, fallback: .unknown)
+        logger.error("calendar event creation failed error=\(error) code=\(code.rawValue)")
         _ = transport.send(
           CalendarAgentMessage(
             kind: .error,
-            message: errorMessage(for: error, fallback: "create_event_failed")
+            errorCode: code,
+            message: code.rawValue
           ),
           to: clientFD
         )
       }
 
-      close(clientFD)
       return .close
 
     case .updateEvent:
       guard let provider, let updateEvent = request.updateEvent else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_update_event"),
+          CalendarAgentMessage(
+            kind: .error,
+            errorCode: .missingUpdateEvent,
+            message: CalendarAgentErrorCode.missingUpdateEvent.rawValue
+          ),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -175,26 +186,30 @@ final class CalendarSocketServer {
         try provider.updateEvent(updateEvent)
         _ = transport.send(CalendarAgentMessage(kind: .updated), to: clientFD)
       } catch {
-        logger.error("calendar event update failed error=\(error)")
+        let code = errorCode(for: error, fallback: .unknown)
+        logger.error("calendar event update failed error=\(error) code=\(code.rawValue)")
         _ = transport.send(
           CalendarAgentMessage(
             kind: .error,
-            message: errorMessage(for: error, fallback: "update_event_failed")
+            errorCode: code,
+            message: code.rawValue
           ),
           to: clientFD
         )
       }
 
-      close(clientFD)
       return .close
 
     case .deleteEvent:
       guard let provider, let deleteEvent = request.deleteEvent else {
         _ = transport.send(
-          CalendarAgentMessage(kind: .error, message: "missing_delete_event"),
+          CalendarAgentMessage(
+            kind: .error,
+            errorCode: .missingDeleteEvent,
+            message: CalendarAgentErrorCode.missingDeleteEvent.rawValue
+          ),
           to: clientFD
         )
-        close(clientFD)
         return .close
       }
 
@@ -202,38 +217,42 @@ final class CalendarSocketServer {
         try provider.deleteEvent(deleteEvent)
         _ = transport.send(CalendarAgentMessage(kind: .deleted), to: clientFD)
       } catch {
-        logger.error("calendar event delete failed error=\(error)")
+        let code = errorCode(for: error, fallback: .unknown)
+        logger.error("calendar event delete failed error=\(error) code=\(code.rawValue)")
         _ = transport.send(
           CalendarAgentMessage(
             kind: .error,
-            message: errorMessage(for: error, fallback: "delete_event_failed")
+            errorCode: code,
+            message: code.rawValue
           ),
           to: clientFD
         )
       }
 
-      close(clientFD)
       return .close
     }
   }
 
   /// Maps one calendar-domain error to a stable wire-level error code.
-  private func errorMessage(for error: Error, fallback: String) -> String {
+  private func errorCode(
+    for error: Error,
+    fallback: CalendarAgentErrorCode
+  ) -> CalendarAgentErrorCode {
     if let createError = error as? CalendarAgentCreateError {
       switch createError {
       case .accessDenied:
-        return "access_denied"
+        return .accessDenied
       case .invalidDateRange:
-        return "invalid_date_range"
+        return .invalidDateRange
       case .noWritableCalendar:
-        return "no_writable_calendar"
+        return .noWritableCalendar
       }
     }
 
     if let mutationError = error as? CalendarAgentMutationError {
       switch mutationError {
       case .eventNotFound:
-        return "event_not_found"
+        return .eventNotFound
       }
     }
 

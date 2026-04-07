@@ -3,6 +3,52 @@ import Foundation
 /// Stable protocol version used by the calendar agent socket.
 public let calendarAgentProtocolVersion = "1"
 
+/// Stable structured error codes returned by the calendar agent.
+public enum CalendarAgentErrorCode: String, Codable, Equatable {
+  case accessDenied = "access_denied"
+  case invalidDateRange = "invalid_date_range"
+  case eventNotFound = "event_not_found"
+  case noWritableCalendar = "no_writable_calendar"
+  case missingQuery = "missing_query"
+  case missingCreateEvent = "missing_create_event"
+  case missingUpdateEvent = "missing_update_event"
+  case missingDeleteEvent = "missing_delete_event"
+  case unknown = "unknown"
+}
+
+/// Calendar-agent protocol capabilities advertised by the server.
+public struct CalendarAgentCapabilities: Codable, Equatable {
+  /// Whether live subscriptions are supported.
+  public var supportsSubscriptions: Bool
+  /// Whether create/update/delete event mutations are supported.
+  public var supportsEventMutation: Bool
+  /// Whether writable calendars are returned in snapshots.
+  public var supportsWritableCalendars: Bool
+  /// Whether typed wire-level error codes are supported.
+  public var supportsStructuredErrors: Bool
+
+  /// Creates one calendar-agent capabilities payload.
+  public init(
+    supportsSubscriptions: Bool,
+    supportsEventMutation: Bool,
+    supportsWritableCalendars: Bool,
+    supportsStructuredErrors: Bool
+  ) {
+    self.supportsSubscriptions = supportsSubscriptions
+    self.supportsEventMutation = supportsEventMutation
+    self.supportsWritableCalendars = supportsWritableCalendars
+    self.supportsStructuredErrors = supportsStructuredErrors
+  }
+
+  /// Default capabilities for the current calendar agent.
+  public static let `default` = CalendarAgentCapabilities(
+    supportsSubscriptions: true,
+    supportsEventMutation: true,
+    supportsWritableCalendars: true,
+    supportsStructuredErrors: true
+  )
+}
+
 /// Commands supported by the calendar agent socket.
 public enum CalendarAgentCommand: String, Codable {
   case ping
@@ -191,6 +237,31 @@ public struct CalendarAgentRequest: Codable {
     self.updateEvent = updateEvent
     self.deleteEvent = deleteEvent
   }
+
+  /// Builds one fetch request.
+  public static func fetch(_ query: CalendarAgentQuery) -> Self {
+    Self(command: .fetch, query: query)
+  }
+
+  /// Builds one subscribe request.
+  public static func subscribe(_ query: CalendarAgentQuery) -> Self {
+    Self(command: .subscribe, query: query)
+  }
+
+  /// Builds one create-event request.
+  public static func createEvent(_ payload: CalendarAgentCreateEvent) -> Self {
+    Self(command: .createEvent, createEvent: payload)
+  }
+
+  /// Builds one update-event request.
+  public static func updateEvent(_ payload: CalendarAgentUpdateEvent) -> Self {
+    Self(command: .updateEvent, updateEvent: payload)
+  }
+
+  /// Builds one delete-event request.
+  public static func deleteEvent(_ payload: CalendarAgentDeleteEvent) -> Self {
+    Self(command: .deleteEvent, deleteEvent: payload)
+  }
 }
 
 /// One version payload returned by the calendar agent.
@@ -199,11 +270,18 @@ public struct CalendarAgentVersion: Codable, Equatable {
   public var appVersion: String
   /// Stable socket protocol version.
   public var protocolVersion: String
+  /// Advertised calendar-agent capabilities.
+  public var capabilities: CalendarAgentCapabilities
 
   /// Creates one calendar-agent version payload.
-  public init(appVersion: String, protocolVersion: String) {
+  public init(
+    appVersion: String,
+    protocolVersion: String,
+    capabilities: CalendarAgentCapabilities = .default
+  ) {
     self.appVersion = appVersion
     self.protocolVersion = protocolVersion
+    self.capabilities = capabilities
   }
 }
 
@@ -231,8 +309,10 @@ public enum CalendarAgentSectionKind: String, Codable, Equatable {
 
 /// One normalized calendar event returned by the agent.
 public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
-  /// Stable event identifier.
+  /// Stable UI identifier for this event row or occurrence.
   public var id: String
+  /// Stable EventKit event identifier used for mutation APIs when available.
+  public var eventIdentifier: String?
   /// Event title.
   public var title: String
   /// Event start date.
@@ -259,6 +339,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
   /// Creates one normalized calendar event.
   public init(
     id: String,
+    eventIdentifier: String? = nil,
     title: String,
     startDate: Date,
     endDate: Date,
@@ -272,6 +353,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
     travelTimeSeconds: TimeInterval? = nil
   ) {
     self.id = id
+    self.eventIdentifier = eventIdentifier
     self.title = title
     self.startDate = startDate
     self.endDate = endDate
@@ -397,6 +479,8 @@ public struct CalendarAgentMessage: Codable {
   public var version: CalendarAgentVersion?
   /// Optional snapshot payload.
   public var snapshot: CalendarAgentSnapshot?
+  /// Optional structured error code.
+  public var errorCode: CalendarAgentErrorCode?
   /// Optional error message.
   public var message: String?
 
@@ -405,11 +489,13 @@ public struct CalendarAgentMessage: Codable {
     kind: CalendarAgentMessageKind,
     version: CalendarAgentVersion? = nil,
     snapshot: CalendarAgentSnapshot? = nil,
+    errorCode: CalendarAgentErrorCode? = nil,
     message: String? = nil
   ) {
     self.kind = kind
     self.version = version
     self.snapshot = snapshot
+    self.errorCode = errorCode
     self.message = message
   }
 }

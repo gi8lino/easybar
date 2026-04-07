@@ -47,17 +47,14 @@ public enum NetworkAgentField: String, Codable, CaseIterable {
   case captivePortal = "network.captive_portal"
   case locationAuthorized = "auth.location_authorized"
   case locationPermissionState = "auth.location_permission_state"
+}
 
-  /// Standard field set needed to construct a typed network snapshot.
-  public static let snapshotFieldSet: [NetworkAgentField] = [
-    .locationAuthorized,
-    .locationPermissionState,
-    .generatedAt,
-    .ssid,
-    .interfaceName,
-    .primaryInterfaceIsTunnel,
-    .rssi,
-  ]
+/// One stable wire-level error code returned by the network agent.
+public enum NetworkAgentErrorCode: String, Codable, Equatable {
+  case permissionDenied = "permission_denied"
+  case missingFields = "missing_fields"
+  case providerUnavailable = "provider_unavailable"
+  case unknown = "unknown"
 }
 
 /// Describes one shared network-agent field.
@@ -66,14 +63,14 @@ public struct NetworkAgentFieldSpec {
   public let field: NetworkAgentField
   /// Short help text for humans.
   public let help: String
-  /// Whether this field requires location authorization.
+  /// Whether the field requires location authorization.
   public let requiresLocationAuthorization: Bool
 
   /// Creates one network-agent field spec.
   public init(
     field: NetworkAgentField,
     help: String,
-    requiresLocationAuthorization: Bool
+    requiresLocationAuthorization: Bool = false
   ) {
     self.field = field
     self.help = help
@@ -124,58 +121,20 @@ public let networkAgentFieldRegistry: [NetworkAgentFieldSpec] = [
     help: "Last interface change time",
     requiresLocationAuthorization: true
   ),
-  .init(
-    field: .primaryInterface,
-    help: "Primary network interface",
-    requiresLocationAuthorization: false
-  ),
-  .init(
-    field: .activeTunnelInterface,
-    help: "First active tunnel interface",
-    requiresLocationAuthorization: false
-  ),
-  .init(
-    field: .activeTunnelInterfaces,
-    help: "All active tunnel interfaces",
-    requiresLocationAuthorization: false
-  ),
-  .init(
-    field: .primaryInterfaceIsTunnel,
-    help: "Whether the primary interface is a tunnel",
-    requiresLocationAuthorization: false
-  ),
-  .init(field: .ipv4Address, help: "Primary IPv4 address", requiresLocationAuthorization: false),
-  .init(field: .ipv6Address, help: "Primary IPv6 address", requiresLocationAuthorization: false),
-  .init(
-    field: .defaultGateway,
-    help: "Default gateway address",
-    requiresLocationAuthorization: false
-  ),
-  .init(field: .dnsServers, help: "Configured DNS servers", requiresLocationAuthorization: false),
-  .init(
-    field: .internetReachable,
-    help: "Internet reachability state",
-    requiresLocationAuthorization: false
-  ),
-  .init(field: .captivePortal, help: "Captive portal state", requiresLocationAuthorization: false),
-  .init(
-    field: .locationAuthorized,
-    help: "Location authorization state",
-    requiresLocationAuthorization: false
-  ),
-  .init(
-    field: .locationPermissionState,
-    help: "Location permission label",
-    requiresLocationAuthorization: false
-  ),
-  .init(
-    field: .generatedAt, help: "Snapshot generation time", requiresLocationAuthorization: false),
+  .init(field: .primaryInterface, help: "Primary network interface"),
+  .init(field: .activeTunnelInterface, help: "First active tunnel interface"),
+  .init(field: .activeTunnelInterfaces, help: "All active tunnel interfaces"),
+  .init(field: .primaryInterfaceIsTunnel, help: "Whether the primary interface is a tunnel"),
+  .init(field: .ipv4Address, help: "Primary IPv4 address"),
+  .init(field: .ipv6Address, help: "Primary IPv6 address"),
+  .init(field: .defaultGateway, help: "Default gateway address"),
+  .init(field: .dnsServers, help: "Configured DNS servers"),
+  .init(field: .internetReachable, help: "Internet reachability state"),
+  .init(field: .captivePortal, help: "Captive portal state"),
+  .init(field: .locationAuthorized, help: "Location authorization state"),
+  .init(field: .locationPermissionState, help: "Location permission label"),
+  .init(field: .generatedAt, help: "Snapshot generation time"),
 ]
-
-/// Lookup table for field metadata by field key.
-public let networkAgentFieldSpecByField: [NetworkAgentField: NetworkAgentFieldSpec] = Dictionary(
-  uniqueKeysWithValues: networkAgentFieldRegistry.map { ($0.field, $0) }
-)
 
 /// One request sent to the network agent.
 public struct NetworkAgentRequest: Codable {
@@ -188,6 +147,16 @@ public struct NetworkAgentRequest: Codable {
   public init(command: NetworkAgentCommand, fields: [NetworkAgentField]? = nil) {
     self.command = command
     self.fields = fields
+  }
+
+  /// Builds one fetch request.
+  public static func fetch(_ fields: [NetworkAgentField]) -> Self {
+    Self(command: .fetch, fields: fields)
+  }
+
+  /// Builds one subscribe request.
+  public static func subscribe(_ fields: [NetworkAgentField]) -> Self {
+    Self(command: .subscribe, fields: fields)
   }
 }
 
@@ -207,7 +176,22 @@ public struct NetworkAgentVersion: Codable, Equatable {
 
 /// Full network snapshot returned by the agent.
 public struct NetworkAgentSnapshot: Codable, Equatable {
-  private static let fieldDateFormatter = ISO8601DateFormatter()
+  public static let dateFormatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+  }()
+
+  /// Standard field set required to build a snapshot from field values.
+  public static let snapshotFieldSet: [NetworkAgentField] = [
+    .locationAuthorized,
+    .locationPermissionState,
+    .generatedAt,
+    .ssid,
+    .interfaceName,
+    .primaryInterfaceIsTunnel,
+    .rssi,
+  ]
 
   /// Whether location/Wi-Fi access is currently granted.
   public var accessGranted: Bool
@@ -243,13 +227,13 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     self.rssi = rssi
   }
 
-  /// Builds one typed snapshot from the standard snapshot field set.
+  /// Builds one typed snapshot from field-query values.
   public init?(fields: [String: NetworkAgentFieldValue]) {
     guard
       let accessGranted = fields[NetworkAgentField.locationAuthorized.rawValue]?.boolValue,
       let permissionState = fields[NetworkAgentField.locationPermissionState.rawValue]?.stringValue,
       let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue]?.stringValue,
-      let generatedAt = Self.fieldDateFormatter.date(from: generatedAtRaw),
+      let generatedAt = Self.dateFormatter.date(from: generatedAtRaw),
       let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]?
         .boolValue
     else {
@@ -285,7 +269,9 @@ public struct NetworkAgentMessage: Codable {
   public var version: NetworkAgentVersion?
   /// Optional field values payload.
   public var fields: [String: NetworkAgentFieldValue]?
-  /// Optional error message.
+  /// Optional stable wire-level error code.
+  public var errorCode: NetworkAgentErrorCode?
+  /// Optional legacy error message.
   public var message: String?
 
   /// Creates one network agent message.
@@ -293,11 +279,13 @@ public struct NetworkAgentMessage: Codable {
     kind: NetworkAgentMessageKind,
     version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
+    errorCode: NetworkAgentErrorCode? = nil,
     message: String? = nil
   ) {
     self.kind = kind
     self.version = version
     self.fields = fields
+    self.errorCode = errorCode
     self.message = message
   }
 }

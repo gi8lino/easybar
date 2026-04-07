@@ -26,7 +26,7 @@ public final class NetworkAgentController {
       componentName: config.componentName,
       socketPath: config.socketPath,
       appVersion: config.appVersion,
-      allowUnauthorizedFieldsWithoutLocation: config.allowUnauthorizedFieldsWithoutLocation,
+      allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedFieldsWithoutLocation,
       logger: logger
     )
   }

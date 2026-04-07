@@ -3,6 +3,40 @@ import EventKit
 import Foundation
 
 final class CalendarSnapshotProvider {
+  private enum EventTravelTimeBridge {
+    static let key = "travelTime"
+
+    static func getSeconds(from event: EKEvent) -> TimeInterval? {
+      let selector = NSSelectorFromString(key)
+      guard event.responds(to: selector) else { return nil }
+
+      if let value = event.value(forKey: key) as? NSNumber {
+        let seconds = value.doubleValue
+        return seconds > 0 ? seconds : nil
+      }
+
+      return nil
+    }
+
+    static func setSeconds(_ seconds: TimeInterval?, on event: EKEvent) {
+      guard let seconds, seconds > 0 else {
+        event.setValue(Optional<NSNumber>.none, forKey: key)
+        return
+      }
+
+      event.setValue(NSNumber(value: seconds), forKey: key)
+    }
+  }
+
+  private static let formatterLocale = Locale(identifier: "en_US_POSIX")
+  private static let formatterCalendar = Calendar(identifier: .gregorian)
+  private static let formatterTimeZone = TimeZone.autoupdatingCurrent
+  private static let birthdayFormatterLock = NSLock()
+  private static var birthdayFormatters: [String: DateFormatter] = [:]
+
+  private static let eventTimeFormatter: DateFormatter = makeFormatter(format: "HH:mm")
+  private static let dayTitleFormatter: DateFormatter = makeFormatter(format: "dd.MM.yyyy")
+
   private let eventStore = EKEventStore()
   private let authState = CalendarAuthorizationState()
   private let logger: ProcessLogger
@@ -13,7 +47,7 @@ final class CalendarSnapshotProvider {
   /// Creates one calendar snapshot provider that logs through the provided logger.
   init(logger: ProcessLogger) {
     self.logger = logger
-    self.authorizationController = CalendarAuthorizationController(
+    authorizationController = CalendarAuthorizationController(
       eventStore: eventStore,
       authState: authState,
       logger: logger
@@ -62,25 +96,15 @@ final class CalendarSnapshotProvider {
       logger.debug(
         "calendar snapshot access_granted=false permission_state=\(permissionState)"
       )
-      return CalendarAgentSnapshot(
-        accessGranted: false,
-        permissionState: permissionState,
-        generatedAt: now,
-        writableCalendars: [],
-        events: [],
-        sections: []
-      )
+      return makeAccessDeniedSnapshot(permissionState: permissionState, generatedAt: now)
     }
 
     guard let fetchRange = normalizedFetchRange(from: query) else {
       logger.warn("calendar snapshot invalid fetch range")
-      return CalendarAgentSnapshot(
-        accessGranted: true,
+      return makeEmptySnapshot(
         permissionState: permissionState,
         generatedAt: now,
-        writableCalendars: writableCalendars(),
-        events: [],
-        sections: []
+        writableCalendars: writableCalendars()
       )
     }
 
@@ -144,11 +168,7 @@ final class CalendarSnapshotProvider {
     event.endDate = draft.endDate
     event.isAllDay = draft.isAllDay
     event.location = normalizedOptionalText(draft.location)
-
-    if let travelTimeSeconds = draft.travelTimeSeconds, travelTimeSeconds > 0 {
-      event.setValue(NSNumber(value: travelTimeSeconds), forKey: "travelTime")
-    }
-
+    EventTravelTimeBridge.setSeconds(draft.travelTimeSeconds, on: event)
     event.alarms = draft.alertOffsetsSeconds.map { EKAlarm(relativeOffset: -abs($0)) }
 
     try eventStore.save(event, span: .thisEvent, commit: true)
@@ -194,12 +214,7 @@ final class CalendarSnapshotProvider {
     event.endDate = draft.endDate
     event.isAllDay = draft.isAllDay
     event.location = normalizedOptionalText(draft.location)
-
-    if let travelTimeSeconds = draft.travelTimeSeconds, travelTimeSeconds > 0 {
-      event.setValue(NSNumber(value: travelTimeSeconds), forKey: "travelTime")
-    } else {
-      event.setValue(Optional<NSNumber>.none, forKey: "travelTime")
-    }
+    EventTravelTimeBridge.setSeconds(draft.travelTimeSeconds, on: event)
 
     if draft.alertOffsetsSeconds.isEmpty {
       event.alarms = nil
@@ -257,6 +272,61 @@ final class CalendarSnapshotProvider {
 
     guard start < end else { return nil }
     return DateInterval(start: start, end: end)
+  }
+
+  /// Returns one empty snapshot for denied access.
+  private func makeAccessDeniedSnapshot(
+    permissionState: String,
+    generatedAt: Date
+  ) -> CalendarAgentSnapshot {
+    CalendarAgentSnapshot(
+      accessGranted: false,
+      permissionState: permissionState,
+      generatedAt: generatedAt,
+      writableCalendars: [],
+      events: [],
+      sections: []
+    )
+  }
+
+  /// Returns one empty successful snapshot.
+  private func makeEmptySnapshot(
+    permissionState: String,
+    generatedAt: Date,
+    writableCalendars: [CalendarAgentWritableCalendar]
+  ) -> CalendarAgentSnapshot {
+    CalendarAgentSnapshot(
+      accessGranted: true,
+      permissionState: permissionState,
+      generatedAt: generatedAt,
+      writableCalendars: writableCalendars,
+      events: [],
+      sections: []
+    )
+  }
+
+  /// Creates one stable formatter for deterministic popup rendering.
+  private static func makeFormatter(format: String) -> DateFormatter {
+    let formatter = DateFormatter()
+    formatter.locale = formatterLocale
+    formatter.calendar = formatterCalendar
+    formatter.timeZone = formatterTimeZone
+    formatter.dateFormat = format
+    return formatter
+  }
+
+  /// Returns a cached birthday formatter for one format string.
+  private static func birthdayFormatter(for format: String) -> DateFormatter {
+    birthdayFormatterLock.lock()
+    defer { birthdayFormatterLock.unlock() }
+
+    if let formatter = birthdayFormatters[format] {
+      return formatter
+    }
+
+    let formatter = makeFormatter(format: format)
+    birthdayFormatters[format] = formatter
+    return formatter
   }
 }
 
@@ -326,9 +396,13 @@ extension CalendarSnapshotProvider {
         return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
       }
       .map { event in
-        CalendarAgentEvent(
-          id:
-            "\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
+        let eventIdentifier = event.eventIdentifier
+        let stableID =
+          "\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+
+        return CalendarAgentEvent(
+          id: stableID,
+          eventIdentifier: eventIdentifier,
           title: normalizedTitle(event.title),
           startDate: event.startDate,
           endDate: event.endDate,
@@ -374,9 +448,13 @@ extension CalendarSnapshotProvider {
         return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
       }
       .map { event in
-        CalendarAgentEvent(
-          id:
-            "birthday-\(event.eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)",
+        let eventIdentifier = event.eventIdentifier
+        let stableID =
+          "birthday-\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+
+        return CalendarAgentEvent(
+          id: stableID,
+          eventIdentifier: eventIdentifier,
           title: birthdayTitle(for: event, showAge: query.birthdaysShowAge),
           startDate: event.startDate,
           endDate: event.endDate,
@@ -484,20 +562,7 @@ extension CalendarSnapshotProvider {
 
   /// Resolves travel time from the best available source.
   private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
-    directTravelTimeSeconds(for: event)
-  }
-
-  /// Reads `travelTime` dynamically when the Objective-C runtime exposes it.
-  private func directTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
-    let selector = NSSelectorFromString("travelTime")
-    guard event.responds(to: selector) else { return nil }
-
-    if let value = event.value(forKey: "travelTime") as? NSNumber {
-      let seconds = value.doubleValue
-      return seconds > 0 ? seconds : nil
-    }
-
-    return nil
+    EventTravelTimeBridge.getSeconds(from: event)
   }
 
   /// Returns whether the event has at least one visible non-travel alert.
@@ -509,7 +574,7 @@ extension CalendarSnapshotProvider {
   private func visibleAlertOffsetsSeconds(for event: EKEvent) -> [TimeInterval] {
     guard let alarms = event.alarms, !alarms.isEmpty else { return [] }
 
-    let travelTimeSeconds = directTravelTimeSeconds(for: event)
+    let travelTimeSeconds = EventTravelTimeBridge.getSeconds(from: event)
     return alarms.compactMap { alarm in
       let offset = alarm.relativeOffset
       guard offset <= 0 else { return nil }
@@ -662,13 +727,33 @@ extension CalendarSnapshotProvider {
 extension CalendarSnapshotProvider {
   /// Returns one birthday title, optionally with age appended.
   private func birthdayTitle(for event: EKEvent, showAge: Bool) -> String {
-    let title = normalizedTitle(event.title)
+    let rawTitle = normalizedTitle(event.title)
+    let normalized = normalizedBirthdayTitle(rawTitle)
 
-    guard showAge, let age = extractedAge(from: title) else {
+    guard showAge, let age = extractedAge(from: rawTitle) else {
+      return normalized
+    }
+
+    return "\(normalized) (\(age))"
+  }
+
+  /// Removes one trailing age suffix from a birthday title when present.
+  private func normalizedBirthdayTitle(_ title: String) -> String {
+    guard let open = title.lastIndex(of: "("),
+      let close = title.lastIndex(of: ")"),
+      open < close
+    else {
       return title
     }
 
-    return "\(title) (\(age))"
+    let suffix = title[title.index(after: open)..<close]
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard Int(suffix) != nil else {
+      return title
+    }
+
+    return title[..<open].trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   /// Extracts an age suffix from one birthday event title.
@@ -703,23 +788,17 @@ extension CalendarSnapshotProvider {
 
   /// Formats one event time for popup display.
   private func formatEventTime(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    Self.eventTimeFormatter.string(from: date)
   }
 
   /// Formats one day header for popup display.
   private func formatDayTitle(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "dd.MM.yyyy"
-    return formatter.string(from: date)
+    Self.dayTitleFormatter.string(from: date)
   }
 
   /// Formats one birthday date using the configured format.
   private func formatBirthdayDate(_ date: Date, format: String) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = format
-    return formatter.string(from: date)
+    Self.birthdayFormatter(for: format).string(from: date)
   }
 }
 
