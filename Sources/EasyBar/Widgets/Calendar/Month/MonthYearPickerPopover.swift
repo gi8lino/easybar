@@ -54,13 +54,6 @@ extension MonthYearPickerPopover {
 
       Spacer()
 
-      Button(action: onClose) {
-        Image(systemName: "xmark")
-          .font(.system(size: 10, weight: .semibold))
-          .foregroundStyle(headerColor.opacity(0.8))
-      }
-      .buttonStyle(.plain)
-
       Button(action: { pageStartYear += 12 }) {
         Text("›")
           .font(.system(size: 15, weight: .semibold))

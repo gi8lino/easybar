@@ -54,49 +54,62 @@ struct NativeMonthCalendarPopupView: View {
 
   /// Renders the month calendar popup.
   var body: some View {
-    popupLayoutView
-      .frame(width: popupWidth, alignment: .leading)
-      .padding(.horizontal, CGFloat(config.paddingX))
-      .padding(.vertical, CGFloat(config.paddingY))
-      .background(color(config.backgroundColorHex))
-      .overlay {
-        RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
-          .stroke(
-            color(config.borderColorHex),
-            lineWidth: max(CGFloat(config.borderWidth), 1)
-          )
+    ZStack {
+      popupLayoutView
+
+      if isYearPickerPresented {
+        Color.black
+          .opacity(0.001)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            isYearPickerPresented = false
+          }
+
+        yearPickerOverlayView
       }
-      .clipShape(
-        RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
-      )
-      .padding(.horizontal, CGFloat(config.marginX))
-      .padding(.vertical, CGFloat(config.marginY))
-      .onAppear {
-        syncSelectionIntoVisibleMonth()
-        MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
-        logSelection("on_appear")
-      }
-      .onDisappear {
-        composerPanel.close()
-      }
-      .onChange(of: visibleMonth) { _, newValue in
-        MonthCalendarAgentClient.shared.focusVisibleMonth(newValue)
-      }
-      .onChange(of: selectedStartDate) { _, _ in
-        logSelection("selected_start_changed")
-        logResolvedAppointments("selected_start_changed")
-      }
-      .onChange(of: selectedEndDate) { _, _ in
-        logSelection("selected_end_changed")
-        logResolvedAppointments("selected_end_changed")
-      }
-      .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
-        easybarLog.debug(
-          "month calendar popup snapshot changed generated_at=\(generatedAt?.description ?? "nil")"
+    }
+    .frame(width: popupWidth, alignment: .leading)
+    .padding(.horizontal, CGFloat(config.paddingX))
+    .padding(.vertical, CGFloat(config.paddingY))
+    .background(color(config.backgroundColorHex))
+    .overlay {
+      RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
+        .stroke(
+          color(config.borderColorHex),
+          lineWidth: max(CGFloat(config.borderWidth), 1)
         )
-        resolveVisibleMonthAutoSelection()
-        logResolvedAppointments("snapshot_changed")
-      }
+    }
+    .clipShape(
+      RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
+    )
+    .padding(.horizontal, CGFloat(config.marginX))
+    .padding(.vertical, CGFloat(config.marginY))
+    .onAppear {
+      syncSelectionIntoVisibleMonth()
+      MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
+      logSelection("on_appear")
+    }
+    .onDisappear {
+      composerPanel.close()
+    }
+    .onChange(of: visibleMonth) { _, newValue in
+      MonthCalendarAgentClient.shared.focusVisibleMonth(newValue)
+    }
+    .onChange(of: selectedStartDate) { _, _ in
+      logSelection("selected_start_changed")
+      logResolvedAppointments("selected_start_changed")
+    }
+    .onChange(of: selectedEndDate) { _, _ in
+      logSelection("selected_end_changed")
+      logResolvedAppointments("selected_end_changed")
+    }
+    .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
+      easybarLog.debug(
+        "month calendar popup snapshot changed generated_at=\(generatedAt?.description ?? "nil")"
+      )
+      resolveVisibleMonthAutoSelection()
+      logResolvedAppointments("snapshot_changed")
+    }
   }
 }
 

@@ -65,41 +65,40 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds the calendar container.
   var calendarContainerView: some View {
-    ZStack(alignment: .top) {
-      VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
-        headerView
-        weekdayHeaderView
-        monthGridView
-      }
-
-      if isYearPickerPresented {
-        VStack {
-          MonthYearPickerPopover(
-            currentYear: visibleYear,
-            pageStartYear: $yearPickerPageStart,
-            onSelectYear: selectYear(_:),
-            onClose: { isYearPickerPresented = false },
-            headerColor: color(config.headerTextColorHex),
-            backgroundColor: color(config.backgroundColorHex),
-            borderColor: color(config.borderColorHex),
-            currentYearTextColor: color(config.headerTextColorHex),
-            currentYearBackgroundColor: color(config.todayCellBackgroundColorHex),
-            currentYearBorderColor: color(config.todayCellBorderColorHex)
-          )
-          .padding(.top, 40)
-          .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
-
-          Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .zIndex(2)
-      }
+    VStack(alignment: .leading, spacing: CGFloat(config.spacing)) {
+      headerView
+      weekdayHeaderView
+      monthGridView
     }
     .frame(
       minWidth: calendarContainerWidth,
       maxWidth: calendarContainerWidth,
       alignment: .topLeading
     )
+  }
+
+  /// Builds the year-picker overlay shown above the popup content.
+  var yearPickerOverlayView: some View {
+    VStack {
+      MonthYearPickerPopover(
+        currentYear: visibleYear,
+        pageStartYear: $yearPickerPageStart,
+        onSelectYear: selectYear(_:),
+        onClose: { isYearPickerPresented = false },
+        headerColor: color(config.headerTextColorHex),
+        backgroundColor: color(config.backgroundColorHex),
+        borderColor: color(config.borderColorHex),
+        currentYearTextColor: color(config.headerTextColorHex),
+        currentYearBackgroundColor: color(config.todayCellBackgroundColorHex),
+        currentYearBorderColor: color(config.todayCellBorderColorHex)
+      )
+      .padding(.top, 40)
+      .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 6)
+
+      Spacer(minLength: 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .zIndex(2)
   }
 
   /// Builds the agenda container.
