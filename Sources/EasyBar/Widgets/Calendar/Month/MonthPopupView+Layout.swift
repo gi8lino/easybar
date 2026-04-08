@@ -148,9 +148,10 @@ extension NativeMonthCalendarPopupView {
       monthTitleRowView
       monthControlsRowView
     }
+    .padding(.top, 10)
   }
 
-  /// Builds the centered month-title row with a stable header height.
+  /// Builds the centered month-title row.
   private var monthTitleRowView: some View {
     HStack {
       Spacer()
@@ -165,15 +166,12 @@ extension NativeMonthCalendarPopupView {
             .font(.system(size: 10, weight: .semibold))
         }
         .foregroundStyle(color(config.headerTextColorHex))
-        .frame(maxWidth: .infinity, alignment: .center)
       }
       .buttonStyle(.plain)
 
       Spacer()
     }
-    .frame(maxWidth: .infinity, minHeight: 10, alignment: .center)
-    .padding(.top, 10)
-    .padding(.bottom, 2)
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   /// Builds the month navigation and today controls row.
