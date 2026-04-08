@@ -144,7 +144,7 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the popup month header.
   var headerView: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 4) {
       HStack {
         Spacer()
 
@@ -166,7 +166,7 @@ extension NativeMonthCalendarPopupView {
         Spacer()
       }
       .frame(maxWidth: .infinity)
-      .padding(.top, 4)
+      .padding(.top, 6)
 
       HStack(spacing: 18) {
         Button(action: showPreviousMonth) {
