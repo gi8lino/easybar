@@ -118,6 +118,7 @@ fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
+	@rm -rf "$(DIST_DIR)" ".build"
 	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_MACOS)" "$(NETWORK_AGENT_RESOURCES)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-calendar-agent ARCH=$(ARCH) VERSION=$(VERSION)
