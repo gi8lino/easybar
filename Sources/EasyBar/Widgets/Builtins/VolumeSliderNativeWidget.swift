@@ -4,6 +4,14 @@ import Foundation
 final class VolumeSliderNativeWidget: NativeWidget {
   let rootID = "builtin_volume"
 
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.volumeChange.rawValue,
+      AppEvent.muteChange.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
   private var autoHideWorkItem: DispatchWorkItem?
@@ -17,8 +25,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
   /// Starts the volume widget.
   func start() {
-    VolumeEvents.shared.subscribeVolume()
-
     eventObserver.start { [weak self] payload in
       guard let self else { return }
 
@@ -81,7 +87,7 @@ extension VolumeSliderNativeWidget {
       return false
     }
 
-    guard event == .volumeChange || event == .muteChange else {
+    guard event == .volumeChange || event == .muteChange || event == .systemWoke else {
       return false
     }
 

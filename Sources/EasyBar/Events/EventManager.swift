@@ -20,7 +20,7 @@ final class EventManager {
     refresh()
   }
 
-  /// Starts only the native event sources required by all active subscriptions.
+  /// Replaces the current Lua runtime event subscriptions.
   func start(subscriptions: Set<String>) {
     setLuaSubscriptions(subscriptions)
   }
@@ -48,50 +48,51 @@ final class EventManager {
       """
     )
 
-    if mergedSubscriptions.contains("system_woke") {
+    if mergedSubscriptions.contains(AppEvent.systemWoke.rawValue) {
       SystemEvents.shared.subscribeSystemWake()
     }
 
-    if mergedSubscriptions.contains("sleep") {
+    if mergedSubscriptions.contains(AppEvent.sleep.rawValue) {
       SystemEvents.shared.subscribeSleep()
     }
 
-    if mergedSubscriptions.contains("space_change") {
+    if mergedSubscriptions.contains(AppEvent.spaceChange.rawValue) {
       SystemEvents.shared.subscribeSpaceChange()
     }
 
-    if mergedSubscriptions.contains("app_switch") {
+    if mergedSubscriptions.contains(AppEvent.appSwitch.rawValue) {
       SystemEvents.shared.subscribeAppSwitch()
     }
 
-    if mergedSubscriptions.contains("display_change") {
+    if mergedSubscriptions.contains(AppEvent.displayChange.rawValue) {
       SystemEvents.shared.subscribeDisplayChange()
     }
 
-    if mergedSubscriptions.contains("power_source_change")
-      || mergedSubscriptions.contains("charging_state_change")
+    if mergedSubscriptions.contains(AppEvent.powerSourceChange.rawValue)
+      || mergedSubscriptions.contains(AppEvent.chargingStateChange.rawValue)
     {
       PowerEvents.shared.subscribePowerSource()
     }
 
-    if mergedSubscriptions.contains("wifi_change") {
+    if mergedSubscriptions.contains(AppEvent.wifiChange.rawValue) {
       NetworkEvents.shared.subscribeWifi()
     }
 
-    if mergedSubscriptions.contains("network_change") {
+    if mergedSubscriptions.contains(AppEvent.networkChange.rawValue) {
       NetworkEvents.shared.subscribeNetwork()
     }
 
-    if mergedSubscriptions.contains("volume_change") || mergedSubscriptions.contains("mute_change")
+    if mergedSubscriptions.contains(AppEvent.volumeChange.rawValue)
+      || mergedSubscriptions.contains(AppEvent.muteChange.rawValue)
     {
       VolumeEvents.shared.subscribeVolume()
     }
 
-    if mergedSubscriptions.contains("minute_tick") {
+    if mergedSubscriptions.contains(AppEvent.minuteTick.rawValue) {
       TimerEvents.shared.startMinuteTimer()
     }
 
-    if mergedSubscriptions.contains("second_tick") {
+    if mergedSubscriptions.contains(AppEvent.secondTick.rawValue) {
       TimerEvents.shared.startSecondTimer()
     }
   }

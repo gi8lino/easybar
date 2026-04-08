@@ -8,7 +8,14 @@ final class CalendarNativeWidget: NativeWidget {
 
   let rootID = "builtin_calendar"
 
-  private var timer: Timer?
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.minuteTick.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
+  private let eventObserver = EasyBarEventObserver()
 
   private struct Snapshot {
     let config: Config.CalendarBuiltinConfig
@@ -24,15 +31,25 @@ final class CalendarNativeWidget: NativeWidget {
       "starting native widget id=\(rootID) enabled=\(snapshot.config.enabled) layout=\(snapshot.config.anchor.layout.rawValue) position=\(snapshot.config.position.rawValue) popup_mode=\(snapshot.config.popupMode.rawValue) days=\(upcoming.events.days) show_birthdays=\(upcoming.birthdays.show)"
     )
 
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+
+      switch event {
+      case .minuteTick, .systemWoke:
+        self.publish()
+      default:
+        break
+      }
+    }
+
     guard Config.shared.calendarAgentEnabled else {
       easybarLog.info("calendar agent disabled in config")
-      startTimer()
       publish()
       return
     }
 
     startCalendarAgent(for: snapshot)
-    startTimer()
     publish()
   }
 
@@ -40,8 +57,7 @@ final class CalendarNativeWidget: NativeWidget {
   func stop() {
     easybarLog.info("stopping native widget id=\(rootID)")
 
-    timer?.invalidate()
-    timer = nil
+    eventObserver.stop()
 
     if Config.shared.calendarAgentEnabled {
       stopCalendarAgent()
@@ -289,16 +305,9 @@ extension CalendarNativeWidget {
   }
 }
 
-// MARK: - Timer And Formatting
+// MARK: - Formatting
 
 extension CalendarNativeWidget {
-  /// Starts the periodic date refresh timer.
-  fileprivate func startTimer() {
-    timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-      self?.publish()
-    }
-  }
-
   /// Formats one date string.
   fileprivate func formatDate(_ date: Date, format: String) -> String {
     let formatter = DateFormatter()

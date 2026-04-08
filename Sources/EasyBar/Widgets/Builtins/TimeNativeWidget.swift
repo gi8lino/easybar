@@ -4,19 +4,30 @@ final class TimeNativeWidget: NativeWidget {
 
   let rootID = "builtin_time"
 
-  private var timer: Timer?
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.secondTick.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
+  private let eventObserver = EasyBarEventObserver()
 
   /// Starts the time widget.
   func start() {
-    startTimer()
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+      guard event == .secondTick || event == .systemWoke else { return }
+      self.publish()
+    }
+
     publish()
   }
 
   /// Stops the time widget.
   func stop() {
-    timer?.invalidate()
-    timer = nil
-
+    eventObserver.stop()
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
@@ -32,13 +43,6 @@ final class TimeNativeWidget: NativeWidget {
     )
 
     WidgetStore.shared.apply(root: rootID, nodes: [node])
-  }
-
-  /// Starts the timer that drives time updates.
-  private func startTimer() {
-    timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-      self?.publish()
-    }
   }
 
   /// Builds one formatter for the configured time format.

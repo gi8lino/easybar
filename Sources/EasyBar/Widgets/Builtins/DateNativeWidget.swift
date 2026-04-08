@@ -4,19 +4,30 @@ final class DateNativeWidget: NativeWidget {
 
   let rootID = "builtin_date"
 
-  private var timer: Timer?
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.minuteTick.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
+  private let eventObserver = EasyBarEventObserver()
 
   /// Starts the date widget.
   func start() {
-    startTimer()
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+      guard event == .minuteTick || event == .systemWoke else { return }
+      self.publish()
+    }
+
     publish()
   }
 
   /// Stops the date widget.
   func stop() {
-    timer?.invalidate()
-    timer = nil
-
+    eventObserver.stop()
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
@@ -32,13 +43,6 @@ final class DateNativeWidget: NativeWidget {
     )
 
     WidgetStore.shared.apply(root: rootID, nodes: [node])
-  }
-
-  /// Starts the timer that drives date updates.
-  private func startTimer() {
-    timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-      self?.publish()
-    }
   }
 
   /// Builds one formatter for the configured date format.

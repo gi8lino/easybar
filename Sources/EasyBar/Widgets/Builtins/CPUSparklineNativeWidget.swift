@@ -6,7 +6,14 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   let rootID = "builtin_cpu"
 
-  private var timer: Timer?
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.secondTick.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
+  private let eventObserver = EasyBarEventObserver()
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
 
@@ -14,15 +21,28 @@ final class CPUSparklineNativeWidget: NativeWidget {
   func start() {
     samples = Array(repeating: 0, count: historySize)
     previousCPUInfo = readCPUInfo()
-    startTimer()
+
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+
+      switch event {
+      case .secondTick:
+        self.sampleAndPublish()
+      case .systemWoke:
+        self.previousCPUInfo = self.readCPUInfo()
+        self.publish()
+      default:
+        break
+      }
+    }
 
     publish()
   }
 
   /// Stops CPU sampling.
   func stop() {
-    timer?.invalidate()
-    timer = nil
+    eventObserver.stop()
     samples.removeAll()
     previousCPUInfo = nil
 
@@ -57,13 +77,6 @@ final class CPUSparklineNativeWidget: NativeWidget {
   /// Returns the configured history size with the minimum enforced.
   private var historySize: Int {
     max(2, Config.shared.builtinCPU.historySize)
-  }
-
-  /// Starts the sampling timer.
-  private func startTimer() {
-    timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-      self?.sampleAndPublish()
-    }
   }
 
   /// Builds the sparkline node from the current samples.
