@@ -56,6 +56,7 @@ LUA_API_STUB := Sources/EasyBar/Lua/easybar_api.lua
 BUNDLE_ID ?= com.gi8lino.EasyBar
 VERSION ?= dev
 ARCH ?= universal
+RUN_ARCH ?= arm64
 CODESIGN_IDENTITY ?= -
 NOTARYTOOL_PROFILE ?=
 NOTARY_SUBMIT ?= 0
@@ -82,16 +83,27 @@ else
 $(error Unsupported ARCH '$(ARCH)'. Use arm64, x86_64, or universal)
 endif
 
+ifeq ($(RUN_ARCH),universal)
+RUN_ARCHES := arm64 x86_64
+else ifeq ($(RUN_ARCH),arm64)
+RUN_ARCHES := arm64
+else ifeq ($(RUN_ARCH),x86_64)
+RUN_ARCHES := x86_64
+else
+$(error Unsupported RUN_ARCH '$(RUN_ARCH)'. Use arm64, x86_64, or universal)
+endif
+
 .DEFAULT_GOAL := help
 
 .PHONY: help all prepare-version build bundle package release app cli fmt clean clean-dist run stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
-        print-arch print-version print-latest-tag print-package-sha256 \
-        tag-patch tag-minor tag-major push-tags
+        print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
+        tag-patch tag-minor tag-major push-tags \
+        run-build-app run-build-calendar-agent run-build-network-agent
 
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Build
 
@@ -201,6 +213,51 @@ ifeq ($(ARCH),universal)
 else
 	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(CLI_PRODUCT)
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
+endif
+
+run-build-app: ## Internal target: fast local app build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(APP_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(APP_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(APP_PRODUCT)" \
+		-output "$(APP_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(APP_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
+	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
+		-output "$(CALENDAR_AGENT_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CALENDAR_AGENT_PRODUCT)
+	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
+endif
+
+run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(NETWORK_AGENT_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(NETWORK_AGENT_PRODUCT)
+	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
+		-output "$(NETWORK_AGENT_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(NETWORK_AGENT_PRODUCT)
+	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
 endif
 
 copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
@@ -324,7 +381,11 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Packaged Resources:"
 	@ls -1 "$(APP_RESOURCES)" 2>/dev/null || true
 
-run: bundle ## Build, start local agents, and run EasyBar in foreground with debug logging.
+run: prepare-version ## Fast local run with debug builds and local agents.
+	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_DEBUG=1 "$(APP_BIN)"
@@ -365,6 +426,9 @@ path.write_text(updated)'
 print-arch: ## Print the selected ARCH.
 	@echo "$(ARCH)"
 
+print-run-arch: ## Print the selected RUN_ARCH.
+	@echo "$(RUN_ARCH)"
+
 print-version: ## Print the current version derived from the latest tag.
 	@echo "$(CURRENT_VERSION)"
 
@@ -391,5 +455,5 @@ tag-major: ## Create the next major tag locally.
 push-tags: ## Push commits and tags to origin.
 	@git push --follow-tags
 
-tag: ## Show latest tag
+tag: ## Show latest tag.
 	@echo "Latest version: $(LATEST_TAG)"
