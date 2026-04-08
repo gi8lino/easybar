@@ -5,6 +5,14 @@ import IOKit.ps
 final class BatteryNativeWidget: NativeWidget {
   let rootID = "builtin_battery"
 
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.powerSourceChange.rawValue,
+      AppEvent.chargingStateChange.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
   private var timer: Timer?
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
@@ -19,9 +27,6 @@ final class BatteryNativeWidget: NativeWidget {
 
   /// Starts the widget and listens for battery-related events.
   func start() {
-    PowerEvents.shared.subscribePowerSource()
-    SystemEvents.shared.subscribeSystemWake()
-
     eventObserver.start { [weak self] payload in
       guard let self else { return }
 
@@ -150,6 +155,10 @@ extension BatteryNativeWidget {
       paddingBottom: nil,
       marginX: style.marginX,
       marginY: style.marginY,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: style.spacing,
       backgroundColor: style.backgroundColorHex,
       borderColor: style.borderColorHex,
@@ -196,6 +205,12 @@ extension BatteryNativeWidget {
       paddingRight: nil,
       paddingTop: nil,
       paddingBottom: nil,
+      marginX: nil,
+      marginY: nil,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: style.spacing,
       backgroundColor: nil,
       borderColor: nil,
@@ -231,7 +246,7 @@ extension BatteryNativeWidget {
       iconColor: nil,
       labelColor: nil,
       visible: !text.isEmpty,
-      role: nil,
+      role: .popupContent,
       receivesMouseHover: nil,
       receivesMouseClick: nil,
       receivesMouseScroll: nil,
@@ -253,6 +268,12 @@ extension BatteryNativeWidget {
       paddingRight: nil,
       paddingTop: nil,
       paddingBottom: nil,
+      marginX: nil,
+      marginY: nil,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: 4,
       backgroundColor: popup.backgroundColorHex,
       borderColor: popup.borderColorHex,
@@ -314,6 +335,12 @@ extension BatteryNativeWidget {
       paddingRight: nil,
       paddingTop: nil,
       paddingBottom: nil,
+      marginX: nil,
+      marginY: nil,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: nil,
       backgroundColor: nil,
       borderColor: nil,
@@ -541,6 +568,12 @@ extension BatteryNativeWidget {
       paddingRight: nil,
       paddingTop: nil,
       paddingBottom: nil,
+      marginX: nil,
+      marginY: nil,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: 4,
       backgroundColor: nil,
       borderColor: nil,

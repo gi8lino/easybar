@@ -4,70 +4,104 @@ final class EventManager {
 
   static let shared = EventManager()
 
+  private var luaSubscriptions = Set<String>()
+  private var nativeSubscriptions = Set<String>()
   private var activeSubscriptions = Set<String>()
 
-  /// Starts only the native event sources required by the current widget subscriptions.
+  /// Replaces the current Lua runtime event subscriptions.
+  func setLuaSubscriptions(_ subscriptions: Set<String>) {
+    luaSubscriptions = subscriptions
+    refresh()
+  }
+
+  /// Replaces the current native widget event subscriptions.
+  func setNativeSubscriptions(_ subscriptions: Set<String>) {
+    nativeSubscriptions = subscriptions
+    refresh()
+  }
+
+  /// Starts only the native event sources required by all active subscriptions.
   func start(subscriptions: Set<String>) {
-    stopAll()
+    setLuaSubscriptions(subscriptions)
+  }
 
-    activeSubscriptions = subscriptions
+  /// Stops all active native event sources and clears every subscription source.
+  func stopAll() {
+    luaSubscriptions.removeAll()
+    nativeSubscriptions.removeAll()
+    stopActiveSources()
+    activeSubscriptions.removeAll()
+  }
 
-    easybarLog.debug("required events: \(subscriptions)")
+  /// Rebuilds active event listeners from the merged Lua and native subscriptions.
+  private func refresh() {
+    let mergedSubscriptions = luaSubscriptions.union(nativeSubscriptions)
 
-    if subscriptions.contains("system_woke") {
+    stopActiveSources()
+    activeSubscriptions = mergedSubscriptions
+
+    easybarLog.debug(
+      """
+      required events merged=\(mergedSubscriptions) \
+      lua=\(luaSubscriptions) \
+      native=\(nativeSubscriptions)
+      """
+    )
+
+    if mergedSubscriptions.contains("system_woke") {
       SystemEvents.shared.subscribeSystemWake()
     }
 
-    if subscriptions.contains("sleep") {
+    if mergedSubscriptions.contains("sleep") {
       SystemEvents.shared.subscribeSleep()
     }
 
-    if subscriptions.contains("space_change") {
+    if mergedSubscriptions.contains("space_change") {
       SystemEvents.shared.subscribeSpaceChange()
     }
 
-    if subscriptions.contains("app_switch") {
+    if mergedSubscriptions.contains("app_switch") {
       SystemEvents.shared.subscribeAppSwitch()
     }
 
-    if subscriptions.contains("display_change") {
+    if mergedSubscriptions.contains("display_change") {
       SystemEvents.shared.subscribeDisplayChange()
     }
 
-    if subscriptions.contains("power_source_change")
-      || subscriptions.contains("charging_state_change")
+    if mergedSubscriptions.contains("power_source_change")
+      || mergedSubscriptions.contains("charging_state_change")
     {
       PowerEvents.shared.subscribePowerSource()
     }
 
-    if subscriptions.contains("wifi_change") {
+    if mergedSubscriptions.contains("wifi_change") {
       NetworkEvents.shared.subscribeWifi()
     }
 
-    if subscriptions.contains("network_change") {
+    if mergedSubscriptions.contains("network_change") {
       NetworkEvents.shared.subscribeNetwork()
     }
 
-    if subscriptions.contains("volume_change") || subscriptions.contains("mute_change") {
+    if mergedSubscriptions.contains("volume_change") || mergedSubscriptions.contains("mute_change")
+    {
       VolumeEvents.shared.subscribeVolume()
     }
 
-    if subscriptions.contains("minute_tick") {
+    if mergedSubscriptions.contains("minute_tick") {
       TimerEvents.shared.startMinuteTimer()
     }
 
-    if subscriptions.contains("second_tick") {
+    if mergedSubscriptions.contains("second_tick") {
       TimerEvents.shared.startSecondTimer()
     }
   }
 
-  /// Stops all active native event sources.
-  func stopAll() {
+  /// Stops every currently active native event source.
+  private func stopActiveSources() {
     TimerEvents.shared.stopAll()
     SystemEvents.shared.stopAll()
     NetworkEvents.shared.stopAll()
     PowerEvents.shared.stopAll()
     VolumeEvents.shared.stopAll()
-    activeSubscriptions.removeAll()
   }
 }

@@ -35,6 +35,7 @@ final class NativeWidgetRegistry {
     NativeGroupRegistry.shared.reload()
     widgets = makeEnabledWidgets()
     logRegisteredWidgets()
+    applyNativeEventSubscriptions()
     startWidgets()
   }
 
@@ -45,6 +46,7 @@ final class NativeWidgetRegistry {
     }
 
     widgets.removeAll()
+    EventManager.shared.setNativeSubscriptions([])
     NativeGroupRegistry.shared.clear()
   }
 
@@ -75,6 +77,16 @@ final class NativeWidgetRegistry {
   private func makeWidgetIfEnabled(_ registration: Registration) -> NativeWidget? {
     guard registration.enabled else { return nil }
     return registration.makeWidget()
+  }
+
+  /// Applies the merged native widget event subscriptions to the event manager.
+  private func applyNativeEventSubscriptions() {
+    let subscriptions = widgets.reduce(into: Set<String>()) { result, widget in
+      result.formUnion(widget.appEventSubscriptions)
+    }
+
+    easybarLog.debug("native widget event subscriptions=\(subscriptions)")
+    EventManager.shared.setNativeSubscriptions(subscriptions)
   }
 
   /// Logs the current built-in widget enablement snapshot.
