@@ -7,14 +7,14 @@ on:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: write
       actions: write
 
     env:
       BUNDLE_ID: com.gi8lino.EasyBar
-      XCODE_VERSION: "16.4"
+      XCODE_VERSION: "26"
 
     steps:
       - uses: actions/checkout@v6
