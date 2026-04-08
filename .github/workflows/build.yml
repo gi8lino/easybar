@@ -7,19 +7,36 @@ on:
 
 jobs:
   release:
-    runs-on: macos-latest
+    runs-on: macos-14
     permissions:
       contents: write
       actions: write
 
     env:
       BUNDLE_ID: com.gi8lino.EasyBar
+      DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
 
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Select pinned Xcode
+        shell: bash
+        run: |
+          sudo xcode-select -s "${DEVELOPER_DIR}"
+          xcode-select -p
+
+      - name: Print toolchain info
+        shell: bash
+        run: |
+          sw_vers
+          uname -a
+          xcodebuild -version
+          swift --version
+          xcrun --show-sdk-path
+          xcrun --show-sdk-version
 
       - name: Derive version from tag
         id: version
@@ -33,6 +50,11 @@ jobs:
 
           echo "Tag: $TAG"
           echo "Version: $VERSION"
+
+      - name: Clean build directories
+        shell: bash
+        run: |
+          rm -rf .build dist
 
       - name: Build universal release artifact
         shell: bash
@@ -58,10 +80,25 @@ jobs:
           test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
           plutil -p "dist/EasyBar.app/Contents/Info.plist"
 
+      - name: Print build fingerprints
+        shell: bash
+        run: |
+          shasum -a 256 "dist/EasyBar.app/Contents/MacOS/EasyBar"
+          shasum -a 256 "dist/EasyBar.app/Contents/Info.plist"
+          shasum -a 256 "dist/EasyBar.app/EasyBar_EasyBar.bundle/easybar_api.lua"
+          codesign -dv --verbose=4 "dist/EasyBar.app" 2>&1 || true
+
       - name: Print package checksum
         shell: bash
         run: |
           shasum -a 256 "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EasyBar-${{ steps.version.outputs.version }}
+          path: dist/EasyBar-${{ steps.version.outputs.version }}.zip
+          if-no-files-found: error
 
       - name: Create release
         env:
