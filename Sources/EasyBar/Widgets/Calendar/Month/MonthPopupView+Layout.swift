@@ -166,7 +166,7 @@ extension NativeMonthCalendarPopupView {
         Spacer()
       }
       .frame(maxWidth: .infinity)
-      .padding(.top, 6)
+      .padding(.top, 26)
 
       HStack(spacing: 18) {
         Button(action: showPreviousMonth) {
