@@ -144,66 +144,75 @@ extension NativeMonthCalendarPopupView {
 extension NativeMonthCalendarPopupView {
   /// Builds the popup month header.
   var headerView: some View {
-    VStack(spacing: 4) {
-      HStack {
-        Spacer()
+    VStack(spacing: 10) {
+      monthTitleRowView
+      monthControlsRowView
+    }
+  }
 
-        Button(action: openYearPicker) {
-          HStack(spacing: 8) {
-            Text(visibleMonthTitle)
-              .font(.system(size: 18, weight: .semibold))
-              .lineLimit(1)
-              .minimumScaleFactor(0.8)
+  /// Builds the centered month-title row with a stable header height.
+  private var monthTitleRowView: some View {
+    HStack {
+      Spacer()
 
-            Image(systemName: "chevron.down")
-              .font(.system(size: 10, weight: .semibold))
-          }
-          .foregroundStyle(color(config.headerTextColorHex))
-          .frame(maxWidth: .infinity, alignment: .center)
+      Button(action: openYearPicker) {
+        HStack(spacing: 8) {
+          Text(visibleMonthTitle)
+            .font(.system(size: 18, weight: .semibold))
+            .lineLimit(1)
+
+          Image(systemName: "chevron.down")
+            .font(.system(size: 10, weight: .semibold))
         }
-        .buttonStyle(.plain)
-
-        Spacer()
+        .foregroundStyle(color(config.headerTextColorHex))
+        .frame(maxWidth: .infinity, alignment: .center)
       }
-      .frame(maxWidth: .infinity)
-      .padding(.top, 26)
+      .buttonStyle(.plain)
 
-      HStack(spacing: 18) {
-        Button(action: showPreviousMonth) {
-          Text("‹")
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(color(config.headerTextColorHex))
-            .frame(minWidth: 18)
-        }
-        .buttonStyle(.plain)
+      Spacer()
+    }
+    .frame(maxWidth: .infinity, minHeight: 10, alignment: .center)
+    .padding(.top, 10)
+    .padding(.bottom, 2)
+  }
 
-        Button(action: showToday) {
-          HStack(spacing: 4) {
-            let icon = config.todayButtonIcon.trimmingCharacters(in: .whitespacesAndNewlines)
+  /// Builds the month navigation and today controls row.
+  private var monthControlsRowView: some View {
+    HStack(spacing: 18) {
+      Button(action: showPreviousMonth) {
+        Text("‹")
+          .font(.system(size: 17, weight: .semibold))
+          .foregroundStyle(color(config.headerTextColorHex))
+          .frame(minWidth: 18)
+      }
+      .buttonStyle(.plain)
 
-            if !icon.isEmpty {
-              Text(icon)
-                .font(Theme.iconFont(size: 11))
-                .foregroundStyle(color(config.headerTextColorHex))
-            }
+      Button(action: showToday) {
+        HStack(spacing: 4) {
+          let icon = config.todayButtonIcon.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            Text(config.todayButtonTitle)
-              .font(.system(size: 12, weight: .medium))
+          if !icon.isEmpty {
+            Text(icon)
+              .font(Theme.iconFont(size: 11))
               .foregroundStyle(color(config.headerTextColorHex))
           }
-        }
-        .buttonStyle(.plain)
 
-        Button(action: showNextMonth) {
-          Text("›")
-            .font(.system(size: 17, weight: .semibold))
+          Text(config.todayButtonTitle)
+            .font(.system(size: 12, weight: .medium))
             .foregroundStyle(color(config.headerTextColorHex))
-            .frame(minWidth: 18)
         }
-        .buttonStyle(.plain)
       }
-      .frame(maxWidth: .infinity, alignment: .center)
+      .buttonStyle(.plain)
+
+      Button(action: showNextMonth) {
+        Text("›")
+          .font(.system(size: 17, weight: .semibold))
+          .foregroundStyle(color(config.headerTextColorHex))
+          .frame(minWidth: 18)
+      }
+      .buttonStyle(.plain)
     }
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   /// Shows the current month and selects today.
