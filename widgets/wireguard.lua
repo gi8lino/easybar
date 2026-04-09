@@ -7,20 +7,6 @@ local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function debug_shell(command)
-	local pipe = io.popen(command .. " 2>&1")
-	if not pipe then
-		easybar.log(easybar.level.error, "debug shell popen failed", command)
-		return ""
-	end
-
-	local output = pipe:read("*a") or ""
-	pipe:close()
-
-	easybar.log(easybar.level.info, "command", command, "output", trim(output))
-	return output
-end
-
 local function quote(s)
 	return string.format("%q", s or "")
 end
@@ -37,6 +23,49 @@ local function status_label(connected)
 	return "Inactive"
 end
 
+local function run_shell(command)
+	local pipe = io.popen(command .. " 2>&1")
+	if not pipe then
+		easybar.log(easybar.level.error, "shell popen failed", command)
+		return nil, "popen failed"
+	end
+
+	local output = pipe:read("*a") or ""
+	local ok, _, code = pipe:close()
+
+	local trimmed = trim(output)
+
+	if ok then
+		if trimmed ~= "" then
+			easybar.log(easybar.level.trace, "shell ok", command, trimmed)
+		else
+			easybar.log(easybar.level.trace, "shell ok", command, "<empty>")
+		end
+		return trimmed, nil
+	end
+
+	easybar.log(
+		easybar.level.warn,
+		"shell command failed",
+		command,
+		"code",
+		tostring(code),
+		"output",
+		trimmed ~= "" and trimmed or "<empty>"
+	)
+	return trimmed, code or "command failed"
+end
+
+local function current_status(vpn_name)
+	local name = quote(vpn_name)
+	local output, err = run_shell("scutil --nc status " .. name)
+	if err ~= nil then
+		return nil, err
+	end
+
+	return (output or ""):lower(), nil
+end
+
 local function apply_network_event(event)
 	if event == nil or event.network == nil then
 		return
@@ -44,7 +73,13 @@ local function apply_network_event(event)
 
 	local value = event.network.primary_interface_is_tunnel
 	if value ~= nil then
-		state.wireguard_connected = value == true
+		local connected = value == true
+		if state.wireguard_connected ~= connected then
+			state.wireguard_connected = connected
+			easybar.log(easybar.level.debug, "wireguard tunnel state changed", connected and "active" or "inactive")
+		else
+			state.wireguard_connected = connected
+		end
 	end
 end
 
@@ -55,14 +90,22 @@ local function toggle_wireguard()
 		return
 	end
 
+	local status, err = current_status(vpn_name)
+	if err ~= nil or status == nil then
+		easybar.log(easybar.level.warn, "failed to read wireguard status", vpn_name)
+		return
+	end
+
+	easybar.log(easybar.level.debug, "wireguard status", vpn_name, status)
+
 	local name = quote(vpn_name)
-	local status = trim(debug_shell("scutil --nc status " .. name)):lower()
-	easybar.log(easybar.level.info, "vpn_name", vpn_name, "status", status)
 
 	if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
-		debug_shell("scutil --nc stop " .. name)
+		easybar.log(easybar.level.info, "stopping wireguard", vpn_name)
+		run_shell("scutil --nc stop " .. name)
 	else
-		debug_shell("scutil --nc start " .. name)
+		easybar.log(easybar.level.info, "starting wireguard", vpn_name)
+		run_shell("scutil --nc start " .. name)
 	end
 end
 
@@ -133,8 +176,6 @@ easybar.add("item", "wireguard_popup_label", {
 
 easybar.subscribe("wireguard", {
 	easybar.events.network_change,
-	easybar.events.wifi_change,
-	easybar.events.minute_tick,
 	easybar.events.forced,
 }, function(event)
 	apply_network_event(event)
