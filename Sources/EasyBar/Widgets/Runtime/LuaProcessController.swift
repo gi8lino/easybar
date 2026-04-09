@@ -2,7 +2,7 @@ import Foundation
 
 /// Tracks the process group ID of the running Lua runtime process.
 /// This lets EasyBar terminate the runtime and any child processes it spawned.
-private var easyBarLuaProcessGroupPID: pid_t = 0
+var easyBarLuaProcessGroupPID: pid_t = 0
 
 /// Terminates the Lua runtime process group.
 ///
@@ -29,13 +29,13 @@ private func easyBarSignalHandler(_ signal: Int32) {
 /// Owns Lua process lifecycle and process-group shutdown behavior.
 final class LuaProcessController {
 
-  private struct LaunchContext {
+  struct LaunchContext {
     let runtimePath: String
     let luaPath: String
     let widgetsPath: String
   }
 
-  private struct LaunchPipes {
+  struct LaunchPipes {
     let input = Pipe()
     let output = Pipe()
     let error = Pipe()
@@ -98,65 +98,5 @@ final class LuaProcessController {
     Darwin.signal(SIGHUP, easyBarSignalHandler)
     Darwin.signal(SIGABRT, easyBarSignalHandler)
     Darwin.signal(SIGQUIT, easyBarSignalHandler)
-  }
-
-  /// Resolves the launch inputs for one Lua runtime process.
-  private func launchContext() -> LaunchContext? {
-    guard let runtimePath = resolvedRuntimePath() else { return nil }
-
-    return LaunchContext(
-      runtimePath: runtimePath,
-      luaPath: Config.shared.luaPath,
-      widgetsPath: Config.shared.widgetsPath
-    )
-  }
-
-  /// Resolves the bundled Lua runtime script path.
-  private func resolvedRuntimePath() -> String? {
-    guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
-      easybarLog.error("runtime.lua not found")
-      return nil
-    }
-
-    return runtime.path
-  }
-
-  /// Logs one Lua runtime launch request.
-  private func logLaunch(context: LaunchContext) {
-    easybarLog.debug("starting lua runtime")
-    easybarLog.debug("lua binary: \(context.luaPath)")
-    easybarLog.debug("lua script: \(context.runtimePath)")
-    easybarLog.debug("widgets path: \(context.widgetsPath)")
-  }
-
-  /// Builds one configured Lua runtime process.
-  private func makeProcess(context: LaunchContext, pipes: LaunchPipes) -> Process {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: context.luaPath)
-    process.arguments = [context.runtimePath, context.widgetsPath]
-    process.standardInput = pipes.input
-    process.standardOutput = pipes.output
-    process.standardError = pipes.error
-    process.terminationHandler = handleTermination
-    return process
-  }
-
-  /// Handles Lua process termination and related cleanup logging.
-  private func handleTermination(process: Process) {
-    logTerminationStatus(process.terminationStatus)
-
-    if easyBarLuaProcessGroupPID == process.processIdentifier {
-      easyBarLuaProcessGroupPID = 0
-    }
-  }
-
-  /// Logs one Lua runtime termination status.
-  private func logTerminationStatus(_ status: Int32) {
-    guard status != 0 else {
-      easybarLog.info("lua runtime terminated status=\(status)")
-      return
-    }
-
-    easybarLog.warn("lua runtime terminated status=\(status)")
   }
 }
