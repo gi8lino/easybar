@@ -1,49 +1,6 @@
 import Darwin
 import Foundation
 
-/// Supported log levels ordered from least to most verbose.
-public enum ProcessLogLevel: Int, CaseIterable, Sendable {
-  case error = 0
-  case warn = 1
-  case info = 2
-  case debug = 3
-  case trace = 4
-
-  /// Returns the canonical uppercase label used in log output.
-  public var label: String {
-    switch self {
-    case .error:
-      return "ERROR"
-    case .warn:
-      return "WARN"
-    case .info:
-      return "INFO"
-    case .debug:
-      return "DEBUG"
-    case .trace:
-      return "TRACE"
-    }
-  }
-
-  /// Parses one user-facing level string.
-  public init?(string: String) {
-    switch string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-    case "error":
-      self = .error
-    case "warn", "warning":
-      self = .warn
-    case "info":
-      self = .info
-    case "debug":
-      self = .debug
-    case "trace":
-      self = .trace
-    default:
-      return nil
-    }
-  }
-}
-
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
   private static let formatter: DateFormatter = {
@@ -85,7 +42,7 @@ public final class ProcessLogger {
     return fileLoggingPathValue
   }
 
-  /// Updates the minimum enabled log level.
+  /// Updates the current minimum log level.
   public func setMinimumLevel(_ level: ProcessLogLevel) {
     lock.lock()
     minimumLevelFlag = level
@@ -131,40 +88,45 @@ public final class ProcessLogger {
       let handle = try FileHandle(forWritingTo: url)
       try handle.seekToEnd()
       fileHandle = handle
-      writeUnlocked(level: .info, message: "file logging enabled path=\(url.path)", stream: stdout)
+      writeUnlocked(level: "INFO", message: "file logging enabled path=\(url.path)", stream: stdout)
     } catch {
       fileLoggingEnabledFlag = false
       writeUnlocked(
-        level: .warn,
+        level: "WARN",
         message: "failed to open log file at \(path): \(error)",
         stream: stderr
       )
     }
   }
 
-  /// Writes one trace message when the minimum level allows it.
+  /// Writes one trace message when trace logging is enabled.
   public func trace(_ message: String) {
-    writeIfEnabled(level: .trace, message: message, stream: stdout)
+    guard shouldLog(.trace) else { return }
+    write(level: "TRACE", message: message, stream: stdout)
   }
 
-  /// Writes one debug message when the minimum level allows it.
+  /// Writes one debug message when debug or trace logging is enabled.
   public func debug(_ message: String) {
-    writeIfEnabled(level: .debug, message: message, stream: stdout)
+    guard shouldLog(.debug) else { return }
+    write(level: "DEBUG", message: message, stream: stdout)
   }
 
-  /// Writes one info message when the minimum level allows it.
+  /// Writes one info message.
   public func info(_ message: String) {
-    writeIfEnabled(level: .info, message: message, stream: stdout)
+    guard shouldLog(.info) else { return }
+    write(level: "INFO", message: message, stream: stdout)
   }
 
-  /// Writes one warning message when the minimum level allows it.
+  /// Writes one warning message.
   public func warn(_ message: String) {
-    writeIfEnabled(level: .warn, message: message, stream: stderr)
+    guard shouldLog(.warn) else { return }
+    write(level: "WARN", message: message, stream: stderr)
   }
 
-  /// Writes one error message when the minimum level allows it.
+  /// Writes one error message.
   public func error(_ message: String) {
-    writeIfEnabled(level: .error, message: message, stream: stderr)
+    guard shouldLog(.error) else { return }
+    write(level: "ERROR", message: message, stream: stderr)
   }
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
@@ -178,20 +140,20 @@ public final class ProcessLogger {
     writeFileUnlocked(message)
   }
 
-  private func writeIfEnabled(
-    level: ProcessLogLevel,
-    message: String,
-    stream: UnsafeMutablePointer<FILE>?
-  ) {
+  private func shouldLog(_ level: ProcessLogLevel) -> Bool {
     lock.lock()
     defer { lock.unlock() }
+    return minimumLevelFlag.allows(level)
+  }
 
-    guard level.rawValue <= minimumLevelFlag.rawValue else { return }
+  private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
+    lock.lock()
+    defer { lock.unlock() }
     writeUnlocked(level: level, message: message, stream: stream)
   }
 
   private func writeUnlocked(
-    level: ProcessLogLevel,
+    level: String,
     message: String,
     stream: UnsafeMutablePointer<FILE>?
   ) {
@@ -201,8 +163,8 @@ public final class ProcessLogger {
     writeFileUnlocked(line)
   }
 
-  private func formattedLine(level: ProcessLogLevel, message: String) -> String {
-    "[\(Self.formatter.string(from: Date()))] \(label) [\(level.label)] \(message)"
+  private func formattedLine(level: String, message: String) -> String {
+    "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
   }
 
   private func writeFileUnlocked(_ line: String) {
@@ -213,7 +175,7 @@ public final class ProcessLogger {
     } catch {
       fileLoggingEnabledFlag = false
       fputs(
-        formattedLine(level: .warn, message: "failed writing log file: \(error)") + "\n",
+        formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n",
         stderr
       )
       fflush(stderr)
