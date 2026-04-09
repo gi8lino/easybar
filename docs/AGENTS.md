@@ -5,7 +5,9 @@ EasyBar uses two helper processes:
 - `easybar-calendar-agent`
 - `easybar-network-agent`
 
-Both run out of process, listen on a local Unix socket, and exchange newline-delimited JSON messages with EasyBar.
+Both run out of process, listen on a local Unix socket, and exchange newline-delimited JSON messages with clients.
+
+The main client is EasyBar itself, but the network agent protocol is also reused by standalone clients such as `wifi-snitch`.
 
 ## Why agents exist
 
@@ -75,6 +77,8 @@ Default sockets:
 
 EasyBar connects to those sockets directly.
 
+Other local clients can also connect when they speak the same protocol.
+
 ## Common protocol shape
 
 Both agents support the same basic command flow:
@@ -120,6 +124,28 @@ Mutation responses use:
 - `deleted`
 - `error`
 
+## How EasyBar uses agent data
+
+EasyBar keeps long-lived subscriptions open to the agents for normal runtime updates.
+
+A manual `easybar --refresh` does not reload the app config and does not restart the agents.
+Instead, it tells the already running EasyBar process to refresh using the currently loaded config.
+
+In practice, that means EasyBar can trigger fresh agent reads and republish updated UI state without rebuilding the whole app.
+
+`easybar --reload-config` is different:
+
+- it reloads `config.toml` from disk
+- it rebuilds EasyBar runtime state from the new config
+- it recreates agent-backed runtime pieces using the updated settings
+
+So the distinction is:
+
+- `refresh`
+  refresh current runtime state and pull fresh data
+- `reload-config`
+  rebuild runtime state from a newly loaded config file
+
 ---
 
 # Calendar Agent
@@ -135,7 +161,7 @@ It is responsible for:
 - separating travel time from regular alerts
 - tagging holiday-calendar events for UI decisions
 - creating, updating, and deleting events
-- pushing snapshots to EasyBar subscribers
+- pushing snapshots to subscribers
 
 Calendar data exposed by the agent includes:
 
@@ -379,6 +405,12 @@ Network data exposed by the agent includes:
 
 It is not responsible for UI rendering decisions like Wi-Fi bar mapping.
 
+The reusable implementation behind this protocol lives in `EasyBarNetworkAgentCore`.
+That core is used by:
+
+- `EasyBarNetworkAgent`
+- the standalone `wifi-snitch` project
+
 ## Network requests
 
 Request shape:
@@ -437,6 +469,8 @@ Field value types:
   auth and reachability flags
 - integers
   RSSI, noise, SNR, link quality, channel, tx rate
+- doubles
+  numeric values that are not represented as integers
 - string arrays
   DNS servers and active tunnel interfaces
 

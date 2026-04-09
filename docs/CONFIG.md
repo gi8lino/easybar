@@ -63,6 +63,24 @@ For the network agent:
 - `allow_unauthorized_non_sensitive_fields = true`
   non-Wi-Fi fields may still be returned without location access
 
+Other common network-agent config:
+
+```toml
+[agents.network]
+enabled = true
+socket_path = "/tmp/EasyBar/network-agent.sock"
+refresh_interval_seconds = 60
+allow_unauthorized_non_sensitive_fields = false
+```
+
+Calendar-agent socket config:
+
+```toml
+[agents.calendar]
+enabled = true
+socket_path = "/tmp/EasyBar/calendar-agent.sock"
+```
+
 ## Native groups
 
 EasyBar supports native built-in groups in `config.toml`.

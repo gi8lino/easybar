@@ -154,6 +154,42 @@ This is why reload behavior is predictable:
 - no old subscriptions left behind
 - no stale popup trees left in the store
 
+## Refresh behavior
+
+It is useful to distinguish three different things:
+
+- normal runtime events
+- a manual refresh
+- a Lua runtime reload
+
+A normal event is something like `wifi_change`, `network_change`, `minute_tick`, or `mouse.clicked`.
+
+A manual refresh is triggered by EasyBar itself, for example through:
+
+```bash
+easybar --refresh
+```
+
+That refresh:
+
+- uses the currently loaded config
+- pulls fresh state through the already running app and agent clients
+- emits refresh-style events so Lua widgets and native widgets can update immediately
+- does not reread `config.toml` from disk
+- does not restart the Lua process
+
+A Lua runtime reload is different.
+That fully shuts the Lua side down and starts it again, which resets widget runtime state.
+
+So the intended distinction is:
+
+- `refresh`
+  refresh current runtime state
+- `reload-config`
+  reload config and rebuild runtime state
+- Lua runtime restart
+  restart the Lua process itself
+
 ## Widget loading
 
 Lua bootstrap starts in [runtime.lua](./Sources/EasyBar/Lua/runtime.lua).
@@ -222,11 +258,12 @@ Examples:
 
 - system wake
 - sleep
-- Wi‑Fi change
+- Wi-Fi change
 - network change
 - volume change
 - widget mouse events
 - slider events
+- manual refresh
 
 `EventBus` does two things with each payload:
 
@@ -271,7 +308,16 @@ Examples:
 - `second_tick`
 - `forced`
 
-### 4. Lua normalizes and dispatches
+### 4. Manual refresh
+
+When EasyBar receives a manual refresh request, it can emit refresh-related events into the same event pipeline.
+
+That means Lua widgets participate in refreshes through the same normalized event boundary they already use for normal runtime updates.
+
+This is one reason refresh is not the same thing as restarting the Lua runtime:
+the event pipeline stays alive and the existing widget process keeps running.
+
+### 5. Lua normalizes and dispatches
 
 Lua receives one stdin line at a time in [runtime.lua](./Sources/EasyBar/Lua/runtime.lua).
 
@@ -444,6 +490,7 @@ Touch:
   - stdin JSON in
   - stdout JSON out
   - stderr logs
+
 - If you change the public Lua API, also update:
   - the shipped stub
   - the widget docs

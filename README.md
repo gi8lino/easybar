@@ -81,7 +81,7 @@ EasyBar uses two small helper agents:
 - `easybar-calendar-agent`
   owns `EventKit`, requests Calendar permission, watches calendar changes, and pushes cached snapshots to EasyBar over a local Unix socket
 - `easybar-network-agent`
-  owns Wi-Fi and network state that depends on location permission, watches network changes, and pushes snapshots to EasyBar over a local Unix socket
+  owns Wi-Fi and network state that depends on location permission, watches network changes, and pushes field updates to EasyBar over a local Unix socket
 
 This keeps permission-sensitive APIs out of the main UI process and makes those widgets more reliable.
 
@@ -110,11 +110,13 @@ More details live in [docs/AGENTS.md](./docs/AGENTS.md).
 
 EasyBar exposes one local Unix control socket for `easybar` and other clients.
 
-Commands are sent as typed JSON requests, not raw strings:
+Commands are sent as typed JSON requests, not raw strings.
+
+Example request shape:
 
 ```json
 {
-  "command": "refresh"
+  "command": "<typed command name>"
 }
 ```
 
@@ -136,6 +138,26 @@ Supported commands:
 - `reload_config`
 
 `easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
+
+### Refresh vs reload-config
+
+EasyBar exposes both a refresh action and a config reload action because they solve different problems.
+
+`easybar --refresh`:
+
+- refreshes the bar and widgets using the currently loaded config
+- pulls fresh data from agents
+- re-emits refresh-style state so widgets can update immediately
+- does not reread `config.toml` from disk
+
+`easybar --reload-config`:
+
+- reloads `config.toml` from disk
+- rebuilds EasyBar using the new config
+- reapplies native widgets and Lua runtime state against the updated configuration
+
+Use `--refresh` when the config is already correct and you want fresh UI state or fresh agent-backed data.
+Use `--reload-config` when you changed the config file itself.
 
 ### AeroSpace layout mode example
 
@@ -374,17 +396,19 @@ If a reload is rejected, EasyBar keeps the last valid config and logs the parse 
 
 #### Lua widgets stop updating
 
-Restart the Lua runtime:
+First try a normal refresh:
 
 ```bash
 easybar --refresh
 ```
 
-or use the bar context menu item:
+That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and it does not mean “restart Lua runtime”.
+
+If you specifically want to restart the Lua side, use the bar context menu item:
 
 - `Restart Lua Runtime`
 
-If that is not enough, restart the app:
+If a normal refresh is not enough, restart the whole app:
 
 ```bash
 brew services restart gi8lino/tap/easybar

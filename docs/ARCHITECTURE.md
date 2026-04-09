@@ -19,7 +19,7 @@ EasyBar is split into a few focused targets:
 - `EasyBarNetworkAgent`
   helper app that owns Wi-Fi and network observation
 - `EasyBarNetworkAgentCore`
-  shared network-agent logic extracted from the helper app target
+  shared reusable network-agent logic used by `EasyBarNetworkAgent` and also by the standalone `wifi-snitch` project
 
 At runtime, the system looks like this:
 
@@ -218,13 +218,6 @@ This keeps policy and rendering separate:
 
 - the agent gathers and exposes raw network state
 - EasyBar decides how to display it
-
-Then I would document it that way directly.
-
-The better description is:
-
-- `EasyBarNetworkAgentCore`
-  shared network-agent implementation used by `EasyBarNetworkAgent` and also reused by the standalone `wifi-snitch` project
 
 ## Network agent core
 
