@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import SwiftUI
 
@@ -11,8 +12,7 @@ struct ConfigSnapshot {
 
   struct Logging {
     let enabled: Bool
-    let debugEnabled: Bool
-    let traceEnabled: Bool
+    let level: ProcessLogLevel
     let directory: String
   }
 

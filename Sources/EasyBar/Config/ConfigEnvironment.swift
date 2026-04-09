@@ -8,13 +8,8 @@ extension Config {
     expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
   }
 
-  /// Returns the debug logging override from the environment when present.
-  func environmentDebugOverride() -> Bool? {
-    boolEnvironmentValue(named: "EASYBAR_DEBUG")
-  }
-
-  /// Returns the trace logging override from the environment when present.
-  func environmentTraceOverride() -> Bool? {
-    boolEnvironmentValue(named: "EASYBAR_TRACE")
+  /// Returns the log-level override from the environment when present.
+  func environmentLogLevelOverride() -> ProcessLogLevel? {
+    ProcessLogLevel.normalized(stringEnvironmentValue(named: "EASYBAR_LOG_LEVEL"))
   }
 }

@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import TOMLKit
 
@@ -47,6 +48,20 @@ extension Config {
       spacing: try optionalNumber(table["spacing"], path: "\(path).spacing") ?? fallback.spacing,
       opacity: try optionalNumber(table["opacity"], path: "\(path).opacity") ?? fallback.opacity
     )
+  }
+
+  /// Parses one configured minimum log level.
+  func normalizedLogLevel(_ value: String) -> ProcessLogLevel {
+    ProcessLogLevel.normalized(value) ?? .info
+  }
+
+  /// Returns the legacy boolean logging override mapped into a log level.
+  func legacyConfigLogLevel(from table: TOMLTable) -> ProcessLogLevel? {
+    guard let debugEnabled = table["debug"]?.bool else {
+      return nil
+    }
+
+    return debugEnabled ? .debug : .info
   }
 
   /// Parses one battery color mode.

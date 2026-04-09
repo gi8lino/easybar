@@ -26,7 +26,7 @@ public final class NetworkAgentController {
       componentName: config.componentName,
       socketPath: config.socketPath,
       appVersion: config.appVersion,
-      allowUnauthorizedFieldsWithoutLocation: config.allowUnauthorizedFieldsWithoutLocation,
+      allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedFieldsWithoutLocation,
       logger: logger
     )
   }
@@ -69,10 +69,10 @@ public final class NetworkAgentController {
         socketSummary:
           "socket path=\(config.socketPath) refresh_interval_seconds=\(config.refreshIntervalSeconds) allow_unauthorized_fields_without_location=\(config.allowUnauthorizedFieldsWithoutLocation)",
         loggingSummary:
-          "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) trace=\(logger.traceEnabled) path=\(logger.fileLoggingPath)"
+          "logging enabled=\(logger.fileLoggingEnabled) level=\(logger.minimumLevel.rawValue) path=\(logger.fileLoggingPath)"
       ),
       write: logger.info
     )
-    logger.info("debug logging=\(logger.debugEnabled) trace logging=\(logger.traceEnabled)")
+    logger.info("log level=\(logger.minimumLevel.rawValue)")
   }
 }

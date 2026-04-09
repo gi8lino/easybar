@@ -82,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Configures file logging from the current app config.
   private func configureLogging() {
     easybarLog.configureRuntimeLogging(
-      debugEnabled: Config.shared.environmentDebugOverride() ?? Config.shared.loggingDebugEnabled,
+      minimumLevel: Config.shared.loggingLevel,
       fileLoggingEnabled: Config.shared.loggingEnabled,
       fileLoggingPath: easyBarLogPath(in: Config.shared.loggingDirectory)
     )
@@ -179,7 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configPath: Config.shared.configPath,
         socketSummary: "socket path=\(SharedRuntimeConfig.current.easyBarSocketPath)",
         loggingSummary:
-          "logging enabled=\(easybarLog.fileLoggingEnabled) debug=\(easybarLog.debugEnabled) path=\(easybarLog.fileLoggingPath)"
+          "logging enabled=\(easybarLog.fileLoggingEnabled) level=\(easybarLog.minimumLevel.rawValue) path=\(easybarLog.fileLoggingPath)"
       ),
       write: easybarLog.info
     )
@@ -226,12 +226,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
     let configOverride = env["EASYBAR_CONFIG_PATH"] ?? ""
-    let debug = env["EASYBAR_DEBUG"] ?? ""
+    let logLevel = env["EASYBAR_LOG_LEVEL"] ?? ""
 
     easybarLog.info(
       "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)"
     )
-    easybarLog.info("environment EASYBAR_DEBUG=\(debug.isEmpty ? "<unset>" : debug)")
+    easybarLog.info(
+      "environment EASYBAR_LOG_LEVEL=\(logLevel.isEmpty ? "<unset>" : logLevel)"
+    )
   }
 
   /// Logs whether required custom fonts are available at runtime.

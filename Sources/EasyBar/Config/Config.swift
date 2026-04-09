@@ -17,8 +17,7 @@ final class Config {
 
   struct LoggingSection {
     var enabled: Bool
-    var debugEnabled: Bool
-    var traceEnabled: Bool
+    var level: ProcessLogLevel
     var directory: String
   }
 
@@ -68,14 +67,19 @@ final class Config {
     set { loggingSection.enabled = newValue }
   }
 
+  var loggingLevel: ProcessLogLevel {
+    get { loggingSection.level }
+    set { loggingSection.level = newValue }
+  }
+
   var loggingDebugEnabled: Bool {
-    get { loggingSection.debugEnabled }
-    set { loggingSection.debugEnabled = newValue }
+    get { loggingSection.level.allows(.debug) }
+    set { loggingSection.level = newValue ? .debug : .info }
   }
 
   var loggingTraceEnabled: Bool {
-    get { loggingSection.traceEnabled }
-    set { loggingSection.traceEnabled = newValue }
+    get { loggingSection.level.allows(.trace) }
+    set { loggingSection.level = newValue ? .trace : .info }
   }
 
   var loggingDirectory: String {
@@ -145,8 +149,7 @@ final class Config {
     )
     loggingSection = .init(
       enabled: false,
-      debugEnabled: false,
-      traceEnabled: false,
+      level: .info,
       directory: ""
     )
     calendarAgentSection = .init(
@@ -230,5 +233,4 @@ final class Config {
     builtinTime = .default
     builtinDate = .default
   }
-
 }

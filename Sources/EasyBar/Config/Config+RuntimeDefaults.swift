@@ -13,6 +13,7 @@ extension Config {
     appSection.lockDirectory = runtime.lockDirectory
 
     loggingSection.directory = runtime.loggingDirectory
+    loggingSection.level = runtime.loggingLevel
 
     calendarAgentSection.socketPath = runtime.calendarAgentSocketPath
 
@@ -40,8 +41,7 @@ extension Config {
   /// Restores logging defaults.
   func resetLoggingDefaults() {
     loggingSection.enabled = false
-    loggingSection.debugEnabled = false
-    loggingSection.traceEnabled = false
+    loggingSection.level = .info
   }
 
   /// Restores agent defaults.

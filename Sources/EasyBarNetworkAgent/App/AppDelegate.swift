@@ -14,8 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPr
     let runtimeConfig = SharedRuntimeConfig.current
 
     logger.configureRuntimeLogging(
-      debugEnabled: runtimeConfig.loggingDebugEnabled,
-      traceEnabled: runtimeConfig.loggingTraceEnabled,
+      minimumLevel: runtimeConfig.loggingLevel,
       fileLoggingEnabled: runtimeConfig.loggingEnabled,
       fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
         .appendingPathComponent("network-agent.out")

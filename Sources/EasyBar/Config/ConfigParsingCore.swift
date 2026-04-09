@@ -38,12 +38,16 @@ extension Config {
       loggingEnabled = try requiredBool(value, path: "logging.enabled")
     }
 
-    if let value = logging["debug"] {
-      loggingDebugEnabled = try requiredBool(value, path: "logging.debug")
+    if let value = logging["level"] {
+      loggingLevel = normalizedLogLevel(
+        try requiredString(value, path: "logging.level")
+      )
+    } else if let legacyLevel = legacyConfigLogLevel(from: logging) {
+      loggingLevel = legacyLevel
     }
 
-    if let value = logging["trace"] {
-      loggingTraceEnabled = try requiredBool(value, path: "logging.trace")
+    if let envLevel = environmentLogLevelOverride() {
+      loggingLevel = envLevel
     }
 
     if let value = logging["directory"] {

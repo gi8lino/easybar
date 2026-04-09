@@ -1,3 +1,5 @@
+import EasyBarShared
+
 extension Config {
   /// Captures the current config state.
   func snapshot() -> ConfigSnapshot {
@@ -10,8 +12,7 @@ extension Config {
       ),
       logging: .init(
         enabled: loggingSection.enabled,
-        debugEnabled: loggingSection.debugEnabled,
-        traceEnabled: loggingSection.traceEnabled,
+        level: loggingSection.level,
         directory: loggingSection.directory
       ),
       calendarAgent: .init(
@@ -66,8 +67,7 @@ extension Config {
 
     loggingSection = .init(
       enabled: snapshot.logging.enabled,
-      debugEnabled: snapshot.logging.debugEnabled,
-      traceEnabled: snapshot.logging.traceEnabled,
+      level: snapshot.logging.level,
       directory: snapshot.logging.directory
     )
 

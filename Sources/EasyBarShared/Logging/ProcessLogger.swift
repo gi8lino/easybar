@@ -15,27 +15,30 @@ public final class ProcessLogger {
   private let label: String
   private let lock = NSLock()
   private var fileHandle: FileHandle?
-  private var debugEnabledFlag: Bool
-  private var traceEnabledFlag: Bool
+  private var minimumLevelFlag: ProcessLogLevel
   private var fileLoggingEnabledFlag = false
   private var fileLoggingPathValue = ""
 
-  public init(label: String, debugEnabled: Bool = false, traceEnabled: Bool = false) {
+  public init(label: String, minimumLevel: ProcessLogLevel = .info) {
     self.label = label
-    debugEnabledFlag = debugEnabled
-    traceEnabledFlag = traceEnabled
+    minimumLevelFlag = minimumLevel
   }
 
+  /// Returns the current minimum enabled log level.
+  public var minimumLevel: ProcessLogLevel {
+    lock.lock()
+    defer { lock.unlock() }
+    return minimumLevelFlag
+  }
+
+  /// Compatibility accessor for existing debug-oriented call sites.
   public var debugEnabled: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return debugEnabledFlag || traceEnabledFlag
+    minimumLevel.allows(.debug)
   }
 
+  /// Compatibility accessor for existing trace-oriented call sites.
   public var traceEnabled: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return traceEnabledFlag
+    minimumLevel.allows(.trace)
   }
 
   public var fileLoggingEnabled: Bool {
@@ -50,29 +53,30 @@ public final class ProcessLogger {
     return fileLoggingPathValue
   }
 
-  /// Updates the current debug logging flag.
+  /// Updates the current minimum log level.
+  public func setMinimumLevel(_ level: ProcessLogLevel) {
+    lock.lock()
+    minimumLevelFlag = level
+    lock.unlock()
+  }
+
+  /// Compatibility helper that maps debug on/off into a minimum log level.
   public func setDebugEnabled(_ enabled: Bool) {
-    lock.lock()
-    debugEnabledFlag = enabled
-    lock.unlock()
+    setMinimumLevel(enabled ? .debug : .info)
   }
 
-  /// Updates the current trace logging flag.
+  /// Compatibility helper that maps trace on/off into a minimum log level.
   public func setTraceEnabled(_ enabled: Bool) {
-    lock.lock()
-    traceEnabledFlag = enabled
-    lock.unlock()
+    setMinimumLevel(enabled ? .trace : .info)
   }
 
-  /// Configures debug, trace, and optional file logging in one step.
+  /// Configures minimum level and optional file logging in one step.
   public func configureRuntimeLogging(
-    debugEnabled: Bool,
-    traceEnabled: Bool,
+    minimumLevel: ProcessLogLevel,
     fileLoggingEnabled: Bool,
     fileLoggingPath: String
   ) {
-    setDebugEnabled(debugEnabled)
-    setTraceEnabled(traceEnabled)
+    setMinimumLevel(minimumLevel)
     configureFileLogging(enabled: fileLoggingEnabled, path: fileLoggingPath)
   }
 
@@ -105,42 +109,40 @@ public final class ProcessLogger {
       let handle = try FileHandle(forWritingTo: url)
       try handle.seekToEnd()
       fileHandle = handle
-      writeUnlocked(level: "INFO", message: "file logging enabled path=\(url.path)", stream: stdout)
+      writeUnlocked(level: .info, message: "file logging enabled path=\(url.path)", stream: stdout)
     } catch {
       fileLoggingEnabledFlag = false
       writeUnlocked(
-        level: "WARN",
+        level: .warn,
         message: "failed to open log file at \(path): \(error)",
         stream: stderr
       )
     }
   }
 
-  /// Writes one trace message when trace logging is enabled.
+  /// Writes one trace message when the minimum level allows it.
   public func trace(_ message: String) {
-    guard traceEnabled else { return }
-    write(level: "TRACE", message: message, stream: stdout)
+    writeIfEnabled(level: .trace, message: message, stream: stdout)
   }
 
-  /// Writes one debug message when debug or trace logging is enabled.
+  /// Writes one debug message when the minimum level allows it.
   public func debug(_ message: String) {
-    guard debugEnabled else { return }
-    write(level: "DEBUG", message: message, stream: stdout)
+    writeIfEnabled(level: .debug, message: message, stream: stdout)
   }
 
   /// Writes one info message.
   public func info(_ message: String) {
-    write(level: "INFO", message: message, stream: stdout)
+    writeIfEnabled(level: .info, message: message, stream: stdout)
   }
 
   /// Writes one warning message.
   public func warn(_ message: String) {
-    write(level: "WARN", message: message, stream: stderr)
+    writeIfEnabled(level: .warn, message: message, stream: stderr)
   }
 
   /// Writes one error message.
   public func error(_ message: String) {
-    write(level: "ERROR", message: message, stream: stderr)
+    writeIfEnabled(level: .error, message: message, stream: stderr)
   }
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
@@ -154,14 +156,20 @@ public final class ProcessLogger {
     writeFileUnlocked(message)
   }
 
-  private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
+  private func writeIfEnabled(
+    level: ProcessLogLevel,
+    message: String,
+    stream: UnsafeMutablePointer<FILE>?
+  ) {
     lock.lock()
     defer { lock.unlock() }
+
+    guard minimumLevelFlag.allows(level) else { return }
     writeUnlocked(level: level, message: message, stream: stream)
   }
 
   private func writeUnlocked(
-    level: String,
+    level: ProcessLogLevel,
     message: String,
     stream: UnsafeMutablePointer<FILE>?
   ) {
@@ -171,8 +179,8 @@ public final class ProcessLogger {
     writeFileUnlocked(line)
   }
 
-  private func formattedLine(level: String, message: String) -> String {
-    "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
+  private func formattedLine(level: ProcessLogLevel, message: String) -> String {
+    "[\(Self.formatter.string(from: Date()))] \(label) [\(level.rawValue.uppercased())] \(message)"
   }
 
   private func writeFileUnlocked(_ line: String) {
@@ -183,7 +191,7 @@ public final class ProcessLogger {
     } catch {
       fileLoggingEnabledFlag = false
       fputs(
-        formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n",
+        formattedLine(level: .warn, message: "failed writing log file: \(error)") + "\n",
         stderr
       )
       fflush(stderr)

@@ -11,7 +11,6 @@ extension Config {
       let data = try? Data(contentsOf: URL(fileURLWithPath: resolvedConfigPath)),
       let text = String(data: data, encoding: .utf8)
     else {
-      applyEnvironmentLoggingOverrides()
       easybarLog.info("using default configuration from \(resolvedConfigPath)")
       return
     }
@@ -24,7 +23,6 @@ extension Config {
       try parseAgents(from: toml)
       try parseBar(from: toml)
       try parseBuiltins(from: toml)
-      applyEnvironmentLoggingOverrides()
     } catch let error as ConfigError {
       throw error
     } catch {
@@ -32,17 +30,6 @@ extension Config {
         path: "config",
         message: "parse failed: \(error)"
       )
-    }
-  }
-
-  /// Applies logging-related environment overrides after config parsing.
-  private func applyEnvironmentLoggingOverrides() {
-    if let debugOverride = environmentDebugOverride() {
-      loggingDebugEnabled = debugOverride
-    }
-
-    if let traceOverride = environmentTraceOverride() {
-      loggingTraceEnabled = traceOverride
     }
   }
 }

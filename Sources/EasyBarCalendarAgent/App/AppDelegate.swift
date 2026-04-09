@@ -12,8 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let runtimeConfig = SharedRuntimeConfig.current
 
     logger.configureRuntimeLogging(
-      debugEnabled: runtimeConfig.loggingDebugEnabled,
-      traceEnabled: runtimeConfig.loggingTraceEnabled,
+      minimumLevel: runtimeConfig.loggingLevel,
       fileLoggingEnabled: runtimeConfig.loggingEnabled,
       fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
         .appendingPathComponent("calendar-agent.out")

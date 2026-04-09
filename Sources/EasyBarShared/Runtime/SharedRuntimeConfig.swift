@@ -42,12 +42,16 @@ public struct SharedRuntimeConfig {
     logging.enabled
   }
 
+  public var loggingLevel: ProcessLogLevel {
+    logging.level
+  }
+
   public var loggingDebugEnabled: Bool {
-    logging.debugEnabled
+    logging.level.allows(.debug)
   }
 
   public var loggingTraceEnabled: Bool {
-    logging.traceEnabled
+    logging.level.allows(.trace)
   }
 
   public var loggingDirectory: String {
@@ -99,19 +103,16 @@ public struct SharedAppRuntimeConfig {
 /// Resolved logging values shared by helper processes.
 public struct SharedLoggingRuntimeConfig {
   public let enabled: Bool
-  public let debugEnabled: Bool
-  public let traceEnabled: Bool
+  public let level: ProcessLogLevel
   public let directory: String
 
   public init(
     enabled: Bool,
-    debugEnabled: Bool,
-    traceEnabled: Bool,
+    level: ProcessLogLevel,
     directory: String
   ) {
     self.enabled = enabled
-    self.debugEnabled = debugEnabled
-    self.traceEnabled = traceEnabled
+    self.level = level
     self.directory = directory
   }
 }
