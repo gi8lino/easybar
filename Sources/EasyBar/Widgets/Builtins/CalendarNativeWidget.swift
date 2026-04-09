@@ -18,6 +18,9 @@ final class CalendarNativeWidget: NativeWidget {
 
   private let eventObserver = EasyBarEventObserver()
 
+  private var startedCalendarAgent = false
+  private var startedPopupMode: Config.CalendarPopupMode = .none
+
   private struct Snapshot {
     let config: Config.CalendarBuiltinConfig
     let now: Date
@@ -44,7 +47,10 @@ final class CalendarNativeWidget: NativeWidget {
       }
     }
 
-    guard Config.shared.calendarAgentEnabled else {
+    startedCalendarAgent = snapshot.config.enabled && Config.shared.calendarAgentEnabled
+    startedPopupMode = snapshot.config.popupMode
+
+    guard startedCalendarAgent else {
       easybarLog.info("calendar agent disabled in config")
       publish()
       return
@@ -60,9 +66,12 @@ final class CalendarNativeWidget: NativeWidget {
 
     eventObserver.stop()
 
-    if Config.shared.calendarAgentEnabled {
+    if startedCalendarAgent {
       stopCalendarAgent()
     }
+
+    startedCalendarAgent = false
+    startedPopupMode = .none
 
     WidgetStore.shared.apply(root: rootID, nodes: [])
     NativeUpcomingCalendarStore.shared.clear()
@@ -118,20 +127,22 @@ extension CalendarNativeWidget {
 
     case .upcoming:
       UpcomingCalendarAgentClient.shared.start()
+
     case .month:
       MonthCalendarAgentClient.shared.start()
       MonthCalendarAgentClient.shared.focusVisibleMonth(snapshot.now)
     }
   }
 
-  /// Stops the calendar agent required by the active popup mode.
+  /// Stops the calendar agent required by the popup mode started by this widget.
   private func stopCalendarAgent() {
-    switch Config.shared.builtinCalendar.popupMode {
+    switch startedPopupMode {
     case .none:
       break
 
     case .upcoming:
       UpcomingCalendarAgentClient.shared.stop()
+
     case .month:
       MonthCalendarAgentClient.shared.stop()
     }

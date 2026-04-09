@@ -13,6 +13,7 @@ final class WiFiNativeWidget: NativeWidget {
 
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
+  private var startedNetworkAgent = false
 
   func start() {
     let config = Config.shared.builtinWiFi
@@ -22,7 +23,9 @@ final class WiFiNativeWidget: NativeWidget {
 
     startEventObserver()
 
-    guard Config.shared.networkAgentEnabled else {
+    startedNetworkAgent = config.enabled && Config.shared.networkAgentEnabled
+
+    guard startedNetworkAgent else {
       easybarLog.info("network agent disabled in config")
       publish()
       return
@@ -38,10 +41,11 @@ final class WiFiNativeWidget: NativeWidget {
     eventObserver.stop()
     isHovered = false
 
-    if Config.shared.networkAgentEnabled {
+    if startedNetworkAgent {
       NetworkAgentClient.shared.stop()
     }
 
+    startedNetworkAgent = false
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
