@@ -57,20 +57,19 @@ enabled = true
 socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
 allow_unauthorized_non_sensitive_fields = false
-```
 
 Supported logging levels are:
 
-- `info`
-- `debug`
-- `trace`
+* `info`
+* `debug`
+* `trace`
 
 Environment overrides still exist for:
 
-- config path
-- socket paths
-- network refresh interval
-- agent enablement flags when explicitly supported by the shared runtime config
+* config path
+* socket paths
+* network refresh interval
+* agent enablement flags when explicitly supported by the shared runtime config
 
 The app and agents no longer use legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` toggles for normal runtime logging. Use `logging.level` in `config.toml` instead.
 
@@ -80,8 +79,8 @@ If an agent is disabled in config, the helper app exits immediately without open
 
 Default sockets:
 
-- calendar agent: `/tmp/EasyBar/calendar-agent.sock`
-- network agent: `/tmp/EasyBar/network-agent.sock`
+* calendar agent: `/tmp/EasyBar/calendar-agent.sock`
+* network agent: `/tmp/EasyBar/network-agent.sock`
 
 EasyBar connects to those sockets directly.
 
@@ -91,32 +90,32 @@ Other local clients can also connect when they speak the same protocol.
 
 Both agents support the same basic command flow:
 
-- `ping`
-- `fetch`
-- `subscribe`
+* `ping`
+* `fetch`
+* `subscribe`
 
 Both respond with a `kind` field:
 
-- `pong`
-- `subscribed`
-- `error`
+* `pong`
+* `subscribed`
+* `error`
 
 Typical behavior:
 
-- `ping`
+* `ping`
   returns one `pong`, then closes
-- `fetch`
+* `fetch`
   returns one data payload, then closes
-- `subscribe`
+* `subscribe`
   returns one `subscribed`
   returns one immediate data payload
   keeps the socket open for later pushes
 
 ### Transport format
 
-- newline-delimited JSON
-- one request per line
-- one response per line
+* newline-delimited JSON
+* one request per line
+* one response per line
 
 Example:
 

@@ -10,14 +10,14 @@ end
 local function debug_shell(command)
 	local pipe = io.popen(command .. " 2>&1")
 	if not pipe then
-		easybar.log("error", "debug shell popen failed", command)
+		easybar.log(easybar.level.error, "debug shell popen failed", command)
 		return ""
 	end
 
 	local output = pipe:read("*a") or ""
 	pipe:close()
 
-	easybar.log("info", "command", command, "output", trim(output))
+	easybar.log(easybar.level.info, "command", command, "output", trim(output))
 	return output
 end
 
@@ -51,13 +51,13 @@ end
 local function toggle_wireguard()
 	local vpn_name = secrets.vpn_name or ""
 	if vpn_name == "" then
-		easybar.log("warn", "wireguard toggle skipped because secrets.vpn_name is empty")
+		easybar.log(easybar.level.warn, "wireguard toggle skipped because secrets.vpn_name is empty")
 		return
 	end
 
 	local name = quote(vpn_name)
 	local status = trim(debug_shell("scutil --nc status " .. name)):lower()
-	easybar.log("info", "vpn_name", vpn_name, "status", status)
+	easybar.log(easybar.level.info, "vpn_name", vpn_name, "status", status)
 
 	if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
 		debug_shell("scutil --nc stop " .. name)

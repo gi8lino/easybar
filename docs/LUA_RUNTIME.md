@@ -264,10 +264,12 @@ API methods mutate this registry:
 - `subscribe`
 - `log`
 - `events`
+- `level`
 
 Notable:
 
 - event tokens are used instead of raw strings
+- logging levels are exposed to widgets through `easybar.level`
 
 ## Event flow
 
@@ -362,21 +364,29 @@ Structured format:
 EASYBAR_LOG\t<level>\t<context>\tmessage
 ```
 
-Valid Lua log levels are:
+Valid public Lua log levels are:
 
-- `trace`
-- `debug`
-- `info`
-- `warn`
-- `error`
+- `easybar.level.trace`
+- `easybar.level.debug`
+- `easybar.level.info`
+- `easybar.level.warn`
+- `easybar.level.error`
 
-The Lua side treats those strings as the public scripting contract.
-`LuaLogBridge.swift` is the translation boundary that maps them into the Swift host logger.
+These resolve to the lowercase scripting values used by `easybar.log(...)`.
+
+Examples:
+
+```lua
+easybar.log(easybar.level.info, "refreshing widget")
+easybar.log(easybar.level.debug, "current value", 42)
+easybar.log(easybar.level.trace, "raw payload", payload)
+```
+
+`LuaLogBridge.swift` is the translation boundary that maps Lua log levels into the Swift host logger.
 
 That means:
 
-- Lua widgets should log using the lowercase public API values
-- Lua runtime internals may emit uppercase structured lines on stderr
+- Lua widgets should log using the public Lua API values
 - Swift remains the canonical implementation of filtering and output behavior
 
 ## End-to-end data flow
