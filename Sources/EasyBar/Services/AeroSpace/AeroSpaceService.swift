@@ -52,9 +52,6 @@ extension AeroSpaceService {
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
-  ///
-  /// This path should feel immediate, so it skips the normal debounce and
-  /// performs one fast reload plus a short follow-up reload for consistency.
   func triggerRefresh() {
     guard hasConsumers else {
       easybarLog.debug("aerospace refresh skipped, no registered consumers")
@@ -62,7 +59,7 @@ extension AeroSpaceService {
     }
 
     refreshQueue.async { [weak self] in
-      self?.reloadStateTwice()
+      self?.reloadState()
     }
   }
 
@@ -88,7 +85,7 @@ extension AeroSpaceService {
     refreshQueue.async { [weak self] in
       guard let self else { return }
       _ = self.runAeroSpace(arguments: ["workspace", workspace])
-      self.reloadStateTwice()
+      self.reloadState()
     }
   }
 
@@ -163,6 +160,9 @@ extension AeroSpaceService {
       bundlePath: bundlePath
     )
 
+    let didChange = focusedApp != focused || focusedAppID != focused.id
+    guard didChange else { return }
+
     focusedApp = focused
     focusedAppID = focused.id
 
@@ -197,22 +197,25 @@ extension AeroSpaceService {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
 
+      let spacesChanged = self.spaces != spaces
+      let focusedAppChanged = self.focusedApp != focused
+      let focusedAppIDChanged = self.focusedAppID != focused?.id
+      let layoutChanged = self.focusedLayoutMode != layoutMode
+
+      guard spacesChanged || focusedAppChanged || focusedAppIDChanged || layoutChanged else {
+        return
+      }
+
       self.spaces = spaces
       self.focusedApp = focused
       self.focusedAppID = focused?.id
       self.focusedLayoutMode = layoutMode
+
       self.publishUpdate(
         logMessage:
           "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none") layout=\(layoutMode.rawValue)"
       )
     }
-  }
-
-  /// Reloads twice to smooth over small AeroSpace timing gaps.
-  fileprivate func reloadStateTwice() {
-    reloadState()
-    Thread.sleep(forTimeInterval: 0.04)
-    reloadState()
   }
 }
 
