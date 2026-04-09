@@ -48,21 +48,30 @@
 ---| '"slider.preview"'
 ---| '"slider.changed"'
 
+---@class EasyBarNetworkEventData
+---@field primary_interface_is_tunnel? boolean Whether the current primary network interface is a tunnel.
+---@field interface_name? string The network interface name when provided.
+
+---@class EasyBarPowerEventData
+---@field charging? boolean Whether the current power source is charging.
+
+---@class EasyBarAudioEventData
+---@field muted? boolean Whether the current audio output is muted.
+---@field value? number The current audio-related value when provided.
+
 ---@class EasyBarEvent
 ---@field name string The dispatched event name.
----@field widget_id? string The owner widget id that originated the event.
+---@field widget_id? string The subscribed widget id receiving the event.
 ---@field target_widget_id? string The concrete node id that received the interaction.
 ---@field app_name? string The focused app name for app-switch style events.
----@field interface_name? string The network interface name for network-related events.
 ---@field button? string The mouse button name, usually `left` or `right`.
 ---@field direction? string The scroll direction, usually `up` or `down`.
----@field charging? boolean Whether the current power source is charging.
----@field muted? boolean Whether the current audio output is muted.
----@field primary_interface_is_tunnel? boolean Whether the current primary network interface is a tunnel.
 ---@field value? number|string|boolean The event value for slider and driver updates.
 ---@field delta_x? number Horizontal scroll delta.
 ---@field delta_y? number Vertical scroll delta.
----@field raw table The original normalized payload from the runtime.
+---@field network? EasyBarNetworkEventData Structured network event data.
+---@field power? EasyBarPowerEventData Structured power event data.
+---@field audio? EasyBarAudioEventData Structured audio event data.
 
 ---@alias EasyBarEventHandler fun(event: EasyBarEvent)
 
@@ -127,13 +136,6 @@ function EasyBar.add(kind, id, props) end
 ---@param id string
 ---@param props table
 function EasyBar.set(id, props) end
-
----Updates one node through the animated set path.
----Use this when a visual change should feel intentional but still behave like `set(...)`.
----@param id string
----@param props table
----@param options? table
-function EasyBar.animate(id, props, options) end
 
 ---Returns a copy of the current property table for one node.
 ---@param id string

@@ -56,12 +56,6 @@ function M.new(log)
 		required_events = subscriptions.required_events,
 	}
 
-	--- Writes through the normal set(...) path.
-	function api.animate(id, props, options)
-		local _ = options
-		api.set(id, props)
-	end
-
 	--- Returns one widget-scoped EasyBar API.
 	--- Defaults are isolated to this widget instance.
 	function api.make_widget_api(source)
@@ -84,7 +78,6 @@ function M.new(log)
 		end
 
 		widget_api.set = api.set
-		widget_api.animate = api.animate
 		widget_api.get = api.get
 		widget_api.remove = api.remove
 		widget_api.exec = api.exec

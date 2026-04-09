@@ -43,8 +43,6 @@ enum WidgetEvent: String {
 }
 
 /// Strongly typed event payload used inside Swift.
-///
-/// Lua still receives a JSON dictionary at the boundary.
 struct EasyBarEventPayload {
   let appEvent: AppEvent?
   let widgetEvent: WidgetEvent?
@@ -55,14 +53,17 @@ struct EasyBarEventPayload {
   let interfaceName: String?
   let button: MouseButton?
   let direction: ScrollDirection?
+
   let charging: Bool?
   let muted: Bool?
   let primaryInterfaceIsTunnel: Bool?
+
   let value: Double?
   let deltaX: Double?
   let deltaY: Double?
 
-  /// Creates one app-wide event payload.
+  // MARK: - Builders
+
   static func app(
     _ event: AppEvent,
     appName: String? = nil,
@@ -81,7 +82,6 @@ struct EasyBarEventPayload {
     )
   }
 
-  /// Creates one widget-scoped event payload.
   static func widget(
     _ event: WidgetEvent,
     widgetID: String,
@@ -104,73 +104,97 @@ struct EasyBarEventPayload {
     )
   }
 
-  /// Returns the raw event name used by Lua.
+  // MARK: - Public
+
   var eventName: String {
-    appEventName ?? widgetEventName ?? ""
+    appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
 
-  /// Returns whether this payload has a non-empty event name.
-  private var hasEventName: Bool {
-    !eventName.isEmpty
-  }
+  /// New structured encoding for Lua
+  func toDictionary() -> [String: Any] {
+    var payload: [String: Any] = [
+      "name": eventName
+    ]
 
-  /// Returns the debug log line for this payload.
-  var debugDescription: String? {
-    if isAppEvent {
-      guard let appEventName else { return nil }
-
-      if let primaryInterfaceIsTunnel {
-        return "emit event \(appEventName) primary_interface_is_tunnel=\(primaryInterfaceIsTunnel)"
-      }
-
-      return "emit event \(appEventName)"
+    // widget targeting
+    if let widgetID {
+      payload["widget_id"] = widgetID
     }
 
-    guard isWidgetEvent else { return nil }
-    guard let widgetEventName else { return nil }
-    return "emit widget event \(widgetEventName) widget=\(resolvedWidgetID)"
-  }
+    if let targetWidgetID {
+      payload["target_widget_id"] = targetWidgetID
+    }
 
-  /// Encodes this payload for the Lua runtime boundary.
-  func toDictionary() -> [String: String] {
-    var payload: [String: String] = [:]
+    // interaction
+    if let button {
+      payload["button"] = button.rawValue
+    }
 
-    put(&payload, key: "event", value: resolvedEventName)
-    put(&payload, key: "widget", value: widgetID)
-    put(&payload, key: "target_widget", value: targetWidgetID)
-    put(&payload, key: "app", value: appName)
-    put(&payload, key: "interface", value: interfaceName)
-    put(&payload, key: "button", value: buttonName)
-    put(&payload, key: "direction", value: directionName)
-    put(&payload, key: "charging", value: charging)
-    put(&payload, key: "muted", value: muted)
-    put(&payload, key: "primary_interface_is_tunnel", value: primaryInterfaceIsTunnel)
-    put(&payload, key: "value", value: value)
-    put(&payload, key: "delta_x", value: deltaX)
-    put(&payload, key: "delta_y", value: deltaY)
+    if let direction {
+      payload["direction"] = direction.rawValue
+    }
+
+    if let value {
+      payload["value"] = value
+    }
+
+    if let deltaX {
+      payload["delta_x"] = deltaX
+    }
+
+    if let deltaY {
+      payload["delta_y"] = deltaY
+    }
+
+    // MARK: - Structured domains
+
+    // network
+    if primaryInterfaceIsTunnel != nil || interfaceName != nil {
+      var network: [String: Any] = [:]
+
+      if let primaryInterfaceIsTunnel {
+        network["primary_interface_is_tunnel"] = primaryInterfaceIsTunnel
+      }
+
+      if let interfaceName {
+        network["interface_name"] = interfaceName
+      }
+
+      payload["network"] = network
+    }
+
+    // power
+    if let charging {
+      payload["power"] = [
+        "charging": charging
+      ]
+    }
+
+    // audio
+    if muted != nil || value != nil {
+      var audio: [String: Any] = [:]
+
+      if let muted {
+        audio["muted"] = muted
+      }
+
+      if let value {
+        audio["value"] = value
+      }
+
+      payload["audio"] = audio
+    }
+
+    // app context
+    if let appName {
+      payload["app_name"] = appName
+    }
 
     return payload
   }
 
-  /// Stores one optional string value in the Lua payload.
-  private func put(_ payload: inout [String: String], key: String, value: String?) {
-    guard let value else { return }
-    payload[key] = value
-  }
+  // MARK: - Internal
 
-  /// Stores one optional Bool value in the Lua payload.
-  private func put(_ payload: inout [String: String], key: String, value: Bool?) {
-    guard let value else { return }
-    payload[key] = value ? "true" : "false"
-  }
-
-  /// Stores one optional numeric value in the Lua payload.
-  private func put(_ payload: inout [String: String], key: String, value: Double?) {
-    guard let value else { return }
-    payload[key] = String(value)
-  }
-
-  /// Builds one strongly typed event payload.
   private static func makePayload(
     appEvent: AppEvent? = nil,
     widgetEvent: WidgetEvent? = nil,
@@ -203,47 +227,6 @@ struct EasyBarEventPayload {
       deltaX: deltaX,
       deltaY: deltaY
     )
-  }
-
-  /// Returns the non-empty event name used at the Lua boundary.
-  private var resolvedEventName: String? {
-    guard hasEventName else { return nil }
-    return eventName
-  }
-
-  /// Returns the raw app event name.
-  private var appEventName: String? {
-    appEvent?.rawValue
-  }
-
-  /// Returns whether this payload carries an app event.
-  private var isAppEvent: Bool {
-    appEvent != nil
-  }
-
-  /// Returns the raw widget event name.
-  private var widgetEventName: String? {
-    widgetEvent?.rawValue
-  }
-
-  /// Returns whether this payload carries a widget event.
-  private var isWidgetEvent: Bool {
-    widgetEvent != nil
-  }
-
-  /// Returns the raw mouse button name.
-  private var buttonName: String? {
-    button?.rawValue
-  }
-
-  /// Returns the widget id used in debug logs.
-  private var resolvedWidgetID: String {
-    widgetID ?? ""
-  }
-
-  /// Returns the raw scroll direction name.
-  private var directionName: String? {
-    direction?.rawValue
   }
 }
 

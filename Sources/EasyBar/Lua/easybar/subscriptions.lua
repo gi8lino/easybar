@@ -3,25 +3,6 @@
 --- Returns one helper object with subscribe/handle_event/required_events.
 local M = {}
 
---- Returns one handler event table scoped to one subscribed item.
-local function make_handler_event(id, event, deep_copy)
-	return {
-		name = event.name,
-		widget_id = id,
-		target_widget_id = event.target_widget_id or event.widget_id,
-		app_name = event.app_name,
-		interface_name = event.interface_name,
-		button = event.button,
-		direction = event.direction,
-		charging = event.charging,
-		muted = event.muted,
-		value = event.value,
-		delta_x = event.delta_x,
-		delta_y = event.delta_y,
-		raw = deep_copy(event.raw or {}),
-	}
-end
-
 --- Deep-copies one Lua value tree.
 local function deep_copy(value)
 	if type(value) ~= "table" then
@@ -35,6 +16,18 @@ local function deep_copy(value)
 	end
 
 	return copy
+end
+
+--- Returns one handler event table scoped to one subscribed item.
+local function make_handler_event(id, event)
+	local handler_event = deep_copy(event)
+	handler_event.widget_id = id
+
+	if handler_event.target_widget_id == nil and event.widget_id ~= nil then
+		handler_event.target_widget_id = event.widget_id
+	end
+
+	return handler_event
 end
 
 --- Returns one new subscription helper object.
@@ -53,7 +46,7 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 			return
 		end
 
-		local handler_event = make_handler_event(id, event, deep_copy)
+		local handler_event = make_handler_event(id, event)
 
 		for _, handler in ipairs(handlers) do
 			local ok, err = pcall(handler, handler_event)
@@ -112,8 +105,6 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 
 							dispatch_handlers_for(id, {
 								name = "routine",
-								widget_id = nil,
-								raw = {},
 							})
 						end
 					end

@@ -1,48 +1,71 @@
 --- Module contract:
---- Owns raw host-event normalization and runtime dispatch into the registry.
---- Returns helpers that normalize payloads and trigger re-renders.
+--- Owns host-event normalization and runtime dispatch into the registry.
+--- Returns helpers that validate payloads and trigger re-renders.
 local M = {}
 
---- Converts JSON boolean strings into Lua booleans.
-local function normalize_boolean(value)
-	if value == "true" then
-		return true
+--- Deep-copies one Lua value tree.
+local function deep_copy(value)
+	if type(value) ~= "table" then
+		return value
 	end
 
-	if value == "false" then
-		return false
+	local copy = {}
+
+	for key, item in pairs(value) do
+		copy[key] = deep_copy(item)
 	end
 
-	return nil
+	return copy
 end
 
---- Converts numeric payload fields into Lua numbers.
-local function normalize_number(value)
-	if value == nil or value == "" then
-		return nil
-	end
-
-	return tonumber(value)
-end
-
---- Converts one raw JSON payload into one canonical Lua event table.
+--- Returns a validated canonical Lua event table.
 function M.normalize_event(payload)
-	return {
-		name = payload.event,
-		widget_id = payload.widget,
-		target_widget_id = payload.target_widget,
-		app_name = payload.app,
-		interface_name = payload.interface,
-		button = payload.button,
-		direction = payload.direction,
-		charging = normalize_boolean(payload.charging),
-		muted = normalize_boolean(payload.muted),
-		primary_interface_is_tunnel = normalize_boolean(payload.primary_interface_is_tunnel),
-		value = normalize_number(payload.value),
-		delta_x = normalize_number(payload.delta_x),
-		delta_y = normalize_number(payload.delta_y),
-		raw = payload,
-	}
+	assert(type(payload) == "table", "event payload must be a table")
+	assert(type(payload.name) == "string" and payload.name ~= "", "event payload missing name")
+
+	local event = deep_copy(payload)
+
+	if event.widget_id ~= nil then
+		event.widget_id = tostring(event.widget_id)
+	end
+
+	if event.target_widget_id ~= nil then
+		event.target_widget_id = tostring(event.target_widget_id)
+	end
+
+	if event.app_name ~= nil then
+		event.app_name = tostring(event.app_name)
+	end
+
+	if event.button ~= nil then
+		event.button = tostring(event.button)
+	end
+
+	if event.direction ~= nil then
+		event.direction = tostring(event.direction)
+	end
+
+	if event.delta_x ~= nil then
+		event.delta_x = tonumber(event.delta_x)
+	end
+
+	if event.delta_y ~= nil then
+		event.delta_y = tonumber(event.delta_y)
+	end
+
+	if event.network ~= nil and type(event.network) ~= "table" then
+		error("event.network must be a table when present")
+	end
+
+	if event.power ~= nil and type(event.power) ~= "table" then
+		error("event.power must be a table when present")
+	end
+
+	if event.audio ~= nil and type(event.audio) ~= "table" then
+		error("event.audio must be a table when present")
+	end
+
+	return event
 end
 
 --- Dispatches one normalized event and re-renders all affected trees.

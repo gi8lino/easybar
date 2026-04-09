@@ -67,10 +67,9 @@ while true do
 
 	local ok, payload = pcall(json.decode, line)
 
-	if not ok or type(payload) ~= "table" or not payload.event then
+	if not ok or type(payload) ~= "table" or type(payload.name) ~= "string" or payload.name == "" then
 		log.error("runtime ignored invalid json payload=" .. tostring(line))
 	else
-		-- Event normalization keeps the registry and renderer free from raw JSON parsing.
 		local event = events.normalize_event(payload)
 		events.dispatch_event(registry, event, render, log, json)
 	end

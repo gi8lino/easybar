@@ -78,6 +78,7 @@ final class EventBus {
     }
 
     runtime.send(encoded)
+
   }
 
   /// Returns the encoded Lua payload string.
@@ -86,7 +87,7 @@ final class EventBus {
   }
 
   /// Encodes one event payload as JSON for the Lua runtime.
-  private func encodeJSON(_ payload: [String: String]) -> String? {
+  private func encodeJSON(_ payload: [String: Any]) -> String? {
     guard let data = try? JSONSerialization.data(withJSONObject: payload),
       let string = String(data: data, encoding: .utf8)
     else {
@@ -94,6 +95,7 @@ final class EventBus {
     }
 
     return string
+
   }
 
   /// Emits one already-constructed app payload.
@@ -108,8 +110,8 @@ final class EventBus {
 
   /// Logs one emitted payload for local debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
-    guard let line = payload.debugDescription else { return }
-    easybarLog.debug(line)
+    guard !payload.eventName.isEmpty else { return }
+    easybarLog.debug("emit event (payload.eventName)")
   }
 }
 
