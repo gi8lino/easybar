@@ -68,8 +68,9 @@ private struct AppContext {
   private let logger: ProcessLogger
 
   init(debugEnabled: Bool) {
-    let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
-    logger = ProcessLogger(label: "easybarctl", debugEnabled: debugEnabled || envEnabled)
+    let envEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
+    logger = ProcessLogger(
+      label: "easybarctl", minimumLevel: (debugEnabled || envEnabled) ? .debug : .info)
   }
 
   /// Writes one debug line when CLI debug logging is enabled.
