@@ -2,6 +2,8 @@ import Foundation
 
 enum BuiltinNativeNodeFactory {
 
+  // MARK: - Public Builders
+
   /// Builds one simple root item node.
   static func makeItemNode(
     rootID: String,
@@ -46,6 +48,65 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  /// Builds one root sparkline node.
+  static func makeSparklineNode(
+    rootID: String,
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle,
+    text: String,
+    values: [Double],
+    lineWidth: Double,
+    color: String?
+  ) -> WidgetNodeState {
+    var node = makeRootNode(
+      id: rootID,
+      kind: .sparkline,
+      placement: placement,
+      style: style,
+      icon: style.icon,
+      text: text,
+      color: color
+    )
+
+    node.values = values
+    node.lineWidth = lineWidth
+    return node
+  }
+
+  /// Builds one root spaces node.
+  static func makeSpacesNode(
+    rootID: String,
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle
+  ) -> WidgetNodeState {
+    makeRootNode(
+      id: rootID,
+      kind: .spaces,
+      placement: placement,
+      style: style,
+      icon: "",
+      text: "",
+      color: style.textColorHex
+    )
+  }
+
+  /// Builds one native group root node.
+  static func makeGroupNode(
+    id: String,
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle
+  ) -> WidgetNodeState {
+    makeRootNode(
+      id: id,
+      kind: .group,
+      placement: placement,
+      style: style,
+      icon: "",
+      text: "",
+      color: style.textColorHex
+    )
+  }
+
   /// Builds one root row container node.
   static func makeRowContainerNode(
     rootID: String,
@@ -85,6 +146,26 @@ enum BuiltinNativeNodeFactory {
       kind: .popup,
       placement: placement,
       style: style
+    )
+  }
+
+  /// Builds one child column node.
+  static func makeColumnNode(
+    rootID: String,
+    parentID: String,
+    columnID: String,
+    position: WidgetPosition,
+    order: Int,
+    spacing: Double?
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: columnID,
+      root: rootID,
+      kind: .column,
+      parent: parentID,
+      position: position,
+      order: order,
+      spacing: spacing
     )
   }
 
@@ -246,6 +327,8 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  // MARK: - Internal Builders
+
   /// Builds one root node with the shared built-in style defaults.
   private static func makeRootNode(
     id: String,
@@ -270,13 +353,6 @@ enum BuiltinNativeNodeFactory {
       icon: icon,
       text: text,
       color: color,
-      visible: true,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
       value: value,
       min: min,
       max: max,

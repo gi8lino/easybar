@@ -12,8 +12,11 @@ final class DateNativeWidget: NativeWidget {
   }
 
   private let eventObserver = EasyBarEventObserver()
+  private lazy var renderer = DateRenderer(
+    rootID: rootID,
+    config: Config.shared.builtinDate
+  )
 
-  /// Starts the date widget.
   func start() {
     eventObserver.start { [weak self] payload in
       guard let self else { return }
@@ -25,30 +28,15 @@ final class DateNativeWidget: NativeWidget {
     publish()
   }
 
-  /// Stops the date widget.
   func stop() {
     eventObserver.stop()
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
-  /// Publishes the current date.
   private func publish() {
-    let config = Config.shared.builtinDate
-
-    let node = BuiltinNativeNodeFactory.makeItemNode(
-      rootID: rootID,
-      placement: config.placement,
-      style: config.style,
-      text: makeFormatter(format: config.format).string(from: Date())
+    WidgetStore.shared.apply(
+      root: rootID,
+      nodes: renderer.makeNodes(snapshot: Date())
     )
-
-    WidgetStore.shared.apply(root: rootID, nodes: [node])
-  }
-
-  /// Builds one formatter for the configured date format.
-  private func makeFormatter(format: String) -> DateFormatter {
-    let formatter = DateFormatter()
-    formatter.dateFormat = format
-    return formatter
   }
 }

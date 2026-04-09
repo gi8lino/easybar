@@ -1,7 +1,9 @@
 import EasyBarShared
 import Foundation
 
+/// Native Wi-Fi widget backed by the network agent snapshot store.
 final class WiFiNativeWidget: NativeWidget {
+
   let rootID = "builtin_wifi"
 
   var appEventSubscriptions: Set<String> {
@@ -14,8 +16,9 @@ final class WiFiNativeWidget: NativeWidget {
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
   private var startedNetworkAgent = false
+  private lazy var renderer = WiFiRenderer(rootID: rootID)
 
-  private struct Snapshot {
+  struct Snapshot {
     let config: Config.WiFiBuiltinConfig
     let network: NetworkAgentSnapshot?
     let labelText: String
@@ -24,11 +27,11 @@ final class WiFiNativeWidget: NativeWidget {
     let labelVisible: Bool
   }
 
+  // MARK: - Lifecycle
+
+  /// Starts the Wi-Fi widget.
   func start() {
     let config = Config.shared.builtinWiFi
-    easybarLog.info(
-      "starting native widget id=\(rootID) enabled=\(config.enabled) position=\(config.position.rawValue)"
-    )
 
     NativeWidgetEventDriver.start(
       observer: eventObserver,
@@ -43,7 +46,6 @@ final class WiFiNativeWidget: NativeWidget {
     startedNetworkAgent = config.enabled && Config.shared.networkAgentEnabled
 
     guard startedNetworkAgent else {
-      easybarLog.info("network agent disabled in config")
       publish()
       return
     }
@@ -52,9 +54,8 @@ final class WiFiNativeWidget: NativeWidget {
     publish()
   }
 
+  /// Stops the Wi-Fi widget.
   func stop() {
-    easybarLog.info("stopping native widget id=\(rootID)")
-
     eventObserver.stop()
     isHovered = false
 
@@ -66,9 +67,12 @@ final class WiFiNativeWidget: NativeWidget {
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
+  // MARK: - Publish
+
+  /// Publishes the current Wi-Fi nodes.
   private func publish() {
     let snapshot = makeSnapshot()
-    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
+    WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
   }
 
   /// Returns the current render snapshot.
@@ -86,8 +90,13 @@ final class WiFiNativeWidget: NativeWidget {
       labelVisible: config.showSSIDOnHover && isHovered && !labelText.isEmpty
     )
   }
+}
 
-  /// Handles app-wide events relevant to the Wi-Fi widget.
+// MARK: - Events
+
+extension WiFiNativeWidget {
+
+  /// Handles app-wide Wi-Fi-related events.
   private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else { return false }
 
@@ -120,54 +129,13 @@ final class WiFiNativeWidget: NativeWidget {
       return
     }
   }
+}
 
-  /// Builds the Wi-Fi widget nodes for the current snapshot.
-  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    [
-      makeRootNode(config: snapshot.config),
-      makeIconNode(snapshot: snapshot),
-      makeLabelNode(snapshot: snapshot),
-    ]
-  }
+// MARK: - Presentation Helpers
 
-  /// Builds the root row node.
-  private func makeRootNode(config: Config.WiFiBuiltinConfig) -> WidgetNodeState {
-    BuiltinNativeNodeFactory.makeRowContainerNode(
-      rootID: rootID,
-      placement: config.placement,
-      style: config.style
-    )
-  }
+extension WiFiNativeWidget {
 
-  /// Builds the signal icon node.
-  private func makeIconNode(snapshot: Snapshot) -> WidgetNodeState {
-    BuiltinNativeNodeFactory.makeChildItemNode(
-      rootID: rootID,
-      parentID: rootID,
-      childID: "\(rootID)_icon",
-      position: snapshot.config.placement.position,
-      order: 0,
-      icon: snapshot.iconText,
-      color: snapshot.iconColorHex,
-      fontSize: 16
-    )
-  }
-
-  /// Builds the optional SSID label node.
-  private func makeLabelNode(snapshot: Snapshot) -> WidgetNodeState {
-    BuiltinNativeNodeFactory.makeChildItemNode(
-      rootID: rootID,
-      parentID: rootID,
-      childID: "\(rootID)_label",
-      position: snapshot.config.placement.position,
-      order: 1,
-      text: snapshot.labelText,
-      color: snapshot.config.textColorHex,
-      visible: snapshot.labelVisible,
-      spacing: 4
-    )
-  }
-
+  /// Returns the Wi-Fi bar count from RSSI.
   private func resolvedSignalBars(snapshot: NetworkAgentSnapshot?) -> Int {
     guard
       let snapshot,
@@ -192,6 +160,7 @@ final class WiFiNativeWidget: NativeWidget {
     }
   }
 
+  /// Resolves the Wi-Fi signal icon.
   private func resolvedSignalIcon(snapshot: NetworkAgentSnapshot?) -> String {
     let bars = resolvedSignalBars(snapshot: snapshot)
 
@@ -209,6 +178,7 @@ final class WiFiNativeWidget: NativeWidget {
     }
   }
 
+  /// Resolves the Wi-Fi signal color.
   private func resolvedSignalColor(
     snapshot: NetworkAgentSnapshot?,
     config: Config.WiFiBuiltinConfig
@@ -220,6 +190,7 @@ final class WiFiNativeWidget: NativeWidget {
     return config.activeColorHex
   }
 
+  /// Resolves the label text for the current Wi-Fi state.
   private func resolvedLabelText(
     snapshot: NetworkAgentSnapshot?,
     config: Config.WiFiBuiltinConfig

@@ -1,5 +1,6 @@
 import Foundation
 
+/// Native time widget.
 final class TimeNativeWidget: NativeWidget {
 
   let rootID = "builtin_time"

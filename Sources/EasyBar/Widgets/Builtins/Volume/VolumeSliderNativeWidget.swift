@@ -1,7 +1,9 @@
 import CoreAudio
 import Foundation
 
+/// Native volume widget with optional inline expansion.
 final class VolumeSliderNativeWidget: NativeWidget {
+
   let rootID = "builtin_volume"
 
   var appEventSubscriptions: Set<String> {
@@ -15,6 +17,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
   private var autoHideWorkItem: DispatchWorkItem?
+  private lazy var renderer = VolumeRenderer(rootID: rootID)
 
   private struct SystemVolumeState {
     let clampedSystem: Double
@@ -23,14 +26,17 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let isMuted: Bool
   }
 
-  private struct Snapshot {
+  struct Snapshot {
     let config: Config.VolumeBuiltinConfig
     let placement: Config.BuiltinWidgetPlacement
     var style: Config.BuiltinWidgetStyle
     let text: String
     let value: Double
     let step: Double
+    let isHovered: Bool
   }
+
+  // MARK: - Lifecycle
 
   /// Starts the volume widget.
   func start() {
@@ -46,25 +52,22 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     publish()
   }
-}
 
-// MARK: - Lifecycle
-
-extension VolumeSliderNativeWidget {
   /// Stops the volume widget.
   func stop() {
     eventObserver.stop()
-
     cancelAutoHide()
     isHovered = false
+
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
+
+  // MARK: - Publish
 
   /// Publishes the current volume widget state.
   private func publish() {
     let snapshot = makeSnapshot()
-    let nodes = makeNodes(snapshot: snapshot)
-    WidgetStore.shared.apply(root: rootID, nodes: nodes)
+    WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
   }
 
   /// Returns the current render snapshot.
@@ -91,7 +94,8 @@ extension VolumeSliderNativeWidget {
       style: style,
       text: text,
       value: volumeState.roundedValue,
-      step: volumeState.step
+      step: volumeState.step,
+      isHovered: isHovered
     )
   }
 }
@@ -99,10 +103,10 @@ extension VolumeSliderNativeWidget {
 // MARK: - Event Handling
 
 extension VolumeSliderNativeWidget {
+
+  /// Handles app-wide volume-related events.
   private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
-    guard let event = payload.appEvent else {
-      return false
-    }
+    guard let event = payload.appEvent else { return false }
 
     guard event == .volumeChange || event == .muteChange || event == .systemWoke else {
       return false
@@ -113,9 +117,10 @@ extension VolumeSliderNativeWidget {
     return true
   }
 
+  /// Handles widget-local hover and slider events.
   private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
-    guard payload.widgetID == rootID else { return }
+    guard payload.widgetID == rootID || payload.widgetID == "\(rootID)_slider" else { return }
 
     switch event {
     case .mouseEntered:
@@ -141,6 +146,7 @@ extension VolumeSliderNativeWidget {
     }
   }
 
+  /// Expands temporarily on external volume change when configured.
   private func applyExternalVolumeChange() {
     guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
 
@@ -148,6 +154,7 @@ extension VolumeSliderNativeWidget {
     scheduleAutoHide()
   }
 
+  /// Applies one slider value back to the system volume.
   private func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
     let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
 
@@ -168,6 +175,7 @@ extension VolumeSliderNativeWidget {
     publish()
   }
 
+  /// Converts the slider-range value back to a normalized system volume.
   private func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig)
     -> Double
   {
@@ -175,7 +183,7 @@ extension VolumeSliderNativeWidget {
     return (value - config.minValue) / span
   }
 
-  /// Returns the current rendered volume state.
+  /// Returns the current system volume state.
   private func currentSystemVolumeState(config: Config.VolumeBuiltinConfig) -> SystemVolumeState {
     let systemVolume = readSystemVolume()
     let isMuted = readMutedState()
@@ -193,88 +201,10 @@ extension VolumeSliderNativeWidget {
   }
 }
 
-// MARK: - Node Building
-
-extension VolumeSliderNativeWidget {
-  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    guard !snapshot.config.expandToSliderOnHover else {
-      return makeExpandableNodes(snapshot: snapshot)
-    }
-
-    return [
-      BuiltinNativeNodeFactory.makeSliderNode(
-        rootID: rootID,
-        placement: snapshot.placement,
-        style: snapshot.style,
-        text: snapshot.text,
-        value: snapshot.value,
-        min: snapshot.config.minValue,
-        max: snapshot.config.maxValue,
-        step: snapshot.step
-      )
-    ]
-  }
-
-  /// Builds the expandable hover layout.
-  private func makeExpandableNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    var nodes: [WidgetNodeState] = [
-      BuiltinNativeNodeFactory.makeRowContainerNode(
-        rootID: rootID,
-        placement: snapshot.placement,
-        style: snapshot.style
-      )
-    ]
-
-    if !snapshot.style.icon.isEmpty {
-      nodes.append(
-        BuiltinNativeNodeFactory.makeChildItemNode(
-          rootID: rootID,
-          parentID: rootID,
-          childID: "\(rootID)_icon",
-          position: snapshot.placement.position,
-          order: 0,
-          icon: snapshot.style.icon,
-          color: snapshot.style.textColorHex
-        )
-      )
-    }
-
-    nodes.append(
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: rootID,
-        childID: "\(rootID)_label",
-        position: snapshot.placement.position,
-        order: 1,
-        text: snapshot.text,
-        color: snapshot.style.textColorHex,
-        visible: isHovered && !snapshot.text.isEmpty
-      )
-    )
-
-    nodes.append(
-      BuiltinNativeNodeFactory.makeChildSliderNode(
-        rootID: rootID,
-        parentID: rootID,
-        childID: "\(rootID)_slider",
-        position: snapshot.placement.position,
-        order: 2,
-        value: snapshot.value,
-        min: snapshot.config.minValue,
-        max: snapshot.config.maxValue,
-        step: snapshot.step,
-        color: snapshot.style.textColorHex,
-        visible: isHovered
-      )
-    )
-
-    return nodes
-  }
-}
-
 // MARK: - Hover Behavior
 
 extension VolumeSliderNativeWidget {
+
   /// Schedules hiding the slider shortly after interaction.
   private func scheduleAutoHide() {
     cancelAutoHide()
@@ -314,6 +244,7 @@ extension VolumeSliderNativeWidget {
 // MARK: - CoreAudio Access
 
 extension VolumeSliderNativeWidget {
+
   /// Reads the current system volume.
   private func readSystemVolume() -> Double {
     guard let deviceID = defaultOutputDeviceID() else {
