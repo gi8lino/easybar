@@ -151,8 +151,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   /// Handles one manual-refresh IPC trigger.
+  ///
+  /// This keeps the current in-memory config, but asks all runtime consumers
+  /// to refresh their current state and fetch fresh agent-backed data.
   private func handleManualRefresh() {
+    easybarLog.info("handling manual refresh")
+
     aeroSpaceService.triggerRefresh()
+
+    UpcomingCalendarAgentClient.shared.refresh()
+    MonthCalendarAgentClient.shared.refresh()
+    NetworkAgentClient.shared.refresh()
+
+    NativeWidgetRegistry.shared.reload()
     EventBus.shared.emit(.manualRefresh)
   }
 

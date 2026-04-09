@@ -146,27 +146,28 @@ private enum CLI {
     .init(
       flag: "--workspace-changed",
       command: .workspaceChanged,
-      description: "Send workspace_changed"
+      description: "Notify EasyBar that the focused workspace changed"
     ),
     .init(
       flag: "--focus-changed",
       command: .focusChanged,
-      description: "Send focus_changed"
+      description: "Notify EasyBar that the focused app or window changed"
     ),
     .init(
       flag: "--space-mode-changed",
       command: .spaceModeChanged,
-      description: "Send space_mode_changed"
+      description: "Notify EasyBar that the AeroSpace layout mode changed"
     ),
     .init(
       flag: "--refresh",
       command: .manualRefresh,
-      description: "Send refresh"
+      description:
+        "Refresh the bar and widgets with the current config and pull fresh data from agents"
     ),
     .init(
       flag: "--reload-config",
       command: .reloadConfig,
-      description: "Send reload_config"
+      description: "Reload config from disk and rebuild EasyBar using the new settings"
     ),
   ]
 

@@ -43,6 +43,12 @@ final class NetworkAgentClient {
     client.stop()
   }
 
+  /// Requests one fresh network-agent update using the current subscription.
+  func refresh() {
+    easybarLog.debug("network agent client manual refresh")
+    client.refresh()
+  }
+
   /// Starts shared app-event observation needed by the network agent client.
   private func startEventObserver() {
     eventObserver.start { [weak self] payload in
