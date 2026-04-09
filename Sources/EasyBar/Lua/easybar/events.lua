@@ -70,7 +70,7 @@ end
 
 --- Dispatches one normalized event and re-renders all affected trees.
 function M.dispatch_event(registry, event, render, log, json)
-	log.debug("runtime dispatch event=" .. tostring(event.name))
+	log.trace("runtime dispatch event=" .. tostring(event.name))
 	registry.handle_event(event)
 	render.emit_all(registry, log, json)
 end

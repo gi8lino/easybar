@@ -2,6 +2,7 @@
 ---@meta
 
 ---@alias EasyBarLevel
+---| '"trace"'
 ---| '"info"'
 ---| '"warn"'
 ---| '"error"'

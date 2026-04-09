@@ -59,10 +59,10 @@ final class AppController {
         configPath: runtimeConfig.configPath,
         socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
         loggingSummary:
-          "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) path=\(logger.fileLoggingPath)"
+          "logging enabled=\(logger.fileLoggingEnabled) debug=\(logger.debugEnabled) trace=\(logger.traceEnabled) path=\(logger.fileLoggingPath)"
       ),
       write: logger.info
     )
-    logger.info("debug logging=\(logger.debugEnabled)")
+    logger.info("debug logging=\(logger.debugEnabled) trace logging=\(logger.traceEnabled)")
   }
 }

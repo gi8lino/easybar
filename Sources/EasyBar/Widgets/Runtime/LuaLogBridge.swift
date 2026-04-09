@@ -36,6 +36,8 @@ final class LuaLogBridge {
   /// Logs one structured Lua message at the requested level.
   private func logFormatted(level: String, message: String) {
     switch level {
+    case "TRACE":
+      easybarLog.trace(message)
     case "DEBUG":
       easybarLog.debug(message)
     case "INFO":

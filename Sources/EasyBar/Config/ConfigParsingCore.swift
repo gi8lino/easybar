@@ -42,6 +42,10 @@ extension Config {
       loggingDebugEnabled = try requiredBool(value, path: "logging.debug")
     }
 
+    if let value = logging["trace"] {
+      loggingTraceEnabled = try requiredBool(value, path: "logging.trace")
+    }
+
     if let value = logging["directory"] {
       loggingDirectory =
         NSString(

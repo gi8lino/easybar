@@ -41,6 +41,7 @@ extension Config {
   func resetLoggingDefaults() {
     loggingSection.enabled = false
     loggingSection.debugEnabled = false
+    loggingSection.traceEnabled = false
   }
 
   /// Restores agent defaults.

@@ -12,4 +12,9 @@ extension Config {
   func environmentDebugOverride() -> Bool? {
     boolEnvironmentValue(named: "EASYBAR_DEBUG")
   }
+
+  /// Returns the trace logging override from the environment when present.
+  func environmentTraceOverride() -> Bool? {
+    boolEnvironmentValue(named: "EASYBAR_TRACE")
+  }
 }

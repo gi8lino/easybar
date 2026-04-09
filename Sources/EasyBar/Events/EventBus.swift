@@ -77,8 +77,8 @@ final class EventBus {
       return
     }
 
+    easybarLog.trace("sent to lua stdin: \(encoded)")
     runtime.send(encoded)
-
   }
 
   /// Returns the encoded Lua payload string.
@@ -95,7 +95,6 @@ final class EventBus {
     }
 
     return string
-
   }
 
   /// Emits one already-constructed app payload.
@@ -108,10 +107,10 @@ final class EventBus {
     emit(payload)
   }
 
-  /// Logs one emitted payload for local debugging.
+  /// Logs one emitted payload for verbose debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
-    easybarLog.debug("emit event \(payload.eventName)")
+    easybarLog.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
   }
 }
 

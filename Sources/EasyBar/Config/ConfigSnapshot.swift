@@ -12,6 +12,7 @@ struct ConfigSnapshot {
   struct Logging {
     let enabled: Bool
     let debugEnabled: Bool
+    let traceEnabled: Bool
     let directory: String
   }
 

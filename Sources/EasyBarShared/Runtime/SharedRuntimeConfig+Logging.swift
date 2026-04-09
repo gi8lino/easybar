@@ -14,6 +14,11 @@ func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
     ?? loggingTable?["debug"]?.bool
     ?? false
 
+  let traceEnabled =
+    boolEnvironmentValue(named: "EASYBAR_TRACE")
+    ?? loggingTable?["trace"]?.bool
+    ?? false
+
   let directory =
     expandedEnvironmentPath(named: "EASYBAR_LOGGING_DIRECTORY")
     ?? expandedPath(loggingTable?["directory"]?.string)
@@ -22,6 +27,7 @@ func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
   return SharedLoggingRuntimeConfig(
     enabled: enabled,
     debugEnabled: debugEnabled,
+    traceEnabled: traceEnabled,
     directory: directory
   )
 }

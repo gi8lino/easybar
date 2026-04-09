@@ -18,6 +18,7 @@ final class Config {
   struct LoggingSection {
     var enabled: Bool
     var debugEnabled: Bool
+    var traceEnabled: Bool
     var directory: String
   }
 
@@ -70,6 +71,11 @@ final class Config {
   var loggingDebugEnabled: Bool {
     get { loggingSection.debugEnabled }
     set { loggingSection.debugEnabled = newValue }
+  }
+
+  var loggingTraceEnabled: Bool {
+    get { loggingSection.traceEnabled }
+    set { loggingSection.traceEnabled = newValue }
   }
 
   var loggingDirectory: String {
@@ -140,6 +146,7 @@ final class Config {
     loggingSection = .init(
       enabled: false,
       debugEnabled: false,
+      traceEnabled: false,
       directory: ""
     )
     calendarAgentSection = .init(

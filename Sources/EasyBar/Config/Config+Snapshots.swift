@@ -11,6 +11,7 @@ extension Config {
       logging: .init(
         enabled: loggingSection.enabled,
         debugEnabled: loggingSection.debugEnabled,
+        traceEnabled: loggingSection.traceEnabled,
         directory: loggingSection.directory
       ),
       calendarAgent: .init(
@@ -66,6 +67,7 @@ extension Config {
     loggingSection = .init(
       enabled: snapshot.logging.enabled,
       debugEnabled: snapshot.logging.debugEnabled,
+      traceEnabled: snapshot.logging.traceEnabled,
       directory: snapshot.logging.directory
     )
 

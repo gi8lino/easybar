@@ -16,18 +16,26 @@ public final class ProcessLogger {
   private let lock = NSLock()
   private var fileHandle: FileHandle?
   private var debugEnabledFlag: Bool
+  private var traceEnabledFlag: Bool
   private var fileLoggingEnabledFlag = false
   private var fileLoggingPathValue = ""
 
-  public init(label: String, debugEnabled: Bool = false) {
+  public init(label: String, debugEnabled: Bool = false, traceEnabled: Bool = false) {
     self.label = label
     debugEnabledFlag = debugEnabled
+    traceEnabledFlag = traceEnabled
   }
 
   public var debugEnabled: Bool {
     lock.lock()
     defer { lock.unlock() }
-    return debugEnabledFlag
+    return debugEnabledFlag || traceEnabledFlag
+  }
+
+  public var traceEnabled: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return traceEnabledFlag
   }
 
   public var fileLoggingEnabled: Bool {
@@ -49,13 +57,22 @@ public final class ProcessLogger {
     lock.unlock()
   }
 
-  /// Configures debug and optional file logging in one step.
+  /// Updates the current trace logging flag.
+  public func setTraceEnabled(_ enabled: Bool) {
+    lock.lock()
+    traceEnabledFlag = enabled
+    lock.unlock()
+  }
+
+  /// Configures debug, trace, and optional file logging in one step.
   public func configureRuntimeLogging(
     debugEnabled: Bool,
+    traceEnabled: Bool,
     fileLoggingEnabled: Bool,
     fileLoggingPath: String
   ) {
     setDebugEnabled(debugEnabled)
+    setTraceEnabled(traceEnabled)
     configureFileLogging(enabled: fileLoggingEnabled, path: fileLoggingPath)
   }
 
@@ -99,7 +116,13 @@ public final class ProcessLogger {
     }
   }
 
-  /// Writes one debug message when debug logging is enabled.
+  /// Writes one trace message when trace logging is enabled.
+  public func trace(_ message: String) {
+    guard traceEnabled else { return }
+    write(level: "TRACE", message: message, stream: stdout)
+  }
+
+  /// Writes one debug message when debug or trace logging is enabled.
   public func debug(_ message: String) {
     guard debugEnabled else { return }
     write(level: "DEBUG", message: message, stream: stdout)

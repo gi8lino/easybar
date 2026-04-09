@@ -239,47 +239,6 @@ local function apply_interaction(node, interaction)
 	return node
 end
 
---- Builds one render node from an item record and its child nodes.
-local function make_node(id, item, root_position, children)
-	local props = item.props
-
-	local kind = item.kind or "item"
-
-	if kind == "item" and type(children) == "table" and #children > 0 then
-		kind = "row"
-	end
-
-	local node = base_node(id, kind, root_position, props.order, resolve_drawing(props, true))
-	node.icon = icon_string(props.icon)
-	node.text = label_string(props.label)
-	node.color = resolve_color(props)
-	node.iconColor = resolve_icon_color(props)
-	node.labelColor = resolve_label_color(props)
-	node.imagePath = resolve_image_path(props)
-	node.imageSize = resolve_image_size(props)
-	node.imageCornerRadius = resolve_image_corner_radius(props)
-	node.iconFontSize = resolve_icon_font_size(props)
-	node.labelFontSize = resolve_label_font_size(props)
-	node.value = tonumber(props.value)
-	node.min = tonumber(props.min)
-	node.max = tonumber(props.max)
-	node.step = tonumber(props.step)
-	node.values = props.values
-	node.lineWidth = tonumber(props.line_width or props.lineWidth)
-	node.children = children
-	return apply_box_style(node, props)
-end
-
---- Builds the popup content container for one popup-enabled item.
-local function make_popup_container(id, root_position, popup_props, children)
-	local node = base_node(id, "column", root_position, 0, resolve_drawing(popup_props, false))
-	node.icon = ""
-	node.text = ""
-	node.color = ""
-	node.children = children
-	return apply_box_style(node, popup_props)
-end
-
 --- Resolves which mouse capabilities the node should expose.
 local function resolve_mouse_interaction(registry, id)
 	local subscriptions = registry._state.subscriptions[id]
@@ -312,6 +271,47 @@ local function resolve_mouse_interaction(registry, id)
 		click = click,
 		scroll = scroll,
 	}
+end
+
+--- Builds one render node from an item record and its child nodes.
+local function make_node(registry, id, item, root_position, children)
+	local props = item.props
+
+	local kind = item.kind or "item"
+
+	if kind == "item" and type(children) == "table" and #children > 0 then
+		kind = "row"
+	end
+
+	local node = base_node(id, kind, root_position, props.order, resolve_drawing(props, true))
+	node.icon = icon_string(props.icon)
+	node.text = label_string(props.label)
+	node.color = resolve_color(props)
+	node.iconColor = resolve_icon_color(props)
+	node.labelColor = resolve_label_color(props)
+	node.imagePath = resolve_image_path(props)
+	node.imageSize = resolve_image_size(props)
+	node.imageCornerRadius = resolve_image_corner_radius(props)
+	node.iconFontSize = resolve_icon_font_size(props)
+	node.labelFontSize = resolve_label_font_size(props)
+	node.value = tonumber(props.value)
+	node.min = tonumber(props.min)
+	node.max = tonumber(props.max)
+	node.step = tonumber(props.step)
+	node.values = props.values
+	node.lineWidth = tonumber(props.line_width or props.lineWidth)
+	node.children = children
+	return apply_interaction(apply_box_style(node, props), resolve_mouse_interaction(registry, id))
+end
+
+--- Builds the popup content container for one popup-enabled item.
+local function make_popup_container(id, root_position, popup_props, children)
+	local node = base_node(id, "column", root_position, 0, resolve_drawing(popup_props, false))
+	node.icon = ""
+	node.text = ""
+	node.color = ""
+	node.children = children
+	return apply_box_style(node, popup_props)
 end
 
 --- Flattens one render tree into the payload expected by Swift.
@@ -457,20 +457,16 @@ local function build_tree(registry, id, root_position)
 	local has_popup = type(item.props.popup) == "table" or #popup_child_nodes > 0
 
 	if not has_popup then
-		return apply_interaction(
-			make_node(id, item, root_position, child_nodes),
-			resolve_mouse_interaction(registry, id)
-		)
+		return make_node(registry, id, item, root_position, child_nodes)
 	end
 
-	local anchor = make_node(id .. "_anchor", item, root_position, child_nodes)
+	local anchor = make_node(registry, id .. "_anchor", item, root_position, child_nodes)
 	anchor.order = 0
 
 	local popup_props = item.props.popup or {}
 	local popup_container = make_popup_container(id .. "_popup_content", root_position, popup_props, popup_child_nodes)
 
-	local root = make_node(id, item, root_position, child_nodes)
-	apply_interaction(root, resolve_mouse_interaction(registry, id))
+	local root = make_node(registry, id, item, root_position, child_nodes)
 	root.popupChildren = { popup_container }
 
 	if #child_nodes > 0 then
@@ -512,7 +508,7 @@ local function emit_tree(tree, log, json)
 
 	if last_emitted[root_id] == encoded then
 		if log then
-			log.debug("render skipped unchanged tree root=" .. root_id)
+			log.trace("render skipped unchanged tree root=" .. root_id)
 		end
 		return
 	end

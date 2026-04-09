@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     logger.configureRuntimeLogging(
       debugEnabled: runtimeConfig.loggingDebugEnabled,
+      traceEnabled: runtimeConfig.loggingTraceEnabled,
       fileLoggingEnabled: runtimeConfig.loggingEnabled,
       fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
         .appendingPathComponent("calendar-agent.out")

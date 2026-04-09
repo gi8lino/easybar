@@ -7,6 +7,7 @@ lock_dir = "/tmp/EasyBar" # Folder that contains lock files for EasyBar.
 [logging]
 enabled = false # Mirrors stdout and stderr log lines into per-process files when true.
 debug = false # Enables verbose debug logs without requiring EASYBAR_DEBUG in the service environment.
+trace = false # Enables ultra-verbose trace logs. Trace implies debug and is intended for short diagnostic sessions.
 directory = "~/.local/state/easybar" # Log directory. EasyBar writes easybar.out, calendar-agent.out, and network-agent.out here.
 
 [agents.calendar]

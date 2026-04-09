@@ -46,6 +46,10 @@ public struct SharedRuntimeConfig {
     logging.debugEnabled
   }
 
+  public var loggingTraceEnabled: Bool {
+    logging.traceEnabled
+  }
+
   public var loggingDirectory: String {
     logging.directory
   }
@@ -96,15 +100,18 @@ public struct SharedAppRuntimeConfig {
 public struct SharedLoggingRuntimeConfig {
   public let enabled: Bool
   public let debugEnabled: Bool
+  public let traceEnabled: Bool
   public let directory: String
 
   public init(
     enabled: Bool,
     debugEnabled: Bool,
+    traceEnabled: Bool,
     directory: String
   ) {
     self.enabled = enabled
     self.debugEnabled = debugEnabled
+    self.traceEnabled = traceEnabled
     self.directory = directory
   }
 }

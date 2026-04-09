@@ -26,6 +26,11 @@ local function write(level, source, message)
 	io.stderr:flush()
 end
 
+--- Writes one runtime trace log line.
+function M.trace(message)
+	write("TRACE", "runtime", message)
+end
+
 --- Writes one runtime debug log line.
 function M.debug(message)
 	write("DEBUG", "runtime", message)

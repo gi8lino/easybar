@@ -63,7 +63,7 @@ while true do
 		break
 	end
 
-	log.debug("runtime stdin " .. tostring(line))
+	log.trace("runtime stdin " .. tostring(line))
 
 	local ok, payload = pcall(json.decode, line)
 
