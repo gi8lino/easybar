@@ -10,6 +10,6 @@ extension Config {
 
   /// Returns the log-level override from the environment when present.
   func environmentLogLevelOverride() -> ProcessLogLevel? {
-    ProcessLogLevel.normalized(stringEnvironmentValue(named: SharedEnvironmentKeys.logLevel))
+    ProcessLogLevel.normalized(stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel))
   }
 }
