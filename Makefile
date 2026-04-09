@@ -95,7 +95,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package release app cli fmt clean clean-dist run stop dev icons \
+.PHONY: help all prepare-version build bundle package release app cli fmt clean clean-dist run run-debug run-trace stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -388,7 +388,25 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@EASYBAR_DEBUG=1 "$(APP_BIN)"
+	@"$(APP_BIN)"
+
+run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
+	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
+	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
+	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
+	@EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
+
+run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
+	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
+	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
+	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
+	@EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@if command -v brew >/dev/null 2>&1; then \
@@ -404,8 +422,8 @@ stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@pkill -f "$(NETWORK_AGENT_BUNDLE)/Contents/MacOS/$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
 
 dev: prepare-version ## Fast debug run without bundling.
-	@EASYBAR_DEBUG=1 $(SWIFT_BUILD_DEBUG) --product $(APP_PRODUCT)
-	@EASYBAR_DEBUG=1 swift run -c debug $(APP_PRODUCT)
+	@EASYBAR_LOG_LEVEL=debug $(SWIFT_BUILD_DEBUG) --product $(APP_PRODUCT)
+	@EASYBAR_LOG_LEVEL=debug swift run -c debug $(APP_PRODUCT)
 
 ##@ Cleanup
 
