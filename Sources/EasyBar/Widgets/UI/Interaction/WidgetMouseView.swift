@@ -173,7 +173,7 @@ final class MouseTrackingNSView: NSView {
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
     easybarLog.debug(
-      "\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)")
+      "event=\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)")
 
     EventBus.shared.emitWidgetEvent(
       event,

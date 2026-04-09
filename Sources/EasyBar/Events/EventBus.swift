@@ -111,7 +111,7 @@ final class EventBus {
   /// Logs one emitted payload for local debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
-    easybarLog.debug("emit event (payload.eventName)")
+    easybarLog.debug("emit event \(payload.eventName)")
   }
 }
 
