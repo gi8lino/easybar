@@ -34,12 +34,18 @@ final class WidgetPopupPanelController: ObservableObject {
     refreshPresentation()
   }
 
-  /// Closes the popup when present.
+  /// Closes the popup when present and clears related window state.
   func close() {
-    guard let panel else { return }
+    guard let panel else {
+      detachAndResetParentWindow()
+      return
+    }
 
     detachFromParentWindow()
     panel.orderOut(nil)
+    panel.contentViewController = nil
+    self.panel = nil
+    detachAndResetParentWindow()
   }
 
   /// Applies the current presentation state to the panel.
@@ -67,6 +73,8 @@ final class WidgetPopupPanelController: ObservableObject {
 
     let panel = panel ?? makePanel()
     self.panel = panel
+    panel.contentViewController = hostingController
+
     if self.parentWindow !== parentWindow {
       detachFromParentWindow()
       self.parentWindow = parentWindow
@@ -85,7 +93,8 @@ final class WidgetPopupPanelController: ObservableObject {
       NSPoint(
         x: screenRect.maxX - contentSize.width,
         y: screenRect.minY - contentSize.height - 6
-      ))
+      )
+    )
 
     if panel.parent == nil {
       parentWindow.addChildWindow(panel, ordered: .above)
@@ -116,6 +125,12 @@ final class WidgetPopupPanelController: ObservableObject {
   private func detachFromParentWindow() {
     guard let panel, let parentWindow else { return }
     parentWindow.removeChildWindow(panel)
+  }
+
+  /// Clears the tracked parent window and its observers.
+  private func detachAndResetParentWindow() {
+    removeParentWindowObservers()
+    parentWindow = nil
   }
 
   /// Installs window observers used to keep the popup positioned correctly.
@@ -149,8 +164,6 @@ final class WidgetPopupPanelController: ObservableObject {
   private func handleParentWindowUpdate(notification: Notification.Name) {
     if notification == NSWindow.willCloseNotification {
       close()
-      parentWindow = nil
-      removeParentWindowObservers()
       return
     }
 
