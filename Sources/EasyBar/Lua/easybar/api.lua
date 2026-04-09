@@ -20,6 +20,14 @@ local event_tokens = load_module("event_tokens")
 local registry_module = load_module("registry")
 local subscriptions_module = load_module("subscriptions")
 
+local LOG_LEVELS = {
+	trace = "trace",
+	debug = "debug",
+	info = "info",
+	warn = "warn",
+	error = "error",
+}
+
 --- Joins log arguments into one message string.
 local function join_message(...)
 	local parts = {}
@@ -29,6 +37,20 @@ local function join_message(...)
 	end
 
 	return table.concat(parts, " ")
+end
+
+--- Returns one normalized uppercase host log level.
+local function normalize_log_level(level)
+	if type(level) ~= "string" then
+		return "INFO"
+	end
+
+	local normalized = LOG_LEVELS[string.lower(level)]
+	if normalized == nil then
+		return "INFO"
+	end
+
+	return string.upper(normalized)
 end
 
 --- Builds one widget-scoped EasyBar API instance.
@@ -41,7 +63,7 @@ function M.new(log)
 			return
 		end
 
-		log.widget(source or "widget", level or "INFO", join_message(...))
+		log.widget(source or "widget", normalize_log_level(level), join_message(...))
 	end
 
 	local api = {
@@ -83,6 +105,7 @@ function M.new(log)
 		widget_api.exec = api.exec
 		widget_api.subscribe = api.subscribe
 		widget_api.events = event_tokens.tokens
+		widget_api.level = LOG_LEVELS
 
 		--- Writes one widget log line through the host logger.
 		function widget_api.log(level, ...)

@@ -114,6 +114,13 @@
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
+---@class EasyBarLevels
+---@field trace EasyBarLevel
+---@field debug EasyBarLevel
+---@field info EasyBarLevel
+---@field warn EasyBarLevel
+---@field error EasyBarLevel
+
 ---@class EasyBar
 local EasyBar = {}
 
@@ -157,6 +164,10 @@ function EasyBar.exec(command, callback) end
 ---All supported EasyBar event tokens.
 ---@type EasyBarEvents
 EasyBar.events = {}
+
+---All supported EasyBar log levels.
+---@type EasyBarLevels
+EasyBar.level = {}
 
 ---Subscribes one node to one or more event tokens.
 ---Interaction belongs to the subscribed node frame.
