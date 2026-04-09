@@ -1,6 +1,49 @@
 import Darwin
 import Foundation
 
+/// Supported log levels ordered from least to most verbose.
+public enum ProcessLogLevel: Int, CaseIterable, Sendable {
+  case error = 0
+  case warn = 1
+  case info = 2
+  case debug = 3
+  case trace = 4
+
+  /// Returns the canonical uppercase label used in log output.
+  public var label: String {
+    switch self {
+    case .error:
+      return "ERROR"
+    case .warn:
+      return "WARN"
+    case .info:
+      return "INFO"
+    case .debug:
+      return "DEBUG"
+    case .trace:
+      return "TRACE"
+    }
+  }
+
+  /// Parses one user-facing level string.
+  public init?(string: String) {
+    switch string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "error":
+      self = .error
+    case "warn", "warning":
+      self = .warn
+    case "info":
+      self = .info
+    case "debug":
+      self = .debug
+    case "trace":
+      self = .trace
+    default:
+      return nil
+    }
+  }
+}
+
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
   private static let formatter: DateFormatter = {
@@ -24,21 +67,10 @@ public final class ProcessLogger {
     minimumLevelFlag = minimumLevel
   }
 
-  /// Returns the current minimum enabled log level.
   public var minimumLevel: ProcessLogLevel {
     lock.lock()
     defer { lock.unlock() }
     return minimumLevelFlag
-  }
-
-  /// Compatibility accessor for existing debug-oriented call sites.
-  public var debugEnabled: Bool {
-    minimumLevel.allows(.debug)
-  }
-
-  /// Compatibility accessor for existing trace-oriented call sites.
-  public var traceEnabled: Bool {
-    minimumLevel.allows(.trace)
   }
 
   public var fileLoggingEnabled: Bool {
@@ -53,21 +85,11 @@ public final class ProcessLogger {
     return fileLoggingPathValue
   }
 
-  /// Updates the current minimum log level.
+  /// Updates the minimum enabled log level.
   public func setMinimumLevel(_ level: ProcessLogLevel) {
     lock.lock()
     minimumLevelFlag = level
     lock.unlock()
-  }
-
-  /// Compatibility helper that maps debug on/off into a minimum log level.
-  public func setDebugEnabled(_ enabled: Bool) {
-    setMinimumLevel(enabled ? .debug : .info)
-  }
-
-  /// Compatibility helper that maps trace on/off into a minimum log level.
-  public func setTraceEnabled(_ enabled: Bool) {
-    setMinimumLevel(enabled ? .trace : .info)
   }
 
   /// Configures minimum level and optional file logging in one step.
@@ -130,17 +152,17 @@ public final class ProcessLogger {
     writeIfEnabled(level: .debug, message: message, stream: stdout)
   }
 
-  /// Writes one info message.
+  /// Writes one info message when the minimum level allows it.
   public func info(_ message: String) {
     writeIfEnabled(level: .info, message: message, stream: stdout)
   }
 
-  /// Writes one warning message.
+  /// Writes one warning message when the minimum level allows it.
   public func warn(_ message: String) {
     writeIfEnabled(level: .warn, message: message, stream: stderr)
   }
 
-  /// Writes one error message.
+  /// Writes one error message when the minimum level allows it.
   public func error(_ message: String) {
     writeIfEnabled(level: .error, message: message, stream: stderr)
   }
@@ -164,7 +186,7 @@ public final class ProcessLogger {
     lock.lock()
     defer { lock.unlock() }
 
-    guard minimumLevelFlag.allows(level) else { return }
+    guard level.rawValue <= minimumLevelFlag.rawValue else { return }
     writeUnlocked(level: level, message: message, stream: stream)
   }
 
@@ -180,7 +202,7 @@ public final class ProcessLogger {
   }
 
   private func formattedLine(level: ProcessLogLevel, message: String) -> String {
-    "[\(Self.formatter.string(from: Date()))] \(label) [\(level.rawValue.uppercased())] \(message)"
+    "[\(Self.formatter.string(from: Date()))] \(label) [\(level.label)] \(message)"
   }
 
   private func writeFileUnlocked(_ line: String) {

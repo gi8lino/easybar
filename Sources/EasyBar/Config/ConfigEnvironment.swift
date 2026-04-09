@@ -5,11 +5,11 @@ extension Config {
 
   /// Returns the config path override from the environment when present.
   func environmentConfigPathOverride() -> String? {
-    expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
+    expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
   }
 
   /// Returns the log-level override from the environment when present.
   func environmentLogLevelOverride() -> ProcessLogLevel? {
-    ProcessLogLevel.normalized(stringEnvironmentValue(named: "EASYBAR_LOG_LEVEL"))
+    ProcessLogLevel.normalized(stringEnvironmentValue(named: SharedEnvironmentKeys.logLevel))
   }
 }

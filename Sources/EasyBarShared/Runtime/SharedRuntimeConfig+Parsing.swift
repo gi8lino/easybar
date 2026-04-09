@@ -3,7 +3,7 @@ import TOMLKit
 
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
 func resolvedConfigPath() -> String {
-  expandedEnvironmentPath(named: "EASYBAR_CONFIG_PATH")
+  expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
     ?? FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent(".config/easybar/config.toml")
     .path

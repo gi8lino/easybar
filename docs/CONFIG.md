@@ -32,12 +32,35 @@ EasyBar uses one shared log directory for all three processes:
 - `calendar-agent.out`
 - `network-agent.out`
 
-Configure that directory with:
+Configure logging with:
 
 ```toml
 [logging]
+enabled = true
+level = "info"
 directory = "~/.local/state/easybar"
 ```
+
+Supported levels:
+
+- `info`
+- `debug`
+- `trace`
+
+Meaning:
+
+- `info`
+  normal runtime logs
+- `debug`
+  info plus debug logs
+- `trace`
+  info, debug, and very verbose trace logs
+
+Notes:
+
+- the main app and helper agents now use this config-driven level instead of legacy `EASYBAR_DEBUG` / `EASYBAR_TRACE` environment toggles
+- `EASYBAR_CONFIG_PATH` remains the main environment override for the runtime config file
+- the `easybar` CLI may still support its own debug flag or CLI-only debug env handling, but that is separate from app and agent runtime logging
 
 ## Agents
 

@@ -45,7 +45,7 @@ Relevant config:
 ```toml
 [logging]
 enabled = false
-debug = false
+level = "info"
 directory = "~/.local/state/easybar"
 
 [agents.calendar]
@@ -59,12 +59,20 @@ refresh_interval_seconds = 60
 allow_unauthorized_non_sensitive_fields = false
 ```
 
-The agents also respect environment overrides for:
+Supported logging levels are:
+
+- `info`
+- `debug`
+- `trace`
+
+Environment overrides still exist for:
 
 - config path
-- debug logging
 - socket paths
 - network refresh interval
+- agent enablement flags when explicitly supported by the shared runtime config
+
+The app and agents no longer use legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` toggles for normal runtime logging. Use `logging.level` in `config.toml` instead.
 
 If an agent is disabled in config, the helper app exits immediately without opening its socket.
 
@@ -218,13 +226,13 @@ end)
 
 ## Key transformations
 
-| Layer | Shape | Responsibility |
-| -- | -- | |
-| Agent | flat key-value | data collection |
-| EasyBar | typed models | normalization |
-| EventBus | structured JSON | event transport |
-| Lua | structured event object | widget logic |
-| UI | rendered nodes | presentation |
+| Layer    | Shape                   | Responsibility  |
+| -------- | ----------------------- | --------------- |
+| Agent    | flat key-value          | data collection |
+| EasyBar  | typed models            | normalization   |
+| EventBus | structured JSON         | event transport |
+| Lua      | structured event object | widget logic    |
+| UI       | rendered nodes          | presentation    |
 
 ## Important rule
 
@@ -232,8 +240,6 @@ end)
 👉 Widgets **never care about raw agent format**
 
 EasyBar is the boundary that translates between them.
-
-# ➕ Add this section: **Debugging agents**
 
 # Debugging agents
 
@@ -260,12 +266,12 @@ If logging is enabled:
 ```toml
 [logging]
 enabled = true
-debug = true
+level = "debug"
 ```
 
 Logs are written to:
 
-```
+```text
 ~/.local/state/easybar/
 ```
 
@@ -274,6 +280,14 @@ Or via Homebrew:
 ```bash
 tail -n 200 ~/Library/Logs/Homebrew/easybar-calendar-agent/*.log
 tail -n 200 ~/Library/Logs/Homebrew/easybar-network-agent/*.log
+```
+
+For extremely verbose socket and update tracing, temporarily use:
+
+```toml
+[logging]
+enabled = true
+level = "trace"
 ```
 
 ## 3. Test socket manually
@@ -300,13 +314,13 @@ echo '{"command":"fetch","fields":["wifi.ssid"]}' | nc -U /tmp/EasyBar/network-a
 
 ## 4. Common problems
 
-### ❌ No data returned
+### No data returned
 
 - agent not running
 - wrong socket path
 - config disabled agent
 
-### ❌ Wi-Fi fields missing
+### Wi-Fi fields missing
 
 - Location permission not granted
 - check:
@@ -315,22 +329,22 @@ echo '{"command":"fetch","fields":["wifi.ssid"]}' | nc -U /tmp/EasyBar/network-a
 systemsettings Privacy LocationServices
 ```
 
-### ❌ Calendar empty
+### Calendar empty
 
 - Calendar permission not granted
 - EventKit access denied
 
-### ❌ Permission stuck at `not_determined`
+### Permission stuck at `not_determined`
 
 Agents retry with backoff:
 
-```
+```text
 1, 2, 3, 5, 8, 13, ... seconds
 ```
 
-Wait or restart agent.
+Wait or restart the agent.
 
-### ❌ Wrong or stale data
+### Wrong or stale data
 
 Restart agents:
 
@@ -343,11 +357,11 @@ brew services restart gi8lino/tap/easybar-calendar-agent
 
 Important distinction:
 
-| Problem | Likely source |
-| -- | |
-| No socket response | agent |
-| JSON correct but widget wrong | Lua |
-| Event missing field | EasyBar mapping |
+| Problem                       | Likely source   |
+| ----------------------------- | --------------- |
+| No socket response            | agent           |
+| JSON correct but widget wrong | Lua             |
+| Event missing field           | EasyBar mapping |
 
 ## 6. Inspect raw agent output
 
@@ -376,7 +390,7 @@ Best order:
 
 👉 Always debug from the bottom up:
 
-```
+```text
 Agent → Socket → EasyBar → Lua → UI
 ```
 
@@ -503,7 +517,7 @@ Clients request only what they need.
 }
 ```
 
-## Field model (IMPORTANT)
+## Field model
 
 The network agent returns a **flat map of typed values**:
 
@@ -516,7 +530,7 @@ The network agent returns a **flat map of typed values**:
 ```
 
 - keys are dot-separated
-- values are typed (not strings)
+- values are typed, not stringified UI values
 
 This is different from Lua events, where values are structured into objects.
 
@@ -599,4 +613,4 @@ EasyBar connects to them over Unix sockets.
 - network = field-based
 - EasyBar maps agent data → structured events → UI
 
-👉 **Agents collect data -- EasyBar owns presentation.**
+👉 **Agents collect data. EasyBar owns presentation.**

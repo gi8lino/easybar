@@ -3,7 +3,7 @@
 This document explains how EasyBar runs Lua widgets internally.
 
 It is for contributors, not widget authors.
-For the public widget API, see [LUA_WIDGETS.md](./docs/LUA_WIDGETS.md).
+For the public widget API, see [LUA_WIDGETS.md](./LUA_WIDGETS.md).
 
 ## Overview
 
@@ -358,19 +358,32 @@ Lua logs to stderr.
 
 Structured format:
 
-```
+```text
 EASYBAR_LOG\t<level>\t<context>\tmessage
 ```
 
-Handled by:
+Valid Lua log levels are:
 
-- `LuaLogBridge.swift`
+- `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
+
+The Lua side treats those strings as the public scripting contract.
+`LuaLogBridge.swift` is the translation boundary that maps them into the Swift host logger.
+
+That means:
+
+- Lua widgets should log using the lowercase public API values
+- Lua runtime internals may emit uppercase structured lines on stderr
+- Swift remains the canonical implementation of filtering and output behavior
 
 ## End-to-end data flow
 
 This is the complete runtime path from system event to UI:
 
-1. system event occurs (e.g. Wi-Fi change)
+1. system event occurs, for example Wi-Fi change
 2. Swift event source emits through `EventBus`
 3. event is forwarded to Lua via stdin JSON
 4. Lua normalizes and dispatches it
@@ -390,15 +403,19 @@ Important properties:
 
 ### Check Lua logs
 
-```bash
-log stream --predicate 'process == "EasyBar"'
-```
+Inspect the normal EasyBar logs and look for messages such as:
 
-Look for:
-
-```
+```text
 lua[widget.lua] ...
 lua[runtime] ...
+```
+
+For deeper runtime debugging, temporarily raise the host logging level to:
+
+```toml
+[logging]
+enabled = true
+level = "trace"
 ```
 
 ### Run Lua manually

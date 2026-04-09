@@ -225,14 +225,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Logs relevant environment overrides.
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
-    let configOverride = env["EASYBAR_CONFIG_PATH"] ?? ""
-    let logLevel = env["EASYBAR_LOG_LEVEL"] ?? ""
+    let configOverride = env["\(SharedEnvironmentKeys.configPath)"] ?? ""
+    let logLevel = env["\(SharedEnvironmentKeys.logLevel)"] ?? ""
 
     easybarLog.info(
-      "environment EASYBAR_CONFIG_PATH=\(configOverride.isEmpty ? "<unset>" : configOverride)"
+      "environment \(SharedEnvironmentKeys.configPath)=\(configOverride.isEmpty ? "<unset>" : configOverride)"
     )
     easybarLog.info(
-      "environment EASYBAR_LOG_LEVEL=\(logLevel.isEmpty ? "<unset>" : logLevel)"
+      "environment \(SharedEnvironmentKeys.logLevel)=\(logLevel.isEmpty ? "<unset>" : logLevel)"
     )
   }
 

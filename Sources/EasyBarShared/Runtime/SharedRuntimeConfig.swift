@@ -46,14 +46,6 @@ public struct SharedRuntimeConfig {
     logging.level
   }
 
-  public var loggingDebugEnabled: Bool {
-    logging.level.allows(.debug)
-  }
-
-  public var loggingTraceEnabled: Bool {
-    logging.level.allows(.trace)
-  }
-
   public var loggingDirectory: String {
     logging.directory
   }

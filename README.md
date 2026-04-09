@@ -74,6 +74,48 @@ brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
+## Logging
+
+EasyBar, the calendar agent, and the network agent share one logging config block.
+
+Example:
+
+```toml
+[logging]
+enabled = true
+level = "debug"
+directory = "~/.local/state/easybar"
+```
+
+Supported levels:
+
+- `info`
+- `debug`
+- `trace`
+
+Behavior:
+
+- `info` writes normal operational logs
+- `debug` includes debug output in addition to info, warnings, and errors
+- `trace` includes everything, including very verbose trace logs
+
+When file logging is enabled, EasyBar writes:
+
+- `easybar.out`
+- `calendar-agent.out`
+- `network-agent.out`
+
+into the configured logging directory.
+
+The app and helper agents no longer use legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` environment toggles. For normal app and agent logging, use `logging.level` in `config.toml`.
+
+The `easybar` CLI still supports debug output independently through:
+
+- `easybar --debug`
+- `EASYBAR_DEBUG=1 easybar ...`
+
+That CLI-only environment behavior is just for the control client and does not change the main app or agent log level.
+
 ## Agents
 
 EasyBar uses two small helper agents:
@@ -276,7 +318,7 @@ Enable logging in `config.toml`:
 ```toml
 [logging]
 enabled = true
-debug = true
+level = "debug"
 ```
 
 Then inspect the log output in your configured logging directory.
@@ -290,6 +332,14 @@ tail -n 200 ~/Library/Logs/Homebrew/easybar-network-agent/*.log
 ```
 
 If your Homebrew setup writes logs somewhere else on your machine, use `brew services info easybar` and the corresponding agent services to find the actual paths.
+
+For very verbose app and agent troubleshooting, temporarily raise the level to:
+
+```toml
+[logging]
+enabled = true
+level = "trace"
+```
 
 ### Common problems and fixes
 

@@ -1,27 +1,22 @@
-import TOMLKit
+import Foundation
 
-/// Returns the resolved logging config from env, TOML, and defaults.
-func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
-  let loggingTable = toml["logging"]?.table
+/// Returns one resolved log level from env, TOML, and defaults.
+func resolvedProcessLogLevel(
+  environmentName: String,
+  tomlValue: String?,
+  fallback: ProcessLogLevel = .info
+) -> ProcessLogLevel {
+  if let raw = stringEnvironmentValue(named: environmentName),
+    let level = ProcessLogLevel(string: raw)
+  {
+    return level
+  }
 
-  let enabled =
-    boolEnvironmentValue(named: "EASYBAR_LOGGING_ENABLED")
-    ?? loggingTable?["enabled"]?.bool
-    ?? false
+  if let tomlValue,
+    let level = ProcessLogLevel(string: tomlValue)
+  {
+    return level
+  }
 
-  let level =
-    ProcessLogLevel.normalized(stringEnvironmentValue(named: "EASYBAR_LOG_LEVEL"))
-    ?? ProcessLogLevel.normalized(loggingTable?["level"]?.string)
-    ?? .info
-
-  let directory =
-    expandedEnvironmentPath(named: "EASYBAR_LOGGING_DIRECTORY")
-    ?? expandedPath(loggingTable?["directory"]?.string)
-    ?? defaultLoggingDirectoryPath()
-
-  return SharedLoggingRuntimeConfig(
-    enabled: enabled,
-    level: level,
-    directory: directory
-  )
+  return fallback
 }

@@ -5,7 +5,7 @@ import TOMLKit
 func resolvedEasyBarConfig(from toml: TOMLTable) -> SharedEasyBarRuntimeConfig {
   SharedEasyBarRuntimeConfig(
     socketPath: resolvedSocketPath(
-      environmentName: "EASYBAR_SOCKET_PATH",
+      environmentName: SharedEnvironmentKeys.easyBarSocketPath,
       tomlValue: nil,
       fallback: defaultEasyBarSocketPath
     )
@@ -17,12 +17,12 @@ func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRun
   let calendarTable = toml["agents"]?["calendar"]?.table
 
   let enabled =
-    boolEnvironmentValue(named: "EASYBAR_CALENDAR_AGENT_ENABLED")
+    boolEnvironmentValue(named: SharedEnvironmentKeys.calendarAgentEnabled)
     ?? calendarTable?["enabled"]?.bool
     ?? true
 
   let socketPath = resolvedSocketPath(
-    environmentName: "EASYBAR_CALENDAR_AGENT_SOCKET",
+    environmentName: SharedEnvironmentKeys.calendarAgentSocketPath,
     tomlValue: calendarTable?["socket_path"]?.string,
     fallback: defaultCalendarAgentSocketPath
   )
@@ -38,23 +38,25 @@ func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRunti
   let networkTable = toml["agents"]?["network"]?.table
 
   let enabled =
-    boolEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_ENABLED")
+    boolEnvironmentValue(named: SharedEnvironmentKeys.networkAgentEnabled)
     ?? networkTable?["enabled"]?.bool
     ?? true
 
   let socketPath = resolvedSocketPath(
-    environmentName: "EASYBAR_NETWORK_AGENT_SOCKET",
+    environmentName: SharedEnvironmentKeys.networkAgentSocketPath,
     tomlValue: networkTable?["socket_path"]?.string,
     fallback: defaultNetworkAgentSocketPath
   )
 
   let refreshIntervalSeconds =
-    timeIntervalEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_REFRESH_INTERVAL_SECONDS")
+    timeIntervalEnvironmentValue(named: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
     ?? networkTable?["refresh_interval_seconds"]?.double
     ?? 60
 
   let allowUnauthorizedFieldsWithoutLocation =
-    boolEnvironmentValue(named: "EASYBAR_NETWORK_AGENT_ALLOW_UNAUTHORIZED_NON_SENSITIVE_FIELDS")
+    boolEnvironmentValue(
+      named: SharedEnvironmentKeys.networkAgentAllowUnauthorizedNonSensitiveFields
+    )
     ?? networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
     ?? false
 

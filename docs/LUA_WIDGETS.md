@@ -206,9 +206,30 @@ end)
 
 Logs from a widget.
 
+Supported levels:
+
+- `"trace"`
+- `"debug"`
+- `"info"`
+- `"warn"`
+- `"error"`
+
+Example:
+
 ```lua
 easybar.log("info", "refreshing widget")
+easybar.log("debug", "current value", 42)
+easybar.log("trace", "raw payload", payload)
 ```
+
+These are the public Lua logging levels.
+The Swift host decides which ones are actually emitted based on the configured host logging level.
+
+For example:
+
+- host `logging.level = "info"` shows `info`, `warn`, and `error`
+- host `logging.level = "debug"` also shows `debug`
+- host `logging.level = "trace"` also shows `trace`
 
 ## Properties
 

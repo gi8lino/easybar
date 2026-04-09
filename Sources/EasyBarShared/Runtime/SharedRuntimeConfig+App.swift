@@ -5,7 +5,7 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   let appTable = toml["app"]?.table
 
   let lockDirectory =
-    expandedEnvironmentPath(named: "EASYBAR_LOCK_DIR")
+    expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
 
