@@ -133,7 +133,13 @@ Instead, it tells the already running EasyBar process to refresh using the curre
 
 In practice, that means EasyBar can trigger fresh agent reads and republish updated UI state without rebuilding the whole app.
 
-`easybar --reload-config` is different:
+`easybar --restart-lua-runtime` is also different from agent restart behavior:
+
+- it restarts only the Lua widget runtime inside the main EasyBar process
+- it does not restart the helper agents
+- EasyBar continues using the already running agent clients and their current subscriptions
+
+`easybar --reload-config` is different again:
 
 - it reloads `config.toml` from disk
 - it rebuilds EasyBar runtime state from the new config
@@ -143,6 +149,8 @@ So the distinction is:
 
 - `refresh`
   refresh current runtime state and pull fresh data
+- `restart-lua-runtime`
+  restart only the Lua widget runtime
 - `reload-config`
   rebuild runtime state from a newly loaded config file
 

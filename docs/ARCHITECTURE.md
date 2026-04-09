@@ -116,6 +116,7 @@ This keeps automation simple and avoids forcing users to speak the socket protoc
 Typical examples:
 
 - `easybar --refresh`
+- `easybar --restart-lua-runtime`
 - `easybar --reload-config`
 - `easybar --space-mode-changed`
 
@@ -130,7 +131,8 @@ The control socket is used for commands such as:
 - `workspace_changed`
 - `focus_changed`
 - `space_mode_changed`
-- `refresh`
+- `manual_refresh`
+- `restart_lua_runtime`
 - `reload_config`
 
 Requests and responses are typed JSON.

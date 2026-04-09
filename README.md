@@ -134,20 +134,29 @@ Supported commands:
 - `workspace_changed`
 - `focus_changed`
 - `space_mode_changed`
-- `refresh`
+- `manual_refresh`
+- `restart_lua_runtime`
 - `reload_config`
 
 `easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
 
-### Refresh vs reload-config
+### Refresh vs restart-lua-runtime vs reload-config
 
-EasyBar exposes both a refresh action and a config reload action because they solve different problems.
+EasyBar exposes three different runtime control actions because they solve different problems.
 
 `easybar --refresh`:
 
 - refreshes the bar and widgets using the currently loaded config
 - pulls fresh data from agents
 - re-emits refresh-style state so widgets can update immediately
+- does not reread `config.toml` from disk
+- does not restart the Lua runtime
+
+`easybar --restart-lua-runtime`:
+
+- stops the current Lua runtime
+- starts a fresh Lua runtime process
+- reloads Lua widget files and resets Lua-side widget state
 - does not reread `config.toml` from disk
 
 `easybar --reload-config`:
@@ -157,6 +166,7 @@ EasyBar exposes both a refresh action and a config reload action because they so
 - reapplies native widgets and Lua runtime state against the updated configuration
 
 Use `--refresh` when the config is already correct and you want fresh UI state or fresh agent-backed data.
+Use `--restart-lua-runtime` when the Lua side is stuck, stale, or needs a full runtime reset.
 Use `--reload-config` when you changed the config file itself.
 
 ### AeroSpace layout mode example
@@ -402,13 +412,19 @@ First try a normal refresh:
 easybar --refresh
 ```
 
-That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and it does not mean “restart Lua runtime”.
+That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and it does not restart the Lua runtime.
 
-If you specifically want to restart the Lua side, use the bar context menu item:
+If the Lua side itself seems stuck, restart it explicitly:
+
+```bash
+easybar --restart-lua-runtime
+```
+
+The bar context menu item does the same thing:
 
 - `Restart Lua Runtime`
 
-If a normal refresh is not enough, restart the whole app:
+If that is still not enough, restart the whole app:
 
 ```bash
 brew services restart gi8lino/tap/easybar

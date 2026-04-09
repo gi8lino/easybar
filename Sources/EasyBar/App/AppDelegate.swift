@@ -65,8 +65,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Restarts only the Lua runtime without reloading config.
   private func restartLuaRuntime() {
-    reloadRuntimeServices()
+    WidgetRunner.shared.reload()
     aeroSpaceService.triggerRefresh()
+  }
+
+  /// Refreshes the current runtime state without reloading config.
+  ///
+  /// This keeps the current config, refreshes app-coordinated state,
+  /// refreshes agent-backed widget data through emitted events, and
+  /// notifies Lua widgets with the manual refresh event.
+  private func refreshRuntime() {
+    aeroSpaceService.triggerRefresh()
+    EventBus.shared.emit(.manualRefresh)
   }
 
   /// Configures file logging from the current app config.
@@ -81,6 +91,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Creates and presents the main bar window controller.
   private func setupBarWindowController() {
     let controller = BarWindowController()
+    controller.onRefresh = { [weak self] in
+      self?.refreshRuntime()
+    }
     controller.onReloadConfig = { [weak self] in
       self?.reloadConfig()
     }
@@ -129,6 +142,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     case .reloadConfig:
       reloadConfig()
+
+    case .restartLuaRuntime:
+      restartLuaRuntime()
     }
   }
 
@@ -151,20 +167,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   /// Handles one manual-refresh IPC trigger.
-  ///
-  /// This keeps the current in-memory config, but asks all runtime consumers
-  /// to refresh their current state and fetch fresh agent-backed data.
   private func handleManualRefresh() {
-    easybarLog.info("handling manual refresh")
-
-    aeroSpaceService.triggerRefresh()
-
-    UpcomingCalendarAgentClient.shared.refresh()
-    MonthCalendarAgentClient.shared.refresh()
-    NetworkAgentClient.shared.refresh()
-
-    NativeWidgetRegistry.shared.reload()
-    EventBus.shared.emit(.manualRefresh)
+    refreshRuntime()
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.

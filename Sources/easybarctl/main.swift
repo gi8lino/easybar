@@ -162,12 +162,17 @@ private enum CLI {
       flag: "--refresh",
       command: .manualRefresh,
       description:
-        "Refresh the bar and widgets with the current config and pull fresh data from agents"
+        "Refresh the bar and widgets using the currently loaded config and pull fresh data from agents"
     ),
     .init(
       flag: "--reload-config",
       command: .reloadConfig,
-      description: "Reload config from disk and rebuild EasyBar using the new settings"
+      description: "Reload config from disk and rebuild EasyBar with the new settings"
+    ),
+    .init(
+      flag: "--restart-lua-runtime",
+      command: .restartLuaRuntime,
+      description: "Restart only the Lua widget runtime using the currently loaded config"
     ),
   ]
 

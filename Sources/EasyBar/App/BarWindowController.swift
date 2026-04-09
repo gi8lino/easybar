@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Hosts the top-level borderless bar window.
 final class BarWindowController: NSWindowController {
+  var onRefresh: (() -> Void)?
   var onReloadConfig: (() -> Void)?
   var onRestartLuaRuntime: (() -> Void)?
 
@@ -112,6 +113,7 @@ final class BarWindowController: NSWindowController {
   /// Returns the runtime control menu items.
   private var runtimeMenuItems: [NSMenuItem] {
     [
+      actionItem(title: "Refresh", action: #selector(refresh(_:))),
       actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))),
       actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))),
     ]
@@ -246,6 +248,11 @@ final class BarWindowController: NSWindowController {
   /// Returns the current Wi-Fi/location permission label.
   private var wifiPermissionLabel: String {
     NativeWiFiStore.shared.snapshot?.permissionState ?? "unknown"
+  }
+
+  /// Refreshes the current runtime through the app layer.
+  @objc private func refresh(_ sender: Any?) {
+    onRefresh?()
   }
 
   /// Reloads the app config through the app layer.

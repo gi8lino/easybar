@@ -10,6 +10,7 @@ extension IPC {
     case focusChanged = "focus_changed"
     case spaceModeChanged = "space_mode_changed"
     case manualRefresh = "manual_refresh"
+    case restartLuaRuntime = "restart_lua_runtime"
     case reloadConfig = "reload_config"
   }
 

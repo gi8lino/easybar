@@ -160,7 +160,7 @@ It is useful to distinguish three different things:
 
 - normal runtime events
 - a manual refresh
-- a Lua runtime reload
+- a Lua runtime restart
 
 A normal event is something like `wifi_change`, `network_change`, `minute_tick`, or `mouse.clicked`.
 
@@ -178,7 +178,13 @@ That refresh:
 - does not reread `config.toml` from disk
 - does not restart the Lua process
 
-A Lua runtime reload is different.
+A Lua runtime restart is different.
+It is triggered explicitly, for example through:
+
+```bash
+easybar --restart-lua-runtime
+```
+
 That fully shuts the Lua side down and starts it again, which resets widget runtime state.
 
 So the intended distinction is:
@@ -187,7 +193,7 @@ So the intended distinction is:
   refresh current runtime state
 - `reload-config`
   reload config and rebuild runtime state
-- Lua runtime restart
+- `restart-lua-runtime`
   restart the Lua process itself
 
 ## Widget loading
