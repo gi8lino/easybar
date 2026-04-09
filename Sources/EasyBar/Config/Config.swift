@@ -35,10 +35,10 @@ final class Config {
 
   // MARK: - Stored config sections
 
-  private var appSection: AppSection
-  private var loggingSection: LoggingSection
-  private var calendarAgentSection: CalendarAgentSection
-  private var networkAgentSection: NetworkAgentSection
+  var appSection: AppSection
+  var loggingSection: LoggingSection
+  var calendarAgentSection: CalendarAgentSection
+  var networkAgentSection: NetworkAgentSection
 
   // MARK: - App compatibility accessors
 
@@ -199,58 +199,8 @@ final class Config {
     resetDerivedDefaults()
   }
 
-  /// Restores defaults derived from the current home directory.
-  private func resetDerivedDefaults() {
-    let runtime = SharedRuntimeConfig.current
-
-    appSection.widgetsPath =
-      FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".config/easybar/widgets")
-      .path
-    appSection.lockDirectory = runtime.lockDirectory
-
-    loggingSection.directory = runtime.loggingDirectory
-
-    calendarAgentSection.socketPath = runtime.calendarAgentSocketPath
-
-    networkAgentSection.socketPath = runtime.networkAgentSocketPath
-    networkAgentSection.refreshIntervalSeconds = runtime.networkAgentRefreshIntervalSeconds
-    networkAgentSection.allowUnauthorizedNonSensitiveFields =
-      runtime.networkAgentAllowUnauthorizedNonSensitiveFields
-  }
-
-  /// Restores all static defaults before parsing again.
-  private func resetStaticDefaults() {
-    resetAppDefaults()
-    resetLoggingDefaults()
-    resetAgentDefaults()
-    resetBarDefaults()
-    resetBuiltinDefaults()
-  }
-
-  /// Restores app-level defaults.
-  private func resetAppDefaults() {
-    appSection.luaPath = "/opt/homebrew/bin/lua"
-    appSection.watchConfigFile = false
-  }
-
-  /// Restores logging defaults.
-  private func resetLoggingDefaults() {
-    loggingSection.enabled = false
-    loggingSection.debugEnabled = false
-  }
-
-  /// Restores agent defaults.
-  private func resetAgentDefaults() {
-    calendarAgentSection.enabled = true
-
-    networkAgentSection.enabled = true
-    networkAgentSection.refreshIntervalSeconds = 60
-    networkAgentSection.allowUnauthorizedNonSensitiveFields = false
-  }
-
   /// Restores bar defaults.
-  private func resetBarDefaults() {
+  func resetBarDefaults() {
     barHeight = 32
     barPaddingX = 10
     barExtendBehindNotch = true
@@ -260,7 +210,7 @@ final class Config {
   }
 
   /// Restores built-in widget defaults.
-  private func resetBuiltinDefaults() {
+  func resetBuiltinDefaults() {
     builtinCPU = .default
     builtinBattery = .default
     builtinGroups = []
@@ -274,112 +224,4 @@ final class Config {
     builtinDate = .default
   }
 
-  /// Captures the current config state.
-  private func snapshot() -> ConfigSnapshot {
-    ConfigSnapshot(
-      app: .init(
-        widgetsPath: appSection.widgetsPath,
-        luaPath: appSection.luaPath,
-        watchConfigFile: appSection.watchConfigFile,
-        lockDirectory: appSection.lockDirectory
-      ),
-      logging: .init(
-        enabled: loggingSection.enabled,
-        debugEnabled: loggingSection.debugEnabled,
-        directory: loggingSection.directory
-      ),
-      calendarAgent: .init(
-        enabled: calendarAgentSection.enabled,
-        socketPath: calendarAgentSection.socketPath
-      ),
-      networkAgent: .init(
-        enabled: networkAgentSection.enabled,
-        socketPath: networkAgentSection.socketPath,
-        refreshIntervalSeconds: networkAgentSection.refreshIntervalSeconds,
-        allowUnauthorizedNonSensitiveFields:
-          networkAgentSection.allowUnauthorizedNonSensitiveFields
-      ),
-      bar: .init(
-        height: barHeight,
-        paddingX: barPaddingX,
-        extendBehindNotch: barExtendBehindNotch,
-        backgroundHex: barBackgroundHex,
-        borderHex: barBorderHex
-      ),
-      builtins: .init(
-        cpu: builtinCPU,
-        battery: builtinBattery,
-        groups: builtinGroups,
-        spaces: builtinSpaces,
-        frontApp: builtinFrontApp,
-        aerospaceMode: builtinAeroSpaceMode,
-        volume: builtinVolume,
-        wifi: builtinWiFi,
-        calendar: builtinCalendar,
-        time: builtinTime,
-        date: builtinDate
-      )
-    )
-  }
-
-  /// Restores one previous config snapshot.
-  private func apply(_ snapshot: ConfigSnapshot) {
-    applyAppSnapshot(snapshot)
-    applyBarSnapshot(snapshot)
-    applyBuiltinSnapshot(snapshot)
-  }
-
-  /// Restores the app-level config snapshot.
-  private func applyAppSnapshot(_ snapshot: ConfigSnapshot) {
-    appSection = .init(
-      widgetsPath: snapshot.app.widgetsPath,
-      luaPath: snapshot.app.luaPath,
-      watchConfigFile: snapshot.app.watchConfigFile,
-      lockDirectory: snapshot.app.lockDirectory
-    )
-
-    loggingSection = .init(
-      enabled: snapshot.logging.enabled,
-      debugEnabled: snapshot.logging.debugEnabled,
-      directory: snapshot.logging.directory
-    )
-
-    calendarAgentSection = .init(
-      enabled: snapshot.calendarAgent.enabled,
-      socketPath: snapshot.calendarAgent.socketPath
-    )
-
-    networkAgentSection = .init(
-      enabled: snapshot.networkAgent.enabled,
-      socketPath: snapshot.networkAgent.socketPath,
-      refreshIntervalSeconds: snapshot.networkAgent.refreshIntervalSeconds,
-      allowUnauthorizedNonSensitiveFields:
-        snapshot.networkAgent.allowUnauthorizedNonSensitiveFields
-    )
-  }
-
-  /// Restores the bar config snapshot.
-  private func applyBarSnapshot(_ snapshot: ConfigSnapshot) {
-    barHeight = snapshot.bar.height
-    barPaddingX = snapshot.bar.paddingX
-    barExtendBehindNotch = snapshot.bar.extendBehindNotch
-
-    barBackgroundHex = snapshot.bar.backgroundHex
-    barBorderHex = snapshot.bar.borderHex
-  }
-
-  /// Restores the built-in widget config snapshot.
-  private func applyBuiltinSnapshot(_ snapshot: ConfigSnapshot) {
-    builtinCPU = snapshot.builtins.cpu
-    builtinBattery = snapshot.builtins.battery
-    builtinGroups = snapshot.builtins.groups
-    builtinSpaces = snapshot.builtins.spaces
-    builtinFrontApp = snapshot.builtins.frontApp
-    builtinAeroSpaceMode = snapshot.builtins.aerospaceMode
-    builtinVolume = snapshot.builtins.volume
-    builtinWiFi = snapshot.builtins.wifi
-    builtinCalendar = snapshot.builtins.calendar
-    builtinTime = snapshot.builtins.time
-    builtinDate = snapshot.builtins.date
-  }
 }
