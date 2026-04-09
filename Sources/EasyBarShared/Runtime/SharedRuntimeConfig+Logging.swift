@@ -3,7 +3,7 @@ import TOMLKit
 
 extension SharedRuntimeConfig {
   /// Resolves the shared logging config from TOML plus supported environment overrides.
-  func resolvedLoggingConfig(from toml: TOMLTable) -> LoggingConfig {
+  static func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
     let loggingTable = toml["logging"]?.table
 
     let enabled =
@@ -14,7 +14,7 @@ extension SharedRuntimeConfig {
     let level = resolvedLoggingLevel(
       tomlValue: loggingTable?["level"]?.string,
       legacyDebugValue: loggingTable?["debug"]?.bool,
-      environmentName: SharedEnvironmentKeys.logLevel,
+      environmentName: SharedEnvironmentKeys.loggingLevel,
       fallback: .info
     )
 
@@ -23,7 +23,7 @@ extension SharedRuntimeConfig {
       ?? expandedPath(loggingTable?["directory"]?.string)
       ?? defaultLoggingDirectory()
 
-    return LoggingConfig(
+    return SharedLoggingRuntimeConfig(
       enabled: enabled,
       level: level,
       directory: directory
@@ -31,7 +31,7 @@ extension SharedRuntimeConfig {
   }
 
   /// Resolves the configured minimum logging level from environment or TOML.
-  private func resolvedLoggingLevel(
+  private static func resolvedLoggingLevel(
     tomlValue: String?,
     legacyDebugValue: Bool?,
     environmentName: String,
@@ -57,14 +57,14 @@ extension SharedRuntimeConfig {
   }
 
   /// Returns the default shared logging directory.
-  private func defaultLoggingDirectory() -> String {
+  private static func defaultLoggingDirectory() -> String {
     FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".local/state/easybar")
       .path
   }
 
   /// Expands one optional filesystem path.
-  private func expandedPath(_ value: String?) -> String? {
+  private static func expandedPath(_ value: String?) -> String? {
     guard let value, !value.isEmpty else { return nil }
     return NSString(string: value).expandingTildeInPath
   }
