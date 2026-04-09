@@ -37,6 +37,7 @@ function M.normalize_event(payload)
 		direction = payload.direction,
 		charging = normalize_boolean(payload.charging),
 		muted = normalize_boolean(payload.muted),
+		primary_interface_is_tunnel = normalize_boolean(payload.primary_interface_is_tunnel),
 		value = normalize_number(payload.value),
 		delta_x = normalize_number(payload.delta_x),
 		delta_y = normalize_number(payload.delta_y),

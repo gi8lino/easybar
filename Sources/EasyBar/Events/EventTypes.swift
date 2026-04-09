@@ -57,6 +57,7 @@ struct EasyBarEventPayload {
   let direction: ScrollDirection?
   let charging: Bool?
   let muted: Bool?
+  let primaryInterfaceIsTunnel: Bool?
   let value: Double?
   let deltaX: Double?
   let deltaY: Double?
@@ -67,7 +68,8 @@ struct EasyBarEventPayload {
     appName: String? = nil,
     interfaceName: String? = nil,
     charging: Bool? = nil,
-    muted: Bool? = nil
+    muted: Bool? = nil,
+    primaryInterfaceIsTunnel: Bool? = nil
   ) -> EasyBarEventPayload {
     makePayload(
       appEvent: event,
@@ -75,6 +77,7 @@ struct EasyBarEventPayload {
       interfaceName: interfaceName,
       charging: charging,
       muted: muted,
+      primaryInterfaceIsTunnel: primaryInterfaceIsTunnel
     )
   }
 
@@ -115,6 +118,11 @@ struct EasyBarEventPayload {
   var debugDescription: String? {
     if isAppEvent {
       guard let appEventName else { return nil }
+
+      if let primaryInterfaceIsTunnel {
+        return "emit event \(appEventName) primary_interface_is_tunnel=\(primaryInterfaceIsTunnel)"
+      }
+
       return "emit event \(appEventName)"
     }
 
@@ -136,6 +144,7 @@ struct EasyBarEventPayload {
     put(&payload, key: "direction", value: directionName)
     put(&payload, key: "charging", value: charging)
     put(&payload, key: "muted", value: muted)
+    put(&payload, key: "primary_interface_is_tunnel", value: primaryInterfaceIsTunnel)
     put(&payload, key: "value", value: value)
     put(&payload, key: "delta_x", value: deltaX)
     put(&payload, key: "delta_y", value: deltaY)
@@ -173,6 +182,7 @@ struct EasyBarEventPayload {
     direction: ScrollDirection? = nil,
     charging: Bool? = nil,
     muted: Bool? = nil,
+    primaryInterfaceIsTunnel: Bool? = nil,
     value: Double? = nil,
     deltaX: Double? = nil,
     deltaY: Double? = nil
@@ -188,6 +198,7 @@ struct EasyBarEventPayload {
       direction: direction,
       charging: charging,
       muted: muted,
+      primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
       value: value,
       deltaX: deltaX,
       deltaY: deltaY

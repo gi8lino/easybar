@@ -177,7 +177,23 @@ final class WidgetRunner {
   /// Emits one initial event when Lua subscribed to it.
   private func emitInitialEvent(named name: String, event: AppEvent) {
     guard runtimeState.requiredEvents.contains(name) else { return }
-    EventBus.shared.emit(event)
+
+    switch event {
+    case .networkChange:
+      let isTunnel = NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
+      EventBus.shared.emit(.networkChange, primaryInterfaceIsTunnel: isTunnel)
+
+    case .wifiChange:
+      if let interfaceName = NativeWiFiStore.shared.snapshot?.interfaceName, !interfaceName.isEmpty
+      {
+        EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
+      } else {
+        EventBus.shared.emit(.wifiChange)
+      }
+
+    default:
+      EventBus.shared.emit(event)
+    }
   }
 
   /// Resets Lua runtime handshake and subscription state.

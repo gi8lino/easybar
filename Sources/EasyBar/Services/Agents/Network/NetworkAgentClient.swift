@@ -120,7 +120,10 @@ final class NetworkAgentClient {
 
       guard changed else { return }
 
-      EventBus.shared.emit(.networkChange)
+      EventBus.shared.emit(
+        .networkChange,
+        primaryInterfaceIsTunnel: false
+      )
 
       if previous?.ssid != nil || previous?.interfaceName != nil {
         EventBus.shared.emit(.wifiChange)
@@ -136,7 +139,10 @@ final class NetworkAgentClient {
 
       guard changed else { return }
 
-      EventBus.shared.emit(.networkChange)
+      EventBus.shared.emit(
+        .networkChange,
+        primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
+      )
 
       let ssidChanged = previous?.ssid != snapshot.ssid
       let interfaceChanged = previous?.interfaceName != snapshot.interfaceName

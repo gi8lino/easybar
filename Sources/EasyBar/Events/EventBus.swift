@@ -34,6 +34,11 @@ final class EventBus {
     emitApp(.app(event, muted: muted))
   }
 
+  /// Emits one app-wide event with tunnel-state context.
+  func emit(_ event: AppEvent, primaryInterfaceIsTunnel: Bool) {
+    emitApp(.app(event, primaryInterfaceIsTunnel: primaryInterfaceIsTunnel))
+  }
+
   /// Emits one widget-scoped event to native widgets and the Lua runtime.
   func emitWidgetEvent(
     _ event: WidgetEvent,

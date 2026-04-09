@@ -38,30 +38,12 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
-local function network_agent_socket_path()
-	return os.getenv("EASYBAR_NETWORK_AGENT_SOCKET") or "/tmp/EasyBar/network-agent.sock"
-end
+local state = {
+	wireguard_connected = false,
+}
 
-local function get_network_fields()
-	local socket_path = quote(network_agent_socket_path())
-	local payload = quote('{"command":"fetch","fields":["network.primary_interface_is_tunnel"]}\n')
-	local command = "printf %s " .. payload .. " | nc -U " .. socket_path
-	local output = shell(command)
-
-	local result = {
-		primary_interface_is_tunnel = false,
-	}
-
-	local value = output:match('"network%.primary_interface_is_tunnel"%s*:%s*"([^"]+)"')
-	if value ~= nil then
-		result.primary_interface_is_tunnel = trim(value) == "true"
-	end
-
-	return result
-end
-
-local function get_wireguard_status(fields)
-	return fields.primary_interface_is_tunnel
+local function get_wireguard_status()
+	return state.wireguard_connected
 end
 
 local function status_label(wireguard_connected)
@@ -70,6 +52,17 @@ local function status_label(wireguard_connected)
 	end
 
 	return "Inactive"
+end
+
+local function apply_network_event(event)
+	if event == nil then
+		return
+	end
+
+	if event.primary_interface_is_tunnel ~= nil then
+		state.wireguard_connected = event.primary_interface_is_tunnel == true
+		easybar.log("debug", "wireguard state updated from event", state.wireguard_connected)
+	end
 end
 
 local function toggle_wireguard()
@@ -91,8 +84,7 @@ local function toggle_wireguard()
 end
 
 local function refresh()
-	local fields = get_network_fields()
-	local wireguard_connected = get_wireguard_status(fields)
+	local wireguard_connected = get_wireguard_status()
 	local logo_path = home .. "/.config/easybar/assets/wireguard.png"
 	local logo_exists = io.open(logo_path, "rb") ~= nil
 	local icon_opacity = wireguard_connected and 1.0 or 0.7
@@ -164,14 +156,22 @@ easybar.add("item", "wireguard_popup_label", {
 	},
 })
 
-easybar.subscribe("wireguard", { easybar.events.network_change, easybar.events.wifi_change, easybar.events.minute_tick, easybar.events.forced }, function(_)
+easybar.subscribe("wireguard", {
+	easybar.events.network_change,
+	easybar.events.wifi_change,
+	easybar.events.minute_tick,
+	easybar.events.forced,
+}, function(event)
+	if event.name == "network_change" then
+		apply_network_event(event)
+	end
+
 	refresh()
 end)
 
 easybar.subscribe("wireguard", easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
-		refresh()
 	end
 end)
 

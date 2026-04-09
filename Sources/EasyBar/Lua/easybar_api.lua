@@ -58,6 +58,7 @@
 ---@field direction? string The scroll direction, usually `up` or `down`.
 ---@field charging? boolean Whether the current power source is charging.
 ---@field muted? boolean Whether the current audio output is muted.
+---@field primary_interface_is_tunnel? boolean Whether the current primary network interface is a tunnel.
 ---@field value? number|string|boolean The event value for slider and driver updates.
 ---@field delta_x? number Horizontal scroll delta.
 ---@field delta_y? number Vertical scroll delta.
