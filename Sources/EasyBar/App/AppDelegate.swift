@@ -5,7 +5,7 @@ import TOMLKit
 
 extension SharedRuntimeConfig {
   /// Resolves the shared logging config from TOML plus supported environment overrides.
-  func resolvedLoggingConfig(from toml: TOMLTable) -> SharedRuntimeConfig.Logging {
+  func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
     let loggingTable = toml["logging"]?.table
 
     let enabled =
@@ -25,7 +25,7 @@ extension SharedRuntimeConfig {
       ?? expandedPath(loggingTable?["directory"]?.string)
       ?? defaultLoggingDirectory()
 
-    return SharedRuntimeConfig.Logging(
+    return SharedLoggingRuntimeConfig(
       enabled: enabled,
       level: level,
       directory: directory
