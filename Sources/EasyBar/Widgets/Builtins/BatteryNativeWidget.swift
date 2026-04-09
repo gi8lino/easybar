@@ -13,8 +13,8 @@ final class BatteryNativeWidget: NativeWidget {
     ]
   }
 
-  private var timer: Timer?
   private let eventObserver = EasyBarEventObserver()
+  private var timer: Timer?
   private var isHovered = false
 
   private struct Snapshot {
@@ -27,15 +27,15 @@ final class BatteryNativeWidget: NativeWidget {
 
   /// Starts the widget and listens for battery-related events.
   func start() {
-    eventObserver.start { [weak self] payload in
-      guard let self else { return }
-
-      if self.handleAppEvent(payload) {
-        return
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      appHandler: { [weak self] payload in
+        self?.handleAppEvent(payload) ?? false
+      },
+      widgetHandler: { [weak self] payload in
+        self?.handleWidgetEvent(payload)
       }
-
-      self.handleWidgetEvent(payload)
-    }
+    )
 
     timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
       self?.publish()
@@ -118,108 +118,17 @@ extension BatteryNativeWidget {
     let config = Config.shared.builtinBattery
     let popup = config.popup
 
-    let root = WidgetNodeState(
-      id: rootID,
-      root: rootID,
-      kind: .popup,
-      parent: placement.groupID,
-      position: placement.position,
-      order: placement.order,
-      icon: "",
-      text: "",
-      color: nil,
-      iconColor: nil,
-      labelColor: nil,
-      visible: true,
-      role: nil,
-      receivesMouseHover: nil,
-      receivesMouseClick: nil,
-      receivesMouseScroll: nil,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
-      value: nil,
-      min: nil,
-      max: nil,
-      step: nil,
-      values: nil,
-      lineWidth: nil,
-      paddingX: style.paddingX,
-      paddingY: style.paddingY,
-      paddingLeft: nil,
-      paddingRight: nil,
-      paddingTop: nil,
-      paddingBottom: nil,
-      marginX: style.marginX,
-      marginY: style.marginY,
-      marginLeft: nil,
-      marginRight: nil,
-      marginTop: nil,
-      marginBottom: nil,
-      spacing: style.spacing,
-      backgroundColor: style.backgroundColorHex,
-      borderColor: style.borderColorHex,
-      borderWidth: style.borderWidth,
-      cornerRadius: style.cornerRadius,
-      opacity: style.opacity,
-      width: nil,
-      height: nil,
-      yOffset: nil
+    let root = BuiltinNativeNodeFactory.makePopupRootNode(
+      rootID: rootID,
+      placement: placement,
+      style: style
     )
 
-    let anchorRow = WidgetNodeState(
-      id: "\(rootID)_anchor",
-      root: rootID,
-      kind: .row,
-      parent: rootID,
+    let anchorRow = BuiltinNativeNodeFactory.makePopupAnchorRowNode(
+      rootID: rootID,
+      anchorID: "\(rootID)_anchor",
       position: placement.position,
-      order: 0,
-      icon: "",
-      text: "",
-      color: nil,
-      iconColor: nil,
-      labelColor: nil,
-      visible: true,
-      role: .popupAnchor,
-      receivesMouseHover: nil,
-      receivesMouseClick: nil,
-      receivesMouseScroll: nil,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
-      value: nil,
-      min: nil,
-      max: nil,
-      step: nil,
-      values: nil,
-      lineWidth: nil,
-      paddingX: 0,
-      paddingY: 0,
-      paddingLeft: nil,
-      paddingRight: nil,
-      paddingTop: nil,
-      paddingBottom: nil,
-      marginX: nil,
-      marginY: nil,
-      marginLeft: nil,
-      marginRight: nil,
-      marginTop: nil,
-      marginBottom: nil,
-      spacing: style.spacing,
-      backgroundColor: nil,
-      borderColor: nil,
-      borderWidth: nil,
-      cornerRadius: nil,
-      opacity: 1,
-      width: nil,
-      height: nil,
-      yOffset: nil
+      spacing: style.spacing
     )
 
     let anchorIcon = BuiltinNativeNodeFactory.makeChildItemNode(
@@ -233,56 +142,32 @@ extension BatteryNativeWidget {
       fontSize: config.iconSize
     )
 
-    let popupColumn = WidgetNodeState(
-      id: "\(rootID)_popup",
-      root: rootID,
-      kind: .column,
-      parent: rootID,
+    let popupSpacer = BuiltinNativeNodeFactory.makeSpacerNode(
+      rootID: rootID,
+      spacerID: "\(rootID)_popup_spacer",
+      parentID: rootID,
+      position: placement.position,
+      order: 1,
+      visible: false,
+      paddingX: popup.marginX,
+      paddingY: popup.marginY,
+      opacity: 1
+    )
+
+    let popupColumn = BuiltinNativeNodeFactory.makePopupContentColumnNode(
+      rootID: rootID,
+      contentID: "\(rootID)_popup",
       position: placement.position,
       order: 0,
-      icon: "",
-      text: "",
-      color: nil,
-      iconColor: nil,
-      labelColor: nil,
       visible: !text.isEmpty,
-      role: .popupContent,
-      receivesMouseHover: nil,
-      receivesMouseClick: nil,
-      receivesMouseScroll: nil,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
-      value: nil,
-      min: nil,
-      max: nil,
-      step: nil,
-      values: nil,
-      lineWidth: nil,
       paddingX: popup.paddingX,
       paddingY: popup.paddingY,
-      paddingLeft: nil,
-      paddingRight: nil,
-      paddingTop: nil,
-      paddingBottom: nil,
-      marginX: nil,
-      marginY: nil,
-      marginLeft: nil,
-      marginRight: nil,
-      marginTop: nil,
-      marginBottom: nil,
       spacing: 4,
       backgroundColor: popup.backgroundColorHex,
       borderColor: popup.borderColorHex,
       borderWidth: popup.borderWidth,
       cornerRadius: popup.cornerRadius,
-      opacity: 1,
-      width: nil,
-      height: nil,
-      yOffset: nil
+      opacity: 1
     )
 
     let popupText = BuiltinNativeNodeFactory.makeChildItemNode(
@@ -298,58 +183,6 @@ extension BatteryNativeWidget {
         styleTextColorHex: style.textColorHex
       ),
       visible: !text.isEmpty
-    )
-
-    let popupSpacer = WidgetNodeState(
-      id: "\(rootID)_popup_spacer",
-      root: rootID,
-      kind: .item,
-      parent: rootID,
-      position: placement.position,
-      order: 1,
-      icon: "",
-      text: "",
-      color: nil,
-      iconColor: nil,
-      labelColor: nil,
-      visible: false,
-      role: nil,
-      receivesMouseHover: nil,
-      receivesMouseClick: nil,
-      receivesMouseScroll: nil,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
-      value: nil,
-      min: nil,
-      max: nil,
-      step: nil,
-      values: nil,
-      lineWidth: nil,
-      paddingX: popup.marginX,
-      paddingY: popup.marginY,
-      paddingLeft: nil,
-      paddingRight: nil,
-      paddingTop: nil,
-      paddingBottom: nil,
-      marginX: nil,
-      marginY: nil,
-      marginLeft: nil,
-      marginRight: nil,
-      marginTop: nil,
-      marginBottom: nil,
-      spacing: nil,
-      backgroundColor: nil,
-      borderColor: nil,
-      borderWidth: nil,
-      cornerRadius: nil,
-      opacity: 1,
-      width: nil,
-      height: nil,
-      yOffset: nil
     )
 
     return [
@@ -533,56 +366,16 @@ extension BatteryNativeWidget {
     colorHex: String?,
     showInlineLabel: Bool
   ) -> WidgetNodeState {
-    WidgetNodeState(
-      id: "\(rootID)_label",
-      root: rootID,
-      kind: .item,
-      parent: rootID,
+    BuiltinNativeNodeFactory.makeChildItemNode(
+      rootID: rootID,
+      parentID: rootID,
+      childID: "\(rootID)_label",
       position: placement.position,
       order: 1,
-      icon: "",
       text: showInlineLabel ? text : "",
       color: colorHex,
-      iconColor: nil,
-      labelColor: nil,
       visible: showInlineLabel && !text.isEmpty,
-      role: nil,
-      receivesMouseHover: nil,
-      receivesMouseClick: nil,
-      receivesMouseScroll: nil,
-      imagePath: nil,
-      imageSize: nil,
-      imageCornerRadius: nil,
-      fontSize: nil,
-      iconFontSize: nil,
-      labelFontSize: nil,
-      value: nil,
-      min: nil,
-      max: nil,
-      step: nil,
-      values: nil,
-      lineWidth: nil,
-      paddingX: 0,
-      paddingY: 0,
-      paddingLeft: nil,
-      paddingRight: nil,
-      paddingTop: nil,
-      paddingBottom: nil,
-      marginX: nil,
-      marginY: nil,
-      marginLeft: nil,
-      marginRight: nil,
-      marginTop: nil,
-      marginBottom: nil,
-      spacing: 4,
-      backgroundColor: nil,
-      borderColor: nil,
-      borderWidth: nil,
-      cornerRadius: nil,
-      opacity: 1,
-      width: nil,
-      height: nil,
-      yOffset: nil
+      spacing: 4
     )
   }
 

@@ -17,12 +17,21 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
 
+  private struct Snapshot {
+    let placement: Config.BuiltinWidgetPlacement
+    let style: Config.BuiltinWidgetStyle
+    let label: String
+    let colorHex: String?
+    let lineWidth: Double
+    let samples: [Double]
+  }
+
   /// Starts CPU sampling.
   func start() {
     samples = Array(repeating: 0, count: historySize)
     previousCPUInfo = readCPUInfo()
 
-    eventObserver.start { [weak self] payload in
+    NativeWidgetEventDriver.start(observer: eventObserver) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
 
@@ -58,7 +67,21 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Publishes the current sparkline node.
   private func publish() {
-    WidgetStore.shared.apply(root: rootID, nodes: [makeNode()])
+    let snapshot = makeSnapshot()
+    WidgetStore.shared.apply(root: rootID, nodes: [makeNode(snapshot: snapshot)])
+  }
+
+  /// Returns the current render snapshot.
+  private func makeSnapshot() -> Snapshot {
+    let config = Config.shared.builtinCPU
+    return Snapshot(
+      placement: config.placement,
+      style: config.style,
+      label: config.label,
+      colorHex: config.colorHex ?? config.style.textColorHex,
+      lineWidth: config.lineWidth,
+      samples: samples
+    )
   }
 
   /// Appends one sample and keeps the configured history size.
@@ -80,21 +103,17 @@ final class CPUSparklineNativeWidget: NativeWidget {
   }
 
   /// Builds the sparkline node from the current samples.
-  private func makeNode() -> WidgetNodeState {
-    let config = Config.shared.builtinCPU
-    let placement = config.placement
-    let style = config.style
-
-    return WidgetNodeState(
+  private func makeNode(snapshot: Snapshot) -> WidgetNodeState {
+    WidgetNodeState(
       id: rootID,
       root: rootID,
       kind: .sparkline,
-      parent: placement.groupID,
-      position: placement.position,
-      order: placement.order,
-      icon: style.icon,
-      text: config.label,
-      color: config.colorHex ?? style.textColorHex,
+      parent: snapshot.placement.groupID,
+      position: snapshot.placement.position,
+      order: snapshot.placement.order,
+      icon: snapshot.style.icon,
+      text: snapshot.label,
+      color: snapshot.colorHex,
       iconColor: nil,
       labelColor: nil,
       visible: true,
@@ -112,22 +131,26 @@ final class CPUSparklineNativeWidget: NativeWidget {
       min: nil,
       max: nil,
       step: nil,
-      values: samples,
-      lineWidth: config.lineWidth,
-      paddingX: style.paddingX,
-      paddingY: style.paddingY,
+      values: snapshot.samples,
+      lineWidth: snapshot.lineWidth,
+      paddingX: snapshot.style.paddingX,
+      paddingY: snapshot.style.paddingY,
       paddingLeft: nil,
       paddingRight: nil,
       paddingTop: nil,
       paddingBottom: nil,
-      marginX: style.marginX,
-      marginY: style.marginY,
-      spacing: style.spacing,
-      backgroundColor: style.backgroundColorHex,
-      borderColor: style.borderColorHex,
-      borderWidth: style.borderWidth,
-      cornerRadius: style.cornerRadius,
-      opacity: style.opacity,
+      marginX: snapshot.style.marginX,
+      marginY: snapshot.style.marginY,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
+      spacing: snapshot.style.spacing,
+      backgroundColor: snapshot.style.backgroundColorHex,
+      borderColor: snapshot.style.borderColorHex,
+      borderWidth: snapshot.style.borderWidth,
+      cornerRadius: snapshot.style.cornerRadius,
+      opacity: snapshot.style.opacity,
       width: nil,
       height: nil,
       yOffset: nil

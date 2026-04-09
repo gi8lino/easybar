@@ -15,13 +15,30 @@ final class WiFiNativeWidget: NativeWidget {
   private var isHovered = false
   private var startedNetworkAgent = false
 
+  private struct Snapshot {
+    let config: Config.WiFiBuiltinConfig
+    let network: NetworkAgentSnapshot?
+    let labelText: String
+    let iconText: String
+    let iconColorHex: String
+    let labelVisible: Bool
+  }
+
   func start() {
     let config = Config.shared.builtinWiFi
     easybarLog.info(
       "starting native widget id=\(rootID) enabled=\(config.enabled) position=\(config.position.rawValue)"
     )
 
-    startEventObserver()
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      appHandler: { [weak self] payload in
+        self?.handleAppEvent(payload) ?? false
+      },
+      widgetHandler: { [weak self] payload in
+        self?.handleWidgetEvent(payload)
+      }
+    )
 
     startedNetworkAgent = config.enabled && Config.shared.networkAgentEnabled
 
@@ -50,35 +67,36 @@ final class WiFiNativeWidget: NativeWidget {
   }
 
   private func publish() {
+    let snapshot = makeSnapshot()
+    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot))
+  }
+
+  /// Returns the current render snapshot.
+  private func makeSnapshot() -> Snapshot {
     let config = Config.shared.builtinWiFi
-    let snapshot = NativeWiFiStore.shared.snapshot
-    WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot, config: config))
-  }
+    let network = NativeWiFiStore.shared.snapshot
+    let labelText = resolvedLabelText(snapshot: network, config: config)
 
-  /// Starts widget event observation.
-  private func startEventObserver() {
-    eventObserver.start { [weak self] payload in
-      self?.handleEvent(payload)
-    }
-  }
-
-  /// Handles app and widget events.
-  private func handleEvent(_ payload: EasyBarEventPayload) {
-    if let appEvent = payload.appEvent {
-      handleAppEvent(appEvent)
-      return
-    }
-
-    handleWidgetEvent(payload)
+    return Snapshot(
+      config: config,
+      network: network,
+      labelText: labelText,
+      iconText: resolvedSignalIcon(snapshot: network),
+      iconColorHex: resolvedSignalColor(snapshot: network, config: config),
+      labelVisible: config.showSSIDOnHover && isHovered && !labelText.isEmpty
+    )
   }
 
   /// Handles app-wide events relevant to the Wi-Fi widget.
-  private func handleAppEvent(_ event: AppEvent) {
+  private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+    guard let event = payload.appEvent else { return false }
+
     switch event {
     case .networkChange, .systemWoke:
       publish()
+      return true
     default:
-      break
+      return false
     }
   }
 
@@ -104,15 +122,11 @@ final class WiFiNativeWidget: NativeWidget {
   }
 
   /// Builds the Wi-Fi widget nodes for the current snapshot.
-  private func makeNodes(
-    snapshot: NetworkAgentSnapshot?,
-    config: Config.WiFiBuiltinConfig
-  ) -> [WidgetNodeState] {
-    let labelText = resolvedLabelText(snapshot: snapshot, config: config)
-    return [
-      makeRootNode(config: config),
-      makeIconNode(snapshot: snapshot, config: config),
-      makeLabelNode(text: labelText, config: config),
+  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    [
+      makeRootNode(config: snapshot.config),
+      makeIconNode(snapshot: snapshot),
+      makeLabelNode(snapshot: snapshot),
     ]
   }
 
@@ -126,33 +140,30 @@ final class WiFiNativeWidget: NativeWidget {
   }
 
   /// Builds the signal icon node.
-  private func makeIconNode(
-    snapshot: NetworkAgentSnapshot?,
-    config: Config.WiFiBuiltinConfig
-  ) -> WidgetNodeState {
+  private func makeIconNode(snapshot: Snapshot) -> WidgetNodeState {
     BuiltinNativeNodeFactory.makeChildItemNode(
       rootID: rootID,
       parentID: rootID,
       childID: "\(rootID)_icon",
-      position: config.placement.position,
-      order: 13,
-      icon: resolvedSignalIcon(snapshot: snapshot),
-      color: resolvedSignalColor(snapshot: snapshot, config: config),
+      position: snapshot.config.placement.position,
+      order: 0,
+      icon: snapshot.iconText,
+      color: snapshot.iconColorHex,
       fontSize: 16
     )
   }
 
   /// Builds the optional SSID label node.
-  private func makeLabelNode(text: String, config: Config.WiFiBuiltinConfig) -> WidgetNodeState {
+  private func makeLabelNode(snapshot: Snapshot) -> WidgetNodeState {
     BuiltinNativeNodeFactory.makeChildItemNode(
       rootID: rootID,
       parentID: rootID,
       childID: "\(rootID)_label",
-      position: config.placement.position,
-      order: 13,
-      text: text,
-      color: config.textColorHex,
-      visible: config.showSSIDOnHover && isHovered && !text.isEmpty,
+      position: snapshot.config.placement.position,
+      order: 1,
+      text: snapshot.labelText,
+      color: snapshot.config.textColorHex,
+      visible: snapshot.labelVisible,
       spacing: 4
     )
   }

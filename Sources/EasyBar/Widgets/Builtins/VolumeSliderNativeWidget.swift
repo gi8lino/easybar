@@ -16,24 +16,33 @@ final class VolumeSliderNativeWidget: NativeWidget {
   private var isHovered = false
   private var autoHideWorkItem: DispatchWorkItem?
 
-  private struct VolumeState {
+  private struct SystemVolumeState {
     let clampedSystem: Double
     let roundedValue: Double
     let step: Double
     let isMuted: Bool
   }
 
+  private struct Snapshot {
+    let config: Config.VolumeBuiltinConfig
+    let placement: Config.BuiltinWidgetPlacement
+    var style: Config.BuiltinWidgetStyle
+    let text: String
+    let value: Double
+    let step: Double
+  }
+
   /// Starts the volume widget.
   func start() {
-    eventObserver.start { [weak self] payload in
-      guard let self else { return }
-
-      if self.handleAppEvent(payload) {
-        return
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      appHandler: { [weak self] payload in
+        self?.handleAppEvent(payload) ?? false
+      },
+      widgetHandler: { [weak self] payload in
+        self?.handleWidgetEvent(payload)
       }
-
-      self.handleWidgetEvent(payload)
-    }
+    )
 
     publish()
   }
@@ -53,20 +62,30 @@ extension VolumeSliderNativeWidget {
 
   /// Publishes the current volume widget state.
   private func publish() {
+    let snapshot = makeSnapshot()
+    let nodes = makeNodes(snapshot: snapshot)
+    WidgetStore.shared.apply(root: rootID, nodes: nodes)
+  }
+
+  /// Returns the current render snapshot.
+  private func makeSnapshot() -> Snapshot {
     let config = Config.shared.builtinVolume
     let placement = config.placement
     var style = config.style
-    let volumeState = currentVolumeState(config: config)
+    let volumeState = currentSystemVolumeState(config: config)
 
     style.icon = resolvedIcon(
-      for: volumeState.clampedSystem, muted: volumeState.isMuted, config: config)
+      for: volumeState.clampedSystem,
+      muted: volumeState.isMuted,
+      config: config
+    )
 
     let text =
       config.showPercentage && isHovered
       ? "\(Int((volumeState.clampedSystem * 100.0).rounded()))%"
       : ""
 
-    let nodes = makeNodes(
+    return Snapshot(
       config: config,
       placement: placement,
       style: style,
@@ -74,15 +93,13 @@ extension VolumeSliderNativeWidget {
       value: volumeState.roundedValue,
       step: volumeState.step
     )
-
-    WidgetStore.shared.apply(root: rootID, nodes: nodes)
   }
 }
 
 // MARK: - Event Handling
 
 extension VolumeSliderNativeWidget {
-  fileprivate func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
+  private func handleAppEvent(_ payload: EasyBarEventPayload) -> Bool {
     guard let event = payload.appEvent else {
       return false
     }
@@ -96,7 +113,7 @@ extension VolumeSliderNativeWidget {
     return true
   }
 
-  fileprivate func handleWidgetEvent(_ payload: EasyBarEventPayload) {
+  private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard let event = payload.widgetEvent else { return }
     guard payload.widgetID == rootID else { return }
 
@@ -124,14 +141,14 @@ extension VolumeSliderNativeWidget {
     }
   }
 
-  fileprivate func applyExternalVolumeChange() {
+  private func applyExternalVolumeChange() {
     guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
 
     isHovered = true
     scheduleAutoHide()
   }
 
-  fileprivate func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
+  private func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
     let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
 
     guard Config.shared.builtinVolume.expandToSliderOnHover else {
@@ -151,7 +168,7 @@ extension VolumeSliderNativeWidget {
     publish()
   }
 
-  fileprivate func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig)
+  private func normalizedSliderValue(_ value: Double, config: Config.VolumeBuiltinConfig)
     -> Double
   {
     let span = max(config.maxValue - config.minValue, 0.0001)
@@ -159,7 +176,7 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Returns the current rendered volume state.
-  private func currentVolumeState(config: Config.VolumeBuiltinConfig) -> VolumeState {
+  private func currentSystemVolumeState(config: Config.VolumeBuiltinConfig) -> SystemVolumeState {
     let systemVolume = readSystemVolume()
     let isMuted = readMutedState()
     let clampedSystem = min(max(systemVolume, 0), 1)
@@ -167,7 +184,7 @@ extension VolumeSliderNativeWidget {
     let sliderValue = config.minValue + clampedSystem * (config.maxValue - config.minValue)
     let roundedValue = (sliderValue / step).rounded() * step
 
-    return VolumeState(
+    return SystemVolumeState(
       clampedSystem: clampedSystem,
       roundedValue: roundedValue,
       step: step,
@@ -179,68 +196,45 @@ extension VolumeSliderNativeWidget {
 // MARK: - Node Building
 
 extension VolumeSliderNativeWidget {
-  fileprivate func makeNodes(
-    config: Config.VolumeBuiltinConfig,
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle,
-    text: String,
-    value: Double,
-    step: Double
-  ) -> [WidgetNodeState] {
-    guard !config.expandToSliderOnHover else {
-      return makeExpandableNodes(
-        placement: placement,
-        style: style,
-        text: text,
-        value: value,
-        min: config.minValue,
-        max: config.maxValue,
-        step: step
-      )
+  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    guard !snapshot.config.expandToSliderOnHover else {
+      return makeExpandableNodes(snapshot: snapshot)
     }
 
     return [
       BuiltinNativeNodeFactory.makeSliderNode(
         rootID: rootID,
-        placement: placement,
-        style: style,
-        text: text,
-        value: value,
-        min: config.minValue,
-        max: config.maxValue,
-        step: step
+        placement: snapshot.placement,
+        style: snapshot.style,
+        text: snapshot.text,
+        value: snapshot.value,
+        min: snapshot.config.minValue,
+        max: snapshot.config.maxValue,
+        step: snapshot.step
       )
     ]
   }
 
   /// Builds the expandable hover layout.
-  fileprivate func makeExpandableNodes(
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle,
-    text: String,
-    value: Double,
-    min: Double,
-    max: Double,
-    step: Double
-  ) -> [WidgetNodeState] {
+  private func makeExpandableNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     var nodes: [WidgetNodeState] = [
       BuiltinNativeNodeFactory.makeRowContainerNode(
         rootID: rootID,
-        placement: placement,
-        style: style
+        placement: snapshot.placement,
+        style: snapshot.style
       )
     ]
 
-    if !style.icon.isEmpty {
+    if !snapshot.style.icon.isEmpty {
       nodes.append(
         BuiltinNativeNodeFactory.makeChildItemNode(
           rootID: rootID,
           parentID: rootID,
           childID: "\(rootID)_icon",
-          position: placement.position,
+          position: snapshot.placement.position,
           order: 0,
-          icon: style.icon,
-          color: style.textColorHex
+          icon: snapshot.style.icon,
+          color: snapshot.style.textColorHex
         )
       )
     }
@@ -250,11 +244,11 @@ extension VolumeSliderNativeWidget {
         rootID: rootID,
         parentID: rootID,
         childID: "\(rootID)_label",
-        position: placement.position,
+        position: snapshot.placement.position,
         order: 1,
-        text: text,
-        color: style.textColorHex,
-        visible: isHovered && !text.isEmpty
+        text: snapshot.text,
+        color: snapshot.style.textColorHex,
+        visible: isHovered && !snapshot.text.isEmpty
       )
     )
 
@@ -263,13 +257,13 @@ extension VolumeSliderNativeWidget {
         rootID: rootID,
         parentID: rootID,
         childID: "\(rootID)_slider",
-        position: placement.position,
+        position: snapshot.placement.position,
         order: 2,
-        value: value,
-        min: min,
-        max: max,
-        step: step,
-        color: style.textColorHex,
+        value: snapshot.value,
+        min: snapshot.config.minValue,
+        max: snapshot.config.maxValue,
+        step: snapshot.step,
+        color: snapshot.style.textColorHex,
         visible: isHovered
       )
     )
@@ -282,7 +276,7 @@ extension VolumeSliderNativeWidget {
 
 extension VolumeSliderNativeWidget {
   /// Schedules hiding the slider shortly after interaction.
-  fileprivate func scheduleAutoHide() {
+  private func scheduleAutoHide() {
     cancelAutoHide()
 
     let work = DispatchWorkItem { [weak self] in
@@ -296,13 +290,13 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Cancels a pending auto-hide.
-  fileprivate func cancelAutoHide() {
+  private func cancelAutoHide() {
     autoHideWorkItem?.cancel()
     autoHideWorkItem = nil
   }
 
   /// Resolves the volume icon.
-  fileprivate func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
+  private func resolvedIcon(for value: Double, muted: Bool, config: Config.VolumeBuiltinConfig)
     -> String
   {
     if muted {
@@ -321,7 +315,7 @@ extension VolumeSliderNativeWidget {
 
 extension VolumeSliderNativeWidget {
   /// Reads the current system volume.
-  fileprivate func readSystemVolume() -> Double {
+  private func readSystemVolume() -> Double {
     guard let deviceID = defaultOutputDeviceID() else {
       return 0
     }
@@ -352,7 +346,7 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Reads the current muted state.
-  fileprivate func readMutedState() -> Bool {
+  private func readMutedState() -> Bool {
     guard let deviceID = defaultOutputDeviceID() else {
       return false
     }
@@ -383,7 +377,7 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Sets the system volume.
-  fileprivate func setSystemVolume(_ volume: Double) {
+  private func setSystemVolume(_ volume: Double) {
     guard let deviceID = defaultOutputDeviceID() else { return }
 
     var address = AudioObjectPropertyAddress(
@@ -405,7 +399,7 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Returns the default output device.
-  fileprivate func defaultOutputDeviceID() -> AudioDeviceID? {
+  private func defaultOutputDeviceID() -> AudioDeviceID? {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
       mScope: kAudioObjectPropertyScopeGlobal,

@@ -74,6 +74,108 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  /// Builds one root popup node.
+  static func makePopupRootNode(
+    rootID: String,
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle
+  ) -> WidgetNodeState {
+    makeRootNode(
+      id: rootID,
+      kind: .popup,
+      placement: placement,
+      style: style
+    )
+  }
+
+  /// Builds one popup anchor row attached to the popup root.
+  static func makePopupAnchorRowNode(
+    rootID: String,
+    anchorID: String,
+    position: WidgetPosition,
+    spacing: Double? = 4
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: anchorID,
+      root: rootID,
+      kind: .row,
+      parent: rootID,
+      position: position,
+      order: 0,
+      visible: true,
+      role: .popupAnchor,
+      paddingX: 0,
+      paddingY: 0,
+      spacing: spacing,
+      opacity: 1
+    )
+  }
+
+  /// Builds one popup content column attached to the popup root.
+  static func makePopupContentColumnNode(
+    rootID: String,
+    contentID: String,
+    position: WidgetPosition,
+    order: Int = 0,
+    visible: Bool = true,
+    paddingX: Double? = 0,
+    paddingY: Double? = 0,
+    spacing: Double? = 4,
+    backgroundColor: String? = nil,
+    borderColor: String? = nil,
+    borderWidth: Double? = nil,
+    cornerRadius: Double? = nil,
+    opacity: Double? = 1
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: contentID,
+      root: rootID,
+      kind: .column,
+      parent: rootID,
+      position: position,
+      order: order,
+      visible: visible,
+      role: .popupContent,
+      paddingX: paddingX,
+      paddingY: paddingY,
+      spacing: spacing,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      cornerRadius: cornerRadius,
+      opacity: opacity
+    )
+  }
+
+  /// Builds one simple spacer item.
+  static func makeSpacerNode(
+    rootID: String,
+    spacerID: String,
+    parentID: String?,
+    position: WidgetPosition,
+    order: Int,
+    visible: Bool = false,
+    paddingX: Double? = 0,
+    paddingY: Double? = 0,
+    opacity: Double? = 1
+  ) -> WidgetNodeState {
+    makeNode(
+      id: spacerID,
+      root: rootID,
+      kind: .item,
+      parent: parentID,
+      position: position,
+      order: order,
+      icon: "",
+      text: "",
+      color: nil,
+      visible: visible,
+      paddingX: paddingX,
+      paddingY: paddingY,
+      opacity: opacity
+    )
+  }
+
   /// Builds one child item node.
   static func makeChildItemNode(
     rootID: String,
@@ -204,6 +306,7 @@ enum BuiltinNativeNodeFactory {
     text: String = "",
     color: String? = nil,
     visible: Bool = true,
+    role: WidgetNodeRole? = nil,
     imagePath: String? = nil,
     imageSize: Double? = nil,
     imageCornerRadius: Double? = nil,
@@ -214,7 +317,16 @@ enum BuiltinNativeNodeFactory {
     min: Double? = nil,
     max: Double? = nil,
     step: Double? = nil,
-    spacing: Double? = 4
+    paddingX: Double? = 0,
+    paddingY: Double? = 0,
+    marginX: Double? = nil,
+    marginY: Double? = nil,
+    spacing: Double? = 4,
+    backgroundColor: String? = nil,
+    borderColor: String? = nil,
+    borderWidth: Double? = nil,
+    cornerRadius: Double? = nil,
+    opacity: Double? = 1
   ) -> WidgetNodeState {
     makeNode(
       id: id,
@@ -227,6 +339,7 @@ enum BuiltinNativeNodeFactory {
       text: text,
       color: color,
       visible: visible,
+      role: role,
       imagePath: imagePath,
       imageSize: imageSize,
       imageCornerRadius: imageCornerRadius,
@@ -237,7 +350,16 @@ enum BuiltinNativeNodeFactory {
       min: min,
       max: max,
       step: step,
-      spacing: spacing
+      paddingX: paddingX,
+      paddingY: paddingY,
+      marginX: marginX,
+      marginY: marginY,
+      spacing: spacing,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      cornerRadius: cornerRadius,
+      opacity: opacity
     )
   }
 
@@ -253,6 +375,7 @@ enum BuiltinNativeNodeFactory {
     text: String = "",
     color: String? = nil,
     visible: Bool = true,
+    role: WidgetNodeRole? = nil,
     imagePath: String? = nil,
     imageSize: Double? = nil,
     imageCornerRadius: Double? = nil,
@@ -287,7 +410,7 @@ enum BuiltinNativeNodeFactory {
       iconColor: nil,
       labelColor: nil,
       visible: visible,
-      role: nil,
+      role: role,
       receivesMouseHover: nil,
       receivesMouseClick: nil,
       receivesMouseScroll: nil,
@@ -311,6 +434,10 @@ enum BuiltinNativeNodeFactory {
       paddingBottom: nil,
       marginX: marginX,
       marginY: marginY,
+      marginLeft: nil,
+      marginRight: nil,
+      marginTop: nil,
+      marginBottom: nil,
       spacing: spacing,
       backgroundColor: backgroundColor,
       borderColor: borderColor,

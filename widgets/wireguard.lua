@@ -7,19 +7,6 @@ local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function shell(command)
-	local pipe = io.popen(command .. " 2>/dev/null")
-	if not pipe then
-		easybar.log("error", "shell popen failed")
-		return ""
-	end
-
-	local output = pipe:read("*a") or ""
-	pipe:close()
-
-	return output
-end
-
 local function debug_shell(command)
 	local pipe = io.popen(command .. " 2>&1")
 	if not pipe then
@@ -162,10 +149,7 @@ easybar.subscribe("wireguard", {
 	easybar.events.minute_tick,
 	easybar.events.forced,
 }, function(event)
-	if event.name == "network_change" then
-		apply_network_event(event)
-	end
-
+	apply_network_event(event)
 	refresh()
 end)
 
