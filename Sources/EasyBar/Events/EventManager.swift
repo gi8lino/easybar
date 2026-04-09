@@ -74,14 +74,6 @@ final class EventManager {
       PowerEvents.shared.subscribePowerSource()
     }
 
-    if mergedSubscriptions.contains(AppEvent.wifiChange.rawValue) {
-      NetworkEvents.shared.subscribeWifi()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.networkChange.rawValue) {
-      NetworkEvents.shared.subscribeNetwork()
-    }
-
     if mergedSubscriptions.contains(AppEvent.volumeChange.rawValue)
       || mergedSubscriptions.contains(AppEvent.muteChange.rawValue)
     {
@@ -101,7 +93,6 @@ final class EventManager {
   private func stopActiveSources() {
     TimerEvents.shared.stopAll()
     SystemEvents.shared.stopAll()
-    NetworkEvents.shared.stopAll()
     PowerEvents.shared.stopAll()
     VolumeEvents.shared.stopAll()
   }
