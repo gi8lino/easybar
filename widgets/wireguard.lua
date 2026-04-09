@@ -3,6 +3,10 @@ package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/
 
 local secrets = require("secrets")
 
+local state = {
+	wireguard_connected = false,
+}
+
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -25,9 +29,53 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
-local state = {
-	wireguard_connected = false,
-}
+local function dump_table(value, depth)
+	depth = depth or 0
+
+	if type(value) ~= "table" then
+		return tostring(value)
+	end
+
+	if depth > 4 then
+		return "{...}"
+	end
+
+	local parts = {}
+	for k, v in pairs(value) do
+		table.insert(parts, tostring(k) .. "=" .. dump_table(v, depth + 1))
+	end
+
+	table.sort(parts)
+	return "{" .. table.concat(parts, ", ") .. "}"
+end
+
+local function log_event(prefix, event)
+	easybar.log("info", prefix, dump_table(event))
+end
+
+local function to_boolean(value)
+	if type(value) == "boolean" then
+		return value
+	end
+
+	if type(value) == "string" then
+		local normalized = trim(value):lower()
+
+		if normalized == "true" or normalized == "1" or normalized == "yes" or normalized == "on" then
+			return true
+		end
+
+		if normalized == "false" or normalized == "0" or normalized == "no" or normalized == "off" then
+			return false
+		end
+	end
+
+	if type(value) == "number" then
+		return value ~= 0
+	end
+
+	return nil
+end
 
 local function get_wireguard_status()
 	return state.wireguard_connected
@@ -41,15 +89,60 @@ local function status_label(wireguard_connected)
 	return "Inactive"
 end
 
-local function apply_network_event(event)
+local function network_event_tunnel_value(event)
 	if event == nil then
-		return
+		return nil
+	end
+
+	if event.raw ~= nil and event.raw.primary_interface_is_tunnel ~= nil then
+		return event.raw.primary_interface_is_tunnel
 	end
 
 	if event.primary_interface_is_tunnel ~= nil then
-		state.wireguard_connected = event.primary_interface_is_tunnel == true
-		easybar.log("debug", "wireguard state updated from event", state.wireguard_connected)
+		return event.primary_interface_is_tunnel
 	end
+
+	return nil
+end
+
+local function apply_network_event(event)
+	if event == nil then
+		easybar.log("debug", "wireguard apply_network_event skipped nil event")
+		return false
+	end
+
+	local raw_value = network_event_tunnel_value(event)
+	local resolved = to_boolean(raw_value)
+
+	if resolved == nil then
+		easybar.log(
+			"debug",
+			"wireguard apply_network_event skipped missing tunnel flag",
+			"type",
+			type(raw_value),
+			"value",
+			tostring(raw_value)
+		)
+		return false
+	end
+
+	local changed = state.wireguard_connected ~= resolved
+	state.wireguard_connected = resolved
+
+	easybar.log(
+		"info",
+		"wireguard state updated from network event",
+		"changed",
+		tostring(changed),
+		"type",
+		type(raw_value),
+		"value",
+		tostring(raw_value),
+		"resolved",
+		tostring(resolved)
+	)
+
+	return changed
 end
 
 local function toggle_wireguard()
@@ -74,7 +167,6 @@ local function refresh()
 	local wireguard_connected = get_wireguard_status()
 	local logo_path = home .. "/.config/easybar/assets/wireguard.png"
 	local logo_exists = io.open(logo_path, "rb") ~= nil
-	local icon_opacity = wireguard_connected and 1.0 or 0.7
 
 	if logo_exists then
 		local handle = io.open(logo_path, "rb")
@@ -83,17 +175,26 @@ local function refresh()
 		end
 	end
 
+	easybar.log("info", "wireguard refresh connected", tostring(wireguard_connected))
+
+	easybar.set("wireguard", {
+		background = {
+			color = "#202020",
+			border_color = "#4a4a4a",
+		},
+	})
+
 	easybar.set("wireguard_icon", {
 		icon = {
 			string = logo_exists and "" or "WG",
-			image = logo_path,
+			image = logo_exists and logo_path or nil,
 			image_size = 16,
 			image_corner_radius = 0,
 		},
 		label = {
 			string = "",
 		},
-		opacity = icon_opacity,
+		opacity = wireguard_connected and 1.0 or 0.55,
 	})
 
 	easybar.set("wireguard_popup_label", {
@@ -128,7 +229,7 @@ easybar.add("item", "wireguard_icon", {
 	icon = {
 		string = "WG",
 		image = home .. "/.config/easybar/assets/wireguard.png",
-		image_size = 22,
+		image_size = 16,
 		image_corner_radius = 0,
 	},
 	label = {
@@ -149,11 +250,14 @@ easybar.subscribe("wireguard", {
 	easybar.events.minute_tick,
 	easybar.events.forced,
 }, function(event)
+	log_event("wireguard payload", event)
 	apply_network_event(event)
 	refresh()
 end)
 
 easybar.subscribe("wireguard", easybar.events.mouse.clicked, function(event)
+	log_event("wireguard click payload", event)
+
 	if event.button == nil or event.button == "left" then
 		toggle_wireguard()
 	end
