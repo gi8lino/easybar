@@ -19,22 +19,32 @@ final class NativeWiFiStore: ObservableObject {
 
   private init() {}
 
-  func apply(snapshot: NetworkAgentSnapshot) {
+  /// Applies one new snapshot.
+  ///
+  /// Returns true when the render-relevant state actually changed.
+  @discardableResult
+  func apply(snapshot: NetworkAgentSnapshot) -> Bool {
     let signature = signature(for: snapshot)
-    guard signature != lastPublishedSignature else { return }
+    guard signature != lastPublishedSignature else { return false }
 
     lastPublishedSignature = signature
     easybarLog.debug(
       "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") rssi=\(snapshot.rssi.map(String.init) ?? "<none>")"
     )
     publish(snapshot: snapshot)
+    return true
   }
 
-  func clear() {
-    guard snapshot != nil else { return }
+  /// Clears the current snapshot.
+  ///
+  /// Returns true when state was present and got cleared.
+  @discardableResult
+  func clear() -> Bool {
+    guard snapshot != nil else { return false }
     lastPublishedSignature = nil
     easybarLog.debug("wifi widget cleared")
     publish(snapshot: nil)
+    return true
   }
 
   /// Returns the render-relevant snapshot signature.

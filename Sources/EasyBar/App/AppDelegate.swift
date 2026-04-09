@@ -3,7 +3,6 @@ import EasyBarShared
 import Foundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-
   private var barWindowController: BarWindowController?
   private let aeroSpaceService = AeroSpaceService.shared
   private let socketServer = SocketServer()
@@ -47,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationWillTerminate(_ notification: Notification) {
     easybarLog.info("easybar shutting down")
 
+    socketServer.stop()
     configFileWatcher.stop()
     NativeWidgetRegistry.shared.stop()
     WidgetRunner.shared.shutdown()
@@ -158,39 +158,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Logs one startup snapshot so service-vs-local differences are visible.
   private func logStartup() {
-    logBundleDetails()
+    logProcessStartup(
+      snapshot: makeProcessStartupSnapshot(
+        processName: "easybar",
+        configPath: Config.shared.configPath,
+        socketSummary: "socket path=\(SharedRuntimeConfig.current.easyBarSocketPath)",
+        loggingSummary:
+          "logging enabled=\(easybarLog.fileLoggingEnabled) debug=\(easybarLog.debugEnabled) path=\(easybarLog.fileLoggingPath)"
+      ),
+      write: easybarLog.info
+    )
+
     logConfigDetails()
     logScreenDetails()
     logEnvironmentDetails()
   }
 
-  /// Logs app bundle and process identity details.
-  private func logBundleDetails() {
-    let bundle = Bundle.main
-    let info = bundle.infoDictionary ?? [:]
-    let bundleID = bundle.bundleIdentifier ?? "unknown"
-    let version = info["CFBundleShortVersionString"] as? String ?? "unknown"
-    let build = info["CFBundleVersion"] as? String ?? "unknown"
-    let executable = bundle.executableURL?.path ?? "unknown"
-    let bundlePath = bundle.bundleURL.path
-    let processID = ProcessInfo.processInfo.processIdentifier
-
-    easybarLog.info(
-      "easybar startup version=\(version) build=\(build) bundle_id=\(bundleID) pid=\(processID)"
-    )
-    easybarLog.info("app bundle_path=\(bundlePath)")
-    easybarLog.info("app executable=\(executable)")
-  }
-
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    easybarLog.info("config path=\(Config.shared.configPath)")
     easybarLog.info("widgets path=\(Config.shared.widgetsPath)")
     easybarLog.info("lua path=\(Config.shared.luaPath)")
     easybarLog.info("watch config=\(Config.shared.watchConfigFile)")
-    easybarLog.info(
-      "logging enabled=\(Config.shared.loggingEnabled) debug=\(Config.shared.loggingDebugEnabled) directory=\(Config.shared.loggingDirectory) path=\(easybarLog.fileLoggingPath)"
-    )
     easybarLog.info(
       "calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"
     )

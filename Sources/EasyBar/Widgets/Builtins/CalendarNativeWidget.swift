@@ -12,6 +12,7 @@ final class CalendarNativeWidget: NativeWidget {
     [
       AppEvent.minuteTick.rawValue,
       AppEvent.systemWoke.rawValue,
+      AppEvent.calendarChange.rawValue,
     ]
   }
 
@@ -36,7 +37,7 @@ final class CalendarNativeWidget: NativeWidget {
       guard let event = payload.appEvent else { return }
 
       switch event {
-      case .minuteTick, .systemWoke:
+      case .minuteTick, .systemWoke, .calendarChange:
         self.publish()
       default:
         break

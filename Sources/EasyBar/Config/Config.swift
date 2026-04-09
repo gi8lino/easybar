@@ -4,7 +4,6 @@ import SwiftUI
 
 /// Global EasyBar configuration loaded from disk.
 final class Config {
-
   static let shared = Config()
 
   // MARK: - Sections
@@ -202,19 +201,22 @@ final class Config {
 
   /// Restores defaults derived from the current home directory.
   private func resetDerivedDefaults() {
+    let runtime = SharedRuntimeConfig.current
+
     appSection.widgetsPath =
       FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".config/easybar/widgets")
       .path
-    appSection.lockDirectory = defaultSingleInstanceLockDirectory()
+    appSection.lockDirectory = runtime.lockDirectory
 
-    loggingSection.directory = defaultLoggingDirectoryPath()
+    loggingSection.directory = runtime.loggingDirectory
 
-    calendarAgentSection.socketPath = defaultCalendarAgentSocketPath()
+    calendarAgentSection.socketPath = runtime.calendarAgentSocketPath
 
-    networkAgentSection.socketPath = defaultNetworkAgentSocketPath()
-    networkAgentSection.refreshIntervalSeconds = 60
-    networkAgentSection.allowUnauthorizedNonSensitiveFields = false
+    networkAgentSection.socketPath = runtime.networkAgentSocketPath
+    networkAgentSection.refreshIntervalSeconds = runtime.networkAgentRefreshIntervalSeconds
+    networkAgentSection.allowUnauthorizedNonSensitiveFields =
+      runtime.networkAgentAllowUnauthorizedNonSensitiveFields
   }
 
   /// Restores all static defaults before parsing again.
@@ -380,19 +382,4 @@ final class Config {
     builtinTime = snapshot.builtins.time
     builtinDate = snapshot.builtins.date
   }
-}
-
-/// Returns the default directory used for single-instance lock files.
-private func defaultSingleInstanceLockDirectory() -> String {
-  "/tmp/EasyBar"
-}
-
-/// Returns the default Unix socket path used by the calendar agent.
-private func defaultCalendarAgentSocketPath() -> String {
-  "/tmp/EasyBar/calendar-agent.sock"
-}
-
-/// Returns the default Unix socket path used by the network agent.
-private func defaultNetworkAgentSocketPath() -> String {
-  "/tmp/EasyBar/network-agent.sock"
 }

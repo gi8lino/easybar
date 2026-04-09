@@ -66,8 +66,6 @@ private struct ParsedArguments {
 
 private struct AppContext {
   private let logger: ProcessLogger
-  private let decoder = JSONDecoder()
-  private let encoder = JSONEncoder()
 
   init(debugEnabled: Bool) {
     let envEnabled = ProcessInfo.processInfo.environment["EASYBAR_DEBUG"] == "1"
@@ -77,16 +75,6 @@ private struct AppContext {
   /// Writes one debug line when CLI debug logging is enabled.
   func debug(_ message: String) {
     logger.debug(message)
-  }
-
-  /// Encodes one IPC request.
-  func encode(_ request: IPC.Request) throws -> Data {
-    try encoder.encode(request)
-  }
-
-  /// Decodes one IPC response.
-  func decodeResponse(from data: Data) throws -> IPC.Response {
-    try decoder.decode(IPC.Response.self, from: data)
   }
 }
 
@@ -341,49 +329,9 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
 {
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
-  let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-  guard fd >= 0 else {
-    throw AppError.message("failed to create socket \(socketPath)")
-  }
+  let transport = LineSocketClientTransport<IPC.Request, IPC.Response>(socketPath: socketPath)
+  let response = try transport.send(request: IPC.Request(command: command))
 
-  defer { close(fd) }
-
-  var addr = makeSockAddrUn(path: socketPath)
-  let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-  let result = withUnsafePointer(to: &addr) {
-    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-      connect(fd, $0, addrLen)
-    }
-  }
-
-  guard result >= 0 else {
-    throw AppError.message("could not connect to \(socketPath)")
-  }
-
-  context.debug("connected to socket")
-
-  let requestData = try context.encode(IPC.Request(command: command))
-  let writeResult = requestData.withUnsafeBytes {
-    guard let baseAddress = $0.baseAddress else { return -1 }
-    return write(fd, baseAddress, $0.count)
-  }
-
-  guard writeResult >= 0 else {
-    throw AppError.message("failed to send command \"\(command)\"")
-  }
-
-  var buffer = [UInt8](repeating: 0, count: 256)
-  let readResult = read(fd, &buffer, 255)
-  guard readResult >= 0 else {
-    throw AppError.message("failed to read IPC response")
-  }
-
-  let responseData = Data(buffer.prefix(readResult))
-  let rawResponse = String(data: responseData, encoding: .utf8) ?? "<invalid_utf8>"
-  context.debug("received raw response '\(rawResponse)'")
-
-  let response = try context.decodeResponse(from: responseData)
   context.debug(
     "decoded response status='\(response.status.rawValue)' message='\(response.message ?? "<nil>")'"
   )

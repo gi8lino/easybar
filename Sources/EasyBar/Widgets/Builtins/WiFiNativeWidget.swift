@@ -4,8 +4,14 @@ import Foundation
 final class WiFiNativeWidget: NativeWidget {
   let rootID = "builtin_wifi"
 
+  var appEventSubscriptions: Set<String> {
+    [
+      AppEvent.networkChange.rawValue,
+      AppEvent.systemWoke.rawValue,
+    ]
+  }
+
   private let eventObserver = EasyBarEventObserver()
-  private var storeToken: NSObjectProtocol?
   private var isHovered = false
 
   func start() {
@@ -15,7 +21,6 @@ final class WiFiNativeWidget: NativeWidget {
     )
 
     startEventObserver()
-    startStoreObserver()
 
     guard Config.shared.networkAgentEnabled else {
       easybarLog.info("network agent disabled in config")
@@ -24,7 +29,6 @@ final class WiFiNativeWidget: NativeWidget {
     }
 
     NetworkAgentClient.shared.start()
-
     publish()
   }
 
@@ -32,10 +36,6 @@ final class WiFiNativeWidget: NativeWidget {
     easybarLog.info("stopping native widget id=\(rootID)")
 
     eventObserver.stop()
-    if let storeToken {
-      NotificationCenter.default.removeObserver(storeToken)
-      self.storeToken = nil
-    }
     isHovered = false
 
     if Config.shared.networkAgentEnabled {
@@ -51,26 +51,35 @@ final class WiFiNativeWidget: NativeWidget {
     WidgetStore.shared.apply(root: rootID, nodes: makeNodes(snapshot: snapshot, config: config))
   }
 
-  /// Starts widget mouse event observation.
+  /// Starts widget event observation.
   private func startEventObserver() {
     eventObserver.start { [weak self] payload in
       self?.handleEvent(payload)
     }
   }
 
-  /// Starts store change observation.
-  private func startStoreObserver() {
-    storeToken = NotificationCenter.default.addObserver(
-      forName: NativeWiFiStore.didChangeNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] _ in
-      self?.publish()
+  /// Handles app and widget events.
+  private func handleEvent(_ payload: EasyBarEventPayload) {
+    if let appEvent = payload.appEvent {
+      handleAppEvent(appEvent)
+      return
+    }
+
+    handleWidgetEvent(payload)
+  }
+
+  /// Handles app-wide events relevant to the Wi-Fi widget.
+  private func handleAppEvent(_ event: AppEvent) {
+    switch event {
+    case .networkChange, .systemWoke:
+      publish()
+    default:
+      break
     }
   }
 
-  /// Handles widget hover events.
-  private func handleEvent(_ payload: EasyBarEventPayload) {
+  /// Handles widget-local hover events.
+  private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard payload.widgetID == rootID else { return }
     guard let event = payload.widgetEvent else { return }
 

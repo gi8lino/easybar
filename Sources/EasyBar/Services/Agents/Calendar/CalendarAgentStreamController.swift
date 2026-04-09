@@ -12,6 +12,7 @@ final class CalendarAgentStreamController {
   private let clearState: () -> Void
 
   private var started = false
+  private let eventObserver = EasyBarEventObserver()
 
   private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
     label: label,
@@ -61,6 +62,7 @@ final class CalendarAgentStreamController {
     }
 
     started = true
+    startEventObserver()
     easybarLog.info("starting \(label) socket=\(socketPath())")
     client.start()
   }
@@ -71,6 +73,7 @@ final class CalendarAgentStreamController {
 
     easybarLog.info("stopping \(label)")
     started = false
+    eventObserver.stop()
     client.stop()
   }
 
@@ -78,6 +81,18 @@ final class CalendarAgentStreamController {
   func refresh() {
     guard started else { return }
     client.refresh()
+  }
+
+  /// Starts shared app-event observation needed by the calendar agent streams.
+  private func startEventObserver() {
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+      guard event == .systemWoke else { return }
+
+      easybarLog.debug("\(self.label) refreshing after system_woke")
+      self.refresh()
+    }
   }
 
   /// Handles one decoded calendar-agent response.
@@ -93,6 +108,7 @@ final class CalendarAgentStreamController {
         "\(label) applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
       )
       applySnapshot(snapshot)
+      CalendarAgentEventRelay.shared.noteSnapshotUpdate()
 
     case .error:
       easybarLog.warn("\(label) received error message=\(response.message ?? "unknown")")

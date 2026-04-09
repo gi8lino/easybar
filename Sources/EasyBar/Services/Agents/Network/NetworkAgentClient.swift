@@ -4,6 +4,8 @@ import Foundation
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
 
+  private let eventObserver = EasyBarEventObserver()
+
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
     socketPath: { Config.shared.networkAgentSocketPath },
@@ -13,10 +15,8 @@ final class NetworkAgentClient {
     handleMessage: { [weak self] message in
       self?.handle(message)
     },
-    clearState: {
-      DispatchQueue.main.async {
-        NativeWiFiStore.shared.clear()
-      }
+    clearState: { [weak self] in
+      self?.clearPublishedState()
     },
     debugLog: easybarLog.debug,
     infoLog: easybarLog.info,
@@ -33,12 +33,26 @@ final class NetworkAgentClient {
 
   /// Starts the network agent client.
   func start() {
+    startEventObserver()
     client.start()
   }
 
   /// Stops the network agent client.
   func stop() {
+    eventObserver.stop()
     client.stop()
+  }
+
+  /// Starts shared app-event observation needed by the network agent client.
+  private func startEventObserver() {
+    eventObserver.start { [weak self] payload in
+      guard let self else { return }
+      guard let event = payload.appEvent else { return }
+      guard event == .systemWoke else { return }
+
+      easybarLog.debug("network agent client refreshing after system_woke")
+      self.client.refresh()
+    }
   }
 
   /// Handles one decoded network agent message.
@@ -51,7 +65,11 @@ final class NetworkAgentClient {
       easybarLog.info("network agent client subscribed")
 
     case .fields:
-      guard let fields = message.fields else { return }
+      guard let fields = message.fields else {
+        easybarLog.warn("network agent returned fields message without payload")
+        return
+      }
+
       guard let snapshot = NetworkAgentSnapshot(fields: fields) else {
         easybarLog.warn("network agent returned incomplete field set")
         return
@@ -63,24 +81,22 @@ final class NetworkAgentClient {
       break
 
     case .error:
-      handleError(message.message ?? "unknown")
-
+      handleError(code: message.errorCode, message: message.message)
     }
   }
 
   /// Handles one network-agent error message.
-  private func handleError(_ message: String) {
-    easybarLog.warn("network agent error=\(message)")
+  private func handleError(code: NetworkAgentErrorCode?, message: String?) {
+    easybarLog.warn(
+      "network agent error code=\(code?.rawValue ?? "unknown") message=\(message ?? "unknown")"
+    )
 
-    guard message.hasPrefix("permission_denied") else { return }
-
-    let permissionState =
-      message.split(separator: ":", maxSplits: 1).dropFirst().first.map(String.init) ?? "denied"
+    guard code == .permissionDenied else { return }
 
     publish(
       snapshot: NetworkAgentSnapshot(
         accessGranted: false,
-        permissionState: permissionState,
+        permissionState: "denied",
         generatedAt: Date(),
         ssid: nil,
         interfaceName: nil,
@@ -90,10 +106,42 @@ final class NetworkAgentClient {
     )
   }
 
-  /// Publishes one snapshot to the shared store on the main queue.
+  /// Clears the shared Wi-Fi state and emits the corresponding app events.
+  private func clearPublishedState() {
+    DispatchQueue.main.async {
+      let previous = NativeWiFiStore.shared.snapshot
+      let changed = NativeWiFiStore.shared.clear()
+
+      guard changed else { return }
+
+      EventBus.shared.emit(.networkChange)
+
+      if previous?.ssid != nil || previous?.interfaceName != nil {
+        EventBus.shared.emit(.wifiChange)
+      }
+    }
+  }
+
+  /// Publishes one snapshot to the shared store on the main queue and emits app events.
   private func publish(snapshot: NetworkAgentSnapshot) {
     DispatchQueue.main.async {
-      NativeWiFiStore.shared.apply(snapshot: snapshot)
+      let previous = NativeWiFiStore.shared.snapshot
+      let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
+
+      guard changed else { return }
+
+      EventBus.shared.emit(.networkChange)
+
+      let ssidChanged = previous?.ssid != snapshot.ssid
+      let interfaceChanged = previous?.interfaceName != snapshot.interfaceName
+
+      guard ssidChanged || interfaceChanged else { return }
+
+      if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
+        EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
+      } else {
+        EventBus.shared.emit(.wifiChange)
+      }
     }
   }
 }
