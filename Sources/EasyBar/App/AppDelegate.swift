@@ -4,6 +4,7 @@ import Foundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private var barWindowController: BarWindowController?
+  private let configErrorWindowController = ConfigErrorWindowController()
   private let aeroSpaceService = AeroSpaceService.shared
   private let socketServer = SocketServer()
   private let configFileWatcher = ConfigFileWatcher.shared
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     validateRequiredFonts()
     installWidgetEditorStub()
     setupBarWindowController()
+    updateConfigErrorWindow()
     startRuntimeServices()
     startSocketServer()
   }
@@ -63,8 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     aeroSpaceService.triggerRefresh()
 
     if let reloadError {
-      presentConfigReloadError(reloadError)
+      easybarLog.warn("config reload window presented error=\(reloadError)")
     }
+
+    updateConfigErrorWindow()
   }
 
   /// Restarts only the Lua runtime without reloading config.
@@ -175,23 +179,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     refreshRuntime()
   }
 
-  /// Presents one visible error dialog when a manual config reload fails.
-  private func presentConfigReloadError(_ error: any Error) {
-    let alert = NSAlert()
-    alert.alertStyle = .critical
-    alert.messageText = "EasyBar Config Reload Failed"
-    alert.informativeText =
-      """
-      EasyBar kept the previous config active.
+  /// Keeps the config error window in sync with the last known load result.
+  private func updateConfigErrorWindow() {
+    guard let failureState = Config.shared.loadFailureState else {
+      configErrorWindowController.close()
+      return
+    }
 
-      \(Config.shared.configPath)
-
-      \(error.localizedDescription)
-      """
-    alert.addButton(withTitle: "OK")
-
-    NSApp.activate(ignoringOtherApps: true)
-    alert.runModal()
+    configErrorWindowController.present(
+      failureState: failureState,
+      configPath: Config.shared.configPath
+    )
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.

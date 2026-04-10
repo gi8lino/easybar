@@ -6,6 +6,16 @@ import SwiftUI
 final class Config: ObservableObject {
   static let shared = Config()
 
+  enum LoadFailureContext {
+    case initialLoad
+    case reloadKeptPreviousConfig
+  }
+
+  struct LoadFailureState {
+    let error: any Error
+    let context: LoadFailureContext
+  }
+
   // MARK: - Sections
 
   struct AppSection {
@@ -140,6 +150,8 @@ final class Config: ObservableObject {
   var builtinTime: TimeBuiltinConfig = .default
   var builtinDate: DateBuiltinConfig = .default
 
+  private(set) var loadFailureState: LoadFailureState?
+
   private init() {
     appSection = .init(
       widgetsPath: "",
@@ -167,11 +179,12 @@ final class Config: ObservableObject {
 
     do {
       try load()
+      loadFailureState = nil
     } catch {
       let message = "invalid config at \(configPath): \(error)"
       easybarLog.error(message)
       fputs("easybar: \(message)\n", stderr)
-      exit(1)
+      loadFailureState = LoadFailureState(error: error, context: .initialLoad)
     }
   }
 
@@ -186,11 +199,13 @@ final class Config: ObservableObject {
 
     do {
       try load()
+      loadFailureState = nil
       objectWillChange.send()
       easybarLog.info("reload applied")
       return nil
     } catch {
       apply(snapshot)
+      loadFailureState = LoadFailureState(error: error, context: .reloadKeptPreviousConfig)
       easybarLog.warn("reload rejected: \(error)")
       return error
     }
