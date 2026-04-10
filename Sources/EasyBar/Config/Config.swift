@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 /// Global EasyBar configuration loaded from disk.
-final class Config {
+final class Config: ObservableObject {
   static let shared = Config()
 
   // MARK: - Sections
@@ -175,8 +175,9 @@ final class Config {
     }
   }
 
-  /// Reloads config from disk.
-  func reload() {
+  /// Reloads config from disk and returns one validation error when reload fails.
+  @discardableResult
+  func reload() -> (any Error)? {
     easybarLog.info("reloading configuration")
 
     let snapshot = snapshot()
@@ -185,10 +186,13 @@ final class Config {
 
     do {
       try load()
+      objectWillChange.send()
       easybarLog.info("reload applied")
+      return nil
     } catch {
       apply(snapshot)
       easybarLog.warn("reload rejected: \(error)")
+      return error
     }
   }
 

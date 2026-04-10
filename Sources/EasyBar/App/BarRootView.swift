@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Root SwiftUI view of the EasyBar window.
 struct BarRootView: View {
+  @ObservedObject private var config = Config.shared
   private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
 
   var body: some View {
@@ -17,17 +18,17 @@ struct BarRootView: View {
       WidgetBar(position: .right)
     }
     .font(globalBarFont)
-    .padding(.horizontal, Config.shared.barPaddingX)
+    .padding(.horizontal, config.barPaddingX)
     .frame(
       maxWidth: .infinity,
-      minHeight: Config.shared.barHeight,
-      maxHeight: Config.shared.barHeight,
+      minHeight: config.barHeight,
+      maxHeight: config.barHeight,
       alignment: .center
     )
-    .background(Theme.barBackground)
+    .background(Color(hex: config.barBackgroundHex))
     .overlay(alignment: .bottom) {
       Rectangle()
-        .fill(Theme.barBorder)
+        .fill(Color(hex: config.barBorderHex))
         .frame(height: 1)
     }
     .foregroundStyle(Theme.defaultTextColor)

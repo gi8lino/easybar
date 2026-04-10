@@ -54,13 +54,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Reloads config and reapplies all dependent runtime state.
   private func reloadConfig() {
-    Config.shared.reload()
+    let reloadError = Config.shared.reload()
     configureLogging()
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
     reloadRuntimeServices()
     configFileWatcher.restart()
     aeroSpaceService.triggerRefresh()
+
+    if let reloadError {
+      presentConfigReloadError(reloadError)
+    }
   }
 
   /// Restarts only the Lua runtime without reloading config.
@@ -169,6 +173,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Handles one manual-refresh IPC trigger.
   private func handleManualRefresh() {
     refreshRuntime()
+  }
+
+  /// Presents one visible error dialog when a manual config reload fails.
+  private func presentConfigReloadError(_ error: any Error) {
+    let alert = NSAlert()
+    alert.alertStyle = .critical
+    alert.messageText = "EasyBar Config Reload Failed"
+    alert.informativeText =
+      """
+      EasyBar kept the previous config active.
+
+      \(Config.shared.configPath)
+
+      \(error.localizedDescription)
+      """
+    alert.addButton(withTitle: "OK")
+
+    NSApp.activate(ignoringOtherApps: true)
+    alert.runModal()
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.

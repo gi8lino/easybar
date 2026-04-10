@@ -7,6 +7,7 @@ final class BarWindowController: NSWindowController {
   var onRefresh: (() -> Void)?
   var onReloadConfig: (() -> Void)?
   var onRestartLuaRuntime: (() -> Void)?
+  private let hostingView: BarHostingView<BarRootView>
 
   /// Creates a borderless bar window pinned to the top of the screen.
   init() {
@@ -48,6 +49,8 @@ final class BarWindowController: NSWindowController {
     window.contentView = hostingView
     window.setFrame(frame, display: false)
 
+    self.hostingView = hostingView
+
     super.init(window: window)
 
     window.contextMenuProvider = { [weak self] in
@@ -60,18 +63,19 @@ final class BarWindowController: NSWindowController {
     nil
   }
 
-  /// Reapplies the configured frame after a config reload.
+  /// Reapplies the configured frame and root view after a config reload.
   func reloadLayout() {
     guard let window else { return }
 
     let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen)
 
+    hostingView.rootView = BarRootView()
     window.setFrame(frame, display: true)
     window.setContentSize(frame.size)
     window.minSize = frame.size
     window.maxSize = frame.size
-    window.contentView?.frame = NSRect(origin: .zero, size: frame.size)
+    hostingView.frame = NSRect(origin: .zero, size: frame.size)
     easybarLog.info("bar window reloaded frame=\(NSStringFromRect(window.frame))")
   }
 
