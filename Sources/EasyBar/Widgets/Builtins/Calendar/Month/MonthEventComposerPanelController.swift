@@ -126,6 +126,9 @@ final class MonthCalendarEventComposerPanelController: NSObject, ObservableObjec
     window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
     window.backgroundColor = .clear
     window.isOpaque = false
+    window.representedURL = nil
+    window.miniwindowImage = NSApp.applicationIconImage
+    window.standardWindowButton(.documentIconButton)?.image = NSApp.applicationIconImage
     window.contentViewController = hostingController
     window.delegate = self
 
