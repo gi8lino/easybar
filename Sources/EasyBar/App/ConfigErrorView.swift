@@ -26,7 +26,8 @@ struct ConfigErrorView: View {
     case .initialLoad:
       return "The bar is running with fallback defaults until the config is fixed and reloaded."
     case .reloadKeptPreviousConfig:
-      return "The previous working config is still active. Fix the file and reload config to apply the changes."
+      return
+        "The previous working config is still active. Fix the file and reload config to apply the changes."
     }
   }
 

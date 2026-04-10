@@ -3,7 +3,8 @@ import SwiftUI
 
 /// Manages a standalone window for the month-calendar event composer.
 @MainActor
-final class MonthCalendarEventComposerPanelController: NSObject, ObservableObject, NSWindowDelegate {
+final class MonthCalendarEventComposerPanelController: NSObject, ObservableObject, NSWindowDelegate
+{
   private var window: NSWindow?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var composer: MonthCalendarEventComposer?
