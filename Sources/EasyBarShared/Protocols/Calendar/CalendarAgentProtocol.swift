@@ -1,7 +1,7 @@
 import Foundation
 
 /// Stable protocol version used by the calendar agent socket.
-public let calendarAgentProtocolVersion = "1"
+public let calendarAgentProtocolVersion = "2"
 
 /// Stable structured error codes returned by the calendar agent.
 public enum CalendarAgentErrorCode: String, Codable, Equatable {
@@ -123,8 +123,8 @@ public struct CalendarAgentCreateEvent: Codable, Equatable {
   public var endDate: Date
   /// Whether the event is all day.
   public var isAllDay: Bool
-  /// Optional calendar name to create the event in.
-  public var calendarName: String?
+  /// Optional calendar identifier to create the event in.
+  public var calendarID: String?
   /// Optional event location.
   public var location: String?
   /// Optional alert lead times in seconds before the event.
@@ -138,7 +138,7 @@ public struct CalendarAgentCreateEvent: Codable, Equatable {
     startDate: Date,
     endDate: Date,
     isAllDay: Bool,
-    calendarName: String? = nil,
+    calendarID: String? = nil,
     location: String? = nil,
     alertOffsetsSeconds: [TimeInterval] = [],
     travelTimeSeconds: TimeInterval? = nil
@@ -147,7 +147,7 @@ public struct CalendarAgentCreateEvent: Codable, Equatable {
     self.startDate = startDate
     self.endDate = endDate
     self.isAllDay = isAllDay
-    self.calendarName = calendarName
+    self.calendarID = calendarID
     self.location = location
     self.alertOffsetsSeconds = alertOffsetsSeconds
     self.travelTimeSeconds = travelTimeSeconds
@@ -166,8 +166,8 @@ public struct CalendarAgentUpdateEvent: Codable, Equatable {
   public var endDate: Date
   /// Whether the event is all day.
   public var isAllDay: Bool
-  /// Optional calendar name to move the event to.
-  public var calendarName: String?
+  /// Optional calendar identifier to move the event to.
+  public var calendarID: String?
   /// Optional event location.
   public var location: String?
   /// Optional alert lead times in seconds before the event.
@@ -182,7 +182,7 @@ public struct CalendarAgentUpdateEvent: Codable, Equatable {
     startDate: Date,
     endDate: Date,
     isAllDay: Bool,
-    calendarName: String? = nil,
+    calendarID: String? = nil,
     location: String? = nil,
     alertOffsetsSeconds: [TimeInterval] = [],
     travelTimeSeconds: TimeInterval? = nil
@@ -192,7 +192,7 @@ public struct CalendarAgentUpdateEvent: Codable, Equatable {
     self.startDate = startDate
     self.endDate = endDate
     self.isAllDay = isAllDay
-    self.calendarName = calendarName
+    self.calendarID = calendarID
     self.location = location
     self.alertOffsetsSeconds = alertOffsetsSeconds
     self.travelTimeSeconds = travelTimeSeconds
@@ -321,6 +321,8 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
   public var endDate: Date
   /// Whether the event is all day.
   public var isAllDay: Bool
+  /// Stable source calendar identifier.
+  public var calendarID: String?
   /// Optional source calendar name.
   public var calendarName: String?
   /// Optional source calendar color.
@@ -344,6 +346,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
     startDate: Date,
     endDate: Date,
     isAllDay: Bool,
+    calendarID: String? = nil,
     calendarName: String? = nil,
     calendarColorHex: String? = nil,
     location: String? = nil,
@@ -358,6 +361,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
     self.startDate = startDate
     self.endDate = endDate
     self.isAllDay = isAllDay
+    self.calendarID = calendarID
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location

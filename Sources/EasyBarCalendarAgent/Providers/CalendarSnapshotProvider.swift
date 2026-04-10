@@ -20,7 +20,7 @@ final class CalendarSnapshotProvider {
 
     static func setSeconds(_ seconds: TimeInterval?, on event: EKEvent) {
       guard let seconds, seconds > 0 else {
-        event.setValue(Optional<NSNumber>.none, forKey: key)
+        event.setValue(NSNumber(value: 0), forKey: key)
         return
       }
 
@@ -162,7 +162,7 @@ final class CalendarSnapshotProvider {
     }
 
     let event = EKEvent(eventStore: eventStore)
-    event.calendar = try resolvedCalendar(named: draft.calendarName)
+    event.calendar = try resolvedCalendar(id: draft.calendarID)
     event.title = normalizedTitle(draft.title)
     event.startDate = draft.startDate
     event.endDate = draft.endDate
@@ -208,7 +208,7 @@ final class CalendarSnapshotProvider {
       throw CalendarAgentCreateError.invalidDateRange
     }
 
-    event.calendar = try resolvedCalendar(named: draft.calendarName)
+    event.calendar = try resolvedCalendar(id: draft.calendarID)
     event.title = normalizedTitle(draft.title)
     event.startDate = draft.startDate
     event.endDate = draft.endDate
@@ -407,6 +407,7 @@ extension CalendarSnapshotProvider {
           startDate: event.startDate,
           endDate: event.endDate,
           isAllDay: event.isAllDay,
+          calendarID: event.calendar.calendarIdentifier,
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
@@ -459,6 +460,7 @@ extension CalendarSnapshotProvider {
           startDate: event.startDate,
           endDate: event.endDate,
           isAllDay: true,
+          calendarID: event.calendar.calendarIdentifier,
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
@@ -507,16 +509,14 @@ extension CalendarSnapshotProvider {
   }
 
   /// Resolves one writable calendar for creation or update.
-  private func resolvedCalendar(named name: String?) throws -> EKCalendar {
+  private func resolvedCalendar(id: String?) throws -> EKCalendar {
     let writableCalendars = eventStore.calendars(for: .event).filter { calendar in
       calendar.allowsContentModifications && calendar.type != .birthday
     }
 
-    if let name = normalizedOptionalText(name) {
-      let normalized = normalizedCalendarName(name)
-
+    if let id = normalizedOptionalText(id) {
       if let match = writableCalendars.first(where: {
-        normalizedCalendarName($0.title) == normalized
+        $0.calendarIdentifier == id
       }) {
         return match
       }
@@ -837,12 +837,30 @@ extension CalendarSnapshotProvider {
   }
 }
 
-enum CalendarAgentCreateError: Error {
+enum CalendarAgentCreateError: LocalizedError {
   case accessDenied
   case invalidDateRange
   case noWritableCalendar
+
+  var errorDescription: String? {
+    switch self {
+    case .accessDenied:
+      return "Calendar access is not available."
+    case .invalidDateRange:
+      return "The end time must be after the start time."
+    case .noWritableCalendar:
+      return "No writable calendar is available."
+    }
+  }
 }
 
-enum CalendarAgentMutationError: Error {
+enum CalendarAgentMutationError: LocalizedError {
   case eventNotFound
+
+  var errorDescription: String? {
+    switch self {
+    case .eventNotFound:
+      return "The selected appointment could not be found."
+    }
+  }
 }

@@ -88,10 +88,25 @@ public enum CalendarAgentOneShotClient {
 }
 
 /// Errors produced by the one-shot calendar agent client.
-public enum CalendarAgentOneShotError: Error {
+public enum CalendarAgentOneShotError: LocalizedError {
   case socketCreationFailed
   case connectionFailed
   case writeFailed
   case readFailed
   case emptyResponse
+
+  public var errorDescription: String? {
+    switch self {
+    case .socketCreationFailed:
+      return "Failed to create the calendar agent socket."
+    case .connectionFailed:
+      return "Failed to connect to the calendar agent."
+    case .writeFailed:
+      return "Failed to send the request to the calendar agent."
+    case .readFailed:
+      return "Failed to read the calendar agent response."
+    case .emptyResponse:
+      return "The calendar agent returned an empty response."
+    }
+  }
 }

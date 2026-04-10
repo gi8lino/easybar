@@ -90,7 +90,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: .missingQuery,
-            message: CalendarAgentErrorCode.missingQuery.rawValue
+            message: "Missing calendar query."
           ),
           to: clientFD
         )
@@ -110,7 +110,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: .missingQuery,
-            message: CalendarAgentErrorCode.missingQuery.rawValue
+            message: "Missing calendar query."
           ),
           to: clientFD
         )
@@ -144,7 +144,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: .missingCreateEvent,
-            message: CalendarAgentErrorCode.missingCreateEvent.rawValue
+            message: "Missing create-event payload."
           ),
           to: clientFD
         )
@@ -161,7 +161,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: code,
-            message: code.rawValue
+            message: errorMessage(for: error, code: code)
           ),
           to: clientFD
         )
@@ -175,7 +175,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: .missingUpdateEvent,
-            message: CalendarAgentErrorCode.missingUpdateEvent.rawValue
+            message: "Missing update-event payload."
           ),
           to: clientFD
         )
@@ -192,7 +192,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: code,
-            message: code.rawValue
+            message: errorMessage(for: error, code: code)
           ),
           to: clientFD
         )
@@ -206,7 +206,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: .missingDeleteEvent,
-            message: CalendarAgentErrorCode.missingDeleteEvent.rawValue
+            message: "Missing delete-event payload."
           ),
           to: clientFD
         )
@@ -223,7 +223,7 @@ final class CalendarSocketServer {
           CalendarAgentMessage(
             kind: .error,
             errorCode: code,
-            message: code.rawValue
+            message: errorMessage(for: error, code: code)
           ),
           to: clientFD
         )
@@ -257,5 +257,26 @@ final class CalendarSocketServer {
     }
 
     return fallback
+  }
+
+  /// Builds one readable wire-level error message from a calendar-domain error.
+  private func errorMessage(for error: Error, code: CalendarAgentErrorCode) -> String {
+    if let localizedError = error as? LocalizedError,
+      let description = localizedError.errorDescription,
+      !description.isEmpty
+    {
+      return description
+    }
+
+    let nsError = error as NSError
+    let description = nsError.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if !description.isEmpty,
+      description.caseInsensitiveCompare("The operation couldn’t be completed.") != .orderedSame
+    {
+      return "\(description) [\(nsError.domain) \(nsError.code)]"
+    }
+
+    return "\(code.rawValue) [\(nsError.domain) \(nsError.code)]"
   }
 }

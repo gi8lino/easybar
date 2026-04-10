@@ -174,6 +174,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   private let popupConfig = Config.shared.builtinCalendar.month.popup
 
   private var cancellables: Set<AnyCancellable> = []
+  private var preferredCalendarID: String?
   private var preferredCalendarName: String?
 
   init() {
@@ -227,6 +228,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   /// Prepares the composer for the given date using agent-backed state.
   func prepare(defaultDate: Date) {
     mode = .create
+    preferredCalendarID = nil
     preferredCalendarName = normalizedOptionalText(popupConfig.composerDefaultCalendarName)
 
     let normalizedDate = calendar.startOfDay(for: defaultDate)
@@ -261,6 +263,7 @@ final class MonthCalendarEventComposer: ObservableObject {
     location = event.location ?? ""
     alertRows = resolvedAlertRows(from: event.alertOffsetsSeconds)
     travelTime = resolvedTravelTimeOption(from: event.travelTimeSeconds)
+    preferredCalendarID = normalizedOptionalText(event.calendarID)
     preferredCalendarName = normalizedOptionalText(event.calendarName)
 
     applySnapshot(NativeMonthCalendarStore.shared.snapshot)
@@ -320,7 +323,7 @@ final class MonthCalendarEventComposer: ObservableObject {
         startDate: resolvedDates.start,
         endDate: resolvedDates.end,
         isAllDay: isAllDay,
-        calendarName: selectedCalendar.title,
+        calendarID: selectedCalendar.id,
         location: normalizedOptionalText(location),
         alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
         travelTimeSeconds: travelTime.seconds
@@ -343,7 +346,7 @@ final class MonthCalendarEventComposer: ObservableObject {
         startDate: resolvedDates.start,
         endDate: resolvedDates.end,
         isAllDay: isAllDay,
-        calendarName: selectedCalendar.title,
+        calendarID: selectedCalendar.id,
         location: normalizedOptionalText(location),
         alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
         travelTimeSeconds: travelTime.seconds
@@ -428,6 +431,13 @@ extension MonthCalendarEventComposer {
 
   /// Applies the preferred or configured calendar when available.
   private func applyPreferredCalendarSelectionIfNeeded() {
+    if let preferredCalendarID,
+      let preferred = calendars.first(where: { $0.id == preferredCalendarID })
+    {
+      selectedCalendarID = preferred.id
+      return
+    }
+
     if let preferredCalendarName,
       let preferred = calendars.first(where: {
         $0.title.compare(
