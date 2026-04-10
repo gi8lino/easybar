@@ -31,6 +31,7 @@ final class BatteryNativeWidget: NativeWidget {
     let style: Config.BuiltinWidgetStyle
     let percentage: Int
     let charging: Bool
+    let onExternalPower: Bool
     let text: String
     let colorHex: String?
     let showLabel: Bool
@@ -111,8 +112,9 @@ extension BatteryNativeWidget {
       let percentage = max > 0 ? Int((Double(current) / Double(max)) * 100.0) : 0
 
       let charging =
+        ((desc[kIOPSIsChargingKey as String] as? Bool) ?? false)
+      let onExternalPower =
         (desc[kIOPSPowerSourceStateKey as String] as? String) == kIOPSACPowerValue
-        || ((desc[kIOPSIsChargingKey as String] as? Bool) ?? false)
 
       let text = "\(percentage)%"
 
@@ -122,6 +124,7 @@ extension BatteryNativeWidget {
         style: style,
         percentage: percentage,
         charging: charging,
+        onExternalPower: onExternalPower,
         text: text,
         colorHex: resolvedBatteryColor(
           for: percentage,
@@ -186,6 +189,7 @@ extension BatteryNativeWidget {
       style: style,
       percentage: 0,
       charging: false,
+      onExternalPower: false,
       text: config.unavailableText,
       colorHex: resolvedUnavailableColor(config: config),
       showLabel: false,
@@ -248,11 +252,6 @@ extension BatteryNativeWidget {
 
   /// Resolves the color used when the battery is unavailable.
   private func resolvedUnavailableColor(config: Config.BatteryBuiltinConfig) -> String? {
-    switch config.colorMode {
-    case .dynamic:
-      return config.style.textColorHex
-    case .fixed:
-      return config.fixedColorHex ?? config.style.textColorHex
-    }
+    config.colors.unavailableColorHex
   }
 }

@@ -23,6 +23,13 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var imagePath: String?
   var imageSize: Double?
   var imageCornerRadius: Double?
+  var symbolName: String?
+  var symbolSecondaryColor: String?
+  var symbolOverlayName: String?
+  var symbolOverlayColor: String?
+  var symbolOverlayScale: Double?
+  var symbolOverlayOffsetX: Double?
+  var symbolOverlayOffsetY: Double?
 
   var fontSize: Double?
   var iconFontSize: Double?

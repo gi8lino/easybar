@@ -198,30 +198,34 @@ order = 20 # Sort order among widgets in the same position.
 
 [builtins.battery.style]
 icon = "🔋" # Fallback or default battery icon.
-text_color = "#ffffff" # Used when color_mode is fixed or data is unavailable.
+text_color = "#cdd6f4" # Used when color_mode is fixed or data is unavailable.
 background_color = "#00000000" # Background color of the widget.
 border_color = "#00000000" # Border color of the widget.
 border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
-padding_x = 8 # Horizontal inner padding of the widget.
+padding_x = 4 # Horizontal inner padding of the widget.
 padding_y = 0 # Vertical inner padding of the widget.
-spacing = 10 # Gap between the battery icon and text.
+spacing = 6 # Gap between the battery icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.battery.content]
 unavailable_text = "n/a" # Fallback text shown when battery data is unavailable.
 icon_size = 18 # Font size of the battery icon.
-color_mode = "dynamic" # Battery color mode: dynamic | fixed.
-fixed_color = "#8aadf4" # Color used only when color_mode = "fixed".
+color_mode = "fixed" # Battery color mode: dynamic | fixed.
+fixed_color = "#cdd6f4" # Color used only when color_mode = "fixed".
 display_mode = "expand" # Display mode: none | tooltip | expand | always.
 
 [builtins.battery.colors]
-high = "#8bd5ca" # Color used for 70-100%.
-medium = "#eed49f" # Color used for 50-69%.
-low = "#f5a97f" # Color used for 30-49%.
-critical = "#ed8796" # Color used for 0-29%.
+high = "#cdd6f4" # Color used for 70-100%.
+medium = "#cdd6f4" # Color used for 50-69%.
+low = "#f9e2af" # Color used for 30-49%.
+critical = "#f38ba8" # Color used for 0-29%.
+frame = "#6c7086" # Secondary palette color for the battery frame.
+charging_overlay = "#1e1e2e" # Color of the charging bolt overlay.
+external_power_overlay = "#1e1e2e" # Color of the plugged-in holding overlay.
+unavailable = "#6c7086" # Color used when battery data is unavailable.
 
 [builtins.battery.tooltip]
 text_color = "#ffffff" # Text color used in the tooltip popup.

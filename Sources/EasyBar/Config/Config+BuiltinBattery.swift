@@ -23,6 +23,10 @@ extension Config {
     var mediumColorHex: String
     var lowColorHex: String
     var criticalColorHex: String
+    var frameColorHex: String
+    var chargingOverlayColorHex: String
+    var externalPowerOverlayColorHex: String
+    var unavailableColorHex: String
   }
 
   /// Battery hover popup style used for `display_mode = "tooltip"`.
@@ -109,29 +113,33 @@ extension Config {
       ),
       style: .init(
         icon: "🔋",
-        textColorHex: "#ffffff",
+        textColorHex: "#cdd6f4",
         backgroundColorHex: "#00000000",
         borderColorHex: "#00000000",
         borderWidth: 0,
         cornerRadius: 8,
         marginX: 0,
         marginY: 0,
-        paddingX: 8,
+        paddingX: 4,
         paddingY: 0,
-        spacing: 10,
+        spacing: 6,
         opacity: 1
       ),
       content: .init(
         unavailableText: "n/a",
         iconSize: 18,
-        colorMode: .dynamic,
-        fixedColorHex: "#8aadf4",
+        colorMode: .fixed,
+        fixedColorHex: "#cdd6f4",
         displayMode: .expand,
         colors: .init(
-          highColorHex: "#8bd5ca",
-          mediumColorHex: "#eed49f",
-          lowColorHex: "#f5a97f",
-          criticalColorHex: "#ed8796"
+          highColorHex: "#cdd6f4",
+          mediumColorHex: "#cdd6f4",
+          lowColorHex: "#f9e2af",
+          criticalColorHex: "#f38ba8",
+          frameColorHex: "#6c7086",
+          chargingOverlayColorHex: "#1e1e2e",
+          externalPowerOverlayColorHex: "#1e1e2e",
+          unavailableColorHex: "#6c7086"
         )
       ),
       popup: .init(
@@ -236,7 +244,21 @@ extension Config {
       criticalColorHex: try optionalString(
         table["critical"],
         path: "builtins.battery.colors.critical"
-      ) ?? fallback.criticalColorHex
+      ) ?? fallback.criticalColorHex,
+      frameColorHex: try optionalString(table["frame"], path: "builtins.battery.colors.frame")
+        ?? fallback.frameColorHex,
+      chargingOverlayColorHex: try optionalString(
+        table["charging_overlay"],
+        path: "builtins.battery.colors.charging_overlay"
+      ) ?? fallback.chargingOverlayColorHex,
+      externalPowerOverlayColorHex: try optionalString(
+        table["external_power_overlay"],
+        path: "builtins.battery.colors.external_power_overlay"
+      ) ?? fallback.externalPowerOverlayColorHex,
+      unavailableColorHex: try optionalString(
+        table["unavailable"],
+        path: "builtins.battery.colors.unavailable"
+      ) ?? fallback.unavailableColorHex
     )
   }
 

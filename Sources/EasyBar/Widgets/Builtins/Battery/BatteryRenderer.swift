@@ -39,13 +39,21 @@ extension BatteryRenderer {
         childID: "\(rootID)_icon",
         position: snapshot.placement.position,
         order: 0,
-        icon: resolvedBatteryIcon(
-          for: snapshot.percentage,
-          charging: snapshot.charging,
-          unavailable: snapshot.isUnavailable,
-          fallbackIcon: snapshot.style.icon
-        ),
+        icon: snapshot.isUnavailable ? snapshot.style.icon : "",
         color: snapshot.colorHex,
+        symbolName: resolvedBatterySymbol(
+          for: snapshot.percentage,
+          unavailable: snapshot.isUnavailable
+        ),
+        symbolSecondaryColor: resolvedBatteryFrameColor(snapshot: snapshot),
+        symbolOverlayName: resolvedBatteryOverlaySymbol(
+          charging: snapshot.charging,
+          onExternalPower: snapshot.onExternalPower,
+          unavailable: snapshot.isUnavailable
+        ),
+        symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
+        symbolOverlayScale: snapshot.charging ? 0.48 : 0.43,
+        symbolOverlayOffsetY: snapshot.charging ? -0.35 : -0.2,
         fontSize: config.iconSize
       ),
 
@@ -102,13 +110,21 @@ extension BatteryRenderer {
         childID: "\(rootID)_icon",
         position: snapshot.placement.position,
         order: 0,
-        icon: resolvedBatteryIcon(
-          for: snapshot.percentage,
-          charging: snapshot.charging,
-          unavailable: snapshot.isUnavailable,
-          fallbackIcon: snapshot.style.icon
-        ),
+        icon: snapshot.isUnavailable ? snapshot.style.icon : "",
         color: snapshot.colorHex,
+        symbolName: resolvedBatterySymbol(
+          for: snapshot.percentage,
+          unavailable: snapshot.isUnavailable
+        ),
+        symbolSecondaryColor: resolvedBatteryFrameColor(snapshot: snapshot),
+        symbolOverlayName: resolvedBatteryOverlaySymbol(
+          charging: snapshot.charging,
+          onExternalPower: snapshot.onExternalPower,
+          unavailable: snapshot.isUnavailable
+        ),
+        symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
+        symbolOverlayScale: snapshot.charging ? 0.48 : 0.43,
+        symbolOverlayOffsetY: snapshot.charging ? -0.35 : -0.2,
         fontSize: snapshot.config.iconSize
       ),
       popupNode,
@@ -131,45 +147,62 @@ extension BatteryRenderer {
 
 extension BatteryRenderer {
 
-  /// Resolves the icon for the current battery state.
-  fileprivate func resolvedBatteryIcon(
+  /// Resolves the base SF Symbol for the current battery level.
+  fileprivate func resolvedBatterySymbol(
     for percentage: Int,
-    charging: Bool,
-    unavailable: Bool,
-    fallbackIcon: String
-  ) -> String {
+    unavailable: Bool
+  ) -> String? {
     if unavailable {
-      return fallbackIcon
-    }
-
-    if charging {
-      switch percentage {
-      case 100: return "󰂅"
-      case 90...99: return "󰂋"
-      case 80...89: return "󰂊"
-      case 70...79: return "󰢞"
-      case 60...69: return "󰂉"
-      case 50...59: return "󰢝"
-      case 40...49: return "󰂈"
-      case 30...39: return "󰂇"
-      case 20...29: return "󰂆"
-      case 10...19: return "󰢜"
-      default: return "󰂃"
-      }
+      return nil
     }
 
     switch percentage {
-    case 100: return "󰁹"
-    case 90...99: return "󰂂"
-    case 80...89: return "󰂁"
-    case 70...79: return "󰂀"
-    case 60...69: return "󰁿"
-    case 50...59: return "󰁾"
-    case 40...49: return "󰁽"
-    case 30...39: return "󰁼"
-    case 20...29: return "󰁻"
-    case 10...19: return "󰁺"
-    default: return "󰂃"
+    case 88...100:
+      return "battery.100percent"
+    case 63...87:
+      return "battery.75percent"
+    case 38...62:
+      return "battery.50percent"
+    case 13...37:
+      return "battery.25percent"
+    default:
+      return "battery.0percent"
     }
+  }
+
+  /// Resolves the overlay symbol for charging and plugged-in hold states.
+  fileprivate func resolvedBatteryOverlaySymbol(
+    charging: Bool,
+    onExternalPower: Bool,
+    unavailable: Bool
+  ) -> String? {
+    guard !unavailable else { return nil }
+
+    if charging {
+      return "bolt.fill"
+    }
+
+    if onExternalPower {
+      return "powerplug.portrait"
+    }
+
+    return nil
+  }
+
+  fileprivate func resolvedBatteryFrameColor(snapshot: Snapshot) -> String? {
+    guard !snapshot.isUnavailable else { return nil }
+    return snapshot.config.colors.frameColorHex
+  }
+
+  fileprivate func resolvedBatteryOverlayColor(snapshot: Snapshot) -> String? {
+    if snapshot.charging {
+      return snapshot.config.colors.chargingOverlayColorHex
+    }
+
+    if snapshot.onExternalPower {
+      return snapshot.config.colors.externalPowerOverlayColorHex
+    }
+
+    return nil
   }
 }

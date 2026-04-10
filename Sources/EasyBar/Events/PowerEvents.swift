@@ -61,7 +61,7 @@ final class PowerEvents {
     }
   }
 
-  /// Returns whether the current active power source is charging.
+  /// Returns whether the current active power source is actively charging.
   private func readChargingState() -> Bool {
     guard
       let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
@@ -79,11 +79,7 @@ final class PowerEvents {
         continue
       }
 
-      // AC power and explicit charging both count as "charging" for widgets.
-      let powerSourceState = description[kIOPSPowerSourceStateKey as String] as? String
-      let isCharging = (description[kIOPSIsChargingKey as String] as? Bool) ?? false
-
-      return powerSourceState == kIOPSACPowerValue || isCharging
+      return (description[kIOPSIsChargingKey as String] as? Bool) ?? false
     }
 
     return false

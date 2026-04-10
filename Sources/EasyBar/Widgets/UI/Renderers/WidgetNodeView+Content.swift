@@ -7,6 +7,7 @@ extension WidgetNodeView {
   var itemContent: some View {
     HStack(spacing: itemSpacing) {
       imageView
+      symbolView
       iconText
       labelText
     }
@@ -88,6 +89,16 @@ extension WidgetNodeView {
     !node.icon.isEmpty
   }
 
+  var hasSymbol: Bool {
+    guard let symbolName = node.symbolName else { return false }
+    return !symbolName.isEmpty
+  }
+
+  var hasSymbolSecondaryColor: Bool {
+    guard let secondaryColor = node.symbolSecondaryColor else { return false }
+    return !secondaryColor.isEmpty
+  }
+
   var hasLabel: Bool {
     !node.text.isEmpty
   }
@@ -108,14 +119,61 @@ extension WidgetNodeView {
     fontValue(size: node.labelFontSize ?? node.fontSize)
   }
 
+  var symbolResolvedFont: Font {
+    .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
+  }
+
+  var symbolOverlayResolvedFont: Font {
+    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    let scale = CGFloat(node.symbolOverlayScale ?? 0.58)
+    return .system(size: baseSize * scale, weight: .semibold)
+  }
+
+  var symbolOverlayOffset: CGSize {
+    CGSize(
+      width: CGFloat(node.symbolOverlayOffsetX ?? 0),
+      height: CGFloat(node.symbolOverlayOffsetY ?? 0)
+    )
+  }
+
   @ViewBuilder
   var imageView: some View {
     renderedImageView()
   }
 
   @ViewBuilder
+  var symbolView: some View {
+    if hasSymbol, let symbolName = node.symbolName {
+      ZStack {
+        if hasSymbolSecondaryColor {
+          Image(systemName: symbolName)
+            .symbolRenderingMode(.palette)
+            .font(symbolResolvedFont)
+            .foregroundStyle(
+              iconResolvedColor,
+              color(node.symbolSecondaryColor)
+            )
+        } else {
+          Image(systemName: symbolName)
+            .symbolRenderingMode(.hierarchical)
+            .font(symbolResolvedFont)
+            .foregroundStyle(iconResolvedColor)
+        }
+
+        if let overlayName = node.symbolOverlayName, !overlayName.isEmpty {
+          Image(systemName: overlayName)
+            .symbolRenderingMode(.monochrome)
+            .font(symbolOverlayResolvedFont)
+            .foregroundStyle(color(node.symbolOverlayColor))
+            .offset(symbolOverlayOffset)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
   var iconText: some View {
-    if hasIcon {
+    if hasIcon && !hasSymbol {
       Text(node.icon)
         .font(iconResolvedFont)
         .foregroundStyle(iconResolvedColor)
