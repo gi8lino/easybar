@@ -103,6 +103,25 @@ extension NativeMonthCalendarPopupView {
 
   /// Builds one appointment row.
   func appointmentRow(_ event: NativeMonthCalendarEvent) -> some View {
+    let isBirthday = isBirthdayEvent(event)
+
+    let content = appointmentRowContent(event, showsChevron: !isBirthday)
+
+    if isBirthday {
+      return AnyView(content)
+    }
+
+    return AnyView(
+      content
+        .contentShape(Rectangle())
+        .onTapGesture {
+          openComposer(for: event)
+        }
+    )
+  }
+
+  /// Builds the shared appointment row content.
+  func appointmentRowContent(_ event: NativeMonthCalendarEvent, showsChevron: Bool) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Rectangle()
         .fill(color(normalizedIndicatorColorHex(for: event)))
@@ -134,17 +153,15 @@ extension NativeMonthCalendarPopupView {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
-      Image(systemName: "chevron.right")
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(color(config.secondaryTextColorHex).opacity(0.8))
-        .padding(.top, 3)
+      if showsChevron {
+        Image(systemName: "chevron.right")
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(color(config.secondaryTextColorHex).opacity(0.8))
+          .padding(.top, 3)
+      }
     }
     .padding(.leading, CGFloat(config.itemIndent))
     .padding(.vertical, 4)
-    .contentShape(Rectangle())
-    .onTapGesture {
-      openComposer(for: event)
-    }
   }
 
   /// Builds the primary appointment title line.
