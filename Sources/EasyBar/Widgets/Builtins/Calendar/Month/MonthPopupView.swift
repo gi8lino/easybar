@@ -35,7 +35,7 @@ struct NativeMonthCalendarPopupView: View {
   let config = Config.shared.builtinCalendar.month.popup
   let calendar = Calendar.current
 
-  let composerPanel = MonthCalendarEventComposerPanelController()
+  @StateObject var composerPanel = MonthCalendarEventComposerPanelController()
 
   @State var visibleMonth = Self.startOfMonth(Date())
   @State var selectedStartDate = Date()
@@ -88,9 +88,6 @@ struct NativeMonthCalendarPopupView: View {
       syncSelectionIntoVisibleMonth()
       MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
       logSelection("on_appear")
-    }
-    .onDisappear {
-      composerPanel.close()
     }
     .onChange(of: visibleMonth) { _, newValue in
       MonthCalendarAgentClient.shared.focusVisibleMonth(newValue)
