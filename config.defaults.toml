@@ -1,13 +1,13 @@
 [app]
-widgets_dir = "~/.config/easybar/widgets" # Folder that contains your custom Lua widget files.
+widgets_dir = "~/.config/easybar/widgets" # Directory that contains your custom Lua widget files.
 lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
-watch_config = false # Auto-reload EasyBar when config.toml changes.
-lock_dir = "/tmp/EasyBar" # Folder that contains lock files for EasyBar.
+watch_config = false # Reloads EasyBar automatically when config.toml changes.
+lock_dir = "/tmp/EasyBar" # Directory that contains lock files used by EasyBar.
 
 [logging]
-enabled = false # Mirrors stdout and stderr log lines into per-process files when true.
-level = "info" # Minimum log level: trace | debug | info | warn | error
-directory = "~/.local/state/easybar" # Log directory. EasyBar writes easybar.out, calendar-agent.out, and network-agent.out here.
+enabled = false # Mirrors stdout and stderr into per-process log files when true.
+level = "info" # Minimum log level: trace | debug | info | warn | error.
+directory = "~/.local/state/easybar" # Directory where EasyBar writes easybar.out, calendar-agent.out, and network-agent.out.
 
 [agents.calendar]
 enabled = true # Starts the calendar socket client in EasyBar and enables the calendar helper contract.
@@ -16,16 +16,16 @@ socket_path = "/tmp/EasyBar/calendar-agent.sock" # Unix socket path used by Easy
 [agents.network]
 enabled = true # Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.
 socket_path = "/tmp/EasyBar/network-agent.sock" # Unix socket path used by EasyBar and the network agent.
-refresh_interval_seconds = 60 # Periodic fallback refresh interval for Wi-Fi state; set to 0 to disable polling.
-allow_unauthorized_non_sensitive_fields = false # When false, requests for Wi-Fi fields fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned.
+refresh_interval_seconds = 60 # Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.
+allow_unauthorized_non_sensitive_fields = false # When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned.
 
 [bar]
 height = 32 # Total height of the bar.
 padding_x = 10 # Horizontal left and right padding inside the bar.
-extend_behind_notch = true # When true, the bar window spans the full top edge, including behind the notch.
+extend_behind_notch = true # Makes the bar span the full top edge, including the area behind the notch.
 
 [bar.colors]
-background = "#111111" # Bar background color.
+background = "#111111" # Background color of the bar.
 border = "#222222" # Bottom border color of the bar.
 
 [builtins.spaces]
@@ -34,7 +34,7 @@ position = "left" # Places the widget on the left, center, or right side of the 
 order = 10 # Sort order among widgets in the same position.
 icon = "" # Unused fallback icon for the spaces root widget.
 text_color = "" # Fallback text color for the spaces root widget.
-background_color = "#00000000" # Background behind the whole spaces block.
+background_color = "#00000000" # Background color behind the whole spaces block.
 border_color = "#00000000" # Border color around the whole spaces block.
 border_width = 0 # Border width around the whole spaces block.
 corner_radius = 0 # Corner radius around the whole spaces block.
@@ -46,8 +46,8 @@ spacing = 0 # Root-level spacing of the spaces widget container.
 opacity = 1 # Overall opacity of the spaces widget container.
 
 [builtins.spaces.layout]
-spacing = 8 # Gap between one space pill and the next.
-hide_empty = true # Hides spaces with no apps.
+spacing = 8 # Gap between space pills.
+hide_empty = true # Hides spaces that have no apps.
 padding_x = 12 # Horizontal inner padding inside each space pill.
 padding_y = 2 # Vertical inner padding inside each space pill.
 margin_x = 4 # Horizontal outer margin around the whole spaces row.
@@ -61,8 +61,8 @@ show_label = true # Shows the workspace label.
 show_icons = true # Shows app icons inside each space pill.
 show_only_focused_label = false # Shows the label only on the focused space when true.
 collapse_inactive = false # Makes inactive spaces more compact when true.
-collapsed_padding_x = 6 # Horizontal inner padding for collapsed inactive space pills.
-collapsed_padding_y = 4 # Vertical inner padding for collapsed inactive space pills.
+collapsed_padding_x = 6 # Horizontal inner padding of collapsed inactive space pills.
+collapsed_padding_y = 4 # Vertical inner padding of collapsed inactive space pills.
 click_to_focus_space = true # Switches to a workspace when its pill is clicked.
 click_to_focus_app = true # Activates an app when its icon is clicked.
 
@@ -85,11 +85,11 @@ active_background = "#2b2b2b" # Background color of the focused space pill.
 inactive_background = "#1a1a1a" # Background color of inactive space pills.
 active_border = "#444444" # Border color of the focused space pill.
 inactive_border = "#00000000" # Border color of inactive space pills.
-focused_app_border = "#00000000" # Border color for the focused app icon in spaces.
+focused_app_border = "#00000000" # Border color of the focused app icon.
 
 [builtins.front_app]
 enabled = false # Shows or hides the front-app widget.
-position = "left" # Places the widget on the left, center, or right side.
+position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 20 # Sort order among widgets in the same position.
 
 [builtins.front_app.style]
@@ -103,72 +103,59 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 6 # Gap between icon and label.
+spacing = 6 # Gap between the icon and label.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.front_app.content]
-show_icon = true # Shows the focused app icon.
+show_icon = false  # Shows the focused app icon.
 show_name = true # Shows the focused app name.
-fallback_text = "No App" # Fallback text when no app name is available.
+fallback_text = "No App" # Fallback text shown when no app name is available.
 icon_size = 14 # Display size of the app icon.
 icon_corner_radius = 4 # Corner radius of the displayed app icon.
 
 [builtins.aerospace_mode]
-enabled = true
-position = "left"
-order = 30
+enabled = false # Shows or hides the AeroSpace mode widget.
+position = "left" # Places the widget on the left, center, or right side of the bar.
+order = 30 # Sort order among widgets in the same position.
 
 [builtins.aerospace_mode.style]
-text_color = "#ffffff"
-background_color = "#1a1a1a"
-border_color = "#333333"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 4
-spacing = 6
-opacity = 1
+text_color = "#ffffff" # Text color of the widget.
+background_color = "#1a1a1a" # Background color of the widget.
+border_color = "#333333" # Border color of the widget.
+border_width = 1 # Border width of the widget.
+corner_radius = 8 # Corner radius of the widget background.
+padding_x = 8 # Horizontal inner padding of the widget.
+padding_y = 4 # Vertical inner padding of the widget.
+spacing = 6 # Gap between the icon and text.
+opacity = 1 # Overall opacity of the widget.
 
 [builtins.aerospace_mode.content]
-show_icon = true
-show_text = false
-
-# Horizontal tiling
-h_tiles_icon = "󰕴"
-
-# Vertical tiling
-v_tiles_icon = "󰕳"
-
-# Horizontal accordion
-h_accordion_icon = "󰖲"
-
-# Vertical accordion
-v_accordion_icon = "󰖳"
-
-# Floating window/container
-floating_icon = "󰹙"
-
-# Fallback when layout cannot be detected
-unknown_icon = "󰘎"
-
-h_tiles_text = "h_tiles"
-v_tiles_text = "v_tiles"
-h_accordion_text = "h_accordion"
-v_accordion_text = "v_accordion"
-floating_text = "floating"
-unknown_text = "unknown"
+show_icon = true # Shows the icon for the current AeroSpace layout mode.
+show_text = false # Shows the text label for the current AeroSpace layout mode.
+h_tiles_icon = "󰕴" # Icon used for horizontal tiling.
+v_tiles_icon = "󰕳" # Icon used for vertical tiling.
+h_accordion_icon = "󰖲" # Icon used for horizontal accordion.
+v_accordion_icon = "󰖳" # Icon used for vertical accordion.
+floating_icon = "󰹙" # Icon used for floating windows or containers.
+unknown_icon = "󰘎" # Fallback icon used when the layout cannot be detected.
+h_tiles_text = "h_tiles" # Text label used for horizontal tiling.
+v_tiles_text = "v_tiles" # Text label used for vertical tiling.
+h_accordion_text = "h_accordion" # Text label used for horizontal accordion.
+v_accordion_text = "v_accordion" # Text label used for vertical accordion.
+floating_text = "floating" # Text label used for floating windows or containers.
+unknown_text = "unknown" # Fallback text label used when the layout cannot be detected.
 
 [builtins.cpu]
 enabled = false # Shows or hides the CPU widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
 
-# Example native group configuration. This is not enabled by default.
+# Example native group configuration. This is disabled by default.
 # Uncomment this block and the `group = "system"` lines below if you want
-# battery and Wi-Fi rendered inside one shared native container.
+# battery and Wi-Fi to be rendered inside one shared native container.
 #
 #[builtins.groups.system]
-#position = "right" # Places the native group on the left, center, or right side.
+#position = "right" # Places the native group on the left, center, or right side of the bar.
 #order = 40 # Sort order among widgets in the same position.
 #
 #[builtins.groups.system.style]
@@ -180,7 +167,7 @@ order = 10 # Sort order among widgets in the same position.
 #margin_y = 0 # Vertical outer margin around the native group.
 #padding_x = 8 # Horizontal inner padding of the native group.
 #padding_y = 2 # Vertical inner padding of the native group.
-#spacing = 6 # Gap between native children in the group.
+#spacing = 6 # Gap between native child widgets in the group.
 #opacity = 1 # Overall opacity of the native group.
 
 [builtins.cpu.style]
@@ -194,7 +181,7 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 6 # Gap between icon, label, and sparkline.
+spacing = 6 # Gap between the icon, label, and sparkline.
 opacity = 1 # Overall opacity of the widget.
 
 [builtins.cpu.content]
@@ -205,12 +192,12 @@ color = "#a6da95" # Color of the sparkline and label.
 
 [builtins.battery]
 enabled = false # Shows or hides the battery widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 20 # Sort order among widgets in the same position.
 # group = "system" # Optional native group id that should contain this widget.
 
 [builtins.battery.style]
-icon = "🔋" # Fallback/default battery icon.
+icon = "🔋" # Fallback or default battery icon.
 text_color = "#ffffff" # Used when color_mode is fixed or data is unavailable.
 background_color = "#00000000" # Background color of the widget.
 border_color = "#00000000" # Border color of the widget.
@@ -224,17 +211,17 @@ spacing = 10 # Gap between the battery icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.battery.content]
-unavailable_text = "n/a" # Fallback text when battery data is unavailable.
+unavailable_text = "n/a" # Fallback text shown when battery data is unavailable.
 icon_size = 18 # Font size of the battery icon.
-color_mode = "dynamic" # dynamic | fixed
-fixed_color = "#8aadf4" # Used only when color_mode = "fixed".
-display_mode = "expand" # none | tooltip | expand | always
+color_mode = "dynamic" # Battery color mode: dynamic | fixed.
+fixed_color = "#8aadf4" # Color used only when color_mode = "fixed".
+display_mode = "expand" # Display mode: none | tooltip | expand | always.
 
 [builtins.battery.colors]
-high = "#8bd5ca" # Color for 70-100%.
-medium = "#eed49f" # Color for 50-69%.
-low = "#f5a97f" # Color for 30-49%.
-critical = "#ed8796" # Color for 0-29%.
+high = "#8bd5ca" # Color used for 70-100%.
+medium = "#eed49f" # Color used for 50-69%.
+low = "#f5a97f" # Color used for 30-49%.
+critical = "#ed8796" # Color used for 0-29%.
 
 [builtins.battery.popup]
 text_color = "#ffffff" # Text color used in the tooltip popup.
@@ -249,12 +236,12 @@ margin_y = 8 # Vertical outer margin around the tooltip popup.
 
 [builtins.volume]
 enabled = false # Shows or hides the volume widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 20 # Sort order among widgets in the same position.
 
 [builtins.wifi]
 enabled = false # Shows or hides the built-in Wi-Fi widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 30 # Sort order among widgets in the same position.
 # group = "system" # Optional native group id that should contain this widget.
 
@@ -269,7 +256,7 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 0 # Vertical inner padding of the widget.
-spacing = 6 # Gap between signal bars and optional hover label.
+spacing = 6 # Gap between the signal bars and optional hover label.
 opacity = 1 # Overall opacity of the widget.
 
 [builtins.wifi.content]
@@ -291,7 +278,7 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 8 # Gap between icon, label, and slider.
+spacing = 8 # Gap between the icon, label, and slider.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.volume.content]
@@ -309,9 +296,9 @@ width = 80 # Width of the slider when shown.
 
 [builtins.calendar]
 enabled = false # Shows or hides the unified calendar widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 60 # Sort order among widgets in the same position.
-popup_mode = "month" # none | upcoming | month
+popup_mode = "month" # Popup mode: none | upcoming | month.
 
 [builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.
@@ -328,16 +315,16 @@ spacing = 6 # Gap between anchor contents.
 opacity = 1.0 # Overall opacity of the anchor widget.
 
 [builtins.calendar.anchor]
-layout = "stack" # Anchor layout: item, stack, or inline.
+layout = "stack" # Anchor layout: item | stack | inline.
 item_format = "EEE, MMM d" # Format used when anchor layout is item.
-top_format = "HH:mm" # Top line format in stack or inline layouts.
-bottom_format = "d. MMM" # Bottom or second line format in stack or inline layouts.
+top_format = "HH:mm" # Top line format used in stack or inline layouts.
+bottom_format = "d. MMM" # Bottom or second line format used in stack or inline layouts.
 line_spacing = 0 # Vertical spacing between top and bottom lines in stack layout.
-top_text_color = "#ffffff" # Color of the top line text.
-bottom_text_color = "#d0d0d0" # Color of the bottom line text.
+top_text_color = "#ffffff" # Text color of the top line.
+bottom_text_color = "#d0d0d0" # Text color of the bottom line.
 
 [builtins.calendar.upcoming.events]
-days = 3 # Number of days of upcoming events to show in the popup.
+days = 3 # Number of days of upcoming events shown in the popup.
 empty_text = "No upcoming events" # Text shown when no events exist for a day.
 
 [builtins.calendar.upcoming.birthdays]
@@ -393,24 +380,24 @@ margin_x = 8 # Horizontal outer margin around the whole month popup.
 margin_y = 8 # Vertical outer margin around the whole month popup.
 
 [builtins.calendar.month.popup.calendar]
-show_week_numbers = true # Shows the week numbers in the calendar grid.
+show_week_numbers = true # Shows week numbers in the calendar grid.
 show_event_indicators = true # Shows dots under days that contain events.
 header_text_color = "#ffffff" # Text color of the month header and appointments title.
 weekday_text_color = "#91d7e3" # Text color of the weekday labels.
 first_weekday = 2 # First weekday used by the month grid. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting.
 weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
-# weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels for Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
+# weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels in Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
 day_text_color = "#d0d0d0" # Text color of days in the current month.
-outside_month_text_color = "#6e738d" # Text color of trailing and leading days outside the current month.
-today_cell_background_color = "" # Background color of today's day cell when not selected.
-today_cell_border_color = "#FF0000" # Border color of today's day cell when not selected.
-today_cell_border_width = 1.4 # Border width of today's day cell when not selected.
+outside_month_text_color = "#6e738d" # Text color of leading and trailing days outside the current month.
+today_cell_background_color = "" # Background color of today's day cell when it is not selected.
+today_cell_border_color = "#FF0000" # Border color of today's day cell when it is not selected.
+today_cell_border_width = 1.4 # Border width of today's day cell when it is not selected.
 indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
 
 [builtins.calendar.month.popup.selection]
 selected_text_color = "#0B1020" # Text color of selected day cells.
 selected_background_color = "#89B4FA" # Background color of selected day cells.
-selection_date_format = "yyyy-MM-dd" # Date header format used in the agenda when a multi-day range is selected.
+selection_date_format = "yyyy-MM-dd" # Date header format used when a multi-day range is selected.
 selection_date_separator = " - " # Separator used between start and end dates when a date range is selected.
 allows_range_selection = true # Allows selecting a date range by dragging across days.
 reset_selection_on_third_tap = true # Reserved selection behavior flag for the month popup.
@@ -420,7 +407,7 @@ event_text_color = "#d0d0d0" # Text color of appointment rows.
 empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
 secondary_text_color = "#91d7e3" # Text color of secondary appointment details.
 travel_text_color = "#8a8a8a" # Muted text color used for travel-time and end-time rows.
-layout = "calendar_appointments_vertical" # Popup layout: calendar_appointments_horizontal | appointments_calendar_horizontal | calendar_appointments_vertical | appointments_calendar_vertical
+layout = "calendar_appointments_vertical" # Popup layout: calendar_appointments_horizontal | appointments_calendar_horizontal | calendar_appointments_vertical | appointments_calendar_vertical.
 appointments_scrollable = true # Makes the appointments area scroll vertically when true.
 appointments_min_height = 180 # Minimum height of the appointments area. Set equal to appointments_max_height for a fixed height.
 appointments_max_height = 240 # Maximum height of the appointments area. Set equal to appointments_min_height for a fixed height.
@@ -428,8 +415,8 @@ empty_text = "No appointments" # Text shown when the selected day or range has n
 agenda_title = "Appointments" # Title shown above the appointments list.
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
-show_holiday_all_day_label = false # Shows "All day" for holiday-calendar events when they are all day.
-all_day_label = "All day" # Text shown for all-day events when show_all_day_label is true
+show_holiday_all_day_label = false # Shows "All day" for all-day holiday-calendar events.
+all_day_label = "All day" # Text shown for all-day events when show_all_day_label is true.
 show_location = true # Shows the event location line when present.
 show_travel_time = true # Shows the travel-time line when present. Regular alerts are not shown here.
 travel_icon = "" # Leading icon shown for travel-time rows.
@@ -460,8 +447,8 @@ edit_title = "Edit Appointment" # Panel title shown when editing an appointment.
 title_label = "Title" # Label shown above the title field.
 location_label = "Location" # Label shown above the location field.
 calendar_label = "Calendar" # Label shown above the calendar picker.
-start_label = "Begin" # Labels shown for the start and end times.
-end_label = "End" # Labels shown for the start and end times.
+start_label = "Begin" # Label shown for the start time.
+end_label = "End" # Label shown for the end time.
 all_day_label = "All day" # Label shown for all-day events.
 travel_time_label = "Travel time" # Label shown for the travel-time picker.
 alert_label = "Alert" # Label shown above the alerts section.
@@ -476,8 +463,8 @@ delete_confirmation_message = "This action cannot be undone." # Delete confirmat
 title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
 location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
 default_calendar_name = "Personal" # Default calendar name used when creating new appointments.
-default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day
-default_travel_time = "none" # Default travel-time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours
+default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day.
+default_travel_time = "none" # Default travel time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours.
 
 [builtins.calendar.month.popup.composer.alert_labels]
 none = "None" # Label shown for no alert.
@@ -502,14 +489,14 @@ none = "None" # Label shown when no travel time is set.
 2_hours = "2 hours" # Label shown for 2 hours of travel time.
 
 [builtins.calendar.month.popup.today_button]
-title = "Today" # Title of the today button.
-border_color = "#3F2F6B" # Border color of the today button.
-border_width = 1.5 # Border width of the today button.
-icon = "" # Optional leading icon of the today button, like 󰃭.
+title = "Today" # Title of the Today button.
+border_color = "#3F2F6B" # Border color of the Today button.
+border_width = 1.5 # Border width of the Today button.
+icon = "" # Optional leading icon of the Today button, for example 󰃭.
 
 [builtins.time]
 enabled = false # Shows or hides the time widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 40 # Sort order among widgets in the same position.
 
 [builtins.time.style]
@@ -523,7 +510,7 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 6 # Gap between icon and text.
+spacing = 6 # Gap between the icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.time.content]
@@ -531,7 +518,7 @@ format = "HH:mm" # Time format string.
 
 [builtins.date]
 enabled = false # Shows or hides the date widget.
-position = "right" # Places the widget on the left, center, or right side.
+position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 50 # Sort order among widgets in the same position.
 
 [builtins.date.style]
@@ -545,7 +532,7 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
-spacing = 6 # Gap between icon and text.
+spacing = 6 # Gap between the icon and text.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
