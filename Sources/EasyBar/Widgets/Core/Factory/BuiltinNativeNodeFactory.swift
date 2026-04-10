@@ -96,7 +96,7 @@ enum BuiltinNativeNodeFactory {
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle
   ) -> WidgetNodeState {
-    makeRootNode(
+    var node = makeRootNode(
       id: id,
       kind: .group,
       placement: placement,
@@ -105,6 +105,12 @@ enum BuiltinNativeNodeFactory {
       text: "",
       color: style.textColorHex
     )
+    // Native groups are layout containers; letting them own hover surfaces
+    // interferes with hover-driven children such as tooltip widgets.
+    node.receivesMouseHover = false
+    node.receivesMouseClick = false
+    node.receivesMouseScroll = false
+    return node
   }
 
   /// Builds one root row container node.

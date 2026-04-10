@@ -25,6 +25,7 @@ final class WiFiNativeWidget: NativeWidget {
     let iconText: String
     let iconColorHex: String
     let labelVisible: Bool
+    let popupVisible: Bool
   }
 
   // MARK: - Lifecycle
@@ -87,7 +88,8 @@ final class WiFiNativeWidget: NativeWidget {
       labelText: presentation.labelText,
       iconText: presentation.iconText,
       iconColorHex: presentation.iconColorHex,
-      labelVisible: config.showSSIDOnHover && isHovered && !presentation.labelText.isEmpty
+      labelVisible: shouldShowInlineLabel(config: config, text: presentation.labelText),
+      popupVisible: shouldShowPopupLabel(config: config, text: presentation.labelText)
     )
   }
 }
@@ -128,5 +130,30 @@ extension WiFiNativeWidget {
     default:
       return
     }
+  }
+
+  /// Returns whether the Wi-Fi label should be visible inline.
+  private func shouldShowInlineLabel(
+    config: Config.WiFiBuiltinConfig,
+    text: String
+  ) -> Bool {
+    guard !text.isEmpty else { return false }
+
+    switch config.displayMode {
+    case .none, .tooltip:
+      return false
+    case .expand:
+      return isHovered
+    case .always:
+      return true
+    }
+  }
+
+  /// Returns whether the Wi-Fi label should be shown in a popup.
+  private func shouldShowPopupLabel(
+    config: Config.WiFiBuiltinConfig,
+    text: String
+  ) -> Bool {
+    config.displayMode == .tooltip && !text.isEmpty
   }
 }

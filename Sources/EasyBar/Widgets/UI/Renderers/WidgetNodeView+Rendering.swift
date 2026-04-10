@@ -111,10 +111,8 @@ extension WidgetNodeView {
   var popupAnchor: some View {
     let content = Group {
       if hasAnchorChildren {
-        VStack(alignment: .leading, spacing: itemSpacing) {
-          ForEach(anchorChildren) { child in
-            WidgetNodeView(node: child)
-          }
+        ForEach(anchorChildren) { child in
+          WidgetNodeView(node: child)
         }
       } else {
         itemContent

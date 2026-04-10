@@ -161,7 +161,7 @@ extension Config {
     let styleTable = battery["style"]?.table ?? TOMLTable()
     let contentTable = battery["content"]?.table ?? TOMLTable()
     let colorsTable = battery["colors"]?.table ?? TOMLTable()
-    let popupTable = battery["popup"]?.table ?? TOMLTable()
+    let tooltipTable = battery["tooltip"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
       from: styleTable,
@@ -174,7 +174,7 @@ extension Config {
       colorsTable: colorsTable,
       fallback: builtinBattery.content
     )
-    let popup = try parseBatteryPopup(from: popupTable, fallback: builtinBattery.popup)
+    let popup = try parseBatteryPopup(from: tooltipTable, fallback: builtinBattery.popup)
 
     builtinBattery = BatteryBuiltinConfig(
       placement: placement,
@@ -240,7 +240,7 @@ extension Config {
     )
   }
 
-  /// Parses the battery tooltip popup settings.
+  /// Parses the battery tooltip settings.
   fileprivate func parseBatteryPopup(
     from table: TOMLTable,
     fallback: BuiltinBatteryPopup
@@ -248,39 +248,39 @@ extension Config {
     BuiltinBatteryPopup(
       textColorHex: try optionalString(
         table["text_color"],
-        path: "builtins.battery.popup.text_color"
+        path: "builtins.battery.tooltip.text_color"
       ) ?? fallback.textColorHex,
       backgroundColorHex: try optionalString(
         table["background_color"],
-        path: "builtins.battery.popup.background_color"
+        path: "builtins.battery.tooltip.background_color"
       ) ?? fallback.backgroundColorHex,
       borderColorHex: try optionalString(
         table["border_color"],
-        path: "builtins.battery.popup.border_color"
+        path: "builtins.battery.tooltip.border_color"
       ) ?? fallback.borderColorHex,
       borderWidth: try optionalNumber(
         table["border_width"],
-        path: "builtins.battery.popup.border_width"
+        path: "builtins.battery.tooltip.border_width"
       ) ?? fallback.borderWidth,
       cornerRadius: try optionalNumber(
         table["corner_radius"],
-        path: "builtins.battery.popup.corner_radius"
+        path: "builtins.battery.tooltip.corner_radius"
       ) ?? fallback.cornerRadius,
       paddingX: try optionalNumber(
         table["padding_x"],
-        path: "builtins.battery.popup.padding_x"
+        path: "builtins.battery.tooltip.padding_x"
       ) ?? fallback.paddingX,
       paddingY: try optionalNumber(
         table["padding_y"],
-        path: "builtins.battery.popup.padding_y"
+        path: "builtins.battery.tooltip.padding_y"
       ) ?? fallback.paddingY,
       marginX: try optionalNumber(
         table["margin_x"],
-        path: "builtins.battery.popup.margin_x"
+        path: "builtins.battery.tooltip.margin_x"
       ) ?? fallback.marginX,
       marginY: try optionalNumber(
         table["margin_y"],
-        path: "builtins.battery.popup.margin_y"
+        path: "builtins.battery.tooltip.margin_y"
       ) ?? fallback.marginY
     )
   }

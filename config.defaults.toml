@@ -223,7 +223,7 @@ medium = "#eed49f" # Color used for 50-69%.
 low = "#f5a97f" # Color used for 30-49%.
 critical = "#ed8796" # Color used for 0-29%.
 
-[builtins.battery.popup]
+[builtins.battery.tooltip]
 text_color = "#ffffff" # Text color used in the tooltip popup.
 background_color = "#111111" # Background color of the tooltip popup.
 border_color = "#444444" # Border color of the tooltip popup.
@@ -260,12 +260,23 @@ spacing = 6 # Gap between the signal bars and optional hover label.
 opacity = 1 # Overall opacity of the widget.
 
 [builtins.wifi.content]
-show_ssid_on_hover = true # Shows the connected SSID while hovering the widget.
+display_mode = "expand" # Display mode: none | tooltip | expand | always.
 disconnected_text = "Wi-Fi" # Hover label shown when Wi-Fi is not connected.
 denied_text = "Location" # Hover label shown when Wi-Fi permission is unavailable.
 active_color = "#ffffff" # Color of active signal bars.
 inactive_color = "#6e738d" # Color of inactive signal bars.
 text_color = "#ffffff" # Color of the hover label text.
+
+[builtins.wifi.tooltip]
+text_color = "#ffffff" # Text color used in the tooltip popup.
+background_color = "#111111" # Background color of the tooltip popup.
+border_color = "#444444" # Border color of the tooltip popup.
+border_width = 1 # Border width of the tooltip popup.
+corner_radius = 8 # Corner radius of the tooltip popup.
+padding_x = 8 # Horizontal inner padding of the tooltip popup.
+padding_y = 6 # Vertical inner padding of the tooltip popup.
+margin_x = 0 # Horizontal outer margin around the tooltip popup.
+margin_y = 8 # Vertical outer margin around the tooltip popup.
 
 [builtins.volume.style]
 icon = "" # Leading icon of the compact widget.

@@ -71,24 +71,34 @@ extension BatteryRenderer {
   /// Builds the tooltip popup layout.
   private func makeTooltipNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     let popup = snapshot.config.popup
+    var popupNode = BuiltinNativeNodeFactory.makePopupContentColumnNode(
+      rootID: rootID,
+      contentID: "\(rootID)_popup",
+      position: snapshot.placement.position,
+      order: 0,
+      visible: !snapshot.text.isEmpty,
+      paddingX: popup.paddingX,
+      paddingY: popup.paddingY,
+      spacing: 4,
+      backgroundColor: popup.backgroundColorHex,
+      borderColor: popup.borderColorHex,
+      borderWidth: popup.borderWidth,
+      cornerRadius: popup.cornerRadius,
+      opacity: 1
+    )
+    popupNode.marginX = popup.marginX
+    popupNode.marginY = popup.marginY
 
     return [
-      BuiltinNativeNodeFactory.makePopupRootNode(
+      BuiltinNativeNodeFactory.makeRowContainerNode(
         rootID: rootID,
         placement: snapshot.placement,
         style: snapshot.style
       ),
 
-      BuiltinNativeNodeFactory.makePopupAnchorRowNode(
-        rootID: rootID,
-        anchorID: "\(rootID)_anchor",
-        position: snapshot.placement.position,
-        spacing: snapshot.style.spacing
-      ),
-
       BuiltinNativeNodeFactory.makeChildItemNode(
         rootID: rootID,
-        parentID: "\(rootID)_anchor",
+        parentID: rootID,
         childID: "\(rootID)_icon",
         position: snapshot.placement.position,
         order: 0,
@@ -101,34 +111,7 @@ extension BatteryRenderer {
         color: snapshot.colorHex,
         fontSize: snapshot.config.iconSize
       ),
-
-      BuiltinNativeNodeFactory.makeSpacerNode(
-        rootID: rootID,
-        spacerID: "\(rootID)_popup_spacer",
-        parentID: rootID,
-        position: snapshot.placement.position,
-        order: 1,
-        visible: false,
-        paddingX: popup.marginX,
-        paddingY: popup.marginY,
-        opacity: 1
-      ),
-
-      BuiltinNativeNodeFactory.makePopupContentColumnNode(
-        rootID: rootID,
-        contentID: "\(rootID)_popup",
-        position: snapshot.placement.position,
-        order: 0,
-        visible: !snapshot.text.isEmpty,
-        paddingX: popup.paddingX,
-        paddingY: popup.paddingY,
-        spacing: 4,
-        backgroundColor: popup.backgroundColorHex,
-        borderColor: popup.borderColorHex,
-        borderWidth: popup.borderWidth,
-        cornerRadius: popup.cornerRadius,
-        opacity: 1
-      ),
+      popupNode,
 
       BuiltinNativeNodeFactory.makeChildItemNode(
         rootID: rootID,

@@ -74,6 +74,11 @@ extension Config {
     BuiltinBatteryDisplayMode(rawValue: value) ?? .expand
   }
 
+  /// Parses one Wi-Fi display mode.
+  func normalizedWiFiDisplayMode(_ value: String) -> BuiltinWiFiDisplayMode {
+    BuiltinWiFiDisplayMode(rawValue: value) ?? .expand
+  }
+
   /// Parses one calendar popup mode.
   func normalizedCalendarPopupMode(_ value: String) -> CalendarPopupMode {
     CalendarPopupMode(rawValue: value) ?? .upcoming

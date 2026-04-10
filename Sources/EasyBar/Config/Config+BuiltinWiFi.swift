@@ -3,9 +3,28 @@ import TOMLKit
 
 extension Config {
 
+  enum BuiltinWiFiDisplayMode: String {
+    case none
+    case tooltip
+    case expand
+    case always
+  }
+
+  struct BuiltinWiFiPopup {
+    var textColorHex: String?
+    var backgroundColorHex: String
+    var borderColorHex: String
+    var borderWidth: Double
+    var cornerRadius: Double
+    var paddingX: Double
+    var paddingY: Double
+    var marginX: Double
+    var marginY: Double
+  }
+
   struct WiFiBuiltinConfig {
     struct Content {
-      var showSSIDOnHover: Bool
+      var displayMode: BuiltinWiFiDisplayMode
       var disconnectedText: String
       var deniedText: String
       var activeColorHex: String
@@ -16,6 +35,7 @@ extension Config {
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
     var content: Content
+    var popup: BuiltinWiFiPopup
 
     var enabled: Bool {
       get { placement.enabled }
@@ -32,9 +52,9 @@ extension Config {
       set { placement.order = newValue }
     }
 
-    var showSSIDOnHover: Bool {
-      get { content.showSSIDOnHover }
-      set { content.showSSIDOnHover = newValue }
+    var displayMode: BuiltinWiFiDisplayMode {
+      get { content.displayMode }
+      set { content.displayMode = newValue }
     }
 
     var disconnectedText: String {
@@ -84,12 +104,23 @@ extension Config {
         opacity: 1
       ),
       content: .init(
-        showSSIDOnHover: true,
+        displayMode: .expand,
         disconnectedText: "Wi-Fi",
         deniedText: "Location",
         activeColorHex: "#ffffff",
         inactiveColorHex: "#6e738d",
         textColorHex: "#ffffff"
+      ),
+      popup: .init(
+        textColorHex: "#ffffff",
+        backgroundColorHex: "#111111",
+        borderColorHex: "#444444",
+        borderWidth: 1,
+        cornerRadius: 8,
+        paddingX: 8,
+        paddingY: 6,
+        marginX: 0,
+        marginY: 8
       )
     )
   }
@@ -105,6 +136,7 @@ extension Config {
 
     let styleTable = wifi["style"]?.table ?? TOMLTable()
     let contentTable = wifi["content"]?.table ?? TOMLTable()
+    let tooltipTable = wifi["tooltip"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
       from: styleTable,
@@ -113,10 +145,12 @@ extension Config {
     )
 
     let content = WiFiBuiltinConfig.Content(
-      showSSIDOnHover: try optionalBool(
-        contentTable["show_ssid_on_hover"],
-        path: "builtins.wifi.content.show_ssid_on_hover"
-      ) ?? builtinWiFi.showSSIDOnHover,
+      displayMode: normalizedWiFiDisplayMode(
+        try optionalString(
+          contentTable["display_mode"],
+          path: "builtins.wifi.content.display_mode"
+        ) ?? builtinWiFi.displayMode.rawValue
+      ),
       disconnectedText: try optionalString(
         contentTable["disconnected_text"],
         path: "builtins.wifi.content.disconnected_text"
@@ -139,10 +173,59 @@ extension Config {
       ) ?? builtinWiFi.textColorHex
     )
 
+    let popup = try parseWiFiPopup(from: tooltipTable, fallback: builtinWiFi.popup)
+
     builtinWiFi = WiFiBuiltinConfig(
       placement: placement,
       style: style,
-      content: content
+      content: content,
+      popup: popup
+    )
+  }
+}
+
+extension Config {
+  fileprivate func parseWiFiPopup(
+    from table: TOMLTable,
+    fallback: BuiltinWiFiPopup
+  ) throws -> BuiltinWiFiPopup {
+    BuiltinWiFiPopup(
+      textColorHex: try optionalString(
+        table["text_color"],
+        path: "builtins.wifi.tooltip.text_color"
+      ) ?? fallback.textColorHex,
+      backgroundColorHex: try optionalString(
+        table["background_color"],
+        path: "builtins.wifi.tooltip.background_color"
+      ) ?? fallback.backgroundColorHex,
+      borderColorHex: try optionalString(
+        table["border_color"],
+        path: "builtins.wifi.tooltip.border_color"
+      ) ?? fallback.borderColorHex,
+      borderWidth: try optionalNumber(
+        table["border_width"],
+        path: "builtins.wifi.tooltip.border_width"
+      ) ?? fallback.borderWidth,
+      cornerRadius: try optionalNumber(
+        table["corner_radius"],
+        path: "builtins.wifi.tooltip.corner_radius"
+      ) ?? fallback.cornerRadius,
+      paddingX: try optionalNumber(
+        table["padding_x"],
+        path: "builtins.wifi.tooltip.padding_x"
+      ) ?? fallback.paddingX,
+      paddingY: try optionalNumber(
+        table["padding_y"],
+        path: "builtins.wifi.tooltip.padding_y"
+      ) ?? fallback.paddingY,
+      marginX: try optionalNumber(
+        table["margin_x"],
+        path: "builtins.wifi.tooltip.margin_x"
+      ) ?? fallback.marginX,
+      marginY: try optionalNumber(
+        table["margin_y"],
+        path: "builtins.wifi.tooltip.margin_y"
+      ) ?? fallback.marginY
     )
   }
 }
