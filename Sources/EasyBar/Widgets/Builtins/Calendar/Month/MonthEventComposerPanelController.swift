@@ -1,10 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// Manages a small floating panel for the month-calendar event composer.
+/// Manages a standalone window for the month-calendar event composer.
 @MainActor
-final class MonthCalendarEventComposerPanelController: ObservableObject {
-  private var panel: NSPanel?
+final class MonthCalendarEventComposerPanelController: NSObject, ObservableObject, NSWindowDelegate {
+  private var window: NSWindow?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var composer: MonthCalendarEventComposer?
 
@@ -66,39 +66,37 @@ final class MonthCalendarEventComposerPanelController: ObservableObject {
     showIfPossible()
   }
 
-  /// Closes the composer panel when present.
+  /// Closes the composer window when present.
   func close() {
-    panel?.close()
-    panel = nil
-    composer = nil
-    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
+    window?.close()
+    reset()
   }
 
-  /// Shows the panel centered relative to the active window or screen.
+  /// Shows the window centered relative to the active window or screen.
   private func showIfPossible() {
-    let panel = panel ?? makePanel()
-    self.panel = panel
+    let window = window ?? makeWindow()
+    self.window = window
 
     if let composer {
-      panel.title = composer.panelTitle
+      window.title = composer.panelTitle
     }
 
     hostingController.view.layoutSubtreeIfNeeded()
     let fittingSize = hostingController.view.fittingSize
     guard fittingSize.width > 0, fittingSize.height > 0 else { return }
 
-    panel.setContentSize(fittingSize)
+    window.setContentSize(fittingSize)
 
-    if let window = NSApp.keyWindow ?? NSApp.mainWindow {
-      let parentFrame = window.frame
-      panel.setFrameOrigin(
+    if let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow {
+      let parentFrame = parentWindow.frame
+      window.setFrameOrigin(
         NSPoint(
           x: parentFrame.midX - fittingSize.width / 2,
           y: parentFrame.midY - fittingSize.height / 2
         )
       )
     } else if let screenFrame = NSScreen.main?.visibleFrame {
-      panel.setFrameOrigin(
+      window.setFrameOrigin(
         NSPoint(
           x: screenFrame.midX - fittingSize.width / 2,
           y: screenFrame.midY - fittingSize.height / 2
@@ -106,35 +104,45 @@ final class MonthCalendarEventComposerPanelController: ObservableObject {
       )
     }
 
-    panel.makeKeyAndOrderFront(nil)
+    window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
   }
 
-  /// Builds the shared floating composer panel.
-  private func makePanel() -> NSPanel {
-    let panel = NSPanel(
+  /// Builds the shared composer window.
+  private func makeWindow() -> NSWindow {
+    let window = NSWindow(
       contentRect: .zero,
-      styleMask: [.titled, .fullSizeContentView],
+      styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
-    panel.title = "Appointment"
-    panel.titleVisibility = .hidden
-    panel.titlebarAppearsTransparent = true
-    panel.isMovableByWindowBackground = true
-    panel.isFloatingPanel = true
-    panel.level = .floating
-    panel.hasShadow = true
-    panel.hidesOnDeactivate = false
-    panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-    panel.backgroundColor = .clear
-    panel.isOpaque = false
-    panel.contentViewController = hostingController
+    window.title = "Appointment"
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
+    window.isMovableByWindowBackground = true
+    window.level = .normal
+    window.hasShadow = true
+    window.isReleasedWhenClosed = false
+    window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+    window.backgroundColor = .clear
+    window.isOpaque = false
+    window.contentViewController = hostingController
+    window.delegate = self
 
-    panel.standardWindowButton(.closeButton)?.isHidden = true
-    panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-    panel.standardWindowButton(.zoomButton)?.isHidden = true
+    window.standardWindowButton(.zoomButton)?.isHidden = true
 
-    return panel
+    return window
+  }
+
+  /// Clears the retained composer-window state.
+  private func reset() {
+    window = nil
+    composer = nil
+    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
+  }
+
+  /// Clears retained state after the user closes the window directly.
+  func windowWillClose(_ notification: Notification) {
+    reset()
   }
 }
