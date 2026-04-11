@@ -183,6 +183,8 @@ extension BatteryNativeWidget {
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle
   ) -> Snapshot {
+    let text = config.unavailableText
+
     Snapshot(
       config: config,
       placement: placement,
@@ -190,9 +192,9 @@ extension BatteryNativeWidget {
       percentage: 0,
       charging: false,
       onExternalPower: false,
-      text: config.unavailableText,
+      text: text,
       colorHex: resolvedUnavailableColor(config: config),
-      showLabel: false,
+      showLabel: shouldShowLabel(config: config, text: text),
       isUnavailable: true
     )
   }
