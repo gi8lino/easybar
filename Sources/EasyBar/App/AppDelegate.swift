@@ -40,6 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     validateRequiredFonts()
     installWidgetEditorStub()
     setupBarWindowController()
+    configFileWatcher.onConfigFileChange = { [weak self] in
+      self?.reloadConfig()
+    }
     updateConfigErrorWindow()
     startRuntimeServices()
     startSocketServer()
@@ -49,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     easybarLog.info("easybar shutting down")
 
     socketServer.stop()
+    configFileWatcher.onConfigFileChange = nil
     configFileWatcher.stop()
     NativeWidgetRegistry.shared.stop()
     WidgetRunner.shared.shutdown()

@@ -9,6 +9,7 @@ final class ConfigFileWatcher {
   private var fileDescriptor: CInt = -1
   private var source: DispatchSourceFileSystemObject?
   private var debounceWorkItem: DispatchWorkItem?
+  var onConfigFileChange: (() -> Void)?
 
   private init() {}
 
@@ -79,6 +80,11 @@ final class ConfigFileWatcher {
   private func performReload() {
     DispatchQueue.main.async {
       easybarLog.info("config file changed, reloading")
+
+      if let onConfigFileChange = self.onConfigFileChange {
+        onConfigFileChange()
+        return
+      }
 
       Config.shared.reload()
       WidgetRunner.shared.reload()
