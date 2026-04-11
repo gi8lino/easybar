@@ -185,7 +185,7 @@ extension BatteryNativeWidget {
   ) -> Snapshot {
     let text = config.unavailableText
 
-    Snapshot(
+    return Snapshot(
       config: config,
       placement: placement,
       style: style,
