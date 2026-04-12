@@ -12,14 +12,21 @@ final class LuaRuntime {
 
   private init() {}
 
+  /// Returns the running Lua process identifier when available.
+  var processIdentifier: Int32? {
+    processController.processIdentifier
+  }
+
   /// Starts the Lua runtime if it is not already running.
   func start() {
     guard let result = processController.start() else { return }
+    MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.process.processIdentifier)
     attachAndStartTransport(result)
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.
   func shutdown() {
+    MetricsCoordinator.shared.recordLuaRuntimeStopped()
     transport.shutdown()
     processController.shutdown()
   }

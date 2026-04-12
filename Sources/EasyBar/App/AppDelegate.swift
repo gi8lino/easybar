@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let configErrorWindowController = ConfigErrorWindowController()
   private let aeroSpaceService = AeroSpaceService.shared
   private let socketServer = SocketServer()
+  private let metricsCoordinator = MetricsCoordinator.shared
   private let configFileWatcher = ConfigFileWatcher.shared
   private let instanceGuard = SingleInstanceGuard()
 
@@ -51,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationWillTerminate(_ notification: Notification) {
     easybarLog.info("easybar shutting down")
 
+    metricsCoordinator.onSnapshot = nil
     socketServer.stop()
     configFileWatcher.onConfigFileChange = nil
     configFileWatcher.stop()
@@ -132,6 +134,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Starts the IPC server used by easybar and external triggers.
   private func startSocketServer() {
+    metricsCoordinator.onSnapshot = { [weak self] snapshot in
+      self?.socketServer.broadcastMetrics(snapshot)
+    }
     socketServer.start { [weak self] command in
       self?.handleSocketCommand(command)
     }
@@ -157,6 +162,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     case .restartLuaRuntime:
       restartLuaRuntime()
+
+    case .metrics:
+      break
     }
   }
 

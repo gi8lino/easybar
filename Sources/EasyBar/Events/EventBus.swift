@@ -65,6 +65,10 @@ final class EventBus {
 
   /// Emits one typed event payload.
   func emit(_ payload: EasyBarEventPayload) {
+    MetricsCoordinator.shared.recordEvent(
+      name: payload.eventName,
+      isWidgetEvent: payload.widgetEvent != nil
+    )
     NotificationCenter.default.post(name: .easyBarEvent, object: payload)
     logEmission(payload)
     sendToLua(payload)

@@ -10,8 +10,10 @@ extension WidgetRunner {
       let update = try decodeUpdate(from: line)
       handleUpdate(update, rawLine: line)
     } catch DecodingError.dataCorrupted {
+      MetricsCoordinator.shared.recordDecodeError()
       easybarLog.warn("invalid utf8: \(line)")
     } catch {
+      MetricsCoordinator.shared.recordDecodeError()
       easybarLog.warn("json decode failed: \(line)")
       easybarLog.debug("decode error: \(error)")
     }
@@ -90,6 +92,7 @@ extension WidgetRunner {
     runtimeState.requiredEvents = Set(update.subscribedEvents)
     runtimeState.hasSubscriptions = true
 
+    MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
     easybarLog.debug("required events: \(runtimeState.requiredEvents)")
     EventManager.shared.start(subscriptions: runtimeState.requiredEvents)
     emitInitialEventsIfPossible()
@@ -99,6 +102,7 @@ extension WidgetRunner {
   func handleReady() {
     easybarLog.debug("lua runtime handshake received")
     runtimeState.isReady = true
+    MetricsCoordinator.shared.recordLuaReady()
     emitInitialEventsIfPossible()
   }
 
@@ -110,6 +114,7 @@ extension WidgetRunner {
     }
 
     easybarLog.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+    MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
     WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
   }
 

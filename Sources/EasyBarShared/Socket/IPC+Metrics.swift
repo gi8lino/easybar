@@ -1,0 +1,197 @@
+import Foundation
+
+extension IPC {
+  /// One point-in-time metrics payload streamed by EasyBar.
+  public struct MetricsSnapshot: Codable {
+    public let timestamp: Date
+    public let collectionEnabled: Bool
+    public let sampleIntervalSeconds: Double
+    public let process: ProcessMetrics
+    public let lua: ProcessMetrics
+    public let runtime: RuntimeMetrics
+    public let agents: [AgentMetrics]
+    public let widgets: [WidgetMetrics]
+    public let events: [CounterMetrics]
+
+    public init(
+      timestamp: Date,
+      collectionEnabled: Bool,
+      sampleIntervalSeconds: Double,
+      process: ProcessMetrics,
+      lua: ProcessMetrics,
+      runtime: RuntimeMetrics,
+      agents: [AgentMetrics],
+      widgets: [WidgetMetrics],
+      events: [CounterMetrics]
+    ) {
+      self.timestamp = timestamp
+      self.collectionEnabled = collectionEnabled
+      self.sampleIntervalSeconds = sampleIntervalSeconds
+      self.process = process
+      self.lua = lua
+      self.runtime = runtime
+      self.agents = agents
+      self.widgets = widgets
+      self.events = events
+    }
+  }
+
+  /// One sampled process state.
+  public struct ProcessMetrics: Codable {
+    public let name: String
+    public let running: Bool
+    public let pid: Int32?
+    public let cpuPercent: Double?
+    public let residentSizeBytes: UInt64?
+    public let threadCount: Int?
+
+    public init(
+      name: String,
+      running: Bool,
+      pid: Int32? = nil,
+      cpuPercent: Double? = nil,
+      residentSizeBytes: UInt64? = nil,
+      threadCount: Int? = nil
+    ) {
+      self.name = name
+      self.running = running
+      self.pid = pid
+      self.cpuPercent = cpuPercent
+      self.residentSizeBytes = residentSizeBytes
+      self.threadCount = threadCount
+    }
+  }
+
+  /// One aggregated runtime metrics payload.
+  public struct RuntimeMetrics: Codable {
+    public let subscriberCount: Int
+    public let luaRestartCount: Int
+    public let luaReady: Bool
+    public let subscribedEventCount: Int
+    public let totalEvents: Int
+    public let appEvents: Int
+    public let widgetEvents: Int
+    public let eventsPerSecond: Double
+    public let stdoutLines: Int
+    public let stderrLines: Int
+    public let luaWrites: Int
+    public let treeUpdates: Int
+    public let treeUpdatesPerSecond: Double
+    public let decodeErrors: Int
+    public let lastTreeRoot: String?
+    public let lastTreeNodeCount: Int?
+    public let lastTreeAt: Date?
+
+    public init(
+      subscriberCount: Int,
+      luaRestartCount: Int,
+      luaReady: Bool,
+      subscribedEventCount: Int,
+      totalEvents: Int,
+      appEvents: Int,
+      widgetEvents: Int,
+      eventsPerSecond: Double,
+      stdoutLines: Int,
+      stderrLines: Int,
+      luaWrites: Int,
+      treeUpdates: Int,
+      treeUpdatesPerSecond: Double,
+      decodeErrors: Int,
+      lastTreeRoot: String?,
+      lastTreeNodeCount: Int?,
+      lastTreeAt: Date?
+    ) {
+      self.subscriberCount = subscriberCount
+      self.luaRestartCount = luaRestartCount
+      self.luaReady = luaReady
+      self.subscribedEventCount = subscribedEventCount
+      self.totalEvents = totalEvents
+      self.appEvents = appEvents
+      self.widgetEvents = widgetEvents
+      self.eventsPerSecond = eventsPerSecond
+      self.stdoutLines = stdoutLines
+      self.stderrLines = stderrLines
+      self.luaWrites = luaWrites
+      self.treeUpdates = treeUpdates
+      self.treeUpdatesPerSecond = treeUpdatesPerSecond
+      self.decodeErrors = decodeErrors
+      self.lastTreeRoot = lastTreeRoot
+      self.lastTreeNodeCount = lastTreeNodeCount
+      self.lastTreeAt = lastTreeAt
+    }
+  }
+
+  /// One aggregated helper-agent metrics payload.
+  public struct AgentMetrics: Codable {
+    public let name: String
+    public let connected: Bool
+    public let process: ProcessMetrics
+    public let messagesTotal: Int
+    public let messagesPerSecond: Double
+    public let reconnectsTotal: Int
+    public let refreshesTotal: Int
+    public let decodeErrorsTotal: Int
+    public let lastMessageAt: Date?
+    public let lastDisconnectAt: Date?
+
+    public init(
+      name: String,
+      connected: Bool,
+      process: ProcessMetrics,
+      messagesTotal: Int,
+      messagesPerSecond: Double,
+      reconnectsTotal: Int,
+      refreshesTotal: Int,
+      decodeErrorsTotal: Int,
+      lastMessageAt: Date?,
+      lastDisconnectAt: Date?
+    ) {
+      self.name = name
+      self.connected = connected
+      self.process = process
+      self.messagesTotal = messagesTotal
+      self.messagesPerSecond = messagesPerSecond
+      self.reconnectsTotal = reconnectsTotal
+      self.refreshesTotal = refreshesTotal
+      self.decodeErrorsTotal = decodeErrorsTotal
+      self.lastMessageAt = lastMessageAt
+      self.lastDisconnectAt = lastDisconnectAt
+    }
+  }
+
+  /// One widget update counter in the metrics payload.
+  public struct WidgetMetrics: Codable {
+    public let id: String
+    public let updatesTotal: Int
+    public let updatesPerSecond: Double
+    public let lastNodeCount: Int
+    public let lastUpdatedAt: Date?
+
+    public init(
+      id: String,
+      updatesTotal: Int,
+      updatesPerSecond: Double,
+      lastNodeCount: Int,
+      lastUpdatedAt: Date?
+    ) {
+      self.id = id
+      self.updatesTotal = updatesTotal
+      self.updatesPerSecond = updatesPerSecond
+      self.lastNodeCount = lastNodeCount
+      self.lastUpdatedAt = lastUpdatedAt
+    }
+  }
+
+  /// One named counter with total and current per-second rate.
+  public struct CounterMetrics: Codable {
+    public let name: String
+    public let total: Int
+    public let perSecond: Double
+
+    public init(name: String, total: Int, perSecond: Double) {
+      self.name = name
+      self.total = total
+      self.perSecond = perSecond
+    }
+  }
+}

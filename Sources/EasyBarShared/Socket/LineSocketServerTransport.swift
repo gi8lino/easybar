@@ -33,9 +33,6 @@ public final class LineSocketServerTransport<
   private let stateLock = NSLock()
   private let acceptQueue: DispatchQueue
   private let clientQueue: DispatchQueue
-  private let requestDecoder: JSONDecoder
-  private let responseEncoder: JSONEncoder
-
   private var serverFD: Int32 = -1
   private var running = false
   private var subscribers: [Int32: Subscriber] = [:]
@@ -62,13 +59,6 @@ public final class LineSocketServerTransport<
       qos: .utility,
       attributes: .concurrent
     )
-
-    requestDecoder = JSONDecoder()
-    requestDecoder.dateDecodingStrategy = .iso8601
-
-    responseEncoder = JSONEncoder()
-    responseEncoder.outputFormatting = [.sortedKeys]
-    responseEncoder.dateEncodingStrategy = .iso8601
   }
 
   deinit {
@@ -175,7 +165,11 @@ public final class LineSocketServerTransport<
   /// Sends one encoded response to the given client file descriptor.
   @discardableResult
   public func send(_ response: Response, to clientFD: Int32) -> Bool {
-    guard let data = try? responseEncoder.encode(response) else {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    encoder.dateEncodingStrategy = .iso8601
+
+    guard let data = try? encoder.encode(response) else {
       errorLog("\(serverLabel) response encode failed")
       return false
     }
@@ -247,13 +241,15 @@ public final class LineSocketServerTransport<
   private func handleClient(
     _ clientFD: Int32, handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
     var pending = Data()
     var buffer = [UInt8](repeating: 0, count: 4096)
 
     while true {
       if let requestData = nextLine(from: &pending) {
         do {
-          let request = try requestDecoder.decode(Request.self, from: requestData)
+          let request = try decoder.decode(Request.self, from: requestData)
           let disposition = handler(clientFD, request)
 
           switch disposition {

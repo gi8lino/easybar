@@ -18,6 +18,18 @@ final class NetworkAgentClient {
     clearState: { [weak self] in
       self?.clearPublishedState()
     },
+    onConnected: {
+      MetricsCoordinator.shared.recordAgentConnected(.network)
+    },
+    onDisconnected: {
+      MetricsCoordinator.shared.recordAgentDisconnected(.network)
+    },
+    onDecodedMessage: {
+      MetricsCoordinator.shared.recordAgentMessage(.network)
+    },
+    onDecodeError: {
+      MetricsCoordinator.shared.recordAgentDecodeError(.network)
+    },
     debugLog: easybarLog.debug,
     infoLog: easybarLog.info,
     warnLog: easybarLog.warn,
@@ -46,6 +58,7 @@ final class NetworkAgentClient {
   /// Requests one fresh network-agent update using the current subscription.
   func refresh() {
     easybarLog.debug("network agent client manual refresh")
+    MetricsCoordinator.shared.recordAgentRefresh(.network)
     client.refresh()
   }
 

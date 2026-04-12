@@ -10,6 +10,7 @@ final class CalendarAgentStreamController {
   private let makeRequest: () -> CalendarAgentRequest
   private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
   private let clearState: () -> Void
+  private let metricsAgent: MetricsCoordinator.AgentKey
 
   private var started = false
   private let eventObserver = EasyBarEventObserver()
@@ -26,6 +27,22 @@ final class CalendarAgentStreamController {
     clearState: { [weak self] in
       self?.clearState()
     },
+    onConnected: { [weak self] in
+      guard let self else { return }
+      MetricsCoordinator.shared.recordAgentConnected(self.metricsAgent)
+    },
+    onDisconnected: { [weak self] in
+      guard let self else { return }
+      MetricsCoordinator.shared.recordAgentDisconnected(self.metricsAgent)
+    },
+    onDecodedMessage: { [weak self] in
+      guard let self else { return }
+      MetricsCoordinator.shared.recordAgentMessage(self.metricsAgent)
+    },
+    onDecodeError: { [weak self] in
+      guard let self else { return }
+      MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
+    },
     debugLog: easybarLog.debug,
     infoLog: easybarLog.info,
     warnLog: easybarLog.warn,
@@ -35,12 +52,14 @@ final class CalendarAgentStreamController {
   /// Creates one shared calendar-agent stream controller.
   init(
     label: String,
+    metricsAgent: MetricsCoordinator.AgentKey = .calendar,
     socketPath: @escaping () -> String,
     makeRequest: @escaping () -> CalendarAgentRequest,
     applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void,
     clearState: @escaping () -> Void = {}
   ) {
     self.label = label
+    self.metricsAgent = metricsAgent
     self.socketPath = socketPath
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
@@ -80,6 +99,7 @@ final class CalendarAgentStreamController {
   /// Sends one fresh request built from current config and state.
   func refresh() {
     guard started else { return }
+    MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
     client.refresh()
   }
 

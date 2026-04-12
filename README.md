@@ -179,6 +179,7 @@ Supported commands:
 - `manual_refresh`
 - `restart_lua_runtime`
 - `reload_config`
+- `metrics`
 
 `easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
 
@@ -210,6 +211,34 @@ EasyBar exposes three different runtime control actions because they solve diffe
 Use `--refresh` when the config is already correct and you want fresh UI state or fresh agent-backed data.
 Use `--restart-lua-runtime` when the Lua side is stuck, stale, or needs a full runtime reset.
 Use `--reload-config` when you changed the config file itself.
+
+### Metrics
+
+EasyBar can stream lightweight internal metrics over the main socket.
+
+Use:
+
+```bash
+easybar --metrics
+```
+
+for one point-in-time snapshot, or:
+
+```bash
+easybar --metrics --watch
+```
+
+for a rolling terminal view with simple graphs.
+
+The metrics stream includes:
+
+- EasyBar process CPU, memory, and thread count
+- Lua runtime CPU, memory, and thread count
+- runtime event and tree-update rates
+- agent connection state plus message, reconnect, and refresh counters
+- the busiest widget tree roots and top emitted event names
+
+The periodic sampler stays off until a metrics client asks for it, so normal idle runtime does not keep collecting process samples when nobody is watching.
 
 ### AeroSpace layout mode example
 

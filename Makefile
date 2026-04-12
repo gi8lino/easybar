@@ -100,7 +100,7 @@ endif
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags \
-        run-build-app run-build-calendar-agent run-build-network-agent
+        run-build-app run-build-calendar-agent run-build-network-agent run-build-cli
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -386,6 +386,7 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@"$(APP_BIN)"
@@ -395,6 +396,7 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
@@ -404,9 +406,25 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
+
+run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CLI_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CLI_PRODUCT)
+	@mkdir -p "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(CLI_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(CLI_PRODUCT)" \
+		-output "$(CLI_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CLI_PRODUCT)
+	@mkdir -p "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CLI_PRODUCT)" "$(CLI_BIN)"
+endif
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@if command -v brew >/dev/null 2>&1; then \

@@ -8,6 +8,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private let subscribeRequest: () -> Request
   private let handleMessage: (Message) -> Void
   private let clearState: () -> Void
+  private let onConnected: (() -> Void)?
+  private let onDisconnected: (() -> Void)?
+  private let onDecodedMessage: (() -> Void)?
+  private let onDecodeError: (() -> Void)?
 
   private let debugLog: (String) -> Void
   private let infoLog: (String) -> Void
@@ -32,6 +36,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     subscribeRequest: @escaping () -> Request,
     handleMessage: @escaping (Message) -> Void,
     clearState: @escaping () -> Void,
+    onConnected: (() -> Void)? = nil,
+    onDisconnected: (() -> Void)? = nil,
+    onDecodedMessage: (() -> Void)? = nil,
+    onDecodeError: (() -> Void)? = nil,
     debugLog: @escaping (String) -> Void = { _ in },
     infoLog: @escaping (String) -> Void = { _ in },
     warnLog: @escaping (String) -> Void = { _ in },
@@ -42,6 +50,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     self.subscribeRequest = subscribeRequest
     self.handleMessage = handleMessage
     self.clearState = clearState
+    self.onConnected = onConnected
+    self.onDisconnected = onDisconnected
+    self.onDecodedMessage = onDecodedMessage
+    self.onDecodeError = onDecodeError
     self.debugLog = debugLog
     self.infoLog = infoLog
     self.warnLog = warnLog
@@ -124,6 +136,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       self.setConnectedSocketFD(fd)
+      self.onConnected?()
       self.infoLog("\(self.label) connected socket=\(resolvedSocketPath)")
 
       guard self.send(self.subscribeRequest(), to: fd) else {
@@ -180,8 +193,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private func handleMessageData(_ data: Data) {
     do {
       let message = try decoder.decode(Message.self, from: data)
+      onDecodedMessage?()
       handleMessage(message)
     } catch {
+      onDecodeError?()
       warnLog("\(label) failed to decode message: \(error)")
     }
   }
@@ -194,6 +209,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     close(fd)
 
     clearState()
+    onDisconnected?()
 
     guard isRunning() else { return }
 

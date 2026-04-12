@@ -49,6 +49,7 @@ final class LuaTransport {
 
       do {
         try pipe.fileHandleForWriting.write(contentsOf: data)
+        MetricsCoordinator.shared.recordLuaWrite()
         easybarLog.debug("sent to lua stdin: \(string)")
       } catch {
         easybarLog.error("failed writing to lua stdin: \(error)")
@@ -61,6 +62,7 @@ final class LuaTransport {
     guard let pipe = outputPipe else { return }
 
     installReadabilityHandler(on: pipe) { line in
+      MetricsCoordinator.shared.recordLuaStdoutLine()
       easybarLog.debug("lua stdout raw: \(line)")
       NotificationCenter.default.post(name: .easyBarLuaStdout, object: line)
     }
@@ -71,6 +73,7 @@ final class LuaTransport {
     guard let pipe = errorPipe else { return }
 
     installReadabilityHandler(on: pipe) { [logBridge] line in
+      MetricsCoordinator.shared.recordLuaStderrLine()
       logBridge.handle(line)
     }
   }

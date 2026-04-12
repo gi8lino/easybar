@@ -76,8 +76,11 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.noReply
     }
 
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+
     do {
-      return try JSONDecoder().decode(Response.self, from: replyData)
+      return try decoder.decode(Response.self, from: replyData)
     } catch {
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }

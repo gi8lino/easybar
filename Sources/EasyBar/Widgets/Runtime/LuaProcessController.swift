@@ -44,6 +44,11 @@ final class LuaProcessController {
   private(set) var process: Process?
   private var signalHandlersInstalled = false
 
+  /// Returns the running Lua process identifier when available.
+  var processIdentifier: Int32? {
+    process?.processIdentifier
+  }
+
   /// Starts the Lua runtime process and returns its pipes.
   func start() -> (process: Process, input: Pipe, output: Pipe, error: Pipe)? {
     guard process == nil else {
