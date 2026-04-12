@@ -9,11 +9,16 @@ import Foundation
 /// - `NativeMonthCalendarPopupView`
 ///
 /// So this renderer is responsible only for the anchor node tree.
-struct CalendarRenderer: NativeWidgetRenderer {
+final class CalendarRenderer: NativeWidgetRenderer {
 
   typealias Snapshot = CalendarNativeWidget.Snapshot
 
   let rootID: String
+  private let formatterCache = FormattedDateFormatterCache()
+
+  init(rootID: String) {
+    self.rootID = rootID
+  }
 
   /// Builds the calendar anchor nodes for the current snapshot.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
@@ -152,8 +157,6 @@ extension CalendarRenderer {
 
   /// Formats one date using the configured calendar anchor format.
   private func format(_ date: Date, _ format: String) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = format
-    return formatter.string(from: date)
+    formatterCache.string(from: date, format: format)
   }
 }

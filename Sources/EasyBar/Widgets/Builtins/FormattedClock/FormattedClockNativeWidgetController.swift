@@ -1,5 +1,29 @@
 import Foundation
 
+/// Shared cache for format-driven date rendering across native widgets.
+final class FormattedDateFormatterCache {
+
+  private var formatters: [String: DateFormatter] = [:]
+
+  func string(from date: Date, format: String) -> String {
+    formatter(for: format).string(from: date)
+  }
+
+  private func formatter(for format: String) -> DateFormatter {
+    if let formatter = formatters[format] {
+      return formatter
+    }
+
+    let formatter = DateFormatter()
+    formatter.locale = .autoupdatingCurrent
+    formatter.calendar = .autoupdatingCurrent
+    formatter.timeZone = .autoupdatingCurrent
+    formatter.dateFormat = format
+    formatters[format] = formatter
+    return formatter
+  }
+}
+
 /// Shared controller for simple date/time native widgets that render one formatted timestamp.
 final class FormattedClockNativeWidgetController {
 
@@ -13,16 +37,11 @@ final class FormattedClockNativeWidgetController {
 
   private let snapshotProvider: () -> Snapshot
   private let eventObserver = EasyBarEventObserver()
-  private let formatter = DateFormatter()
-
-  private var currentFormat = ""
+  private let formatterCache = FormattedDateFormatterCache()
 
   init(rootID: String, snapshotProvider: @escaping () -> Snapshot) {
     self.rootID = rootID
     self.snapshotProvider = snapshotProvider
-    formatter.locale = .autoupdatingCurrent
-    formatter.calendar = .autoupdatingCurrent
-    formatter.timeZone = .autoupdatingCurrent
   }
 
   var appEventSubscriptions: Set<String> {
@@ -54,22 +73,15 @@ final class FormattedClockNativeWidgetController {
 
   private func publish() {
     let snapshot = snapshotProvider()
-    updateFormatterIfNeeded(format: snapshot.format)
 
     let node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,
       placement: snapshot.placement,
       style: snapshot.style,
-      text: formatter.string(from: Date())
+      text: formatterCache.string(from: Date(), format: snapshot.format)
     )
 
     WidgetStore.shared.apply(root: rootID, nodes: [node])
-  }
-
-  private func updateFormatterIfNeeded(format: String) {
-    guard currentFormat != format else { return }
-    currentFormat = format
-    formatter.dateFormat = format
   }
 }
 

@@ -12,8 +12,9 @@ final class CalendarNativeWidget: NativeWidget {
   let rootID = "builtin_calendar"
 
   var appEventSubscriptions: Set<String> {
-    [
-      AppEvent.minuteTick.rawValue,
+    let refreshEvent = Self.refreshEvent(for: Config.shared.builtinCalendar)
+    return [
+      refreshEvent.rawValue,
       AppEvent.systemWoke.rawValue,
       AppEvent.calendarChange.rawValue,
     ]
@@ -41,7 +42,7 @@ final class CalendarNativeWidget: NativeWidget {
       guard let event = payload.appEvent else { return }
 
       switch event {
-      case .minuteTick, .systemWoke, .calendarChange:
+      case Self.refreshEvent(for: Config.shared.builtinCalendar), .systemWoke, .calendarChange:
         self.publish()
       default:
         break
@@ -109,6 +110,24 @@ final class CalendarNativeWidget: NativeWidget {
       ?? now.addingTimeInterval(TimeInterval(dayCount * 86_400))
 
     return DateInterval(start: start, end: end)
+  }
+
+  /// Returns the cheapest tick cadence that keeps the active anchor layout current.
+  private static func refreshEvent(for config: Config.CalendarBuiltinConfig) -> AppEvent {
+    let needsSecondPrecision = activeFormats(for: config).contains { format in
+      FormattedClockRefreshPolicy.event(for: format) == .secondTick
+    }
+    return needsSecondPrecision ? .secondTick : .minuteTick
+  }
+
+  /// Returns only the format strings used by the current anchor layout.
+  private static func activeFormats(for config: Config.CalendarBuiltinConfig) -> [String] {
+    switch config.anchor.layout {
+    case .stack, .inline:
+      return [config.anchor.topFormat, config.anchor.bottomFormat]
+    case .item:
+      return [config.anchor.itemFormat]
+    }
   }
 }
 
