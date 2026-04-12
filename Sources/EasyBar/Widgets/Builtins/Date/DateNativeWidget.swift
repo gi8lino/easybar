@@ -3,40 +3,22 @@ import Foundation
 final class DateNativeWidget: NativeWidget {
 
   let rootID = "builtin_date"
-
-  var appEventSubscriptions: Set<String> {
-    [
-      AppEvent.minuteTick.rawValue,
-      AppEvent.systemWoke.rawValue,
-    ]
+  private lazy var controller = FormattedClockNativeWidgetController(rootID: rootID) {
+    let config = Config.shared.builtinDate
+    return .init(
+      placement: config.placement,
+      style: config.style,
+      format: config.format
+    )
   }
 
-  private let eventObserver = EasyBarEventObserver()
-  private lazy var renderer = DateRenderer(
-    rootID: rootID,
-    config: Config.shared.builtinDate
-  )
+  var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }
 
   func start() {
-    eventObserver.start { [weak self] payload in
-      guard let self else { return }
-      guard let event = payload.appEvent else { return }
-      guard event == .minuteTick || event == .systemWoke else { return }
-      self.publish()
-    }
-
-    publish()
+    controller.start()
   }
 
   func stop() {
-    eventObserver.stop()
-    WidgetStore.shared.apply(root: rootID, nodes: [])
-  }
-
-  private func publish() {
-    WidgetStore.shared.apply(
-      root: rootID,
-      nodes: renderer.makeNodes(snapshot: Date())
-    )
+    controller.stop()
   }
 }

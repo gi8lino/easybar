@@ -4,38 +4,65 @@ final class TimerEvents {
 
   static let shared = TimerEvents()
 
-  private var timers: [Timer] = []
+  private var minuteTimer: Timer?
+  private var secondTimer: Timer?
 
   private init() {}
 
   /// Starts the minute timer used by Lua `minute_tick` subscriptions.
   func startMinuteTimer() {
-    let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-      EventBus.shared.emit(.minuteTick)
-    }
-
-    timers.append(timer)
+    minuteTimer?.invalidate()
+    minuteTimer = makeAlignedTimer(
+      interval: 60,
+      tolerance: 1,
+      event: .minuteTick
+    )
 
     easybarLog.debug("minute timer started")
   }
 
   /// Starts the second timer used by Lua `second_tick` and `routine` subscriptions.
   func startSecondTimer() {
-    let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      EventBus.shared.emit(.secondTick)
-    }
-
-    timers.append(timer)
+    secondTimer?.invalidate()
+    secondTimer = makeAlignedTimer(
+      interval: 1,
+      tolerance: 0.05,
+      event: .secondTick
+    )
 
     easybarLog.debug("second timer started")
   }
 
   /// Stops and clears all active timers.
   func stopAll() {
-    for timer in timers {
-      timer.invalidate()
-    }
+    minuteTimer?.invalidate()
+    secondTimer?.invalidate()
+    minuteTimer = nil
+    secondTimer = nil
+  }
 
-    timers.removeAll()
+  /// Starts one repeating timer aligned to the next real wall-clock boundary.
+  private func makeAlignedTimer(
+    interval: TimeInterval,
+    tolerance: TimeInterval,
+    event: AppEvent
+  ) -> Timer {
+    let timer = Timer(
+      fire: nextBoundary(after: Date(), interval: interval),
+      interval: interval,
+      repeats: true
+    ) { _ in
+      EventBus.shared.emit(event)
+    }
+    timer.tolerance = tolerance
+    RunLoop.main.add(timer, forMode: .common)
+    return timer
+  }
+
+  /// Returns the next whole second or minute boundary after the given time.
+  private func nextBoundary(after date: Date, interval: TimeInterval) -> Date {
+    let current = date.timeIntervalSinceReferenceDate
+    let nextStep = floor(current / interval) + 1
+    return Date(timeIntervalSinceReferenceDate: nextStep * interval)
   }
 }
