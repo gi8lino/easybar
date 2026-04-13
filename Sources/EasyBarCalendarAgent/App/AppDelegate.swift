@@ -19,37 +19,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         .path
     )
 
-    let lockPath = defaultSingleInstanceLockPath(
+    switch instanceGuard.acquireLock(
       processName: "easybar-calendar-agent",
       directory: runtimeConfig.lockDirectory
-    )
-
-    switch instanceGuard.acquireLock(at: lockPath) {
+    ) {
     case .acquired:
       break
 
-    case .alreadyRunning:
+    case .alreadyRunning(let lockPath):
       logger.warn("easybar-calendar-agent already running lock_path=\(lockPath)")
-      NSApp.terminate(nil)
-      return
+      terminateApplication()
 
-    case .failed(let message):
+    case .failed(let lockPath, let reason):
       logger.error(
-        "easybar-calendar-agent failed to acquire single-instance lock lock_path=\(lockPath) error=\(message)"
+        "easybar-calendar-agent failed to acquire single-instance lock lock_path=\(lockPath) error=\(reason)"
       )
-      NSApp.terminate(nil)
-      return
+      terminateApplication()
     }
 
     NSApp.setActivationPolicy(.accessory)
     guard controller.start() else {
-      NSApp.terminate(nil)
-      return
+      terminateApplication()
     }
   }
 
   /// Stops the calendar agent before termination.
   func applicationWillTerminate(_ notification: Notification) {
     controller.stop()
+  }
+
+  /// Terminates the application immediately.
+  private func terminateApplication() -> Never {
+    NSApp.terminate(nil)
+    fatalError("Application should have terminated")
   }
 }

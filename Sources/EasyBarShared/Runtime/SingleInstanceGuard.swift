@@ -7,6 +7,12 @@ public enum SingleInstanceAcquireResult: Equatable {
   case failed(String)
 }
 
+public enum SingleInstanceLockResult: Equatable {
+  case acquired(lockPath: String)
+  case alreadyRunning(lockPath: String)
+  case failed(lockPath: String, reason: String)
+}
+
 public final class SingleInstanceGuard {
   private var lockFileHandle: FileHandle?
 
@@ -63,6 +69,29 @@ public final class SingleInstanceGuard {
     lockFileHandle?.closeFile()
     lockFileHandle = handle
     return .acquired
+  }
+
+  /// Resolves the default lock path for one named process and acquires it.
+  @discardableResult
+  public func acquireLock(
+    processName: String,
+    directory: String? = nil
+  ) -> SingleInstanceLockResult {
+    let lockPath = defaultSingleInstanceLockPath(
+      processName: processName,
+      directory: directory
+    )
+
+    switch acquireLock(at: lockPath) {
+    case .acquired:
+      return .acquired(lockPath: lockPath)
+
+    case .alreadyRunning:
+      return .alreadyRunning(lockPath: lockPath)
+
+    case .failed(let reason):
+      return .failed(lockPath: lockPath, reason: reason)
+    }
   }
 }
 

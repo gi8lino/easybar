@@ -12,26 +12,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let instanceGuard = SingleInstanceGuard()
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let lockPath = defaultSingleInstanceLockPath(
+    switch instanceGuard.acquireLock(
       processName: "easybar",
       directory: Config.shared.lockDirectory
-    )
-
-    switch instanceGuard.acquireLock(at: lockPath) {
+    ) {
     case .acquired:
       break
 
-    case .alreadyRunning:
+    case .alreadyRunning(let lockPath):
       easybarLog.warn("easybar already running lock_path=\(lockPath)")
-      NSApp.terminate(nil)
-      return
+      terminateApplication()
 
-    case .failed(let reason):
+    case .failed(let lockPath, let reason):
       easybarLog.error(
         "easybar failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
       )
-      NSApp.terminate(nil)
-      return
+      terminateApplication()
     }
 
     NSApp.setActivationPolicy(.accessory)
@@ -58,6 +54,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     configFileWatcher.stop()
     NativeWidgetRegistry.shared.stop()
     WidgetRunner.shared.shutdown()
+  }
+
+  /// Terminates the application immediately.
+  private func terminateApplication() -> Never {
+    NSApp.terminate(nil)
+    fatalError("Application should have terminated")
   }
 
   /// Reloads config and reapplies all dependent runtime state.
