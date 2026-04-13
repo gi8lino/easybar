@@ -31,6 +31,9 @@ final class BatteryNativeWidget: NativeWidget {
     let style: Config.BuiltinWidgetStyle
     let percentage: Int
     let charging: Bool
+    let charged: Bool
+    let finishingCharge: Bool
+    let onHold: Bool
     let onExternalPower: Bool
     let text: String
     let colorHex: String?
@@ -111,10 +114,21 @@ extension BatteryNativeWidget {
       let max = desc[kIOPSMaxCapacityKey as String] as? Int ?? 100
       let percentage = max > 0 ? Int((Double(current) / Double(max)) * 100.0) : 0
 
-      let charging =
-        ((desc[kIOPSIsChargingKey as String] as? Bool) ?? false)
+      let charging = (desc[kIOPSIsChargingKey as String] as? Bool) ?? false
+      let charged = (desc[kIOPSIsChargedKey as String] as? Bool) ?? false
+      let finishingCharge = (desc[kIOPSIsFinishingChargeKey as String] as? Bool) ?? false
       let onExternalPower =
         (desc[kIOPSPowerSourceStateKey as String] as? String) == kIOPSACPowerValue
+
+      // Public IOKit does not expose a dedicated "on hold" flag.
+      // Infer it as: connected to external power, not actively charging,
+      // not fully charged, and not in the finishing-charge phase.
+      let onHold =
+        onExternalPower
+        && !charging
+        && !charged
+        && !finishingCharge
+        && percentage < 100
 
       let text = "\(percentage)%"
 
@@ -124,6 +138,9 @@ extension BatteryNativeWidget {
         style: style,
         percentage: percentage,
         charging: charging,
+        charged: charged,
+        finishingCharge: finishingCharge,
+        onHold: onHold,
         onExternalPower: onExternalPower,
         text: text,
         colorHex: resolvedBatteryColor(
@@ -191,6 +208,9 @@ extension BatteryNativeWidget {
       style: style,
       percentage: 0,
       charging: false,
+      charged: false,
+      finishingCharge: false,
+      onHold: false,
       onExternalPower: false,
       text: text,
       colorHex: resolvedUnavailableColor(config: config),
