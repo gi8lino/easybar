@@ -49,6 +49,23 @@ public enum NetworkAgentField: String, Codable, CaseIterable {
   case locationPermissionState = "auth.location_permission_state"
 }
 
+/// Stable field namespaces supported by the network agent.
+public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable {
+  case wifi
+  case network
+  case auth
+
+  /// Prefix shared by every field in this namespace.
+  public var fieldPrefix: String {
+    rawValue + "."
+  }
+
+  /// Returns whether the namespace contains the provided field.
+  public func contains(_ field: NetworkAgentField) -> Bool {
+    field.rawValue.hasPrefix(fieldPrefix)
+  }
+}
+
 /// One stable wire-level error code returned by the network agent.
 public enum NetworkAgentErrorCode: String, Codable, Equatable {
   case permissionDenied = "permission_denied"
@@ -75,6 +92,20 @@ public struct NetworkAgentFieldSpec {
     self.field = field
     self.help = help
     self.requiresLocationAuthorization = requiresLocationAuthorization
+  }
+}
+
+/// Describes one shared network-agent namespace selector.
+public struct NetworkAgentFieldNamespaceSpec {
+  /// Namespace key accepted by clients.
+  public let namespace: NetworkAgentFieldNamespace
+  /// Short help text for humans.
+  public let help: String
+
+  /// Creates one network-agent namespace selector spec.
+  public init(namespace: NetworkAgentFieldNamespace, help: String) {
+    self.namespace = namespace
+    self.help = help
   }
 }
 
@@ -135,6 +166,85 @@ public let networkAgentFieldRegistry: [NetworkAgentFieldSpec] = [
   .init(field: .locationPermissionState, help: "Location permission label"),
   .init(field: .generatedAt, help: "Snapshot generation time"),
 ]
+
+/// Ordered namespace selectors shared by clients.
+public let networkAgentFieldNamespaceRegistry: [NetworkAgentFieldNamespaceSpec] = [
+  .init(namespace: .wifi, help: "Expand to every Wi-Fi field"),
+  .init(namespace: .network, help: "Expand to every network field"),
+  .init(namespace: .auth, help: "Expand to every authorization field"),
+]
+
+/// One selector-expansion error shared by clients.
+public enum NetworkAgentFieldSelectorError: LocalizedError, Equatable {
+  case unknownFieldOrSelector(String)
+
+  public var errorDescription: String? {
+    switch self {
+    case .unknownFieldOrSelector(let value):
+      return "unknown field or selector: \(value)"
+    }
+  }
+}
+
+private let networkAgentFieldsInRegistryOrder = networkAgentFieldRegistry.map(\.field)
+private let networkAgentFieldsByRawValue = Dictionary(
+  uniqueKeysWithValues: networkAgentFieldsInRegistryOrder.map { ($0.rawValue, $0) }
+)
+
+/// Expands field names and shared selectors into concrete fields.
+public func expandNetworkAgentFieldSelectors(_ selectors: [String]) throws -> [NetworkAgentField] {
+  var expanded: [NetworkAgentField] = []
+  var seen: Set<NetworkAgentField> = []
+
+  for selector in selectors.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }).filter({
+    !$0.isEmpty
+  }) {
+    for field in try expandNetworkAgentFieldSelector(selector) {
+      if seen.insert(field).inserted {
+        expanded.append(field)
+      }
+    }
+  }
+
+  return expanded
+}
+
+/// Expands one field name or selector into concrete fields.
+public func expandNetworkAgentFieldSelector(_ selector: String) throws -> [NetworkAgentField] {
+  if selector == "all" {
+    return networkAgentFieldsInRegistryOrder
+  }
+
+  if let field = networkAgentFieldsByRawValue[selector] {
+    return [field]
+  }
+
+  guard let namespace = networkAgentFieldNamespace(for: selector) else {
+    throw NetworkAgentFieldSelectorError.unknownFieldOrSelector(selector)
+  }
+
+  return networkAgentFieldsInRegistryOrder.filter(namespace.contains)
+}
+
+private func networkAgentFieldNamespace(for selector: String) -> NetworkAgentFieldNamespace? {
+  if let namespace = NetworkAgentFieldNamespace(rawValue: selector) {
+    return namespace
+  }
+
+  if selector.hasSuffix("."),
+    let namespace = NetworkAgentFieldNamespace(rawValue: String(selector.dropLast()))
+  {
+    return namespace
+  }
+
+  if selector.hasSuffix(".*"),
+    let namespace = NetworkAgentFieldNamespace(rawValue: String(selector.dropLast(2)))
+  {
+    return namespace
+  }
+
+  return nil
+}
 
 /// One request sent to the network agent.
 public struct NetworkAgentRequest: Codable {
