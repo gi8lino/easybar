@@ -7,6 +7,31 @@ struct BatteryRenderer: NativeWidgetRenderer {
 
   let rootID: String
 
+  /// Tunable battery fill metrics.
+  ///
+  /// These values are relative to the symbol font size and control how the custom
+  /// inner fill sits inside the `battery.0percent` shell.
+  ///
+  /// Tweak these first when the fill looks too large, too small, or slightly off-center:
+  /// - `canvasWidthFactor`
+  /// - `canvasHeightFactor`
+  /// - `fillWidthFactor`
+  /// - `fillHeightFactor`
+  /// - `fillOffsetXFactor`
+  /// - `fillOffsetYFactor`
+  /// - `fillCornerRadiusFactor`
+  /// - `minimumVisibleFillFactor`
+  private enum BatteryFillMetrics {
+    static let canvasWidthFactor = 1.52
+    static let canvasHeightFactor = 0.90
+    static let fillWidthFactor = 0.66
+    static let fillHeightFactor = 0.36
+    static let fillOffsetXFactor = 0.1
+    static let fillOffsetYFactor = 0.0
+    static let fillCornerRadiusFactor = 0.10
+    static let minimumVisibleFillFactor = 0.08
+  }
+
   /// Builds the battery nodes for the current snapshot.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     switch snapshot.config.displayMode {
@@ -33,26 +58,11 @@ extension BatteryRenderer {
         style: snapshot.style
       ),
 
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
+      makeBatteryIconNode(
+        snapshot: snapshot,
         parentID: rootID,
         childID: "\(rootID)_icon",
-        position: snapshot.placement.position,
         order: 0,
-        icon: snapshot.isUnavailable ? snapshot.style.icon : "",
-        color: snapshot.colorHex,
-        symbolName: resolvedBatterySymbol(
-          for: snapshot.percentage,
-          unavailable: snapshot.isUnavailable
-        ),
-        symbolSecondaryColor: resolvedBatteryFrameColor(snapshot: snapshot),
-        symbolOverlayName: resolvedBatteryOverlaySymbol(snapshot: snapshot),
-        symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
-        symbolOverlayBackdropColor: resolvedBatteryOverlayBackdropColor(snapshot: snapshot),
-        symbolOverlayScale: resolvedBatteryOverlayScale(snapshot: snapshot),
-        symbolOverlayBackdropScale: resolvedBatteryOverlayBackdropScale(snapshot: snapshot),
-        symbolOverlayOffsetX: resolvedBatteryOverlayOffsetX(snapshot: snapshot),
-        symbolOverlayOffsetY: resolvedBatteryOverlayOffsetY(snapshot: snapshot),
         fontSize: config.iconSize
       ),
 
@@ -103,26 +113,11 @@ extension BatteryRenderer {
         style: snapshot.style
       ),
 
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
+      makeBatteryIconNode(
+        snapshot: snapshot,
         parentID: rootID,
         childID: "\(rootID)_icon",
-        position: snapshot.placement.position,
         order: 0,
-        icon: snapshot.isUnavailable ? snapshot.style.icon : "",
-        color: snapshot.colorHex,
-        symbolName: resolvedBatterySymbol(
-          for: snapshot.percentage,
-          unavailable: snapshot.isUnavailable
-        ),
-        symbolSecondaryColor: resolvedBatteryFrameColor(snapshot: snapshot),
-        symbolOverlayName: resolvedBatteryOverlaySymbol(snapshot: snapshot),
-        symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
-        symbolOverlayBackdropColor: resolvedBatteryOverlayBackdropColor(snapshot: snapshot),
-        symbolOverlayScale: resolvedBatteryOverlayScale(snapshot: snapshot),
-        symbolOverlayBackdropScale: resolvedBatteryOverlayBackdropScale(snapshot: snapshot),
-        symbolOverlayOffsetX: resolvedBatteryOverlayOffsetX(snapshot: snapshot),
-        symbolOverlayOffsetY: resolvedBatteryOverlayOffsetY(snapshot: snapshot),
         fontSize: snapshot.config.iconSize
       ),
 
@@ -142,31 +137,65 @@ extension BatteryRenderer {
   }
 }
 
+// MARK: - Node Building
+
+extension BatteryRenderer {
+
+  /// Builds the battery icon item node with custom inner fill metadata.
+  private func makeBatteryIconNode(
+    snapshot: Snapshot,
+    parentID: String,
+    childID: String,
+    order: Int,
+    fontSize: Double
+  ) -> WidgetNodeState {
+    BuiltinNativeNodeFactory.makeChildItemNode(
+      rootID: rootID,
+      parentID: parentID,
+      childID: childID,
+      position: snapshot.placement.position,
+      order: order,
+      icon: snapshot.isUnavailable ? snapshot.style.icon : "",
+      color: snapshot.colorHex,
+      symbolName: resolvedBatterySymbol(unavailable: snapshot.isUnavailable),
+      symbolSecondaryColor: resolvedBatteryFrameColor(snapshot: snapshot),
+      symbolOverlayName: resolvedBatteryOverlaySymbol(snapshot: snapshot),
+      symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
+      symbolOverlayBackdropColor: resolvedBatteryOverlayBackdropColor(snapshot: snapshot),
+      symbolOverlayScale: resolvedBatteryOverlayScale(snapshot: snapshot),
+      symbolOverlayBackdropScale: resolvedBatteryOverlayBackdropScale(snapshot: snapshot),
+      symbolOverlayOffsetX: resolvedBatteryOverlayOffsetX(snapshot: snapshot),
+      symbolOverlayOffsetY: resolvedBatteryOverlayOffsetY(snapshot: snapshot),
+      symbolFillFraction: snapshot.isUnavailable ? nil : snapshot.fillFraction,
+      symbolFillWidthFactor: snapshot.isUnavailable ? nil : BatteryFillMetrics.fillWidthFactor,
+      symbolFillHeightFactor: snapshot.isUnavailable ? nil : BatteryFillMetrics.fillHeightFactor,
+      symbolFillOffsetXFactor: snapshot.isUnavailable ? nil : BatteryFillMetrics.fillOffsetXFactor,
+      symbolFillOffsetYFactor: snapshot.isUnavailable ? nil : BatteryFillMetrics.fillOffsetYFactor,
+      symbolFillCornerRadiusFactor: snapshot.isUnavailable
+        ? nil
+        : BatteryFillMetrics.fillCornerRadiusFactor,
+      symbolFillMinimumVisibleWidthFactor: snapshot.isUnavailable
+        ? nil
+        : BatteryFillMetrics.minimumVisibleFillFactor,
+      symbolCanvasWidthFactor: snapshot.isUnavailable ? nil : BatteryFillMetrics.canvasWidthFactor,
+      symbolCanvasHeightFactor: snapshot.isUnavailable
+        ? nil : BatteryFillMetrics.canvasHeightFactor,
+      fontSize: fontSize
+    )
+  }
+}
+
 // MARK: - Icon Logic
 
 extension BatteryRenderer {
 
-  /// Resolves the base SF Symbol for the current battery level.
-  fileprivate func resolvedBatterySymbol(
-    for percentage: Int,
-    unavailable: Bool
-  ) -> String? {
+  /// Resolves the base SF Symbol for the current battery shell.
+  fileprivate func resolvedBatterySymbol(unavailable: Bool) -> String? {
     if unavailable {
       return nil
     }
 
-    switch percentage {
-    case 88...100:
-      return "battery.100percent"
-    case 63...87:
-      return "battery.75percent"
-    case 38...62:
-      return "battery.50percent"
-    case 13...37:
-      return "battery.25percent"
-    default:
-      return "battery.0percent"
-    }
+    return "battery.0percent"
   }
 
   /// Resolves the overlay symbol for charging, on-hold, and external-power states.
@@ -191,11 +220,11 @@ extension BatteryRenderer {
   /// Returns the overlay scale for the charging bolt, on-hold pause, or plug.
   fileprivate func resolvedBatteryOverlayScale(snapshot: Snapshot) -> Double? {
     if snapshot.charging {
-      return 0.48
+      return 0.40
     }
 
     if snapshot.onHold {
-      return 0.46
+      return 0.40
     }
 
     if snapshot.onExternalPower {
@@ -208,15 +237,15 @@ extension BatteryRenderer {
   /// Returns the backdrop scale used to create a soft outline around the overlay.
   fileprivate func resolvedBatteryOverlayBackdropScale(snapshot: Snapshot) -> Double? {
     if snapshot.charging {
-      return 0.56
+      return 0.40
     }
 
     if snapshot.onHold {
-      return 0.56
+      return 0.40
     }
 
     if snapshot.onExternalPower {
-      return 0.62
+      return 0.44
     }
 
     return nil
@@ -225,11 +254,11 @@ extension BatteryRenderer {
   /// Returns the horizontal overlay offset used to visually center the overlay.
   fileprivate func resolvedBatteryOverlayOffsetX(snapshot: Snapshot) -> Double? {
     if snapshot.charging {
-      return 0
+      return -1
     }
 
     if snapshot.onHold {
-      return 0
+      return -1
     }
 
     if snapshot.onExternalPower {

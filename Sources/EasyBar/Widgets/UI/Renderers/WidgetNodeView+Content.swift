@@ -103,6 +103,11 @@ extension WidgetNodeView {
     !node.text.isEmpty
   }
 
+  var hasCustomSymbolFill: Bool {
+    guard let fraction = node.symbolFillFraction else { return false }
+    return fraction >= 0
+  }
+
   var iconResolvedColor: Color {
     color(node.iconColor ?? node.color)
   }
@@ -121,6 +126,10 @@ extension WidgetNodeView {
 
   var symbolResolvedFont: Font {
     .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
+  }
+
+  var symbolResolvedFontSize: CGFloat {
+    CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
   }
 
   var symbolOverlayResolvedFont: Font {
@@ -161,6 +170,47 @@ extension WidgetNodeView {
     )
   }
 
+  var symbolCanvasSize: CGSize {
+    let base = symbolResolvedFontSize
+    let widthFactor = CGFloat(node.symbolCanvasWidthFactor ?? 1.0)
+    let heightFactor = CGFloat(node.symbolCanvasHeightFactor ?? 1.0)
+    return CGSize(width: base * widthFactor, height: base * heightFactor)
+  }
+
+  var symbolFillFractionClamped: CGFloat {
+    guard let fraction = node.symbolFillFraction else { return 0 }
+    return CGFloat(Swift.max(0, Swift.min(fraction, 1)))
+  }
+
+  var symbolFillWidth: CGFloat {
+    let maxWidth = symbolCanvasSize.width * CGFloat(node.symbolFillWidthFactor ?? 0)
+    guard maxWidth > 0 else { return 0 }
+
+    let fraction = symbolFillFractionClamped
+    if fraction <= 0 {
+      return 0
+    }
+
+    let rawWidth = maxWidth * fraction
+    let minimumVisibleWidth = maxWidth * CGFloat(node.symbolFillMinimumVisibleWidthFactor ?? 0)
+    return Swift.min(maxWidth, Swift.max(rawWidth, minimumVisibleWidth))
+  }
+
+  var symbolFillHeight: CGFloat {
+    symbolCanvasSize.height * CGFloat(node.symbolFillHeightFactor ?? 0)
+  }
+
+  var symbolFillOffset: CGSize {
+    CGSize(
+      width: symbolCanvasSize.width * CGFloat(node.symbolFillOffsetXFactor ?? 0),
+      height: symbolCanvasSize.height * CGFloat(node.symbolFillOffsetYFactor ?? 0)
+    )
+  }
+
+  var symbolFillCornerRadius: CGFloat {
+    symbolResolvedFontSize * CGFloat(node.symbolFillCornerRadiusFactor ?? 0)
+  }
+
   @ViewBuilder
   var imageView: some View {
     renderedImageView()
@@ -170,19 +220,10 @@ extension WidgetNodeView {
   var symbolView: some View {
     if hasSymbol, let symbolName = node.symbolName {
       ZStack {
-        if hasSymbolSecondaryColor {
-          Image(systemName: symbolName)
-            .symbolRenderingMode(.palette)
-            .font(symbolResolvedFont)
-            .foregroundStyle(
-              iconResolvedColor,
-              color(node.symbolSecondaryColor)
-            )
+        if hasCustomSymbolFill {
+          customFilledSymbolView(name: symbolName)
         } else {
-          Image(systemName: symbolName)
-            .symbolRenderingMode(.hierarchical)
-            .font(symbolResolvedFont)
-            .foregroundStyle(iconResolvedColor)
+          baseSymbolView(name: symbolName)
         }
 
         if let overlayName = node.symbolOverlayName, !overlayName.isEmpty {
@@ -190,6 +231,59 @@ extension WidgetNodeView {
         }
       }
     }
+  }
+
+  @ViewBuilder
+  func baseSymbolView(name: String) -> some View {
+    if hasSymbolSecondaryColor {
+      Image(systemName: name)
+        .symbolRenderingMode(.palette)
+        .font(symbolResolvedFont)
+        .foregroundStyle(
+          iconResolvedColor,
+          color(node.symbolSecondaryColor)
+        )
+    } else {
+      Image(systemName: name)
+        .symbolRenderingMode(.hierarchical)
+        .font(symbolResolvedFont)
+        .foregroundStyle(iconResolvedColor)
+    }
+  }
+
+  @ViewBuilder
+  func customFilledSymbolView(name: String) -> some View {
+    ZStack {
+      Color.clear
+        .frame(width: symbolCanvasSize.width, height: symbolCanvasSize.height)
+        .overlay(alignment: .leading) {
+          RoundedRectangle(cornerRadius: symbolFillCornerRadius)
+            .fill(iconResolvedColor)
+            .frame(width: symbolFillWidth, height: symbolFillHeight)
+            .offset(symbolFillOffset)
+        }
+
+      if hasSymbolSecondaryColor {
+        Image(systemName: name)
+          .symbolRenderingMode(.palette)
+          .font(symbolResolvedFont)
+          .foregroundStyle(
+            Color.clear,
+            color(node.symbolSecondaryColor)
+          )
+      } else {
+        Image(systemName: name)
+          .symbolRenderingMode(.hierarchical)
+          .font(symbolResolvedFont)
+          .foregroundStyle(iconResolvedColor.opacity(0.18))
+      }
+
+      Image(systemName: name)
+        .symbolRenderingMode(.monochrome)
+        .font(symbolResolvedFont)
+        .foregroundStyle(color(node.symbolSecondaryColor))
+    }
+    .frame(width: symbolCanvasSize.width, height: symbolCanvasSize.height)
   }
 
   @ViewBuilder
@@ -263,10 +357,12 @@ extension WidgetNodeView {
 
   @ViewBuilder
   func renderedImageView() -> some View {
+    // TODO: maybe invert if
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)
       let image = resolvedImage(imagePath: imagePath, customImage: customImage)
 
+      // TODO: maybe invert if
       if let tintedImage = tintedImage(from: image, customImage: customImage) {
         imageBaseView(image: tintedImage, renderingMode: .template)
           .foregroundStyle(iconResolvedColor)

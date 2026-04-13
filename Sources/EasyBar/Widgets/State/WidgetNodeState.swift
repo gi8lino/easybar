@@ -33,6 +33,17 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var symbolOverlayOffsetX: Double?
   var symbolOverlayOffsetY: Double?
 
+  // Custom symbol fill metadata used for exact battery-percentage rendering.
+  var symbolFillFraction: Double?
+  var symbolFillWidthFactor: Double?
+  var symbolFillHeightFactor: Double?
+  var symbolFillOffsetXFactor: Double?
+  var symbolFillOffsetYFactor: Double?
+  var symbolFillCornerRadiusFactor: Double?
+  var symbolFillMinimumVisibleWidthFactor: Double?
+  var symbolCanvasWidthFactor: Double?
+  var symbolCanvasHeightFactor: Double?
+
   var fontSize: Double?
   var iconFontSize: Double?
   var labelFontSize: Double?

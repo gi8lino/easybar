@@ -30,6 +30,7 @@ final class BatteryNativeWidget: NativeWidget {
     let placement: Config.BuiltinWidgetPlacement
     let style: Config.BuiltinWidgetStyle
     let percentage: Int
+    let fillFraction: Double
     let charging: Bool
     let charged: Bool
     let finishingCharge: Bool
@@ -111,8 +112,11 @@ extension BatteryNativeWidget {
       }
 
       let current = desc[kIOPSCurrentCapacityKey as String] as? Int ?? 0
-      let max = desc[kIOPSMaxCapacityKey as String] as? Int ?? 100
-      let percentage = max > 0 ? Int((Double(current) / Double(max)) * 100.0) : 0
+      let maximumCapacity = desc[kIOPSMaxCapacityKey as String] as? Int ?? 100
+      let percentage =
+        maximumCapacity > 0
+        ? Int((Double(current) / Double(maximumCapacity)) * 100.0)
+        : 0
 
       let charging = (desc[kIOPSIsChargingKey as String] as? Bool) ?? false
       let charged = (desc[kIOPSIsChargedKey as String] as? Bool) ?? false
@@ -130,13 +134,16 @@ extension BatteryNativeWidget {
         && !finishingCharge
         && percentage < 100
 
-      let text = "\(percentage)%"
+      let clampedPercentage = Swift.max(0, Swift.min(percentage, 100))
+      let fillFraction = Double(clampedPercentage) / 100.0
+      let text = "\(clampedPercentage)%"
 
       return Snapshot(
         config: config,
         placement: placement,
         style: style,
-        percentage: percentage,
+        percentage: clampedPercentage,
+        fillFraction: fillFraction,
         charging: charging,
         charged: charged,
         finishingCharge: finishingCharge,
@@ -144,7 +151,7 @@ extension BatteryNativeWidget {
         onExternalPower: onExternalPower,
         text: text,
         colorHex: resolvedBatteryColor(
-          for: percentage,
+          for: clampedPercentage,
           mode: config.colorMode,
           fixedColorHex: config.fixedColorHex ?? style.textColorHex,
           colors: config.colors
@@ -207,6 +214,7 @@ extension BatteryNativeWidget {
       placement: placement,
       style: style,
       percentage: 0,
+      fillFraction: 0,
       charging: false,
       charged: false,
       finishingCharge: false,
