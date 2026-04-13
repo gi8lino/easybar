@@ -27,7 +27,9 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var symbolSecondaryColor: String?
   var symbolOverlayName: String?
   var symbolOverlayColor: String?
+  var symbolOverlayBackdropColor: String?
   var symbolOverlayScale: Double?
+  var symbolOverlayBackdropScale: Double?
   var symbolOverlayOffsetX: Double?
   var symbolOverlayOffsetY: Double?
 

@@ -52,8 +52,11 @@ extension BatteryRenderer {
           unavailable: snapshot.isUnavailable
         ),
         symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
-        symbolOverlayScale: snapshot.charging ? 0.48 : 0.43,
-        symbolOverlayOffsetY: snapshot.charging ? -0.35 : -0.2,
+        symbolOverlayBackdropColor: resolvedBatteryOverlayBackdropColor(snapshot: snapshot),
+        symbolOverlayScale: resolvedBatteryOverlayScale(snapshot: snapshot),
+        symbolOverlayBackdropScale: resolvedBatteryOverlayBackdropScale(snapshot: snapshot),
+        symbolOverlayOffsetX: resolvedBatteryOverlayOffsetX(snapshot: snapshot),
+        symbolOverlayOffsetY: resolvedBatteryOverlayOffsetY(snapshot: snapshot),
         fontSize: config.iconSize
       ),
 
@@ -123,8 +126,11 @@ extension BatteryRenderer {
           unavailable: snapshot.isUnavailable
         ),
         symbolOverlayColor: resolvedBatteryOverlayColor(snapshot: snapshot),
-        symbolOverlayScale: snapshot.charging ? 0.48 : 0.43,
-        symbolOverlayOffsetY: snapshot.charging ? -0.35 : -0.2,
+        symbolOverlayBackdropColor: resolvedBatteryOverlayBackdropColor(snapshot: snapshot),
+        symbolOverlayScale: resolvedBatteryOverlayScale(snapshot: snapshot),
+        symbolOverlayBackdropScale: resolvedBatteryOverlayBackdropScale(snapshot: snapshot),
+        symbolOverlayOffsetX: resolvedBatteryOverlayOffsetX(snapshot: snapshot),
+        symbolOverlayOffsetY: resolvedBatteryOverlayOffsetY(snapshot: snapshot),
         fontSize: snapshot.config.iconSize
       ),
       popupNode,
@@ -189,18 +195,73 @@ extension BatteryRenderer {
     return nil
   }
 
+  /// Returns the overlay scale for the charging bolt or external-power plug.
+  fileprivate func resolvedBatteryOverlayScale(snapshot: Snapshot) -> Double? {
+    if snapshot.charging {
+      return 0.48
+    }
+
+    if snapshot.onExternalPower {
+      return 0.54
+    }
+
+    return nil
+  }
+
+  /// Returns the backdrop scale used to create a soft outline around the plug.
+  fileprivate func resolvedBatteryOverlayBackdropScale(snapshot: Snapshot) -> Double? {
+    if snapshot.onExternalPower && !snapshot.charging {
+      return 0.62
+    }
+
+    return nil
+  }
+
+  /// Returns the horizontal overlay offset used to visually center the plug.
+  fileprivate func resolvedBatteryOverlayOffsetX(snapshot: Snapshot) -> Double? {
+    if snapshot.onExternalPower && !snapshot.charging {
+      return -1
+    }
+
+    return nil
+  }
+
+  /// Returns the vertical overlay offset for the charging bolt or plug.
+  fileprivate func resolvedBatteryOverlayOffsetY(snapshot: Snapshot) -> Double? {
+    if snapshot.charging {
+      return -0.35
+    }
+
+    if snapshot.onExternalPower {
+      return -0.14
+    }
+
+    return nil
+  }
+
+  /// Returns the frame color used to visually separate the plug from the battery.
   fileprivate func resolvedBatteryFrameColor(snapshot: Snapshot) -> String? {
     guard !snapshot.isUnavailable else { return nil }
     return snapshot.config.colors.frameColorHex
   }
 
+  // Returns the color of the charging bolt or external-power plug.
   fileprivate func resolvedBatteryOverlayColor(snapshot: Snapshot) -> String? {
     if snapshot.charging {
       return snapshot.config.colors.chargingOverlayColorHex
     }
 
     if snapshot.onExternalPower {
-      return snapshot.config.colors.externalPowerOverlayColorHex
+      return "#FFFFFFFF"
+    }
+
+    return nil
+  }
+
+  /// Returns the soft translucent border color behind the external-power plug.
+  fileprivate func resolvedBatteryOverlayBackdropColor(snapshot: Snapshot) -> String? {
+    if snapshot.onExternalPower && !snapshot.charging {
+      return "#000000F0"
     }
 
     return nil

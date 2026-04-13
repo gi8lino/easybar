@@ -129,6 +129,31 @@ extension WidgetNodeView {
     return .system(size: baseSize * scale, weight: .semibold)
   }
 
+  var symbolOverlayBackdropResolvedFont: Font {
+    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    let scale = CGFloat(node.symbolOverlayBackdropScale ?? node.symbolOverlayScale ?? 0.58)
+    return .system(size: baseSize * scale, weight: .semibold)
+  }
+
+  var symbolOverlayOutlineDistance: CGFloat {
+    max(
+      0.35,
+      (symbolOverlayBackdropResolvedFontSize - symbolOverlayResolvedFontSize) * 0.35
+    )
+  }
+
+  var symbolOverlayResolvedFontSize: CGFloat {
+    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    let scale = CGFloat(node.symbolOverlayScale ?? 0.58)
+    return baseSize * scale
+  }
+
+  var symbolOverlayBackdropResolvedFontSize: CGFloat {
+    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    let scale = CGFloat(node.symbolOverlayBackdropScale ?? node.symbolOverlayScale ?? 0.58)
+    return baseSize * scale
+  }
+
   var symbolOverlayOffset: CGSize {
     CGSize(
       width: CGFloat(node.symbolOverlayOffsetX ?? 0),
@@ -161,13 +186,35 @@ extension WidgetNodeView {
         }
 
         if let overlayName = node.symbolOverlayName, !overlayName.isEmpty {
-          Image(systemName: overlayName)
-            .symbolRenderingMode(.monochrome)
-            .font(symbolOverlayResolvedFont)
-            .foregroundStyle(color(node.symbolOverlayColor))
-            .offset(symbolOverlayOffset)
+          overlaySymbolView(name: overlayName)
         }
       }
+    }
+  }
+
+  @ViewBuilder
+  func overlaySymbolView(name: String) -> some View {
+    let overlay = Image(systemName: name)
+      .symbolRenderingMode(.monochrome)
+      .font(symbolOverlayResolvedFont)
+      .foregroundStyle(color(node.symbolOverlayColor))
+      .offset(symbolOverlayOffset)
+
+    if let backdropColor = node.symbolOverlayBackdropColor, !backdropColor.isEmpty {
+      let outline = color(backdropColor)
+      let d = symbolOverlayOutlineDistance
+
+      overlay
+        .shadow(color: outline, radius: 0, x: d, y: 0)
+        .shadow(color: outline, radius: 0, x: -d, y: 0)
+        .shadow(color: outline, radius: 0, x: 0, y: d)
+        .shadow(color: outline, radius: 0, x: 0, y: -d)
+        .shadow(color: outline, radius: 0, x: d * 0.8, y: d * 0.8)
+        .shadow(color: outline, radius: 0, x: -d * 0.8, y: d * 0.8)
+        .shadow(color: outline, radius: 0, x: d * 0.8, y: -d * 0.8)
+        .shadow(color: outline, radius: 0, x: -d * 0.8, y: -d * 0.8)
+    } else {
+      overlay
     }
   }
 
