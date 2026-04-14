@@ -19,6 +19,7 @@ enum WidgetNodeKind: String, Codable {
   case progress
   case sparkline
   case spaces
+  case wifiIndicator = "wifi_indicator"
 
   /// Returns whether this kind renders as a horizontal child container.
   var isRowLikeContainer: Bool {
@@ -35,7 +36,7 @@ enum WidgetNodeKind: String, Codable {
 
   /// Returns whether this kind renders through a dedicated custom view.
   var isCustomRenderedKind: Bool {
-    self == .spaces
+    self == .spaces || self == .wifiIndicator
   }
 
   /// Returns whether this kind renders through a dedicated container view.

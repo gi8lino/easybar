@@ -339,6 +339,41 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  /// Builds one custom-drawn Wi-Fi indicator node.
+  static func makeChildWiFiIndicatorNode(
+    rootID: String,
+    parentID: String,
+    childID: String,
+    position: WidgetPosition,
+    order: Int,
+    signalLevel: Int,
+    state: String,
+    activeColor: String,
+    inactiveColor: String,
+    width: Double,
+    height: Double
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: childID,
+      root: rootID,
+      kind: .wifiIndicator,
+      parent: parentID,
+      position: position,
+      order: order,
+      icon: state,
+      color: activeColor,
+      iconColor: inactiveColor,
+      value: Double(signalLevel),
+      min: 0,
+      max: 3,
+      paddingX: 0,
+      paddingY: 0,
+      spacing: 0,
+      width: width,
+      height: height
+    )
+  }
+
   /// Builds one child slider node.
   static func makeChildSliderNode(
     rootID: String,
@@ -423,6 +458,8 @@ enum BuiltinNativeNodeFactory {
     icon: String = "",
     text: String = "",
     color: String? = nil,
+    iconColor: String? = nil,
+    labelColor: String? = nil,
     visible: Bool = true,
     role: WidgetNodeRole? = nil,
     imagePath: String? = nil,
@@ -462,7 +499,9 @@ enum BuiltinNativeNodeFactory {
     borderColor: String? = nil,
     borderWidth: Double? = nil,
     cornerRadius: Double? = nil,
-    opacity: Double? = 1
+    opacity: Double? = 1,
+    width: Double? = nil,
+    height: Double? = nil
   ) -> WidgetNodeState {
     makeNode(
       id: id,
@@ -474,6 +513,8 @@ enum BuiltinNativeNodeFactory {
       icon: icon,
       text: text,
       color: color,
+      iconColor: iconColor,
+      labelColor: labelColor,
       visible: visible,
       role: role,
       imagePath: imagePath,
@@ -513,7 +554,9 @@ enum BuiltinNativeNodeFactory {
       borderColor: borderColor,
       borderWidth: borderWidth,
       cornerRadius: cornerRadius,
-      opacity: opacity
+      opacity: opacity,
+      width: width,
+      height: height
     )
   }
 
@@ -528,6 +571,8 @@ enum BuiltinNativeNodeFactory {
     icon: String = "",
     text: String = "",
     color: String? = nil,
+    iconColor: String? = nil,
+    labelColor: String? = nil,
     visible: Bool = true,
     role: WidgetNodeRole? = nil,
     imagePath: String? = nil,
@@ -567,7 +612,9 @@ enum BuiltinNativeNodeFactory {
     borderColor: String? = nil,
     borderWidth: Double? = nil,
     cornerRadius: Double? = nil,
-    opacity: Double? = 1
+    opacity: Double? = 1,
+    width: Double? = nil,
+    height: Double? = nil
   ) -> WidgetNodeState {
     WidgetNodeState(
       id: id,
@@ -579,8 +626,8 @@ enum BuiltinNativeNodeFactory {
       icon: icon,
       text: text,
       color: color,
-      iconColor: nil,
-      labelColor: nil,
+      iconColor: iconColor,
+      labelColor: labelColor,
       visible: visible,
       role: role,
       receivesMouseHover: nil,
@@ -634,8 +681,8 @@ enum BuiltinNativeNodeFactory {
       borderWidth: borderWidth,
       cornerRadius: cornerRadius,
       opacity: opacity,
-      width: nil,
-      height: nil,
+      width: width,
+      height: height,
       yOffset: nil
     )
   }

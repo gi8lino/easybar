@@ -10,6 +10,10 @@ extension Config {
     case always
   }
 
+  struct BuiltinWiFiExpand {
+    var textColorHex: String
+  }
+
   struct BuiltinWiFiPopup {
     var textColorHex: String?
     var backgroundColorHex: String
@@ -29,12 +33,12 @@ extension Config {
       var deniedText: String
       var activeColorHex: String
       var inactiveColorHex: String
-      var textColorHex: String
     }
 
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
     var content: Content
+    var expand: BuiltinWiFiExpand
     var popup: BuiltinWiFiPopup
 
     var enabled: Bool {
@@ -77,9 +81,9 @@ extension Config {
       set { content.inactiveColorHex = newValue }
     }
 
-    var textColorHex: String {
-      get { content.textColorHex }
-      set { content.textColorHex = newValue }
+    var expandTextColorHex: String {
+      get { expand.textColorHex }
+      set { expand.textColorHex = newValue }
     }
 
     static let `default` = WiFiBuiltinConfig(
@@ -104,15 +108,17 @@ extension Config {
         opacity: 1
       ),
       content: .init(
-        displayMode: .expand,
-        disconnectedText: "Wi-Fi",
-        deniedText: "Location",
-        activeColorHex: "#ffffff",
-        inactiveColorHex: "#6e738d",
+        displayMode: .tooltip,
+        disconnectedText: "disconnected",
+        deniedText: "denied",
+        activeColorHex: "#cdd6f4",
+        inactiveColorHex: "#6c7086"
+      ),
+      expand: .init(
         textColorHex: "#ffffff"
       ),
       popup: .init(
-        textColorHex: "#ffffff",
+        textColorHex: "#cad3f5",
         backgroundColorHex: "#111111",
         borderColorHex: "#444444",
         borderWidth: 1,
@@ -136,6 +142,7 @@ extension Config {
 
     let styleTable = wifi["style"]?.table ?? TOMLTable()
     let contentTable = wifi["content"]?.table ?? TOMLTable()
+    let expandTable = wifi["expand"]?.table ?? TOMLTable()
     let tooltipTable = wifi["tooltip"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
@@ -166,25 +173,35 @@ extension Config {
       inactiveColorHex: try optionalString(
         contentTable["inactive_color"],
         path: "builtins.wifi.content.inactive_color"
-      ) ?? builtinWiFi.inactiveColorHex,
-      textColorHex: try optionalString(
-        contentTable["text_color"],
-        path: "builtins.wifi.content.text_color"
-      ) ?? builtinWiFi.textColorHex
+      ) ?? builtinWiFi.inactiveColorHex
     )
 
+    let expand = try parseWiFiExpand(from: expandTable, fallback: builtinWiFi.expand)
     let popup = try parseWiFiPopup(from: tooltipTable, fallback: builtinWiFi.popup)
 
     builtinWiFi = WiFiBuiltinConfig(
       placement: placement,
       style: style,
       content: content,
+      expand: expand,
       popup: popup
     )
   }
 }
 
 extension Config {
+  fileprivate func parseWiFiExpand(
+    from table: TOMLTable,
+    fallback: BuiltinWiFiExpand
+  ) throws -> BuiltinWiFiExpand {
+    BuiltinWiFiExpand(
+      textColorHex: try optionalString(
+        table["text_color"],
+        path: "builtins.wifi.expand.text_color"
+      ) ?? fallback.textColorHex
+    )
+  }
+
   fileprivate func parseWiFiPopup(
     from table: TOMLTable,
     fallback: BuiltinWiFiPopup

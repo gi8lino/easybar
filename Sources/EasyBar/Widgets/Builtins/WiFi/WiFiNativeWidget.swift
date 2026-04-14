@@ -22,8 +22,10 @@ final class WiFiNativeWidget: NativeWidget {
     let config: Config.WiFiBuiltinConfig
     let network: NetworkAgentSnapshot?
     let labelText: String
-    let iconText: String
-    let iconColorHex: String
+    let signalLevel: Int
+    let visualState: WiFiPresentation.VisualState
+    let activeColorHex: String
+    let inactiveColorHex: String
     let labelVisible: Bool
     let popupVisible: Bool
   }
@@ -86,8 +88,10 @@ final class WiFiNativeWidget: NativeWidget {
       config: config,
       network: network,
       labelText: presentation.labelText,
-      iconText: presentation.iconText,
-      iconColorHex: presentation.iconColorHex,
+      signalLevel: presentation.signalLevel,
+      visualState: presentation.visualState,
+      activeColorHex: presentation.activeColorHex,
+      inactiveColorHex: presentation.inactiveColorHex,
       labelVisible: shouldShowInlineLabel(config: config, text: presentation.labelText),
       popupVisible: shouldShowPopupLabel(config: config, text: presentation.labelText)
     )

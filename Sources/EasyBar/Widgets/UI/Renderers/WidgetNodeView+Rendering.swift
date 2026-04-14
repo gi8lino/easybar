@@ -28,6 +28,18 @@ extension WidgetNodeView {
     case .spaces:
       SpacesWidgetView()
         .modifier(nodeStyle)
+
+    case .wifiIndicator:
+      WiFiSignalCanvas(
+        signalLevel: Int(node.value ?? 0),
+        state: node.icon,
+        activeColor: nodeColor,
+        inactiveColor: color(node.iconColor),
+        slashColor: color(node.iconColor)
+      )
+      .frame(width: cgFloat(node.width) ?? 16, height: cgFloat(node.height) ?? 12)
+      .modifier(nodeStyle)
+
     default:
       EmptyView()
     }

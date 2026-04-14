@@ -27,15 +27,18 @@ extension WiFiRenderer {
         style: snapshot.config.style
       ),
 
-      BuiltinNativeNodeFactory.makeChildItemNode(
+      BuiltinNativeNodeFactory.makeChildWiFiIndicatorNode(
         rootID: rootID,
         parentID: rootID,
         childID: "\(rootID)_icon",
         position: snapshot.config.placement.position,
         order: 0,
-        icon: snapshot.iconText,
-        color: snapshot.iconColorHex,
-        fontSize: 16
+        signalLevel: snapshot.signalLevel,
+        state: snapshot.visualState.rawValue,
+        activeColor: snapshot.activeColorHex,
+        inactiveColor: snapshot.inactiveColorHex,
+        width: 20,
+        height: 13
       ),
 
       BuiltinNativeNodeFactory.makeChildItemNode(
@@ -45,9 +48,9 @@ extension WiFiRenderer {
         position: snapshot.config.placement.position,
         order: 1,
         text: snapshot.labelText,
-        color: snapshot.config.textColorHex,
+        color: snapshot.config.expandTextColorHex,
         visible: snapshot.labelVisible,
-        spacing: 4
+        spacing: 4,
       ),
     ]
   }
@@ -79,16 +82,20 @@ extension WiFiRenderer {
         style: snapshot.config.style
       ),
 
-      BuiltinNativeNodeFactory.makeChildItemNode(
+      BuiltinNativeNodeFactory.makeChildWiFiIndicatorNode(
         rootID: rootID,
         parentID: rootID,
         childID: "\(rootID)_icon",
         position: snapshot.config.placement.position,
         order: 0,
-        icon: snapshot.iconText,
-        color: snapshot.iconColorHex,
-        fontSize: 16
+        signalLevel: snapshot.signalLevel,
+        state: snapshot.visualState.rawValue,
+        activeColor: snapshot.activeColorHex,
+        inactiveColor: snapshot.inactiveColorHex,
+        width: 20,
+        height: 13
       ),
+
       popupNode,
 
       BuiltinNativeNodeFactory.makeChildItemNode(
@@ -98,7 +105,7 @@ extension WiFiRenderer {
         position: snapshot.config.placement.position,
         order: 0,
         text: snapshot.labelText,
-        color: popup.textColorHex ?? snapshot.config.textColorHex,
+        color: popup.textColorHex ?? snapshot.config.expandTextColorHex,
         visible: snapshot.popupVisible
       ),
     ]

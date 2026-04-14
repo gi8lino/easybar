@@ -3,18 +3,29 @@ import Foundation
 
 /// Render-ready Wi-Fi label and icon presentation.
 struct WiFiPresentation {
+
+  enum VisualState: String {
+    case connected
+    case disconnected
+    case denied
+  }
+
   let labelText: String
-  let iconText: String
-  let iconColorHex: String
+  let signalLevel: Int
+  let visualState: VisualState
+  let activeColorHex: String
+  let inactiveColorHex: String
 
   init(snapshot: NetworkAgentSnapshot?, config: Config.WiFiBuiltinConfig) {
     labelText = Self.labelText(snapshot: snapshot, config: config)
-    iconText = Self.iconText(snapshot: snapshot)
-    iconColorHex = Self.iconColorHex(snapshot: snapshot, config: config)
+    signalLevel = Self.signalLevel(snapshot: snapshot)
+    visualState = Self.visualState(snapshot: snapshot)
+    activeColorHex = config.activeColorHex
+    inactiveColorHex = config.inactiveColorHex
   }
 
-  /// Returns the Wi-Fi bar count from RSSI.
-  private static func signalBars(snapshot: NetworkAgentSnapshot?) -> Int {
+  /// Returns the visual signal level from RSSI in the 0...3 range.
+  private static func signalLevel(snapshot: NetworkAgentSnapshot?) -> Int {
     guard
       let snapshot,
       snapshot.accessGranted,
@@ -25,45 +36,21 @@ struct WiFiPresentation {
     }
 
     switch rssi {
-    case let value where value >= -58:
-      return 4
-    case let value where value >= -67:
-      return 3
-    case let value where value >= -75:
-      return 2
-    case let value where value >= -83:
+    case ..<(-78):
       return 1
+    case ..<(-64):
+      return 2
     default:
-      return 0
+      return 3
     }
   }
 
-  /// Resolves the Wi-Fi signal icon.
-  private static func iconText(snapshot: NetworkAgentSnapshot?) -> String {
-    switch signalBars(snapshot: snapshot) {
-    case 4:
-      return "󰤨 "
-    case 3:
-      return "󰤥 "
-    case 2:
-      return "󰤢 "
-    case 1:
-      return "󰤟 "
-    default:
-      return "󰤮 "
-    }
-  }
-
-  /// Resolves the Wi-Fi signal color.
-  private static func iconColorHex(
-    snapshot: NetworkAgentSnapshot?,
-    config: Config.WiFiBuiltinConfig
-  ) -> String {
-    guard let snapshot, snapshot.accessGranted, snapshot.ssid != nil else {
-      return config.inactiveColorHex
-    }
-
-    return config.activeColorHex
+  /// Resolves the Wi-Fi visual state.
+  private static func visualState(snapshot: NetworkAgentSnapshot?) -> VisualState {
+    guard let snapshot else { return .disconnected }
+    guard snapshot.accessGranted else { return .denied }
+    guard snapshot.ssid != nil else { return .disconnected }
+    return .connected
   }
 
   /// Resolves the label text for the current Wi-Fi state.

@@ -145,8 +145,8 @@ easybar.add("group", "wireguard", {
 		corner_radius = 8,
 		padding_left = 12,
 		padding_right = 12,
-		padding_top = 6,
-		padding_bottom = 6,
+		padding_top = 4,
+		padding_bottom = 4,
 	},
 	spacing = 0,
 	popup = {

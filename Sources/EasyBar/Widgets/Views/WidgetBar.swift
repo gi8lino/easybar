@@ -7,7 +7,7 @@ struct WidgetBar: View {
 
   /// Renders the widgets for one bar position.
   var body: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 4) {
       ForEach(topLevelNodes) { node in
         WidgetNodeView(node: node)
       }

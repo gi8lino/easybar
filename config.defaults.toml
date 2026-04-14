@@ -252,7 +252,7 @@ order = 30 # Sort order among widgets in the same position.
 
 [builtins.wifi.style]
 icon = "" # Unused fallback icon for the Wi-Fi root widget.
-text_color = "#ffffff" # Default text color for Wi-Fi text.
+text_color = "#ffffff" # Default text color for the Wi-Fi widget root.
 background_color = "#00000000" # Background color of the widget.
 border_color = "#00000000" # Border color of the widget.
 border_width = 0 # Border width of the widget.
@@ -261,19 +261,21 @@ margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 0 # Vertical inner padding of the widget.
-spacing = 6 # Gap between the signal bars and optional hover label.
+spacing = 6 # Gap between the signal bars and optional inline label.
 opacity = 1 # Overall opacity of the widget.
 
 [builtins.wifi.content]
-display_mode = "expand" # Display mode: none | tooltip | expand | always.
-disconnected_text = "Wi-Fi" # Hover label shown when Wi-Fi is not connected.
-denied_text = "Location" # Hover label shown when Wi-Fi permission is unavailable.
-active_color = "#ffffff" # Color of active signal bars.
-inactive_color = "#6e738d" # Color of inactive signal bars.
-text_color = "#ffffff" # Color of the hover label text.
+display_mode = "tooltip" # Display mode: none | tooltip | expand | always.
+disconnected_text = "disconnected" # Inline or tooltip text shown when Wi-Fi is not connected.
+denied_text = "denied" # Inline or tooltip text shown when Wi-Fi permission is unavailable.
+active_color = "#cdd6f4" # Color of active signal bars.
+inactive_color = "#6c7086" # Color of inactive signal bars.
+
+[builtins.wifi.expand]
+text_color = "#ffffff" # Text color of the inline label used in expand or always mode.
 
 [builtins.wifi.tooltip]
-text_color = "#ffffff" # Text color used in the tooltip popup.
+text_color = "#cdd6f4" # Text color used in the tooltip popup.
 background_color = "#111111" # Background color of the tooltip popup.
 border_color = "#444444" # Border color of the tooltip popup.
 border_width = 1 # Border width of the tooltip popup.
