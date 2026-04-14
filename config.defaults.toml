@@ -218,13 +218,14 @@ fixed_color = "#cdd6f4" # Color used only when color_mode = "fixed".
 display_mode = "expand" # Display mode: none | tooltip | expand | always.
 
 [builtins.battery.colors]
-high = "#cdd6f4" # Color used for 70-100%.
-medium = "#cdd6f4" # Color used for 50-69%.
-low = "#f9e2af" # Color used for 30-49%.
+high = "#a6e3a1" # Color used for 70-100%.
+medium = "#f9e2af" # Color used for 50-69%.
+low = "#fab387" # Color used for 30-49%.
 critical = "#f38ba8" # Color used for 0-29%.
 frame = "#6c7086" # Secondary palette color for the battery frame.
-charging_overlay = "#1e1e2e" # Color of the charging bolt overlay.
-external_power_overlay = "#1e1e2e" # Color of the plugged-in holding overlay.
+charging_overlay = "#FFFFFFFF" # Color of the charging bolt overlay.
+external_power_overlay = "#FFFFFFFF" # Color of the plugged-in holding overlay.
+on_hold_overlay = "#FFFFFFFF" # Color of the on-hold pause overlay.
 unavailable = "#6c7086" # Color used when battery data is unavailable.
 
 [builtins.battery.tooltip]

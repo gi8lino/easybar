@@ -298,11 +298,11 @@ extension BatteryRenderer {
     }
 
     if snapshot.onHold {
-      return "#FFFFFFFF"
+      return snapshot.config.colors.onHoldOverlayColorHex
     }
 
     if snapshot.onExternalPower {
-      return "#FFFFFFFF"
+      return snapshot.config.colors.externalPowerOverlayColorHex
     }
 
     return nil

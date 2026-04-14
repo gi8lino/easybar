@@ -26,6 +26,7 @@ extension Config {
     var frameColorHex: String
     var chargingOverlayColorHex: String
     var externalPowerOverlayColorHex: String
+    var onHoldOverlayColorHex: String
     var unavailableColorHex: String
   }
 
@@ -132,13 +133,14 @@ extension Config {
         fixedColorHex: "#cdd6f4",
         displayMode: .expand,
         colors: .init(
-          highColorHex: "#cdd6f4",
-          mediumColorHex: "#cdd6f4",
-          lowColorHex: "#f9e2af",
+          highColorHex: "#a6e3a1",
+          mediumColorHex: "#f9e2af",
+          lowColorHex: "#fab387",
           criticalColorHex: "#f38ba8",
           frameColorHex: "#6c7086",
-          chargingOverlayColorHex: "#1e1e2e",
-          externalPowerOverlayColorHex: "#1e1e2e",
+          chargingOverlayColorHex: "#FFFFFFFF",
+          externalPowerOverlayColorHex: "#FFFFFFFF",
+          onHoldOverlayColorHex: "#FFFFFFFF",
           unavailableColorHex: "#6c7086"
         )
       ),
@@ -255,6 +257,10 @@ extension Config {
         table["external_power_overlay"],
         path: "builtins.battery.colors.external_power_overlay"
       ) ?? fallback.externalPowerOverlayColorHex,
+      onHoldOverlayColorHex: try optionalString(
+        table["on_hold_overlay"],
+        path: "builtins.battery.colors.on_hold_overlay"
+      ) ?? fallback.onHoldOverlayColorHex,
       unavailableColorHex: try optionalString(
         table["unavailable"],
         path: "builtins.battery.colors.unavailable"
