@@ -4,19 +4,37 @@ import Foundation
 /// This lets EasyBar terminate the runtime and any child processes it spawned.
 var easyBarLuaProcessGroupPID: pid_t = 0
 
+/// Tracks the pending forced-kill work item for the active Lua process group.
+private var easyBarLuaForcedKillWorkItem: DispatchWorkItem?
+
+/// Queue used for deferred forced termination of the Lua process group.
+private let easyBarLuaTerminationQueue = DispatchQueue(
+  label: "easybar.lua.termination",
+  qos: .utility
+)
+
 /// Terminates the Lua runtime process group.
 ///
-/// A soft terminate is attempted first, then a forced kill shortly after.
-/// This prevents orphaned child processes from surviving reload/shutdown.
+/// A soft terminate is attempted first, then a forced kill shortly after on a
+/// background queue. This prevents orphaned child processes from surviving
+/// reload/shutdown without blocking the calling thread.
 private func easyBarTerminateLuaProcessGroup() {
   let pid = easyBarLuaProcessGroupPID
   guard pid > 0 else { return }
 
-  kill(-pid, SIGTERM)
-  usleep(150_000)
-  kill(-pid, SIGKILL)
+  easyBarLuaForcedKillWorkItem?.cancel()
+  easyBarLuaForcedKillWorkItem = nil
 
-  easyBarLuaProcessGroupPID = 0
+  kill(-pid, SIGTERM)
+
+  let workItem = DispatchWorkItem {
+    guard easyBarLuaProcessGroupPID == pid else { return }
+    kill(-pid, SIGKILL)
+    easyBarLuaProcessGroupPID = 0
+  }
+
+  easyBarLuaForcedKillWorkItem = workItem
+  easyBarLuaTerminationQueue.asyncAfter(deadline: .now() + 0.15, execute: workItem)
 }
 
 /// Handles termination-related signals by shutting down the Lua process group first.
@@ -75,6 +93,8 @@ final class LuaProcessController {
 
     // Put Lua into its own process group so shutdown can kill the whole tree.
     _ = setpgid(pid, pid)
+    easyBarLuaForcedKillWorkItem?.cancel()
+    easyBarLuaForcedKillWorkItem = nil
     easyBarLuaProcessGroupPID = pid
 
     self.process = process

@@ -2,20 +2,32 @@ import Foundation
 
 extension WidgetRunner {
 
+  /// Queue used to decode and classify Lua stdout lines off the main thread.
+  private static let outputProcessingQueue = DispatchQueue(
+    label: "easybar.widget-runner.output",
+    qos: .userInitiated
+  )
+
   /// Handles one line of structured stdout from the Lua runtime.
   func handleRuntimeOutput(_ line: String) {
     easybarLog.debug("lua stdout: \(line)")
 
-    do {
-      let update = try decodeUpdate(from: line)
-      handleUpdate(update, rawLine: line)
-    } catch DecodingError.dataCorrupted {
-      MetricsCoordinator.shared.recordDecodeError()
-      easybarLog.warn("invalid utf8: \(line)")
-    } catch {
-      MetricsCoordinator.shared.recordDecodeError()
-      easybarLog.warn("json decode failed: \(line)")
-      easybarLog.debug("decode error: \(error)")
+    Self.outputProcessingQueue.async { [weak self] in
+      guard let self else { return }
+
+      do {
+        let update = try self.decodeUpdate(from: line)
+        DispatchQueue.main.async { [weak self] in
+          self?.handleUpdate(update, rawLine: line)
+        }
+      } catch DecodingError.dataCorrupted {
+        MetricsCoordinator.shared.recordDecodeError()
+        easybarLog.warn("invalid utf8: \(line)")
+      } catch {
+        MetricsCoordinator.shared.recordDecodeError()
+        easybarLog.warn("json decode failed: \(line)")
+        easybarLog.debug("decode error: \(error)")
+      }
     }
   }
 
@@ -24,7 +36,7 @@ extension WidgetRunner {
     stdoutObserver = NotificationCenter.default.addObserver(
       forName: .easyBarLuaStdout,
       object: nil,
-      queue: .main
+      queue: nil
     ) { [weak self] notification in
       guard let line = notification.object as? String else { return }
       self?.handleRuntimeOutput(line)
