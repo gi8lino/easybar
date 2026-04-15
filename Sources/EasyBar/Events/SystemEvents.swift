@@ -15,6 +15,7 @@ final class SystemEvents {
       object: nil,
       queue: .main
     ) { _ in
+      easybarLog.debug("received workspace didWake notification")
       EventBus.shared.emit(.systemWoke)
     }
 
@@ -29,6 +30,7 @@ final class SystemEvents {
       object: nil,
       queue: .main
     ) { _ in
+      easybarLog.debug("received workspace willSleep notification")
       EventBus.shared.emit(.sleep)
     }
 
@@ -43,6 +45,7 @@ final class SystemEvents {
       object: nil,
       queue: .main
     ) { _ in
+      easybarLog.debug("received workspace activeSpaceDidChange notification")
       EventBus.shared.emit(.spaceChange)
     }
 
@@ -57,11 +60,17 @@ final class SystemEvents {
       object: nil,
       queue: .main
     ) { notification in
-      if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
-        as? NSRunningApplication
-      {
-        EventBus.shared.emit(.appSwitch, appName: app.localizedName ?? "")
+      guard
+        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+          as? NSRunningApplication
+      else {
+        easybarLog.debug("received didActivateApplication notification without app payload")
+        return
       }
+
+      let appName = app.localizedName ?? ""
+      easybarLog.debug("received didActivateApplication notification app=\(appName)")
+      EventBus.shared.emit(.appSwitch, appName: appName)
     }
 
     observers.append(observer)
@@ -75,6 +84,7 @@ final class SystemEvents {
       object: nil,
       queue: .main
     ) { _ in
+      easybarLog.debug("received didChangeScreenParameters notification")
       EventBus.shared.emit(.displayChange)
     }
 
@@ -94,5 +104,6 @@ final class SystemEvents {
     }
 
     observers.removeAll()
+    easybarLog.debug("stopped all system event observers")
   }
 }

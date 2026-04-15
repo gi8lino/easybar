@@ -6,6 +6,7 @@ final class EventBus {
   static let shared = EventBus()
 
   private let runtime = LuaRuntime.shared
+  private let luaSendQueue = DispatchQueue(label: "com.gi8lino.easybar.eventbus.lua-send")
 
   private init() {}
 
@@ -65,24 +66,58 @@ final class EventBus {
 
   /// Emits one typed event payload.
   func emit(_ payload: EasyBarEventPayload) {
+    let threadLabel = Thread.isMainThread ? "main" : "background"
+    easybarLog.trace("emit begin name=\(payload.eventName) thread=\(threadLabel)")
+
     MetricsCoordinator.shared.recordEvent(
       name: payload.eventName,
       isWidgetEvent: payload.widgetEvent != nil
     )
+
+    let nativeStart = Date()
     NotificationCenter.default.post(name: .easyBarEvent, object: payload)
+    logSlowPhase(
+      name: "native delivery",
+      eventName: payload.eventName,
+      startedAt: nativeStart
+    )
+
     logEmission(payload)
-    sendToLua(payload)
+    sendToLuaAsync(payload)
+
+    easybarLog.trace("emit end name=\(payload.eventName) thread=\(threadLabel)")
+  }
+
+  /// Encodes and forwards one payload to the Lua runtime on a dedicated serial queue.
+  private func sendToLuaAsync(_ payload: EasyBarEventPayload) {
+    luaSendQueue.async { [weak self] in
+      self?.sendToLua(payload)
+    }
   }
 
   /// Encodes and forwards one payload to the Lua runtime.
   private func sendToLua(_ payload: EasyBarEventPayload) {
+    let encodeStart = Date()
+
     guard let encoded = encodedPayload(payload) else {
-      easybarLog.error("failed to encode lua event payload")
+      easybarLog.error("failed to encode lua event payload name=\(payload.eventName)")
       return
     }
 
+    logSlowPhase(
+      name: "lua payload encode",
+      eventName: payload.eventName,
+      startedAt: encodeStart
+    )
+
+    let sendStart = Date()
     easybarLog.trace("sent to lua stdin: \(encoded)")
     runtime.send(encoded)
+    logSlowPhase(
+      name: "lua send",
+      eventName: payload.eventName,
+      startedAt: sendStart
+    )
   }
 
   /// Returns the encoded Lua payload string.
@@ -115,6 +150,20 @@ final class EventBus {
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
     easybarLog.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
+  }
+
+  /// Logs one phase duration when it looks unexpectedly slow.
+  private func logSlowPhase(
+    name: String,
+    eventName: String,
+    startedAt: Date,
+    slowThreshold: TimeInterval = 0.1
+  ) {
+    let elapsed = Date().timeIntervalSince(startedAt)
+    guard elapsed >= slowThreshold else { return }
+
+    let milliseconds = Int((elapsed * 1000).rounded())
+    easybarLog.warn("slow event phase phase=\(name) event=\(eventName) duration_ms=\(milliseconds)")
   }
 }
 
