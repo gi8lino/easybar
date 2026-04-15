@@ -71,28 +71,66 @@ final class ConfigFileWatcher {
   private func scheduleReload() {
     debounceWorkItem?.cancel()
 
-    let work = DispatchWorkItem { [weak self] in self?.performReload() }
+    let work = DispatchWorkItem { [weak self] in
+      self?.performReload()
+    }
+
     debounceWorkItem = work
     queue.asyncAfter(deadline: .now() + 0.20, execute: work)
   }
 
   /// Reloads config and refreshes all dependent systems.
+  ///
+  /// The watcher stays off the main queue until the moment UI/runtime apply work
+  /// must happen. This keeps file-system events and debounce handling lightweight.
   private func performReload() {
-    DispatchQueue.main.async {
-      easybarLog.info("config file changed, reloading")
+    easybarLog.info("config file changed, scheduling reload")
+
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+
+      easybarLog.info("config file changed, reloading on main thread")
 
       if let onConfigFileChange = self.onConfigFileChange {
         onConfigFileChange()
         return
       }
 
-      Config.shared.reload()
+      let reloadStart = Date()
+      easybarLog.info("config watcher step=Config.reload")
+      let reloadError = Config.shared.reload()
+      self.logSlowPhase(name: "Config.reload", startedAt: reloadStart)
+
+      let widgetRunnerStart = Date()
+      easybarLog.info("config watcher step=WidgetRunner.reload")
       WidgetRunner.shared.reload()
+      self.logSlowPhase(name: "WidgetRunner.reload", startedAt: widgetRunnerStart)
+
+      let nativeRegistryStart = Date()
+      easybarLog.info("config watcher step=NativeWidgetRegistry.reload")
       NativeWidgetRegistry.shared.reload()
+      self.logSlowPhase(
+        name: "NativeWidgetRegistry.reload",
+        startedAt: nativeRegistryStart
+      )
+
+      let aeroSpaceStart = Date()
+      easybarLog.info("config watcher step=AeroSpaceService.triggerRefresh")
       AeroSpaceService.shared.triggerRefresh()
+      self.logSlowPhase(
+        name: "AeroSpaceService.triggerRefresh",
+        startedAt: aeroSpaceStart
+      )
+
+      if let reloadError {
+        easybarLog.warn("config watcher reload completed with error=\(reloadError)")
+      }
 
       // Some editors replace the file atomically, so re-open the watcher.
+      let restartStart = Date()
+      easybarLog.info("config watcher step=restart")
       self.restart()
+      self.logSlowPhase(name: "ConfigFileWatcher.restart", startedAt: restartStart)
     }
   }
 
@@ -108,5 +146,18 @@ final class ConfigFileWatcher {
     guard fileDescriptor >= 0 else { return }
     close(fileDescriptor)
     fileDescriptor = -1
+  }
+
+  /// Logs one phase duration when it looks unexpectedly slow.
+  private func logSlowPhase(
+    name: String,
+    startedAt: Date,
+    slowThreshold: TimeInterval = 0.1
+  ) {
+    let elapsed = Date().timeIntervalSince(startedAt)
+    guard elapsed >= slowThreshold else { return }
+
+    let milliseconds = Int((elapsed * 1000).rounded())
+    easybarLog.warn("slow config watcher phase phase=\(name) duration_ms=\(milliseconds)")
   }
 }
