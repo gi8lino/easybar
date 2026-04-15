@@ -30,30 +30,18 @@ final class NativeWidgetRegistry {
   private func registerAll() {
     easybarLog.info("native widget registry registerAll begin")
 
-    let stopStart = Date()
     stopAll()
-    logSlowPhase(name: "stopAll", startedAt: stopStart)
 
     easybarLog.info("registering native widgets")
     logConfig()
 
-    let groupReloadStart = Date()
     NativeGroupRegistry.shared.reload()
-    logSlowPhase(name: "NativeGroupRegistry.reload", startedAt: groupReloadStart)
-
-    let makeWidgetsStart = Date()
     widgets = makeEnabledWidgets()
-    logSlowPhase(name: "makeEnabledWidgets", startedAt: makeWidgetsStart)
 
     logRegisteredWidgets()
 
-    let subscriptionsStart = Date()
     applyNativeEventSubscriptions()
-    logSlowPhase(name: "applyNativeEventSubscriptions", startedAt: subscriptionsStart)
-
-    let startWidgetsStart = Date()
     startWidgets()
-    logSlowPhase(name: "startWidgets", startedAt: startWidgetsStart)
 
     easybarLog.info("native widget registry registerAll end")
   }
@@ -65,25 +53,13 @@ final class NativeWidgetRegistry {
     }
 
     for widget in widgets {
-      let startedAt = Date()
       easybarLog.debug("stopping native widget id=\(widget.rootID)")
       widget.stop()
-      logSlowWidgetPhase(
-        action: "stop",
-        widgetID: widget.rootID,
-        startedAt: startedAt
-      )
     }
 
     widgets.removeAll()
-
-    let subscriptionsStart = Date()
     EventManager.shared.setNativeSubscriptions([])
-    logSlowPhase(name: "EventManager.setNativeSubscriptions(empty)", startedAt: subscriptionsStart)
-
-    let clearGroupsStart = Date()
     NativeGroupRegistry.shared.clear()
-    logSlowPhase(name: "NativeGroupRegistry.clear", startedAt: clearGroupsStart)
   }
 
   /// Builds the enabled native widget list from the current config.
@@ -155,43 +131,8 @@ final class NativeWidgetRegistry {
   /// Starts all currently registered widgets.
   private func startWidgets() {
     for widget in widgets {
-      let startedAt = Date()
       easybarLog.debug("starting native widget id=\(widget.rootID)")
       widget.start()
-      logSlowWidgetPhase(
-        action: "start",
-        widgetID: widget.rootID,
-        startedAt: startedAt
-      )
     }
-  }
-
-  /// Logs one overall registry phase duration when it looks unexpectedly slow.
-  private func logSlowPhase(
-    name: String,
-    startedAt: Date,
-    slowThreshold: TimeInterval = 0.1
-  ) {
-    let elapsed = Date().timeIntervalSince(startedAt)
-    guard elapsed >= slowThreshold else { return }
-
-    let milliseconds = Int((elapsed * 1000).rounded())
-    easybarLog.warn("slow native widget registry phase phase=\(name) duration_ms=\(milliseconds)")
-  }
-
-  /// Logs one widget-specific phase duration when it looks unexpectedly slow.
-  private func logSlowWidgetPhase(
-    action: String,
-    widgetID: String,
-    startedAt: Date,
-    slowThreshold: TimeInterval = 0.1
-  ) {
-    let elapsed = Date().timeIntervalSince(startedAt)
-    guard elapsed >= slowThreshold else { return }
-
-    let milliseconds = Int((elapsed * 1000).rounded())
-    easybarLog.warn(
-      "slow native widget phase action=\(action) widget_id=\(widgetID) duration_ms=\(milliseconds)"
-    )
   }
 }

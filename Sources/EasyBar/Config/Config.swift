@@ -178,10 +178,7 @@ final class Config: ObservableObject {
     resetDerivedDefaults()
 
     do {
-      let loadStart = Date()
       try load()
-      logSlowPhase(name: "initial load", startedAt: loadStart)
-
       loadFailureState = nil
     } catch {
       let message = "invalid config at \(configPath): \(error)"
@@ -196,31 +193,19 @@ final class Config: ObservableObject {
   func reload() -> (any Error)? {
     easybarLog.info("reloading configuration path=\(configPath)")
 
-    let snapshotStart = Date()
     let snapshot = snapshot()
-    logSlowPhase(name: "snapshot", startedAt: snapshotStart)
-
-    let resetStart = Date()
     resetToDefaults()
-    logSlowPhase(name: "resetToDefaults", startedAt: resetStart)
 
     do {
-      let loadStart = Date()
       try load()
-      logSlowPhase(name: "load", startedAt: loadStart)
-
-      let publishStart = Date()
       loadFailureState = nil
       objectWillChange.send()
-      logSlowPhase(name: "objectWillChange.send", startedAt: publishStart)
 
       easybarLog.info("reload applied")
       return nil
     } catch {
-      let rollbackStart = Date()
       apply(snapshot)
       loadFailureState = LoadFailureState(error: error, context: .reloadKeptPreviousConfig)
-      logSlowPhase(name: "rollback apply(snapshot)", startedAt: rollbackStart)
 
       easybarLog.warn("reload rejected: \(error)")
       return error
@@ -267,18 +252,5 @@ final class Config: ObservableObject {
     builtinCalendar = .default
     builtinTime = .default
     builtinDate = .default
-  }
-
-  /// Logs one config phase duration when it looks unexpectedly slow.
-  private func logSlowPhase(
-    name: String,
-    startedAt: Date,
-    slowThreshold: TimeInterval = 0.1
-  ) {
-    let elapsed = Date().timeIntervalSince(startedAt)
-    guard elapsed >= slowThreshold else { return }
-
-    let milliseconds = Int((elapsed * 1000).rounded())
-    easybarLog.warn("slow config phase phase=\(name) duration_ms=\(milliseconds)")
   }
 }

@@ -31,11 +31,7 @@ final class EventManager {
 
     luaSubscriptions.removeAll()
     nativeSubscriptions.removeAll()
-
-    let stopStart = Date()
     stopActiveSources()
-    logSlowPhase(name: "stopActiveSources", startedAt: stopStart)
-
     activeSubscriptions.removeAll()
 
     easybarLog.debug("event manager stopAll end")
@@ -65,15 +61,9 @@ final class EventManager {
       """
     )
 
-    let stopStart = Date()
     stopActiveSources()
-    logSlowPhase(name: "stopActiveSources", startedAt: stopStart)
-
     activeSubscriptions = mergedSubscriptions
-
-    let subscribeStart = Date()
     subscribeActiveSources(mergedSubscriptions)
-    logSlowPhase(name: "subscribeActiveSources", startedAt: subscribeStart)
 
     easybarLog.debug("event manager refresh end active=\(activeSubscriptions)")
   }
@@ -81,61 +71,43 @@ final class EventManager {
   /// Starts every event source required by the merged subscription set.
   private func subscribeActiveSources(_ mergedSubscriptions: Set<String>) {
     if mergedSubscriptions.contains(AppEvent.systemWoke.rawValue) {
-      let startedAt = Date()
       SystemEvents.shared.subscribeSystemWake()
-      logSlowPhase(name: "SystemEvents.subscribeSystemWake", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.sleep.rawValue) {
-      let startedAt = Date()
       SystemEvents.shared.subscribeSleep()
-      logSlowPhase(name: "SystemEvents.subscribeSleep", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.spaceChange.rawValue) {
-      let startedAt = Date()
       SystemEvents.shared.subscribeSpaceChange()
-      logSlowPhase(name: "SystemEvents.subscribeSpaceChange", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.appSwitch.rawValue) {
-      let startedAt = Date()
       SystemEvents.shared.subscribeAppSwitch()
-      logSlowPhase(name: "SystemEvents.subscribeAppSwitch", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.displayChange.rawValue) {
-      let startedAt = Date()
       SystemEvents.shared.subscribeDisplayChange()
-      logSlowPhase(name: "SystemEvents.subscribeDisplayChange", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.powerSourceChange.rawValue)
       || mergedSubscriptions.contains(AppEvent.chargingStateChange.rawValue)
     {
-      let startedAt = Date()
       PowerEvents.shared.subscribePowerSource()
-      logSlowPhase(name: "PowerEvents.subscribePowerSource", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.volumeChange.rawValue)
       || mergedSubscriptions.contains(AppEvent.muteChange.rawValue)
     {
-      let startedAt = Date()
       VolumeEvents.shared.subscribeVolume()
-      logSlowPhase(name: "VolumeEvents.subscribeVolume", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.minuteTick.rawValue) {
-      let startedAt = Date()
       TimerEvents.shared.startMinuteTimer()
-      logSlowPhase(name: "TimerEvents.startMinuteTimer", startedAt: startedAt)
     }
 
     if mergedSubscriptions.contains(AppEvent.secondTick.rawValue) {
-      let startedAt = Date()
       TimerEvents.shared.startSecondTimer()
-      logSlowPhase(name: "TimerEvents.startSecondTimer", startedAt: startedAt)
     }
   }
 
@@ -145,18 +117,5 @@ final class EventManager {
     SystemEvents.shared.stopAll()
     PowerEvents.shared.stopAll()
     VolumeEvents.shared.stopAll()
-  }
-
-  /// Logs one phase duration when it looks unexpectedly slow.
-  private func logSlowPhase(
-    name: String,
-    startedAt: Date,
-    slowThreshold: TimeInterval = 0.1
-  ) {
-    let elapsed = Date().timeIntervalSince(startedAt)
-    guard elapsed >= slowThreshold else { return }
-
-    let milliseconds = Int((elapsed * 1000).rounded())
-    easybarLog.warn("slow event manager phase phase=\(name) duration_ms=\(milliseconds)")
   }
 }
