@@ -14,11 +14,16 @@ extension WidgetRunner {
 
     Self.outputProcessingQueue.async { [weak self] in
       guard let self else { return }
+      guard self.started else { return }
 
       do {
         let update = try self.decodeUpdate(from: line)
+
         DispatchQueue.main.async { [weak self] in
-          self?.handleUpdate(update, rawLine: line)
+          guard let self else { return }
+          guard self.started else { return }
+
+          self.handleUpdate(update, rawLine: line)
         }
       } catch DecodingError.dataCorrupted {
         MetricsCoordinator.shared.recordDecodeError()
@@ -33,13 +38,18 @@ extension WidgetRunner {
 
   /// Starts observing structured stdout from the Lua runtime.
   func startObservingRuntimeOutput() {
+    stopObservingRuntimeOutput()
+
     stdoutObserver = NotificationCenter.default.addObserver(
       forName: .easyBarLuaStdout,
       object: nil,
       queue: nil
     ) { [weak self] notification in
+      guard let self else { return }
+      guard self.started else { return }
       guard let line = notification.object as? String else { return }
-      self?.handleRuntimeOutput(line)
+
+      self.handleRuntimeOutput(line)
     }
   }
 

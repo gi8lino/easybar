@@ -66,9 +66,6 @@ final class EventBus {
 
   /// Emits one typed event payload.
   func emit(_ payload: EasyBarEventPayload) {
-    let threadLabel = Thread.isMainThread ? "main" : "background"
-    easybarLog.trace("emit begin name=\(payload.eventName) thread=\(threadLabel)")
-
     MetricsCoordinator.shared.recordEvent(
       name: payload.eventName,
       isWidgetEvent: payload.widgetEvent != nil
@@ -77,8 +74,6 @@ final class EventBus {
     NotificationCenter.default.post(name: .easyBarEvent, object: payload)
     logEmission(payload)
     sendToLuaAsync(payload)
-
-    easybarLog.trace("emit end name=\(payload.eventName) thread=\(threadLabel)")
   }
 
   /// Encodes and forwards one payload to the Lua runtime on a dedicated serial queue.

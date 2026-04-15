@@ -9,6 +9,8 @@ final class ConfigFileWatcher {
   private var fileDescriptor: CInt = -1
   private var source: DispatchSourceFileSystemObject?
   private var debounceWorkItem: DispatchWorkItem?
+  private var reloadInFlight = false
+  private var reloadQueued = false
   var onConfigFileChange: (() -> Void)?
 
   private init() {}
@@ -61,6 +63,7 @@ final class ConfigFileWatcher {
   func stop() {
     debounceWorkItem?.cancel()
     debounceWorkItem = nil
+    reloadQueued = false
 
     source?.cancel()
     source = nil
@@ -84,6 +87,13 @@ final class ConfigFileWatcher {
   /// The watcher stays off the main queue until the moment UI/runtime apply work
   /// must happen. This keeps file-system events and debounce handling lightweight.
   private func performReload() {
+    guard !reloadInFlight else {
+      reloadQueued = true
+      easybarLog.info("config file changed while reload is active; queueing another reload")
+      return
+    }
+
+    reloadInFlight = true
     easybarLog.info("config file changed, scheduling reload")
 
     DispatchQueue.main.async { [weak self] in
@@ -93,28 +103,38 @@ final class ConfigFileWatcher {
 
       if let onConfigFileChange = self.onConfigFileChange {
         onConfigFileChange()
-        return
+      } else {
+        easybarLog.info("config watcher step=Config.reload")
+        let reloadError = Config.shared.reload()
+
+        easybarLog.info("config watcher step=WidgetRunner.reload")
+        WidgetRunner.shared.reload()
+
+        easybarLog.info("config watcher step=NativeWidgetRegistry.reload")
+        NativeWidgetRegistry.shared.reload()
+
+        easybarLog.info("config watcher step=AeroSpaceService.triggerRefresh")
+        AeroSpaceService.shared.triggerRefresh()
+
+        if let reloadError {
+          easybarLog.warn("config watcher reload completed with error=\(reloadError)")
+        }
+
+        // Some editors replace the file atomically, so re-open the watcher.
+        easybarLog.info("config watcher step=restart")
+        self.restart()
       }
 
-      easybarLog.info("config watcher step=Config.reload")
-      let reloadError = Config.shared.reload()
+      self.queue.async { [weak self] in
+        guard let self else { return }
 
-      easybarLog.info("config watcher step=WidgetRunner.reload")
-      WidgetRunner.shared.reload()
+        self.reloadInFlight = false
 
-      easybarLog.info("config watcher step=NativeWidgetRegistry.reload")
-      NativeWidgetRegistry.shared.reload()
-
-      easybarLog.info("config watcher step=AeroSpaceService.triggerRefresh")
-      AeroSpaceService.shared.triggerRefresh()
-
-      if let reloadError {
-        easybarLog.warn("config watcher reload completed with error=\(reloadError)")
+        if self.reloadQueued {
+          self.reloadQueued = false
+          self.scheduleReload()
+        }
       }
-
-      // Some editors replace the file atomically, so re-open the watcher.
-      easybarLog.info("config watcher step=restart")
-      self.restart()
     }
   }
 

@@ -11,6 +11,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let configFileWatcher = ConfigFileWatcher.shared
   private let instanceGuard = SingleInstanceGuard()
 
+  private var isReloadingConfig = false
+  private var queuedConfigReload = false
+
   func applicationDidFinishLaunching(_ notification: Notification) {
     switch instanceGuard.acquireLock(
       processName: "easybar",
@@ -84,6 +87,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       return
     }
 
+    if isReloadingConfig {
+      queuedConfigReload = true
+      easybarLog.info("reloadConfig already in progress; queueing another reload")
+      return
+    }
+
+    isReloadingConfig = true
     easybarLog.info("reloadConfig begin")
 
     easybarLog.info("reloadConfig step=config.reload")
@@ -115,6 +125,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     updateConfigErrorWindow()
 
     easybarLog.info("reloadConfig end")
+    isReloadingConfig = false
+
+    if queuedConfigReload {
+      queuedConfigReload = false
+      DispatchQueue.main.async { [weak self] in
+        self?.reloadConfig()
+      }
+    }
   }
 
   /// Restarts only the Lua runtime without reloading config.

@@ -4,6 +4,7 @@ import Foundation
 final class CalendarAgentEventRelay {
   static let shared = CalendarAgentEventRelay()
 
+  private let queue = DispatchQueue(label: "easybar.calendar-agent.event-relay")
   private var pendingWorkItem: DispatchWorkItem?
 
   private init() {}
@@ -14,13 +15,19 @@ final class CalendarAgentEventRelay {
   /// underlying EventKit change. This relay collapses those near-simultaneous
   /// updates into one app-wide event.
   func noteSnapshotUpdate() {
-    pendingWorkItem?.cancel()
+    queue.async { [weak self] in
+      guard let self else { return }
 
-    let workItem = DispatchWorkItem {
-      EventBus.shared.emit(.calendarChange)
+      self.pendingWorkItem?.cancel()
+
+      let workItem = DispatchWorkItem {
+        DispatchQueue.main.async {
+          EventBus.shared.emit(.calendarChange)
+        }
+      }
+
+      self.pendingWorkItem = workItem
+      self.queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
     }
-
-    pendingWorkItem = workItem
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: workItem)
   }
 }

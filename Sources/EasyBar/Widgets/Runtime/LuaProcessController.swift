@@ -13,6 +13,9 @@ private let easyBarLuaTerminationQueue = DispatchQueue(
   qos: .utility
 )
 
+/// Grace period between SIGTERM and the fallback SIGKILL.
+private let easyBarLuaTerminationGracePeriod: DispatchTimeInterval = .milliseconds(150)
+
 /// Terminates the Lua runtime process group.
 ///
 /// A soft terminate is attempted first, then a forced kill shortly after on a
@@ -34,7 +37,10 @@ private func easyBarTerminateLuaProcessGroup() {
   }
 
   easyBarLuaForcedKillWorkItem = workItem
-  easyBarLuaTerminationQueue.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+  easyBarLuaTerminationQueue.asyncAfter(
+    deadline: .now() + easyBarLuaTerminationGracePeriod,
+    execute: workItem
+  )
 }
 
 /// Handles termination-related signals by shutting down the Lua process group first.
@@ -82,6 +88,7 @@ final class LuaProcessController {
 
     let pipes = LaunchPipes()
     let process = makeProcess(context: context, pipes: pipes)
+
     do {
       try process.run()
     } catch {
@@ -93,6 +100,7 @@ final class LuaProcessController {
 
     // Put Lua into its own process group so shutdown can kill the whole tree.
     _ = setpgid(pid, pid)
+
     easyBarLuaForcedKillWorkItem?.cancel()
     easyBarLuaForcedKillWorkItem = nil
     easyBarLuaProcessGroupPID = pid
