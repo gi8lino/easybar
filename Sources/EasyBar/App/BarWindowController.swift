@@ -65,10 +65,25 @@ final class BarWindowController: NSWindowController {
 
   /// Reapplies the configured frame and root view after a config reload.
   func reloadLayout() {
-    guard let window else { return }
+    if !Thread.isMainThread {
+      easybarLog.warn("bar window reloadLayout invoked off main thread; redispatching to main")
+      DispatchQueue.main.async { [weak self] in
+        self?.reloadLayout()
+      }
+      return
+    }
+
+    guard let window else {
+      easybarLog.warn("bar window reloadLayout skipped because window is unavailable")
+      return
+    }
 
     let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen)
+
+    easybarLog.info(
+      "bar window reload begin current_frame=\(NSStringFromRect(window.frame)) target_frame=\(NSStringFromRect(frame))"
+    )
 
     hostingView.rootView = BarRootView()
     window.setFrame(frame, display: true)
@@ -76,17 +91,30 @@ final class BarWindowController: NSWindowController {
     window.minSize = frame.size
     window.maxSize = frame.size
     hostingView.frame = NSRect(origin: .zero, size: frame.size)
-    easybarLog.info("bar window reloaded frame=\(NSStringFromRect(window.frame))")
+
+    easybarLog.info("bar window reload end frame=\(NSStringFromRect(window.frame))")
   }
 
   /// Shows the panel without asking AppKit to make it key.
   func present() {
-    guard let window else { return }
+    if !Thread.isMainThread {
+      easybarLog.warn("bar window present invoked off main thread; redispatching to main")
+      DispatchQueue.main.async { [weak self] in
+        self?.present()
+      }
+      return
+    }
+
+    guard let window else {
+      easybarLog.warn("bar window present skipped because window is unavailable")
+      return
+    }
 
     window.setFrame(window.frame, display: true)
     window.orderFrontRegardless()
     easybarLog.info(
-      "bar window presented frame=\(NSStringFromRect(window.frame)) level=\(window.level.rawValue)")
+      "bar window presented frame=\(NSStringFromRect(window.frame)) level=\(window.level.rawValue)"
+    )
   }
 
   /// Calculates the frame of the bar based on config.
@@ -289,7 +317,8 @@ final class BarWindowController: NSWindowController {
   /// Opens Location Services settings so the user can grant Wi-Fi access again.
   @objc private func openLocationSettings(_ sender: Any?) {
     openSettingsURL(
-      "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices")
+      "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
+    )
   }
 
   /// Opens one System Settings deep link when available.
