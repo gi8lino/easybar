@@ -7,50 +7,54 @@ final class WidgetStore: ObservableObject {
 
   @Published private(set) var nodes: [WidgetNodeState] = []
 
+  private let stateQueue = DispatchQueue(label: "easybar.widget-store.state")
   private var nodeMap: [String: WidgetNodeState] = [:]
   private var rootIndex: [String: Set<String>] = [:]
 
   func apply(root: String, nodes updates: [WidgetNodeState]) {
-    for id in existingIDs(for: root) {
-      nodeMap.removeValue(forKey: id)
+    let renderedNodes = stateQueue.sync { () -> [WidgetNodeState] in
+      for id in existingIDs(for: root) {
+        nodeMap.removeValue(forKey: id)
+      }
+
+      rootIndex[root] = storeNodes(updates)
+      return nodeMap.values.sorted(by: sortNodes)
     }
 
-    rootIndex[root] = storeNodes(updates)
-    render()
+    publish(nodes: renderedNodes)
   }
 
   func clear() {
-    nodeMap.removeAll()
-    rootIndex.removeAll()
+    stateQueue.sync {
+      nodeMap.removeAll()
+      rootIndex.removeAll()
+    }
+
     publish(nodes: [])
   }
 
   func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
-    sortedNodes {
+    sortedPublishedNodes {
       $0.isTopLevel && $0.position == position
     }
   }
 
   func children(of parentID: String) -> [WidgetNodeState] {
-    sortedNodes {
+    sortedPublishedNodes {
       $0.parent == parentID && !$0.isPopupAnchor && !$0.isPopupContent
     }
   }
 
   func anchorChildren(of parentID: String) -> [WidgetNodeState] {
-    sortedNodes {
+    sortedPublishedNodes {
       $0.parent == parentID && $0.isPopupAnchor
     }
   }
 
   func popupChildren(of parentID: String) -> [WidgetNodeState] {
-    sortedNodes {
+    sortedPublishedNodes {
       $0.parent == parentID && $0.isPopupContent
     }
-  }
-
-  private func render() {
-    publish(nodes: nodeMap.values.sorted(by: sortNodes))
   }
 
   private func sortNodes(_ lhs: WidgetNodeState, _ rhs: WidgetNodeState) -> Bool {
@@ -82,8 +86,8 @@ final class WidgetStore: ObservableObject {
     return ids
   }
 
-  /// Returns sorted nodes matching the given predicate.
-  private func sortedNodes(
+  /// Returns sorted published nodes matching the given predicate.
+  private func sortedPublishedNodes(
     matching predicate: (WidgetNodeState) -> Bool
   ) -> [WidgetNodeState] {
     nodes
@@ -93,6 +97,11 @@ final class WidgetStore: ObservableObject {
 
   /// Publishes the current rendered nodes on the main queue.
   private func publish(nodes: [WidgetNodeState]) {
+    if Thread.isMainThread {
+      self.nodes = nodes
+      return
+    }
+
     DispatchQueue.main.async {
       self.nodes = nodes
     }

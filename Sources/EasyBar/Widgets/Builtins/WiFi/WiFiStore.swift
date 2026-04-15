@@ -61,10 +61,16 @@ final class NativeWiFiStore: ObservableObject {
 
   /// Publishes one snapshot change on the main queue.
   private func publish(snapshot: NetworkAgentSnapshot?) {
-    // NetworkAgentClient already marshals store mutations onto the main queue.
-    // Keep this publish synchronous so renders triggered right after apply()
-    // observe the fresh snapshot instead of the previous value.
-    self.snapshot = snapshot
-    NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
+    let applyChange = {
+      self.snapshot = snapshot
+      NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
+    }
+
+    if Thread.isMainThread {
+      applyChange()
+      return
+    }
+
+    DispatchQueue.main.sync(execute: applyChange)
   }
 }

@@ -23,6 +23,7 @@ final class CalendarNativeWidget: NativeWidget {
   private let eventObserver = EasyBarEventObserver()
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
+  private var started = false
   private var startedCalendarAgent = false
   private var startedPopupMode: Config.CalendarPopupMode = .none
 
@@ -35,6 +36,9 @@ final class CalendarNativeWidget: NativeWidget {
 
   /// Starts the calendar widget.
   func start() {
+    guard !started else { return }
+    started = true
+
     let snapshot = currentSnapshot()
 
     NativeWidgetEventDriver.start(observer: eventObserver) { [weak self] payload in
@@ -61,18 +65,21 @@ final class CalendarNativeWidget: NativeWidget {
 
   /// Stops the calendar widget.
   func stop() {
+    guard started else { return }
+    started = false
+
     eventObserver.stop()
 
     if startedCalendarAgent {
       stopCalendarAgent()
+      NativeUpcomingCalendarStore.shared.clear()
+      NativeMonthCalendarStore.shared.clear()
     }
 
     startedCalendarAgent = false
     startedPopupMode = .none
 
     WidgetStore.shared.apply(root: rootID, nodes: [])
-    NativeUpcomingCalendarStore.shared.clear()
-    NativeMonthCalendarStore.shared.clear()
   }
 
   // MARK: - Publish

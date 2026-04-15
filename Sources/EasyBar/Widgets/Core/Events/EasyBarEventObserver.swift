@@ -14,13 +14,20 @@ final class EasyBarEventObserver {
     token = NotificationCenter.default.addObserver(
       forName: .easyBarEvent,
       object: nil,
-      queue: .main
+      queue: nil
     ) { notification in
       guard let payload = notification.object as? EasyBarEventPayload else {
         return
       }
 
-      handler(payload)
+      if Thread.isMainThread {
+        handler(payload)
+        return
+      }
+
+      DispatchQueue.main.async {
+        handler(payload)
+      }
     }
   }
 

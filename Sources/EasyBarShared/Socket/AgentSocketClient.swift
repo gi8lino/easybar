@@ -28,6 +28,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private var running = false
   private var reconnectWorkItem: DispatchWorkItem?
   private var nextReconnectDelayOverride: TimeInterval?
+  private var activeConnectionID: UInt64 = 0
 
   /// Creates one shared agent client transport.
   public init(
@@ -70,7 +71,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
   /// Returns whether the client currently has an open socket.
   public var isConnected: Bool {
-    withLock { socketFD >= 0 }
+    withLock { running && socketFD >= 0 }
   }
 
   /// Starts the client connection loop.
@@ -91,9 +92,11 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       running = false
       reconnectWorkItem?.cancel()
       reconnectWorkItem = nil
+      nextReconnectDelayOverride = nil
 
       let currentFD = socketFD
       socketFD = -1
+      activeConnectionID &+= 1
       return currentFD
     }
 
@@ -114,12 +117,12 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
   /// Sends one fresh subscribe request through the active socket.
   public func refresh() {
-    let currentFD = withLock { socketFD }
-    guard currentFD >= 0 else { return }
+    let connection = currentConnection()
+    guard connection.fd >= 0 else { return }
 
-    guard send(subscribeRequest(), to: currentFD) else {
+    guard send(subscribeRequest(), to: connection.fd) else {
       warnLog("\(label) failed to send refresh request")
-      handleDisconnect(fd: currentFD)
+      handleDisconnect(fd: connection.fd, connectionID: connection.id)
       return
     }
   }
@@ -135,26 +138,31 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
         return
       }
 
-      self.setConnectedSocketFD(fd)
+      guard let connectionID = self.activateConnectedSocketFD(fd) else {
+        shutdown(fd, SHUT_RDWR)
+        close(fd)
+        return
+      }
+
       self.onConnected?()
       self.infoLog("\(self.label) connected socket=\(resolvedSocketPath)")
 
       guard self.send(self.subscribeRequest(), to: fd) else {
         self.warnLog("\(self.label) failed to send subscribe request")
-        self.handleDisconnect(fd: fd)
+        self.handleDisconnect(fd: fd, connectionID: connectionID)
         return
       }
 
-      self.readLoop(fd: fd)
+      self.readLoop(fd: fd, connectionID: connectionID)
     }
   }
 
   /// Reads newline-delimited messages until the socket disconnects.
-  private func readLoop(fd: Int32) {
+  private func readLoop(fd: Int32, connectionID: UInt64) {
     var buffer = [UInt8](repeating: 0, count: 4096)
     var pending = Data()
 
-    while isRunning() {
+    while isActiveConnection(fd: fd, connectionID: connectionID) {
       let count = read(fd, &buffer, buffer.count)
 
       if count > 0 {
@@ -164,6 +172,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       if count == 0 {
+        flushPendingLine(&pending)
         break
       }
 
@@ -175,7 +184,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       break
     }
 
-    handleDisconnect(fd: fd)
+    handleDisconnect(fd: fd, connectionID: connectionID)
   }
 
   /// Decodes and handles one or more pending newline-delimited messages.
@@ -187,6 +196,13 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       guard !line.isEmpty else { continue }
       handleMessageData(Data(line))
     }
+  }
+
+  /// Decodes one trailing line without a terminating newline when present.
+  private func flushPendingLine(_ pending: inout Data) {
+    guard !pending.isEmpty else { return }
+    handleMessageData(pending)
+    pending.removeAll()
   }
 
   /// Decodes one message payload and forwards it to the caller.
@@ -202,11 +218,13 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   }
 
   /// Handles one socket disconnect and schedules reconnect when still running.
-  private func handleDisconnect(fd: Int32) {
-    clearConnectedSocketFD(fd)
+  private func handleDisconnect(fd: Int32, connectionID: UInt64) {
+    let wasActive = clearConnectedSocketFD(fd, connectionID: connectionID)
 
     shutdown(fd, SHUT_RDWR)
     close(fd)
+
+    guard wasActive else { return }
 
     clearState()
     onDisconnected?()
@@ -258,6 +276,20 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     withLock { running }
   }
 
+  /// Returns whether the given socket still belongs to the active connection.
+  private func isActiveConnection(fd: Int32, connectionID: UInt64) -> Bool {
+    withLock {
+      running && socketFD == fd && activeConnectionID == connectionID
+    }
+  }
+
+  /// Returns the current connection snapshot.
+  private func currentConnection() -> (fd: Int32, id: UInt64) {
+    withLock {
+      (socketFD, activeConnectionID)
+    }
+  }
+
   /// Opens and connects one Unix socket.
   private func openConnectedSocket(socketPath: String) -> Int32? {
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -290,18 +322,28 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     return fd
   }
 
-  /// Stores one connected socket descriptor.
-  private func setConnectedSocketFD(_ fd: Int32) {
+  /// Stores one connected socket descriptor and returns its connection id.
+  private func activateConnectedSocketFD(_ fd: Int32) -> UInt64? {
     withLock {
+      guard running else { return nil }
+
+      reconnectWorkItem?.cancel()
+      reconnectWorkItem = nil
       socketFD = fd
+      activeConnectionID &+= 1
+      return activeConnectionID
     }
   }
 
   /// Clears the current socket descriptor when it matches one disconnected client.
-  private func clearConnectedSocketFD(_ fd: Int32) {
+  private func clearConnectedSocketFD(_ fd: Int32, connectionID: UInt64) -> Bool {
     withLock {
-      guard socketFD == fd else { return }
+      guard socketFD == fd, activeConnectionID == connectionID else {
+        return false
+      }
+
       socketFD = -1
+      return true
     }
   }
 

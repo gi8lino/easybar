@@ -8,13 +8,13 @@ final class WiFiNativeWidget: NativeWidget {
 
   var appEventSubscriptions: Set<String> {
     [
-      AppEvent.networkChange.rawValue,
-      AppEvent.systemWoke.rawValue,
+      AppEvent.networkChange.rawValue
     ]
   }
 
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
+  private var started = false
   private var startedNetworkAgent = false
   private lazy var renderer = WiFiRenderer(rootID: rootID)
 
@@ -34,6 +34,9 @@ final class WiFiNativeWidget: NativeWidget {
 
   /// Starts the Wi-Fi widget.
   func start() {
+    guard !started else { return }
+    started = true
+
     let config = Config.shared.builtinWiFi
 
     NativeWidgetEventDriver.start(
@@ -59,6 +62,9 @@ final class WiFiNativeWidget: NativeWidget {
 
   /// Stops the Wi-Fi widget.
   func stop() {
+    guard started else { return }
+    started = false
+
     eventObserver.stop()
     isHovered = false
 
@@ -107,7 +113,7 @@ extension WiFiNativeWidget {
     guard let event = payload.appEvent else { return false }
 
     switch event {
-    case .networkChange, .systemWoke:
+    case .networkChange:
       publish()
       return true
     default:
