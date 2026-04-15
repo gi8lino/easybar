@@ -5,6 +5,8 @@ final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
 
   private let eventObserver = EasyBarEventObserver()
+  private let refreshQueue = DispatchQueue(label: "easybar.network-agent.refresh")
+  private var pendingWakeRefreshWorkItem: DispatchWorkItem?
 
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
@@ -51,6 +53,8 @@ final class NetworkAgentClient {
 
   /// Stops the network agent client.
   func stop() {
+    pendingWakeRefreshWorkItem?.cancel()
+    pendingWakeRefreshWorkItem = nil
     eventObserver.stop()
     client.stop()
   }
@@ -69,9 +73,22 @@ final class NetworkAgentClient {
       guard let event = payload.appEvent else { return }
       guard event == .systemWoke else { return }
 
-      easybarLog.debug("network agent client refreshing after system_woke")
-      self.client.refresh()
+      self.scheduleWakeRefresh()
     }
+  }
+
+  /// Coalesces wake-triggered refresh work into one refresh request.
+  private func scheduleWakeRefresh() {
+    pendingWakeRefreshWorkItem?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      easybarLog.debug("network agent client refreshing after system_woke")
+      self.refresh()
+    }
+
+    pendingWakeRefreshWorkItem = workItem
+    refreshQueue.asyncAfter(deadline: .now() + 0.20, execute: workItem)
   }
 
   /// Handles one decoded network agent message.
