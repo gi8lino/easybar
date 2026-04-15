@@ -34,8 +34,10 @@ extension AeroSpaceService {
 
   /// Starts the service.
   func start() {
+    easybarLog.debug("aerospace service start begin")
     subscribeAppSwitches()
     refresh()
+    easybarLog.debug("aerospace service start end")
   }
 
   /// Registers one widget that depends on AeroSpace state.
@@ -57,6 +59,8 @@ extension AeroSpaceService {
       easybarLog.debug("aerospace refresh skipped, no registered consumers")
       return
     }
+
+    easybarLog.debug("aerospace triggerRefresh queued consumers=\(consumers.count)")
 
     refreshQueue.async { [weak self] in
       self?.reloadState()
@@ -115,6 +119,13 @@ extension AeroSpaceService {
 
   /// Public refresh entry.
   func refresh() {
+    guard hasConsumers else {
+      easybarLog.debug("aerospace refresh skipped, no registered consumers")
+      return
+    }
+
+    easybarLog.debug("aerospace refresh queued consumers=\(consumers.count)")
+
     refreshQueue.async { [weak self] in
       self?.reloadState()
     }
@@ -143,6 +154,8 @@ extension AeroSpaceService {
 
       self.applyOptimisticFocusedApp(from: app)
     }
+
+    easybarLog.debug("aerospace app switch observer installed")
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
@@ -175,6 +188,8 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
   fileprivate func reloadState() {
+    easybarLog.debug("aerospace reloadState begin")
+
     let workspaces = loadWorkspaces()
     let windows = loadWindows()
     let groupedApps = Dictionary(grouping: windows, by: \.workspace)
@@ -203,6 +218,7 @@ extension AeroSpaceService {
       let layoutChanged = self.focusedLayoutMode != layoutMode
 
       guard spacesChanged || focusedAppChanged || focusedAppIDChanged || layoutChanged else {
+        easybarLog.debug("aerospace reloadState end without changes")
         return
       }
 
@@ -215,6 +231,8 @@ extension AeroSpaceService {
         logMessage:
           "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none") layout=\(layoutMode.rawValue)"
       )
+
+      easybarLog.debug("aerospace reloadState end with changes")
     }
   }
 }
@@ -348,7 +366,10 @@ extension AeroSpaceService {
 
   /// Runs the AeroSpace CLI.
   fileprivate func runAeroSpace(arguments: [String]) -> String? {
-    guard let executable = resolveAeroSpacePath() else { return nil }
+    guard let executable = resolveAeroSpacePath() else {
+      easybarLog.debug("aerospace executable not found")
+      return nil
+    }
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
@@ -367,6 +388,12 @@ extension AeroSpaceService {
     process.waitUntilExit()
 
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
+
+    if process.terminationStatus != 0 {
+      easybarLog.debug(
+        "aerospace command exited with status=\(process.terminationStatus) args=\(arguments.joined(separator: " "))"
+      )
+    }
 
     return String(data: data, encoding: .utf8)?
       .trimmingCharacters(in: .whitespacesAndNewlines)
