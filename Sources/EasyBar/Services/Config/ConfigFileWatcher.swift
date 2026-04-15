@@ -96,41 +96,25 @@ final class ConfigFileWatcher {
         return
       }
 
-      let reloadStart = Date()
       easybarLog.info("config watcher step=Config.reload")
       let reloadError = Config.shared.reload()
-      self.logSlowPhase(name: "Config.reload", startedAt: reloadStart)
 
-      let widgetRunnerStart = Date()
       easybarLog.info("config watcher step=WidgetRunner.reload")
       WidgetRunner.shared.reload()
-      self.logSlowPhase(name: "WidgetRunner.reload", startedAt: widgetRunnerStart)
 
-      let nativeRegistryStart = Date()
       easybarLog.info("config watcher step=NativeWidgetRegistry.reload")
       NativeWidgetRegistry.shared.reload()
-      self.logSlowPhase(
-        name: "NativeWidgetRegistry.reload",
-        startedAt: nativeRegistryStart
-      )
 
-      let aeroSpaceStart = Date()
       easybarLog.info("config watcher step=AeroSpaceService.triggerRefresh")
       AeroSpaceService.shared.triggerRefresh()
-      self.logSlowPhase(
-        name: "AeroSpaceService.triggerRefresh",
-        startedAt: aeroSpaceStart
-      )
 
       if let reloadError {
         easybarLog.warn("config watcher reload completed with error=\(reloadError)")
       }
 
       // Some editors replace the file atomically, so re-open the watcher.
-      let restartStart = Date()
       easybarLog.info("config watcher step=restart")
       self.restart()
-      self.logSlowPhase(name: "ConfigFileWatcher.restart", startedAt: restartStart)
     }
   }
 
@@ -146,18 +130,5 @@ final class ConfigFileWatcher {
     guard fileDescriptor >= 0 else { return }
     close(fileDescriptor)
     fileDescriptor = -1
-  }
-
-  /// Logs one phase duration when it looks unexpectedly slow.
-  private func logSlowPhase(
-    name: String,
-    startedAt: Date,
-    slowThreshold: TimeInterval = 0.1
-  ) {
-    let elapsed = Date().timeIntervalSince(startedAt)
-    guard elapsed >= slowThreshold else { return }
-
-    let milliseconds = Int((elapsed * 1000).rounded())
-    easybarLog.warn("slow config watcher phase phase=\(name) duration_ms=\(milliseconds)")
   }
 }
