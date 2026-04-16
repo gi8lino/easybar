@@ -1,11 +1,13 @@
 import AppKit
 import SwiftUI
 
+/// Presents a floating window that explains config load or reload failures.
 @MainActor
 final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   private var window: NSWindow?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
 
+  /// Presents the current config failure state in a dedicated floating window.
   func present(failureState: Config.LoadFailureState, configPath: String) {
     hostingController.rootView = AnyView(
       ConfigErrorContentView(
@@ -30,11 +32,13 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     NSApp.activate(ignoringOtherApps: true)
   }
 
+  /// Closes the config error window when it is currently shown.
   func close() {
     window?.close()
     reset()
   }
 
+  /// Builds the floating config error window shell.
   private func makeWindow() -> NSWindow {
     let window = NSWindow(
       contentRect: .zero,
@@ -61,6 +65,7 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     return window
   }
 
+  /// Centers the floating error window over the active window or main screen.
   private func center(window: NSWindow, size: CGSize) {
     if let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow {
       let parentFrame = parentWindow.frame
@@ -83,11 +88,13 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     }
   }
 
+  /// Resets all retained window/controller state after close.
   private func reset() {
     window = nil
     hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   }
 
+  /// Resets controller state when the user closes the window directly.
   func windowWillClose(_ notification: Notification) {
     reset()
   }
