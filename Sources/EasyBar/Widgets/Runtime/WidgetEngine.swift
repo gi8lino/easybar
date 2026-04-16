@@ -9,6 +9,7 @@ actor WidgetEngine {
   private let decoder = JSONDecoder()
 
   private var runtimeState = WidgetRuntimeState()
+  private var scriptedRoots = Set<String>()
   private var started = false
 
   /// Starts the scripted widget runtime.
@@ -38,12 +39,14 @@ actor WidgetEngine {
   func reload() async {
     easybarLog.debug("widget engine reload begin")
 
+    let rootsToClear = scriptedRoots
     await shutdown()
 
     await MainActor.run {
-      WidgetStore.shared.clear()
+      WidgetStore.shared.clear(roots: rootsToClear)
     }
 
+    scriptedRoots.removeAll()
     await start()
 
     easybarLog.debug("widget engine reload end")
@@ -62,7 +65,7 @@ actor WidgetEngine {
     runtimeState.reset()
 
     await MainActor.run {
-      EventManager.shared.stopAll()
+      EventManager.shared.stopLuaSubscriptions()
     }
 
     await LuaRuntime.shared.shutdown()
@@ -169,6 +172,7 @@ actor WidgetEngine {
       return
     }
 
+    scriptedRoots.insert(tree.root)
     easybarLog.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
     MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
 

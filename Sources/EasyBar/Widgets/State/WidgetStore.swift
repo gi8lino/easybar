@@ -25,6 +25,20 @@ final class WidgetStore: ObservableObject {
     nodes = []
   }
 
+  func clear(roots: Set<String>) {
+    guard !roots.isEmpty else { return }
+
+    for root in roots {
+      for id in existingIDs(for: root) {
+        nodeMap.removeValue(forKey: id)
+      }
+
+      rootIndex.removeValue(forKey: root)
+    }
+
+    nodes = nodeMap.values.sorted(by: sortNodes)
+  }
+
   func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
     sortedPublishedNodes {
       $0.isTopLevel && $0.position == position

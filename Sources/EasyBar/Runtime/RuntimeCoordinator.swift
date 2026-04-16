@@ -132,11 +132,6 @@ actor RuntimeCoordinator {
     easybarLog.info("restartLuaRuntime begin")
 
     await widgetEngine.reload()
-
-    await MainActor.run {
-      NativeWidgetRegistry.shared.reload()
-    }
-
     aeroSpaceService.triggerRefresh()
 
     easybarLog.info("restartLuaRuntime end")

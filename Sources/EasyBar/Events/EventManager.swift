@@ -26,6 +26,13 @@ final class EventManager {
     setLuaSubscriptions(subscriptions)
   }
 
+  /// Stops only Lua-owned event subscriptions while preserving native ones.
+  func stopLuaSubscriptions() {
+    guard !luaSubscriptions.isEmpty else { return }
+    luaSubscriptions.removeAll()
+    refresh()
+  }
+
   /// Stops all active native event sources and clears every subscription source.
   func stopAll() {
     easybarLog.debug("event manager stopAll begin")
