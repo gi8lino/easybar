@@ -1,36 +1,28 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 final class WidgetStore: ObservableObject {
-
   static let shared = WidgetStore()
 
   @Published private(set) var nodes: [WidgetNodeState] = []
 
-  private let stateQueue = DispatchQueue(label: "easybar.widget-store.state")
   private var nodeMap: [String: WidgetNodeState] = [:]
   private var rootIndex: [String: Set<String>] = [:]
 
   func apply(root: String, nodes updates: [WidgetNodeState]) {
-    let renderedNodes = stateQueue.sync { () -> [WidgetNodeState] in
-      for id in existingIDs(for: root) {
-        nodeMap.removeValue(forKey: id)
-      }
-
-      rootIndex[root] = storeNodes(updates)
-      return nodeMap.values.sorted(by: sortNodes)
+    for id in existingIDs(for: root) {
+      nodeMap.removeValue(forKey: id)
     }
 
-    publish(nodes: renderedNodes)
+    rootIndex[root] = storeNodes(updates)
+    nodes = nodeMap.values.sorted(by: sortNodes)
   }
 
   func clear() {
-    stateQueue.sync {
-      nodeMap.removeAll()
-      rootIndex.removeAll()
-    }
-
-    publish(nodes: [])
+    nodeMap.removeAll()
+    rootIndex.removeAll()
+    nodes = []
   }
 
   func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
@@ -93,17 +85,5 @@ final class WidgetStore: ObservableObject {
     nodes
       .filter(predicate)
       .sorted(by: sortNodes)
-  }
-
-  /// Publishes the current rendered nodes on the main queue.
-  private func publish(nodes: [WidgetNodeState]) {
-    if Thread.isMainThread {
-      self.nodes = nodes
-      return
-    }
-
-    DispatchQueue.main.async {
-      self.nodes = nodes
-    }
   }
 }

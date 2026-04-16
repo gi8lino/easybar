@@ -3,6 +3,7 @@ import EasyBarShared
 import SwiftUI
 
 /// Hosts the top-level borderless bar window.
+@MainActor
 final class BarWindowController: NSWindowController {
   var onRefresh: (() -> Void)?
   var onReloadConfig: (() -> Void)?
@@ -65,14 +66,6 @@ final class BarWindowController: NSWindowController {
 
   /// Reapplies the configured frame and root view after a config reload.
   func reloadLayout() {
-    if !Thread.isMainThread {
-      easybarLog.warn("bar window reloadLayout invoked off main thread; redispatching to main")
-      DispatchQueue.main.async { [weak self] in
-        self?.reloadLayout()
-      }
-      return
-    }
-
     guard let window else {
       easybarLog.warn("bar window reloadLayout skipped because window is unavailable")
       return
@@ -97,14 +90,6 @@ final class BarWindowController: NSWindowController {
 
   /// Shows the panel without asking AppKit to make it key.
   func present() {
-    if !Thread.isMainThread {
-      easybarLog.warn("bar window present invoked off main thread; redispatching to main")
-      DispatchQueue.main.async { [weak self] in
-        self?.present()
-      }
-      return
-    }
-
     guard let window else {
       easybarLog.warn("bar window present skipped because window is unavailable")
       return
@@ -258,10 +243,6 @@ final class BarWindowController: NSWindowController {
   }
 
   /// Returns the current calendar permission label.
-  ///
-  /// Both calendar popups use the same calendar agent, so prefer whichever
-  /// store already has a snapshot. If both are available and disagree, show
-  /// the more informative non-unknown value first.
   private var calendarPermissionLabel: String {
     let upcoming = NativeUpcomingCalendarStore.shared.snapshot?.permissionState
     let month = NativeMonthCalendarStore.shared.snapshot?.permissionState

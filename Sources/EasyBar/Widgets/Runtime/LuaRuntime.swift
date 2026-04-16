@@ -1,13 +1,11 @@
 import Foundation
 
-/// Facade for the Lua runtime used by scripted widgets.
+/// Actor-owned facade for the Lua runtime used by scripted widgets.
 ///
 /// Process lifecycle, transport, and log routing are split into dedicated helpers.
-final class LuaRuntime {
-
+actor LuaRuntime {
   static let shared = LuaRuntime()
 
-  private let lifecycleQueue = DispatchQueue(label: "easybar.lua.runtime.lifecycle")
   private let processController = LuaProcessController()
   private let transport = LuaTransport()
 
@@ -20,21 +18,23 @@ final class LuaRuntime {
 
   /// Starts the Lua runtime if it is not already running.
   func start() {
-    lifecycleQueue.sync {
-      guard let result = processController.start() else { return }
+    guard let result = processController.start() else { return }
 
-      attachAndStartTransport(result)
-      MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.process.processIdentifier)
-    }
+    attachAndStartTransport(result)
+    MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.process.processIdentifier)
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.
   func shutdown() {
-    lifecycleQueue.sync {
-      MetricsCoordinator.shared.recordLuaRuntimeStopped()
-      transport.shutdown()
-      processController.shutdown()
-    }
+    MetricsCoordinator.shared.recordLuaRuntimeStopped()
+    transport.shutdown()
+    processController.shutdown()
+  }
+
+  /// Restarts the Lua runtime.
+  func restart() {
+    shutdown()
+    start()
   }
 
   /// Sends one encoded event line to the Lua runtime stdin.

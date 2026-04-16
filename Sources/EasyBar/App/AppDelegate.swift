@@ -2,17 +2,11 @@ import AppKit
 import EasyBarShared
 import Foundation
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private var barWindowController: BarWindowController?
   private let configErrorWindowController = ConfigErrorWindowController()
-  private let aeroSpaceService = AeroSpaceService.shared
-  private let socketServer = SocketServer()
-  private let metricsCoordinator = MetricsCoordinator.shared
-  private let configFileWatcher = ConfigFileWatcher.shared
   private let instanceGuard = SingleInstanceGuard()
-
-  private var isReloadingConfig = false
-  private var queuedConfigReload = false
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     switch instanceGuard.acquireLock(
@@ -33,32 +27,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       terminateApplication()
     }
 
+    RuntimeUIBridge.shared.appDelegate = self
+
     NSApp.setActivationPolicy(.accessory)
-    configureLogging()
 
     logStartup()
     validateRequiredFonts()
     installWidgetEditorStub()
     setupBarWindowController()
-    configFileWatcher.onConfigFileChange = { [weak self] in
-      self?.dispatchToMain(reason: "config file watcher change") {
-        self?.reloadConfig()
-      }
-    }
     updateConfigErrorWindow()
-    startRuntimeServices()
-    startSocketServer()
+
+    Task {
+      await RuntimeCoordinator.shared.start()
+    }
   }
 
   func applicationWillTerminate(_ notification: Notification) {
     easybarLog.info("easybar shutting down")
 
-    metricsCoordinator.onSnapshot = nil
-    socketServer.stop()
-    configFileWatcher.onConfigFileChange = nil
-    configFileWatcher.stop()
-    NativeWidgetRegistry.shared.stop()
-    WidgetRunner.shared.shutdown()
+    Task {
+      await RuntimeCoordinator.shared.stop()
+    }
   }
 
   /// Terminates the application immediately.
@@ -67,249 +56,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     fatalError("Application should have terminated")
   }
 
-  /// Runs one block on the main thread.
-  private func dispatchToMain(reason: String, _ block: @escaping () -> Void) {
-    if Thread.isMainThread {
-      block()
-      return
-    }
-
-    easybarLog.warn("redispatching work to main thread reason=\(reason)")
-    DispatchQueue.main.async(execute: block)
-  }
-
-  /// Reloads config and reapplies all dependent runtime state.
-  private func reloadConfig() {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "reloadConfig") { [weak self] in
-        self?.reloadConfig()
-      }
-      return
-    }
-
-    if isReloadingConfig {
-      queuedConfigReload = true
-      easybarLog.info("reloadConfig already in progress; queueing another reload")
-      return
-    }
-
-    isReloadingConfig = true
-    easybarLog.info("reloadConfig begin")
-
-    easybarLog.info("reloadConfig step=config.reload")
-    let reloadError = Config.shared.reload()
-
-    easybarLog.info("reloadConfig step=configureLogging")
-    configureLogging()
-
-    easybarLog.info("reloadConfig step=installWidgetEditorStub")
-    installWidgetEditorStub()
-
-    easybarLog.info("reloadConfig step=barWindowController.reloadLayout")
-    barWindowController?.reloadLayout()
-
-    easybarLog.info("reloadConfig step=reloadRuntimeServices")
-    reloadRuntimeServices()
-
-    easybarLog.info("reloadConfig step=configFileWatcher.restart")
-    configFileWatcher.restart()
-
-    easybarLog.info("reloadConfig step=aeroSpaceService.triggerRefresh")
-    aeroSpaceService.triggerRefresh()
-
-    if let reloadError {
-      easybarLog.warn("config reload window presented error=\(reloadError)")
-    }
-
-    easybarLog.info("reloadConfig step=updateConfigErrorWindow")
-    updateConfigErrorWindow()
-
-    easybarLog.info("reloadConfig end")
-    isReloadingConfig = false
-
-    if queuedConfigReload {
-      queuedConfigReload = false
-      DispatchQueue.main.async { [weak self] in
-        self?.reloadConfig()
-      }
-    }
-  }
-
-  /// Restarts only the Lua runtime without reloading config.
-  private func restartLuaRuntime() {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "restartLuaRuntime") { [weak self] in
-        self?.restartLuaRuntime()
-      }
-      return
-    }
-
-    easybarLog.info("restartLuaRuntime begin")
-    WidgetRunner.shared.reload()
-    aeroSpaceService.triggerRefresh()
-    easybarLog.info("restartLuaRuntime end")
-  }
-
-  /// Refreshes the current runtime state without reloading config.
-  ///
-  /// This keeps the current config, refreshes app-coordinated state,
-  /// refreshes agent-backed widget data through emitted events, and
-  /// notifies Lua widgets with the manual refresh event.
-  private func refreshRuntime() {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "refreshRuntime") { [weak self] in
-        self?.refreshRuntime()
-      }
-      return
-    }
-
-    easybarLog.info("refreshRuntime begin")
-    aeroSpaceService.triggerRefresh()
-    EventBus.shared.emit(.manualRefresh)
-    easybarLog.info("refreshRuntime end")
-  }
-
-  /// Configures file logging from the current app config.
-  private func configureLogging() {
-    easybarLog.configureRuntimeLogging(
-      minimumLevel: Config.shared.loggingLevel,
-      fileLoggingEnabled: Config.shared.loggingEnabled,
-      fileLoggingPath: easyBarLogPath(in: Config.shared.loggingDirectory)
-    )
-  }
-
   /// Creates and presents the main bar window controller.
   private func setupBarWindowController() {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "setupBarWindowController") { [weak self] in
-        self?.setupBarWindowController()
-      }
-      return
-    }
-
     let controller = BarWindowController()
-    controller.onRefresh = { [weak self] in
-      self?.refreshRuntime()
+    controller.onRefresh = {
+      Task {
+        await RuntimeCoordinator.shared.refreshRuntime()
+      }
     }
-    controller.onReloadConfig = { [weak self] in
-      self?.reloadConfig()
+    controller.onReloadConfig = {
+      Task {
+        await RuntimeCoordinator.shared.reloadConfig()
+      }
     }
-    controller.onRestartLuaRuntime = { [weak self] in
-      self?.restartLuaRuntime()
+    controller.onRestartLuaRuntime = {
+      Task {
+        await RuntimeCoordinator.shared.restartLuaRuntime()
+      }
     }
     controller.present()
     barWindowController = controller
   }
 
-  /// Starts the shared runtime services used by the app.
-  private func startRuntimeServices() {
-    easybarLog.info("startRuntimeServices begin")
-    aeroSpaceService.start()
-    WidgetRunner.shared.start()
-    NativeWidgetRegistry.shared.start()
-    configFileWatcher.start()
-    easybarLog.info("startRuntimeServices end")
+  /// Called by the runtime bridge to reload the bar layout.
+  func reloadBarLayoutFromRuntime() {
+    installWidgetEditorStub()
+    barWindowController?.reloadLayout()
   }
 
-  /// Reloads the Lua and native widget runtime services.
-  private func reloadRuntimeServices() {
-    easybarLog.info("reloadRuntimeServices begin")
-
-    easybarLog.info("reloadRuntimeServices step=WidgetRunner.reload")
-    WidgetRunner.shared.reload()
-
-    easybarLog.info("reloadRuntimeServices step=NativeWidgetRegistry.reload")
-    NativeWidgetRegistry.shared.reload()
-
-    easybarLog.info("reloadRuntimeServices end")
-  }
-
-  /// Starts the IPC server used by easybar and external triggers.
-  private func startSocketServer() {
-    metricsCoordinator.onSnapshot = { [weak self] snapshot in
-      self?.socketServer.broadcastMetrics(snapshot)
-    }
-
-    socketServer.start { [weak self] command in
-      self?.dispatchToMain(reason: "socket command \(command)") {
-        self?.handleSocketCommand(command)
-      }
-    }
-  }
-
-  /// Handles one incoming IPC command from the socket server.
-  private func handleSocketCommand(_ command: IPC.Command) {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "handleSocketCommand \(command)") { [weak self] in
-        self?.handleSocketCommand(command)
-      }
-      return
-    }
-
-    easybarLog.info("handleSocketCommand command=\(command)")
-
-    switch command {
-    case .workspaceChanged:
-      handleWorkspaceChanged()
-
-    case .focusChanged:
-      handleFocusChanged()
-
-    case .spaceModeChanged:
-      handleSpaceModeChanged()
-
-    case .manualRefresh:
-      handleManualRefresh()
-
-    case .reloadConfig:
-      reloadConfig()
-
-    case .restartLuaRuntime:
-      restartLuaRuntime()
-
-    case .metrics:
-      break
-    }
-  }
-
-  /// Handles one workspace-changed IPC trigger.
-  private func handleWorkspaceChanged() {
-    easybarLog.info("handleWorkspaceChanged begin")
-    aeroSpaceService.triggerRefresh()
-    EventBus.shared.emit(.workspaceChange)
-    easybarLog.info("handleWorkspaceChanged end")
-  }
-
-  /// Handles one focus-changed IPC trigger.
-  private func handleFocusChanged() {
-    easybarLog.info("handleFocusChanged begin")
-    aeroSpaceService.triggerRefresh()
-    EventBus.shared.emit(.focusChange)
-    easybarLog.info("handleFocusChanged end")
-  }
-
-  /// Handles one space-mode-changed IPC trigger.
-  private func handleSpaceModeChanged() {
-    easybarLog.info("handleSpaceModeChanged begin")
-    aeroSpaceService.triggerRefresh()
-    EventBus.shared.emit(.spaceModeChange)
-    easybarLog.info("handleSpaceModeChanged end")
-  }
-
-  /// Handles one manual-refresh IPC trigger.
-  private func handleManualRefresh() {
-    refreshRuntime()
+  /// Called by the runtime bridge to keep the config error window in sync.
+  func updateConfigErrorWindowFromRuntime() {
+    updateConfigErrorWindow()
   }
 
   /// Keeps the config error window in sync with the last known load result.
   private func updateConfigErrorWindow() {
-    guard Thread.isMainThread else {
-      dispatchToMain(reason: "updateConfigErrorWindow") { [weak self] in
-        self?.updateConfigErrorWindow()
-      }
-      return
-    }
-
     guard let failureState = Config.shared.loadFailureState else {
       configErrorWindowController.close()
       return

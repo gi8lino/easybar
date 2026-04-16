@@ -1,154 +1,45 @@
 import Foundation
 
-/// Watches config.toml for changes and reloads EasyBar automatically.
+/// Legacy compatibility façade for config watching.
+///
+/// The real watcher ownership now lives in the actor-based `FileWatcher`.
 final class ConfigFileWatcher {
-
   static let shared = ConfigFileWatcher()
 
-  private let queue = DispatchQueue(label: "easybar.config-watcher")
-  private var fileDescriptor: CInt = -1
-  private var source: DispatchSourceFileSystemObject?
-  private var debounceWorkItem: DispatchWorkItem?
-  private var reloadInFlight = false
-  private var reloadQueued = false
   var onConfigFileChange: (() -> Void)?
+
+  private var task: Task<Void, Never>?
 
   private init() {}
 
-  /// Starts watching the config file if enabled.
+  /// Starts watching using the actor-based watcher.
   func start() {
     stop()
 
-    guard Config.shared.watchConfigFile else {
-      easybarLog.debug("config file watcher disabled")
-      return
+    task = Task { [weak self] in
+      guard let self else { return }
+
+      let enabled = await ConfigManager.shared.watchConfigFileEnabled()
+      let path = await ConfigManager.shared.configPath()
+      let stream = await FileWatcher().start(configPath: path, enabled: enabled)
+
+      for await _ in stream {
+        await MainActor.run {
+          self.onConfigFileChange?()
+        }
+      }
     }
-
-    let path = Config.shared.configPath
-    guard let descriptor = openDescriptor(path: path) else {
-      easybarLog.warn("failed to watch config file at \(path)")
-      return
-    }
-
-    fileDescriptor = descriptor
-
-    let source = DispatchSource.makeFileSystemObjectSource(
-      fileDescriptor: descriptor,
-      eventMask: [.write, .delete, .rename, .attrib, .extend],
-      queue: queue
-    )
-
-    // Reload after a short debounce so editors can finish writing.
-    source.setEventHandler { [weak self] in
-      self?.scheduleReload()
-    }
-
-    source.setCancelHandler { [weak self] in
-      self?.closeDescriptor()
-    }
-
-    self.source = source
-    source.resume()
-
-    easybarLog.debug("config file watcher started path=\(path)")
   }
 
-  /// Restarts the watcher after config reload or file replacement.
+  /// Restarts watching.
   func restart() {
     stop()
     start()
   }
 
-  /// Stops watching the config file.
+  /// Stops watching.
   func stop() {
-    debounceWorkItem?.cancel()
-    debounceWorkItem = nil
-    reloadQueued = false
-
-    source?.cancel()
-    source = nil
-    closeDescriptor()
-  }
-
-  /// Schedules one debounced reload.
-  private func scheduleReload() {
-    debounceWorkItem?.cancel()
-
-    let work = DispatchWorkItem { [weak self] in
-      self?.performReload()
-    }
-
-    debounceWorkItem = work
-    queue.asyncAfter(deadline: .now() + 0.20, execute: work)
-  }
-
-  /// Reloads config and refreshes all dependent systems.
-  ///
-  /// The watcher stays off the main queue until the moment UI/runtime apply work
-  /// must happen. This keeps file-system events and debounce handling lightweight.
-  private func performReload() {
-    guard !reloadInFlight else {
-      reloadQueued = true
-      easybarLog.info("config file changed while reload is active; queueing another reload")
-      return
-    }
-
-    reloadInFlight = true
-    easybarLog.info("config file changed, scheduling reload")
-
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-
-      easybarLog.info("config file changed, reloading on main thread")
-
-      if let onConfigFileChange = self.onConfigFileChange {
-        onConfigFileChange()
-      } else {
-        easybarLog.info("config watcher step=Config.reload")
-        let reloadError = Config.shared.reload()
-
-        easybarLog.info("config watcher step=WidgetRunner.reload")
-        WidgetRunner.shared.reload()
-
-        easybarLog.info("config watcher step=NativeWidgetRegistry.reload")
-        NativeWidgetRegistry.shared.reload()
-
-        easybarLog.info("config watcher step=AeroSpaceService.triggerRefresh")
-        AeroSpaceService.shared.triggerRefresh()
-
-        if let reloadError {
-          easybarLog.warn("config watcher reload completed with error=\(reloadError)")
-        }
-
-        // Some editors replace the file atomically, so re-open the watcher.
-        easybarLog.info("config watcher step=restart")
-        self.restart()
-      }
-
-      self.queue.async { [weak self] in
-        guard let self else { return }
-
-        self.reloadInFlight = false
-
-        if self.reloadQueued {
-          self.reloadQueued = false
-          self.scheduleReload()
-        }
-      }
-    }
-  }
-
-  /// Opens the config file for filesystem event watching.
-  private func openDescriptor(path: String) -> CInt? {
-    let descriptor = open(path, O_EVTONLY)
-    guard descriptor >= 0 else { return nil }
-    return descriptor
-  }
-
-  /// Closes the watched file descriptor when present.
-  private func closeDescriptor() {
-    guard fileDescriptor >= 0 else { return }
-    close(fileDescriptor)
-    fileDescriptor = -1
+    task?.cancel()
+    task = nil
   }
 }
