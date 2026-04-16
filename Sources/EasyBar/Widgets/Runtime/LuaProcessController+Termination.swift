@@ -15,20 +15,18 @@ private let easyBarLuaTerminationGracePeriod: DispatchTimeInterval = .millisecon
 
 /// Terminates the Lua runtime process.
 ///
-/// When a dedicated process group is available, EasyBar signals the whole Lua
-/// process group so any children created by the Lua runtime are cleaned up too.
-/// Otherwise it falls back to the direct child process.
+/// EasyBar signals the whole Lua process group so any children created by the
+/// Lua runtime are cleaned up too. If the process group identifier is missing,
+/// it falls back to the direct child process identifier.
 func easyBarTerminateLuaProcess(
-  _ process: Process?,
+  processIdentifier: Int32?,
   processGroupIdentifier: Int32?
 ) {
-  guard let process else { return }
-  guard process.isRunning else { return }
+  guard let processIdentifier else { return }
+  guard easyBarProcessIsRunning(processIdentifier) else { return }
 
   easyBarLuaForcedKillWorkItem?.cancel()
   easyBarLuaForcedKillWorkItem = nil
-
-  let processIdentifier = process.processIdentifier
 
   if let processGroupIdentifier, processGroupIdentifier > 0 {
     easybarLog.debug(
@@ -37,11 +35,11 @@ func easyBarTerminateLuaProcess(
     kill(-processGroupIdentifier, SIGTERM)
   } else {
     easybarLog.debug("sending SIGTERM to lua process pid=\(processIdentifier)")
-    process.terminate()
+    kill(processIdentifier, SIGTERM)
   }
 
   let workItem = DispatchWorkItem {
-    guard process.isRunning else { return }
+    guard easyBarProcessIsRunning(processIdentifier) else { return }
 
     if let processGroupIdentifier, processGroupIdentifier > 0 {
       easybarLog.warn(
@@ -59,4 +57,13 @@ func easyBarTerminateLuaProcess(
     deadline: .now() + easyBarLuaTerminationGracePeriod,
     execute: workItem
   )
+}
+
+/// Returns whether the given process identifier still exists.
+private func easyBarProcessIsRunning(_ processIdentifier: Int32) -> Bool {
+  if kill(processIdentifier, 0) == 0 {
+    return true
+  }
+
+  return errno == EPERM
 }

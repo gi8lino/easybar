@@ -84,10 +84,14 @@ actor RuntimeCoordinator {
 
     await MainActor.run {
       AppController.shared.handlePostConfigReloadUI()
-      NativeWidgetRegistry.shared.reload()
     }
 
     await widgetEngine.reload()
+
+    await MainActor.run {
+      NativeWidgetRegistry.shared.reload()
+    }
+
     await restartFileWatcher()
 
     aeroSpaceService.triggerRefresh()
@@ -105,11 +109,18 @@ actor RuntimeCoordinator {
     }
   }
 
-  /// Restarts only the Lua and widget runtime.
+  /// Restarts the Lua/widget runtime and reapplies native widgets afterward.
   func restartLuaRuntime() async {
     easybarLog.info("restartLuaRuntime begin")
+
     await widgetEngine.reload()
+
+    await MainActor.run {
+      NativeWidgetRegistry.shared.reload()
+    }
+
     aeroSpaceService.triggerRefresh()
+
     easybarLog.info("restartLuaRuntime end")
   }
 

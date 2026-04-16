@@ -31,14 +31,14 @@ actor LuaRuntime {
     )
     transport.startReading()
 
-    MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.process.processIdentifier)
+    MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.
-  func shutdown() {
+  func shutdown() async {
     MetricsCoordinator.shared.recordLuaRuntimeStopped()
     transport.shutdown()
-    processController.shutdown()
+    await processController.shutdownAndWait()
   }
 
   /// Sends one encoded event line to the Lua runtime stdin.
