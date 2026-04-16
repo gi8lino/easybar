@@ -1,6 +1,7 @@
 import Foundation
 
 /// Native AeroSpace layout-mode widget backed by `AeroSpaceService` state.
+@MainActor
 final class AeroSpaceModeNativeWidget: NativeWidget {
 
   let rootID = "builtin_aerospace_mode"

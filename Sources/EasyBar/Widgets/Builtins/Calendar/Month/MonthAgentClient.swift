@@ -132,7 +132,7 @@ final class MonthCalendarAgentClient {
           socketPath: socketPath
         )
 
-        DispatchQueue.main.async {
+        Task { @MainActor in
           switch response.kind {
           case successKind:
             self.refresh()
@@ -152,7 +152,7 @@ final class MonthCalendarAgentClient {
           }
         }
       } catch {
-        DispatchQueue.main.async {
+        Task { @MainActor in
           easybarLog.error("month calendar mutation failed error=\(error)")
           completion(false, error.localizedDescription)
         }

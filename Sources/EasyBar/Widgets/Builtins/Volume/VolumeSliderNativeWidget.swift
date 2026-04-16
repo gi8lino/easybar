@@ -2,6 +2,7 @@ import CoreAudio
 import Foundation
 
 /// Native volume widget with optional inline expansion.
+@MainActor
 final class VolumeSliderNativeWidget: NativeWidget {
 
   let rootID = "builtin_volume"

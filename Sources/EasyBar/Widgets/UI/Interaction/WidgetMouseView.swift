@@ -3,7 +3,6 @@ import SwiftUI
 
 /// AppKit-backed event surface for widget mouse input.
 struct WidgetMouseView: NSViewRepresentable {
-
   let widgetID: String
   let targetWidgetID: String
   let tracksHover: Bool
@@ -32,7 +31,6 @@ struct WidgetMouseView: NSViewRepresentable {
 }
 
 final class MouseTrackingNSView: NSView {
-
   var widgetID: String = ""
   var targetWidgetID: String = ""
   var tracksHover = true
@@ -117,14 +115,16 @@ final class MouseTrackingNSView: NSView {
 
     easybarLog.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
 
-    EventBus.shared.emitWidgetEvent(
-      .mouseScrolled,
-      widgetID: widgetID,
-      targetWidgetID: targetWidgetID,
-      direction: direction,
-      deltaX: Double(event.scrollingDeltaX),
-      deltaY: Double(event.scrollingDeltaY)
-    )
+    Task {
+      await EventHub.shared.emitWidgetEvent(
+        .mouseScrolled,
+        widgetID: widgetID,
+        targetWidgetID: targetWidgetID,
+        direction: direction,
+        deltaX: Double(event.scrollingDeltaX),
+        deltaY: Double(event.scrollingDeltaY)
+      )
+    }
   }
 
   /// Replaces the current tracking area with the standard widget mouse options.
@@ -173,19 +173,21 @@ final class MouseTrackingNSView: NSView {
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
     easybarLog.debug(
-      "event=\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)")
-
-    EventBus.shared.emitWidgetEvent(
-      event,
-      widgetID: widgetID,
-      targetWidgetID: targetWidgetID,
-      button: button
+      "event=\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)"
     )
+
+    Task {
+      await EventHub.shared.emitWidgetEvent(
+        event,
+        widgetID: widgetID,
+        targetWidgetID: targetWidgetID,
+        button: button
+      )
+    }
   }
 }
 
 private final class HoverState {
-
   private let lock = NSLock()
   private var hoveredWidgetIDs = Set<String>()
   private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]

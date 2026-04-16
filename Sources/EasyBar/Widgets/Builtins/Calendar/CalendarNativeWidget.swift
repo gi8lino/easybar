@@ -7,6 +7,7 @@ import Foundation
 /// - agent lifecycle
 /// - snapshot creation
 /// - delegating rendering
+@MainActor
 final class CalendarNativeWidget: NativeWidget {
 
   let rootID = "builtin_calendar"

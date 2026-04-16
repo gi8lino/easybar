@@ -106,15 +106,24 @@ extension WidgetNodeView {
 
   func emitNodeHoverEvent(_ hovering: Bool) {
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
-    EventBus.shared.emitWidgetEvent(event, widgetID: node.root, targetWidgetID: node.id)
+
+    Task {
+      await EventHub.shared.emitWidgetEvent(
+        event,
+        widgetID: node.root,
+        targetWidgetID: node.id
+      )
+    }
   }
 
   func emitNodeClickEvent() {
-    EventBus.shared.emitWidgetEvent(
-      .mouseClicked,
-      widgetID: node.root,
-      targetWidgetID: node.id,
-      button: .left
-    )
+    Task {
+      await EventHub.shared.emitWidgetEvent(
+        .mouseClicked,
+        widgetID: node.root,
+        targetWidgetID: node.id,
+        button: .left
+      )
+    }
   }
 }

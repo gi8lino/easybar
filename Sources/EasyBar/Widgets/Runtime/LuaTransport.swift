@@ -2,7 +2,6 @@ import Foundation
 
 /// Handles stdin/stdout/stderr transport for the Lua runtime process.
 final class LuaTransport {
-
   private let stateQueue = DispatchQueue(label: "easybar.lua.transport.state")
   private let writeQueue = DispatchQueue(label: "easybar.lua.transport.write")
   private let logBridge = LuaLogBridge()
@@ -13,8 +12,15 @@ final class LuaTransport {
   private(set) var outputPipe: Pipe?
   private(set) var errorPipe: Pipe?
 
+  private var stdoutHandler: (@Sendable (String) -> Void)?
+
   /// Attaches the transport to the given process pipes.
-  func attach(input: Pipe, output: Pipe, error: Pipe) {
+  func attach(
+    input: Pipe,
+    output: Pipe,
+    error: Pipe,
+    stdoutHandler: @escaping @Sendable (String) -> Void
+  ) {
     stateQueue.sync {
       stopReadabilityHandler(for: outputPipe)
       stopReadabilityHandler(for: errorPipe)
@@ -22,6 +28,7 @@ final class LuaTransport {
       inputPipe = input
       outputPipe = output
       errorPipe = error
+      self.stdoutHandler = stdoutHandler
       generation &+= 1
     }
   }
@@ -30,7 +37,11 @@ final class LuaTransport {
   func startReading() {
     stateQueue.sync {
       let currentGeneration = generation
-      installOutputReadabilityHandler(generation: currentGeneration)
+      let currentStdoutHandler = stdoutHandler
+      installOutputReadabilityHandler(
+        generation: currentGeneration,
+        stdoutHandler: currentStdoutHandler
+      )
       installErrorReadabilityHandler(generation: currentGeneration)
     }
   }
@@ -48,6 +59,7 @@ final class LuaTransport {
       inputPipe = nil
       outputPipe = nil
       errorPipe = nil
+      stdoutHandler = nil
 
       return current
     }
@@ -83,13 +95,16 @@ final class LuaTransport {
   }
 
   /// Installs the stdout handler used for structured JSON widget updates.
-  private func installOutputReadabilityHandler(generation: UInt64) {
+  private func installOutputReadabilityHandler(
+    generation: UInt64,
+    stdoutHandler: (@Sendable (String) -> Void)?
+  ) {
     guard let pipe = outputPipe else { return }
 
     installReadabilityHandler(on: pipe, generation: generation) { line in
       MetricsCoordinator.shared.recordLuaStdoutLine()
       easybarLog.debug("lua stdout raw: \(line)")
-      NotificationCenter.default.post(name: .easyBarLuaStdout, object: line)
+      stdoutHandler?(line)
     }
   }
 
@@ -175,8 +190,4 @@ final class LuaTransport {
   private func closeReadPipe(_ pipe: Pipe?) {
     try? pipe?.fileHandleForReading.close()
   }
-}
-
-extension Notification.Name {
-  static let easyBarLuaStdout = Notification.Name("easybar.lua.stdout")
 }

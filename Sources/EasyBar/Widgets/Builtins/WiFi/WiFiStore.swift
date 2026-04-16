@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+@MainActor
 final class NativeWiFiStore: ObservableObject {
   static let shared = NativeWiFiStore()
   static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")
@@ -59,18 +60,9 @@ final class NativeWiFiStore: ObservableObject {
     )
   }
 
-  /// Publishes one snapshot change on the main queue.
+  /// Publishes one snapshot change.
   private func publish(snapshot: NetworkAgentSnapshot?) {
-    let applyChange = {
-      self.snapshot = snapshot
-      NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
-    }
-
-    if Thread.isMainThread {
-      applyChange()
-      return
-    }
-
-    DispatchQueue.main.sync(execute: applyChange)
+    self.snapshot = snapshot
+    NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
   }
 }

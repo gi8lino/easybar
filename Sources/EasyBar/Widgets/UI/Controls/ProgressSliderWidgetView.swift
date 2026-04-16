@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ProgressSliderWidgetView: View {
-
   let rootWidgetID: String
   let minValue: Double
   let maxValue: Double
@@ -58,22 +57,26 @@ struct ProgressSliderWidgetView: View {
             let newValue = value(for: gesture.location.x, width: geometry.size.width)
             value = newValue
 
-            EventBus.shared.emitWidgetEvent(
-              .sliderPreview,
-              widgetID: rootWidgetID,
-              value: newValue
-            )
+            Task {
+              await EventHub.shared.emitWidgetEvent(
+                .sliderPreview,
+                widgetID: rootWidgetID,
+                value: newValue
+              )
+            }
           }
           .onEnded { gesture in
             let newValue = value(for: gesture.location.x, width: geometry.size.width)
             value = newValue
             isDragging = false
 
-            EventBus.shared.emitWidgetEvent(
-              .sliderChanged,
-              widgetID: rootWidgetID,
-              value: newValue
-            )
+            Task {
+              await EventHub.shared.emitWidgetEvent(
+                .sliderChanged,
+                widgetID: rootWidgetID,
+                value: newValue
+              )
+            }
           }
       )
     }

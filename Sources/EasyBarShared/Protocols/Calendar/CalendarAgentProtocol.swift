@@ -4,7 +4,7 @@ import Foundation
 public let calendarAgentProtocolVersion = "2"
 
 /// Stable structured error codes returned by the calendar agent.
-public enum CalendarAgentErrorCode: String, Codable, Equatable {
+public enum CalendarAgentErrorCode: String, Codable, Equatable, Sendable {
   case accessDenied = "access_denied"
   case invalidDateRange = "invalid_date_range"
   case eventNotFound = "event_not_found"
@@ -17,7 +17,7 @@ public enum CalendarAgentErrorCode: String, Codable, Equatable {
 }
 
 /// Calendar-agent protocol capabilities advertised by the server.
-public struct CalendarAgentCapabilities: Codable, Equatable {
+public struct CalendarAgentCapabilities: Codable, Equatable, Sendable {
   /// Whether live subscriptions are supported.
   public var supportsSubscriptions: Bool
   /// Whether create/update/delete event mutations are supported.
@@ -50,7 +50,7 @@ public struct CalendarAgentCapabilities: Codable, Equatable {
 }
 
 /// Commands supported by the calendar agent socket.
-public enum CalendarAgentCommand: String, Codable {
+public enum CalendarAgentCommand: String, Codable, Sendable {
   case ping
   case version
   case fetch
@@ -61,7 +61,7 @@ public enum CalendarAgentCommand: String, Codable {
 }
 
 /// Query payload that shapes one calendar snapshot request.
-public struct CalendarAgentQuery: Codable, Equatable {
+public struct CalendarAgentQuery: Codable, Equatable, Sendable {
   /// Inclusive fetch start date.
   public var startDate: Date
   /// Exclusive fetch end date.
@@ -114,7 +114,7 @@ public struct CalendarAgentQuery: Codable, Equatable {
 }
 
 /// One create-event payload sent to the calendar agent.
-public struct CalendarAgentCreateEvent: Codable, Equatable {
+public struct CalendarAgentCreateEvent: Codable, Equatable, Sendable {
   /// Event title.
   public var title: String
   /// Event start date.
@@ -155,7 +155,7 @@ public struct CalendarAgentCreateEvent: Codable, Equatable {
 }
 
 /// One update-event payload sent to the calendar agent.
-public struct CalendarAgentUpdateEvent: Codable, Equatable {
+public struct CalendarAgentUpdateEvent: Codable, Equatable, Sendable {
   /// Stable EventKit event identifier.
   public var eventIdentifier: String
   /// Updated event title.
@@ -200,7 +200,7 @@ public struct CalendarAgentUpdateEvent: Codable, Equatable {
 }
 
 /// One delete-event payload sent to the calendar agent.
-public struct CalendarAgentDeleteEvent: Codable, Equatable {
+public struct CalendarAgentDeleteEvent: Codable, Equatable, Sendable {
   /// Stable EventKit event identifier.
   public var eventIdentifier: String
 
@@ -211,7 +211,7 @@ public struct CalendarAgentDeleteEvent: Codable, Equatable {
 }
 
 /// One request sent to the calendar agent.
-public struct CalendarAgentRequest: Codable {
+public struct CalendarAgentRequest: Codable, Sendable {
   /// Command to execute on the agent.
   public var command: CalendarAgentCommand
   /// Optional query used for fetch and subscribe requests.
@@ -265,7 +265,7 @@ public struct CalendarAgentRequest: Codable {
 }
 
 /// One version payload returned by the calendar agent.
-public struct CalendarAgentVersion: Codable, Equatable {
+public struct CalendarAgentVersion: Codable, Equatable, Sendable {
   /// The application version embedded in the calendar-agent build.
   public var appVersion: String
   /// Stable socket protocol version.
@@ -286,7 +286,7 @@ public struct CalendarAgentVersion: Codable, Equatable {
 }
 
 /// One writable calendar returned by the agent for the composer.
-public struct CalendarAgentWritableCalendar: Codable, Identifiable, Equatable {
+public struct CalendarAgentWritableCalendar: Codable, Identifiable, Equatable, Sendable {
   /// Stable calendar identifier.
   public var id: String
   /// User-visible calendar title.
@@ -300,7 +300,7 @@ public struct CalendarAgentWritableCalendar: Codable, Identifiable, Equatable {
 }
 
 /// Section kinds returned by the calendar agent snapshot.
-public enum CalendarAgentSectionKind: String, Codable, Equatable {
+public enum CalendarAgentSectionKind: String, Codable, Equatable, Sendable {
   case birthdays
   case today
   case tomorrow
@@ -308,7 +308,7 @@ public enum CalendarAgentSectionKind: String, Codable, Equatable {
 }
 
 /// One normalized calendar event returned by the agent.
-public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
+public struct CalendarAgentEvent: Codable, Identifiable, Equatable, Sendable {
   /// Stable UI identifier for this event row or occurrence.
   public var id: String
   /// Stable EventKit event identifier used for mutation APIs when available.
@@ -373,7 +373,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable {
 }
 
 /// One rendered event or birthday row in a calendar section.
-public struct CalendarAgentItem: Codable, Identifiable, Equatable {
+public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   /// Stable item identifier.
   public var id: String
   /// Leading time or date label.
@@ -410,7 +410,7 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable {
 }
 
 /// One logical section in a calendar snapshot.
-public struct CalendarAgentSection: Codable, Identifiable, Equatable {
+public struct CalendarAgentSection: Codable, Identifiable, Equatable, Sendable {
   /// Stable section identifier.
   public var id: String
   /// User-visible section title.
@@ -431,7 +431,7 @@ public struct CalendarAgentSection: Codable, Identifiable, Equatable {
 }
 
 /// Full calendar snapshot returned by the agent.
-public struct CalendarAgentSnapshot: Codable, Equatable {
+public struct CalendarAgentSnapshot: Codable, Equatable, Sendable {
   /// Whether calendar access is currently granted.
   public var accessGranted: Bool
   /// Current calendar permission state string.
@@ -464,7 +464,7 @@ public struct CalendarAgentSnapshot: Codable, Equatable {
 }
 
 /// Message kinds sent by the calendar agent.
-public enum CalendarAgentMessageKind: String, Codable {
+public enum CalendarAgentMessageKind: String, Codable, Sendable {
   case pong
   case version
   case subscribed
@@ -476,7 +476,7 @@ public enum CalendarAgentMessageKind: String, Codable {
 }
 
 /// One message sent over the calendar agent socket.
-public struct CalendarAgentMessage: Codable {
+public struct CalendarAgentMessage: Codable, Sendable {
   /// Message kind discriminator.
   public var kind: CalendarAgentMessageKind
   /// Optional version payload.

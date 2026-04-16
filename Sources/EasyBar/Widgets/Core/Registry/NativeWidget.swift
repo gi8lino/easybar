@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 protocol NativeWidget: AnyObject {
   var rootID: String { get }
   var appEventSubscriptions: Set<String> { get }

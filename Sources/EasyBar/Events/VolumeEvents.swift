@@ -2,7 +2,6 @@ import CoreAudio
 import Foundation
 
 final class VolumeEvents {
-
   static let shared = VolumeEvents()
 
   private var currentDeviceID: AudioDeviceID?
@@ -43,9 +42,11 @@ final class VolumeEvents {
     guard defaultDeviceListener == nil else { return }
 
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-      // Device changes can invalidate all per-device listeners, so rebuild them first.
       self?.refreshDeviceSubscription()
-      EventBus.shared.emit(.volumeChange)
+
+      Task {
+        await EventHub.shared.emit(.volumeChange)
+      }
     }
 
     let status = addListener(
@@ -97,9 +98,10 @@ final class VolumeEvents {
     lastMutedState = readMutedState(for: newDeviceID)
     installDeviceListeners()
 
-    // Re-emit current state after switching devices so widgets refresh immediately.
-    EventBus.shared.emit(.volumeChange)
-    EventBus.shared.emit(.muteChange, muted: lastMutedState ?? false)
+    Task {
+      await EventHub.shared.emit(.volumeChange)
+      await EventHub.shared.emit(.muteChange, muted: lastMutedState ?? false)
+    }
   }
 
   /// Starts volume and mute listeners for the current output device.
@@ -107,7 +109,9 @@ final class VolumeEvents {
     guard let deviceID = currentDeviceID else { return }
 
     let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
-      EventBus.shared.emit(.volumeChange)
+      Task {
+        await EventHub.shared.emit(.volumeChange)
+      }
     }
 
     let volumeStatus = addListener(
@@ -124,15 +128,19 @@ final class VolumeEvents {
     volumeListener = volumeBlock
 
     let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-      EventBus.shared.emit(.volumeChange)
+      Task {
+        await EventHub.shared.emit(.volumeChange)
+      }
 
       guard let self, let deviceID = self.currentDeviceID else { return }
 
-      // Only emit mute changes when the effective state actually changed.
       let muted = self.readMutedState(for: deviceID)
       if self.lastMutedState != muted {
         self.lastMutedState = muted
-        EventBus.shared.emit(.muteChange, muted: muted)
+
+        Task {
+          await EventHub.shared.emit(.muteChange, muted: muted)
+        }
       }
     }
 

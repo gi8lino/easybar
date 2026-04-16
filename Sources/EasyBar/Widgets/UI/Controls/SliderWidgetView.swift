@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SliderWidgetView: View {
-
   let rootWidgetID: String
   let minValue: Double
   let maxValue: Double
@@ -40,11 +39,13 @@ struct SliderWidgetView: View {
         set: { newValue in
           value = newValue
 
-          EventBus.shared.emitWidgetEvent(
-            .sliderPreview,
-            widgetID: rootWidgetID,
-            value: newValue
-          )
+          Task {
+            await EventHub.shared.emitWidgetEvent(
+              .sliderPreview,
+              widgetID: rootWidgetID,
+              value: newValue
+            )
+          }
         }
       ),
       in: minValue...maxValue,
@@ -53,11 +54,15 @@ struct SliderWidgetView: View {
         isEditing = editing
 
         if !editing {
-          EventBus.shared.emitWidgetEvent(
-            .sliderChanged,
-            widgetID: rootWidgetID,
-            value: value
-          )
+          let committedValue = value
+
+          Task {
+            await EventHub.shared.emitWidgetEvent(
+              .sliderChanged,
+              widgetID: rootWidgetID,
+              value: committedValue
+            )
+          }
         }
       }
     )

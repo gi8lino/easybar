@@ -2,6 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Native Wi-Fi widget backed by the network agent snapshot store.
+@MainActor
 final class WiFiNativeWidget: NativeWidget {
 
   let rootID = "builtin_wifi"

@@ -1,46 +1,58 @@
 import Foundation
 
-/// Central event bridge for both native Swift widgets and the Lua runtime.
-final class EventBus {
-
-  static let shared = EventBus()
+/// Actor-owned event hub for native widgets and the Lua runtime.
+actor EventHub {
+  static let shared = EventHub()
 
   private let runtime = LuaRuntime.shared
-  private let luaSendQueue = DispatchQueue(label: "com.gi8lino.easybar.eventbus.lua-send")
+  private var continuations: [UUID: AsyncStream<EasyBarEventPayload>.Continuation] = [:]
 
-  private init() {}
+  /// Subscribes to the app-wide event stream.
+  func subscribe() -> AsyncStream<EasyBarEventPayload> {
+    let id = UUID()
 
-  /// Emits one app-wide event to native widgets and the Lua runtime.
-  func emit(_ event: AppEvent) {
-    emitApp(.app(event))
+    return AsyncStream { continuation in
+      continuations[id] = continuation
+
+      continuation.onTermination = { [weak self] _ in
+        Task {
+          await self?.removeContinuation(id: id)
+        }
+      }
+    }
+  }
+
+  /// Emits one app-wide event.
+  func emit(_ event: AppEvent) async {
+    await emit(.app(event))
   }
 
   /// Emits one app-wide event with app name context.
-  func emit(_ event: AppEvent, appName: String) {
-    emitApp(.app(event, appName: appName))
+  func emit(_ event: AppEvent, appName: String) async {
+    await emit(.app(event, appName: appName))
   }
 
   /// Emits one app-wide event with interface name context.
-  func emit(_ event: AppEvent, interfaceName: String) {
-    emitApp(.app(event, interfaceName: interfaceName))
+  func emit(_ event: AppEvent, interfaceName: String) async {
+    await emit(.app(event, interfaceName: interfaceName))
   }
 
   /// Emits one app-wide event with charging state context.
-  func emit(_ event: AppEvent, charging: Bool) {
-    emitApp(.app(event, charging: charging))
+  func emit(_ event: AppEvent, charging: Bool) async {
+    await emit(.app(event, charging: charging))
   }
 
   /// Emits one app-wide event with muted state context.
-  func emit(_ event: AppEvent, muted: Bool) {
-    emitApp(.app(event, muted: muted))
+  func emit(_ event: AppEvent, muted: Bool) async {
+    await emit(.app(event, muted: muted))
   }
 
   /// Emits one app-wide event with tunnel-state context.
-  func emit(_ event: AppEvent, primaryInterfaceIsTunnel: Bool) {
-    emitApp(.app(event, primaryInterfaceIsTunnel: primaryInterfaceIsTunnel))
+  func emit(_ event: AppEvent, primaryInterfaceIsTunnel: Bool) async {
+    await emit(.app(event, primaryInterfaceIsTunnel: primaryInterfaceIsTunnel))
   }
 
-  /// Emits one widget-scoped event to native widgets and the Lua runtime.
+  /// Emits one widget-scoped interaction event.
   func emitWidgetEvent(
     _ event: WidgetEvent,
     widgetID: String,
@@ -50,8 +62,8 @@ final class EventBus {
     value: Double? = nil,
     deltaX: Double? = nil,
     deltaY: Double? = nil
-  ) {
-    emitWidget(
+  ) async {
+    await emit(
       .widget(
         event,
         widgetID: widgetID,
@@ -61,37 +73,39 @@ final class EventBus {
         value: value,
         deltaX: deltaX,
         deltaY: deltaY
-      ))
+      )
+    )
   }
 
-  /// Emits one typed event payload.
-  func emit(_ payload: EasyBarEventPayload) {
+  /// Emits one fully constructed payload.
+  func emit(_ payload: EasyBarEventPayload) async {
     MetricsCoordinator.shared.recordEvent(
       name: payload.eventName,
       isWidgetEvent: payload.widgetEvent != nil
     )
 
-    NotificationCenter.default.post(name: .easyBarEvent, object: payload)
-    logEmission(payload)
-    sendToLuaAsync(payload)
-  }
-
-  /// Encodes and forwards one payload to the Lua runtime on a dedicated serial queue.
-  private func sendToLuaAsync(_ payload: EasyBarEventPayload) {
-    luaSendQueue.async { [weak self] in
-      self?.sendToLua(payload)
+    for continuation in continuations.values {
+      continuation.yield(payload)
     }
+
+    logEmission(payload)
+    await sendToLua(payload)
   }
 
-  /// Encodes and forwards one payload to the Lua runtime.
-  private func sendToLua(_ payload: EasyBarEventPayload) {
+  /// Removes one terminated subscription.
+  private func removeContinuation(id: UUID) {
+    continuations.removeValue(forKey: id)
+  }
+
+  /// Sends one payload to the Lua runtime stdin.
+  private func sendToLua(_ payload: EasyBarEventPayload) async {
     guard let encoded = encodedPayload(payload) else {
       easybarLog.error("failed to encode lua event payload name=\(payload.eventName)")
       return
     }
 
     easybarLog.trace("sent to lua stdin: \(encoded)")
-    runtime.send(encoded)
+    await runtime.send(encoded)
   }
 
   /// Returns the encoded Lua payload string.
@@ -110,23 +124,9 @@ final class EventBus {
     return string
   }
 
-  /// Emits one already-constructed app payload.
-  private func emitApp(_ payload: EasyBarEventPayload) {
-    emit(payload)
-  }
-
-  /// Emits one already-constructed widget payload.
-  private func emitWidget(_ payload: EasyBarEventPayload) {
-    emit(payload)
-  }
-
   /// Logs one emitted payload for verbose debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
     easybarLog.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
   }
-}
-
-extension Notification.Name {
-  static let easyBarEvent = Notification.Name("easybar.event")
 }

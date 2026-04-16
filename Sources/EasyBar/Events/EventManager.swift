@@ -1,7 +1,8 @@
 import Foundation
 
+/// Main-actor owner of native event source subscriptions.
+@MainActor
 final class EventManager {
-
   static let shared = EventManager()
 
   private var luaSubscriptions = Set<String>()

@@ -1,10 +1,7 @@
+import EasyBarShared
 import Foundation
 
-/// Actor-owned facade around the global config object.
-///
-/// The app still uses `Config.shared` as the source of truth for now, but all
-/// reload orchestration should go through this actor so config mutation has one
-/// owner in the runtime layer.
+/// Actor-owned access to config mutation and runtime-facing config reads.
 actor ConfigManager {
   static let shared = ConfigManager()
 
@@ -13,7 +10,7 @@ actor ConfigManager {
     let errorMessage: String?
   }
 
-  /// Reloads the active config on the main actor.
+  /// Reloads the active config and returns a stable result.
   func reload() async -> ReloadResult {
     await MainActor.run {
       let error = Config.shared.reload()
@@ -32,7 +29,7 @@ actor ConfigManager {
     }
   }
 
-  /// Returns whether config file watching is currently enabled.
+  /// Returns whether config watching is enabled.
   func watchConfigFileEnabled() async -> Bool {
     await MainActor.run {
       Config.shared.watchConfigFile
@@ -46,7 +43,7 @@ actor ConfigManager {
     }
   }
 
-  /// Returns the configured logging level.
+  /// Returns the current minimum log level.
   func loggingLevel() async -> ProcessLogLevel {
     await MainActor.run {
       Config.shared.loggingLevel
@@ -64,20 +61,6 @@ actor ConfigManager {
   func loggingDirectory() async -> String {
     await MainActor.run {
       Config.shared.loggingDirectory
-    }
-  }
-
-  /// Returns the current config failure state.
-  func loadFailureState() async -> Config.LoadFailureState? {
-    await MainActor.run {
-      Config.shared.loadFailureState
-    }
-  }
-
-  /// Returns the current config path for the error window.
-  func errorWindowConfigPath() async -> String {
-    await MainActor.run {
-      Config.shared.configPath
     }
   }
 }

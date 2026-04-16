@@ -39,17 +39,18 @@ extension LuaProcessController {
     process.standardInput = pipes.input
     process.standardOutput = pipes.output
     process.standardError = pipes.error
-    process.terminationHandler = handleTermination
+    process.terminationHandler = { [weak self] process in
+      self?.handleTermination(process: process)
+    }
     return process
   }
 
   /// Handles Lua process termination and related cleanup logging.
   func handleTermination(process: Process) {
-    logTerminationStatus(process.terminationStatus)
+    easyBarLuaForcedKillWorkItem?.cancel()
+    easyBarLuaForcedKillWorkItem = nil
 
-    if easyBarLuaProcessGroupPID == process.processIdentifier {
-      easyBarLuaProcessGroupPID = 0
-    }
+    logTerminationStatus(process.terminationStatus)
   }
 
   /// Logs one Lua runtime termination status.

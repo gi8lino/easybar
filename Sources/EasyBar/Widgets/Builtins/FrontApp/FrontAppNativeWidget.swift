@@ -1,6 +1,7 @@
 import Foundation
 
 /// Native front-app widget backed by `AeroSpaceService` state.
+@MainActor
 final class FrontAppNativeWidget: NativeWidget {
 
   let rootID = "builtin_front_app"

@@ -1,6 +1,7 @@
 import Darwin.Mach
 import Foundation
 
+@MainActor
 final class CPUSparklineNativeWidget: NativeWidget {
 
   let rootID = "builtin_cpu"

@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 final class DateNativeWidget: NativeWidget {
 
   let rootID = "builtin_date"

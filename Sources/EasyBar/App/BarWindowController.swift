@@ -8,7 +8,8 @@ final class BarWindowController: NSWindowController {
   var onRefresh: (() -> Void)?
   var onReloadConfig: (() -> Void)?
   var onRestartLuaRuntime: (() -> Void)?
-  private let hostingView: BarHostingView<BarRootView>
+
+  private let hostingView: BarHostingView<BarContentView>
 
   /// Creates a borderless bar window pinned to the top of the screen.
   init() {
@@ -16,7 +17,7 @@ final class BarWindowController: NSWindowController {
     let frame = Self.makeFrame(for: screen)
     easybarLog.info("bar window initial target_frame=\(NSStringFromRect(frame))")
 
-    let contentView = BarRootView()
+    let contentView = BarContentView()
 
     let window = BarPanel(
       contentRect: frame,
@@ -78,7 +79,7 @@ final class BarWindowController: NSWindowController {
       "bar window reload begin current_frame=\(NSStringFromRect(window.frame)) target_frame=\(NSStringFromRect(frame))"
     )
 
-    hostingView.rootView = BarRootView()
+    hostingView.rootView = BarContentView()
     window.setFrame(frame, display: true)
     window.setContentSize(frame.size)
     window.minSize = frame.size
@@ -306,6 +307,53 @@ final class BarWindowController: NSWindowController {
   private func openSettingsURL(_ value: String) {
     guard let url = URL(string: value) else { return }
     NSWorkspace.shared.open(url)
+  }
+}
+
+/// Hosting view that disables AppKit safe-area insets so the bar can extend behind the notch.
+private final class BarHostingView<Content: View>: NSHostingView<Content> {
+  override var safeAreaInsets: NSEdgeInsets {
+    .init(top: 0, left: 0, bottom: 0, right: 0)
+  }
+
+  override var safeAreaRect: NSRect {
+    bounds
+  }
+}
+
+/// Root SwiftUI view of the EasyBar window.
+private struct BarContentView: View {
+  @ObservedObject private var config = Config.shared
+  private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
+
+  var body: some View {
+    HStack(spacing: 8) {
+      WidgetBar(position: .left)
+
+      Spacer(minLength: 0)
+
+      WidgetBar(position: .center)
+
+      Spacer(minLength: 0)
+
+      WidgetBar(position: .right)
+    }
+    .font(globalBarFont)
+    .padding(.horizontal, config.barPaddingX)
+    .frame(
+      maxWidth: .infinity,
+      minHeight: config.barHeight,
+      maxHeight: config.barHeight,
+      alignment: .center
+    )
+    .background(Color(hex: config.barBackgroundHex))
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(Color(hex: config.barBorderHex))
+        .frame(height: 1)
+    }
+    .foregroundStyle(Theme.defaultTextColor)
+    .ignoresSafeArea()
   }
 }
 

@@ -150,13 +150,15 @@ final class NetworkAgentClient {
 
       guard changed else { return }
 
-      EventBus.shared.emit(
-        .networkChange,
-        primaryInterfaceIsTunnel: false
-      )
+      Task {
+        await EventHub.shared.emit(
+          .networkChange,
+          primaryInterfaceIsTunnel: false
+        )
 
-      if previous?.ssid != nil || previous?.interfaceName != nil {
-        EventBus.shared.emit(.wifiChange)
+        if previous?.ssid != nil || previous?.interfaceName != nil {
+          await EventHub.shared.emit(.wifiChange)
+        }
       }
     }
   }
@@ -169,20 +171,22 @@ final class NetworkAgentClient {
 
       guard changed else { return }
 
-      EventBus.shared.emit(
-        .networkChange,
-        primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
-      )
+      Task {
+        await EventHub.shared.emit(
+          .networkChange,
+          primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
+        )
 
-      let ssidChanged = previous?.ssid != snapshot.ssid
-      let interfaceChanged = previous?.interfaceName != snapshot.interfaceName
+        let ssidChanged = previous?.ssid != snapshot.ssid
+        let interfaceChanged = previous?.interfaceName != snapshot.interfaceName
 
-      guard ssidChanged || interfaceChanged else { return }
+        guard ssidChanged || interfaceChanged else { return }
 
-      if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
-        EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
-      } else {
-        EventBus.shared.emit(.wifiChange)
+        if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
+          await EventHub.shared.emit(.wifiChange, interfaceName: interfaceName)
+        } else {
+          await EventHub.shared.emit(.wifiChange)
+        }
       }
     }
   }

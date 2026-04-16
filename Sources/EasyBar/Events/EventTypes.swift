@@ -1,7 +1,7 @@
 import Foundation
 
 /// App-wide events emitted by EasyBar.
-enum AppEvent: String {
+enum AppEvent: String, Sendable {
   case manualRefresh = "manual_refresh"
 
   case systemWoke = "system_woke"
@@ -30,7 +30,7 @@ enum AppEvent: String {
 }
 
 /// Widget-scoped interaction events emitted by EasyBar.
-enum WidgetEvent: String {
+enum WidgetEvent: String, Sendable {
   case mouseEntered = "mouse.entered"
   case mouseExited = "mouse.exited"
   case mouseDown = "mouse.down"
@@ -42,8 +42,21 @@ enum WidgetEvent: String {
   case sliderChanged = "slider.changed"
 }
 
+/// Mouse button names used by widget interaction events.
+enum MouseButton: String, Sendable {
+  case left
+  case right
+  case middle
+}
+
+/// Scroll direction names used by widget interaction events.
+enum ScrollDirection: String, Sendable {
+  case up
+  case down
+}
+
 /// Strongly typed event payload used inside Swift.
-struct EasyBarEventPayload {
+struct EasyBarEventPayload: Sendable {
   let appEvent: AppEvent?
   let widgetEvent: WidgetEvent?
 
@@ -110,13 +123,12 @@ struct EasyBarEventPayload {
     appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
 
-  /// New structured encoding for Lua
+  /// New structured encoding for Lua.
   func toDictionary() -> [String: Any] {
     var payload: [String: Any] = [
       "name": eventName
     ]
 
-    // widget targeting
     if let widgetID {
       payload["widget_id"] = widgetID
     }
@@ -125,7 +137,6 @@ struct EasyBarEventPayload {
       payload["target_widget_id"] = targetWidgetID
     }
 
-    // interaction
     if let button {
       payload["button"] = button.rawValue
     }
@@ -146,9 +157,6 @@ struct EasyBarEventPayload {
       payload["delta_y"] = deltaY
     }
 
-    // MARK: - Structured domains
-
-    // network
     if primaryInterfaceIsTunnel != nil || interfaceName != nil {
       var network: [String: Any] = [:]
 
@@ -163,14 +171,12 @@ struct EasyBarEventPayload {
       payload["network"] = network
     }
 
-    // power
     if let charging {
       payload["power"] = [
         "charging": charging
       ]
     }
 
-    // audio
     if muted != nil || value != nil {
       var audio: [String: Any] = [:]
 
@@ -185,7 +191,6 @@ struct EasyBarEventPayload {
       payload["audio"] = audio
     }
 
-    // app context
     if let appName {
       payload["app_name"] = appName
     }
@@ -228,17 +233,4 @@ struct EasyBarEventPayload {
       deltaY: deltaY
     )
   }
-}
-
-/// Mouse button names used by widget interaction events.
-enum MouseButton: String {
-  case left
-  case right
-  case middle
-}
-
-/// Scroll direction names used by widget interaction events.
-enum ScrollDirection: String {
-  case up
-  case down
 }

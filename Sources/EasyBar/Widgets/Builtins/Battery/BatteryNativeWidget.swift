@@ -8,6 +8,7 @@ import IOKit.ps
 /// - event handling
 /// - snapshot creation
 /// - delegating rendering
+@MainActor
 final class BatteryNativeWidget: NativeWidget {
 
   let rootID = "builtin_battery"
@@ -57,7 +58,11 @@ final class BatteryNativeWidget: NativeWidget {
     )
 
     timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
-      self?.publish()
+      guard let self else { return }
+
+      Task { @MainActor in
+        self.publish()
+      }
     }
 
     publish()
@@ -124,9 +129,6 @@ extension BatteryNativeWidget {
       let onExternalPower =
         (desc[kIOPSPowerSourceStateKey as String] as? String) == kIOPSACPowerValue
 
-      // Public IOKit does not expose a dedicated "on hold" flag.
-      // Infer it as: connected to external power, not actively charging,
-      // not fully charged, and not in the finishing-charge phase.
       let onHold =
         onExternalPower
         && !charging

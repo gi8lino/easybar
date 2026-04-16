@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 final class SpacesNativeWidget: NativeWidget {
 
   let rootID = "builtin_spaces"

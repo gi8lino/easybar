@@ -1,6 +1,7 @@
 import Foundation
 
 /// Native time widget.
+@MainActor
 final class TimeNativeWidget: NativeWidget {
 
   let rootID = "builtin_time"

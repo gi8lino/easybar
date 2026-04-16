@@ -1,6 +1,7 @@
 import Foundation
 
 /// Publishes config-defined native groups into the shared widget store.
+@MainActor
 final class NativeGroupRegistry {
 
   static let shared = NativeGroupRegistry()

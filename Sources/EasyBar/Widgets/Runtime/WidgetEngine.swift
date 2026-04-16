@@ -1,40 +1,17 @@
 import Foundation
 
-/// Actor-owned widget runtime coordinator.
+/// Actor-owned scripted widget runtime.
 ///
-/// This replaces direct ownership in `WidgetRunner` while keeping a small
-/// compatibility façade so the rest of the app can migrate incrementally.
+/// This actor owns the Lua handshake state, subscriptions, and tree updates.
 actor WidgetEngine {
   static let shared = WidgetEngine()
-
-  private static let outputProcessingQueue = DispatchQueue(
-    label: "easybar.widget-engine.output",
-    qos: .userInitiated
-  )
 
   private let decoder = JSONDecoder()
 
   private var runtimeState = WidgetRuntimeState()
   private var started = false
-  private var stdoutObserver: NSObjectProtocol?
 
-  static let initialEvents: [(name: String, event: AppEvent)] = [
-    ("system_woke", .systemWoke),
-    ("power_source_change", .powerSourceChange),
-    ("charging_state_change", .chargingStateChange),
-    ("wifi_change", .wifiChange),
-    ("network_change", .networkChange),
-    ("volume_change", .volumeChange),
-    ("mute_change", .muteChange),
-    ("calendar_change", .calendarChange),
-    ("minute_tick", .minuteTick),
-    ("second_tick", .secondTick),
-    ("focus_change", .focusChange),
-    ("workspace_change", .workspaceChange),
-    ("space_mode_change", .spaceModeChange),
-  ]
-
-  /// Starts the widget runtime and begins observing Lua stdout.
+  /// Starts the scripted widget runtime.
   func start() async {
     guard !started else {
       easybarLog.debug("widget engine already started")
@@ -44,27 +21,35 @@ actor WidgetEngine {
     easybarLog.debug("widget engine start begin")
 
     started = true
-    resetRuntimeState()
-    startObservingRuntimeOutput()
+    runtimeState.reset()
+
+    await LuaRuntime.shared.setStdoutHandler { line in
+      Task {
+        await WidgetEngine.shared.handleRuntimeOutput(line)
+      }
+    }
+
     await LuaRuntime.shared.start()
 
     easybarLog.debug("widget engine start end")
   }
 
-  /// Reloads the Lua runtime and clears rendered widget state.
+  /// Reloads the scripted widget runtime and clears rendered state.
   func reload() async {
     easybarLog.debug("widget engine reload begin")
 
     await shutdown()
+
     await MainActor.run {
       WidgetStore.shared.clear()
     }
+
     await start()
 
     easybarLog.debug("widget engine reload end")
   }
 
-  /// Stops the widget runtime and related event sources.
+  /// Stops the scripted widget runtime and event sources.
   func shutdown() async {
     guard started else {
       easybarLog.debug("widget engine shutdown skipped, not started")
@@ -73,68 +58,35 @@ actor WidgetEngine {
 
     easybarLog.debug("widget engine shutdown begin")
 
-    stopObservingRuntimeOutput()
-
     started = false
-    resetRuntimeState()
+    runtimeState.reset()
 
-    EventManager.shared.stopAll()
+    await MainActor.run {
+      EventManager.shared.stopAll()
+    }
+
     await LuaRuntime.shared.shutdown()
 
     easybarLog.debug("widget engine shutdown end")
   }
 
-  /// Resets Lua runtime handshake and subscription state.
-  private func resetRuntimeState() {
-    runtimeState.reset()
-  }
-
   /// Handles one line of structured stdout from the Lua runtime.
-  private func handleRuntimeOutput(_ line: String) {
+  func handleRuntimeOutput(_ line: String) async {
+    guard started else { return }
+
     easybarLog.debug("lua stdout: \(line)")
 
-    Self.outputProcessingQueue.async { [weak self] in
-      guard let self else { return }
-
-      Task {
-        guard await self.started else { return }
-
-        do {
-          let update = try self.decodeUpdate(from: line)
-          await self.handleUpdate(update, rawLine: line)
-        } catch DecodingError.dataCorrupted {
-          MetricsCoordinator.shared.recordDecodeError()
-          easybarLog.warn("invalid utf8: \(line)")
-        } catch {
-          MetricsCoordinator.shared.recordDecodeError()
-          easybarLog.warn("json decode failed: \(line)")
-          easybarLog.debug("decode error: \(error)")
-        }
-      }
+    do {
+      let update = try decodeUpdate(from: line)
+      await handleUpdate(update, rawLine: line)
+    } catch DecodingError.dataCorrupted {
+      MetricsCoordinator.shared.recordDecodeError()
+      easybarLog.warn("invalid utf8: \(line)")
+    } catch {
+      MetricsCoordinator.shared.recordDecodeError()
+      easybarLog.warn("json decode failed: \(line)")
+      easybarLog.debug("decode error: \(error)")
     }
-  }
-
-  /// Starts observing structured stdout from the Lua runtime.
-  private func startObservingRuntimeOutput() {
-    stopObservingRuntimeOutput()
-
-    stdoutObserver = NotificationCenter.default.addObserver(
-      forName: .easyBarLuaStdout,
-      object: nil,
-      queue: nil
-    ) { [weak self] notification in
-      guard let self else { return }
-      guard let line = notification.object as? String else { return }
-
-      self.handleRuntimeOutput(line)
-    }
-  }
-
-  /// Stops observing structured stdout from the Lua runtime.
-  private func stopObservingRuntimeOutput() {
-    guard let stdoutObserver else { return }
-    NotificationCenter.default.removeObserver(stdoutObserver)
-    self.stdoutObserver = nil
   }
 
   /// Decodes one structured runtime update line.
@@ -149,32 +101,32 @@ actor WidgetEngine {
   }
 
   /// Emits initial events after both subscriptions and readiness are known.
-  private func emitInitialEventsIfPossible() {
+  private func emitInitialEventsIfPossible() async {
     guard runtimeState.canEmitInitialEvents else { return }
     runtimeState.didEmitInitialEvents = true
-    emitInitialEvents()
+    await emitInitialEvents()
   }
 
   /// Emits initial state-refresh events required by subscribed widgets.
-  private func emitInitialEvents() {
+  private func emitInitialEvents() async {
     easybarLog.debug("emitting initial widget events")
 
     for (name, event) in Self.initialEvents {
-      emitInitialEvent(named: name, event: event)
+      await emitInitialEvent(named: name, event: event)
     }
 
-    EventBus.shared.emit(.manualRefresh)
+    await EventHub.shared.emit(.manualRefresh)
   }
 
   /// Handles one decoded Lua runtime update.
   private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) async {
     guard !update.isSubscriptions else {
-      handleSubscriptions(update)
+      await handleSubscriptions(update)
       return
     }
 
     guard !update.isReady else {
-      handleReady()
+      await handleReady()
       return
     }
 
@@ -187,22 +139,27 @@ actor WidgetEngine {
   }
 
   /// Handles one subscription update from Lua.
-  private func handleSubscriptions(_ update: WidgetTreeUpdate) {
+  private func handleSubscriptions(_ update: WidgetTreeUpdate) async {
     runtimeState.requiredEvents = Set(update.subscribedEvents)
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
     easybarLog.debug("required events: \(runtimeState.requiredEvents)")
-    EventManager.shared.start(subscriptions: runtimeState.requiredEvents)
-    emitInitialEventsIfPossible()
+
+    let requiredEvents = runtimeState.requiredEvents
+    await MainActor.run {
+      EventManager.shared.start(subscriptions: requiredEvents)
+    }
+
+    await emitInitialEventsIfPossible()
   }
 
   /// Handles the Lua runtime ready handshake.
-  private func handleReady() {
+  private func handleReady() async {
     easybarLog.debug("lua runtime handshake received")
     runtimeState.isReady = true
     MetricsCoordinator.shared.recordLuaReady()
-    emitInitialEventsIfPossible()
+    await emitInitialEventsIfPossible()
   }
 
   /// Handles one rendered widget tree update.
@@ -221,24 +178,47 @@ actor WidgetEngine {
   }
 
   /// Emits one initial event when Lua subscribed to it.
-  private func emitInitialEvent(named name: String, event: AppEvent) {
+  private func emitInitialEvent(named name: String, event: AppEvent) async {
     guard runtimeState.requiredEvents.contains(name) else { return }
 
     switch event {
     case .networkChange:
-      let isTunnel = NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
-      EventBus.shared.emit(.networkChange, primaryInterfaceIsTunnel: isTunnel)
+      let isTunnel = await MainActor.run {
+        NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
+      }
+      await EventHub.shared.emit(.networkChange, primaryInterfaceIsTunnel: isTunnel)
 
     case .wifiChange:
-      if let interfaceName = NativeWiFiStore.shared.snapshot?.interfaceName, !interfaceName.isEmpty
-      {
-        EventBus.shared.emit(.wifiChange, interfaceName: interfaceName)
+      let interfaceName = await MainActor.run {
+        NativeWiFiStore.shared.snapshot?.interfaceName
+      }
+
+      if let interfaceName, !interfaceName.isEmpty {
+        await EventHub.shared.emit(.wifiChange, interfaceName: interfaceName)
       } else {
-        EventBus.shared.emit(.wifiChange)
+        await EventHub.shared.emit(.wifiChange)
       }
 
     default:
-      EventBus.shared.emit(event)
+      await EventHub.shared.emit(event)
     }
   }
+}
+
+extension WidgetEngine {
+  static let initialEvents: [(name: String, event: AppEvent)] = [
+    ("system_woke", .systemWoke),
+    ("power_source_change", .powerSourceChange),
+    ("charging_state_change", .chargingStateChange),
+    ("wifi_change", .wifiChange),
+    ("network_change", .networkChange),
+    ("volume_change", .volumeChange),
+    ("mute_change", .muteChange),
+    ("calendar_change", .calendarChange),
+    ("minute_tick", .minuteTick),
+    ("second_tick", .secondTick),
+    ("focus_change", .focusChange),
+    ("workspace_change", .workspaceChange),
+    ("space_mode_change", .spaceModeChange),
+  ]
 }

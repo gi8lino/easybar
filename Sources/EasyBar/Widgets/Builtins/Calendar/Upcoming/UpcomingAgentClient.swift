@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+@MainActor
 final class UpcomingCalendarAgentClient {
 
   static let shared = UpcomingCalendarAgentClient()

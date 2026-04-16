@@ -22,7 +22,9 @@ final class CalendarAgentEventRelay {
 
       let workItem = DispatchWorkItem {
         DispatchQueue.main.async {
-          EventBus.shared.emit(.calendarChange)
+          Task {
+            await EventHub.shared.emit(.calendarChange)
+          }
         }
       }
 

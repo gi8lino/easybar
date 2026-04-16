@@ -2,7 +2,6 @@ import AppKit
 import Foundation
 
 final class SystemEvents {
-
   static let shared = SystemEvents()
 
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
@@ -45,7 +44,9 @@ final class SystemEvents {
       queue: .main
     ) { _ in
       easybarLog.debug("received workspace willSleep notification")
-      EventBus.shared.emit(.sleep)
+      Task {
+        await EventHub.shared.emit(.sleep)
+      }
     }
 
     observers[.sleep] = observer
@@ -62,7 +63,9 @@ final class SystemEvents {
       queue: .main
     ) { _ in
       easybarLog.debug("received workspace activeSpaceDidChange notification")
-      EventBus.shared.emit(.spaceChange)
+      Task {
+        await EventHub.shared.emit(.spaceChange)
+      }
     }
 
     observers[.spaceChange] = observer
@@ -88,7 +91,10 @@ final class SystemEvents {
 
       let appName = app.localizedName ?? ""
       easybarLog.debug("received didActivateApplication notification app=\(appName)")
-      EventBus.shared.emit(.appSwitch, appName: appName)
+
+      Task {
+        await EventHub.shared.emit(.appSwitch, appName: appName)
+      }
     }
 
     observers[.appSwitch] = observer
@@ -105,7 +111,9 @@ final class SystemEvents {
       queue: .main
     ) { _ in
       easybarLog.debug("received didChangeScreenParameters notification")
-      EventBus.shared.emit(.displayChange)
+      Task {
+        await EventHub.shared.emit(.displayChange)
+      }
     }
 
     observers[.displayChange] = observer
@@ -121,7 +129,6 @@ final class SystemEvents {
     let defaultCenter = NotificationCenter.default
 
     for observer in observers.values {
-      // Observers may belong to either center, so remove them from both.
       workspaceCenter.removeObserver(observer)
       defaultCenter.removeObserver(observer)
     }
@@ -139,7 +146,9 @@ final class SystemEvents {
     let workItem = DispatchWorkItem {
       DispatchQueue.main.async {
         easybarLog.debug("emitting coalesced system_woke")
-        EventBus.shared.emit(.systemWoke)
+        Task {
+          await EventHub.shared.emit(.systemWoke)
+        }
       }
     }
 

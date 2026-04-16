@@ -2,39 +2,30 @@ import Foundation
 
 /// Small helper for observing typed EasyBar events in native widgets.
 final class EasyBarEventObserver {
-
-  private var token: NSObjectProtocol?
+  private var task: Task<Void, Never>?
 
   /// Starts observing EasyBar events.
   ///
-  /// The handler receives the already typed payload.
+  /// The handler receives the already typed payload on the main actor.
   func start(handler: @escaping (EasyBarEventPayload) -> Void) {
     stop()
 
-    token = NotificationCenter.default.addObserver(
-      forName: .easyBarEvent,
-      object: nil,
-      queue: nil
-    ) { notification in
-      guard let payload = notification.object as? EasyBarEventPayload else {
-        return
-      }
+    task = Task {
+      let stream = await EventHub.shared.subscribe()
 
-      if Thread.isMainThread {
-        handler(payload)
-        return
-      }
+      for await payload in stream {
+        guard !Task.isCancelled else { break }
 
-      DispatchQueue.main.async {
-        handler(payload)
+        await MainActor.run {
+          handler(payload)
+        }
       }
     }
   }
 
   /// Stops observing EasyBar events.
   func stop() {
-    guard let token else { return }
-    NotificationCenter.default.removeObserver(token)
-    self.token = nil
+    task?.cancel()
+    task = nil
   }
 }

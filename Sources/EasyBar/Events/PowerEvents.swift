@@ -2,7 +2,6 @@ import Foundation
 import IOKit.ps
 
 final class PowerEvents {
-
   static let shared = PowerEvents()
 
   private var runLoopSource: Unmanaged<CFRunLoopSource>?
@@ -15,7 +14,10 @@ final class PowerEvents {
     guard runLoopSource == nil else { return }
 
     let callback: IOPowerSourceCallbackType = { _ in
-      EventBus.shared.emit(.powerSourceChange)
+      Task {
+        await EventHub.shared.emit(.powerSourceChange)
+      }
+
       PowerEvents.shared.handlePowerSourceCallback()
     }
 
@@ -57,7 +59,10 @@ final class PowerEvents {
 
     if lastChargingState != newState {
       lastChargingState = newState
-      EventBus.shared.emit(.chargingStateChange, charging: newState)
+
+      Task {
+        await EventHub.shared.emit(.chargingStateChange, charging: newState)
+      }
     }
   }
 

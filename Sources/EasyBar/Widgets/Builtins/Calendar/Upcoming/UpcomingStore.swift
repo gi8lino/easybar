@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+@MainActor
 final class NativeUpcomingCalendarStore: ObservableObject {
   static let shared = NativeUpcomingCalendarStore()
 
@@ -75,17 +76,15 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     !overlappingEvents(on: date).isEmpty
   }
 
-  /// Publishes one calendar snapshot update on the main queue.
+  /// Publishes one calendar snapshot update.
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
-    DispatchQueue.main.async {
-      self.snapshot = snapshot
-      self.sections = snapshot?.sections ?? []
-      self.events = snapshot?.events ?? []
+    self.snapshot = snapshot
+    self.sections = snapshot?.sections ?? []
+    self.events = snapshot?.events ?? []
 
-      easybarLog.debug(
-        "upcoming calendar store published snapshot_present=\(snapshot != nil) events=\(self.events.count) sections=\(self.sections.count)"
-      )
-    }
+    easybarLog.debug(
+      "upcoming calendar store published snapshot_present=\(snapshot != nil) events=\(self.events.count) sections=\(self.sections.count)"
+    )
   }
 
   /// Formats one debug date string.

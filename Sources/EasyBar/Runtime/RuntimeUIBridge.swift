@@ -1,22 +1,24 @@
 import Foundation
 
-/// Main-actor bridge for UI-owned runtime side effects.
-///
-/// The runtime coordinator is intentionally not allowed to own AppKit window
-/// controllers directly. This bridge keeps those actions on the main actor.
+/// Main-actor bridge used by the actor-owned runtime to trigger UI work.
 @MainActor
 final class RuntimeUIBridge {
   static let shared = RuntimeUIBridge()
 
-  weak var appDelegate: AppDelegate?
+  private init() {}
 
   /// Reloads the bar layout when the main window controller exists.
   func reloadBarLayout() {
-    appDelegate?.reloadBarLayoutFromRuntime()
+    AppController.shared.reloadBarLayout()
   }
 
   /// Updates the config error window from the current config failure state.
   func updateConfigErrorWindow() {
-    appDelegate?.updateConfigErrorWindowFromRuntime()
+    AppController.shared.updateConfigErrorWindow()
+  }
+
+  /// Applies the full post-config-reload UI refresh.
+  func handlePostConfigReloadUI() {
+    AppController.shared.handlePostConfigReloadUI()
   }
 }

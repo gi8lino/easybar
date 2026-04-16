@@ -30,10 +30,6 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping one day.
-  ///
-  /// This method is used frequently during SwiftUI rendering, so it should stay
-  /// free of debug logging to avoid noisy output and unnecessary overhead while
-  /// typing or hovering in the popup.
   func eventsForDay(_ date: Date) -> [NativeMonthCalendarEvent] {
     let calendar = Calendar.current
     let startOfDay = calendar.startOfDay(for: date)
@@ -48,9 +44,6 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping the inclusive day range.
-  ///
-  /// This method is also used from view updates, so it intentionally avoids
-  /// debug logging for the same reason as `eventsForDay(_:)`.
   func eventsInRange(from startDate: Date, to endDate: Date) -> [NativeMonthCalendarEvent] {
     let calendar = Calendar.current
     let startOfRange = calendar.startOfDay(for: startDate)
@@ -71,10 +64,6 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Prepares the subscribed month preload range for one visible month and radius.
-  ///
-  /// Radius `0` means the visible month only, `1` adds previous and next month,
-  /// and larger values expand outward symmetrically. Returns true when the
-  /// active preload range changed.
   func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar)
     -> Bool
   {
@@ -136,7 +125,7 @@ final class NativeMonthCalendarStore: ObservableObject {
 
   /// Publishes one calendar snapshot update on the main queue.
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
-    DispatchQueue.main.async {
+    let applyChange = {
       self.snapshot = snapshot
       self.sections = snapshot?.sections ?? []
       self.events = snapshot?.events ?? []
@@ -145,6 +134,13 @@ final class NativeMonthCalendarStore: ObservableObject {
         "month calendar store published snapshot_present=\(snapshot != nil) events=\(self.events.count) sections=\(self.sections.count)"
       )
     }
+
+    if Thread.isMainThread {
+      applyChange()
+      return
+    }
+
+    DispatchQueue.main.async(execute: applyChange)
   }
 
   /// Returns the first day of one month.

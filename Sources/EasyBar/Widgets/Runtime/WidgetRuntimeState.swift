@@ -1,6 +1,6 @@
 import Foundation
 
-/// Mutable Lua runtime handshake state tracked by the widget runner.
+/// Mutable Lua runtime handshake state tracked by the widget engine.
 struct WidgetRuntimeState {
   /// Event names currently requested by Lua widgets.
   var requiredEvents = Set<String>()
@@ -11,7 +11,7 @@ struct WidgetRuntimeState {
   /// Whether initial events have already been emitted.
   var didEmitInitialEvents = false
 
-  /// Returns whether the runner can emit the initial event batch.
+  /// Returns whether the engine can emit the initial event batch.
   var canEmitInitialEvents: Bool {
     isReady && hasSubscriptions && !didEmitInitialEvents
   }

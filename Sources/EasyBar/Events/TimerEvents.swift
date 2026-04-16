@@ -1,7 +1,6 @@
 import Foundation
 
 final class TimerEvents {
-
   static let shared = TimerEvents()
 
   private var minuteTimer: Timer?
@@ -52,8 +51,11 @@ final class TimerEvents {
       interval: interval,
       repeats: true
     ) { _ in
-      EventBus.shared.emit(event)
+      Task {
+        await EventHub.shared.emit(event)
+      }
     }
+
     timer.tolerance = tolerance
     RunLoop.main.add(timer, forMode: .common)
     return timer
