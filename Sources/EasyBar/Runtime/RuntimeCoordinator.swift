@@ -36,6 +36,7 @@ actor RuntimeCoordinator {
       NativeWidgetRegistry.shared.start()
     }
 
+    CalendarAgentEventRelay.shared.start()
     await widgetEngine.start()
     aeroSpaceService.start()
 
@@ -65,6 +66,7 @@ actor RuntimeCoordinator {
     metricsCoordinator.onSnapshot = nil
     socketServer.stop()
     aeroSpaceService.stop()
+    CalendarAgentEventRelay.shared.stop()
 
     await widgetEngine.shutdown()
 

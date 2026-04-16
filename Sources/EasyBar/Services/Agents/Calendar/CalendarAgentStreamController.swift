@@ -27,7 +27,7 @@ final class CalendarAgentStreamController {
       self?.handle(message)
     },
     clearState: { [weak self] in
-      self?.clearState()
+      self?.handleDisconnectedStateReset()
     },
     onConnected: { [weak self] in
       guard let self else { return }
@@ -98,6 +98,7 @@ final class CalendarAgentStreamController {
     pendingWakeRefreshWorkItem = nil
     eventObserver.stop()
     client.stop()
+    clearState()
   }
 
   /// Sends one fresh request built from current config and state.
@@ -120,6 +121,7 @@ final class CalendarAgentStreamController {
 
   /// Coalesces wake-triggered refresh work into one refresh request.
   private func scheduleWakeRefresh() {
+    guard started else { return }
     pendingWakeRefreshWorkItem?.cancel()
 
     let workItem = DispatchWorkItem { [weak self] in
@@ -134,6 +136,8 @@ final class CalendarAgentStreamController {
 
   /// Handles one decoded calendar-agent response.
   private func handle(_ response: CalendarAgentMessage) {
+    guard started else { return }
+
     switch response.kind {
     case .snapshot:
       guard let snapshot = response.snapshot else {
@@ -157,5 +161,11 @@ final class CalendarAgentStreamController {
     case .pong, .subscribed, .created, .updated, .deleted:
       break
     }
+  }
+
+  /// Clears published state only for disconnects that occur while the stream is active.
+  private func handleDisconnectedStateReset() {
+    guard started else { return }
+    clearState()
   }
 }

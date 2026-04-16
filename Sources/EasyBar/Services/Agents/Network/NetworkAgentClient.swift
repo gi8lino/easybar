@@ -7,6 +7,7 @@ final class NetworkAgentClient {
   private let eventObserver = EasyBarEventObserver()
   private let refreshQueue = DispatchQueue(label: "easybar.network-agent.refresh")
   private var pendingWakeRefreshWorkItem: DispatchWorkItem?
+  private var started = false
 
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
@@ -18,7 +19,7 @@ final class NetworkAgentClient {
       self?.handle(message)
     },
     clearState: { [weak self] in
-      self?.clearPublishedState()
+      self?.handleDisconnectedStateReset()
     },
     onConnected: {
       MetricsCoordinator.shared.recordAgentConnected(.network)
@@ -47,16 +48,21 @@ final class NetworkAgentClient {
 
   /// Starts the network agent client.
   func start() {
+    guard !started else { return }
+    started = true
     startEventObserver()
     client.start()
   }
 
   /// Stops the network agent client.
   func stop() {
+    guard started else { return }
+    started = false
     pendingWakeRefreshWorkItem?.cancel()
     pendingWakeRefreshWorkItem = nil
     eventObserver.stop()
     client.stop()
+    clearPublishedState(notify: false)
   }
 
   /// Requests one fresh network-agent update using the current subscription.
@@ -79,6 +85,7 @@ final class NetworkAgentClient {
 
   /// Coalesces wake-triggered refresh work into one refresh request.
   private func scheduleWakeRefresh() {
+    guard started else { return }
     pendingWakeRefreshWorkItem?.cancel()
 
     let workItem = DispatchWorkItem { [weak self] in
@@ -93,6 +100,8 @@ final class NetworkAgentClient {
 
   /// Handles one decoded network agent message.
   private func handle(_ message: NetworkAgentMessage) {
+    guard started else { return }
+
     switch message.kind {
     case .version:
       break
@@ -123,6 +132,8 @@ final class NetworkAgentClient {
 
   /// Handles one network-agent error message.
   private func handleError(code: NetworkAgentErrorCode?, message: String?) {
+    guard started else { return }
+
     easybarLog.warn(
       "network agent error code=\(code?.rawValue ?? "unknown") message=\(message ?? "unknown")"
     )
@@ -143,12 +154,19 @@ final class NetworkAgentClient {
   }
 
   /// Clears the shared Wi-Fi state and emits the corresponding app events.
-  private func clearPublishedState() {
+  private func handleDisconnectedStateReset() {
+    guard started else { return }
+    clearPublishedState(notify: true)
+  }
+
+  /// Clears the shared Wi-Fi state and optionally emits the corresponding app events.
+  private func clearPublishedState(notify: Bool) {
     DispatchQueue.main.async {
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.clear()
 
       guard changed else { return }
+      guard notify else { return }
 
       Task {
         await EventHub.shared.emit(
@@ -166,6 +184,8 @@ final class NetworkAgentClient {
   /// Publishes one snapshot to the shared store on the main queue and emits app events.
   private func publish(snapshot: NetworkAgentSnapshot) {
     DispatchQueue.main.async {
+      guard self.started else { return }
+
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
 
