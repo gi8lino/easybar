@@ -493,6 +493,8 @@ private struct MetricsHistory {
 
 /// Renders human-readable metrics text for one-shot and watch output.
 private enum MetricsRenderer {
+  private static let watchGraphWidth = 32
+
   static func snapshotText(_ snapshot: IPC.MetricsSnapshot) -> String {
     let sections = [
       header(snapshot, live: false),
@@ -531,33 +533,37 @@ private enum MetricsRenderer {
         column("metric", width: 10),
         column("now", width: 8, alignment: .right),
         column("avg", width: 8, alignment: .right),
-        "history",
+        "history (\(watchGraphWidth))",
       ]),
       graphLine(
         label: "app cpu",
         current: percent(snapshot.process.cpuPercent),
         average: percent(average(history.values(for: "process.cpu"))),
         values: history.values(for: "process.cpu"),
-        absoluteMax: 100
+        absoluteMax: 100,
+        fixedWidth: watchGraphWidth
       ),
       graphLine(
         label: "lua cpu",
         current: percent(snapshot.lua.cpuPercent),
         average: percent(average(history.values(for: "lua.cpu"))),
         values: history.values(for: "lua.cpu"),
-        absoluteMax: 100
+        absoluteMax: 100,
+        fixedWidth: watchGraphWidth
       ),
       graphLine(
         label: "events/s",
         current: number(snapshot.runtime.eventsPerSecond),
         average: number(average(history.values(for: "runtime.events"))),
-        values: history.values(for: "runtime.events")
+        values: history.values(for: "runtime.events"),
+        fixedWidth: watchGraphWidth
       ),
       graphLine(
         label: "tree/s",
         current: number(snapshot.runtime.treeUpdatesPerSecond),
         average: number(average(history.values(for: "runtime.tree"))),
-        values: history.values(for: "runtime.tree")
+        values: history.values(for: "runtime.tree"),
+        fixedWidth: watchGraphWidth
       ),
     ]
 
@@ -580,46 +586,58 @@ private enum MetricsRenderer {
     return [
       "Runtime",
       row([
-        column("metric", width: 18),
-        column("value", width: 16),
-        column("metric", width: 18),
-        column("value", width: 16),
+        column("metric", width: 16),
+        column("value", width: 18),
+        column("metric", width: 16),
+        column("value", width: 18),
       ]),
       row([
-        column("subscribers", width: 18),
-        column(String(runtime.subscriberCount), width: 16),
-        column("lua_ready", width: 18),
-        column(yesNo(runtime.luaReady), width: 16),
+        column("subscribers", width: 16),
+        column(String(runtime.subscriberCount), width: 18),
+        column("lua_ready", width: 16),
+        column(yesNo(runtime.luaReady), width: 18),
       ]),
       row([
-        column("subscribed_events", width: 18),
-        column(String(runtime.subscribedEventCount), width: 16),
-        column("lua_restarts", width: 18),
-        column(String(runtime.luaRestartCount), width: 16),
+        column("subscribed", width: 16),
+        column(String(runtime.subscribedEventCount), width: 18),
+        column("lua_restarts", width: 16),
+        column(String(runtime.luaRestartCount), width: 18),
       ]),
       row([
-        column("events", width: 18),
-        column("\(runtime.totalEvents) (\(number(runtime.eventsPerSecond))/s)", width: 16),
-        column("tree_updates", width: 18),
-        column("\(runtime.treeUpdates) (\(number(runtime.treeUpdatesPerSecond))/s)", width: 16),
+        column("events", width: 16),
+        column(String(runtime.totalEvents), width: 18),
+        column("events_rate", width: 16),
+        column("\(number(runtime.eventsPerSecond))/s", width: 18),
       ]),
       row([
-        column("stdout", width: 18),
-        column(String(runtime.stdoutLines), width: 16),
-        column("stderr", width: 18),
-        column(String(runtime.stderrLines), width: 16),
+        column("app/widget", width: 16),
+        column("\(runtime.appEvents)/\(runtime.widgetEvents)", width: 18),
+        column("tree_updates", width: 16),
+        column(String(runtime.treeUpdates), width: 18),
       ]),
       row([
-        column("lua_writes", width: 18),
-        column(String(runtime.luaWrites), width: 16),
-        column("decode_errors", width: 18),
-        column(String(runtime.decodeErrors), width: 16),
+        column("tree_rate", width: 16),
+        column("\(number(runtime.treeUpdatesPerSecond))/s", width: 18),
+        column("decode_errors", width: 16),
+        column(String(runtime.decodeErrors), width: 18),
       ]),
       row([
-        column("last_tree", width: 18),
-        column(runtime.lastTreeRoot ?? "-", width: 16),
-        column("nodes", width: 18),
-        column(runtime.lastTreeNodeCount.map(String.init) ?? "-", width: 16),
+        column("stdout/stderr", width: 16),
+        column("\(runtime.stdoutLines)/\(runtime.stderrLines)", width: 18),
+        column("lua_writes", width: 16),
+        column(String(runtime.luaWrites), width: 18),
+      ]),
+      row([
+        column("last_tree", width: 16),
+        column(runtime.lastTreeRoot ?? "-", width: 18),
+        column("tree_nodes", width: 16),
+        column(runtime.lastTreeNodeCount.map(String.init) ?? "-", width: 18),
+      ]),
+      row([
+        column("last_tree_age", width: 16),
+        column(relative(runtime.lastTreeAt), width: 18),
+        column("sample", width: 16),
+        column(sampleInterval(snapshot.sampleIntervalSeconds), width: 18),
       ]),
     ].joined(separator: "\n")
   }
@@ -727,33 +745,42 @@ private enum MetricsRenderer {
     current: String,
     average: String,
     values: [Double],
-    absoluteMax: Double? = nil
+    absoluteMax: Double? = nil,
+    fixedWidth: Int
   ) -> String {
     row([
       column(label, width: 10),
       column(current, width: 8, alignment: .right),
       column(average, width: 8, alignment: .right),
-      sparkline(values, absoluteMax: absoluteMax),
+      sparkline(values, absoluteMax: absoluteMax, fixedWidth: fixedWidth),
     ])
   }
 
-  private static func sparkline(_ values: [Double], absoluteMax: Double? = nil) -> String {
-    guard !values.isEmpty else { return "[no data]" }
+  private static func sparkline(
+    _ values: [Double],
+    absoluteMax: Double? = nil,
+    fixedWidth: Int
+  ) -> String {
+    guard fixedWidth > 0 else { return "[]" }
+    guard !values.isEmpty else { return "[" + String(repeating: " ", count: fixedWidth) + "]" }
 
     let symbols = Array("▁▂▃▄▅▆▇█")
     let maxValue = absoluteMax ?? (values.max() ?? 0)
+    let visibleValues = Array(values.suffix(fixedWidth))
+    let leadingPadding = max(0, fixedWidth - visibleValues.count)
 
     guard maxValue > 0 else {
-      return "[" + String(repeating: String(symbols[0]), count: values.count) + "]"
+      return "[" + String(repeating: " ", count: leadingPadding)
+        + String(repeating: String(symbols[0]), count: visibleValues.count) + "]"
     }
 
-    let rendered = values.map { value -> Character in
+    let rendered = visibleValues.map { value -> Character in
       let normalized = min(max(value / maxValue, 0), 1)
       let index = Int((normalized * Double(symbols.count - 1)).rounded())
       return symbols[index]
     }
 
-    return "[" + String(rendered) + "]"
+    return "[" + String(repeating: " ", count: leadingPadding) + String(rendered) + "]"
   }
 
   private static func timestamp(_ date: Date) -> String {
@@ -810,6 +837,10 @@ private enum MetricsRenderer {
     formatter.includesUnit = true
     formatter.isAdaptive = true
     return formatter.string(fromByteCount: Int64(value))
+  }
+
+  private static func sampleInterval(_ value: Double) -> String {
+    "\(number(value))s"
   }
 
   private static func average(_ values: [Double]) -> Double? {
