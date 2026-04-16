@@ -16,6 +16,7 @@ final class LuaProcessController {
   }
 
   fileprivate(set) var process: Process?
+  fileprivate(set) var processGroupIdentifier: Int32?
 
   /// Returns the running Lua process identifier when available.
   var processIdentifier: Int32? {
@@ -47,8 +48,15 @@ final class LuaProcessController {
     easyBarLuaForcedKillWorkItem = nil
 
     self.process = process
+    processGroupIdentifier = assignDedicatedProcessGroup(to: process)
 
-    easybarLog.debug("lua runtime started pid=\(process.processIdentifier)")
+    if let processGroupIdentifier {
+      easybarLog.debug(
+        "lua runtime started pid=\(process.processIdentifier) pgid=\(processGroupIdentifier)"
+      )
+    } else {
+      easybarLog.debug("lua runtime started pid=\(process.processIdentifier) pgid=<unavailable>")
+    }
 
     return (process, pipes.input, pipes.output, pipes.error)
   }
@@ -57,8 +65,31 @@ final class LuaProcessController {
   func shutdown() {
     guard let process else { return }
 
-    easybarLog.debug("shutting down lua runtime pid=\(process.processIdentifier)")
-    easyBarTerminateLuaProcess(process)
-    self.process = nil
+    if let processGroupIdentifier {
+      easybarLog.debug(
+        "shutting down lua runtime pid=\(process.processIdentifier) pgid=\(processGroupIdentifier)"
+      )
+    } else {
+      easybarLog.debug("shutting down lua runtime pid=\(process.processIdentifier)")
+    }
+
+    easyBarTerminateLuaProcess(
+      process,
+      processGroupIdentifier: processGroupIdentifier
+    )
+
+    clearTrackedProcessState()
+  }
+
+  /// Clears the currently tracked Lua process state.
+  func clearTrackedProcessState() {
+    process = nil
+    processGroupIdentifier = nil
+  }
+
+  /// Clears the tracked Lua process only when it matches the given pid.
+  func clearTrackedProcessIfMatching(pid: Int32) {
+    guard process?.processIdentifier == pid else { return }
+    clearTrackedProcessState()
   }
 }
