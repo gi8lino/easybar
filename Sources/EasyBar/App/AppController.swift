@@ -8,6 +8,9 @@ final class AppController {
   static let shared = AppController()
 
   private var started = false
+  private var shutdownTask: Task<Void, Never>?
+  private var terminationRequestTask: Task<Void, Never>?
+  private var forceImmediateTermination = false
   private var barWindowController: BarWindowController?
   private let configErrorWindowController = ConfigErrorWindowController()
   private let instanceGuard = SingleInstanceGuard()
@@ -55,14 +58,35 @@ final class AppController {
 
   /// Stops the actor-owned runtime.
   func stop() {
-    guard started else { return }
-    started = false
+    _ = ensureShutdownTask()
+  }
 
-    easybarLog.info("easybar shutting down")
-    signalHandler.stop()
+  /// Stops the actor-owned runtime and waits for cleanup to finish.
+  func stopAndWait() async {
+    guard let shutdownTask = ensureShutdownTask() else { return }
+    await shutdownTask.value
+    self.shutdownTask = nil
+  }
 
-    Task {
-      await RuntimeCoordinator.shared.stop()
+  /// Requests graceful shutdown, then terminates once cleanup is complete.
+  func requestTermination() {
+    guard !forceImmediateTermination else {
+      NSApp.terminate(nil)
+      return
+    }
+
+    guard terminationRequestTask == nil else { return }
+
+    terminationRequestTask = Task { [weak self] in
+      guard let self else { return }
+
+      await self.stopAndWait()
+
+      await MainActor.run {
+        self.terminationRequestTask = nil
+        self.forceImmediateTermination = true
+        NSApp.terminate(nil)
+      }
     }
   }
 
@@ -93,8 +117,14 @@ final class AppController {
 
   /// Terminates the application immediately.
   private func terminateApplication() -> Never {
+    forceImmediateTermination = true
     NSApp.terminate(nil)
     fatalError("Application should have terminated")
+  }
+
+  /// Returns whether AppKit termination should bypass graceful shutdown.
+  var shouldTerminateImmediately: Bool {
+    forceImmediateTermination
   }
 
   /// Configures file logging from the current app config.
@@ -240,5 +270,25 @@ final class AppController {
     } catch {
       easybarLog.warn("failed to install widget editor stub: \(error)")
     }
+  }
+
+  /// Starts one shared shutdown task when the app is still running.
+  private func ensureShutdownTask() -> Task<Void, Never>? {
+    if let shutdownTask {
+      return shutdownTask
+    }
+
+    guard started else { return nil }
+    started = false
+
+    easybarLog.info("easybar shutting down")
+    signalHandler.stop()
+
+    let shutdownTask = Task {
+      await RuntimeCoordinator.shared.stop()
+    }
+
+    self.shutdownTask = shutdownTask
+    return shutdownTask
   }
 }

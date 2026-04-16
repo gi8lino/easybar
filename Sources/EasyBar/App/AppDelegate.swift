@@ -7,6 +7,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     AppController.shared.start()
   }
 
+  func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    if AppController.shared.shouldTerminateImmediately {
+      return .terminateNow
+    }
+
+    AppController.shared.requestTermination()
+    return .terminateCancel
+  }
+
   func applicationWillTerminate(_ notification: Notification) {
     AppController.shared.stop()
   }

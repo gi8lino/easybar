@@ -12,6 +12,7 @@ actor FileWatcher {
   private var source: DispatchSourceFileSystemObject?
   private var debounceWorkItem: DispatchWorkItem?
   private var continuation: AsyncStream<Event>.Continuation?
+  private let debounceQueue = DispatchQueue(label: "easybar.file-watcher.debounce", qos: .utility)
 
   /// Starts watching the given config file and returns an event stream.
   func start(configPath: String, enabled: Bool) -> AsyncStream<Event> {
@@ -108,7 +109,7 @@ actor FileWatcher {
 
     debounceWorkItem = workItem
 
-    DispatchQueue.main.asyncAfter(
+    debounceQueue.asyncAfter(
       deadline: .now() + 0.25,
       execute: workItem
     )

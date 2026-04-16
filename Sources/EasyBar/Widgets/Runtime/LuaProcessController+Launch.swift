@@ -102,7 +102,13 @@ extension LuaProcessController {
 
   /// Installs exit observation for the spawned Lua child.
   func installTerminationSource(for pid: Int32) {
-    terminationSource?.cancel()
+    let previousSource = withLock { () -> DispatchSourceProcess? in
+      let previousSource = terminationSource
+      terminationSource = nil
+      return previousSource
+    }
+
+    previousSource?.cancel()
 
     let source = DispatchSource.makeProcessSource(
       identifier: pid,
@@ -115,13 +121,14 @@ extension LuaProcessController {
     }
 
     source.resume()
-    terminationSource = source
+    withLock {
+      terminationSource = source
+    }
   }
 
   /// Handles Lua process termination and related cleanup logging.
   func handleTermination(pid: Int32) {
-    easyBarLuaForcedKillWorkItem?.cancel()
-    easyBarLuaForcedKillWorkItem = nil
+    cancelForcedKillWorkItem()
 
     var rawStatus: Int32 = 0
     let waitResult = waitpid(pid, &rawStatus, 0)

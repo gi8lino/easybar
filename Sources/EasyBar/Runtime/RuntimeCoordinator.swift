@@ -19,7 +19,9 @@ actor RuntimeCoordinator {
   private var watcherTask: Task<Void, Never>?
   private var started = false
   private var isReloadingConfig = false
+  private var isRestartingLuaRuntime = false
   private var queuedConfigReload = false
+  private var queuedLuaRuntimeRestart = false
 
   /// Starts the actor-owned runtime.
   func start() async {
@@ -50,6 +52,11 @@ actor RuntimeCoordinator {
 
     easybarLog.info("runtime coordinator stop begin")
 
+    isReloadingConfig = false
+    isRestartingLuaRuntime = false
+    queuedConfigReload = false
+    queuedLuaRuntimeRestart = false
+
     watcherTask?.cancel()
     watcherTask = nil
 
@@ -69,9 +76,9 @@ actor RuntimeCoordinator {
 
   /// Reloads config and reapplies all dependent runtime state.
   func reloadConfig() async {
-    if isReloadingConfig {
+    if isReloadingConfig || isRestartingLuaRuntime {
       queuedConfigReload = true
-      easybarLog.info("reloadConfig already in progress; queueing another reload")
+      easybarLog.info("reloadConfig busy; queueing another reload")
       return
     }
 
@@ -82,17 +89,15 @@ actor RuntimeCoordinator {
 
     await configureLogging()
 
-    await MainActor.run {
-      AppController.shared.handlePostConfigReloadUI()
-    }
-
     await widgetEngine.reload()
 
     await MainActor.run {
       NativeWidgetRegistry.shared.reload()
+      AppController.shared.handlePostConfigReloadUI()
     }
 
     await restartFileWatcher()
+    reloadSocketServerConfiguration()
 
     aeroSpaceService.triggerRefresh()
 
@@ -106,11 +111,24 @@ actor RuntimeCoordinator {
     if queuedConfigReload {
       queuedConfigReload = false
       await reloadConfig()
+      return
+    }
+
+    if queuedLuaRuntimeRestart {
+      queuedLuaRuntimeRestart = false
+      await restartLuaRuntime()
     }
   }
 
   /// Restarts the Lua/widget runtime and reapplies native widgets afterward.
   func restartLuaRuntime() async {
+    if isReloadingConfig || isRestartingLuaRuntime {
+      queuedLuaRuntimeRestart = true
+      easybarLog.info("restartLuaRuntime busy; queueing another restart")
+      return
+    }
+
+    isRestartingLuaRuntime = true
     easybarLog.info("restartLuaRuntime begin")
 
     await widgetEngine.reload()
@@ -122,6 +140,18 @@ actor RuntimeCoordinator {
     aeroSpaceService.triggerRefresh()
 
     easybarLog.info("restartLuaRuntime end")
+    isRestartingLuaRuntime = false
+
+    if queuedConfigReload {
+      queuedConfigReload = false
+      await reloadConfig()
+      return
+    }
+
+    if queuedLuaRuntimeRestart {
+      queuedLuaRuntimeRestart = false
+      await restartLuaRuntime()
+    }
   }
 
   /// Refreshes the current runtime without reloading config.
@@ -219,6 +249,11 @@ actor RuntimeCoordinator {
         await self.handleSocketCommand(command)
       }
     }
+  }
+
+  /// Rebinds the IPC socket server when the config changed the socket path.
+  private func reloadSocketServerConfiguration() {
+    socketServer.reloadConfiguration()
   }
 
   /// Broadcasts one metrics snapshot through the IPC socket server.

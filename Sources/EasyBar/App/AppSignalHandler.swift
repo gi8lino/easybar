@@ -19,7 +19,7 @@ final class AppSignalHandler {
     let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
     sigintSource.setEventHandler {
       easybarLog.info("received SIGINT")
-      NSApp.terminate(nil)
+      AppController.shared.requestTermination()
     }
     sigintSource.resume()
     self.sigintSource = sigintSource
@@ -27,7 +27,7 @@ final class AppSignalHandler {
     let sigtermSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
     sigtermSource.setEventHandler {
       easybarLog.info("received SIGTERM")
-      NSApp.terminate(nil)
+      AppController.shared.requestTermination()
     }
     sigtermSource.resume()
     self.sigtermSource = sigtermSource
