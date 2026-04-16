@@ -18,8 +18,11 @@ final class AeroSpaceService: ObservableObject {
   @Published private(set) var focusedLayoutMode: AeroSpaceLayoutMode = .unknown
 
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
+  private let stateLock = NSLock()
   private var consumers = Set<String>()
   private var appSwitchObserver: NSObjectProtocol?
+  private var running = false
+  private var generation: UInt64 = 0
 
   private init() {}
 }
@@ -34,10 +37,38 @@ extension AeroSpaceService {
 
   /// Starts the service.
   func start() {
+    let shouldStart = withLock { () -> Bool in
+      guard !running else { return false }
+      running = true
+      generation &+= 1
+      return true
+    }
+
+    guard shouldStart else { return }
+
     easybarLog.debug("aerospace service start begin")
     subscribeAppSwitches()
     refresh()
     easybarLog.debug("aerospace service start end")
+  }
+
+  /// Stops the service and prevents queued refresh work from publishing.
+  func stop() {
+    let observer = withLock { () -> NSObjectProtocol? in
+      guard running else { return nil }
+      running = false
+      generation &+= 1
+      return appSwitchObserver
+    }
+
+    if let observer {
+      NSWorkspace.shared.notificationCenter.removeObserver(observer)
+      withLock {
+        appSwitchObserver = nil
+      }
+    }
+
+    easybarLog.debug("aerospace service stop end")
   }
 
   /// Registers one widget that depends on AeroSpace state.
@@ -60,10 +91,12 @@ extension AeroSpaceService {
       return
     }
 
+    let generation = currentGeneration()
     easybarLog.debug("aerospace triggerRefresh queued consumers=\(consumers.count)")
 
     refreshQueue.async { [weak self] in
-      self?.reloadState()
+      guard let self, self.shouldExecute(generation: generation) else { return }
+      self.reloadState()
     }
   }
 
@@ -88,7 +121,9 @@ extension AeroSpaceService {
 
     refreshQueue.async { [weak self] in
       guard let self else { return }
+      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
       _ = self.runAeroSpace(arguments: ["workspace", workspace])
+      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
       self.reloadState()
     }
   }
@@ -124,10 +159,12 @@ extension AeroSpaceService {
       return
     }
 
+    let generation = currentGeneration()
     easybarLog.debug("aerospace refresh queued consumers=\(consumers.count)")
 
     refreshQueue.async { [weak self] in
-      self?.reloadState()
+      guard let self, self.shouldExecute(generation: generation) else { return }
+      self.reloadState()
     }
   }
 }
@@ -188,6 +225,7 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
   fileprivate func reloadState() {
+    guard shouldExecute(generation: currentGeneration()) else { return }
     easybarLog.debug("aerospace reloadState begin")
 
     let workspaces = loadWorkspaces()
@@ -211,6 +249,7 @@ extension AeroSpaceService {
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
+      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
       let spacesChanged = self.spaces != spaces
       let focusedAppChanged = self.focusedApp != focused
@@ -366,6 +405,8 @@ extension AeroSpaceService {
 
   /// Runs the AeroSpace CLI.
   fileprivate func runAeroSpace(arguments: [String]) -> String? {
+    guard isRunning else { return nil }
+
     guard let executable = resolveAeroSpacePath() else {
       easybarLog.debug("aerospace executable not found")
       return nil
@@ -377,6 +418,7 @@ extension AeroSpaceService {
 
     let pipe = Pipe()
     process.standardOutput = pipe
+    let outputHandle = pipe.fileHandleForReading
 
     do {
       try process.run()
@@ -386,8 +428,20 @@ extension AeroSpaceService {
     }
 
     process.waitUntilExit()
+    guard isRunning else {
+      try? outputHandle.close()
+      return nil
+    }
 
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    let data: Data
+    do {
+      data = try outputHandle.readToEnd() ?? Data()
+    } catch {
+      easybarLog.debug(
+        "failed to read aerospace output args=\(arguments.joined(separator: " ")): \(error)"
+      )
+      return nil
+    }
 
     if process.terminationStatus != 0 {
       easybarLog.debug(
@@ -424,6 +478,30 @@ extension AeroSpaceService {
   fileprivate func publishUpdate(logMessage: String) {
     easybarLog.debug(logMessage)
     NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
+  }
+
+  /// Returns whether the service is still allowed to execute the queued refresh work.
+  fileprivate func shouldExecute(generation: UInt64) -> Bool {
+    withLock {
+      running && self.generation == generation
+    }
+  }
+
+  /// Returns the current refresh generation.
+  fileprivate func currentGeneration() -> UInt64 {
+    withLock { generation }
+  }
+
+  /// Returns whether the service is currently running.
+  fileprivate var isRunning: Bool {
+    withLock { running }
+  }
+
+  /// Runs one closure while holding the service state lock.
+  fileprivate func withLock<T>(_ body: () -> T) -> T {
+    stateLock.lock()
+    defer { stateLock.unlock() }
+    return body()
   }
 }
 

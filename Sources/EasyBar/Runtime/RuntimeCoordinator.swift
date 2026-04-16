@@ -64,6 +64,7 @@ actor RuntimeCoordinator {
 
     metricsCoordinator.onSnapshot = nil
     socketServer.stop()
+    aeroSpaceService.stop()
 
     await widgetEngine.shutdown()
 
