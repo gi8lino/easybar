@@ -20,6 +20,130 @@
 ---| '"sparkline"'
 ---| '"spaces"'
 
+---@alias EasyBarBoolLike boolean
+---| '"on"'
+---| '"off"'
+
+---@alias EasyBarRootPosition
+---| '"left"'
+---| '"center"'
+---| '"right"'
+
+---@alias EasyBarPosition string
+
+---@class (exact) EasyBarFontProps
+---@field size? number Font size in points.
+
+---@class (exact) EasyBarLabelProps
+---@field string? string Label text.
+---@field color? string Hex color override for the label.
+---@field font? EasyBarFontProps Label font overrides.
+
+---@class (exact) EasyBarIconProps
+---@field string? string Icon glyph text.
+---@field color? string Hex color override for the icon.
+---@field font? EasyBarFontProps Icon font overrides.
+---@field image? string Image path to render instead of icon text.
+---@field image_size? number Image size in points.
+---@field image_corner_radius? number Image corner radius in points.
+---@field padding_right? number Additional spacing between icon and label.
+
+---@class (exact) EasyBarImageProps
+---@field path? string Image path.
+---@field size? number Image size in points.
+---@field corner_radius? number Image corner radius in points.
+
+---@class (exact) EasyBarBackgroundProps
+---@field color? string Background fill color.
+---@field border_color? string Border stroke color.
+---@field border_width? number Border width in points.
+---@field corner_radius? number Corner radius in points.
+---@field padding_left? number Left padding in points.
+---@field padding_right? number Right padding in points.
+---@field padding_top? number Top padding in points.
+---@field padding_bottom? number Bottom padding in points.
+
+---@class (exact) EasyBarMarginProps
+---@field margin_left? number Left margin in points.
+---@field margin_right? number Right margin in points.
+---@field margin_top? number Top margin in points.
+---@field margin_bottom? number Bottom margin in points.
+
+---@class (exact) EasyBarPopupProps
+---@field drawing? EasyBarBoolLike Whether popup content is shown.
+---@field background? EasyBarBackgroundProps Popup background styling.
+---@field spacing? number Child spacing inside the popup container.
+---@field width? number Popup width in points.
+---@field height? number Popup height in points.
+---@field opacity? number Popup opacity from `0` to `1`.
+---@field y_offset? number Vertical offset in points.
+---@field padding_x? number Horizontal popup padding shorthand.
+---@field padding_y? number Vertical popup padding shorthand.
+---@field paddingX? number Horizontal popup padding shorthand.
+---@field paddingY? number Vertical popup padding shorthand.
+---@field padding_left? number Left popup padding in points.
+---@field padding_right? number Right popup padding in points.
+---@field padding_top? number Top popup padding in points.
+---@field padding_bottom? number Bottom popup padding in points.
+---@field margin_x? number Horizontal popup margin shorthand.
+---@field margin_y? number Vertical popup margin shorthand.
+---@field marginX? number Horizontal popup margin shorthand.
+---@field marginY? number Vertical popup margin shorthand.
+---@field margin_left? number Left popup margin in points.
+---@field margin_right? number Right popup margin in points.
+---@field margin_top? number Top popup margin in points.
+---@field margin_bottom? number Bottom popup margin in points.
+---@field backgroundColor? string Legacy direct background color alias.
+---@field borderColor? string Legacy direct border color alias.
+---@field borderWidth? number Legacy direct border width alias.
+---@field cornerRadius? number Legacy direct corner radius alias.
+
+---@alias EasyBarLabelLike string|number|boolean|EasyBarLabelProps
+---@alias EasyBarIconLike string|number|boolean|EasyBarIconProps
+
+---@class (exact) EasyBarNodeProps
+---@field position? EasyBarPosition Root nodes use `left`, `center`, or `right`; popup children use `popup.<id>`.
+---@field order? integer Render order within one bar position.
+---@field drawing? EasyBarBoolLike Whether the node is visible.
+---@field parent? string Parent node id for nested layout.
+---@field width? number Width in points.
+---@field height? number Height in points.
+---@field opacity? number Opacity from `0` to `1`.
+---@field y_offset? number Vertical offset in points.
+---@field interval? number Polling interval in seconds.
+---@field on_interval? fun() Interval callback executed on the configured cadence.
+---@field color? string Primary foreground color.
+---@field icon? EasyBarIconLike Icon table or shorthand value.
+---@field label? EasyBarLabelLike Label table or shorthand value.
+---@field image? EasyBarImageProps Standalone image content.
+---@field background? EasyBarBackgroundProps Background and padding styling.
+---@field margin? EasyBarMarginProps Margin overrides for individual edges.
+---@field popup? EasyBarPopupProps Popup container properties.
+---@field spacing? number Child spacing for rows, groups, and popup content.
+---@field value? number Current scalar value for progress/slider nodes.
+---@field min? number Minimum value for progress/slider nodes.
+---@field max? number Maximum value for progress/slider nodes.
+---@field step? number Slider step size.
+---@field values? number[] Sparkline sample values.
+---@field line_width? number Sparkline stroke width.
+---@field lineWidth? number Legacy sparkline stroke width alias.
+---@field padding_x? number Horizontal padding shorthand.
+---@field padding_y? number Vertical padding shorthand.
+---@field paddingX? number Horizontal padding shorthand.
+---@field paddingY? number Vertical padding shorthand.
+---@field margin_x? number Horizontal margin shorthand.
+---@field margin_y? number Vertical margin shorthand.
+---@field marginX? number Horizontal margin shorthand.
+---@field marginY? number Vertical margin shorthand.
+---@field margin_left? number Left margin in points.
+---@field margin_right? number Right margin in points.
+---@field margin_top? number Top margin in points.
+---@field margin_bottom? number Bottom margin in points.
+---@field backgroundColor? string Legacy direct background color alias.
+---@field borderColor? string Legacy direct border color alias.
+---@field borderWidth? number Legacy direct border width alias.
+---@field cornerRadius? number Legacy direct corner radius alias.
+
 ---@alias EasyBarEventName
 ---| '"interval"'
 ---| '"forced"'
@@ -125,7 +249,7 @@ local EasyBar = {}
 
 ---Sets per-widget default properties for future `easybar.add(...)` calls.
 ---Defaults apply only within the current widget file.
----@param props table
+---@param props EasyBarNodeProps
 function EasyBar.default(props) end
 
 ---Clears previously configured widget defaults.
@@ -138,17 +262,17 @@ function EasyBar.clear_defaults() end
 ---on the configured cadence without requiring an event subscription.
 ---@param kind EasyBarKind
 ---@param id string
----@param props? table
+---@param props? EasyBarNodeProps
 function EasyBar.add(kind, id, props) end
 
 ---Merges properties into one existing node.
 ---@param id string
----@param props table
+---@param props EasyBarNodeProps
 function EasyBar.set(id, props) end
 
 ---Returns a copy of the current property table for one node.
 ---@param id string
----@return table
+---@return EasyBarNodeProps
 function EasyBar.get(id) end
 
 ---Removes one node and all of its descendants.

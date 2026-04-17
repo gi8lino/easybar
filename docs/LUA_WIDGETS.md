@@ -24,7 +24,8 @@ That gives you:
 
 - no `unknown global 'easybar'` warning
 - hover documentation
-- basic autocomplete for the `easybar` API
+- autocomplete for the `easybar` API
+- diagnostics and autocomplete for supported node properties such as `background.border_width`, `popup.drawing`, `interval`, and `on_interval`
 
 Suggested setup:
 
@@ -48,6 +49,8 @@ Example `.luarc.json`:
   }
 }
 ```
+
+If your editor still only knows about the `easybar` global but not nested property tables, restart EasyBar once so it reinstalls the latest `easybar_api.lua` stub.
 
 ## API
 
@@ -242,6 +245,9 @@ easybar.log(easybar.level.warn, "vpn toggle skipped")
 ```
 
 ## Properties
+
+The bundled LuaLS stub marks the public property tables as exact, so unknown keys in
+`icon`, `label`, `background`, `popup`, and the top-level node props should surface as editor diagnostics.
 
 ### Basic
 
