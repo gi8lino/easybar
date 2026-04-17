@@ -31,30 +31,32 @@ At a high level:
 
 ```mermaid
 sequenceDiagram
-    participant App as "AppDelegate / WidgetRunner"
+    participant App as "AppController / RuntimeCoordinator"
+    participant Engine as "WidgetEngine"
     participant Proc as "LuaProcessController / LuaTransport"
     participant Lua as "runtime.lua"
     participant API as "api.lua registry"
     participant Render as "render.lua"
-    participant Events as "EventBus / EventManager"
+    participant Events as "EventHub / EventManager"
     participant Store as "WidgetStore"
 
-    App->>Proc: start()
+    App->>Engine: start scripted runtime
+    Engine->>Proc: start()
     Proc->>Lua: launch runtime.lua with widget dir
     Lua->>API: load widgets and build registry
-    Lua-->>App: subscriptions JSON
-    Lua-->>App: ready JSON
-    App->>Events: start required native subscriptions
-    App->>Lua: initial events (forced, wifi_change, ...)
+    Lua-->>Engine: subscriptions JSON
+    Lua-->>Engine: ready JSON
+    Engine->>Events: start required native subscriptions
+    Engine->>Lua: initial subscribed events + refresh event
     Lua->>API: handle_event(...)
     API->>Render: current registry state
-    Render-->>App: tree JSON
-    App->>Store: apply(root, nodes)
+    Render-->>Engine: tree JSON
+    Engine->>Store: apply(root, nodes)
     Events->>Lua: later runtime/widget events as JSON
     Lua->>API: handle_event(...)
     API->>Render: updated registry state
-    Render-->>App: changed tree JSON
-    App->>Store: apply(root, nodes)
+    Render-->>Engine: changed tree JSON
+    Engine->>Store: apply(root, nodes)
 ```
 
 ## Main pieces
@@ -73,14 +75,17 @@ sequenceDiagram
 - `LuaRuntime.swift`
   small facade over process + transport
 
-- `WidgetRunner.swift`
+- `WidgetEngine.swift`
   owns the runtime handshake, subscriptions, and tree updates
 
-- `EventBus.swift`
+- `EventHub.swift`
   sends app and widget events to both Swift listeners and Lua
 
 - `EventManager.swift`
   starts only the native event sources Lua actually subscribed to
+
+- `RuntimeCoordinator.swift`
+  owns startup, shutdown, reload, file watching, and socket-command orchestration
 
 - `WidgetStore.swift`
   stores the latest rendered node trees
@@ -114,12 +119,15 @@ sequenceDiagram
 
 Swift entry:
 
-- `AppDelegate.swift`
-  calls `WidgetRunner.shared.start()`
+- `AppController.swift`
+  hands off runtime startup to `RuntimeCoordinator.shared.start()`
 
 Runner flow:
 
-- `WidgetRunner.swift`
+- `RuntimeCoordinator.swift`
+  starts the widget engine as part of runtime startup
+
+- `WidgetEngine.swift`
   registers for Lua stdout notifications
 
 - `LuaRuntime.swift`
@@ -141,7 +149,9 @@ This prevents orphaned processes.
 
 Shutdown path:
 
-- `WidgetRunner.shutdown()`
+- `RuntimeCoordinator.stop()`
+- `WidgetEngine.shutdown()`
+- `EventManager.stopLuaSubscriptions()`
 - `LuaRuntime.shutdown()`
 - `LuaTransport.shutdown()`
 - `LuaProcessController.shutdown()`
@@ -275,7 +285,7 @@ Notable:
 
 ### 1. Swift emits events
 
-From `EventBus.swift`.
+From `EventHub.swift`.
 
 Each event:
 
@@ -291,13 +301,8 @@ After loading widgets:
 
 ### 3. Initial events
 
-After `ready`, Swift emits:
-
-- `forced`
-- `wifi_change`
-- `network_change`
-- `minute_tick`
-- `second_tick`
+Once Lua has published both its subscriptions and `ready`, `WidgetEngine` emits the
+currently subscribed initial event batch and then triggers one normal refresh pass.
 
 This prevents empty UI on startup.
 
@@ -343,7 +348,7 @@ Key design:
 
 Handled in:
 
-- `WidgetRunner`
+- `WidgetEngine`
 - `WidgetStore`
 
 Update logic:
@@ -394,7 +399,7 @@ That means:
 This is the complete runtime path from system event to UI:
 
 1. system event occurs, for example Wi-Fi change
-2. Swift event source emits through `EventBus`
+2. Swift event source emits through `EventHub`
 3. event is forwarded to Lua via stdin JSON
 4. Lua normalizes and dispatches it
 5. widget handlers update registry state
@@ -431,7 +436,7 @@ level = "trace"
 ### Run Lua manually
 
 ```bash
-lua runtime.lua <widget_dir>
+lua Sources/EasyBar/Lua/runtime.lua <widget_dir>
 ```
 
 ### Verify subscriptions
@@ -482,7 +487,8 @@ Look for:
 
 ### Event payloads
 
-- `EventBus.swift`
+- `EventHub.swift`
+- `EventTypes.swift`
 - `events.lua`
 
 ### Rendering
@@ -492,9 +498,10 @@ Look for:
 
 ### Process/runtime
 
+- `RuntimeCoordinator.swift`
+- `WidgetEngine.swift`
 - `LuaProcessController.swift`
 - `LuaTransport.swift`
-- `WidgetRunner.swift`
 
 ## Contributor notes
 
