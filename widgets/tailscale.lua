@@ -132,7 +132,7 @@ end
 easybar.add("group", "tailscale", {
 	position = "right",
 	order = 2,
-	update_freq = 10,
+	interval = 10,
 	background = {
 		color = "#202020",
 		border_color = "#4a4a4a",
@@ -147,6 +147,9 @@ easybar.add("group", "tailscale", {
 	popup = {
 		drawing = true,
 	},
+	on_interval = function()
+		refresh()
+	end,
 })
 
 easybar.add("item", "tailscale_icon", {
@@ -170,7 +173,6 @@ easybar.add("item", "tailscale_popup_label", {
 })
 
 easybar.subscribe("tailscale", {
-	easybar.events.routine,
 	easybar.events.network_change,
 	easybar.events.system_woke,
 	easybar.events.forced,

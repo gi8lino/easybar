@@ -53,6 +53,29 @@ local function normalize_log_level(level)
 	return string.upper(normalized)
 end
 
+--- Returns one shallow copy of props without `on_interval`.
+local function strip_interval_handler(props)
+	if type(props) ~= "table" then
+		return props
+	end
+
+	local copy = {}
+
+	for key, value in pairs(props) do
+		if key ~= "on_interval" then
+			copy[key] = value
+		end
+	end
+
+	return copy
+end
+
+--- Returns whether one interval value is valid.
+local function valid_interval(value)
+	local interval = tonumber(value)
+	return interval ~= nil and interval > 0
+end
+
 --- Builds one widget-scoped EasyBar API instance.
 function M.new(log)
 	local registry = registry_module.new()
@@ -96,10 +119,44 @@ function M.new(log)
 
 		--- Adds one item using this widget's scoped defaults.
 		function widget_api.add(kind, id, props)
-			api.add(kind, id, props, widget_defaults)
+			local interval_handler = type(props) == "table" and props.on_interval or nil
+			local item_props = strip_interval_handler(props)
+			local merged = registry.merge_props(widget_defaults, item_props or {})
+
+			if interval_handler ~= nil then
+				assert(valid_interval(merged.interval), "on_interval requires interval > 0")
+			elseif type(props) == "table" and props.interval ~= nil then
+				error("interval requires on_interval")
+			end
+
+			api.add(kind, id, item_props, widget_defaults)
+
+			if interval_handler ~= nil then
+				subscriptions.set_interval_handler(id, interval_handler)
+			end
 		end
 
-		widget_api.set = api.set
+		--- Merges properties into one item and optionally updates its interval callback.
+		function widget_api.set(id, props)
+			local interval_handler = type(props) == "table" and props.on_interval or nil
+			local item_props = strip_interval_handler(props)
+			local merged = registry.merge_props(api.get(id), item_props or {})
+
+			if interval_handler ~= nil then
+				assert(valid_interval(merged.interval), "on_interval requires interval > 0")
+			end
+
+			api.set(id, item_props)
+
+			if type(props) == "table" and props.interval ~= nil then
+				subscriptions.reset_interval_schedule(id)
+			end
+
+			if interval_handler ~= nil then
+				subscriptions.set_interval_handler(id, interval_handler)
+			end
+		end
+
 		widget_api.get = api.get
 		widget_api.remove = api.remove
 		widget_api.exec = api.exec

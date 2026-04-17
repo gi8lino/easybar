@@ -32,7 +32,6 @@ local function make_event_token(name)
 end
 
 M.tokens = {
-	routine = make_event_token("routine"),
 	forced = make_event_token("forced"),
 	system_woke = make_event_token("system_woke"),
 	sleep = make_event_token("sleep"),

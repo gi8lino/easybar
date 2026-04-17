@@ -261,8 +261,8 @@ Main state:
 - `items`
 - `item_order`
 - `subscriptions`
-- `routine_next_due`
-- `needs_second_tick`
+- `interval_handlers`
+- `interval_next_due`
 
 API methods mutate this registry:
 
@@ -469,7 +469,7 @@ Look for:
 
 **High CPU usage**
 
-- aggressive `update_freq`
+- aggressive `interval`
 
 ## Where to change what
 

@@ -23,7 +23,7 @@ enum AppEvent: String, Sendable {
 
   case minuteTick = "minute_tick"
   case secondTick = "second_tick"
-  case routineTick = "routine_tick"
+  case intervalTick = "interval_tick"
 
   case focusChange = "focus_change"
   case workspaceChange = "workspace_change"

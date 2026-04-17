@@ -21,7 +21,7 @@
 ---| '"spaces"'
 
 ---@alias EasyBarEventName
----| '"routine"'
+---| '"interval"'
 ---| '"forced"'
 ---| '"system_woke"'
 ---| '"sleep"'
@@ -92,7 +92,6 @@
 ---@field changed? EasyBarEventToken Fired when a slider value is committed.
 
 ---@class EasyBarEvents
----@field routine? EasyBarEventToken Fired from `update_freq` polling on subscribed widgets.
 ---@field forced? EasyBarEventToken Fired when EasyBar or `easybar` triggers a manual refresh.
 ---@field system_woke? EasyBarEventToken Fired after the system wakes from sleep.
 ---@field sleep? EasyBarEventToken Fired before the system goes to sleep.
@@ -135,6 +134,8 @@ function EasyBar.clear_defaults() end
 ---Creates one EasyBar node.
 ---Use `item` for simple widgets, `group` for shared containers, and `row`/`column`
 ---for layout wrappers around child nodes.
+---When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
+---on the configured cadence without requiring an event subscription.
 ---@param kind EasyBarKind
 ---@param id string
 ---@param props? table

@@ -106,7 +106,8 @@ final class LuaProcessController {
 
   /// Clears the currently tracked Lua process state.
   func clearTrackedProcessState() {
-    let clearedState = withLock { () -> (DispatchSourceProcess?, DispatchWorkItem?, [CheckedContinuation<Void, Never>]) in
+    let clearedState = withLock {
+      () -> (DispatchSourceProcess?, DispatchWorkItem?, [CheckedContinuation<Void, Never>]) in
       let source = terminationSource
       let workItem = forcedKillWorkItem
       let waiters = shutdownWaiters

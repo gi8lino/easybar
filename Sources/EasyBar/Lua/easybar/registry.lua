@@ -145,7 +145,8 @@ local function remove_recursive(state, id)
 
 	state.items[id] = nil
 	state.subscriptions[id] = nil
-	state.routine_next_due[id] = nil
+	state.interval_handlers[id] = nil
+	state.interval_next_due[id] = nil
 
 	for index, value in ipairs(state.item_order) do
 		if value == id then
@@ -161,7 +162,8 @@ function M.new()
 		items = {},
 		item_order = {},
 		subscriptions = {},
-		routine_next_due = {},
+		interval_handlers = {},
+		interval_next_due = {},
 	}
 
 	local registry = {

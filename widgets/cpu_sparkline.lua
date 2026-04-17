@@ -24,7 +24,7 @@ end
 easybar.add("sparkline", "cpu_sparkline", {
 	position = "right",
 	order = 60,
-	update_freq = 1,
+	interval = 1,
 	icon = {
 		string = "󰍛",
 		color = "#a6da95",
@@ -43,9 +43,16 @@ easybar.add("sparkline", "cpu_sparkline", {
 		padding_top = 4,
 		padding_bottom = 4,
 	},
+	on_interval = function()
+		push_value(read_cpu())
+
+		easybar.set("cpu_sparkline", {
+			values = history,
+		})
+	end,
 })
 
-easybar.subscribe("cpu_sparkline", { easybar.events.routine, easybar.events.forced }, function()
+easybar.subscribe("cpu_sparkline", easybar.events.forced, function()
 	push_value(read_cpu())
 
 	easybar.set("cpu_sparkline", {

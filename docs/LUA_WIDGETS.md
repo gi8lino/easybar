@@ -251,7 +251,8 @@ easybar.log(easybar.level.warn, "vpn toggle skipped")
 - `parent`
 - `width`
 - `height`
-- `update_freq`
+- `interval`
+- `on_interval`
 
 ### Icon
 
@@ -326,18 +327,17 @@ easybar.subscribe("calendar", easybar.events.mouse.exited, function()
 end)
 ```
 
-## Routine updates
+## Interval updates
 
 ```lua
 easybar.add("item", "clock", {
-    update_freq = 30,
+    interval = 30,
+    on_interval = function()
+        easybar.set("clock", {
+            label = os.date("%H:%M"),
+        })
+    end,
 })
-
-easybar.subscribe("clock", easybar.events.routine, function()
-    easybar.set("clock", {
-        label = os.date("%H:%M"),
-    })
-end)
 ```
 
 ## Recommended pattern
@@ -353,14 +353,17 @@ easybar.default({
 easybar.add("item", "clock", {
     position = "right",
     order = 10,
+    interval = 60,
+    on_interval = function()
+        easybar.set("clock", {
+            label = os.date("%H:%M"),
+        })
+    end,
 })
-
-easybar.subscribe("clock", easybar.events.routine, function()
-    easybar.set("clock", {
-        label = os.date("%H:%M"),
-    })
-end)
 ```
+
+Use `interval` and `on_interval` when a widget must poll.
+Use `easybar.subscribe(...)` for real events such as `network_change`, `system_woke`, and `mouse.clicked`.
 
 ## Style guidelines
 

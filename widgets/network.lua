@@ -59,7 +59,7 @@ end
 easybar.add("item", "network", {
 	position = "right",
 	order = 35,
-	update_freq = 30,
+	interval = 30,
 	icon = {
 		string = "📶",
 	},
@@ -70,9 +70,21 @@ easybar.add("item", "network", {
 		padding_top = 4,
 		padding_bottom = 4,
 	},
+	on_interval = function()
+		easybar.set("network", {
+			label = {
+				string = read_ssid(),
+			},
+		})
+	end,
 })
 
-easybar.subscribe("network", { easybar.events.routine, easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced }, function()
+easybar.subscribe("network", {
+	easybar.events.network_change,
+	easybar.events.wifi_change,
+	easybar.events.system_woke,
+	easybar.events.forced,
+}, function()
 	easybar.set("network", {
 		label = {
 			string = read_ssid(),

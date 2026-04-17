@@ -42,7 +42,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
       case .systemWoke:
         self.previousCPUInfo = self.readCPUInfo()
         self.publish()
-      case .routineTick:
+      case .intervalTick:
         break
       default:
         break

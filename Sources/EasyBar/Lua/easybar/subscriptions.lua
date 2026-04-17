@@ -1,9 +1,9 @@
 --- Module contract:
---- Owns event subscriptions, routine scheduling, and handler dispatch.
+--- Owns event subscriptions, interval scheduling, and handler dispatch.
 --- Returns one helper object with subscribe/handle_event/required_events.
 local M = {}
 
-local ROUTINE_TICK_PREFIX = "routine_tick:"
+local INTERVAL_TICK_PREFIX = "interval_tick:"
 
 --- Deep-copies one Lua value tree.
 local function deep_copy(value)
@@ -108,16 +108,38 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 		end
 	end
 
-	--- Returns the cadence needed to drive every subscribed routine.
-	local function required_routine_tick_interval()
+	--- Dispatches the registered interval callback for one widget id.
+	local function dispatch_interval_handler_for(id)
+		local handler = state.interval_handlers[id]
+		if type(handler) ~= "function" then
+			return
+		end
+
+		local ok, err = pcall(handler, {
+			name = "interval",
+			widget_id = id,
+		})
+
+		if not ok and log then
+			log.error(
+				"lua interval handler failed id="
+					.. tostring(id)
+					.. " error="
+					.. tostring(err)
+			)
+		end
+	end
+
+	--- Returns the cadence needed to drive every registered interval callback.
+	local function required_interval_tick_interval()
 		local interval
 
 		for _, id in ipairs(state.item_order) do
 			local item = state.items[id]
-			local bucket = state.subscriptions[id]
+			local handler = state.interval_handlers[id]
 
-			if item ~= nil and bucket and type(bucket.routine) == "table" and #bucket.routine > 0 then
-				local value = normalize_interval(item.props.update_freq)
+			if item ~= nil and type(handler) == "function" then
+				local value = normalize_interval(item.props.interval)
 
 				if value ~= nil then
 					interval = interval == nil and value or gcd(interval, value)
@@ -128,33 +150,40 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 		return interval
 	end
 
-	--- Emits due `routine` events for items with `update_freq`.
-	local function dispatch_routine_if_due()
+	--- Emits due interval callbacks for widgets with `interval`.
+	local function dispatch_interval_if_due()
 		local now = os.time()
 
 		for _, id in ipairs(state.item_order) do
 			local item = state.items[id]
 
-			if item ~= nil then
-				local bucket = state.subscriptions[id]
+			if item ~= nil and type(state.interval_handlers[id]) == "function" then
+				local interval = normalize_interval(item.props.interval) or 0
 
-				if bucket and type(bucket.routine) == "table" and #bucket.routine > 0 then
-					local interval = normalize_interval(item.props.update_freq) or 0
+				if interval > 0 then
+					local next_due = state.interval_next_due[id] or 0
 
-					if interval > 0 then
-						local next_due = state.routine_next_due[id] or 0
-
-						if now >= next_due then
-							state.routine_next_due[id] = now + interval
-
-							dispatch_handlers_for(id, {
-								name = "routine",
-							})
-						end
+					if now >= next_due then
+						state.interval_next_due[id] = now + interval
+						dispatch_interval_handler_for(id)
 					end
 				end
 			end
 		end
+	end
+
+	--- Registers one widget-local interval callback.
+	function subscriptions.set_interval_handler(id, handler)
+		ensure_item_exists(id)
+		assert(type(handler) == "function", "on_interval must be a function")
+		state.interval_handlers[id] = handler
+		state.interval_next_due[id] = 0
+	end
+
+	--- Resets one widget-local interval schedule after its cadence changes.
+	function subscriptions.reset_interval_schedule(id)
+		ensure_item_exists(id)
+		state.interval_next_due[id] = 0
 	end
 
 	--- Subscribes one item to one or more events.
@@ -180,8 +209,8 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 
 	--- Handles one incoming normalized EasyBar event.
 	function subscriptions.handle_event(event)
-		if event.name == "second_tick" or event.name == "routine_tick" then
-			dispatch_routine_if_due()
+		if event.name == "interval_tick" then
+			dispatch_interval_if_due()
 		end
 
 		dispatch_targeted(event)
@@ -203,9 +232,9 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 			end
 		end
 
-		local routine_interval = required_routine_tick_interval()
-		if routine_interval ~= nil then
-			events[ROUTINE_TICK_PREFIX .. tostring(routine_interval)] = true
+		local interval = required_interval_tick_interval()
+		if interval ~= nil then
+			events[INTERVAL_TICK_PREFIX .. tostring(interval)] = true
 		end
 
 		local result = {}
