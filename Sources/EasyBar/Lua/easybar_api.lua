@@ -244,7 +244,20 @@
 ---@field warn EasyBarLevel
 ---@field error EasyBarLevel
 
+---Widget-scoped EasyBar API injected into every widget file.
+---Use it to create nodes, update props, subscribe to events, and write widget logs.
 ---@class EasyBar
+---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps) Creates one node in the widget registry.
+---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
+---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
+---@field events EasyBarEvents Event token namespace used by `easybar.subscribe(...)`.
+---@field exec fun(command: string, callback?: fun(output: string): any): any Runs one shell command and optionally receives trimmed output.
+---@field get fun(id: string): EasyBarNodeProps Returns a copy of the current props for one node.
+---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
+---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
+---@field remove fun(id: string) Removes one node and all descendants.
+---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one existing node.
+---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node to runtime or interaction events.
 local EasyBar = {}
 
 ---Sets per-widget default properties for future `easybar.add(...)` calls.
