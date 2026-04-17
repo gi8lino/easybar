@@ -17,6 +17,8 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
   var role: WidgetNodeRole?
   var receivesMouseHover: Bool?
+  var receivesMouseDown: Bool?
+  var receivesMouseUp: Bool?
   var receivesMouseClick: Bool?
   var receivesMouseScroll: Bool?
 
@@ -111,6 +113,16 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
     }
 
     return id == root
+  }
+
+  /// Returns whether this node should own mouse-down interactions.
+  var isMouseDownInteractive: Bool {
+    receivesMouseDown == true
+  }
+
+  /// Returns whether this node should own mouse-up interactions.
+  var isMouseUpInteractive: Bool {
+    receivesMouseUp == true
   }
 
   /// Returns whether this node should own click interactions.

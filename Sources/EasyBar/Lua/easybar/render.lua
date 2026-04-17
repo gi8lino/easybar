@@ -198,6 +198,8 @@ local function base_node(id, kind, root_position, order, visible)
 		order = tonumber(order or 0) or 0,
 		visible = visible ~= false,
 		receivesMouseHover = false,
+		receivesMouseDown = false,
+		receivesMouseUp = false,
 		receivesMouseClick = false,
 		receivesMouseScroll = false,
 	}
@@ -234,6 +236,8 @@ end
 --- Applies resolved mouse interaction flags to one node.
 local function apply_interaction(node, interaction)
 	node.receivesMouseHover = interaction.hover
+	node.receivesMouseDown = interaction.down
+	node.receivesMouseUp = interaction.up
 	node.receivesMouseClick = interaction.click
 	node.receivesMouseScroll = interaction.scroll
 	return node
@@ -245,12 +249,16 @@ local function resolve_mouse_interaction(registry, id)
 	if type(subscriptions) ~= "table" then
 		return {
 			hover = false,
+			down = false,
+			up = false,
 			click = false,
 			scroll = false,
 		}
 	end
 
 	local hover = false
+	local down = false
+	local up = false
 	local click = false
 	local scroll = false
 
@@ -258,6 +266,10 @@ local function resolve_mouse_interaction(registry, id)
 		if type(event_name) == "string" then
 			if event_name == "mouse.entered" or event_name == "mouse.exited" then
 				hover = true
+			elseif event_name == "mouse.down" then
+				down = true
+			elseif event_name == "mouse.up" then
+				up = true
 			elseif event_name == "mouse.clicked" then
 				click = true
 			elseif event_name == "mouse.scrolled" then
@@ -268,6 +280,8 @@ local function resolve_mouse_interaction(registry, id)
 
 	return {
 		hover = hover,
+		down = down,
+		up = up,
 		click = click,
 		scroll = scroll,
 	}
@@ -338,6 +352,8 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		labelFontSize = tonumber(node.labelFontSize),
 		visible = node.visible ~= false,
 		receivesMouseHover = node.receivesMouseHover == true,
+		receivesMouseDown = node.receivesMouseDown == true,
+		receivesMouseUp = node.receivesMouseUp == true,
 		receivesMouseClick = node.receivesMouseClick == true,
 		receivesMouseScroll = node.receivesMouseScroll == true,
 		role = node.role,

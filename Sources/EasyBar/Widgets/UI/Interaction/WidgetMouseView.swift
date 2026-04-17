@@ -6,11 +6,24 @@ struct WidgetMouseView: NSViewRepresentable {
   let widgetID: String
   let targetWidgetID: String
   let tracksHover: Bool
+  let emitsMouseDown: Bool
+  let emitsMouseUp: Bool
+  let emitsMouseClick: Bool
 
-  init(widgetID: String, targetWidgetID: String? = nil, tracksHover: Bool = true) {
+  init(
+    widgetID: String,
+    targetWidgetID: String? = nil,
+    tracksHover: Bool = true,
+    emitsMouseDown: Bool = false,
+    emitsMouseUp: Bool = false,
+    emitsMouseClick: Bool = false
+  ) {
     self.widgetID = widgetID
     self.targetWidgetID = targetWidgetID ?? widgetID
     self.tracksHover = tracksHover
+    self.emitsMouseDown = emitsMouseDown
+    self.emitsMouseUp = emitsMouseUp
+    self.emitsMouseClick = emitsMouseClick
   }
 
   /// Creates the AppKit-backed mouse surface.
@@ -19,6 +32,9 @@ struct WidgetMouseView: NSViewRepresentable {
     view.widgetID = widgetID
     view.targetWidgetID = targetWidgetID
     view.tracksHover = tracksHover
+    view.emitsMouseDown = emitsMouseDown
+    view.emitsMouseUp = emitsMouseUp
+    view.emitsMouseClick = emitsMouseClick
     return view
   }
 
@@ -27,6 +43,9 @@ struct WidgetMouseView: NSViewRepresentable {
     nsView.widgetID = widgetID
     nsView.targetWidgetID = targetWidgetID
     nsView.tracksHover = tracksHover
+    nsView.emitsMouseDown = emitsMouseDown
+    nsView.emitsMouseUp = emitsMouseUp
+    nsView.emitsMouseClick = emitsMouseClick
   }
 }
 
@@ -34,6 +53,9 @@ final class MouseTrackingNSView: NSView {
   var widgetID: String = ""
   var targetWidgetID: String = ""
   var tracksHover = true
+  var emitsMouseDown = false
+  var emitsMouseUp = false
+  var emitsMouseClick = false
 
   private var trackingArea: NSTrackingArea?
   private var isMouseInside = false
@@ -160,13 +182,19 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits one mouse down event for the given button.
   private func emitMouseDown(button: MouseButton) {
+    guard emitsMouseDown else { return }
     emitMouseEvent(.mouseDown, button: button)
   }
 
   /// Emits one mouse up and click pair for the given button.
   private func emitMouseUp(button: MouseButton) {
-    emitMouseEvent(.mouseUp, button: button)
-    emitMouseEvent(.mouseClicked, button: button)
+    if emitsMouseUp {
+      emitMouseEvent(.mouseUp, button: button)
+    }
+
+    if emitsMouseClick {
+      emitMouseEvent(.mouseClicked, button: button)
+    }
   }
 
   /// Emits one widget mouse event with shared logging.

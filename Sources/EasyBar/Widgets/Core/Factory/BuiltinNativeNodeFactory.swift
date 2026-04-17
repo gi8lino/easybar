@@ -108,6 +108,8 @@ enum BuiltinNativeNodeFactory {
     // Native groups are layout containers; letting them own hover surfaces
     // interferes with hover-driven children such as tooltip widgets.
     node.receivesMouseHover = false
+    node.receivesMouseDown = false
+    node.receivesMouseUp = false
     node.receivesMouseClick = false
     node.receivesMouseScroll = false
     return node
@@ -631,6 +633,8 @@ enum BuiltinNativeNodeFactory {
       visible: visible,
       role: role,
       receivesMouseHover: nil,
+      receivesMouseDown: nil,
+      receivesMouseUp: nil,
       receivesMouseClick: nil,
       receivesMouseScroll: nil,
       imagePath: imagePath,
