@@ -89,15 +89,19 @@ directory = "~/.local/state/easybar"
 
 Supported levels:
 
-- `info`
-- `debug`
 - `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
 
 Behavior:
 
+- `trace` includes everything, including very verbose trace logs
 - `info` writes normal operational logs
 - `debug` includes debug output in addition to info, warnings, and errors
-- `trace` includes everything, including very verbose trace logs
+- `warn` keeps only warnings and errors
+- `error` keeps only error logs
 
 When file logging is enabled, EasyBar writes:
 
@@ -166,7 +170,7 @@ Responses are typed too:
 
 ```json
 {
-  "status": "accepted",
+  "kind": "accepted",
   "message": null
 }
 ```
