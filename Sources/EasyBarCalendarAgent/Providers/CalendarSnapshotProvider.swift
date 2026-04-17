@@ -399,6 +399,11 @@ extension CalendarSnapshotProvider {
         let eventIdentifier = event.eventIdentifier
         let stableID =
           "\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+        let travelTimeSeconds = resolvedTravelTimeSeconds(for: event)
+        let alertOffsetsSeconds = visibleAlertOffsetsSeconds(
+          for: event,
+          travelTimeSeconds: travelTimeSeconds
+        )
 
         return CalendarAgentEvent(
           id: stableID,
@@ -411,10 +416,10 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
-          alertOffsetsSeconds: visibleAlertOffsetsSeconds(for: event),
+          alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
-          hasAlert: hasVisibleAlert(for: event),
-          travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
+          hasAlert: hasVisibleAlert(alertOffsetsSeconds: alertOffsetsSeconds),
+          travelTimeSeconds: travelTimeSeconds
         )
       }
   }
@@ -452,6 +457,11 @@ extension CalendarSnapshotProvider {
         let eventIdentifier = event.eventIdentifier
         let stableID =
           "birthday-\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+        let travelTimeSeconds = resolvedTravelTimeSeconds(for: event)
+        let alertOffsetsSeconds = visibleAlertOffsetsSeconds(
+          for: event,
+          travelTimeSeconds: travelTimeSeconds
+        )
 
         return CalendarAgentEvent(
           id: stableID,
@@ -464,10 +474,10 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
-          alertOffsetsSeconds: visibleAlertOffsetsSeconds(for: event),
+          alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
-          hasAlert: hasVisibleAlert(for: event),
-          travelTimeSeconds: resolvedTravelTimeSeconds(for: event)
+          hasAlert: hasVisibleAlert(alertOffsetsSeconds: alertOffsetsSeconds),
+          travelTimeSeconds: travelTimeSeconds
         )
       }
   }
@@ -566,15 +576,17 @@ extension CalendarSnapshotProvider {
   }
 
   /// Returns whether the event has at least one visible non-travel alert.
-  private func hasVisibleAlert(for event: EKEvent) -> Bool {
-    !visibleAlertOffsetsSeconds(for: event).isEmpty
+  private func hasVisibleAlert(alertOffsetsSeconds: [TimeInterval]) -> Bool {
+    !alertOffsetsSeconds.isEmpty
   }
 
   /// Returns visible non-travel alert lead times.
-  private func visibleAlertOffsetsSeconds(for event: EKEvent) -> [TimeInterval] {
+  private func visibleAlertOffsetsSeconds(
+    for event: EKEvent,
+    travelTimeSeconds: TimeInterval?
+  ) -> [TimeInterval] {
     guard let alarms = event.alarms, !alarms.isEmpty else { return [] }
 
-    let travelTimeSeconds = EventTravelTimeBridge.getSeconds(from: event)
     return alarms.compactMap { alarm in
       let offset = alarm.relativeOffset
       guard offset <= 0 else { return nil }

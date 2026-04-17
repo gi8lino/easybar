@@ -267,7 +267,6 @@ final class MonthCalendarEventComposer: ObservableObject {
     preferredCalendarName = normalizedOptionalText(event.calendarName)
 
     applySnapshot(NativeMonthCalendarStore.shared.snapshot)
-    MonthCalendarAgentClient.shared.refresh()
   }
 
   /// Resets the form fields to a clean state using one selected date.
