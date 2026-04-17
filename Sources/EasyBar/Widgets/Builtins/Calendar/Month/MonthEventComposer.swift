@@ -18,16 +18,23 @@ final class MonthCalendarEventComposer: ObservableObject {
   struct AlertRow: Identifiable, Equatable {
     let id: UUID
     var option: AlertOption
+    var customMinutesText: String
 
-    init(id: UUID = UUID(), option: AlertOption) {
+    init(id: UUID = UUID(), option: AlertOption, customMinutesText: String = "") {
       self.id = id
       self.option = option
+      self.customMinutesText = customMinutesText
     }
   }
 
   enum Mode {
     case create
     case edit(eventIdentifier: String)
+  }
+
+  enum Validation<Value> {
+    case success(Value)
+    case failure(String)
   }
 
   enum AlertOption: String, CaseIterable, Identifiable {
@@ -39,6 +46,7 @@ final class MonthCalendarEventComposer: ObservableObject {
     case thirtyMinutes = "30_minutes"
     case oneHour = "1_hour"
     case oneDay = "1_day"
+    case custom
 
     var id: String { rawValue }
 
@@ -60,6 +68,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         return "1 hour before"
       case .oneDay:
         return "1 day before"
+      case .custom:
+        return "Custom"
       }
     }
 
@@ -82,6 +92,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         return 3600
       case .oneDay:
         return 86_400
+      case .custom:
+        return nil
       }
     }
   }
@@ -97,6 +109,7 @@ final class MonthCalendarEventComposer: ObservableObject {
     case oneHour = "1_hour"
     case ninetyMinutes = "90_minutes"
     case twoHours = "2_hours"
+    case custom
 
     var id: String { rawValue }
 
@@ -122,6 +135,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         return "1.5 hours"
       case .twoHours:
         return "2 hours"
+      case .custom:
+        return "Custom"
       }
     }
 
@@ -147,6 +162,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         return 5400
       case .twoHours:
         return 7200
+      case .custom:
+        return nil
       }
     }
   }
@@ -166,6 +183,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   @Published var location = ""
   @Published var alertRows: [AlertRow] = [.init(option: .tenMinutes)]
   @Published var travelTime: TravelTimeOption = .none
+  @Published var customTravelTimeMinutes = ""
 
   @Published var errorMessage: String?
   @Published var infoMessage: String?
@@ -262,7 +280,9 @@ final class MonthCalendarEventComposer: ObservableObject {
     isAllDay = event.isAllDay
     location = event.location ?? ""
     alertRows = resolvedAlertRows(from: event.alertOffsetsSeconds)
-    travelTime = resolvedTravelTimeOption(from: event.travelTimeSeconds)
+    let travelTimeSelection = resolvedTravelTimeSelection(from: event.travelTimeSeconds)
+    travelTime = travelTimeSelection.option
+    customTravelTimeMinutes = travelTimeSelection.customMinutesText
     preferredCalendarID = normalizedOptionalText(event.calendarID)
     preferredCalendarName = normalizedOptionalText(event.calendarName)
 
@@ -281,7 +301,9 @@ final class MonthCalendarEventComposer: ObservableObject {
     isAllDay = false
     location = ""
     alertRows = resolvedDefaultAlertRows()
-    travelTime = resolvedDefaultTravelTime()
+    let defaultTravelTime = resolvedDefaultTravelTime()
+    travelTime = defaultTravelTime
+    customTravelTimeMinutes = ""
     errorMessage = nil
     infoMessage = nil
     isSaving = false
@@ -313,6 +335,24 @@ final class MonthCalendarEventComposer: ObservableObject {
       return
     }
 
+    let resolvedAlertOffsetsSeconds: [TimeInterval]
+    switch validatedAlertOffsetsSeconds() {
+    case .success(let offsetsSeconds):
+      resolvedAlertOffsetsSeconds = offsetsSeconds
+    case .failure(let message):
+      errorMessage = message
+      return
+    }
+
+    let resolvedTravelTimeSeconds: TimeInterval?
+    switch validatedTravelTimeSeconds() {
+    case .success(let travelTimeSeconds):
+      resolvedTravelTimeSeconds = travelTimeSeconds
+    case .failure(let message):
+      errorMessage = message
+      return
+    }
+
     isSaving = true
 
     switch mode {
@@ -324,8 +364,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         isAllDay: isAllDay,
         calendarID: selectedCalendar.id,
         location: normalizedOptionalText(location),
-        alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
-        travelTimeSeconds: travelTime.seconds
+        alertOffsetsSeconds: resolvedAlertOffsetsSeconds,
+        travelTimeSeconds: resolvedTravelTimeSeconds
       )
 
       MonthCalendarAgentClient.shared.createEvent(draft) { [weak self] success, message in
@@ -347,8 +387,8 @@ final class MonthCalendarEventComposer: ObservableObject {
         isAllDay: isAllDay,
         calendarID: selectedCalendar.id,
         location: normalizedOptionalText(location),
-        alertOffsetsSeconds: resolvedAlertOffsetsSeconds(),
-        travelTimeSeconds: travelTime.seconds
+        alertOffsetsSeconds: resolvedAlertOffsetsSeconds,
+        travelTimeSeconds: resolvedTravelTimeSeconds
       )
 
       MonthCalendarAgentClient.shared.updateEvent(draft) { [weak self] success, message in
@@ -481,31 +521,34 @@ extension MonthCalendarEventComposer {
 
   /// Resolves alert rows from saved lead times.
   private func resolvedAlertRows(from offsetsSeconds: [TimeInterval]) -> [AlertRow] {
-    let resolved = offsetsSeconds.compactMap(resolvedAlertOption(from:)).map {
-      AlertRow(option: $0)
-    }
+    let resolved = offsetsSeconds.compactMap(resolvedAlertRow(from:))
     return resolved.isEmpty ? [] : resolved
   }
 
-  /// Resolves one alert option from one saved lead time.
-  private func resolvedAlertOption(from seconds: TimeInterval) -> AlertOption? {
+  /// Resolves one alert row from one saved lead time.
+  private func resolvedAlertRow(from seconds: TimeInterval) -> AlertRow? {
+    guard seconds >= 0 else { return nil }
+
     switch Int(seconds.rounded()) {
     case 0:
-      return .atTime
+      return AlertRow(option: .atTime)
     case 300:
-      return .fiveMinutes
+      return AlertRow(option: .fiveMinutes)
     case 600:
-      return .tenMinutes
+      return AlertRow(option: .tenMinutes)
     case 900:
-      return .fifteenMinutes
+      return AlertRow(option: .fifteenMinutes)
     case 1800:
-      return .thirtyMinutes
+      return AlertRow(option: .thirtyMinutes)
     case 3600:
-      return .oneHour
+      return AlertRow(option: .oneHour)
     case 86_400:
-      return .oneDay
+      return AlertRow(option: .oneDay)
     default:
-      return nil
+      return AlertRow(
+        option: .custom,
+        customMinutesText: customMinutesText(from: seconds)
+      )
     }
   }
 
@@ -514,37 +557,111 @@ extension MonthCalendarEventComposer {
     TravelTimeOption(rawValue: popupConfig.composerDefaultTravelTime) ?? .none
   }
 
-  /// Resolves one travel-time option from seconds.
-  private func resolvedTravelTimeOption(from seconds: TimeInterval?) -> TravelTimeOption {
-    guard let seconds else { return resolvedDefaultTravelTime() }
+  /// Resolves one travel-time selection from saved seconds.
+  private func resolvedTravelTimeSelection(from seconds: TimeInterval?)
+    -> (option: TravelTimeOption, customMinutesText: String)
+  {
+    guard let seconds else { return (.none, "") }
 
     switch Int(seconds.rounded()) {
     case 300:
-      return .fiveMinutes
+      return (.fiveMinutes, "")
     case 600:
-      return .tenMinutes
+      return (.tenMinutes, "")
     case 900:
-      return .fifteenMinutes
+      return (.fifteenMinutes, "")
     case 1200:
-      return .twentyMinutes
+      return (.twentyMinutes, "")
     case 1800:
-      return .thirtyMinutes
+      return (.thirtyMinutes, "")
     case 2700:
-      return .fortyFiveMinutes
+      return (.fortyFiveMinutes, "")
     case 3600:
-      return .oneHour
+      return (.oneHour, "")
     case 5400:
-      return .ninetyMinutes
+      return (.ninetyMinutes, "")
     case 7200:
-      return .twoHours
+      return (.twoHours, "")
     default:
-      return .none
+      return (.custom, customMinutesText(from: seconds))
     }
   }
 
   /// Returns the current alert lead times in seconds.
-  private func resolvedAlertOffsetsSeconds() -> [TimeInterval] {
-    alertRows.compactMap(\.option.leadTimeSeconds)
+  private func validatedAlertOffsetsSeconds() -> Validation<[TimeInterval]> {
+    var offsetsSeconds: [TimeInterval] = []
+
+    for row in alertRows {
+      switch validatedAlertOffsetSeconds(for: row) {
+      case .success(let offsetSeconds):
+        if let offsetSeconds {
+          offsetsSeconds.append(offsetSeconds)
+        }
+      case .failure(let message):
+        return .failure(message)
+      }
+    }
+
+    return .success(offsetsSeconds)
+  }
+
+  /// Returns one validated alert lead time in seconds.
+  private func validatedAlertOffsetSeconds(for row: AlertRow) -> Validation<TimeInterval?> {
+    if row.option != .custom {
+      return .success(row.option.leadTimeSeconds)
+    }
+
+    switch validatedCustomMinutes(
+      row.customMinutesText,
+      emptyMessage: "Enter custom alert minutes.",
+      invalidMessage: "Custom alert minutes must be a positive whole number."
+    ) {
+    case .success(let minutes):
+      return .success(TimeInterval(minutes * 60))
+    case .failure(let message):
+      return .failure(message)
+    }
+  }
+
+  /// Returns one validated travel time in seconds.
+  private func validatedTravelTimeSeconds() -> Validation<TimeInterval?> {
+    if travelTime != .custom {
+      return .success(travelTime.seconds)
+    }
+
+    switch validatedCustomMinutes(
+      customTravelTimeMinutes,
+      emptyMessage: "Enter custom travel time minutes.",
+      invalidMessage: "Custom travel time minutes must be a positive whole number."
+    ) {
+    case .success(let minutes):
+      return .success(TimeInterval(minutes * 60))
+    case .failure(let message):
+      return .failure(message)
+    }
+  }
+
+  /// Validates one custom whole-minute input.
+  private func validatedCustomMinutes(
+    _ value: String,
+    emptyMessage: String,
+    invalidMessage: String
+  ) -> Validation<Int> {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
+      return .failure(emptyMessage)
+    }
+
+    guard let minutes = Int(trimmed), minutes > 0 else {
+      return .failure(invalidMessage)
+    }
+
+    return .success(minutes)
+  }
+
+  /// Formats one minute-based duration string for custom rows.
+  private func customMinutesText(from seconds: TimeInterval) -> String {
+    String(max(1, Int((seconds / 60).rounded())))
   }
 }
 
@@ -658,7 +775,41 @@ extension MonthCalendarEventComposer {
   /// Updates one alert row selection.
   func setAlert(_ option: AlertOption, id: UUID) {
     guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
+    if option == .custom, alertRows[index].customMinutesText.isEmpty {
+      alertRows[index].customMinutesText = defaultCustomMinutesText(for: alertRows[index].option)
+    }
     alertRows[index].option = option
+  }
+
+  /// Updates one alert row custom-minute value.
+  func setCustomAlertMinutes(_ value: String, id: UUID) {
+    guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
+    alertRows[index].customMinutesText = value
+  }
+
+  /// Updates the selected travel-time option.
+  func setTravelTime(_ option: TravelTimeOption) {
+    if option == .custom, customTravelTimeMinutes.isEmpty {
+      customTravelTimeMinutes = defaultCustomMinutesText(for: travelTime)
+    }
+    travelTime = option
+  }
+
+  /// Returns the current custom alert value for one row.
+  func customAlertMinutes(for id: UUID) -> String {
+    alertRows.first(where: { $0.id == id })?.customMinutesText ?? ""
+  }
+
+  /// Returns one reasonable custom-minute seed for an alert option.
+  private func defaultCustomMinutesText(for option: AlertOption) -> String {
+    guard let seconds = option.leadTimeSeconds, seconds > 0 else { return "" }
+    return customMinutesText(from: seconds)
+  }
+
+  /// Returns one reasonable custom-minute seed for a travel-time option.
+  private func defaultCustomMinutesText(for option: TravelTimeOption) -> String {
+    guard let seconds = option.seconds, seconds > 0 else { return "" }
+    return customMinutesText(from: seconds)
   }
 
   /// Returns the configured title for one alert option.

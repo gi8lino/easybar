@@ -854,6 +854,7 @@ extension Config {
               "30_minutes": "30 minutes before",
               "1_hour": "1 hour before",
               "1_day": "1 day before",
+              "custom": "Custom",
             ],
             travelTimeLabels: [
               "none": "None",
@@ -866,6 +867,7 @@ extension Config {
               "1_hour": "1 hour",
               "90_minutes": "1.5 hours",
               "2_hours": "2 hours",
+              "custom": "Custom",
             ],
             startLabel: "Begin",
             endLabel: "End",

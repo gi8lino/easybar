@@ -169,7 +169,13 @@ extension MonthCalendarEventComposerView {
           fieldLabel(config.composerTravelTimeLabel)
             .frame(width: fieldLabelWidth, alignment: .leading)
 
-          Picker("", selection: $composer.travelTime) {
+          Picker(
+            "",
+            selection: Binding(
+              get: { composer.travelTime },
+              set: { composer.setTravelTime($0) }
+            )
+          ) {
             ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
               Text(composer.title(for: option)).tag(option)
             }
@@ -177,6 +183,13 @@ extension MonthCalendarEventComposerView {
           .labelsHidden()
           .pickerStyle(.menu)
           .frame(width: menuFieldWidth, alignment: .leading)
+
+          if composer.travelTime == .custom {
+            customMinutesField(
+              text: $composer.customTravelTimeMinutes,
+              width: customFieldWidth
+            )
+          }
 
           Spacer(minLength: 0)
         }
@@ -257,6 +270,16 @@ extension MonthCalendarEventComposerView {
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(width: 170, alignment: .leading)
+
+            if row.option == .custom {
+              customMinutesField(
+                text: Binding(
+                  get: { composer.customAlertMinutes(for: row.id) },
+                  set: { composer.setCustomAlertMinutes($0, id: row.id) }
+                ),
+                width: customFieldWidth
+              )
+            }
 
             Button {
               composer.removeAlert(id: row.id)
@@ -369,6 +392,25 @@ extension MonthCalendarEventComposerView {
 
   /// Returns the menu width used by aligned schedule rows.
   private var menuFieldWidth: CGFloat { 170 }
+
+  /// Returns the custom minute-field width used in the composer.
+  private var customFieldWidth: CGFloat { 76 }
+
+  /// Builds one compact whole-minute text field.
+  private func customMinutesField(
+    text: Binding<String>,
+    width: CGFloat
+  ) -> some View {
+    HStack(alignment: .center, spacing: 4) {
+      TextField("Min", text: text)
+        .textFieldStyle(.roundedBorder)
+        .frame(width: width, alignment: .leading)
+
+      Text("min")
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(color(config.secondaryTextColorHex))
+    }
+  }
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
