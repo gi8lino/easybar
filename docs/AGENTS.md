@@ -57,12 +57,15 @@ enabled = true
 socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
 allow_unauthorized_non_sensitive_fields = false
+```
 
 Supported logging levels are:
 
-* `info`
-* `debug`
 * `trace`
+* `debug`
+* `info`
+* `warn`
+* `error`
 
 Environment overrides still exist for:
 
@@ -88,15 +91,25 @@ Other local clients can also connect when they speak the same protocol.
 
 ## Common protocol shape
 
-Both agents support the same basic command flow:
+Both agents share the same transport and baseline command flow:
 
 * `ping`
+* `version`
 * `fetch`
 * `subscribe`
 
-Both respond with a `kind` field:
+The calendar agent additionally supports:
+
+* `create_event`
+* `update_event`
+* `delete_event`
+
+Every response includes a `kind` field.
+
+Common kinds include:
 
 * `pong`
+* `version`
 * `subscribed`
 * `error`
 
@@ -104,8 +117,10 @@ Typical behavior:
 
 * `ping`
   returns one `pong`, then closes
+* `version`
+  returns one version payload, then closes
 * `fetch`
-  returns one data payload, then closes
+  returns one data payload (`snapshot` for calendar, `fields` for network), then closes
 * `subscribe`
   returns one `subscribed`
   returns one immediate data payload
@@ -410,7 +425,7 @@ It is responsible for:
 
 ```json
 {
-  "command": "ping | fetch | subscribe | create_event | update_event | delete_event",
+  "command": "ping | version | fetch | subscribe | create_event | update_event | delete_event",
   "query": {
     "startDate": "2026-03-29T00:00:00Z",
     "endDate": "2026-04-01T00:00:00Z"
@@ -436,6 +451,7 @@ Notes:
 Other kinds:
 
 - `pong`
+- `version`
 - `subscribed`
 - `created`
 - `updated`
