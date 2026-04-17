@@ -43,18 +43,24 @@ directory = "~/.local/state/easybar"
 
 Supported levels:
 
-- `info`
-- `debug`
 - `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
 
 Meaning:
 
-- `info`
-  normal runtime logs
+- `trace`
+  info, debug, warnings, errors, and very verbose trace logs
 - `debug`
   info plus debug logs
-- `trace`
-  info, debug, and very verbose trace logs
+- `info`
+  normal runtime logs
+- `warn`
+  warnings and errors only
+- `error`
+  error logs only
 
 Notes:
 
