@@ -120,9 +120,11 @@ directory = "~/.local/state/easybar"
 
 Supported levels are:
 
-- `info`
-- `debug`
 - `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
 
 That keeps the normal runtime logging model explicit and consistent across all long-lived processes.
 
@@ -170,6 +172,7 @@ The control socket is used for commands such as:
 - `manual_refresh`
 - `restart_lua_runtime`
 - `reload_config`
+- `metrics`
 
 Requests and responses are typed JSON.
 
