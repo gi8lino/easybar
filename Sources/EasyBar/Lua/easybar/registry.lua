@@ -162,7 +162,6 @@ function M.new()
 		item_order = {},
 		subscriptions = {},
 		routine_next_due = {},
-		needs_second_tick = false,
 	}
 
 	local registry = {
@@ -200,10 +199,6 @@ function M.new()
 		if is_new then
 			state.item_order[#state.item_order + 1] = id
 		end
-
-		if state.items[id].props.update_freq ~= nil then
-			state.needs_second_tick = true
-		end
 	end
 
 	--- Returns one merged property table using registry normalization rules.
@@ -218,10 +213,6 @@ function M.new()
 	function registry.set(id, props)
 		local item = registry.ensure_item_exists(id)
 		deep_merge(item.props, normalize_props(props or {}))
-
-		if item.props.update_freq ~= nil then
-			state.needs_second_tick = true
-		end
 	end
 
 	--- Returns one copied item property table.

@@ -3,6 +3,8 @@
 --- Returns one helper object with subscribe/handle_event/required_events.
 local M = {}
 
+local ROUTINE_TICK_PREFIX = "routine_tick:"
+
 --- Deep-copies one Lua value tree.
 local function deep_copy(value)
 	if type(value) ~= "table" then
@@ -16,6 +18,28 @@ local function deep_copy(value)
 	end
 
 	return copy
+end
+
+--- Returns one positive whole-second interval or nil.
+local function normalize_interval(value)
+	local number = tonumber(value)
+	if number == nil or number <= 0 then
+		return nil
+	end
+
+	return math.max(1, math.floor(number))
+end
+
+--- Returns the greatest common divisor for two positive integers.
+local function gcd(left, right)
+	left = math.abs(left)
+	right = math.abs(right)
+
+	while right ~= 0 do
+		left, right = right, left % right
+	end
+
+	return left
 end
 
 --- Returns one handler event table scoped to one subscribed item.
@@ -84,6 +108,26 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 		end
 	end
 
+	--- Returns the cadence needed to drive every subscribed routine.
+	local function required_routine_tick_interval()
+		local interval
+
+		for _, id in ipairs(state.item_order) do
+			local item = state.items[id]
+			local bucket = state.subscriptions[id]
+
+			if item ~= nil and bucket and type(bucket.routine) == "table" and #bucket.routine > 0 then
+				local value = normalize_interval(item.props.update_freq)
+
+				if value ~= nil then
+					interval = interval == nil and value or gcd(interval, value)
+				end
+			end
+		end
+
+		return interval
+	end
+
 	--- Emits due `routine` events for items with `update_freq`.
 	local function dispatch_routine_if_due()
 		local now = os.time()
@@ -95,7 +139,7 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 				local bucket = state.subscriptions[id]
 
 				if bucket and type(bucket.routine) == "table" and #bucket.routine > 0 then
-					local interval = tonumber(item.props.update_freq or 0) or 0
+					local interval = normalize_interval(item.props.update_freq) or 0
 
 					if interval > 0 then
 						local next_due = state.routine_next_due[id] or 0
@@ -131,16 +175,12 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 			local event_name = event_tokens.normalize(event)
 			bucket[event_name] = bucket[event_name] or {}
 			bucket[event_name][#bucket[event_name] + 1] = handler
-
-			if event_name == "routine" then
-				state.needs_second_tick = true
-			end
 		end
 	end
 
 	--- Handles one incoming normalized EasyBar event.
 	function subscriptions.handle_event(event)
-		if event.name == "second_tick" then
+		if event.name == "second_tick" or event.name == "routine_tick" then
 			dispatch_routine_if_due()
 		end
 
@@ -163,8 +203,9 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 			end
 		end
 
-		if state.needs_second_tick then
-			events.second_tick = true
+		local routine_interval = required_routine_tick_interval()
+		if routine_interval ~= nil then
+			events[ROUTINE_TICK_PREFIX .. tostring(routine_interval)] = true
 		end
 
 		local result = {}

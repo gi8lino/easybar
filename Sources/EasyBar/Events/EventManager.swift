@@ -5,6 +5,8 @@ import Foundation
 final class EventManager {
   static let shared = EventManager()
 
+  private static let routineTickPrefix = "routine_tick:"
+
   private var luaSubscriptions = Set<String>()
   private var nativeSubscriptions = Set<String>()
   private var activeSubscriptions = Set<String>()
@@ -78,6 +80,8 @@ final class EventManager {
 
   /// Starts every event source required by the merged subscription set.
   private func subscribeActiveSources(_ mergedSubscriptions: Set<String>) {
+    let routineInterval = Self.routineTickInterval(in: mergedSubscriptions)
+
     if mergedSubscriptions.contains(AppEvent.systemWoke.rawValue) {
       SystemEvents.shared.subscribeSystemWake()
     }
@@ -117,6 +121,10 @@ final class EventManager {
     if mergedSubscriptions.contains(AppEvent.secondTick.rawValue) {
       TimerEvents.shared.startSecondTimer()
     }
+
+    if let routineInterval {
+      TimerEvents.shared.startRoutineTimer(interval: routineInterval)
+    }
   }
 
   /// Stops every currently active native event source.
@@ -125,5 +133,17 @@ final class EventManager {
     SystemEvents.shared.stopAll()
     PowerEvents.shared.stopAll()
     VolumeEvents.shared.stopAll()
+  }
+
+  /// Returns the shared Lua routine cadence requested by the runtime.
+  private static func routineTickInterval(in subscriptions: Set<String>) -> TimeInterval? {
+    for name in subscriptions {
+      guard name.hasPrefix(routineTickPrefix) else { continue }
+      let rawValue = String(name.dropFirst(routineTickPrefix.count))
+      guard let interval = TimeInterval(rawValue), interval > 0 else { continue }
+      return interval
+    }
+
+    return nil
   }
 }

@@ -5,6 +5,7 @@ final class TimerEvents {
 
   private var minuteTimer: Timer?
   private var secondTimer: Timer?
+  private var routineTimer: Timer?
 
   private init() {}
 
@@ -20,7 +21,7 @@ final class TimerEvents {
     easybarLog.debug("minute timer started")
   }
 
-  /// Starts the second timer used by Lua `second_tick` and `routine` subscriptions.
+  /// Starts the second timer used by explicit `second_tick` subscriptions.
   func startSecondTimer() {
     secondTimer?.invalidate()
     secondTimer = makeAlignedTimer(
@@ -32,12 +33,26 @@ final class TimerEvents {
     easybarLog.debug("second timer started")
   }
 
+  /// Starts the routine timer used by Lua `update_freq` subscriptions.
+  func startRoutineTimer(interval: TimeInterval) {
+    routineTimer?.invalidate()
+    routineTimer = makeAlignedTimer(
+      interval: interval,
+      tolerance: min(1, max(0.05, interval * 0.05)),
+      event: .routineTick
+    )
+
+    easybarLog.debug("routine timer started interval=\(interval)")
+  }
+
   /// Stops and clears all active timers.
   func stopAll() {
     minuteTimer?.invalidate()
     secondTimer?.invalidate()
+    routineTimer?.invalidate()
     minuteTimer = nil
     secondTimer = nil
+    routineTimer = nil
   }
 
   /// Starts one repeating timer aligned to the next real wall-clock boundary.
