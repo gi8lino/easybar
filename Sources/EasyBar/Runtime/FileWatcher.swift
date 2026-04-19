@@ -66,17 +66,19 @@ actor FileWatcher {
 
     guard enabled else { return }
 
-    let fd = open(configPath, O_EVTONLY)
-    guard fd >= 0 else {
-      easybarLog.warn("file watcher failed to open path=\(configPath)")
+    guard let watchTarget = openWatchTarget(for: configPath) else {
+      easybarLog.warn("file watcher failed to open watch target for path=\(configPath)")
       return
     }
 
-    fileDescriptor = fd
+    fileDescriptor = watchTarget.fd
+    easybarLog.debug(
+      "file watcher watching path=\(watchTarget.path) target=\(configPath)"
+    )
 
     let queue = DispatchQueue(label: "easybar.file-watcher", qos: .utility)
     let source = DispatchSource.makeFileSystemObjectSource(
-      fileDescriptor: fd,
+      fileDescriptor: watchTarget.fd,
       eventMask: [.write, .delete, .rename, .attrib, .extend, .link, .revoke],
       queue: queue
     )
@@ -118,6 +120,27 @@ actor FileWatcher {
   /// Emits one debounced changed event.
   private func emitChanged() {
     continuation?.yield(.changed)
+  }
+
+  /// Opens the config file when present, otherwise the nearest existing ancestor.
+  private func openWatchTarget(for configPath: String) -> (fd: Int32, path: String)? {
+    var candidateURL = URL(fileURLWithPath: configPath)
+
+    while true {
+      let candidatePath = candidateURL.path
+      let fd = open(candidatePath, O_EVTONLY)
+
+      if fd >= 0 {
+        return (fd, candidatePath)
+      }
+
+      let parentURL = candidateURL.deletingLastPathComponent()
+      guard parentURL.path != candidatePath else {
+        return nil
+      }
+
+      candidateURL = parentURL
+    }
   }
 
   /// Closes the watched file descriptor when present.
