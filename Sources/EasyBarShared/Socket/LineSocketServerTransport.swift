@@ -254,7 +254,8 @@ public final class LineSocketServerTransport<
 
           switch disposition {
           case .close:
-            continue
+            close(clientFD)
+            return
 
           case .keepOpen:
             return
