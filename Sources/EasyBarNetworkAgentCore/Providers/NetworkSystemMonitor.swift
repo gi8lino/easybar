@@ -147,7 +147,7 @@ final class NetworkSystemMonitor {
 
     let tunnelInterfaces = allInterfaces.filter(isTunnelInterface)
     let primaryInterfaceIsTunnel = primaryInterface.map(isTunnelInterface) ?? false
-    let activeTunnelInterface = primaryInterfaceIsTunnel ? primaryInterface : nil
+    let activeTunnelInterface = primaryInterfaceIsTunnel ? primaryInterface : tunnelInterfaces.first
     let primaryIPv4 = primaryServiceID.flatMap {
       raw["State:/Network/Service/\($0)/IPv4"] as? [String: Any]
     }
