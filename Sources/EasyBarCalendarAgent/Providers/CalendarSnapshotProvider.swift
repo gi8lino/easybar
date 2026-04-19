@@ -680,8 +680,9 @@ extension CalendarSnapshotProvider {
         continue
       }
 
+      let effectiveDayStart = max(day, sectionStartDate)
       let dayEvents = regularEvents.filter { event in
-        event.startDate < nextDay && event.endDate > day
+        event.startDate < nextDay && event.endDate > effectiveDayStart
       }
 
       let title: String
