@@ -43,6 +43,11 @@ extension Config {
     ]
   }
 
+  /// Returns the configured app environment merged onto the runtime defaults.
+  static func mergedAppEnvironment(with configured: [String: String]) -> [String: String] {
+    defaultAppEnvironment().merging(configured) { _, configuredValue in configuredValue }
+  }
+
   /// Restores logging defaults.
   func resetLoggingDefaults() {
     loggingSection.enabled = false

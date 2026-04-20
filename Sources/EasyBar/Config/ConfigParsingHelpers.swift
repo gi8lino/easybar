@@ -32,9 +32,7 @@ extension Config {
       textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
         ?? fallback.textColorHex,
       backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "\(path).background_color"
-      ) ?? fallback.backgroundColorHex,
+        table["background_color"], path: "\(path).background_color") ?? fallback.backgroundColorHex,
       borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
         ?? fallback.borderColorHex,
       borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
@@ -231,19 +229,15 @@ extension Config {
     return try requiredStringArray(value, path: path)
   }
 
-  func optionalStringTable(
-    _ value: (any TOMLValueConvertible)?,
-    path: String
-  ) throws -> [String: String]? {
+  func optionalStringTable(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String:
+    String]?
+  {
     guard let value else { return nil }
     return try requiredStringTable(value, path: path)
   }
 
-  /// Parses one optional string path and expands `~` when present.
-  func optionalExpandedPath(
-    _ value: (any TOMLValueConvertible)?,
-    path: String
-  ) throws -> String? {
+  /// Parses one optional path string and expands `~` when present.
+  func optionalExpandedPath(_ value: (any TOMLValueConvertible)?, path: String) throws -> String? {
     expandedPath(try optionalString(value, path: path))
   }
 }

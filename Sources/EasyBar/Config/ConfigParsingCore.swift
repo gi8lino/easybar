@@ -16,9 +16,7 @@ extension Config {
       ?? luaPath
 
     if let configuredEnvironment = try optionalStringTable(app["env"], path: "app.env") {
-      appSection.environment = Self.defaultAppEnvironment().merging(configuredEnvironment) {
-        _, configuredValue in configuredValue
-      }
+      appSection.environment = Self.mergedAppEnvironment(with: configuredEnvironment)
     }
 
     watchConfigFile =
