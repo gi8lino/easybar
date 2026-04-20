@@ -10,7 +10,8 @@ extension LuaProcessController {
     return LaunchContext(
       runtimePath: runtimePath,
       luaPath: Config.shared.luaPath,
-      widgetsPath: Config.shared.widgetsPath
+      widgetsPath: Config.shared.widgetsPath,
+      environment: Config.shared.appSection.environment
     )
   }
 
@@ -30,6 +31,7 @@ extension LuaProcessController {
     easybarLog.debug("lua binary: \(context.luaPath)")
     easybarLog.debug("lua script: \(context.runtimePath)")
     easybarLog.debug("widgets path: \(context.widgetsPath)")
+    easybarLog.debug("lua env keys: \(context.environment.keys.sorted())")
   }
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
@@ -68,7 +70,7 @@ extension LuaProcessController {
     )
     defer { freeCStringVector(argv) }
 
-    let envp = try makeEnvironmentVector()
+    let envp = try makeEnvironmentVector(overrides: context.environment)
     defer { freeCStringVector(envp) }
 
     var pid: pid_t = 0
@@ -287,13 +289,43 @@ extension LuaProcessController {
   }
 
   /// Builds the environment vector inherited by the Lua runtime.
-  private func makeEnvironmentVector() throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
+  private func makeEnvironmentVector(
+    overrides: [String: String]
+  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
   {
-    let environment = ProcessInfo.processInfo.environment
+    var environment = ProcessInfo.processInfo.environment
+    overrides.forEach { key, value in
+      environment[key] = value
+    }
+    environment["PATH"] = resolvedRuntimePATH(from: environment, overrides: overrides)
+
+    let flattenedEnvironment = environment
       .map { "\($0.key)=\($0.value)" }
       .sorted()
 
-    return try makeCStringVector(environment)
+    return try makeCStringVector(flattenedEnvironment)
+  }
+
+  /// Returns one predictable PATH for widget shell commands, without requiring shell startup files.
+  private func resolvedRuntimePATH(
+    from environment: [String: String],
+    overrides: [String: String]
+  ) -> String {
+    if let configuredPath = overrides["PATH"], !configuredPath.isEmpty {
+      return configuredPath
+    }
+
+    let inheritedPath = environment["PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    if !inheritedPath.isEmpty {
+      return inheritedPath
+    }
+
+    return defaultRuntimePATH()
+  }
+
+  /// Returns one conservative default PATH for GUI-launched widget subprocesses.
+  private func defaultRuntimePATH() -> String {
+    "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   }
 
   /// Creates one null-terminated C string vector suitable for `posix_spawn`.

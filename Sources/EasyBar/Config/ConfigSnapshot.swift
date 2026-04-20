@@ -6,6 +6,7 @@ struct ConfigSnapshot {
   struct App {
     let widgetsPath: String
     let luaPath: String
+    let environment: [String: String]
     let watchConfigFile: Bool
     let lockDirectory: String
   }

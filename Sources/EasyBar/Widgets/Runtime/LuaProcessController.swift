@@ -8,6 +8,7 @@ final class LuaProcessController {
     let runtimePath: String
     let luaPath: String
     let widgetsPath: String
+    let environment: [String: String]
   }
 
   struct LaunchPipes {

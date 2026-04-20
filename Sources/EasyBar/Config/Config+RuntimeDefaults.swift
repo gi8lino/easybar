@@ -35,6 +35,7 @@ extension Config {
   /// Restores app-level defaults.
   func resetAppDefaults() {
     appSection.luaPath = "/opt/homebrew/bin/lua"
+    appSection.environment = [:]
     appSection.watchConfigFile = false
   }
 

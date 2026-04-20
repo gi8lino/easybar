@@ -24,6 +24,30 @@ This repository ships two config examples:
 Use `config.defaults.toml` when you want the complete reference.
 Use `config.minimal.toml` when you want a shorter starting point.
 
+## App environment
+
+Use `[app.env]` for environment variables that should be visible inside the Lua runtime and any shell commands launched by widgets.
+
+Example:
+
+```toml
+[app]
+widgets_dir = "~/.config/easybar/widgets"
+lua_path = "/opt/homebrew/bin/lua"
+
+[app.env]
+PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+TAILSCALE = "/usr/local/bin/tailscale"
+```
+
+Behavior:
+
+- if `[app.env]` sets `PATH`, EasyBar passes that exact value to the Lua runtime
+- if `[app.env]` does not set `PATH`, EasyBar uses the inherited app `PATH` when available
+- if the app itself has no usable `PATH`, EasyBar falls back to `/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin`
+
+This is especially useful for GUI-launched EasyBar sessions on macOS, where shell startup files such as `.zshrc` are not used to populate the app environment.
+
 ## Logging
 
 EasyBar uses one shared log directory for all three processes:

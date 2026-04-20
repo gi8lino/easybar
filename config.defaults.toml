@@ -4,6 +4,9 @@ lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for
 watch_config = false # Reloads EasyBar automatically when config.toml changes.
 lock_dir = "/tmp/EasyBar" # Directory that contains lock files used by EasyBar.
 
+[app.env]
+PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" # Environment overrides passed into the Lua runtime and widget shell commands.
+
 [logging]
 enabled = false # Mirrors stdout and stderr into per-process log files when true.
 level = "info" # Minimum log level: trace | debug | info | warn | error.

@@ -288,12 +288,17 @@ EASYBAR_CONFIG_PATH=/path/to/config.toml
 A small example:
 
 ```toml
+[app.env]
+PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 [builtins.spaces]
 enabled = true
 
 [builtins.calendar]
 enabled = true
 ```
+
+`[app.env]` is passed into the Lua runtime and widget shell commands. This is the right place to make GUI-launched widgets see tools like `tailscale`, `kubectl`, or custom scripts without depending on shell startup files.
 
 The repository includes two config examples:
 
@@ -513,7 +518,7 @@ If that is still not enough, restart the whole app:
 brew services restart gi8lino/tap/easybar
 ```
 
-If a widget still fails, check your configured `widgets_dir`, Lua path, and any widget-specific logs or output.
+If a widget still fails, check your configured `widgets_dir`, Lua path, `[app.env]`, and any widget-specific logs or output.
 
 ### Reset and recover
 

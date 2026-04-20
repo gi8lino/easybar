@@ -21,6 +21,7 @@ final class Config: ObservableObject {
   struct AppSection {
     var widgetsPath: String
     var luaPath: String
+    var environment: [String: String]
     var watchConfigFile: Bool
     var lockDirectory: String
   }
@@ -156,6 +157,7 @@ final class Config: ObservableObject {
     appSection = .init(
       widgetsPath: "",
       luaPath: "/opt/homebrew/bin/lua",
+      environment: [:],
       watchConfigFile: false,
       lockDirectory: ""
     )

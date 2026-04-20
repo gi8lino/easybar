@@ -7,6 +7,7 @@ extension Config {
       app: .init(
         widgetsPath: appSection.widgetsPath,
         luaPath: appSection.luaPath,
+        environment: appSection.environment,
         watchConfigFile: appSection.watchConfigFile,
         lockDirectory: appSection.lockDirectory
       ),
@@ -61,6 +62,7 @@ extension Config {
     appSection = .init(
       widgetsPath: snapshot.app.widgetsPath,
       luaPath: snapshot.app.luaPath,
+      environment: snapshot.app.environment,
       watchConfigFile: snapshot.app.watchConfigFile,
       lockDirectory: snapshot.app.lockDirectory
     )

@@ -18,6 +18,10 @@ extension Config {
       luaPath = try requiredString(value, path: "app.lua_path")
     }
 
+    if let value = app["env"] {
+      appSection.environment = try requiredStringTable(value, path: "app.env")
+    }
+
     if let value = app["watch_config"] {
       watchConfigFile = try requiredBool(value, path: "app.watch_config")
     }

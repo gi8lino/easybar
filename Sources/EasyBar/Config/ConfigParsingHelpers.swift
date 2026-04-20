@@ -158,6 +158,24 @@ extension Config {
     }
   }
 
+  func requiredStringTable(
+    _ value: any TOMLValueConvertible,
+    path: String
+  ) throws -> [String: String] {
+    guard let table = value.table else {
+      throw ConfigError.invalidType(
+        path: path,
+        expected: "table",
+        actual: describe(value)
+      )
+    }
+
+    return try table.reduce(into: [String: String]()) { result, entry in
+      let (key, value) = entry
+      result[key] = try requiredString(value, path: "\(path).\(key)")
+    }
+  }
+
   func describe(_ value: any TOMLValueConvertible) -> String {
     if let string = value.string {
       return "string(\(string.debugDescription))"
@@ -209,5 +227,10 @@ extension Config {
   func optionalStringArray(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String]? {
     guard let value else { return nil }
     return try requiredStringArray(value, path: path)
+  }
+
+  func optionalStringTable(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String: String]? {
+    guard let value else { return nil }
+    return try requiredStringTable(value, path: path)
   }
 }
