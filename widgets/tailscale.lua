@@ -1,6 +1,3 @@
-local home = os.getenv("HOME")
-package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/?.lua"
-
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -24,32 +21,8 @@ local function asset_path(name)
 	return dir .. "assets/" .. name
 end
 
-local function shell_path()
-	local seen = {}
-	local ordered = {}
-
-	local function add(path)
-		if path == nil or path == "" or seen[path] then
-			return
-		end
-
-		seen[path] = true
-		table.insert(ordered, path)
-	end
-
-	add("/usr/local/bin")
-	add("/opt/homebrew/bin")
-	add("/Applications/Tailscale.app/Contents/MacOS")
-
-	for entry in string.gmatch(os.getenv("PATH") or "", "[^:]+") do
-		add(entry)
-	end
-
-	return table.concat(ordered, ":")
-end
-
 local function shell(command)
-	local handle = io.popen("PATH=" .. quote(shell_path()) .. " " .. command .. " 2>&1")
+	local handle = io.popen(command .. " 2>&1")
 	if not handle then
 		return "", false
 	end
@@ -59,28 +32,10 @@ local function shell(command)
 	return trim(output), ok == true
 end
 
-local function executable_exists(path)
-	if path == nil or path == "" then
-		return false
-	end
-
-	local _, ok = shell("test -x " .. quote(path))
-	return ok
-end
-
 local function resolve_tailscale()
-	local candidates = {
-		os.getenv("TAILSCALE"),
-		"/usr/local/bin/tailscale",
-		"/opt/homebrew/bin/tailscale",
-		"/Applications/Tailscale.app/Contents/MacOS/tailscale",
-		trim(shell("command -v tailscale")),
-	}
-
-	for _, path in ipairs(candidates) do
-		if executable_exists(path) then
-			return path
-		end
+	local configured = trim(os.getenv("TAILSCALE") or "")
+	if configured ~= "" then
+		return configured
 	end
 
 	return "tailscale"
@@ -114,12 +69,18 @@ local function cli_status()
 	local health_message = output:match([["Health"%s*:%s*%[%s*"([^"]*)"]])
 	local connected = backend_state == "Running"
 	local detail = health_message or backend_state or status_label(connected)
+
 	if detail == "" then
 		detail = status_label(connected)
 	end
 
 	if state.tailscale_connected ~= connected then
-		easybar.log(easybar.level.debug, "tailscale state changed", connected and "active" or "inactive", backend_state or "<unknown>")
+		easybar.log(
+			easybar.level.debug,
+			"tailscale state changed",
+			connected and "active" or "inactive",
+			backend_state or "<unknown>"
+		)
 	end
 
 	state.tailscale_connected = connected
