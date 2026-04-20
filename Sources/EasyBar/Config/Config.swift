@@ -192,7 +192,7 @@ final class Config: ObservableObject {
     appSection = .init(
       widgetsPath: "",
       luaPath: SharedPathDefaults.defaultLuaPath,
-      environment: Self.defaultAppEnvironment(),
+      environment: SharedPathDefaults.defaultLuaEnvironment,
       watchConfigFile: true,
       lockDirectory: ""
     )
