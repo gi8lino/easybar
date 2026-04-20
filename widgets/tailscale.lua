@@ -5,6 +5,10 @@ local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+local function quote(s)
+	return string.format("%q", s or "")
+end
+
 local function script_dir()
 	local source = debug.getinfo(1, "S").source or ""
 	local path = source:gsub("^@", "")
@@ -20,8 +24,32 @@ local function asset_path(name)
 	return dir .. "assets/" .. name
 end
 
+local function shell_path()
+	local seen = {}
+	local ordered = {}
+
+	local function add(path)
+		if path == nil or path == "" or seen[path] then
+			return
+		end
+
+		seen[path] = true
+		table.insert(ordered, path)
+	end
+
+	add("/usr/local/bin")
+	add("/opt/homebrew/bin")
+	add("/Applications/Tailscale.app/Contents/MacOS")
+
+	for entry in string.gmatch(os.getenv("PATH") or "", "[^:]+") do
+		add(entry)
+	end
+
+	return table.concat(ordered, ":")
+end
+
 local function shell(command)
-	local handle = io.popen(command .. " 2>&1")
+	local handle = io.popen("PATH=" .. quote(shell_path()) .. " " .. command .. " 2>&1")
 	if not handle then
 		return "", false
 	end
@@ -31,16 +59,26 @@ local function shell(command)
 	return trim(output), ok == true
 end
 
+local function executable_exists(path)
+	if path == nil or path == "" then
+		return false
+	end
+
+	local _, ok = shell("test -x " .. quote(path))
+	return ok
+end
+
 local function resolve_tailscale()
 	local candidates = {
 		os.getenv("TAILSCALE"),
-		"/opt/homebrew/bin/tailscale",
 		"/usr/local/bin/tailscale",
+		"/opt/homebrew/bin/tailscale",
+		"/Applications/Tailscale.app/Contents/MacOS/tailscale",
 		trim(shell("command -v tailscale")),
 	}
 
 	for _, path in ipairs(candidates) do
-		if path and path ~= "" then
+		if executable_exists(path) then
 			return path
 		end
 	end
@@ -66,7 +104,7 @@ local function status_label(connected)
 end
 
 local function cli_status()
-	local output, ok = shell(tailscale .. " status --json")
+	local output, ok = shell(quote(tailscale) .. " status --json")
 	if not ok or output == "" then
 		easybar.log(easybar.level.warn, "tailscale status failed", output ~= "" and output or "<empty>")
 		return false, state.status_detail
@@ -91,7 +129,7 @@ end
 
 local function toggle_tailscale()
 	local connected = cli_status()
-	local command = connected and (tailscale .. " down") or (tailscale .. " up")
+	local command = connected and (quote(tailscale) .. " down") or (quote(tailscale) .. " up")
 	local output, ok = shell(command)
 
 	if not ok then
