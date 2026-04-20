@@ -174,6 +174,7 @@ final class AppController {
     logConfigDetails()
     logScreenDetails()
     logEnvironmentDetails()
+    logConfiguredEnvironment()
   }
 
   /// Logs config-derived startup details.
@@ -209,7 +210,7 @@ final class AppController {
     }
   }
 
-  /// Logs relevant environment overrides.
+  /// Logs relevant process environment overrides.
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
     let configOverride = env["\(SharedEnvironmentKeys.configPath)"] ?? ""
@@ -221,6 +222,21 @@ final class AppController {
     easybarLog.info(
       "environment \(SharedEnvironmentKeys.loggingLevel)=\(logLevel.isEmpty ? "<unset>" : logLevel)"
     )
+  }
+
+  /// Logs the configured environment overrides passed to the Lua runtime.
+  private func logConfiguredEnvironment() {
+    let environment = Config.shared.appSection.environment
+
+    guard !environment.isEmpty else {
+      easybarLog.info("app env=<empty>")
+      return
+    }
+
+    for key in environment.keys.sorted() {
+      let value = environment[key] ?? ""
+      easybarLog.info("app env \(key)=\(value)")
+    }
   }
 
   /// Logs whether required custom fonts are available at runtime.

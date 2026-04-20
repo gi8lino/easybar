@@ -293,10 +293,10 @@ extension LuaProcessController {
     overrides: [String: String]
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     var environment = ProcessInfo.processInfo.environment
+
     overrides.forEach { key, value in
       environment[key] = value
     }
-    environment["PATH"] = resolvedRuntimePATH(from: environment, overrides: overrides)
 
     let flattenedEnvironment =
       environment
@@ -304,28 +304,6 @@ extension LuaProcessController {
       .sorted()
 
     return try makeCStringVector(flattenedEnvironment)
-  }
-
-  /// Returns one predictable PATH for widget shell commands, without requiring shell startup files.
-  private func resolvedRuntimePATH(
-    from environment: [String: String],
-    overrides: [String: String]
-  ) -> String {
-    if let configuredPath = overrides["PATH"], !configuredPath.isEmpty {
-      return configuredPath
-    }
-
-    let inheritedPath = environment["PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    if !inheritedPath.isEmpty {
-      return inheritedPath
-    }
-
-    return defaultRuntimePATH()
-  }
-
-  /// Returns one conservative default PATH for GUI-launched widget subprocesses.
-  private func defaultRuntimePATH() -> String {
-    "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   }
 
   /// Creates one null-terminated C string vector suitable for `posix_spawn`.

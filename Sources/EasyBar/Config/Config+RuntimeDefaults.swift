@@ -35,8 +35,15 @@ extension Config {
   /// Restores app-level defaults.
   func resetAppDefaults() {
     appSection.luaPath = "/opt/homebrew/bin/lua"
-    appSection.environment = [:]
+    appSection.environment = defaultAppEnvironment()
     appSection.watchConfigFile = false
+  }
+
+  /// Returns the default environment overrides passed to the Lua runtime.
+  func defaultAppEnvironment() -> [String: String] {
+    [
+      "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    ]
   }
 
   /// Restores logging defaults.
