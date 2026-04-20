@@ -98,9 +98,8 @@ public final class SingleInstanceGuard {
 /// Returns the default lock path for one named process.
 public func defaultSingleInstanceLockPath(processName: String, directory: String? = nil) -> String {
   let baseDirectory =
-    directory?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-    ? NSString(string: directory!).expandingTildeInPath
-    : FileManager.default.temporaryDirectory.path
+    expandedPath(directory?.trimmingCharacters(in: .whitespacesAndNewlines))
+    ?? FileManager.default.temporaryDirectory.path
 
   return URL(fileURLWithPath: baseDirectory, isDirectory: true)
     .appendingPathComponent("\(processName).lock")

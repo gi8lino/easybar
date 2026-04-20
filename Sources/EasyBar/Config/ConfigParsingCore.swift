@@ -7,48 +7,39 @@ extension Config {
   func parseApp(from toml: TOMLTable) throws {
     guard let app = toml["app"]?.table else { return }
 
-    if let value = app["widgets_dir"] {
-      widgetsPath =
-        NSString(
-          string: try requiredString(value, path: "app.widgets_dir")
-        ).expandingTildeInPath
-    }
+    widgetsPath =
+      try optionalExpandedPath(app["widgets_dir"], path: "app.widgets_dir")
+      ?? widgetsPath
 
-    if let value = app["lua_path"] {
-      luaPath = try requiredString(value, path: "app.lua_path")
-    }
+    luaPath =
+      try optionalString(app["lua_path"], path: "app.lua_path")
+      ?? luaPath
 
-    if let value = app["env"] {
-      let configuredEnvironment = try requiredStringTable(value, path: "app.env")
+    if let configuredEnvironment = try optionalStringTable(app["env"], path: "app.env") {
       appSection.environment = Self.defaultAppEnvironment().merging(configuredEnvironment) {
         _, configuredValue in configuredValue
       }
     }
 
-    if let value = app["watch_config"] {
-      watchConfigFile = try requiredBool(value, path: "app.watch_config")
-    }
+    watchConfigFile =
+      try optionalBool(app["watch_config"], path: "app.watch_config")
+      ?? watchConfigFile
 
-    if let value = app["lock_dir"] {
-      lockDirectory =
-        NSString(
-          string: try requiredString(value, path: "app.lock_dir")
-        ).expandingTildeInPath
-    }
+    lockDirectory =
+      try optionalExpandedPath(app["lock_dir"], path: "app.lock_dir")
+      ?? lockDirectory
   }
 
   /// Parses logging settings.
   func parseLogging(from toml: TOMLTable) throws {
     guard let logging = toml["logging"]?.table else { return }
 
-    if let value = logging["enabled"] {
-      loggingEnabled = try requiredBool(value, path: "logging.enabled")
-    }
+    loggingEnabled =
+      try optionalBool(logging["enabled"], path: "logging.enabled")
+      ?? loggingEnabled
 
-    if let value = logging["level"] {
-      loggingLevel = normalizedLogLevel(
-        try requiredString(value, path: "logging.level")
-      )
+    if let configuredLevel = try optionalString(logging["level"], path: "logging.level") {
+      loggingLevel = normalizedLogLevel(configuredLevel)
     } else if let legacyLevel = legacyConfigLogLevel(from: logging) {
       loggingLevel = legacyLevel
     }
@@ -57,12 +48,9 @@ extension Config {
       loggingLevel = envLevel
     }
 
-    if let value = logging["directory"] {
-      loggingDirectory =
-        NSString(
-          string: try requiredString(value, path: "logging.directory")
-        ).expandingTildeInPath
-    }
+    loggingDirectory =
+      try optionalExpandedPath(logging["directory"], path: "logging.directory")
+      ?? loggingDirectory
   }
 
   /// Parses agent settings.
@@ -70,43 +58,35 @@ extension Config {
     guard let agents = toml["agents"]?.table else { return }
 
     if let calendar = agents["calendar"]?.table {
-      if let value = calendar["enabled"] {
-        calendarAgentEnabled = try requiredBool(value, path: "agents.calendar.enabled")
-      }
+      calendarAgentEnabled =
+        try optionalBool(calendar["enabled"], path: "agents.calendar.enabled")
+        ?? calendarAgentEnabled
 
-      if let value = calendar["socket_path"] {
-        calendarAgentSocketPath =
-          NSString(
-            string: try requiredString(value, path: "agents.calendar.socket_path")
-          ).expandingTildeInPath
-      }
+      calendarAgentSocketPath =
+        try optionalExpandedPath(calendar["socket_path"], path: "agents.calendar.socket_path")
+        ?? calendarAgentSocketPath
     }
 
     if let network = agents["network"]?.table {
-      if let value = network["enabled"] {
-        networkAgentEnabled = try requiredBool(value, path: "agents.network.enabled")
-      }
+      networkAgentEnabled =
+        try optionalBool(network["enabled"], path: "agents.network.enabled")
+        ?? networkAgentEnabled
 
-      if let value = network["socket_path"] {
-        networkAgentSocketPath =
-          NSString(
-            string: try requiredString(value, path: "agents.network.socket_path")
-          ).expandingTildeInPath
-      }
+      networkAgentSocketPath =
+        try optionalExpandedPath(network["socket_path"], path: "agents.network.socket_path")
+        ?? networkAgentSocketPath
 
-      if let value = network["refresh_interval_seconds"] {
-        networkAgentRefreshIntervalSeconds = try requiredNumber(
-          value,
+      networkAgentRefreshIntervalSeconds =
+        try optionalNumber(
+          network["refresh_interval_seconds"],
           path: "agents.network.refresh_interval_seconds"
-        )
-      }
+        ) ?? networkAgentRefreshIntervalSeconds
 
-      if let value = network["allow_unauthorized_non_sensitive_fields"] {
-        networkAgentAllowUnauthorizedNonSensitiveFields = try requiredBool(
-          value,
+      networkAgentAllowUnauthorizedNonSensitiveFields =
+        try optionalBool(
+          network["allow_unauthorized_non_sensitive_fields"],
           path: "agents.network.allow_unauthorized_non_sensitive_fields"
-        )
-      }
+        ) ?? networkAgentAllowUnauthorizedNonSensitiveFields
     }
   }
 
@@ -114,29 +94,28 @@ extension Config {
   func parseBar(from toml: TOMLTable) throws {
     guard let bar = toml["bar"]?.table else { return }
 
-    if let value = bar["height"] {
-      barHeight = CGFloat(try requiredInt(value, path: "bar.height"))
+    if let height = try optionalInt(bar["height"], path: "bar.height") {
+      barHeight = CGFloat(height)
     }
 
-    if let value = bar["padding_x"] {
-      barPaddingX = CGFloat(try requiredInt(value, path: "bar.padding_x"))
+    if let paddingX = try optionalInt(bar["padding_x"], path: "bar.padding_x") {
+      barPaddingX = CGFloat(paddingX)
     }
 
-    if let value = bar["extend_behind_notch"] {
-      barExtendBehindNotch = try requiredBool(
-        value,
+    barExtendBehindNotch =
+      try optionalBool(
+        bar["extend_behind_notch"],
         path: "bar.extend_behind_notch"
-      )
-    }
+      ) ?? barExtendBehindNotch
 
     guard let colors = bar["colors"]?.table else { return }
 
-    if let value = colors["background"] {
-      barBackgroundHex = try requiredString(value, path: "bar.colors.background")
-    }
+    barBackgroundHex =
+      try optionalString(colors["background"], path: "bar.colors.background")
+      ?? barBackgroundHex
 
-    if let value = colors["border"] {
-      barBorderHex = try requiredString(value, path: "bar.colors.border")
-    }
+    barBorderHex =
+      try optionalString(colors["border"], path: "bar.colors.border")
+      ?? barBorderHex
   }
 }
