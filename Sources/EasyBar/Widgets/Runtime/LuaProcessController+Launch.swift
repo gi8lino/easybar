@@ -291,15 +291,15 @@ extension LuaProcessController {
   /// Builds the environment vector inherited by the Lua runtime.
   private func makeEnvironmentVector(
     overrides: [String: String]
-  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
-  {
+  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     var environment = ProcessInfo.processInfo.environment
     overrides.forEach { key, value in
       environment[key] = value
     }
     environment["PATH"] = resolvedRuntimePATH(from: environment, overrides: overrides)
 
-    let flattenedEnvironment = environment
+    let flattenedEnvironment =
+      environment
       .map { "\($0.key)=\($0.value)" }
       .sorted()
 

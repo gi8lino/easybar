@@ -229,7 +229,9 @@ extension Config {
     return try requiredStringArray(value, path: path)
   }
 
-  func optionalStringTable(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String: String]? {
+  func optionalStringTable(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String:
+    String]?
+  {
     guard let value else { return nil }
     return try requiredStringTable(value, path: path)
   }
