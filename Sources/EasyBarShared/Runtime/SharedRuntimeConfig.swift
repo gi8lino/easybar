@@ -34,6 +34,10 @@ public struct SharedRuntimeConfig {
 
   // MARK: - Compatibility accessors
 
+  public var widgetsPath: String {
+    app.widgetsPath
+  }
+
   public var lockDirectory: String {
     app.lockDirectory
   }
@@ -85,9 +89,14 @@ public struct SharedRuntimeConfig {
 
 /// Resolved app-level values shared by helper processes.
 public struct SharedAppRuntimeConfig {
+  public let widgetsPath: String
   public let lockDirectory: String
 
-  public init(lockDirectory: String) {
+  public init(
+    widgetsPath: String,
+    lockDirectory: String
+  ) {
+    self.widgetsPath = widgetsPath
     self.lockDirectory = lockDirectory
   }
 }

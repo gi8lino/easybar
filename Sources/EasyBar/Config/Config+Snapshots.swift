@@ -27,13 +27,7 @@ extension Config {
         allowUnauthorizedNonSensitiveFields:
           networkAgentSection.allowUnauthorizedNonSensitiveFields
       ),
-      bar: .init(
-        height: barHeight,
-        paddingX: barPaddingX,
-        extendBehindNotch: barExtendBehindNotch,
-        backgroundHex: barBackgroundHex,
-        borderHex: barBorderHex
-      ),
+      bar: barSection,
       builtins: .init(
         cpu: builtinCPU,
         battery: builtinBattery,
@@ -89,12 +83,7 @@ extension Config {
 
   /// Restores the bar config snapshot.
   func applyBarSnapshot(_ snapshot: ConfigSnapshot) {
-    barHeight = snapshot.bar.height
-    barPaddingX = snapshot.bar.paddingX
-    barExtendBehindNotch = snapshot.bar.extendBehindNotch
-
-    barBackgroundHex = snapshot.bar.backgroundHex
-    barBorderHex = snapshot.bar.borderHex
+    barSection = snapshot.bar
   }
 
   /// Restores the built-in widget config snapshot.

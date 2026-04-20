@@ -44,12 +44,29 @@ final class Config: ObservableObject {
     var allowUnauthorizedNonSensitiveFields: Bool
   }
 
+  struct BarSection {
+    var height: CGFloat
+    var paddingX: CGFloat
+    var extendBehindNotch: Bool
+    var backgroundHex: String
+    var borderHex: String
+
+    static let `default` = BarSection(
+      height: 32,
+      paddingX: 10,
+      extendBehindNotch: true,
+      backgroundHex: "#111111",
+      borderHex: "#222222"
+    )
+  }
+
   // MARK: - Stored config sections
 
   var appSection: AppSection
   var loggingSection: LoggingSection
   var calendarAgentSection: CalendarAgentSection
   var networkAgentSection: NetworkAgentSection
+  var barSection: BarSection
 
   // MARK: - App compatibility accessors
 
@@ -128,14 +145,32 @@ final class Config: ObservableObject {
     set { networkAgentSection.allowUnauthorizedNonSensitiveFields = newValue }
   }
 
-  // MARK: - Bar
+  // MARK: - Bar compatibility accessors
 
-  var barHeight: CGFloat = 32
-  var barPaddingX: CGFloat = 10
-  var barExtendBehindNotch: Bool = true
+  var barHeight: CGFloat {
+    get { barSection.height }
+    set { barSection.height = newValue }
+  }
 
-  var barBackgroundHex: String = "#111111"
-  var barBorderHex: String = "#222222"
+  var barPaddingX: CGFloat {
+    get { barSection.paddingX }
+    set { barSection.paddingX = newValue }
+  }
+
+  var barExtendBehindNotch: Bool {
+    get { barSection.extendBehindNotch }
+    set { barSection.extendBehindNotch = newValue }
+  }
+
+  var barBackgroundHex: String {
+    get { barSection.backgroundHex }
+    set { barSection.backgroundHex = newValue }
+  }
+
+  var barBorderHex: String {
+    get { barSection.borderHex }
+    set { barSection.borderHex = newValue }
+  }
 
   // MARK: - Builtins
 
@@ -156,9 +191,9 @@ final class Config: ObservableObject {
   private init() {
     appSection = .init(
       widgetsPath: "",
-      luaPath: "/opt/homebrew/bin/lua",
-      environment: [:],
-      watchConfigFile: false,
+      luaPath: SharedPathDefaults.defaultLuaPath,
+      environment: Self.defaultAppEnvironment(),
+      watchConfigFile: true,
       lockDirectory: ""
     )
     loggingSection = .init(
@@ -173,9 +208,10 @@ final class Config: ObservableObject {
     networkAgentSection = .init(
       enabled: true,
       socketPath: "",
-      refreshIntervalSeconds: 15,
+      refreshIntervalSeconds: 0,
       allowUnauthorizedNonSensitiveFields: false
     )
+    barSection = .default
 
     resetDerivedDefaults()
 
@@ -220,9 +256,7 @@ final class Config: ObservableObject {
       return override
     }
 
-    return FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".config/easybar/config.toml")
-      .path
+    return SharedPathDefaults.defaultConfigPath()
   }
 
   /// Restores all defaults before parsing again.
@@ -233,12 +267,7 @@ final class Config: ObservableObject {
 
   /// Restores bar defaults.
   func resetBarDefaults() {
-    barHeight = 32
-    barPaddingX = 10
-    barExtendBehindNotch = true
-
-    barBackgroundHex = "#111111"
-    barBorderHex = "#222222"
+    barSection = .default
   }
 
   /// Restores built-in widget defaults.

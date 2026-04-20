@@ -6,10 +6,7 @@ extension Config {
   func resetDerivedDefaults() {
     let runtime = SharedRuntimeConfig.current
 
-    appSection.widgetsPath =
-      FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".config/easybar/widgets")
-      .path
+    appSection.widgetsPath = runtime.widgetsPath
     appSection.lockDirectory = runtime.lockDirectory
 
     loggingSection.directory = runtime.loggingDirectory
@@ -34,13 +31,13 @@ extension Config {
 
   /// Restores app-level defaults.
   func resetAppDefaults() {
-    appSection.luaPath = "/opt/homebrew/bin/lua"
-    appSection.environment = defaultAppEnvironment()
-    appSection.watchConfigFile = false
+    appSection.luaPath = SharedPathDefaults.defaultLuaPath
+    appSection.environment = Self.defaultAppEnvironment()
+    appSection.watchConfigFile = true
   }
 
   /// Returns the default environment overrides passed to the Lua runtime.
-  func defaultAppEnvironment() -> [String: String] {
+  static func defaultAppEnvironment() -> [String: String] {
     [
       "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     ]

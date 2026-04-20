@@ -19,7 +19,10 @@ extension Config {
     }
 
     if let value = app["env"] {
-      appSection.environment = try requiredStringTable(value, path: "app.env")
+      let configuredEnvironment = try requiredStringTable(value, path: "app.env")
+      appSection.environment = Self.defaultAppEnvironment().merging(configuredEnvironment) {
+        _, configuredValue in configuredValue
+      }
     }
 
     if let value = app["watch_config"] {

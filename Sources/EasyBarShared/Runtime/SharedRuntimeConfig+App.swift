@@ -4,12 +4,19 @@ import TOMLKit
 func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   let appTable = toml["app"]?.table
 
+  let widgetsPath =
+    expandedPath(appTable?["widgets_dir"]?.string)
+    ?? SharedPathDefaults.defaultWidgetsPath()
+
   let lockDirectory =
     expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
 
-  return SharedAppRuntimeConfig(lockDirectory: lockDirectory)
+  return SharedAppRuntimeConfig(
+    widgetsPath: widgetsPath,
+    lockDirectory: lockDirectory
+  )
 }
 
 /// Returns the default directory used for single-instance lock files.

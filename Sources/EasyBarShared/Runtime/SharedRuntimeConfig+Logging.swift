@@ -1,4 +1,3 @@
-import Foundation
 import TOMLKit
 
 extension SharedRuntimeConfig {
@@ -21,7 +20,7 @@ extension SharedRuntimeConfig {
     let directory =
       expandedEnvironmentPath(named: SharedEnvironmentKeys.loggingDirectory)
       ?? expandedPath(loggingTable?["directory"]?.string)
-      ?? defaultLoggingDirectory()
+      ?? SharedPathDefaults.defaultLoggingDirectory()
 
     return SharedLoggingRuntimeConfig(
       enabled: enabled,
@@ -54,18 +53,5 @@ extension SharedRuntimeConfig {
     }
 
     return fallback
-  }
-
-  /// Returns the default shared logging directory.
-  private static func defaultLoggingDirectory() -> String {
-    FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".local/state/easybar")
-      .path
-  }
-
-  /// Expands one optional filesystem path.
-  private static func expandedPath(_ value: String?) -> String? {
-    guard let value, !value.isEmpty else { return nil }
-    return NSString(string: value).expandingTildeInPath
   }
 }

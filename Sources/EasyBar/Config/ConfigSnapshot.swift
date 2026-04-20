@@ -29,14 +29,6 @@ struct ConfigSnapshot {
     let allowUnauthorizedNonSensitiveFields: Bool
   }
 
-  struct Bar {
-    let height: CGFloat
-    let paddingX: CGFloat
-    let extendBehindNotch: Bool
-    let backgroundHex: String
-    let borderHex: String
-  }
-
   struct Builtins {
     let cpu: Config.CPUBuiltinConfig
     let battery: Config.BatteryBuiltinConfig
@@ -55,6 +47,6 @@ struct ConfigSnapshot {
   let logging: Logging
   let calendarAgent: CalendarAgent
   let networkAgent: NetworkAgent
-  let bar: Bar
+  let bar: Config.BarSection
   let builtins: Builtins
 }
