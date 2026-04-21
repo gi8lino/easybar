@@ -4,7 +4,7 @@ import TOMLKit
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
 func resolvedConfigPath() -> String {
   expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
-    ?? SharedPathDefaults.defaultConfigPath()
+    ?? SharedPathDefaults.defaultConfigPath().path
 }
 
 /// Returns one parsed TOML table or an empty table when loading fails.

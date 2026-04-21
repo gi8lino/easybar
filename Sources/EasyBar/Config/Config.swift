@@ -263,7 +263,7 @@ final class Config: ObservableObject {
       return override
     }
 
-    return SharedPathDefaults.defaultConfigPath()
+    return SharedPathDefaults.defaultConfigPath().path
   }
 
   /// Restores all defaults before parsing again.

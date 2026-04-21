@@ -6,12 +6,16 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
 
   let widgetsPath =
     expandedPath(appTable?["widgets_dir"]?.string)
-    ?? SharedPathDefaults.defaultWidgetsPath()
+    ?? SharedPathDefaults.defaultWidgetsPath().path
+
+  // TODO: Create directory
 
   let lockDirectory =
     expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
+
+  // TODO: Create directory
 
   return SharedAppRuntimeConfig(
     widgetsPath: widgetsPath,

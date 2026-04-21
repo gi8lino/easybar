@@ -20,7 +20,9 @@ extension SharedRuntimeConfig {
     let directory =
       expandedEnvironmentPath(named: SharedEnvironmentKeys.loggingDirectory)
       ?? expandedPath(loggingTable?["directory"]?.string)
-      ?? SharedPathDefaults.defaultLoggingDirectory()
+      ?? SharedPathDefaults.defaultLoggingDirectory().path
+
+    // TODO: Create directory
 
     return SharedLoggingRuntimeConfig(
       enabled: enabled,

@@ -264,15 +264,9 @@ final class AppController {
       return
     }
 
-    let supportDirectory = defaultSupportDirectoryPath()
-    let installedStub = defaultWidgetEditorStubPath()
-    let fileManager = FileManager.default
+    let installedStub = SharedPathDefaults.defaultWidgetEditorStubPath()
 
     do {
-      try fileManager.createDirectory(
-        at: supportDirectory,
-        withIntermediateDirectories: true
-      )
 
       let bundledData = try Data(contentsOf: bundledStub)
       let existingData = try? Data(contentsOf: installedStub)
