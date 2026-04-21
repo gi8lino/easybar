@@ -1,5 +1,5 @@
 --- Module contract:
---- Owns reusable `easybar.events` tokens and event-name normalization.
+--- Owns reusable `easybar.events` tokens, mouse constants, and event-name normalization.
 --- Returns one table with `tokens`, `driver_events`, and `normalize(...)`.
 local M = {}
 
@@ -22,6 +22,19 @@ local DRIVER_EVENTS = {
 	workspace_change = true,
 	space_mode_change = true,
 	forced = true,
+}
+
+local MOUSE_BUTTONS = {
+	left = "left",
+	right = "right",
+	middle = "middle",
+}
+
+local SCROLL_DIRECTIONS = {
+	up = "up",
+	down = "down",
+	left = "left",
+	right = "right",
 }
 
 --- Wraps one runtime event name in a reusable subscribe token.
@@ -57,6 +70,18 @@ M.tokens = {
 		down = make_event_token("mouse.down"),
 		up = make_event_token("mouse.up"),
 		scrolled = make_event_token("mouse.scrolled"),
+
+		left_button = MOUSE_BUTTONS.left,
+		right_button = MOUSE_BUTTONS.right,
+		middle_button = MOUSE_BUTTONS.middle,
+
+		up_scroll = SCROLL_DIRECTIONS.up,
+		down_scroll = SCROLL_DIRECTIONS.down,
+		left_scroll = SCROLL_DIRECTIONS.left,
+		right_scroll = SCROLL_DIRECTIONS.right,
+
+		buttons = MOUSE_BUTTONS,
+		directions = SCROLL_DIRECTIONS,
 	},
 	slider = {
 		preview = make_event_token("slider.preview"),

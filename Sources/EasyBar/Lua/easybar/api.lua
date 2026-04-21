@@ -28,6 +28,19 @@ local LOG_LEVELS = {
 	error = "error",
 }
 
+local KINDS = {
+	item = "item",
+	row = "row",
+	column = "column",
+	group = "group",
+	popup = "popup",
+	slider = "slider",
+	progress = "progress",
+	progress_slider = "progress_slider",
+	sparkline = "sparkline",
+	spaces = "spaces",
+}
+
 --- Joins log arguments into one message string.
 local function join_message(...)
 	local parts = {}
@@ -162,6 +175,7 @@ function M.new(log)
 		widget_api.exec = api.exec
 		widget_api.subscribe = api.subscribe
 		widget_api.events = event_tokens.tokens
+		widget_api.kind = KINDS
 		widget_api.level = LOG_LEVELS
 
 		--- Writes one widget log line through the host logger.

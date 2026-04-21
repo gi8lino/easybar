@@ -20,6 +20,17 @@
 ---| '"sparkline"'
 ---| '"spaces"'
 
+---@alias EasyBarMouseButton
+---| '"left"'
+---| '"right"'
+---| '"middle"'
+
+---@alias EasyBarScrollDirection
+---| '"up"'
+---| '"down"'
+---| '"left"'
+---| '"right"'
+
 ---@alias EasyBarBoolLike boolean
 ---| '"on"'
 ---| '"off"'
@@ -189,8 +200,8 @@
 ---@field widget_id? string The subscribed widget id receiving the event.
 ---@field target_widget_id? string The concrete node id that received the interaction.
 ---@field app_name? string The focused app name for app-switch style events.
----@field button? string The mouse button name, usually `left` or `right`.
----@field direction? string The scroll direction, usually `up` or `down`.
+---@field button? EasyBarMouseButton|string The mouse button name, usually `left`, `right`, or `middle`.
+---@field direction? EasyBarScrollDirection|string The scroll direction, usually `up`, `down`, `left`, or `right`.
 ---@field value? number|string|boolean The event value for slider and driver updates.
 ---@field delta_x? number Horizontal scroll delta.
 ---@field delta_y? number Vertical scroll delta.
@@ -203,6 +214,17 @@
 ---@class EasyBarEventToken
 ---@field name EasyBarEventName The canonical runtime event name sent by EasyBar.
 
+---@class EasyBarMouseButtons
+---@field left EasyBarMouseButton
+---@field right EasyBarMouseButton
+---@field middle EasyBarMouseButton
+
+---@class EasyBarScrollDirections
+---@field up EasyBarScrollDirection
+---@field down EasyBarScrollDirection
+---@field left EasyBarScrollDirection
+---@field right EasyBarScrollDirection
+
 ---@class EasyBarMouseEvents
 ---@field entered? EasyBarEventToken Fired when the pointer enters the subscribed node frame.
 ---@field exited? EasyBarEventToken Fired when the pointer leaves the subscribed node frame.
@@ -210,6 +232,15 @@
 ---@field down? EasyBarEventToken Fired on mouse button press over the subscribed node.
 ---@field up? EasyBarEventToken Fired on mouse button release over the subscribed node.
 ---@field scrolled? EasyBarEventToken Fired when the pointer scrolls over the subscribed node.
+---@field left_button EasyBarMouseButton Constant for `event.button == "left"`.
+---@field right_button EasyBarMouseButton Constant for `event.button == "right"`.
+---@field middle_button EasyBarMouseButton Constant for `event.button == "middle"`.
+---@field up_scroll EasyBarScrollDirection Constant for `event.direction == "up"`.
+---@field down_scroll EasyBarScrollDirection Constant for `event.direction == "down"`.
+---@field left_scroll EasyBarScrollDirection Constant for `event.direction == "left"`.
+---@field right_scroll EasyBarScrollDirection Constant for `event.direction == "right"`.
+---@field buttons EasyBarMouseButtons Nested mouse-button constants.
+---@field directions EasyBarScrollDirections Nested scroll-direction constants.
 
 ---@class EasyBarSliderEvents
 ---@field preview? EasyBarEventToken Fired while a slider is being previewed or dragged.
@@ -234,7 +265,7 @@
 ---@field focus_change? EasyBarEventToken Fired when workspace focus changes.
 ---@field workspace_change? EasyBarEventToken Fired when workspace layout or selection changes.
 ---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
----@field mouse? EasyBarMouseEvents Mouse interaction event tokens.
+---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
 ---@class EasyBarLevels
@@ -244,15 +275,28 @@
 ---@field warn EasyBarLevel
 ---@field error EasyBarLevel
 
+---@class EasyBarKinds
+---@field item EasyBarKind
+---@field row EasyBarKind
+---@field column EasyBarKind
+---@field group EasyBarKind
+---@field popup EasyBarKind
+---@field slider EasyBarKind
+---@field progress EasyBarKind
+---@field progress_slider EasyBarKind
+---@field sparkline EasyBarKind
+---@field spaces EasyBarKind
+
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, update props, subscribe to events, and write widget logs.
 ---@class EasyBar
 ---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps) Creates one node in the widget registry.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
----@field events EasyBarEvents Event token namespace used by `easybar.subscribe(...)`.
+---@field events EasyBarEvents Event token namespace used by `easybar.subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, callback?: fun(output: string): any): any Runs one shell command and optionally receives trimmed output.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of the current props for one node.
+---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
 ---@field remove fun(id: string) Removes one node and all descendants.
@@ -269,8 +313,8 @@ function EasyBar.default(props) end
 function EasyBar.clear_defaults() end
 
 ---Creates one EasyBar node.
----Use `item` for simple widgets, `group` for shared containers, and `row`/`column`
----for layout wrappers around child nodes.
+---Use `easybar.kind.item` for simple widgets, `easybar.kind.group` for shared containers,
+---and `easybar.kind.row` / `easybar.kind.column` for layout wrappers around child nodes.
 ---When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
 ---on the configured cadence without requiring an event subscription.
 ---@param kind EasyBarKind
@@ -299,13 +343,17 @@ function EasyBar.remove(id) end
 ---@return any
 function EasyBar.exec(command, callback) end
 
----All supported EasyBar event tokens.
+---All supported EasyBar event tokens and mouse constants.
 ---@type EasyBarEvents
 EasyBar.events = {}
 
 ---All supported EasyBar log levels.
 ---@type EasyBarLevels
 EasyBar.level = {}
+
+---All supported EasyBar kind constants.
+---@type EasyBarKinds
+EasyBar.kind = {}
 
 ---Subscribes one node to one or more event tokens.
 ---Interaction belongs to the subscribed node frame.
