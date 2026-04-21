@@ -37,12 +37,6 @@ easybar.add(easybar.kind.sparkline, "cpu_sparkline", {
 	line_width = 1.8,
 	width = 64,
 	height = 18,
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	on_interval = function()
 		push_value(read_cpu())
 

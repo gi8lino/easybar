@@ -145,15 +145,15 @@ extension Config {
         )
       ),
       popup: .init(
-        textColorHex: "#ffffff",
-        backgroundColorHex: "#111111",
-        borderColorHex: "#444444",
-        borderWidth: 1,
-        cornerRadius: 8,
-        paddingX: 8,
-        paddingY: 6,
-        marginX: 0,
-        marginY: 8
+        textColorHex: Config.builtinPopupDefaultTextColorHex,
+        backgroundColorHex: Config.builtinPopupDefaultBackgroundColorHex,
+        borderColorHex: Config.builtinPopupDefaultBorderColorHex,
+        borderWidth: Config.builtinPopupDefaultBorderWidth,
+        cornerRadius: Config.builtinPopupDefaultCornerRadius,
+        paddingX: Config.builtinPopupDefaultPaddingX,
+        paddingY: Config.builtinPopupDefaultPaddingY,
+        marginX: Config.builtinPopupDefaultMarginX,
+        marginY: Config.builtinPopupDefaultMarginY
       )
     )
   }

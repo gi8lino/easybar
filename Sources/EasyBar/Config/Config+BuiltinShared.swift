@@ -2,6 +2,15 @@ import Foundation
 import TOMLKit
 
 extension Config {
+  static let builtinPopupDefaultTextColorHex = "#cdd6f4"
+  static let builtinPopupDefaultBackgroundColorHex = "#111111"
+  static let builtinPopupDefaultBorderColorHex = "#444444"
+  static let builtinPopupDefaultBorderWidth = 1.0
+  static let builtinPopupDefaultCornerRadius = 8.0
+  static let builtinPopupDefaultPaddingX = 8.0
+  static let builtinPopupDefaultPaddingY = 6.0
+  static let builtinPopupDefaultMarginX = 0.0
+  static let builtinPopupDefaultMarginY = 8.0
 
   /// Shared placement block for built-in widgets.
   struct BuiltinWidgetPlacement {

@@ -50,12 +50,6 @@ end
 easybar.add(easybar.kind.row, "volume_inline", {
 	position = "right",
 	order = 52,
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	spacing = 8,
 })
 

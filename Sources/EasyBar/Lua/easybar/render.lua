@@ -4,6 +4,64 @@
 local M = {}
 
 local last_emitted = {}
+local DEFAULT_ROOT_SHELL_STYLE = {
+	background = {
+		color = "#1a1a1a",
+		border_color = "#333333",
+		border_width = 1,
+		corner_radius = 8,
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 4,
+		padding_bottom = 4,
+	},
+}
+local DEFAULT_POPUP_TEXT_COLOR = "#cdd6f4"
+local DEFAULT_POPUP_STYLE = {
+	background = {
+		color = "#111111",
+		border_color = "#444444",
+		border_width = 1,
+		corner_radius = 8,
+	},
+	padding_x = 8,
+	padding_y = 6,
+	margin_x = 0,
+	margin_y = 8,
+	spacing = 4,
+}
+
+--- Deep-copies one Lua value tree.
+local function deep_copy(value)
+	if type(value) ~= "table" then
+		return value
+	end
+
+	local copy = {}
+
+	for key, item in pairs(value) do
+		copy[key] = deep_copy(item)
+	end
+
+	return copy
+end
+
+--- Deep-merges one source table into one target table.
+local function deep_merge(target, source)
+	if type(source) ~= "table" then
+		return target
+	end
+
+	for key, value in pairs(source) do
+		if type(value) == "table" and type(target[key]) == "table" then
+			deep_merge(target[key], value)
+		else
+			target[key] = deep_copy(value)
+		end
+	end
+
+	return target
+end
 
 --- Normalizes one root position into the supported bar positions.
 local function normalize_position(position)
@@ -180,6 +238,16 @@ local function popup_parent_id(item)
 	return nil
 end
 
+--- Returns whether one item is rendered inside popup content.
+local function is_popup_item(item)
+	return popup_parent_id(item) ~= nil
+end
+
+--- Returns whether one item is one bar-root widget node.
+local function is_bar_root_item(item)
+	return regular_parent_id(item) == nil and popup_parent_id(item) == nil
+end
+
 --- Returns the regular parent id for nested child items.
 local function regular_parent_id(item)
 	if type(item.props.parent) == "string" and item.props.parent ~= "" then
@@ -290,41 +358,57 @@ end
 --- Builds one render node from an item record and its child nodes.
 local function make_node(registry, id, item, root_position, children)
 	local props = item.props
+	local resolved_props = props
 	local kind = item.kind or "item"
 
 	if kind == "item" and type(children) == "table" and #children > 0 then
 		kind = "row"
 	end
 
-	local node = base_node(id, kind, root_position, props.order, resolve_drawing(props, true))
-	node.icon = icon_string(props.icon)
-	node.text = label_string(props.label)
-	node.color = resolve_color(props)
-	node.iconColor = resolve_icon_color(props)
-	node.labelColor = resolve_label_color(props)
-	node.imagePath = resolve_image_path(props)
-	node.imageSize = resolve_image_size(props)
-	node.imageCornerRadius = resolve_image_corner_radius(props)
-	node.iconFontSize = resolve_icon_font_size(props)
-	node.labelFontSize = resolve_label_font_size(props)
-	node.value = tonumber(props.value)
-	node.min = tonumber(props.min)
-	node.max = tonumber(props.max)
-	node.step = tonumber(props.step)
-	node.values = props.values
-	node.lineWidth = tonumber(props.line_width or props.lineWidth)
+	if is_bar_root_item(item) then
+		resolved_props = {}
+		deep_merge(resolved_props, DEFAULT_ROOT_SHELL_STYLE)
+		deep_merge(resolved_props, props)
+	end
+
+	local node = base_node(id, kind, root_position, resolved_props.order, resolve_drawing(resolved_props, true))
+	node.icon = icon_string(resolved_props.icon)
+	node.text = label_string(resolved_props.label)
+	node.color = resolve_color(resolved_props)
+	node.iconColor = resolve_icon_color(resolved_props)
+	node.labelColor = resolve_label_color(resolved_props)
+	node.imagePath = resolve_image_path(resolved_props)
+	node.imageSize = resolve_image_size(resolved_props)
+	node.imageCornerRadius = resolve_image_corner_radius(resolved_props)
+	node.iconFontSize = resolve_icon_font_size(resolved_props)
+	node.labelFontSize = resolve_label_font_size(resolved_props)
+	node.value = tonumber(resolved_props.value)
+	node.min = tonumber(resolved_props.min)
+	node.max = tonumber(resolved_props.max)
+	node.step = tonumber(resolved_props.step)
+	node.values = resolved_props.values
+	node.lineWidth = tonumber(resolved_props.line_width or resolved_props.lineWidth)
 	node.children = children
-	return apply_interaction(apply_box_style(node, props), resolve_mouse_interaction(registry, id))
+
+	if is_popup_item(item) and node.color == "" then
+		node.color = DEFAULT_POPUP_TEXT_COLOR
+	end
+
+	return apply_interaction(apply_box_style(node, resolved_props), resolve_mouse_interaction(registry, id))
 end
 
 --- Builds the popup content container for one popup-enabled item.
 local function make_popup_container(id, root_position, popup_props, children)
-	local node = base_node(id, "column", root_position, 0, resolve_drawing(popup_props, false))
+	local resolved_popup_props = {}
+	deep_merge(resolved_popup_props, DEFAULT_POPUP_STYLE)
+	deep_merge(resolved_popup_props, popup_props or {})
+
+	local node = base_node(id, "column", root_position, 0, resolve_drawing(resolved_popup_props, false))
 	node.icon = ""
 	node.text = ""
 	node.color = ""
 	node.children = children
-	return apply_box_style(node, popup_props)
+	return apply_box_style(node, resolved_popup_props)
 end
 
 --- Flattens one render tree into the payload expected by Swift.

@@ -65,12 +65,6 @@ end
 easybar.add(easybar.kind.row, "volume_slider", {
 	position = "right",
 	order = 51,
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	spacing = 8,
 })
 

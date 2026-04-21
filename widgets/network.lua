@@ -62,12 +62,6 @@ easybar.add(easybar.kind.item, "network", {
 		string = "📶",
 	},
 	label = "",
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	on_interval = function()
 		easybar.set("network", {
 			label = {

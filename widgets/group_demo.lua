@@ -34,28 +34,8 @@ easybar.add(easybar.kind.group, "group_demo", {
 	position = "right",
 	order = 5,
 	spacing = 6,
-	background = {
-		color = "#202020",
-		border_color = "#4a4a4a",
-		border_width = 1,
-		corner_radius = 8,
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	popup = {
 		drawing = false,
-		background = {
-			color = "#1e2030",
-			border_color = "#494d64",
-			border_width = 1,
-			corner_radius = 10,
-		},
-		padding_left = 10,
-		padding_right = 10,
-		padding_top = 8,
-		padding_bottom = 8,
 	},
 })
 
@@ -77,7 +57,6 @@ easybar.add(easybar.kind.item, "group_demo_popup", {
 	position = "popup.group_demo",
 	label = {
 		string = "Group popup",
-		color = "#cad3f5",
 	},
 })
 

@@ -73,12 +73,6 @@ end
 easybar.add(easybar.kind.item, "vpn", {
 	position = "right",
 	order = 41,
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 })
 
 easybar.subscribe(

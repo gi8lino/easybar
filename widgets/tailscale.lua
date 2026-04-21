@@ -309,9 +309,6 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 		string = "",
 	},
 	background = {
-		color = "#202020",
-		border_width = 1,
-		corner_radius = 8,
 		padding_left = 12,
 		padding_right = 12,
 		padding_top = 2,
@@ -319,10 +316,6 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 	},
 	popup = {
 		drawing = "on",
-		padding_left = 4,
-		padding_right = 4,
-		padding_top = 6,
-		padding_bottom = 6,
 	},
 	on_interval = function()
 		refresh()

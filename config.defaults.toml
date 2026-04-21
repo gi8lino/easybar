@@ -234,7 +234,7 @@ on_hold_overlay = "#FFFFFFFF" # Color of the on-hold pause overlay.
 unavailable = "#6c7086" # Color used when battery data is unavailable.
 
 [builtins.battery.tooltip]
-text_color = "#ffffff" # Text color used in the tooltip popup.
+text_color = "#cdd6f4" # Text color used in the tooltip popup.
 background_color = "#111111" # Background color of the tooltip popup.
 border_color = "#444444" # Border color of the tooltip popup.
 border_width = 1 # Border width of the tooltip popup.

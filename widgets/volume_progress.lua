@@ -64,11 +64,9 @@ local function refresh()
 	easybar.set("volume_progress_popup_label", {
 		icon = {
 			string = icon_for_state(state),
-			color = "#cad3f5",
 		},
 		label = {
 			string = "Volume " .. text_for_state(state),
-			color = "#cad3f5",
 		},
 	})
 
@@ -80,25 +78,9 @@ end
 easybar.add(easybar.kind.row, "volume_progress", {
 	position = "right",
 	order = 50,
-	background = {
-		padding_left = 8,
-		padding_right = 8,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
 	spacing = 8,
 	popup = {
 		drawing = false,
-		background = {
-			color = "#1e2030",
-			border_color = "#494d64",
-			border_width = 1,
-			corner_radius = 10,
-		},
-		padding_left = 12,
-		padding_right = 12,
-		padding_top = 12,
-		padding_bottom = 12,
 		spacing = 8,
 	},
 })

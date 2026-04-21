@@ -130,7 +130,6 @@ local function refresh()
 	easybar.set("wireguard_popup_label", {
 		label = {
 			string = status_label(wireguard_connected),
-			color = "#cad3f5",
 		},
 	})
 end
@@ -139,14 +138,8 @@ easybar.add(easybar.kind.group, "wireguard", {
 	position = "right",
 	order = 2,
 	background = {
-		color = "#202020",
-		border_color = "#4a4a4a",
-		border_width = 1,
-		corner_radius = 8,
 		padding_left = 12,
 		padding_right = 12,
-		padding_top = 4,
-		padding_bottom = 4,
 	},
 	spacing = 0,
 	popup = {
