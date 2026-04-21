@@ -14,12 +14,9 @@ extension Config {
     let kind: Kind
   }
 
-  /// Registered directory requirements keyed by config path.
-  private static var registeredDirectories: [String: RequiredDirectory] = [:]
-
   /// Removes all currently registered directory requirements.
   func resetRegisteredDirectories() {
-    Self.registeredDirectories.removeAll()
+    registeredDirectories.removeAll()
   }
 
   /// Registers or replaces one required runtime directory.
@@ -31,7 +28,7 @@ extension Config {
     path: String,
     kind: RequiredDirectory.Kind
   ) {
-    Self.registeredDirectories[configPath] = RequiredDirectory(
+    registeredDirectories[configPath] = RequiredDirectory(
       configPath: configPath,
       path: path,
       kind: kind
@@ -40,7 +37,7 @@ extension Config {
 
   /// Ensures all registered runtime-required directories exist.
   func ensureRequiredDirectoriesExist() throws {
-    for requiredDirectory in Self.registeredDirectories.values.sorted(by: {
+    for requiredDirectory in registeredDirectories.values.sorted(by: {
       $0.configPath < $1.configPath
     }) {
       switch requiredDirectory.kind {

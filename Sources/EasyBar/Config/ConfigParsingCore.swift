@@ -55,12 +55,15 @@ extension Config {
       ?? loggingEnabled
 
     if let configuredLevel = try optionalString(logging["level"], path: "logging.level") {
-      loggingLevel = normalizedLogLevel(configuredLevel)
+      loggingLevel = try parseLogLevel(
+        configuredLevel,
+        path: "logging.level"
+      )
     } else if let legacyLevel = legacyConfigLogLevel(from: logging) {
       loggingLevel = legacyLevel
     }
 
-    if let envLevel = environmentLogLevelOverride() {
+    if let envLevel = try environmentLogLevelOverride() {
       loggingLevel = envLevel
     }
 

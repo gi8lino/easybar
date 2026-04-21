@@ -42,7 +42,7 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   private func makeWindow() -> NSWindow {
     let window = NSWindow(
       contentRect: .zero,
-      styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+      styleMask: [.titled, .closable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
@@ -59,9 +59,10 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     window.representedURL = nil
     window.miniwindowImage = NSApp.applicationIconImage
     window.standardWindowButton(.documentIconButton)?.image = NSApp.applicationIconImage
+    window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    window.standardWindowButton(.zoomButton)?.isHidden = true
     window.contentViewController = hostingController
     window.delegate = self
-    window.standardWindowButton(.zoomButton)?.isHidden = true
     return window
   }
 
@@ -105,11 +106,20 @@ private struct ConfigErrorContentView: View {
   let configPath: String
   let onClose: () -> Void
 
-  private var errorText: String {
-    state.error.localizedDescription
-      .components(separatedBy: .whitespacesAndNewlines)
-      .filter { !$0.isEmpty }
-      .joined(separator: " ")
+  private var configError: ConfigError? {
+    state.error as? ConfigError
+  }
+
+  private var issuePathText: String? {
+    configError?.configPath
+  }
+
+  private var detailText: String {
+    if let configError {
+      return configError.detail
+    }
+
+    return normalizedText(state.error.localizedDescription)
   }
 
   private var title: String {
@@ -151,13 +161,25 @@ private struct ConfigErrorContentView: View {
           .textSelection(.enabled)
       }
 
+      if let issuePathText {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Config key")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+
+          Text(issuePathText)
+            .font(.system(size: 12, design: .monospaced))
+            .textSelection(.enabled)
+        }
+      }
+
       VStack(alignment: .leading, spacing: 6) {
         Text("What is wrong")
           .font(.system(size: 11, weight: .semibold))
           .foregroundStyle(.secondary)
 
         ScrollView {
-          Text(errorText)
+          Text(detailText)
             .font(.system(size: 12, design: .monospaced))
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -177,16 +199,33 @@ private struct ConfigErrorContentView: View {
       }
 
       HStack {
+        Button("Open Config") {
+          openConfig()
+        }
+
         Spacer()
+
         Button("Close", action: onClose)
           .keyboardShortcut(.defaultAction)
       }
     }
     .padding(18)
-    .frame(width: 520)
+    .frame(width: 560)
     .background(
       RoundedRectangle(cornerRadius: 14, style: .continuous)
         .fill(Color(nsColor: .controlBackgroundColor))
     )
+  }
+
+  private func normalizedText(_ value: String) -> String {
+    value
+      .components(separatedBy: .whitespacesAndNewlines)
+      .filter { !$0.isEmpty }
+      .joined(separator: " ")
+  }
+
+  private func openConfig() {
+    let url = URL(fileURLWithPath: configPath)
+    NSWorkspace.shared.open(url)
   }
 }

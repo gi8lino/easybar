@@ -3,7 +3,7 @@ import TOMLKit
 
 extension Config {
 
-  enum BuiltinWiFiDisplayMode: String {
+  enum BuiltinWiFiDisplayMode: String, CaseIterable {
     case none
     case tooltip
     case expand
@@ -152,11 +152,12 @@ extension Config {
     )
 
     let content = WiFiBuiltinConfig.Content(
-      displayMode: normalizedWiFiDisplayMode(
+      displayMode: try parseWiFiDisplayMode(
         try optionalString(
           contentTable["display_mode"],
           path: "builtins.wifi.content.display_mode"
-        ) ?? builtinWiFi.displayMode.rawValue
+        ) ?? builtinWiFi.displayMode.rawValue,
+        path: "builtins.wifi.content.display_mode"
       ),
       disconnectedText: try optionalString(
         contentTable["disconnected_text"],

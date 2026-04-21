@@ -267,8 +267,11 @@ extension Config {
     SpacesBuiltinConfig.Text(
       size: try optionalNumber(table["size"], path: "builtins.spaces.text.size")
         ?? fallback.size,
-      weight: try optionalString(table["weight"], path: "builtins.spaces.text.weight")
-        ?? fallback.weight,
+      weight: try validatedSpacesTextWeight(
+        try optionalString(table["weight"], path: "builtins.spaces.text.weight")
+          ?? fallback.weight,
+        path: "builtins.spaces.text.weight"
+      ),
       focusedColorHex: try optionalString(
         table["focused_color"],
         path: "builtins.spaces.text.focused_color"

@@ -192,7 +192,10 @@ final class Config: ObservableObject {
   var builtinTime: TimeBuiltinConfig = .default
   var builtinDate: DateBuiltinConfig = .default
 
+  // MARK: - Transient config state
+
   private(set) var loadFailureState: LoadFailureState?
+  var registeredDirectories: [String: RequiredDirectory] = [:]
 
   private init() {
     appSection = .init(
@@ -251,6 +254,7 @@ final class Config: ObservableObject {
     } catch {
       apply(snapshot)
       loadFailureState = LoadFailureState(error: error, context: .reloadKeptPreviousConfig)
+      objectWillChange.send()
 
       easybarLog.warn("reload rejected: \(error)")
       return error

@@ -12,8 +12,12 @@ extension Config {
 
     /// Returns the configured native group parent when present.
     var groupID: String? {
-      guard let group, !group.isEmpty else { return nil }
-      return Config.shared.builtinGroups.contains { $0.id == group } ? group : nil
+      guard let group else { return nil }
+
+      let trimmed = group.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !trimmed.isEmpty else { return nil }
+
+      return trimmed
     }
   }
 

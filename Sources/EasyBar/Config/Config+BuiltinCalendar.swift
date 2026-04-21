@@ -4,14 +4,14 @@ import TOMLKit
 extension Config {
 
   /// Popup mode used by the unified calendar widget.
-  enum CalendarPopupMode: String {
+  enum CalendarPopupMode: String, CaseIterable {
     case none
     case upcoming
     case month
   }
 
   /// Popup layout variants for the month calendar popup.
-  enum MonthCalendarPopupLayout: String {
+  enum MonthCalendarPopupLayout: String, CaseIterable {
     case calendarAppointmentsHorizontal = "calendar_appointments_horizontal"
     case appointmentsCalendarHorizontal = "appointments_calendar_horizontal"
     case calendarAppointmentsVertical = "calendar_appointments_vertical"
@@ -921,11 +921,12 @@ extension Config {
       fallback: builtinCalendar.style
     )
 
-    let popupMode = normalizedCalendarPopupMode(
+    let popupMode = try parseCalendarPopupMode(
       try optionalString(
         calendar["popup_mode"],
         path: "builtins.calendar.popup_mode"
-      ) ?? builtinCalendar.popupMode.rawValue
+      ) ?? builtinCalendar.popupMode.rawValue,
+      path: "builtins.calendar.popup_mode"
     )
 
     let anchor = try parseCalendarAnchor(
@@ -952,45 +953,6 @@ extension Config {
       anchor: anchor,
       upcoming: upcoming,
       month: month
-    )
-  }
-
-  /// Parses the calendar anchor block.
-  func parseCalendarAnchor(
-    from table: TOMLTable,
-    fallback: CalendarBuiltinConfig.Anchor
-  ) throws -> CalendarBuiltinConfig.Anchor {
-    CalendarBuiltinConfig.Anchor(
-      itemFormat: try optionalString(
-        table["item_format"],
-        path: "builtins.calendar.anchor.item_format"
-      ) ?? fallback.itemFormat,
-      layout: normalizedCalendarLayout(
-        try optionalString(
-          table["layout"],
-          path: "builtins.calendar.anchor.layout"
-        ) ?? fallback.layout.rawValue
-      ),
-      topFormat: try optionalString(
-        table["top_format"],
-        path: "builtins.calendar.anchor.top_format"
-      ) ?? fallback.topFormat,
-      bottomFormat: try optionalString(
-        table["bottom_format"],
-        path: "builtins.calendar.anchor.bottom_format"
-      ) ?? fallback.bottomFormat,
-      lineSpacing: try optionalNumber(
-        table["line_spacing"],
-        path: "builtins.calendar.anchor.line_spacing"
-      ) ?? fallback.lineSpacing,
-      topTextColorHex: try optionalString(
-        table["top_text_color"],
-        path: "builtins.calendar.anchor.top_text_color"
-      ) ?? fallback.topTextColorHex,
-      bottomTextColorHex: try optionalString(
-        table["bottom_text_color"],
-        path: "builtins.calendar.anchor.bottom_text_color"
-      ) ?? fallback.bottomTextColorHex
     )
   }
 }

@@ -17,8 +17,20 @@ extension Config {
 
     let resolvedConfigPath = configPath
     let fileURL = URL(fileURLWithPath: resolvedConfigPath)
+    let fileManager = FileManager.default
 
-    if let data = try? Data(contentsOf: fileURL) {
+    if fileManager.fileExists(atPath: fileURL.path) {
+      let data: Data
+
+      do {
+        data = try Data(contentsOf: fileURL)
+      } catch {
+        throw ConfigError.invalidValue(
+          path: "config",
+          message: "failed to read file at \(resolvedConfigPath): \(error.localizedDescription)"
+        )
+      }
+
       guard let text = String(data: data, encoding: .utf8) else {
         throw ConfigError.invalidValue(
           path: "config",
@@ -60,7 +72,14 @@ extension Config {
   }
 
   /// Returns the log-level override from the environment when present.
-  func environmentLogLevelOverride() -> ProcessLogLevel? {
-    ProcessLogLevel.normalized(stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel))
+  func environmentLogLevelOverride() throws -> ProcessLogLevel? {
+    guard let value = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel) else {
+      return nil
+    }
+
+    return try parseLogLevel(
+      value,
+      path: "environment.\(SharedEnvironmentKeys.loggingLevel)"
+    )
   }
 }

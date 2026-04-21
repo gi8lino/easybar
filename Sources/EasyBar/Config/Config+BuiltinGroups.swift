@@ -27,7 +27,8 @@ extension Config {
           position: .right,
           order: 40,
           group: nil
-        )
+        ),
+        allowGroupReference: false
       )
 
       let styleTable = groupTable["style"]?.table ?? groupTable

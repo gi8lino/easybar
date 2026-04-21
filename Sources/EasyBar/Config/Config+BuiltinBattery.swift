@@ -4,13 +4,13 @@ import TOMLKit
 extension Config {
 
   /// Battery color mode.
-  enum BuiltinBatteryColorMode: String {
+  enum BuiltinBatteryColorMode: String, CaseIterable {
     case dynamic
     case fixed
   }
 
   /// Battery percentage display mode.
-  enum BuiltinBatteryDisplayMode: String {
+  enum BuiltinBatteryDisplayMode: String, CaseIterable {
     case none
     case tooltip
     case expand
@@ -211,21 +211,23 @@ extension Config {
         table["icon_size"],
         path: "builtins.battery.content.icon_size"
       ) ?? fallback.iconSize,
-      colorMode: normalizedBatteryColorMode(
+      colorMode: try parseBatteryColorMode(
         try optionalString(
           table["color_mode"],
           path: "builtins.battery.content.color_mode"
-        ) ?? fallback.colorMode.rawValue
+        ) ?? fallback.colorMode.rawValue,
+        path: "builtins.battery.content.color_mode"
       ),
       fixedColorHex: try optionalString(
         table["fixed_color"],
         path: "builtins.battery.content.fixed_color"
       ) ?? fallback.fixedColorHex,
-      displayMode: normalizedBatteryDisplayMode(
+      displayMode: try parseBatteryDisplayMode(
         try optionalString(
           table["display_mode"],
           path: "builtins.battery.content.display_mode"
-        ) ?? fallback.displayMode.rawValue
+        ) ?? fallback.displayMode.rawValue,
+        path: "builtins.battery.content.display_mode"
       ),
       colors: try parseBatteryColors(from: colorsTable, fallback: fallback.colors)
     )

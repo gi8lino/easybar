@@ -8,16 +8,26 @@ extension Config {
   func parseBuiltinPlacement(
     from table: TOMLTable,
     path: String,
-    fallback: BuiltinWidgetPlacement
+    fallback: BuiltinWidgetPlacement,
+    allowGroupReference: Bool = true
   ) throws -> BuiltinWidgetPlacement {
+    let rawGroup =
+      try optionalString(table["group"], path: "\(path).group")
+      ?? fallback.group
+
     return BuiltinWidgetPlacement(
       enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
-      position: normalizedPosition(
+      position: try parsePosition(
         try optionalString(table["position"], path: "\(path).position")
-          ?? fallback.position.rawValue
+          ?? fallback.position.rawValue,
+        path: "\(path).position"
       ),
       order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
-      group: try optionalString(table["group"], path: "\(path).group") ?? fallback.group
+      group: try validatedBuiltinGroupReference(
+        rawGroup,
+        path: "\(path).group",
+        allowGroupReference: allowGroupReference
+      )
     )
   }
 
@@ -32,7 +42,9 @@ extension Config {
       textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
         ?? fallback.textColorHex,
       backgroundColorHex: try optionalString(
-        table["background_color"], path: "\(path).background_color") ?? fallback.backgroundColorHex,
+        table["background_color"],
+        path: "\(path).background_color"
+      ) ?? fallback.backgroundColorHex,
       borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
         ?? fallback.borderColorHex,
       borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
@@ -51,8 +63,23 @@ extension Config {
   }
 
   /// Parses one configured minimum log level.
-  func normalizedLogLevel(_ value: String) -> ProcessLogLevel {
-    ProcessLogLevel.normalized(value) ?? .info
+  func parseLogLevel(
+    _ value: String,
+    path: String
+  ) throws -> ProcessLogLevel {
+    if let parsed = ProcessLogLevel.normalized(value) {
+      return parsed
+    }
+
+    let expected = ProcessLogLevel.allCases
+      .map(\.rawValue)
+      .sorted()
+      .joined(separator: ", ")
+
+    throw ConfigError.invalidValue(
+      path: path,
+      message: "expected one of \(expected)"
+    )
   }
 
   /// Returns the legacy boolean logging override mapped into a log level.
@@ -65,31 +92,191 @@ extension Config {
   }
 
   /// Parses one battery color mode.
-  func normalizedBatteryColorMode(_ value: String) -> BuiltinBatteryColorMode {
-    BuiltinBatteryColorMode(rawValue: value) ?? .dynamic
+  func parseBatteryColorMode(
+    _ value: String,
+    path: String
+  ) throws -> BuiltinBatteryColorMode {
+    try parseStringEnum(
+      value,
+      as: BuiltinBatteryColorMode.self,
+      path: path
+    )
   }
 
   /// Parses one battery display mode.
-  func normalizedBatteryDisplayMode(_ value: String) -> BuiltinBatteryDisplayMode {
-    BuiltinBatteryDisplayMode(rawValue: value) ?? .expand
+  func parseBatteryDisplayMode(
+    _ value: String,
+    path: String
+  ) throws -> BuiltinBatteryDisplayMode {
+    try parseStringEnum(
+      value,
+      as: BuiltinBatteryDisplayMode.self,
+      path: path
+    )
   }
 
   /// Parses one Wi-Fi display mode.
-  func normalizedWiFiDisplayMode(_ value: String) -> BuiltinWiFiDisplayMode {
-    BuiltinWiFiDisplayMode(rawValue: value) ?? .expand
+  func parseWiFiDisplayMode(
+    _ value: String,
+    path: String
+  ) throws -> BuiltinWiFiDisplayMode {
+    try parseStringEnum(
+      value,
+      as: BuiltinWiFiDisplayMode.self,
+      path: path
+    )
   }
 
   /// Parses one calendar popup mode.
-  func normalizedCalendarPopupMode(_ value: String) -> CalendarPopupMode {
-    CalendarPopupMode(rawValue: value) ?? .upcoming
+  func parseCalendarPopupMode(
+    _ value: String,
+    path: String
+  ) throws -> CalendarPopupMode {
+    try parseStringEnum(
+      value,
+      as: CalendarPopupMode.self,
+      path: path
+    )
   }
 
-  func normalizedPosition(_ value: String) -> WidgetPosition {
-    WidgetPosition(rawValue: value) ?? .right
+  /// Parses one month-calendar popup layout mode.
+  func parseMonthCalendarPopupLayout(
+    _ value: String,
+    path: String
+  ) throws -> MonthCalendarPopupLayout {
+    try parseStringEnum(
+      value,
+      as: MonthCalendarPopupLayout.self,
+      path: path
+    )
   }
 
-  func normalizedCalendarLayout(_ value: String) -> CalendarAnchorLayout {
-    CalendarAnchorLayout(rawValue: value) ?? .item
+  /// Parses one widget position.
+  func parsePosition(
+    _ value: String,
+    path: String
+  ) throws -> WidgetPosition {
+    let normalized = normalizedEnumValue(value)
+
+    guard let parsed = WidgetPosition(rawValue: normalized) else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one of left, center, right"
+      )
+    }
+
+    return parsed
+  }
+
+  /// Parses one calendar anchor layout.
+  func parseCalendarLayout(
+    _ value: String,
+    path: String
+  ) throws -> CalendarAnchorLayout {
+    let normalized = normalizedEnumValue(value)
+
+    guard let parsed = CalendarAnchorLayout(rawValue: normalized) else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "unsupported value '\(value.trimmingCharacters(in: .whitespacesAndNewlines))'"
+      )
+    }
+
+    return parsed
+  }
+
+  /// Validates one configured built-in group reference.
+  func validatedBuiltinGroupReference(
+    _ value: String?,
+    path: String,
+    allowGroupReference: Bool
+  ) throws -> String? {
+    guard let value else { return nil }
+
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    guard allowGroupReference else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "built-in groups cannot be nested"
+      )
+    }
+
+    guard builtinGroups.contains(where: { $0.id == trimmed }) else {
+      let knownGroups = builtinGroups.map(\.id).sorted()
+
+      if knownGroups.isEmpty {
+        throw ConfigError.invalidValue(
+          path: path,
+          message: "unknown built-in group '\(trimmed)'"
+        )
+      }
+
+      throw ConfigError.invalidValue(
+        path: path,
+        message:
+          "unknown built-in group '\(trimmed)'; expected one of \(knownGroups.joined(separator: ", "))"
+      )
+    }
+
+    return trimmed
+  }
+
+  /// Validates one configured spaces text weight.
+  func validatedSpacesTextWeight(
+    _ value: String,
+    path: String
+  ) throws -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    let normalized = trimmed.lowercased()
+
+    let allowed = [
+      "ultralight",
+      "thin",
+      "light",
+      "regular",
+      "medium",
+      "semibold",
+      "bold",
+      "heavy",
+      "black",
+    ]
+
+    guard allowed.contains(normalized) else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one of \(allowed.joined(separator: ", "))"
+      )
+    }
+
+    return trimmed
+  }
+
+  /// Parses one generic string-backed enum case-insensitively.
+  private func parseStringEnum<T>(
+    _ value: String,
+    as type: T.Type,
+    path: String
+  ) throws -> T where T: RawRepresentable, T: CaseIterable, T.RawValue == String {
+    let normalized = normalizedEnumValue(value)
+
+    guard let parsed = T(rawValue: normalized) else {
+      let expected = T.allCases.map(\.rawValue).sorted().joined(separator: ", ")
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one of \(expected)"
+      )
+    }
+
+    return parsed
+  }
+
+  /// Normalizes one string enum token for forgiving parsing.
+  private func normalizedEnumValue(_ value: String) -> String {
+    value
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
   }
 
   func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {
@@ -229,9 +416,10 @@ extension Config {
     return try requiredStringArray(value, path: path)
   }
 
-  func optionalStringTable(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String:
-    String]?
-  {
+  func optionalStringTable(
+    _ value: (any TOMLValueConvertible)?,
+    path: String
+  ) throws -> [String: String]? {
     guard let value else { return nil }
     return try requiredStringTable(value, path: path)
   }
