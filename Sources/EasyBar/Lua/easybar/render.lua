@@ -183,7 +183,7 @@ local function resolve_image_corner_radius(props)
 		return tonumber(props.icon.image_corner_radius)
 	end
 
-	if type(props.image) == "table" and props.image.corner_radius ~= nil then
+	if type(props.image) == "table" and type(props.image.corner_radius) ~= "nil" then
 		return tonumber(props.image.corner_radius)
 	end
 
@@ -238,6 +238,15 @@ local function popup_parent_id(item)
 	return nil
 end
 
+--- Returns the regular parent id for nested child items.
+local function regular_parent_id(item)
+	if type(item.props.parent) == "string" and item.props.parent ~= "" then
+		return item.props.parent
+	end
+
+	return nil
+end
+
 --- Returns whether one item is rendered inside popup content.
 local function is_popup_item(item)
 	return popup_parent_id(item) ~= nil
@@ -246,15 +255,6 @@ end
 --- Returns whether one item is one bar-root widget node.
 local function is_bar_root_item(item)
 	return regular_parent_id(item) == nil and popup_parent_id(item) == nil
-end
-
---- Returns the regular parent id for nested child items.
-local function regular_parent_id(item)
-	if type(item.props.parent) == "string" and item.props.parent ~= "" then
-		return item.props.parent
-	end
-
-	return nil
 end
 
 --- Builds one minimal render node with shared defaults applied.
