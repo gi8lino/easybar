@@ -42,6 +42,10 @@ public struct SharedRuntimeConfig {
     app.lockDirectory
   }
 
+  public var widgetEditorStubPath: String {
+    app.widgetEditorStubPath
+  }
+
   public var loggingEnabled: Bool {
     logging.enabled
   }
@@ -91,13 +95,16 @@ public struct SharedRuntimeConfig {
 public struct SharedAppRuntimeConfig {
   public let widgetsPath: String
   public let lockDirectory: String
+  public let widgetEditorStubPath: String
 
   public init(
     widgetsPath: String,
-    lockDirectory: String
+    lockDirectory: String,
+    widgetEditorStubPath: String
   ) {
     self.widgetsPath = widgetsPath
     self.lockDirectory = lockDirectory
+    self.widgetEditorStubPath = widgetEditorStubPath
   }
 }
 

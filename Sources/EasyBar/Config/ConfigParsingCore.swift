@@ -29,6 +29,13 @@ extension Config {
       ?? lockDirectory
     lockDirectory = resolvedLockDirectory
 
+    let resolvedWidgetEditorStubPath =
+      try optionalExpandedPath(
+        app["widget_editor_stub_path"],
+        path: "app.widget_editor_stub_path"
+      ) ?? widgetEditorStubPath
+    widgetEditorStubPath = resolvedWidgetEditorStubPath
+
     develop =
       try optionalBool(app["develop"], path: "app.develop")
       ?? develop
@@ -43,6 +50,12 @@ extension Config {
       for: "app.lock_dir",
       path: resolvedLockDirectory,
       kind: .directory
+    )
+
+    registerDirectoryRequirement(
+      for: "app.widget_editor_stub_path",
+      path: resolvedWidgetEditorStubPath,
+      kind: .parentDirectory
     )
   }
 

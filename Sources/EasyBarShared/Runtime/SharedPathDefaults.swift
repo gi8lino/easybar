@@ -5,7 +5,7 @@ public enum SharedPathDefaults {
   static let defaultConfigRelativePath = ".config/easybar/config.toml"
   static let defaultWidgetsRelativePath = ".config/easybar/widgets"
   static let defaultLoggingDirectoryRelativePath = ".local/state/easybar"
-  static let defaultWidgetEditorStubRelativePath = "/.local/share/easybar/"
+  static let defaultWidgetEditorStubRelativePath = ".local/share/easybar/easybar_api.lua"
 
   public static let defaultLuaPath = "/opt/homebrew/bin/lua"
   public static let defaultLuaEnvironment: [String: String] = [

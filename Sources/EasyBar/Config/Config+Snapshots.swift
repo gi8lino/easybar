@@ -10,6 +10,7 @@ extension Config {
         environment: appSection.environment,
         watchConfigFile: appSection.watchConfigFile,
         lockDirectory: appSection.lockDirectory,
+        widgetEditorStubPath: appSection.widgetEditorStubPath,
         develop: appSection.develop
       ),
       logging: .init(
@@ -60,6 +61,7 @@ extension Config {
       environment: snapshot.app.environment,
       watchConfigFile: snapshot.app.watchConfigFile,
       lockDirectory: snapshot.app.lockDirectory,
+      widgetEditorStubPath: snapshot.app.widgetEditorStubPath,
       develop: snapshot.app.develop
     )
 

@@ -8,6 +8,7 @@ extension Config {
 
     appSection.widgetsPath = runtime.widgetsPath
     appSection.lockDirectory = runtime.lockDirectory
+    appSection.widgetEditorStubPath = runtime.widgetEditorStubPath
 
     loggingSection.directory = runtime.loggingDirectory
     loggingSection.level = runtime.loggingLevel

@@ -24,6 +24,7 @@ final class Config: ObservableObject {
     var environment: [String: String]
     var watchConfigFile: Bool
     var lockDirectory: String
+    var widgetEditorStubPath: String
     var develop: Bool
   }
 
@@ -89,6 +90,11 @@ final class Config: ObservableObject {
   var lockDirectory: String {
     get { appSection.lockDirectory }
     set { appSection.lockDirectory = newValue }
+  }
+
+  var widgetEditorStubPath: String {
+    get { appSection.widgetEditorStubPath }
+    set { appSection.widgetEditorStubPath = newValue }
   }
 
   var develop: Bool {
@@ -204,6 +210,7 @@ final class Config: ObservableObject {
       environment: SharedPathDefaults.defaultLuaEnvironment,
       watchConfigFile: true,
       lockDirectory: "",
+      widgetEditorStubPath: "",
       develop: false
     )
     loggingSection = .init(

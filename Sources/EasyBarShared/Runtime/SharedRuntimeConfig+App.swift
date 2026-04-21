@@ -17,9 +17,14 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
 
   // TODO: Create directory
 
+  let widgetEditorStubPath =
+    expandedPath(appTable?["widget_editor_stub_path"]?.string)
+    ?? SharedPathDefaults.defaultWidgetEditorStubPath().path
+
   return SharedAppRuntimeConfig(
     widgetsPath: widgetsPath,
-    lockDirectory: lockDirectory
+    lockDirectory: lockDirectory,
+    widgetEditorStubPath: widgetEditorStubPath
   )
 }
 

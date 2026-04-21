@@ -256,7 +256,7 @@ final class AppController {
     )
   }
 
-  /// Installs the bundled Lua editor stub into the active widget directory.
+  /// Installs the bundled Lua editor stub into the configured editor-stub path.
   private func installWidgetEditorStub() {
     guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua")
     else {
@@ -264,10 +264,9 @@ final class AppController {
       return
     }
 
-    let installedStub = SharedPathDefaults.defaultWidgetEditorStubPath()
+    let installedStub = URL(fileURLWithPath: Config.shared.widgetEditorStubPath)
 
     do {
-
       let bundledData = try Data(contentsOf: bundledStub)
       let existingData = try? Data(contentsOf: installedStub)
 
@@ -275,6 +274,10 @@ final class AppController {
         return
       }
 
+      try FileManager.default.createDirectory(
+        at: installedStub.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+      )
       try bundledData.write(to: installedStub, options: .atomic)
       easybarLog.info("installed widget editor stub path=\(installedStub.path)")
     } catch {
