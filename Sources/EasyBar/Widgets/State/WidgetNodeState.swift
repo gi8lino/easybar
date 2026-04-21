@@ -107,12 +107,16 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   }
 
   /// Returns whether this node should own hover interactions.
+  ///
+  /// By default, only simple root items own hover. Container roots such as rows and groups
+  /// should not implicitly take hover ownership because that blocks child item interaction
+  /// surfaces rendered above/below them.
   var isMouseHoverInteractive: Bool {
     if let receivesMouseHover {
       return receivesMouseHover
     }
 
-    return id == root
+    return id == root && kind == .item
   }
 
   /// Returns whether this node should own mouse-down interactions.
@@ -126,8 +130,15 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   }
 
   /// Returns whether this node should own click interactions.
+  ///
+  /// Child items inside scripted row/group containers should be clickable by default so Lua
+  /// widgets can subscribe to item-specific click events without needing extra node flags.
   var isMouseClickInteractive: Bool {
-    receivesMouseClick == true
+    if let receivesMouseClick {
+      return receivesMouseClick
+    }
+
+    return kind == .item
   }
 
   /// Returns whether this node should own scroll interactions.

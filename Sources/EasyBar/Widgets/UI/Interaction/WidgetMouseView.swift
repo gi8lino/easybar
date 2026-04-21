@@ -9,6 +9,7 @@ struct WidgetMouseView: NSViewRepresentable {
   let emitsMouseDown: Bool
   let emitsMouseUp: Bool
   let emitsMouseClick: Bool
+  let emitsMouseScroll: Bool
 
   init(
     widgetID: String,
@@ -16,7 +17,8 @@ struct WidgetMouseView: NSViewRepresentable {
     tracksHover: Bool = true,
     emitsMouseDown: Bool = false,
     emitsMouseUp: Bool = false,
-    emitsMouseClick: Bool = false
+    emitsMouseClick: Bool = false,
+    emitsMouseScroll: Bool = false
   ) {
     self.widgetID = widgetID
     self.targetWidgetID = targetWidgetID ?? widgetID
@@ -24,6 +26,7 @@ struct WidgetMouseView: NSViewRepresentable {
     self.emitsMouseDown = emitsMouseDown
     self.emitsMouseUp = emitsMouseUp
     self.emitsMouseClick = emitsMouseClick
+    self.emitsMouseScroll = emitsMouseScroll
   }
 
   /// Creates the AppKit-backed mouse surface.
@@ -35,6 +38,7 @@ struct WidgetMouseView: NSViewRepresentable {
     view.emitsMouseDown = emitsMouseDown
     view.emitsMouseUp = emitsMouseUp
     view.emitsMouseClick = emitsMouseClick
+    view.emitsMouseScroll = emitsMouseScroll
     return view
   }
 
@@ -46,6 +50,7 @@ struct WidgetMouseView: NSViewRepresentable {
     nsView.emitsMouseDown = emitsMouseDown
     nsView.emitsMouseUp = emitsMouseUp
     nsView.emitsMouseClick = emitsMouseClick
+    nsView.emitsMouseScroll = emitsMouseScroll
   }
 }
 
@@ -56,6 +61,7 @@ final class MouseTrackingNSView: NSView {
   var emitsMouseDown = false
   var emitsMouseUp = false
   var emitsMouseClick = false
+  var emitsMouseScroll = false
 
   private var trackingArea: NSTrackingArea?
   private var isMouseInside = false
@@ -71,9 +77,17 @@ final class MouseTrackingNSView: NSView {
     true
   }
 
-  /// Make this transparent view participate in hit-testing.
+  /// Make this transparent view participate in hit-testing only when it actually needs to
+  /// consume button or scroll events. Hover tracking uses `NSTrackingArea` and does not need
+  /// to win hit-testing.
   override func hitTest(_ point: NSPoint) -> NSView? {
-    bounds.contains(point) ? self : nil
+    guard bounds.contains(point) else { return nil }
+    return handlesDirectMouseEvents ? self : nil
+  }
+
+  /// Returns whether this surface needs direct event ownership.
+  private var handlesDirectMouseEvents: Bool {
+    emitsMouseDown || emitsMouseUp || emitsMouseClick || emitsMouseScroll
   }
 
   /// Rebuilds tracking areas after layout updates.
@@ -133,6 +147,8 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits one scroll-wheel event.
   override func scrollWheel(with event: NSEvent) {
+    guard emitsMouseScroll else { return }
+
     let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
 
     easybarLog.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")

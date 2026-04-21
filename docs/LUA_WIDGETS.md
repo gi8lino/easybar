@@ -11,6 +11,8 @@ Interaction is node-based.
 - the subscribed node frame is the interactive surface
 - use smaller child nodes when only part of a widget should be interactive
 - use `group` when multiple child nodes should share one styled container
+- if children inside a group must be clicked independently, subscribe on the child ids
+- subscribe on the group id only when the whole group should behave as one interactive surface
 
 ## Editor support
 
@@ -295,6 +297,15 @@ background = {
 
 ## Grouping
 
+Use `group` when multiple child nodes should share:
+
+- one background
+- one border
+- one padding box
+- one popup owner
+
+Example:
+
 ```lua
 easybar.add("group", "vpn", {
     position = "right",
@@ -307,7 +318,45 @@ easybar.add("group", "vpn", {
     },
     spacing = 6,
 })
+
+easybar.add("item", "vpn_main", {
+    parent = "vpn",
+    icon = {
+        string = "󰖂",
+    },
+})
+
+easybar.add("item", "vpn_mode", {
+    parent = "vpn",
+    icon = {
+        string = "󰌾",
+    },
+})
 ```
+
+Important:
+
+- the group is the shared styled container
+- each child item can still be its own interactive surface
+- if each child should react independently to clicks, subscribe on the child ids, not only on the group id
+
+Example:
+
+```lua
+easybar.subscribe("vpn_main", easybar.events.mouse.clicked, function(event)
+    if event.button == nil or event.button == "left" then
+        -- handle main toggle
+    end
+end)
+
+easybar.subscribe("vpn_mode", easybar.events.mouse.clicked, function(event)
+    if event.button == nil or event.button == "left" then
+        -- handle secondary toggle
+    end
+end)
+```
+
+Use a group-level mouse subscription only when the whole grouped widget should behave like one single click target.
 
 ## Popups
 

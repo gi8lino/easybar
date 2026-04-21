@@ -67,7 +67,8 @@ extension WidgetNodeView {
         tracksHover: tracksHover,
         emitsMouseDown: node.isMouseDownInteractive,
         emitsMouseUp: node.isMouseUpInteractive,
-        emitsMouseClick: node.isMouseClickInteractive
+        emitsMouseClick: node.isMouseClickInteractive,
+        emitsMouseScroll: node.isMouseScrollInteractive
       )
       .frame(width: proxy.size.width, height: proxy.size.height)
       .contentShape(Rectangle())
@@ -102,9 +103,9 @@ extension WidgetNodeView {
   @ViewBuilder
   var popupAnchorMouseOverlay: some View {
     if node.isMouseDownInteractive || node.isMouseUpInteractive || node.isMouseClickInteractive
-      || node.isMouseScrollInteractive || hasPopupChildren || node.kind == .popup
+      || node.isMouseScrollInteractive
     {
-      nodeEventSurface(tracksHover: true)
+      nodeEventSurface(tracksHover: false)
     }
   }
 
