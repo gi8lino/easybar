@@ -20,7 +20,7 @@ socket_path = "/tmp/EasyBar/calendar-agent.sock" # Unix socket path used by Easy
 [agents.network]
 enabled = true # Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.
 socket_path = "/tmp/EasyBar/network-agent.sock" # Unix socket path used by EasyBar and the network agent.
-refresh_interval_seconds = 0 # Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.
+refresh_interval_seconds = 60 # Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.
 allow_unauthorized_non_sensitive_fields = false # When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned.
 
 [bar]
