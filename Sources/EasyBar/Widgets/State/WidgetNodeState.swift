@@ -108,15 +108,20 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
   /// Returns whether this node should own hover interactions.
   ///
-  /// By default, only simple root items own hover. Container roots such as rows and groups
-  /// should not implicitly take hover ownership because that blocks child item interaction
-  /// surfaces rendered above/below them.
+  /// Root widgets need hover by default even when they render as rows or groups,
+  /// because native widgets like battery/volume/wifi and scripted container widgets
+  /// rely on root-level hover events. Hover-only overlays do not steal click handling
+  /// from children because `WidgetMouseView` only participates in hit-testing when it
+  /// emits direct mouse button or scroll events.
+  ///
+  /// Config-defined native groups can still opt out explicitly through
+  /// `receivesMouseHover = false`.
   var isMouseHoverInteractive: Bool {
     if let receivesMouseHover {
       return receivesMouseHover
     }
 
-    return id == root && kind == .item
+    return id == root
   }
 
   /// Returns whether this node should own mouse-down interactions.
