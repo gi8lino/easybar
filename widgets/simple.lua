@@ -13,7 +13,7 @@ local function render()
 	})
 end
 
-easybar.add("item", "toggle_test", {
+easybar.add(easybar.kind.item, "toggle_test", {
 	position = "right",
 	order = 1,
 	background = {

@@ -30,7 +30,7 @@ local function render()
 	})
 end
 
-easybar.add("group", "group_demo", {
+easybar.add(easybar.kind.group, "group_demo", {
 	position = "right",
 	order = 5,
 	spacing = 6,
@@ -59,21 +59,21 @@ easybar.add("group", "group_demo", {
 	},
 })
 
-easybar.add("item", "group_demo_icon", {
+easybar.add(easybar.kind.item, "group_demo_icon", {
 	parent = "group_demo",
 	icon = {
 		string = "󰄱",
 	},
 })
 
-easybar.add("item", "group_demo_label", {
+easybar.add(easybar.kind.item, "group_demo_label", {
 	parent = "group_demo",
 	label = {
 		string = "Group",
 	},
 })
 
-easybar.add("item", "group_demo_popup", {
+easybar.add(easybar.kind.item, "group_demo_popup", {
 	position = "popup.group_demo",
 	label = {
 		string = "Group popup",

@@ -77,7 +77,7 @@ local function refresh()
 	})
 end
 
-easybar.add("row", "volume_progress", {
+easybar.add(easybar.kind.row, "volume_progress", {
 	position = "right",
 	order = 50,
 	background = {
@@ -103,11 +103,11 @@ easybar.add("row", "volume_progress", {
 	},
 })
 
-easybar.add("item", "volume_progress_anchor", {
+easybar.add(easybar.kind.item, "volume_progress_anchor", {
 	parent = "volume_progress",
 })
 
-easybar.add("progress", "volume_progress_bar", {
+easybar.add(easybar.kind.progress, "volume_progress_bar", {
 	parent = "volume_progress",
 	min = 0,
 	max = 100,
@@ -117,11 +117,11 @@ easybar.add("progress", "volume_progress_bar", {
 	color = "#8aadf4",
 })
 
-easybar.add("item", "volume_progress_popup_label", {
+easybar.add(easybar.kind.item, "volume_progress_popup_label", {
 	position = "popup.volume_progress",
 })
 
-easybar.add("slider", "volume_progress_popup_slider", {
+easybar.add(easybar.kind.slider, "volume_progress_popup_slider", {
 	position = "popup.volume_progress",
 	min = 0,
 	max = 100,
@@ -146,7 +146,7 @@ end)
 
 easybar.subscribe("volume_progress", easybar.events.mouse.scrolled, function(event)
 	local direction = event.direction
-	local delta = direction == "up" and 5 or -5
+	local delta = direction == easybar.events.mouse.up_scroll and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh()
 end)

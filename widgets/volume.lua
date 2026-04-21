@@ -73,7 +73,7 @@ local function refresh()
 	})
 end
 
-easybar.add("item", "volume", {
+easybar.add(easybar.kind.item, "volume", {
 	position = "right",
 	order = 45,
 	background = {
@@ -98,11 +98,11 @@ easybar.add("item", "volume", {
 	},
 })
 
-easybar.add("item", "volume_popup_label", {
+easybar.add(easybar.kind.item, "volume_popup_label", {
 	position = "popup.volume",
 })
 
-easybar.add("slider", "volume_slider", {
+easybar.add(easybar.kind.slider, "volume_slider", {
 	position = "popup.volume",
 	min = 0,
 	max = 100,
@@ -127,7 +127,7 @@ end)
 
 easybar.subscribe("volume", easybar.events.mouse.scrolled, function(event)
 	local direction = event.direction
-	local delta = direction == "up" and 5 or -5
+	local delta = direction == easybar.events.mouse.up_scroll and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh()
 end)

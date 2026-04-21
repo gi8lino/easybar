@@ -21,7 +21,7 @@ local function push_value(value)
 	table.insert(history, value)
 end
 
-easybar.add("sparkline", "cpu_sparkline", {
+easybar.add(easybar.kind.sparkline, "cpu_sparkline", {
 	position = "right",
 	order = 60,
 	interval = 1,

@@ -62,7 +62,7 @@ local function refresh()
 	})
 end
 
-easybar.add("row", "volume_slider", {
+easybar.add(easybar.kind.row, "volume_slider", {
 	position = "right",
 	order = 51,
 	background = {
@@ -74,11 +74,11 @@ easybar.add("row", "volume_slider", {
 	spacing = 8,
 })
 
-easybar.add("item", "volume_slider_label", {
+easybar.add(easybar.kind.item, "volume_slider_label", {
 	parent = "volume_slider",
 })
 
-easybar.add("slider", "volume_slider_control", {
+easybar.add(easybar.kind.slider, "volume_slider_control", {
 	parent = "volume_slider",
 	min = 0,
 	max = 100,
@@ -90,7 +90,7 @@ easybar.subscribe("volume_slider", { easybar.events.volume_change, easybar.event
 
 easybar.subscribe("volume_slider", easybar.events.mouse.scrolled, function(event)
 	local direction = event.direction
-	local delta = direction == "up" and 5 or -5
+	local delta = direction == easybar.events.mouse.up_scroll and 5 or -5
 	set_volume(get_audio_state().volume + delta)
 	refresh()
 end)

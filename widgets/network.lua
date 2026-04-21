@@ -1,5 +1,3 @@
-local home = os.getenv("HOME")
-
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -56,7 +54,7 @@ local function read_ssid()
 	return "offline"
 end
 
-easybar.add("item", "network", {
+easybar.add(easybar.kind.item, "network", {
 	position = "right",
 	order = 35,
 	interval = 30,

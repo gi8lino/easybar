@@ -128,7 +128,7 @@ local function refresh(show_label)
 	})
 end
 
-easybar.add("row", "wifi_vpn", {
+easybar.add(easybar.kind.row, "wifi_vpn", {
 	position = "right",
 	order = 25,
 	background = {
@@ -144,20 +144,24 @@ easybar.add("row", "wifi_vpn", {
 	spacing = 15,
 })
 
-easybar.add("item", "wifi_vpn_wifi", {
+easybar.add(easybar.kind.item, "wifi_vpn_wifi", {
 	parent = "wifi_vpn",
 })
 
-easybar.add("item", "wifi_vpn_vpn", {
+easybar.add(easybar.kind.item, "wifi_vpn_vpn", {
 	parent = "wifi_vpn",
 	drawing = false,
 })
 
 local show_label = false
 
-easybar.subscribe("wifi_vpn", { easybar.events.wifi_change, easybar.events.network_change, easybar.events.minute_tick, easybar.events.forced }, function(event)
-	refresh(show_label)
-end)
+easybar.subscribe(
+	"wifi_vpn",
+	{ easybar.events.wifi_change, easybar.events.network_change, easybar.events.minute_tick, easybar.events.forced },
+	function(event)
+		refresh(show_label)
+	end
+)
 
 easybar.subscribe("wifi_vpn", easybar.events.mouse.entered, function(event)
 	show_label = true
@@ -170,7 +174,7 @@ easybar.subscribe("wifi_vpn", easybar.events.mouse.exited, function(event)
 end)
 
 easybar.subscribe("wifi_vpn", easybar.events.mouse.clicked, function(event)
-	if event.button == nil or event.button == "left" then
+	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_vpn()
 		refresh(show_label)
 	end

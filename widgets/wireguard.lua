@@ -135,7 +135,7 @@ local function refresh()
 	})
 end
 
-easybar.add("group", "wireguard", {
+easybar.add(easybar.kind.group, "wireguard", {
 	position = "right",
 	order = 2,
 	background = {
@@ -154,7 +154,7 @@ easybar.add("group", "wireguard", {
 	},
 })
 
-easybar.add("item", "wireguard_icon", {
+easybar.add(easybar.kind.item, "wireguard_icon", {
 	parent = "wireguard",
 	icon = {
 		string = "",
@@ -167,7 +167,7 @@ easybar.add("item", "wireguard_icon", {
 	},
 })
 
-easybar.add("item", "wireguard_popup_label", {
+easybar.add(easybar.kind.item, "wireguard_popup_label", {
 	position = "popup.wireguard",
 	label = {
 		string = "",
@@ -183,7 +183,7 @@ easybar.subscribe("wireguard", {
 end)
 
 easybar.subscribe("wireguard", easybar.events.mouse.clicked, function(event)
-	if event.button == nil or event.button == "left" then
+	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_wireguard()
 	end
 end)

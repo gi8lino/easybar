@@ -90,7 +90,7 @@ local function apply(show_label)
 	})
 end
 
-easybar.add("item", "battery", {
+easybar.add(easybar.kind.item, "battery", {
 	position = "right",
 	order = 20,
 	background = {
@@ -101,9 +101,13 @@ easybar.add("item", "battery", {
 	},
 })
 
-easybar.subscribe("battery", { easybar.events.forced, easybar.events.power_source_change, easybar.events.system_woke }, function()
-	apply(false)
-end)
+easybar.subscribe(
+	"battery",
+	{ easybar.events.forced, easybar.events.power_source_change, easybar.events.system_woke },
+	function()
+		apply(false)
+	end
+)
 
 easybar.subscribe("battery", easybar.events.mouse.entered, function()
 	apply(true)

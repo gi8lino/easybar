@@ -70,7 +70,7 @@ local function read_vpn_status()
 	}
 end
 
-easybar.add("item", "vpn", {
+easybar.add(easybar.kind.item, "vpn", {
 	position = "right",
 	order = 41,
 	background = {
@@ -81,20 +81,24 @@ easybar.add("item", "vpn", {
 	},
 })
 
-easybar.subscribe("vpn", { easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced }, function()
-	local state = read_vpn_status()
+easybar.subscribe(
+	"vpn",
+	{ easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced },
+	function()
+		local state = read_vpn_status()
 
-	easybar.set("vpn", {
-		icon = {
-			string = state.icon,
-			color = state.color,
-		},
-		label = {
-			string = state.label,
-			color = state.color,
-		},
-	})
-end)
+		easybar.set("vpn", {
+			icon = {
+				string = state.icon,
+				color = state.color,
+			},
+			label = {
+				string = state.label,
+				color = state.color,
+			},
+		})
+	end
+)
 
 do
 	local state = read_vpn_status()
