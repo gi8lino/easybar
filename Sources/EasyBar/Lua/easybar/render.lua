@@ -290,7 +290,6 @@ end
 --- Builds one render node from an item record and its child nodes.
 local function make_node(registry, id, item, root_position, children)
 	local props = item.props
-
 	local kind = item.kind or "item"
 
 	if kind == "item" and type(children) == "table" and #children > 0 then
@@ -447,6 +446,11 @@ local function popup_children_of(registry, anchor_id)
 	return children
 end
 
+--- Returns one internal id that cannot collide with user-declared ids.
+local function internal_popup_id(id, suffix)
+	return id .. "__easybar_" .. suffix
+end
+
 --- Builds the render tree for one root widget id.
 local function build_tree(registry, id, root_position)
 	local item = item_by_id(registry, id)
@@ -476,19 +480,25 @@ local function build_tree(registry, id, root_position)
 		return make_node(registry, id, item, root_position, child_nodes)
 	end
 
-	local anchor = make_node(registry, id .. "_anchor", item, root_position, child_nodes)
-	anchor.order = 0
-
 	local popup_props = item.props.popup or {}
-	local popup_container = make_popup_container(id .. "_popup_content", root_position, popup_props, popup_child_nodes)
+	local popup_container =
+		make_popup_container(internal_popup_id(id, "popup_content"), root_position, popup_props, popup_child_nodes)
+
+	-- Real popup roots need dedicated anchor children because Swift renders `.popup`
+	-- nodes through `popupAnchor`. Normal item/row/group widgets should keep their
+	-- regular children directly on the root and only attach popup content separately.
+	if item.kind == "popup" then
+		local anchor = make_node(registry, internal_popup_id(id, "popup_anchor"), item, root_position, child_nodes)
+		anchor.order = 0
+
+		local root = make_node(registry, id, item, root_position, nil)
+		root.anchorChildren = { anchor }
+		root.popupChildren = { popup_container }
+		return root
+	end
 
 	local root = make_node(registry, id, item, root_position, child_nodes)
 	root.popupChildren = { popup_container }
-
-	if #child_nodes > 0 then
-		root.anchorChildren = { anchor }
-	end
-
 	return root
 end
 

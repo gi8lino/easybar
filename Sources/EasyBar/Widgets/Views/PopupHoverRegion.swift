@@ -37,6 +37,11 @@ final class PopupHoverNSView: NSView {
   var hoverChanged: ((Bool) -> Void)?
   private var trackingArea: NSTrackingArea?
 
+  /// Keep this view out of hit-testing so it never steals clicks or scroll events.
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    nil
+  }
+
   /// Rebuilds tracking areas after bounds changes.
   override func updateTrackingAreas() {
     super.updateTrackingAreas()

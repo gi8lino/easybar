@@ -6,27 +6,33 @@ struct WidgetMouseView: NSViewRepresentable {
   let widgetID: String
   let targetWidgetID: String
   let tracksHover: Bool
+  let emitsMouseHover: Bool
   let emitsMouseDown: Bool
   let emitsMouseUp: Bool
   let emitsMouseClick: Bool
   let emitsMouseScroll: Bool
+  let onHoverChanged: ((Bool) -> Void)?
 
   init(
     widgetID: String,
     targetWidgetID: String? = nil,
     tracksHover: Bool = true,
+    emitsMouseHover: Bool = false,
     emitsMouseDown: Bool = false,
     emitsMouseUp: Bool = false,
     emitsMouseClick: Bool = false,
-    emitsMouseScroll: Bool = false
+    emitsMouseScroll: Bool = false,
+    onHoverChanged: ((Bool) -> Void)? = nil
   ) {
     self.widgetID = widgetID
     self.targetWidgetID = targetWidgetID ?? widgetID
     self.tracksHover = tracksHover
+    self.emitsMouseHover = emitsMouseHover
     self.emitsMouseDown = emitsMouseDown
     self.emitsMouseUp = emitsMouseUp
     self.emitsMouseClick = emitsMouseClick
     self.emitsMouseScroll = emitsMouseScroll
+    self.onHoverChanged = onHoverChanged
   }
 
   /// Creates the AppKit-backed mouse surface.
@@ -35,22 +41,26 @@ struct WidgetMouseView: NSViewRepresentable {
     view.widgetID = widgetID
     view.targetWidgetID = targetWidgetID
     view.tracksHover = tracksHover
+    view.emitsMouseHover = emitsMouseHover
     view.emitsMouseDown = emitsMouseDown
     view.emitsMouseUp = emitsMouseUp
     view.emitsMouseClick = emitsMouseClick
     view.emitsMouseScroll = emitsMouseScroll
+    view.onHoverChanged = onHoverChanged
     return view
   }
 
-  /// Updates the AppKit surface ids and hover flags.
+  /// Updates the AppKit surface ids and interaction flags.
   func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
     nsView.widgetID = widgetID
     nsView.targetWidgetID = targetWidgetID
     nsView.tracksHover = tracksHover
+    nsView.emitsMouseHover = emitsMouseHover
     nsView.emitsMouseDown = emitsMouseDown
     nsView.emitsMouseUp = emitsMouseUp
     nsView.emitsMouseClick = emitsMouseClick
     nsView.emitsMouseScroll = emitsMouseScroll
+    nsView.onHoverChanged = onHoverChanged
   }
 }
 
@@ -58,10 +68,12 @@ final class MouseTrackingNSView: NSView {
   var widgetID: String = ""
   var targetWidgetID: String = ""
   var tracksHover = true
+  var emitsMouseHover = false
   var emitsMouseDown = false
   var emitsMouseUp = false
   var emitsMouseClick = false
   var emitsMouseScroll = false
+  var onHoverChanged: ((Bool) -> Void)?
 
   private var trackingArea: NSTrackingArea?
   private var isMouseInside = false
@@ -102,7 +114,12 @@ final class MouseTrackingNSView: NSView {
     guard !isMouseInside else { return }
     isMouseInside = true
     guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
-    emitMouseEvent(.mouseEntered)
+
+    onHoverChanged?(true)
+
+    if emitsMouseHover {
+      emitMouseEvent(.mouseEntered)
+    }
   }
 
   /// Emits hover-exited when tracking is enabled.
@@ -110,8 +127,15 @@ final class MouseTrackingNSView: NSView {
     guard tracksHover else { return }
     guard isMouseInside else { return }
     isMouseInside = false
-    Self.hoverState.exit(widgetID: self.targetWidgetID) {
-      self.emitMouseEvent(.mouseExited)
+
+    Self.hoverState.exit(widgetID: self.targetWidgetID) { [weak self] in
+      guard let self else { return }
+
+      self.onHoverChanged?(false)
+
+      if self.emitsMouseHover {
+        self.emitMouseEvent(.mouseExited)
+      }
     }
   }
 

@@ -37,7 +37,6 @@ extension WidgetNodeView {
 
     return AnyView(
       surfaced
-        .onHover { hovering in handleAnchorHover(hovering) }
         .background {
           WidgetPopupAnchorView { anchor in
             popupPanel.updateAnchorView(anchor)
@@ -51,7 +50,6 @@ extension WidgetNodeView {
       .modifier(nodeStyle)
       .contentShape(Rectangle())
       .overlay(popupAnchorMouseOverlay)
-      .onHover { hovering in handleAnchorHover(hovering) }
       .background {
         WidgetPopupAnchorView { anchor in
           popupPanel.updateAnchorView(anchor)
@@ -65,6 +63,7 @@ extension WidgetNodeView {
         widgetID: node.root,
         targetWidgetID: node.id,
         tracksHover: tracksHover,
+        emitsMouseHover: node.isMouseHoverInteractive,
         emitsMouseDown: node.isMouseDownInteractive,
         emitsMouseUp: node.isMouseUpInteractive,
         emitsMouseClick: node.isMouseClickInteractive,
@@ -102,10 +101,24 @@ extension WidgetNodeView {
 
   @ViewBuilder
   var popupAnchorMouseOverlay: some View {
-    if node.isMouseDownInteractive || node.isMouseUpInteractive || node.isMouseClickInteractive
-      || node.isMouseScrollInteractive
+    if nodeCanPresentPopup || node.isMouseHoverInteractive || node.isMouseDownInteractive
+      || node.isMouseUpInteractive || node.isMouseClickInteractive || node.isMouseScrollInteractive
     {
-      nodeEventSurface(tracksHover: false)
+      GeometryReader { proxy in
+        WidgetMouseView(
+          widgetID: node.root,
+          targetWidgetID: node.id,
+          tracksHover: true,
+          emitsMouseHover: node.isMouseHoverInteractive,
+          emitsMouseDown: node.isMouseDownInteractive,
+          emitsMouseUp: node.isMouseUpInteractive,
+          emitsMouseClick: node.isMouseClickInteractive,
+          emitsMouseScroll: node.isMouseScrollInteractive,
+          onHoverChanged: handleAnchorHover
+        )
+        .frame(width: proxy.size.width, height: proxy.size.height)
+        .contentShape(Rectangle())
+      }
     }
   }
 

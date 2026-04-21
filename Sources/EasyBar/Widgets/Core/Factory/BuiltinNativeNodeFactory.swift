@@ -11,7 +11,7 @@ enum BuiltinNativeNodeFactory {
     style: Config.BuiltinWidgetStyle,
     text: String
   ) -> WidgetNodeState {
-    makeRootNode(
+    var node = makeRootNode(
       id: rootID,
       kind: .item,
       placement: placement,
@@ -20,6 +20,8 @@ enum BuiltinNativeNodeFactory {
       text: text,
       color: style.textColorHex
     )
+    node.receivesMouseHover = true
+    return node
   }
 
   /// Builds one simple root slider node.
@@ -121,12 +123,14 @@ enum BuiltinNativeNodeFactory {
     placement: Config.BuiltinWidgetPlacement,
     style: Config.BuiltinWidgetStyle
   ) -> WidgetNodeState {
-    makeRootNode(
+    var node = makeRootNode(
       id: rootID,
       kind: .row,
       placement: placement,
       style: style
     )
+    node.receivesMouseHover = true
+    return node
   }
 
   /// Builds one root column container node.

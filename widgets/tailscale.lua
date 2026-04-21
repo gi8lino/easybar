@@ -199,14 +199,6 @@ local function current_icon_name(connected, exit_node_enabled)
 	return "tailscale-active.png"
 end
 
-local function set_popup_visible(visible)
-	easybar.set("tailscale_icon", {
-		popup = {
-			drawing = visible and "on" or "off",
-		},
-	})
-end
-
 local function render(snapshot)
 	local tailscale_logo_path = asset_path(current_icon_name(snapshot.tailscale_connected, snapshot.exit_node_enabled))
 
@@ -214,7 +206,7 @@ local function render(snapshot)
 		icon = {
 			string = "",
 			image = tailscale_logo_path,
-			image_size = 22,
+			image_size = 18,
 			image_corner_radius = 0,
 		},
 		label = {
@@ -226,7 +218,6 @@ local function render(snapshot)
 	easybar.set("tailscale_popup_label", {
 		label = {
 			string = snapshot.status_detail or status_label(snapshot.tailscale_connected),
-			color = "#cad3f5",
 		},
 	})
 
@@ -234,7 +225,6 @@ local function render(snapshot)
 		drawing = snapshot.tailscale_connected and "on" or "off",
 		label = {
 			string = snapshot.exit_node_detail,
-			color = "#cad3f5",
 		},
 	})
 end
@@ -312,7 +302,7 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 	icon = {
 		string = "",
 		image = asset_path("tailscale-inactive.png"),
-		image_size = 22,
+		image_size = 18,
 		image_corner_radius = 0,
 	},
 	label = {
@@ -320,7 +310,6 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 	},
 	background = {
 		color = "#202020",
-		border_color = "#4a4a4a",
 		border_width = 1,
 		corner_radius = 8,
 		padding_left = 12,
@@ -329,19 +318,11 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 		padding_bottom = 2,
 	},
 	popup = {
-		drawing = "off",
-		background = {
-			color = "#1e1e2e",
-			border_color = "#4a4a4a",
-			border_width = 1,
-			corner_radius = 8,
-			padding_left = 10,
-			padding_right = 10,
-			padding_top = 8,
-			padding_bottom = 8,
-		},
-		spacing = 6,
-		y_offset = 8,
+		drawing = "on",
+		padding_left = 4,
+		padding_right = 4,
+		padding_top = 6,
+		padding_bottom = 6,
 	},
 	on_interval = function()
 		refresh()
@@ -369,14 +350,6 @@ easybar.subscribe("tailscale_icon", {
 	easybar.events.forced,
 }, function()
 	refresh()
-end)
-
-easybar.subscribe("tailscale_icon", easybar.events.mouse.entered, function()
-	set_popup_visible(true)
-end)
-
-easybar.subscribe("tailscale_icon", easybar.events.mouse.exited, function()
-	set_popup_visible(false)
 end)
 
 easybar.subscribe("tailscale_icon", easybar.events.mouse.clicked, function(event)
