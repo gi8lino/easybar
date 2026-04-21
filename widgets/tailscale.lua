@@ -206,7 +206,7 @@ local function render(snapshot)
 		icon = {
 			string = "",
 			image = tailscale_logo_path,
-			image_size = 18,
+			image_size = 16,
 			image_corner_radius = 0,
 		},
 		label = {
@@ -302,17 +302,17 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 	icon = {
 		string = "",
 		image = asset_path("tailscale-inactive.png"),
-		image_size = 18,
+		image_size = 16,
 		image_corner_radius = 0,
 	},
 	label = {
 		string = "",
 	},
 	background = {
-		padding_left = 12,
-		padding_right = 12,
-		padding_top = 2,
-		padding_bottom = 2,
+		padding_left = 8,
+		padding_right = 8,
+		padding_top = 6,
+		padding_bottom = 6,
 	},
 	popup = {
 		drawing = "on",
