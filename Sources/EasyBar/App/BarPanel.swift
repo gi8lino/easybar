@@ -2,7 +2,7 @@ import AppKit
 
 /// Borderless non-activating panel used for the EasyBar window.
 final class BarPanel: NSPanel {
-  var contextMenuProvider: (() -> NSMenu)?
+  var contextMenuProvider: ((Bool) -> NSMenu)?
 
   override var canBecomeKey: Bool {
     false
@@ -18,7 +18,9 @@ final class BarPanel: NSPanel {
 
   /// Shows the dynamic bar context menu on right click.
   override func rightMouseUp(with event: NSEvent) {
-    guard let menu = contextMenuProvider?() else {
+    let showDeveloperSection = event.modifierFlags.contains(.shift)
+
+    guard let menu = contextMenuProvider?(showDeveloperSection) else {
       super.rightMouseUp(with: event)
       return
     }

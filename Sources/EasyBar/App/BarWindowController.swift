@@ -55,8 +55,8 @@ final class BarWindowController: NSWindowController {
 
     super.init(window: window)
 
-    window.contextMenuProvider = { [weak self] in
-      self?.makeContextMenu() ?? NSMenu()
+    window.contextMenuProvider = { [weak self] showDeveloperSection in
+      self?.makeContextMenu(showDeveloperSection: showDeveloperSection) ?? NSMenu()
     }
   }
 
@@ -117,7 +117,7 @@ final class BarWindowController: NSWindowController {
   }
 
   /// Builds the right-click menu for the bar.
-  private func makeContextMenu() -> NSMenu {
+  private func makeContextMenu(showDeveloperSection: Bool) -> NSMenu {
     let menu = NSMenu()
 
     appendItems([versionItem("EasyBar \(BuildInfo.appVersion)")], to: menu)
@@ -125,7 +125,17 @@ final class BarWindowController: NSWindowController {
     appendSection(openMenuItems, to: menu)
     appendItems(agentMenuItems, to: menu)
 
+    if shouldShowDeveloperSection(showDeveloperSection) {
+      menu.addItem(.separator())
+      appendItems(developerMenuItems, to: menu)
+    }
+
     return menu
+  }
+
+  /// Returns whether the developer section should be visible.
+  private func shouldShowDeveloperSection(_ shiftRequested: Bool) -> Bool {
+    Config.shared.develop || shiftRequested
   }
 
   /// Returns the runtime control menu items.
@@ -142,6 +152,14 @@ final class BarWindowController: NSWindowController {
     [
       actionItem(title: "Open Config", action: #selector(openConfig(_:))),
       actionItem(title: "Open Widgets Folder", action: #selector(openWidgetsFolder(_:))),
+    ]
+  }
+
+  /// Returns the developer-only menu items.
+  private var developerMenuItems: [NSMenuItem] {
+    [
+      logLevelMenuItem(),
+      actionItem(title: "Open Log Folder", action: #selector(openLogFolder(_:))),
     ]
   }
 
@@ -216,6 +234,27 @@ final class BarWindowController: NSWindowController {
     return item
   }
 
+  /// Creates the developer log-level submenu.
+  private func logLevelMenuItem() -> NSMenuItem {
+    let item = NSMenuItem(title: "Log Level", action: nil, keyEquivalent: "")
+    let submenu = NSMenu(title: "Log Level")
+
+    ProcessLogLevel.allCases.forEach { level in
+      let levelItem = NSMenuItem(
+        title: level.rawValue.capitalized,
+        action: #selector(setLogLevel(_:)),
+        keyEquivalent: ""
+      )
+      levelItem.target = self
+      levelItem.representedObject = level.rawValue
+      levelItem.state = easybarLog.minimumLevel == level ? .on : .off
+      submenu.addItem(levelItem)
+    }
+
+    item.submenu = submenu
+    return item
+  }
+
   /// Creates one readable non-destructive status row.
   private func readOnlyItem(_ title: String) -> NSMenuItem {
     let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
@@ -279,6 +318,19 @@ final class BarWindowController: NSWindowController {
     onRestartLuaRuntime?()
   }
 
+  /// Updates the runtime log level immediately.
+  @objc private func setLogLevel(_ sender: NSMenuItem) {
+    guard
+      let rawValue = sender.representedObject as? String,
+      let level = ProcessLogLevel(rawValue: rawValue)
+    else {
+      return
+    }
+
+    easybarLog.setMinimumLevel(level)
+    easybarLog.info("runtime log level changed to \(level.rawValue)")
+  }
+
   /// Opens the active config file in Finder/default app.
   @objc private func openConfig(_ sender: Any?) {
     let url = URL(fileURLWithPath: Config.shared.configPath)
@@ -288,6 +340,12 @@ final class BarWindowController: NSWindowController {
   /// Opens the configured widgets directory.
   @objc private func openWidgetsFolder(_ sender: Any?) {
     let url = URL(fileURLWithPath: Config.shared.widgetsPath, isDirectory: true)
+    NSWorkspace.shared.open(url)
+  }
+
+  /// Opens the configured log directory.
+  @objc private func openLogFolder(_ sender: Any?) {
+    let url = URL(fileURLWithPath: Config.shared.loggingDirectory, isDirectory: true)
     NSWorkspace.shared.open(url)
   }
 

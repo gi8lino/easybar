@@ -9,6 +9,7 @@ struct ConfigSnapshot {
     let environment: [String: String]
     let watchConfigFile: Bool
     let lockDirectory: String
+    let develop: Bool
   }
 
   struct Logging {

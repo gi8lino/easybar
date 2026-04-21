@@ -568,6 +568,23 @@ For implementation details, see the docs in [`docs/`](./docs/).
 - [docs/LUA_WIDGETS.md](./docs/LUA_WIDGETS.md)
   Lua widget authoring and interaction model
 
+## Developer menu
+
+EasyBar includes a hidden developer section in the bar context menu.
+
+By default, it only appears when you hold `Shift` and right-click the bar.
+
+You can also make it always visible in `config.toml` with:
+
+```toml
+develop = true
+```
+
+The developer section currently includes:
+
+- runtime log level selection
+- open log folder
+
 ## License
 
 This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.

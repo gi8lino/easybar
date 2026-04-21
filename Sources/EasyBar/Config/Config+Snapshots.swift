@@ -9,7 +9,8 @@ extension Config {
         luaPath: appSection.luaPath,
         environment: appSection.environment,
         watchConfigFile: appSection.watchConfigFile,
-        lockDirectory: appSection.lockDirectory
+        lockDirectory: appSection.lockDirectory,
+        develop: appSection.develop
       ),
       logging: .init(
         enabled: loggingSection.enabled,
@@ -58,7 +59,8 @@ extension Config {
       luaPath: snapshot.app.luaPath,
       environment: snapshot.app.environment,
       watchConfigFile: snapshot.app.watchConfigFile,
-      lockDirectory: snapshot.app.lockDirectory
+      lockDirectory: snapshot.app.lockDirectory,
+      develop: snapshot.app.develop
     )
 
     loggingSection = .init(

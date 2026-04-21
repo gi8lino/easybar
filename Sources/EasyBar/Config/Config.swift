@@ -24,6 +24,7 @@ final class Config: ObservableObject {
     var environment: [String: String]
     var watchConfigFile: Bool
     var lockDirectory: String
+    var develop: Bool
   }
 
   struct LoggingSection {
@@ -88,6 +89,11 @@ final class Config: ObservableObject {
   var lockDirectory: String {
     get { appSection.lockDirectory }
     set { appSection.lockDirectory = newValue }
+  }
+
+  var develop: Bool {
+    get { appSection.develop }
+    set { appSection.develop = newValue }
   }
 
   var loggingEnabled: Bool {
@@ -194,7 +200,8 @@ final class Config: ObservableObject {
       luaPath: SharedPathDefaults.defaultLuaPath,
       environment: SharedPathDefaults.defaultLuaEnvironment,
       watchConfigFile: true,
-      lockDirectory: ""
+      lockDirectory: "",
+      develop: false
     )
     loggingSection = .init(
       enabled: false,

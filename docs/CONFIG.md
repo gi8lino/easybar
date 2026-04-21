@@ -183,3 +183,39 @@ For the native `spaces` widget:
 
 - `[builtins.spaces]` controls the outer container placement and shared box model
 - `[builtins.spaces.layout]` controls the internal workspace-pill layout
+
+## Developer menu
+
+EasyBar can expose a developer section in the bar context menu.
+
+Default behavior:
+
+- normal right-click shows the standard menu
+- Shift + right-click also shows the hidden developer section
+
+To always show the developer section, enable:
+
+```toml
+develop = true
+```
+
+The developer section currently includes:
+
+- `Log Level`
+  lets you switch the active runtime log level from the menu
+- `Open Log Folder`
+  opens the configured log directory in Finder
+
+Example:
+
+```toml
+[app]
+develop = true
+
+[logging]
+enabled = true
+level = "info"
+directory = "~/.local/state/easybar"
+```
+
+This is mainly intended for local debugging and troubleshooting.

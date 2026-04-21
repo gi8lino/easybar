@@ -26,6 +26,10 @@ extension Config {
     lockDirectory =
       try optionalExpandedPath(app["lock_dir"], path: "app.lock_dir")
       ?? lockDirectory
+
+    develop =
+      try optionalBool(app["develop"], path: "app.develop")
+      ?? develop
   }
 
   /// Parses logging settings.
