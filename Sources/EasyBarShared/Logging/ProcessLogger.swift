@@ -88,7 +88,6 @@ public final class ProcessLogger {
       let handle = try FileHandle(forWritingTo: url)
       try handle.seekToEnd()
       fileHandle = handle
-      writeUnlocked(level: "INFO", message: "file logging enabled path=\(url.path)", stream: stdout)
     } catch {
       fileLoggingEnabledFlag = false
       writeUnlocked(
