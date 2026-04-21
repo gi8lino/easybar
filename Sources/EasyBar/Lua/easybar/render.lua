@@ -257,6 +257,11 @@ local function is_bar_root_item(item)
 	return regular_parent_id(item) == nil and popup_parent_id(item) == nil
 end
 
+--- Returns whether one item should receive the default root shell styling.
+local function uses_default_root_shell(item)
+	return is_bar_root_item(item) and item.kind ~= "popup"
+end
+
 --- Builds one minimal render node with shared defaults applied.
 local function base_node(id, kind, root_position, order, visible)
 	return {
@@ -365,7 +370,7 @@ local function make_node(registry, id, item, root_position, children)
 		kind = "row"
 	end
 
-	if is_bar_root_item(item) then
+	if uses_default_root_shell(item) then
 		resolved_props = {}
 		deep_merge(resolved_props, DEFAULT_ROOT_SHELL_STYLE)
 		deep_merge(resolved_props, props)
