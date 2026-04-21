@@ -189,40 +189,33 @@ local function toggle_exit_node()
 	refresh()
 end
 
+local function current_icon_name(connected, exit_node_enabled)
+	if not connected then
+		return "tailscale-inactive.png"
+	end
+
+	if exit_node_enabled then
+		return "tailscale-active-exit-node.png"
+	end
+
+	return "tailscale-active.png"
+end
+
 refresh = function()
 	local tailscale_connected, detail, exit_node_enabled, exit_node_detail = cli_status()
-
-	local tailscale_logo_path = tailscale_connected and asset_path("tailscale-active.png")
-		or asset_path("tailscale-inactive.png")
-
-	local exit_node_logo_path = exit_node_enabled and asset_path("tailscale-exit-node-active.png")
-		or asset_path("tailscale-exit-node-inactive.png")
+	local tailscale_logo_path = asset_path(current_icon_name(tailscale_connected, exit_node_enabled))
 
 	easybar.set("tailscale_icon", {
 		icon = {
 			string = "",
 			image = tailscale_logo_path,
-			image_size = 22,
+			image_size = 18,
 			image_corner_radius = 0,
 		},
 		label = {
 			string = "",
 		},
 		opacity = 1.0,
-	})
-
-	easybar.set("tailscale_exit_node", {
-		drawing = tailscale_connected,
-		icon = {
-			string = "",
-			image = exit_node_logo_path,
-			image_size = 22,
-			image_corner_radius = 0,
-		},
-		label = {
-			string = "",
-		},
-		opacity = tailscale_connected and 1.0 or 0.0,
 	})
 
 	easybar.set("tailscale_popup_label", {
@@ -241,31 +234,10 @@ refresh = function()
 	})
 end
 
-easybar.add("group", "tailscale", {
+easybar.add("item", "tailscale_icon", {
 	position = "right",
 	order = 2,
 	interval = 10,
-	background = {
-		color = "#202020",
-		border_color = "#4a4a4a",
-		border_width = 1,
-		corner_radius = 8,
-		padding_left = 12,
-		padding_right = 12,
-		padding_top = 4,
-		padding_bottom = 4,
-	},
-	spacing = 6,
-	popup = {
-		drawing = true,
-	},
-	on_interval = function()
-		refresh()
-	end,
-})
-
-easybar.add("item", "tailscale_icon", {
-	parent = "tailscale",
 	icon = {
 		string = "",
 		image = asset_path("tailscale-inactive.png"),
@@ -275,38 +247,40 @@ easybar.add("item", "tailscale_icon", {
 	label = {
 		string = "",
 	},
-})
-
-easybar.add("item", "tailscale_exit_node", {
-	parent = "tailscale",
-	drawing = false,
-	icon = {
-		string = "",
-		image = asset_path("tailscale-exit-node-inactive.png"),
-		image_size = 22,
-		image_corner_radius = 0,
+	background = {
+		color = "#202020",
+		border_color = "#4a4a4a",
+		border_width = 1,
+		corner_radius = 8,
+		padding_left = 12,
+		padding_right = 12,
+		padding_top = 2,
+		padding_bottom = 2,
 	},
-	label = {
-		string = "",
+	popup = {
+		drawing = true,
 	},
+	on_interval = function()
+		refresh()
+	end,
 })
 
 easybar.add("item", "tailscale_popup_label", {
-	position = "popup.tailscale",
+	position = "popup.tailscale_icon",
 	label = {
 		string = "",
 	},
 })
 
 easybar.add("item", "tailscale_popup_exit_node_label", {
-	position = "popup.tailscale",
+	position = "popup.tailscale_icon",
 	drawing = false,
 	label = {
 		string = "",
 	},
 })
 
-easybar.subscribe("tailscale", {
+easybar.subscribe("tailscale_icon", {
 	easybar.events.network_change,
 	easybar.events.system_woke,
 	easybar.events.forced,
@@ -317,11 +291,10 @@ end)
 easybar.subscribe("tailscale_icon", easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == "left" then
 		toggle_tailscale()
+		return
 	end
-end)
 
-easybar.subscribe("tailscale_exit_node", easybar.events.mouse.clicked, function(event)
-	if event.button == nil or event.button == "left" then
+	if event.button == "right" then
 		toggle_exit_node()
 	end
 end)
