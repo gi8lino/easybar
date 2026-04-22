@@ -14,6 +14,25 @@ Interaction is node-based.
 - if children inside a group must be clicked independently, subscribe on the child ids
 - subscribe on the group id only when the whole group should behave as one interactive surface
 
+## Default styling
+
+Lua widgets now inherit native-like styling in the most common cases, so you usually do
+not need to restate the full shell or popup style.
+
+### Built-in defaults
+
+| Node shape | Default styling |
+| --- | --- |
+| bar-root `item`, `row`, `group` | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4` |
+| popup content | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
+| child items inside a parent/group | no root shell by default |
+
+Notes:
+
+- use `easybar.default(...)` when one widget file wants shared child styling or small local tweaks
+- override padding only when you intentionally want a taller or denser pill than the native default
+- popup-attached items inherit popup text color when they do not set one explicitly
+
 ## Editor support
 
 EasyBar installs a bundled LuaLS stub into:
@@ -91,6 +110,19 @@ easybar.add("item", "clock", {
     },
     label = {
         string = "00:00",
+    },
+})
+```
+
+Minimal icon-only widget:
+
+```lua
+easybar.add("item", "vpn", {
+    position = "right",
+    order = 20,
+    icon = {
+        image = "/path/to/vpn.png",
+        image_size = 16,
     },
 })
 ```
@@ -353,6 +385,25 @@ end)
 
 Use a group-level mouse subscription only when the whole grouped widget should behave like one single click target.
 
+Minimal group example:
+
+```lua
+easybar.add("group", "vpn", {
+    position = "right",
+    order = 40,
+})
+
+easybar.add("item", "vpn_icon", {
+    parent = "vpn",
+    icon = "󰖂",
+})
+
+easybar.add("item", "vpn_label", {
+    parent = "vpn",
+    label = "Active",
+})
+```
+
 ## Popups
 
 Popup content inherits native-like defaults when you do not override them:
@@ -363,6 +414,9 @@ Popup content inherits native-like defaults when you do not override them:
 - corner radius `8`
 - padding `8 x 6`
 - margin `0 x 8`
+
+That means a simple popup widget already renders close to the built-in popup look
+without extra popup styling.
 
 ```lua
 easybar.add("item", "calendar", {
@@ -399,6 +453,15 @@ easybar.add("item", "clock", {
 })
 ```
 
+Minimal popup content example:
+
+```lua
+easybar.add("item", "calendar_popup_label", {
+    position = "popup.calendar",
+    label = "Next event: 14:00",
+})
+```
+
 ## Recommended pattern
 
 ```lua
@@ -422,6 +485,22 @@ easybar.add("item", "clock", {
 
 Bar-root Lua items already inherit the native shell by default, so you usually only
 need `easybar.default(...)` for shared child styling or widget-specific overrides.
+
+For example, this is often enough for a small image-based widget:
+
+```lua
+easybar.add("item", "tailscale", {
+    position = "right",
+    order = 2,
+    icon = {
+        image = "/path/to/tailscale.png",
+        image_size = 16,
+    },
+    popup = {
+        drawing = true,
+    },
+})
+```
 
 Use `interval` and `on_interval` when a widget must poll.
 Use `easybar.subscribe(...)` for real events such as `network_change`, `system_woke`, and `mouse.clicked`.
