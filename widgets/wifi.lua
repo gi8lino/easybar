@@ -3,6 +3,11 @@ package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/
 
 local secrets = require("secrets")
 
+local state = {
+	interface_name = nil,
+	primary_interface_is_tunnel = false,
+}
+
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -24,51 +29,35 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
-local function get_network_fields()
-	local command =
-		"wifisnitchctl field wifi.ssid,network.primary_interface,network.primary_interface_is_tunnel --format=lines"
+local function apply_event(event)
+	if event == nil or type(event.network) ~= "table" then
+		return
+	end
 
-	local output = shell(command)
-
-	local result = {
-		ssid = "",
-		primary_interface = "",
-		primary_interface_is_tunnel = false,
-	}
-
-	for line in output:gmatch("[^\r\n]+") do
-		local key, value = line:match("^([^=]+)=(.*)$")
-		value = trim(value)
-
-		if key == "wifi.ssid" then
-			result.ssid = value
-		elseif key == "network.primary_interface" then
-			result.primary_interface = value
-		elseif key == "network.primary_interface_is_tunnel" then
-			result.primary_interface_is_tunnel = value == "true"
+	if event.network.interface_name ~= nil then
+		state.interface_name = trim(event.network.interface_name)
+		if state.interface_name == "" then
+			state.interface_name = nil
 		end
 	end
 
-	return result
+	if type(event.network.primary_interface_is_tunnel) == "boolean" then
+		state.primary_interface_is_tunnel = event.network.primary_interface_is_tunnel
+	end
 end
 
-local function get_wifi_status(fields)
-	local ssid = fields.ssid
-	local primary_interface = fields.primary_interface
+local function get_wifi_status()
+	local interface_name = state.interface_name
 
-	if ssid ~= "" then
-		return ssid, true
-	end
-
-	if primary_interface == "en0" then
-		return "", true
+	if interface_name ~= nil and interface_name ~= "" then
+		return interface_name, true
 	end
 
 	return "", false
 end
 
-local function get_vpn_status(fields)
-	return fields.primary_interface_is_tunnel
+local function get_vpn_status()
+	return state.primary_interface_is_tunnel
 end
 
 local function toggle_vpn()
@@ -88,9 +77,8 @@ local function toggle_vpn()
 end
 
 local function refresh(show_label)
-	local fields = get_network_fields()
-	local ssid, wifi_connected = get_wifi_status(fields)
-	local vpn_connected = get_vpn_status(fields)
+	local interface_name, wifi_connected = get_wifi_status()
+	local vpn_connected = get_vpn_status()
 
 	local wifi_icon = "􀙇"
 	local wifi_label = ""
@@ -100,8 +88,8 @@ local function refresh(show_label)
 		wifi_icon = "􀙈"
 		wifi_label = "Not Connected"
 		wifi_color = "#ff4f8b"
-	elseif ssid ~= "" then
-		wifi_label = ssid
+	else
+		wifi_label = interface_name
 	end
 
 	easybar.set("wifi_vpn_wifi", {
@@ -147,8 +135,9 @@ local show_label = false
 
 easybar.subscribe(
 	"wifi_vpn",
-	{ easybar.events.wifi_change, easybar.events.network_change, easybar.events.minute_tick, easybar.events.forced },
+	{ easybar.events.wifi_change, easybar.events.network_change, easybar.events.system_woke, easybar.events.forced },
 	function(event)
+		apply_event(event)
 		refresh(show_label)
 	end
 )

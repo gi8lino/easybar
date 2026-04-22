@@ -1,74 +1,53 @@
-local function trim(s)
-	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
+local state = {
+	interface_name = nil,
+}
 
-local function shell(command)
-	local handle = io.popen(command .. " 2>/dev/null")
-	if not handle then
-		return ""
+local function normalize_interface_name(value)
+	if type(value) ~= "string" then
+		return nil
 	end
 
-	local output = handle:read("*a") or ""
-	handle:close()
-	return output
-end
-
-local function resolve_wifisnitchctl()
-	local candidates = {
-		os.getenv("WIFISNITCHCTL"),
-		"/opt/homebrew/bin/wifisnitchctl",
-		"/usr/local/bin/wifisnitchctl",
-		trim(shell("command -v wifisnitchctl")),
-	}
-
-	for _, path in ipairs(candidates) do
-		if path and path ~= "" then
-			return path
-		end
+	local trimmed = value:gsub("^%s+", ""):gsub("%s+$", "")
+	if trimmed == "" then
+		return nil
 	end
 
-	return "wifisnitchctl"
+	return trimmed
 end
 
-local wifisnitchctl = resolve_wifisnitchctl()
-
-local function read_ssid()
-	local handle = io.popen(wifisnitchctl .. " field wifi.ssid --format=lines 2>/dev/null")
-	if not handle then
-		return "offline"
+local function apply_event(event)
+	if event == nil or type(event.network) ~= "table" then
+		return
 	end
 
-	local output = handle:read("*a") or ""
-	handle:close()
+	if event.network.interface_name ~= nil then
+		state.interface_name = normalize_interface_name(event.network.interface_name)
+	end
+end
 
-	for line in output:gmatch("[^\r\n]+") do
-		local key, value = line:match("^([^=]+)=(.*)$")
-		if key == "wifi.ssid" then
-			value = trim(value)
-			if value ~= "" then
-				return value
-			end
-		end
+local function label_text()
+	if state.interface_name ~= nil then
+		return state.interface_name
 	end
 
 	return "offline"
 end
 
+local function render()
+	easybar.set("network", {
+		label = {
+			string = label_text(),
+		},
+	})
+end
+
 easybar.add(easybar.kind.item, "network", {
 	position = "right",
 	order = 35,
-	interval = 30,
 	icon = {
 		string = "📶",
 	},
 	label = "",
-	on_interval = function()
-		easybar.set("network", {
-			label = {
-				string = read_ssid(),
-			},
-		})
-	end,
 })
 
 easybar.subscribe("network", {
@@ -76,16 +55,9 @@ easybar.subscribe("network", {
 	easybar.events.wifi_change,
 	easybar.events.system_woke,
 	easybar.events.forced,
-}, function()
-	easybar.set("network", {
-		label = {
-			string = read_ssid(),
-		},
-	})
+}, function(event)
+	apply_event(event)
+	render()
 end)
 
-easybar.set("network", {
-	label = {
-		string = read_ssid(),
-	},
-})
+render()
