@@ -14,18 +14,6 @@ extension Config {
     var textColorHex: String
   }
 
-  struct BuiltinWiFiPopup {
-    var textColorHex: String?
-    var backgroundColorHex: String
-    var borderColorHex: String
-    var borderWidth: Double
-    var cornerRadius: Double
-    var paddingX: Double
-    var paddingY: Double
-    var marginX: Double
-    var marginY: Double
-  }
-
   struct WiFiBuiltinConfig {
     struct Content {
       var displayMode: BuiltinWiFiDisplayMode
@@ -39,7 +27,7 @@ extension Config {
     var style: BuiltinWidgetStyle
     var content: Content
     var expand: BuiltinWiFiExpand
-    var popup: BuiltinWiFiPopup
+    var popup: BuiltinPopupStyle
 
     var enabled: Bool {
       get { placement.enabled }
@@ -178,7 +166,11 @@ extension Config {
     )
 
     let expand = try parseWiFiExpand(from: expandTable, fallback: builtinWiFi.expand)
-    let popup = try parseWiFiPopup(from: tooltipTable, fallback: builtinWiFi.popup)
+    let popup = try parseBuiltinPopupStyle(
+      from: tooltipTable,
+      path: "builtins.wifi.tooltip",
+      fallback: builtinWiFi.popup
+    )
 
     builtinWiFi = WiFiBuiltinConfig(
       placement: placement,
@@ -200,50 +192,6 @@ extension Config {
         table["text_color"],
         path: "builtins.wifi.expand.text_color"
       ) ?? fallback.textColorHex
-    )
-  }
-
-  fileprivate func parseWiFiPopup(
-    from table: TOMLTable,
-    fallback: BuiltinWiFiPopup
-  ) throws -> BuiltinWiFiPopup {
-    BuiltinWiFiPopup(
-      textColorHex: try optionalString(
-        table["text_color"],
-        path: "builtins.wifi.tooltip.text_color"
-      ) ?? fallback.textColorHex,
-      backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "builtins.wifi.tooltip.background_color"
-      ) ?? fallback.backgroundColorHex,
-      borderColorHex: try optionalString(
-        table["border_color"],
-        path: "builtins.wifi.tooltip.border_color"
-      ) ?? fallback.borderColorHex,
-      borderWidth: try optionalNumber(
-        table["border_width"],
-        path: "builtins.wifi.tooltip.border_width"
-      ) ?? fallback.borderWidth,
-      cornerRadius: try optionalNumber(
-        table["corner_radius"],
-        path: "builtins.wifi.tooltip.corner_radius"
-      ) ?? fallback.cornerRadius,
-      paddingX: try optionalNumber(
-        table["padding_x"],
-        path: "builtins.wifi.tooltip.padding_x"
-      ) ?? fallback.paddingX,
-      paddingY: try optionalNumber(
-        table["padding_y"],
-        path: "builtins.wifi.tooltip.padding_y"
-      ) ?? fallback.paddingY,
-      marginX: try optionalNumber(
-        table["margin_x"],
-        path: "builtins.wifi.tooltip.margin_x"
-      ) ?? fallback.marginX,
-      marginY: try optionalNumber(
-        table["margin_y"],
-        path: "builtins.wifi.tooltip.margin_y"
-      ) ?? fallback.marginY
     )
   }
 }

@@ -46,6 +46,19 @@ extension Config {
     var opacity: Double
   }
 
+  /// Shared popup style block for built-ins that render simple tooltip-style popups.
+  struct BuiltinPopupStyle {
+    var textColorHex: String?
+    var backgroundColorHex: String
+    var borderColorHex: String
+    var borderWidth: Double
+    var cornerRadius: Double
+    var paddingX: Double
+    var paddingY: Double
+    var marginX: Double
+    var marginY: Double
+  }
+
   /// Parses all built-in widget sections.
   func parseBuiltins(from toml: TOMLTable) throws {
     guard let builtins = toml["builtins"]?.table else { return }

@@ -62,6 +62,34 @@ extension Config {
     )
   }
 
+  /// Parses one tooltip/popup style block shared by simple built-ins.
+  func parseBuiltinPopupStyle(
+    from table: TOMLTable,
+    path: String,
+    fallback: BuiltinPopupStyle
+  ) throws -> BuiltinPopupStyle {
+    BuiltinPopupStyle(
+      textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
+        ?? fallback.textColorHex,
+      backgroundColorHex: try optionalString(
+        table["background_color"],
+        path: "\(path).background_color"
+      ) ?? fallback.backgroundColorHex,
+      borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
+        ?? fallback.borderColorHex,
+      borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
+        ?? fallback.borderWidth,
+      cornerRadius: try optionalNumber(table["corner_radius"], path: "\(path).corner_radius")
+        ?? fallback.cornerRadius,
+      paddingX: try optionalNumber(table["padding_x"], path: "\(path).padding_x")
+        ?? fallback.paddingX,
+      paddingY: try optionalNumber(table["padding_y"], path: "\(path).padding_y")
+        ?? fallback.paddingY,
+      marginX: try optionalNumber(table["margin_x"], path: "\(path).margin_x") ?? fallback.marginX,
+      marginY: try optionalNumber(table["margin_y"], path: "\(path).margin_y") ?? fallback.marginY
+    )
+  }
+
   /// Parses one configured minimum log level.
   func parseLogLevel(
     _ value: String,

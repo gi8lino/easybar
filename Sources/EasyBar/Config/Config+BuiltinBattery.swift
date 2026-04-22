@@ -30,19 +30,6 @@ extension Config {
     var unavailableColorHex: String
   }
 
-  /// Battery hover popup style used for `display_mode = "tooltip"`.
-  struct BuiltinBatteryPopup {
-    var textColorHex: String?
-    var backgroundColorHex: String
-    var borderColorHex: String
-    var borderWidth: Double
-    var cornerRadius: Double
-    var paddingX: Double
-    var paddingY: Double
-    var marginX: Double
-    var marginY: Double
-  }
-
   /// Built-in battery widget config.
   struct BatteryBuiltinConfig {
 
@@ -58,7 +45,7 @@ extension Config {
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
     var content: Content
-    var popup: BuiltinBatteryPopup
+    var popup: BuiltinPopupStyle
 
     var enabled: Bool {
       get { placement.enabled }
@@ -184,7 +171,11 @@ extension Config {
       colorsTable: colorsTable,
       fallback: builtinBattery.content
     )
-    let popup = try parseBatteryPopup(from: tooltipTable, fallback: builtinBattery.popup)
+    let popup = try parseBuiltinPopupStyle(
+      from: tooltipTable,
+      path: "builtins.battery.tooltip",
+      fallback: builtinBattery.popup
+    )
 
     builtinBattery = BatteryBuiltinConfig(
       placement: placement,
@@ -267,51 +258,6 @@ extension Config {
         table["unavailable"],
         path: "builtins.battery.colors.unavailable"
       ) ?? fallback.unavailableColorHex
-    )
-  }
-
-  /// Parses the battery tooltip settings.
-  fileprivate func parseBatteryPopup(
-    from table: TOMLTable,
-    fallback: BuiltinBatteryPopup
-  ) throws -> BuiltinBatteryPopup {
-    BuiltinBatteryPopup(
-      textColorHex: try optionalString(
-        table["text_color"],
-        path: "builtins.battery.tooltip.text_color"
-      ) ?? fallback.textColorHex,
-      backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "builtins.battery.tooltip.background_color"
-      ) ?? fallback.backgroundColorHex,
-      borderColorHex: try optionalString(
-        table["border_color"],
-        path: "builtins.battery.tooltip.border_color"
-      ) ?? fallback.borderColorHex,
-      borderWidth: try optionalNumber(
-        table["border_width"],
-        path: "builtins.battery.tooltip.border_width"
-      ) ?? fallback.borderWidth,
-      cornerRadius: try optionalNumber(
-        table["corner_radius"],
-        path: "builtins.battery.tooltip.corner_radius"
-      ) ?? fallback.cornerRadius,
-      paddingX: try optionalNumber(
-        table["padding_x"],
-        path: "builtins.battery.tooltip.padding_x"
-      ) ?? fallback.paddingX,
-      paddingY: try optionalNumber(
-        table["padding_y"],
-        path: "builtins.battery.tooltip.padding_y"
-      ) ?? fallback.paddingY,
-      marginX: try optionalNumber(
-        table["margin_x"],
-        path: "builtins.battery.tooltip.margin_x"
-      ) ?? fallback.marginX,
-      marginY: try optionalNumber(
-        table["margin_y"],
-        path: "builtins.battery.tooltip.margin_y"
-      ) ?? fallback.marginY
     )
   }
 }
