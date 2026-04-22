@@ -62,7 +62,7 @@ extension Config {
     )
   }
 
-  /// Parses one tooltip/popup style block shared by simple built-ins.
+  /// Parses one tooltip style block shared by simple built-ins.
   func parseBuiltinPopupStyle(
     from table: TOMLTable,
     path: String,

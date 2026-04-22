@@ -234,15 +234,15 @@ on_hold_overlay = "#FFFFFFFF" # Color of the on-hold pause overlay.
 unavailable = "#6c7086" # Color used when battery data is unavailable.
 
 [builtins.battery.tooltip]
-text_color = "#cdd6f4" # Text color used in the tooltip popup.
-background_color = "#111111" # Background color of the tooltip popup.
-border_color = "#444444" # Border color of the tooltip popup.
-border_width = 1 # Border width of the tooltip popup.
-corner_radius = 8 # Corner radius of the tooltip popup.
-padding_x = 8 # Horizontal inner padding of the tooltip popup.
-padding_y = 6 # Vertical inner padding of the tooltip popup.
-margin_x = 0 # Horizontal outer margin around the tooltip popup.
-margin_y = 8 # Vertical outer margin around the tooltip popup.
+text_color = "#cdd6f4" # Text color used in the tooltip.
+background_color = "#111111" # Background color of the tooltip.
+border_color = "#444444" # Border color of the tooltip.
+border_width = 1 # Border width of the tooltip.
+corner_radius = 8 # Corner radius of the tooltip.
+padding_x = 8 # Horizontal inner padding of the tooltip.
+padding_y = 6 # Vertical inner padding of the tooltip.
+margin_x = 0 # Horizontal outer margin around the tooltip.
+margin_y = 8 # Vertical outer margin around the tooltip.
 
 [builtins.volume]
 enabled = false # Shows or hides the volume widget.
@@ -280,15 +280,15 @@ inactive_color = "#6c7086" # Color of inactive signal bars.
 text_color = "#ffffff" # Text color of the inline label used in expand or always mode.
 
 [builtins.wifi.tooltip]
-text_color = "#cdd6f4" # Text color used in the tooltip popup.
-background_color = "#111111" # Background color of the tooltip popup.
-border_color = "#444444" # Border color of the tooltip popup.
-border_width = 1 # Border width of the tooltip popup.
-corner_radius = 8 # Corner radius of the tooltip popup.
-padding_x = 8 # Horizontal inner padding of the tooltip popup.
-padding_y = 6 # Vertical inner padding of the tooltip popup.
-margin_x = 0 # Horizontal outer margin around the tooltip popup.
-margin_y = 8 # Vertical outer margin around the tooltip popup.
+text_color = "#cdd6f4" # Text color used in the tooltip.
+background_color = "#111111" # Background color of the tooltip.
+border_color = "#444444" # Border color of the tooltip.
+border_width = 1 # Border width of the tooltip.
+corner_radius = 8 # Corner radius of the tooltip.
+padding_x = 8 # Horizontal inner padding of the tooltip.
+padding_y = 6 # Vertical inner padding of the tooltip.
+margin_x = 0 # Horizontal outer margin around the tooltip.
+margin_y = 8 # Vertical outer margin around the tooltip.
 
 [builtins.volume.style]
 icon = "" # Leading icon of the compact widget.

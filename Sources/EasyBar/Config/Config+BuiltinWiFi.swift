@@ -139,30 +139,9 @@ extension Config {
       fallback: builtinWiFi.style
     )
 
-    let content = WiFiBuiltinConfig.Content(
-      displayMode: try parseWiFiDisplayMode(
-        try optionalString(
-          contentTable["display_mode"],
-          path: "builtins.wifi.content.display_mode"
-        ) ?? builtinWiFi.displayMode.rawValue,
-        path: "builtins.wifi.content.display_mode"
-      ),
-      disconnectedText: try optionalString(
-        contentTable["disconnected_text"],
-        path: "builtins.wifi.content.disconnected_text"
-      ) ?? builtinWiFi.disconnectedText,
-      deniedText: try optionalString(
-        contentTable["denied_text"],
-        path: "builtins.wifi.content.denied_text"
-      ) ?? builtinWiFi.deniedText,
-      activeColorHex: try optionalString(
-        contentTable["active_color"],
-        path: "builtins.wifi.content.active_color"
-      ) ?? builtinWiFi.activeColorHex,
-      inactiveColorHex: try optionalString(
-        contentTable["inactive_color"],
-        path: "builtins.wifi.content.inactive_color"
-      ) ?? builtinWiFi.inactiveColorHex
+    let content = try parseWiFiContent(
+      from: contentTable,
+      fallback: builtinWiFi.content
     )
 
     let expand = try parseWiFiExpand(from: expandTable, fallback: builtinWiFi.expand)
@@ -183,6 +162,37 @@ extension Config {
 }
 
 extension Config {
+  fileprivate func parseWiFiContent(
+    from table: TOMLTable,
+    fallback: WiFiBuiltinConfig.Content
+  ) throws -> WiFiBuiltinConfig.Content {
+    WiFiBuiltinConfig.Content(
+      displayMode: try parseWiFiDisplayMode(
+        try optionalString(
+          table["display_mode"],
+          path: "builtins.wifi.content.display_mode"
+        ) ?? fallback.displayMode.rawValue,
+        path: "builtins.wifi.content.display_mode"
+      ),
+      disconnectedText: try optionalString(
+        table["disconnected_text"],
+        path: "builtins.wifi.content.disconnected_text"
+      ) ?? fallback.disconnectedText,
+      deniedText: try optionalString(
+        table["denied_text"],
+        path: "builtins.wifi.content.denied_text"
+      ) ?? fallback.deniedText,
+      activeColorHex: try optionalString(
+        table["active_color"],
+        path: "builtins.wifi.content.active_color"
+      ) ?? fallback.activeColorHex,
+      inactiveColorHex: try optionalString(
+        table["inactive_color"],
+        path: "builtins.wifi.content.inactive_color"
+      ) ?? fallback.inactiveColorHex
+    )
+  }
+
   fileprivate func parseWiFiExpand(
     from table: TOMLTable,
     fallback: BuiltinWiFiExpand
