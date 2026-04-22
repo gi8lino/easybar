@@ -64,7 +64,6 @@ enum AppEvent: String, CaseIterable, Sendable {
     .calendarChange,
     .minuteTick,
     .secondTick,
-    .intervalTick,
     .focusChange,
     .workspaceChange,
     .spaceModeChange,

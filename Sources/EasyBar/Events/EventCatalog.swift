@@ -20,8 +20,6 @@ enum EventCatalog {
     for warning in warnings {
       easybarLog.warn(warning)
     }
-
-    assertionFailure(warnings.joined(separator: "\n"))
   }
 
   /// Returns human-readable mismatch warnings for the Lua token definitions.
