@@ -10,6 +10,10 @@ extension VolumeSliderNativeWidget {
       return false
     }
 
+    if isAdjustingSlider && (event == .volumeChange || event == .muteChange) {
+      return true
+    }
+
     applyExternalVolumeChange()
     publish()
     return true
@@ -27,16 +31,18 @@ extension VolumeSliderNativeWidget {
       publish()
 
     case .mouseExited:
+      guard !isAdjustingSlider else { return }
       isHovered = false
       cancelAutoHide()
       publish()
 
     case .sliderPreview:
       guard let value = payload.value else { return }
-      applySliderValue(value, shouldAutoHide: false)
+      applySliderPreviewValue(value)
 
     case .sliderChanged:
       guard let value = payload.value else { return }
+      isAdjustingSlider = false
       applySliderValue(value, shouldAutoHide: true)
 
     default:
@@ -47,9 +53,20 @@ extension VolumeSliderNativeWidget {
   /// Expands temporarily on external volume change when configured.
   func applyExternalVolumeChange() {
     guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
+    guard !isAdjustingSlider else { return }
 
     isHovered = true
     scheduleAutoHide()
+  }
+
+  /// Applies one slider preview value without rebuilding the widget mid-drag.
+  func applySliderPreviewValue(_ value: Double) {
+    let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
+
+    isAdjustingSlider = true
+    isHovered = true
+    cancelAutoHide()
+    setSystemVolume(normalized)
   }
 
   /// Applies one slider value back to the system volume.
@@ -63,6 +80,7 @@ extension VolumeSliderNativeWidget {
     }
 
     isHovered = true
+    isAdjustingSlider = false
     cancelAutoHide()
     setSystemVolume(normalized)
 

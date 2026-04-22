@@ -3,6 +3,15 @@ import SwiftUI
 // MARK: - Interaction
 
 extension WidgetNodeView {
+  func styledContainerSurface<Content: View>(_ content: Content) -> some View {
+    AnyView(
+      content
+        .modifier(nodeStyle)
+        .contentShape(Rectangle())
+        .background(nodeMouseOverlay)
+    )
+  }
+
   func styledNodeSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -12,8 +21,24 @@ extension WidgetNodeView {
     )
   }
 
-  func styledMouseContent<Content: View>(_ content: Content) -> some View {
+  /// Styles one native interactive control surface without attaching an extra tap gesture.
+  ///
+  /// Native controls such as `Slider` already manage their own mouse tracking and drag
+  /// lifecycle. Adding an extra `TapGesture` wrapper can interfere with dragging.
+  func styledControlContent<Content: View>(_ content: Content) -> some View {
     AnyView(
+      content
+        .modifier(nodeStyle)
+        .onHover { hovering in
+          guard node.isMouseHoverInteractive else { return }
+          emitNodeHoverEvent(hovering)
+        }
+        .overlay(scrollOverlay)
+    )
+  }
+
+  func styledMouseContent<Content: View>(_ content: Content) -> some View {
+    let base = AnyView(
       content
         .modifier(nodeStyle)
         .contentShape(Rectangle())
@@ -21,13 +46,19 @@ extension WidgetNodeView {
           guard node.isMouseHoverInteractive else { return }
           emitNodeHoverEvent(hovering)
         }
-        .simultaneousGesture(
-          TapGesture().onEnded {
-            guard node.isMouseClickInteractive else { return }
-            emitNodeClickEvent()
-          }
-        )
         .overlay(scrollOverlay)
+    )
+
+    guard node.isMouseClickInteractive else {
+      return base
+    }
+
+    return AnyView(
+      base.simultaneousGesture(
+        TapGesture().onEnded {
+          emitNodeClickEvent()
+        }
+      )
     )
   }
 

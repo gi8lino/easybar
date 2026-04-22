@@ -17,6 +17,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
   let eventObserver = EasyBarEventObserver()
   var isHovered = false
+  var isAdjustingSlider = false
   var autoHideWorkItem: DispatchWorkItem?
   private lazy var renderer = VolumeRenderer(rootID: rootID)
 
@@ -59,6 +60,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     eventObserver.stop()
     cancelAutoHide()
     isHovered = false
+    isAdjustingSlider = false
 
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }

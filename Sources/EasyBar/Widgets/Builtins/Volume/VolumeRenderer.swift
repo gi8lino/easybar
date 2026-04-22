@@ -14,7 +14,7 @@ struct VolumeRenderer: NativeWidgetRenderer {
     }
 
     return [
-      BuiltinNativeNodeFactory.makeSliderNode(
+      BuiltinNativeNodeFactory.makeProgressSliderNode(
         rootID: rootID,
         placement: snapshot.placement,
         style: snapshot.style,
@@ -70,7 +70,7 @@ extension VolumeRenderer {
     )
 
     nodes.append(
-      BuiltinNativeNodeFactory.makeChildSliderNode(
+      BuiltinNativeNodeFactory.makeChildProgressSliderNode(
         rootID: rootID,
         parentID: rootID,
         childID: "\(rootID)_slider",

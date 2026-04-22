@@ -25,11 +25,13 @@ struct BarContentView: View {
       maxHeight: config.barHeight,
       alignment: .center
     )
-    .background(Color(hex: config.barBackgroundHex))
+    .background(Theme.barBackground)
     .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(Color(hex: config.barBorderHex))
-        .frame(height: 1)
+      if config.barShowsBorder {
+        Rectangle()
+          .fill(Theme.barBorder)
+          .frame(height: 1)
+      }
     }
     .foregroundStyle(Theme.defaultTextColor)
     .ignoresSafeArea()

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SliderWidgetView: View {
   let rootWidgetID: String
+  let targetWidgetID: String
   let minValue: Double
   let maxValue: Double
   let step: Double
@@ -14,6 +15,7 @@ struct SliderWidgetView: View {
 
   init(
     rootWidgetID: String,
+    targetWidgetID: String,
     minValue: Double,
     maxValue: Double,
     step: Double,
@@ -22,6 +24,7 @@ struct SliderWidgetView: View {
     width: CGFloat? = nil
   ) {
     self.rootWidgetID = rootWidgetID
+    self.targetWidgetID = targetWidgetID
     self.minValue = minValue
     self.maxValue = maxValue
     self.step = step
@@ -37,12 +40,17 @@ struct SliderWidgetView: View {
       value: Binding(
         get: { value },
         set: { newValue in
+          if !isEditing {
+            isEditing = true
+          }
+
           value = newValue
 
           Task {
             await EventHub.shared.emitWidgetEvent(
               .sliderPreview,
               widgetID: rootWidgetID,
+              targetWidgetID: targetWidgetID,
               value: newValue
             )
           }
@@ -60,6 +68,7 @@ struct SliderWidgetView: View {
             await EventHub.shared.emitWidgetEvent(
               .sliderChanged,
               widgetID: rootWidgetID,
+              targetWidgetID: targetWidgetID,
               value: committedValue
             )
           }

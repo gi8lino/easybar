@@ -31,7 +31,7 @@ extend_behind_notch = true # Makes the bar span the full top edge, including the
 
 [bar.colors]
 background = "#111111" # Background color of the bar.
-border = "#222222" # Bottom border color of the bar.
+border = "#00000000" # Bottom border color of the bar. Use a visible color to opt in.
 
 [builtins.spaces]
 enabled = false # Shows or hides the built-in spaces widget.
@@ -112,7 +112,7 @@ spacing = 6 # Gap between the icon and label.
 opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.front_app.content]
-show_icon = false  # Shows the focused app icon.
+show_icon = true # Shows the focused app icon.
 show_name = true # Shows the focused app name.
 fallback_text = "No App" # Fallback text shown when no app name is available.
 icon_size = 14 # Display size of the app icon.
@@ -124,11 +124,14 @@ position = "left" # Places the widget on the left, center, or right side of the 
 order = 30 # Sort order among widgets in the same position.
 
 [builtins.aerospace_mode.style]
+icon = "" # Leading icon of the widget. The mode-specific icon comes from content settings.
 text_color = "#ffffff" # Text color of the widget.
 background_color = "#1a1a1a" # Background color of the widget.
 border_color = "#333333" # Border color of the widget.
 border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
+margin_x = 0 # Horizontal outer margin around the widget.
+margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
 padding_y = 4 # Vertical inner padding of the widget.
 spacing = 6 # Gap between the icon and text.
@@ -244,11 +247,6 @@ padding_y = 6 # Vertical inner padding of the tooltip.
 margin_x = 0 # Horizontal outer margin around the tooltip.
 margin_y = 8 # Vertical outer margin around the tooltip.
 
-[builtins.volume]
-enabled = false # Shows or hides the volume widget.
-position = "right" # Places the widget on the left, center, or right side of the bar.
-order = 20 # Sort order among widgets in the same position.
-
 [builtins.wifi]
 enabled = false # Shows or hides the built-in Wi-Fi widget.
 position = "right" # Places the widget on the left, center, or right side of the bar.
@@ -290,17 +288,22 @@ padding_y = 6 # Vertical inner padding of the tooltip.
 margin_x = 0 # Horizontal outer margin around the tooltip.
 margin_y = 8 # Vertical outer margin around the tooltip.
 
+[builtins.volume]
+enabled = false # Shows or hides the volume widget.
+position = "right" # Places the widget on the left, center, or right side of the bar.
+order = 20 # Sort order among widgets in the same position.
+
 [builtins.volume.style]
 icon = "" # Leading icon of the compact widget.
-text_color = "#ffffff" # Text color of the widget.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
-border_width = 1 # Border width of the widget.
+text_color = "#cdd6f4" # Text color of the widget.
+background_color = "#00000000" # Background color of the widget.
+border_color = "#00000000" # Border color of the widget.
+border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
 margin_y = 0 # Vertical outer margin around the widget.
 padding_x = 8 # Horizontal inner padding of the widget.
-padding_y = 4 # Vertical inner padding of the widget.
+padding_y = 0 # Vertical inner padding of the widget.
 spacing = 8 # Gap between the icon, label, and slider.
 opacity = 1.0 # Overall opacity of the widget.
 

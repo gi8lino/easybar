@@ -20,7 +20,9 @@ end
 
 local function set_volume(value)
 	value = math.max(0, math.min(100, tonumber(value) or 0))
-	os.execute("osascript -e 'set volume output volume " .. value .. "'")
+
+	os.execute("osascript -e 'set volume output muted false' -e 'set volume output volume " .. value .. "'")
+
 	return value
 end
 
@@ -40,11 +42,20 @@ local function text_for_state(state)
 	if state.muted then
 		return "Muted"
 	end
+
 	return tostring(state.volume) .. "%"
 end
 
+local popup_visible = false
+
 local function refresh()
 	local state = get_audio_state()
+
+	easybar.set("volume_progress", {
+		popup = {
+			drawing = popup_visible,
+		},
+	})
 
 	easybar.set("volume_progress_anchor", {
 		icon = {
@@ -111,19 +122,20 @@ easybar.add(easybar.kind.slider, "volume_progress_popup_slider", {
 	width = 140,
 })
 
-easybar.subscribe("volume_progress", { easybar.events.volume_change, easybar.events.forced }, refresh)
-
-easybar.subscribe("volume_progress", easybar.events.mouse.entered, function()
-	easybar.set("volume_progress", {
-		popup = { drawing = true },
-	})
+easybar.subscribe("volume_progress", {
+	easybar.events.volume_change,
+	easybar.events.mute_change,
+	easybar.events.system_woke,
+	easybar.events.forced,
+}, function()
 	refresh()
 end)
 
-easybar.subscribe("volume_progress", easybar.events.mouse.exited, function()
-	easybar.set("volume_progress", {
-		popup = { drawing = false },
-	})
+easybar.subscribe("volume_progress", easybar.events.mouse.clicked, function(event)
+	if event.button == nil or event.button == easybar.events.mouse.left_button then
+		popup_visible = not popup_visible
+		refresh()
+	end
 end)
 
 easybar.subscribe("volume_progress", easybar.events.mouse.scrolled, function(event)

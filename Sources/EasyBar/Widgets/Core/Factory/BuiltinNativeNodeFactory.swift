@@ -50,6 +50,32 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  /// Builds one simple root progress-slider node.
+  static func makeProgressSliderNode(
+    rootID: String,
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle,
+    text: String,
+    value: Double,
+    min: Double,
+    max: Double,
+    step: Double
+  ) -> WidgetNodeState {
+    makeRootNode(
+      id: rootID,
+      kind: .progressSlider,
+      placement: placement,
+      style: style,
+      icon: style.icon,
+      text: text,
+      color: style.textColorHex,
+      value: value,
+      min: min,
+      max: max,
+      step: step
+    )
+  }
+
   /// Builds one root sparkline node.
   static func makeSparklineNode(
     rootID: String,
@@ -398,6 +424,36 @@ enum BuiltinNativeNodeFactory {
       id: childID,
       root: rootID,
       kind: .slider,
+      parent: parentID,
+      position: position,
+      order: order,
+      color: color,
+      visible: visible,
+      value: value,
+      min: min,
+      max: max,
+      step: step
+    )
+  }
+
+  /// Builds one child progress-slider node.
+  static func makeChildProgressSliderNode(
+    rootID: String,
+    parentID: String,
+    childID: String,
+    position: WidgetPosition,
+    order: Int,
+    value: Double,
+    min: Double,
+    max: Double,
+    step: Double,
+    color: String? = nil,
+    visible: Bool = true
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: childID,
+      root: rootID,
+      kind: .progressSlider,
       parent: parentID,
       position: position,
       order: order,

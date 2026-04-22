@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 struct ProgressSliderWidgetView: View {
   let rootWidgetID: String
+  let targetWidgetID: String
   let minValue: Double
   let maxValue: Double
   let step: Double
@@ -14,6 +16,7 @@ struct ProgressSliderWidgetView: View {
 
   init(
     rootWidgetID: String,
+    targetWidgetID: String,
     minValue: Double,
     maxValue: Double,
     step: Double,
@@ -22,6 +25,7 @@ struct ProgressSliderWidgetView: View {
     width: CGFloat? = nil
   ) {
     self.rootWidgetID = rootWidgetID
+    self.targetWidgetID = targetWidgetID
     self.minValue = minValue
     self.maxValue = maxValue
     self.step = step
@@ -49,24 +53,25 @@ struct ProgressSliderWidgetView: View {
           .offset(x: knobOffset(in: geometry.size.width) - 6)
       }
       .contentShape(Rectangle())
-      .gesture(
-        DragGesture(minimumDistance: 0)
-          .onChanged { gesture in
+      .overlay {
+        ProgressSliderInteractionSurface(
+          onPreview: { x in
             isDragging = true
 
-            let newValue = value(for: gesture.location.x, width: geometry.size.width)
+            let newValue = value(for: x, width: geometry.size.width)
             value = newValue
 
             Task {
               await EventHub.shared.emitWidgetEvent(
                 .sliderPreview,
                 widgetID: rootWidgetID,
+                targetWidgetID: targetWidgetID,
                 value: newValue
               )
             }
-          }
-          .onEnded { gesture in
-            let newValue = value(for: gesture.location.x, width: geometry.size.width)
+          },
+          onCommit: { x in
+            let newValue = value(for: x, width: geometry.size.width)
             value = newValue
             isDragging = false
 
@@ -74,11 +79,13 @@ struct ProgressSliderWidgetView: View {
               await EventHub.shared.emitWidgetEvent(
                 .sliderChanged,
                 widgetID: rootWidgetID,
+                targetWidgetID: targetWidgetID,
                 value: newValue
               )
             }
           }
-      )
+        )
+      }
     }
     .frame(width: resolvedWidth, height: 14)
     .onChange(of: externalValue) { _, newValue in
@@ -118,5 +125,57 @@ struct ProgressSliderWidgetView: View {
     let safeStep = max(step, 0.0001)
     let stepped = (rawValue / safeStep).rounded() * safeStep
     return min(max(stepped, minValue), maxValue)
+  }
+}
+
+private struct ProgressSliderInteractionSurface: NSViewRepresentable {
+  let onPreview: (CGFloat) -> Void
+  let onCommit: (CGFloat) -> Void
+
+  func makeNSView(context: Context) -> ProgressSliderInteractionNSView {
+    let view = ProgressSliderInteractionNSView()
+    view.onPreview = onPreview
+    view.onCommit = onCommit
+    return view
+  }
+
+  func updateNSView(_ nsView: ProgressSliderInteractionNSView, context: Context) {
+    nsView.onPreview = onPreview
+    nsView.onCommit = onCommit
+  }
+}
+
+private final class ProgressSliderInteractionNSView: NSView {
+  var onPreview: ((CGFloat) -> Void)?
+  var onCommit: ((CGFloat) -> Void)?
+
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+    true
+  }
+
+  override var acceptsFirstResponder: Bool {
+    true
+  }
+
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    bounds.contains(point) ? self : nil
+  }
+
+  override func mouseDown(with event: NSEvent) {
+    emitPreview(for: event)
+  }
+
+  override func mouseDragged(with event: NSEvent) {
+    emitPreview(for: event)
+  }
+
+  override func mouseUp(with event: NSEvent) {
+    let point = convert(event.locationInWindow, from: nil)
+    onCommit?(point.x)
+  }
+
+  private func emitPreview(for event: NSEvent) {
+    let point = convert(event.locationInWindow, from: nil)
+    onPreview?(point.x)
   }
 }

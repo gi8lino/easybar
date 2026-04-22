@@ -20,6 +20,7 @@ extension WidgetNodeView {
 
       SliderWidgetView(
         rootWidgetID: node.root,
+        targetWidgetID: node.id,
         minValue: minValue,
         maxValue: maxValue,
         step: stepValue,
@@ -37,6 +38,7 @@ extension WidgetNodeView {
 
       ProgressSliderWidgetView(
         rootWidgetID: node.root,
+        targetWidgetID: node.id,
         minValue: minValue,
         maxValue: maxValue,
         step: stepValue,
@@ -357,12 +359,10 @@ extension WidgetNodeView {
 
   @ViewBuilder
   func renderedImageView() -> some View {
-    // TODO: maybe invert if
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)
       let image = resolvedImage(imagePath: imagePath, customImage: customImage)
 
-      // TODO: maybe invert if
       if let tintedImage = tintedImage(from: image, customImage: customImage) {
         imageBaseView(image: tintedImage, renderingMode: .template)
           .foregroundStyle(iconResolvedColor)

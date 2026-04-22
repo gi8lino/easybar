@@ -1,12 +1,26 @@
 import SwiftUI
 
+extension String {
+
+  /// Returns the hex text normalized for shared color checks.
+  var normalizedHexColor: String {
+    trimmingCharacters(in: .whitespacesAndNewlines)
+      .replacingOccurrences(of: "#", with: "")
+      .uppercased()
+  }
+
+  /// Returns whether this hex string resolves to a fully transparent color.
+  var isFullyTransparentHexColor: Bool {
+    normalizedHexColor.isEmpty || normalizedHexColor == "00000000"
+  }
+}
+
 extension Color {
 
   /// Creates a color from `RRGGBB` or `RRGGBBAA` hex text.
   init(hex: String) {
 
-    var hex = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-    hex = hex.replacingOccurrences(of: "#", with: "")
+    let hex = hex.normalizedHexColor
 
     var int: UInt64 = 0
     Scanner(string: hex).scanHexInt64(&int)

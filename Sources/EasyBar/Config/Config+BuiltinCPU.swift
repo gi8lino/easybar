@@ -58,7 +58,7 @@ extension Config {
         order: 10
       ),
       style: .init(
-        icon: "󰍛 ",
+        icon: "󰍛",
         textColorHex: "",
         backgroundColorHex: "",
         borderColorHex: "",

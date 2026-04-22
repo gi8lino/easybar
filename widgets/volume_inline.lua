@@ -20,7 +20,9 @@ end
 
 local function set_volume(value)
 	value = math.max(0, math.min(100, tonumber(value) or 0))
-	os.execute("osascript -e 'set volume output volume " .. value .. "'")
+
+	os.execute("osascript -e 'set volume output muted false' -e 'set volume output volume " .. value .. "'")
+
 	return value
 end
 
@@ -28,6 +30,7 @@ local function text_for_state(state)
 	if state.muted then
 		return "􀊣"
 	end
+
 	return tostring(state.volume) .. "%"
 end
 
@@ -68,7 +71,12 @@ easybar.add(easybar.kind.slider, "volume_inline_slider", {
 
 local expanded = false
 
-easybar.subscribe("volume_inline", { easybar.events.volume_change, easybar.events.forced }, function()
+easybar.subscribe("volume_inline", {
+	easybar.events.volume_change,
+	easybar.events.mute_change,
+	easybar.events.system_woke,
+	easybar.events.forced,
+}, function()
 	refresh(expanded)
 end)
 

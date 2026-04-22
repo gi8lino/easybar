@@ -58,7 +58,7 @@ final class Config: ObservableObject {
       paddingX: 10,
       extendBehindNotch: true,
       backgroundHex: "#111111",
-      borderHex: "#222222"
+      borderHex: "#00000000"
     )
   }
 
@@ -182,6 +182,10 @@ final class Config: ObservableObject {
   var barBorderHex: String {
     get { barSection.borderHex }
     set { barSection.borderHex = newValue }
+  }
+
+  var barShowsBorder: Bool {
+    !barBorderHex.isFullyTransparentHexColor
   }
 
   // MARK: - Builtins

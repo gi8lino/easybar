@@ -56,8 +56,10 @@ extension WidgetNodeView {
         }
       }
       .modifier(nodeStyle)
+
     case .popup:
       popupAnchor
+
     default:
       EmptyView()
     }
@@ -68,13 +70,17 @@ extension WidgetNodeView {
   var interactiveNodeView: some View {
     switch node.kind {
     case .slider:
-      styledMouseContent(sliderView)
+      styledControlContent(sliderView)
+
     case .progressSlider:
-      styledMouseContent(progressSliderView)
+      styledControlContent(progressSliderView)
+
     case .progress:
       styledMouseContent(progressView)
+
     case .sparkline:
       styledMouseContent(sparklineView)
+
     default:
       EmptyView()
     }
@@ -88,12 +94,12 @@ extension WidgetNodeView {
             childRow
           }
         } else {
-          styledNodeSurface(childRow)
+          styledContainerSurface(childRow)
         }
       } else if hasPopupChildren {
         popupAnchorSurface(childRow)
       } else {
-        styledNodeSurface(childRow)
+        styledContainerSurface(childRow)
       }
     }
   }
