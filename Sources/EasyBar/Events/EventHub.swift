@@ -4,7 +4,7 @@ import Foundation
 actor EventHub {
   static let shared = EventHub()
 
-  private let runtime = LuaRuntime.shared
+  private let luaEventSink = LuaEventSink()
   private var subscribers: [UUID: Subscriber] = [:]
 
   private struct Subscriber {
@@ -105,39 +105,12 @@ actor EventHub {
     }
 
     logEmission(payload)
-    await sendToLua(payload)
+    luaEventSink.enqueue(payload)
   }
 
   /// Removes one terminated subscription.
   private func removeContinuation(id: UUID) {
     subscribers.removeValue(forKey: id)
-  }
-
-  /// Sends one payload to the Lua runtime stdin.
-  private func sendToLua(_ payload: EasyBarEventPayload) async {
-    guard let encoded = encodedPayload(payload) else {
-      easybarLog.error("failed to encode lua event payload name=\(payload.eventName)")
-      return
-    }
-
-    easybarLog.trace("sent to lua stdin: \(encoded)")
-    await runtime.send(encoded)
-  }
-
-  /// Returns the encoded Lua payload string.
-  private func encodedPayload(_ payload: EasyBarEventPayload) -> String? {
-    encodeJSON(payload.toDictionary())
-  }
-
-  /// Encodes one event payload as JSON for the Lua runtime.
-  private func encodeJSON(_ payload: [String: Any]) -> String? {
-    guard let data = try? JSONSerialization.data(withJSONObject: payload),
-      let string = String(data: data, encoding: .utf8)
-    else {
-      return nil
-    }
-
-    return string
   }
 
   /// Logs one emitted payload for verbose debugging.
