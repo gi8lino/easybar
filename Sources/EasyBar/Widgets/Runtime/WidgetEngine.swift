@@ -23,6 +23,7 @@ actor WidgetEngine {
 
     started = true
     runtimeState.reset()
+    EventCatalog.validateLuaDefinitions()
 
     await LuaRuntime.shared.setStdoutHandler { line in
       Task {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// App-wide events emitted by EasyBar.
-enum AppEvent: String, Sendable {
+enum AppEvent: String, CaseIterable, Sendable {
   case manualRefresh = "manual_refresh"
 
   case systemWoke = "system_woke"
@@ -28,10 +28,51 @@ enum AppEvent: String, Sendable {
   case focusChange = "focus_change"
   case workspaceChange = "workspace_change"
   case spaceModeChange = "space_mode_change"
+
+  static let luaTokenEvents: [AppEvent] = [
+    .systemWoke,
+    .sleep,
+    .spaceChange,
+    .appSwitch,
+    .displayChange,
+    .powerSourceChange,
+    .chargingStateChange,
+    .networkChange,
+    .wifiChange,
+    .volumeChange,
+    .muteChange,
+    .calendarChange,
+    .minuteTick,
+    .secondTick,
+    .focusChange,
+    .workspaceChange,
+    .spaceModeChange,
+  ]
+
+  static let luaDriverEvents: [AppEvent] = [
+    .systemWoke,
+    .sleep,
+    .spaceChange,
+    .appSwitch,
+    .displayChange,
+    .powerSourceChange,
+    .chargingStateChange,
+    .networkChange,
+    .wifiChange,
+    .volumeChange,
+    .muteChange,
+    .calendarChange,
+    .minuteTick,
+    .secondTick,
+    .intervalTick,
+    .focusChange,
+    .workspaceChange,
+    .spaceModeChange,
+  ]
 }
 
 /// Widget-scoped interaction events emitted by EasyBar.
-enum WidgetEvent: String, Sendable {
+enum WidgetEvent: String, CaseIterable, Sendable {
   case mouseEntered = "mouse.entered"
   case mouseExited = "mouse.exited"
   case mouseDown = "mouse.down"
