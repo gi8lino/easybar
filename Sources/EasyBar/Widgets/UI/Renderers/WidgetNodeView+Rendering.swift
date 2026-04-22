@@ -141,6 +141,5 @@ extension WidgetNodeView {
       }
     }
     .fixedSize()
-    .modifier(nodeStyle)
   }
 }
