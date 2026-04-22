@@ -18,10 +18,16 @@ local DEFAULT_ROOT_SHELL_STYLE = {
 }
 local DEFAULT_POPUP_TEXT_COLOR = "#cdd6f4"
 local DEFAULT_POPUP_STYLE = {
-	padding_x = 2,
-	padding_y = 2,
+	background = {
+		color = "#111111",
+		border_color = "#444444",
+		border_width = 1,
+		corner_radius = 8,
+	},
+	padding_x = 8,
+	padding_y = 6,
 	margin_x = 0,
-	margin_y = 2,
+	margin_y = 8,
 	spacing = 4,
 }
 

@@ -127,16 +127,11 @@ local props = easybar.get("clock")
 
 Sets defaults for future `easybar.add(...)` calls.
 
-Useful for shared styling.
+Defaults are scoped to the current widget file only.
+Useful for shared child styling or per-widget tweaks.
 
 ```lua
 easybar.default({
-    background = {
-        padding_left = 8,
-        padding_right = 8,
-        padding_top = 4,
-        padding_bottom = 4,
-    },
     label = {
         color = "#cad3f5",
     },
@@ -360,6 +355,15 @@ Use a group-level mouse subscription only when the whole grouped widget should b
 
 ## Popups
 
+Popup content inherits native-like defaults when you do not override them:
+
+- text color `#cdd6f4`
+- background `#111111`
+- border `#444444` with width `1`
+- corner radius `8`
+- padding `8 x 6`
+- margin `0 x 8`
+
 ```lua
 easybar.add("item", "calendar", {
     position = "right",
@@ -399,9 +403,8 @@ easybar.add("item", "clock", {
 
 ```lua
 easybar.default({
-    background = {
-        padding_left = 8,
-        padding_right = 8,
+    label = {
+        color = "#cdd6f4",
     },
 })
 
@@ -416,6 +419,9 @@ easybar.add("item", "clock", {
     end,
 })
 ```
+
+Bar-root Lua items already inherit the native shell by default, so you usually only
+need `easybar.default(...)` for shared child styling or widget-specific overrides.
 
 Use `interval` and `on_interval` when a widget must poll.
 Use `easybar.subscribe(...)` for real events such as `network_change`, `system_woke`, and `mouse.clicked`.
