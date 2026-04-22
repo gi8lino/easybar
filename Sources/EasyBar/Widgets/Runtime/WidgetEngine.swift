@@ -108,17 +108,8 @@ actor WidgetEngine {
   private func emitInitialEventsIfPossible() async {
     guard runtimeState.canEmitInitialEvents else { return }
     runtimeState.didEmitInitialEvents = true
-    await emitInitialEvents()
-  }
-
-  /// Emits initial state-refresh events required by subscribed widgets.
-  private func emitInitialEvents() async {
-    easybarLog.debug("emitting initial widget events")
-
-    for (name, event) in Self.initialEvents {
-      await emitInitialEvent(named: name, event: event)
-    }
-
+    easybarLog.debug("emitting replayable widget events")
+    await EventHub.shared.emitReplayableState(for: runtimeState.requiredEvents)
     await EventHub.shared.emit(.manualRefresh)
   }
 
@@ -181,49 +172,4 @@ actor WidgetEngine {
       WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
     }
   }
-
-  /// Emits one initial event when Lua subscribed to it.
-  private func emitInitialEvent(named name: String, event: AppEvent) async {
-    guard runtimeState.requiredEvents.contains(name) else { return }
-
-    switch event {
-    case .networkChange:
-      let isTunnel = await MainActor.run {
-        NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
-      }
-      await EventHub.shared.emit(.networkChange, primaryInterfaceIsTunnel: isTunnel)
-
-    case .wifiChange:
-      let interfaceName = await MainActor.run {
-        NativeWiFiStore.shared.snapshot?.interfaceName
-      }
-
-      if let interfaceName, !interfaceName.isEmpty {
-        await EventHub.shared.emit(.wifiChange, interfaceName: interfaceName)
-      } else {
-        await EventHub.shared.emit(.wifiChange)
-      }
-
-    default:
-      await EventHub.shared.emit(event)
-    }
-  }
-}
-
-extension WidgetEngine {
-  static let initialEvents: [(name: String, event: AppEvent)] = [
-    ("system_woke", .systemWoke),
-    ("power_source_change", .powerSourceChange),
-    ("charging_state_change", .chargingStateChange),
-    ("wifi_change", .wifiChange),
-    ("network_change", .networkChange),
-    ("volume_change", .volumeChange),
-    ("mute_change", .muteChange),
-    ("calendar_change", .calendarChange),
-    ("minute_tick", .minuteTick),
-    ("second_tick", .secondTick),
-    ("focus_change", .focusChange),
-    ("workspace_change", .workspaceChange),
-    ("space_mode_change", .spaceModeChange),
-  ]
 }

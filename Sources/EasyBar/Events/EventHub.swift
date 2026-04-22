@@ -6,6 +6,7 @@ actor EventHub {
 
   private let luaEventSink = LuaEventSink()
   private var subscribers: [UUID: Subscriber] = [:]
+  private var replayablePayloads: [String: EasyBarEventPayload] = [:]
 
   private struct Subscriber {
     let eventNames: Set<String>?
@@ -15,16 +16,30 @@ actor EventHub {
   /// Subscribes to the app-wide event stream.
   func subscribe(
     eventNames: Set<String>? = nil,
+    replayLatest: Bool = false,
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy =
       .bufferingNewest(32)
   ) -> AsyncStream<EasyBarEventPayload> {
     let id = UUID()
 
     return AsyncStream(bufferingPolicy: bufferingPolicy) { continuation in
+      let normalizedEventNames = eventNames?.isEmpty == true ? nil : eventNames
+
       subscribers[id] = Subscriber(
-        eventNames: eventNames?.isEmpty == true ? nil : eventNames,
+        eventNames: normalizedEventNames,
         continuation: continuation
       )
+
+      if replayLatest {
+        for eventName in EventReplayCatalog.orderedEventNames {
+          if let normalizedEventNames, !normalizedEventNames.contains(eventName) {
+            continue
+          }
+
+          guard let payload = replayablePayloads[eventName] else { continue }
+          continuation.yield(payload)
+        }
+      }
 
       continuation.onTermination = { [weak self] _ in
         Task {
@@ -96,6 +111,10 @@ actor EventHub {
       isWidgetEvent: payload.widgetEvent != nil
     )
 
+    if EventReplayCatalog.isReplayable(payload.eventName) {
+      replayablePayloads[payload.eventName] = payload
+    }
+
     for subscriber in subscribers.values {
       if let eventNames = subscriber.eventNames, !eventNames.contains(payload.eventName) {
         continue
@@ -106,6 +125,15 @@ actor EventHub {
 
     logEmission(payload)
     luaEventSink.enqueue(payload)
+  }
+
+  /// Emits the latest replayable state for the requested event names.
+  func emitReplayableState(for eventNames: Set<String>) async {
+    let payloads = await EventReplayCatalog.payloads(for: eventNames)
+
+    for payload in payloads {
+      await emit(payload)
+    }
   }
 
   /// Removes one terminated subscription.
