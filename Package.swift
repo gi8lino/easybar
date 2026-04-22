@@ -77,5 +77,12 @@ let package = Package(
         "Info.plist"
       ]
     ),
+    .testTarget(
+      name: "EasyBarTests",
+      dependencies: [
+        "EasyBar"
+      ],
+      path: "Tests/EasyBarTests"
+    ),
   ]
 )

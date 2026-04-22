@@ -50,6 +50,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         WidgetEvent.sliderPreview.rawValue,
         WidgetEvent.sliderChanged.rawValue,
       ]),
+      widgetTargetIDs: [rootID, "\(rootID)_slider"],
       appHandler: { [weak self] payload in
         self?.handleAppEvent(payload) ?? false
       },

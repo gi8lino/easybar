@@ -9,17 +9,31 @@ final class EasyBarEventObserver {
   /// The handler receives the already typed payload on the main actor.
   func start(
     eventNames: Set<String>,
+    widgetTargetIDs: Set<String>? = nil,
     replayLatest: Bool = false,
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy? = nil,
     handler: @escaping (EasyBarEventPayload) -> Void
   ) {
-    start(eventNames: Optional(eventNames), replayLatest: replayLatest, handler: handler)
+    start(
+      eventNames: Optional(eventNames),
+      widgetTargetIDs: widgetTargetIDs,
+      replayLatest: replayLatest,
+      bufferingPolicy: bufferingPolicy,
+      handler: handler
+    )
   }
 
   /// Starts observing EasyBar events.
   ///
   /// The handler receives the already typed payload on the main actor.
   func start(handler: @escaping (EasyBarEventPayload) -> Void) {
-    start(eventNames: nil, replayLatest: false, handler: handler)
+    start(
+      eventNames: nil,
+      widgetTargetIDs: nil,
+      replayLatest: false,
+      bufferingPolicy: nil,
+      handler: handler
+    )
   }
 
   /// Starts observing EasyBar events with an optional event-name filter.
@@ -27,7 +41,9 @@ final class EasyBarEventObserver {
   /// The handler receives the already typed payload on the main actor.
   private func start(
     eventNames: Set<String>?,
+    widgetTargetIDs: Set<String>?,
     replayLatest: Bool,
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy?,
     handler: @escaping (EasyBarEventPayload) -> Void
   ) {
     stop()
@@ -35,7 +51,9 @@ final class EasyBarEventObserver {
     task = Task {
       let stream = await EventHub.shared.subscribe(
         eventNames: eventNames,
-        replayLatest: replayLatest
+        widgetTargetIDs: widgetTargetIDs,
+        replayLatest: replayLatest,
+        bufferingPolicy: bufferingPolicy
       )
 
       for await payload in stream {

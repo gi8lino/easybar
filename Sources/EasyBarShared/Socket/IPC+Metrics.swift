@@ -72,6 +72,10 @@ extension IPC {
     public let appEvents: Int
     public let widgetEvents: Int
     public let eventsPerSecond: Double
+    public let droppedEvents: Int
+    public let droppedEventsPerSecond: Double
+    public let coalescedEvents: Int
+    public let coalescedEventsPerSecond: Double
     public let stdoutLines: Int
     public let stderrLines: Int
     public let luaWrites: Int
@@ -91,6 +95,10 @@ extension IPC {
       appEvents: Int,
       widgetEvents: Int,
       eventsPerSecond: Double,
+      droppedEvents: Int,
+      droppedEventsPerSecond: Double,
+      coalescedEvents: Int,
+      coalescedEventsPerSecond: Double,
       stdoutLines: Int,
       stderrLines: Int,
       luaWrites: Int,
@@ -109,6 +117,10 @@ extension IPC {
       self.appEvents = appEvents
       self.widgetEvents = widgetEvents
       self.eventsPerSecond = eventsPerSecond
+      self.droppedEvents = droppedEvents
+      self.droppedEventsPerSecond = droppedEventsPerSecond
+      self.coalescedEvents = coalescedEvents
+      self.coalescedEventsPerSecond = coalescedEventsPerSecond
       self.stdoutLines = stdoutLines
       self.stderrLines = stderrLines
       self.luaWrites = luaWrites
@@ -187,11 +199,27 @@ extension IPC {
     public let name: String
     public let total: Int
     public let perSecond: Double
+    public let droppedTotal: Int
+    public let droppedPerSecond: Double
+    public let coalescedTotal: Int
+    public let coalescedPerSecond: Double
 
-    public init(name: String, total: Int, perSecond: Double) {
+    public init(
+      name: String,
+      total: Int,
+      perSecond: Double,
+      droppedTotal: Int = 0,
+      droppedPerSecond: Double = 0,
+      coalescedTotal: Int = 0,
+      coalescedPerSecond: Double = 0
+    ) {
       self.name = name
       self.total = total
       self.perSecond = perSecond
+      self.droppedTotal = droppedTotal
+      self.droppedPerSecond = droppedPerSecond
+      self.coalescedTotal = coalescedTotal
+      self.coalescedPerSecond = coalescedPerSecond
     }
   }
 }

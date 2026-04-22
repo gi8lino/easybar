@@ -13,7 +13,7 @@ enum EventCatalog {
 
   /// Verifies that the Lua token file matches the Swift event catalog.
   static func validateLuaDefinitions() {
-    let warnings = luaDefinitionWarnings()
+    let warnings = currentLuaDefinitionWarnings()
 
     guard !warnings.isEmpty else { return }
 
@@ -23,7 +23,7 @@ enum EventCatalog {
   }
 
   /// Returns human-readable mismatch warnings for the Lua token definitions.
-  private static func luaDefinitionWarnings() -> [String] {
+  static func currentLuaDefinitionWarnings() -> [String] {
     guard let source = loadLuaEventTokenSource() else {
       return [
         "unable to validate Lua event token parity because Lua/easybar/event_tokens.lua could not be loaded"

@@ -610,6 +610,18 @@ private enum MetricsRenderer {
         column("\(number(runtime.eventsPerSecond))/s", width: 18),
       ]),
       row([
+        column("dropped", width: 16),
+        column(String(runtime.droppedEvents), width: 18),
+        column("dropped_rate", width: 16),
+        column("\(number(runtime.droppedEventsPerSecond))/s", width: 18),
+      ]),
+      row([
+        column("coalesced", width: 16),
+        column(String(runtime.coalescedEvents), width: 18),
+        column("coal_rate", width: 16),
+        column("\(number(runtime.coalescedEventsPerSecond))/s", width: 18),
+      ]),
+      row([
         column("app/widget", width: 16),
         column("\(runtime.appEvents)/\(runtime.widgetEvents)", width: 18),
         column("tree_updates", width: 16),
@@ -707,6 +719,8 @@ private enum MetricsRenderer {
       column("name", width: 18),
       column("total", width: 6),
       column("rate", width: 10),
+      column("drop", width: 6),
+      column("coal", width: 6),
     ])
 
     let body = snapshot.events.map { event in
@@ -714,6 +728,8 @@ private enum MetricsRenderer {
         column(event.name, width: 18),
         column(String(event.total), width: 6),
         column("\(number(event.perSecond))/s", width: 10),
+        column(String(event.droppedTotal), width: 6),
+        column(String(event.coalescedTotal), width: 6),
       ])
     }
 

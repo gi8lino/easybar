@@ -10,23 +10,29 @@ actor EventHub {
 
   private struct Subscriber {
     let eventNames: Set<String>?
+    let widgetTargetIDs: Set<String>?
     let continuation: AsyncStream<EasyBarEventPayload>.Continuation
   }
 
   /// Subscribes to the app-wide event stream.
   func subscribe(
     eventNames: Set<String>? = nil,
+    widgetTargetIDs: Set<String>? = nil,
     replayLatest: Bool = false,
-    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy =
-      .bufferingNewest(32)
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy? = nil
   ) -> AsyncStream<EasyBarEventPayload> {
     let id = UUID()
+    let resolvedBufferingPolicy = bufferingPolicy ?? EventDeliveryPolicy.defaultBufferingPolicy(
+      for: eventNames
+    )
 
-    return AsyncStream(bufferingPolicy: bufferingPolicy) { continuation in
+    return AsyncStream(bufferingPolicy: resolvedBufferingPolicy) { continuation in
       let normalizedEventNames = eventNames?.isEmpty == true ? nil : eventNames
+      let normalizedWidgetTargetIDs = widgetTargetIDs?.isEmpty == true ? nil : widgetTargetIDs
 
       subscribers[id] = Subscriber(
         eventNames: normalizedEventNames,
+        widgetTargetIDs: normalizedWidgetTargetIDs,
         continuation: continuation
       )
 
@@ -115,12 +121,19 @@ actor EventHub {
       replayablePayloads[payload.eventName] = payload
     }
 
-    for subscriber in subscribers.values {
-      if let eventNames = subscriber.eventNames, !eventNames.contains(payload.eventName) {
-        continue
-      }
+    let deliveryPolicy = EventDeliveryPolicy.forEventName(payload.eventName)
 
-      subscriber.continuation.yield(payload)
+    for subscriber in subscribers.values {
+      guard shouldDeliver(payload, to: subscriber) else { continue }
+
+      let result = subscriber.continuation.yield(payload)
+
+      if case .dropped = result {
+        MetricsCoordinator.shared.recordEventBackpressure(
+          name: payload.eventName,
+          coalesced: deliveryPolicy == .coalescing
+        )
+      }
     }
 
     logEmission(payload)
@@ -139,6 +152,24 @@ actor EventHub {
   /// Removes one terminated subscription.
   private func removeContinuation(id: UUID) {
     subscribers.removeValue(forKey: id)
+  }
+
+  /// Returns whether one payload matches one subscriber filter.
+  private func shouldDeliver(_ payload: EasyBarEventPayload, to subscriber: Subscriber) -> Bool {
+    if let eventNames = subscriber.eventNames, !eventNames.contains(payload.eventName) {
+      return false
+    }
+
+    guard EventDeliveryPolicy.routesDirectlyToWidgets(payload.eventName) else {
+      return true
+    }
+
+    guard let widgetTargetIDs = subscriber.widgetTargetIDs else {
+      return true
+    }
+
+    let widgetIDs = [payload.widgetID, payload.targetWidgetID].compactMap { $0 }
+    return widgetIDs.contains { widgetTargetIDs.contains($0) }
   }
 
   /// Logs one emitted payload for verbose debugging.

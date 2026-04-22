@@ -7,10 +7,11 @@ enum NativeWidgetEventDriver {
   static func start(
     observer: EasyBarEventObserver,
     eventNames: Set<String>,
+    widgetTargetIDs: Set<String> = [],
     appHandler: @escaping (EasyBarEventPayload) -> Bool,
     widgetHandler: @escaping (EasyBarEventPayload) -> Void
   ) {
-    observer.start(eventNames: eventNames) { payload in
+    observer.start(eventNames: eventNames, widgetTargetIDs: widgetTargetIDs) { payload in
       if appHandler(payload) {
         return
       }

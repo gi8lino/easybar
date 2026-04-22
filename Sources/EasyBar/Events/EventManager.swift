@@ -19,6 +19,11 @@ final class EventManager {
     case secondTick
   }
 
+  struct SubscriptionPlan: Equatable {
+    let sources: Set<String>
+    let interval: TimeInterval?
+  }
+
   private var luaSubscriptions = Set<String>()
   private var nativeSubscriptions = Set<String>()
   private var activeSubscriptions = Set<String>()
@@ -220,6 +225,18 @@ final class EventManager {
     }
 
     return sources
+  }
+
+  /// Returns the external subscription plan used to activate native sources.
+  static func subscriptionPlan(for subscriptions: Set<String>) -> SubscriptionPlan {
+    SubscriptionPlan(
+      sources: requiredSources(for: subscriptions).map { String(describing: $0) }.reduce(
+        into: Set<String>()
+      ) { result, source in
+        result.insert(source)
+      },
+      interval: intervalTickInterval(in: subscriptions)
+    )
   }
 
   /// Returns the shared Lua interval cadence requested by the runtime.

@@ -48,6 +48,8 @@ final class MetricsCoordinator {
 
   private struct SampleCounters {
     var totalEvents: Int
+    var droppedEvents: Int
+    var coalescedEvents: Int
     var treeUpdates: Int
     var stdoutLines: Int
     var stderrLines: Int
@@ -55,6 +57,8 @@ final class MetricsCoordinator {
     var agentMessages: [AgentKey: Int]
     var widgetUpdates: [String: Int]
     var eventCounts: [String: Int]
+    var droppedEventCounts: [String: Int]
+    var coalescedEventCounts: [String: Int]
   }
 
   private struct State {
@@ -69,6 +73,10 @@ final class MetricsCoordinator {
     var appEvents = 0
     var widgetEvents = 0
     var eventCounts: [String: Int] = [:]
+    var droppedEvents = 0
+    var coalescedEvents = 0
+    var droppedEventCounts: [String: Int] = [:]
+    var coalescedEventCounts: [String: Int] = [:]
 
     var stdoutLines = 0
     var stderrLines = 0
@@ -156,6 +164,19 @@ final class MetricsCoordinator {
         state.appEvents += 1
       }
       state.eventCounts[name, default: 0] += 1
+    }
+  }
+
+  /// Records one event dropped or coalesced because a subscriber buffer was full.
+  func recordEventBackpressure(name: String, coalesced: Bool) {
+    withLock {
+      if coalesced {
+        state.coalescedEvents += 1
+        state.coalescedEventCounts[name, default: 0] += 1
+      } else {
+        state.droppedEvents += 1
+        state.droppedEventCounts[name, default: 0] += 1
+      }
     }
   }
 
@@ -333,6 +354,8 @@ final class MetricsCoordinator {
 
     let currentCounters = SampleCounters(
       totalEvents: snapshotState.totalEvents,
+      droppedEvents: snapshotState.droppedEvents,
+      coalescedEvents: snapshotState.coalescedEvents,
       treeUpdates: snapshotState.treeUpdates,
       stdoutLines: snapshotState.stdoutLines,
       stderrLines: snapshotState.stderrLines,
@@ -341,7 +364,9 @@ final class MetricsCoordinator {
         result[key] = snapshotState.agents[key]?.messagesTotal ?? 0
       },
       widgetUpdates: snapshotState.widgetUpdateCounts,
-      eventCounts: snapshotState.eventCounts
+      eventCounts: snapshotState.eventCounts,
+      droppedEventCounts: snapshotState.droppedEventCounts,
+      coalescedEventCounts: snapshotState.coalescedEventCounts
     )
 
     let runtime = IPC.RuntimeMetrics(
@@ -355,6 +380,20 @@ final class MetricsCoordinator {
       eventsPerSecond: rate(
         current: snapshotState.totalEvents,
         previous: baseline?.totalEvents,
+        interval: safeInterval,
+        enabled: collectionEnabled
+      ),
+      droppedEvents: snapshotState.droppedEvents,
+      droppedEventsPerSecond: rate(
+        current: snapshotState.droppedEvents,
+        previous: baseline?.droppedEvents,
+        interval: safeInterval,
+        enabled: collectionEnabled
+      ),
+      coalescedEvents: snapshotState.coalescedEvents,
+      coalescedEventsPerSecond: rate(
+        current: snapshotState.coalescedEvents,
+        previous: baseline?.coalescedEvents,
         interval: safeInterval,
         enabled: collectionEnabled
       ),
@@ -420,14 +459,32 @@ final class MetricsCoordinator {
       }
       .prefix(8)
 
-    let events = snapshotState.eventCounts
-      .map { name, total in
+    let counterNames = Set(snapshotState.eventCounts.keys)
+      .union(snapshotState.droppedEventCounts.keys)
+      .union(snapshotState.coalescedEventCounts.keys)
+
+    let events = counterNames
+      .map { name in
         IPC.CounterMetrics(
           name: name,
-          total: total,
+          total: snapshotState.eventCounts[name] ?? 0,
           perSecond: rate(
-            current: total,
+            current: snapshotState.eventCounts[name] ?? 0,
             previous: baseline?.eventCounts[name],
+            interval: safeInterval,
+            enabled: collectionEnabled
+          ),
+          droppedTotal: snapshotState.droppedEventCounts[name] ?? 0,
+          droppedPerSecond: rate(
+            current: snapshotState.droppedEventCounts[name] ?? 0,
+            previous: baseline?.droppedEventCounts[name],
+            interval: safeInterval,
+            enabled: collectionEnabled
+          ),
+          coalescedTotal: snapshotState.coalescedEventCounts[name] ?? 0,
+          coalescedPerSecond: rate(
+            current: snapshotState.coalescedEventCounts[name] ?? 0,
+            previous: baseline?.coalescedEventCounts[name],
             interval: safeInterval,
             enabled: collectionEnabled
           )

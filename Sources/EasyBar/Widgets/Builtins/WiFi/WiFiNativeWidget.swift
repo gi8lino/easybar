@@ -46,6 +46,7 @@ final class WiFiNativeWidget: NativeWidget {
         WidgetEvent.mouseEntered.rawValue,
         WidgetEvent.mouseExited.rawValue,
       ]),
+      widgetTargetIDs: [rootID],
       appHandler: { [weak self] payload in
         self?.handleAppEvent(payload) ?? false
       },
