@@ -95,7 +95,8 @@ extension VolumeSliderNativeWidget {
     let clamped = min(max(volume, 0), 1)
     let scalar = Float32(clamped)
 
-    let wroteMain = writeSystemVolumeScalar(scalar, deviceID: deviceID, element: kAudioObjectPropertyElementMain)
+    let wroteMain = writeSystemVolumeScalar(
+      scalar, deviceID: deviceID, element: kAudioObjectPropertyElementMain)
     let wroteLeft = writeSystemVolumeScalar(scalar, deviceID: deviceID, element: 1)
     let wroteRight = writeSystemVolumeScalar(scalar, deviceID: deviceID, element: 2)
 

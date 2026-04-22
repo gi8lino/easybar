@@ -81,15 +81,16 @@ enum EventCatalog {
     let range = NSRange(source.startIndex..., in: source)
     let matches = regex.matches(in: source, range: range)
 
-    return Set(matches.compactMap { match in
-      guard match.numberOfRanges > 1,
-        let range = Range(match.range(at: 1), in: source)
-      else {
-        return nil
-      }
+    return Set(
+      matches.compactMap { match in
+        guard match.numberOfRanges > 1,
+          let range = Range(match.range(at: 1), in: source)
+        else {
+          return nil
+        }
 
-      return String(source[range])
-    })
+        return String(source[range])
+      })
   }
 
   /// Appends missing and unexpected event-name warnings for one Lua definition set.
@@ -107,7 +108,8 @@ enum EventCatalog {
     }
 
     if !unexpected.isEmpty {
-      warnings.append("\(label) contain names missing from Swift: \(unexpected.joined(separator: ", "))")
+      warnings.append(
+        "\(label) contain names missing from Swift: \(unexpected.joined(separator: ", "))")
     }
   }
 }
