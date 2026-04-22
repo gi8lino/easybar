@@ -6,10 +6,11 @@ enum NativeWidgetEventDriver {
   /// Starts observing EasyBar events and routes app events before widget-local events.
   static func start(
     observer: EasyBarEventObserver,
+    eventNames: Set<String>,
     appHandler: @escaping (EasyBarEventPayload) -> Bool,
     widgetHandler: @escaping (EasyBarEventPayload) -> Void
   ) {
-    observer.start { payload in
+    observer.start(eventNames: eventNames) { payload in
       if appHandler(payload) {
         return
       }
@@ -21,8 +22,9 @@ enum NativeWidgetEventDriver {
   /// Starts observing EasyBar events with a single raw handler.
   static func start(
     observer: EasyBarEventObserver,
+    eventNames: Set<String>,
     handler: @escaping (EasyBarEventPayload) -> Void
   ) {
-    observer.start(handler: handler)
+    observer.start(eventNames: eventNames, handler: handler)
   }
 }

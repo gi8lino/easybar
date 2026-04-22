@@ -42,7 +42,10 @@ final class CalendarNativeWidget: NativeWidget {
 
     let snapshot = currentSnapshot()
 
-    NativeWidgetEventDriver.start(observer: eventObserver) { [weak self] payload in
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      eventNames: appEventSubscriptions
+    ) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
 

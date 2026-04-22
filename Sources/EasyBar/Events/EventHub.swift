@@ -5,14 +5,26 @@ actor EventHub {
   static let shared = EventHub()
 
   private let runtime = LuaRuntime.shared
-  private var continuations: [UUID: AsyncStream<EasyBarEventPayload>.Continuation] = [:]
+  private var subscribers: [UUID: Subscriber] = [:]
+
+  private struct Subscriber {
+    let eventNames: Set<String>?
+    let continuation: AsyncStream<EasyBarEventPayload>.Continuation
+  }
 
   /// Subscribes to the app-wide event stream.
-  func subscribe() -> AsyncStream<EasyBarEventPayload> {
+  func subscribe(
+    eventNames: Set<String>? = nil,
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy =
+      .bufferingNewest(32)
+  ) -> AsyncStream<EasyBarEventPayload> {
     let id = UUID()
 
-    return AsyncStream { continuation in
-      continuations[id] = continuation
+    return AsyncStream(bufferingPolicy: bufferingPolicy) { continuation in
+      subscribers[id] = Subscriber(
+        eventNames: eventNames?.isEmpty == true ? nil : eventNames,
+        continuation: continuation
+      )
 
       continuation.onTermination = { [weak self] _ in
         Task {
@@ -84,8 +96,12 @@ actor EventHub {
       isWidgetEvent: payload.widgetEvent != nil
     )
 
-    for continuation in continuations.values {
-      continuation.yield(payload)
+    for subscriber in subscribers.values {
+      if let eventNames = subscriber.eventNames, !eventNames.contains(payload.eventName) {
+        continue
+      }
+
+      subscriber.continuation.yield(payload)
     }
 
     logEmission(payload)
@@ -94,7 +110,7 @@ actor EventHub {
 
   /// Removes one terminated subscription.
   private func removeContinuation(id: UUID) {
-    continuations.removeValue(forKey: id)
+    subscribers.removeValue(forKey: id)
   }
 
   /// Sends one payload to the Lua runtime stdin.

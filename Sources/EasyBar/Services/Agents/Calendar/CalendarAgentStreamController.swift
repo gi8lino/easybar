@@ -110,7 +110,7 @@ final class CalendarAgentStreamController {
 
   /// Starts shared app-event observation needed by the calendar agent streams.
   private func startEventObserver() {
-    eventObserver.start { [weak self] payload in
+    eventObserver.start(eventNames: [AppEvent.systemWoke.rawValue]) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
       guard event == .systemWoke else { return }

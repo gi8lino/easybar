@@ -53,7 +53,10 @@ final class FormattedClockNativeWidgetController {
   }
 
   func start() {
-    NativeWidgetEventDriver.start(observer: eventObserver) { [weak self] payload in
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      eventNames: appEventSubscriptions
+    ) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
       guard event == self.refreshEvent || event == .systemWoke else { return }

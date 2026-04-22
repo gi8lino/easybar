@@ -44,6 +44,12 @@ final class VolumeSliderNativeWidget: NativeWidget {
   func start() {
     NativeWidgetEventDriver.start(
       observer: eventObserver,
+      eventNames: appEventSubscriptions.union([
+        WidgetEvent.mouseEntered.rawValue,
+        WidgetEvent.mouseExited.rawValue,
+        WidgetEvent.sliderPreview.rawValue,
+        WidgetEvent.sliderChanged.rawValue,
+      ]),
       appHandler: { [weak self] payload in
         self?.handleAppEvent(payload) ?? false
       },

@@ -32,7 +32,10 @@ final class CPUSparklineNativeWidget: NativeWidget {
     samples = Array(repeating: 0, count: historySize)
     previousCPUInfo = readCPUInfo()
 
-    NativeWidgetEventDriver.start(observer: eventObserver) { [weak self] payload in
+    NativeWidgetEventDriver.start(
+      observer: eventObserver,
+      eventNames: appEventSubscriptions
+    ) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
 

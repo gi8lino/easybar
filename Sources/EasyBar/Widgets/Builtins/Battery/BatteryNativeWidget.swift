@@ -49,6 +49,10 @@ final class BatteryNativeWidget: NativeWidget {
   func start() {
     NativeWidgetEventDriver.start(
       observer: eventObserver,
+      eventNames: appEventSubscriptions.union([
+        WidgetEvent.mouseEntered.rawValue,
+        WidgetEvent.mouseExited.rawValue,
+      ]),
       appHandler: { [weak self] payload in
         self?.handleAppEvent(payload) ?? false
       },
