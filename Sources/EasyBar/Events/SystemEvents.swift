@@ -34,6 +34,11 @@ final class SystemEvents {
     easybarLog.debug("subscribed system_woke")
   }
 
+  /// Stops observation for system wake notifications.
+  func unsubscribeSystemWake() {
+    removeObserver(.systemWake)
+  }
+
   /// Starts observation for system sleep notifications.
   func subscribeSleep() {
     guard observers[.sleep] == nil else { return }
@@ -53,6 +58,11 @@ final class SystemEvents {
     easybarLog.debug("subscribed sleep")
   }
 
+  /// Stops observation for system sleep notifications.
+  func unsubscribeSleep() {
+    removeObserver(.sleep)
+  }
+
   /// Starts observation for active space changes.
   func subscribeSpaceChange() {
     guard observers[.spaceChange] == nil else { return }
@@ -70,6 +80,11 @@ final class SystemEvents {
 
     observers[.spaceChange] = observer
     easybarLog.debug("subscribed space_change")
+  }
+
+  /// Stops observation for active space changes.
+  func unsubscribeSpaceChange() {
+    removeObserver(.spaceChange)
   }
 
   /// Starts observation for frontmost app changes.
@@ -101,6 +116,11 @@ final class SystemEvents {
     easybarLog.debug("subscribed app_switch")
   }
 
+  /// Stops observation for frontmost app changes.
+  func unsubscribeAppSwitch() {
+    removeObserver(.appSwitch)
+  }
+
   /// Starts observation for display configuration changes.
   func subscribeDisplayChange() {
     guard observers[.displayChange] == nil else { return }
@@ -120,20 +140,20 @@ final class SystemEvents {
     easybarLog.debug("subscribed display_change")
   }
 
+  /// Stops observation for display configuration changes.
+  func unsubscribeDisplayChange() {
+    removeObserver(.displayChange)
+  }
+
   /// Removes every registered system observer.
   func stopAll() {
     pendingWakeWorkItem?.cancel()
     pendingWakeWorkItem = nil
-
-    let workspaceCenter = NSWorkspace.shared.notificationCenter
-    let defaultCenter = NotificationCenter.default
-
-    for observer in observers.values {
-      workspaceCenter.removeObserver(observer)
-      defaultCenter.removeObserver(observer)
-    }
-
-    observers.removeAll()
+    unsubscribeSystemWake()
+    unsubscribeSleep()
+    unsubscribeSpaceChange()
+    unsubscribeAppSwitch()
+    unsubscribeDisplayChange()
     easybarLog.debug("stopped all system event observers")
   }
 
@@ -154,5 +174,13 @@ final class SystemEvents {
 
     pendingWakeWorkItem = workItem
     wakeQueue.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+  }
+
+  /// Removes one registered observer when present.
+  private func removeObserver(_ kind: ObserverKind) {
+    guard let observer = observers.removeValue(forKey: kind) else { return }
+
+    NSWorkspace.shared.notificationCenter.removeObserver(observer)
+    NotificationCenter.default.removeObserver(observer)
   }
 }

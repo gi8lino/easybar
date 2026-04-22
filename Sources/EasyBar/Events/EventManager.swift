@@ -7,9 +7,23 @@ final class EventManager {
 
   private static let intervalTickPrefix = "interval_tick:"
 
+  private enum ManagedSource: Hashable {
+    case systemWake
+    case sleep
+    case spaceChange
+    case appSwitch
+    case displayChange
+    case powerSource
+    case volume
+    case minuteTick
+    case secondTick
+  }
+
   private var luaSubscriptions = Set<String>()
   private var nativeSubscriptions = Set<String>()
   private var activeSubscriptions = Set<String>()
+  private var activeSources = Set<ManagedSource>()
+  private var activeInterval: TimeInterval?
 
   /// Replaces the current Lua runtime event subscriptions.
   func setLuaSubscriptions(_ subscriptions: Set<String>) {
@@ -43,6 +57,8 @@ final class EventManager {
     nativeSubscriptions.removeAll()
     stopActiveSources()
     activeSubscriptions.removeAll()
+    activeSources.removeAll()
+    activeInterval = nil
 
     easybarLog.debug("event manager stopAll end")
   }
@@ -58,6 +74,11 @@ final class EventManager {
 
     let added = mergedSubscriptions.subtracting(activeSubscriptions)
     let removed = activeSubscriptions.subtracting(mergedSubscriptions)
+    let desiredSources = Self.requiredSources(for: mergedSubscriptions)
+    let sourcesToAdd = desiredSources.subtracting(activeSources)
+    let sourcesToRemove = activeSources.subtracting(desiredSources)
+    let desiredInterval = Self.intervalTickInterval(in: mergedSubscriptions)
+    let intervalChanged = desiredInterval != activeInterval
 
     easybarLog.debug(
       """
@@ -66,64 +87,83 @@ final class EventManager {
       active=\(activeSubscriptions) \
       added=\(added) \
       removed=\(removed) \
+      source_add=\(sourcesToAdd) \
+      source_remove=\(sourcesToRemove) \
+      interval=\(String(describing: desiredInterval)) \
+      previous_interval=\(String(describing: activeInterval)) \
       lua=\(luaSubscriptions) \
       native=\(nativeSubscriptions)
       """
     )
 
-    stopActiveSources()
+    unsubscribeSources(sourcesToRemove)
+
+    if intervalChanged, activeInterval != nil {
+      TimerEvents.shared.stopIntervalTimer()
+    }
+
     activeSubscriptions = mergedSubscriptions
-    subscribeActiveSources(mergedSubscriptions)
+    subscribeSources(sourcesToAdd)
+
+    if intervalChanged, let desiredInterval {
+      TimerEvents.shared.startIntervalTimer(interval: desiredInterval)
+    }
+
+    activeSources = desiredSources
+    activeInterval = desiredInterval
 
     easybarLog.debug("event manager refresh end active=\(activeSubscriptions)")
   }
 
-  /// Starts every event source required by the merged subscription set.
-  private func subscribeActiveSources(_ mergedSubscriptions: Set<String>) {
-    let interval = Self.intervalTickInterval(in: mergedSubscriptions)
-
-    if mergedSubscriptions.contains(AppEvent.systemWoke.rawValue) {
-      SystemEvents.shared.subscribeSystemWake()
+  /// Starts the newly required event sources.
+  private func subscribeSources(_ sources: Set<ManagedSource>) {
+    for source in sources {
+      switch source {
+      case .systemWake:
+        SystemEvents.shared.subscribeSystemWake()
+      case .sleep:
+        SystemEvents.shared.subscribeSleep()
+      case .spaceChange:
+        SystemEvents.shared.subscribeSpaceChange()
+      case .appSwitch:
+        SystemEvents.shared.subscribeAppSwitch()
+      case .displayChange:
+        SystemEvents.shared.subscribeDisplayChange()
+      case .powerSource:
+        PowerEvents.shared.subscribePowerSource()
+      case .volume:
+        VolumeEvents.shared.subscribeVolume()
+      case .minuteTick:
+        TimerEvents.shared.startMinuteTimer()
+      case .secondTick:
+        TimerEvents.shared.startSecondTimer()
+      }
     }
+  }
 
-    if mergedSubscriptions.contains(AppEvent.sleep.rawValue) {
-      SystemEvents.shared.subscribeSleep()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.spaceChange.rawValue) {
-      SystemEvents.shared.subscribeSpaceChange()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.appSwitch.rawValue) {
-      SystemEvents.shared.subscribeAppSwitch()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.displayChange.rawValue) {
-      SystemEvents.shared.subscribeDisplayChange()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.powerSourceChange.rawValue)
-      || mergedSubscriptions.contains(AppEvent.chargingStateChange.rawValue)
-    {
-      PowerEvents.shared.subscribePowerSource()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.volumeChange.rawValue)
-      || mergedSubscriptions.contains(AppEvent.muteChange.rawValue)
-    {
-      VolumeEvents.shared.subscribeVolume()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.minuteTick.rawValue) {
-      TimerEvents.shared.startMinuteTimer()
-    }
-
-    if mergedSubscriptions.contains(AppEvent.secondTick.rawValue) {
-      TimerEvents.shared.startSecondTimer()
-    }
-
-    if let interval {
-      TimerEvents.shared.startIntervalTimer(interval: interval)
+  /// Stops the event sources that are no longer required.
+  private func unsubscribeSources(_ sources: Set<ManagedSource>) {
+    for source in sources {
+      switch source {
+      case .systemWake:
+        SystemEvents.shared.unsubscribeSystemWake()
+      case .sleep:
+        SystemEvents.shared.unsubscribeSleep()
+      case .spaceChange:
+        SystemEvents.shared.unsubscribeSpaceChange()
+      case .appSwitch:
+        SystemEvents.shared.unsubscribeAppSwitch()
+      case .displayChange:
+        SystemEvents.shared.unsubscribeDisplayChange()
+      case .powerSource:
+        PowerEvents.shared.unsubscribePowerSource()
+      case .volume:
+        VolumeEvents.shared.unsubscribeVolume()
+      case .minuteTick:
+        TimerEvents.shared.stopMinuteTimer()
+      case .secondTick:
+        TimerEvents.shared.stopSecondTimer()
+      }
     }
   }
 
@@ -133,6 +173,53 @@ final class EventManager {
     SystemEvents.shared.stopAll()
     PowerEvents.shared.stopAll()
     VolumeEvents.shared.stopAll()
+  }
+
+  /// Returns the concrete native sources required by the merged subscription set.
+  private static func requiredSources(for subscriptions: Set<String>) -> Set<ManagedSource> {
+    var sources = Set<ManagedSource>()
+
+    if subscriptions.contains(AppEvent.systemWoke.rawValue) {
+      sources.insert(.systemWake)
+    }
+
+    if subscriptions.contains(AppEvent.sleep.rawValue) {
+      sources.insert(.sleep)
+    }
+
+    if subscriptions.contains(AppEvent.spaceChange.rawValue) {
+      sources.insert(.spaceChange)
+    }
+
+    if subscriptions.contains(AppEvent.appSwitch.rawValue) {
+      sources.insert(.appSwitch)
+    }
+
+    if subscriptions.contains(AppEvent.displayChange.rawValue) {
+      sources.insert(.displayChange)
+    }
+
+    if subscriptions.contains(AppEvent.powerSourceChange.rawValue)
+      || subscriptions.contains(AppEvent.chargingStateChange.rawValue)
+    {
+      sources.insert(.powerSource)
+    }
+
+    if subscriptions.contains(AppEvent.volumeChange.rawValue)
+      || subscriptions.contains(AppEvent.muteChange.rawValue)
+    {
+      sources.insert(.volume)
+    }
+
+    if subscriptions.contains(AppEvent.minuteTick.rawValue) {
+      sources.insert(.minuteTick)
+    }
+
+    if subscriptions.contains(AppEvent.secondTick.rawValue) {
+      sources.insert(.secondTick)
+    }
+
+    return sources
   }
 
   /// Returns the shared Lua interval cadence requested by the runtime.

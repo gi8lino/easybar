@@ -27,6 +27,11 @@ final class VolumeEvents {
     easybarLog.debug("subscribed mute_change")
   }
 
+  /// Stops observation for output-device, volume, and mute changes.
+  func unsubscribeVolume() {
+    stopAll()
+  }
+
   /// Stops all active audio listeners and clears cached device state.
   func stopAll() {
     uninstallDeviceListeners()

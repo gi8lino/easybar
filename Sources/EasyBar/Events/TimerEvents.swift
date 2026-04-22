@@ -21,6 +21,12 @@ final class TimerEvents {
     easybarLog.debug("minute timer started")
   }
 
+  /// Stops the minute timer.
+  func stopMinuteTimer() {
+    minuteTimer?.invalidate()
+    minuteTimer = nil
+  }
+
   /// Starts the second timer used by explicit `second_tick` subscriptions.
   func startSecondTimer() {
     secondTimer?.invalidate()
@@ -31,6 +37,12 @@ final class TimerEvents {
     )
 
     easybarLog.debug("second timer started")
+  }
+
+  /// Stops the second timer.
+  func stopSecondTimer() {
+    secondTimer?.invalidate()
+    secondTimer = nil
   }
 
   /// Starts the interval timer used by Lua `interval` callbacks.
@@ -45,14 +57,17 @@ final class TimerEvents {
     easybarLog.debug("interval timer started interval=\(interval)")
   }
 
+  /// Stops the interval timer.
+  func stopIntervalTimer() {
+    intervalTimer?.invalidate()
+    intervalTimer = nil
+  }
+
   /// Stops and clears all active timers.
   func stopAll() {
-    minuteTimer?.invalidate()
-    secondTimer?.invalidate()
-    intervalTimer?.invalidate()
-    minuteTimer = nil
-    secondTimer = nil
-    intervalTimer = nil
+    stopMinuteTimer()
+    stopSecondTimer()
+    stopIntervalTimer()
   }
 
   /// Starts one repeating timer aligned to the next real wall-clock boundary.

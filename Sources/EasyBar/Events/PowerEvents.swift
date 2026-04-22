@@ -39,6 +39,11 @@ final class PowerEvents {
     easybarLog.debug("subscribed charging_state_change")
   }
 
+  /// Stops observation for power and charging events.
+  func unsubscribePowerSource() {
+    stopAll()
+  }
+
   /// Stops all power-source observation.
   func stopAll() {
     guard let runLoopSource else { return }
