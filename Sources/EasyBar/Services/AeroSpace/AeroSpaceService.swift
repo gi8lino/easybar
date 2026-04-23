@@ -25,6 +25,7 @@ final class AeroSpaceService: ObservableObject {
   }
 
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
+  private let commandRunner = AeroSpaceCommandRunner()
   private let stateLock = NSLock()
   private var coordination = CoordinationState()
 
@@ -249,47 +250,33 @@ extension AeroSpaceService {
     guard shouldExecute(generation: currentGeneration()) else { return }
     easybarLog.debug("aerospace reloadState begin")
 
-    let workspaces = loadWorkspaces()
-    let windows = loadWindows()
-    let groupedApps = Dictionary(grouping: windows, by: \.workspace)
-    let focused = loadFocusedApp()
-    let layoutMode = loadFocusedLayoutMode()
-
-    let spaces =
-      workspaces
-      .map { workspace in
-        SpaceItem(
-          id: workspace.name,
-          name: workspace.name,
-          isFocused: workspace.isFocused,
-          isVisible: workspace.isVisible,
-          apps: deduplicateApps(groupedApps[workspace.name] ?? [])
-        )
-      }
-      .filter { !$0.apps.isEmpty }
+    let snapshot = AeroSpaceSnapshotLoader.load(
+      run: runAeroSpace(arguments:),
+      resolveAppID: resolvedAppID(name:bundlePath:)
+    )
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
-      let spacesChanged = self.spaces != spaces
-      let focusedAppChanged = self.focusedApp != focused
-      let focusedAppIDChanged = self.focusedAppID != focused?.id
-      let layoutChanged = self.focusedLayoutMode != layoutMode
+      let spacesChanged = self.spaces != snapshot.spaces
+      let focusedAppChanged = self.focusedApp != snapshot.focusedApp
+      let focusedAppIDChanged = self.focusedAppID != snapshot.focusedApp?.id
+      let layoutChanged = self.focusedLayoutMode != snapshot.focusedLayoutMode
 
       guard spacesChanged || focusedAppChanged || focusedAppIDChanged || layoutChanged else {
         easybarLog.debug("aerospace reloadState end without changes")
         return
       }
 
-      self.spaces = spaces
-      self.focusedApp = focused
-      self.focusedAppID = focused?.id
-      self.focusedLayoutMode = layoutMode
+      self.spaces = snapshot.spaces
+      self.focusedApp = snapshot.focusedApp
+      self.focusedAppID = snapshot.focusedApp?.id
+      self.focusedLayoutMode = snapshot.focusedLayoutMode
 
       self.publishUpdate(
         logMessage:
-          "aerospace state updated spaces=\(spaces.count) focused=\(focused?.name ?? "none") layout=\(layoutMode.rawValue)"
+          "aerospace state updated spaces=\(snapshot.spaces.count) focused=\(snapshot.focusedApp?.name ?? "none") layout=\(snapshot.focusedLayoutMode.rawValue)"
       )
 
       easybarLog.debug("aerospace reloadState end with changes")
@@ -297,193 +284,19 @@ extension AeroSpaceService {
   }
 }
 
-// MARK: - AeroSpace Loading
+// MARK: - AeroSpace Command Execution
 
 extension AeroSpaceService {
-  /// Reads all known workspaces from AeroSpace.
-  fileprivate func loadWorkspaces() -> [WorkspaceDTO] {
-    guard
-      let namesOutput = runAeroSpace(arguments: [
-        "list-workspaces", "--all", "--format", "%{workspace}",
-      ]),
-      let stateOutput = runAeroSpace(arguments: [
-        "list-workspaces",
-        "--all",
-        "--format",
-        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
-      ])
-    else {
-      return []
-    }
-
-    let names =
-      namesOutput
-      .split(whereSeparator: \.isNewline)
-      .map { String($0) }
-
-    let stateByWorkspace = Dictionary(
-      uniqueKeysWithValues:
-        stateOutput
-        .split(whereSeparator: \.isNewline)
-        .compactMap(parseWorkspaceStateLine)
-    )
-
-    return names.map { name in
-      let state = stateByWorkspace[name] ?? .default
-
-      return WorkspaceDTO(
-        name: name,
-        isFocused: state.isFocused,
-        isVisible: state.isVisible
-      )
-    }
-  }
-
-  /// Reads all windows from AeroSpace.
-  fileprivate func loadWindows() -> [WindowDTO] {
-    guard
-      let output = runAeroSpace(arguments: [
-        "list-windows",
-        "--all",
-        "--format",
-        "%{workspace} | %{app-name} | %{app-bundle-path}",
-      ])
-    else {
-      return []
-    }
-
-    return
-      output
-      .split(whereSeparator: \.isNewline)
-      .compactMap(parseWindowLine)
-  }
-
-  /// Reads the currently focused app from AeroSpace.
-  fileprivate func loadFocusedApp() -> SpaceApp? {
-    guard
-      let output = runAeroSpace(arguments: [
-        "list-windows",
-        "--focused",
-        "--format",
-        "%{app-bundle-path} | %{app-name}",
-      ])
-    else {
-      return nil
-    }
-
-    let parts = splitPipedLine(output)
-
-    let bundlePath = parts.first.flatMap { $0.isEmpty ? nil : $0 }
-    let name = parts.count > 1 ? parts[1] : ""
-    let id = resolvedAppID(name: name, bundlePath: bundlePath)
-
-    if id.isEmpty {
-      return nil
-    }
-
-    return SpaceApp(
-      id: id,
-      bundleID: "",
-      name: name,
-      bundlePath: bundlePath
-    )
-  }
-
-  /// Reads the currently focused AeroSpace layout mode.
-  fileprivate func loadFocusedLayoutMode() -> AeroSpaceLayoutMode {
-    guard
-      let output = runAeroSpace(arguments: [
-        "list-windows",
-        "--focused",
-        "--format",
-        "%{window-layout}",
-      ])
-    else {
-      return .unknown
-    }
-
-    return parseLayoutMode(output)
-  }
-
-  /// Deduplicates apps per workspace.
-  fileprivate func deduplicateApps(_ windows: [WindowDTO]) -> [SpaceApp] {
-    var seen = Set<String>()
-    var result: [SpaceApp] = []
-
-    for window in windows {
-      let key = resolvedAppID(
-        name: window.name,
-        bundlePath: window.bundlePath.isEmpty ? nil : window.bundlePath
-      )
-      guard !seen.contains(key) else { continue }
-
-      seen.insert(key)
-      result.append(makeSpaceApp(name: window.name, bundlePath: window.bundlePath))
-    }
-
-    return result
-  }
-
   /// Runs the AeroSpace CLI.
   fileprivate func runAeroSpace(arguments: [String]) -> String? {
     guard isRunning else { return nil }
 
-    guard let executable = resolveAeroSpacePath() else {
-      easybarLog.debug("aerospace executable not found")
-      return nil
-    }
-
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: executable)
-    process.arguments = arguments
-
-    let pipe = Pipe()
-    process.standardOutput = pipe
-    let outputHandle = pipe.fileHandleForReading
-
-    do {
-      try process.run()
-    } catch {
-      easybarLog.debug("failed to run aerospace \(arguments.joined(separator: " ")): \(error)")
-      return nil
-    }
-
-    process.waitUntilExit()
+    let output = commandRunner.run(arguments: arguments)
     guard isRunning else {
-      try? outputHandle.close()
       return nil
     }
 
-    let data: Data
-    do {
-      data = try outputHandle.readToEnd() ?? Data()
-    } catch {
-      easybarLog.debug(
-        "failed to read aerospace output args=\(arguments.joined(separator: " ")): \(error)"
-      )
-      return nil
-    }
-
-    if process.terminationStatus != 0 {
-      easybarLog.debug(
-        "aerospace command exited with status=\(process.terminationStatus) args=\(arguments.joined(separator: " "))"
-      )
-    }
-
-    return String(data: data, encoding: .utf8)?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  /// Resolves the AeroSpace binary.
-  fileprivate func resolveAeroSpacePath() -> String? {
-    let candidates = [
-      "/opt/homebrew/bin/aerospace",
-      "/usr/local/bin/aerospace",
-      "/Applications/AeroSpace.app/Contents/MacOS/aerospace",
-    ]
-
-    let fm = FileManager.default
-    return candidates.first(where: { fm.isExecutableFile(atPath: $0) })
+    return output
   }
 
   /// Resolves a stable app identity from bundle path or name.
@@ -526,97 +339,6 @@ extension AeroSpaceService {
   }
 }
 
-// MARK: - Parsing
-
-extension AeroSpaceService {
-  /// Parses one workspace state line from AeroSpace output.
-  fileprivate func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
-    let parts = line.split(separator: " ").map(String.init)
-    guard parts.count >= 3 else { return nil }
-
-    return (
-      parts[0],
-      WorkspaceState(
-        isFocused: parts[1] == "true",
-        isVisible: parts[2] == "true"
-      )
-    )
-  }
-
-  /// Parses one window line from AeroSpace output.
-  fileprivate func parseWindowLine(_ line: Substring) -> WindowDTO? {
-    let parts = splitPipedLine(String(line))
-    guard parts.count >= 3 else { return nil }
-
-    return WindowDTO(
-      workspace: parts[0],
-      name: parts[1],
-      bundlePath: parts[2]
-    )
-  }
-
-  /// Parses one focused layout mode from AeroSpace output.
-  fileprivate func parseLayoutMode(_ output: String) -> AeroSpaceLayoutMode {
-    let normalized = output.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    switch normalized {
-    case AeroSpaceLayoutMode.hTiles.rawValue:
-      return .hTiles
-    case AeroSpaceLayoutMode.vTiles.rawValue:
-      return .vTiles
-    case AeroSpaceLayoutMode.hAccordion.rawValue:
-      return .hAccordion
-    case AeroSpaceLayoutMode.vAccordion.rawValue:
-      return .vAccordion
-    case AeroSpaceLayoutMode.floating.rawValue:
-      return .floating
-    default:
-      return .unknown
-    }
-  }
-
-  /// Splits one `a | b | c` line and trims each part.
-  fileprivate func splitPipedLine(_ line: String) -> [String] {
-    line
-      .components(separatedBy: " | ")
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-  }
-
-  /// Builds one `SpaceApp` from parsed AeroSpace window data.
-  fileprivate func makeSpaceApp(name: String, bundlePath: String) -> SpaceApp {
-    let normalizedBundlePath = bundlePath.isEmpty ? nil : bundlePath
-
-    return SpaceApp(
-      id: resolvedAppID(name: name, bundlePath: normalizedBundlePath),
-      bundleID: "",
-      name: name,
-      bundlePath: normalizedBundlePath
-    )
-  }
-}
-
 extension Notification.Name {
   static let easyBarAeroSpaceDidUpdate = Notification.Name("easybar.aerospace.did-update")
-}
-
-private struct WorkspaceDTO {
-  let name: String
-  let isFocused: Bool
-  let isVisible: Bool
-}
-
-private struct WorkspaceState {
-  let isFocused: Bool
-  let isVisible: Bool
-
-  static let `default` = WorkspaceState(
-    isFocused: false,
-    isVisible: false
-  )
-}
-
-private struct WindowDTO {
-  let workspace: String
-  let name: String
-  let bundlePath: String
 }
