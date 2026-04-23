@@ -17,12 +17,16 @@ final class AeroSpaceService: ObservableObject {
   /// Resolved layout mode used by `AeroSpaceModeNativeWidget`.
   @Published private(set) var focusedLayoutMode: AeroSpaceLayoutMode = .unknown
 
+  private struct CoordinationState {
+    var consumers = Set<String>()
+    var appSwitchObserver: NSObjectProtocol?
+    var running = false
+    var generation: UInt64 = 0
+  }
+
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
   private let stateLock = NSLock()
-  private var consumers = Set<String>()
-  private var appSwitchObserver: NSObjectProtocol?
-  private var running = false
-  private var generation: UInt64 = 0
+  private var coordination = CoordinationState()
 
   private init() {}
 }
@@ -32,15 +36,20 @@ final class AeroSpaceService: ObservableObject {
 extension AeroSpaceService {
   /// Returns whether any native widget currently needs AeroSpace state.
   private var hasConsumers: Bool {
-    !consumers.isEmpty
+    withLock { !coordination.consumers.isEmpty }
+  }
+
+  /// Returns the current registered consumer count.
+  private var consumerCount: Int {
+    withLock { coordination.consumers.count }
   }
 
   /// Starts the service.
   func start() {
     let shouldStart = withLock { () -> Bool in
-      guard !running else { return false }
-      running = true
-      generation &+= 1
+      guard !coordination.running else { return false }
+      coordination.running = true
+      coordination.generation &+= 1
       return true
     }
 
@@ -55,17 +64,16 @@ extension AeroSpaceService {
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
     let observer = withLock { () -> NSObjectProtocol? in
-      guard running else { return nil }
-      running = false
-      generation &+= 1
-      return appSwitchObserver
+      guard coordination.running else { return nil }
+      coordination.running = false
+      coordination.generation &+= 1
+      let observer = coordination.appSwitchObserver
+      coordination.appSwitchObserver = nil
+      return observer
     }
 
     if let observer {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
-      withLock {
-        appSwitchObserver = nil
-      }
     }
 
     easybarLog.debug("aerospace service stop end")
@@ -73,15 +81,21 @@ extension AeroSpaceService {
 
   /// Registers one widget that depends on AeroSpace state.
   func registerConsumer(_ id: String) {
-    consumers.insert(id)
-    easybarLog.debug("aerospace consumer registered id=\(id) count=\(consumers.count)")
+    let count = withLock { () -> Int in
+      coordination.consumers.insert(id)
+      return coordination.consumers.count
+    }
+    easybarLog.debug("aerospace consumer registered id=\(id) count=\(count)")
     refresh()
   }
 
   /// Unregisters one widget that no longer depends on AeroSpace state.
   func unregisterConsumer(_ id: String) {
-    consumers.remove(id)
-    easybarLog.debug("aerospace consumer unregistered id=\(id) count=\(consumers.count)")
+    let count = withLock { () -> Int in
+      coordination.consumers.remove(id)
+      return coordination.consumers.count
+    }
+    easybarLog.debug("aerospace consumer unregistered id=\(id) count=\(count)")
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
@@ -92,7 +106,7 @@ extension AeroSpaceService {
     }
 
     let generation = currentGeneration()
-    easybarLog.debug("aerospace triggerRefresh queued consumers=\(consumers.count)")
+    easybarLog.debug("aerospace triggerRefresh queued consumers=\(consumerCount)")
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -160,7 +174,7 @@ extension AeroSpaceService {
     }
 
     let generation = currentGeneration()
-    easybarLog.debug("aerospace refresh queued consumers=\(consumers.count)")
+    easybarLog.debug("aerospace refresh queued consumers=\(consumerCount)")
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -174,9 +188,10 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Listens for app activation so focused-app UI can update immediately.
   fileprivate func subscribeAppSwitches() {
-    guard appSwitchObserver == nil else { return }
+    let shouldInstall = withLock { coordination.appSwitchObserver == nil }
+    guard shouldInstall else { return }
 
-    appSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification,
       object: nil,
       queue: .main
@@ -190,6 +205,12 @@ extension AeroSpaceService {
       }
 
       self.applyOptimisticFocusedApp(from: app)
+    }
+
+    withLock {
+      if coordination.appSwitchObserver == nil {
+        coordination.appSwitchObserver = observer
+      }
     }
 
     easybarLog.debug("aerospace app switch observer installed")
@@ -483,18 +504,18 @@ extension AeroSpaceService {
   /// Returns whether the service is still allowed to execute the queued refresh work.
   fileprivate func shouldExecute(generation: UInt64) -> Bool {
     withLock {
-      running && self.generation == generation
+      coordination.running && coordination.generation == generation
     }
   }
 
   /// Returns the current refresh generation.
   fileprivate func currentGeneration() -> UInt64 {
-    withLock { generation }
+    withLock { coordination.generation }
   }
 
   /// Returns whether the service is currently running.
   fileprivate var isRunning: Bool {
-    withLock { running }
+    withLock { coordination.running }
   }
 
   /// Runs one closure while holding the service state lock.
