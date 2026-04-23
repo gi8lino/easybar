@@ -55,7 +55,7 @@ final class SocketServer {
 
   /// Broadcasts one metrics payload to all active stream subscribers.
   func broadcastMetrics(_ snapshot: IPC.MetricsSnapshot) {
-    let message = IPC.Message(kind: .metrics, metrics: snapshot)
+    let message = IPC.Message.metrics(snapshot)
 
     for subscriber in transport.subscribersSnapshot() {
       if !transport.send(message, to: subscriber.fd) {
@@ -76,7 +76,7 @@ final class SocketServer {
     if request.command == .metrics {
       let snapshot = MetricsCoordinator.shared.snapshot()
       let sent = self.transport.send(
-        IPC.Message(kind: .metrics, metrics: snapshot),
+        .metrics(snapshot),
         to: clientFD
       )
 
@@ -94,7 +94,7 @@ final class SocketServer {
       return .keepOpen
     }
 
-    _ = self.transport.send(IPC.Message(kind: .accepted), to: clientFD)
+    _ = self.transport.send(.accepted, to: clientFD)
 
     handler(request.command)
 

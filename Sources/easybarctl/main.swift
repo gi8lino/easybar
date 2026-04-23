@@ -379,14 +379,19 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
   let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
-  let response = try transport.send(request: IPC.Request(command: command))
+  let response = try transport.send(request: .makeCommand(command))
 
-  context.debug(
-    "decoded response kind='\(response.kind.rawValue)' message='\(response.message ?? "<nil>")'"
-  )
+  switch response {
+  case .accepted:
+    context.debug("decoded response kind='accepted' message='<nil>'")
 
-  guard response.kind == .accepted else {
-    throw AppError.message(response.message ?? "command rejected")
+  case .rejected(let message):
+    context.debug("decoded response kind='rejected' message='\(message ?? "<nil>")'")
+    throw AppError.message(message ?? "command rejected")
+
+  case .metrics:
+    context.debug("decoded response kind='metrics' message='<nil>'")
+    throw AppError.message("unexpected metrics response")
   }
 
   context.debug("command sent")
@@ -399,13 +404,18 @@ private func fetchMetricsSnapshot(from socketPath: String, context: AppContext) 
   context.debug("requesting metrics snapshot from \(socketPath)")
 
   let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
-  let response = try transport.send(request: IPC.Request(command: .metrics))
+  let response = try transport.send(request: .makeMetrics())
 
-  guard response.kind == .metrics, let metrics = response.metrics else {
-    throw AppError.message(response.message ?? "metrics unavailable")
+  switch response {
+  case .metrics(let metrics):
+    return metrics
+
+  case .rejected(let message):
+    throw AppError.message(message ?? "metrics unavailable")
+
+  case .accepted:
+    throw AppError.message("metrics unavailable")
   }
-
-  return metrics
 }
 
 /// Streams live metrics and renders them as a rolling terminal dashboard.
@@ -416,16 +426,21 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
   terminal.activate()
   defer { terminal.restore() }
 
-  try client.stream(request: IPC.Request(command: .metrics, watch: true)) { message in
-    guard message.kind == .metrics, let snapshot = message.metrics else {
-      if message.kind == .rejected {
-        throw AppError.message(message.message ?? "metrics rejected")
-      }
+  try client.stream(request: .makeMetrics(watch: true)) { message in
+    switch message {
+    case .metrics(let snapshot):
+      history.append(snapshot)
+      CLIOutput.renderWatch(
+        MetricsRenderer.watchText(snapshot, history: history),
+        terminal: terminal
+      )
+
+    case .rejected(let message):
+      throw AppError.message(message ?? "metrics rejected")
+
+    case .accepted:
       return
     }
-
-    history.append(snapshot)
-    CLIOutput.renderWatch(MetricsRenderer.watchText(snapshot, history: history), terminal: terminal)
   }
 
   context.debug("metrics stream ended")
