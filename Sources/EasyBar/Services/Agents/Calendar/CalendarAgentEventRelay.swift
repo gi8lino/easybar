@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
@@ -7,7 +8,12 @@ final class CalendarAgentEventRelay {
   private let queue = DispatchQueue(label: "easybar.calendar-agent.event-relay")
   private var running = false
   private var generation: UInt64 = 0
-  private var pendingWorkItem: DispatchWorkItem?
+  private lazy var scheduler = DebouncedActionScheduler(
+    label: "calendar agent event relay",
+    delay: 0.05,
+    queue: queue,
+    debugLog: easybarLog.debug
+  )
 
   private init() {}
 
@@ -24,8 +30,7 @@ final class CalendarAgentEventRelay {
     queue.async {
       self.running = false
       self.generation &+= 1
-      self.pendingWorkItem?.cancel()
-      self.pendingWorkItem = nil
+      self.scheduler.cancel()
     }
   }
 
@@ -41,9 +46,7 @@ final class CalendarAgentEventRelay {
 
       let generation = self.generation
 
-      self.pendingWorkItem?.cancel()
-
-      let workItem = DispatchWorkItem { [weak self] in
+      self.scheduler.schedule { [weak self] in
         guard let self else { return }
         guard self.running, self.generation == generation else { return }
 
@@ -53,9 +56,6 @@ final class CalendarAgentEventRelay {
           }
         }
       }
-
-      self.pendingWorkItem = workItem
-      self.queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
     }
   }
 }
