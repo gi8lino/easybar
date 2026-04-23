@@ -22,9 +22,11 @@ actor EventHub {
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy? = nil
   ) -> AsyncStream<EasyBarEventPayload> {
     let id = UUID()
-    let resolvedBufferingPolicy = bufferingPolicy ?? EventDeliveryPolicy.defaultBufferingPolicy(
-      for: eventNames
-    )
+    let resolvedBufferingPolicy =
+      bufferingPolicy
+      ?? EventDeliveryPolicy.defaultBufferingPolicy(
+        for: eventNames
+      )
 
     return AsyncStream(bufferingPolicy: resolvedBufferingPolicy) { continuation in
       let normalizedEventNames = eventNames?.isEmpty == true ? nil : eventNames

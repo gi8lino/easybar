@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import EasyBar
 
 final class EventCatalogTests: XCTestCase {

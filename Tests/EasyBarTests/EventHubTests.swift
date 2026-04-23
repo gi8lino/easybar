@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import EasyBar
 
 final class EventHubTests: XCTestCase {
@@ -41,7 +42,9 @@ final class EventHubTests: XCTestCase {
     )
 
     let matchingTask = Task { await Self.next(from: matchingStream) }
-    let nonMatchingTask = Task { await Self.next(from: nonMatchingStream, timeoutNanoseconds: 100_000_000) }
+    let nonMatchingTask = Task {
+      await Self.next(from: nonMatchingStream, timeoutNanoseconds: 100_000_000)
+    }
 
     await hub.emitWidgetEvent(
       .sliderPreview,

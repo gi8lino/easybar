@@ -159,7 +159,8 @@ enum AeroSpaceSnapshotLoader {
       guard !seen.contains(key) else { continue }
 
       seen.insert(key)
-      result.append(makeSpaceApp(name: window.name, bundlePath: window.bundlePath, resolveAppID: resolveAppID))
+      result.append(
+        makeSpaceApp(name: window.name, bundlePath: window.bundlePath, resolveAppID: resolveAppID))
     }
 
     return result
