@@ -11,11 +11,9 @@ final class CalendarAgentStreamController {
   private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
   private let clearState: () -> Void
   private let metricsAgent: MetricsCoordinator.AgentKey
+  private let wakeRefreshController: AgentWakeRefreshController
 
   private var started = false
-  private let eventObserver = EasyBarEventObserver()
-  private let refreshQueue = DispatchQueue(label: "easybar.calendar-agent.refresh")
-  private var pendingWakeRefreshWorkItem: DispatchWorkItem?
 
   private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
     label: label,
@@ -66,6 +64,7 @@ final class CalendarAgentStreamController {
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
     self.clearState = clearState
+    wakeRefreshController = AgentWakeRefreshController(label: label)
   }
 
   /// Returns whether the stream currently has an active connection.
@@ -83,7 +82,10 @@ final class CalendarAgentStreamController {
     }
 
     started = true
-    startEventObserver()
+    wakeRefreshController.start { [weak self] in
+      guard let self, self.started else { return }
+      self.refresh()
+    }
     easybarLog.info("starting \(label) socket=\(socketPath())")
     client.start()
   }
@@ -94,9 +96,7 @@ final class CalendarAgentStreamController {
 
     easybarLog.info("stopping \(label)")
     started = false
-    pendingWakeRefreshWorkItem?.cancel()
-    pendingWakeRefreshWorkItem = nil
-    eventObserver.stop()
+    wakeRefreshController.stop()
     client.stop()
     clearState()
   }
@@ -106,32 +106,6 @@ final class CalendarAgentStreamController {
     guard started else { return }
     MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
     client.refresh()
-  }
-
-  /// Starts shared app-event observation needed by the calendar agent streams.
-  private func startEventObserver() {
-    eventObserver.start(eventNames: [AppEvent.systemWoke.rawValue]) { [weak self] payload in
-      guard let self else { return }
-      guard let event = payload.appEvent else { return }
-      guard event == .systemWoke else { return }
-
-      self.scheduleWakeRefresh()
-    }
-  }
-
-  /// Coalesces wake-triggered refresh work into one refresh request.
-  private func scheduleWakeRefresh() {
-    guard started else { return }
-    pendingWakeRefreshWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      easybarLog.debug("\(self.label) refreshing after system_woke")
-      self.refresh()
-    }
-
-    pendingWakeRefreshWorkItem = workItem
-    refreshQueue.asyncAfter(deadline: .now() + 0.20, execute: workItem)
   }
 
   /// Handles one decoded calendar-agent response.

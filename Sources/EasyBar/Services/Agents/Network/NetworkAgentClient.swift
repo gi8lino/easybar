@@ -4,9 +4,7 @@ import Foundation
 final class NetworkAgentClient {
   static let shared = NetworkAgentClient()
 
-  private let eventObserver = EasyBarEventObserver()
-  private let refreshQueue = DispatchQueue(label: "easybar.network-agent.refresh")
-  private var pendingWakeRefreshWorkItem: DispatchWorkItem?
+  private let wakeRefreshController = AgentWakeRefreshController(label: "network agent client")
   private var started = false
 
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
@@ -50,7 +48,10 @@ final class NetworkAgentClient {
   func start() {
     guard !started else { return }
     started = true
-    startEventObserver()
+    wakeRefreshController.start { [weak self] in
+      guard let self, self.started else { return }
+      self.refresh()
+    }
     client.start()
   }
 
@@ -58,9 +59,7 @@ final class NetworkAgentClient {
   func stop() {
     guard started else { return }
     started = false
-    pendingWakeRefreshWorkItem?.cancel()
-    pendingWakeRefreshWorkItem = nil
-    eventObserver.stop()
+    wakeRefreshController.stop()
     client.stop()
     clearPublishedState(notify: false)
   }
@@ -70,32 +69,6 @@ final class NetworkAgentClient {
     easybarLog.debug("network agent client manual refresh")
     MetricsCoordinator.shared.recordAgentRefresh(.network)
     client.refresh()
-  }
-
-  /// Starts shared app-event observation needed by the network agent client.
-  private func startEventObserver() {
-    eventObserver.start(eventNames: [AppEvent.systemWoke.rawValue]) { [weak self] payload in
-      guard let self else { return }
-      guard let event = payload.appEvent else { return }
-      guard event == .systemWoke else { return }
-
-      self.scheduleWakeRefresh()
-    }
-  }
-
-  /// Coalesces wake-triggered refresh work into one refresh request.
-  private func scheduleWakeRefresh() {
-    guard started else { return }
-    pendingWakeRefreshWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      easybarLog.debug("network agent client refreshing after system_woke")
-      self.refresh()
-    }
-
-    pendingWakeRefreshWorkItem = workItem
-    refreshQueue.asyncAfter(deadline: .now() + 0.20, execute: workItem)
   }
 
   /// Handles one decoded network agent message.
