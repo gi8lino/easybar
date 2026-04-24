@@ -41,9 +41,12 @@ let package = Package(
       ],
       path: "Sources/EasyBar",
       exclude: [
-        "Info.plist"
+        "Info.plist",
+        "Lua/easybar_api.base.lua",
+        "Lua/easybar_api.events.lua",
       ],
       resources: [
+        .copy("Events/event_catalog.json"),
         .copy("Lua/runtime.lua"),
         .copy("Lua/easybar_api.lua"),
         .copy("Lua/easybar"),

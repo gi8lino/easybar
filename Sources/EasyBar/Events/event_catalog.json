@@ -1,0 +1,201 @@
+{
+  "forcedEvent": {
+    "luaField": "forced",
+    "runtimeName": "forced",
+    "doc": "Fired when EasyBar or `easybar` triggers a manual refresh."
+  },
+  "appEvents": [
+    {
+      "swiftCase": "systemWoke",
+      "luaField": "system_woke",
+      "runtimeName": "system_woke",
+      "driver": true,
+      "doc": "Fired after the system wakes from sleep."
+    },
+    {
+      "swiftCase": "sleep",
+      "luaField": "sleep",
+      "runtimeName": "sleep",
+      "driver": true,
+      "doc": "Fired before the system goes to sleep."
+    },
+    {
+      "swiftCase": "spaceChange",
+      "luaField": "space_change",
+      "runtimeName": "space_change",
+      "driver": true,
+      "doc": "Fired when the active macOS space changes."
+    },
+    {
+      "swiftCase": "appSwitch",
+      "luaField": "app_switch",
+      "runtimeName": "app_switch",
+      "driver": true,
+      "doc": "Fired when the frontmost app changes."
+    },
+    {
+      "swiftCase": "displayChange",
+      "luaField": "display_change",
+      "runtimeName": "display_change",
+      "driver": true,
+      "doc": "Fired when attached displays change."
+    },
+    {
+      "swiftCase": "powerSourceChange",
+      "luaField": "power_source_change",
+      "runtimeName": "power_source_change",
+      "driver": true,
+      "doc": "Fired when the power source changes."
+    },
+    {
+      "swiftCase": "chargingStateChange",
+      "luaField": "charging_state_change",
+      "runtimeName": "charging_state_change",
+      "driver": true,
+      "doc": "Fired when charging starts or stops."
+    },
+    {
+      "swiftCase": "wifiChange",
+      "luaField": "wifi_change",
+      "runtimeName": "wifi_change",
+      "driver": true,
+      "doc": "Fired when Wi-Fi state or SSID changes."
+    },
+    {
+      "swiftCase": "networkChange",
+      "luaField": "network_change",
+      "runtimeName": "network_change",
+      "driver": true,
+      "doc": "Fired when network routing or tunnel state changes."
+    },
+    {
+      "swiftCase": "volumeChange",
+      "luaField": "volume_change",
+      "runtimeName": "volume_change",
+      "driver": true,
+      "doc": "Fired when output volume changes."
+    },
+    {
+      "swiftCase": "muteChange",
+      "luaField": "mute_change",
+      "runtimeName": "mute_change",
+      "driver": true,
+      "doc": "Fired when mute state changes."
+    },
+    {
+      "swiftCase": "minuteTick",
+      "luaField": "minute_tick",
+      "runtimeName": "minute_tick",
+      "driver": true,
+      "doc": "Fired once per minute."
+    },
+    {
+      "swiftCase": "secondTick",
+      "luaField": "second_tick",
+      "runtimeName": "second_tick",
+      "driver": true,
+      "doc": "Fired once per second."
+    },
+    {
+      "swiftCase": "calendarChange",
+      "luaField": "calendar_change",
+      "runtimeName": "calendar_change",
+      "driver": true,
+      "doc": "Fired when the calendar snapshot updates."
+    },
+    {
+      "swiftCase": "focusChange",
+      "luaField": "focus_change",
+      "runtimeName": "focus_change",
+      "driver": true,
+      "doc": "Fired when workspace focus changes."
+    },
+    {
+      "swiftCase": "workspaceChange",
+      "luaField": "workspace_change",
+      "runtimeName": "workspace_change",
+      "driver": true,
+      "doc": "Fired when workspace layout or selection changes."
+    },
+    {
+      "swiftCase": "spaceModeChange",
+      "luaField": "space_mode_change",
+      "runtimeName": "space_mode_change",
+      "driver": true,
+      "doc": "Fired when the AeroSpace layout mode changes."
+    }
+  ],
+  "widgetGroups": [
+    {
+      "name": "mouse",
+      "doc": "Mouse interaction event tokens and constants.",
+      "events": [
+        {
+          "swiftCase": "mouseEntered",
+          "luaField": "entered",
+          "runtimeName": "mouse.entered",
+          "doc": "Fired when the pointer enters the subscribed node frame."
+        },
+        {
+          "swiftCase": "mouseExited",
+          "luaField": "exited",
+          "runtimeName": "mouse.exited",
+          "doc": "Fired when the pointer leaves the subscribed node frame."
+        },
+        {
+          "swiftCase": "mouseClicked",
+          "luaField": "clicked",
+          "runtimeName": "mouse.clicked",
+          "doc": "Fired when the subscribed node is clicked."
+        },
+        {
+          "swiftCase": "mouseDown",
+          "luaField": "down",
+          "runtimeName": "mouse.down",
+          "doc": "Fired on mouse button press over the subscribed node."
+        },
+        {
+          "swiftCase": "mouseUp",
+          "luaField": "up",
+          "runtimeName": "mouse.up",
+          "doc": "Fired on mouse button release over the subscribed node."
+        },
+        {
+          "swiftCase": "mouseScrolled",
+          "luaField": "scrolled",
+          "runtimeName": "mouse.scrolled",
+          "doc": "Fired when the pointer scrolls over the subscribed node."
+        }
+      ]
+    },
+    {
+      "name": "slider",
+      "doc": "Slider interaction event tokens.",
+      "events": [
+        {
+          "swiftCase": "sliderPreview",
+          "luaField": "preview",
+          "runtimeName": "slider.preview",
+          "doc": "Fired while a slider is being previewed or dragged."
+        },
+        {
+          "swiftCase": "sliderChanged",
+          "luaField": "changed",
+          "runtimeName": "slider.changed",
+          "doc": "Fired when a slider value is committed."
+        }
+      ]
+    }
+  ],
+  "mouseButtons": [
+    "left",
+    "right",
+    "middle"
+  ],
+  "scrollDirections": [
+    "up",
+    "down",
+    "left",
+    "right"
+  ]
+}

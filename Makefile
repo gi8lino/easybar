@@ -95,7 +95,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all prepare-version build bundle package release app cli fmt clean clean-dist run run-debug run-trace stop dev icons \
+.PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt clean clean-dist run run-debug run-trace stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -105,11 +105,15 @@ endif
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
+	@python3 scripts/generate_event_catalog.py
+
 ##@ Build
 
 all: build ## Build the default artifacts.
 
 prepare-version: ## Update Sources/EasyBarShared/Build/BuildInfo.swift with the selected VERSION.
+	@$(MAKE) --no-print-directory generate-event-catalog
 	@mkdir -p "$(dir $(BUILD_INFO))"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \

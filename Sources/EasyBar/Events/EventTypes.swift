@@ -28,46 +28,6 @@ enum AppEvent: String, CaseIterable, Sendable {
   case focusChange = "focus_change"
   case workspaceChange = "workspace_change"
   case spaceModeChange = "space_mode_change"
-
-  static let luaTokenEvents: [AppEvent] = [
-    .systemWoke,
-    .sleep,
-    .spaceChange,
-    .appSwitch,
-    .displayChange,
-    .powerSourceChange,
-    .chargingStateChange,
-    .networkChange,
-    .wifiChange,
-    .volumeChange,
-    .muteChange,
-    .calendarChange,
-    .minuteTick,
-    .secondTick,
-    .focusChange,
-    .workspaceChange,
-    .spaceModeChange,
-  ]
-
-  static let luaDriverEvents: [AppEvent] = [
-    .systemWoke,
-    .sleep,
-    .spaceChange,
-    .appSwitch,
-    .displayChange,
-    .powerSourceChange,
-    .chargingStateChange,
-    .networkChange,
-    .wifiChange,
-    .volumeChange,
-    .muteChange,
-    .calendarChange,
-    .minuteTick,
-    .secondTick,
-    .focusChange,
-    .workspaceChange,
-    .spaceModeChange,
-  ]
 }
 
 /// Widget-scoped interaction events emitted by EasyBar.
@@ -84,16 +44,18 @@ enum WidgetEvent: String, CaseIterable, Sendable {
 }
 
 /// Mouse button names used by widget interaction events.
-enum MouseButton: String, Sendable {
+enum MouseButton: String, CaseIterable, Sendable {
   case left
   case right
   case middle
 }
 
 /// Scroll direction names used by widget interaction events.
-enum ScrollDirection: String, Sendable {
+enum ScrollDirection: String, CaseIterable, Sendable {
   case up
   case down
+  case left
+  case right
 }
 
 /// Strongly typed event payload used inside Swift.
