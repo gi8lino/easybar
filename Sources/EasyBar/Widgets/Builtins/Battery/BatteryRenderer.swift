@@ -191,10 +191,7 @@ extension BatteryRenderer {
 
   /// Resolves the base SF Symbol for the current battery shell.
   fileprivate func resolvedBatterySymbol(unavailable: Bool) -> String? {
-    if unavailable {
-      return nil
-    }
-
+    guard !unavailable else { return nil }
     return "battery.0percent"
   }
 
@@ -310,18 +307,7 @@ extension BatteryRenderer {
 
   /// Returns the border color behind the overlay to improve contrast.
   fileprivate func resolvedBatteryOverlayBackdropColor(snapshot: Snapshot) -> String? {
-    if snapshot.charging {
-      return "#000000F0"
-    }
-
-    if snapshot.onHold {
-      return "#000000F0"
-    }
-
-    if snapshot.onExternalPower {
-      return "#000000F0"
-    }
-
-    return nil
+    guard snapshot.charging || snapshot.onHold || snapshot.onExternalPower else { return nil }
+    return snapshot.config.colors.overlayOutlineColorHex
   }
 }

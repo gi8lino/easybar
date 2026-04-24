@@ -120,7 +120,13 @@ final class CalendarAgentStreamController {
       }
 
       easybarLog.debug(
-        "\(label) applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
+        """
+        \(label) applied snapshot
+        access_granted=\(snapshot.accessGranted)
+        permission_state=\(snapshot.permissionState)
+        events=\(snapshot.events.count)
+        sections=\(snapshot.sections.count)
+        """
       )
       applySnapshot(snapshot)
       CalendarAgentEventRelay.shared.noteSnapshotUpdate()

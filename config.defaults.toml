@@ -231,6 +231,7 @@ medium = "#f9e2af" # Color used for 50-69%.
 low = "#fab387" # Color used for 30-49%.
 critical = "#f38ba8" # Color used for 0-29%.
 frame = "#6c7086" # Secondary palette color for the battery frame.
+overlay_outline = "#000000F0" # Outline color drawn behind battery overlay symbols.
 charging_overlay = "#FFFFFFFF" # Color of the charging bolt overlay.
 external_power_overlay = "#FFFFFFFF" # Color of the plugged-in holding overlay.
 on_hold_overlay = "#FFFFFFFF" # Color of the on-hold pause overlay.

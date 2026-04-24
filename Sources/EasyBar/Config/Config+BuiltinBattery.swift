@@ -24,6 +24,7 @@ extension Config {
     var lowColorHex: String
     var criticalColorHex: String
     var frameColorHex: String
+    var overlayOutlineColorHex: String
     var chargingOverlayColorHex: String
     var externalPowerOverlayColorHex: String
     var onHoldOverlayColorHex: String
@@ -125,6 +126,7 @@ extension Config {
           lowColorHex: "#fab387",
           criticalColorHex: "#f38ba8",
           frameColorHex: "#6c7086",
+          overlayOutlineColorHex: "#000000F0",
           chargingOverlayColorHex: "#FFFFFFFF",
           externalPowerOverlayColorHex: "#FFFFFFFF",
           onHoldOverlayColorHex: "#FFFFFFFF",
@@ -242,6 +244,10 @@ extension Config {
       ) ?? fallback.criticalColorHex,
       frameColorHex: try optionalString(table["frame"], path: "builtins.battery.colors.frame")
         ?? fallback.frameColorHex,
+      overlayOutlineColorHex: try optionalString(
+        table["overlay_outline"],
+        path: "builtins.battery.colors.overlay_outline"
+      ) ?? fallback.overlayOutlineColorHex,
       chargingOverlayColorHex: try optionalString(
         table["charging_overlay"],
         path: "builtins.battery.colors.charging_overlay"
