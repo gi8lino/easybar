@@ -22,8 +22,6 @@ extension SharedRuntimeConfig {
       ?? expandedPath(loggingTable?["directory"]?.string)
       ?? SharedPathDefaults.defaultLoggingDirectory().path
 
-    // TODO: Create directory
-
     return SharedLoggingRuntimeConfig(
       enabled: enabled,
       level: level,

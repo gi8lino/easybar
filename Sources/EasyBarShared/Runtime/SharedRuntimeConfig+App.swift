@@ -8,14 +8,10 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
     expandedPath(appTable?["widgets_dir"]?.string)
     ?? SharedPathDefaults.defaultWidgetsPath().path
 
-  // TODO: Create directory
-
   let lockDirectory =
     expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
-
-  // TODO: Create directory
 
   let widgetEditorStubPath =
     expandedPath(appTable?["widget_editor_stub_path"]?.string)
@@ -29,6 +25,4 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
 }
 
 /// Returns the default directory used for single-instance lock files.
-func defaultSingleInstanceLockDirectoryPath() -> String {
-  "/tmp/EasyBar"
-}
+func defaultSingleInstanceLockDirectoryPath() -> String { return "/tmp/EasyBar" }
