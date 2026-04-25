@@ -164,7 +164,13 @@ actor WidgetEngine {
     }
 
     scriptedRoots.insert(tree.root)
-    easybarLog.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+    easybarLog.debug(
+      """
+      decoded widget tree
+      root=\(tree.root)
+      nodes=\(tree.nodes.count)
+      """
+    )
     MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
 
     await MainActor.run {

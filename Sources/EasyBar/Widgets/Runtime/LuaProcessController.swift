@@ -62,7 +62,12 @@ final class LuaProcessController {
 
       installTerminationSource(for: pid)
 
-      easybarLog.debug("lua runtime started pid=\(pid) pgid=\(pid)")
+      easybarLog.debug(
+        """
+        lua runtime started
+        pid=\(pid)
+        pgid=\(pid)
+        """)
 
       return (pid, pipes.input, pipes.output, pipes.error)
     } catch {
@@ -80,7 +85,11 @@ final class LuaProcessController {
     }
 
     if snapshot.isShuttingDown {
-      easybarLog.debug("lua runtime shutdown already in progress pid=\(snapshot.processIdentifier)")
+      easybarLog.debug(
+        """
+        lua runtime shutdown already in progress
+        pid=\(snapshot.processIdentifier)
+        """)
       await waitForShutdownCompletion()
       return
     }
@@ -91,10 +100,17 @@ final class LuaProcessController {
 
     if let processGroupIdentifier = snapshot.processGroupIdentifier {
       easybarLog.debug(
-        "shutting down lua runtime pid=\(snapshot.processIdentifier) pgid=\(processGroupIdentifier)"
-      )
+        """
+        shutting down lua runtime
+        pid=\(snapshot.processIdentifier)
+        pgid=\(processGroupIdentifier)
+        """)
     } else {
-      easybarLog.debug("shutting down lua runtime pid=\(snapshot.processIdentifier)")
+      easybarLog.debug(
+        """
+        shutting down lua runtime
+        pid=\(snapshot.processIdentifier)
+        """)
     }
 
     terminateProcess(

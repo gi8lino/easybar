@@ -74,7 +74,12 @@ final class NetworkSocketServer {
     -> LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
     .ClientDisposition
   {
-    logger.debug("\(componentName) request fd=\(clientFD) command=\(request.command.rawValue)")
+    logger.debug(
+      """
+      \(componentName) request
+      fd=\(clientFD)
+      command=\(request.command.rawValue)
+      """)
 
     switch request.command {
     case .ping:
@@ -133,7 +138,11 @@ final class NetworkSocketServer {
       }
 
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
-      logger.info("\(componentName) subscriber added fd=\(clientFD)")
+      logger.info(
+        """
+        \(componentName) subscriber added
+        fd=\(clientFD)
+        """)
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)

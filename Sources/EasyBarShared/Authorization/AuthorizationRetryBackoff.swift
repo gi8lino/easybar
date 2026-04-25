@@ -40,7 +40,11 @@ public final class AuthorizationRetryBackoff {
     }
 
     scheduledWorkItem = workItem
-    debugLog("authorization retry scheduled delay=\(delay)")
+    debugLog(
+      """
+      authorization retry scheduled
+      delay=\(delay)
+      """)
     queue.asyncAfter(deadline: .now() + delay, execute: workItem)
   }
 }

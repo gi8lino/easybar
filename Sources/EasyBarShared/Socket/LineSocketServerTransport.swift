@@ -79,8 +79,11 @@ public final class LineSocketServerTransport<
       try FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true)
     } catch {
       errorLog(
-        "\(serverLabel) failed to create socket directory path=\(socketDir.path) error=\(error)"
-      )
+        """
+        \(serverLabel) failed to create socket directory
+        path=\(socketDir.path)
+        error=\(error)
+        """)
       return
     }
 
@@ -108,7 +111,12 @@ public final class LineSocketServerTransport<
     }
 
     guard bindResult == 0 else {
-      errorLog("\(serverLabel) bind failed path=\(socketPath) errno=\(errno)")
+      errorLog(
+        """
+        \(serverLabel) bind failed
+        path=\(socketPath)
+        errno=\(errno)
+        """)
       close(fd)
       return
     }
@@ -116,7 +124,12 @@ public final class LineSocketServerTransport<
     chmod(socketPath, mode_t(0o600))
 
     guard listen(fd, 8) == 0 else {
-      errorLog("\(serverLabel) listen failed path=\(socketPath) errno=\(errno)")
+      errorLog(
+        """
+        \(serverLabel) listen failed
+        path=\(socketPath)
+        errno=\(errno)
+        """)
       close(fd)
       unlink(socketPath)
       return
@@ -125,7 +138,11 @@ public final class LineSocketServerTransport<
     serverFD = fd
     running = true
 
-    infoLog("\(serverLabel) listening socket_path=\(socketPath)")
+    infoLog(
+      """
+      \(serverLabel) listening
+      socket_path=\(socketPath)
+      """)
 
     acceptQueue.async { [weak self] in
       self?.acceptLoop(handler: handler)
@@ -159,7 +176,11 @@ public final class LineSocketServerTransport<
     }
 
     unlink(socketPath)
-    infoLog("\(serverLabel) stopped socket_path=\(socketPath)")
+    infoLog(
+      """
+      \(serverLabel) stopped
+      socket_path=\(socketPath)
+      """)
   }
 
   /// Sends one encoded response to the given client file descriptor.
@@ -183,7 +204,11 @@ public final class LineSocketServerTransport<
     subscribers[fd] = subscriber
     stateLock.unlock()
 
-    debugLog("\(serverLabel) subscriber added fd=\(fd)")
+    debugLog(
+      """
+      \(serverLabel) subscriber added
+      fd=\(fd)
+      """)
   }
 
   /// Removes one subscriber and closes its socket.
@@ -197,7 +222,11 @@ public final class LineSocketServerTransport<
     close(fd)
 
     if existed {
-      debugLog("\(serverLabel) subscriber removed fd=\(fd)")
+      debugLog(
+        """
+        \(serverLabel) subscriber removed
+        fd=\(fd)
+        """)
     }
 
     return existed
@@ -226,7 +255,11 @@ public final class LineSocketServerTransport<
       }
 
       guard configureNoSigPipe(fd: clientFD) else {
-        errorLog("\(serverLabel) failed to configure client socket no-sigpipe fd=\(clientFD)")
+        errorLog(
+          """
+          \(serverLabel) failed to configure client socket no-sigpipe
+          fd=\(clientFD)
+          """)
         close(clientFD)
         continue
       }
@@ -261,7 +294,11 @@ public final class LineSocketServerTransport<
             return
           }
         } catch {
-          warnLog("\(serverLabel) request decode failed error=\(error)")
+          warnLog(
+            """
+            \(serverLabel) request decode failed
+            error=\(error)
+            """)
           close(clientFD)
           return
         }

@@ -57,12 +57,24 @@ final class AppController {
       snapshot: makeProcessStartupSnapshot(
         processName: "calendar agent",
         configPath: runtimeConfig.configPath,
-        socketSummary: "socket path=\(runtimeConfig.calendarAgentSocketPath)",
+        socketSummary:
+          """
+          socket
+          path=\(runtimeConfig.calendarAgentSocketPath)
+          """,
         loggingSummary:
-          "logging enabled=\(logger.fileLoggingEnabled) level=\(logger.minimumLevel.rawValue) path=\(logger.fileLoggingPath)"
-      ),
+          """
+          logging enabled=\(logger.fileLoggingEnabled)
+          level=\(logger.minimumLevel.rawValue)
+          path=\(logger.fileLoggingPath)
+          """),
       write: logger.info
     )
-    logger.info("log level=\(logger.minimumLevel.rawValue)")
+    logger.info(
+      """
+      log
+      level=\(logger.minimumLevel.rawValue)
+      """
+    )
   }
 }

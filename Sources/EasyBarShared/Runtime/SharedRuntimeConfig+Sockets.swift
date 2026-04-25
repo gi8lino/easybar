@@ -80,16 +80,10 @@ func resolvedSocketPath(
 }
 
 /// Returns the default Unix socket path used by EasyBar.
-func defaultEasyBarSocketPath() -> String {
-  "/tmp/EasyBar/easybar.sock"
-}
+func defaultEasyBarSocketPath() -> String { return "/tmp/EasyBar/easybar.sock" }
 
 /// Returns the default Unix socket path used by the calendar agent.
-func defaultCalendarAgentSocketPath() -> String {
-  "/tmp/EasyBar/calendar-agent.sock"
-}
+func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-agent.sock" }
 
 /// Returns the default Unix socket path used by the network agent.
-func defaultNetworkAgentSocketPath() -> String {
-  "/tmp/EasyBar/network-agent.sock"
-}
+func defaultNetworkAgentSocketPath() -> String { return "/tmp/EasyBar/network-agent.sock" }

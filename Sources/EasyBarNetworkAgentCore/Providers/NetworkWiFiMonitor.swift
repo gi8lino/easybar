@@ -42,7 +42,12 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       try client.startMonitoringEvent(with: .powerDidChange)
       try client.startMonitoringEvent(with: .scanCacheUpdated)
       wifiClient = client
-      logger.info("\(componentName) subscribed wifi_change")
+      logger.info(
+        """
+        \(componentName) subscribed
+        event=wifi_change
+        """
+      )
     } catch {
       logger.warn("failed to subscribe \(componentName) Wi-Fi events: \(error)")
     }
@@ -123,25 +128,41 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
   /// Handles one Wi-Fi SSID change callback.
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi SSID changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi SSID changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi BSSID change callback.
   func bssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi BSSID changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi BSSID changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi country code change callback.
   func countryCodeDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi country code changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi country code changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi link change callback.
   func linkDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi link changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi link changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
@@ -150,26 +171,42 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     withName interfaceName: String, rssi: Int, transmitRate: Double
   ) {
     logger.info(
-      "\(componentName) Wi-Fi link quality changed interface=\(interfaceName) rssi=\(rssi) tx_rate=\(transmitRate)"
-    )
+      """
+      \(componentName) Wi-Fi link quality changed
+      interface=\(interfaceName)
+      rssi=\(rssi)
+      tx_rate=\(transmitRate)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi mode change callback.
   func modeDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi mode changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi mode changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi power change callback.
   func powerStateDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info("\(componentName) Wi-Fi power changed interface=\(interfaceName)")
+    logger.info(
+      """
+      \(componentName) Wi-Fi power changed
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
   /// Handles one Wi-Fi scan cache update callback.
   func scanCacheUpdatedForWiFiInterface(withName interfaceName: String) {
-    logger.debug("\(componentName) Wi-Fi scan cache updated interface=\(interfaceName)")
+    logger.debug(
+      """
+      \(componentName) Wi-Fi scan cache updated
+      interface=\(interfaceName)
+      """)
     onChange?()
   }
 
@@ -180,7 +217,12 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
     guard let rssi else {
       smoothedRSSI = nil
-      logger.debug("\(componentName) RSSI unavailable")
+      logger.debug(
+        """
+        \(componentName) RSSI unavailable
+        rssi=<none>
+        """
+      )
       return nil
     }
 

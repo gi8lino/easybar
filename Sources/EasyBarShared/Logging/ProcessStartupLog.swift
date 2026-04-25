@@ -70,8 +70,13 @@ public func logProcessStartup(
   write: (String) -> Void
 ) {
   write(
-    "\(snapshot.processName) startup version=\(snapshot.version) build=\(snapshot.build) bundle_id=\(snapshot.bundleIdentifier) pid=\(snapshot.processIdentifier)"
-  )
+    """
+    \(snapshot.processName)
+    startup version=\(snapshot.version)
+    build=\(snapshot.build)
+    bundle_id=\(snapshot.bundleIdentifier)
+    pid=\(snapshot.processIdentifier)
+    """)
   write("app bundle_path=\(snapshot.bundlePath)")
   write("app executable=\(snapshot.executablePath)")
   write("config path=\(snapshot.configPath)")

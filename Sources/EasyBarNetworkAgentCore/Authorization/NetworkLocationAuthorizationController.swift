@@ -35,7 +35,10 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
     logger.info(
-      "\(componentName) authorization status before start=\(authState.permissionState())"
+      """
+      \(componentName) authorization status before
+      start=\(authState.permissionState())
+      """
     )
 
     requestAccessIfNeeded()
@@ -68,8 +71,10 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
       self.authState.setStatus(status)
       self.logger.info(
-        "\(self.componentName) authorization changed status=\(self.authState.permissionState())"
-      )
+        """
+        \(self.componentName) authorization changed
+        status=\(self.authState.permissionState())
+        """)
       self.handleAuthorizationStateChange(status)
       self.onChange?()
     }
@@ -79,30 +84,52 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   private func requestAccessIfNeeded() {
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
-    logger.info("\(componentName) access status=\(authState.permissionState())")
+    logger.info(
+      """
+      \(componentName) access
+      status=\(authState.permissionState())
+      """)
 
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.info("\(componentName) access already granted")
+      logger.info(
+        """
+        \(componentName) access already granted
+        status=\(authState.permissionState())
+        """
+      )
       onChange?()
 
     case .notDetermined:
       prepareAuthorizationPromptIfNeeded()
-      logger.info("requesting \(componentName) when-in-use access")
+      logger.info(
+        """
+        requesting \(componentName) when-in-use access
+        status=\(authState.permissionState())
+        """
+      )
       locationManager.requestWhenInUseAuthorization()
       scheduleRetry()
 
     case .denied, .restricted:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.warn("\(componentName) access unavailable status=\(authState.permissionState())")
+      logger.warn(
+        """
+        \(componentName) access unavailable
+        status=\(authState.permissionState())
+        """)
 
     @unknown default:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.warn("\(componentName) access status unknown raw=\(status.rawValue)")
+      logger.warn(
+        """
+        \(componentName) access status unknown
+        raw=\(status.rawValue)
+        """)
     }
   }
 
@@ -133,7 +160,12 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     guard !presentedAuthorizationPrompt else { return }
     presentedAuthorizationPrompt = true
 
-    logger.info("\(componentName) preparing authorization prompt")
+    logger.info(
+      """
+      \(componentName) preparing authorization prompt
+      presented=\(presentedAuthorizationPrompt)
+      """
+    )
     Task { @MainActor [weak promptPresenter] in
       promptPresenter?.preparePrompt()
     }
@@ -144,7 +176,12 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     guard presentedAuthorizationPrompt else { return }
     presentedAuthorizationPrompt = false
 
-    logger.info("\(componentName) restoring UI after authorization prompt")
+    logger.info(
+      """
+      \(componentName) restoring UI after authorization prompt
+      presented=\(presentedAuthorizationPrompt)
+      """
+    )
     Task { @MainActor [weak promptPresenter] in
       promptPresenter?.restoreUI()
     }

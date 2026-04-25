@@ -29,12 +29,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPr
       break
 
     case .alreadyRunning(let lockPath):
-      logger.warn("easybar-network-agent already running lock_path=\(lockPath)")
+      logger.warn(
+        """
+        easybar-network-agent already running
+        lock_path=\(lockPath)
+        """)
       terminateApplication()
 
     case .failed(let lockPath, let reason):
       logger.error(
-        "easybar-network-agent failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
+        """
+        easybar-network-agent failed to acquire instance lock
+        lock_path=\(lockPath)
+        reason=\(reason)
+        """
       )
       terminateApplication()
     }
@@ -66,7 +74,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPr
     presentedAuthorizationPrompt = true
 
     let changed = NSApp.setActivationPolicy(.regular)
-    logger.info("network agent promoted for authorization prompt changed=\(changed)")
+    logger.info(
+      """
+      network agent promoted for authorization prompt
+      changed=\(changed)
+      """)
     NSApp.activate(ignoringOtherApps: true)
   }
 
@@ -76,7 +88,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPr
     presentedAuthorizationPrompt = false
 
     let changed = NSApp.setActivationPolicy(.accessory)
-    logger.info("network agent restored accessory mode changed=\(changed)")
+    logger.info(
+      """
+      network agent restored accessory mode
+      changed=\(changed)
+      """)
   }
 
   /// Terminates the application immediately.
