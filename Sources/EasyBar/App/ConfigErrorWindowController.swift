@@ -35,7 +35,8 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   /// Closes the config error window when it is currently shown.
   func close() {
     window?.close()
-    reset()
+    window = nil
+    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   }
 
   /// Builds the floating config error window shell.
@@ -89,15 +90,10 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     }
   }
 
-  /// Resets all retained window/controller state after close.
-  private func reset() {
-    window = nil
-    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
-  }
-
   /// Resets controller state when the user closes the window directly.
   func windowWillClose(_ notification: Notification) {
-    reset()
+    window = nil
+    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   }
 }
 
