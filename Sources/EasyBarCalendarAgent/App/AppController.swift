@@ -35,7 +35,22 @@ final class AppController {
       return false
     }
 
-    logStartup()
+    logProcessStartup(
+      processName: "calendar agent",
+      configPath: runtimeConfig.configPath,
+      socketSummary:
+        """
+        socket
+        path=\(runtimeConfig.calendarAgentSocketPath)
+        """,
+      loggingSummary:
+        """
+        logging enabled=\(logger.fileLoggingEnabled)
+        level=\(logger.minimumLevel.rawValue)
+        path=\(logger.fileLoggingPath)
+        """,
+      write: logger.info
+    )
 
     snapshotProvider.start { [weak self] in
       self?.socketServer.broadcastSnapshots()
@@ -49,32 +64,5 @@ final class AppController {
   func stop() {
     socketServer.stop()
     snapshotProvider.stop()
-  }
-
-  /// Logs one startup snapshot for the calendar agent.
-  private func logStartup() {
-    logProcessStartup(
-      snapshot: makeProcessStartupSnapshot(
-        processName: "calendar agent",
-        configPath: runtimeConfig.configPath,
-        socketSummary:
-          """
-          socket
-          path=\(runtimeConfig.calendarAgentSocketPath)
-          """,
-        loggingSummary:
-          """
-          logging enabled=\(logger.fileLoggingEnabled)
-          level=\(logger.minimumLevel.rawValue)
-          path=\(logger.fileLoggingPath)
-          """),
-      write: logger.info
-    )
-    logger.info(
-      """
-      log
-      level=\(logger.minimumLevel.rawValue)
-      """
-    )
   }
 }

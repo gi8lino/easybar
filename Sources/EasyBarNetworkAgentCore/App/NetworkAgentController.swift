@@ -44,7 +44,24 @@ public final class NetworkAgentController {
       return false
     }
 
-    logStartup()
+    logProcessStartup(
+      processName: config.processName,
+      configPath: config.configPath,
+      socketSummary:
+        """
+        socket
+        path=\(config.socketPath)
+        refresh_interval_seconds=\(config.refreshIntervalSeconds)
+        allow_unauthorized_fields_without_location=\(config.allowUnauthorizedFieldsWithoutLocation)
+        """,
+      loggingSummary:
+        """
+        logging enabled=\(logger.fileLoggingEnabled)
+        level=\(logger.minimumLevel.rawValue)
+        path=\(logger.fileLoggingPath)
+        """,
+      write: logger.info
+    )
 
     snapshotProvider.start { [weak self] in
       self?.socketServer.broadcastSnapshots()
@@ -58,34 +75,5 @@ public final class NetworkAgentController {
   public func stop() {
     socketServer.stop()
     snapshotProvider.stop()
-  }
-
-  /// Logs one startup snapshot for the network agent.
-  private func logStartup() {
-    logProcessStartup(
-      snapshot: makeProcessStartupSnapshot(
-        processName: config.processName,
-        configPath: config.configPath,
-        socketSummary:
-          """
-          socket
-          path=\(config.socketPath)
-          refresh_interval_seconds=\(config.refreshIntervalSeconds)
-          allow_unauthorized_fields_without_location=\(config.allowUnauthorizedFieldsWithoutLocation)
-          """,
-        loggingSummary:
-          """
-          logging enabled=\(logger.fileLoggingEnabled)
-          level=\(logger.minimumLevel.rawValue)
-          path=\(logger.fileLoggingPath)
-          """),
-      write: logger.info
-    )
-    logger.info(
-      """
-      log
-      level=\(logger.minimumLevel.rawValue)
-      """
-    )
   }
 }

@@ -161,13 +161,15 @@ final class AppController {
   /// Logs one startup snapshot so service-vs-local differences are visible.
   private func logStartup() {
     logProcessStartup(
-      snapshot: makeProcessStartupSnapshot(
-        processName: "easybar",
-        configPath: Config.shared.configPath,
-        socketSummary: "socket path=\(SharedRuntimeConfig.current.easyBarSocketPath)",
-        loggingSummary:
-          "logging enabled=\(easybarLog.fileLoggingEnabled) level=\(easybarLog.minimumLevel.rawValue) path=\(easybarLog.fileLoggingPath)"
-      ),
+      processName: "easybar",
+      configPath: Config.shared.configPath,
+      socketSummary: "socket path=\(SharedRuntimeConfig.current.easyBarSocketPath)",
+      loggingSummary:
+        """
+        logging enabled=\(easybarLog.fileLoggingEnabled)
+        level=\(easybarLog.minimumLevel.rawValue)
+        path=\(easybarLog.fileLoggingPath)
+        """,
       write: easybarLog.info
     )
 
@@ -183,28 +185,44 @@ final class AppController {
     easybarLog.info("lua path=\(Config.shared.luaPath)")
     easybarLog.info("watch config=\(Config.shared.watchConfigFile)")
     easybarLog.info(
-      "calendar agent enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"
-    )
+      """
+      calendar agent enabled=\(Config.shared.calendarAgentEnabled)
+      socket=\(Config.shared.calendarAgentSocketPath)
+      """)
     easybarLog.info(
-      "network agent enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)"
-    )
+      """
+      network agent enabled=\(Config.shared.networkAgentEnabled)
+      socket=\(Config.shared.networkAgentSocketPath)
+      refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)
+      """)
     easybarLog.info(
-      "calendar builtin enabled=\(Config.shared.builtinCalendar.enabled) popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
-    )
+      """
+      calendar builtin enabled=\(Config.shared.builtinCalendar.enabled)
+      popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue)
+      anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue)
+      position=\(Config.shared.builtinCalendar.position.rawValue)
+      """)
     easybarLog.info(
-      "wifi builtin enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)"
-    )
+      """
+      wifi builtin enabled=\(Config.shared.builtinWiFi.enabled)
+      position=\(Config.shared.builtinWiFi.position.rawValue)
+      """)
     easybarLog.info(
-      "bar height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)"
-    )
+      """
+      bar height=\(Config.shared.barHeight)
+      padding_x=\(Config.shared.barPaddingX)
+      extend_behind_notch=\(Config.shared.barExtendBehindNotch)
+      """)
   }
 
   /// Logs screen geometry visible at startup.
   private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
       easybarLog.info(
-        "screen frame=\(NSStringFromRect(screen.frame)) visible=\(NSStringFromRect(screen.visibleFrame))"
-      )
+        """
+        screen frame=\(NSStringFromRect(screen.frame))
+        visible=\(NSStringFromRect(screen.visibleFrame))
+        """)
     } else {
       easybarLog.warn("no screen available during startup logging")
     }
@@ -252,8 +270,7 @@ final class AppController {
     }
 
     easybarLog.warn(
-      "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped"
-    )
+      "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped")
   }
 
   /// Installs the bundled Lua editor stub into the configured editor-stub path.
