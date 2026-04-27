@@ -430,10 +430,11 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
     switch message {
     case .metrics(let snapshot):
       history.append(snapshot)
-      CLIOutput.renderWatch(
-        MetricsRenderer.watchText(snapshot, history: history),
-        terminal: terminal
+      fputs(
+        terminal.redrawPrefix + MetricsRenderer.watchText(snapshot, history: history),
+        stdout
       )
+      fflush(stdout)
 
     case .rejected(let message):
       throw AppError.message(message ?? "metrics rejected")
@@ -444,14 +445,6 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
   }
 
   context.debug("metrics stream ended")
-}
-
-extension CLIOutput {
-  /// Renders one watch frame.
-  static func renderWatch(_ contents: String, terminal: WatchTerminal) {
-    fputs(terminal.redrawPrefix + contents, stdout)
-    fflush(stdout)
-  }
 }
 
 /// Manages watch-mode terminal state.
