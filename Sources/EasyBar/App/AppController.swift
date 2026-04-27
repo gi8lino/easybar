@@ -90,15 +90,10 @@ final class AppController {
     }
   }
 
-  /// Reloads the visible bar layout.
-  func reloadBarLayout() {
-    barWindowController?.reloadLayout()
-  }
-
   /// Applies all UI-side work required after a config reload.
   func handlePostConfigReloadUI() {
     installWidgetEditorStub()
-    reloadBarLayout()
+    barWindowController?.reloadLayout()
     updateConfigErrorWindow()
   }
 
