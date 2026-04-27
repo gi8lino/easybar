@@ -2,18 +2,18 @@ import Darwin
 import EasyBarShared
 import Foundation
 
-/// The EasyBar CLI entry point.
+/// CLI entry point.
 @main
 enum EasyBarCtlApp {
-  /// Runs the CLI process.
+  /// Runs the CLI.
   static func main() {
     exit(AppController().run())
   }
 }
 
-/// Coordinates argument parsing, command dispatch, and CLI output.
+/// Runs the CLI flow.
 private struct AppController {
-  /// Runs the CLI command flow and returns the process exit code.
+  /// Returns the exit code.
   func run() -> Int32 {
     do {
       let parsed = try parseArguments(CommandLine.arguments)
@@ -86,7 +86,7 @@ private struct AppContext {
       label: "easybarctl", minimumLevel: (debugEnabled || envEnabled) ? .debug : .info)
   }
 
-  /// Writes one debug line when CLI debug logging is enabled.
+  /// Logs a debug line.
   func debug(_ message: String) {
     logger.debug(message)
   }
@@ -99,17 +99,17 @@ private enum AppError: Error {
 }
 
 private enum CLIOutput {
-  /// Writes one plain error line.
+  /// Prints an error.
   static func printError(_ message: String) {
     fputs("easybar: \(message)\n", stderr)
   }
 
-  /// Writes one plain version line.
+  /// Prints the version.
   static func printVersion() {
     fputs("easybar \(BuildInfo.appVersion)\n", stdout)
   }
 
-  /// Writes usage text.
+  /// Prints usage.
   static func printUsage() {
     let commandLines = CLI.cmdOptions.map {
       CLI.formatOption(CLI.optionText(for: $0), $0.description)
@@ -132,7 +132,7 @@ private enum CLIOutput {
     fputs(lines.joined(separator: "\n") + "\n", stderr)
   }
 
-  /// Writes one one-shot metrics snapshot.
+  /// Prints one metrics snapshot.
   static func printMetricsSnapshot(_ snapshot: IPC.MetricsSnapshot) {
     fputs(MetricsRenderer.snapshotText(snapshot) + "\n", stdout)
   }
@@ -213,12 +213,12 @@ private enum CLI {
     helpOption,
   ]
 
-  /// Formats one help row with aligned option text.
+  /// Formats one help row.
   static func formatOption(_ option: String, _ description: String) -> String {
     "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
   }
 
-  /// Returns the rendered text for one option, including short flag and placeholder.
+  /// Renders one option label.
   static func optionText(for option: CLIOption) -> String {
     var text = option.flag
 
@@ -233,25 +233,25 @@ private enum CLI {
     return text
   }
 
-  /// Returns whether one argument matches an option's long or short flag.
+  /// Checks whether an argument matches an option.
   static func matches(_ option: CLIOption, argument: String) -> Bool {
     option.flag == argument || option.short == argument
   }
 
-  /// Returns the inline `--flag=value` payload when present.
+  /// Returns the value from `--flag=value`.
   static func inlineValue(for option: CLIOption, argument: String) -> String? {
     let prefix = "\(option.flag)="
     guard argument.hasPrefix(prefix) else { return nil }
     return String(argument.dropFirst(prefix.count))
   }
 
-  /// Returns the command string associated with one argument when it is a command option.
+  /// Returns the command for one argument.
   static func command(for argument: String) -> IPC.Command? {
     cmdOptions.first { matches($0, argument: argument) }?.command
   }
 }
 
-/// Parses CLI arguments into one validated command request.
+/// Parses CLI arguments.
 private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   var selectedCommand: IPC.Command?
   var socketPath = SharedRuntimeConfig.current.easyBarSocketPath
@@ -303,7 +303,7 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
   )
 }
 
-/// Handles one app-level argument and returns the next parse index when matched.
+/// Parses one app-level option.
 private func parseAppArgument(
   _ argument: String,
   arguments: [String],
@@ -342,7 +342,7 @@ private func parseAppArgument(
   return nil
 }
 
-/// Parses one socket option and returns the resolved value plus next index.
+/// Parses `--socket`.
 private func parseSocketArgument(
   _ argument: String,
   arguments: [String],
@@ -373,7 +373,7 @@ private func parseSocketArgument(
   return (socketPath, nextIndex + 1)
 }
 
-/// Connects to the EasyBar socket and sends one IPC command.
+/// Sends one IPC command.
 private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws
 {
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
@@ -397,7 +397,7 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
   context.debug("command sent")
 }
 
-/// Requests one one-shot metrics snapshot.
+/// Fetches one metrics snapshot.
 private func fetchMetricsSnapshot(from socketPath: String, context: AppContext) throws
   -> IPC.MetricsSnapshot
 {
@@ -418,7 +418,7 @@ private func fetchMetricsSnapshot(from socketPath: String, context: AppContext) 
   }
 }
 
-/// Streams live metrics and renders them as a rolling terminal dashboard.
+/// Streams live metrics.
 private func streamMetrics(to socketPath: String, context: AppContext) throws {
   let client = MetricsStreamClient(socketPath: socketPath)
   var history = MetricsHistory(limit: 32)
@@ -447,14 +447,14 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
 }
 
 extension CLIOutput {
-  /// Clears the terminal and renders one live metrics frame.
+  /// Renders one watch frame.
   static func renderWatch(_ contents: String, terminal: WatchTerminal) {
     fputs(terminal.redrawPrefix + contents, stdout)
     fflush(stdout)
   }
 }
 
-/// Manages terminal state for live watch rendering.
+/// Manages watch-mode terminal state.
 private final class WatchTerminal {
   private let interactive: Bool = isatty(STDOUT_FILENO) != 0
   private var activated = false
@@ -466,6 +466,7 @@ private final class WatchTerminal {
   func activate() {
     guard interactive, !activated else { return }
     activated = true
+    // Use the alternate screen so watch mode does not leave partial frames behind.
     fputs("\u{001B}[?1049h\u{001B}[?25l\u{001B}[H\u{001B}[2J\u{001B}[3J", stdout)
     fflush(stdout)
   }
@@ -478,7 +479,7 @@ private final class WatchTerminal {
   }
 }
 
-/// Maintains a small rolling window used for watch-mode graphs.
+/// Stores recent watch samples.
 private struct MetricsHistory {
   let limit: Int
   private(set) var series: [String: [Double]] = [:]
@@ -506,7 +507,7 @@ private struct MetricsHistory {
   }
 }
 
-/// Renders human-readable metrics text for one-shot and watch output.
+/// Renders metrics output.
 private enum MetricsRenderer {
   private static let watchGraphWidth = 32
 
@@ -906,7 +907,7 @@ private enum MetricsRenderer {
   }
 }
 
-/// One streaming socket client used by `easybar --metrics --watch`.
+/// Streaming client for `--metrics --watch`.
 private struct MetricsStreamClient {
   let socketPath: String
 
@@ -953,6 +954,7 @@ private struct MetricsStreamClient {
     var buffer = [UInt8](repeating: 0, count: 4096)
 
     while true {
+      // Consume complete lines first so partial reads can accumulate in `pending`.
       if let line = nextLine(from: &pending) {
         let message = try decoder.decode(IPC.Message.self, from: line)
         try handleMessage(message)
