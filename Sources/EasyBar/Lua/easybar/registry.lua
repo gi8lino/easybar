@@ -38,23 +38,8 @@ local function normalize_bool(value, default)
 	return default
 end
 
---- Normalizes shorthand label values into a label table.
-local function normalize_label(value)
-	if value == nil then
-		return nil
-	end
-
-	if type(value) == "table" then
-		return value
-	end
-
-	return {
-		string = tostring(value),
-	}
-end
-
---- Normalizes shorthand icon values into an icon table.
-local function normalize_icon(value)
+--- Normalizes shorthand string-ish values into `{ string = ... }` tables.
+local function normalize_string_prop(value)
 	if value == nil then
 		return nil
 	end
@@ -73,11 +58,11 @@ local function normalize_props(props)
 	local normalized = helpers.deep_copy(props or {})
 
 	if normalized.label ~= nil then
-		normalized.label = normalize_label(normalized.label)
+		normalized.label = normalize_string_prop(normalized.label)
 	end
 
 	if normalized.icon ~= nil then
-		normalized.icon = normalize_icon(normalized.icon)
+		normalized.icon = normalize_string_prop(normalized.icon)
 	end
 
 	if normalized.drawing ~= nil then
