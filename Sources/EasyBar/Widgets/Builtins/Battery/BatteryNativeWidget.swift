@@ -191,21 +191,8 @@ extension BatteryNativeWidget {
   private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard payload.widgetID == rootID else { return }
     guard let event = payload.widgetEvent else { return }
-
-    switch event {
-    case .mouseEntered:
-      guard !isHovered else { return }
-      isHovered = true
-      publishIfHoverAffectsLayout()
-
-    case .mouseExited:
-      guard isHovered else { return }
-      isHovered = false
-      publishIfHoverAffectsLayout()
-
-    default:
-      break
-    }
+    guard NativeWidgetHoverSupport.updateHoverState(event, isHovered: &isHovered) else { return }
+    publishIfHoverAffectsLayout()
   }
 
   /// Returns the unavailable fallback snapshot.
@@ -244,18 +231,11 @@ extension BatteryNativeWidget {
     config: Config.BatteryBuiltinConfig,
     text: String
   ) -> Bool {
-    guard !text.isEmpty else { return false }
-
-    switch config.displayMode {
-    case .none:
-      return false
-    case .tooltip:
-      return false
-    case .expand:
-      return isHovered
-    case .always:
-      return true
-    }
+    NativeWidgetHoverSupport.showsInlineLabel(
+      text: text,
+      mode: config.displayMode,
+      isHovered: isHovered
+    )
   }
 
   /// Hover only affects layout for inline expand mode.

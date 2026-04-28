@@ -131,21 +131,8 @@ extension WiFiNativeWidget {
   private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard payload.widgetID == rootID else { return }
     guard let event = payload.widgetEvent else { return }
-
-    switch event {
-    case .mouseEntered:
-      guard !isHovered else { return }
-      isHovered = true
-      publish()
-
-    case .mouseExited:
-      guard isHovered else { return }
-      isHovered = false
-      publish()
-
-    default:
-      return
-    }
+    guard NativeWidgetHoverSupport.updateHoverState(event, isHovered: &isHovered) else { return }
+    publish()
   }
 
   /// Returns whether the Wi-Fi label should be visible inline.
@@ -153,16 +140,11 @@ extension WiFiNativeWidget {
     config: Config.WiFiBuiltinConfig,
     text: String
   ) -> Bool {
-    guard !text.isEmpty else { return false }
-
-    switch config.displayMode {
-    case .none, .tooltip:
-      return false
-    case .expand:
-      return isHovered
-    case .always:
-      return true
-    }
+    NativeWidgetHoverSupport.showsInlineLabel(
+      text: text,
+      mode: config.displayMode,
+      isHovered: isHovered
+    )
   }
 
   /// Returns whether the Wi-Fi label should be shown in a popup.
