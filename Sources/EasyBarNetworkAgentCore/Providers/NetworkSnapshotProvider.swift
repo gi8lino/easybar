@@ -48,10 +48,8 @@ public final class NetworkSnapshotProvider {
     }
 
     logger.info(
-      """
-      \(componentName) refresh
-      interval_seconds=\(refreshIntervalSeconds)
-      """
+      "\(componentName) refresh",
+      logFields("interval_seconds", refreshIntervalSeconds)
     )
 
     if refreshIntervalSeconds > 0 {
@@ -84,15 +82,16 @@ public final class NetworkSnapshotProvider {
     let network = systemMonitor.currentState()
 
     logger.debug(
-      """
-      \(componentName) snapshot
-      access_granted=\(authorizer.isAuthorized())
-      permission_state=\(permissionState)
-      ssid=\(wifi.ssid ?? "<none>")
-      interface=\(wifi.interfaceName ?? "<none>")
-      rssi=\(wifi.rssi.map(String.init) ?? "<none>")
-      primary_is_tunnel=\(network.primaryInterfaceIsTunnel)
-      """)
+      "\(componentName) snapshot",
+      logFields(
+        "access_granted", authorizer.isAuthorized(),
+        "permission_state", permissionState,
+        "ssid", wifi.ssid ?? "<none>",
+        "interface", wifi.interfaceName ?? "<none>",
+        "rssi", wifi.rssi.map(String.init) ?? "<none>",
+        "primary_is_tunnel", network.primaryInterfaceIsTunnel
+      )
+    )
 
     return NetworkAgentSnapshot(
       accessGranted: authorizer.isAuthorized(),

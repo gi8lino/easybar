@@ -29,10 +29,9 @@ final class CalendarAuthorizationController {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
     logger.info(
-      """
-      calendar agent authorization status before
-      start=\(authState.describe(status))
-      """)
+      "calendar agent authorization status before",
+      logFields("start", authState.describe(status))
+    )
 
     requestAccessIfNeeded()
   }
@@ -68,10 +67,8 @@ final class CalendarAuthorizationController {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
     logger.info(
-      """
-      calendar agent access
-      status=\(authState.describe(status))
-      """
+      "calendar agent access",
+      logFields("status", authState.describe(status))
     )
 
     switch status {
@@ -90,21 +87,23 @@ final class CalendarAuthorizationController {
 
         if let error {
           self.logger.error(
-            """
-            calendar agent access request failed
-            status=\(self.authState.describe(newStatus))
-            error=\(error)
-            """)
+            "calendar agent access request failed",
+            logFields(
+              "status", self.authState.describe(newStatus),
+              "error", error
+            )
+          )
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
           return
         }
 
         self.logger.info(
-          """
-          calendar agent access request completed
-          granted=\(granted)
-          status=\(self.authState.describe(newStatus))
-          """)
+          "calendar agent access request completed",
+          logFields(
+            "granted", granted,
+            "status", self.authState.describe(newStatus)
+          )
+        )
 
         guard granted else {
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
@@ -121,18 +120,16 @@ final class CalendarAuthorizationController {
     case .denied, .restricted, .writeOnly:
       retryBackoff.reset()
       logger.warn(
-        """
-        calendar agent access unavailable
-        status=\(authState.describe(status))
-        """)
+        "calendar agent access unavailable",
+        logFields("status", authState.describe(status))
+      )
 
     @unknown default:
       retryBackoff.reset()
       logger.warn(
-        """
-        calendar agent access status unknown
-        raw=\(status.rawValue)
-        """)
+        "calendar agent access status unknown",
+        logFields("raw", status.rawValue)
+      )
     }
   }
 

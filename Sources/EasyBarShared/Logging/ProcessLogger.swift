@@ -1,6 +1,43 @@
 import Darwin
 import Foundation
 
+/// Formats alternating key/value components into one compact single-line log field string.
+public func logFields(_ components: Any?...) -> String {
+  guard !components.isEmpty else { return "" }
+
+  var fields: [String] = []
+  fields.reserveCapacity(components.count / 2)
+
+  var index = 0
+  while index < components.count {
+    let key = String(describing: components[index] ?? "nil")
+    let value = index + 1 < components.count ? components[index + 1] : nil
+    fields.append("\(key)=\(formatLogFieldValue(value))")
+    index += 2
+  }
+
+  return fields.joined(separator: " ")
+}
+
+private func formatLogFieldValue(_ value: Any?) -> String {
+  guard let value else { return "nil" }
+
+  let text = String(describing: value)
+  let escaped =
+    text
+    .replacingOccurrences(of: "\\", with: "\\\\")
+    .replacingOccurrences(of: "\n", with: "\\n")
+    .replacingOccurrences(of: "\r", with: "\\r")
+    .replacingOccurrences(of: "\t", with: "\\t")
+    .replacingOccurrences(of: "\"", with: "\\\"")
+
+  guard escaped.contains(where: \.isWhitespace) || escaped.isEmpty else {
+    return escaped
+  }
+
+  return "\"\(escaped)\""
+}
+
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
   private static let formatter: DateFormatter = {
@@ -104,10 +141,20 @@ public final class ProcessLogger {
     write(level: "TRACE", message: message, stream: stdout)
   }
 
+  /// Writes one trace message with structured fields when trace logging is enabled.
+  public func trace(_ message: String, _ fields: String) {
+    trace(combine(message: message, fields: fields))
+  }
+
   /// Writes one debug message when debug or trace logging is enabled.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
     write(level: "DEBUG", message: message, stream: stdout)
+  }
+
+  /// Writes one debug message with structured fields when debug or trace logging is enabled.
+  public func debug(_ message: String, _ fields: String) {
+    debug(combine(message: message, fields: fields))
   }
 
   /// Writes one info message.
@@ -116,16 +163,31 @@ public final class ProcessLogger {
     write(level: "INFO", message: message, stream: stdout)
   }
 
+  /// Writes one info message with structured fields.
+  public func info(_ message: String, _ fields: String) {
+    info(combine(message: message, fields: fields))
+  }
+
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
     write(level: "WARN", message: message, stream: stderr)
   }
 
+  /// Writes one warning message with structured fields.
+  public func warn(_ message: String, _ fields: String) {
+    warn(combine(message: message, fields: fields))
+  }
+
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
     write(level: "ERROR", message: message, stream: stderr)
+  }
+
+  /// Writes one error message with structured fields.
+  public func error(_ message: String, _ fields: String) {
+    error(combine(message: message, fields: fields))
   }
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
@@ -164,6 +226,11 @@ public final class ProcessLogger {
 
   private func formattedLine(level: String, message: String) -> String {
     "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
+  }
+
+  private func combine(message: String, fields: String) -> String {
+    guard !fields.isEmpty else { return message }
+    return "\(message) \(fields)"
   }
 
   private func writeFileUnlocked(_ line: String) {
