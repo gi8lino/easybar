@@ -83,7 +83,8 @@ let package = Package(
     .testTarget(
       name: "EasyBarTests",
       dependencies: [
-        "EasyBar"
+        "EasyBar",
+        "EasyBarShared",
       ],
       path: "Tests/EasyBarTests"
     ),
