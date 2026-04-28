@@ -11,6 +11,7 @@ local function runtime_dir()
 end
 
 local base_dir = runtime_dir()
+package.path = base_dir .. "/?.lua;" .. package.path
 
 --- Loads one bundled runtime module by name.
 local function load_module(name)

@@ -2,23 +2,9 @@
 --- Owns event subscriptions, interval scheduling, and handler dispatch.
 --- Returns one helper object with subscribe/handle_event/required_events.
 local M = {}
+local helpers = require("easybar.helpers")
 
 local INTERVAL_TICK_PREFIX = "interval_tick:"
-
---- Deep-copies one Lua value tree.
-local function deep_copy(value)
-	if type(value) ~= "table" then
-		return value
-	end
-
-	local copy = {}
-
-	for key, item in pairs(value) do
-		copy[key] = deep_copy(item)
-	end
-
-	return copy
-end
 
 --- Returns one positive whole-second interval or nil.
 local function normalize_interval(value)
@@ -44,7 +30,7 @@ end
 
 --- Returns one handler event table scoped to one subscribed item.
 local function make_handler_event(id, event)
-	local handler_event = deep_copy(event)
+	local handler_event = helpers.deep_copy(event)
 	handler_event.widget_id = id
 
 	if handler_event.target_widget_id == nil and event.widget_id ~= nil then

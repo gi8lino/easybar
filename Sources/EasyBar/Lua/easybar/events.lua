@@ -2,28 +2,14 @@
 --- Owns host-event normalization and runtime dispatch into the registry.
 --- Returns helpers that validate payloads and trigger re-renders.
 local M = {}
-
---- Deep-copies one Lua value tree.
-local function deep_copy(value)
-	if type(value) ~= "table" then
-		return value
-	end
-
-	local copy = {}
-
-	for key, item in pairs(value) do
-		copy[key] = deep_copy(item)
-	end
-
-	return copy
-end
+local helpers = require("easybar.helpers")
 
 --- Returns a validated canonical Lua event table.
 function M.normalize_event(payload)
 	assert(type(payload) == "table", "event payload must be a table")
 	assert(type(payload.name) == "string" and payload.name ~= "", "event payload missing name")
 
-	local event = deep_copy(payload)
+	local event = helpers.deep_copy(payload)
 
 	if event.widget_id ~= nil then
 		event.widget_id = tostring(event.widget_id)

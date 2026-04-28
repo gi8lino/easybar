@@ -2,21 +2,7 @@
 --- Owns widget item state, property normalization, and item tree mutation.
 --- Returns one registry object with item CRUD helpers and raw `_state`.
 local M = {}
-
---- Deep-copies one Lua value tree.
-local function deep_copy(value)
-	if type(value) ~= "table" then
-		return value
-	end
-
-	local copy = {}
-
-	for key, item in pairs(value) do
-		copy[key] = deep_copy(item)
-	end
-
-	return copy
-end
+local helpers = require("easybar.helpers")
 
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
@@ -28,7 +14,7 @@ local function deep_merge(target, source)
 		if type(value) == "table" and type(target[key]) == "table" then
 			deep_merge(target[key], value)
 		else
-			target[key] = deep_copy(value)
+			target[key] = helpers.deep_copy(value)
 		end
 	end
 
@@ -84,7 +70,7 @@ end
 
 --- Normalizes item props into the shape expected by the renderer.
 local function normalize_props(props)
-	local normalized = deep_copy(props or {})
+	local normalized = helpers.deep_copy(props or {})
 
 	if normalized.label ~= nil then
 		normalized.label = normalize_label(normalized.label)
@@ -220,7 +206,7 @@ function M.new()
 	--- Returns one copied item property table.
 	function registry.get(id)
 		local item = registry.ensure_item_exists(id)
-		return deep_copy(item.props)
+		return helpers.deep_copy(item.props)
 	end
 
 	--- Removes one item and its descendants.

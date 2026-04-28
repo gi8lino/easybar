@@ -2,6 +2,7 @@
 --- Owns registry-to-render-tree conversion and change-aware tree emission.
 --- Returns helpers that emit flattened widget trees for the Swift host.
 local M = {}
+local helpers = require("easybar.helpers")
 
 local last_emitted = {}
 local DEFAULT_ROOT_SHELL_STYLE = {
@@ -31,21 +32,6 @@ local DEFAULT_POPUP_STYLE = {
 	spacing = 4,
 }
 
---- Deep-copies one Lua value tree.
-local function deep_copy(value)
-	if type(value) ~= "table" then
-		return value
-	end
-
-	local copy = {}
-
-	for key, item in pairs(value) do
-		copy[key] = deep_copy(item)
-	end
-
-	return copy
-end
-
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
 	if type(source) ~= "table" then
@@ -56,7 +42,7 @@ local function deep_merge(target, source)
 		if type(value) == "table" and type(target[key]) == "table" then
 			deep_merge(target[key], value)
 		else
-			target[key] = deep_copy(value)
+			target[key] = helpers.deep_copy(value)
 		end
 	end
 
