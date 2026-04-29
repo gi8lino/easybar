@@ -1,9 +1,30 @@
 import Darwin
 import Foundation
 
+/// One structured field attached to a process log entry.
+public struct ProcessLogField {
+  public let key: String
+  public let value: Any?
+
+  public init(_ key: String, _ value: Any?) {
+    self.key = key
+    self.value = value
+  }
+}
+
+/// Builds one typed process log field.
+public func logField(_ key: String, _ value: Any?) -> ProcessLogField {
+  ProcessLogField(key, value)
+}
+
 /// Formats alternating key/value components into one compact single-line log field string.
 public func formatLogFields(_ components: Any?...) -> String {
   formatLogFields(components)
+}
+
+/// Formats typed log fields into one compact single-line string.
+public func formatLogFields(_ fields: ProcessLogField...) -> String {
+  formatLogFields(fields)
 }
 
 private func formatLogFields(_ components: [Any?]) -> String {
@@ -21,6 +42,14 @@ private func formatLogFields(_ components: [Any?]) -> String {
   }
 
   return fields.joined(separator: " ")
+}
+
+private func formatLogFields(_ fields: [ProcessLogField]) -> String {
+  guard !fields.isEmpty else { return "" }
+
+  return fields
+    .map { "\($0.key)=\(formatLogFieldValue($0.value))" }
+    .joined(separator: " ")
 }
 
 private func formatLogFieldValue(_ value: Any?) -> String {
@@ -150,6 +179,11 @@ public final class ProcessLogger {
     trace(combine(message: message, components: components))
   }
 
+  /// Writes one trace message with typed structured fields when trace logging is enabled.
+  public func trace(_ message: String, _ fields: ProcessLogField...) {
+    trace(combine(message: message, fields: fields))
+  }
+
   /// Writes one debug message when debug or trace logging is enabled.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
@@ -159,6 +193,11 @@ public final class ProcessLogger {
   /// Writes one debug message with structured fields when debug or trace logging is enabled.
   public func debug(_ message: String, _ components: Any?...) {
     debug(combine(message: message, components: components))
+  }
+
+  /// Writes one debug message with typed structured fields when debug or trace logging is enabled.
+  public func debug(_ message: String, _ fields: ProcessLogField...) {
+    debug(combine(message: message, fields: fields))
   }
 
   /// Writes one info message.
@@ -172,6 +211,11 @@ public final class ProcessLogger {
     info(combine(message: message, components: components))
   }
 
+  /// Writes one info message with typed structured fields.
+  public func info(_ message: String, _ fields: ProcessLogField...) {
+    info(combine(message: message, fields: fields))
+  }
+
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
@@ -183,6 +227,11 @@ public final class ProcessLogger {
     warn(combine(message: message, components: components))
   }
 
+  /// Writes one warning message with typed structured fields.
+  public func warn(_ message: String, _ fields: ProcessLogField...) {
+    warn(combine(message: message, fields: fields))
+  }
+
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
@@ -192,6 +241,11 @@ public final class ProcessLogger {
   /// Writes one error message with structured fields.
   public func error(_ message: String, _ components: Any?...) {
     error(combine(message: message, components: components))
+  }
+
+  /// Writes one error message with typed structured fields.
+  public func error(_ message: String, _ fields: ProcessLogField...) {
+    error(combine(message: message, fields: fields))
   }
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
@@ -236,6 +290,12 @@ public final class ProcessLogger {
     let fields = combinedFields(from: components)
     guard !fields.isEmpty else { return message }
     return "\(message) \(fields)"
+  }
+
+  private func combine(message: String, fields: [ProcessLogField]) -> String {
+    let rendered = formatLogFields(fields)
+    guard !rendered.isEmpty else { return message }
+    return "\(message) \(rendered)"
   }
 
   private func combinedFields(from components: [Any?]) -> String {

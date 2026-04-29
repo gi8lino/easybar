@@ -43,4 +43,15 @@ final class ProcessLoggerTests: XCTestCase {
       "ssid=nil orphan=nil"
     )
   }
+
+  func testTypedLogFieldsFormatStructuredPairs() {
+    XCTAssertEqual(
+      formatLogFields(
+        logField("event", "startup"),
+        logField("pid", 1234),
+        logField("path", "/tmp/easybar.sock")
+      ),
+      "event=startup pid=1234 path=/tmp/easybar.sock"
+    )
+  }
 }
