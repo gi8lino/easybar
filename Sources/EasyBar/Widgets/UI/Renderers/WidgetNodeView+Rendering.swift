@@ -52,7 +52,7 @@ extension WidgetNodeView {
     case .column:
       VStack(alignment: .leading, spacing: stackSpacing) {
         ForEach(children) { child in
-          WidgetNodeView(node: child)
+          WidgetNodeView(node: child, logger: logger)
         }
       }
       .modifier(nodeStyle)
@@ -130,7 +130,7 @@ extension WidgetNodeView {
     let content = Group {
       if hasAnchorChildren {
         ForEach(anchorChildren) { child in
-          WidgetNodeView(node: child)
+          WidgetNodeView(node: child, logger: logger)
         }
       } else {
         itemContent
@@ -143,7 +143,7 @@ extension WidgetNodeView {
   var popupContent: some View {
     VStack(alignment: .leading, spacing: stackSpacing) {
       ForEach(popupChildren) { child in
-        WidgetNodeView(node: child)
+        WidgetNodeView(node: child, logger: logger)
       }
     }
     .fixedSize()

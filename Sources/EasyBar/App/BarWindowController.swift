@@ -20,7 +20,7 @@ final class BarWindowController: NSWindowController {
     let frame = Self.makeFrame(for: screen)
     logger.info("bar window initial", logField("target_frame", NSStringFromRect(frame)))
 
-    let contentView = BarContentView()
+    let contentView = BarContentView(logger: logger)
 
     let window = BarPanel(
       contentRect: frame,
@@ -84,7 +84,7 @@ final class BarWindowController: NSWindowController {
       logField("target_frame", NSStringFromRect(frame))
     )
 
-    hostingView.rootView = BarContentView()
+    hostingView.rootView = BarContentView(logger: logger)
     window.setFrame(frame, display: true)
     window.setContentSize(frame.size)
     window.minSize = frame.size

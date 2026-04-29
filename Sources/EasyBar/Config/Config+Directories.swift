@@ -88,7 +88,6 @@ extension Config {
         at: url,
         withIntermediateDirectories: true
       )
-      logger?.info("created directory", "path", url.path)
     } catch {
       throw ConfigError.invalidValue(
         path: path,

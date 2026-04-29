@@ -1,7 +1,9 @@
+import EasyBarShared
 import SwiftUI
 
 struct WidgetNodeView: View {
   let node: WidgetNodeState
+  let logger: ProcessLogger
 
   @ObservedObject var store = WidgetStore.shared
 

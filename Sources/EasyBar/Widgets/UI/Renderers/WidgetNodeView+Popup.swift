@@ -72,7 +72,7 @@ extension WidgetNodeView {
   var childRow: some View {
     HStack(spacing: stackSpacing) {
       ForEach(children) { child in
-        WidgetNodeView(node: child)
+        WidgetNodeView(node: child, logger: logger)
       }
     }
   }

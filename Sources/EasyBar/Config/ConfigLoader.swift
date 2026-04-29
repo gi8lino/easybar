@@ -55,8 +55,6 @@ extension Config {
         )
       }
     } else {
-      logger?.info("using default configuration", "path", resolvedConfigPath)
-
       try parseApp(from: TOMLTable())
       try parseLogging(from: TOMLTable())
       try parseAgents(from: TOMLTable())

@@ -1,21 +1,23 @@
+import EasyBarShared
 import SwiftUI
 
 /// Root SwiftUI view of the EasyBar window.
 struct BarContentView: View {
+  let logger: ProcessLogger
   @ObservedObject private var config = Config.shared
   private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
 
   var body: some View {
     HStack(spacing: 8) {
-      WidgetBar(position: .left)
+      WidgetBar(position: .left, logger: logger)
 
       Spacer(minLength: 0)
 
-      WidgetBar(position: .center)
+      WidgetBar(position: .center, logger: logger)
 
       Spacer(minLength: 0)
 
-      WidgetBar(position: .right)
+      WidgetBar(position: .right, logger: logger)
     }
     .font(globalBarFont)
     .padding(.horizontal, config.barPaddingX)

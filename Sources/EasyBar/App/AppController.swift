@@ -134,8 +134,6 @@ final class AppController {
 
   /// Bootstraps all shared logger-owning services before runtime startup begins.
   private static func bootstrapSharedDependencies(logger: ProcessLogger) {
-    Config.shared.attachLogger(logger)
-
     LuaRuntime.bootstrap(logger: logger)
     EventManager.bootstrap(
       logger: logger,

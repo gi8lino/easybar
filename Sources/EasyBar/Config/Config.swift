@@ -70,15 +70,6 @@ final class Config: ObservableObject {
   var networkAgentSection: NetworkAgentSection
   var barSection: BarSection
 
-  // MARK: - Logging
-
-  var logger: ProcessLogger?
-
-  /// Attaches the runtime logger after process logging has been configured.
-  func attachLogger(_ logger: ProcessLogger) {
-    self.logger = logger
-  }
-
   // MARK: - App compatibility accessors
 
   var widgetsPath: String {
@@ -258,8 +249,6 @@ final class Config: ObservableObject {
   /// Reloads config from disk and returns one validation error when reload fails.
   @discardableResult
   func reload() -> (any Error)? {
-    logger?.info("reloading configuration", "path", configPath)
-
     let snapshot = snapshot()
     resetToDefaults()
 
@@ -267,15 +256,11 @@ final class Config: ObservableObject {
       try load()
       loadFailureState = nil
       objectWillChange.send()
-
-      logger?.info("reload applied")
       return nil
     } catch {
       apply(snapshot)
       loadFailureState = LoadFailureState(error: error, context: .reloadKeptPreviousConfig)
       objectWillChange.send()
-
-      logger?.warn("reload rejected: \(error)")
       return error
     }
   }
