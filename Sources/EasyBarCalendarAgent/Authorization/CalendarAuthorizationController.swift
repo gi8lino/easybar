@@ -66,7 +66,7 @@ final class CalendarAuthorizationController {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
 
-    logger.info("calendar agent access status=\(authState.describe(status))")
+    logger.info("calendar agent access status changed", logField("status", authState.describe(status)))
 
     switch status {
     case .authorized, .fullAccess:
@@ -94,8 +94,8 @@ final class CalendarAuthorizationController {
 
         self.logger.info(
           "calendar agent access request completed",
-          "granted", "\(granted)",
-          "status=\(self.authState.describe(newStatus))"
+          logField("granted", granted),
+          logField("status", self.authState.describe(newStatus))
         )
 
         guard granted else {

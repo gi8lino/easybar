@@ -70,7 +70,8 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
       self.authState.setStatus(status)
       self.logger.info(
-        "\(self.componentName) authorization changed status=\(self.authState.permissionState())"
+        "\(self.componentName) authorization changed",
+        logField("status", self.authState.permissionState())
       )
       self.handleAuthorizationStateChange(status)
       self.onChange?()
@@ -82,19 +83,23 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
 
-    logger.info("\(componentName) access status=\(authState.permissionState())")
+    logger.info("\(componentName) access status", logField("status", authState.permissionState()))
 
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.info("\(componentName) access already granted status=\(authState.permissionState())")
+      logger.info(
+        "\(componentName) access already granted",
+        logField("status", authState.permissionState())
+      )
       onChange?()
 
     case .notDetermined:
       prepareAuthorizationPromptIfNeeded()
       logger.info(
-        "requesting \(componentName) when-in-use access status=\(authState.permissionState())"
+        "requesting \(componentName) when-in-use access",
+        logField("status", authState.permissionState())
       )
       locationManager.requestWhenInUseAuthorization()
       scheduleRetry()
@@ -102,12 +107,15 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     case .denied, .restricted:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.warn("\(componentName) access unavailable status=\(authState.permissionState())")
+      logger.warn(
+        "\(componentName) access unavailable",
+        logField("status", authState.permissionState())
+      )
 
     @unknown default:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.warn("\(componentName) access status unknown raw=\(status.rawValue)")
+      logger.warn("\(componentName) access status unknown", logField("raw", status.rawValue))
     }
   }
 

@@ -40,7 +40,7 @@ final class AppController {
       break
 
     case .alreadyRunning(let lockPath):
-      logger.warn("easybar already running lock_path=\(lockPath)")
+      logger.warn("easybar already running", logField("lock_path", lockPath))
       terminateApplication()
 
     case .failed(let lockPath, let reason):
@@ -212,23 +212,37 @@ final class AppController {
 
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    logger.info("config details widgets_path=\(Config.shared.widgetsPath)")
-    logger.info("config details lua_path=\(Config.shared.luaPath)")
-    logger.info("config details watch_config=\(Config.shared.watchConfigFile)")
+    logger.info("config details", logField("widgets_path", Config.shared.widgetsPath))
+    logger.info("config details", logField("lua_path", Config.shared.luaPath))
+    logger.info("config details", logField("watch_config", Config.shared.watchConfigFile))
     logger.info(
-      "config details calendar_agent_enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"
+      "config details",
+      logField("calendar_agent_enabled", Config.shared.calendarAgentEnabled),
+      logField("socket", Config.shared.calendarAgentSocketPath)
     )
     logger.info(
-      "config details network_agent_enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)"
+      "config details",
+      logField("network_agent_enabled", Config.shared.networkAgentEnabled),
+      logField("socket", Config.shared.networkAgentSocketPath),
+      logField("refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds)
     )
     logger.info(
-      "config details calendar_builtin_enabled=\(Config.shared.builtinCalendar.enabled) popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
+      "config details",
+      logField("calendar_builtin_enabled", Config.shared.builtinCalendar.enabled),
+      logField("popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
+      logField("anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue),
+      logField("position", Config.shared.builtinCalendar.position.rawValue)
     )
     logger.info(
-      "config details wifi_builtin_enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)"
+      "config details",
+      logField("wifi_builtin_enabled", Config.shared.builtinWiFi.enabled),
+      logField("position", Config.shared.builtinWiFi.position.rawValue)
     )
     logger.info(
-      "config details bar_height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)"
+      "config details",
+      logField("bar_height", Config.shared.barHeight),
+      logField("padding_x", Config.shared.barPaddingX),
+      logField("extend_behind_notch", Config.shared.barExtendBehindNotch)
     )
   }
 
@@ -236,7 +250,9 @@ final class AppController {
   private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
       logger.info(
-        "screen details screen_frame=\(NSStringFromRect(screen.frame)) visible=\(NSStringFromRect(screen.visibleFrame))"
+        "screen details",
+        logField("screen_frame", NSStringFromRect(screen.frame)),
+        logField("visible", NSStringFromRect(screen.visibleFrame))
       )
     } else {
       logger.warn("no screen available during startup logging")
@@ -250,10 +266,14 @@ final class AppController {
     let logLevel = env["\(SharedEnvironmentKeys.loggingLevel)"] ?? ""
 
     logger.info(
-      "environment \(SharedEnvironmentKeys.configPath)=\(configOverride.isEmpty ? "<unset>" : configOverride)"
+      "environment override",
+      logField("key", SharedEnvironmentKeys.configPath),
+      logField("value", configOverride.isEmpty ? "<unset>" : configOverride)
     )
     logger.info(
-      "environment \(SharedEnvironmentKeys.loggingLevel)=\(logLevel.isEmpty ? "<unset>" : logLevel)"
+      "environment override",
+      logField("key", SharedEnvironmentKeys.loggingLevel),
+      logField("value", logLevel.isEmpty ? "<unset>" : logLevel)
     )
   }
 
@@ -262,13 +282,13 @@ final class AppController {
     let environment = Config.shared.appSection.environment
 
     guard !environment.isEmpty else {
-      logger.info("app env value=<empty>")
+      logger.info("app env", logField("value", "<empty>"))
       return
     }
 
     for key in environment.keys.sorted() {
       let value = environment[key] ?? ""
-      logger.info("app env \(key)=\(value)")
+      logger.info("app env", logField("key", key), logField("value", value))
     }
   }
 
@@ -280,7 +300,7 @@ final class AppController {
   /// Logs one warning when a required font is missing.
   private func validateFont(named fontName: String) {
     if NSFont(name: fontName, size: 12) != nil {
-      logger.info("font available name=\(fontName)")
+      logger.info("font available", logField("name", fontName))
       return
     }
 
@@ -312,9 +332,9 @@ final class AppController {
         withIntermediateDirectories: true
       )
       try bundledData.write(to: installedStub, options: .atomic)
-      logger.info("installed widget editor stub path=\(installedStub.path)")
+      logger.info("installed widget editor stub", logField("path", installedStub.path))
     } catch {
-      logger.warn("failed to install widget editor stub error=\(error)")
+      logger.warn("failed to install widget editor stub", logField("error", error))
     }
   }
 

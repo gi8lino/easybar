@@ -81,7 +81,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to subscribe default output device changes status=\(status)")
+      logger.debug("failed to subscribe default output device changes", logField("status", status))
       return
     }
 
@@ -101,7 +101,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to remove default output device listener status=\(status)")
+      logger.debug("failed to remove default output device listener", logField("status", status))
       return
     }
   }
@@ -147,7 +147,7 @@ final class VolumeEvents {
     )
 
     guard volumeStatus == noErr else {
-      logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
+      logger.debug("failed to subscribe volume listener", logField("status", volumeStatus))
       return
     }
 
@@ -177,7 +177,7 @@ final class VolumeEvents {
     )
 
     guard muteStatus == noErr else {
-      logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
+      logger.debug("mute listener unavailable on current output device", logField("status", muteStatus))
       return
     }
 
@@ -198,7 +198,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        logger.debug("failed to remove volume listener status=\(status)")
+        logger.debug("failed to remove volume listener", logField("status", status))
         return
       }
     }
@@ -213,7 +213,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        logger.debug("failed to remove mute listener status=\(status)")
+        logger.debug("failed to remove mute listener", logField("status", status))
         return
       }
     }
@@ -236,7 +236,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to read default output device status=\(status)")
+      logger.debug("failed to read default output device", logField("status", status))
       return nil
     }
 

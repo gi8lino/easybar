@@ -141,7 +141,7 @@ final class EventManager {
     activeSources = desiredSources
     activeInterval = desiredInterval
 
-    logger.debug("event manager refresh end active=\(activeSubscriptions)")
+    logger.debug("event manager refresh end", logField("active", activeSubscriptions))
   }
 
   /// Starts the newly required event sources.

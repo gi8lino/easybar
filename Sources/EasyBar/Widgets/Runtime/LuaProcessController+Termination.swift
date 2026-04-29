@@ -1,4 +1,5 @@
 import Darwin
+import EasyBarShared
 import Foundation
 
 /// Queue used for deferred forced termination of the Lua process.
@@ -19,11 +20,13 @@ extension LuaProcessController {
 
     if let processGroupIdentifier, processGroupIdentifier > 0 {
       logger.debug(
-        "sending SIGTERM to lua process group pgid=\(processGroupIdentifier) pid=\(processIdentifier)"
+        "sending SIGTERM to lua process group",
+        logField("pgid", processGroupIdentifier),
+        logField("pid", processIdentifier)
       )
       kill(-processGroupIdentifier, SIGTERM)
     } else {
-      logger.debug("sending SIGTERM to lua process pid=\(processIdentifier)")
+      logger.debug("sending SIGTERM to lua process", logField("pid", processIdentifier))
       kill(processIdentifier, SIGTERM)
     }
 
@@ -33,11 +36,13 @@ extension LuaProcessController {
 
       if let processGroupIdentifier, processGroupIdentifier > 0 {
         self.logger.warn(
-          "forcing lua process group shutdown pgid=\(processGroupIdentifier) pid=\(processIdentifier)"
+          "forcing lua process group shutdown",
+          logField("pgid", processGroupIdentifier),
+          logField("pid", processIdentifier)
         )
         kill(-processGroupIdentifier, SIGKILL)
       } else {
-        self.logger.warn("forcing lua process shutdown pid=\(processIdentifier)")
+        self.logger.warn("forcing lua process shutdown", logField("pid", processIdentifier))
         kill(processIdentifier, SIGKILL)
       }
     }

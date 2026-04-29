@@ -150,7 +150,7 @@ actor WidgetEngine {
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
-    logger.debug("required events: \(runtimeState.requiredEvents)")
+    logger.debug("required events updated", logField("events", runtimeState.requiredEvents))
 
     let requiredEvents = runtimeState.requiredEvents
     await MainActor.run {
@@ -179,7 +179,11 @@ actor WidgetEngine {
 
     scriptedRoots.insert(tree.root)
 
-    logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
+    logger.debug(
+      "decoded widget tree",
+      logField("root", tree.root),
+      logField("nodes", tree.nodes.count)
+    )
     MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
 
     await MainActor.run {

@@ -133,7 +133,10 @@ final class SystemEvents {
       }
 
       let appName = app.localizedName ?? ""
-      self.logger.debug("received didActivateApplication notification app=\(appName)")
+      self.logger.debug(
+        "received didActivateApplication notification",
+        logField("app", appName)
+      )
 
       Task {
         await EventHub.shared.emit(.appSwitch, appName: appName)

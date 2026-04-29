@@ -20,11 +20,11 @@ final class LuaEventSink {
   func enqueue(_ payload: EasyBarEventPayload) {
     queue.async { [runtime, logger] in
       guard let encoded = Self.encodedPayload(payload) else {
-        logger.error("failed to encode lua event payload name=\(payload.eventName)")
+        logger.error("failed to encode lua event payload", logField("name", payload.eventName))
         return
       }
 
-      logger.trace("sent to lua stdin: \(encoded)")
+      logger.trace("sent to lua stdin", logField("payload", encoded))
 
       Task {
         await runtime.send(encoded)

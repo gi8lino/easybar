@@ -74,7 +74,7 @@ final class TimerEvents {
       event: .intervalTick
     )
 
-    logger.debug("interval timer started interval=\(interval)")
+    logger.debug("interval timer started", logField("interval", interval))
   }
 
   /// Stops the interval timer.

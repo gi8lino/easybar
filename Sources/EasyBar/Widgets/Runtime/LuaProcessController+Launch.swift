@@ -1,4 +1,5 @@
 import Darwin
+import EasyBarShared
 import Foundation
 
 extension LuaProcessController {
@@ -27,10 +28,10 @@ extension LuaProcessController {
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
     logger.debug("starting lua runtime")
-    logger.debug("lua binary: \(context.luaPath)")
-    logger.debug("lua script: \(context.runtimePath)")
-    logger.debug("widgets path: \(context.widgetsPath)")
-    logger.debug("lua env keys: \(context.environment.keys.sorted())")
+    logger.debug("lua binary", logField("path", context.luaPath))
+    logger.debug("lua script", logField("path", context.runtimePath))
+    logger.debug("widgets path", logField("path", context.widgetsPath))
+    logger.debug("lua env keys", logField("keys", context.environment.keys.sorted()))
   }
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
@@ -139,7 +140,7 @@ extension LuaProcessController {
       status = normalizedTerminationStatus(from: rawStatus)
     } else {
       let code = errno
-      logger.warn("waitpid failed for lua runtime pid=\(pid) errno=\(code)")
+      logger.warn("waitpid failed for lua runtime", logField("pid", pid), logField("errno", code))
       status = 1
     }
 
@@ -164,11 +165,19 @@ extension LuaProcessController {
   /// Logs one Lua runtime termination status.
   func logTerminationStatus(_ status: Int32, processIdentifier: Int32) {
     guard status != 0 else {
-      logger.info("lua runtime terminated pid=\(processIdentifier) status=\(status)")
+      logger.info(
+        "lua runtime terminated",
+        logField("pid", processIdentifier),
+        logField("status", status)
+      )
       return
     }
 
-    logger.warn("lua runtime terminated pid=\(processIdentifier) status=\(status)")
+    logger.warn(
+      "lua runtime terminated",
+      logField("pid", processIdentifier),
+      logField("status", status)
+    )
   }
 
   /// Initializes one `posix_spawn_file_actions_t`.

@@ -85,7 +85,7 @@ actor FileWatcher {
     guard enabled else { return }
 
     guard let watchTarget = openWatchTarget(for: configPath) else {
-      logger.warn("file watcher failed to open watch target for path=\(configPath)")
+      logger.warn("file watcher failed to open watch target", logField("path", configPath))
       return
     }
 

@@ -42,7 +42,7 @@ public final class DebouncedActionScheduler {
     lock.unlock()
 
     if let label {
-      logger.debug("\(label) scheduled delay=\(delay)")
+      logger.debug("\(label) scheduled", logField("delay", delay))
     }
 
     queue.asyncAfter(deadline: .now() + delay, execute: workItem)

@@ -213,6 +213,10 @@ actor EventHub {
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
 
-    logger.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
+    logger.trace(
+      "emit event",
+      logField("name", payload.eventName),
+      logField("payload", payload.toDictionary())
+    )
   }
 }
