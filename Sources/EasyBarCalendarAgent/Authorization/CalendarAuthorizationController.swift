@@ -30,7 +30,9 @@ final class CalendarAuthorizationController {
     authState.setStatus(status)
 
     logger.info(
-      "calendar agent authorization status before", "start", "\(authState.describe(status))")
+      "calendar agent authorization status before",
+      .field("start", "\(authState.describe(status))"),
+    )
 
     requestAccessIfNeeded()
   }
@@ -66,7 +68,10 @@ final class CalendarAuthorizationController {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
 
-    logger.info("calendar agent access status changed", .field("status", authState.describe(status)))
+    logger.info(
+      "calendar agent access status changed",
+      .field("status", authState.describe(status)),
+    )
 
     switch status {
     case .authorized, .fullAccess:
@@ -86,8 +91,8 @@ final class CalendarAuthorizationController {
         if let error {
           self.logger.error(
             "calendar agent access request failed",
-            "status", "\(self.authState.describe(newStatus))",
-            "error", "\(error)")
+            .field("status", "\(self.authState.describe(newStatus))"),
+            .field("error", "\(error)"))
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
           return
         }
@@ -113,11 +118,17 @@ final class CalendarAuthorizationController {
 
     case .denied, .restricted, .writeOnly:
       retryBackoff.reset()
-      logger.warn("calendar agent access unavailable", "status", "\(authState.describe(status))")
+      logger.warn(
+        "calendar agent access unavailable",
+        .field("status", "\(authState.describe(status))"),
+      )
 
     @unknown default:
       retryBackoff.reset()
-      logger.warn("calendar agent access status unknown", "raw", "\(status.rawValue)")
+      logger.warn(
+        "calendar agent access status unknown",
+        .field("raw", "\(status.rawValue)"),
+      )
     }
   }
 

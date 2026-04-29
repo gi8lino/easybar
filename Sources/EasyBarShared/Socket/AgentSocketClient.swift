@@ -135,7 +135,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       self.onConnected?()
-      self.logger.info("\(self.label) connected", .field("socket", resolvedSocketPath))
+      self.logger.info(
+        "\(self.label) connected",
+        .field("socket", resolvedSocketPath),
+      )
 
       guard self.send(self.subscribeRequest(), to: fd) else {
         self.logger.warn("\(self.label) failed to send subscribe request")
@@ -173,7 +176,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
         continue
       }
 
-      logger.debug("\(label) read failed", .field("errno", errno))
+      logger.debug(
+        "\(label) read failed",
+        .field("errno", errno),
+      )
       break
     }
 
@@ -211,7 +217,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       handleMessage(message)
     } catch {
       onDecodeError?()
-      logger.warn("\(label) failed to decode message", .field("error", error))
+      logger.warn(
+        "\(label) failed to decode message",
+        .field("error", error),
+      )
     }
   }
 
@@ -255,7 +264,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
     guard shouldSchedule else { return }
 
-    logger.debug("\(label) scheduling reconnect", .field("delay", scheduledDelay))
+    logger.debug(
+      "\(label) scheduling reconnect",
+      .field("delay", scheduledDelay),
+    )
     queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
   }
 
@@ -268,7 +280,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       let data = try encoder.encode(request) + Data([0x0A])
       return writeAll(data, to: fd)
     } catch {
-      logger.warn("\(label) failed to encode request", .field("error", error))
+      logger.warn(
+        "\(label) failed to encode request",
+        .field("error", error),
+      )
       return false
     }
   }
@@ -298,12 +313,18 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private func openConnectedSocket(socketPath: String) -> Int32? {
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      logger.error("\(label) failed to create socket", .field("errno", errno))
+      logger.error(
+        "\(label) failed to create socket",
+        .field("errno", errno),
+      )
       return nil
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      logger.error("\(label) failed to configure socket no-sigpipe", .field("fd", fd))
+      logger.error(
+        "\(label) failed to configure socket no-sigpipe",
+        .field("fd", fd),
+      )
       close(fd)
       return nil
     }

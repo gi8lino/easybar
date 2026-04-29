@@ -136,8 +136,8 @@ final class NetworkAgentClient {
 
     logger.warn(
       "network agent error",
-      "code", code?.rawValue ?? "unknown",
-      "message", message ?? "unknown"
+      .field("code", code?.rawValue ?? "unknown"),
+      .field("message", message ?? "unknown)"),
     )
 
     guard code == .permissionDenied else { return }

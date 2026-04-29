@@ -81,7 +81,10 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to subscribe default output device changes", .field("status", status))
+      logger.debug(
+        "failed to subscribe default output device changes",
+        .field("status", status),
+      )
       return
     }
 
@@ -101,7 +104,10 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to remove default output device listener", .field("status", status))
+      logger.debug(
+        "failed to remove default output device listener",
+        .field("status", status),
+      )
       return
     }
   }
@@ -147,7 +153,10 @@ final class VolumeEvents {
     )
 
     guard volumeStatus == noErr else {
-      logger.debug("failed to subscribe volume listener", .field("status", volumeStatus))
+      logger.debug(
+        "failed to subscribe volume listener",
+        .field("status", volumeStatus),
+      )
       return
     }
 
@@ -177,7 +186,10 @@ final class VolumeEvents {
     )
 
     guard muteStatus == noErr else {
-      logger.debug("mute listener unavailable on current output device", .field("status", muteStatus))
+      logger.debug(
+        "mute listener unavailable on current output device",
+        .field("status", muteStatus),
+      )
       return
     }
 
@@ -198,7 +210,10 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        logger.debug("failed to remove volume listener", .field("status", status))
+        logger.debug(
+          "failed to remove volume listener",
+          .field("status", status),
+        )
         return
       }
     }
@@ -213,7 +228,10 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        logger.debug("failed to remove mute listener", .field("status", status))
+        logger.debug(
+          "failed to remove mute listener",
+          .field("status", status),
+        )
         return
       }
     }
@@ -236,7 +254,10 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      logger.debug("failed to read default output device", .field("status", status))
+      logger.debug(
+        "failed to read default output device",
+        .field("status", status),
+      )
       return nil
     }
 

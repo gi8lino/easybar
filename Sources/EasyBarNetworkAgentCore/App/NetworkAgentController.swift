@@ -40,27 +40,28 @@ public final class NetworkAgentController {
   @discardableResult
   public func start() -> Bool {
     guard isEnabled else {
-      logger.info("\(config.componentName) disabled in config")
+      logger.info(
+        "network agent disabled in config",
+        .field("component", config.componentName)
+      )
       return false
     }
 
     logProcessStartup(
       processName: config.processName,
       configPath: config.configPath,
-      socketSummary:
-        formatLogFields(
-          "socket path", "\(config.socketPath)",
-          "refresh_interval_seconds", "\(config.refreshIntervalSeconds)",
-          "allow_unauthorized_fields_without_location",
-          "\(config.allowUnauthorizedFieldsWithoutLocation)",
-        ),
-      loggingSummary:
-        formatLogFields(
-          "logging enabled", "\(logger.fileLoggingEnabled)",
-          "level", "\(logger.minimumLevel.rawValue)",
-          "path", "\(logger.fileLoggingPath)",
-        ),
-      write: logger.info
+      socketPath: "\(config.socketPath)",
+      logger: logger
+    )
+
+    logger.info(
+      "network agent config",
+      .field("component", config.componentName),
+      .field("refresh_interval_seconds", config.refreshIntervalSeconds),
+      .field(
+        "allow_unauthorized_fields_without_location",
+        config.allowUnauthorizedFieldsWithoutLocation
+      )
     )
 
     snapshotProvider.start { [weak self] in

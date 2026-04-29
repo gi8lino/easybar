@@ -69,12 +69,19 @@ final class LuaProcessController {
 
       installTerminationSource(for: pid)
 
-      logger.debug("lua runtime started", .field("pid", pid), .field("pgid", pid))
+      logger.debug(
+        "lua runtime started",
+        .field("pid", pid),
+        .field("pgid", pid),
+      )
 
       return (pid, pipes.input, pipes.output, pipes.error)
     } catch {
       closeLaunchPipesAfterFailedSpawn(pipes)
-      logger.error("failed to start lua runtime: \(error)")
+      logger.error(
+        "failed to start lua runtime",
+        .field("error", "\(error)"),
+      )
       return nil
     }
   }
@@ -106,7 +113,10 @@ final class LuaProcessController {
         .field("pgid", processGroupIdentifier)
       )
     } else {
-      logger.debug("shutting down lua runtime", .field("pid", snapshot.processIdentifier))
+      logger.debug(
+        "shutting down lua runtime",
+        .field("pid", snapshot.processIdentifier),
+      )
     }
 
     terminateProcess(

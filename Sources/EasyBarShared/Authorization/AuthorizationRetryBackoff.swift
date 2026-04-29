@@ -60,7 +60,10 @@ public final class AuthorizationRetryBackoff {
 
     guard let scheduledDelay, let workItem else { return }
 
-    logger.debug("authorization retry scheduled", "delay", "\(scheduledDelay)")
+    logger.debug(
+      "authorization retry scheduled",
+      .field("delay", "\(scheduledDelay)"),
+    )
     queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
   }
 

@@ -39,10 +39,10 @@ final class NativeMonthCalendarStore: ObservableObject {
   func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
     logger.debug(
       "month calendar popup applied snapshot",
-      "access_granted", "\(snapshot.accessGranted)",
-      "permission_state", "\(snapshot.permissionState)",
-      "events", "\(snapshot.events.count)",
-      "sections", "\(snapshot.sections.count)"
+      .field("access_granted", "\(snapshot.accessGranted)"),
+      .field("permission_state", "\(snapshot.permissionState)"),
+      .field("events", "\(snapshot.events.count)"),
+      .field("sections", "\(snapshot.sections.count)"),
     )
     publish(snapshot: snapshot)
   }
@@ -135,10 +135,10 @@ final class NativeMonthCalendarStore: ObservableObject {
 
       logger.debug(
         "month calendar store prepared subscription range",
-        "month", "\(debugDate(startOfVisibleMonth))",
-        "radius", "\(normalizedRadius)",
-        "start", "\(debugDate(preparedRange.start))",
-        "end", "\(debugDate(preparedRange.end))",
+        .field("month", "\(debugDate(startOfVisibleMonth))"),
+        .field("radius", "\(normalizedRadius)"),
+        .field("start", "\(debugDate(preparedRange.start))"),
+        .field("end", "\(debugDate(preparedRange.end))"),
       )
     }
 
@@ -160,9 +160,9 @@ final class NativeMonthCalendarStore: ObservableObject {
 
       self.logger.debug(
         "month calendar store published",
-        "snapshot_present", "\(snapshot != nil)",
-        "events", "\(self.events.count)",
-        "sections", "\(self.sections.count)",
+        .field("snapshot_present", "\(snapshot != nil)"),
+        .field("events", "\(self.events.count)"),
+        .field("sections", "\(self.sections.count)"),
       )
     }
 

@@ -84,7 +84,10 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
 
-    logger.info("\(componentName) access status", .field("status", authState.permissionState()))
+    logger.info(
+      "\(componentName) access status",
+      .field("status", authState.permissionState()),
+    )
 
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
@@ -116,7 +119,10 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     @unknown default:
       retryBackoff.reset()
       restoreAccessoryModeIfNeeded()
-      logger.warn("\(componentName) access status unknown", .field("raw", status.rawValue))
+      logger.warn(
+        "\(componentName) access status unknown",
+        .field("raw", status.rawValue),
+      )
     }
   }
 
@@ -149,7 +155,8 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     presentedAuthorizationPrompt = true
 
     logger.info(
-      "\(componentName) preparing authorization prompt presented=\(presentedAuthorizationPrompt)"
+      "\(componentName) preparing authorization prompt",
+      .field("presented", "\(presentedAuthorizationPrompt)"),
     )
 
     Task { @MainActor [weak promptPresenter] in
@@ -164,7 +171,8 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     presentedAuthorizationPrompt = false
 
     logger.info(
-      "\(componentName) restoring UI after authorization prompt presented=\(presentedAuthorizationPrompt)"
+      "\(componentName) restoring UI after authorization prompt",
+      .field("presented", "\(presentedAuthorizationPrompt)"),
     )
 
     Task { @MainActor [weak promptPresenter] in

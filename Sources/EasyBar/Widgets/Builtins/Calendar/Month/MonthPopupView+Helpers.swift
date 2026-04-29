@@ -113,8 +113,8 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup select_year",
-      "year", "\(year)",
-      "visible_month", "\(debugDate(visibleMonth))"
+      .field("year", "\(year)"),
+      .field("visible_month", "\(debugDate(visibleMonth))"),
     )
   }
 
@@ -171,17 +171,18 @@ extension NativeMonthCalendarPopupView {
   func logSelection(_ reason: String) {
     logger.debug(
       "month calendar popup selection",
-      "reason", "\(reason)",
-      "start", "\(debugDate(selectedStartDate))",
-      "end", "\(debugDate(selectedEndDate))",
+      .field("reason", "\(reason)"),
+      .field("start", "\(debugDate(selectedStartDate))"),
+      .field("end", "\(debugDate(selectedEndDate))"),
     )
   }
 
   /// Logs the appointments resolved for the current selection.
   func logResolvedAppointments(_ reason: String) {
     logger.debug(
-      "month calendar popup appointments", "reason", "\(reason)",
-      "count", "\(selectedEvents.count)",
+      "month calendar popup appointments",
+      .field("reason", "\(reason)"),
+      .field("count", "\(selectedEvents.count)"),
     )
   }
 

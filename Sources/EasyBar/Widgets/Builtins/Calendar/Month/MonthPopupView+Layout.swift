@@ -223,7 +223,7 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup show_today",
-      "visible_month", "\(debugDate(visibleMonth))"
+      .field("visible_month", "\(debugDate(visibleMonth))"),
     )
   }
 
@@ -242,7 +242,7 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup show_previous_month",
-      "visible_month", "\(debugDate(visibleMonth))",
+      .field("visible_month", "\(debugDate(visibleMonth))"),
     )
   }
 
@@ -261,7 +261,7 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup show_next_month",
-      "visible_month", "\(debugDate(visibleMonth))",
+      .field("visible_month", "\(debugDate(visibleMonth))"),
     )
   }
 

@@ -27,8 +27,10 @@ public final class NetworkSnapshotProvider {
       logger: logger.child("authorization"),
       promptPresenter: promptPresenter
     )
-    wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger.child("wifi_monitor"))
-    systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger.child("system_monitor"))
+    wifiMonitor = NetworkWiFiMonitor(
+      componentName: componentName, logger: logger.child("wifi_monitor"))
+    systemMonitor = NetworkSystemMonitor(
+      componentName: componentName, logger: logger.child("system_monitor"))
   }
 
   /// Starts permission, Wi-Fi, and network monitoring.
@@ -49,7 +51,7 @@ public final class NetworkSnapshotProvider {
 
     logger.info(
       "\(componentName) refresh",
-      "interval_seconds", refreshIntervalSeconds,
+      .field("interval_seconds", refreshIntervalSeconds),
     )
 
     if refreshIntervalSeconds > 0 {
@@ -83,12 +85,12 @@ public final class NetworkSnapshotProvider {
 
     logger.debug(
       "\(componentName) snapshot",
-      "access_granted", authorizer.isAuthorized(),
-      "permission_state", permissionState,
-      "ssid", wifi.ssid ?? "<none>",
-      "interface", wifi.interfaceName ?? "<none>",
-      "rssi", wifi.rssi.map(String.init) ?? "<none>",
-      "primary_is_tunnel", network.primaryInterfaceIsTunnel,
+      .field("access_granted", authorizer.isAuthorized()),
+      .field("permission_state", permissionState),
+      .field("ssid", wifi.ssid ?? "<none>"),
+      .field("interface", wifi.interfaceName ?? "<none>"),
+      .field("rssi", wifi.rssi.map(String.init) ?? "<none>"),
+      .field("primary_is_tunnel", network.primaryInterfaceIsTunnel),
     )
 
     return NetworkAgentSnapshot(

@@ -17,41 +17,17 @@ public struct ProcessLogField {
   }
 }
 
-/// Formats alternating key/value components into one compact single-line log field string.
-public func formatLogFields(_ components: Any?...) -> String {
-  formatLogFields(components)
-}
-
-/// Formats typed log fields into one compact single-line string.
-public func formatLogFields(_ fields: ProcessLogField...) -> String {
-  formatLogFields(fields)
-}
-
-private func formatLogFields(_ components: [Any?]) -> String {
-  guard !components.isEmpty else { return "" }
-
-  var fields: [String] = []
-  fields.reserveCapacity(components.count / 2)
-
-  var index = 0
-  while index < components.count {
-    let key = String(describing: components[index] ?? "nil")
-    let value = index + 1 < components.count ? components[index + 1] : nil
-    fields.append("\(key)=\(formatLogFieldValue(value))")
-    index += 2
-  }
-
-  return fields.joined(separator: " ")
-}
-
+/// Formats typed log fields into one compact string.
 private func formatLogFields(_ fields: [ProcessLogField]) -> String {
   guard !fields.isEmpty else { return "" }
 
-  return fields
+  return
+    fields
     .map { "\($0.key)=\(formatLogFieldValue($0.value))" }
     .joined(separator: " ")
 }
 
+/// Formats one log field value.
 private func formatLogFieldValue(_ value: Any?) -> String {
   guard let value else { return "nil" }
 
@@ -73,6 +49,7 @@ private func formatLogFieldValue(_ value: Any?) -> String {
 
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
+  /// Shared mutable logger state.
   private final class SharedState {
     let lock = NSLock()
     var fileHandle: FileHandle?
@@ -80,11 +57,13 @@ public final class ProcessLogger {
     var fileLoggingEnabled = false
     var fileLoggingPath = ""
 
+    /// Creates shared logger state.
     init(minimumLevel: ProcessLogLevel) {
       self.minimumLevel = minimumLevel
     }
   }
 
+  /// Formats log timestamps.
   private static let formatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .iso8601)
@@ -97,11 +76,13 @@ public final class ProcessLogger {
   private let label: String
   private let sharedState: SharedState
 
+  /// Creates one process logger.
   public init(label: String, minimumLevel: ProcessLogLevel = .info) {
     self.label = label
     sharedState = SharedState(minimumLevel: minimumLevel)
   }
 
+  /// Creates one child logger with shared state.
   private init(label: String, sharedState: SharedState) {
     self.label = label
     self.sharedState = sharedState
@@ -111,24 +92,31 @@ public final class ProcessLogger {
   public func child(_ suffix: String) -> ProcessLogger {
     let trimmedSuffix = suffix.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedSuffix.isEmpty else { return self }
+
     return ProcessLogger(label: "\(label).\(trimmedSuffix)", sharedState: sharedState)
   }
 
+  /// Current minimum log level.
   public var minimumLevel: ProcessLogLevel {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
+
     return sharedState.minimumLevel
   }
 
+  /// Whether file logging is enabled.
   public var fileLoggingEnabled: Bool {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
+
     return sharedState.fileLoggingEnabled
   }
 
+  /// Current file logging path.
   public var fileLoggingPath: String {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
+
     return sharedState.fileLoggingPath
   }
 
@@ -139,7 +127,7 @@ public final class ProcessLogger {
     sharedState.lock.unlock()
   }
 
-  /// Configures minimum level and optional file logging in one step.
+  /// Configures minimum level and optional file logging.
   public func configureRuntimeLogging(
     minimumLevel: ProcessLogLevel,
     fileLoggingEnabled: Bool,
@@ -149,7 +137,7 @@ public final class ProcessLogger {
     configureFileLogging(enabled: fileLoggingEnabled, path: fileLoggingPath)
   }
 
-  /// Configures optional mirroring of log lines into one file.
+  /// Configures optional mirroring into one file.
   public func configureFileLogging(enabled: Bool, path: String) {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
@@ -188,34 +176,26 @@ public final class ProcessLogger {
     }
   }
 
-  /// Writes one trace message when trace logging is enabled.
+  /// Writes one trace message.
   public func trace(_ message: String) {
     guard shouldLog(.trace) else { return }
+
     write(level: "TRACE", message: message, stream: stdout)
   }
 
-  /// Writes one trace message with structured fields when trace logging is enabled.
-  public func trace(_ message: String, _ components: Any?...) {
-    trace(combine(message: message, components: components))
-  }
-
-  /// Writes one trace message with typed structured fields when trace logging is enabled.
+  /// Writes one trace message with typed fields.
   public func trace(_ message: String, _ fields: ProcessLogField...) {
     trace(combine(message: message, fields: fields))
   }
 
-  /// Writes one debug message when debug or trace logging is enabled.
+  /// Writes one debug message.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
+
     write(level: "DEBUG", message: message, stream: stdout)
   }
 
-  /// Writes one debug message with structured fields when debug or trace logging is enabled.
-  public func debug(_ message: String, _ components: Any?...) {
-    debug(combine(message: message, components: components))
-  }
-
-  /// Writes one debug message with typed structured fields when debug or trace logging is enabled.
+  /// Writes one debug message with typed fields.
   public func debug(_ message: String, _ fields: ProcessLogField...) {
     debug(combine(message: message, fields: fields))
   }
@@ -223,15 +203,11 @@ public final class ProcessLogger {
   /// Writes one info message.
   public func info(_ message: String) {
     guard shouldLog(.info) else { return }
+
     write(level: "INFO", message: message, stream: stdout)
   }
 
-  /// Writes one info message with structured fields.
-  public func info(_ message: String, _ components: Any?...) {
-    info(combine(message: message, components: components))
-  }
-
-  /// Writes one info message with typed structured fields.
+  /// Writes one info message with typed fields.
   public func info(_ message: String, _ fields: ProcessLogField...) {
     info(combine(message: message, fields: fields))
   }
@@ -239,15 +215,11 @@ public final class ProcessLogger {
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
+
     write(level: "WARN", message: message, stream: stderr)
   }
 
-  /// Writes one warning message with structured fields.
-  public func warn(_ message: String, _ components: Any?...) {
-    warn(combine(message: message, components: components))
-  }
-
-  /// Writes one warning message with typed structured fields.
+  /// Writes one warning message with typed fields.
   public func warn(_ message: String, _ fields: ProcessLogField...) {
     warn(combine(message: message, fields: fields))
   }
@@ -255,79 +227,68 @@ public final class ProcessLogger {
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
+
     write(level: "ERROR", message: message, stream: stderr)
   }
 
-  /// Writes one error message with structured fields.
-  public func error(_ message: String, _ components: Any?...) {
-    error(combine(message: message, components: components))
-  }
-
-  /// Writes one error message with typed structured fields.
+  /// Writes one error message with typed fields.
   public func error(_ message: String, _ fields: ProcessLogField...) {
     error(combine(message: message, fields: fields))
   }
 
-  /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
+  /// Writes one raw message and mirrors it to the log file.
   public func writeRaw(_ message: String, to stream: UnsafeMutablePointer<FILE>?) {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
 
-    let line = message + "\n"
-    fputs(line, stream)
+    fputs(message + "\n", stream)
     fflush(stream)
     writeFileUnlocked(message)
   }
 
+  /// Returns whether one level should be logged.
   private func shouldLog(_ level: ProcessLogLevel) -> Bool {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
+
     return sharedState.minimumLevel.allows(level)
   }
 
+  /// Writes one formatted message.
   private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
+
     writeUnlocked(level: level, message: message, stream: stream)
   }
 
+  /// Writes one formatted message while locked.
   private func writeUnlocked(
     level: String,
     message: String,
     stream: UnsafeMutablePointer<FILE>?
   ) {
     let line = formattedLine(level: level, message: message)
+
     fputs(line + "\n", stream)
     fflush(stream)
     writeFileUnlocked(line)
   }
 
+  /// Builds one formatted log line.
   private func formattedLine(level: String, message: String) -> String {
     "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
   }
 
-  private func combine(message: String, components: [Any?]) -> String {
-    let fields = combinedFields(from: components)
-    guard !fields.isEmpty else { return message }
-    return "\(message) \(fields)"
-  }
-
+  /// Appends typed fields to one message.
   private func combine(message: String, fields: [ProcessLogField]) -> String {
     let rendered = formatLogFields(fields)
     guard !rendered.isEmpty else { return message }
+
     return "\(message) \(rendered)"
   }
 
-  private func combinedFields(from components: [Any?]) -> String {
-    guard !components.isEmpty else { return "" }
-
-    if components.count == 1, let preformatted = components[0] as? String {
-      return preformatted
-    }
-
-    return formatLogFields(components)
-  }
-
+  /// Writes one line to the configured log file.
   private func writeFileUnlocked(_ line: String) {
     guard let data = (line + "\n").data(using: .utf8) else { return }
 

@@ -26,7 +26,10 @@ extension LuaProcessController {
       )
       kill(-processGroupIdentifier, SIGTERM)
     } else {
-      logger.debug("sending SIGTERM to lua process", .field("pid", processIdentifier))
+      logger.debug(
+        "sending SIGTERM to lua process",
+        .field("pid", processIdentifier),
+      )
       kill(processIdentifier, SIGTERM)
     }
 

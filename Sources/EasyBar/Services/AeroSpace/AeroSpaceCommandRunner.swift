@@ -29,7 +29,10 @@ final class AeroSpaceCommandRunner {
       try process.run()
     } catch {
       logger.debug(
-        "failed to run aerospace", "args", arguments.joined(separator: " "), "error", error)
+        "failed to run aerospace",
+        .field("args", arguments.joined(separator: " ")),
+        .field("error", error),
+      )
       return nil
     }
 
@@ -41,8 +44,8 @@ final class AeroSpaceCommandRunner {
     } catch {
       logger.debug(
         "failed to read aerospace output",
-        "args", arguments.joined(separator: " "),
-        "error", error
+        .field("args", arguments.joined(separator: " ")),
+        .field("error", error),
       )
       return nil
     }
@@ -50,8 +53,8 @@ final class AeroSpaceCommandRunner {
     if process.terminationStatus != 0 {
       logger.debug(
         "aerospace command exited",
-        "status", process.terminationStatus,
-        "args", arguments.joined(separator: " ")
+        .field("status", process.terminationStatus),
+        .field("args", arguments.joined(separator: " ")),
       )
     }
 

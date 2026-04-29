@@ -71,11 +71,17 @@ final class NativeWidgetRegistry {
   /// Stops and clears all widgets.
   private func stopAll() {
     if !widgets.isEmpty {
-      logger.info("native widget registry stopping", "count", widgets.count)
+      logger.info(
+        "native widget registry stopping",
+        .field("count", widgets.count),
+      )
     }
 
     for widget in widgets {
-      logger.debug("stopping native widget", "id", widget.rootID)
+      logger.debug(
+        "stopping native widget",
+        .field("id", widget.rootID),
+      )
       widget.stop()
     }
 
@@ -119,7 +125,10 @@ final class NativeWidgetRegistry {
       result.formUnion(widget.appEventSubscriptions)
     }
 
-    logger.debug("native widget event subscriptions", "subscriptions", subscriptions)
+    logger.debug(
+      "native widget event subscriptions",
+      .field("subscriptions", subscriptions),
+    )
     EventManager.shared.setNativeSubscriptions(subscriptions)
   }
 
@@ -127,17 +136,17 @@ final class NativeWidgetRegistry {
   private func logConfig() {
     logger.info(
       "native widget config",
-      "spaces", Config.shared.builtinSpaces.enabled,
-      "battery", Config.shared.builtinBattery.enabled,
-      "front_app", Config.shared.builtinFrontApp.enabled,
-      "aerospace_mode", Config.shared.builtinAeroSpaceMode.enabled,
-      "volume", Config.shared.builtinVolume.enabled,
-      "wifi", Config.shared.builtinWiFi.enabled,
-      "date", Config.shared.builtinDate.enabled,
-      "time", Config.shared.builtinTime.enabled,
-      "calendar", Config.shared.builtinCalendar.enabled,
-      "calendar_popup_mode", Config.shared.builtinCalendar.popupMode.rawValue,
-      "cpu", Config.shared.builtinCPU.enabled
+      .field("spaces", Config.shared.builtinSpaces.enabled),
+      .field("battery", Config.shared.builtinBattery.enabled),
+      .field("front_app", Config.shared.builtinFrontApp.enabled),
+      .field("aerospace_mode", Config.shared.builtinAeroSpaceMode.enabled),
+      .field("volume", Config.shared.builtinVolume.enabled),
+      .field("wifi", Config.shared.builtinWiFi.enabled),
+      .field("date", Config.shared.builtinDate.enabled),
+      .field("time", Config.shared.builtinTime.enabled),
+      .field("calendar", Config.shared.builtinCalendar.enabled),
+      .field("calendar_popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
+      .field("cpu", Config.shared.builtinCPU.enabled),
     )
   }
 
@@ -145,15 +154,18 @@ final class NativeWidgetRegistry {
   private func logRegisteredWidgets() {
     logger.info(
       "native widgets registered",
-      "count", widgets.count,
-      "ids", widgets.map(\.rootID).joined(separator: ",")
+      .field("count", widgets.count),
+      .field("ids", widgets.map(\.rootID).joined(separator: ",")),
     )
   }
 
   /// Starts all currently registered widgets.
   private func startWidgets() {
     for widget in widgets {
-      logger.debug("starting native widget", "id", widget.rootID)
+      logger.debug(
+        "starting native widget",
+        .field("id", widget.rootID),
+      )
       widget.start()
     }
   }

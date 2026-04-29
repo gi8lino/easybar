@@ -105,7 +105,7 @@ struct NativeMonthCalendarPopupView: View {
     .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
       logger.debug(
         "month calendar popup snapshot changed",
-        "generated_at", "\(generatedAt?.description ?? "nil")",
+        .field("generated_at", "\(generatedAt?.description ?? "nil")"),
       )
       resolveVisibleMonthAutoSelection()
       logResolvedAppointments("snapshot_changed")

@@ -80,8 +80,8 @@ public final class LineSocketServerTransport<
     } catch {
       logger.error(
         "\(serverLabel) failed to create socket directory",
-        "path", "\(socketDir.path)",
-        "error", "\(error)",
+        .field("path", "\(socketDir.path)"),
+        .field("error", "\(error)"),
       )
       return
     }
@@ -92,7 +92,7 @@ public final class LineSocketServerTransport<
     guard fd >= 0 else {
       logger.error(
         "\(serverLabel) failed to create socket",
-        "errno", "\(errno)",
+        .field("errno", "\(errno)"),
       )
       return
     }
@@ -100,7 +100,7 @@ public final class LineSocketServerTransport<
     guard configureNoSigPipe(fd: fd) else {
       logger.error(
         "\(serverLabel) failed to configure server socket no-sigpipe",
-        "fd", "\(fd)",
+        .field("fd", "\(fd)"),
       )
       close(fd)
       return
@@ -118,8 +118,8 @@ public final class LineSocketServerTransport<
     guard bindResult == 0 else {
       logger.error(
         "\(serverLabel) bind failed",
-        "path", "\(socketPath)",
-        "errno", "\(errno)",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
       )
       close(fd)
       return
@@ -128,16 +128,16 @@ public final class LineSocketServerTransport<
     if chmod(socketPath, mode_t(0o600)) != 0 {
       logger.warn(
         "\(serverLabel) chmod failed",
-        "path", "\(socketPath)",
-        "errno", "\(errno)",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
       )
     }
 
     guard listen(fd, 8) == 0 else {
       logger.error(
         "\(serverLabel) listen failed",
-        "path", "\(socketPath)",
-        "errno", "\(errno)",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
       )
       close(fd)
       unlink(socketPath)
@@ -149,7 +149,7 @@ public final class LineSocketServerTransport<
 
     logger.info(
       "\(serverLabel) listening",
-      "socket_path", "\(socketPath)",
+      .field("socket_path", "\(socketPath)"),
     )
 
     acceptQueue.async { [weak self] in
@@ -186,7 +186,7 @@ public final class LineSocketServerTransport<
     unlink(socketPath)
     logger.info(
       "\(serverLabel) stopped",
-      "socket_path=\(socketPath)",
+      .field("socket_path", "\(socketPath)"),
     )
   }
 
@@ -203,7 +203,7 @@ public final class LineSocketServerTransport<
     } catch {
       logger.error(
         "\(serverLabel) response encode failed",
-        "error", "\(error)",
+        .field("error", "\(error)"),
       )
       return false
     }
@@ -217,7 +217,7 @@ public final class LineSocketServerTransport<
 
     logger.debug(
       "\(serverLabel) subscriber added",
-      "fd", "\(fd)",
+      .field("fd", "\(fd)"),
     )
   }
 
@@ -234,7 +234,7 @@ public final class LineSocketServerTransport<
     if existed {
       logger.debug(
         "\(serverLabel) subscriber removed",
-        "fd", "\(fd)",
+        .field("fd", "\(fd)"),
       )
     }
 
@@ -270,7 +270,7 @@ public final class LineSocketServerTransport<
 
         logger.debug(
           "\(serverLabel) accept failed",
-          "errno", "\(errno)",
+          .field("errno", "\(errno)"),
         )
         continue
       }
@@ -278,7 +278,7 @@ public final class LineSocketServerTransport<
       guard configureNoSigPipe(fd: clientFD) else {
         logger.error(
           "\(serverLabel) failed to configure client socket no-sigpipe",
-          "fd", "\(clientFD)",
+          .field("fd", "\(clientFD)"),
         )
         close(clientFD)
         continue
@@ -318,7 +318,7 @@ public final class LineSocketServerTransport<
         } catch {
           logger.warn(
             "\(serverLabel) request decode failed",
-            "error", "\(error)",
+            .field("error", "\(error)"),
           )
           close(clientFD)
           return
@@ -346,8 +346,8 @@ public final class LineSocketServerTransport<
 
       logger.debug(
         "\(serverLabel) client read failed",
-        "fd", "\(clientFD)",
-        "errno", "\(errno)",
+        .field("fd", "\(clientFD)"),
+        .field("errno", "\(errno)"),
       )
       close(clientFD)
       return

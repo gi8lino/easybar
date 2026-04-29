@@ -74,10 +74,10 @@ final class UpcomingCalendarAgentClient {
 
     logger.debug(
       "requesting upcoming calendar snapshot",
-      "start", requestedRange.start.timeIntervalSince1970,
-      "end", requestedRange.end.timeIntervalSince1970,
-      "days", upcoming.events.days,
-      "show_birthdays", upcoming.birthdays.show
+      .field("start", requestedRange.start.timeIntervalSince1970),
+      .field("end", requestedRange.end.timeIntervalSince1970),
+      .field("days", upcoming.events.days),
+      .field("show_birthdays", upcoming.birthdays.show),
     )
 
     let query = CalendarAgentQuery(

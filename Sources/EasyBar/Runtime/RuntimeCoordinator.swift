@@ -138,7 +138,10 @@ actor RuntimeCoordinator {
     aeroSpaceService.triggerRefresh()
 
     if let errorMessage = result.errorMessage {
-      logger.warn("config reload completed with error", .field("error", errorMessage))
+      logger.warn(
+        "config reload completed with error",
+        .field("error", errorMessage),
+      )
     }
 
     logger.info("reloadConfig end")
@@ -200,7 +203,10 @@ actor RuntimeCoordinator {
 
   /// Handles one incoming IPC command.
   func handleSocketCommand(_ command: IPC.Command) async {
-    logger.info("handling socket command", .field("command", command))
+    logger.info(
+      "handling socket command",
+      .field("command", command),
+    )
 
     switch command {
     case .workspaceChanged:
@@ -279,7 +285,9 @@ actor RuntimeCoordinator {
       }
 
       logger.info(
-        "\(operation) aborted because runtime stopped or restarted generation=\(generation) current_generation=\(lifecycleGeneration)"
+        "\(operation) aborted because runtime stopped or restarted",
+        .field("generation", "\(generation)"),
+        .field("current_generation", "\(lifecycleGeneration)"),
       )
       return false
     }

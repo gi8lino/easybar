@@ -38,13 +38,8 @@ final class AppController {
     logProcessStartup(
       processName: "calendar agent",
       configPath: runtimeConfig.configPath,
-      socketSummary: formatLogFields("socket_path", runtimeConfig.calendarAgentSocketPath),
-      loggingSummary: formatLogFields(
-        "logging_enabled", logger.fileLoggingEnabled,
-        "level", logger.minimumLevel.rawValue,
-        "path", logger.fileLoggingPath
-      ),
-      write: logger.info
+      socketPath: runtimeConfig.calendarAgentSocketPath,
+      logger: logger
     )
 
     snapshotProvider.start { [weak self] in

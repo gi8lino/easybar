@@ -95,8 +95,8 @@ final class CalendarSnapshotProvider {
     guard hasAccess else {
       logger.debug(
         "calendar snapshot",
-        "access_granted", false,
-        "permission_state", permissionState
+        .field("access_granted", false),
+        .field("permission_state", permissionState),
       )
       return makeAccessDeniedSnapshot(permissionState: permissionState, generatedAt: now)
     }
@@ -132,18 +132,18 @@ final class CalendarSnapshotProvider {
 
     logger.debug(
       "calendar snapshot",
-      "access_granted", true,
-      "permission_state", permissionState,
-      "fetch_start", fetchRange.start,
-      "fetch_end", fetchRange.end,
-      "section_start", String(describing: query.sectionStartDate),
-      "section_day_count", String(describing: query.sectionDayCount),
-      "show_birthdays", query.showBirthdays,
-      "included", query.includedCalendarNames,
-      "excluded", query.excludedCalendarNames,
-      "writable_calendars", snapshot.writableCalendars.count,
-      "events", snapshot.events.count,
-      "sections", snapshot.sections.count
+      .field("access_granted", true),
+      .field("permission_state", permissionState),
+      .field("fetch_start", fetchRange.start),
+      .field("fetch_end", fetchRange.end),
+      .field("section_start", String(describing: query.sectionStartDate)),
+      .field("section_day_count", String(describing: query.sectionDayCount)),
+      .field("show_birthdays", query.showBirthdays),
+      .field("included", query.includedCalendarNames),
+      .field("excluded", query.excludedCalendarNames),
+      .field("writable_calendars", snapshot.writableCalendars.count),
+      .field("events", snapshot.events.count),
+      .field("sections", snapshot.sections.count),
     )
 
     return snapshot
@@ -176,12 +176,12 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event created",
-      "title", event.title ?? "Untitled",
-      "start", draft.startDate,
-      "end", draft.endDate,
-      "all_day", draft.isAllDay,
-      "calendar", event.calendar.title,
-      "location", event.location ?? ""
+      .field("title", event.title ?? "Untitled"),
+      .field("start", draft.startDate),
+      .field("end", draft.endDate),
+      .field("all_day", draft.isAllDay),
+      .field("calendar", event.calendar.title),
+      .field("location", event.location ?? ""),
     )
 
     DispatchQueue.main.async { [weak self] in
@@ -225,13 +225,13 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event updated",
-      "event_id", draft.eventIdentifier,
-      "title", event.title ?? "Untitled",
-      "start", draft.startDate,
-      "end", draft.endDate,
-      "all_day", draft.isAllDay,
-      "calendar", event.calendar.title,
-      "location", event.location ?? ""
+      .field("event_id", draft.eventIdentifier),
+      .field("title", event.title ?? "Untitled"),
+      .field("start", draft.startDate),
+      .field("end", draft.endDate),
+      .field("all_day", draft.isAllDay),
+      .field("calendar", event.calendar.title),
+      .field("location", event.location ?? ""),
     )
 
     DispatchQueue.main.async { [weak self] in
@@ -255,8 +255,8 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event deleted",
-      "event_id", draft.eventIdentifier,
-      "title", event.title ?? "Untitled"
+      .field("event_id", draft.eventIdentifier),
+      .field("title", event.title ?? "Untitled"),
     )
 
     DispatchQueue.main.async { [weak self] in

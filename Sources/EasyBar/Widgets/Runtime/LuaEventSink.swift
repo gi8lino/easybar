@@ -20,7 +20,10 @@ final class LuaEventSink {
   func enqueue(_ payload: EasyBarEventPayload) {
     queue.async { [runtime, logger] in
       guard let encoded = Self.encodedPayload(payload) else {
-        logger.error("failed to encode lua event payload", .field("name", payload.eventName))
+        logger.error(
+          "failed to encode lua event payload",
+          .field("name", payload.eventName),
+        )
         return
       }
 

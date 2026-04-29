@@ -192,8 +192,8 @@ final class MouseTrackingNSView: NSView {
 
     logger.debug(
       "mouse scrolled",
-      "widget", "\(widgetID)",
-      "direction", "\(direction.rawValue)",
+      .field("widget", "\(widgetID)"),
+      .field("direction", "\(direction.rawValue)"),
     )
 
     Task {
@@ -260,9 +260,10 @@ final class MouseTrackingNSView: NSView {
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
     logger.debug(
-      "event=\(event.rawValue)",
-      "widget", "\(widgetID)",
-      "target=\(targetWidgetID)\(buttonSuffix)",
+      "emit mouse event",
+      .field("event", "\(event.rawValue)"),
+      .field("widget", "\(widgetID)"),
+      .field("target", "\(targetWidgetID)\(buttonSuffix)"),
     )
 
     Task {

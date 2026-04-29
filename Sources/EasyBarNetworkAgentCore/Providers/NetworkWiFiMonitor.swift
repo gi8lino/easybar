@@ -44,12 +44,12 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       wifiClient = client
       logger.info(
         "\(componentName) subscribed",
-        "event", "wifi_change"
+        .field("event", "wifi_change"),
       )
     } catch {
       logger.warn(
         "failed to subscribe \(componentName) Wi-Fi events",
-        "error", error
+        .field("error", error),
       )
     }
   }
@@ -62,7 +62,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       } catch {
         logger.warn(
           "failed to stop Wi-Fi monitoring",
-          "error", error,
+          .field("error", error),
         )
       }
     }
@@ -134,7 +134,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi SSID changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -143,7 +143,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func bssidDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi BSSID changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -152,7 +152,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func countryCodeDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi country code changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -161,7 +161,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func linkDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi link changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -172,9 +172,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   ) {
     logger.info(
       "\(componentName) Wi-Fi link quality changed",
-      "interface", interfaceName,
-      "rssi", rssi,
-      "tx_rate", transmitRate,
+      .field("interface", interfaceName),
+      .field("rssi", rssi),
+      .field("tx_rate", transmitRate),
     )
     onChange?()
   }
@@ -183,7 +183,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func modeDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi mode changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -192,7 +192,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func powerStateDidChangeForWiFiInterface(withName interfaceName: String) {
     logger.info(
       "\(componentName) Wi-Fi power changed",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -201,7 +201,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func scanCacheUpdatedForWiFiInterface(withName interfaceName: String) {
     logger.debug(
       "\(componentName) Wi-Fi scan cache updated",
-      "interface", interfaceName,
+      .field("interface", interfaceName),
     )
     onChange?()
   }
@@ -215,7 +215,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       smoothedRSSI = nil
       logger.debug(
         "\(componentName) RSSI unavailable",
-        "rssi", "<none>",
+        .field("rssi", "<none>"),
       )
       return nil
     }

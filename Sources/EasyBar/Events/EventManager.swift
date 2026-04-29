@@ -122,7 +122,17 @@ final class EventManager {
     let intervalChanged = desiredInterval != activeInterval
 
     logger.debug(
-      "event manager refresh begin merged=\(mergedSubscriptions) active=\(activeSubscriptions) added=\(added) removed=\(removed) source_add=\(sourcesToAdd) source_remove=\(sourcesToRemove) interval=\(String(describing: desiredInterval)) previous_interval=\(String(describing: activeInterval)) lua=\(luaSubscriptions) native=\(nativeSubscriptions)"
+      "event manager refresh begin",
+      .field("merged", "\(mergedSubscriptions)"),
+      .field("active", "\(activeSubscriptions)"),
+      .field("added", "\(added)"),
+      .field("removed", "\(removed)"),
+      .field("source_add", "\(sourcesToAdd)"),
+      .field("source_remove", "\(sourcesToRemove)"),
+      .field("interval", "\(String(describing: desiredInterval))"),
+      .field("previous_interval", "\(String(describing: activeInterval))"),
+      .field("lua", "\(luaSubscriptions)"),
+      .field("native", "\(nativeSubscriptions)"),
     )
 
     unsubscribeSources(sourcesToRemove)
@@ -141,7 +151,10 @@ final class EventManager {
     activeSources = desiredSources
     activeInterval = desiredInterval
 
-    logger.debug("event manager refresh end", .field("active", activeSubscriptions))
+    logger.debug(
+      "event manager refresh end",
+      .field("active", activeSubscriptions),
+    )
   }
 
   /// Starts the newly required event sources.

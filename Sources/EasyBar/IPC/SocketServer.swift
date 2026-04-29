@@ -61,7 +61,9 @@ final class SocketServer {
     }
 
     logger.info(
-      "restarting socket server old_path=\(socketPath) new_path=\(updatedSocketPath)"
+      "restarting socket server",
+      .field("old_path", "\(socketPath)"),
+      .field("new_path", "\(updatedSocketPath)")
     )
 
     MetricsCoordinator.shared.resetStreaming()

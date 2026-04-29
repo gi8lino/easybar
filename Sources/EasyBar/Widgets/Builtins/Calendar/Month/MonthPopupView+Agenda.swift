@@ -406,8 +406,8 @@ extension NativeMonthCalendarPopupView {
     lastResolvedDragDate = date
 
     logger.debug(
-      "month calendar popup",
-      "pointer_begin date=\(debugDate(date))",
+      "month calendar popup pointer_begin",
+      .field("date", "\(debugDate(date))"),
     )
   }
 
@@ -427,10 +427,10 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup drag_update",
-      "anchor", "\(debugDate(dragAnchorDate))",
-      "current", "\(debugDate(date))",
-      "start", "\(debugDate(selectedStartDate))",
-      "end", "\(debugDate(selectedEndDate))",
+      .field("anchor", "\(debugDate(dragAnchorDate))"),
+      .field("current", "\(debugDate(date))"),
+      .field("start", "\(debugDate(selectedStartDate))"),
+      .field("end", "\(debugDate(selectedEndDate))"),
     )
   }
 
@@ -470,7 +470,7 @@ extension NativeMonthCalendarPopupView {
       selectedEndDate = startDate
       logger.debug(
         "month calendar popup click_select",
-        "date", "\(debugDate(startDate))",
+        .field("date", "\(debugDate(startDate))"),
       )
       return
     }
@@ -480,8 +480,8 @@ extension NativeMonthCalendarPopupView {
 
     logger.debug(
       "month calendar popup drag_end",
-      "start", "\(debugDate(selectedStartDate))",
-      "end", "\(debugDate(selectedEndDate))",
+      .field("start", "\(debugDate(selectedStartDate))"),
+      .field("end", "\(debugDate(selectedEndDate))"),
     )
   }
 

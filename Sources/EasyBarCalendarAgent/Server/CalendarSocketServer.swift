@@ -62,8 +62,8 @@ final class CalendarSocketServer {
   {
     logger.debug(
       "calendar agent request",
-      "fd", clientFD,
-      "command", request.command.rawValue,
+      .field("fd", clientFD),
+      .field("command", request.command.rawValue),
     )
 
     switch request.command {
@@ -121,7 +121,7 @@ final class CalendarSocketServer {
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
       logger.info(
         "calendar agent subscriber added",
-        "fd", clientFD,
+        .field("fd", clientFD),
       )
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
@@ -162,8 +162,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event creation failed",
-          "error", error,
-          "code", code.rawValue,
+          .field("error", error),
+          .field("code", code.rawValue),
         )
         _ = transport.send(
           CalendarAgentMessage(
@@ -197,8 +197,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event update failed",
-          "error", error,
-          "code", code.rawValue,
+          .field("error", error),
+          .field("code", code.rawValue),
         )
         _ = transport.send(
           CalendarAgentMessage(
@@ -232,8 +232,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event delete failed",
-          "error", error,
-          "code", code.rawValue,
+          .field("error", error),
+          .field("code", code.rawValue),
         )
         _ = transport.send(
           CalendarAgentMessage(

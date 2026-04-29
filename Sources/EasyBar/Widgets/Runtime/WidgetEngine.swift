@@ -150,7 +150,10 @@ actor WidgetEngine {
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
-    logger.debug("required events updated", .field("events", runtimeState.requiredEvents))
+    logger.debug(
+      "required events updated",
+      .field("events", runtimeState.requiredEvents),
+    )
 
     let requiredEvents = runtimeState.requiredEvents
     await MainActor.run {

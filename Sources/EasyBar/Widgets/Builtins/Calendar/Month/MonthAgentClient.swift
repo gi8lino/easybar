@@ -161,18 +161,26 @@ final class MonthCalendarAgentClient {
 
           case .error:
             let message = response.message ?? "unknown"
-            logger.error("month calendar mutation failed", "message", message)
+            logger.error(
+              "month calendar mutation failed",
+              .field("message", message),
+            )
             completion(false, message)
 
           default:
             logger.error(
-              "month calendar mutation unexpected response", "response", response.kind.rawValue)
+              "month calendar mutation unexpected response",
+              .field("response", response.kind.rawValue),
+            )
             completion(false, "unexpected_response")
           }
         }
       } catch {
         Task { @MainActor in
-          logger.error("month calendar mutation failed", "error", error)
+          logger.error(
+            "month calendar mutation failed",
+            .field("error", error),
+          )
           completion(false, error.localizedDescription)
         }
       }
@@ -195,10 +203,10 @@ final class MonthCalendarAgentClient {
 
     logger.debug(
       "requesting month calendar snapshot",
-      "start", requestedRange.start.timeIntervalSince1970,
-      "end", requestedRange.end.timeIntervalSince1970,
-      "show_birthdays", monthConfig.showBirthdays,
-      "birthdays_show_age", monthConfig.birthdaysShowAge
+      .field("start", requestedRange.start.timeIntervalSince1970),
+      .field("end", requestedRange.end.timeIntervalSince1970),
+      .field("show_birthdays", monthConfig.showBirthdays),
+      .field("birthdays_show_age", monthConfig.birthdaysShowAge),
     )
 
     let query = CalendarAgentQuery(

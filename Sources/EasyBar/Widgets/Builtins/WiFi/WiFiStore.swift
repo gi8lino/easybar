@@ -47,10 +47,10 @@ final class NativeWiFiStore: ObservableObject {
     lastPublishedSignature = signature
     logger.debug(
       "wifi widget applied snapshot",
-      "access_granted", "\(snapshot.accessGranted)",
-      "permission_state", "\(snapshot.permissionState)",
-      "ssid", "\(snapshot.ssid ?? "<none>")",
-      "rssi", "\(snapshot.rssi.map(String.init) ?? "<none>")",
+      .field("access_granted", "\(snapshot.accessGranted)"),
+      .field("permission_state", "\(snapshot.permissionState)"),
+      .field("ssid", "\(snapshot.ssid ?? "<none>")"),
+      .field("rssi", "\(snapshot.rssi.map(String.init) ?? "<none>")"),
     )
     publish(snapshot: snapshot)
     return true

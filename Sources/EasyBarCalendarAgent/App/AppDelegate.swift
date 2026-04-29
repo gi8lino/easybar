@@ -29,15 +29,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     case .alreadyRunning(let lockPath):
       logger.warn(
         "easybar-calendar-agent already running",
-        "lock_path", lockPath
+        .field("lock_path", lockPath),
       )
       terminateApplication()
 
     case .failed(let lockPath, let reason):
       logger.error(
         "easybar-calendar-agent failed to acquire single-instance lock",
-        "lock_path", lockPath,
-        "error", reason
+        .field("lock_path", lockPath),
+        .field("error", reason),
       )
       terminateApplication()
     }

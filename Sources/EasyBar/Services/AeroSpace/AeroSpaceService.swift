@@ -13,7 +13,8 @@ final class AeroSpaceService: ObservableObject {
   static var shared: AeroSpaceService {
     guard let sharedInstance else {
       fatalError(
-        "AeroSpaceService.bootstrap(logger:) must be called before AeroSpaceService.shared")
+        "AeroSpaceService.bootstrap(logger:) must be called before AeroSpaceService.shared"
+      )
     }
 
     return sharedInstance
@@ -107,7 +108,12 @@ extension AeroSpaceService {
       return coordination.consumers.count
     }
 
-    logger.debug("aerospace consumer registered", "id", id, "count", count)
+    logger.debug(
+      "aerospace consumer registered",
+      .field("id", id),
+      .field("count", count)
+    )
+
     refresh()
   }
 
@@ -118,7 +124,11 @@ extension AeroSpaceService {
       return coordination.consumers.count
     }
 
-    logger.debug("aerospace consumer unregistered", "id", id, "count", count)
+    logger.debug(
+      "aerospace consumer unregistered",
+      .field("id", id),
+      .field("count", count)
+    )
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
@@ -129,7 +139,11 @@ extension AeroSpaceService {
     }
 
     let generation = currentGeneration()
-    logger.debug("aerospace triggerRefresh queued", "consumers", consumerCount)
+
+    logger.debug(
+      "aerospace triggerRefresh queued",
+      .field("consumers", consumerCount)
+    )
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -139,7 +153,10 @@ extension AeroSpaceService {
 
   /// Focuses the requested workspace.
   func focusWorkspace(_ workspace: String) {
-    logger.info("aerospace focus workspace requested", "workspace", workspace)
+    logger.info(
+      "aerospace focus workspace requested",
+      .field("workspace", workspace)
+    )
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
@@ -158,7 +175,9 @@ extension AeroSpaceService {
     refreshQueue.async { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
+
       _ = self.runAeroSpace(arguments: ["workspace", workspace])
+
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
       self.reloadState()
     }
@@ -166,10 +185,16 @@ extension AeroSpaceService {
 
   /// Activates one application shown inside a workspace.
   func focusApp(_ app: SpaceApp) {
-    logger.info("aerospace focus app requested", "app", app.name)
+    logger.info(
+      "aerospace focus app requested",
+      .field("app", app.name)
+    )
 
     guard let bundlePath = app.bundlePath, !bundlePath.isEmpty else {
-      logger.debug("aerospace focus app skipped, missing bundle path", "app", app.name)
+      logger.debug(
+        "aerospace focus app skipped, missing bundle path",
+        .field("app", app.name)
+      )
       return
     }
 
@@ -182,7 +207,11 @@ extension AeroSpaceService {
         configuration: configuration
       ) { _, error in
         if let error {
-          logger.debug("failed to focus app", "app", app.name, "error", error)
+          logger.debug(
+            "failed to focus app",
+            .field("app", app.name),
+            .field("error", error)
+          )
         }
       }
     }
@@ -196,7 +225,11 @@ extension AeroSpaceService {
     }
 
     let generation = currentGeneration()
-    logger.debug("aerospace refresh queued", "consumers", consumerCount)
+
+    logger.debug(
+      "aerospace refresh queued",
+      .field("consumers", consumerCount)
+    )
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -259,7 +292,12 @@ extension AeroSpaceService {
     focusedApp = focused
     focusedAppID = focused.id
 
-    publishUpdate(logMessage: "aerospace optimistic focus updated", fields: ["app": focused.name])
+    logger.debug(
+      "aerospace optimistic focus updated",
+      .field("app", focused.name)
+    )
+
+    NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
 }
 
@@ -269,6 +307,7 @@ extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
   fileprivate func reloadState() {
     guard shouldExecute(generation: currentGeneration()) else { return }
+
     logger.debug("aerospace reloadState begin")
 
     let snapshot = AeroSpaceSnapshotLoader.load(
@@ -295,14 +334,14 @@ extension AeroSpaceService {
       self.focusedAppID = snapshot.focusedApp?.id
       self.focusedLayoutMode = snapshot.focusedLayoutMode
 
-      self.publishUpdate(
-        logMessage: "aerospace state updated",
-        fields: [
-          "spaces": snapshot.spaces.count,
-          "focused": snapshot.focusedApp?.name ?? "none",
-          "layout": snapshot.focusedLayoutMode.rawValue,
-        ]
+      self.logger.debug(
+        "aerospace state updated",
+        .field("spaces", snapshot.spaces.count),
+        .field("focused", snapshot.focusedApp?.name ?? "none"),
+        .field("layout", snapshot.focusedLayoutMode.rawValue)
       )
+
+      NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
 
       self.logger.debug("aerospace reloadState end with changes")
     }
@@ -317,6 +356,7 @@ extension AeroSpaceService {
     guard isRunning else { return nil }
 
     let output = commandRunner.run(arguments: arguments)
+
     guard isRunning else {
       return nil
     }
@@ -331,18 +371,6 @@ extension AeroSpaceService {
     }
 
     return bundlePath
-  }
-
-  /// Publishes one shared AeroSpace update notification.
-  fileprivate func publishUpdate(logMessage: String, fields: [String: Any] = [:]) {
-    var components: [Any] = []
-    for key in fields.keys.sorted() {
-      components.append(key)
-      components.append(fields[key] ?? "nil")
-    }
-
-    logger.debug(logMessage, components)
-    NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
 
   /// Returns whether the service is still allowed to execute the queued refresh work.

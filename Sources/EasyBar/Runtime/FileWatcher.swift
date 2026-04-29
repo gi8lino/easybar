@@ -85,13 +85,17 @@ actor FileWatcher {
     guard enabled else { return }
 
     guard let watchTarget = openWatchTarget(for: configPath) else {
-      logger.warn("file watcher failed to open watch target", .field("path", configPath))
+      logger.warn(
+        "file watcher failed to open watch target",
+        .field("path", configPath))
       return
     }
 
     fileDescriptor = watchTarget.fd
     logger.debug(
-      "file watcher watching path=\(watchTarget.path) target=\(configPath)"
+      "file watcher watching",
+      .field("path", "\(watchTarget.path)"),
+      .field("target", "\(configPath)"),
     )
 
     let queue = DispatchQueue(label: "easybar.file-watcher", qos: .utility)

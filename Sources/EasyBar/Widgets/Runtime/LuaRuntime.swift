@@ -55,7 +55,10 @@ actor LuaRuntime {
     transport.startReading()
 
     MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
-    logger.debug("lua runtime facade started", .field("pid", result.processIdentifier))
+    logger.debug(
+      "lua runtime facade started",
+      .field("pid", result.processIdentifier),
+    )
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.

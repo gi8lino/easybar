@@ -92,7 +92,10 @@ final class CalendarAgentStreamController {
       self.refresh()
     }
 
-    logger.info("starting \(label)", "socket", socketPath())
+    logger.info(
+      "starting \(label)",
+      .field("socket", socketPath()),
+    )
     client.start()
   }
 
@@ -129,17 +132,20 @@ final class CalendarAgentStreamController {
 
       logger.debug(
         "\(label) applied snapshot",
-        "permission_state", snapshot.permissionState,
-        "access_granted", snapshot.accessGranted,
-        "events", snapshot.events.count,
-        "sections", snapshot.sections.count
+        .field("permission_state", snapshot.permissionState),
+        .field("access_granted", snapshot.accessGranted),
+        .field("events", snapshot.events.count),
+        .field("sections", snapshot.sections.count),
       )
 
       applySnapshot(snapshot)
       CalendarAgentEventRelay.shared.noteSnapshotUpdate()
 
     case .error:
-      logger.warn("\(label) received error", "message", response.message ?? "unknown")
+      logger.warn(
+        "\(label) received error",
+        .field("message", response.message ?? "unknown"),
+      )
       clearState()
 
     case .version:

@@ -34,10 +34,10 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
     logger.debug(
       "upcoming calendar popup applied snapshot",
-      "access_granted", "\(snapshot.accessGranted)",
-      "permission_state", "\(snapshot.permissionState)",
-      "events", "\(snapshot.events.count)",
-      "sections", "\(snapshot.sections.count)",
+      .field("access_granted", "\(snapshot.accessGranted)"),
+      .field("permission_state", "\(snapshot.permissionState)"),
+      .field("events", "\(snapshot.events.count)"),
+      .field("sections", "\(snapshot.sections.count)"),
     )
     publish(snapshot: snapshot)
   }
@@ -54,7 +54,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       logger.debug(
         "upcoming calendar store overlappingEvents(on:) failed",
-        "date", "\(startOfDay)",
+        .field("date", "\(startOfDay)"),
       )
       return []
     }
@@ -65,8 +65,8 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
     logger.debug(
       "upcoming calendar store overlappingEvents(on:)",
-      "date", "\(debugDate(startOfDay))",
-      "matches", "\(matches.count)",
+      .field("date", "\(debugDate(startOfDay))"),
+      .field("matches", "\(matches.count)"),
     )
 
     return matches
@@ -80,8 +80,8 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     guard let endOfRange = calendar.date(byAdding: .day, value: 1, to: endDayStart) else {
       logger.debug(
         "upcoming calendar store overlappingEvents(from:to:) failed",
-        "start", "\(debugDate(startOfRange))",
-        "end", "\(debugDate(endDayStart))",
+        .field("start", "\(debugDate(startOfRange))"),
+        .field("end", "\(debugDate(endDayStart))"),
       )
       return []
     }
@@ -92,9 +92,9 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
     logger.debug(
       "upcoming calendar store overlappingEvents(from:to:)",
-      "start=\(debugDate(startOfRange))",
-      "end=\(debugDate(endDayStart))",
-      "matches=\(matches.count)",
+      .field("start", "\(debugDate(startOfRange))"),
+      .field("end", "\(debugDate(endDayStart))"),
+      .field("matches", "\(matches.count)"),
     )
 
     return matches
@@ -113,9 +113,9 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
     logger.debug(
       "upcoming calendar store published",
-      "snapshot_present", "\(snapshot != nil)",
-      "events", "\(self.events.count)",
-      "sections", "\(self.sections.count)"
+      .field("snapshot_present", "\(snapshot != nil)"),
+      .field("events", "\(self.events.count)"),
+      .field("sections", "\(self.sections.count))"),
     )
   }
 
