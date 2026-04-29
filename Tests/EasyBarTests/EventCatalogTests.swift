@@ -7,6 +7,7 @@ final class EventCatalogTests: XCTestCase {
     XCTAssertEqual(EventCatalog.currentLuaDefinitionWarnings(), [])
   }
 
+  @MainActor
   func testSubscriptionPlanIncludesIntervalAndGroupedSources() {
     let plan = EventManager.subscriptionPlan(
       for: [

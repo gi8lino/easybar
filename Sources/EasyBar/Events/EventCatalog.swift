@@ -66,12 +66,18 @@ enum EventCatalog {
 
   /// Loads the bundled generated event catalog manifest.
   private static func loadGeneratedCatalog() -> GeneratedCatalog? {
-    guard
-      let url = Bundle.module.url(
+    let candidateURLs = [
+      Bundle.module.url(
         forResource: "event_catalog",
         withExtension: "json",
         subdirectory: "Events"
       ),
+      URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        .appendingPathComponent("Sources/EasyBar/Events/event_catalog.json"),
+    ].compactMap { $0 }
+
+    guard
+      let url = candidateURLs.first(where: { (try? $0.checkResourceIsReachable()) == true }),
       let data = try? Data(contentsOf: url),
       let catalog = try? JSONDecoder().decode(GeneratedCatalogManifest.self, from: data)
     else {
