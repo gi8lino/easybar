@@ -1,58 +1,90 @@
+import AppKit
 import EasyBarShared
-import Foundation
 
+/// App-level controller for the calendar agent process.
+///
+/// This type owns macOS application concerns such as logging setup, the
+/// single-instance guard, activation policy, and runtime creation. The
+/// long-running agent behavior lives in `CalendarAgentRuntime`.
 @MainActor
 final class AppController {
-  private let runtimeConfig: SharedRuntimeConfig
-  private let snapshotProvider: CalendarSnapshotProvider
-  private let socketServer: CalendarSocketServer
-  private let logger: ProcessLogger
+  private let logger = ProcessLogger(label: "easybar-calendar-agent")
+  private let instanceGuard = SingleInstanceGuard()
 
-  /// Builds the calendar agent controller from one runtime config.
-  init(
-    config: SharedRuntimeConfig = .current,
-    logger: ProcessLogger
-  ) {
-    runtimeConfig = config
-    self.logger = logger
-    snapshotProvider = CalendarSnapshotProvider(logger: logger.child("snapshot_provider"))
-    socketServer = CalendarSocketServer(
-      socketPath: config.calendarAgentSocketPath,
-      logger: logger.child("socket_server")
+  private var runtime: CalendarAgentRuntime?
+
+  /// Starts the calendar agent app shell and runtime.
+  func start() {
+    let sharedConfig = SharedRuntimeConfig.current
+
+    configureLogging(runtimeConfig: sharedConfig)
+
+    guard acquireInstanceLock(runtimeConfig: sharedConfig) else {
+      terminateApplication()
+    }
+
+    let runtimeConfig = CalendarAgentRuntimeConfig.easyBar(
+      runtimeConfig: sharedConfig,
+      appVersion: BuildInfo.appVersion
+    )
+
+    runtime = CalendarAgentRuntime(
+      config: runtimeConfig,
+      logger: logger.child("runtime")
+    )
+
+    NSApp.setActivationPolicy(.accessory)
+
+    guard runtime?.start() == true else {
+      terminateApplication()
+    }
+  }
+
+  /// Stops the calendar agent runtime.
+  func stop() {
+    runtime?.stop()
+  }
+
+  /// Configures process logging from the shared runtime config.
+  private func configureLogging(runtimeConfig: SharedRuntimeConfig) {
+    logger.configureRuntimeLogging(
+      minimumLevel: runtimeConfig.loggingLevel,
+      fileLoggingEnabled: runtimeConfig.loggingEnabled,
+      fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
+        .appendingPathComponent("calendar-agent.out")
+        .path
     )
   }
 
-  /// Returns whether the calendar agent should run.
-  var isEnabled: Bool {
-    runtimeConfig.calendarAgentEnabled
-  }
+  /// Acquires the single-instance lock for the calendar agent process.
+  private func acquireInstanceLock(runtimeConfig: SharedRuntimeConfig) -> Bool {
+    switch instanceGuard.acquireLock(
+      processName: "easybar-calendar-agent",
+      directory: runtimeConfig.lockDirectory
+    ) {
+    case .acquired:
+      return true
 
-  /// Starts snapshot delivery and the calendar socket server.
-  @discardableResult
-  func start() -> Bool {
-    guard isEnabled else {
-      logger.info("calendar agent disabled in config")
+    case .alreadyRunning(let lockPath):
+      logger.warn(
+        "easybar-calendar-agent already running",
+        .field("lock_path", lockPath)
+      )
+      return false
+
+    case .failed(let lockPath, let reason):
+      logger.error(
+        "easybar-calendar-agent failed to acquire single-instance lock",
+        .field("lock_path", lockPath),
+        .field("reason", reason)
+      )
       return false
     }
-
-    logProcessStartup(
-      processName: "calendar agent",
-      configPath: runtimeConfig.configPath,
-      socketPath: runtimeConfig.calendarAgentSocketPath,
-      logger: logger
-    )
-
-    snapshotProvider.start { [weak self] in
-      self?.socketServer.broadcastSnapshots()
-    }
-
-    socketServer.start(provider: snapshotProvider)
-    return true
   }
 
-  /// Stops the calendar socket server and snapshot provider.
-  func stop() {
-    socketServer.stop()
-    snapshotProvider.stop()
+  /// Terminates the application immediately.
+  private func terminateApplication() -> Never {
+    NSApp.terminate(nil)
+    fatalError("Application should have terminated")
   }
 }

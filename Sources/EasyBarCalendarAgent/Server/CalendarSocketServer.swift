@@ -8,12 +8,18 @@ final class CalendarSocketServer {
   }
 
   private var provider: CalendarSnapshotProvider?
+  private let appVersion: String
   private let logger: ProcessLogger
   private let transport:
     LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
-  init(socketPath: String, logger: ProcessLogger) {
+  init(
+    socketPath: String,
+    appVersion: String,
+    logger: ProcessLogger
+  ) {
+    self.appVersion = appVersion
     self.logger = logger
     transport = LineSocketServerTransport(
       socketPath: socketPath,
@@ -72,7 +78,7 @@ final class CalendarSocketServer {
         CalendarAgentMessage(
           kind: .version,
           version: CalendarAgentVersion(
-            appVersion: BuildInfo.appVersion,
+            appVersion: appVersion,
             protocolVersion: calendarAgentProtocolVersion,
             capabilities: .default
           )
