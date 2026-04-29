@@ -6,7 +6,7 @@ struct EasyBarNetworkAgentApp: App {
 
   var body: some Scene {
     Settings {
-      SettingsView()
+      EmptyView()
     }
   }
 }
