@@ -2,3 +2,5 @@
 dist/
 todo.txt
 .swiftpm/
+.DS_Store
+
