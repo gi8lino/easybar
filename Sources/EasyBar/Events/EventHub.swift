@@ -1,6 +1,14 @@
 import EasyBarShared
 import Foundation
 
+/// Receives event payloads emitted by the event hub.
+protocol EventPayloadSink {
+  /// Enqueues one event payload for downstream delivery.
+  func enqueue(_ payload: EasyBarEventPayload)
+}
+
+extension LuaEventSink: EventPayloadSink {}
+
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
   private static var sharedInstance: EventHub?
@@ -26,7 +34,7 @@ actor EventHub {
   }
 
   private let logger: ProcessLogger
-  private let luaEventSink: LuaEventSink
+  private let luaEventSink: EventPayloadSink
 
   private var subscribers: [UUID: Subscriber] = [:]
   private var replayablePayloads: [String: EasyBarEventPayload] = [:]
@@ -37,16 +45,27 @@ actor EventHub {
     let continuation: AsyncStream<EasyBarEventPayload>.Continuation
   }
 
-  /// Creates one event hub.
+  /// Creates one production event hub.
   private init(
     logger: ProcessLogger,
     luaRuntime: LuaRuntime
   ) {
-    self.logger = logger
-    self.luaEventSink = LuaEventSink(
-      runtime: luaRuntime,
-      logger: logger.child("lua_sink")
+    self.init(
+      logger: logger,
+      luaEventSink: LuaEventSink(
+        runtime: luaRuntime,
+        logger: logger.child("lua_sink")
+      )
     )
+  }
+
+  /// Creates one event hub with an injected sink.
+  init(
+    logger: ProcessLogger,
+    luaEventSink: EventPayloadSink
+  ) {
+    self.logger = logger
+    self.luaEventSink = luaEventSink
   }
 
   /// Subscribes to the app-wide event stream.

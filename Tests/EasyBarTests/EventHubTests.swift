@@ -1,10 +1,25 @@
+import EasyBarShared
 import XCTest
 
 @testable import EasyBar
 
 final class EventHubTests: XCTestCase {
+  private static func makeHub() -> EventHub {
+    EventHub(
+      logger: ProcessLogger(
+        label: "eventhub.test",
+        minimumLevel: .error
+      ),
+      luaEventSink: NoopEventSink()
+    )
+  }
+
+  private final class NoopEventSink: EventPayloadSink {
+    func enqueue(_ payload: EasyBarEventPayload) {}
+  }
+
   func testFilteredSubscriptionReceivesMatchingEventOnly() async {
-    let hub = EventHub()
+    let hub = Self.makeHub()
     let stream = await hub.subscribe(eventNames: [AppEvent.systemWoke.rawValue])
     let task = Task { await Self.next(from: stream) }
 
@@ -12,11 +27,36 @@ final class EventHubTests: XCTestCase {
     await hub.emit(.systemWoke)
 
     let payload = await task.value
+
     XCTAssertEqual(payload?.eventName, AppEvent.systemWoke.rawValue)
   }
 
-  func testReplayLatestReplaysMostRecentState() async {
-    let hub = EventHub()
+  func testUnfilteredSubscriptionReceivesAppEvent() async {
+    let hub = Self.makeHub()
+    let stream = await hub.subscribe()
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emit(.minuteTick)
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, AppEvent.minuteTick.rawValue)
+  }
+
+  func testEmptyEventFilterBehavesLikeUnfilteredSubscription() async {
+    let hub = Self.makeHub()
+    let stream = await hub.subscribe(eventNames: Set<String>())
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emit(.secondTick)
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
+  }
+
+  func testReplayLatestReplaysMostRecentReplayableState() async {
+    let hub = Self.makeHub()
 
     await hub.emit(.secondTick)
 
@@ -26,16 +66,143 @@ final class EventHubTests: XCTestCase {
     )
 
     let payload = await Self.next(from: stream)
+
     XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
   }
 
-  func testWidgetEventsRouteOnlyToMatchingTargets() async {
-    let hub = EventHub()
+  func testReplayLatestUsesMostRecentPayloadForReplayableEvent() async {
+    let hub = Self.makeHub()
+
+    await hub.emit(.networkChange, primaryInterfaceIsTunnel: false)
+    await hub.emit(.networkChange, primaryInterfaceIsTunnel: true)
+
+    let stream = await hub.subscribe(
+      eventNames: [AppEvent.networkChange.rawValue],
+      replayLatest: true
+    )
+
+    let payload = await Self.next(from: stream)
+
+    XCTAssertEqual(payload?.eventName, AppEvent.networkChange.rawValue)
+    XCTAssertEqual(payload?.primaryInterfaceIsTunnel, true)
+  }
+
+  func testReplayLatestRespectsEventFilter() async {
+    let hub = Self.makeHub()
+
+    await hub.emit(.minuteTick)
+    await hub.emit(.secondTick)
+
+    let stream = await hub.subscribe(
+      eventNames: [AppEvent.secondTick.rawValue],
+      replayLatest: true
+    )
+
+    let payload = await Self.next(from: stream)
+
+    XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
+  }
+
+  func testReplayLatestDoesNotEmitWhenNoCachedPayloadExists() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [AppEvent.secondTick.rawValue],
+      replayLatest: true
+    )
+
+    let payload = await Self.next(
+      from: stream,
+      timeoutNanoseconds: 100_000_000
+    )
+
+    XCTAssertNil(payload)
+  }
+
+  func testReplayLatestDoesNotReplayNonReplayableWidgetEvent() async {
+    let hub = Self.makeHub()
+
+    await hub.emitWidgetEvent(
+      .mouseClicked,
+      widgetID: "clock",
+      button: .left
+    )
+
+    let stream = await hub.subscribe(
+      eventNames: [WidgetEvent.mouseClicked.rawValue],
+      replayLatest: true
+    )
+
+    let payload = await Self.next(
+      from: stream,
+      timeoutNanoseconds: 100_000_000
+    )
+
+    XCTAssertNil(payload)
+  }
+
+  func testEmitReplayableStateEmitsRequestedReplayableEventsInStableOrder() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [
+        AppEvent.minuteTick.rawValue,
+        AppEvent.secondTick.rawValue,
+      ]
+    )
+
+    let task = Task {
+      await Self.collect(
+        from: stream,
+        count: 2,
+        timeoutNanoseconds: 1_000_000_000
+      )
+    }
+
+    await hub.emitReplayableState(
+      for: [
+        AppEvent.minuteTick.rawValue,
+        AppEvent.secondTick.rawValue,
+      ]
+    )
+
+    let payloads = await task.value
+
+    XCTAssertEqual(
+      payloads.map(\.eventName),
+      [
+        AppEvent.minuteTick.rawValue,
+        AppEvent.secondTick.rawValue,
+      ]
+    )
+  }
+
+  func testEmitReplayableStateIgnoresUnknownEventNames() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(eventNames: ["unknown_event"])
+    let task = Task {
+      await Self.next(
+        from: stream,
+        timeoutNanoseconds: 100_000_000
+      )
+    }
+
+    await hub.emitReplayableState(for: ["unknown_event"])
+
+    let payload = await task.value
+
+    XCTAssertNil(payload)
+  }
+
+  func testWidgetEventsRouteOnlyToMatchingTargetWidgetIDs() async {
+    let hub = Self.makeHub()
 
     let matchingStream = await hub.subscribe(
       eventNames: [WidgetEvent.sliderPreview.rawValue],
       widgetTargetIDs: ["volume_slider"]
     )
+
     let nonMatchingStream = await hub.subscribe(
       eventNames: [WidgetEvent.sliderPreview.rawValue],
       widgetTargetIDs: ["other_widget"]
@@ -43,7 +210,10 @@ final class EventHubTests: XCTestCase {
 
     let matchingTask = Task { await Self.next(from: matchingStream) }
     let nonMatchingTask = Task {
-      await Self.next(from: nonMatchingStream, timeoutNanoseconds: 100_000_000)
+      await Self.next(
+        from: nonMatchingStream,
+        timeoutNanoseconds: 100_000_000
+      )
     }
 
     await hub.emitWidgetEvent(
@@ -56,28 +226,270 @@ final class EventHubTests: XCTestCase {
     let matchingPayload = await matchingTask.value
     let nonMatchingPayload = await nonMatchingTask.value
 
+    XCTAssertEqual(matchingPayload?.eventName, WidgetEvent.sliderPreview.rawValue)
     XCTAssertEqual(matchingPayload?.targetWidgetID, "volume_slider")
+    XCTAssertEqual(matchingPayload?.value, 0.5)
     XCTAssertNil(nonMatchingPayload)
+  }
+
+  func testWidgetEventsRouteToMatchingSourceWidgetID() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [WidgetEvent.mouseClicked.rawValue],
+      widgetTargetIDs: ["clock"]
+    )
+
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emitWidgetEvent(
+      .mouseClicked,
+      widgetID: "clock",
+      button: .left
+    )
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, WidgetEvent.mouseClicked.rawValue)
+    XCTAssertEqual(payload?.widgetID, "clock")
+    XCTAssertEqual(payload?.button, .left)
+  }
+
+  func testWidgetSubscriptionWithoutTargetFilterReceivesMatchingWidgetEvent() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [WidgetEvent.mouseScrolled.rawValue]
+    )
+
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emitWidgetEvent(
+      .mouseScrolled,
+      widgetID: "calendar",
+      direction: .down,
+      deltaX: 0,
+      deltaY: -8
+    )
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, WidgetEvent.mouseScrolled.rawValue)
+    XCTAssertEqual(payload?.widgetID, "calendar")
+    XCTAssertEqual(payload?.direction, .down)
+    XCTAssertEqual(payload?.deltaX, 0)
+    XCTAssertEqual(payload?.deltaY, -8)
+  }
+
+  func testWidgetEventFilterStillRequiresMatchingEventName() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [WidgetEvent.sliderChanged.rawValue],
+      widgetTargetIDs: ["volume_slider"]
+    )
+
+    let task = Task {
+      await Self.next(
+        from: stream,
+        timeoutNanoseconds: 100_000_000
+      )
+    }
+
+    await hub.emitWidgetEvent(
+      .sliderPreview,
+      widgetID: "builtin_volume",
+      targetWidgetID: "volume_slider",
+      value: 0.5
+    )
+
+    let payload = await task.value
+
+    XCTAssertNil(payload)
+  }
+
+  func testAppEventsIgnoreWidgetTargetFilterWhenEventNameMatches() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [AppEvent.systemWoke.rawValue],
+      widgetTargetIDs: ["some_widget"]
+    )
+
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emit(.systemWoke)
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, AppEvent.systemWoke.rawValue)
+  }
+
+  func testAppPayloadDictionaryIncludesNestedContext() {
+    let payload = EasyBarEventPayload.app(
+      .networkChange,
+      appName: "Finder",
+      interfaceName: "utun4",
+      charging: true,
+      muted: false,
+      primaryInterfaceIsTunnel: true
+    )
+
+    let dictionary = payload.toDictionary()
+    let network = dictionary["network"] as? [String: Any]
+    let power = dictionary["power"] as? [String: Any]
+    let audio = dictionary["audio"] as? [String: Any]
+
+    XCTAssertEqual(dictionary["name"] as? String, AppEvent.networkChange.rawValue)
+    XCTAssertEqual(dictionary["app_name"] as? String, "Finder")
+
+    XCTAssertEqual(network?["interface_name"] as? String, "utun4")
+    XCTAssertEqual(network?["primary_interface_is_tunnel"] as? Bool, true)
+
+    XCTAssertEqual(power?["charging"] as? Bool, true)
+    XCTAssertEqual(audio?["muted"] as? Bool, false)
+
+    XCTAssertNil(dictionary["widget_id"])
+    XCTAssertNil(dictionary["target_widget_id"])
+  }
+
+  func testWidgetPayloadDictionaryIncludesInteractionContext() {
+    let payload = EasyBarEventPayload.widget(
+      .mouseScrolled,
+      widgetID: "calendar",
+      targetWidgetID: "calendar_popup",
+      button: .middle,
+      direction: .down,
+      value: 0.75,
+      deltaX: 1.5,
+      deltaY: -4.25
+    )
+
+    let dictionary = payload.toDictionary()
+    let audio = dictionary["audio"] as? [String: Any]
+
+    XCTAssertEqual(dictionary["name"] as? String, WidgetEvent.mouseScrolled.rawValue)
+    XCTAssertEqual(dictionary["widget_id"] as? String, "calendar")
+    XCTAssertEqual(dictionary["target_widget_id"] as? String, "calendar_popup")
+    XCTAssertEqual(dictionary["button"] as? String, MouseButton.middle.rawValue)
+    XCTAssertEqual(dictionary["direction"] as? String, ScrollDirection.down.rawValue)
+    XCTAssertEqual(dictionary["value"] as? Double, 0.75)
+    XCTAssertEqual(dictionary["delta_x"] as? Double, 1.5)
+    XCTAssertEqual(dictionary["delta_y"] as? Double, -4.25)
+
+    XCTAssertEqual(audio?["value"] as? Double, 0.75)
+  }
+
+  func testEventReplayCatalogIdentifiesReplayableEvents() {
+    XCTAssertTrue(EventReplayCatalog.isReplayable(AppEvent.secondTick.rawValue))
+    XCTAssertTrue(EventReplayCatalog.isReplayable(AppEvent.networkChange.rawValue))
+    XCTAssertFalse(EventReplayCatalog.isReplayable(WidgetEvent.mouseClicked.rawValue))
+    XCTAssertFalse(EventReplayCatalog.isReplayable("unknown_event"))
+  }
+
+  func testEventDeliveryPolicyRoutesOnlyWidgetEventsDirectlyToWidgets() {
+    XCTAssertTrue(
+      EventDeliveryPolicy.routesDirectlyToWidgets(
+        WidgetEvent.mouseClicked.rawValue
+      )
+    )
+
+    XCTAssertTrue(
+      EventDeliveryPolicy.routesDirectlyToWidgets(
+        WidgetEvent.sliderPreview.rawValue
+      )
+    )
+
+    XCTAssertFalse(
+      EventDeliveryPolicy.routesDirectlyToWidgets(
+        AppEvent.systemWoke.rawValue
+      )
+    )
+  }
+
+  func testEventDeliveryPolicyClassifiesCoalescingEvents() {
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(AppEvent.secondTick.rawValue),
+      .coalescing
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(AppEvent.intervalTick.rawValue),
+      .coalescing
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(WidgetEvent.mouseScrolled.rawValue),
+      .coalescing
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(WidgetEvent.sliderPreview.rawValue),
+      .coalescing
+    )
+  }
+
+  func testEventDeliveryPolicyClassifiesReliableEvents() {
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(AppEvent.systemWoke.rawValue),
+      .reliable
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(AppEvent.powerSourceChange.rawValue),
+      .reliable
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName(WidgetEvent.mouseClicked.rawValue),
+      .reliable
+    )
+
+    XCTAssertEqual(
+      EventDeliveryPolicy.forEventName("unknown_event"),
+      .reliable
+    )
   }
 
   private static func next(
     from stream: AsyncStream<EasyBarEventPayload>,
     timeoutNanoseconds: UInt64 = 1_000_000_000
   ) async -> EasyBarEventPayload? {
-    await withTaskGroup(of: EasyBarEventPayload?.self) { group in
+    await collect(
+      from: stream,
+      count: 1,
+      timeoutNanoseconds: timeoutNanoseconds
+    ).first
+  }
+
+  private static func collect(
+    from stream: AsyncStream<EasyBarEventPayload>,
+    count: Int,
+    timeoutNanoseconds: UInt64
+  ) async -> [EasyBarEventPayload] {
+    await withTaskGroup(of: [EasyBarEventPayload].self) { group in
       group.addTask {
         var iterator = stream.makeAsyncIterator()
-        return await iterator.next()
+        var payloads: [EasyBarEventPayload] = []
+        payloads.reserveCapacity(count)
+
+        while payloads.count < count {
+          guard let payload = await iterator.next() else { break }
+
+          payloads.append(payload)
+        }
+
+        return payloads
       }
 
       group.addTask {
         try? await Task.sleep(nanoseconds: timeoutNanoseconds)
-        return nil
+        return []
       }
 
-      let value = await group.next() ?? nil
+      let payloads = await group.next() ?? []
       group.cancelAll()
-      return value
+      return payloads
     }
   }
 }
