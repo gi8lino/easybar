@@ -19,7 +19,7 @@ final class CalendarAuthorizationController {
     self.eventStore = eventStore
     self.authState = authState
     self.logger = logger
-    retryBackoff = AuthorizationRetryBackoff(logger: logger)
+    retryBackoff = AuthorizationRetryBackoff(logger: logger.child("retry_backoff"))
   }
 
   /// Starts authorization handling and requests access when needed.
@@ -66,7 +66,7 @@ final class CalendarAuthorizationController {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
 
-    logger.info("calendar agent access status changed", logField("status", authState.describe(status)))
+    logger.info("calendar agent access status changed", .field("status", authState.describe(status)))
 
     switch status {
     case .authorized, .fullAccess:
@@ -94,8 +94,8 @@ final class CalendarAuthorizationController {
 
         self.logger.info(
           "calendar agent access request completed",
-          logField("granted", granted),
-          logField("status", self.authState.describe(newStatus))
+          .field("granted", granted),
+          .field("status", self.authState.describe(newStatus))
         )
 
         guard granted else {

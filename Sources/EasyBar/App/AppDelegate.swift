@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private let logger = ProcessLogger(label: "easybar")
-  private lazy var appController = AppController(logger: logger)
+  private lazy var appController = AppController(logger: logger.child("app"))
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     appController.start()

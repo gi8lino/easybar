@@ -150,7 +150,7 @@ actor WidgetEngine {
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
-    logger.debug("required events updated", logField("events", runtimeState.requiredEvents))
+    logger.debug("required events updated", .field("events", runtimeState.requiredEvents))
 
     let requiredEvents = runtimeState.requiredEvents
     await MainActor.run {
@@ -181,8 +181,8 @@ actor WidgetEngine {
 
     logger.debug(
       "decoded widget tree",
-      logField("root", tree.root),
-      logField("nodes", tree.nodes.count)
+      .field("root", tree.root),
+      .field("nodes", tree.nodes.count)
     )
     MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
 

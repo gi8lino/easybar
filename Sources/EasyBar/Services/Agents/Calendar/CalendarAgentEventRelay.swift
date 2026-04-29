@@ -31,7 +31,7 @@ final class CalendarAgentEventRelay {
     label: "calendar agent event relay",
     delay: 0.05,
     queue: queue,
-    logger: logger
+    logger: logger.child("scheduler")
   )
 
   private init(logger: ProcessLogger) {

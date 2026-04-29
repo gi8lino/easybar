@@ -45,7 +45,7 @@ actor EventHub {
     self.logger = logger
     self.luaEventSink = LuaEventSink(
       runtime: luaRuntime,
-      logger: logger
+      logger: logger.child("lua_sink")
     )
   }
 
@@ -215,8 +215,8 @@ actor EventHub {
 
     logger.trace(
       "emit event",
-      logField("name", payload.eventName),
-      logField("payload", payload.toDictionary())
+      .field("name", payload.eventName),
+      .field("payload", payload.toDictionary())
     )
   }
 }

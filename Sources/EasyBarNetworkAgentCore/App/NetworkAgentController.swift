@@ -19,7 +19,7 @@ public final class NetworkAgentController {
     snapshotProvider = NetworkSnapshotProvider(
       componentName: config.componentName,
       refreshIntervalSeconds: config.refreshIntervalSeconds,
-      logger: logger,
+      logger: logger.child("snapshot_provider"),
       promptPresenter: promptPresenter
     )
     socketServer = NetworkSocketServer(
@@ -27,7 +27,7 @@ public final class NetworkAgentController {
       socketPath: config.socketPath,
       appVersion: config.appVersion,
       allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedFieldsWithoutLocation,
-      logger: logger
+      logger: logger.child("socket_server")
     )
   }
 

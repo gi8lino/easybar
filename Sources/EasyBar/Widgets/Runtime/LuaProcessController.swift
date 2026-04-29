@@ -69,7 +69,7 @@ final class LuaProcessController {
 
       installTerminationSource(for: pid)
 
-      logger.debug("lua runtime started", logField("pid", pid), logField("pgid", pid))
+      logger.debug("lua runtime started", .field("pid", pid), .field("pgid", pid))
 
       return (pid, pipes.input, pipes.output, pipes.error)
     } catch {
@@ -89,7 +89,7 @@ final class LuaProcessController {
     if snapshot.isShuttingDown {
       logger.debug(
         "lua runtime shutdown already in progress",
-        logField("pid", snapshot.processIdentifier)
+        .field("pid", snapshot.processIdentifier)
       )
       await waitForShutdownCompletion()
       return
@@ -102,11 +102,11 @@ final class LuaProcessController {
     if let processGroupIdentifier = snapshot.processGroupIdentifier {
       logger.debug(
         "shutting down lua runtime",
-        logField("pid", snapshot.processIdentifier),
-        logField("pgid", processGroupIdentifier)
+        .field("pid", snapshot.processIdentifier),
+        .field("pgid", processGroupIdentifier)
       )
     } else {
-      logger.debug("shutting down lua runtime", logField("pid", snapshot.processIdentifier))
+      logger.debug("shutting down lua runtime", .field("pid", snapshot.processIdentifier))
     }
 
     terminateProcess(

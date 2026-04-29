@@ -20,7 +20,7 @@ final class LuaTransport {
   /// Creates one Lua transport.
   init(logger: ProcessLogger) {
     self.logger = logger
-    self.logBridge = LuaLogBridge(logger: logger)
+    self.logBridge = LuaLogBridge(logger: logger.child("stderr"))
   }
 
   /// Attaches the transport to the given process pipes.

@@ -24,11 +24,11 @@ public final class NetworkSnapshotProvider {
     self.logger = logger
     authorizer = NetworkLocationAuthorizationController(
       componentName: componentName,
-      logger: logger,
+      logger: logger.child("authorization"),
       promptPresenter: promptPresenter
     )
-    wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger)
-    systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger)
+    wifiMonitor = NetworkWiFiMonitor(componentName: componentName, logger: logger.child("wifi_monitor"))
+    systemMonitor = NetworkSystemMonitor(componentName: componentName, logger: logger.child("system_monitor"))
   }
 
   /// Starts permission, Wi-Fi, and network monitoring.

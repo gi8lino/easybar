@@ -44,7 +44,7 @@ final class CalendarAgentStreamController {
       guard let self else { return }
       MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
     },
-    logger: logger
+    logger: logger.child("socket_client")
   )
 
   /// Creates one shared calendar-agent stream controller.
@@ -67,7 +67,7 @@ final class CalendarAgentStreamController {
 
     wakeRefreshController = AgentWakeRefreshController(
       label: label,
-      logger: logger
+      logger: logger.child("wake_refresh")
     )
   }
 

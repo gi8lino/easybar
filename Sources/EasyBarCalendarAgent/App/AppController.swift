@@ -15,10 +15,10 @@ final class AppController {
   ) {
     runtimeConfig = config
     self.logger = logger
-    snapshotProvider = CalendarSnapshotProvider(logger: logger)
+    snapshotProvider = CalendarSnapshotProvider(logger: logger.child("snapshot_provider"))
     socketServer = CalendarSocketServer(
       socketPath: config.calendarAgentSocketPath,
-      logger: logger
+      logger: logger.child("socket_server")
     )
   }
 

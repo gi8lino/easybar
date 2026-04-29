@@ -42,7 +42,7 @@ final class MonthCalendarAgentClient {
     clearState: {
       NativeMonthCalendarStore.shared.clear()
     },
-    logger: logger
+    logger: logger.child("stream")
   )
 
   private init(logger: ProcessLogger) {

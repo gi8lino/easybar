@@ -28,8 +28,8 @@ actor LuaRuntime {
   /// Creates one Lua runtime.
   init(logger: ProcessLogger) {
     self.logger = logger
-    self.processController = LuaProcessController(logger: logger)
-    self.transport = LuaTransport(logger: logger)
+    self.processController = LuaProcessController(logger: logger.child("process"))
+    self.transport = LuaTransport(logger: logger.child("transport"))
   }
 
   /// Returns the running Lua process identifier when available.
@@ -55,7 +55,7 @@ actor LuaRuntime {
     transport.startReading()
 
     MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
-    logger.debug("lua runtime facade started", logField("pid", result.processIdentifier))
+    logger.debug("lua runtime facade started", .field("pid", result.processIdentifier))
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.

@@ -48,7 +48,7 @@ final class AeroSpaceService: ObservableObject {
 
   private init(logger: ProcessLogger) {
     self.logger = logger
-    self.commandRunner = AeroSpaceCommandRunner(logger: logger)
+    self.commandRunner = AeroSpaceCommandRunner(logger: logger.child("commands"))
   }
 }
 

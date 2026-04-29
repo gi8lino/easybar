@@ -14,7 +14,7 @@ final class AgentWakeRefreshController {
     queue: DispatchQueue(
       label: "easybar.\(label.replacingOccurrences(of: " ", with: "-")).wake"
     ),
-    logger: logger
+    logger: logger.child("scheduler")
   )
 
   init(

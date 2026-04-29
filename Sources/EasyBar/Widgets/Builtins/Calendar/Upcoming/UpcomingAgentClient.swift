@@ -35,7 +35,7 @@ final class UpcomingCalendarAgentClient {
     clearState: {
       NativeUpcomingCalendarStore.shared.clear()
     },
-    logger: logger
+    logger: logger.child("stream")
   )
 
   private init(logger: ProcessLogger) {

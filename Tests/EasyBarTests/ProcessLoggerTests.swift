@@ -47,9 +47,9 @@ final class ProcessLoggerTests: XCTestCase {
   func testTypedLogFieldsFormatStructuredPairs() {
     XCTAssertEqual(
       formatLogFields(
-        logField("event", "startup"),
-        logField("pid", 1234),
-        logField("path", "/tmp/easybar.sock")
+        .field("event", "startup"),
+        .field("pid", 1234),
+        .field("path", "/tmp/easybar.sock")
       ),
       "event=startup pid=1234 path=/tmp/easybar.sock"
     )

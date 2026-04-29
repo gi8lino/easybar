@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NetworkAuthorizationPr
     )
     controller = NetworkAgentController(
       config: controllerConfig,
-      logger: logger,
+      logger: logger.child("app"),
       promptPresenter: self
     )
 

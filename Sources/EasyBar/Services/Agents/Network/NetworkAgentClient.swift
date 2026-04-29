@@ -24,7 +24,7 @@ final class NetworkAgentClient {
 
   private lazy var wakeRefreshController = AgentWakeRefreshController(
     label: "network agent client",
-    logger: logger
+    logger: logger.child("wake_refresh")
   )
 
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
@@ -51,7 +51,7 @@ final class NetworkAgentClient {
     onDecodeError: {
       MetricsCoordinator.shared.recordAgentDecodeError(.network)
     },
-    logger: logger
+    logger: logger.child("socket_client")
   )
 
   private init(logger: ProcessLogger) {

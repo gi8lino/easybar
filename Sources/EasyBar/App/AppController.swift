@@ -7,7 +7,7 @@ import Foundation
 final class AppController {
   private let logger: ProcessLogger
   private let runtimeCoordinator: RuntimeCoordinator
-  private lazy var signalHandler = AppSignalHandler(logger: logger) { [weak self] in
+  private lazy var signalHandler = AppSignalHandler(logger: logger.child("signals")) { [weak self] in
     self?.requestTermination()
   }
 
@@ -23,8 +23,8 @@ final class AppController {
   /// Creates the app shell with its process logger.
   init(logger: ProcessLogger) {
     self.logger = logger
-    Self.bootstrapSharedDependencies(logger: logger)
-    self.runtimeCoordinator = RuntimeCoordinator(logger: logger)
+    Self.bootstrapSharedDependencies(logger: logger.child("services"))
+    self.runtimeCoordinator = RuntimeCoordinator(logger: logger.child("runtime"))
   }
 
   /// Starts the app shell and the actor-owned runtime.
@@ -40,7 +40,7 @@ final class AppController {
       break
 
     case .alreadyRunning(let lockPath):
-      logger.warn("easybar already running", logField("lock_path", lockPath))
+      logger.warn("easybar already running", .field("lock_path", lockPath))
       terminateApplication()
 
     case .failed(let lockPath, let reason):
@@ -134,21 +134,21 @@ final class AppController {
 
   /// Bootstraps all shared logger-owning services before runtime startup begins.
   private static func bootstrapSharedDependencies(logger: ProcessLogger) {
-    LuaRuntime.bootstrap(logger: logger)
+    LuaRuntime.bootstrap(logger: logger.child("lua"))
     EventManager.bootstrap(
-      logger: logger,
+      logger: logger.child("events"),
       luaRuntime: LuaRuntime.shared
     )
 
-    NativeWidgetRegistry.bootstrap(logger: logger)
-    AeroSpaceService.bootstrap(logger: logger)
-    CalendarAgentEventRelay.bootstrap(logger: logger)
-    NetworkAgentClient.bootstrap(logger: logger)
-    NativeWiFiStore.bootstrap(logger: logger)
-    NativeMonthCalendarStore.bootstrap(logger: logger)
-    NativeUpcomingCalendarStore.bootstrap(logger: logger)
-    MonthCalendarAgentClient.bootstrap(logger: logger)
-    UpcomingCalendarAgentClient.bootstrap(logger: logger)
+    NativeWidgetRegistry.bootstrap(logger: logger.child("widgets"))
+    AeroSpaceService.bootstrap(logger: logger.child("aerospace"))
+    CalendarAgentEventRelay.bootstrap(logger: logger.child("calendar_relay"))
+    NetworkAgentClient.bootstrap(logger: logger.child("network_agent"))
+    NativeWiFiStore.bootstrap(logger: logger.child("wifi_store"))
+    NativeMonthCalendarStore.bootstrap(logger: logger.child("month_store"))
+    NativeUpcomingCalendarStore.bootstrap(logger: logger.child("upcoming_store"))
+    MonthCalendarAgentClient.bootstrap(logger: logger.child("month_agent"))
+    UpcomingCalendarAgentClient.bootstrap(logger: logger.child("upcoming_agent"))
   }
 
   /// Configures file logging from the current app config.
@@ -162,7 +162,7 @@ final class AppController {
 
   /// Creates and presents the main bar window controller.
   private func setupBarWindowController() {
-    let controller = BarWindowController(logger: logger)
+    let controller = BarWindowController(logger: logger.child("window"))
     controller.onRefresh = { [weak self] in
       guard let self else { return }
 
@@ -210,37 +210,37 @@ final class AppController {
 
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    logger.info("config details", logField("widgets_path", Config.shared.widgetsPath))
-    logger.info("config details", logField("lua_path", Config.shared.luaPath))
-    logger.info("config details", logField("watch_config", Config.shared.watchConfigFile))
+    logger.info("config details", .field("widgets_path", Config.shared.widgetsPath))
+    logger.info("config details", .field("lua_path", Config.shared.luaPath))
+    logger.info("config details", .field("watch_config", Config.shared.watchConfigFile))
     logger.info(
       "config details",
-      logField("calendar_agent_enabled", Config.shared.calendarAgentEnabled),
-      logField("socket", Config.shared.calendarAgentSocketPath)
+      .field("calendar_agent_enabled", Config.shared.calendarAgentEnabled),
+      .field("socket", Config.shared.calendarAgentSocketPath)
     )
     logger.info(
       "config details",
-      logField("network_agent_enabled", Config.shared.networkAgentEnabled),
-      logField("socket", Config.shared.networkAgentSocketPath),
-      logField("refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds)
+      .field("network_agent_enabled", Config.shared.networkAgentEnabled),
+      .field("socket", Config.shared.networkAgentSocketPath),
+      .field("refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds)
     )
     logger.info(
       "config details",
-      logField("calendar_builtin_enabled", Config.shared.builtinCalendar.enabled),
-      logField("popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
-      logField("anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue),
-      logField("position", Config.shared.builtinCalendar.position.rawValue)
+      .field("calendar_builtin_enabled", Config.shared.builtinCalendar.enabled),
+      .field("popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
+      .field("anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue),
+      .field("position", Config.shared.builtinCalendar.position.rawValue)
     )
     logger.info(
       "config details",
-      logField("wifi_builtin_enabled", Config.shared.builtinWiFi.enabled),
-      logField("position", Config.shared.builtinWiFi.position.rawValue)
+      .field("wifi_builtin_enabled", Config.shared.builtinWiFi.enabled),
+      .field("position", Config.shared.builtinWiFi.position.rawValue)
     )
     logger.info(
       "config details",
-      logField("bar_height", Config.shared.barHeight),
-      logField("padding_x", Config.shared.barPaddingX),
-      logField("extend_behind_notch", Config.shared.barExtendBehindNotch)
+      .field("bar_height", Config.shared.barHeight),
+      .field("padding_x", Config.shared.barPaddingX),
+      .field("extend_behind_notch", Config.shared.barExtendBehindNotch)
     )
   }
 
@@ -249,8 +249,8 @@ final class AppController {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
       logger.info(
         "screen details",
-        logField("screen_frame", NSStringFromRect(screen.frame)),
-        logField("visible", NSStringFromRect(screen.visibleFrame))
+        .field("screen_frame", NSStringFromRect(screen.frame)),
+        .field("visible", NSStringFromRect(screen.visibleFrame))
       )
     } else {
       logger.warn("no screen available during startup logging")
@@ -265,13 +265,13 @@ final class AppController {
 
     logger.info(
       "environment override",
-      logField("key", SharedEnvironmentKeys.configPath),
-      logField("value", configOverride.isEmpty ? "<unset>" : configOverride)
+      .field("key", SharedEnvironmentKeys.configPath),
+      .field("value", configOverride.isEmpty ? "<unset>" : configOverride)
     )
     logger.info(
       "environment override",
-      logField("key", SharedEnvironmentKeys.loggingLevel),
-      logField("value", logLevel.isEmpty ? "<unset>" : logLevel)
+      .field("key", SharedEnvironmentKeys.loggingLevel),
+      .field("value", logLevel.isEmpty ? "<unset>" : logLevel)
     )
   }
 
@@ -280,13 +280,13 @@ final class AppController {
     let environment = Config.shared.appSection.environment
 
     guard !environment.isEmpty else {
-      logger.info("app env", logField("value", "<empty>"))
+      logger.info("app env", .field("value", "<empty>"))
       return
     }
 
     for key in environment.keys.sorted() {
       let value = environment[key] ?? ""
-      logger.info("app env", logField("key", key), logField("value", value))
+      logger.info("app env", .field("key", key), .field("value", value))
     }
   }
 
@@ -298,7 +298,7 @@ final class AppController {
   /// Logs one warning when a required font is missing.
   private func validateFont(named fontName: String) {
     if NSFont(name: fontName, size: 12) != nil {
-      logger.info("font available", logField("name", fontName))
+      logger.info("font available", .field("name", fontName))
       return
     }
 
@@ -330,9 +330,9 @@ final class AppController {
         withIntermediateDirectories: true
       )
       try bundledData.write(to: installedStub, options: .atomic)
-      logger.info("installed widget editor stub", logField("path", installedStub.path))
+      logger.info("installed widget editor stub", .field("path", installedStub.path))
     } catch {
-      logger.warn("failed to install widget editor stub", logField("error", error))
+      logger.warn("failed to install widget editor stub", .field("error", error))
     }
   }
 

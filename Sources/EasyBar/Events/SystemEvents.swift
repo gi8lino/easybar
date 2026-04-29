@@ -135,7 +135,7 @@ final class SystemEvents {
       let appName = app.localizedName ?? ""
       self.logger.debug(
         "received didActivateApplication notification",
-        logField("app", appName)
+        .field("app", appName)
       )
 
       Task {

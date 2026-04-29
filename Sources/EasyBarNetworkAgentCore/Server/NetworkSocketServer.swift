@@ -32,7 +32,7 @@ final class NetworkSocketServer {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: componentName,
-      logger: logger,
+      logger: logger.child("transport"),
     )
   }
 

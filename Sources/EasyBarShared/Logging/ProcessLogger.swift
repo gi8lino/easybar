@@ -10,11 +10,11 @@ public struct ProcessLogField {
     self.key = key
     self.value = value
   }
-}
 
-/// Builds one typed process log field.
-public func logField(_ key: String, _ value: Any?) -> ProcessLogField {
-  ProcessLogField(key, value)
+  /// Builds one typed process log field for contextual `.field(...)` call sites.
+  public static func field(_ key: String, _ value: Any?) -> ProcessLogField {
+    ProcessLogField(key, value)
+  }
 }
 
 /// Formats alternating key/value components into one compact single-line log field string.
@@ -73,6 +73,18 @@ private func formatLogFieldValue(_ value: Any?) -> String {
 
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
+  private final class SharedState {
+    let lock = NSLock()
+    var fileHandle: FileHandle?
+    var minimumLevel: ProcessLogLevel
+    var fileLoggingEnabled = false
+    var fileLoggingPath = ""
+
+    init(minimumLevel: ProcessLogLevel) {
+      self.minimumLevel = minimumLevel
+    }
+  }
+
   private static let formatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .iso8601)
@@ -83,40 +95,48 @@ public final class ProcessLogger {
   }()
 
   private let label: String
-  private let lock = NSLock()
-  private var fileHandle: FileHandle?
-  private var minimumLevelFlag: ProcessLogLevel
-  private var fileLoggingEnabledFlag = false
-  private var fileLoggingPathValue = ""
+  private let sharedState: SharedState
 
   public init(label: String, minimumLevel: ProcessLogLevel = .info) {
     self.label = label
-    minimumLevelFlag = minimumLevel
+    sharedState = SharedState(minimumLevel: minimumLevel)
+  }
+
+  private init(label: String, sharedState: SharedState) {
+    self.label = label
+    self.sharedState = sharedState
+  }
+
+  /// Returns one child logger that shares runtime configuration and file output.
+  public func child(_ suffix: String) -> ProcessLogger {
+    let trimmedSuffix = suffix.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedSuffix.isEmpty else { return self }
+    return ProcessLogger(label: "\(label).\(trimmedSuffix)", sharedState: sharedState)
   }
 
   public var minimumLevel: ProcessLogLevel {
-    lock.lock()
-    defer { lock.unlock() }
-    return minimumLevelFlag
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
+    return sharedState.minimumLevel
   }
 
   public var fileLoggingEnabled: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return fileLoggingEnabledFlag
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
+    return sharedState.fileLoggingEnabled
   }
 
   public var fileLoggingPath: String {
-    lock.lock()
-    defer { lock.unlock() }
-    return fileLoggingPathValue
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
+    return sharedState.fileLoggingPath
   }
 
   /// Updates the current minimum log level.
   public func setMinimumLevel(_ level: ProcessLogLevel) {
-    lock.lock()
-    minimumLevelFlag = level
-    lock.unlock()
+    sharedState.lock.lock()
+    sharedState.minimumLevel = level
+    sharedState.lock.unlock()
   }
 
   /// Configures minimum level and optional file logging in one step.
@@ -131,13 +151,13 @@ public final class ProcessLogger {
 
   /// Configures optional mirroring of log lines into one file.
   public func configureFileLogging(enabled: Bool, path: String) {
-    lock.lock()
-    defer { lock.unlock() }
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
 
-    fileHandle?.closeFile()
-    fileHandle = nil
-    fileLoggingEnabledFlag = enabled
-    fileLoggingPathValue = path
+    sharedState.fileHandle?.closeFile()
+    sharedState.fileHandle = nil
+    sharedState.fileLoggingEnabled = enabled
+    sharedState.fileLoggingPath = path
 
     guard enabled, !path.isEmpty else { return }
 
@@ -157,9 +177,9 @@ public final class ProcessLogger {
 
       let handle = try FileHandle(forWritingTo: url)
       try handle.seekToEnd()
-      fileHandle = handle
+      sharedState.fileHandle = handle
     } catch {
-      fileLoggingEnabledFlag = false
+      sharedState.fileLoggingEnabled = false
       writeUnlocked(
         level: "WARN",
         message: "failed to open log file at \(path): \(error)",
@@ -250,8 +270,8 @@ public final class ProcessLogger {
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
   public func writeRaw(_ message: String, to stream: UnsafeMutablePointer<FILE>?) {
-    lock.lock()
-    defer { lock.unlock() }
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
 
     let line = message + "\n"
     fputs(line, stream)
@@ -260,14 +280,14 @@ public final class ProcessLogger {
   }
 
   private func shouldLog(_ level: ProcessLogLevel) -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return minimumLevelFlag.allows(level)
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
+    return sharedState.minimumLevel.allows(level)
   }
 
   private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
-    lock.lock()
-    defer { lock.unlock() }
+    sharedState.lock.lock()
+    defer { sharedState.lock.unlock() }
     writeUnlocked(level: level, message: message, stream: stream)
   }
 
@@ -312,16 +332,16 @@ public final class ProcessLogger {
     guard let data = (line + "\n").data(using: .utf8) else { return }
 
     do {
-      try fileHandle?.write(contentsOf: data)
+      try sharedState.fileHandle?.write(contentsOf: data)
     } catch {
-      fileLoggingEnabledFlag = false
+      sharedState.fileLoggingEnabled = false
       fputs(
         formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n",
         stderr
       )
       fflush(stderr)
-      fileHandle?.closeFile()
-      fileHandle = nil
+      sharedState.fileHandle?.closeFile()
+      sharedState.fileHandle = nil
     }
   }
 }

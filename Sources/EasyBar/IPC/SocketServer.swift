@@ -23,7 +23,7 @@ final class SocketServer {
     self.socketPath = socketPath
     transport = Self.makeTransport(
       socketPath: socketPath,
-      logger: logger
+      logger: logger.child("transport")
     )
   }
 
@@ -55,7 +55,7 @@ final class SocketServer {
       socketPath = updatedSocketPath
       transport = Self.makeTransport(
         socketPath: updatedSocketPath,
-        logger: logger
+        logger: logger.child("transport")
       )
       return
     }
@@ -70,7 +70,7 @@ final class SocketServer {
     socketPath = updatedSocketPath
     transport = Self.makeTransport(
       socketPath: updatedSocketPath,
-      logger: logger
+      logger: logger.child("transport")
     )
 
     let activeTransport = transport

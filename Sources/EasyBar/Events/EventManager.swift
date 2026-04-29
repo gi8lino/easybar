@@ -22,15 +22,15 @@ final class EventManager {
     luaRuntime: LuaRuntime
   ) {
     EventHub.bootstrap(
-      logger: logger,
+      logger: logger.child("hub"),
       luaRuntime: luaRuntime
     )
-    SystemEvents.bootstrap(logger: logger)
-    PowerEvents.bootstrap(logger: logger)
-    TimerEvents.bootstrap(logger: logger)
-    VolumeEvents.bootstrap(logger: logger)
+    SystemEvents.bootstrap(logger: logger.child("system"))
+    PowerEvents.bootstrap(logger: logger.child("power"))
+    TimerEvents.bootstrap(logger: logger.child("timer"))
+    VolumeEvents.bootstrap(logger: logger.child("volume"))
 
-    sharedInstance = EventManager(logger: logger)
+    sharedInstance = EventManager(logger: logger.child("manager"))
   }
 
   private static let intervalTickPrefix = "interval_tick:"
@@ -141,7 +141,7 @@ final class EventManager {
     activeSources = desiredSources
     activeInterval = desiredInterval
 
-    logger.debug("event manager refresh end", logField("active", activeSubscriptions))
+    logger.debug("event manager refresh end", .field("active", activeSubscriptions))
   }
 
   /// Starts the newly required event sources.

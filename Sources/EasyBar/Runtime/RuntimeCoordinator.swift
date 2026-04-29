@@ -27,15 +27,15 @@ actor RuntimeCoordinator {
   /// Creates one runtime coordinator.
   init(logger: ProcessLogger) {
     self.logger = logger
-    self.fileWatcher = FileWatcher(logger: logger)
+    self.fileWatcher = FileWatcher(logger: logger.child("file_watcher"))
     luaRuntime = LuaRuntime.shared
 
     widgetEngine = WidgetEngine(
-      logger: logger,
+      logger: logger.child("widget_engine"),
       luaRuntime: luaRuntime
     )
 
-    socketServer = SocketServer(logger: logger)
+    socketServer = SocketServer(logger: logger.child("socket_server"))
   }
 
   /// Starts the actor-owned runtime.
@@ -138,7 +138,7 @@ actor RuntimeCoordinator {
     aeroSpaceService.triggerRefresh()
 
     if let errorMessage = result.errorMessage {
-      logger.warn("config reload completed with error", logField("error", errorMessage))
+      logger.warn("config reload completed with error", .field("error", errorMessage))
     }
 
     logger.info("reloadConfig end")
@@ -200,7 +200,7 @@ actor RuntimeCoordinator {
 
   /// Handles one incoming IPC command.
   func handleSocketCommand(_ command: IPC.Command) async {
-    logger.info("handling socket command", logField("command", command))
+    logger.info("handling socket command", .field("command", command))
 
     switch command {
     case .workspaceChanged:

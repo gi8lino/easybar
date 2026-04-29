@@ -28,10 +28,10 @@ extension LuaProcessController {
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
     logger.debug("starting lua runtime")
-    logger.debug("lua binary", logField("path", context.luaPath))
-    logger.debug("lua script", logField("path", context.runtimePath))
-    logger.debug("widgets path", logField("path", context.widgetsPath))
-    logger.debug("lua env keys", logField("keys", context.environment.keys.sorted()))
+    logger.debug("lua binary", .field("path", context.luaPath))
+    logger.debug("lua script", .field("path", context.runtimePath))
+    logger.debug("widgets path", .field("path", context.widgetsPath))
+    logger.debug("lua env keys", .field("keys", context.environment.keys.sorted()))
   }
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
@@ -140,7 +140,7 @@ extension LuaProcessController {
       status = normalizedTerminationStatus(from: rawStatus)
     } else {
       let code = errno
-      logger.warn("waitpid failed for lua runtime", logField("pid", pid), logField("errno", code))
+      logger.warn("waitpid failed for lua runtime", .field("pid", pid), .field("errno", code))
       status = 1
     }
 
@@ -167,16 +167,16 @@ extension LuaProcessController {
     guard status != 0 else {
       logger.info(
         "lua runtime terminated",
-        logField("pid", processIdentifier),
-        logField("status", status)
+        .field("pid", processIdentifier),
+        .field("status", status)
       )
       return
     }
 
     logger.warn(
       "lua runtime terminated",
-      logField("pid", processIdentifier),
-      logField("status", status)
+      .field("pid", processIdentifier),
+      .field("status", status)
     )
   }
 

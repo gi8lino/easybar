@@ -50,7 +50,7 @@ final class CalendarSnapshotProvider {
     authorizationController = CalendarAuthorizationController(
       eventStore: eventStore,
       authState: authState,
-      logger: logger
+      logger: logger.child("authorization")
     )
   }
 

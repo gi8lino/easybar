@@ -4,7 +4,7 @@ import EasyBarShared
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private let logger = ProcessLogger(label: "easybar-calendar-agent")
-  private lazy var controller = AppController(logger: logger)
+  private lazy var controller = AppController(logger: logger.child("app"))
   private let instanceGuard = SingleInstanceGuard()
 
   /// Starts the calendar agent after launch.

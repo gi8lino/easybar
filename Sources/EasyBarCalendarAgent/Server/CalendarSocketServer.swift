@@ -18,7 +18,7 @@ final class CalendarSocketServer {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "calendar agent",
-      logger: logger,
+      logger: logger.child("transport"),
     )
   }
 
