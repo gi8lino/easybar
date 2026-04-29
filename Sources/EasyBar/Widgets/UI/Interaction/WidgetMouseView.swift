@@ -41,10 +41,9 @@ struct WidgetMouseView: NSViewRepresentable {
 
   /// Creates the AppKit-backed mouse surface.
   func makeNSView(context: Context) -> MouseTrackingNSView {
-    let view = MouseTrackingNSView()
+    let view = MouseTrackingNSView(logger: logger)
     view.widgetID = widgetID
     view.targetWidgetID = targetWidgetID
-    view.logger = logger
     view.tracksHover = tracksHover
     view.emitsMouseHover = emitsMouseHover
     view.emitsMouseDown = emitsMouseDown
@@ -59,7 +58,6 @@ struct WidgetMouseView: NSViewRepresentable {
   func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
     nsView.widgetID = widgetID
     nsView.targetWidgetID = targetWidgetID
-    nsView.logger = logger
     nsView.tracksHover = tracksHover
     nsView.emitsMouseHover = emitsMouseHover
     nsView.emitsMouseDown = emitsMouseDown
@@ -73,7 +71,7 @@ struct WidgetMouseView: NSViewRepresentable {
 final class MouseTrackingNSView: NSView {
   var widgetID: String = ""
   var targetWidgetID: String = ""
-  var logger: ProcessLogger!
+  let logger: ProcessLogger
   var tracksHover = true
   var emitsMouseHover = false
   var emitsMouseDown = false
@@ -85,6 +83,16 @@ final class MouseTrackingNSView: NSView {
   private var trackingArea: NSTrackingArea?
   private var isMouseInside = false
   private static let hoverState = HoverState()
+
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    super.init(frame: .zero)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    nil
+  }
 
   /// Accept the first click even when EasyBar is not active.
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
