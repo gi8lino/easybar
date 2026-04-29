@@ -18,6 +18,7 @@ actor RuntimeCoordinator {
 
   private var watcherTask: Task<Void, Never>?
   private var started = false
+  private var lifecycleGeneration: UInt64 = 0
   private var isReloadingConfig = false
   private var isRestartingLuaRuntime = false
   private var queuedConfigReload = false
@@ -27,6 +28,7 @@ actor RuntimeCoordinator {
   func start() async {
     guard !started else { return }
     started = true
+    lifecycleGeneration &+= 1
 
     easybarLog.info("runtime coordinator start begin")
 
@@ -50,6 +52,7 @@ actor RuntimeCoordinator {
   func stop() async {
     guard started else { return }
     started = false
+    lifecycleGeneration &+= 1
 
     easybarLog.info("runtime coordinator stop begin")
 
@@ -85,21 +88,37 @@ actor RuntimeCoordinator {
       return
     }
 
+    let generation = lifecycleGeneration
     isReloadingConfig = true
     easybarLog.info("reloadConfig begin")
 
     let result = await configManager.reload()
+    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+      return
+    }
 
     await configureLogging()
+    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+      return
+    }
 
     await widgetEngine.reload()
+    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+      return
+    }
 
     await MainActor.run {
       NativeWidgetRegistry.shared.reload()
       AppController.shared.handlePostConfigReloadUI()
     }
+    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+      return
+    }
 
     await restartFileWatcher()
+    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+      return
+    }
     reloadSocketServerConfiguration()
 
     aeroSpaceService.triggerRefresh()
@@ -131,10 +150,14 @@ actor RuntimeCoordinator {
       return
     }
 
+    let generation = lifecycleGeneration
     isRestartingLuaRuntime = true
     easybarLog.info("restartLuaRuntime begin")
 
     await widgetEngine.reload()
+    guard shouldContinueLifecycleWork(generation: generation, operation: "restartLuaRuntime") else {
+      return
+    }
     aeroSpaceService.triggerRefresh()
 
     easybarLog.info("restartLuaRuntime end")
@@ -230,6 +253,23 @@ actor RuntimeCoordinator {
     watcherTask = nil
     await fileWatcher.stop()
     await startFileWatcher()
+  }
+
+  /// Returns whether one in-flight lifecycle operation is still allowed to mutate runtime state.
+  private func shouldContinueLifecycleWork(generation: UInt64, operation: String) -> Bool {
+    guard started, lifecycleGeneration == generation else {
+      if lifecycleGeneration == generation {
+        isReloadingConfig = false
+        isRestartingLuaRuntime = false
+      }
+
+      easybarLog.info(
+        "\(operation) aborted because runtime stopped or restarted generation=\(generation) current_generation=\(lifecycleGeneration)"
+      )
+      return false
+    }
+
+    return true
   }
 
   /// Starts the IPC socket server.
