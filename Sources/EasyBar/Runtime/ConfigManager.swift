@@ -43,6 +43,11 @@ actor ConfigManager {
     }
   }
 
+  /// Returns the active EasyBar socket path.
+  func easyBarSocketPath() async -> String {
+    SharedRuntimeConfig.environmentDefaults().easyBarSocketPath
+  }
+
   /// Returns the current minimum log level.
   func loggingLevel() async -> ProcessLogLevel {
     await MainActor.run {

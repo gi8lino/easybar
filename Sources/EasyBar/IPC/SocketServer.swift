@@ -24,8 +24,7 @@ final class SocketServer {
   }
 
   /// Reloads the socket server when the configured socket path changed.
-  func reloadConfiguration() {
-    let updatedSocketPath = SharedRuntimeConfig.current.easyBarSocketPath
+  func reloadConfiguration(socketPath updatedSocketPath: String) {
     guard updatedSocketPath != socketPath else { return }
     guard let commandHandler else {
       socketPath = updatedSocketPath

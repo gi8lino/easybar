@@ -119,7 +119,7 @@ actor RuntimeCoordinator {
     guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
       return
     }
-    reloadSocketServerConfiguration()
+    await reloadSocketServerConfiguration()
 
     aeroSpaceService.triggerRefresh()
 
@@ -290,8 +290,9 @@ actor RuntimeCoordinator {
   }
 
   /// Rebinds the IPC socket server when the config changed the socket path.
-  private func reloadSocketServerConfiguration() {
-    socketServer.reloadConfiguration()
+  private func reloadSocketServerConfiguration() async {
+    let socketPath = await configManager.easyBarSocketPath()
+    socketServer.reloadConfiguration(socketPath: socketPath)
   }
 
   /// Broadcasts one metrics snapshot through the IPC socket server.
