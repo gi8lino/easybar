@@ -3,6 +3,10 @@ import Foundation
 
 /// Formats alternating key/value components into one compact single-line log field string.
 public func logFields(_ components: Any?...) -> String {
+  formatLogFields(components)
+}
+
+private func formatLogFields(_ components: [Any?]) -> String {
   guard !components.isEmpty else { return "" }
 
   var fields: [String] = []
@@ -142,8 +146,8 @@ public final class ProcessLogger {
   }
 
   /// Writes one trace message with structured fields when trace logging is enabled.
-  public func trace(_ message: String, _ fields: String) {
-    trace(combine(message: message, fields: fields))
+  public func trace(_ message: String, _ components: Any?...) {
+    trace(combine(message: message, components: components))
   }
 
   /// Writes one debug message when debug or trace logging is enabled.
@@ -153,8 +157,8 @@ public final class ProcessLogger {
   }
 
   /// Writes one debug message with structured fields when debug or trace logging is enabled.
-  public func debug(_ message: String, _ fields: String) {
-    debug(combine(message: message, fields: fields))
+  public func debug(_ message: String, _ components: Any?...) {
+    debug(combine(message: message, components: components))
   }
 
   /// Writes one info message.
@@ -164,8 +168,8 @@ public final class ProcessLogger {
   }
 
   /// Writes one info message with structured fields.
-  public func info(_ message: String, _ fields: String) {
-    info(combine(message: message, fields: fields))
+  public func info(_ message: String, _ components: Any?...) {
+    info(combine(message: message, components: components))
   }
 
   /// Writes one warning message.
@@ -175,8 +179,8 @@ public final class ProcessLogger {
   }
 
   /// Writes one warning message with structured fields.
-  public func warn(_ message: String, _ fields: String) {
-    warn(combine(message: message, fields: fields))
+  public func warn(_ message: String, _ components: Any?...) {
+    warn(combine(message: message, components: components))
   }
 
   /// Writes one error message.
@@ -186,8 +190,8 @@ public final class ProcessLogger {
   }
 
   /// Writes one error message with structured fields.
-  public func error(_ message: String, _ fields: String) {
-    error(combine(message: message, fields: fields))
+  public func error(_ message: String, _ components: Any?...) {
+    error(combine(message: message, components: components))
   }
 
   /// Writes one message without timestamped logger formatting and mirrors it to the log file when enabled.
@@ -228,9 +232,20 @@ public final class ProcessLogger {
     "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
   }
 
-  private func combine(message: String, fields: String) -> String {
+  private func combine(message: String, components: [Any?]) -> String {
+    let fields = combinedFields(from: components)
     guard !fields.isEmpty else { return message }
     return "\(message) \(fields)"
+  }
+
+  private func combinedFields(from components: [Any?]) -> String {
+    guard !components.isEmpty else { return "" }
+
+    if components.count == 1, let preformatted = components[0] as? String {
+      return preformatted
+    }
+
+    return formatLogFields(components)
   }
 
   private func writeFileUnlocked(_ line: String) {

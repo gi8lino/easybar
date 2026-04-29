@@ -176,48 +176,48 @@ final class AppController {
 
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    easybarLog.info("widgets path=\(Config.shared.widgetsPath)")
-    easybarLog.info("lua path=\(Config.shared.luaPath)")
-    easybarLog.info("watch config=\(Config.shared.watchConfigFile)")
+    easybarLog.info("config details", "widgets_path", Config.shared.widgetsPath)
+    easybarLog.info("config details", "lua_path", Config.shared.luaPath)
+    easybarLog.info("config details", "watch_config", Config.shared.watchConfigFile)
     easybarLog.info(
-      """
-      calendar agent enabled=\(Config.shared.calendarAgentEnabled)
-      socket=\(Config.shared.calendarAgentSocketPath)
-      """)
+      "config details",
+      "calendar_agent_enabled", Config.shared.calendarAgentEnabled,
+      "socket", Config.shared.calendarAgentSocketPath
+    )
     easybarLog.info(
-      """
-      network agent enabled=\(Config.shared.networkAgentEnabled)
-      socket=\(Config.shared.networkAgentSocketPath)
-      refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)
-      """)
+      "config details",
+      "network_agent_enabled", Config.shared.networkAgentEnabled,
+      "socket", Config.shared.networkAgentSocketPath,
+      "refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds
+    )
     easybarLog.info(
-      """
-      calendar builtin enabled=\(Config.shared.builtinCalendar.enabled)
-      popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue)
-      anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue)
-      position=\(Config.shared.builtinCalendar.position.rawValue)
-      """)
+      "config details",
+      "calendar_builtin_enabled", Config.shared.builtinCalendar.enabled,
+      "popup_mode", Config.shared.builtinCalendar.popupMode.rawValue,
+      "anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue,
+      "position", Config.shared.builtinCalendar.position.rawValue
+    )
     easybarLog.info(
-      """
-      wifi builtin enabled=\(Config.shared.builtinWiFi.enabled)
-      position=\(Config.shared.builtinWiFi.position.rawValue)
-      """)
+      "config details",
+      "wifi_builtin_enabled", Config.shared.builtinWiFi.enabled,
+      "position", Config.shared.builtinWiFi.position.rawValue
+    )
     easybarLog.info(
-      """
-      bar height=\(Config.shared.barHeight)
-      padding_x=\(Config.shared.barPaddingX)
-      extend_behind_notch=\(Config.shared.barExtendBehindNotch)
-      """)
+      "config details",
+      "bar_height", Config.shared.barHeight,
+      "padding_x", Config.shared.barPaddingX,
+      "extend_behind_notch", Config.shared.barExtendBehindNotch
+    )
   }
 
   /// Logs screen geometry visible at startup.
   private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
       easybarLog.info(
-        """
-        screen frame=\(NSStringFromRect(screen.frame))
-        visible=\(NSStringFromRect(screen.visibleFrame))
-        """)
+        "screen details",
+        "screen_frame", NSStringFromRect(screen.frame),
+        "visible", NSStringFromRect(screen.visibleFrame)
+      )
     } else {
       easybarLog.warn("no screen available during startup logging")
     }
@@ -242,13 +242,13 @@ final class AppController {
     let environment = Config.shared.appSection.environment
 
     guard !environment.isEmpty else {
-      easybarLog.info("app env=<empty>")
+      easybarLog.info("app env", "value", "<empty>")
       return
     }
 
     for key in environment.keys.sorted() {
       let value = environment[key] ?? ""
-      easybarLog.info("app env \(key)=\(value)")
+      easybarLog.info("app env", key, value)
     }
   }
 
@@ -260,7 +260,7 @@ final class AppController {
   /// Logs one warning when a required font is missing.
   private func validateFont(named fontName: String) {
     if NSFont(name: fontName, size: 12) != nil {
-      easybarLog.info("font available name=\(fontName)")
+      easybarLog.info("font available", "name", fontName)
       return
     }
 
@@ -291,7 +291,7 @@ final class AppController {
         withIntermediateDirectories: true
       )
       try bundledData.write(to: installedStub, options: .atomic)
-      easybarLog.info("installed widget editor stub path=\(installedStub.path)")
+      easybarLog.info("installed widget editor stub", "path", installedStub.path)
     } catch {
       easybarLog.warn("failed to install widget editor stub: \(error)")
     }
