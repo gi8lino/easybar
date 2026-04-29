@@ -19,7 +19,7 @@ final class ProcessLoggerTests: XCTestCase {
 
     XCTAssertTrue(
       output.contains(
-        "] easybar [INFO] network event event=wifi_change connected=true rssi=-51"
+        "] [INFO ] network event event=wifi_change connected=true rssi=-51"
       )
     )
   }
@@ -89,8 +89,8 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertFalse(output.contains("trace hidden"))
     XCTAssertFalse(output.contains("debug hidden"))
     XCTAssertFalse(output.contains("info hidden"))
-    XCTAssertTrue(output.contains("] easybar [WARN] warn visible"))
-    XCTAssertTrue(output.contains("] easybar [ERROR] error visible"))
+    XCTAssertTrue(output.contains("] [WARN ] warn visible subsystem=easybar"))
+    XCTAssertTrue(output.contains("] [ERROR] error visible subsystem=easybar"))
   }
 
   func testSetMinimumLevelUpdatesRuntimeFiltering() throws {
@@ -104,7 +104,7 @@ final class ProcessLoggerTests: XCTestCase {
     let output = try readLogAndClose(fixture)
 
     XCTAssertFalse(output.contains("debug hidden"))
-    XCTAssertTrue(output.contains("] easybar [DEBUG] debug visible"))
+    XCTAssertTrue(output.contains("] [DEBUG] debug visible subsystem=easybar"))
   }
 
   func testChildLoggerSharesFileOutputAndRuntimeConfiguration() throws {
@@ -122,9 +122,10 @@ final class ProcessLoggerTests: XCTestCase {
 
     XCTAssertTrue(
       output.contains(
-        "] easybar.network [INFO] child event event=socket_connected"
+        "] [INFO ] child event event=socket_connected"
       )
     )
+    XCTAssertFalse(output.contains("subsystem=easybar.network"))
   }
 
   func testEmptyChildLoggerSuffixReturnsParentLogger() throws {
@@ -137,7 +138,7 @@ final class ProcessLoggerTests: XCTestCase {
 
     let output = try readLogAndClose(fixture)
 
-    XCTAssertTrue(output.contains("] easybar [INFO] parent event"))
+    XCTAssertTrue(output.contains("] [INFO ] parent event"))
     XCTAssertFalse(output.contains("easybar."))
   }
 
@@ -175,7 +176,7 @@ final class ProcessLoggerTests: XCTestCase {
     logger.configureFileLogging(enabled: false, path: "")
 
     let output = try String(contentsOf: fileURL, encoding: .utf8)
-    XCTAssertTrue(output.contains("] easybar [DEBUG] runtime debug"))
+    XCTAssertTrue(output.contains("] [DEBUG] runtime debug subsystem=easybar"))
   }
 
   func testProcessStartupLogWritesStandardStartupBlock() throws {
@@ -193,17 +194,17 @@ final class ProcessLoggerTests: XCTestCase {
 
     XCTAssertTrue(
       output.contains(
-        "] easybar [INFO] process startup process=easybar event=startup"
+        "] [INFO ] process startup process=easybar event=startup"
       )
     )
     XCTAssertTrue(
       output.contains(
-        "] easybar [INFO] process startup config config_path=/tmp/easybar/config.toml"
+        "] [INFO ] process startup config config_path=/tmp/easybar/config.toml"
       )
     )
     XCTAssertTrue(
       output.contains(
-        "] easybar [INFO] process startup socket socket_path=/tmp/easybar/easybar.sock"
+        "] [INFO ] process startup socket socket_path=/tmp/easybar/easybar.sock"
       )
     )
     XCTAssertTrue(
@@ -271,108 +272,161 @@ private func cleanup(_ fixture: ProcessLoggerFixture) {
   try? FileManager.default.removeItem(at: fixture.directoryURL)
 }
 
-func testChildLoggerTrimsSuffixWhitespace() throws {
-  let fixture = try makeLogger(label: "easybar")
-  defer { cleanup(fixture) }
+final class ProcessLoggerAdditionalTests: XCTestCase {
+  func testChildLoggerTrimsSuffixWhitespace() throws {
+    let fixture = try makeLogger(label: "easybar")
+    defer { cleanup(fixture) }
 
-  let child = fixture.logger.child("  network  ")
+    let child = fixture.logger.child("  network  ")
 
-  child.info("trimmed child")
+    child.info("trimmed child")
 
-  let output = try readLogAndClose(fixture)
+    let output = try readLogAndClose(fixture)
 
-  XCTAssertTrue(output.contains("] easybar.network [INFO] trimmed child"))
-  XCTAssertFalse(output.contains("easybar.  network  "))
-}
+    XCTAssertTrue(output.contains("] [INFO ] trimmed child"))
+    XCTAssertFalse(output.contains("easybar.  network  "))
+  }
 
-func testChildLoggerSharesMinimumLevelChanges() throws {
-  let fixture = try makeLogger(label: "easybar", minimumLevel: .error)
-  defer { cleanup(fixture) }
+  func testChildLoggerSharesMinimumLevelChanges() throws {
+    let fixture = try makeLogger(label: "easybar", minimumLevel: .error)
+    defer { cleanup(fixture) }
 
-  let child = fixture.logger.child("network")
+    let child = fixture.logger.child("network")
 
-  child.info("child info hidden")
-  fixture.logger.setMinimumLevel(.info)
-  child.info("child info visible")
+    child.info("child info hidden")
+    fixture.logger.setMinimumLevel(.info)
+    child.info("child info visible")
 
-  let output = try readLogAndClose(fixture)
+    let output = try readLogAndClose(fixture)
 
-  XCTAssertFalse(output.contains("child info hidden"))
-  XCTAssertTrue(output.contains("] easybar.network [INFO] child info visible"))
-}
+    XCTAssertFalse(output.contains("child info hidden"))
+    XCTAssertTrue(output.contains("] [INFO ] child info visible"))
+    XCTAssertFalse(output.contains("subsystem=easybar.network"))
+  }
 
-func testConfigureFileLoggingDisabledDoesNotCreateLogFile() throws {
-  let directoryURL = try makeTemporaryDirectory()
-  defer { try? FileManager.default.removeItem(at: directoryURL) }
+  func testConfigureFileLoggingDisabledDoesNotCreateLogFile() throws {
+    let directoryURL = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
 
-  let fileURL = directoryURL.appendingPathComponent("disabled.log")
-  let logger = ProcessLogger(label: "easybar")
+    let fileURL = directoryURL.appendingPathComponent("disabled.log")
+    let logger = ProcessLogger(label: "easybar")
 
-  logger.configureFileLogging(enabled: false, path: fileURL.path)
-  logger.info("stdout only")
+    logger.configureFileLogging(enabled: false, path: fileURL.path)
+    logger.info("stdout only")
 
-  XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
-  XCTAssertFalse(logger.fileLoggingEnabled)
-  XCTAssertEqual(logger.fileLoggingPath, fileURL.path)
-}
+    XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
+    XCTAssertFalse(logger.fileLoggingEnabled)
+    XCTAssertEqual(logger.fileLoggingPath, fileURL.path)
+  }
 
-func testConfigureFileLoggingWithEmptyPathDoesNotCreateFileHandle() {
-  let logger = ProcessLogger(label: "easybar")
+  func testConfigureFileLoggingWithEmptyPathDoesNotCreateFileHandle() {
+    let logger = ProcessLogger(label: "easybar")
 
-  logger.configureFileLogging(enabled: true, path: "")
-  logger.info("stdout only")
+    logger.configureFileLogging(enabled: true, path: "")
+    logger.info("stdout only")
 
-  XCTAssertTrue(logger.fileLoggingEnabled)
-  XCTAssertEqual(logger.fileLoggingPath, "")
-}
+    XCTAssertTrue(logger.fileLoggingEnabled)
+    XCTAssertEqual(logger.fileLoggingPath, "")
+  }
 
-func testReconfiguringFileLoggingMovesOutputToNewFile() throws {
-  let directoryURL = try makeTemporaryDirectory()
-  defer { try? FileManager.default.removeItem(at: directoryURL) }
+  func testReconfiguringFileLoggingMovesOutputToNewFile() throws {
+    let directoryURL = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
 
-  let firstURL = directoryURL.appendingPathComponent("first.log")
-  let secondURL = directoryURL.appendingPathComponent("second.log")
+    let firstURL = directoryURL.appendingPathComponent("first.log")
+    let secondURL = directoryURL.appendingPathComponent("second.log")
 
-  let logger = ProcessLogger(label: "easybar")
-  logger.configureFileLogging(enabled: true, path: firstURL.path)
-  logger.info("first file only")
+    let logger = ProcessLogger(label: "easybar")
+    logger.configureFileLogging(enabled: true, path: firstURL.path)
+    logger.info("first file only")
 
-  logger.configureFileLogging(enabled: true, path: secondURL.path)
-  logger.info("second file only")
+    logger.configureFileLogging(enabled: true, path: secondURL.path)
+    logger.info("second file only")
 
-  logger.configureFileLogging(enabled: false, path: "")
+    logger.configureFileLogging(enabled: false, path: "")
 
-  let firstOutput = try String(contentsOf: firstURL, encoding: .utf8)
-  let secondOutput = try String(contentsOf: secondURL, encoding: .utf8)
+    let firstOutput = try String(contentsOf: firstURL, encoding: .utf8)
+    let secondOutput = try String(contentsOf: secondURL, encoding: .utf8)
 
-  XCTAssertTrue(firstOutput.contains("first file only"))
-  XCTAssertFalse(firstOutput.contains("second file only"))
+    XCTAssertTrue(firstOutput.contains("first file only"))
+    XCTAssertFalse(firstOutput.contains("second file only"))
 
-  XCTAssertFalse(secondOutput.contains("first file only"))
-  XCTAssertTrue(secondOutput.contains("second file only"))
-}
+    XCTAssertFalse(secondOutput.contains("first file only"))
+    XCTAssertTrue(secondOutput.contains("second file only"))
+  }
 
-func testTypedLogFieldsEscapeBackslashesAndCarriageReturns() throws {
-  let fixture = try makeLogger(label: "easybar")
-  defer { cleanup(fixture) }
+  func testTypedLogFieldsEscapeBackslashesAndCarriageReturns() throws {
+    let fixture = try makeLogger(label: "easybar")
+    defer { cleanup(fixture) }
 
-  fixture.logger.info(
-    "escaped fields",
-    .field("path", #"C:\tmp\easybar"#),
-    .field("line", "one\rtwo")
-  )
+    fixture.logger.info(
+      "escaped fields",
+      .field("path", #"C:\tmp\easybar"#),
+      .field("line", "one\rtwo")
+    )
 
-  let output = try readLogAndClose(fixture)
+    let output = try readLogAndClose(fixture)
 
-  XCTAssertTrue(
-    output.contains(#"escaped fields path=C:\\tmp\\easybar line=one\rtwo"#)
-  )
-}
+    XCTAssertTrue(
+      output.contains(#"escaped fields path=C:\\tmp\\easybar line=one\rtwo"#)
+    )
+  }
 
-func testDefaultLoggingDirectoryPathUsesUserStateDirectory() {
-  let expected = FileManager.default.homeDirectoryForCurrentUser
-    .appendingPathComponent(".local/state/easybar")
-    .path
+  func testInfoOmitsSubsystemOutsideDebugAndTraceModes() throws {
+    let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .info)
+    defer { cleanup(fixture) }
 
-  XCTAssertEqual(defaultLoggingDirectoryPath(), expected)
+    fixture.logger.info("runtime log level changed to info")
+
+    let output = try readLogAndClose(fixture)
+
+    XCTAssertTrue(output.contains("] [INFO ] runtime log level changed to info"))
+    XCTAssertFalse(output.contains("subsystem=easybar.app.window"))
+  }
+
+  func testWarnAndErrorAlwaysAppendSubsystemOutsideDebugAndTraceModes() throws {
+    let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .info)
+    defer { cleanup(fixture) }
+
+    fixture.logger.warn("warn event")
+    fixture.logger.error("error event")
+
+    let output = try readLogAndClose(fixture)
+
+    XCTAssertTrue(output.contains("] [WARN ] warn event subsystem=easybar.app.window"))
+    XCTAssertTrue(output.contains("] [ERROR] error event subsystem=easybar.app.window"))
+  }
+
+  func testDebugModeAppendsSubsystemForAllLevels() throws {
+    let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .debug)
+    defer { cleanup(fixture) }
+
+    fixture.logger.info("info event")
+    fixture.logger.debug("debug event")
+
+    let output = try readLogAndClose(fixture)
+
+    XCTAssertTrue(output.contains("] [INFO ] info event subsystem=easybar.app.window"))
+    XCTAssertTrue(output.contains("] [DEBUG] debug event subsystem=easybar.app.window"))
+  }
+
+  func testExistingSubsystemFieldIsNotDuplicated() throws {
+    let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .debug)
+    defer { cleanup(fixture) }
+
+    fixture.logger.info("info event", .field("subsystem", "custom.logger"))
+
+    let output = try readLogAndClose(fixture)
+
+    XCTAssertTrue(output.contains("info event subsystem=custom.logger"))
+    XCTAssertFalse(output.contains("subsystem=easybar.app.window"))
+  }
+
+  func testDefaultLoggingDirectoryPathUsesUserStateDirectory() {
+    let expected = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent(".local/state/easybar")
+      .path
+
+    XCTAssertEqual(defaultLoggingDirectoryPath(), expected)
+  }
 }

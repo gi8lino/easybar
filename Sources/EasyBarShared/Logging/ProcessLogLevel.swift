@@ -48,4 +48,9 @@ public enum ProcessLogLevel: String, Codable, CaseIterable, Sendable {
       return 4
     }
   }
+
+  /// Fixed-width uppercase tag used in log output.
+  var formattedTag: String {
+    rawValue.uppercased().padding(toLength: 5, withPad: " ", startingAt: 0)
+  }
 }

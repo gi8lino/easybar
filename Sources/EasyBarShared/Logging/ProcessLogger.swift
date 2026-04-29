@@ -47,8 +47,20 @@ private func formatLogFieldValue(_ value: Any?) -> String {
   return "\"\(escaped)\""
 }
 
+extension Array where Element == ProcessLogField {
+  /// Returns whether one structured field already exists for the given key.
+  fileprivate func containsField(named key: String) -> Bool {
+    contains { $0.key == key }
+  }
+}
+
 /// Shared process logger with consistent formatting across app, agents, and CLI.
 public final class ProcessLogger {
+  /// Reserved field keys managed by the logger itself.
+  private enum ReservedFieldKey {
+    static let subsystem = "subsystem"
+  }
+
   /// Shared mutable logger state.
   private final class SharedState {
     let lock = NSLock()
@@ -169,8 +181,9 @@ public final class ProcessLogger {
     } catch {
       sharedState.fileLoggingEnabled = false
       writeUnlocked(
-        level: "WARN",
+        level: .warn,
         message: "failed to open log file at \(path): \(error)",
+        fields: [],
         stream: stderr
       )
     }
@@ -180,60 +193,70 @@ public final class ProcessLogger {
   public func trace(_ message: String) {
     guard shouldLog(.trace) else { return }
 
-    write(level: "TRACE", message: message, stream: stdout)
+    write(level: .trace, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one trace message with typed fields.
   public func trace(_ message: String, _ fields: ProcessLogField...) {
-    trace(combine(message: message, fields: fields))
+    guard shouldLog(.trace) else { return }
+
+    write(level: .trace, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one debug message.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
 
-    write(level: "DEBUG", message: message, stream: stdout)
+    write(level: .debug, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one debug message with typed fields.
   public func debug(_ message: String, _ fields: ProcessLogField...) {
-    debug(combine(message: message, fields: fields))
+    guard shouldLog(.debug) else { return }
+
+    write(level: .debug, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one info message.
   public func info(_ message: String) {
     guard shouldLog(.info) else { return }
 
-    write(level: "INFO", message: message, stream: stdout)
+    write(level: .info, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one info message with typed fields.
   public func info(_ message: String, _ fields: ProcessLogField...) {
-    info(combine(message: message, fields: fields))
+    guard shouldLog(.info) else { return }
+
+    write(level: .info, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
 
-    write(level: "WARN", message: message, stream: stderr)
+    write(level: .warn, message: message, fields: [], stream: stderr)
   }
 
   /// Writes one warning message with typed fields.
   public func warn(_ message: String, _ fields: ProcessLogField...) {
-    warn(combine(message: message, fields: fields))
+    guard shouldLog(.warn) else { return }
+
+    write(level: .warn, message: message, fields: fields, stream: stderr)
   }
 
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
 
-    write(level: "ERROR", message: message, stream: stderr)
+    write(level: .error, message: message, fields: [], stream: stderr)
   }
 
   /// Writes one error message with typed fields.
   public func error(_ message: String, _ fields: ProcessLogField...) {
-    error(combine(message: message, fields: fields))
+    guard shouldLog(.error) else { return }
+
+    write(level: .error, message: message, fields: fields, stream: stderr)
   }
 
   /// Writes one raw message and mirrors it to the log file.
@@ -255,20 +278,26 @@ public final class ProcessLogger {
   }
 
   /// Writes one formatted message.
-  private func write(level: String, message: String, stream: UnsafeMutablePointer<FILE>?) {
+  private func write(
+    level: ProcessLogLevel,
+    message: String,
+    fields: [ProcessLogField],
+    stream: UnsafeMutablePointer<FILE>?
+  ) {
     sharedState.lock.lock()
     defer { sharedState.lock.unlock() }
 
-    writeUnlocked(level: level, message: message, stream: stream)
+    writeUnlocked(level: level, message: message, fields: fields, stream: stream)
   }
 
   /// Writes one formatted message while locked.
   private func writeUnlocked(
-    level: String,
+    level: ProcessLogLevel,
     message: String,
+    fields: [ProcessLogField],
     stream: UnsafeMutablePointer<FILE>?
   ) {
-    let line = formattedLine(level: level, message: message)
+    let line = formattedLine(level: level, message: message, fields: fields)
 
     fputs(line + "\n", stream)
     fflush(stream)
@@ -276,16 +305,54 @@ public final class ProcessLogger {
   }
 
   /// Builds one formatted log line.
-  private func formattedLine(level: String, message: String) -> String {
-    "[\(Self.formatter.string(from: Date()))] \(label) [\(level)] \(message)"
+  private func formattedLine(
+    level: ProcessLogLevel,
+    message: String,
+    fields: [ProcessLogField]
+  ) -> String {
+    let renderedLevel = level.formattedTag
+    let renderedMessage = renderedMessage(level: level, message: message, fields: fields)
+    return "[\(Self.formatter.string(from: Date()))] [\(renderedLevel)] \(renderedMessage)"
   }
 
-  /// Appends typed fields to one message.
-  private func combine(message: String, fields: [ProcessLogField]) -> String {
-    let rendered = formatLogFields(fields)
-    guard !rendered.isEmpty else { return message }
+  /// Adds subsystem context only when the active runtime mode or severity requires it.
+  private func renderedMessage(
+    level: ProcessLogLevel,
+    message: String,
+    fields: [ProcessLogField]
+  ) -> String {
+    let renderedFields = renderedFields(level: level, fields: fields)
+    guard !renderedFields.isEmpty else { return message }
 
-    return "\(message) \(rendered)"
+    return "\(message) \(renderedFields)"
+  }
+
+  /// Returns whether the current mode should append subsystem details.
+  private func shouldAppendSubsystem(for level: ProcessLogLevel) -> Bool {
+    if sharedState.minimumLevel == .debug || sharedState.minimumLevel == .trace {
+      return true
+    }
+
+    return level == .warn || level == .error
+  }
+
+  /// Renders caller-provided fields plus logger-managed metadata.
+  private func renderedFields(level: ProcessLogLevel, fields: [ProcessLogField]) -> String {
+    let metadataFields = metadataFields(for: level, existingFields: fields)
+    return formatLogFields(fields + metadataFields)
+  }
+
+  /// Builds logger-managed metadata fields for the current line.
+  private func metadataFields(
+    for level: ProcessLogLevel,
+    existingFields: [ProcessLogField]
+  ) -> [ProcessLogField] {
+    guard shouldAppendSubsystem(for: level) else { return [] }
+    guard !existingFields.containsField(named: ReservedFieldKey.subsystem) else {
+      return []
+    }
+
+    return [.field(ReservedFieldKey.subsystem, label)]
   }
 
   /// Writes one line to the configured log file.
@@ -297,7 +364,8 @@ public final class ProcessLogger {
     } catch {
       sharedState.fileLoggingEnabled = false
       fputs(
-        formattedLine(level: "WARN", message: "failed writing log file: \(error)") + "\n",
+        formattedLine(level: .warn, message: "failed writing log file: \(error)", fields: [])
+          + "\n",
         stderr
       )
       fflush(stderr)
