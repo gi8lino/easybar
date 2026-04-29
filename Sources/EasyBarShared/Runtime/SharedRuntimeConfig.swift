@@ -32,6 +32,18 @@ public struct SharedRuntimeConfig {
     )
   }
 
+  /// Resolves runtime defaults from environment overrides and built-in fallbacks only.
+  public static func environmentDefaults() -> SharedRuntimeConfig {
+    SharedRuntimeConfig(
+      configPath: resolvedConfigPath(),
+      app: resolvedAppEnvironmentDefaults(),
+      logging: resolvedLoggingEnvironmentDefaults(),
+      easyBar: resolvedEasyBarEnvironmentDefaults(),
+      calendarAgent: resolvedCalendarAgentEnvironmentDefaults(),
+      networkAgent: resolvedNetworkAgentEnvironmentDefaults()
+    )
+  }
+
   // MARK: - Compatibility accessors
 
   public var widgetsPath: String {

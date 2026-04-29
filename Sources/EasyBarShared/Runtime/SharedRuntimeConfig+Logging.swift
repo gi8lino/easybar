@@ -29,6 +29,22 @@ extension SharedRuntimeConfig {
     )
   }
 
+  /// Resolves the shared logging config from environment overrides and defaults only.
+  static func resolvedLoggingEnvironmentDefaults() -> SharedLoggingRuntimeConfig {
+    SharedLoggingRuntimeConfig(
+      enabled: boolEnvironmentValue(named: SharedEnvironmentKeys.loggingEnabled) ?? false,
+      level: resolvedLoggingLevel(
+        tomlValue: nil,
+        legacyDebugValue: nil,
+        environmentName: SharedEnvironmentKeys.loggingLevel,
+        fallback: .info
+      ),
+      directory:
+        expandedEnvironmentPath(named: SharedEnvironmentKeys.loggingDirectory)
+        ?? SharedPathDefaults.defaultLoggingDirectory().path
+    )
+  }
+
   /// Resolves the configured minimum logging level from environment or TOML.
   private static func resolvedLoggingLevel(
     tomlValue: String?,

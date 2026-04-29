@@ -24,5 +24,16 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   )
 }
 
+/// Returns the resolved app config from environment overrides and defaults only.
+func resolvedAppEnvironmentDefaults() -> SharedAppRuntimeConfig {
+  SharedAppRuntimeConfig(
+    widgetsPath: SharedPathDefaults.defaultWidgetsPath().path,
+    lockDirectory:
+      expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
+      ?? defaultSingleInstanceLockDirectoryPath(),
+    widgetEditorStubPath: SharedPathDefaults.defaultWidgetEditorStubPath().path
+  )
+}
+
 /// Returns the default directory used for single-instance lock files.
 func defaultSingleInstanceLockDirectoryPath() -> String { return "/tmp/EasyBar" }

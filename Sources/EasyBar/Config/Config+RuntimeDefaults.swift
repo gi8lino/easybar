@@ -4,7 +4,7 @@ import Foundation
 extension Config {
   /// Restores defaults derived from the current runtime environment.
   func resetDerivedDefaults() {
-    let runtime = SharedRuntimeConfig.current
+    let runtime = SharedRuntimeConfig.environmentDefaults()
 
     appSection.widgetsPath = runtime.widgetsPath
     appSection.lockDirectory = runtime.lockDirectory
