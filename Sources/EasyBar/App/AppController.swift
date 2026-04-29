@@ -5,18 +5,27 @@ import Foundation
 /// Main-actor app shell responsible for UI lifecycle and startup wiring.
 @MainActor
 final class AppController {
-  static let shared = AppController()
+  private let logger: ProcessLogger
+  private let runtimeCoordinator: RuntimeCoordinator
+  private lazy var signalHandler = AppSignalHandler(logger: logger) { [weak self] in
+    self?.requestTermination()
+  }
 
   private var started = false
   private var shutdownTask: Task<Void, Never>?
   private var terminationRequestTask: Task<Void, Never>?
   private var forceImmediateTermination = false
   private var barWindowController: BarWindowController?
+
   private let configErrorWindowController = ConfigErrorWindowController()
   private let instanceGuard = SingleInstanceGuard()
-  private let signalHandler = AppSignalHandler()
 
-  private init() {}
+  /// Creates the app shell with its process logger.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    Self.bootstrapSharedDependencies(logger: logger)
+    self.runtimeCoordinator = RuntimeCoordinator(logger: logger)
+  }
 
   /// Starts the app shell and the actor-owned runtime.
   func start() {
@@ -31,11 +40,11 @@ final class AppController {
       break
 
     case .alreadyRunning(let lockPath):
-      easybarLog.warn("easybar already running lock_path=\(lockPath)")
+      logger.warn("easybar already running lock_path=\(lockPath)")
       terminateApplication()
 
     case .failed(let lockPath, let reason):
-      easybarLog.error(
+      logger.error(
         "easybar failed to acquire instance lock lock_path=\(lockPath) reason=\(reason)"
       )
       terminateApplication()
@@ -52,7 +61,7 @@ final class AppController {
     signalHandler.start()
 
     Task {
-      await RuntimeCoordinator.shared.start()
+      await runtimeCoordinator.start()
     }
   }
 
@@ -64,6 +73,7 @@ final class AppController {
   /// Stops the actor-owned runtime and waits for cleanup to finish.
   func stopAndWait() async {
     guard let shutdownTask = ensureShutdownTask() else { return }
+
     await shutdownTask.value
     self.shutdownTask = nil
   }
@@ -110,6 +120,11 @@ final class AppController {
     )
   }
 
+  /// Returns whether AppKit termination should bypass graceful shutdown.
+  var shouldTerminateImmediately: Bool {
+    forceImmediateTermination
+  }
+
   /// Terminates the application immediately.
   private func terminateApplication() -> Never {
     forceImmediateTermination = true
@@ -117,14 +132,30 @@ final class AppController {
     fatalError("Application should have terminated")
   }
 
-  /// Returns whether AppKit termination should bypass graceful shutdown.
-  var shouldTerminateImmediately: Bool {
-    forceImmediateTermination
+  /// Bootstraps all shared logger-owning services before runtime startup begins.
+  private static func bootstrapSharedDependencies(logger: ProcessLogger) {
+    Config.shared.attachLogger(logger)
+
+    LuaRuntime.bootstrap(logger: logger)
+    EventManager.bootstrap(
+      logger: logger,
+      luaRuntime: LuaRuntime.shared
+    )
+
+    NativeWidgetRegistry.bootstrap(logger: logger)
+    AeroSpaceService.bootstrap(logger: logger)
+    CalendarAgentEventRelay.bootstrap(logger: logger)
+    NetworkAgentClient.bootstrap(logger: logger)
+    NativeWiFiStore.bootstrap(logger: logger)
+    NativeMonthCalendarStore.bootstrap(logger: logger)
+    NativeUpcomingCalendarStore.bootstrap(logger: logger)
+    MonthCalendarAgentClient.bootstrap(logger: logger)
+    UpcomingCalendarAgentClient.bootstrap(logger: logger)
   }
 
   /// Configures file logging from the current app config.
   private func configureLogging() {
-    easybarLog.configureRuntimeLogging(
+    logger.configureRuntimeLogging(
       minimumLevel: Config.shared.loggingLevel,
       fileLoggingEnabled: Config.shared.loggingEnabled,
       fileLoggingPath: easyBarLogPath(in: Config.shared.loggingDirectory)
@@ -133,20 +164,26 @@ final class AppController {
 
   /// Creates and presents the main bar window controller.
   private func setupBarWindowController() {
-    let controller = BarWindowController()
-    controller.onRefresh = {
+    let controller = BarWindowController(logger: logger)
+    controller.onRefresh = { [weak self] in
+      guard let self else { return }
+
       Task {
-        await RuntimeCoordinator.shared.refreshRuntime()
+        await self.runtimeCoordinator.refreshRuntime()
       }
     }
-    controller.onReloadConfig = {
+    controller.onReloadConfig = { [weak self] in
+      guard let self else { return }
+
       Task {
-        await RuntimeCoordinator.shared.reloadConfig()
+        await self.runtimeCoordinator.reloadConfig()
       }
     }
-    controller.onRestartLuaRuntime = {
+    controller.onRestartLuaRuntime = { [weak self] in
+      guard let self else { return }
+
       Task {
-        await RuntimeCoordinator.shared.restartLuaRuntime()
+        await self.runtimeCoordinator.restartLuaRuntime()
       }
     }
     controller.present()
@@ -160,11 +197,11 @@ final class AppController {
       configPath: Config.shared.configPath,
       socketSummary: formatLogFields("socket_path", SharedRuntimeConfig.current.easyBarSocketPath),
       loggingSummary: formatLogFields(
-        "logging_enabled", easybarLog.fileLoggingEnabled,
-        "level", easybarLog.minimumLevel.rawValue,
-        "path", easybarLog.fileLoggingPath
+        "logging_enabled", logger.fileLoggingEnabled,
+        "level", logger.minimumLevel.rawValue,
+        "path", logger.fileLoggingPath
       ),
-      write: easybarLog.info
+      write: logger.info
     )
 
     logConfigDetails()
@@ -175,50 +212,34 @@ final class AppController {
 
   /// Logs config-derived startup details.
   private func logConfigDetails() {
-    easybarLog.info("config details", "widgets_path", Config.shared.widgetsPath)
-    easybarLog.info("config details", "lua_path", Config.shared.luaPath)
-    easybarLog.info("config details", "watch_config", Config.shared.watchConfigFile)
-    easybarLog.info(
-      "config details",
-      "calendar_agent_enabled", Config.shared.calendarAgentEnabled,
-      "socket", Config.shared.calendarAgentSocketPath
+    logger.info("config details widgets_path=\(Config.shared.widgetsPath)")
+    logger.info("config details lua_path=\(Config.shared.luaPath)")
+    logger.info("config details watch_config=\(Config.shared.watchConfigFile)")
+    logger.info(
+      "config details calendar_agent_enabled=\(Config.shared.calendarAgentEnabled) socket=\(Config.shared.calendarAgentSocketPath)"
     )
-    easybarLog.info(
-      "config details",
-      "network_agent_enabled", Config.shared.networkAgentEnabled,
-      "socket", Config.shared.networkAgentSocketPath,
-      "refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds
+    logger.info(
+      "config details network_agent_enabled=\(Config.shared.networkAgentEnabled) socket=\(Config.shared.networkAgentSocketPath) refresh_interval_seconds=\(Config.shared.networkAgentRefreshIntervalSeconds)"
     )
-    easybarLog.info(
-      "config details",
-      "calendar_builtin_enabled", Config.shared.builtinCalendar.enabled,
-      "popup_mode", Config.shared.builtinCalendar.popupMode.rawValue,
-      "anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue,
-      "position", Config.shared.builtinCalendar.position.rawValue
+    logger.info(
+      "config details calendar_builtin_enabled=\(Config.shared.builtinCalendar.enabled) popup_mode=\(Config.shared.builtinCalendar.popupMode.rawValue) anchor_layout=\(Config.shared.builtinCalendar.anchor.layout.rawValue) position=\(Config.shared.builtinCalendar.position.rawValue)"
     )
-    easybarLog.info(
-      "config details",
-      "wifi_builtin_enabled", Config.shared.builtinWiFi.enabled,
-      "position", Config.shared.builtinWiFi.position.rawValue
+    logger.info(
+      "config details wifi_builtin_enabled=\(Config.shared.builtinWiFi.enabled) position=\(Config.shared.builtinWiFi.position.rawValue)"
     )
-    easybarLog.info(
-      "config details",
-      "bar_height", Config.shared.barHeight,
-      "padding_x", Config.shared.barPaddingX,
-      "extend_behind_notch", Config.shared.barExtendBehindNotch
+    logger.info(
+      "config details bar_height=\(Config.shared.barHeight) padding_x=\(Config.shared.barPaddingX) extend_behind_notch=\(Config.shared.barExtendBehindNotch)"
     )
   }
 
   /// Logs screen geometry visible at startup.
   private func logScreenDetails() {
     if let screen = NSScreen.main ?? NSScreen.screens.first {
-      easybarLog.info(
-        "screen details",
-        "screen_frame", NSStringFromRect(screen.frame),
-        "visible", NSStringFromRect(screen.visibleFrame)
+      logger.info(
+        "screen details screen_frame=\(NSStringFromRect(screen.frame)) visible=\(NSStringFromRect(screen.visibleFrame))"
       )
     } else {
-      easybarLog.warn("no screen available during startup logging")
+      logger.warn("no screen available during startup logging")
     }
   }
 
@@ -228,10 +249,10 @@ final class AppController {
     let configOverride = env["\(SharedEnvironmentKeys.configPath)"] ?? ""
     let logLevel = env["\(SharedEnvironmentKeys.loggingLevel)"] ?? ""
 
-    easybarLog.info(
+    logger.info(
       "environment \(SharedEnvironmentKeys.configPath)=\(configOverride.isEmpty ? "<unset>" : configOverride)"
     )
-    easybarLog.info(
+    logger.info(
       "environment \(SharedEnvironmentKeys.loggingLevel)=\(logLevel.isEmpty ? "<unset>" : logLevel)"
     )
   }
@@ -241,13 +262,13 @@ final class AppController {
     let environment = Config.shared.appSection.environment
 
     guard !environment.isEmpty else {
-      easybarLog.info("app env", "value", "<empty>")
+      logger.info("app env value=<empty>")
       return
     }
 
     for key in environment.keys.sorted() {
       let value = environment[key] ?? ""
-      easybarLog.info("app env", key, value)
+      logger.info("app env \(key)=\(value)")
     }
   }
 
@@ -259,19 +280,20 @@ final class AppController {
   /// Logs one warning when a required font is missing.
   private func validateFont(named fontName: String) {
     if NSFont(name: fontName, size: 12) != nil {
-      easybarLog.info("font available", "name", fontName)
+      logger.info("font available name=\(fontName)")
       return
     }
 
-    easybarLog.warn(
-      "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped")
+    logger.warn(
+      "font missing name=\(fontName); Nerd Font icons may render incorrectly or be clipped"
+    )
   }
 
   /// Installs the bundled Lua editor stub into the configured editor-stub path.
   private func installWidgetEditorStub() {
     guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua")
     else {
-      easybarLog.warn("easybar_api.lua not found in bundle resources")
+      logger.warn("easybar_api.lua not found in bundle resources")
       return
     }
 
@@ -290,9 +312,9 @@ final class AppController {
         withIntermediateDirectories: true
       )
       try bundledData.write(to: installedStub, options: .atomic)
-      easybarLog.info("installed widget editor stub", "path", installedStub.path)
+      logger.info("installed widget editor stub path=\(installedStub.path)")
     } catch {
-      easybarLog.warn("failed to install widget editor stub: \(error)")
+      logger.warn("failed to install widget editor stub error=\(error)")
     }
   }
 
@@ -305,11 +327,11 @@ final class AppController {
     guard started else { return nil }
     started = false
 
-    easybarLog.info("easybar shutting down")
+    logger.info("easybar shutting down")
     signalHandler.stop()
 
-    let shutdownTask = Task {
-      await RuntimeCoordinator.shared.stop()
+    let shutdownTask = Task { [runtimeCoordinator] in
+      await runtimeCoordinator.stop()
     }
 
     self.shutdownTask = shutdownTask

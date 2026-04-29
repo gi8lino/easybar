@@ -1,13 +1,33 @@
+import EasyBarShared
 import Foundation
 import IOKit.ps
 
 final class PowerEvents {
-  static let shared = PowerEvents()
+  private static var sharedInstance: PowerEvents?
+
+  /// Returns the configured shared power event source.
+  static var shared: PowerEvents {
+    guard let sharedInstance else {
+      fatalError("PowerEvents.bootstrap(logger:) must be called before PowerEvents.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared power event source.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = PowerEvents(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private var runLoopSource: Unmanaged<CFRunLoopSource>?
   private var lastChargingState: Bool?
 
-  private init() {}
+  /// Creates one power event source.
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts power-source observation for power and charging events.
   func subscribePowerSource() {
@@ -22,7 +42,7 @@ final class PowerEvents {
     }
 
     guard let source = IOPSNotificationCreateRunLoopSource(callback, nil) else {
-      easybarLog.debug("failed to create power source run loop source")
+      logger.debug("failed to create power source run loop source")
       return
     }
 
@@ -35,8 +55,8 @@ final class PowerEvents {
       .defaultMode
     )
 
-    easybarLog.debug("subscribed power_source_change")
-    easybarLog.debug("subscribed charging_state_change")
+    logger.debug("subscribed power_source_change")
+    logger.debug("subscribed charging_state_change")
   }
 
   /// Stops observation for power and charging events.

@@ -1,3 +1,4 @@
+import EasyBarShared
 import SwiftUI
 
 /// Renders the popup for the native month-calendar widget.
@@ -32,6 +33,7 @@ struct NativeMonthCalendarPopupView: View {
   }
 
   @ObservedObject var store = NativeMonthCalendarStore.shared
+  var logger: ProcessLogger { store.logger }
   let config = Config.shared.builtinCalendar.month.popup
   let calendar = Calendar.current
 
@@ -101,8 +103,9 @@ struct NativeMonthCalendarPopupView: View {
       logResolvedAppointments("selected_end_changed")
     }
     .onChange(of: store.snapshot?.generatedAt) { _, generatedAt in
-      easybarLog.debug(
-        "month calendar popup snapshot changed generated_at=\(generatedAt?.description ?? "nil")"
+      logger.debug(
+        "month calendar popup snapshot changed",
+        "generated_at", "\(generatedAt?.description ?? "nil")",
       )
       resolveVisibleMonthAutoSelection()
       logResolvedAppointments("snapshot_changed")

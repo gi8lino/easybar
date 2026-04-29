@@ -9,13 +9,16 @@ final class BarWindowController: NSWindowController {
   var onReloadConfig: (() -> Void)?
   var onRestartLuaRuntime: (() -> Void)?
 
+  private let logger: ProcessLogger
   private let hostingView: BarHostingView<BarContentView>
 
   /// Creates a borderless bar window pinned to the top of the screen.
-  init() {
+  init(logger: ProcessLogger) {
+    self.logger = logger
+
     let screen = NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen)
-    easybarLog.info("bar window initial target_frame=\(NSStringFromRect(frame))")
+    logger.info("bar window initial target_frame=\(NSStringFromRect(frame))")
 
     let contentView = BarContentView()
 
@@ -68,14 +71,14 @@ final class BarWindowController: NSWindowController {
   /// Reapplies the configured frame and root view after a config reload.
   func reloadLayout() {
     guard let window else {
-      easybarLog.warn("bar window reloadLayout skipped because window is unavailable")
+      logger.warn("bar window reloadLayout skipped because window is unavailable")
       return
     }
 
     let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen)
 
-    easybarLog.info(
+    logger.info(
       "bar window reload begin current_frame=\(NSStringFromRect(window.frame)) target_frame=\(NSStringFromRect(frame))"
     )
 
@@ -86,19 +89,19 @@ final class BarWindowController: NSWindowController {
     window.maxSize = frame.size
     hostingView.frame = NSRect(origin: .zero, size: frame.size)
 
-    easybarLog.info("bar window reload end frame=\(NSStringFromRect(window.frame))")
+    logger.info("bar window reload end frame=\(NSStringFromRect(window.frame))")
   }
 
   /// Shows the panel without asking AppKit to make it key.
   func present() {
     guard let window else {
-      easybarLog.warn("bar window present skipped because window is unavailable")
+      logger.warn("bar window present skipped because window is unavailable")
       return
     }
 
     window.setFrame(window.frame, display: true)
     window.orderFrontRegardless()
-    easybarLog.info(
+    logger.info(
       "bar window presented frame=\(NSStringFromRect(window.frame)) level=\(window.level.rawValue)"
     )
   }
@@ -247,7 +250,7 @@ final class BarWindowController: NSWindowController {
       )
       levelItem.target = self
       levelItem.representedObject = level.rawValue
-      levelItem.state = easybarLog.minimumLevel == level ? .on : .off
+      levelItem.state = logger.minimumLevel == level ? .on : .off
       submenu.addItem(levelItem)
     }
 
@@ -327,8 +330,8 @@ final class BarWindowController: NSWindowController {
       return
     }
 
-    easybarLog.setMinimumLevel(level)
-    easybarLog.info("runtime log level changed to \(level.rawValue)")
+    logger.setMinimumLevel(level)
+    logger.info("runtime log level changed to \(level.rawValue)")
   }
 
   /// Opens the active config file in Finder/default app.
@@ -364,6 +367,7 @@ final class BarWindowController: NSWindowController {
   /// Opens one System Settings deep link when available.
   private func openSettingsURL(_ value: String) {
     guard let url = URL(string: value) else { return }
+
     NSWorkspace.shared.open(url)
   }
 }

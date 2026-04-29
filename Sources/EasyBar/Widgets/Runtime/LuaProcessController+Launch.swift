@@ -2,7 +2,6 @@ import Darwin
 import Foundation
 
 extension LuaProcessController {
-
   /// Resolves the launch inputs for one Lua runtime process.
   func launchContext() -> LaunchContext? {
     guard let runtimePath = resolvedRuntimePath() else { return nil }
@@ -18,7 +17,7 @@ extension LuaProcessController {
   /// Resolves the bundled Lua runtime script path.
   func resolvedRuntimePath() -> String? {
     guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
-      easybarLog.error("runtime.lua not found")
+      logger.error("runtime.lua not found")
       return nil
     }
 
@@ -27,11 +26,11 @@ extension LuaProcessController {
 
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
-    easybarLog.debug("starting lua runtime")
-    easybarLog.debug("lua binary: \(context.luaPath)")
-    easybarLog.debug("lua script: \(context.runtimePath)")
-    easybarLog.debug("widgets path: \(context.widgetsPath)")
-    easybarLog.debug("lua env keys: \(context.environment.keys.sorted())")
+    logger.debug("starting lua runtime")
+    logger.debug("lua binary: \(context.luaPath)")
+    logger.debug("lua script: \(context.runtimePath)")
+    logger.debug("widgets path: \(context.widgetsPath)")
+    logger.debug("lua env keys: \(context.environment.keys.sorted())")
   }
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
@@ -140,7 +139,7 @@ extension LuaProcessController {
       status = normalizedTerminationStatus(from: rawStatus)
     } else {
       let code = errno
-      easybarLog.warn("waitpid failed for lua runtime pid=\(pid) errno=\(code)")
+      logger.warn("waitpid failed for lua runtime pid=\(pid) errno=\(code)")
       status = 1
     }
 
@@ -165,11 +164,11 @@ extension LuaProcessController {
   /// Logs one Lua runtime termination status.
   func logTerminationStatus(_ status: Int32, processIdentifier: Int32) {
     guard status != 0 else {
-      easybarLog.info("lua runtime terminated pid=\(processIdentifier) status=\(status)")
+      logger.info("lua runtime terminated pid=\(processIdentifier) status=\(status)")
       return
     }
 
-    easybarLog.warn("lua runtime terminated pid=\(processIdentifier) status=\(status)")
+    logger.warn("lua runtime terminated pid=\(processIdentifier) status=\(status)")
   }
 
   /// Initializes one `posix_spawn_file_actions_t`.

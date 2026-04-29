@@ -12,16 +12,16 @@ public func logProcessStartup(
 ) {
   let info = bundle.infoDictionary ?? [:]
   write(
-    """
-    \(processName)
-    startup version=\(info["CFBundleShortVersionString"] as? String ?? "unknown")
-    build=\(info["CFBundleVersion"] as? String ?? "unknown")
-    bundle_id=\(bundle.bundleIdentifier ?? "unknown")
-    pid=\(processInfo.processIdentifier)
-    """)
-  write("app bundle_path=\(bundle.bundleURL.path)")
-  write("app executable=\(bundle.executableURL?.path ?? "unknown")")
-  write("config path=\(configPath)")
+    formatLogFields(
+      "\(processName)",
+      "startup version", "\(info["CFBundleShortVersionString"] as? String ?? "unknown")",
+      "build", "\(info["CFBundleVersion"] as? String ?? "unknown")",
+      "bundle_id", "\(bundle.bundleIdentifier ?? "unknown")",
+      "pid", "\(processInfo.processIdentifier)",
+    ))
+  write(formatLogFields("app bundle_path", "\(bundle.bundleURL.path)"))
+  write(formatLogFields("app executable", "\(bundle.executableURL?.path ?? "unknown")"))
+  write(formatLogFields("config path", "\(configPath)"))
   write(socketSummary)
   write(loggingSummary)
 }

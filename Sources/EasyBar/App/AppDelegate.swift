@@ -1,22 +1,26 @@
 import AppKit
+import EasyBarShared
 import Foundation
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+  private let logger = ProcessLogger(label: "easybar")
+  private lazy var appController = AppController(logger: logger)
+
   func applicationDidFinishLaunching(_ notification: Notification) {
-    AppController.shared.start()
+    appController.start()
   }
 
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    if AppController.shared.shouldTerminateImmediately {
+    if appController.shouldTerminateImmediately {
       return .terminateNow
     }
 
-    AppController.shared.requestTermination()
+    appController.requestTermination()
     return .terminateCancel
   }
 
   func applicationWillTerminate(_ notification: Notification) {
-    AppController.shared.stop()
+    appController.stop()
   }
 }

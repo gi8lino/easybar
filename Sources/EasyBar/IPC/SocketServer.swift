@@ -9,45 +9,90 @@ final class SocketServer {
     IPC.Message
   >
 
-  private var transport = SocketServer.makeTransport(
-    socketPath: SharedRuntimeConfig.current.easyBarSocketPath
-  )
-  private var socketPath = SharedRuntimeConfig.current.easyBarSocketPath
+  private let logger: ProcessLogger
+
+  private var transport: Transport
+  private var socketPath: String
   private var commandHandler: ((IPC.Command) -> Void)?
+
+  init(
+    logger: ProcessLogger,
+    socketPath: String = SharedRuntimeConfig.current.easyBarSocketPath
+  ) {
+    self.logger = logger
+    self.socketPath = socketPath
+    transport = Self.makeTransport(
+      socketPath: socketPath,
+      logger: logger
+    )
+  }
 
   /// Starts the socket listener.
   func start(handler: @escaping (IPC.Command) -> Void) {
     commandHandler = handler
-    transport.start { clientFD, request in
-      self.handle(clientFD: clientFD, request: request, handler: handler)
+
+    let activeTransport = transport
+
+    activeTransport.start { [weak self, weak activeTransport] clientFD, request in
+      guard let self, let activeTransport else {
+        return .close
+      }
+
+      return self.handle(
+        clientFD: clientFD,
+        request: request,
+        handler: handler,
+        transport: activeTransport
+      )
     }
   }
 
   /// Reloads the socket server when the configured socket path changed.
   func reloadConfiguration(socketPath updatedSocketPath: String) {
     guard updatedSocketPath != socketPath else { return }
+
     guard let commandHandler else {
       socketPath = updatedSocketPath
-      transport = Self.makeTransport(socketPath: updatedSocketPath)
+      transport = Self.makeTransport(
+        socketPath: updatedSocketPath,
+        logger: logger
+      )
       return
     }
 
-    easybarLog.info(
+    logger.info(
       "restarting socket server old_path=\(socketPath) new_path=\(updatedSocketPath)"
     )
 
     MetricsCoordinator.shared.resetStreaming()
     transport.stop()
+
     socketPath = updatedSocketPath
-    transport = Self.makeTransport(socketPath: updatedSocketPath)
-    transport.start { clientFD, request in
-      self.handle(clientFD: clientFD, request: request, handler: commandHandler)
+    transport = Self.makeTransport(
+      socketPath: updatedSocketPath,
+      logger: logger
+    )
+
+    let activeTransport = transport
+
+    activeTransport.start { [weak self, weak activeTransport] clientFD, request in
+      guard let self, let activeTransport else {
+        return .close
+      }
+
+      return self.handle(
+        clientFD: clientFD,
+        request: request,
+        handler: commandHandler,
+        transport: activeTransport
+      )
     }
   }
 
   /// Stops the socket listener.
   func stop() {
     commandHandler = nil
+
     MetricsCoordinator.shared.resetStreaming()
     transport.stop()
   }
@@ -68,13 +113,14 @@ final class SocketServer {
   private func handle(
     clientFD: Int32,
     request: IPC.Request,
-    handler: @escaping (IPC.Command) -> Void
+    handler: @escaping (IPC.Command) -> Void,
+    transport: Transport
   ) -> Transport.ClientDisposition {
-    easybarLog.debug("socket dispatching command '\(request.command.rawValue)'")
+    logger.debug("socket dispatching command '\(request.command.rawValue)'")
 
     if request.command == .metrics {
       let snapshot = MetricsCoordinator.shared.snapshot()
-      let sent = self.transport.send(
+      let sent = transport.send(
         .metrics(snapshot),
         to: clientFD
       )
@@ -88,12 +134,13 @@ final class SocketServer {
         return .close
       }
 
-      self.transport.addSubscriber(request, for: clientFD)
+      transport.addSubscriber(request, for: clientFD)
       MetricsCoordinator.shared.addStreamingSubscriber(fd: clientFD)
+
       return .keepOpen
     }
 
-    _ = self.transport.send(.accepted, to: clientFD)
+    _ = transport.send(.accepted, to: clientFD)
 
     handler(request.command)
 
@@ -101,14 +148,14 @@ final class SocketServer {
   }
 
   /// Creates one transport bound to the given socket path.
-  private static func makeTransport(socketPath: String) -> Transport {
+  private static func makeTransport(
+    socketPath: String,
+    logger: ProcessLogger
+  ) -> Transport {
     Transport(
       socketPath: socketPath,
       serverLabel: "easybar",
-      debugLog: easybarLog.debug,
-      infoLog: easybarLog.info,
-      warnLog: easybarLog.warn,
-      errorLog: easybarLog.error
+      logger: logger
     )
   }
 }

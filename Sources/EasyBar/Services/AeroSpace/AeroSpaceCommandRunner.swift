@@ -1,11 +1,19 @@
+import EasyBarShared
 import Foundation
 
 /// Runs the AeroSpace CLI and returns trimmed stdout.
 final class AeroSpaceCommandRunner {
+  private let logger: ProcessLogger
+
+  /// Creates one AeroSpace command runner.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+  }
+
   /// Executes one AeroSpace command.
   func run(arguments: [String]) -> String? {
     guard let executable = resolveExecutablePath() else {
-      easybarLog.debug("aerospace executable not found")
+      logger.debug("aerospace executable not found")
       return nil
     }
 
@@ -20,7 +28,8 @@ final class AeroSpaceCommandRunner {
     do {
       try process.run()
     } catch {
-      easybarLog.debug("failed to run aerospace \(arguments.joined(separator: " ")): \(error)")
+      logger.debug(
+        "failed to run aerospace", "args", arguments.joined(separator: " "), "error", error)
       return nil
     }
 
@@ -30,15 +39,19 @@ final class AeroSpaceCommandRunner {
     do {
       data = try outputHandle.readToEnd() ?? Data()
     } catch {
-      easybarLog.debug(
-        "failed to read aerospace output args=\(arguments.joined(separator: " ")): \(error)"
+      logger.debug(
+        "failed to read aerospace output",
+        "args", arguments.joined(separator: " "),
+        "error", error
       )
       return nil
     }
 
     if process.terminationStatus != 0 {
-      easybarLog.debug(
-        "aerospace command exited with status=\(process.terminationStatus) args=\(arguments.joined(separator: " "))"
+      logger.debug(
+        "aerospace command exited",
+        "status", process.terminationStatus,
+        "args", arguments.joined(separator: " ")
       )
     }
 

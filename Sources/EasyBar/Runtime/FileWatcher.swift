@@ -1,4 +1,5 @@
 import Darwin
+import EasyBarShared
 import Foundation
 
 /// Actor-owned file watcher that emits debounced config change events.
@@ -14,6 +15,13 @@ actor FileWatcher {
   private var continuation: AsyncStream<Event>.Continuation?
   private var watcherGeneration: UInt64 = 0
   private let debounceQueue = DispatchQueue(label: "easybar.file-watcher.debounce", qos: .utility)
+  private let logger: ProcessLogger
+
+  init(
+    logger: ProcessLogger
+  ) {
+    self.logger = logger
+  }
 
   /// Starts watching the given config file and returns an event stream.
   func start(configPath: String, enabled: Bool) -> AsyncStream<Event> {
@@ -77,12 +85,12 @@ actor FileWatcher {
     guard enabled else { return }
 
     guard let watchTarget = openWatchTarget(for: configPath) else {
-      easybarLog.warn("file watcher failed to open watch target for path=\(configPath)")
+      logger.warn("file watcher failed to open watch target for path=\(configPath)")
       return
     }
 
     fileDescriptor = watchTarget.fd
-    easybarLog.debug(
+    logger.debug(
       "file watcher watching path=\(watchTarget.path) target=\(configPath)"
     )
 

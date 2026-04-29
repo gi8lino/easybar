@@ -1,43 +1,53 @@
+import EasyBarShared
 import Foundation
 
 /// Actor-owned scripted widget runtime.
 ///
 /// This actor owns the Lua handshake state, subscriptions, and tree updates.
 actor WidgetEngine {
-  static let shared = WidgetEngine()
-
+  private let logger: ProcessLogger
+  private let luaRuntime: LuaRuntime
   private let decoder = JSONDecoder()
 
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
   private var started = false
 
+  /// Creates one widget engine.
+  init(
+    logger: ProcessLogger,
+    luaRuntime: LuaRuntime
+  ) {
+    self.logger = logger
+    self.luaRuntime = luaRuntime
+  }
+
   /// Starts the scripted widget runtime.
   func start() async {
     guard !started else {
-      easybarLog.debug("widget engine already started")
+      logger.debug("widget engine already started")
       return
     }
 
-    easybarLog.debug("widget engine start begin")
+    logger.debug("widget engine start begin")
 
     started = true
     runtimeState.reset()
 
-    await LuaRuntime.shared.setStdoutHandler { line in
+    await luaRuntime.setStdoutHandler { [weak self] line in
       Task {
-        await WidgetEngine.shared.handleRuntimeOutput(line)
+        await self?.handleRuntimeOutput(line)
       }
     }
 
-    await LuaRuntime.shared.start()
+    await luaRuntime.start()
 
-    easybarLog.debug("widget engine start end")
+    logger.debug("widget engine start end")
   }
 
   /// Reloads the scripted widget runtime and clears rendered state.
   func reload() async {
-    easybarLog.debug("widget engine reload begin")
+    logger.debug("widget engine reload begin")
 
     let rootsToClear = scriptedRoots
     await shutdown()
@@ -49,17 +59,17 @@ actor WidgetEngine {
     scriptedRoots.removeAll()
     await start()
 
-    easybarLog.debug("widget engine reload end")
+    logger.debug("widget engine reload end")
   }
 
   /// Stops the scripted widget runtime and event sources.
   func shutdown() async {
     guard started else {
-      easybarLog.debug("widget engine shutdown skipped, not started")
+      logger.debug("widget engine shutdown skipped, not started")
       return
     }
 
-    easybarLog.debug("widget engine shutdown begin")
+    logger.debug("widget engine shutdown begin")
 
     started = false
     runtimeState.reset()
@@ -68,27 +78,27 @@ actor WidgetEngine {
       EventManager.shared.stopLuaSubscriptions()
     }
 
-    await LuaRuntime.shared.shutdown()
+    await luaRuntime.shutdown()
 
-    easybarLog.debug("widget engine shutdown end")
+    logger.debug("widget engine shutdown end")
   }
 
   /// Handles one line of structured stdout from the Lua runtime.
   func handleRuntimeOutput(_ line: String) async {
     guard started else { return }
 
-    easybarLog.debug("lua stdout: \(line)")
+    logger.debug("lua stdout: \(line)")
 
     do {
       let update = try decodeUpdate(from: line)
       await handleUpdate(update, rawLine: line)
     } catch DecodingError.dataCorrupted {
       MetricsCoordinator.shared.recordDecodeError()
-      easybarLog.warn("invalid utf8: \(line)")
+      logger.warn("invalid utf8: \(line)")
     } catch {
       MetricsCoordinator.shared.recordDecodeError()
-      easybarLog.warn("json decode failed: \(line)")
-      easybarLog.debug("decode error: \(error)")
+      logger.warn("json decode failed: \(line)")
+      logger.debug("decode error: \(error)")
     }
   }
 
@@ -106,8 +116,10 @@ actor WidgetEngine {
   /// Emits initial events after both subscriptions and readiness are known.
   private func emitInitialEventsIfPossible() async {
     guard runtimeState.canEmitInitialEvents else { return }
+
     runtimeState.didEmitInitialEvents = true
-    easybarLog.debug("emitting replayable widget events")
+    logger.debug("emitting replayable widget events")
+
     await EventHub.shared.emitReplayableState(for: runtimeState.requiredEvents)
     await EventHub.shared.emit(.manualRefresh)
   }
@@ -125,7 +137,7 @@ actor WidgetEngine {
     }
 
     guard update.isTree else {
-      easybarLog.warn("unknown lua message: \(rawLine)")
+      logger.warn("unknown lua message: \(rawLine)")
       return
     }
 
@@ -138,7 +150,7 @@ actor WidgetEngine {
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
-    easybarLog.debug("required events: \(runtimeState.requiredEvents)")
+    logger.debug("required events: \(runtimeState.requiredEvents)")
 
     let requiredEvents = runtimeState.requiredEvents
     await MainActor.run {
@@ -150,27 +162,24 @@ actor WidgetEngine {
 
   /// Handles the Lua runtime ready handshake.
   private func handleReady() async {
-    easybarLog.debug("lua runtime handshake received")
+    logger.debug("lua runtime handshake received")
+
     runtimeState.isReady = true
     MetricsCoordinator.shared.recordLuaReady()
+
     await emitInitialEventsIfPossible()
   }
 
   /// Handles one rendered widget tree update.
   private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) async {
     guard let tree = update.treePayload else {
-      easybarLog.warn("unknown lua message: \(rawLine)")
+      logger.warn("unknown lua message: \(rawLine)")
       return
     }
 
     scriptedRoots.insert(tree.root)
-    easybarLog.debug(
-      """
-      decoded widget tree
-      root=\(tree.root)
-      nodes=\(tree.nodes.count)
-      """
-    )
+
+    logger.debug("decoded widget tree root=\(tree.root) nodes=\(tree.nodes.count)")
     MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
 
     await MainActor.run {

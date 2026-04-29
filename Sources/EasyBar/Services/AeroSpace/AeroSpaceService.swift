@@ -1,4 +1,5 @@
 import AppKit
+import EasyBarShared
 import Foundation
 
 /// Loads workspace and focused-app state from AeroSpace.
@@ -6,7 +7,22 @@ import Foundation
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
 /// runs when at least one native widget depends on that state.
 final class AeroSpaceService: ObservableObject {
-  static let shared = AeroSpaceService()
+  private static var sharedInstance: AeroSpaceService?
+
+  /// Returns the configured shared AeroSpace service.
+  static var shared: AeroSpaceService {
+    guard let sharedInstance else {
+      fatalError(
+        "AeroSpaceService.bootstrap(logger:) must be called before AeroSpaceService.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared AeroSpace service.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = AeroSpaceService(logger: logger)
+  }
 
   @Published private(set) var spaces: [SpaceItem] = []
   @Published private(set) var focusedAppID: String?
@@ -24,12 +40,16 @@ final class AeroSpaceService: ObservableObject {
     var generation: UInt64 = 0
   }
 
+  private let logger: ProcessLogger
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
-  private let commandRunner = AeroSpaceCommandRunner()
+  private let commandRunner: AeroSpaceCommandRunner
   private let stateLock = NSLock()
   private var coordination = CoordinationState()
 
-  private init() {}
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+    self.commandRunner = AeroSpaceCommandRunner(logger: logger)
+  }
 }
 
 // MARK: - Public API
@@ -56,10 +76,10 @@ extension AeroSpaceService {
 
     guard shouldStart else { return }
 
-    easybarLog.debug("aerospace service start begin")
+    logger.debug("aerospace service start begin")
     subscribeAppSwitches()
     refresh()
-    easybarLog.debug("aerospace service start end")
+    logger.debug("aerospace service start end")
   }
 
   /// Stops the service and prevents queued refresh work from publishing.
@@ -77,7 +97,7 @@ extension AeroSpaceService {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
     }
 
-    easybarLog.debug("aerospace service stop end")
+    logger.debug("aerospace service stop end")
   }
 
   /// Registers one widget that depends on AeroSpace state.
@@ -86,7 +106,8 @@ extension AeroSpaceService {
       coordination.consumers.insert(id)
       return coordination.consumers.count
     }
-    easybarLog.debug("aerospace consumer registered id=\(id) count=\(count)")
+
+    logger.debug("aerospace consumer registered", "id", id, "count", count)
     refresh()
   }
 
@@ -96,18 +117,19 @@ extension AeroSpaceService {
       coordination.consumers.remove(id)
       return coordination.consumers.count
     }
-    easybarLog.debug("aerospace consumer unregistered id=\(id) count=\(count)")
+
+    logger.debug("aerospace consumer unregistered", "id", id, "count", count)
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
   func triggerRefresh() {
     guard hasConsumers else {
-      easybarLog.debug("aerospace refresh skipped, no registered consumers")
+      logger.debug("aerospace refresh skipped, no registered consumers")
       return
     }
 
     let generation = currentGeneration()
-    easybarLog.debug("aerospace triggerRefresh queued consumers=\(consumerCount)")
+    logger.debug("aerospace triggerRefresh queued", "consumers", consumerCount)
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -117,12 +139,11 @@ extension AeroSpaceService {
 
   /// Focuses the requested workspace.
   func focusWorkspace(_ workspace: String) {
-    easybarLog.info("aerospace focus workspace requested workspace=\(workspace)")
+    logger.info("aerospace focus workspace requested", "workspace", workspace)
 
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
 
-      // Update the visible selection immediately for direct clicks in EasyBar.
       self.spaces = self.spaces.map { space in
         SpaceItem(
           id: space.id,
@@ -145,14 +166,14 @@ extension AeroSpaceService {
 
   /// Activates one application shown inside a workspace.
   func focusApp(_ app: SpaceApp) {
-    easybarLog.info("aerospace focus app requested app=\(app.name)")
+    logger.info("aerospace focus app requested", "app", app.name)
 
     guard let bundlePath = app.bundlePath, !bundlePath.isEmpty else {
-      easybarLog.debug("aerospace focus app skipped, missing bundle path app=\(app.name)")
+      logger.debug("aerospace focus app skipped, missing bundle path", "app", app.name)
       return
     }
 
-    DispatchQueue.main.async {
+    DispatchQueue.main.async { [logger] in
       let configuration = NSWorkspace.OpenConfiguration()
       configuration.activates = true
 
@@ -161,7 +182,7 @@ extension AeroSpaceService {
         configuration: configuration
       ) { _, error in
         if let error {
-          easybarLog.debug("failed to focus app \(app.name): \(error)")
+          logger.debug("failed to focus app", "app", app.name, "error", error)
         }
       }
     }
@@ -170,12 +191,12 @@ extension AeroSpaceService {
   /// Public refresh entry.
   func refresh() {
     guard hasConsumers else {
-      easybarLog.debug("aerospace refresh skipped, no registered consumers")
+      logger.debug("aerospace refresh skipped, no registered consumers")
       return
     }
 
     let generation = currentGeneration()
-    easybarLog.debug("aerospace refresh queued consumers=\(consumerCount)")
+    logger.debug("aerospace refresh queued", "consumers", consumerCount)
 
     refreshQueue.async { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
@@ -214,7 +235,7 @@ extension AeroSpaceService {
       }
     }
 
-    easybarLog.debug("aerospace app switch observer installed")
+    logger.debug("aerospace app switch observer installed")
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
@@ -238,7 +259,7 @@ extension AeroSpaceService {
     focusedApp = focused
     focusedAppID = focused.id
 
-    publishUpdate(logMessage: "aerospace optimistic focus updated app=\(focused.name)")
+    publishUpdate(logMessage: "aerospace optimistic focus updated", fields: ["app": focused.name])
   }
 }
 
@@ -248,7 +269,7 @@ extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
   fileprivate func reloadState() {
     guard shouldExecute(generation: currentGeneration()) else { return }
-    easybarLog.debug("aerospace reloadState begin")
+    logger.debug("aerospace reloadState begin")
 
     let snapshot = AeroSpaceSnapshotLoader.load(
       run: runAeroSpace(arguments:),
@@ -265,7 +286,7 @@ extension AeroSpaceService {
       let layoutChanged = self.focusedLayoutMode != snapshot.focusedLayoutMode
 
       guard spacesChanged || focusedAppChanged || focusedAppIDChanged || layoutChanged else {
-        easybarLog.debug("aerospace reloadState end without changes")
+        self.logger.debug("aerospace reloadState end without changes")
         return
       }
 
@@ -275,11 +296,15 @@ extension AeroSpaceService {
       self.focusedLayoutMode = snapshot.focusedLayoutMode
 
       self.publishUpdate(
-        logMessage:
-          "aerospace state updated spaces=\(snapshot.spaces.count) focused=\(snapshot.focusedApp?.name ?? "none") layout=\(snapshot.focusedLayoutMode.rawValue)"
+        logMessage: "aerospace state updated",
+        fields: [
+          "spaces": snapshot.spaces.count,
+          "focused": snapshot.focusedApp?.name ?? "none",
+          "layout": snapshot.focusedLayoutMode.rawValue,
+        ]
       )
 
-      easybarLog.debug("aerospace reloadState end with changes")
+      self.logger.debug("aerospace reloadState end with changes")
     }
   }
 }
@@ -309,8 +334,14 @@ extension AeroSpaceService {
   }
 
   /// Publishes one shared AeroSpace update notification.
-  fileprivate func publishUpdate(logMessage: String) {
-    easybarLog.debug(logMessage)
+  fileprivate func publishUpdate(logMessage: String, fields: [String: Any] = [:]) {
+    var components: [Any] = []
+    for key in fields.keys.sorted() {
+      components.append(key)
+      components.append(fields[key] ?? "nil")
+    }
+
+    logger.debug(logMessage, components)
     NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
 

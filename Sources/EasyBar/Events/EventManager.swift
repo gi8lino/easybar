@@ -1,9 +1,37 @@
+import EasyBarShared
 import Foundation
 
 /// Main-actor owner of native event source subscriptions.
 @MainActor
 final class EventManager {
-  static let shared = EventManager()
+  private static var sharedInstance: EventManager?
+
+  /// Returns the configured shared event manager.
+  static var shared: EventManager {
+    guard let sharedInstance else {
+      fatalError(
+        "EventManager.bootstrap(logger:luaRuntime:) must be called before EventManager.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared event manager and event-source dependencies.
+  static func bootstrap(
+    logger: ProcessLogger,
+    luaRuntime: LuaRuntime
+  ) {
+    EventHub.bootstrap(
+      logger: logger,
+      luaRuntime: luaRuntime
+    )
+    SystemEvents.bootstrap(logger: logger)
+    PowerEvents.bootstrap(logger: logger)
+    TimerEvents.bootstrap(logger: logger)
+    VolumeEvents.bootstrap(logger: logger)
+
+    sharedInstance = EventManager(logger: logger)
+  }
 
   private static let intervalTickPrefix = "interval_tick:"
 
@@ -24,11 +52,18 @@ final class EventManager {
     let interval: TimeInterval?
   }
 
+  private let logger: ProcessLogger
+
   private var luaSubscriptions = Set<String>()
   private var nativeSubscriptions = Set<String>()
   private var activeSubscriptions = Set<String>()
   private var activeSources = Set<ManagedSource>()
   private var activeInterval: TimeInterval?
+
+  /// Creates one event manager.
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Replaces the current Lua runtime event subscriptions.
   func setLuaSubscriptions(_ subscriptions: Set<String>) {
@@ -50,13 +85,14 @@ final class EventManager {
   /// Stops only Lua-owned event subscriptions while preserving native ones.
   func stopLuaSubscriptions() {
     guard !luaSubscriptions.isEmpty else { return }
+
     luaSubscriptions.removeAll()
     refresh()
   }
 
   /// Stops all active native event sources and clears every subscription source.
   func stopAll() {
-    easybarLog.debug("event manager stopAll begin")
+    logger.debug("event manager stopAll begin")
 
     luaSubscriptions.removeAll()
     nativeSubscriptions.removeAll()
@@ -65,7 +101,7 @@ final class EventManager {
     activeSources.removeAll()
     activeInterval = nil
 
-    easybarLog.debug("event manager stopAll end")
+    logger.debug("event manager stopAll end")
   }
 
   /// Rebuilds active event listeners from the merged Lua and native subscriptions.
@@ -73,7 +109,7 @@ final class EventManager {
     let mergedSubscriptions = luaSubscriptions.union(nativeSubscriptions)
 
     if mergedSubscriptions == activeSubscriptions {
-      easybarLog.debug("event manager refresh skipped, subscriptions unchanged")
+      logger.debug("event manager refresh skipped, subscriptions unchanged")
       return
     }
 
@@ -85,18 +121,8 @@ final class EventManager {
     let desiredInterval = Self.intervalTickInterval(in: mergedSubscriptions)
     let intervalChanged = desiredInterval != activeInterval
 
-    easybarLog.debug(
-      "event manager refresh begin",
-      "merged", mergedSubscriptions,
-      "active", activeSubscriptions,
-      "added", added,
-      "removed", removed,
-      "source_add", sourcesToAdd,
-      "source_remove", sourcesToRemove,
-      "interval", String(describing: desiredInterval),
-      "previous_interval", String(describing: activeInterval),
-      "lua", luaSubscriptions,
-      "native", nativeSubscriptions
+    logger.debug(
+      "event manager refresh begin merged=\(mergedSubscriptions) active=\(activeSubscriptions) added=\(added) removed=\(removed) source_add=\(sourcesToAdd) source_remove=\(sourcesToRemove) interval=\(String(describing: desiredInterval)) previous_interval=\(String(describing: activeInterval)) lua=\(luaSubscriptions) native=\(nativeSubscriptions)"
     )
 
     unsubscribeSources(sourcesToRemove)
@@ -115,7 +141,7 @@ final class EventManager {
     activeSources = desiredSources
     activeInterval = desiredInterval
 
-    easybarLog.debug("event manager refresh end active=\(activeSubscriptions)")
+    logger.debug("event manager refresh end active=\(activeSubscriptions)")
   }
 
   /// Starts the newly required event sources.
@@ -241,8 +267,10 @@ final class EventManager {
   private static func intervalTickInterval(in subscriptions: Set<String>) -> TimeInterval? {
     for name in subscriptions {
       guard name.hasPrefix(intervalTickPrefix) else { continue }
+
       let rawValue = String(name.dropFirst(intervalTickPrefix.count))
       guard let interval = TimeInterval(rawValue), interval > 0 else { continue }
+
       return interval
     }
 

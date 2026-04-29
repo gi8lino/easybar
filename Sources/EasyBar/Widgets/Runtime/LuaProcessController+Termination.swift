@@ -18,25 +18,26 @@ extension LuaProcessController {
     cancelForcedKillWorkItem()
 
     if let processGroupIdentifier, processGroupIdentifier > 0 {
-      easybarLog.debug(
+      logger.debug(
         "sending SIGTERM to lua process group pgid=\(processGroupIdentifier) pid=\(processIdentifier)"
       )
       kill(-processGroupIdentifier, SIGTERM)
     } else {
-      easybarLog.debug("sending SIGTERM to lua process pid=\(processIdentifier)")
+      logger.debug("sending SIGTERM to lua process pid=\(processIdentifier)")
       kill(processIdentifier, SIGTERM)
     }
 
-    let workItem = DispatchWorkItem {
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
       guard easyBarProcessIsRunning(processIdentifier) else { return }
 
       if let processGroupIdentifier, processGroupIdentifier > 0 {
-        easybarLog.warn(
+        self.logger.warn(
           "forcing lua process group shutdown pgid=\(processGroupIdentifier) pid=\(processIdentifier)"
         )
         kill(-processGroupIdentifier, SIGKILL)
       } else {
-        easybarLog.warn("forcing lua process shutdown pid=\(processIdentifier)")
+        self.logger.warn("forcing lua process shutdown pid=\(processIdentifier)")
         kill(processIdentifier, SIGKILL)
       }
     }

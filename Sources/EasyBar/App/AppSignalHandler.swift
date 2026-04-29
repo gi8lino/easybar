@@ -1,12 +1,25 @@
 import AppKit
+import EasyBarShared
 import Foundation
 
 /// Bridges terminal/process signals into normal AppKit termination.
 @MainActor
 final class AppSignalHandler {
+  private let logger: ProcessLogger
+  private let requestTermination: () -> Void
+
   private var sigintSource: DispatchSourceSignal?
   private var sigtermSource: DispatchSourceSignal?
   private var started = false
+
+  /// Creates one signal handler.
+  init(
+    logger: ProcessLogger,
+    requestTermination: @escaping () -> Void
+  ) {
+    self.logger = logger
+    self.requestTermination = requestTermination
+  }
 
   /// Starts listening for termination signals.
   func start() {
@@ -17,17 +30,21 @@ final class AppSignalHandler {
     signal(SIGTERM, SIG_IGN)
 
     let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
-    sigintSource.setEventHandler {
-      easybarLog.info("received SIGINT")
-      AppController.shared.requestTermination()
+    sigintSource.setEventHandler { [weak self] in
+      guard let self else { return }
+
+      self.logger.info("received SIGINT")
+      self.requestTermination()
     }
     sigintSource.resume()
     self.sigintSource = sigintSource
 
     let sigtermSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
-    sigtermSource.setEventHandler {
-      easybarLog.info("received SIGTERM")
-      AppController.shared.requestTermination()
+    sigtermSource.setEventHandler { [weak self] in
+      guard let self else { return }
+
+      self.logger.info("received SIGTERM")
+      self.requestTermination()
     }
     sigtermSource.resume()
     self.sigtermSource = sigtermSource

@@ -40,10 +40,13 @@ enum EventStateInvalidation: CaseIterable {
     switch self {
     case .systemWake:
       return { .app(.systemWoke) }
+
     case .powerSourceChange:
       return { .app(.powerSourceChange) }
+
     case .chargingStateChange:
       return { .app(.chargingStateChange) }
+
     case .wifiChange:
       return {
         let interfaceName = await MainActor.run {
@@ -56,6 +59,7 @@ enum EventStateInvalidation: CaseIterable {
 
         return .app(.wifiChange)
       }
+
     case .networkChange:
       return {
         let isTunnel = await MainActor.run {
@@ -64,20 +68,28 @@ enum EventStateInvalidation: CaseIterable {
 
         return .app(.networkChange, primaryInterfaceIsTunnel: isTunnel)
       }
+
     case .volumeChange:
       return { .app(.volumeChange) }
+
     case .muteChange:
       return { .app(.muteChange) }
+
     case .calendarChange:
       return { .app(.calendarChange) }
+
     case .minuteTick:
       return { .app(.minuteTick) }
+
     case .secondTick:
       return { .app(.secondTick) }
+
     case .focusChange:
       return { .app(.focusChange) }
+
     case .workspaceChange:
       return { .app(.workspaceChange) }
+
     case .spaceModeChange:
       return { .app(.spaceModeChange) }
     }

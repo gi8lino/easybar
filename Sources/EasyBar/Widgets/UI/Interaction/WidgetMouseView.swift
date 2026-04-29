@@ -1,10 +1,12 @@
 import AppKit
+import EasyBarShared
 import SwiftUI
 
 /// AppKit-backed event surface for widget mouse input.
 struct WidgetMouseView: NSViewRepresentable {
   let widgetID: String
   let targetWidgetID: String
+  let logger: ProcessLogger
   let tracksHover: Bool
   let emitsMouseHover: Bool
   let emitsMouseDown: Bool
@@ -16,6 +18,7 @@ struct WidgetMouseView: NSViewRepresentable {
   init(
     widgetID: String,
     targetWidgetID: String? = nil,
+    logger: ProcessLogger,
     tracksHover: Bool = true,
     emitsMouseHover: Bool = false,
     emitsMouseDown: Bool = false,
@@ -26,6 +29,7 @@ struct WidgetMouseView: NSViewRepresentable {
   ) {
     self.widgetID = widgetID
     self.targetWidgetID = targetWidgetID ?? widgetID
+    self.logger = logger
     self.tracksHover = tracksHover
     self.emitsMouseHover = emitsMouseHover
     self.emitsMouseDown = emitsMouseDown
@@ -40,6 +44,7 @@ struct WidgetMouseView: NSViewRepresentable {
     let view = MouseTrackingNSView()
     view.widgetID = widgetID
     view.targetWidgetID = targetWidgetID
+    view.logger = logger
     view.tracksHover = tracksHover
     view.emitsMouseHover = emitsMouseHover
     view.emitsMouseDown = emitsMouseDown
@@ -54,6 +59,7 @@ struct WidgetMouseView: NSViewRepresentable {
   func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
     nsView.widgetID = widgetID
     nsView.targetWidgetID = targetWidgetID
+    nsView.logger = logger
     nsView.tracksHover = tracksHover
     nsView.emitsMouseHover = emitsMouseHover
     nsView.emitsMouseDown = emitsMouseDown
@@ -67,6 +73,7 @@ struct WidgetMouseView: NSViewRepresentable {
 final class MouseTrackingNSView: NSView {
   var widgetID: String = ""
   var targetWidgetID: String = ""
+  var logger: ProcessLogger!
   var tracksHover = true
   var emitsMouseHover = false
   var emitsMouseDown = false
@@ -175,7 +182,11 @@ final class MouseTrackingNSView: NSView {
 
     let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
 
-    easybarLog.debug("mouse scrolled widget=\(widgetID) direction=\(direction.rawValue)")
+    logger.debug(
+      "mouse scrolled",
+      "widget", "\(widgetID)",
+      "direction", "\(direction.rawValue)",
+    )
 
     Task {
       await EventHub.shared.emitWidgetEvent(
@@ -240,8 +251,10 @@ final class MouseTrackingNSView: NSView {
   /// Emits one widget mouse event with shared logging.
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
-    easybarLog.debug(
-      "event=\(event.rawValue) widget=\(widgetID) target=\(targetWidgetID)\(buttonSuffix)"
+    logger.debug(
+      "event=\(event.rawValue)",
+      "widget", "\(widgetID)",
+      "target=\(targetWidgetID)\(buttonSuffix)",
     )
 
     Task {

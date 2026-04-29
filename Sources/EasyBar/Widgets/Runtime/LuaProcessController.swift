@@ -1,9 +1,9 @@
 import Darwin
+import EasyBarShared
 import Foundation
 
 /// Owns Lua process lifecycle.
 final class LuaProcessController {
-
   struct LaunchContext {
     let runtimePath: String
     let luaPath: String
@@ -17,6 +17,8 @@ final class LuaProcessController {
     let error = Pipe()
   }
 
+  let logger: ProcessLogger
+
   private let stateLock = NSLock()
   fileprivate(set) var processIdentifierValue: Int32?
   fileprivate(set) var processGroupIdentifier: Int32?
@@ -24,6 +26,11 @@ final class LuaProcessController {
   var terminationSource: DispatchSourceProcess?
   var forcedKillWorkItem: DispatchWorkItem?
   private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
+
+  /// Creates one Lua process controller.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Returns the running Lua process identifier when available.
   var processIdentifier: Int32? {
@@ -35,12 +42,12 @@ final class LuaProcessController {
   /// Starts the Lua runtime process and returns its pipes.
   func start() -> (processIdentifier: Int32, input: Pipe, output: Pipe, error: Pipe)? {
     if withLock({ isShuttingDown }) {
-      easybarLog.debug("lua runtime start skipped because shutdown is in progress")
+      logger.debug("lua runtime start skipped because shutdown is in progress")
       return nil
     }
 
     guard withLock({ processIdentifierValue == nil }) else {
-      easybarLog.debug("lua runtime already started")
+      logger.debug("lua runtime already started")
       return nil
     }
 
@@ -62,17 +69,12 @@ final class LuaProcessController {
 
       installTerminationSource(for: pid)
 
-      easybarLog.debug(
-        """
-        lua runtime started
-        pid=\(pid)
-        pgid=\(pid)
-        """)
+      logger.debug("lua runtime started pid=\(pid) pgid=\(pid)")
 
       return (pid, pipes.input, pipes.output, pipes.error)
     } catch {
       closeLaunchPipesAfterFailedSpawn(pipes)
-      easybarLog.error("failed to start lua runtime: \(error)")
+      logger.error("failed to start lua runtime: \(error)")
       return nil
     }
   }
@@ -80,16 +82,12 @@ final class LuaProcessController {
   /// Stops the Lua runtime process and waits until the child has fully exited.
   func shutdownAndWait() async {
     guard let snapshot = shutdownSnapshot() else {
-      easybarLog.debug("lua runtime shutdown skipped because no process is running")
+      logger.debug("lua runtime shutdown skipped because no process is running")
       return
     }
 
     if snapshot.isShuttingDown {
-      easybarLog.debug(
-        """
-        lua runtime shutdown already in progress
-        pid=\(snapshot.processIdentifier)
-        """)
+      logger.debug("lua runtime shutdown already in progress pid=\(snapshot.processIdentifier)")
       await waitForShutdownCompletion()
       return
     }
@@ -99,18 +97,11 @@ final class LuaProcessController {
     }
 
     if let processGroupIdentifier = snapshot.processGroupIdentifier {
-      easybarLog.debug(
-        """
-        shutting down lua runtime
-        pid=\(snapshot.processIdentifier)
-        pgid=\(processGroupIdentifier)
-        """)
+      logger.debug(
+        "shutting down lua runtime pid=\(snapshot.processIdentifier) pgid=\(processGroupIdentifier)"
+      )
     } else {
-      easybarLog.debug(
-        """
-        shutting down lua runtime
-        pid=\(snapshot.processIdentifier)
-        """)
+      logger.debug("shutting down lua runtime pid=\(snapshot.processIdentifier)")
     }
 
     terminateProcess(
@@ -147,6 +138,7 @@ final class LuaProcessController {
   /// Clears the tracked Lua process only when it matches the given pid.
   func clearTrackedProcessIfMatching(pid: Int32) {
     guard withLock({ processIdentifierValue == pid }) else { return }
+
     clearTrackedProcessState()
   }
 
@@ -185,6 +177,7 @@ final class LuaProcessController {
   )? {
     withLock {
       guard let processIdentifierValue else { return nil }
+
       return (processIdentifierValue, processGroupIdentifier, isShuttingDown)
     }
   }
@@ -193,6 +186,7 @@ final class LuaProcessController {
   func withLock<T>(_ body: () -> T) -> T {
     stateLock.lock()
     defer { stateLock.unlock() }
+
     return body()
   }
 }

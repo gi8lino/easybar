@@ -4,7 +4,8 @@ import Foundation
 public final class AuthorizationRetryBackoff {
   private let delays: [TimeInterval]
   private let queue: DispatchQueue
-  private let debugLog: (String) -> Void
+  private let logger: ProcessLogger
+  private let lock = NSLock()
 
   private var scheduledWorkItem: DispatchWorkItem?
   private var attemptIndex = 0
@@ -13,38 +14,82 @@ public final class AuthorizationRetryBackoff {
   public init(
     delays: [TimeInterval] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 60],
     queue: DispatchQueue = .main,
-    debugLog: @escaping (String) -> Void = { _ in }
+    logger: ProcessLogger
   ) {
     self.delays = delays
     self.queue = queue
-    self.debugLog = debugLog
+    self.logger = logger
   }
 
   /// Cancels any pending retry and resets the delay sequence.
   public func reset() {
-    scheduledWorkItem?.cancel()
-    scheduledWorkItem = nil
-    attemptIndex = 0
+    let workItem = withLock { () -> DispatchWorkItem? in
+      let workItem = scheduledWorkItem
+      scheduledWorkItem = nil
+      attemptIndex = 0
+      return workItem
+    }
+
+    workItem?.cancel()
   }
 
   /// Schedules the next retry attempt when none is currently pending.
   public func schedule(_ action: @escaping () -> Void) {
-    guard scheduledWorkItem == nil else { return }
+    var workItem: DispatchWorkItem?
 
-    let delay = delays[min(attemptIndex, delays.count - 1)]
-    attemptIndex += 1
+    let scheduledDelay = withLock { () -> TimeInterval? in
+      guard scheduledWorkItem == nil else {
+        return nil
+      }
 
-    let workItem = DispatchWorkItem { [weak self] in
-      self?.scheduledWorkItem = nil
-      action()
+      let delay = delayForCurrentAttempt()
+      attemptIndex += 1
+
+      let nextWorkItem = DispatchWorkItem { [weak self] in
+        guard let self else { return }
+        guard self.clearScheduledWorkItem() else { return }
+
+        action()
+      }
+
+      scheduledWorkItem = nextWorkItem
+      workItem = nextWorkItem
+
+      return delay
     }
 
-    scheduledWorkItem = workItem
-    debugLog(
-      """
-      authorization retry scheduled
-      delay=\(delay)
-      """)
-    queue.asyncAfter(deadline: .now() + delay, execute: workItem)
+    guard let scheduledDelay, let workItem else { return }
+
+    logger.debug("authorization retry scheduled", "delay", "\(scheduledDelay)")
+    queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
+  }
+
+  /// Returns the delay for the current retry attempt.
+  private func delayForCurrentAttempt() -> TimeInterval {
+    guard !delays.isEmpty else {
+      return 0
+    }
+
+    return delays[min(attemptIndex, delays.count - 1)]
+  }
+
+  /// Clears the current scheduled item after it has fired.
+  private func clearScheduledWorkItem() -> Bool {
+    withLock {
+      guard scheduledWorkItem != nil else {
+        return false
+      }
+
+      scheduledWorkItem = nil
+      return true
+    }
+  }
+
+  /// Runs one closure while holding the backoff lock.
+  private func withLock<T>(_ body: () -> T) -> T {
+    lock.lock()
+    defer { lock.unlock() }
+
+    return body()
   }
 }

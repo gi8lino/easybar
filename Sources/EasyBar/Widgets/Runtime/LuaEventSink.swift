@@ -1,19 +1,30 @@
+import EasyBarShared
 import Foundation
 
 /// Serializes event delivery into the Lua runtime off the EventHub hot path.
 final class LuaEventSink {
-  private let runtime = LuaRuntime.shared
+  private let runtime: LuaRuntime
+  private let logger: ProcessLogger
   private let queue = DispatchQueue(label: "easybar.lua-event-sink")
+
+  /// Creates one Lua event sink.
+  init(
+    runtime: LuaRuntime,
+    logger: ProcessLogger
+  ) {
+    self.runtime = runtime
+    self.logger = logger
+  }
 
   /// Enqueues one event payload for Lua delivery.
   func enqueue(_ payload: EasyBarEventPayload) {
-    queue.async { [runtime] in
+    queue.async { [runtime, logger] in
       guard let encoded = Self.encodedPayload(payload) else {
-        easybarLog.error("failed to encode lua event payload name=\(payload.eventName)")
+        logger.error("failed to encode lua event payload name=\(payload.eventName)")
         return
       }
 
-      easybarLog.trace("sent to lua stdin: \(encoded)")
+      logger.trace("sent to lua stdin: \(encoded)")
 
       Task {
         await runtime.send(encoded)
@@ -28,7 +39,8 @@ final class LuaEventSink {
 
   /// Encodes one event payload as JSON for the Lua runtime.
   private static func encodeJSON(_ payload: [String: Any]) -> String? {
-    guard let data = try? JSONSerialization.data(withJSONObject: payload),
+    guard
+      let data = try? JSONSerialization.data(withJSONObject: payload),
       let string = String(data: data, encoding: .utf8)
     else {
       return nil

@@ -12,6 +12,7 @@ final class CalendarAgentStreamController {
   private let clearState: () -> Void
   private let metricsAgent: MetricsCoordinator.AgentKey
   private let wakeRefreshController: AgentWakeRefreshController
+  private let logger: ProcessLogger
 
   private var started = false
 
@@ -43,10 +44,7 @@ final class CalendarAgentStreamController {
       guard let self else { return }
       MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
     },
-    debugLog: easybarLog.debug,
-    infoLog: easybarLog.info,
-    warnLog: easybarLog.warn,
-    errorLog: easybarLog.error
+    logger: logger
   )
 
   /// Creates one shared calendar-agent stream controller.
@@ -56,7 +54,8 @@ final class CalendarAgentStreamController {
     socketPath: @escaping () -> String,
     makeRequest: @escaping () -> CalendarAgentRequest,
     applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void,
-    clearState: @escaping () -> Void = {}
+    clearState: @escaping () -> Void = {},
+    logger: ProcessLogger
   ) {
     self.label = label
     self.metricsAgent = metricsAgent
@@ -64,7 +63,12 @@ final class CalendarAgentStreamController {
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
     self.clearState = clearState
-    wakeRefreshController = AgentWakeRefreshController(label: label)
+    self.logger = logger
+
+    wakeRefreshController = AgentWakeRefreshController(
+      label: label,
+      logger: logger
+    )
   }
 
   /// Returns whether the stream currently has an active connection.
@@ -77,16 +81,18 @@ final class CalendarAgentStreamController {
     guard !started else { return }
 
     guard enabled else {
-      easybarLog.info("\(label) start skipped because agent is disabled")
+      logger.info("\(label) start skipped because agent is disabled")
       return
     }
 
     started = true
+
     wakeRefreshController.start { [weak self] in
       guard let self, self.started else { return }
       self.refresh()
     }
-    easybarLog.info("starting \(label) socket=\(socketPath())")
+
+    logger.info("starting \(label)", "socket", socketPath())
     client.start()
   }
 
@@ -94,7 +100,8 @@ final class CalendarAgentStreamController {
   func stop() {
     guard started else { return }
 
-    easybarLog.info("stopping \(label)")
+    logger.info("stopping \(label)")
+
     started = false
     wakeRefreshController.stop()
     client.stop()
@@ -104,6 +111,7 @@ final class CalendarAgentStreamController {
   /// Sends one fresh request built from current config and state.
   func refresh() {
     guard started else { return }
+
     MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
     client.refresh()
   }
@@ -115,24 +123,23 @@ final class CalendarAgentStreamController {
     switch response.kind {
     case .snapshot:
       guard let snapshot = response.snapshot else {
-        easybarLog.warn("\(label) received snapshot without payload")
+        logger.warn("\(label) received snapshot without payload")
         return
       }
 
-      easybarLog.debug(
-        """
-        \(label) applied snapshot
-        access_granted=\(snapshot.accessGranted)
-        permission_state=\(snapshot.permissionState)
-        events=\(snapshot.events.count)
-        sections=\(snapshot.sections.count)
-        """
+      logger.debug(
+        "\(label) applied snapshot",
+        "permission_state", snapshot.permissionState,
+        "access_granted", snapshot.accessGranted,
+        "events", snapshot.events.count,
+        "sections", snapshot.sections.count
       )
+
       applySnapshot(snapshot)
       CalendarAgentEventRelay.shared.noteSnapshotUpdate()
 
     case .error:
-      easybarLog.warn("\(label) received error message=\(response.message ?? "unknown")")
+      logger.warn("\(label) received error", "message", response.message ?? "unknown")
       clearState()
 
     case .version:

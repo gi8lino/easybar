@@ -1,16 +1,37 @@
+import EasyBarShared
 import Foundation
 
 @MainActor
 final class NativeWidgetRegistry {
-
   private struct Registration {
     let enabled: Bool
     let makeWidget: () -> NativeWidget
   }
 
-  static let shared = NativeWidgetRegistry()
+  private static var sharedInstance: NativeWidgetRegistry?
 
+  /// Returns the configured shared native widget registry.
+  static var shared: NativeWidgetRegistry {
+    guard let sharedInstance else {
+      fatalError(
+        "NativeWidgetRegistry.bootstrap(logger:) must be called before NativeWidgetRegistry.shared"
+      )
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared native widget registry.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = NativeWidgetRegistry(logger: logger)
+  }
+
+  private let logger: ProcessLogger
   private var widgets: [NativeWidget] = []
+
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts all enabled native widgets.
   func start() {
@@ -29,11 +50,11 @@ final class NativeWidgetRegistry {
 
   /// Registers all enabled native widgets.
   private func registerAll() {
-    easybarLog.info("native widget registry registerAll begin")
+    logger.info("native widget registry registerAll begin")
 
     stopAll()
 
-    easybarLog.info("registering native widgets")
+    logger.info("registering native widgets")
     logConfig()
 
     NativeGroupRegistry.shared.reload()
@@ -44,17 +65,17 @@ final class NativeWidgetRegistry {
     applyNativeEventSubscriptions()
     startWidgets()
 
-    easybarLog.info("native widget registry registerAll end")
+    logger.info("native widget registry registerAll end")
   }
 
   /// Stops and clears all widgets.
   private func stopAll() {
     if !widgets.isEmpty {
-      easybarLog.info("native widget registry stopping count=\(widgets.count)")
+      logger.info("native widget registry stopping", "count", widgets.count)
     }
 
     for widget in widgets {
-      easybarLog.debug("stopping native widget id=\(widget.rootID)")
+      logger.debug("stopping native widget", "id", widget.rootID)
       widget.stop()
     }
 
@@ -98,13 +119,13 @@ final class NativeWidgetRegistry {
       result.formUnion(widget.appEventSubscriptions)
     }
 
-    easybarLog.debug("native widget event subscriptions=\(subscriptions)")
+    logger.debug("native widget event subscriptions", "subscriptions", subscriptions)
     EventManager.shared.setNativeSubscriptions(subscriptions)
   }
 
   /// Logs the current built-in widget enablement snapshot.
   private func logConfig() {
-    easybarLog.info(
+    logger.info(
       "native widget config",
       "spaces", Config.shared.builtinSpaces.enabled,
       "battery", Config.shared.builtinBattery.enabled,
@@ -122,7 +143,7 @@ final class NativeWidgetRegistry {
 
   /// Logs the final registered widget ids.
   private func logRegisteredWidgets() {
-    easybarLog.info(
+    logger.info(
       "native widgets registered",
       "count", widgets.count,
       "ids", widgets.map(\.rootID).joined(separator: ",")
@@ -132,7 +153,7 @@ final class NativeWidgetRegistry {
   /// Starts all currently registered widgets.
   private func startWidgets() {
     for widget in widgets {
-      easybarLog.debug("starting native widget id=\(widget.rootID)")
+      logger.debug("starting native widget", "id", widget.rootID)
       widget.start()
     }
   }

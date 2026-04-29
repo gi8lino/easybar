@@ -2,8 +2,25 @@ import EasyBarShared
 import Foundation
 
 final class MonthCalendarAgentClient {
+  private static var sharedInstance: MonthCalendarAgentClient?
 
-  static let shared = MonthCalendarAgentClient()
+  /// Returns the configured shared month-calendar agent client.
+  static var shared: MonthCalendarAgentClient {
+    guard let sharedInstance else {
+      fatalError(
+        "MonthCalendarAgentClient.bootstrap(logger:) must be called before MonthCalendarAgentClient.shared"
+      )
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared month-calendar agent client.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = MonthCalendarAgentClient(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private let preloadQueue = DispatchQueue(
     label: "easybar.month-calendar.preload",
@@ -24,10 +41,13 @@ final class MonthCalendarAgentClient {
     },
     clearState: {
       NativeMonthCalendarStore.shared.clear()
-    }
+    },
+    logger: logger
   )
 
-  private init() {}
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Returns whether the month-calendar agent client is currently active.
   var isConnected: Bool {
@@ -125,7 +145,7 @@ final class MonthCalendarAgentClient {
   ) {
     let socketPath = Config.shared.calendarAgentSocketPath
 
-    DispatchQueue.global(qos: .userInitiated).async {
+    DispatchQueue.global(qos: .userInitiated).async { [logger] in
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,
@@ -141,19 +161,18 @@ final class MonthCalendarAgentClient {
 
           case .error:
             let message = response.message ?? "unknown"
-            easybarLog.error("month calendar mutation failed message=\(message)")
+            logger.error("month calendar mutation failed", "message", message)
             completion(false, message)
 
           default:
-            easybarLog.error(
-              "month calendar mutation unexpected response=\(response.kind.rawValue)"
-            )
+            logger.error(
+              "month calendar mutation unexpected response", "response", response.kind.rawValue)
             completion(false, "unexpected_response")
           }
         }
       } catch {
         Task { @MainActor in
-          easybarLog.error("month calendar mutation failed error=\(error)")
+          logger.error("month calendar mutation failed", "error", error)
           completion(false, error.localizedDescription)
         }
       }
@@ -174,8 +193,12 @@ final class MonthCalendarAgentClient {
     let monthConfig = calendarConfig.month.popup
     let upcomingBirthdays = calendarConfig.upcoming.birthdays
 
-    easybarLog.debug(
-      "requesting month calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) show_birthdays=\(monthConfig.showBirthdays) birthdays_show_age=\(monthConfig.birthdaysShowAge)"
+    logger.debug(
+      "requesting month calendar snapshot",
+      "start", requestedRange.start.timeIntervalSince1970,
+      "end", requestedRange.end.timeIntervalSince1970,
+      "show_birthdays", monthConfig.showBirthdays,
+      "birthdays_show_age", monthConfig.birthdaysShowAge
     )
 
     let query = CalendarAgentQuery(

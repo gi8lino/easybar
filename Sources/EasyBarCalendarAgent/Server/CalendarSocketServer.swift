@@ -18,10 +18,7 @@ final class CalendarSocketServer {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "calendar agent",
-      debugLog: logger.debug,
-      infoLog: logger.info,
-      warnLog: logger.warn,
-      errorLog: logger.error
+      logger: logger,
     )
   }
 
@@ -65,10 +62,8 @@ final class CalendarSocketServer {
   {
     logger.debug(
       "calendar agent request",
-      formatLogFields(
-        "fd", clientFD,
-        "command", request.command.rawValue
-      )
+      "fd", clientFD,
+      "command", request.command.rawValue,
     )
 
     switch request.command {
@@ -126,7 +121,7 @@ final class CalendarSocketServer {
       transport.addSubscriber(Subscriber(query: query), for: clientFD)
       logger.info(
         "calendar agent subscriber added",
-        formatLogFields("fd", clientFD)
+        "fd", clientFD,
       )
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
@@ -167,10 +162,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event creation failed",
-          formatLogFields(
-            "error", error,
-            "code", code.rawValue
-          )
+          "error", error,
+          "code", code.rawValue,
         )
         _ = transport.send(
           CalendarAgentMessage(
@@ -204,10 +197,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event update failed",
-          formatLogFields(
-            "error", error,
-            "code", code.rawValue
-          )
+          "error", error,
+          "code", code.rawValue,
         )
         _ = transport.send(
           CalendarAgentMessage(
@@ -241,10 +232,8 @@ final class CalendarSocketServer {
         let code = errorCode(for: error, fallback: .unknown)
         logger.error(
           "calendar event delete failed",
-          formatLogFields(
-            "error", error,
-            "code", code.rawValue
-          )
+          "error", error,
+          "code", code.rawValue,
         )
         _ = transport.send(
           CalendarAgentMessage(

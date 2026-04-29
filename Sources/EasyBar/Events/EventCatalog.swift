@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 /// Shared event-name catalog and Lua parity checks.
@@ -18,13 +19,13 @@ enum EventCatalog {
     .union([forcedEventName])
 
   /// Verifies that the Lua token file matches the Swift event catalog.
-  static func validateLuaDefinitions() {
+  static func validateLuaDefinitions(logger: ProcessLogger) {
     let warnings = currentLuaDefinitionWarnings()
 
     guard !warnings.isEmpty else { return }
 
     for warning in warnings {
-      easybarLog.warn(warning)
+      logger.warn(warning)
     }
   }
 
@@ -37,30 +38,35 @@ enum EventCatalog {
     }
 
     var warnings: [String] = []
+
     appendMismatchWarnings(
       label: "generated lua event tokens",
       expected: luaTokenEventNames,
       actual: catalog.luaTokenNames,
       warnings: &warnings
     )
+
     appendMismatchWarnings(
       label: "generated lua driver events",
       expected: luaDriverEventNames,
       actual: catalog.luaDriverNames,
       warnings: &warnings
     )
+
     appendMismatchWarnings(
       label: "generated mouse buttons",
       expected: Set(MouseButton.allCases.map(\.rawValue)),
       actual: catalog.mouseButtons,
       warnings: &warnings
     )
+
     appendMismatchWarnings(
       label: "generated scroll directions",
       expected: Set(ScrollDirection.allCases.map(\.rawValue)),
       actual: catalog.scrollDirections,
       warnings: &warnings
     )
+
     return warnings
   }
 
@@ -119,7 +125,8 @@ enum EventCatalog {
 
     if !unexpected.isEmpty {
       warnings.append(
-        "\(label) contain names missing from Swift: \(unexpected.joined(separator: ", "))")
+        "\(label) contain names missing from Swift: \(unexpected.joined(separator: ", "))"
+      )
     }
   }
 }

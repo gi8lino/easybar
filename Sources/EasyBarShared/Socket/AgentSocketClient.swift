@@ -12,15 +12,9 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private let onDisconnected: (() -> Void)?
   private let onDecodedMessage: (() -> Void)?
   private let onDecodeError: (() -> Void)?
-
-  private let debugLog: (String) -> Void
-  private let infoLog: (String) -> Void
-  private let warnLog: (String) -> Void
-  private let errorLog: (String) -> Void
+  private let logger: ProcessLogger
 
   private let lock = NSLock()
-  private let encoder = JSONEncoder()
-  private let decoder = JSONDecoder()
   private let queue: DispatchQueue
   private let reconnectDelay: TimeInterval = 2
 
@@ -41,10 +35,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     onDisconnected: (() -> Void)? = nil,
     onDecodedMessage: (() -> Void)? = nil,
     onDecodeError: (() -> Void)? = nil,
-    debugLog: @escaping (String) -> Void = { _ in },
-    infoLog: @escaping (String) -> Void = { _ in },
-    warnLog: @escaping (String) -> Void = { _ in },
-    errorLog: @escaping (String) -> Void = { _ in }
+    logger: ProcessLogger
   ) {
     self.label = label
     self.socketPath = socketPath
@@ -55,34 +46,32 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     self.onDisconnected = onDisconnected
     self.onDecodedMessage = onDecodedMessage
     self.onDecodeError = onDecodeError
-    self.debugLog = debugLog
-    self.infoLog = infoLog
-    self.warnLog = warnLog
-    self.errorLog = errorLog
+    self.logger = logger
 
     queue = DispatchQueue(
       label: "easybar.\(label.replacingOccurrences(of: " ", with: "-"))",
       qos: .utility
     )
-
-    encoder.dateEncodingStrategy = .iso8601
-    decoder.dateDecodingStrategy = .iso8601
   }
 
   /// Returns whether the client currently has an open socket.
   public var isConnected: Bool {
-    withLock { running && socketFD >= 0 }
+    withLock {
+      running && socketFD >= 0
+    }
   }
 
   /// Starts the client connection loop.
   public func start() {
     let shouldConnect = withLock { () -> Bool in
       guard !running else { return false }
+
       running = true
       return true
     }
 
     guard shouldConnect else { return }
+
     connect()
   }
 
@@ -97,6 +86,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       let currentFD = socketFD
       socketFD = -1
       activeConnectionID &+= 1
+
       return currentFD
     }
 
@@ -121,7 +111,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     guard connection.fd >= 0 else { return }
 
     guard send(subscribeRequest(), to: connection.fd) else {
-      warnLog("\(label) failed to send refresh request")
+      logger.warn("\(label) failed to send refresh request")
       handleDisconnect(fd: connection.fd, connectionID: connection.id)
       return
     }
@@ -145,10 +135,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       self.onConnected?()
-      self.infoLog("\(self.label) connected socket=\(resolvedSocketPath)")
+      self.logger.info("\(self.label) connected socket=\(resolvedSocketPath)")
 
       guard self.send(self.subscribeRequest(), to: fd) else {
-        self.warnLog("\(self.label) failed to send subscribe request")
+        self.logger.warn("\(self.label) failed to send subscribe request")
         self.handleDisconnect(fd: fd, connectionID: connectionID)
         return
       }
@@ -163,7 +153,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     var pending = Data()
 
     while isActiveConnection(fd: fd, connectionID: connectionID) {
-      let count = read(fd, &buffer, buffer.count)
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return Darwin.read(fd, baseAddress, rawBuffer.count)
+      }
 
       if count > 0 {
         pending.append(contentsOf: buffer.prefix(count))
@@ -180,7 +173,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
         continue
       }
 
-      debugLog("\(label) read failed errno=\(errno)")
+      logger.debug("\(label) read failed errno=\(errno)")
       break
     }
 
@@ -194,6 +187,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       pending.removeSubrange(...newlineIndex)
 
       guard !line.isEmpty else { continue }
+
       handleMessageData(Data(line))
     }
   }
@@ -201,37 +195,40 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   /// Decodes one trailing line without a terminating newline when present.
   private func flushPendingLine(_ pending: inout Data) {
     guard !pending.isEmpty else { return }
+
     handleMessageData(pending)
     pending.removeAll()
   }
 
   /// Decodes one message payload and forwards it to the caller.
   private func handleMessageData(_ data: Data) {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+
     do {
       let message = try decoder.decode(Message.self, from: data)
       onDecodedMessage?()
       handleMessage(message)
     } catch {
       onDecodeError?()
-      warnLog("\(label) failed to decode message: \(error)")
+      logger.warn("\(label) failed to decode message error=\(error)")
     }
   }
 
   /// Handles one socket disconnect and schedules reconnect when still running.
   private func handleDisconnect(fd: Int32, connectionID: UInt64) {
     let wasActive = clearConnectedSocketFD(fd, connectionID: connectionID)
+    guard wasActive else { return }
 
     shutdown(fd, SHUT_RDWR)
     close(fd)
-
-    guard wasActive else { return }
 
     clearState()
     onDisconnected?()
 
     guard isRunning() else { return }
 
-    infoLog("\(label) disconnected")
+    logger.info("\(label) disconnected")
     scheduleReconnect()
   }
 
@@ -249,31 +246,38 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       reconnectWorkItem = workItem
+
       let delay = nextReconnectDelayOverride ?? reconnectDelay
       nextReconnectDelayOverride = nil
+
       return (true, delay)
     }
 
     guard shouldSchedule else { return }
 
-    debugLog("\(label) scheduling reconnect delay=\(scheduledDelay)")
+    logger.debug("\(label) scheduling reconnect delay=\(scheduledDelay)")
     queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
   }
 
   /// Sends one encoded request line to the connected socket.
   private func send(_ request: Request, to fd: Int32) -> Bool {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+
     do {
-      let data = try encoder.encode(request) + Data("\n".utf8)
+      let data = try encoder.encode(request) + Data([0x0A])
       return writeAll(data, to: fd)
     } catch {
-      warnLog("\(label) failed to encode request: \(error)")
+      logger.warn("\(label) failed to encode request error=\(error)")
       return false
     }
   }
 
   /// Returns whether the client is still running.
   private func isRunning() -> Bool {
-    withLock { running }
+    withLock {
+      running
+    }
   }
 
   /// Returns whether the given socket still belongs to the active connection.
@@ -294,12 +298,12 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private func openConnectedSocket(socketPath: String) -> Int32? {
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      errorLog("\(label) failed to create socket")
+      logger.error("\(label) failed to create socket errno=\(errno)")
       return nil
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      errorLog("\(label) failed to configure socket no-sigpipe")
+      logger.error("\(label) failed to configure socket no-sigpipe fd=\(fd)")
       close(fd)
       return nil
     }
@@ -314,7 +318,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
 
     guard connectResult == 0 else {
-      debugLog("\(label) connect failed socket=\(socketPath)")
+      logger.debug("\(label) connect failed socket=\(socketPath) errno=\(errno)")
       close(fd)
       return nil
     }
@@ -329,8 +333,10 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
       reconnectWorkItem?.cancel()
       reconnectWorkItem = nil
+
       socketFD = fd
       activeConnectionID &+= 1
+
       return activeConnectionID
     }
   }
@@ -351,6 +357,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private func withLock<T>(_ body: () -> T) -> T {
     lock.lock()
     defer { lock.unlock() }
+
     return body()
   }
 }

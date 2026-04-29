@@ -3,19 +3,40 @@ import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
 final class CalendarAgentEventRelay {
-  static let shared = CalendarAgentEventRelay()
+  private static var sharedInstance: CalendarAgentEventRelay?
+
+  /// Returns the configured shared calendar-agent event relay.
+  static var shared: CalendarAgentEventRelay {
+    guard let sharedInstance else {
+      fatalError(
+        "CalendarAgentEventRelay.bootstrap(logger:) must be called before CalendarAgentEventRelay.shared"
+      )
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared calendar-agent event relay.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = CalendarAgentEventRelay(logger: logger)
+  }
 
   private let queue = DispatchQueue(label: "easybar.calendar-agent.event-relay")
+  private let logger: ProcessLogger
+
   private var running = false
   private var generation: UInt64 = 0
+
   private lazy var scheduler = DebouncedActionScheduler(
     label: "calendar agent event relay",
     delay: 0.05,
     queue: queue,
-    debugLog: easybarLog.debug
+    logger: logger
   )
 
-  private init() {}
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Activates the relay for runtime event delivery.
   func start() {

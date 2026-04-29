@@ -2,7 +2,21 @@ import EasyBarShared
 import Foundation
 
 final class NativeMonthCalendarStore: ObservableObject {
-  static let shared = NativeMonthCalendarStore()
+  private static var sharedInstance: NativeMonthCalendarStore?
+
+  static var shared: NativeMonthCalendarStore {
+    guard let sharedInstance else {
+      fatalError(
+        "NativeMonthCalendarStore.bootstrap(logger:) must be called before NativeMonthCalendarStore.shared"
+      )
+    }
+
+    return sharedInstance
+  }
+
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = NativeMonthCalendarStore(logger: logger)
+  }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var sections: [NativeMonthCalendarPopupSection] = []
@@ -13,19 +27,29 @@ final class NativeMonthCalendarStore: ObservableObject {
   private var focusedVisibleMonth: Date?
   private var subscribedMonthRadius: Int?
 
-  private init() {}
+  let logger: ProcessLogger
+
+  private init(
+    logger: ProcessLogger
+  ) {
+    self.logger = logger
+  }
 
   /// Applies one calendar snapshot to the shared store.
   func apply(snapshot: EasyBarShared.CalendarAgentSnapshot) {
-    easybarLog.debug(
-      "month calendar popup applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) events=\(snapshot.events.count) sections=\(snapshot.sections.count)"
+    logger.debug(
+      "month calendar popup applied snapshot",
+      "access_granted", "\(snapshot.accessGranted)",
+      "permission_state", "\(snapshot.permissionState)",
+      "events", "\(snapshot.events.count)",
+      "sections", "\(snapshot.sections.count)"
     )
     publish(snapshot: snapshot)
   }
 
   /// Clears the current calendar snapshot.
   func clear() {
-    easybarLog.debug("month calendar popup cleared")
+    logger.debug("month calendar popup cleared")
     publish(snapshot: nil)
   }
 
@@ -109,8 +133,12 @@ final class NativeMonthCalendarStore: ObservableObject {
       focusedVisibleMonth = startOfVisibleMonth
       subscribedMonthRadius = normalizedRadius
 
-      easybarLog.debug(
-        "month calendar store prepared subscription range month=\(debugDate(startOfVisibleMonth)) radius=\(normalizedRadius) start=\(debugDate(preparedRange.start)) end=\(debugDate(preparedRange.end))"
+      logger.debug(
+        "month calendar store prepared subscription range",
+        "month", "\(debugDate(startOfVisibleMonth))",
+        "radius", "\(normalizedRadius)",
+        "start", "\(debugDate(preparedRange.start))",
+        "end", "\(debugDate(preparedRange.end))",
       )
     }
 
@@ -130,8 +158,11 @@ final class NativeMonthCalendarStore: ObservableObject {
       self.sections = snapshot?.sections ?? []
       self.events = snapshot?.events ?? []
 
-      easybarLog.debug(
-        "month calendar store published snapshot_present=\(snapshot != nil) events=\(self.events.count) sections=\(self.sections.count)"
+      self.logger.debug(
+        "month calendar store published",
+        "snapshot_present", "\(snapshot != nil)",
+        "events", "\(self.events.count)",
+        "sections", "\(self.sections.count)",
       )
     }
 

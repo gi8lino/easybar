@@ -19,7 +19,7 @@ final class CalendarAuthorizationController {
     self.eventStore = eventStore
     self.authState = authState
     self.logger = logger
-    self.retryBackoff = AuthorizationRetryBackoff(debugLog: logger.debug)
+    retryBackoff = AuthorizationRetryBackoff(logger: logger)
   }
 
   /// Starts authorization handling and requests access when needed.
@@ -28,10 +28,9 @@ final class CalendarAuthorizationController {
 
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
+
     logger.info(
-      "calendar agent authorization status before",
-      formatLogFields("start", authState.describe(status))
-    )
+      "calendar agent authorization status before", "start", "\(authState.describe(status))")
 
     requestAccessIfNeeded()
   }
@@ -66,10 +65,8 @@ final class CalendarAuthorizationController {
   private func requestAccessIfNeeded() {
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
-    logger.info(
-      "calendar agent access",
-      formatLogFields("status", authState.describe(status))
-    )
+
+    logger.info("calendar agent access status=\(authState.describe(status))")
 
     switch status {
     case .authorized, .fullAccess:
@@ -79,6 +76,7 @@ final class CalendarAuthorizationController {
 
     case .notDetermined:
       logger.info("requesting calendar full access")
+
       eventStore.requestFullAccessToEvents { [weak self] granted, error in
         guard let self else { return }
 
@@ -88,21 +86,16 @@ final class CalendarAuthorizationController {
         if let error {
           self.logger.error(
             "calendar agent access request failed",
-            formatLogFields(
-              "status", self.authState.describe(newStatus),
-              "error", error
-            )
-          )
+            "status", "\(self.authState.describe(newStatus))",
+            "error", "\(error)")
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
           return
         }
 
         self.logger.info(
           "calendar agent access request completed",
-          formatLogFields(
-            "granted", granted,
-            "status", self.authState.describe(newStatus)
-          )
+          "granted", "\(granted)",
+          "status=\(self.authState.describe(newStatus))"
         )
 
         guard granted else {
@@ -112,6 +105,7 @@ final class CalendarAuthorizationController {
 
         self.retryBackoff.reset()
         self.authState.markGrantedInProcess()
+
         DispatchQueue.main.async {
           self.onResolvedChange?()
         }
@@ -119,17 +113,11 @@ final class CalendarAuthorizationController {
 
     case .denied, .restricted, .writeOnly:
       retryBackoff.reset()
-      logger.warn(
-        "calendar agent access unavailable",
-        formatLogFields("status", authState.describe(status))
-      )
+      logger.warn("calendar agent access unavailable", "status", "\(authState.describe(status))")
 
     @unknown default:
       retryBackoff.reset()
-      logger.warn(
-        "calendar agent access status unknown",
-        formatLogFields("raw", status.rawValue)
-      )
+      logger.warn("calendar agent access status unknown", "raw", "\(status.rawValue)")
     }
   }
 

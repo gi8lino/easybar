@@ -1,10 +1,13 @@
+import EasyBarShared
 import Foundation
 
 /// Handles stdin/stdout/stderr transport for the Lua runtime process.
 final class LuaTransport {
+  private let logger: ProcessLogger
+  private let logBridge: LuaLogBridge
+
   private let stateQueue = DispatchQueue(label: "easybar.lua.transport.state")
   private let writeQueue = DispatchQueue(label: "easybar.lua.transport.write")
-  private let logBridge = LuaLogBridge()
 
   private var generation: UInt64 = 0
 
@@ -13,6 +16,12 @@ final class LuaTransport {
   private(set) var errorPipe: Pipe?
 
   private var stdoutHandler: (@Sendable (String) -> Void)?
+
+  /// Creates one Lua transport.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    self.logBridge = LuaLogBridge(logger: logger)
+  }
 
   /// Attaches the transport to the given process pipes.
   func attach(
@@ -80,16 +89,16 @@ final class LuaTransport {
 
       let pipe = self.stateQueue.sync { self.inputPipe }
       guard let pipe else {
-        easybarLog.debug("cannot send event, lua stdin not available")
+        self.logger.debug("cannot send event, lua stdin not available")
         return
       }
 
       do {
         try pipe.fileHandleForWriting.write(contentsOf: data)
         MetricsCoordinator.shared.recordLuaWrite()
-        easybarLog.debug("sent to lua stdin: \(string)")
+        self.logger.debug("sent to lua stdin: \(string)")
       } catch {
-        easybarLog.error("failed writing to lua stdin: \(error)")
+        self.logger.error("failed writing to lua stdin: \(error)")
       }
     }
   }
@@ -101,9 +110,9 @@ final class LuaTransport {
   ) {
     guard let pipe = outputPipe else { return }
 
-    installReadabilityHandler(on: pipe, generation: generation) { line in
+    installReadabilityHandler(on: pipe, generation: generation) { [logger] line in
       MetricsCoordinator.shared.recordLuaStdoutLine()
-      easybarLog.debug("lua stdout raw: \(line)")
+      logger.debug("lua stdout raw: \(line)")
       stdoutHandler?(line)
     }
   }

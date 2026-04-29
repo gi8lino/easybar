@@ -1,8 +1,25 @@
 import CoreAudio
+import EasyBarShared
 import Foundation
 
 final class VolumeEvents {
-  static let shared = VolumeEvents()
+  private static var sharedInstance: VolumeEvents?
+
+  /// Returns the configured shared volume event source.
+  static var shared: VolumeEvents {
+    guard let sharedInstance else {
+      fatalError("VolumeEvents.bootstrap(logger:) must be called before VolumeEvents.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared volume event source.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = VolumeEvents(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private var currentDeviceID: AudioDeviceID?
   private var isSubscribed = false
@@ -13,7 +30,10 @@ final class VolumeEvents {
 
   private var lastMutedState: Bool?
 
-  private init() {}
+  /// Creates one volume event source.
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts observation for output-device, volume, and mute changes.
   func subscribeVolume() {
@@ -23,8 +43,8 @@ final class VolumeEvents {
     installDefaultOutputDeviceListener()
     refreshDeviceSubscription()
 
-    easybarLog.debug("subscribed volume_change")
-    easybarLog.debug("subscribed mute_change")
+    logger.debug("subscribed volume_change")
+    logger.debug("subscribed mute_change")
   }
 
   /// Stops observation for output-device, volume, and mute changes.
@@ -61,7 +81,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      easybarLog.debug("failed to subscribe default output device changes status=\(status)")
+      logger.debug("failed to subscribe default output device changes status=\(status)")
       return
     }
 
@@ -71,6 +91,7 @@ final class VolumeEvents {
   /// Removes the default output device listener.
   private func uninstallDefaultOutputDeviceListener() {
     guard let block = defaultDeviceListener else { return }
+
     defer { defaultDeviceListener = nil }
 
     let status = removeListener(
@@ -80,7 +101,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      easybarLog.debug("failed to remove default output device listener status=\(status)")
+      logger.debug("failed to remove default output device listener status=\(status)")
       return
     }
   }
@@ -90,7 +111,7 @@ final class VolumeEvents {
     let newDeviceID = defaultOutputDeviceID()
 
     guard let newDeviceID else {
-      easybarLog.debug("no default output device found")
+      logger.debug("no default output device found")
       return
     }
 
@@ -126,7 +147,7 @@ final class VolumeEvents {
     )
 
     guard volumeStatus == noErr else {
-      easybarLog.debug("failed to subscribe volume listener status=\(volumeStatus)")
+      logger.debug("failed to subscribe volume listener status=\(volumeStatus)")
       return
     }
 
@@ -156,7 +177,7 @@ final class VolumeEvents {
     )
 
     guard muteStatus == noErr else {
-      easybarLog.debug("mute listener unavailable on current output device status=\(muteStatus)")
+      logger.debug("mute listener unavailable on current output device status=\(muteStatus)")
       return
     }
 
@@ -177,7 +198,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        easybarLog.debug("failed to remove volume listener status=\(status)")
+        logger.debug("failed to remove volume listener status=\(status)")
         return
       }
     }
@@ -192,7 +213,7 @@ final class VolumeEvents {
       )
 
       guard status == noErr else {
-        easybarLog.debug("failed to remove mute listener status=\(status)")
+        logger.debug("failed to remove mute listener status=\(status)")
         return
       }
     }
@@ -215,7 +236,7 @@ final class VolumeEvents {
     )
 
     guard status == noErr else {
-      easybarLog.debug("failed to read default output device status=\(status)")
+      logger.debug("failed to read default output device status=\(status)")
       return nil
     }
 
@@ -279,6 +300,7 @@ final class VolumeEvents {
     block: @escaping AudioObjectPropertyListenerBlock
   ) -> OSStatus {
     var address = address
+
     return AudioObjectAddPropertyListenerBlock(
       objectID,
       &address,
@@ -294,6 +316,7 @@ final class VolumeEvents {
     block: @escaping AudioObjectPropertyListenerBlock
   ) -> OSStatus {
     var address = address
+
     return AudioObjectRemovePropertyListenerBlock(
       objectID,
       &address,

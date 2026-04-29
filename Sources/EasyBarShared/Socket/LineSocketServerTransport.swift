@@ -18,6 +18,7 @@ public final class LineSocketServerTransport<
     }
   }
 
+  /// Describes what should happen to a client socket after one request was handled.
   public enum ClientDisposition {
     case close
     case keepOpen
@@ -25,14 +26,12 @@ public final class LineSocketServerTransport<
 
   private let socketPath: String
   private let serverLabel: String
-  private let debugLog: (String) -> Void
-  private let infoLog: (String) -> Void
-  private let warnLog: (String) -> Void
-  private let errorLog: (String) -> Void
+  private let logger: ProcessLogger
 
   private let stateLock = NSLock()
   private let acceptQueue: DispatchQueue
   private let clientQueue: DispatchQueue
+
   private var serverFD: Int32 = -1
   private var running = false
   private var subscribers: [Int32: Subscriber] = [:]
@@ -41,19 +40,17 @@ public final class LineSocketServerTransport<
   public init(
     socketPath: String,
     serverLabel: String,
-    debugLog: @escaping (String) -> Void = { _ in },
-    infoLog: @escaping (String) -> Void = { _ in },
-    warnLog: @escaping (String) -> Void = { _ in },
-    errorLog: @escaping (String) -> Void = { _ in }
+    logger: ProcessLogger
   ) {
     self.socketPath = socketPath
     self.serverLabel = serverLabel
-    self.debugLog = debugLog
-    self.infoLog = infoLog
-    self.warnLog = warnLog
-    self.errorLog = errorLog
+    self.logger = logger
 
-    acceptQueue = DispatchQueue(label: "\(serverLabel).socket.accept", qos: .utility)
+    acceptQueue = DispatchQueue(
+      label: "\(serverLabel).socket.accept",
+      qos: .utility
+    )
+
     clientQueue = DispatchQueue(
       label: "\(serverLabel).socket.client",
       qos: .utility,
@@ -76,14 +73,16 @@ public final class LineSocketServerTransport<
     let socketDir = socketURL.deletingLastPathComponent()
 
     do {
-      try FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true)
+      try FileManager.default.createDirectory(
+        at: socketDir,
+        withIntermediateDirectories: true
+      )
     } catch {
-      errorLog(
-        """
-        \(serverLabel) failed to create socket directory
-        path=\(socketDir.path)
-        error=\(error)
-        """)
+      logger.error(
+        "\(serverLabel) failed to create socket directory",
+        "path", "\(socketDir.path)",
+        "error", "\(error)",
+      )
       return
     }
 
@@ -91,12 +90,18 @@ public final class LineSocketServerTransport<
 
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      errorLog("\(serverLabel) failed to create socket")
+      logger.error(
+        "\(serverLabel) failed to create socket",
+        "errno", "\(errno)",
+      )
       return
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      errorLog("\(serverLabel) failed to configure server socket no-sigpipe")
+      logger.error(
+        "\(serverLabel) failed to configure server socket no-sigpipe",
+        "fd", "\(fd)",
+      )
       close(fd)
       return
     }
@@ -111,25 +116,29 @@ public final class LineSocketServerTransport<
     }
 
     guard bindResult == 0 else {
-      errorLog(
-        """
-        \(serverLabel) bind failed
-        path=\(socketPath)
-        errno=\(errno)
-        """)
+      logger.error(
+        "\(serverLabel) bind failed",
+        "path", "\(socketPath)",
+        "errno", "\(errno)",
+      )
       close(fd)
       return
     }
 
-    chmod(socketPath, mode_t(0o600))
+    if chmod(socketPath, mode_t(0o600)) != 0 {
+      logger.warn(
+        "\(serverLabel) chmod failed",
+        "path", "\(socketPath)",
+        "errno", "\(errno)",
+      )
+    }
 
     guard listen(fd, 8) == 0 else {
-      errorLog(
-        """
-        \(serverLabel) listen failed
-        path=\(socketPath)
-        errno=\(errno)
-        """)
+      logger.error(
+        "\(serverLabel) listen failed",
+        "path", "\(socketPath)",
+        "errno", "\(errno)",
+      )
       close(fd)
       unlink(socketPath)
       return
@@ -138,11 +147,10 @@ public final class LineSocketServerTransport<
     serverFD = fd
     running = true
 
-    infoLog(
-      """
-      \(serverLabel) listening
-      socket_path=\(socketPath)
-      """)
+    logger.info(
+      "\(serverLabel) listening",
+      "socket_path", "\(socketPath)",
+    )
 
     acceptQueue.async { [weak self] in
       self?.acceptLoop(handler: handler)
@@ -176,11 +184,10 @@ public final class LineSocketServerTransport<
     }
 
     unlink(socketPath)
-    infoLog(
-      """
-      \(serverLabel) stopped
-      socket_path=\(socketPath)
-      """)
+    logger.info(
+      "\(serverLabel) stopped",
+      "socket_path=\(socketPath)",
+    )
   }
 
   /// Sends one encoded response to the given client file descriptor.
@@ -190,12 +197,16 @@ public final class LineSocketServerTransport<
     encoder.outputFormatting = [.sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
 
-    guard let data = try? encoder.encode(response) else {
-      errorLog("\(serverLabel) response encode failed")
+    do {
+      let data = try encoder.encode(response) + Data([0x0A])
+      return writeAll(data, to: clientFD)
+    } catch {
+      logger.error(
+        "\(serverLabel) response encode failed",
+        "error", "\(error)",
+      )
       return false
     }
-
-    return writeAll(data + Data([0x0A]), to: clientFD)
   }
 
   /// Adds one subscriber for future broadcasts.
@@ -204,11 +215,10 @@ public final class LineSocketServerTransport<
     subscribers[fd] = subscriber
     stateLock.unlock()
 
-    debugLog(
-      """
-      \(serverLabel) subscriber added
-      fd=\(fd)
-      """)
+    logger.debug(
+      "\(serverLabel) subscriber added",
+      "fd", "\(fd)",
+    )
   }
 
   /// Removes one subscriber and closes its socket.
@@ -222,11 +232,10 @@ public final class LineSocketServerTransport<
     close(fd)
 
     if existed {
-      debugLog(
-        """
-        \(serverLabel) subscriber removed
-        fd=\(fd)
-        """)
+      logger.debug(
+        "\(serverLabel) subscriber removed",
+        "fd", "\(fd)",
+      )
     }
 
     return existed
@@ -235,8 +244,11 @@ public final class LineSocketServerTransport<
   /// Returns a stable snapshot of current subscribers.
   public func subscribersSnapshot() -> [SubscriberEntry] {
     stateLock.lock()
-    let snapshot = subscribers.map { SubscriberEntry(fd: $0.key, subscriber: $0.value) }
+    let snapshot = subscribers.map {
+      SubscriberEntry(fd: $0.key, subscriber: $0.value)
+    }
     stateLock.unlock()
+
     return snapshot
   }
 
@@ -248,18 +260,26 @@ public final class LineSocketServerTransport<
 
       let clientFD = accept(fd, nil, nil)
       if clientFD < 0 {
+        if errno == EINTR {
+          continue
+        }
+
         if !isRunning() {
           break
         }
+
+        logger.debug(
+          "\(serverLabel) accept failed",
+          "errno", "\(errno)",
+        )
         continue
       }
 
       guard configureNoSigPipe(fd: clientFD) else {
-        errorLog(
-          """
-          \(serverLabel) failed to configure client socket no-sigpipe
-          fd=\(clientFD)
-          """)
+        logger.error(
+          "\(serverLabel) failed to configure client socket no-sigpipe",
+          "fd", "\(clientFD)",
+        )
         close(clientFD)
         continue
       }
@@ -272,10 +292,12 @@ public final class LineSocketServerTransport<
 
   /// Reads requests until the client disconnects and invokes the handler for each line.
   private func handleClient(
-    _ clientFD: Int32, handler: @escaping (Int32, Request) -> ClientDisposition
+    _ clientFD: Int32,
+    handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
+
     var pending = Data()
     var buffer = [UInt8](repeating: 0, count: 4096)
 
@@ -294,17 +316,19 @@ public final class LineSocketServerTransport<
             return
           }
         } catch {
-          warnLog(
-            """
-            \(serverLabel) request decode failed
-            error=\(error)
-            """)
+          logger.warn(
+            "\(serverLabel) request decode failed",
+            "error", "\(error)",
+          )
           close(clientFD)
           return
         }
       }
 
-      let count = read(clientFD, &buffer, buffer.count)
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return Darwin.read(clientFD, baseAddress, rawBuffer.count)
+      }
 
       if count > 0 {
         pending.append(contentsOf: buffer.prefix(count))
@@ -320,26 +344,35 @@ public final class LineSocketServerTransport<
         continue
       }
 
+      logger.debug(
+        "\(serverLabel) client read failed",
+        "fd", "\(clientFD)",
+        "errno", "\(errno)",
+      )
       close(clientFD)
       return
     }
   }
 
-  /// Returns the next complete line from the pending buffer when available.
+  /// Returns the next complete non-empty line from the pending buffer when available.
   private func nextLine(from pending: inout Data) -> Data? {
-    guard let newlineIndex = pending.firstIndex(of: 0x0A) else {
-      return nil
+    while let newlineIndex = pending.firstIndex(of: 0x0A) {
+      let line = Data(pending.prefix(upTo: newlineIndex))
+      pending.removeSubrange(...newlineIndex)
+
+      if !line.isEmpty {
+        return line
+      }
     }
 
-    let line = Data(pending.prefix(upTo: newlineIndex))
-    pending.removeSubrange(...newlineIndex)
-    return line.isEmpty ? nil : line
+    return nil
   }
 
   /// Returns whether the server is running.
   private func isRunning() -> Bool {
     stateLock.lock()
     defer { stateLock.unlock() }
+
     return running
   }
 
@@ -347,6 +380,7 @@ public final class LineSocketServerTransport<
   private func currentServerFD() -> Int32 {
     stateLock.lock()
     defer { stateLock.unlock() }
+
     return serverFD
   }
 }

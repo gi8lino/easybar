@@ -1,13 +1,33 @@
+import EasyBarShared
 import Foundation
 
 final class TimerEvents {
-  static let shared = TimerEvents()
+  private static var sharedInstance: TimerEvents?
+
+  /// Returns the configured shared timer event source.
+  static var shared: TimerEvents {
+    guard let sharedInstance else {
+      fatalError("TimerEvents.bootstrap(logger:) must be called before TimerEvents.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared timer event source.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = TimerEvents(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private var minuteTimer: Timer?
   private var secondTimer: Timer?
   private var intervalTimer: Timer?
 
-  private init() {}
+  /// Creates one timer event source.
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts the minute timer used by Lua `minute_tick` subscriptions.
   func startMinuteTimer() {
@@ -18,7 +38,7 @@ final class TimerEvents {
       event: .minuteTick
     )
 
-    easybarLog.debug("minute timer started")
+    logger.debug("minute timer started")
   }
 
   /// Stops the minute timer.
@@ -36,7 +56,7 @@ final class TimerEvents {
       event: .secondTick
     )
 
-    easybarLog.debug("second timer started")
+    logger.debug("second timer started")
   }
 
   /// Stops the second timer.
@@ -54,7 +74,7 @@ final class TimerEvents {
       event: .intervalTick
     )
 
-    easybarLog.debug("interval timer started interval=\(interval)")
+    logger.debug("interval timer started interval=\(interval)")
   }
 
   /// Stops the interval timer.
@@ -95,6 +115,7 @@ final class TimerEvents {
   private func nextBoundary(after date: Date, interval: TimeInterval) -> Date {
     let current = date.timeIntervalSinceReferenceDate
     let nextStep = floor(current / interval) + 1
+
     return Date(timeIntervalSinceReferenceDate: nextStep * interval)
   }
 }

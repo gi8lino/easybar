@@ -6,14 +6,14 @@ import Foundation
 /// This is the single owner of startup, shutdown, reload, file watching,
 /// socket command handling, and runtime refresh orchestration.
 actor RuntimeCoordinator {
-  static let shared = RuntimeCoordinator()
-
+  private let logger: ProcessLogger
   private let configManager = ConfigManager.shared
-  private let fileWatcher = FileWatcher()
-  private let widgetEngine = WidgetEngine.shared
+  private let fileWatcher: FileWatcher
+  private let luaRuntime: LuaRuntime
+  private let widgetEngine: WidgetEngine
 
   private let aeroSpaceService = AeroSpaceService.shared
-  private let socketServer = SocketServer()
+  private let socketServer: SocketServer
   private let metricsCoordinator = MetricsCoordinator.shared
 
   private var watcherTask: Task<Void, Never>?
@@ -24,13 +24,27 @@ actor RuntimeCoordinator {
   private var queuedConfigReload = false
   private var queuedLuaRuntimeRestart = false
 
+  /// Creates one runtime coordinator.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    self.fileWatcher = FileWatcher(logger: logger)
+    luaRuntime = LuaRuntime.shared
+
+    widgetEngine = WidgetEngine(
+      logger: logger,
+      luaRuntime: luaRuntime
+    )
+
+    socketServer = SocketServer(logger: logger)
+  }
+
   /// Starts the actor-owned runtime.
   func start() async {
     guard !started else { return }
     started = true
     lifecycleGeneration &+= 1
 
-    easybarLog.info("runtime coordinator start begin")
+    logger.info("runtime coordinator start begin")
 
     await configureLogging()
 
@@ -45,7 +59,7 @@ actor RuntimeCoordinator {
     await startFileWatcher()
     startSocketServer()
 
-    easybarLog.info("runtime coordinator start end")
+    logger.info("runtime coordinator start end")
   }
 
   /// Stops the actor-owned runtime.
@@ -54,7 +68,7 @@ actor RuntimeCoordinator {
     started = false
     lifecycleGeneration &+= 1
 
-    easybarLog.info("runtime coordinator stop begin")
+    logger.info("runtime coordinator stop begin")
 
     isReloadingConfig = false
     isRestartingLuaRuntime = false
@@ -77,20 +91,20 @@ actor RuntimeCoordinator {
       NativeWidgetRegistry.shared.stop()
     }
 
-    easybarLog.info("runtime coordinator stop end")
+    logger.info("runtime coordinator stop end")
   }
 
   /// Reloads config and reapplies all dependent runtime state.
   func reloadConfig() async {
     if isReloadingConfig || isRestartingLuaRuntime {
       queuedConfigReload = true
-      easybarLog.info("reloadConfig busy; queueing another reload")
+      logger.info("reloadConfig busy; queueing another reload")
       return
     }
 
     let generation = lifecycleGeneration
     isReloadingConfig = true
-    easybarLog.info("reloadConfig begin")
+    logger.info("reloadConfig begin")
 
     let result = await configManager.reload()
     guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
@@ -109,7 +123,6 @@ actor RuntimeCoordinator {
 
     await MainActor.run {
       NativeWidgetRegistry.shared.reload()
-      AppController.shared.handlePostConfigReloadUI()
     }
     guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
       return
@@ -119,15 +132,16 @@ actor RuntimeCoordinator {
     guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
       return
     }
+
     await reloadSocketServerConfiguration()
 
     aeroSpaceService.triggerRefresh()
 
     if let errorMessage = result.errorMessage {
-      easybarLog.warn("config reload completed with error=\(errorMessage)")
+      logger.warn("config reload completed with error=\(errorMessage)")
     }
 
-    easybarLog.info("reloadConfig end")
+    logger.info("reloadConfig end")
     isReloadingConfig = false
 
     if queuedConfigReload {
@@ -146,21 +160,22 @@ actor RuntimeCoordinator {
   func restartLuaRuntime() async {
     if isReloadingConfig || isRestartingLuaRuntime {
       queuedLuaRuntimeRestart = true
-      easybarLog.info("restartLuaRuntime busy; queueing another restart")
+      logger.info("restartLuaRuntime busy; queueing another restart")
       return
     }
 
     let generation = lifecycleGeneration
     isRestartingLuaRuntime = true
-    easybarLog.info("restartLuaRuntime begin")
+    logger.info("restartLuaRuntime begin")
 
     await widgetEngine.reload()
     guard shouldContinueLifecycleWork(generation: generation, operation: "restartLuaRuntime") else {
       return
     }
+
     aeroSpaceService.triggerRefresh()
 
-    easybarLog.info("restartLuaRuntime end")
+    logger.info("restartLuaRuntime end")
     isRestartingLuaRuntime = false
 
     if queuedConfigReload {
@@ -177,15 +192,15 @@ actor RuntimeCoordinator {
 
   /// Refreshes the current runtime without reloading config.
   func refreshRuntime() async {
-    easybarLog.info("refreshRuntime begin")
+    logger.info("refreshRuntime begin")
     aeroSpaceService.triggerRefresh()
     await EventHub.shared.emit(.manualRefresh)
-    easybarLog.info("refreshRuntime end")
+    logger.info("refreshRuntime end")
   }
 
   /// Handles one incoming IPC command.
   func handleSocketCommand(_ command: IPC.Command) async {
-    easybarLog.info("handleSocketCommand command=\(command)")
+    logger.info("handleSocketCommand command=\(command)")
 
     switch command {
     case .workspaceChanged:
@@ -220,7 +235,7 @@ actor RuntimeCoordinator {
     let fileLoggingEnabled = await configManager.loggingEnabled()
     let loggingDirectory = await configManager.loggingDirectory()
 
-    easybarLog.configureRuntimeLogging(
+    logger.configureRuntimeLogging(
       minimumLevel: minimumLevel,
       fileLoggingEnabled: fileLoggingEnabled,
       fileLoggingPath: easyBarLogPath(in: loggingDirectory)
@@ -263,7 +278,7 @@ actor RuntimeCoordinator {
         isRestartingLuaRuntime = false
       }
 
-      easybarLog.info(
+      logger.info(
         "\(operation) aborted because runtime stopped or restarted generation=\(generation) current_generation=\(lifecycleGeneration)"
       )
       return false
@@ -280,7 +295,7 @@ actor RuntimeCoordinator {
       }
     }
 
-    socketServer.start { [weak self] command in
+    socketServer.start { [weak self] (command: IPC.Command) in
       guard let self else { return }
 
       Task {

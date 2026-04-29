@@ -88,7 +88,7 @@ extension Config {
         at: url,
         withIntermediateDirectories: true
       )
-      easybarLog.info("created directory path=\(url.path)")
+      logger?.info("created directory", "path", url.path)
     } catch {
       throw ConfigError.invalidValue(
         path: path,

@@ -32,10 +32,7 @@ final class NetworkSocketServer {
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: componentName,
-      debugLog: logger.debug,
-      infoLog: logger.info,
-      warnLog: logger.warn,
-      errorLog: logger.error
+      logger: logger,
     )
   }
 
@@ -76,10 +73,8 @@ final class NetworkSocketServer {
   {
     logger.debug(
       "\(componentName) request",
-      formatLogFields(
-        "fd", clientFD,
-        "command", request.command.rawValue
-      )
+      "fd", clientFD,
+      "command", request.command.rawValue
     )
 
     switch request.command {
@@ -141,7 +136,7 @@ final class NetworkSocketServer {
       transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
       logger.info(
         "\(componentName) subscriber added",
-        formatLogFields("fd", clientFD)
+        "fd", clientFD
       )
 
       guard transport.send(NetworkAgentMessage(kind: .subscribed), to: clientFD) else {

@@ -55,7 +55,7 @@ extension Config {
         )
       }
     } else {
-      easybarLog.info("using default configuration from \(resolvedConfigPath)")
+      logger?.info("using default configuration", "path", resolvedConfigPath)
 
       try parseApp(from: TOMLTable())
       try parseLogging(from: TOMLTable())

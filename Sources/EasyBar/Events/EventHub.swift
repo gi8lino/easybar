@@ -1,10 +1,33 @@
+import EasyBarShared
 import Foundation
 
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
-  static let shared = EventHub()
+  private static var sharedInstance: EventHub?
 
-  private let luaEventSink = LuaEventSink()
+  /// Returns the configured shared event hub.
+  static var shared: EventHub {
+    guard let sharedInstance else {
+      fatalError("EventHub.bootstrap(logger:luaRuntime:) must be called before EventHub.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared event hub.
+  static func bootstrap(
+    logger: ProcessLogger,
+    luaRuntime: LuaRuntime
+  ) {
+    sharedInstance = EventHub(
+      logger: logger,
+      luaRuntime: luaRuntime
+    )
+  }
+
+  private let logger: ProcessLogger
+  private let luaEventSink: LuaEventSink
+
   private var subscribers: [UUID: Subscriber] = [:]
   private var replayablePayloads: [String: EasyBarEventPayload] = [:]
 
@@ -12,6 +35,18 @@ actor EventHub {
     let eventNames: Set<String>?
     let widgetTargetIDs: Set<String>?
     let continuation: AsyncStream<EasyBarEventPayload>.Continuation
+  }
+
+  /// Creates one event hub.
+  private init(
+    logger: ProcessLogger,
+    luaRuntime: LuaRuntime
+  ) {
+    self.logger = logger
+    self.luaEventSink = LuaEventSink(
+      runtime: luaRuntime,
+      logger: logger
+    )
   }
 
   /// Subscribes to the app-wide event stream.
@@ -177,6 +212,7 @@ actor EventHub {
   /// Logs one emitted payload for verbose debugging.
   private func logEmission(_ payload: EasyBarEventPayload) {
     guard !payload.eventName.isEmpty else { return }
-    easybarLog.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
+
+    logger.trace("emit event \(payload.eventName) payload=\(payload.toDictionary())")
   }
 }

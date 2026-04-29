@@ -1,8 +1,25 @@
 import AppKit
+import EasyBarShared
 import Foundation
 
 final class SystemEvents {
-  static let shared = SystemEvents()
+  private static var sharedInstance: SystemEvents?
+
+  /// Returns the configured shared system event source.
+  static var shared: SystemEvents {
+    guard let sharedInstance else {
+      fatalError("SystemEvents.bootstrap(logger:) must be called before SystemEvents.shared")
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared system event source.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = SystemEvents(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
   private let wakeQueue = DispatchQueue(label: "easybar.system-events.wake")
@@ -16,7 +33,10 @@ final class SystemEvents {
     case displayChange
   }
 
-  private init() {}
+  /// Creates one system event source.
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Starts observation for system wake notifications.
   func subscribeSystemWake() {
@@ -31,7 +51,7 @@ final class SystemEvents {
     }
 
     observers[.systemWake] = observer
-    easybarLog.debug("subscribed system_woke")
+    logger.debug("subscribed system_woke")
   }
 
   /// Stops observation for system wake notifications.
@@ -47,15 +67,18 @@ final class SystemEvents {
       forName: NSWorkspace.willSleepNotification,
       object: nil,
       queue: .main
-    ) { _ in
-      easybarLog.debug("received workspace willSleep notification")
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.logger.debug("received workspace willSleep notification")
+
       Task {
         await EventHub.shared.emit(.sleep)
       }
     }
 
     observers[.sleep] = observer
-    easybarLog.debug("subscribed sleep")
+    logger.debug("subscribed sleep")
   }
 
   /// Stops observation for system sleep notifications.
@@ -71,15 +94,18 @@ final class SystemEvents {
       forName: NSWorkspace.activeSpaceDidChangeNotification,
       object: nil,
       queue: .main
-    ) { _ in
-      easybarLog.debug("received workspace activeSpaceDidChange notification")
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.logger.debug("received workspace activeSpaceDidChange notification")
+
       Task {
         await EventHub.shared.emit(.spaceChange)
       }
     }
 
     observers[.spaceChange] = observer
-    easybarLog.debug("subscribed space_change")
+    logger.debug("subscribed space_change")
   }
 
   /// Stops observation for active space changes.
@@ -95,17 +121,19 @@ final class SystemEvents {
       forName: NSWorkspace.didActivateApplicationNotification,
       object: nil,
       queue: .main
-    ) { notification in
+    ) { [weak self] notification in
+      guard let self else { return }
+
       guard
         let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
           as? NSRunningApplication
       else {
-        easybarLog.debug("received didActivateApplication notification without app payload")
+        self.logger.debug("received didActivateApplication notification without app payload")
         return
       }
 
       let appName = app.localizedName ?? ""
-      easybarLog.debug("received didActivateApplication notification app=\(appName)")
+      self.logger.debug("received didActivateApplication notification app=\(appName)")
 
       Task {
         await EventHub.shared.emit(.appSwitch, appName: appName)
@@ -113,7 +141,7 @@ final class SystemEvents {
     }
 
     observers[.appSwitch] = observer
-    easybarLog.debug("subscribed app_switch")
+    logger.debug("subscribed app_switch")
   }
 
   /// Stops observation for frontmost app changes.
@@ -129,15 +157,18 @@ final class SystemEvents {
       forName: NSApplication.didChangeScreenParametersNotification,
       object: nil,
       queue: .main
-    ) { _ in
-      easybarLog.debug("received didChangeScreenParameters notification")
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.logger.debug("received didChangeScreenParameters notification")
+
       Task {
         await EventHub.shared.emit(.displayChange)
       }
     }
 
     observers[.displayChange] = observer
-    easybarLog.debug("subscribed display_change")
+    logger.debug("subscribed display_change")
   }
 
   /// Stops observation for display configuration changes.
@@ -154,18 +185,21 @@ final class SystemEvents {
     unsubscribeSpaceChange()
     unsubscribeAppSwitch()
     unsubscribeDisplayChange()
-    easybarLog.debug("stopped all system event observers")
+    logger.debug("stopped all system event observers")
   }
 
   /// Coalesces near-simultaneous wake-related notifications into one app event.
   private func scheduleWakeEmission() {
-    easybarLog.debug("received workspace didWake notification")
+    logger.debug("received workspace didWake notification")
 
     pendingWakeWorkItem?.cancel()
 
-    let workItem = DispatchWorkItem {
+    let workItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+
       DispatchQueue.main.async {
-        easybarLog.debug("emitting coalesced system_woke")
+        self.logger.debug("emitting coalesced system_woke")
+
         Task {
           await EventHub.shared.emit(.systemWoke)
         }

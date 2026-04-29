@@ -1,9 +1,15 @@
+import EasyBarShared
 import Foundation
 
 /// Routes structured stderr lines from the Lua runtime into the normal logger.
 final class LuaLogBridge {
-
+  private let logger: ProcessLogger
   private let prefix = "EASYBAR_LOG\t"
+
+  /// Creates one Lua log bridge.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Handles one stderr line from the Lua runtime.
   func handle(_ line: String) {
@@ -30,24 +36,24 @@ final class LuaLogBridge {
 
   /// Logs one raw stderr line that does not follow the structured format.
   private func logRawStderr(_ line: String) {
-    easybarLog.error("lua stderr: \(line)")
+    logger.error("lua stderr: \(line)")
   }
 
   /// Logs one structured Lua message at the requested level.
   private func logFormatted(level: String, message: String) {
     switch level {
     case "TRACE":
-      easybarLog.trace(message)
+      logger.trace(message)
     case "DEBUG":
-      easybarLog.debug(message)
+      logger.debug(message)
     case "INFO":
-      easybarLog.info(message)
+      logger.info(message)
     case "WARN":
-      easybarLog.warn(message)
+      logger.warn(message)
     case "ERROR":
-      easybarLog.error(message)
+      logger.error(message)
     default:
-      easybarLog.info(message)
+      logger.info(message)
     }
   }
 }

@@ -3,8 +3,25 @@ import Foundation
 
 @MainActor
 final class UpcomingCalendarAgentClient {
+  private static var sharedInstance: UpcomingCalendarAgentClient?
 
-  static let shared = UpcomingCalendarAgentClient()
+  /// Returns the configured shared upcoming-calendar agent client.
+  static var shared: UpcomingCalendarAgentClient {
+    guard let sharedInstance else {
+      fatalError(
+        "UpcomingCalendarAgentClient.bootstrap(logger:) must be called before UpcomingCalendarAgentClient.shared"
+      )
+    }
+
+    return sharedInstance
+  }
+
+  /// Configures the shared upcoming-calendar agent client.
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = UpcomingCalendarAgentClient(logger: logger)
+  }
+
+  private let logger: ProcessLogger
 
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
@@ -17,10 +34,13 @@ final class UpcomingCalendarAgentClient {
     },
     clearState: {
       NativeUpcomingCalendarStore.shared.clear()
-    }
+    },
+    logger: logger
   )
 
-  private init() {}
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Returns whether the upcoming-calendar agent client is currently active.
   var isConnected: Bool {
@@ -52,8 +72,12 @@ final class UpcomingCalendarAgentClient {
       now: now
     )
 
-    easybarLog.debug(
-      "requesting upcoming calendar snapshot start=\(requestedRange.start.timeIntervalSince1970) end=\(requestedRange.end.timeIntervalSince1970) days=\(upcoming.events.days) show_birthdays=\(upcoming.birthdays.show)"
+    logger.debug(
+      "requesting upcoming calendar snapshot",
+      "start", requestedRange.start.timeIntervalSince1970,
+      "end", requestedRange.end.timeIntervalSince1970,
+      "days", upcoming.events.days,
+      "show_birthdays", upcoming.birthdays.show
     )
 
     let query = CalendarAgentQuery(

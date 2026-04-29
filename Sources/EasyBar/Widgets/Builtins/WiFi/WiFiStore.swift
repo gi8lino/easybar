@@ -3,11 +3,25 @@ import Foundation
 
 @MainActor
 final class NativeWiFiStore: ObservableObject {
-  static let shared = NativeWiFiStore()
+  private static var sharedInstance: NativeWiFiStore?
+
+  static var shared: NativeWiFiStore {
+    guard let sharedInstance else {
+      fatalError("NativeWiFiStore.bootstrap(logger:) must be called before NativeWiFiStore.shared")
+    }
+
+    return sharedInstance
+  }
+
+  static func bootstrap(logger: ProcessLogger) {
+    sharedInstance = NativeWiFiStore(logger: logger)
+  }
+
   static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")
 
   @Published private(set) var snapshot: NetworkAgentSnapshot?
   private var lastPublishedSignature: Signature?
+  let logger: ProcessLogger
 
   private struct Signature: Equatable {
     let accessGranted: Bool
@@ -18,7 +32,9 @@ final class NativeWiFiStore: ObservableObject {
     let rssi: Int?
   }
 
-  private init() {}
+  private init(logger: ProcessLogger) {
+    self.logger = logger
+  }
 
   /// Applies one new snapshot.
   ///
@@ -29,8 +45,12 @@ final class NativeWiFiStore: ObservableObject {
     guard signature != lastPublishedSignature else { return false }
 
     lastPublishedSignature = signature
-    easybarLog.debug(
-      "wifi widget applied snapshot access_granted=\(snapshot.accessGranted) permission_state=\(snapshot.permissionState) ssid=\(snapshot.ssid ?? "<none>") rssi=\(snapshot.rssi.map(String.init) ?? "<none>")"
+    logger.debug(
+      "wifi widget applied snapshot",
+      "access_granted", "\(snapshot.accessGranted)",
+      "permission_state", "\(snapshot.permissionState)",
+      "ssid", "\(snapshot.ssid ?? "<none>")",
+      "rssi", "\(snapshot.rssi.map(String.init) ?? "<none>")",
     )
     publish(snapshot: snapshot)
     return true
@@ -43,7 +63,7 @@ final class NativeWiFiStore: ObservableObject {
   func clear() -> Bool {
     guard snapshot != nil else { return false }
     lastPublishedSignature = nil
-    easybarLog.debug("wifi widget cleared")
+    logger.debug("wifi widget cleared")
     publish(snapshot: nil)
     return true
   }

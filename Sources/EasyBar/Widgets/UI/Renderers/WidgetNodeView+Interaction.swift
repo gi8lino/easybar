@@ -1,8 +1,17 @@
+import EasyBarShared
 import SwiftUI
 
 // MARK: - Interaction
 
 extension WidgetNodeView {
+  var logger: ProcessLogger {
+    guard let logger = Config.shared.logger else {
+      fatalError("Config logger must be attached before WidgetNodeView interaction setup")
+    }
+
+    return logger
+  }
+
   func styledContainerSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -93,6 +102,7 @@ extension WidgetNodeView {
       WidgetMouseView(
         widgetID: node.root,
         targetWidgetID: node.id,
+        logger: logger,
         tracksHover: tracksHover,
         emitsMouseHover: node.isMouseHoverInteractive,
         emitsMouseDown: node.isMouseDownInteractive,
@@ -139,6 +149,7 @@ extension WidgetNodeView {
         WidgetMouseView(
           widgetID: node.root,
           targetWidgetID: node.id,
+          logger: logger,
           tracksHover: true,
           emitsMouseHover: node.isMouseHoverInteractive,
           emitsMouseDown: node.isMouseDownInteractive,

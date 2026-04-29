@@ -16,6 +16,7 @@ enum EventReplayCatalog {
 
     for invalidation in orderedInvalidations where eventNames.contains(invalidation.eventName) {
       guard let payload = await invalidation.provider() else { continue }
+
       payloads.append(payload)
     }
 
