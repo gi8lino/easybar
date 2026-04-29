@@ -12,11 +12,13 @@ actor FileWatcher {
   private var source: DispatchSourceFileSystemObject?
   private var debounceWorkItem: DispatchWorkItem?
   private var continuation: AsyncStream<Event>.Continuation?
+  private var watcherGeneration: UInt64 = 0
   private let debounceQueue = DispatchQueue(label: "easybar.file-watcher.debounce", qos: .utility)
 
   /// Starts watching the given config file and returns an event stream.
   func start(configPath: String, enabled: Bool) -> AsyncStream<Event> {
     stop()
+    let generation = watcherGeneration
 
     return AsyncStream { continuation in
       Task { [weak self] in
@@ -28,7 +30,8 @@ actor FileWatcher {
         await self.install(
           continuation: continuation,
           configPath: configPath,
-          enabled: enabled
+          enabled: enabled,
+          generation: generation
         )
       }
     }
@@ -36,6 +39,7 @@ actor FileWatcher {
 
   /// Stops the active watcher.
   func stop() {
+    watcherGeneration &+= 1
     debounceWorkItem?.cancel()
     debounceWorkItem = nil
 
@@ -54,13 +58,19 @@ actor FileWatcher {
   private func install(
     continuation: AsyncStream<Event>.Continuation,
     configPath: String,
-    enabled: Bool
+    enabled: Bool,
+    generation: UInt64
   ) {
+    guard generation == watcherGeneration else {
+      continuation.finish()
+      return
+    }
+
     self.continuation = continuation
 
     continuation.onTermination = { [weak self] _ in
       Task {
-        await self?.stop()
+        await self?.handleTermination(generation: generation)
       }
     }
 
@@ -97,6 +107,12 @@ actor FileWatcher {
 
     self.source = source
     source.resume()
+  }
+
+  /// Stops the watcher only when the terminating stream still owns the active installation.
+  private func handleTermination(generation: UInt64) {
+    guard generation == watcherGeneration else { return }
+    stop()
   }
 
   /// Schedules one debounced change event.
