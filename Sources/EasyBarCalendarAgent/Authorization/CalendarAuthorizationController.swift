@@ -30,7 +30,7 @@ final class CalendarAuthorizationController {
     authState.setStatus(status)
     logger.info(
       "calendar agent authorization status before",
-      logFields("start", authState.describe(status))
+      formatLogFields("start", authState.describe(status))
     )
 
     requestAccessIfNeeded()
@@ -68,7 +68,7 @@ final class CalendarAuthorizationController {
     authState.setStatus(status)
     logger.info(
       "calendar agent access",
-      logFields("status", authState.describe(status))
+      formatLogFields("status", authState.describe(status))
     )
 
     switch status {
@@ -88,7 +88,7 @@ final class CalendarAuthorizationController {
         if let error {
           self.logger.error(
             "calendar agent access request failed",
-            logFields(
+            formatLogFields(
               "status", self.authState.describe(newStatus),
               "error", error
             )
@@ -99,7 +99,7 @@ final class CalendarAuthorizationController {
 
         self.logger.info(
           "calendar agent access request completed",
-          logFields(
+          formatLogFields(
             "granted", granted,
             "status", self.authState.describe(newStatus)
           )
@@ -121,14 +121,14 @@ final class CalendarAuthorizationController {
       retryBackoff.reset()
       logger.warn(
         "calendar agent access unavailable",
-        logFields("status", authState.describe(status))
+        formatLogFields("status", authState.describe(status))
       )
 
     @unknown default:
       retryBackoff.reset()
       logger.warn(
         "calendar agent access status unknown",
-        logFields("raw", status.rawValue)
+        formatLogFields("raw", status.rawValue)
       )
     }
   }

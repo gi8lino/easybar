@@ -158,13 +158,12 @@ final class AppController {
     logProcessStartup(
       processName: "easybar",
       configPath: Config.shared.configPath,
-      socketSummary: "socket path=\(SharedRuntimeConfig.current.easyBarSocketPath)",
-      loggingSummary:
-        """
-        logging enabled=\(easybarLog.fileLoggingEnabled)
-        level=\(easybarLog.minimumLevel.rawValue)
-        path=\(easybarLog.fileLoggingPath)
-        """,
+      socketSummary: formatLogFields("socket_path", SharedRuntimeConfig.current.easyBarSocketPath),
+      loggingSummary: formatLogFields(
+        "logging_enabled", easybarLog.fileLoggingEnabled,
+        "level", easybarLog.minimumLevel.rawValue,
+        "path", easybarLog.fileLoggingPath
+      ),
       write: easybarLog.info
     )
 

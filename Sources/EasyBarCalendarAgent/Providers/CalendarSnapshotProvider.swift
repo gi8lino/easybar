@@ -95,7 +95,7 @@ final class CalendarSnapshotProvider {
     guard hasAccess else {
       logger.debug(
         "calendar snapshot",
-        logFields(
+        formatLogFields(
           "access_granted", false,
           "permission_state", permissionState
         )
@@ -134,7 +134,7 @@ final class CalendarSnapshotProvider {
 
     logger.debug(
       "calendar snapshot",
-      logFields(
+      formatLogFields(
         "access_granted", true,
         "permission_state", permissionState,
         "fetch_start", fetchRange.start,
@@ -180,7 +180,7 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event created",
-      logFields(
+      formatLogFields(
         "title", event.title ?? "Untitled",
         "start", draft.startDate,
         "end", draft.endDate,
@@ -231,7 +231,7 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event updated",
-      logFields(
+      formatLogFields(
         "event_id", draft.eventIdentifier,
         "title", event.title ?? "Untitled",
         "start", draft.startDate,
@@ -263,7 +263,7 @@ final class CalendarSnapshotProvider {
 
     logger.info(
       "calendar event deleted",
-      logFields(
+      formatLogFields(
         "event_id", draft.eventIdentifier,
         "title", event.title ?? "Untitled"
       )

@@ -5,7 +5,7 @@ import XCTest
 final class ProcessLoggerTests: XCTestCase {
   func testLogFieldsFormatsSimplePairs() {
     XCTAssertEqual(
-      logFields(
+      formatLogFields(
         "event", "wifi_change",
         "connected", true,
         "rssi", -51
@@ -16,7 +16,7 @@ final class ProcessLoggerTests: XCTestCase {
 
   func testLogFieldsQuotesWhitespaceAndEmptyValues() {
     XCTAssertEqual(
-      logFields(
+      formatLogFields(
         "message", "hello world",
         "empty", ""
       ),
@@ -26,7 +26,7 @@ final class ProcessLoggerTests: XCTestCase {
 
   func testLogFieldsEscapesSpecialCharacters() {
     XCTAssertEqual(
-      logFields(
+      formatLogFields(
         "payload", "line 1\nline\t2",
         "quote", #"say "hi""#
       ),
@@ -36,7 +36,7 @@ final class ProcessLoggerTests: XCTestCase {
 
   func testLogFieldsFormatsNilAndMissingValue() {
     XCTAssertEqual(
-      logFields(
+      formatLogFields(
         "ssid", nil,
         "orphan"
       ),

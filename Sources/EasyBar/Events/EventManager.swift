@@ -86,19 +86,17 @@ final class EventManager {
     let intervalChanged = desiredInterval != activeInterval
 
     easybarLog.debug(
-      """
-      event manager refresh begin \
-      merged=\(mergedSubscriptions) \
-      active=\(activeSubscriptions) \
-      added=\(added) \
-      removed=\(removed) \
-      source_add=\(sourcesToAdd) \
-      source_remove=\(sourcesToRemove) \
-      interval=\(String(describing: desiredInterval)) \
-      previous_interval=\(String(describing: activeInterval)) \
-      lua=\(luaSubscriptions) \
-      native=\(nativeSubscriptions)
-      """
+      "event manager refresh begin",
+      "merged", mergedSubscriptions,
+      "active", activeSubscriptions,
+      "added", added,
+      "removed", removed,
+      "source_add", sourcesToAdd,
+      "source_remove", sourcesToRemove,
+      "interval", String(describing: desiredInterval),
+      "previous_interval", String(describing: activeInterval),
+      "lua", luaSubscriptions,
+      "native", nativeSubscriptions
     )
 
     unsubscribeSources(sourcesToRemove)

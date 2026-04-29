@@ -48,14 +48,14 @@ public final class NetworkAgentController {
       processName: config.processName,
       configPath: config.configPath,
       socketSummary:
-        logFields(
+        formatLogFields(
           "socket path", "\(config.socketPath)",
           "refresh_interval_seconds", "\(config.refreshIntervalSeconds)",
           "allow_unauthorized_fields_without_location",
           "\(config.allowUnauthorizedFieldsWithoutLocation)",
         ),
       loggingSummary:
-        logFields(
+        formatLogFields(
           "logging enabled", "\(logger.fileLoggingEnabled)",
           "level", "\(logger.minimumLevel.rawValue)",
           "path", "\(logger.fileLoggingPath)",

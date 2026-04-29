@@ -145,12 +145,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       }
 
       self.onConnected?()
-      self.infoLog(
-        """
-        \(self.label) connected
-        socket=\(resolvedSocketPath)
-        """
-      )
+      self.infoLog("\(self.label) connected socket=\(resolvedSocketPath)")
 
       guard self.send(self.subscribeRequest(), to: fd) else {
         self.warnLog("\(self.label) failed to send subscribe request")
@@ -185,12 +180,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
         continue
       }
 
-      debugLog(
-        """
-        \(label) read failed
-        errno=\(errno)
-        """
-      )
+      debugLog("\(label) read failed errno=\(errno)")
       break
     }
 
@@ -266,12 +256,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
     guard shouldSchedule else { return }
 
-    debugLog(
-      """
-      \(label) scheduling reconnect
-      delay=\(scheduledDelay)
-      """
-    )
+    debugLog("\(label) scheduling reconnect delay=\(scheduledDelay)")
     queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
   }
 
@@ -329,11 +314,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
 
     guard connectResult == 0 else {
-      debugLog(
-        """
-        \(label) connect failed
-        socket=\(socketPath)
-        """)
+      debugLog("\(label) connect failed socket=\(socketPath)")
       close(fd)
       return nil
     }

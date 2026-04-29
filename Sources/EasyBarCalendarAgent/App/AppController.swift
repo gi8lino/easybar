@@ -38,17 +38,12 @@ final class AppController {
     logProcessStartup(
       processName: "calendar agent",
       configPath: runtimeConfig.configPath,
-      socketSummary:
-        """
-        socket
-        path=\(runtimeConfig.calendarAgentSocketPath)
-        """,
-      loggingSummary:
-        """
-        logging enabled=\(logger.fileLoggingEnabled)
-        level=\(logger.minimumLevel.rawValue)
-        path=\(logger.fileLoggingPath)
-        """,
+      socketSummary: formatLogFields("socket_path", runtimeConfig.calendarAgentSocketPath),
+      loggingSummary: formatLogFields(
+        "logging_enabled", logger.fileLoggingEnabled,
+        "level", logger.minimumLevel.rawValue,
+        "path", logger.fileLoggingPath
+      ),
       write: logger.info
     )
 

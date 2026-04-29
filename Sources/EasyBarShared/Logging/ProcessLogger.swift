@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 /// Formats alternating key/value components into one compact single-line log field string.
-public func logFields(_ components: Any?...) -> String {
+public func formatLogFields(_ components: Any?...) -> String {
   formatLogFields(components)
 }
 

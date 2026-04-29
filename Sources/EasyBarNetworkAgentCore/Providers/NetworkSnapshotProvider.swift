@@ -49,7 +49,7 @@ public final class NetworkSnapshotProvider {
 
     logger.info(
       "\(componentName) refresh",
-      logFields("interval_seconds", refreshIntervalSeconds)
+      formatLogFields("interval_seconds", refreshIntervalSeconds)
     )
 
     if refreshIntervalSeconds > 0 {
@@ -83,7 +83,7 @@ public final class NetworkSnapshotProvider {
 
     logger.debug(
       "\(componentName) snapshot",
-      logFields(
+      formatLogFields(
         "access_granted", authorizer.isAuthorized(),
         "permission_state", permissionState,
         "ssid", wifi.ssid ?? "<none>",
