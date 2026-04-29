@@ -1,16 +1,20 @@
 import EasyBarShared
 import Foundation
 
+/// Runtime controller for the reusable network agent core.
+///
+/// This type owns the long-running agent services: snapshot collection,
+/// authorization-aware network data access, and socket delivery.
 @MainActor
-public final class NetworkAgentController {
-  private let config: NetworkAgentControllerConfig
+public final class NetworkAgentRuntime {
+  private let config: NetworkAgentRuntimeConfig
   private let snapshotProvider: NetworkSnapshotProvider
   private let socketServer: NetworkSocketServer
   private let logger: ProcessLogger
 
-  /// Builds the network agent controller from one host-provided config.
+  /// Builds the network agent runtime from one host-provided config.
   public init(
-    config: NetworkAgentControllerConfig,
+    config: NetworkAgentRuntimeConfig,
     logger: ProcessLogger,
     promptPresenter: NetworkAuthorizationPromptPresenter? = nil
   ) {

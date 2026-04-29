@@ -1,7 +1,8 @@
 import EasyBarShared
 import Foundation
 
-public struct NetworkAgentControllerConfig {
+/// Configuration for one network agent runtime instance.
+public struct NetworkAgentRuntimeConfig {
   public let isEnabled: Bool
   public let processName: String
   public let componentName: String
@@ -11,6 +12,7 @@ public struct NetworkAgentControllerConfig {
   public let refreshIntervalSeconds: TimeInterval
   public let allowUnauthorizedFieldsWithoutLocation: Bool
 
+  /// Builds one network agent runtime config.
   public init(
     isEnabled: Bool,
     processName: String,
@@ -31,11 +33,12 @@ public struct NetworkAgentControllerConfig {
     self.allowUnauthorizedFieldsWithoutLocation = allowUnauthorizedFieldsWithoutLocation
   }
 
+  /// Builds the default EasyBar network agent runtime config.
   public static func easyBar(
     runtimeConfig: SharedRuntimeConfig,
     appVersion: String
-  ) -> NetworkAgentControllerConfig {
-    NetworkAgentControllerConfig(
+  ) -> NetworkAgentRuntimeConfig {
+    NetworkAgentRuntimeConfig(
       isEnabled: runtimeConfig.networkAgentEnabled,
       processName: "network agent",
       componentName: "network agent",
