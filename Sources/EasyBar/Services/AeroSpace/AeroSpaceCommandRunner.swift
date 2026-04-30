@@ -23,6 +23,7 @@ final class AeroSpaceCommandRunner {
 
     let pipe = Pipe()
     process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
     let outputHandle = pipe.fileHandleForReading
 
     do {
@@ -36,8 +37,6 @@ final class AeroSpaceCommandRunner {
       return nil
     }
 
-    process.waitUntilExit()
-
     let data: Data
     do {
       data = try outputHandle.readToEnd() ?? Data()
@@ -49,6 +48,8 @@ final class AeroSpaceCommandRunner {
       )
       return nil
     }
+
+    process.waitUntilExit()
 
     if process.terminationStatus != 0 {
       logger.debug(
