@@ -103,6 +103,31 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
   }
 
+  func testReplayLatestWithoutEventFilterReplaysAllCachedEventsInStableOrder() async {
+    let hub = Self.makeHub()
+
+    await hub.emit(.secondTick)
+    await hub.emit(.networkChange, primaryInterfaceIsTunnel: true)
+
+    let stream = await hub.subscribe(replayLatest: true)
+
+    let payloads = await Self.collect(
+      from: stream,
+      count: 2,
+      timeoutNanoseconds: 1_000_000_000
+    )
+
+    XCTAssertEqual(
+      payloads.map(\.eventName),
+      [
+        AppEvent.networkChange.rawValue,
+        AppEvent.secondTick.rawValue,
+      ]
+    )
+    XCTAssertEqual(payloads.first?.primaryInterfaceIsTunnel, true)
+    XCTAssertNil(payloads.last?.primaryInterfaceIsTunnel)
+  }
+
   func testReplayLatestDoesNotEmitWhenNoCachedPayloadExists() async {
     let hub = Self.makeHub()
 
@@ -281,6 +306,30 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.deltaY, -8)
   }
 
+  func testEmptyWidgetTargetFilterBehavesLikeUnfilteredWidgetSubscription() async {
+    let hub = Self.makeHub()
+
+    let stream = await hub.subscribe(
+      eventNames: [WidgetEvent.sliderPreview.rawValue],
+      widgetTargetIDs: Set<String>()
+    )
+
+    let task = Task { await Self.next(from: stream) }
+
+    await hub.emitWidgetEvent(
+      .sliderPreview,
+      widgetID: "builtin_volume",
+      targetWidgetID: "volume_slider",
+      value: 0.5
+    )
+
+    let payload = await task.value
+
+    XCTAssertEqual(payload?.eventName, WidgetEvent.sliderPreview.rawValue)
+    XCTAssertEqual(payload?.targetWidgetID, "volume_slider")
+    XCTAssertEqual(payload?.value, 0.5)
+  }
+
   func testWidgetEventFilterStillRequiresMatchingEventName() async {
     let hub = Self.makeHub()
 
@@ -451,6 +500,41 @@ final class EventHubTests: XCTestCase {
     )
   }
 
+  func testDefaultBufferingPolicyUsesSmallestBufferForCoalescingOnlySubscriptions() {
+    let policy = EventDeliveryPolicy.defaultBufferingPolicy(
+      for: [
+        AppEvent.secondTick.rawValue,
+        WidgetEvent.sliderPreview.rawValue,
+      ]
+    )
+
+    XCTAssertEqual(bufferSize(for: policy), 1)
+  }
+
+  func testDefaultBufferingPolicyUsesMediumBufferForMixedSubscriptions() {
+    let policy = EventDeliveryPolicy.defaultBufferingPolicy(
+      for: [
+        AppEvent.secondTick.rawValue,
+        AppEvent.systemWoke.rawValue,
+      ]
+    )
+
+    XCTAssertEqual(bufferSize(for: policy), 8)
+  }
+
+  func testDefaultBufferingPolicyUsesLargestBufferForReliableOnlyOrUnfilteredSubscriptions() {
+    let reliableOnlyPolicy = EventDeliveryPolicy.defaultBufferingPolicy(
+      for: [
+        AppEvent.systemWoke.rawValue,
+        AppEvent.powerSourceChange.rawValue,
+      ]
+    )
+    let unfilteredPolicy = EventDeliveryPolicy.defaultBufferingPolicy(for: nil)
+
+    XCTAssertEqual(bufferSize(for: reliableOnlyPolicy), 32)
+    XCTAssertEqual(bufferSize(for: unfilteredPolicy), 32)
+  }
+
   private static func next(
     from stream: AsyncStream<EasyBarEventPayload>,
     timeoutNanoseconds: UInt64 = 1_000_000_000
@@ -490,6 +574,20 @@ final class EventHubTests: XCTestCase {
       let payloads = await group.next() ?? []
       group.cancelAll()
       return payloads
+    }
+  }
+
+  private func bufferSize(
+    for policy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy
+  ) -> Int? {
+    switch policy {
+    case .unbounded:
+      return nil
+    case .bufferingOldest(let count), .bufferingNewest(let count):
+      return count
+    @unknown default:
+      XCTFail("Unhandled buffering policy")
+      return nil
     }
   }
 }
