@@ -430,6 +430,87 @@ final class ConfigLoaderTests: XCTestCase {
       "expected directory path, but found file at \(blockingFileURL.path)"
     )
   }
+
+  func testReloadNormalizesEnumValuesWithWhitespaceForBuiltins() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("normalized-builtins.toml")
+
+    try writeConfig(
+      """
+      [builtins.time]
+      enabled = true
+      position = " Left "
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+  }
+
+  func testReloadReturnsErrorForUnknownBuiltinGroupReference() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("unknown-group.toml")
+
+    try writeConfig(
+      """
+      [builtins.groups.clock_row]
+      enabled = true
+
+      [builtins.time]
+      enabled = true
+      group = "missing"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.time.group")
+    XCTAssertEqual(
+      configError.detail,
+      "unknown built-in group 'missing'; expected one of clock_row"
+    )
+  }
+
+  func testReloadReturnsErrorForNestedBuiltinGroupReference() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("nested-group.toml")
+
+    try writeConfig(
+      """
+      [builtins.groups.outer]
+      enabled = true
+
+      [builtins.groups.inner]
+      enabled = true
+      group = "outer"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.groups.inner.group")
+    XCTAssertEqual(configError.detail, "built-in groups cannot be nested")
+  }
 }
 
 extension ConfigLoaderTests {
