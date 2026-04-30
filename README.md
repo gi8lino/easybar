@@ -1,5 +1,7 @@
 # EasyBar
 
+![bar](./assets/bar.png)
+
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.
 
 It combines fast native widgets with flexible Lua widgets, so you can use built-ins for common system data and add custom widgets when you need something more specific. EasyBar is designed for a clean workflow on macOS and integrates especially well with AeroSpace.
@@ -28,6 +30,16 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Calendar and network helper agents for permission-sensitive data
 - Homebrew install and service workflow
 - Logging and startup diagnostics for troubleshooting
+
+## Screenshots
+
+**Calendar**
+
+![month_calendar](./assets/month_calendar.png)
+
+**Upcoming**
+
+![upcoming](./assets/upcoming.png)
 
 ## Install
 
