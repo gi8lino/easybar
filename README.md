@@ -482,6 +482,22 @@ easybar --space-mode-changed
 
 For example, after every `layout ...` command in your AeroSpace config, add an `exec-and-forget` call to EasyBar. Without that trigger, EasyBar may not know that the layout mode changed yet.
 
+#### Spaces widget misses an app launch or quit
+
+The built-in spaces widget refreshes AeroSpace-derived state from a mix of AeroSpace callbacks and macOS app lifecycle notifications.
+
+- Workspace and focus changes should be wired from AeroSpace with:
+  - `easybar --workspace-changed`
+  - `easybar --focus-changed`
+- App quits are also refreshed from macOS termination notifications.
+- App launches use a short delayed refresh so background apps such as Docker have a chance to create their first window before EasyBar asks AeroSpace for `list-windows`.
+
+If icons still look stale after a launch, trigger a manual refresh once:
+
+```bash
+easybar --refresh
+```
+
 #### Config changes do not apply
 
 If `watch_config = false`, EasyBar will not automatically reload config changes. Either enable config watching or reload manually:

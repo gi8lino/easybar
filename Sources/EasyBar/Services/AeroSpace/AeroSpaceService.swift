@@ -37,7 +37,9 @@ final class AeroSpaceService: ObservableObject {
   private struct CoordinationState {
     var consumers = Set<String>()
     var appSwitchObserver: NSObjectProtocol?
+    var appLaunchObserver: NSObjectProtocol?
     var appTerminationObserver: NSObjectProtocol?
+    var pendingLaunchRefresh: DispatchWorkItem?
     var running = false
     var generation: UInt64 = 0
   }
@@ -80,6 +82,7 @@ extension AeroSpaceService {
 
     logger.debug("aerospace service start begin")
     subscribeAppSwitches()
+    subscribeAppLaunch()
     subscribeAppTermination()
     refresh()
     logger.debug("aerospace service start end")
@@ -92,10 +95,14 @@ extension AeroSpaceService {
       coordination.running = false
       coordination.generation &+= 1
       let observer = coordination.appSwitchObserver
+      let launchObserver = coordination.appLaunchObserver
       let terminationObserver = coordination.appTerminationObserver
+      coordination.pendingLaunchRefresh?.cancel()
+      coordination.pendingLaunchRefresh = nil
       coordination.appSwitchObserver = nil
+      coordination.appLaunchObserver = nil
       coordination.appTerminationObserver = nil
-      return [observer, terminationObserver].compactMap { $0 }
+      return [observer, launchObserver, terminationObserver].compactMap { $0 }
     }
 
     for observer in observers {
@@ -137,6 +144,8 @@ extension AeroSpaceService {
 
   /// Called by the socket server when an external AeroSpace event occurs.
   func triggerRefresh() {
+    cancelPendingLaunchRefresh(reason: "external trigger")
+
     guard hasConsumers else {
       logger.debug("aerospace refresh skipped, no registered consumers")
       return
@@ -275,6 +284,36 @@ extension AeroSpaceService {
     logger.debug("aerospace app switch observer installed")
   }
 
+  /// Listens for app launches and schedules one delayed refresh.
+  fileprivate func subscribeAppLaunch() {
+    let shouldInstall = withLock { coordination.appLaunchObserver == nil }
+    guard shouldInstall else { return }
+
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didLaunchApplicationNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard
+        let self,
+        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+          as? NSRunningApplication
+      else {
+        return
+      }
+
+      self.scheduleLaunchRefresh(for: app)
+    }
+
+    withLock {
+      if coordination.appLaunchObserver == nil {
+        coordination.appLaunchObserver = observer
+      }
+    }
+
+    logger.debug("aerospace app launch observer installed")
+  }
+
   /// Listens for app termination so workspace icons refresh after apps quit.
   fileprivate func subscribeAppTermination() {
     let shouldInstall = withLock { coordination.appTerminationObserver == nil }
@@ -297,6 +336,7 @@ extension AeroSpaceService {
         "aerospace observed app termination",
         .field("app", app.localizedName ?? "")
       )
+      self.cancelPendingLaunchRefresh(reason: "app terminated")
       self.refresh()
     }
 
@@ -309,8 +349,66 @@ extension AeroSpaceService {
     logger.debug("aerospace app termination observer installed")
   }
 
+  /// Schedules one delayed refresh for freshly launched apps that may create windows later.
+  fileprivate func scheduleLaunchRefresh(for app: NSRunningApplication) {
+    cancelPendingLaunchRefresh(reason: "new app launch")
+
+    logger.debug(
+      "aerospace observed app launch",
+      .field("app", app.localizedName ?? "")
+    )
+
+    let generation = currentGeneration()
+    var workItem: DispatchWorkItem?
+    let refreshWorkItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      guard self.shouldExecute(generation: generation) else { return }
+      guard let workItem else { return }
+      self.clearPendingLaunchRefresh(workItem)
+
+      self.logger.debug(
+        "aerospace delayed launch refresh firing",
+        .field("app", app.localizedName ?? "")
+      )
+      self.refresh()
+    }
+    workItem = refreshWorkItem
+
+    withLock {
+      coordination.pendingLaunchRefresh = refreshWorkItem
+    }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: refreshWorkItem)
+  }
+
+  /// Cancels any delayed launch refresh once a stronger signal arrives first.
+  fileprivate func cancelPendingLaunchRefresh(reason: String) {
+    let workItem = withLock { () -> DispatchWorkItem? in
+      let workItem = coordination.pendingLaunchRefresh
+      coordination.pendingLaunchRefresh = nil
+      return workItem
+    }
+
+    guard let workItem else { return }
+    workItem.cancel()
+    logger.debug(
+      "aerospace delayed launch refresh canceled",
+      .field("reason", reason)
+    )
+  }
+
+  /// Clears the pending launch refresh if it still matches the fired work item.
+  fileprivate func clearPendingLaunchRefresh(_ workItem: DispatchWorkItem) {
+    withLock {
+      guard coordination.pendingLaunchRefresh === workItem else { return }
+      coordination.pendingLaunchRefresh = nil
+    }
+  }
+
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
   fileprivate func applyOptimisticFocusedApp(from app: NSRunningApplication) {
+    cancelPendingLaunchRefresh(reason: "app activated")
+
     let bundlePath = app.bundleURL?.path
     let name = app.localizedName ?? ""
     let id = resolvedAppID(name: name, bundlePath: bundlePath)
