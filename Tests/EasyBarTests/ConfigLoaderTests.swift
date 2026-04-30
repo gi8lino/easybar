@@ -275,6 +275,56 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertTrue(config.builtinCPU.enabled)
     XCTAssertEqual(config.builtinCPU.historySize, 24)
   }
+
+  func testReloadReturnsInvalidTypeForBarHeightStringValue() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-type.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = "tall"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case let .invalidType(path, expected, actual)? = error as? ConfigError else {
+      return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.height")
+    XCTAssertEqual(expected, "integer")
+    XCTAssertEqual(actual, "string(tall)")
+  }
+
+  func testReloadReturnsInvalidTypeForLoggingEnabledStringValue() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-logging-type.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      enabled = "yes"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case let .invalidType(path, expected, actual)? = error as? ConfigError else {
+      return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "logging.enabled")
+    XCTAssertEqual(expected, "bool")
+    XCTAssertEqual(actual, "string(yes)")
+  }
 }
 
 extension ConfigLoaderTests {
