@@ -313,7 +313,7 @@ public final class LineSocketServerTransport<
             return
 
           case .keepOpen:
-            return
+            continue
           }
         } catch {
           logger.warn(
