@@ -325,6 +325,47 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(expected, "bool")
     XCTAssertEqual(actual, "string(yes)")
   }
+
+  func testReloadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("env-logging-precedence.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "info"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.loggingLevel, .trace)
+  }
+
+  func testReloadUsesLegacyLoggingDebugWhenLevelIsAbsent() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("legacy-logging.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      debug = true
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.loggingLevel, .debug)
+  }
 }
 
 extension ConfigLoaderTests {
