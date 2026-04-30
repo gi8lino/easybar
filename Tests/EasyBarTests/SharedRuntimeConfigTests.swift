@@ -79,8 +79,8 @@ final class SharedRuntimeConfigTests: XCTestCase {
   }
 }
 
-private extension SharedRuntimeConfigTests {
-  func makeTemporaryDirectory() throws -> URL {
+extension SharedRuntimeConfigTests {
+  fileprivate func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
         "easybar-shared-runtime-tests-\(UUID().uuidString)",
@@ -95,7 +95,7 @@ private extension SharedRuntimeConfigTests {
     return directoryURL
   }
 
-  func writeConfig(_ content: String, to url: URL) throws {
+  fileprivate func writeConfig(_ content: String, to url: URL) throws {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(),
       withIntermediateDirectories: true
@@ -103,7 +103,7 @@ private extension SharedRuntimeConfigTests {
     try content.write(to: url, atomically: true, encoding: .utf8)
   }
 
-  func setEnvironmentValue(_ value: String?, for key: String) {
+  fileprivate func setEnvironmentValue(_ value: String?, for key: String) {
     if let value {
       setenv(key, value, 1)
     } else {
@@ -111,7 +111,7 @@ private extension SharedRuntimeConfigTests {
     }
   }
 
-  func restoreEnvironment() {
+  fileprivate func restoreEnvironment() {
     for key in environmentKeys {
       setEnvironmentValue(originalEnvironment[key] ?? nil, for: key)
     }

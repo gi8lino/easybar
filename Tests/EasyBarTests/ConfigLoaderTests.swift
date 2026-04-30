@@ -292,7 +292,7 @@ final class ConfigLoaderTests: XCTestCase {
 
     let error = config.reload()
 
-    guard case let .invalidType(path, expected, actual)? = error as? ConfigError else {
+    guard case .invalidType(let path, let expected, let actual)? = error as? ConfigError else {
       return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
     }
 
@@ -317,7 +317,7 @@ final class ConfigLoaderTests: XCTestCase {
 
     let error = config.reload()
 
-    guard case let .invalidType(path, expected, actual)? = error as? ConfigError else {
+    guard case .invalidType(let path, let expected, let actual)? = error as? ConfigError else {
       return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
     }
 
