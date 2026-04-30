@@ -719,6 +719,7 @@ extension CalendarSnapshotProvider {
             CalendarAgentItem(
               id: event.id,
               time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
+              endTime: formattedEndTime(for: event),
               title: event.title,
               calendarName: event.calendarName,
               calendarColorHex: event.calendarColorHex,
@@ -801,6 +802,17 @@ extension CalendarSnapshotProvider {
   /// Formats one event time for popup display.
   private func formatEventTime(_ date: Date) -> String {
     Self.eventTimeFormatter.string(from: date)
+  }
+
+  /// Returns one rendered end time for timed events when it differs from the start.
+  private func formattedEndTime(for event: CalendarAgentEvent) -> String? {
+    guard !event.isAllDay, event.endDate > event.startDate else { return nil }
+
+    let startTime = formatEventTime(event.startDate)
+    let endTime = formatEventTime(event.endDate)
+    guard startTime != endTime else { return nil }
+
+    return endTime
   }
 
   /// Formats one day header for popup display.

@@ -353,6 +353,7 @@ bottom_text_color = "#d0d0d0" # Text color of the bottom line.
 [builtins.calendar.upcoming.events]
 days = 3 # Number of days of upcoming events shown in the popup.
 empty_text = "No upcoming events" # Text shown when no events exist for a day.
+exclude_past_events = false # Hides already-finished or already-started items from today's section when true.
 
 [builtins.calendar.upcoming.birthdays]
 show = true # Shows or hides the birthdays section in the upcoming popup.
@@ -373,6 +374,8 @@ spacing = 8 # Vertical spacing between popup sections.
 item_indent = 8 # Left indent for popup items under a section title.
 show_calendar_name = false # Prefixes each event with its calendar name when available.
 use_calendar_colors = true # Colors each event line with its source calendar color when available.
+show_travel_time = true # Shows a secondary line with travel time when present.
+show_end_time = true # Shows a secondary line with the rendered end time for timed events.
 
 [builtins.calendar.upcoming.popup.birthdays]
 title_color = "#89CFEF" # Section title color for birthdays.

@@ -6,6 +6,7 @@ extension Config.CalendarBuiltinConfig {
     struct Events {
       var days: Int
       var emptyText: String
+      var excludePastEvents: Bool
     }
 
     struct Birthdays {
@@ -34,6 +35,8 @@ extension Config.CalendarBuiltinConfig {
       var marginY: Double
       var showCalendarName: Bool
       var useCalendarColors: Bool
+      var showTravelTime: Bool
+      var showEndTime: Bool
       var birthdays: PopupSectionStyle
       var today: PopupSectionStyle
       var tomorrow: PopupSectionStyle

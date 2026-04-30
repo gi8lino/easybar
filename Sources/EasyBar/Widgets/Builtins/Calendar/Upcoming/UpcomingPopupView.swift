@@ -59,9 +59,31 @@ struct NativeUpcomingCalendarPopupView: View {
         .foregroundStyle(color(style.titleColorHex))
 
       ForEach(section.items) { item in
-        Text(itemLine(for: item))
-          .foregroundStyle(color(itemTextColor(for: item, style: style)))
+        itemView(item, style: style)
           .padding(.leading, popup.itemIndent)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  /// Builds one rendered popup item.
+  @ViewBuilder
+  private func itemView(
+    _ item: NativeUpcomingCalendarPopupItem,
+    style: Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(itemLine(for: item))
+        .foregroundStyle(color(itemTextColor(for: item, style: style)))
+
+      if let travelText = travelTimeText(for: item), popup.showTravelTime {
+        Text(travelText)
+          .foregroundStyle(color(style.itemColorHex).opacity(0.8))
+      }
+
+      if let endTimeText = item.endTime, popup.showEndTime {
+        Text(endTimeText)
+          .foregroundStyle(color(style.itemColorHex).opacity(0.8))
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,6 +114,20 @@ struct NativeUpcomingCalendarPopupView: View {
     }
 
     return "\(item.time) \(prefix)\(item.title)"
+  }
+
+  /// Returns one rendered travel-time line when enabled and available.
+  private func travelTimeText(for item: NativeUpcomingCalendarPopupItem) -> String? {
+    guard let travelTimeSeconds = item.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
+
+    let minutes = Int((travelTimeSeconds / 60).rounded())
+    guard minutes > 0 else { return nil }
+
+    if minutes == 1 {
+      return "1 min"
+    }
+
+    return "\(minutes) min"
   }
 
   /// Returns the effective text color for one popup item.

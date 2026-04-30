@@ -84,7 +84,7 @@ final class UpcomingCalendarAgentClient {
     let query = CalendarAgentQuery(
       startDate: requestedRange.start,
       endDate: requestedRange.end,
-      sectionStartDate: now,
+      sectionStartDate: upcoming.events.excludePastEvents ? now : requestedRange.start,
       sectionDayCount: upcoming.events.days,
       showBirthdays: upcoming.birthdays.show,
       emptyText: upcoming.events.emptyText,

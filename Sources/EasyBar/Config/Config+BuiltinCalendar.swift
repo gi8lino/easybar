@@ -85,7 +85,8 @@ extension Config {
       upcoming: .init(
         events: .init(
           days: 3,
-          emptyText: "No upcoming events"
+          emptyText: "No upcoming events",
+          excludePastEvents: false
         ),
         birthdays: .init(
           show: true,
@@ -106,6 +107,8 @@ extension Config {
           marginY: 8,
           showCalendarName: true,
           useCalendarColors: true,
+          showTravelTime: true,
+          showEndTime: true,
           birthdays: .init(
             titleColorHex: "#89CFEF",
             itemColorHex: "#7285A5",

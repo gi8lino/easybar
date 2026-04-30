@@ -378,6 +378,8 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   public var id: String
   /// Leading time or date label.
   public var time: String
+  /// Optional rendered end-time label for timed events.
+  public var endTime: String?
   /// Main row title.
   public var title: String
   /// Optional source calendar name.
@@ -393,6 +395,7 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   public init(
     id: String,
     time: String,
+    endTime: String? = nil,
     title: String,
     calendarName: String? = nil,
     calendarColorHex: String? = nil,
@@ -401,6 +404,7 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   ) {
     self.id = id
     self.time = time
+    self.endTime = endTime
     self.title = title
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex

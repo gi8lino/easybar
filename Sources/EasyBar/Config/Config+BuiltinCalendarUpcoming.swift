@@ -42,7 +42,11 @@ extension Config {
       emptyText: try optionalString(
         table["empty_text"],
         path: "builtins.calendar.upcoming.events.empty_text"
-      ) ?? fallback.emptyText
+      ) ?? fallback.emptyText,
+      excludePastEvents: try optionalBool(
+        table["exclude_past_events"],
+        path: "builtins.calendar.upcoming.events.exclude_past_events"
+      ) ?? fallback.excludePastEvents
     )
   }
 
@@ -130,6 +134,14 @@ extension Config {
         table["use_calendar_colors"],
         path: "builtins.calendar.upcoming.popup.use_calendar_colors"
       ) ?? fallback.useCalendarColors,
+      showTravelTime: try optionalBool(
+        table["show_travel_time"],
+        path: "builtins.calendar.upcoming.popup.show_travel_time"
+      ) ?? fallback.showTravelTime,
+      showEndTime: try optionalBool(
+        table["show_end_time"],
+        path: "builtins.calendar.upcoming.popup.show_end_time"
+      ) ?? fallback.showEndTime,
       birthdays: try parseCalendarUpcomingPopupSectionStyle(
         from: birthdaysTable,
         path: "builtins.calendar.upcoming.popup.birthdays",
