@@ -9,7 +9,6 @@ extension Config.CalendarBuiltinConfig {
       var selection: SelectionStyle
       var agenda: AgendaStyle
       var birthdays: BirthdaysStyle
-      var filters: Filters
       var anchor: AnchorStyle
       var composer: ComposerStyle
       var todayButton: TodayButtonStyle
@@ -292,16 +291,6 @@ extension Config.CalendarBuiltinConfig {
       var birthdayIconColorHex: String? {
         get { birthdays.birthdayIconColorHex }
         set { birthdays.birthdayIconColorHex = newValue }
-      }
-
-      var includedCalendarNames: [String] {
-        get { filters.includedCalendarNames }
-        set { filters.includedCalendarNames = newValue }
-      }
-
-      var excludedCalendarNames: [String] {
-        get { filters.excludedCalendarNames }
-        set { filters.excludedCalendarNames = newValue }
       }
 
       var anchorDateFormat: String {

@@ -141,22 +141,4 @@ extension Config {
       ) ?? fallback.birthdayIconColorHex
     )
   }
-
-  /// Parses the month popup calendar filters block.
-  func parseCalendarMonthPopupFilters(
-    from filtersTable: TOMLTable,
-    rootTable: TOMLTable,
-    fallback: CalendarBuiltinConfig.Month.Popup.Filters
-  ) throws -> CalendarBuiltinConfig.Month.Popup.Filters {
-    CalendarBuiltinConfig.Month.Popup.Filters(
-      includedCalendarNames: try optionalStringArray(
-        filtersTable["included_calendar_names"] ?? rootTable["included_calendar_names"],
-        path: "builtins.calendar.month.popup.filters.included_calendar_names"
-      ) ?? fallback.includedCalendarNames,
-      excludedCalendarNames: try optionalStringArray(
-        filtersTable["excluded_calendar_names"] ?? rootTable["excluded_calendar_names"],
-        path: "builtins.calendar.month.popup.filters.excluded_calendar_names"
-      ) ?? fallback.excludedCalendarNames
-    )
-  }
 }

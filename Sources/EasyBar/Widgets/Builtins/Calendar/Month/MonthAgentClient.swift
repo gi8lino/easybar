@@ -200,6 +200,7 @@ final class MonthCalendarAgentClient {
     let calendarConfig = Config.shared.builtinCalendar
     let monthConfig = calendarConfig.month.popup
     let upcomingBirthdays = calendarConfig.upcoming.birthdays
+    let filters = calendarConfig.filters
 
     logger.debug(
       "requesting month calendar snapshot",
@@ -219,8 +220,8 @@ final class MonthCalendarAgentClient {
       birthdaysTitle: upcomingBirthdays.title,
       birthdaysDateFormat: upcomingBirthdays.dateFormat,
       birthdaysShowAge: monthConfig.birthdaysShowAge,
-      includedCalendarNames: monthConfig.includedCalendarNames,
-      excludedCalendarNames: monthConfig.excludedCalendarNames
+      includedCalendarNames: filters.includedCalendarNames,
+      excludedCalendarNames: filters.excludedCalendarNames
     )
 
     return CalendarAgentRequest(

@@ -20,10 +20,16 @@ extension Config {
 
   /// Built-in calendar widget config.
   struct CalendarBuiltinConfig {
+    struct Filters {
+      var includedCalendarNames: [String]
+      var excludedCalendarNames: [String]
+    }
+
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
     var popupMode: CalendarPopupMode
     var anchor: Anchor
+    var filters: Filters
     var upcoming: Upcoming
     var month: Month
 
@@ -71,6 +77,10 @@ extension Config {
         lineSpacing: 0,
         topTextColorHex: "#ffffff",
         bottomTextColorHex: "#d0d0d0"
+      ),
+      filters: .init(
+        includedCalendarNames: [],
+        excludedCalendarNames: []
       ),
       upcoming: .init(
         events: .init(
@@ -189,10 +199,6 @@ extension Config {
             birthdayIcon: "",
             birthdayIconColorHex: nil
           ),
-          filters: .init(
-            includedCalendarNames: [],
-            excludedCalendarNames: []
-          ),
           anchor: .init(
             dateFormat: "EEE d MMM",
             textColorHex: "#ffffff",
@@ -270,6 +276,7 @@ extension Config {
 
     let styleTable = calendar["style"]?.table ?? TOMLTable()
     let anchorTable = calendar["anchor"]?.table ?? TOMLTable()
+    let filtersTable = calendar["filters"]?.table ?? TOMLTable()
 
     let upcomingTable = calendar["upcoming"]?.table ?? TOMLTable()
     let upcomingEventsTable = upcomingTable["events"]?.table ?? TOMLTable()
@@ -298,6 +305,11 @@ extension Config {
       fallback: builtinCalendar.anchor
     )
 
+    let filters = try parseCalendarFilters(
+      from: filtersTable,
+      fallback: builtinCalendar.filters
+    )
+
     let upcoming = try parseCalendarUpcoming(
       eventsTable: upcomingEventsTable,
       birthdaysTable: upcomingBirthdaysTable,
@@ -315,8 +327,26 @@ extension Config {
       style: style,
       popupMode: popupMode,
       anchor: anchor,
+      filters: filters,
       upcoming: upcoming,
       month: month
+    )
+  }
+
+  /// Parses the shared built-in calendar filters block.
+  func parseCalendarFilters(
+    from table: TOMLTable,
+    fallback: CalendarBuiltinConfig.Filters
+  ) throws -> CalendarBuiltinConfig.Filters {
+    CalendarBuiltinConfig.Filters(
+      includedCalendarNames: try optionalStringArray(
+        table["included_calendar_names"],
+        path: "builtins.calendar.filters.included_calendar_names"
+      ) ?? fallback.includedCalendarNames,
+      excludedCalendarNames: try optionalStringArray(
+        table["excluded_calendar_names"],
+        path: "builtins.calendar.filters.excluded_calendar_names"
+      ) ?? fallback.excludedCalendarNames
     )
   }
 }

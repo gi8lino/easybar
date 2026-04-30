@@ -33,9 +33,4 @@ extension Config.CalendarBuiltinConfig.Month.Popup {
     var birthdayIcon: String
     var birthdayIconColorHex: String?
   }
-
-  struct Filters {
-    var includedCalendarNames: [String]
-    var excludedCalendarNames: [String]
-  }
 }

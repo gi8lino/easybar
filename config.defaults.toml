@@ -394,6 +394,10 @@ title_color = "#91d7e3" # Section title color for future events.
 item_color = "#d0d0d0" # Item text color for future events.
 empty_color = "#c0c0c0" # Empty-state color for future events.
 
+[builtins.calendar.filters]
+included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
+excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
+
 [builtins.calendar.month.popup.style]
 background_color = "#111111" # Background color of the month popup.
 border_color = "#444444" # Border color of the month popup.
@@ -458,10 +462,6 @@ show_birthdays = false # Includes birthday calendars in the month popup as regul
 birthdays_show_age = false # Shows parsed ages for birthday appointments when available.
 birthday_icon = "" # Leading icon shown for birthday appointments.
 birthday_icon_color = "" # Color of the birthday icon. When omitted, event_text_color is used.
-
-[builtins.calendar.month.popup.filters]
-included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
-excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
 
 [builtins.calendar.month.popup.anchor]
 anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".

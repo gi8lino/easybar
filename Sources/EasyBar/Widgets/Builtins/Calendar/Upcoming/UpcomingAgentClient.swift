@@ -67,6 +67,7 @@ final class UpcomingCalendarAgentClient {
     let now = Date()
     let calendarConfig = Config.shared.builtinCalendar
     let upcoming = calendarConfig.upcoming
+    let filters = calendarConfig.filters
     let requestedRange = CalendarNativeWidget.requestedDateRange(
       config: calendarConfig,
       now: now
@@ -90,8 +91,8 @@ final class UpcomingCalendarAgentClient {
       birthdaysTitle: upcoming.birthdays.title,
       birthdaysDateFormat: upcoming.birthdays.dateFormat,
       birthdaysShowAge: upcoming.birthdays.showAge,
-      includedCalendarNames: [],
-      excludedCalendarNames: []
+      includedCalendarNames: filters.includedCalendarNames,
+      excludedCalendarNames: filters.excludedCalendarNames
     )
 
     return CalendarAgentRequest(
