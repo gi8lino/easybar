@@ -366,6 +366,70 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertNil(error)
     XCTAssertEqual(config.loggingLevel, .debug)
   }
+
+  func testReloadExpandsTildePathsFromConfigFile() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("tilde-paths.toml")
+    let homePath = FileManager.default.homeDirectoryForCurrentUser.path
+
+    try writeConfig(
+      """
+      [app]
+      widgets_dir = "~/.config/easybar/widgets-test"
+      lock_dir = "~/.cache/easybar-locks-test"
+
+      [logging]
+      directory = "~/.local/state/easybar-tests"
+
+      [agents.calendar]
+      socket_path = "~/.cache/easybar-tests/calendar.sock"
+
+      [agents.network]
+      socket_path = "~/.cache/easybar-tests/network.sock"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.widgetsPath, "\(homePath)/.config/easybar/widgets-test")
+    XCTAssertEqual(config.lockDirectory, "\(homePath)/.cache/easybar-locks-test")
+    XCTAssertEqual(config.loggingDirectory, "\(homePath)/.local/state/easybar-tests")
+    XCTAssertEqual(config.calendarAgentSocketPath, "\(homePath)/.cache/easybar-tests/calendar.sock")
+    XCTAssertEqual(config.networkAgentSocketPath, "\(homePath)/.cache/easybar-tests/network.sock")
+  }
+
+  func testReloadReturnsErrorWhenDirectorySettingPointsToExistingFile() throws {
+    let config = Config.shared
+    let blockingFileURL = tempDirectoryURL.appendingPathComponent("not-a-directory")
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-directory.toml")
+
+    try "blocker".write(to: blockingFileURL, atomically: true, encoding: .utf8)
+    try writeConfig(
+      """
+      [app]
+      lock_dir = "\(blockingFileURL.path)"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "app.lock_dir")
+    XCTAssertEqual(
+      configError.detail,
+      "expected directory path, but found file at \(blockingFileURL.path)"
+    )
+  }
 }
 
 extension ConfigLoaderTests {
