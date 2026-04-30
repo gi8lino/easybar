@@ -209,6 +209,72 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(configError.detail, "expected one of debug, error, info, trace, warn")
     XCTAssertEqual(config.loggingLevel, .warn)
   }
+
+  func testReloadFailureKeepsPreviousBarAndBuiltinConfiguration() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("reload-config.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = 44
+
+      [bar.colors]
+      background = "#224466"
+
+      [builtins.time]
+      enabled = true
+      position = "left"
+
+      [builtins.time.content]
+      format = "HH:mm:ss"
+
+      [builtins.cpu]
+      enabled = true
+
+      [builtins.cpu.content]
+      history_size = 24
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    XCTAssertNil(config.reload())
+
+    XCTAssertEqual(config.barHeight, 44)
+    XCTAssertEqual(config.barBackgroundHex, "#224466")
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinCPU.enabled)
+    XCTAssertEqual(config.builtinCPU.historySize, 24)
+
+    try writeConfig(
+      """
+      [bar]
+      height = 28
+
+      [builtins.time]
+      position = "sideways"
+      """,
+      to: configFileURL
+    )
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.time.position")
+    XCTAssertEqual(config.barHeight, 44)
+    XCTAssertEqual(config.barBackgroundHex, "#224466")
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinCPU.enabled)
+    XCTAssertEqual(config.builtinCPU.historySize, 24)
+  }
 }
 
 extension ConfigLoaderTests {
