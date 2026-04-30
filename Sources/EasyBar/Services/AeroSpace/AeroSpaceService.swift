@@ -37,6 +37,7 @@ final class AeroSpaceService: ObservableObject {
   private struct CoordinationState {
     var consumers = Set<String>()
     var appSwitchObserver: NSObjectProtocol?
+    var appTerminationObserver: NSObjectProtocol?
     var running = false
     var generation: UInt64 = 0
   }
@@ -79,22 +80,25 @@ extension AeroSpaceService {
 
     logger.debug("aerospace service start begin")
     subscribeAppSwitches()
+    subscribeAppTermination()
     refresh()
     logger.debug("aerospace service start end")
   }
 
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
-    let observer = withLock { () -> NSObjectProtocol? in
-      guard coordination.running else { return nil }
+    let observers = withLock { () -> [NSObjectProtocol] in
+      guard coordination.running else { return [] }
       coordination.running = false
       coordination.generation &+= 1
       let observer = coordination.appSwitchObserver
+      let terminationObserver = coordination.appTerminationObserver
       coordination.appSwitchObserver = nil
-      return observer
+      coordination.appTerminationObserver = nil
+      return [observer, terminationObserver].compactMap { $0 }
     }
 
-    if let observer {
+    for observer in observers {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
     }
 
@@ -269,6 +273,40 @@ extension AeroSpaceService {
     }
 
     logger.debug("aerospace app switch observer installed")
+  }
+
+  /// Listens for app termination so workspace icons refresh after apps quit.
+  fileprivate func subscribeAppTermination() {
+    let shouldInstall = withLock { coordination.appTerminationObserver == nil }
+    guard shouldInstall else { return }
+
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.didTerminateApplicationNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      guard
+        let self,
+        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+          as? NSRunningApplication
+      else {
+        return
+      }
+
+      self.logger.debug(
+        "aerospace observed app termination",
+        .field("app", app.localizedName ?? "")
+      )
+      self.refresh()
+    }
+
+    withLock {
+      if coordination.appTerminationObserver == nil {
+        coordination.appTerminationObserver = observer
+      }
+    }
+
+    logger.debug("aerospace app termination observer installed")
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
