@@ -38,10 +38,6 @@ extension Config {
         styleTable["spacing"] ?? rootTable["spacing"],
         path: "builtins.calendar.month.popup.style.spacing"
       ) ?? fallback.spacing,
-      itemIndent: try optionalNumber(
-        styleTable["item_indent"] ?? rootTable["item_indent"],
-        path: "builtins.calendar.month.popup.style.item_indent"
-      ) ?? fallback.itemIndent,
       marginX: try optionalNumber(
         styleTable["margin_x"] ?? rootTable["margin_x"],
         path: "builtins.calendar.month.popup.style.margin_x"

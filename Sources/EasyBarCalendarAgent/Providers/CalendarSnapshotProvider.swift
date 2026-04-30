@@ -658,6 +658,9 @@ extension CalendarSnapshotProvider {
             CalendarAgentItem(
               id: event.id,
               time: formatBirthdayDate(event.startDate, format: query.birthdaysDateFormat),
+              startDate: event.startDate,
+              endDate: event.endDate,
+              isAllDay: true,
               title: event.title,
               calendarName: event.calendarName,
               calendarColorHex: event.calendarColorHex,
@@ -719,6 +722,9 @@ extension CalendarSnapshotProvider {
             CalendarAgentItem(
               id: event.id,
               time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
+              startDate: event.startDate,
+              endDate: event.endDate,
+              isAllDay: event.isAllDay,
               endTime: formattedEndTime(for: event),
               title: event.title,
               calendarName: event.calendarName,

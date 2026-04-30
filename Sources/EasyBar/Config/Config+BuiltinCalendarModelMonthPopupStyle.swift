@@ -10,7 +10,6 @@ extension Config.CalendarBuiltinConfig.Month.Popup {
     var paddingX: Double
     var paddingY: Double
     var spacing: Double
-    var itemIndent: Double
     var marginX: Double
     var marginY: Double
   }

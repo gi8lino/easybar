@@ -20,7 +20,6 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
-  @Published private(set) var sections: [NativeUpcomingCalendarPopupSection] = []
   @Published private(set) var events: [NativeUpcomingCalendarEvent] = []
 
   private let calendar = Calendar.current
@@ -37,7 +36,6 @@ final class NativeUpcomingCalendarStore: ObservableObject {
       .field("access_granted", "\(snapshot.accessGranted)"),
       .field("permission_state", "\(snapshot.permissionState)"),
       .field("events", "\(snapshot.events.count)"),
-      .field("sections", "\(snapshot.sections.count)"),
     )
     publish(snapshot: snapshot)
   }
@@ -108,14 +106,12 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   /// Publishes one calendar snapshot update.
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     self.snapshot = snapshot
-    self.sections = snapshot?.sections ?? []
     self.events = snapshot?.events ?? []
 
     logger.debug(
       "upcoming calendar store published",
       .field("snapshot_present", "\(snapshot != nil)"),
       .field("events", "\(self.events.count)"),
-      .field("sections", "\(self.sections.count))"),
     )
   }
 

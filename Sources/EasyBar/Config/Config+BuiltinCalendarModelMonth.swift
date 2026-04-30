@@ -8,7 +8,6 @@ extension Config.CalendarBuiltinConfig {
       var calendar: CalendarStyle
       var selection: SelectionStyle
       var agenda: AgendaStyle
-      var birthdays: BirthdaysStyle
       var anchor: AnchorStyle
       var composer: ComposerStyle
       var todayButton: TodayButtonStyle
@@ -46,11 +45,6 @@ extension Config.CalendarBuiltinConfig {
       var spacing: Double {
         get { style.spacing }
         set { style.spacing = newValue }
-      }
-
-      var itemIndent: Double {
-        get { style.itemIndent }
-        set { style.itemIndent = newValue }
       }
 
       var marginX: Double {
@@ -163,29 +157,9 @@ extension Config.CalendarBuiltinConfig {
         set { selection.resetSelectionOnThirdTap = newValue }
       }
 
-      var eventTextColorHex: String {
-        get { agenda.eventTextColorHex }
-        set { agenda.eventTextColorHex = newValue }
-      }
-
-      var emptyTextColorHex: String {
-        get { agenda.emptyTextColorHex }
-        set { agenda.emptyTextColorHex = newValue }
-      }
-
-      var secondaryTextColorHex: String {
-        get { agenda.secondaryTextColorHex }
-        set { agenda.secondaryTextColorHex = newValue }
-      }
-
       var layout: Config.MonthCalendarPopupLayout {
         get { agenda.layout }
         set { agenda.layout = newValue }
-      }
-
-      var travelTextColorHex: String {
-        get { agenda.travelTextColorHex }
-        set { agenda.travelTextColorHex = newValue }
       }
 
       var appointmentsScrollable: Bool {
@@ -203,94 +177,14 @@ extension Config.CalendarBuiltinConfig {
         set { agenda.appointmentsMaxHeight = newValue }
       }
 
-      var emptyText: String {
-        get { agenda.emptyText }
-        set { agenda.emptyText = newValue }
-      }
-
       var agendaTitle: String {
         get { agenda.agendaTitle }
         set { agenda.agendaTitle = newValue }
       }
 
-      var showCalendarName: Bool {
-        get { agenda.showCalendarName }
-        set { agenda.showCalendarName = newValue }
-      }
-
-      var showAllDayLabel: Bool {
-        get { agenda.showAllDayLabel }
-        set { agenda.showAllDayLabel = newValue }
-      }
-
-      var showHolidayAllDayLabel: Bool {
-        get { agenda.showHolidayAllDayLabel }
-        set { agenda.showHolidayAllDayLabel = newValue }
-      }
-
-      var allDayLabel: String {
-        get { agenda.allDayLabel }
-        set { agenda.allDayLabel = newValue }
-      }
-
-      var showLocation: Bool {
-        get { agenda.showLocation }
-        set { agenda.showLocation = newValue }
-      }
-
-      var showTravelTime: Bool {
-        get { agenda.showTravelTime }
-        set { agenda.showTravelTime = newValue }
-      }
-
-      var travelIcon: String {
-        get { agenda.travelIcon }
-        set { agenda.travelIcon = newValue }
-      }
-
-      var travelIconColorHex: String? {
-        get { agenda.travelIconColorHex }
-        set { agenda.travelIconColorHex = newValue }
-      }
-
-      var showAlertIcon: Bool {
-        get { agenda.showAlertIcon }
-        set { agenda.showAlertIcon = newValue }
-      }
-
-      var alertIcon: String {
-        get { agenda.alertIcon }
-        set { agenda.alertIcon = newValue }
-      }
-
-      var alertIconColorHex: String? {
-        get { agenda.alertIconColorHex }
-        set { agenda.alertIconColorHex = newValue }
-      }
-
       var maxVisibleAppointments: Int {
         get { agenda.maxVisibleAppointments }
         set { agenda.maxVisibleAppointments = newValue }
-      }
-
-      var showBirthdays: Bool {
-        get { birthdays.showBirthdays }
-        set { birthdays.showBirthdays = newValue }
-      }
-
-      var birthdaysShowAge: Bool {
-        get { birthdays.birthdaysShowAge }
-        set { birthdays.birthdaysShowAge = newValue }
-      }
-
-      var birthdayIcon: String {
-        get { birthdays.birthdayIcon }
-        set { birthdays.birthdayIcon = newValue }
-      }
-
-      var birthdayIconColorHex: String? {
-        get { birthdays.birthdayIconColorHex }
-        set { birthdays.birthdayIconColorHex = newValue }
       }
 
       var anchorDateFormat: String {

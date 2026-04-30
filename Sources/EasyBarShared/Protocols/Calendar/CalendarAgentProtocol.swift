@@ -378,6 +378,12 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   public var id: String
   /// Leading time or date label.
   public var time: String
+  /// Optional original event start date.
+  public var startDate: Date?
+  /// Optional original event end date.
+  public var endDate: Date?
+  /// Whether the source event is all day.
+  public var isAllDay: Bool
   /// Optional rendered end-time label for timed events.
   public var endTime: String?
   /// Main row title.
@@ -395,6 +401,9 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   public init(
     id: String,
     time: String,
+    startDate: Date? = nil,
+    endDate: Date? = nil,
+    isAllDay: Bool = false,
     endTime: String? = nil,
     title: String,
     calendarName: String? = nil,
@@ -404,6 +413,9 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   ) {
     self.id = id
     self.time = time
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
     self.endTime = endTime
     self.title = title
     self.calendarName = calendarName

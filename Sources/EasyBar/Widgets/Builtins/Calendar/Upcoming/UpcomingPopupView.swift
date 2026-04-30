@@ -3,14 +3,43 @@ import SwiftUI
 struct NativeUpcomingCalendarPopupView: View {
 
   @ObservedObject private var store = NativeUpcomingCalendarStore.shared
-  private let upcoming = Config.shared.builtinCalendar.upcoming
+  @StateObject private var composerPanel = MonthCalendarEventComposerPanelController()
+
   private let popup = Config.shared.builtinCalendar.upcoming.popup
+  private let appointments = Config.shared.builtinCalendar.appointments
+  private let birthdays = Config.shared.builtinCalendar.birthdays
+  private let monthPopup = Config.shared.builtinCalendar.month.popup
+  private let upcoming = Config.shared.builtinCalendar.upcoming
+
+  private var resolvedCalendar: Calendar {
+    var calendar = Calendar.current
+
+    if let firstWeekday = monthPopup.firstWeekday {
+      calendar.firstWeekday = firstWeekday
+    }
+
+    return calendar
+  }
 
   /// Renders the native upcoming-calendar popup content.
   var body: some View {
     VStack(alignment: .leading, spacing: popup.spacing) {
-      emptyStateView
-      sectionsView
+      ForEach(upcomingDates, id: \.self) { date in
+        CalendarAppointmentsListView(
+          title: title(for: date),
+          rows: appointmentRows(for: date),
+          emptyText: appointments.emptyText,
+          style: appointments,
+          birthdayIcon: birthdays.birthdayIcon,
+          birthdayIconColorHex: birthdays.birthdayIconColorHex,
+          defaultIndicatorColorHex: monthPopup.indicatorColorHex,
+          calendar: resolvedCalendar,
+          dateHeaderText: formattedDayHeader,
+          onEventTap: { event in
+            openComposer(for: event)
+          }
+        )
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, popup.paddingX)
@@ -31,134 +60,81 @@ struct NativeUpcomingCalendarPopupView: View {
     .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
   }
 
-  /// Builds the empty popup state when no sections are available.
-  @ViewBuilder
-  private var emptyStateView: some View {
-    if store.sections.isEmpty {
-      Text(upcoming.events.emptyText)
-        .foregroundStyle(color(popup.future.emptyColorHex))
+  /// Returns the three dates rendered by the upcoming popup.
+  private var upcomingDates: [Date] {
+    let start = resolvedCalendar.startOfDay(for: Date())
+
+    return (0..<max(1, upcoming.events.days)).compactMap { offset in
+      resolvedCalendar.date(byAdding: .day, value: offset, to: start)
     }
   }
 
-  /// Builds the popup sections list when calendar data exists.
-  @ViewBuilder
-  private var sectionsView: some View {
-    if !store.sections.isEmpty {
-      ForEach(store.sections) { section in
-        sectionView(section)
+  /// Returns one formatted section title for the given date.
+  private func title(for date: Date) -> String {
+    if resolvedCalendar.isDateInToday(date) {
+      return "Today:"
+    }
+
+    if resolvedCalendar.isDateInTomorrow(date) {
+      return "Tomorrow:"
+    }
+
+    let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
+    formatter.dateFormat = "dd.MM.yyyy"
+    return "\(formatter.string(from: date)):"
+  }
+
+  /// Returns the event rows displayed for one upcoming day.
+  private func appointmentRows(for date: Date) -> [CalendarAppointmentsListRow] {
+    events(for: date).map { event in
+      CalendarAppointmentsListRow(id: event.id, kind: .event(event))
+    }
+  }
+
+  /// Returns the visible events for one day using the current upcoming filtering mode.
+  private func events(for date: Date) -> [NativeUpcomingCalendarEvent] {
+    let startOfDay = resolvedCalendar.startOfDay(for: date)
+    guard let endOfDay = resolvedCalendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+      return []
+    }
+
+    let now = Date()
+    let effectiveStart =
+      upcoming.events.excludePastEvents && resolvedCalendar.isDateInToday(date)
+      ? max(startOfDay, now) : startOfDay
+
+    return store.events
+      .filter { event in
+        event.startDate < endOfDay && event.endDate > effectiveStart
       }
-    }
-  }
+      .sorted { lhs, rhs in
+        if lhs.startDate != rhs.startDate {
+          return lhs.startDate < rhs.startDate
+        }
 
-  /// Builds one calendar popup section.
-  private func sectionView(_ section: NativeUpcomingCalendarPopupSection) -> some View {
-    let style = style(for: section.kind)
+        if lhs.endDate != rhs.endDate {
+          return lhs.endDate < rhs.endDate
+        }
 
-    return VStack(alignment: .leading, spacing: 4) {
-      Text("\(section.title):")
-        .foregroundStyle(color(style.titleColorHex))
-
-      ForEach(section.items) { item in
-        itemView(item, style: style)
-          .padding(.leading, popup.itemIndent)
+        return lhs.id < rhs.id
       }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
-  /// Builds one rendered popup item.
-  @ViewBuilder
-  private func itemView(
-    _ item: NativeUpcomingCalendarPopupItem,
-    style: Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle
-  ) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(itemLine(for: item))
-        .foregroundStyle(color(itemTextColor(for: item, style: style)))
-
-      if let travelText = travelTimeText(for: item), popup.showTravelTime {
-        Text(travelText)
-          .foregroundStyle(color(style.itemColorHex).opacity(0.8))
-      }
-
-      if let endTimeText = item.endTime, popup.showEndTime {
-        Text(endTimeText)
-          .foregroundStyle(color(style.itemColorHex).opacity(0.8))
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
+  /// Formats one day header using the month popup selection format.
+  private func formattedDayHeader(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = resolvedCalendar
+    formatter.dateFormat = monthPopup.selectionDateFormat
+    return formatter.string(from: date)
   }
 
-  /// Returns the popup style for one section kind.
-  private func style(
-    for kind: NativeUpcomingCalendarPopupSectionKind
-  ) -> Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle {
-    switch kind {
-    case .birthdays:
-      return popup.birthdays
-    case .today:
-      return popup.today
-    case .tomorrow:
-      return popup.tomorrow
-    case .future:
-      return popup.future
+  /// Opens the shared event composer for one existing appointment.
+  private func openComposer(for event: NativeUpcomingCalendarEvent) {
+    composerPanel.present(event: event) {
+      MonthCalendarAgentClient.shared.refresh()
+      UpcomingCalendarAgentClient.shared.refresh()
     }
-  }
-
-  /// Builds the rendered line for one popup item.
-  private func itemLine(for item: NativeUpcomingCalendarPopupItem) -> String {
-    let prefix = calendarNamePrefix(for: item)
-
-    if item.time.isEmpty {
-      return prefix + item.title
-    }
-
-    return "\(item.time) \(prefix)\(item.title)"
-  }
-
-  /// Returns one rendered travel-time line when enabled and available.
-  private func travelTimeText(for item: NativeUpcomingCalendarPopupItem) -> String? {
-    guard let travelTimeSeconds = item.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
-
-    let minutes = Int((travelTimeSeconds / 60).rounded())
-    guard minutes > 0 else { return nil }
-
-    if minutes == 1 {
-      return "1 min"
-    }
-
-    return "\(minutes) min"
-  }
-
-  /// Returns the effective text color for one popup item.
-  private func itemTextColor(
-    for item: NativeUpcomingCalendarPopupItem,
-    style: Config.CalendarBuiltinConfig.Upcoming.PopupSectionStyle
-  ) -> String {
-    if item.time.isEmpty {
-      return style.emptyColorHex
-    }
-
-    if popup.useCalendarColors,
-      let calendarColorHex = item.calendarColorHex,
-      !calendarColorHex.isEmpty
-    {
-      return calendarColorHex
-    }
-
-    return style.itemColorHex
-  }
-
-  /// Returns the optional calendar-name prefix.
-  private func calendarNamePrefix(for item: NativeUpcomingCalendarPopupItem) -> String {
-    guard popup.showCalendarName else { return "" }
-    guard let calendarName = item.calendarName?.trimmingCharacters(in: .whitespacesAndNewlines),
-      !calendarName.isEmpty
-    else {
-      return ""
-    }
-
-    return "[\(calendarName)] "
   }
 
   /// Converts one hex string into SwiftUI color.

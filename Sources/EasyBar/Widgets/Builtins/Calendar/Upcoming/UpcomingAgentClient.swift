@@ -67,6 +67,8 @@ final class UpcomingCalendarAgentClient {
     let now = Date()
     let calendarConfig = Config.shared.builtinCalendar
     let upcoming = calendarConfig.upcoming
+    let appointments = calendarConfig.appointments
+    let birthdays = calendarConfig.birthdays
     let filters = calendarConfig.filters
     let requestedRange = CalendarNativeWidget.requestedDateRange(
       config: calendarConfig,
@@ -78,19 +80,20 @@ final class UpcomingCalendarAgentClient {
       .field("start", requestedRange.start.timeIntervalSince1970),
       .field("end", requestedRange.end.timeIntervalSince1970),
       .field("days", upcoming.events.days),
-      .field("show_birthdays", upcoming.birthdays.show),
+      .field("exclude_past_events", upcoming.events.excludePastEvents),
+      .field("show_birthdays", birthdays.showBirthdays),
     )
 
     let query = CalendarAgentQuery(
       startDate: requestedRange.start,
       endDate: requestedRange.end,
-      sectionStartDate: upcoming.events.excludePastEvents ? now : requestedRange.start,
-      sectionDayCount: upcoming.events.days,
-      showBirthdays: upcoming.birthdays.show,
-      emptyText: upcoming.events.emptyText,
-      birthdaysTitle: upcoming.birthdays.title,
-      birthdaysDateFormat: upcoming.birthdays.dateFormat,
-      birthdaysShowAge: upcoming.birthdays.showAge,
+      sectionStartDate: nil,
+      sectionDayCount: nil,
+      showBirthdays: birthdays.showBirthdays,
+      emptyText: appointments.emptyText,
+      birthdaysTitle: "",
+      birthdaysDateFormat: "dd.MM.yyyy",
+      birthdaysShowAge: birthdays.birthdaysShowAge,
       includedCalendarNames: filters.includedCalendarNames,
       excludedCalendarNames: filters.excludedCalendarNames
     )

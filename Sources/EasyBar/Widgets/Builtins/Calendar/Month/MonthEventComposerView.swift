@@ -8,6 +8,7 @@ struct MonthCalendarEventComposerView: View {
   let onDeleted: () -> Void
 
   private let config = Config.shared.builtinCalendar.month.popup
+  private let appointments = Config.shared.builtinCalendar.appointments
 
   @State private var showsDeleteConfirmation = false
 
@@ -96,7 +97,7 @@ extension MonthCalendarEventComposerView {
     } else if let infoMessage = composer.infoMessage, !infoMessage.isEmpty {
       Text(infoMessage)
         .font(.system(size: 12, weight: .regular))
-        .foregroundStyle(color(config.secondaryTextColorHex))
+        .foregroundStyle(color(appointments.secondaryTextColorHex))
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -221,7 +222,7 @@ extension MonthCalendarEventComposerView {
     HStack(alignment: .center, spacing: fieldSpacing) {
       Text(label)
         .font(.system(size: 12, weight: .medium))
-        .foregroundStyle(color(config.secondaryTextColorHex))
+        .foregroundStyle(color(appointments.secondaryTextColorHex))
         .frame(width: fieldLabelWidth, alignment: .leading)
 
       DatePicker(
@@ -299,7 +300,7 @@ extension MonthCalendarEventComposerView {
             .font(.system(size: 12, weight: .medium))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(color(config.secondaryTextColorHex))
+        .foregroundStyle(color(appointments.secondaryTextColorHex))
       }
     }
   }
@@ -375,7 +376,7 @@ extension MonthCalendarEventComposerView {
   private func fieldLabel(_ value: String) -> some View {
     Text(value)
       .font(.system(size: 12, weight: .medium))
-      .foregroundStyle(color(config.secondaryTextColorHex))
+      .foregroundStyle(color(appointments.secondaryTextColorHex))
   }
 
   /// Returns the shared label width used in the schedule section.
@@ -408,7 +409,7 @@ extension MonthCalendarEventComposerView {
 
       Text("min")
         .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(color(config.secondaryTextColorHex))
+        .foregroundStyle(color(appointments.secondaryTextColorHex))
     }
   }
 

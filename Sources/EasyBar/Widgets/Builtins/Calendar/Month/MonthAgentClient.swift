@@ -198,16 +198,15 @@ final class MonthCalendarAgentClient {
     }
 
     let calendarConfig = Config.shared.builtinCalendar
-    let monthConfig = calendarConfig.month.popup
-    let upcomingBirthdays = calendarConfig.upcoming.birthdays
+    let birthdays = calendarConfig.birthdays
     let filters = calendarConfig.filters
 
     logger.debug(
       "requesting month calendar snapshot",
       .field("start", requestedRange.start.timeIntervalSince1970),
       .field("end", requestedRange.end.timeIntervalSince1970),
-      .field("show_birthdays", monthConfig.showBirthdays),
-      .field("birthdays_show_age", monthConfig.birthdaysShowAge),
+      .field("show_birthdays", birthdays.showBirthdays),
+      .field("birthdays_show_age", birthdays.birthdaysShowAge),
     )
 
     let query = CalendarAgentQuery(
@@ -215,11 +214,11 @@ final class MonthCalendarAgentClient {
       endDate: requestedRange.end,
       sectionStartDate: nil,
       sectionDayCount: nil,
-      showBirthdays: monthConfig.showBirthdays,
-      emptyText: monthConfig.emptyText,
-      birthdaysTitle: upcomingBirthdays.title,
-      birthdaysDateFormat: upcomingBirthdays.dateFormat,
-      birthdaysShowAge: monthConfig.birthdaysShowAge,
+      showBirthdays: birthdays.showBirthdays,
+      emptyText: calendarConfig.appointments.emptyText,
+      birthdaysTitle: "",
+      birthdaysDateFormat: "dd.MM.yyyy",
+      birthdaysShowAge: birthdays.birthdaysShowAge,
       includedCalendarNames: filters.includedCalendarNames,
       excludedCalendarNames: filters.excludedCalendarNames
     )

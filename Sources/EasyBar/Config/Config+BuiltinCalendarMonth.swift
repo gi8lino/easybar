@@ -25,7 +25,6 @@ extension Config {
     let calendarTable = table["calendar"]?.table ?? TOMLTable()
     let selectionTable = table["selection"]?.table ?? TOMLTable()
     let agendaTable = table["agenda"]?.table ?? TOMLTable()
-    let birthdaysTable = table["birthdays"]?.table ?? TOMLTable()
     let anchorTable = table["anchor"]?.table ?? TOMLTable()
     let composerTable = table["composer"]?.table ?? TOMLTable()
     let composerAlertLabelsTable = composerTable["alert_labels"]?.table ?? TOMLTable()
@@ -52,11 +51,6 @@ extension Config {
         from: agendaTable,
         rootTable: table,
         fallback: fallback.agenda
-      ),
-      birthdays: try parseCalendarMonthPopupBirthdays(
-        from: birthdaysTable,
-        rootTable: table,
-        fallback: fallback.birthdays
       ),
       anchor: try parseCalendarMonthPopupAnchor(
         from: anchorTable,

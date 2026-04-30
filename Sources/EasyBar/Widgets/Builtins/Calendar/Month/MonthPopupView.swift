@@ -35,6 +35,8 @@ struct NativeMonthCalendarPopupView: View {
   @ObservedObject var store = NativeMonthCalendarStore.shared
   var logger: ProcessLogger { store.logger }
   let config = Config.shared.builtinCalendar.month.popup
+  let appointments = Config.shared.builtinCalendar.appointments
+  let birthdays = Config.shared.builtinCalendar.birthdays
   let calendar = Calendar.current
 
   @StateObject var composerPanel = MonthCalendarEventComposerPanelController()

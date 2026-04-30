@@ -63,23 +63,20 @@ extension NativeMonthCalendarPopupView {
   /// Builds the selected appointments content.
   @ViewBuilder
   var appointmentsContentView: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      if visibleAgendaRows.isEmpty {
-        Text(config.emptyText)
-          .foregroundStyle(color(config.emptyTextColorHex))
-      } else {
-        ForEach(visibleAgendaRows) { row in
-          switch row.kind {
-          case .dayHeader(let date):
-            selectionDayHeaderView(for: date)
-
-          case .event(let event):
-            appointmentRow(event)
-          }
-        }
+    CalendarAppointmentsListView(
+      title: nil,
+      rows: appointmentListRows,
+      emptyText: appointments.emptyText,
+      style: appointments,
+      birthdayIcon: birthdays.birthdayIcon,
+      birthdayIconColorHex: birthdays.birthdayIconColorHex,
+      defaultIndicatorColorHex: config.indicatorColorHex,
+      calendar: resolvedCalendar,
+      dateHeaderText: formattedSelectionDate,
+      onEventTap: { event in
+        openComposer(for: event)
       }
-    }
-    .frame(maxWidth: .infinity, alignment: .topLeading)
+    )
   }
 
   /// Returns the extra top padding for the agenda title in vertical layouts.
@@ -92,185 +89,27 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
-  /// Builds one selected-day header row.
-  func selectionDayHeaderView(for date: Date) -> some View {
-    Text(formattedSelectionDate(date))
-      .font(.system(size: 11, weight: .medium))
-      .foregroundStyle(color(config.secondaryTextColorHex))
-      .padding(.top, 2)
-      .padding(.bottom, 1)
-  }
-
-  /// Builds one appointment row.
-  func appointmentRow(_ event: NativeMonthCalendarEvent) -> some View {
-    let isBirthday = isBirthdayEvent(event)
-
-    let content = appointmentRowContent(event, showsChevron: !isBirthday)
-
-    if isBirthday {
-      return AnyView(content)
-    }
-
-    return AnyView(
-      content
-        .contentShape(Rectangle())
-        .onTapGesture {
-          openComposer(for: event)
-        }
-    )
-  }
-
-  /// Builds the shared appointment row content.
-  func appointmentRowContent(_ event: NativeMonthCalendarEvent, showsChevron: Bool) -> some View {
-    HStack(alignment: .top, spacing: 8) {
-      Rectangle()
-        .fill(color(normalizedIndicatorColorHex(for: event)))
-        .frame(width: 3)
-        .clipShape(RoundedRectangle(cornerRadius: 1.5))
-
-      VStack(alignment: .leading, spacing: 2) {
-        appointmentMetaTopView(for: event)
-        appointmentTitleView(for: event)
-        appointmentEndTimeView(for: event)
-
-        if config.showCalendarName,
-          let calendarName = event.calendarName,
-          !calendarName.isEmpty
-        {
-          Text(calendarName)
-            .font(.system(size: 11, weight: .regular))
-            .foregroundStyle(color(config.secondaryTextColorHex))
-        }
-
-        if config.showLocation,
-          let locationText = event.location,
-          !locationText.isEmpty
-        {
-          Text(locationText)
-            .font(.system(size: 11, weight: .regular))
-            .foregroundStyle(color(config.secondaryTextColorHex))
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-
-      if showsChevron {
-        Image(systemName: "chevron.right")
-          .font(.system(size: 10, weight: .medium))
-          .foregroundStyle(color(config.secondaryTextColorHex).opacity(0.8))
-          .padding(.top, 3)
-      }
-    }
-    .padding(.leading, CGFloat(config.itemIndent))
-    .padding(.vertical, 4)
-  }
-
-  /// Builds the primary appointment title line.
-  @ViewBuilder
-  func appointmentTitleView(for event: NativeMonthCalendarEvent) -> some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
-      if event.isAllDay {
-        let prefix = appointmentPrefix(for: event)
-
-        if !prefix.isEmpty {
-          Text(prefix)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(color(config.secondaryTextColorHex))
-        }
-      } else {
-        Text(formattedEventTime(event.startDate))
-          .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(color(config.eventTextColorHex))
-      }
-
-      if isBirthdayEvent(event) {
-        Text(config.birthdayIcon)
-          .font(Theme.iconFont(size: 13))
-          .foregroundStyle(color(config.birthdayIconColorHex ?? config.eventTextColorHex))
-      }
-
-      Text(event.title)
-        .font(.system(size: 13, weight: .medium))
-        .foregroundStyle(color(config.eventTextColorHex))
-        .lineLimit(2)
-        .multilineTextAlignment(.leading)
-
-      if !event.isAllDay {
-        Spacer(minLength: 0)
-
-        if config.showAlertIcon, event.hasAlert {
-          Text(config.alertIcon)
-            .font(Theme.iconFont(size: 11))
-            .foregroundStyle(color(config.alertIconColorHex ?? config.travelTextColorHex))
-        }
+  /// Returns the shared appointment rows rendered in the month popup.
+  var appointmentListRows: [CalendarAppointmentsListRow] {
+    visibleAgendaRows.map { row in
+      switch row.kind {
+      case .dayHeader(let date):
+        return CalendarAppointmentsListRow(
+          id: row.id,
+          kind: .dayHeader(date)
+        )
+      case .event(let event):
+        return CalendarAppointmentsListRow(
+          id: row.id,
+          kind: .event(event)
+        )
       }
     }
   }
 
-  /// Builds the top metadata line for timed appointments.
-  @ViewBuilder
-  func appointmentMetaTopView(for event: NativeMonthCalendarEvent) -> some View {
-    if !event.isAllDay,
-      config.showTravelTime,
-      let travelTimeText = travelTimeText(for: event),
-      let departureTimeText = travelDepartureTimeText(for: event)
-    {
-      HStack(alignment: .firstTextBaseline, spacing: 4) {
-        Text(departureTimeText)
-          .font(.system(size: 10, weight: .medium))
-          .foregroundStyle(color(config.travelTextColorHex))
-
-        Text(config.travelIcon)
-          .font(Theme.iconFont(size: 11))
-          .foregroundStyle(color(config.travelIconColorHex ?? config.travelTextColorHex))
-
-        Text(travelTimeText)
-          .font(.system(size: 10, weight: .medium))
-          .foregroundStyle(color(config.travelTextColorHex))
-      }
-    }
-  }
-
-  /// Builds the end-time line for timed appointments.
-  @ViewBuilder
-  func appointmentEndTimeView(for event: NativeMonthCalendarEvent) -> some View {
-    if let endTimeText = appointmentEndTimeText(for: event) {
-      Text(endTimeText)
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(color(config.travelTextColorHex))
-    }
-  }
-
-  /// Returns the rendered end time for timed appointments.
-  func appointmentEndTimeText(for event: NativeMonthCalendarEvent) -> String? {
-    guard !event.isAllDay, event.endDate > event.startDate else { return nil }
-
-    let startTime = formattedEventTime(event.startDate)
-    let endTime = formattedEventTime(event.endDate)
-    guard startTime != endTime else { return nil }
-
-    return endTime
-  }
-
-  /// Returns the rendered departure time when travel time is present.
-  func travelDepartureTimeText(for event: NativeMonthCalendarEvent) -> String? {
-    guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
-
-    let departureDate = event.startDate.addingTimeInterval(-travelTimeSeconds)
-    return formattedEventTime(departureDate)
-  }
-
-  /// Returns the rendered travel-time text when available.
-  func travelTimeText(for event: NativeMonthCalendarEvent) -> String? {
-    guard let travelTimeSeconds = event.travelTimeSeconds, travelTimeSeconds > 0 else { return nil }
-
-    let minutes = Int((travelTimeSeconds / 60).rounded())
-    guard minutes > 0 else { return nil }
-
-    if minutes == 1 {
-      return "1 min"
-    }
-
-    return "\(minutes) min"
+  /// Returns whether the given event is a birthday event.
+  func isBirthdayEvent(_ event: NativeMonthCalendarEvent) -> Bool {
+    event.id.hasPrefix("birthday-")
   }
 
   /// Returns the currently selected events.
@@ -483,27 +322,6 @@ extension NativeMonthCalendarPopupView {
       .field("start", "\(debugDate(selectedStartDate))"),
       .field("end", "\(debugDate(selectedEndDate))"),
     )
-  }
-
-  /// Returns the rendered prefix shown before the title when needed.
-  func appointmentPrefix(for event: NativeMonthCalendarEvent) -> String {
-    guard event.isAllDay else { return "" }
-    guard !isBirthdayEvent(event) else { return "" }
-    guard !event.isHoliday || config.showHolidayAllDayLabel else { return "" }
-    return config.showAllDayLabel ? config.allDayLabel : ""
-  }
-
-  /// Returns whether the given event is a birthday event.
-  func isBirthdayEvent(_ event: NativeMonthCalendarEvent) -> Bool {
-    event.id.hasPrefix("birthday-")
-  }
-
-  /// Formats one event time.
-  func formattedEventTime(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
   }
 
   /// Formats one grouped selection date header.
