@@ -3,27 +3,32 @@ import XCTest
 @testable import EasyBar
 
 final class EventCatalogTests: XCTestCase {
+  /// Handles test lua definitions match swift catalog.
   func testLuaDefinitionsMatchSwiftCatalog() {
     XCTAssertEqual(EventCatalog.currentLuaDefinitionWarnings(), [])
   }
 
+  /// Handles test lua token names include widget events and forced event.
   func testLuaTokenNamesIncludeWidgetEventsAndForcedEvent() {
     XCTAssertTrue(EventCatalog.luaTokenEventNames.contains(EventCatalog.forcedEventName))
     XCTAssertTrue(EventCatalog.luaTokenEventNames.contains(WidgetEvent.mouseClicked.rawValue))
     XCTAssertTrue(EventCatalog.luaTokenEventNames.contains(WidgetEvent.sliderChanged.rawValue))
   }
 
+  /// Handles test lua token names exclude internal app events.
   func testLuaTokenNamesExcludeInternalAppEvents() {
     XCTAssertFalse(EventCatalog.luaTokenEventNames.contains(AppEvent.manualRefresh.rawValue))
     XCTAssertFalse(EventCatalog.luaTokenEventNames.contains(AppEvent.intervalTick.rawValue))
   }
 
+  /// Handles test lua driver names include forced event and external app events.
   func testLuaDriverNamesIncludeForcedEventAndExternalAppEvents() {
     XCTAssertTrue(EventCatalog.luaDriverEventNames.contains(EventCatalog.forcedEventName))
     XCTAssertTrue(EventCatalog.luaDriverEventNames.contains(AppEvent.systemWoke.rawValue))
     XCTAssertTrue(EventCatalog.luaDriverEventNames.contains(AppEvent.secondTick.rawValue))
   }
 
+  /// Handles test lua driver names exclude widget events and internal app events.
   func testLuaDriverNamesExcludeWidgetEventsAndInternalAppEvents() {
     XCTAssertFalse(EventCatalog.luaDriverEventNames.contains(WidgetEvent.mouseClicked.rawValue))
     XCTAssertFalse(EventCatalog.luaDriverEventNames.contains(WidgetEvent.sliderChanged.rawValue))
@@ -32,6 +37,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan includes interval and grouped sources.
   func testSubscriptionPlanIncludesIntervalAndGroupedSources() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -49,6 +55,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan returns empty plan for no subscriptions.
   func testSubscriptionPlanReturnsEmptyPlanForNoSubscriptions() {
     let plan = EventManager.subscriptionPlan(for: [])
 
@@ -57,6 +64,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan includes system sources.
   func testSubscriptionPlanIncludesSystemSources() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -77,6 +85,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan groups power events into single power source.
   func testSubscriptionPlanGroupsPowerEventsIntoSinglePowerSource() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -90,6 +99,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan groups volume events into single volume source.
   func testSubscriptionPlanGroupsVolumeEventsIntoSingleVolumeSource() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -103,6 +113,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan includes timer sources.
   func testSubscriptionPlanIncludesTimerSources() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -117,6 +128,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan parses positive interval subscription.
   func testSubscriptionPlanParsesPositiveIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -129,6 +141,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan ignores invalid interval subscription.
   func testSubscriptionPlanIgnoresInvalidIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(
       for: [
@@ -141,6 +154,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan ignores zero and negative interval subscriptions.
   func testSubscriptionPlanIgnoresZeroAndNegativeIntervalSubscriptions() {
     let zeroPlan = EventManager.subscriptionPlan(
       for: [
@@ -162,6 +176,7 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan ignores unknown subscriptions.
   func testSubscriptionPlanIgnoresUnknownSubscriptions() {
     let plan = EventManager.subscriptionPlan(
       for: [

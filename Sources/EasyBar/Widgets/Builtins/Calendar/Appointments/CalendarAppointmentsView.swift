@@ -55,6 +55,7 @@ struct CalendarAppointmentsListView: View {
     .frame(maxWidth: .infinity, alignment: .topLeading)
   }
 
+  /// Handles appointment row.
   private func appointmentRow(_ event: CalendarAgentEvent) -> some View {
     let isBirthday = isBirthdayEvent(event)
     let content = appointmentRowContent(event, showsChevron: !isBirthday && onEventTap != nil)
@@ -72,6 +73,7 @@ struct CalendarAppointmentsListView: View {
     return AnyView(content)
   }
 
+  /// Handles appointment row content.
   private func appointmentRowContent(
     _ event: CalendarAgentEvent,
     showsChevron: Bool
@@ -119,6 +121,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
+  /// Handles appointment title view.
   private func appointmentTitleView(for event: CalendarAgentEvent) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       if event.isAllDay {
@@ -160,6 +163,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
+  /// Handles appointment meta top view.
   private func appointmentMetaTopView(for event: CalendarAgentEvent) -> some View {
     if !event.isAllDay,
       style.showTravelTime,
@@ -189,6 +193,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
+  /// Handles appointment end time view.
   private func appointmentEndTimeView(for event: CalendarAgentEvent) -> some View {
     if style.showEndTime,
       let endTimeText = CalendarEventPresentation.endTimeText(
@@ -204,6 +209,7 @@ struct CalendarAppointmentsListView: View {
     }
   }
 
+  /// Handles appointment prefix.
   private func appointmentPrefix(for event: CalendarAgentEvent) -> String {
     guard event.isAllDay else { return "" }
     guard !isBirthdayEvent(event) else { return "" }
@@ -211,10 +217,12 @@ struct CalendarAppointmentsListView: View {
     return style.showAllDayLabel ? style.allDayLabel : ""
   }
 
+  /// Handles is birthday event.
   private func isBirthdayEvent(_ event: CalendarAgentEvent) -> Bool {
     event.id.hasPrefix("birthday-")
   }
 
+  /// Handles indicator color hex.
   private func indicatorColorHex(for event: CalendarAgentEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
       !hex.isEmpty
@@ -225,6 +233,7 @@ struct CalendarAppointmentsListView: View {
     return defaultIndicatorColorHex
   }
 
+  /// Handles color.
   private func color(_ hex: String) -> Color {
     Color(hex: hex)
   }

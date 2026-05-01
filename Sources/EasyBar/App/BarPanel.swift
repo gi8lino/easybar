@@ -12,6 +12,7 @@ final class BarPanel: NSPanel {
     false
   }
 
+  /// Handles constrain frame rect.
   override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
     frameRect
   }

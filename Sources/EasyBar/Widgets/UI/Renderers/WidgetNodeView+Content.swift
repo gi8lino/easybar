@@ -236,6 +236,7 @@ extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Handles base symbol view.
   func baseSymbolView(name: String) -> some View {
     if hasSymbolSecondaryColor {
       Image(systemName: name)
@@ -254,6 +255,7 @@ extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Handles custom filled symbol view.
   func customFilledSymbolView(name: String) -> some View {
     ZStack {
       Color.clear
@@ -289,6 +291,7 @@ extension WidgetNodeView {
   }
 
   @ViewBuilder
+  /// Handles overlay symbol view.
   func overlaySymbolView(name: String) -> some View {
     let overlay = Image(systemName: name)
       .symbolRenderingMode(.monochrome)
@@ -332,6 +335,7 @@ extension WidgetNodeView {
     }
   }
 
+  /// Handles tinted image.
   func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
     guard customImage != nil,
       let tint = node.iconColor ?? node.color,
@@ -353,11 +357,13 @@ extension WidgetNodeView {
     CGFloat(node.imageCornerRadius ?? 4)
   }
 
+  /// Handles resolved image.
   func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
     customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
   }
 
   @ViewBuilder
+  /// Handles rendered image view.
   func renderedImageView() -> some View {
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)
@@ -376,6 +382,7 @@ extension WidgetNodeView {
     }
   }
 
+  /// Handles image base view.
   func imageBaseView(
     image: NSImage,
     renderingMode: Image.TemplateRenderingMode

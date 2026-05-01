@@ -226,6 +226,7 @@ public func expandNetworkAgentFieldSelector(_ selector: String) throws -> [Netwo
   return networkAgentFieldsInRegistryOrder.filter(namespace.contains)
 }
 
+/// Handles network agent field namespace.
 private func networkAgentFieldNamespace(for selector: String) -> NetworkAgentFieldNamespace? {
   if let namespace = NetworkAgentFieldNamespace(rawValue: selector) {
     return namespace

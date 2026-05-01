@@ -15,10 +15,12 @@ final class DateNativeWidget: NativeWidget {
 
   var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }
 
+  /// Handles start.
   func start() {
     controller.start()
   }
 
+  /// Handles stop.
   func stop() {
     controller.stop()
   }

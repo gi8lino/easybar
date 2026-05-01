@@ -4,6 +4,7 @@ struct SpacesRenderer: NativeWidgetRenderer {
 
   let rootID: String
 
+  /// Creates nodes.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     [
       BuiltinNativeNodeFactory.makeSpacesNode(

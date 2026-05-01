@@ -19,6 +19,7 @@ struct WiFiRenderer: NativeWidgetRenderer {
 }
 
 extension WiFiRenderer {
+  /// Creates inline nodes.
   private func makeInlineNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     [
       BuiltinNativeNodeFactory.makeRowContainerNode(
@@ -55,6 +56,7 @@ extension WiFiRenderer {
     ]
   }
 
+  /// Creates tooltip nodes.
   private func makeTooltipNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     let popup = snapshot.config.popup
     var popupNode = BuiltinNativeNodeFactory.makePopupContentColumnNode(

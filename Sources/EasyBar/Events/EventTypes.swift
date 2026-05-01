@@ -80,6 +80,7 @@ struct EasyBarEventPayload: Sendable {
 
   // MARK: - Builders
 
+  /// Handles app.
   static func app(
     _ event: AppEvent,
     appName: String? = nil,
@@ -98,6 +99,7 @@ struct EasyBarEventPayload: Sendable {
     )
   }
 
+  /// Handles widget.
   static func widget(
     _ event: WidgetEvent,
     widgetID: String,
@@ -203,6 +205,7 @@ struct EasyBarEventPayload: Sendable {
 
   // MARK: - Internal
 
+  /// Creates payload.
   private static func makePayload(
     appEvent: AppEvent? = nil,
     widgetEvent: WidgetEvent? = nil,

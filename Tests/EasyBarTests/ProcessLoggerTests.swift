@@ -4,6 +4,7 @@ import XCTest
 @testable import EasyBarShared
 
 final class ProcessLoggerTests: XCTestCase {
+  /// Handles test info writes typed fields to configured log file.
   func testInfoWritesTypedFieldsToConfiguredLogFile() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -24,6 +25,7 @@ final class ProcessLoggerTests: XCTestCase {
     )
   }
 
+  /// Handles test typed log fields quote whitespace and empty values.
   func testTypedLogFieldsQuoteWhitespaceAndEmptyValues() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -41,6 +43,7 @@ final class ProcessLoggerTests: XCTestCase {
     )
   }
 
+  /// Handles test typed log fields escape special characters.
   func testTypedLogFieldsEscapeSpecialCharacters() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -60,6 +63,7 @@ final class ProcessLoggerTests: XCTestCase {
     )
   }
 
+  /// Handles test typed log fields format nil values.
   func testTypedLogFieldsFormatNilValues() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -74,6 +78,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertTrue(output.contains("nil fields ssid=nil"))
   }
 
+  /// Handles test minimum level filters lower severity messages.
   func testMinimumLevelFiltersLowerSeverityMessages() throws {
     let fixture = try makeLogger(label: "easybar", minimumLevel: .warn)
     defer { cleanup(fixture) }
@@ -93,6 +98,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertTrue(output.contains("] [ERROR] error visible subsystem=easybar"))
   }
 
+  /// Handles test set minimum level updates runtime filtering.
   func testSetMinimumLevelUpdatesRuntimeFiltering() throws {
     let fixture = try makeLogger(label: "easybar", minimumLevel: .error)
     defer { cleanup(fixture) }
@@ -107,6 +113,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertTrue(output.contains("] [DEBUG] debug visible subsystem=easybar"))
   }
 
+  /// Handles test child logger shares file output and runtime configuration.
   func testChildLoggerSharesFileOutputAndRuntimeConfiguration() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -128,6 +135,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertFalse(output.contains("subsystem=easybar.network"))
   }
 
+  /// Handles test empty child logger suffix returns parent logger.
   func testEmptyChildLoggerSuffixReturnsParentLogger() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -142,6 +150,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertFalse(output.contains("easybar."))
   }
 
+  /// Handles test write raw mirrors unformatted message to log file.
   func testWriteRawMirrorsUnformattedMessageToLogFile() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -154,6 +163,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertFalse(output.contains("[INFO] plain runtime output"))
   }
 
+  /// Handles test runtime logging configuration updates level and file state.
   func testRuntimeLoggingConfigurationUpdatesLevelAndFileState() throws {
     let directoryURL = try makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directoryURL) }
@@ -179,6 +189,7 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertTrue(output.contains("] [DEBUG] runtime debug subsystem=easybar"))
   }
 
+  /// Handles test process startup log writes standard startup block.
   func testProcessStartupLogWritesStandardStartupBlock() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -214,6 +225,7 @@ final class ProcessLoggerTests: XCTestCase {
     )
   }
 
+  /// Handles test process log level normalizes free form values.
   func testProcessLogLevelNormalizesFreeFormValues() {
     XCTAssertEqual(ProcessLogLevel.normalized("trace"), .trace)
     XCTAssertEqual(ProcessLogLevel.normalized(" DEBUG "), .debug)
@@ -232,6 +244,7 @@ private struct ProcessLoggerFixture {
   let fileURL: URL
 }
 
+/// Creates logger.
 private func makeLogger(
   label: String,
   minimumLevel: ProcessLogLevel = .info
@@ -249,6 +262,7 @@ private func makeLogger(
   )
 }
 
+/// Creates temporary directory.
 private func makeTemporaryDirectory() throws -> URL {
   let directoryURL = FileManager.default.temporaryDirectory
     .appendingPathComponent("easybar-logging-tests-\(UUID().uuidString)", isDirectory: true)
@@ -261,18 +275,21 @@ private func makeTemporaryDirectory() throws -> URL {
   return directoryURL
 }
 
+/// Handles read log and close.
 private func readLogAndClose(_ fixture: ProcessLoggerFixture) throws -> String {
   fixture.logger.configureFileLogging(enabled: false, path: "")
 
   return try String(contentsOf: fixture.fileURL, encoding: .utf8)
 }
 
+/// Handles cleanup.
 private func cleanup(_ fixture: ProcessLoggerFixture) {
   fixture.logger.configureFileLogging(enabled: false, path: "")
   try? FileManager.default.removeItem(at: fixture.directoryURL)
 }
 
 final class ProcessLoggerAdditionalTests: XCTestCase {
+  /// Handles test child logger trims suffix whitespace.
   func testChildLoggerTrimsSuffixWhitespace() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -287,6 +304,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertFalse(output.contains("easybar.  network  "))
   }
 
+  /// Handles test child logger shares minimum level changes.
   func testChildLoggerSharesMinimumLevelChanges() throws {
     let fixture = try makeLogger(label: "easybar", minimumLevel: .error)
     defer { cleanup(fixture) }
@@ -304,6 +322,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertFalse(output.contains("subsystem=easybar.network"))
   }
 
+  /// Handles test configure file logging disabled does not create log file.
   func testConfigureFileLoggingDisabledDoesNotCreateLogFile() throws {
     let directoryURL = try makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directoryURL) }
@@ -319,6 +338,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertEqual(logger.fileLoggingPath, fileURL.path)
   }
 
+  /// Handles test configure file logging with empty path does not create file handle.
   func testConfigureFileLoggingWithEmptyPathDoesNotCreateFileHandle() {
     let logger = ProcessLogger(label: "easybar")
 
@@ -329,6 +349,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertEqual(logger.fileLoggingPath, "")
   }
 
+  /// Handles test reconfiguring file logging moves output to new file.
   func testReconfiguringFileLoggingMovesOutputToNewFile() throws {
     let directoryURL = try makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directoryURL) }
@@ -355,6 +376,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertTrue(secondOutput.contains("second file only"))
   }
 
+  /// Handles test typed log fields escape backslashes and carriage returns.
   func testTypedLogFieldsEscapeBackslashesAndCarriageReturns() throws {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
@@ -372,6 +394,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     )
   }
 
+  /// Handles test info omits subsystem outside debug and trace modes.
   func testInfoOmitsSubsystemOutsideDebugAndTraceModes() throws {
     let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .info)
     defer { cleanup(fixture) }
@@ -384,6 +407,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertFalse(output.contains("subsystem=easybar.app.window"))
   }
 
+  /// Handles test warn and error always append subsystem outside debug and trace modes.
   func testWarnAndErrorAlwaysAppendSubsystemOutsideDebugAndTraceModes() throws {
     let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .info)
     defer { cleanup(fixture) }
@@ -397,6 +421,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertTrue(output.contains("] [ERROR] error event subsystem=easybar.app.window"))
   }
 
+  /// Handles test debug mode appends subsystem for all levels.
   func testDebugModeAppendsSubsystemForAllLevels() throws {
     let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .debug)
     defer { cleanup(fixture) }
@@ -410,6 +435,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertTrue(output.contains("] [DEBUG] debug event subsystem=easybar.app.window"))
   }
 
+  /// Handles test existing subsystem field is not duplicated.
   func testExistingSubsystemFieldIsNotDuplicated() throws {
     let fixture = try makeLogger(label: "easybar.app.window", minimumLevel: .debug)
     defer { cleanup(fixture) }
@@ -422,6 +448,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     XCTAssertFalse(output.contains("subsystem=easybar.app.window"))
   }
 
+  /// Handles test default logging directory path uses user state directory.
   func testDefaultLoggingDirectoryPathUsesUserStateDirectory() {
     let expected = FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent(".local/state/easybar")

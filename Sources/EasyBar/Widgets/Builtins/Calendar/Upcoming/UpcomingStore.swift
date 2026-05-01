@@ -15,6 +15,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     return sharedInstance
   }
 
+  /// Handles bootstrap.
   static func bootstrap(logger: ProcessLogger) {
     sharedInstance = NativeUpcomingCalendarStore(logger: logger)
   }

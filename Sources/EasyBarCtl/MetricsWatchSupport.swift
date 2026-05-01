@@ -11,6 +11,7 @@ final class WatchTerminal {
     interactive ? "\u{001B}[H\u{001B}[2J\u{001B}[3J" : ""
   }
 
+  /// Handles activate.
   func activate() {
     guard interactive, !activated else { return }
     activated = true
@@ -19,6 +20,7 @@ final class WatchTerminal {
     fflush(stdout)
   }
 
+  /// Handles restore.
   func restore() {
     guard interactive, activated else { return }
     activated = false
@@ -32,6 +34,7 @@ struct MetricsHistory {
   let limit: Int
   private(set) var series: [String: [Double]] = [:]
 
+  /// Handles append.
   mutating func append(_ snapshot: IPC.MetricsSnapshot) {
     append(snapshot.process.cpuPercent ?? 0, for: "process.cpu")
     append(snapshot.lua.cpuPercent ?? 0, for: "lua.cpu")
@@ -39,10 +42,12 @@ struct MetricsHistory {
     append(snapshot.runtime.treeUpdatesPerSecond, for: "runtime.tree")
   }
 
+  /// Handles values.
   func values(for key: String) -> [Double] {
     series[key] ?? []
   }
 
+  /// Handles append.
   private mutating func append(_ value: Double, for key: String) {
     var values = series[key] ?? []
     values.append(max(0, value))

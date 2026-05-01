@@ -6,6 +6,7 @@ import Foundation
 struct MetricsStreamClient {
   let socketPath: String
 
+  /// Handles stream.
   func stream(
     request: IPC.Request,
     handleMessage: (IPC.Message) throws -> Void
@@ -75,6 +76,7 @@ struct MetricsStreamClient {
     }
   }
 
+  /// Handles send all.
   private func sendAll(fd: Int32, data: Data) throws {
     try data.withUnsafeBytes { rawBuffer in
       guard let base = rawBuffer.baseAddress else { return }
@@ -96,6 +98,7 @@ struct MetricsStreamClient {
     }
   }
 
+  /// Handles next line.
   private func nextLine(from pending: inout Data) -> Data? {
     guard let newlineIndex = pending.firstIndex(of: 0x0A) else {
       return nil

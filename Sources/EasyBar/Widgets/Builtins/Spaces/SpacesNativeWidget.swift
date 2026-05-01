@@ -8,6 +8,7 @@ final class SpacesNativeWidget: NativeWidget {
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
   private lazy var renderer = SpacesRenderer(rootID: rootID)
 
+  /// Handles start.
   func start() {
     AeroSpaceService.shared.registerConsumer(rootID)
 
@@ -18,12 +19,14 @@ final class SpacesNativeWidget: NativeWidget {
     publish()
   }
 
+  /// Handles stop.
   func stop() {
     aeroSpaceObserver.stop()
     AeroSpaceService.shared.unregisterConsumer(rootID)
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
+  /// Handles publish.
   private func publish() {
     WidgetStore.shared.apply(
       root: rootID,

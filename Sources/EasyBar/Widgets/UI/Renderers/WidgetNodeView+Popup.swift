@@ -7,6 +7,7 @@ extension WidgetNodeView {
     color(node.color)
   }
 
+  /// Handles color.
   func color(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else {
       return Theme.defaultTextColor
@@ -15,22 +16,26 @@ extension WidgetNodeView {
     return Color(hex: hex)
   }
 
+  /// Handles font value.
   func fontValue(size: Double?) -> Font? {
     guard let size else { return nil }
     return .system(size: CGFloat(size))
   }
 
+  /// Handles cg float.
   func cgFloat(_ value: Double?) -> CGFloat? {
     guard let value else { return nil }
     return CGFloat(value)
   }
 
+  /// Handles schedule popup close check.
   func schedulePopupCloseCheck() {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
       closePopupIfIdle()
     }
   }
 
+  /// Handles handle anchor hover.
   func handleAnchorHover(_ hovering: Bool) {
     anchorHovered = hovering
 
@@ -43,6 +48,7 @@ extension WidgetNodeView {
     schedulePopupCloseCheck()
   }
 
+  /// Handles handle popup hover.
   func handlePopupHover(_ hovering: Bool) {
     popupHovered = hovering
 
@@ -50,12 +56,14 @@ extension WidgetNodeView {
     schedulePopupCloseCheck()
   }
 
+  /// Handles close popup if idle.
   func closePopupIfIdle() {
     guard !anchorHovered else { return }
     guard !popupHovered else { return }
     popupPresented = false
   }
 
+  /// Handles update popup panel.
   func updatePopupPanel(isPresented: Bool) {
     guard nodeCanPresentPopup else {
       popupPanel.close()

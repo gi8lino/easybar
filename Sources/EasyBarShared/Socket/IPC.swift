@@ -70,6 +70,7 @@ extension IPC {
       }
     }
 
+    /// Handles encode.
     public func encode(to encoder: Encoder) throws {
       var container = encoder.container(keyedBy: CodingKeys.self)
 
@@ -152,6 +153,7 @@ extension IPC {
       }
     }
 
+    /// Handles encode.
     public func encode(to encoder: Encoder) throws {
       var container = encoder.container(keyedBy: CodingKeys.self)
 

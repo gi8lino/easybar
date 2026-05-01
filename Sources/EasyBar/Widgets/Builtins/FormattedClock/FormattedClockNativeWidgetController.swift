@@ -5,10 +5,12 @@ final class FormattedDateFormatterCache {
 
   private var formatters: [String: DateFormatter] = [:]
 
+  /// Handles string.
   func string(from date: Date, format: String) -> String {
     formatter(for: format).string(from: date)
   }
 
+  /// Handles formatter.
   private func formatter(for format: String) -> DateFormatter {
     if let formatter = formatters[format] {
       return formatter
@@ -52,6 +54,7 @@ final class FormattedClockNativeWidgetController {
     ]
   }
 
+  /// Handles start.
   func start() {
     NativeWidgetEventDriver.start(
       observer: eventObserver,
@@ -66,6 +69,7 @@ final class FormattedClockNativeWidgetController {
     publish()
   }
 
+  /// Handles stop.
   func stop() {
     eventObserver.stop()
     WidgetStore.shared.apply(root: rootID, nodes: [])
@@ -75,6 +79,7 @@ final class FormattedClockNativeWidgetController {
     FormattedClockRefreshPolicy.event(for: snapshotProvider().format)
   }
 
+  /// Handles publish.
   private func publish() {
     let snapshot = snapshotProvider()
 
@@ -92,6 +97,7 @@ final class FormattedClockNativeWidgetController {
 /// Resolves the lowest-cost refresh cadence that still keeps a formatted clock output current.
 enum FormattedClockRefreshPolicy {
 
+  /// Handles event.
   static func event(for format: String) -> AppEvent {
     containsSecondPrecision(format) ? .secondTick : .minuteTick
   }

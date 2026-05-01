@@ -307,6 +307,7 @@ extension Config {
       .lowercased()
   }
 
+  /// Returns required string.
   func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {
     if let string = value.string {
       return string
@@ -319,6 +320,7 @@ extension Config {
     )
   }
 
+  /// Returns required bool.
   func requiredBool(_ value: any TOMLValueConvertible, path: String) throws -> Bool {
     if let bool = value.bool {
       return bool
@@ -331,6 +333,7 @@ extension Config {
     )
   }
 
+  /// Returns required int.
   func requiredInt(_ value: any TOMLValueConvertible, path: String) throws -> Int {
     if let int = value.int {
       return int
@@ -343,6 +346,7 @@ extension Config {
     )
   }
 
+  /// Returns required number.
   func requiredNumber(_ value: any TOMLValueConvertible, path: String) throws -> Double {
     if let double = value.double {
       return double
@@ -359,6 +363,7 @@ extension Config {
     )
   }
 
+  /// Returns required string array.
   func requiredStringArray(_ value: any TOMLValueConvertible, path: String) throws -> [String] {
     guard let array = value.array else {
       throw ConfigError.invalidType(
@@ -373,6 +378,7 @@ extension Config {
     }
   }
 
+  /// Returns required string table.
   func requiredStringTable(
     _ value: any TOMLValueConvertible,
     path: String
@@ -391,6 +397,7 @@ extension Config {
     }
   }
 
+  /// Describes the value.
   func describe(_ value: any TOMLValueConvertible) -> String {
     if let string = value.string {
       return "string(\(string.debugDescription))"
@@ -419,31 +426,37 @@ extension Config {
     return "unknown"
   }
 
+  /// Returns optional string.
   func optionalString(_ value: (any TOMLValueConvertible)?, path: String) throws -> String? {
     guard let value else { return nil }
     return try requiredString(value, path: path)
   }
 
+  /// Returns optional bool.
   func optionalBool(_ value: (any TOMLValueConvertible)?, path: String) throws -> Bool? {
     guard let value else { return nil }
     return try requiredBool(value, path: path)
   }
 
+  /// Returns optional int.
   func optionalInt(_ value: (any TOMLValueConvertible)?, path: String) throws -> Int? {
     guard let value else { return nil }
     return try requiredInt(value, path: path)
   }
 
+  /// Returns optional number.
   func optionalNumber(_ value: (any TOMLValueConvertible)?, path: String) throws -> Double? {
     guard let value else { return nil }
     return try requiredNumber(value, path: path)
   }
 
+  /// Returns optional string array.
   func optionalStringArray(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String]? {
     guard let value else { return nil }
     return try requiredStringArray(value, path: path)
   }
 
+  /// Returns optional string table.
   func optionalStringTable(
     _ value: (any TOMLValueConvertible)?,
     path: String

@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: - Interaction
 
 extension WidgetNodeView {
+  /// Handles styled container surface.
   func styledContainerSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -13,6 +14,7 @@ extension WidgetNodeView {
     )
   }
 
+  /// Handles styled node surface.
   func styledNodeSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -38,6 +40,7 @@ extension WidgetNodeView {
     )
   }
 
+  /// Handles styled mouse content.
   func styledMouseContent<Content: View>(_ content: Content) -> some View {
     let base = AnyView(
       content
@@ -63,6 +66,7 @@ extension WidgetNodeView {
     )
   }
 
+  /// Handles popup anchor surface.
   func popupAnchorSurface<Content: View>(_ content: Content) -> some View {
     let base = AnyView(content.foregroundStyle(nodeColor))
     let surfaced = popupAnchorInteractiveSurface(base)
@@ -77,6 +81,7 @@ extension WidgetNodeView {
     )
   }
 
+  /// Handles popup item surface.
   func popupItemSurface<Content: View>(_ content: Content) -> some View {
     content
       .modifier(nodeStyle)
@@ -89,6 +94,7 @@ extension WidgetNodeView {
       }
   }
 
+  /// Handles node event surface.
   func nodeEventSurface(tracksHover: Bool = true) -> some View {
     GeometryReader { proxy in
       WidgetMouseView(
@@ -123,6 +129,7 @@ extension WidgetNodeView {
     }
   }
 
+  /// Handles popup anchor interactive surface.
   func popupAnchorInteractiveSurface<Content: View>(_ content: Content) -> some View {
     AnyView(
       content
@@ -156,6 +163,7 @@ extension WidgetNodeView {
     }
   }
 
+  /// Handles emit node hover event.
   func emitNodeHoverEvent(_ hovering: Bool) {
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
 
@@ -168,6 +176,7 @@ extension WidgetNodeView {
     }
   }
 
+  /// Handles emit node click event.
   func emitNodeClickEvent() {
     Task {
       await EventHub.shared.emitWidgetEvent(

@@ -10,6 +10,7 @@ enum InlineLabelVisibility {
 }
 
 enum NativeWidgetHoverSupport {
+  /// Handles update hover state.
   static func updateHoverState(_ event: WidgetEvent, isHovered: inout Bool) -> Bool {
     switch event {
     case .mouseEntered:
@@ -27,6 +28,7 @@ enum NativeWidgetHoverSupport {
     }
   }
 
+  /// Handles shows inline label.
   static func showsInlineLabel(
     text: String,
     mode: some InlineLabelDisplayMode,

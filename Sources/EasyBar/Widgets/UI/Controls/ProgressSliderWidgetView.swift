@@ -132,6 +132,7 @@ private struct ProgressSliderInteractionSurface: NSViewRepresentable {
   let onPreview: (CGFloat) -> Void
   let onCommit: (CGFloat) -> Void
 
+  /// Creates nsview.
   func makeNSView(context: Context) -> ProgressSliderInteractionNSView {
     let view = ProgressSliderInteractionNSView()
     view.onPreview = onPreview
@@ -139,6 +140,7 @@ private struct ProgressSliderInteractionSurface: NSViewRepresentable {
     return view
   }
 
+  /// Handles update nsview.
   func updateNSView(_ nsView: ProgressSliderInteractionNSView, context: Context) {
     nsView.onPreview = onPreview
     nsView.onCommit = onCommit
@@ -149,6 +151,7 @@ private final class ProgressSliderInteractionNSView: NSView {
   var onPreview: ((CGFloat) -> Void)?
   var onCommit: ((CGFloat) -> Void)?
 
+  /// Handles accepts first mouse.
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
     true
   }
@@ -157,23 +160,28 @@ private final class ProgressSliderInteractionNSView: NSView {
     true
   }
 
+  /// Handles hit test.
   override func hitTest(_ point: NSPoint) -> NSView? {
     bounds.contains(point) ? self : nil
   }
 
+  /// Handles mouse down.
   override func mouseDown(with event: NSEvent) {
     emitPreview(for: event)
   }
 
+  /// Handles mouse dragged.
   override func mouseDragged(with event: NSEvent) {
     emitPreview(for: event)
   }
 
+  /// Handles mouse up.
   override func mouseUp(with event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     onCommit?(point.x)
   }
 
+  /// Handles emit preview.
   private func emitPreview(for event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     onPreview?(point.x)

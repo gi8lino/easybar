@@ -18,6 +18,7 @@ enum MetricsRenderer {
     return formatter
   }()
 
+  /// Handles snapshot text.
   static func snapshotText(_ snapshot: IPC.MetricsSnapshot) -> String {
     let sections = [
       header(snapshot, live: false),
@@ -31,6 +32,7 @@ enum MetricsRenderer {
     return sections.filter { !$0.isEmpty }.joined(separator: "\n\n")
   }
 
+  /// Handles watch text.
   static func watchText(_ snapshot: IPC.MetricsSnapshot, history: MetricsHistory) -> String {
     let sections = [
       header(snapshot, live: true),
@@ -45,11 +47,13 @@ enum MetricsRenderer {
     return sections.filter { !$0.isEmpty }.joined(separator: "\n\n") + "\n"
   }
 
+  /// Handles header.
   private static func header(_ snapshot: IPC.MetricsSnapshot, live: Bool) -> String {
     let mode = live ? "live" : "snapshot"
     return "EasyBar metrics (\(mode))  \(timestamp(snapshot.timestamp))"
   }
 
+  /// Handles graphs.
   private static func graphs(_ snapshot: IPC.MetricsSnapshot, history: MetricsHistory) -> String {
     let lines = [
       row([
@@ -93,6 +97,7 @@ enum MetricsRenderer {
     return (["Graphs"] + lines).joined(separator: "\n")
   }
 
+  /// Handles processes.
   private static func processes(_ snapshot: IPC.MetricsSnapshot) -> String {
     let lines = [
       "Processes",
@@ -103,6 +108,7 @@ enum MetricsRenderer {
     return lines.joined(separator: "\n")
   }
 
+  /// Handles runtime.
   private static func runtime(_ snapshot: IPC.MetricsSnapshot) -> String {
     let runtime = snapshot.runtime
 
@@ -177,6 +183,7 @@ enum MetricsRenderer {
     ].joined(separator: "\n")
   }
 
+  /// Handles agents.
   private static func agents(_ snapshot: IPC.MetricsSnapshot) -> String {
     let header = row([
       column("name", width: 10),
@@ -209,6 +216,7 @@ enum MetricsRenderer {
     return (["Agents", header] + body).joined(separator: "\n")
   }
 
+  /// Handles widgets.
   private static func widgets(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.widgets.isEmpty else {
       return "Widgets\nnone"
@@ -233,6 +241,7 @@ enum MetricsRenderer {
     return (["Widgets", header] + body).joined(separator: "\n")
   }
 
+  /// Handles events.
   private static func events(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.events.isEmpty else {
       return "Events\nnone"
@@ -259,6 +268,7 @@ enum MetricsRenderer {
     return (["Events", header] + body).joined(separator: "\n")
   }
 
+  /// Handles process header.
   private static func processHeader() -> String {
     row([
       column("name", width: 10),
@@ -269,6 +279,7 @@ enum MetricsRenderer {
     ])
   }
 
+  /// Handles process line.
   private static func processLine(_ process: IPC.ProcessMetrics) -> String {
     row([
       column(process.name, width: 10),
@@ -279,6 +290,7 @@ enum MetricsRenderer {
     ])
   }
 
+  /// Handles graph line.
   private static func graphLine(
     label: String,
     current: String,
@@ -295,6 +307,7 @@ enum MetricsRenderer {
     ])
   }
 
+  /// Handles sparkline.
   private static func sparkline(
     _ values: [Double],
     absoluteMax: Double? = nil,
@@ -322,10 +335,12 @@ enum MetricsRenderer {
     return "[" + String(repeating: " ", count: leadingPadding) + String(rendered) + "]"
   }
 
+  /// Handles timestamp.
   private static func timestamp(_ date: Date) -> String {
     timestampFormatter.string(from: date)
   }
 
+  /// Handles relative.
   private static func relative(_ date: Date?) -> String {
     guard let date else { return "-" }
 
@@ -333,10 +348,12 @@ enum MetricsRenderer {
     return "\(delta)s"
   }
 
+  /// Handles yes no.
   private static func yesNo(_ value: Bool) -> String {
     value ? "yes" : "no"
   }
 
+  /// Handles number.
   private static func number(_ value: Double?) -> String {
     guard let value else { return "-" }
 
@@ -351,6 +368,7 @@ enum MetricsRenderer {
     return String(format: "%.1f", value)
   }
 
+  /// Handles percent.
   private static func percent(_ value: Double?) -> String {
     guard let value else { return "-" }
 
@@ -365,20 +383,24 @@ enum MetricsRenderer {
     return String(format: "%.1f%%", value)
   }
 
+  /// Handles bytes.
   private static func bytes(_ value: UInt64?) -> String {
     guard let value else { return "-" }
     return byteFormatter.string(fromByteCount: Int64(value))
   }
 
+  /// Handles sample interval.
   private static func sampleInterval(_ value: Double) -> String {
     "\(number(value))s"
   }
 
+  /// Handles average.
   private static func average(_ values: [Double]) -> Double? {
     guard !values.isEmpty else { return nil }
     return values.reduce(0, +) / Double(values.count)
   }
 
+  /// Handles row.
   private static func row(_ columns: [String]) -> String {
     columns.joined(separator: "  ")
   }
@@ -388,6 +410,7 @@ enum MetricsRenderer {
     case right
   }
 
+  /// Handles column.
   private static func column(_ value: String, width: Int, alignment: ColumnAlignment = .left)
     -> String
   {

@@ -301,6 +301,7 @@ final class MetricsCoordinator {
     }
   }
 
+  /// Starts timer.
   private func startTimer() {
     queue.async {
       guard self.timer == nil else { return }
@@ -318,6 +319,7 @@ final class MetricsCoordinator {
     }
   }
 
+  /// Stops timer.
   private func stopTimer() {
     queue.async {
       self.timer?.cancel()
@@ -330,6 +332,7 @@ final class MetricsCoordinator {
     }
   }
 
+  /// Handles collect snapshot.
   private func collectSnapshot(collectionEnabled: Bool) -> IPC.MetricsSnapshot {
     let now = Date()
 
@@ -521,6 +524,7 @@ final class MetricsCoordinator {
     return snapshot
   }
 
+  /// Handles rate.
   private func rate(
     current: Int,
     previous: Int?,
@@ -534,6 +538,7 @@ final class MetricsCoordinator {
     return Double(delta) / interval
   }
 
+  /// Handles with lock.
   private func withLock<T>(_ body: () -> T) -> T {
     lock.lock()
     defer { lock.unlock() }

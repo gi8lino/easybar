@@ -60,6 +60,7 @@ final class ProcessSampler {
     }
   }
 
+  /// Handles resolve cpupercent.
   private func resolveCPUPercent(pid: Int32, totalCPUTime: UInt64, now: Date) -> Double? {
     withLock {
       let timestamp = now.timeIntervalSinceReferenceDate
@@ -81,6 +82,7 @@ final class ProcessSampler {
     }
   }
 
+  /// Handles read task info.
   private func readTaskInfo(for pid: Int32) -> (
     residentSizeBytes: UInt64, threadCount: Int, totalCPUTime: UInt64
   )? {
@@ -107,6 +109,7 @@ final class ProcessSampler {
     )
   }
 
+  /// Handles first pid.
   private func firstPID(named executableName: String) -> Int32? {
     let estimatedCount = Int(proc_listallpids(nil, 0))
     let capacity = max(estimatedCount + 32, 256)
@@ -131,6 +134,7 @@ final class ProcessSampler {
     return nil
   }
 
+  /// Handles with lock.
   private func withLock<T>(_ body: () -> T) -> T {
     lock.lock()
     defer { lock.unlock() }

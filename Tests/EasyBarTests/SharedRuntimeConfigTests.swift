@@ -16,6 +16,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
   private var originalEnvironment: [String: String?] = [:]
   private var tempDirectoryURL: URL!
 
+  /// Handles set up with error.
   override func setUpWithError() throws {
     try super.setUpWithError()
 
@@ -25,6 +26,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     tempDirectoryURL = try makeTemporaryDirectory()
   }
 
+  /// Handles tear down with error.
   override func tearDownWithError() throws {
     restoreEnvironment()
 
@@ -35,6 +37,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     try super.tearDownWithError()
   }
 
+  /// Handles test load prefers environment overrides over toml values.
   func testLoadPrefersEnvironmentOverridesOverTomlValues() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-config.toml")
     let envLoggingDirectory = tempDirectoryURL.appendingPathComponent("env-logs").path
@@ -80,6 +83,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
 }
 
 extension SharedRuntimeConfigTests {
+  /// Creates temporary directory.
   fileprivate func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
@@ -95,6 +99,7 @@ extension SharedRuntimeConfigTests {
     return directoryURL
   }
 
+  /// Handles write config.
   fileprivate func writeConfig(_ content: String, to url: URL) throws {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(),
@@ -103,6 +108,7 @@ extension SharedRuntimeConfigTests {
     try content.write(to: url, atomically: true, encoding: .utf8)
   }
 
+  /// Handles set environment value.
   fileprivate func setEnvironmentValue(_ value: String?, for key: String) {
     if let value {
       setenv(key, value, 1)
@@ -111,6 +117,7 @@ extension SharedRuntimeConfigTests {
     }
   }
 
+  /// Handles restore environment.
   fileprivate func restoreEnvironment() {
     for key in environmentKeys {
       setEnvironmentValue(originalEnvironment[key] ?? nil, for: key)

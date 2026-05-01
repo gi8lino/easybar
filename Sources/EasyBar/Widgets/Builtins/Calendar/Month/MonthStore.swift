@@ -14,6 +14,7 @@ final class NativeMonthCalendarStore: ObservableObject {
     return sharedInstance
   }
 
+  /// Handles bootstrap.
   static func bootstrap(logger: ProcessLogger) {
     sharedInstance = NativeMonthCalendarStore(logger: logger)
   }

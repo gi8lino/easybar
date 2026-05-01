@@ -422,6 +422,7 @@ extension CalendarEventComposerView {
 // MARK: - Button Styles
 
 private struct PrimaryFooterButtonStyle: ButtonStyle {
+  /// Creates body.
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: 13, weight: .medium))
@@ -438,6 +439,7 @@ private struct PrimaryFooterButtonStyle: ButtonStyle {
 }
 
 private struct SecondaryFooterButtonStyle: ButtonStyle {
+  /// Creates body.
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: 13, weight: .regular))
@@ -458,6 +460,7 @@ private struct SecondaryFooterButtonStyle: ButtonStyle {
 }
 
 private struct DangerFooterButtonStyle: ButtonStyle {
+  /// Creates body.
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.system(size: 13, weight: .regular))

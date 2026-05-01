@@ -213,6 +213,7 @@ private struct ConfigErrorContentView: View {
     )
   }
 
+  /// Handles normalized text.
   private func normalizedText(_ value: String) -> String {
     value
       .components(separatedBy: .whitespacesAndNewlines)
@@ -220,6 +221,7 @@ private struct ConfigErrorContentView: View {
       .joined(separator: " ")
   }
 
+  /// Handles open config.
   private func openConfig() {
     let url = URL(fileURLWithPath: configPath)
     NSWorkspace.shared.open(url)

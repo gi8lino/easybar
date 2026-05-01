@@ -119,6 +119,7 @@ extension Config {
     )
   }
 
+  /// Parses wi fi builtin.
   func parseWiFiBuiltin(from builtins: TOMLTable) throws {
     guard let wifi = builtins["wifi"]?.table else { return }
 
@@ -162,6 +163,7 @@ extension Config {
 }
 
 extension Config {
+  /// Parses wi fi content.
   fileprivate func parseWiFiContent(
     from table: TOMLTable,
     fallback: WiFiBuiltinConfig.Content
@@ -193,6 +195,7 @@ extension Config {
     )
   }
 
+  /// Parses wi fi expand.
   fileprivate func parseWiFiExpand(
     from table: TOMLTable,
     fallback: BuiltinWiFiExpand

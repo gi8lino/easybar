@@ -20,6 +20,7 @@ final class ConfigLoaderTests: XCTestCase {
   private var originalSnapshot: ConfigSnapshot!
   private var tempDirectoryURL: URL!
 
+  /// Handles set up with error.
   override func setUpWithError() throws {
     try super.setUpWithError()
 
@@ -31,6 +32,7 @@ final class ConfigLoaderTests: XCTestCase {
     tempDirectoryURL = try makeTemporaryDirectory()
   }
 
+  /// Handles tear down with error.
   override func tearDownWithError() throws {
     restoreEnvironment()
 
@@ -45,6 +47,7 @@ final class ConfigLoaderTests: XCTestCase {
     try super.tearDownWithError()
   }
 
+  /// Handles test reload uses environment overrides when config file is missing.
   func testReloadUsesEnvironmentOverridesWhenConfigFileIsMissing() throws {
     let config = Config.shared
     let missingConfigPath = tempDirectoryURL.appendingPathComponent("missing.toml").path
@@ -85,6 +88,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.registeredDirectories["logging.directory"]?.path, loggingDirectory)
   }
 
+  /// Handles test reload applies config file overrides and creates required directories.
   func testReloadAppliesConfigFileOverridesAndCreatesRequiredDirectories() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
@@ -184,6 +188,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
   }
 
+  /// Handles test reload returns config error for invalid logging level.
   func testReloadReturnsConfigErrorForInvalidLoggingLevel() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid.toml")
@@ -210,6 +215,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .warn)
   }
 
+  /// Handles test reload failure keeps previous bar and builtin configuration.
   func testReloadFailureKeepsPreviousBarAndBuiltinConfiguration() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("reload-config.toml")
@@ -276,6 +282,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.builtinCPU.historySize, 24)
   }
 
+  /// Handles test reload returns invalid type for bar height string value.
   func testReloadReturnsInvalidTypeForBarHeightStringValue() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-type.toml")
@@ -301,6 +308,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(actual, "string(tall)")
   }
 
+  /// Handles test reload returns invalid type for logging enabled string value.
   func testReloadReturnsInvalidTypeForLoggingEnabledStringValue() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-logging-type.toml")
@@ -326,6 +334,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(actual, "string(yes)")
   }
 
+  /// Handles test reload prefers environment logging level over toml value.
   func testReloadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("env-logging-precedence.toml")
@@ -347,6 +356,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .trace)
   }
 
+  /// Handles test reload uses legacy logging debug when level is absent.
   func testReloadUsesLegacyLoggingDebugWhenLevelIsAbsent() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("legacy-logging.toml")
@@ -367,6 +377,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .debug)
   }
 
+  /// Handles test reload expands tilde paths from config file.
   func testReloadExpandsTildePathsFromConfigFile() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("tilde-paths.toml")
@@ -402,6 +413,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.networkAgentSocketPath, "\(homePath)/.cache/easybar-tests/network.sock")
   }
 
+  /// Handles test reload returns error when directory setting points to existing file.
   func testReloadReturnsErrorWhenDirectorySettingPointsToExistingFile() throws {
     let config = Config.shared
     let blockingFileURL = tempDirectoryURL.appendingPathComponent("not-a-directory")
@@ -431,6 +443,7 @@ final class ConfigLoaderTests: XCTestCase {
     )
   }
 
+  /// Handles test reload normalizes enum values with whitespace for builtins.
   func testReloadNormalizesEnumValuesWithWhitespaceForBuiltins() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("normalized-builtins.toml")
@@ -453,6 +466,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.builtinTime.position, .left)
   }
 
+  /// Handles test reload returns error for unknown builtin group reference.
   func testReloadReturnsErrorForUnknownBuiltinGroupReference() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("unknown-group.toml")
@@ -484,6 +498,7 @@ final class ConfigLoaderTests: XCTestCase {
     )
   }
 
+  /// Handles test reload returns error for nested builtin group reference.
   func testReloadReturnsErrorForNestedBuiltinGroupReference() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("nested-group.toml")
@@ -514,6 +529,7 @@ final class ConfigLoaderTests: XCTestCase {
 }
 
 extension ConfigLoaderTests {
+  /// Creates temporary directory.
   fileprivate func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("easybar-config-tests-\(UUID().uuidString)", isDirectory: true)
@@ -526,6 +542,7 @@ extension ConfigLoaderTests {
     return directoryURL
   }
 
+  /// Handles write config.
   fileprivate func writeConfig(_ content: String, to url: URL) throws {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(),
@@ -534,6 +551,7 @@ extension ConfigLoaderTests {
     try content.write(to: url, atomically: true, encoding: .utf8)
   }
 
+  /// Handles set environment value.
   fileprivate func setEnvironmentValue(_ value: String?, for key: String) {
     if let value {
       setenv(key, value, 1)
@@ -542,6 +560,7 @@ extension ConfigLoaderTests {
     }
   }
 
+  /// Handles restore environment.
   fileprivate func restoreEnvironment() {
     for key in environmentKeys {
       setEnvironmentValue(originalEnvironment[key] ?? nil, for: key)

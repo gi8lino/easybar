@@ -13,6 +13,7 @@ final class NativeWiFiStore: ObservableObject {
     return sharedInstance
   }
 
+  /// Handles bootstrap.
   static func bootstrap(logger: ProcessLogger) {
     sharedInstance = NativeWiFiStore(logger: logger)
   }

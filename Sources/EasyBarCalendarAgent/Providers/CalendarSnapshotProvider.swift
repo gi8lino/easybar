@@ -6,6 +6,7 @@ final class CalendarSnapshotProvider {
   private enum EventTravelTimeBridge {
     static let key = "travelTime"
 
+    /// Handles get seconds.
     static func getSeconds(from event: EKEvent) -> TimeInterval? {
       let selector = NSSelectorFromString(key)
       guard event.responds(to: selector) else { return nil }
@@ -18,6 +19,7 @@ final class CalendarSnapshotProvider {
       return nil
     }
 
+    /// Handles set seconds.
     static func setSeconds(_ seconds: TimeInterval?, on event: EKEvent) {
       guard let seconds, seconds > 0 else {
         event.setValue(NSNumber(value: 0), forKey: key)
