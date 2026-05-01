@@ -220,6 +220,13 @@ Common events:
 - `easybar.events.slider.preview`
 - `easybar.events.slider.changed`
 
+App events such as `minute_tick`, `second_tick`, `network_change`, and `volume_change`
+are only forwarded into the Lua runtime when at least one Lua widget subscribes to them.
+
+Targeted interaction events such as `mouse.clicked`, `mouse.entered`, `mouse.exited`,
+`mouse.scrolled`, `slider.preview`, and `slider.changed` are still delivered to the
+relevant Lua widget callbacks when those interactions occur.
+
 ### `easybar.exec(command, callback)`
 
 Runs a shell command.
