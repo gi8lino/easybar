@@ -1,6 +1,7 @@
-.build/
 dist/
-todo.txt
+.build/
 .swiftpm/
+
 .DS_Store
+todo.txt
 
