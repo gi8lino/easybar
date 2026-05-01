@@ -54,9 +54,9 @@ final class EventManager {
 
   private let logger: ProcessLogger
 
-  private var luaSubscriptions = Set<String>()
-  private var nativeSubscriptions = Set<String>()
-  private var activeSubscriptions = Set<String>()
+  private var luaRequestedEvents = Set<String>()
+  private var nativeRequestedEvents = Set<String>()
+  private var activeRequestedEvents = Set<String>()
   private var activeSources = Set<ManagedSource>()
   private var activeInterval: TimeInterval?
 
@@ -67,13 +67,13 @@ final class EventManager {
 
   /// Replaces the current Lua runtime event subscriptions.
   func setLuaSubscriptions(_ subscriptions: Set<String>) {
-    luaSubscriptions = subscriptions
+    luaRequestedEvents = subscriptions
     refresh()
   }
 
   /// Replaces the current native widget event subscriptions.
   func setNativeSubscriptions(_ subscriptions: Set<String>) {
-    nativeSubscriptions = subscriptions
+    nativeRequestedEvents = subscriptions
     refresh()
   }
 
@@ -84,9 +84,9 @@ final class EventManager {
 
   /// Stops only Lua-owned event subscriptions while preserving native ones.
   func stopLuaSubscriptions() {
-    guard !luaSubscriptions.isEmpty else { return }
+    guard !luaRequestedEvents.isEmpty else { return }
 
-    luaSubscriptions.removeAll()
+    luaRequestedEvents.removeAll()
     refresh()
   }
 
@@ -94,10 +94,10 @@ final class EventManager {
   func stopAll() {
     logger.debug("event manager stopAll begin")
 
-    luaSubscriptions.removeAll()
-    nativeSubscriptions.removeAll()
+    luaRequestedEvents.removeAll()
+    nativeRequestedEvents.removeAll()
     stopActiveSources()
-    activeSubscriptions.removeAll()
+    activeRequestedEvents.removeAll()
     activeSources.removeAll()
     activeInterval = nil
 
@@ -106,33 +106,33 @@ final class EventManager {
 
   /// Rebuilds active event listeners from the merged Lua and native subscriptions.
   private func refresh() {
-    let mergedSubscriptions = luaSubscriptions.union(nativeSubscriptions)
+    let mergedRequestedEvents = luaRequestedEvents.union(nativeRequestedEvents)
 
-    if mergedSubscriptions == activeSubscriptions {
-      logger.debug("event manager refresh skipped, subscriptions unchanged")
+    if mergedRequestedEvents == activeRequestedEvents {
+      logger.debug("event manager refresh skipped, requested events unchanged")
       return
     }
 
-    let added = mergedSubscriptions.subtracting(activeSubscriptions)
-    let removed = activeSubscriptions.subtracting(mergedSubscriptions)
-    let desiredSources = Self.requiredSources(for: mergedSubscriptions)
+    let addedEvents = mergedRequestedEvents.subtracting(activeRequestedEvents)
+    let removedEvents = activeRequestedEvents.subtracting(mergedRequestedEvents)
+    let desiredSources = Self.requiredSources(for: mergedRequestedEvents)
     let sourcesToAdd = desiredSources.subtracting(activeSources)
     let sourcesToRemove = activeSources.subtracting(desiredSources)
-    let desiredInterval = Self.intervalTickInterval(in: mergedSubscriptions)
+    let desiredInterval = Self.intervalTickInterval(in: mergedRequestedEvents)
     let intervalChanged = desiredInterval != activeInterval
 
     logger.debug(
       "event manager refresh begin",
-      .field("merged", "\(mergedSubscriptions)"),
-      .field("active", "\(activeSubscriptions)"),
-      .field("added", "\(added)"),
-      .field("removed", "\(removed)"),
+      .field("merged_requested_events", "\(mergedRequestedEvents)"),
+      .field("active_requested_events", "\(activeRequestedEvents)"),
+      .field("added_events", "\(addedEvents)"),
+      .field("removed_events", "\(removedEvents)"),
       .field("source_add", "\(sourcesToAdd)"),
       .field("source_remove", "\(sourcesToRemove)"),
       .field("interval", "\(String(describing: desiredInterval))"),
       .field("previous_interval", "\(String(describing: activeInterval))"),
-      .field("lua", "\(luaSubscriptions)"),
-      .field("native", "\(nativeSubscriptions)"),
+      .field("lua_requested_events", "\(luaRequestedEvents)"),
+      .field("native_requested_events", "\(nativeRequestedEvents)"),
     )
 
     unsubscribeSources(sourcesToRemove)
@@ -141,7 +141,7 @@ final class EventManager {
       TimerEvents.shared.stopIntervalTimer()
     }
 
-    activeSubscriptions = mergedSubscriptions
+    activeRequestedEvents = mergedRequestedEvents
     subscribeSources(sourcesToAdd)
 
     if intervalChanged, let desiredInterval {
@@ -153,7 +153,7 @@ final class EventManager {
 
     logger.debug(
       "event manager refresh end",
-      .field("active", activeSubscriptions),
+      .field("active_requested_events", activeRequestedEvents),
     )
   }
 

@@ -96,7 +96,7 @@ final class LuaTransport {
       do {
         try pipe.fileHandleForWriting.write(contentsOf: data)
         MetricsCoordinator.shared.recordLuaWrite()
-        self.logger.debug("sent to lua stdin: \(string)")
+        self.logger.trace("sent to lua stdin", .field("payload", string))
       } catch {
         self.logger.error("failed writing to lua stdin: \(error)")
       }

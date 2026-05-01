@@ -74,6 +74,8 @@ actor WidgetEngine {
     started = false
     runtimeState.reset()
 
+    await EventHub.shared.clearLuaForwardedAppEvents()
+
     await MainActor.run {
       EventManager.shared.stopLuaSubscriptions()
     }
@@ -156,6 +158,8 @@ actor WidgetEngine {
     )
 
     let requiredEvents = runtimeState.requiredEvents
+    await EventHub.shared.setLuaForwardedAppEvents(requiredEvents)
+
     await MainActor.run {
       EventManager.shared.start(subscriptions: requiredEvents)
     }

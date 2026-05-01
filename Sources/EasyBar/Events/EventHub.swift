@@ -12,6 +12,7 @@ extension LuaEventSink: EventPayloadSink {}
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
   private static var sharedInstance: EventHub?
+  private static let intervalTickPrefix = "interval_tick:"
 
   /// Returns the configured shared event hub.
   static var shared: EventHub {
@@ -38,6 +39,7 @@ actor EventHub {
 
   private var subscribers: [UUID: Subscriber] = [:]
   private var replayablePayloads: [String: EasyBarEventPayload] = [:]
+  private var luaForwardedAppEvents = Set<String>()
 
   private struct Subscriber {
     let eventNames: Set<String>?
@@ -193,7 +195,20 @@ actor EventHub {
     }
 
     logEmission(payload)
-    luaEventSink.enqueue(payload)
+
+    if shouldForwardPayloadToLua(payload) {
+      luaEventSink.enqueue(payload)
+    }
+  }
+
+  /// Replaces the set of app-level events that may be forwarded into Lua.
+  func setLuaForwardedAppEvents(_ eventNames: Set<String>) {
+    luaForwardedAppEvents = eventNames
+  }
+
+  /// Clears all app-level event forwarding for the Lua runtime.
+  func clearLuaForwardedAppEvents() {
+    luaForwardedAppEvents.removeAll()
   }
 
   /// Emits the latest replayable state for the requested event names.
@@ -226,6 +241,23 @@ actor EventHub {
 
     let widgetIDs = [payload.widgetID, payload.targetWidgetID].compactMap { $0 }
     return widgetIDs.contains { widgetTargetIDs.contains($0) }
+  }
+
+  /// Returns whether one payload should be forwarded into the Lua runtime.
+  private func shouldForwardPayloadToLua(_ payload: EasyBarEventPayload) -> Bool {
+    if payload.widgetEvent != nil {
+      return true
+    }
+
+    guard let appEvent = payload.appEvent else {
+      return false
+    }
+
+    if appEvent == .intervalTick {
+      return luaForwardedAppEvents.contains { $0.hasPrefix(Self.intervalTickPrefix) }
+    }
+
+    return luaForwardedAppEvents.contains(appEvent.rawValue)
   }
 
   /// Logs one emitted payload for verbose debugging.
