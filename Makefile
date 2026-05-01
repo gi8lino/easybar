@@ -95,7 +95,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt clean clean-dist run run-debug run-trace stop dev icons \
+.PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
         build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -132,6 +132,9 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
+
+test: generate-event-catalog ## Run the Swift test suite.
+	@swift test
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@rm -rf "$(DIST_DIR)" ".build"
