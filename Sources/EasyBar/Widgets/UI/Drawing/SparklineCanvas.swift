@@ -6,6 +6,9 @@ struct SparklineCanvas: View {
   let tint: Color
   let lineWidth: CGFloat
 
+  private let minValue = 0.0
+  private let maxValue = 100.0
+
   /// Draws the sparkline path when enough points exist.
   var body: some View {
     Canvas { context, size in
@@ -38,27 +41,21 @@ struct SparklineCanvas: View {
     return path
   }
 
-  /// Returns the normalized sparkline points for the current values.
+  /// Returns the sparkline points normalized against the fixed CPU range.
   private func points(size: CGSize) -> [CGPoint] {
-    let bounds = valueBounds
     let maxIndex = CGFloat(max(values.count - 1, 1))
 
     return values.enumerated().map { index, value in
       let x = CGFloat(index) / maxIndex * size.width
-      let y = size.height - CGFloat(normalizedValue(value, bounds: bounds)) * size.height
+      let y = size.height - CGFloat(normalizedValue(value)) * size.height
       return CGPoint(x: x, y: y)
     }
   }
 
-  /// Returns the min/max bounds used to normalize sparkline values.
-  private var valueBounds: (min: Double, span: Double) {
-    let minValue = values.min() ?? 0
-    let maxValue = values.max() ?? 1
-    return (minValue, max(maxValue - minValue, 0.0001))
-  }
-
-  /// Returns the normalized 0...1 value for one sample.
-  private func normalizedValue(_ value: Double, bounds: (min: Double, span: Double)) -> Double {
-    (value - bounds.min) / bounds.span
+  /// Returns one value normalized into the 0...1 range.
+  private func normalizedValue(_ value: Double) -> Double {
+    let span = max(maxValue - minValue, 0.0001)
+    let clamped = min(max(value, minValue), maxValue)
+    return (clamped - minValue) / span
   }
 }

@@ -19,6 +19,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   private lazy var renderer = CPURenderer(rootID: rootID)
 
+  /// Immutable render input for the CPU widget.
   struct Snapshot {
     let placement: Config.BuiltinWidgetPlacement
     let style: Config.BuiltinWidgetStyle
@@ -28,6 +29,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     let samples: [Double]
   }
 
+  /// Starts CPU sampling and publishes the initial widget state.
   func start() {
     samples = Array(repeating: 0, count: historySize)
     previousCPUInfo = readCPUInfo()
@@ -42,11 +44,15 @@ final class CPUSparklineNativeWidget: NativeWidget {
       switch event {
       case .secondTick:
         self.sampleAndPublish()
+
       case .systemWoke:
+        // Reset the baseline because CPU tick counters can jump after wake.
         self.previousCPUInfo = self.readCPUInfo()
         self.publish()
+
       case .intervalTick:
         break
+
       default:
         break
       }
@@ -55,6 +61,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     publish()
   }
 
+  /// Stops CPU sampling and removes the rendered widget nodes.
   func stop() {
     eventObserver.stop()
     samples.removeAll()
@@ -63,19 +70,27 @@ final class CPUSparklineNativeWidget: NativeWidget {
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
+  /// Reads one CPU sample and publishes the current widget state.
   private func sampleAndPublish() {
-    let usage = readCPUUsagePercent() ?? 0
+    guard let usage = readCPUUsagePercent() else {
+      publish()
+      return
+    }
+
     pushSample(usage)
     publish()
   }
 
+  /// Publishes the current snapshot to the widget store.
   private func publish() {
     let snapshot = makeSnapshot()
     WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
   }
 
+  /// Builds one render snapshot from config and current samples.
   private func makeSnapshot() -> Snapshot {
     let config = Config.shared.builtinCPU
+
     return Snapshot(
       placement: config.placement,
       style: config.style,
@@ -86,6 +101,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     )
   }
 
+  /// Appends one clamped CPU sample and keeps the configured history size.
   private func pushSample(_ value: Double) {
     samples.append(min(max(value, 0), 100))
 
@@ -98,10 +114,12 @@ final class CPUSparklineNativeWidget: NativeWidget {
     }
   }
 
+  /// Returns the configured sample history size.
   private var historySize: Int {
     max(2, Config.shared.builtinCPU.historySize)
   }
 
+  /// Reads cumulative CPU tick counters from Mach.
   private func readCPUInfo() -> host_cpu_load_info_data_t? {
     var info = host_cpu_load_info_data_t()
     var count = mach_msg_type_number_t(
@@ -122,23 +140,45 @@ final class CPUSparklineNativeWidget: NativeWidget {
     return status == KERN_SUCCESS ? info : nil
   }
 
+  /// Calculates whole-system CPU usage from the delta between two Mach samples.
   private func readCPUUsagePercent() -> Double? {
     guard let current = readCPUInfo() else { return nil }
-    guard let previous = previousCPUInfo else {
+
+    defer {
       previousCPUInfo = current
+    }
+
+    guard let previous = previousCPUInfo else {
       return nil
     }
 
-    previousCPUInfo = current
-
-    let user = Double(current.cpu_ticks.0 - previous.cpu_ticks.0)
-    let system = Double(current.cpu_ticks.1 - previous.cpu_ticks.1)
-    let idle = Double(current.cpu_ticks.2 - previous.cpu_ticks.2)
-    let nice = Double(current.cpu_ticks.3 - previous.cpu_ticks.3)
+    guard
+      let user = tickDelta(current.cpu_ticks.0, previous.cpu_ticks.0),
+      let system = tickDelta(current.cpu_ticks.1, previous.cpu_ticks.1),
+      let idle = tickDelta(current.cpu_ticks.2, previous.cpu_ticks.2),
+      let nice = tickDelta(current.cpu_ticks.3, previous.cpu_ticks.3)
+    else {
+      return nil
+    }
 
     let active = user + system + nice
     let total = active + idle
 
-    return total > 0 ? (active / total) * 100.0 : 0
+    guard total > 0 else { return 0 }
+
+    let percent = (Double(active) / Double(total)) * 100.0
+    return min(max(percent, 0), 100)
+  }
+
+  /// Returns a safe positive tick delta, or nil if counters moved backwards.
+  private func tickDelta(_ current: natural_t, _ previous: natural_t) -> UInt64? {
+    let current = UInt64(current)
+    let previous = UInt64(previous)
+
+    guard current >= previous else {
+      return nil
+    }
+
+    return current - previous
   }
 }
