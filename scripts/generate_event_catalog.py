@@ -16,21 +16,28 @@ LUA_API_INSERT_MARKER = "-- GENERATED EVENT API"
 
 
 def load_manifest() -> dict:
+    """Load the event catalog manifest used to generate Lua event files."""
     return json.loads(MANIFEST_PATH.read_text())
 
 
 def event_token_line(lua_field: str, runtime_name: str, indent: str = "\t") -> str:
+    """Render one Lua table entry for an event token."""
     return f'{indent}{lua_field} = make_event_token("{runtime_name}"),'
 
 
 def quoted_union(values: list[str]) -> list[str]:
+    """Render EmmyLua union entries for a list of string literal values."""
     return [f'---| \'"{value}"\'' for value in values]
 
 
 def render_event_tokens(manifest: dict) -> str:
+    """Render the generated `easybar.events` Lua runtime module."""
     forced = manifest["forcedEvent"]
     app_events = manifest["appEvents"]
-    widget_groups = {group["name"]: group for group in manifest["widgetGroups"]}
+    widget_groups = {
+        group["name"]: group
+        for group in manifest["widgetGroups"]
+    }
     mouse_buttons = manifest["mouseButtons"]
     scroll_directions = manifest["scrollDirections"]
 
@@ -44,9 +51,12 @@ def render_event_tokens(manifest: dict) -> str:
         "local DRIVER_EVENTS = {",
     ]
 
+    # Driver events are handled by app-level Swift event sources.
     for event in app_events:
         if event.get("driver"):
             lines.append(f'\t{event["luaField"]} = true,')
+
+    # The forced update event is always considered a driver event.
     lines.append(f'\t{forced["luaField"]} = true,')
     lines.extend(
         [
@@ -92,13 +102,22 @@ def render_event_tokens(manifest: dict) -> str:
     mouse = widget_groups["mouse"]
     lines.extend(["\tmouse = {"])
     for event in mouse["events"]:
-        lines.append(event_token_line(event["luaField"], event["runtimeName"], indent="\t\t"))
+        lines.append(
+            event_token_line(
+                event["luaField"],
+                event["runtimeName"],
+                indent="\t\t",
+            )
+        )
+
     lines.append("")
     for value in mouse_buttons:
         lines.append(f"\t\t{value}_button = MOUSE_BUTTONS.{value},")
+
     lines.append("")
     for value in scroll_directions:
         lines.append(f"\t\t{value}_scroll = SCROLL_DIRECTIONS.{value},")
+
     lines.extend(
         [
             "",
@@ -111,7 +130,14 @@ def render_event_tokens(manifest: dict) -> str:
     slider = widget_groups["slider"]
     lines.extend(["\tslider = {"])
     for event in slider["events"]:
-        lines.append(event_token_line(event["luaField"], event["runtimeName"], indent="\t\t"))
+        lines.append(
+            event_token_line(
+                event["luaField"],
+                event["runtimeName"],
+                indent="\t\t",
+            )
+        )
+
     lines.extend(
         [
             "\t},",
@@ -137,16 +163,25 @@ def render_event_tokens(manifest: dict) -> str:
 
 
 def render_lua_api_block(manifest: dict) -> str:
+    """Render EmmyLua annotations for the generated EasyBar event API."""
     forced = manifest["forcedEvent"]
     app_events = manifest["appEvents"]
-    widget_groups = {group["name"]: group for group in manifest["widgetGroups"]}
+    widget_groups = {
+        group["name"]: group
+        for group in manifest["widgetGroups"]
+    }
     mouse_buttons = manifest["mouseButtons"]
     scroll_directions = manifest["scrollDirections"]
 
+    # Include all event names that may be passed through the runtime event system.
     event_names = (
         ["interval", forced["runtimeName"]]
         + [event["runtimeName"] for event in app_events]
-        + [event["runtimeName"] for group in manifest["widgetGroups"] for event in group["events"]]
+        + [
+            event["runtimeName"]
+            for group in manifest["widgetGroups"]
+            for event in group["events"]
+        ]
     )
 
     lines = [
@@ -196,15 +231,20 @@ def render_lua_api_block(manifest: dict) -> str:
     mouse = widget_groups["mouse"]
     lines.extend(["", "---@class EasyBarMouseEvents"])
     for event in mouse["events"]:
-        lines.append(f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}')
+        lines.append(
+            f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
+        )
+
     for value in mouse_buttons:
         lines.append(
             f'---@field {value}_button EasyBarMouseButton Constant for `event.button == "{value}"`.'
         )
+
     for value in scroll_directions:
         lines.append(
             f'---@field {value}_scroll EasyBarScrollDirection Constant for `event.direction == "{value}"`.'
         )
+
     lines.extend(
         [
             "---@field buttons EasyBarMouseButtons Nested mouse-button constants.",
@@ -216,33 +256,49 @@ def render_lua_api_block(manifest: dict) -> str:
 
     slider = widget_groups["slider"]
     for event in slider["events"]:
-        lines.append(f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}')
+        lines.append(
+            f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
+        )
 
     lines.extend(["", "---@class EasyBarEvents"])
-    lines.append(f'---@field {forced["luaField"]}? EasyBarEventToken {forced["doc"]}')
+    lines.append(
+        f'---@field {forced["luaField"]}? EasyBarEventToken {forced["doc"]}'
+    )
+
     for event in app_events:
-        lines.append(f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}')
+        lines.append(
+            f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
+        )
+
     for group in manifest["widgetGroups"]:
-        lines.append(f'---@field {group["name"]}? EasyBar{group["name"].title()}Events {group["doc"]}')
+        lines.append(
+            f'---@field {group["name"]}? EasyBar{group["name"].title()}Events {group["doc"]}'
+        )
 
     lines.append("")
     return "\n".join(lines)
 
 
 def rebuild_lua_api_stub(manifest: dict) -> None:
+    """Regenerate the standalone Lua API stub from the base file and event annotations."""
     generated_events = render_lua_api_block(manifest)
     LUA_API_EVENTS_PATH.write_text(generated_events)
 
     base = LUA_API_BASE_PATH.read_text()
     if LUA_API_INSERT_MARKER not in base:
-        raise RuntimeError("could not find generated event API insertion marker in easybar_api.base.lua")
+        raise RuntimeError(
+            "could not find generated event API insertion marker in easybar_api.base.lua"
+        )
 
-    combined = base.replace(LUA_API_INSERT_MARKER, generated_events, 1).rstrip()
+    combined = base.replace(LUA_API_INSERT_MARKER,
+                            generated_events, 1).rstrip()
     LUA_API_STUB_PATH.write_text(f"{combined}\n")
 
 
 def main() -> None:
+    """Generate Lua runtime event tokens and API annotation files."""
     manifest = load_manifest()
+
     EVENT_TOKENS_PATH.write_text(render_event_tokens(manifest))
     rebuild_lua_api_stub(manifest)
 
