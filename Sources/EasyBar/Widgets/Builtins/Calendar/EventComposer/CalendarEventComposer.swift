@@ -4,7 +4,7 @@ import EasyBarShared
 import Foundation
 
 @MainActor
-final class MonthCalendarEventComposer: ObservableObject {
+final class CalendarEventComposer: ObservableObject {
 
   struct CalendarOption: Identifiable, Equatable {
     let id: String
@@ -189,7 +189,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   @Published var infoMessage: String?
 
   private let calendar = Calendar.current
-  private let popupConfig = Config.shared.builtinCalendar.month.popup
+  private let config = Config.shared.builtinCalendar.composer
 
   private var cancellables: Set<AnyCancellable> = []
   private var preferredCalendarID: String?
@@ -227,9 +227,9 @@ final class MonthCalendarEventComposer: ObservableObject {
   var panelTitle: String {
     switch mode {
     case .create:
-      return popupConfig.composerCreateTitle
+      return config.createTitle
     case .edit:
-      return popupConfig.composerEditTitle
+      return config.editTitle
     }
   }
 
@@ -237,9 +237,9 @@ final class MonthCalendarEventComposer: ObservableObject {
   var saveButtonTitle: String {
     switch mode {
     case .create:
-      return isSaving ? "\(popupConfig.composerSaveLabel)..." : popupConfig.composerSaveLabel
+      return isSaving ? "\(config.saveLabel)..." : config.saveLabel
     case .edit:
-      return isSaving ? "\(popupConfig.composerUpdateLabel)..." : popupConfig.composerUpdateLabel
+      return isSaving ? "\(config.updateLabel)..." : config.updateLabel
     }
   }
 
@@ -247,7 +247,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   func prepare(defaultDate: Date) {
     mode = .create
     preferredCalendarID = nil
-    preferredCalendarName = normalizedOptionalText(popupConfig.composerDefaultCalendarName)
+    preferredCalendarName = normalizedOptionalText(config.defaultCalendarName)
 
     let normalizedDate = calendar.startOfDay(for: defaultDate)
     reset(using: normalizedDate)
@@ -256,7 +256,7 @@ final class MonthCalendarEventComposer: ObservableObject {
   }
 
   /// Prepares the composer for editing one existing event using agent-backed state.
-  func prepare(event: NativeMonthCalendarEvent) {
+  func prepare(event: CalendarAgentEvent) {
     let normalizedStartDate = calendar.startOfDay(for: event.startDate)
     let normalizedEndReference =
       event.isAllDay
@@ -446,7 +446,7 @@ final class MonthCalendarEventComposer: ObservableObject {
 
 // MARK: - Agent Snapshot
 
-extension MonthCalendarEventComposer {
+extension CalendarEventComposer {
   /// Applies one agent snapshot to composer state.
   private func applySnapshot(_ snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     guard let snapshot else {
@@ -507,10 +507,10 @@ extension MonthCalendarEventComposer {
 
 // MARK: - Defaults
 
-extension MonthCalendarEventComposer {
+extension CalendarEventComposer {
   /// Returns the configured default alert option.
   private func resolvedDefaultAlert() -> AlertOption {
-    AlertOption(rawValue: popupConfig.composerDefaultAlert) ?? .tenMinutes
+    AlertOption(rawValue: config.defaultAlert) ?? .tenMinutes
   }
 
   /// Returns the configured default alert rows.
@@ -554,7 +554,7 @@ extension MonthCalendarEventComposer {
 
   /// Returns the configured default travel-time option.
   private func resolvedDefaultTravelTime() -> TravelTimeOption {
-    TravelTimeOption(rawValue: popupConfig.composerDefaultTravelTime) ?? .none
+    TravelTimeOption(rawValue: config.defaultTravelTime) ?? .none
   }
 
   /// Resolves one travel-time selection from saved seconds.
@@ -667,7 +667,7 @@ extension MonthCalendarEventComposer {
 
 // MARK: - Event Building
 
-extension MonthCalendarEventComposer {
+extension CalendarEventComposer {
   /// Returns the final start and end dates for the current form values.
   private func resolvedEventDates() -> (start: Date, end: Date) {
     if isAllDay {
@@ -718,7 +718,7 @@ extension MonthCalendarEventComposer {
   }
 
   /// Resolves the stable EventKit event identifier from one popup event id.
-  private func resolvedEventIdentifier(from event: NativeMonthCalendarEvent) -> String? {
+  private func resolvedEventIdentifier(from event: CalendarAgentEvent) -> String? {
     guard !event.id.hasPrefix("birthday-") else { return nil }
 
     let trimmedID = event.id
@@ -814,11 +814,11 @@ extension MonthCalendarEventComposer {
 
   /// Returns the configured title for one alert option.
   func title(for option: AlertOption) -> String {
-    popupConfig.composerAlertLabels[option.rawValue] ?? option.fallbackTitle
+    config.alertLabels[option.rawValue] ?? option.fallbackTitle
   }
 
   /// Returns the configured title for one travel-time option.
   func title(for option: TravelTimeOption) -> String {
-    popupConfig.composerTravelTimeLabels[option.rawValue] ?? option.fallbackTitle
+    config.travelTimeLabels[option.rawValue] ?? option.fallbackTitle
   }
 }

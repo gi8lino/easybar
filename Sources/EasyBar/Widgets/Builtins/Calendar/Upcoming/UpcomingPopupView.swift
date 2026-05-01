@@ -3,7 +3,7 @@ import SwiftUI
 struct NativeUpcomingCalendarPopupView: View {
 
   @ObservedObject private var store = NativeUpcomingCalendarStore.shared
-  @StateObject private var composerPanel = MonthCalendarEventComposerPanelController()
+  @StateObject private var composerPanel = CalendarEventComposerPanelController()
 
   private let popup = Config.shared.builtinCalendar.upcoming.popup
   private let appointments = Config.shared.builtinCalendar.appointments

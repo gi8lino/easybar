@@ -39,7 +39,7 @@ struct NativeMonthCalendarPopupView: View {
   let birthdays = Config.shared.builtinCalendar.birthdays
   let calendar = Calendar.current
 
-  @StateObject var composerPanel = MonthCalendarEventComposerPanelController()
+  @StateObject var composerPanel = CalendarEventComposerPanelController()
 
   @State var visibleMonth = Self.startOfMonth(Date())
   @State var selectedStartDate = Date()

@@ -1,24 +1,25 @@
 import AppKit
+import EasyBarShared
 import SwiftUI
 
-/// Manages a floating panel for the month-calendar event composer.
+/// Manages a floating panel for the shared calendar event composer.
 @MainActor
-final class MonthCalendarEventComposerPanelController: ObservableObject {
+final class CalendarEventComposerPanelController: ObservableObject {
   private var panel: NSPanel?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
-  private var composer: MonthCalendarEventComposer?
+  private var composer: CalendarEventComposer?
 
   /// Presents the composer panel for one new appointment.
   func present(
     defaultDate: Date,
     onChanged: @escaping () -> Void
   ) {
-    let composer = MonthCalendarEventComposer()
+    let composer = CalendarEventComposer()
     composer.prepare(defaultDate: defaultDate)
     self.composer = composer
 
     hostingController.rootView = AnyView(
-      MonthCalendarEventComposerView(
+      CalendarEventComposerView(
         composer: composer,
         onCancel: { [weak self] in
           self?.close()
@@ -39,15 +40,15 @@ final class MonthCalendarEventComposerPanelController: ObservableObject {
 
   /// Presents the composer panel for one existing appointment.
   func present(
-    event: NativeMonthCalendarEvent,
+    event: CalendarAgentEvent,
     onChanged: @escaping () -> Void
   ) {
-    let composer = MonthCalendarEventComposer()
+    let composer = CalendarEventComposer()
     composer.prepare(event: event)
     self.composer = composer
 
     hostingController.rootView = AnyView(
-      MonthCalendarEventComposerView(
+      CalendarEventComposerView(
         composer: composer,
         onCancel: { [weak self] in
           self?.close()

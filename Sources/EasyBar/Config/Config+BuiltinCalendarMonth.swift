@@ -26,9 +26,6 @@ extension Config {
     let selectionTable = table["selection"]?.table ?? TOMLTable()
     let agendaTable = table["agenda"]?.table ?? TOMLTable()
     let anchorTable = table["anchor"]?.table ?? TOMLTable()
-    let composerTable = table["composer"]?.table ?? TOMLTable()
-    let composerAlertLabelsTable = composerTable["alert_labels"]?.table ?? TOMLTable()
-    let composerTravelTimeLabelsTable = composerTable["travel_time_labels"]?.table ?? TOMLTable()
     let todayButtonTable = table["today_button"]?.table ?? TOMLTable()
 
     return CalendarBuiltinConfig.Month.Popup(
@@ -56,13 +53,6 @@ extension Config {
         from: anchorTable,
         rootTable: table,
         fallback: fallback.anchor
-      ),
-      composer: try parseCalendarMonthPopupComposer(
-        from: composerTable,
-        alertLabelsTable: composerAlertLabelsTable,
-        travelTimeLabelsTable: composerTravelTimeLabelsTable,
-        rootTable: table,
-        fallback: fallback.composer
       ),
       todayButton: try parseCalendarMonthPopupTodayButton(
         from: todayButtonTable,

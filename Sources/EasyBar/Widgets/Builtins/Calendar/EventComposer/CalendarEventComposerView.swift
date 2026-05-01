@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct MonthCalendarEventComposerView: View {
+struct CalendarEventComposerView: View {
 
-  @ObservedObject var composer: MonthCalendarEventComposer
+  @ObservedObject var composer: CalendarEventComposer
   let onCancel: () -> Void
   let onSaved: () -> Void
   let onDeleted: () -> Void
 
-  private let config = Config.shared.builtinCalendar.month.popup
+  private let config = Config.shared.builtinCalendar.composer
   private let appointments = Config.shared.builtinCalendar.appointments
 
   @State private var showsDeleteConfirmation = false
@@ -23,8 +23,8 @@ struct MonthCalendarEventComposerView: View {
       footerView
     }
     .frame(width: 388, alignment: .leading)
-    .padding(.horizontal, 14)
-    .padding(.vertical, 14)
+    .padding(.horizontal, CGFloat(config.paddingX))
+    .padding(.vertical, CGFloat(config.paddingY))
     .background(color(config.backgroundColorHex))
     .overlay {
       RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
@@ -36,23 +36,23 @@ struct MonthCalendarEventComposerView: View {
     .clipShape(
       RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
     )
-    .alert(config.composerDeleteConfirmationTitle, isPresented: $showsDeleteConfirmation) {
-      Button(config.composerCancelLabel, role: .cancel) {}
+    .alert(config.deleteConfirmationTitle, isPresented: $showsDeleteConfirmation) {
+      Button(config.cancelLabel, role: .cancel) {}
 
-      Button(config.composerRemoveLabel, role: .destructive) {
+      Button(config.removeLabel, role: .destructive) {
         composer.delete {
           onDeleted()
         }
       }
     } message: {
-      Text(config.composerDeleteConfirmationMessage)
+      Text(config.deleteConfirmationMessage)
     }
   }
 }
 
 // MARK: - Sections
 
-extension MonthCalendarEventComposerView {
+extension CalendarEventComposerView {
   /// Builds the composer header.
   private var headerView: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -117,21 +117,21 @@ extension MonthCalendarEventComposerView {
     sectionContainer {
       VStack(alignment: .leading, spacing: 10) {
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel(config.composerTitleLabel)
+          fieldLabel(config.titleLabel)
 
-          TextField(config.composerTitlePlaceholder, text: $composer.title)
+          TextField(config.titlePlaceholder, text: $composer.title)
             .textFieldStyle(.roundedBorder)
         }
 
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel(config.composerLocationLabel)
+          fieldLabel(config.locationLabel)
 
-          TextField(config.composerLocationPlaceholder, text: $composer.location)
+          TextField(config.locationPlaceholder, text: $composer.location)
             .textFieldStyle(.roundedBorder)
         }
 
         VStack(alignment: .leading, spacing: 4) {
-          fieldLabel(config.composerCalendarLabel)
+          fieldLabel(config.calendarLabel)
 
           Picker("", selection: $composer.selectedCalendarID) {
             ForEach(composer.calendars) { option in
@@ -153,21 +153,21 @@ extension MonthCalendarEventComposerView {
         allDayRowView
 
         scheduleRowView(
-          label: config.composerStartLabel,
+          label: config.startLabel,
           date: $composer.startDate,
           time: $composer.startTime,
           showsTimePicker: !composer.isAllDay
         )
 
         scheduleRowView(
-          label: config.composerEndLabel,
+          label: config.endLabel,
           date: $composer.endDate,
           time: $composer.endTime,
           showsTimePicker: !composer.isAllDay
         )
 
         HStack(alignment: .center, spacing: fieldSpacing) {
-          fieldLabel(config.composerTravelTimeLabel)
+          fieldLabel(config.travelTimeLabel)
             .frame(width: fieldLabelWidth, alignment: .leading)
 
           Picker(
@@ -177,7 +177,7 @@ extension MonthCalendarEventComposerView {
               set: { composer.setTravelTime($0) }
             )
           ) {
-            ForEach(MonthCalendarEventComposer.TravelTimeOption.allCases) { option in
+            ForEach(CalendarEventComposer.TravelTimeOption.allCases) { option in
               Text(composer.title(for: option)).tag(option)
             }
           }
@@ -201,7 +201,7 @@ extension MonthCalendarEventComposerView {
   /// Builds the all-day toggle row.
   private var allDayRowView: some View {
     HStack(alignment: .center, spacing: fieldSpacing) {
-      fieldLabel(config.composerAllDayLabel)
+      fieldLabel(config.allDayLabel)
         .frame(width: fieldLabelWidth, alignment: .leading)
 
       Toggle("", isOn: $composer.isAllDay)
@@ -253,7 +253,7 @@ extension MonthCalendarEventComposerView {
   private var alertsSectionView: some View {
     sectionContainer {
       VStack(alignment: .leading, spacing: 8) {
-        fieldLabel(config.composerAlertLabel)
+        fieldLabel(config.alertLabel)
 
         ForEach(composer.alertRows) { row in
           HStack(alignment: .center, spacing: 8) {
@@ -264,7 +264,7 @@ extension MonthCalendarEventComposerView {
                 set: { composer.setAlert($0, id: row.id) }
               )
             ) {
-              ForEach(MonthCalendarEventComposer.AlertOption.allCases) { option in
+              ForEach(CalendarEventComposer.AlertOption.allCases) { option in
                 Text(composer.title(for: option)).tag(option)
               }
             }
@@ -296,7 +296,7 @@ extension MonthCalendarEventComposerView {
         Button {
           composer.addAlert()
         } label: {
-          Label(config.composerAddAlertLabel, systemImage: "plus")
+          Label(config.addAlertLabel, systemImage: "plus")
             .font(.system(size: 12, weight: .medium))
         }
         .buttonStyle(.plain)
@@ -316,12 +316,12 @@ extension MonthCalendarEventComposerView {
         Button {
           composer.openCalendarApp()
         } label: {
-          Label(config.composerOpenCalendarLabel, systemImage: "calendar")
+          Label(config.openCalendarLabel, systemImage: "calendar")
         }
         .buttonStyle(SecondaryFooterButtonStyle())
 
         if composer.canDelete {
-          Button(config.composerRemoveLabel) {
+          Button(config.removeLabel) {
             showsDeleteConfirmation = true
           }
           .buttonStyle(DangerFooterButtonStyle())
@@ -329,7 +329,7 @@ extension MonthCalendarEventComposerView {
 
         Spacer()
 
-        Button(config.composerCancelLabel) {
+        Button(config.cancelLabel) {
           onCancel()
         }
         .buttonStyle(SecondaryFooterButtonStyle())
@@ -349,7 +349,7 @@ extension MonthCalendarEventComposerView {
 
 // MARK: - Helpers
 
-extension MonthCalendarEventComposerView {
+extension CalendarEventComposerView {
   /// Returns the corner radius used by the panel.
   private var panelCornerRadius: CGFloat {
     max(CGFloat(config.cornerRadius), 12)

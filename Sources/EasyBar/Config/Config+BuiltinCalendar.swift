@@ -60,6 +60,7 @@ extension Config {
     var filters: Filters
     var appointments: Appointments
     var birthdays: Birthdays
+    var composer: Composer
     var upcoming: Upcoming
     var month: Month
 
@@ -138,6 +139,66 @@ extension Config {
         birthdayIcon: "",
         birthdayIconColorHex: nil
       ),
+      composer: .init(
+        style: .init(
+          backgroundColorHex: "#111111",
+          borderColorHex: "#444444",
+          borderWidth: 1,
+          cornerRadius: 10,
+          paddingX: 14,
+          paddingY: 14,
+          headerTextColorHex: "#ffffff"
+        ),
+        content: .init(
+          createTitle: "New Appointment",
+          editTitle: "Edit Appointment",
+          titleLabel: "Title",
+          locationLabel: "Location",
+          calendarLabel: "Calendar",
+          titlePlaceholder: "What are you doing?",
+          locationPlaceholder: "Where are you going?",
+          defaultCalendarName: nil,
+          defaultAlert: "1_hour",
+          defaultTravelTime: "none",
+          alertLabels: [
+            "none": "None",
+            "at_time": "At time of event",
+            "5_minutes": "5 minutes before",
+            "10_minutes": "10 minutes before",
+            "15_minutes": "15 minutes before",
+            "30_minutes": "30 minutes before",
+            "1_hour": "1 hour before",
+            "1_day": "1 day before",
+            "custom": "Custom",
+          ],
+          travelTimeLabels: [
+            "none": "None",
+            "5_minutes": "5 minutes",
+            "10_minutes": "10 minutes",
+            "15_minutes": "15 minutes",
+            "20_minutes": "20 minutes",
+            "30_minutes": "30 minutes",
+            "45_minutes": "45 minutes",
+            "1_hour": "1 hour",
+            "90_minutes": "1.5 hours",
+            "2_hours": "2 hours",
+            "custom": "Custom",
+          ],
+          startLabel: "Begin",
+          endLabel: "End",
+          allDayLabel: "All day",
+          travelTimeLabel: "Travel time",
+          alertLabel: "Alert",
+          addAlertLabel: "Add alert",
+          openCalendarLabel: "Calendar",
+          cancelLabel: "Cancel",
+          saveLabel: "Save",
+          updateLabel: "Update",
+          removeLabel: "Remove",
+          deleteConfirmationTitle: "Remove appointment?",
+          deleteConfirmationMessage: "This action cannot be undone."
+        )
+      ),
       upcoming: .init(
         events: .init(
           days: 3,
@@ -208,55 +269,6 @@ extension Config {
             textColorHex: "#ffffff",
             showDateText: true
           ),
-          composer: .init(
-            createTitle: "New Appointment",
-            editTitle: "Edit Appointment",
-            titleLabel: "Title",
-            locationLabel: "Location",
-            calendarLabel: "Calendar",
-            titlePlaceholder: "What are you doing?",
-            locationPlaceholder: "Where are you going?",
-            defaultCalendarName: nil,
-            defaultAlert: "1_hour",
-            defaultTravelTime: "none",
-            alertLabels: [
-              "none": "None",
-              "at_time": "At time of event",
-              "5_minutes": "5 minutes before",
-              "10_minutes": "10 minutes before",
-              "15_minutes": "15 minutes before",
-              "30_minutes": "30 minutes before",
-              "1_hour": "1 hour before",
-              "1_day": "1 day before",
-              "custom": "Custom",
-            ],
-            travelTimeLabels: [
-              "none": "None",
-              "5_minutes": "5 minutes",
-              "10_minutes": "10 minutes",
-              "15_minutes": "15 minutes",
-              "20_minutes": "20 minutes",
-              "30_minutes": "30 minutes",
-              "45_minutes": "45 minutes",
-              "1_hour": "1 hour",
-              "90_minutes": "1.5 hours",
-              "2_hours": "2 hours",
-              "custom": "Custom",
-            ],
-            startLabel: "Begin",
-            endLabel: "End",
-            allDayLabel: "All day",
-            travelTimeLabel: "Travel time",
-            alertLabel: "Alert",
-            addAlertLabel: "Add alert",
-            openCalendarLabel: "Calendar",
-            cancelLabel: "Cancel",
-            saveLabel: "Save",
-            updateLabel: "Update",
-            removeLabel: "Remove",
-            deleteConfirmationTitle: "Remove appointment?",
-            deleteConfirmationMessage: "This action cannot be undone."
-          ),
           todayButton: .init(
             title: "Today",
             icon: "",
@@ -283,6 +295,7 @@ extension Config {
     let filtersTable = calendar["filters"]?.table ?? TOMLTable()
     let appointmentsTable = calendar["appointments"]?.table ?? TOMLTable()
     let birthdaysTable = calendar["birthdays"]?.table ?? TOMLTable()
+    let composerTable = calendar["composer"]?.table ?? TOMLTable()
 
     let upcomingTable = calendar["upcoming"]?.table ?? TOMLTable()
     let upcomingEventsTable = upcomingTable["events"]?.table ?? TOMLTable()
@@ -325,6 +338,11 @@ extension Config {
       fallback: builtinCalendar.birthdays
     )
 
+    let composer = try parseCalendarComposer(
+      from: composerTable,
+      fallback: builtinCalendar.composer
+    )
+
     let upcoming = try parseCalendarUpcoming(
       eventsTable: upcomingEventsTable,
       popupTable: upcomingPopupTable,
@@ -344,6 +362,7 @@ extension Config {
       filters: filters,
       appointments: appointments,
       birthdays: birthdays,
+      composer: composer,
       upcoming: upcoming,
       month: month
     )

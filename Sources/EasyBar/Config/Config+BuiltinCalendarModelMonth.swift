@@ -9,7 +9,6 @@ extension Config.CalendarBuiltinConfig {
       var selection: SelectionStyle
       var agenda: AgendaStyle
       var anchor: AnchorStyle
-      var composer: ComposerStyle
       var todayButton: TodayButtonStyle
 
       var backgroundColorHex: String {
@@ -200,131 +199,6 @@ extension Config.CalendarBuiltinConfig {
       var anchorShowDateText: Bool {
         get { anchor.showDateText }
         set { anchor.showDateText = newValue }
-      }
-
-      var composerTitlePlaceholder: String {
-        get { composer.titlePlaceholder }
-        set { composer.titlePlaceholder = newValue }
-      }
-
-      var composerCreateTitle: String {
-        get { composer.createTitle }
-        set { composer.createTitle = newValue }
-      }
-
-      var composerEditTitle: String {
-        get { composer.editTitle }
-        set { composer.editTitle = newValue }
-      }
-
-      var composerTitleLabel: String {
-        get { composer.titleLabel }
-        set { composer.titleLabel = newValue }
-      }
-
-      var composerLocationLabel: String {
-        get { composer.locationLabel }
-        set { composer.locationLabel = newValue }
-      }
-
-      var composerCalendarLabel: String {
-        get { composer.calendarLabel }
-        set { composer.calendarLabel = newValue }
-      }
-
-      var composerLocationPlaceholder: String {
-        get { composer.locationPlaceholder }
-        set { composer.locationPlaceholder = newValue }
-      }
-
-      var composerDefaultCalendarName: String? {
-        get { composer.defaultCalendarName }
-        set { composer.defaultCalendarName = newValue }
-      }
-
-      var composerDefaultAlert: String {
-        get { composer.defaultAlert }
-        set { composer.defaultAlert = newValue }
-      }
-
-      var composerDefaultTravelTime: String {
-        get { composer.defaultTravelTime }
-        set { composer.defaultTravelTime = newValue }
-      }
-
-      var composerAlertLabels: [String: String] {
-        get { composer.alertLabels }
-        set { composer.alertLabels = newValue }
-      }
-
-      var composerTravelTimeLabels: [String: String] {
-        get { composer.travelTimeLabels }
-        set { composer.travelTimeLabels = newValue }
-      }
-
-      var composerStartLabel: String {
-        get { composer.startLabel }
-        set { composer.startLabel = newValue }
-      }
-
-      var composerEndLabel: String {
-        get { composer.endLabel }
-        set { composer.endLabel = newValue }
-      }
-
-      var composerAllDayLabel: String {
-        get { composer.allDayLabel }
-        set { composer.allDayLabel = newValue }
-      }
-
-      var composerTravelTimeLabel: String {
-        get { composer.travelTimeLabel }
-        set { composer.travelTimeLabel = newValue }
-      }
-
-      var composerAlertLabel: String {
-        get { composer.alertLabel }
-        set { composer.alertLabel = newValue }
-      }
-
-      var composerAddAlertLabel: String {
-        get { composer.addAlertLabel }
-        set { composer.addAlertLabel = newValue }
-      }
-
-      var composerOpenCalendarLabel: String {
-        get { composer.openCalendarLabel }
-        set { composer.openCalendarLabel = newValue }
-      }
-
-      var composerCancelLabel: String {
-        get { composer.cancelLabel }
-        set { composer.cancelLabel = newValue }
-      }
-
-      var composerSaveLabel: String {
-        get { composer.saveLabel }
-        set { composer.saveLabel = newValue }
-      }
-
-      var composerUpdateLabel: String {
-        get { composer.updateLabel }
-        set { composer.updateLabel = newValue }
-      }
-
-      var composerRemoveLabel: String {
-        get { composer.removeLabel }
-        set { composer.removeLabel = newValue }
-      }
-
-      var composerDeleteConfirmationTitle: String {
-        get { composer.deleteConfirmationTitle }
-        set { composer.deleteConfirmationTitle = newValue }
-      }
-
-      var composerDeleteConfirmationMessage: String {
-        get { composer.deleteConfirmationMessage }
-        set { composer.deleteConfirmationMessage = newValue }
       }
 
       var todayButtonTitle: String {

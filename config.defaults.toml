@@ -350,6 +350,62 @@ line_spacing = 0 # Vertical spacing between top and bottom lines in stack layout
 top_text_color = "#ffffff" # Text color of the top line.
 bottom_text_color = "#d0d0d0" # Text color of the bottom line.
 
+[builtins.calendar.composer]
+create_title = "New Appointment" # Panel title shown when creating an appointment.
+edit_title = "Edit Appointment" # Panel title shown when editing an appointment.
+title_label = "Title" # Label shown above the title field.
+location_label = "Location" # Label shown above the location field.
+calendar_label = "Calendar" # Label shown above the calendar picker.
+start_label = "Begin" # Label shown for the start time.
+end_label = "End" # Label shown for the end time.
+all_day_label = "All day" # Label shown for all-day events.
+travel_time_label = "Travel time" # Label shown for the travel-time picker.
+alert_label = "Alert" # Label shown above the alerts section.
+add_alert_label = "Add alert" # Button label used to add another alert row.
+open_calendar_label = "Calendar" # Footer button label used to open Calendar.app.
+cancel_label = "Cancel" # Footer cancel button label.
+save_label = "Save" # Footer primary button label when creating.
+update_label = "Update" # Footer primary button label when editing.
+remove_label = "Remove" # Footer destructive button label.
+delete_confirmation_title = "Remove appointment?" # Delete confirmation title.
+delete_confirmation_message = "This action cannot be undone." # Delete confirmation message.
+title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
+location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
+default_calendar_name = "Personal" # Default calendar name used when creating new appointments. Use an empty string to select the first available writable calendar.
+default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day.
+default_travel_time = "none" # Default travel time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours.
+
+[builtins.calendar.composer.style]
+background_color = "#111111" # Background color of the appointment composer panel.
+border_color = "#444444" # Border and divider color of the appointment composer panel.
+border_width = 1 # Border width of the appointment composer panel.
+corner_radius = 10 # Corner radius of the appointment composer panel.
+padding_x = 14 # Horizontal inner padding of the appointment composer panel.
+padding_y = 14 # Vertical inner padding of the appointment composer panel.
+header_text_color = "#ffffff" # Header title color of the appointment composer panel.
+
+[builtins.calendar.composer.alert_labels]
+none = "None" # Label shown for no alert.
+at_time = "At time of event" # Label shown for alerts at event time.
+5_minutes = "5 minutes before" # Label shown for a 5-minute alert.
+10_minutes = "10 minutes before" # Label shown for a 10-minute alert.
+15_minutes = "15 minutes before" # Label shown for a 15-minute alert.
+30_minutes = "30 minutes before" # Label shown for a 30-minute alert.
+1_hour = "1 hour before" # Label shown for a 1-hour alert.
+1_day = "1 day before" # Label shown for a 1-day alert.
+
+[builtins.calendar.composer.travel_time_labels]
+none = "None" # Label shown when no travel time is set.
+5_minutes = "5 minutes" # Label shown for 5 minutes of travel time.
+10_minutes = "10 minutes" # Label shown for 10 minutes of travel time.
+15_minutes = "15 minutes" # Label shown for 15 minutes of travel time.
+20_minutes = "20 minutes" # Label shown for 20 minutes of travel time.
+30_minutes = "30 minutes" # Label shown for 30 minutes of travel time.
+45_minutes = "45 minutes" # Label shown for 45 minutes of travel time.
+1_hour = "1 hour" # Label shown for 1 hour of travel time.
+90_minutes = "1.5 hours" # Label shown for 90 minutes of travel time.
+2_hours = "2 hours" # Label shown for 2 hours of travel time.
+
 [builtins.calendar.upcoming.events]
 days = 3 # Number of days of upcoming events shown in the popup.
 exclude_past_events = false # Hides already-finished or already-started items from today's section when true.
@@ -441,53 +497,6 @@ max_visible_appointments = 8 # Maximum number of visible appointments when scrol
 anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".
 anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month".
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
-
-[builtins.calendar.month.popup.composer]
-create_title = "New Appointment" # Panel title shown when creating an appointment.
-edit_title = "Edit Appointment" # Panel title shown when editing an appointment.
-title_label = "Title" # Label shown above the title field.
-location_label = "Location" # Label shown above the location field.
-calendar_label = "Calendar" # Label shown above the calendar picker.
-start_label = "Begin" # Label shown for the start time.
-end_label = "End" # Label shown for the end time.
-all_day_label = "All day" # Label shown for all-day events.
-travel_time_label = "Travel time" # Label shown for the travel-time picker.
-alert_label = "Alert" # Label shown above the alerts section.
-add_alert_label = "Add alert" # Button label used to add another alert row.
-open_calendar_label = "Calendar" # Footer button label used to open Calendar.app.
-cancel_label = "Cancel" # Footer cancel button label.
-save_label = "Save" # Footer primary button label when creating.
-update_label = "Update" # Footer primary button label when editing.
-remove_label = "Remove" # Footer destructive button label.
-delete_confirmation_title = "Remove appointment?" # Delete confirmation title.
-delete_confirmation_message = "This action cannot be undone." # Delete confirmation message.
-title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
-location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
-default_calendar_name = "Personal" # Default calendar name used when creating new appointments.
-default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day.
-default_travel_time = "none" # Default travel time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours.
-
-[builtins.calendar.month.popup.composer.alert_labels]
-none = "None" # Label shown for no alert.
-at_time = "At time of event" # Label shown for alerts at event time.
-5_minutes = "5 minutes before" # Label shown for a 5-minute alert.
-10_minutes = "10 minutes before" # Label shown for a 10-minute alert.
-15_minutes = "15 minutes before" # Label shown for a 15-minute alert.
-30_minutes = "30 minutes before" # Label shown for a 30-minute alert.
-1_hour = "1 hour before" # Label shown for a 1-hour alert.
-1_day = "1 day before" # Label shown for a 1-day alert.
-
-[builtins.calendar.month.popup.composer.travel_time_labels]
-none = "None" # Label shown when no travel time is set.
-5_minutes = "5 minutes" # Label shown for 5 minutes of travel time.
-10_minutes = "10 minutes" # Label shown for 10 minutes of travel time.
-15_minutes = "15 minutes" # Label shown for 15 minutes of travel time.
-20_minutes = "20 minutes" # Label shown for 20 minutes of travel time.
-30_minutes = "30 minutes" # Label shown for 30 minutes of travel time.
-45_minutes = "45 minutes" # Label shown for 45 minutes of travel time.
-1_hour = "1 hour" # Label shown for 1 hour of travel time.
-90_minutes = "1.5 hours" # Label shown for 90 minutes of travel time.
-2_hours = "2 hours" # Label shown for 2 hours of travel time.
 
 [builtins.calendar.month.popup.today_button]
 title = "Today" # Title of the Today button.
