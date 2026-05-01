@@ -178,6 +178,7 @@ public let networkAgentFieldNamespaceRegistry: [NetworkAgentFieldNamespaceSpec] 
 public enum NetworkAgentFieldSelectorError: LocalizedError, Equatable {
   case unknownFieldOrSelector(String)
 
+  /// Returns the localized selector error message.
   public var errorDescription: String? {
     switch self {
     case .unknownFieldOrSelector(let value):

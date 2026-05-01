@@ -2,6 +2,7 @@ import CoreWLAN
 import EasyBarShared
 import Foundation
 
+/// Watches CoreWLAN Wi-Fi state.
 final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private let smoothingFactor = 0.35
   private let stateLock = NSLock()

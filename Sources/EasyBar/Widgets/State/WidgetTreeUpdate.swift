@@ -1,5 +1,6 @@
 import Foundation
 
+/// Decoded message emitted by the Lua widget runtime.
 struct WidgetTreeUpdate: Codable {
   let type: Kind
   let root: String?

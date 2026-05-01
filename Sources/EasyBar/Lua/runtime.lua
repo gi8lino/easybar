@@ -10,7 +10,9 @@ local function runtime_dir()
 	return source:match("^(.*)/[^/]+$") or "."
 end
 
+--- Runtime module root directory.
 local base_dir = runtime_dir()
+--- Adds bundled runtime modules to the Lua module path.
 package.path = base_dir .. "/?.lua;" .. package.path
 
 --- Loads one bundled runtime module by name.
@@ -25,13 +27,20 @@ local function load_module(name)
 	return chunk()
 end
 
+--- Runtime logger module.
 local log = load_module("log")
+--- Runtime JSON codec module.
 local json = load_module("json")
+--- Public EasyBar API module.
 local api = load_module("api")
+--- Widget loader module.
 local loader = load_module("loader")
+--- Event normalization and dispatch module.
 local events = load_module("events")
+--- Registry renderer module.
 local render = load_module("render")
 
+--- Widget directory passed by the Swift host.
 local widget_dir = arg[1]
 
 if not widget_dir or widget_dir == "" then
@@ -39,6 +48,7 @@ if not widget_dir or widget_dir == "" then
 	widget_dir = home .. "/.config/easybar/widgets"
 end
 
+--- Runtime registry and widget API instance.
 local registry = api.new(log)
 
 io.stdout:setvbuf("line")

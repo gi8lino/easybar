@@ -95,6 +95,7 @@ public enum CalendarAgentOneShotError: LocalizedError {
   case readFailed
   case emptyResponse
 
+  /// Returns the localized client error message.
   public var errorDescription: String? {
     switch self {
     case .socketCreationFailed:

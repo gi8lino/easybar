@@ -112,7 +112,7 @@ extension WidgetNodeView {
     return AnyView(styledNodeSurface(itemContent))
   }
 
-  /// Handles native calendar anchor view.
+  /// Builds the native calendar anchor with popup tracking.
   func nativeCalendarAnchorView<Content: View>(
     @ViewBuilder content: () -> Content
   ) -> some View {

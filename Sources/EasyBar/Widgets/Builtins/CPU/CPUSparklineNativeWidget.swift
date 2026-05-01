@@ -1,6 +1,7 @@
 import Darwin.Mach
 import Foundation
 
+/// Native CPU widget that samples system usage and renders a sparkline.
 @MainActor
 final class CPUSparklineNativeWidget: NativeWidget {
 

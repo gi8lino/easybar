@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+/// Custom progress-style slider used by native and scripted widgets.
 struct ProgressSliderWidgetView: View {
   let rootWidgetID: String
   let targetWidgetID: String
@@ -140,7 +141,7 @@ private struct ProgressSliderInteractionSurface: NSViewRepresentable {
     return view
   }
 
-  /// Handles update nsview.
+  /// Updates the AppKit interaction surface callbacks.
   func updateNSView(_ nsView: ProgressSliderInteractionNSView, context: Context) {
     nsView.onPreview = onPreview
     nsView.onCommit = onCommit
@@ -151,7 +152,7 @@ private final class ProgressSliderInteractionNSView: NSView {
   var onPreview: ((CGFloat) -> Void)?
   var onCommit: ((CGFloat) -> Void)?
 
-  /// Handles accepts first mouse.
+  /// Accepts the first click even when EasyBar is inactive.
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
     true
   }
@@ -160,28 +161,28 @@ private final class ProgressSliderInteractionNSView: NSView {
     true
   }
 
-  /// Handles hit test.
+  /// Restricts hit-testing to the slider bounds.
   override func hitTest(_ point: NSPoint) -> NSView? {
     bounds.contains(point) ? self : nil
   }
 
-  /// Handles mouse down.
+  /// Sends a preview value when dragging starts.
   override func mouseDown(with event: NSEvent) {
     emitPreview(for: event)
   }
 
-  /// Handles mouse dragged.
+  /// Sends preview values while dragging.
   override func mouseDragged(with event: NSEvent) {
     emitPreview(for: event)
   }
 
-  /// Handles mouse up.
+  /// Commits the final slider value.
   override func mouseUp(with event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     onCommit?(point.x)
   }
 
-  /// Handles emit preview.
+  /// Emits one preview value for a mouse event.
   private func emitPreview(for event: NSEvent) {
     let point = convert(event.locationInWindow, from: nil)
     onPreview?(point.x)

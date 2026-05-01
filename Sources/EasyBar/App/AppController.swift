@@ -5,20 +5,30 @@ import Foundation
 /// Main-actor app shell responsible for UI lifecycle and startup wiring.
 @MainActor
 final class AppController {
+  /// Logger used for app-shell diagnostics.
   private let logger: ProcessLogger
+  /// Coordinates runtime startup, refresh, reload, and shutdown.
   private let runtimeCoordinator: RuntimeCoordinator
+  /// Converts process signals into graceful termination requests.
   private lazy var signalHandler = AppSignalHandler(logger: logger.child("signals")) {
     [weak self] in
     self?.requestTermination()
   }
 
+  /// Whether the app shell has completed startup.
   private var started = false
+  /// Shared shutdown task used to avoid duplicate cleanup.
   private var shutdownTask: Task<Void, Never>?
+  /// Task that waits for graceful shutdown before terminating AppKit.
   private var terminationRequestTask: Task<Void, Never>?
+  /// Whether AppKit termination should proceed immediately.
   private var forceImmediateTermination = false
+  /// Controller for the main EasyBar panel.
   private var barWindowController: BarWindowController?
 
+  /// Presenter for config load and reload errors.
   private let configErrorWindowController = ConfigErrorWindowController()
+  /// Prevents multiple EasyBar instances from running at once.
   private let instanceGuard = SingleInstanceGuard()
 
   /// Creates the app shell with its process logger.

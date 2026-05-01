@@ -6,22 +6,37 @@ import Foundation
 /// This is the single owner of startup, shutdown, reload, file watching,
 /// socket command handling, and runtime refresh orchestration.
 actor RuntimeCoordinator {
+  /// Logger used for runtime coordination diagnostics.
   private let logger: ProcessLogger
+  /// Actor used for config reloads and runtime config reads.
   private let configManager = ConfigManager.shared
+  /// Watches config changes when enabled.
   private let fileWatcher: FileWatcher
+  /// Shared Lua runtime process owner.
   private let luaRuntime: LuaRuntime
+  /// Coordinates Lua and native widget rendering.
   private let widgetEngine: WidgetEngine
 
+  /// Shared AeroSpace integration service.
   private let aeroSpaceService = AeroSpaceService.shared
+  /// IPC server for external commands and metrics.
   private let socketServer: SocketServer
+  /// Shared runtime metrics collector.
   private let metricsCoordinator = MetricsCoordinator.shared
 
+  /// Task consuming config watcher events.
   private var watcherTask: Task<Void, Never>?
+  /// Whether runtime services are currently started.
   private var started = false
+  /// Generation used to cancel stale lifecycle work.
   private var lifecycleGeneration: UInt64 = 0
+  /// Whether a config reload is in progress.
   private var isReloadingConfig = false
+  /// Whether a Lua runtime restart is in progress.
   private var isRestartingLuaRuntime = false
+  /// Whether another config reload should run after current work.
   private var queuedConfigReload = false
+  /// Whether another Lua restart should run after current work.
   private var queuedLuaRuntimeRestart = false
 
   /// Creates one runtime coordinator.

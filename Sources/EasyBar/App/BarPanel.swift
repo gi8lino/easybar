@@ -2,17 +2,20 @@ import AppKit
 
 /// Borderless non-activating panel used for the EasyBar window.
 final class BarPanel: NSPanel {
+  /// Builds the right-click menu, optionally including developer actions.
   var contextMenuProvider: ((Bool) -> NSMenu)?
 
+  /// Prevents the bar panel from becoming key.
   override var canBecomeKey: Bool {
     false
   }
 
+  /// Prevents the bar panel from becoming the main window.
   override var canBecomeMain: Bool {
     false
   }
 
-  /// Handles constrain frame rect.
+  /// Allows the bar to keep its configured frame.
   override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
     frameRect
   }

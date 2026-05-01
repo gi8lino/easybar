@@ -1,5 +1,6 @@
 --- Module contract:
 --- Owns shared Lua table helpers reused across runtime modules.
+--- Shared helper module table.
 local M = {}
 
 --- Deep-copies one Lua value tree.

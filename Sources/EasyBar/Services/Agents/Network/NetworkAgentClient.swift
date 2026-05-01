@@ -1,7 +1,9 @@
 import EasyBarShared
 import Foundation
 
+/// Streams Wi-Fi and network state from the network agent.
 final class NetworkAgentClient {
+  /// Configured shared network-agent client.
   private static var sharedInstance: NetworkAgentClient?
 
   /// Returns the configured shared network-agent client.
@@ -19,14 +21,18 @@ final class NetworkAgentClient {
     sharedInstance = NetworkAgentClient(logger: logger)
   }
 
+  /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
+  /// Whether the client lifecycle is active.
   private var started = false
 
+  /// Wake-triggered refresh controller.
   private lazy var wakeRefreshController = AgentWakeRefreshController(
     label: "network agent client",
     logger: logger.child("wake_refresh")
   )
 
+  /// Socket client that owns the network-agent stream.
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
     socketPath: { Config.shared.networkAgentSocketPath },
@@ -54,6 +60,7 @@ final class NetworkAgentClient {
     logger: logger.child("socket_client")
   )
 
+  /// Creates the shared network-agent client.
   private init(logger: ProcessLogger) {
     self.logger = logger
   }

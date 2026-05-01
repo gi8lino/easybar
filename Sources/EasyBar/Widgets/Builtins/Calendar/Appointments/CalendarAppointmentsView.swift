@@ -1,6 +1,7 @@
 import EasyBarShared
 import SwiftUI
 
+/// One render row in a calendar appointments list.
 struct CalendarAppointmentsListRow: Identifiable {
   enum Kind {
     case dayHeader(Date)
@@ -11,6 +12,7 @@ struct CalendarAppointmentsListRow: Identifiable {
   let kind: Kind
 }
 
+/// Shared appointments list used by month and upcoming calendar popups.
 struct CalendarAppointmentsListView: View {
   let title: String?
   let rows: [CalendarAppointmentsListRow]
@@ -55,7 +57,7 @@ struct CalendarAppointmentsListView: View {
     .frame(maxWidth: .infinity, alignment: .topLeading)
   }
 
-  /// Handles appointment row.
+  /// Builds one tappable or static appointment row.
   private func appointmentRow(_ event: CalendarAgentEvent) -> some View {
     let isBirthday = isBirthdayEvent(event)
     let content = appointmentRowContent(event, showsChevron: !isBirthday && onEventTap != nil)
@@ -73,7 +75,7 @@ struct CalendarAppointmentsListView: View {
     return AnyView(content)
   }
 
-  /// Handles appointment row content.
+  /// Builds the visible content for one appointment row.
   private func appointmentRowContent(
     _ event: CalendarAgentEvent,
     showsChevron: Bool
@@ -121,7 +123,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Handles appointment title view.
+  /// Builds the primary appointment title row.
   private func appointmentTitleView(for event: CalendarAgentEvent) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       if event.isAllDay {
@@ -163,7 +165,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Handles appointment meta top view.
+  /// Builds optional metadata shown above the appointment title.
   private func appointmentMetaTopView(for event: CalendarAgentEvent) -> some View {
     if !event.isAllDay,
       style.showTravelTime,
@@ -193,7 +195,7 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Handles appointment end time view.
+  /// Builds the optional appointment end-time label.
   private func appointmentEndTimeView(for event: CalendarAgentEvent) -> some View {
     if style.showEndTime,
       let endTimeText = CalendarEventPresentation.endTimeText(
@@ -209,7 +211,7 @@ struct CalendarAppointmentsListView: View {
     }
   }
 
-  /// Handles appointment prefix.
+  /// Returns the all-day prefix shown before an event title.
   private func appointmentPrefix(for event: CalendarAgentEvent) -> String {
     guard event.isAllDay else { return "" }
     guard !isBirthdayEvent(event) else { return "" }
@@ -217,12 +219,12 @@ struct CalendarAppointmentsListView: View {
     return style.showAllDayLabel ? style.allDayLabel : ""
   }
 
-  /// Handles is birthday event.
+  /// Returns whether the event is rendered as a birthday.
   private func isBirthdayEvent(_ event: CalendarAgentEvent) -> Bool {
     event.id.hasPrefix("birthday-")
   }
 
-  /// Handles indicator color hex.
+  /// Returns the calendar indicator color for one event.
   private func indicatorColorHex(for event: CalendarAgentEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
       !hex.isEmpty
@@ -233,7 +235,7 @@ struct CalendarAppointmentsListView: View {
     return defaultIndicatorColorHex
   }
 
-  /// Handles color.
+  /// Converts one hex string into a SwiftUI color.
   private func color(_ hex: String) -> Color {
     Color(hex: hex)
   }

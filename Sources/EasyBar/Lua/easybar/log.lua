@@ -1,6 +1,7 @@
 --- Module contract:
 --- Owns structured stderr logging for the Lua runtime and widgets.
 --- Returns one logger table with runtime- and widget-scoped writers.
+--- Runtime logger module table.
 local M = {}
 
 --- Flattens one log field into a single safe line.

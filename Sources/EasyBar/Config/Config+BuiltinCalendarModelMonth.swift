@@ -2,13 +2,21 @@ import Foundation
 
 extension Config.CalendarBuiltinConfig {
 
+  /// Month calendar popup config.
   struct Month {
+    /// Month popup style and behavior config.
     struct Popup {
+      /// Popup container style.
       var style: Style
+      /// Calendar grid style.
       var calendar: CalendarStyle
+      /// Date selection style.
       var selection: SelectionStyle
+      /// Agenda list style.
       var agenda: AgendaStyle
+      /// Month anchor style.
       var anchor: AnchorStyle
+      /// Today button style.
       var todayButton: TodayButtonStyle
 
       var backgroundColorHex: String {
@@ -222,6 +230,7 @@ extension Config.CalendarBuiltinConfig {
       }
     }
 
+    /// Popup config for month mode.
     var popup: Popup
   }
 }

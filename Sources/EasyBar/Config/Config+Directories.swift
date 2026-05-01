@@ -4,13 +4,19 @@ extension Config {
 
   /// One resolved filesystem requirement for the runtime.
   struct RequiredDirectory {
+    /// Filesystem requirement kind.
     enum Kind {
+      /// The configured path must be a directory.
       case directory
+      /// The configured path is a file and its parent must exist.
       case parentDirectory
     }
 
+    /// Config key that registered this requirement.
     let configPath: String
+    /// Filesystem path to validate or create.
     let path: String
+    /// Requirement behavior for the path.
     let kind: Kind
   }
 

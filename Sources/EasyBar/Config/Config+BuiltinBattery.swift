@@ -34,6 +34,7 @@ extension Config {
   /// Built-in battery widget config.
   struct BatteryBuiltinConfig {
 
+    /// Battery content and display settings.
     struct Content {
       var unavailableText: String
       var iconSize: Double
@@ -43,9 +44,13 @@ extension Config {
       var colors: BuiltinBatteryColors
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Battery-specific content settings.
     var content: Content
+    /// Tooltip popup style settings.
     var popup: BuiltinPopupStyle
 
     var enabled: Bool {
@@ -93,6 +98,7 @@ extension Config {
       set { content.colors = newValue }
     }
 
+    /// Default battery widget config.
     static let `default` = BatteryBuiltinConfig(
       placement: .init(
         enabled: false,

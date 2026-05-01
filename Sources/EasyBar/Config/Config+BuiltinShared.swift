@@ -2,14 +2,23 @@ import Foundation
 import TOMLKit
 
 extension Config {
+  /// Default popup text color.
   static let builtinPopupDefaultTextColorHex = "#cdd6f4"
+  /// Default popup background color.
   static let builtinPopupDefaultBackgroundColorHex = "#111111"
+  /// Default popup border color.
   static let builtinPopupDefaultBorderColorHex = "#444444"
+  /// Default popup border width.
   static let builtinPopupDefaultBorderWidth = 1.0
+  /// Default popup corner radius.
   static let builtinPopupDefaultCornerRadius = 8.0
+  /// Default popup horizontal padding.
   static let builtinPopupDefaultPaddingX = 8.0
+  /// Default popup vertical padding.
   static let builtinPopupDefaultPaddingY = 6.0
+  /// Default popup horizontal margin.
   static let builtinPopupDefaultMarginX = 0.0
+  /// Default popup vertical margin.
   static let builtinPopupDefaultMarginY = 8.0
 
   /// Shared placement block for built-in widgets.

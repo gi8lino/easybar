@@ -2,7 +2,9 @@ import Foundation
 
 /// Delivery and buffering policy for one event name.
 enum EventDeliveryPolicy {
+  /// Preserve delivery with a larger buffer.
   case reliable
+  /// Prefer the newest value when events arrive faster than consumers read.
   case coalescing
 
   /// Returns the policy for one event name.

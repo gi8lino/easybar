@@ -1,5 +1,6 @@
 import Foundation
 
+/// Render-ready state for one widget node.
 struct WidgetNodeState: Identifiable, Codable, Equatable {
   let id: String
   let root: String

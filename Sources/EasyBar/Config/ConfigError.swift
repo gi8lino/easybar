@@ -1,7 +1,10 @@
 import Foundation
 
+/// Validation errors raised while loading EasyBar config.
 enum ConfigError: Error, LocalizedError {
+  /// A config value had the wrong TOML type.
   case invalidType(path: String, expected: String, actual: String)
+  /// A config value had an unsupported value.
   case invalidValue(path: String, message: String)
 
   /// Returns the config path associated with the validation failure.

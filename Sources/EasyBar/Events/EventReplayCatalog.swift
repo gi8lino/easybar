@@ -2,7 +2,9 @@ import Foundation
 
 /// Replayable event definitions for new subscribers and runtime startup refreshes.
 enum EventReplayCatalog {
+  /// Replayable invalidations in stable emission order.
   static let orderedInvalidations = EventStateInvalidation.allCases
+  /// Replayable event names in stable emission order.
   static let orderedEventNames = orderedInvalidations.map(\.eventName)
 
   /// Returns whether the given event name participates in replay caching.

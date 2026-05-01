@@ -7,7 +7,7 @@ extension WidgetNodeView {
     color(node.color)
   }
 
-  /// Handles color.
+  /// Resolves an optional hex color or falls back to the default text color.
   func color(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else {
       return Theme.defaultTextColor
@@ -16,26 +16,26 @@ extension WidgetNodeView {
     return Color(hex: hex)
   }
 
-  /// Handles font value.
+  /// Returns a system font for an optional point size.
   func fontValue(size: Double?) -> Font? {
     guard let size else { return nil }
     return .system(size: CGFloat(size))
   }
 
-  /// Handles cg float.
+  /// Converts an optional `Double` into an optional `CGFloat`.
   func cgFloat(_ value: Double?) -> CGFloat? {
     guard let value else { return nil }
     return CGFloat(value)
   }
 
-  /// Handles schedule popup close check.
+  /// Schedules a delayed popup close check.
   func schedulePopupCloseCheck() {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
       closePopupIfIdle()
     }
   }
 
-  /// Handles handle anchor hover.
+  /// Updates popup presentation from anchor hover state.
   func handleAnchorHover(_ hovering: Bool) {
     anchorHovered = hovering
 
@@ -48,7 +48,7 @@ extension WidgetNodeView {
     schedulePopupCloseCheck()
   }
 
-  /// Handles handle popup hover.
+  /// Updates popup presentation from popup hover state.
   func handlePopupHover(_ hovering: Bool) {
     popupHovered = hovering
 
@@ -56,14 +56,14 @@ extension WidgetNodeView {
     schedulePopupCloseCheck()
   }
 
-  /// Handles close popup if idle.
+  /// Closes the popup when neither anchor nor content is hovered.
   func closePopupIfIdle() {
     guard !anchorHovered else { return }
     guard !popupHovered else { return }
     popupPresented = false
   }
 
-  /// Handles update popup panel.
+  /// Synchronizes the AppKit popup panel with SwiftUI state.
   func updatePopupPanel(isPresented: Bool) {
     guard nodeCanPresentPopup else {
       popupPanel.close()

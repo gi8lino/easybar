@@ -5,6 +5,7 @@ extension Config {
 
   /// Built-in front app widget config.
   struct FrontAppBuiltinConfig {
+    /// Front-app content settings.
     struct Content {
       var showIcon: Bool
       var showName: Bool
@@ -13,8 +14,11 @@ extension Config {
       var iconCornerRadius: Double
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Front-app-specific content settings.
     var content: Content
 
     var enabled: Bool {
@@ -57,6 +61,7 @@ extension Config {
       set { content.iconCornerRadius = newValue }
     }
 
+    /// Default front-app widget config.
     static let `default` = FrontAppBuiltinConfig(
       placement: .init(
         enabled: false,

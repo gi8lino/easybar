@@ -10,6 +10,7 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
   case writeFailed(String)
   case noReply
 
+  /// Returns a printable transport error.
   public var description: String {
     switch self {
     case .socketFailed:

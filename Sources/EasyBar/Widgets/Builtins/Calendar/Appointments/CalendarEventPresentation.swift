@@ -1,5 +1,6 @@
 import Foundation
 
+/// Formatting helpers for calendar event rows.
 enum CalendarEventPresentation {
   /// Formats one event time using the provided calendar.
   static func formattedEventTime(_ date: Date, calendar: Calendar) -> String {

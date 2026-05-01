@@ -3,6 +3,7 @@ import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
 final class CalendarAgentEventRelay {
+  /// Configured shared calendar-agent event relay.
   private static var sharedInstance: CalendarAgentEventRelay?
 
   /// Returns the configured shared calendar-agent event relay.
@@ -21,12 +22,17 @@ final class CalendarAgentEventRelay {
     sharedInstance = CalendarAgentEventRelay(logger: logger)
   }
 
+  /// Serial queue for relay state and debouncing.
   private let queue = DispatchQueue(label: "easybar.calendar-agent.event-relay")
+  /// Logger used for relay diagnostics.
   private let logger: ProcessLogger
 
+  /// Whether the relay is active.
   private var running = false
+  /// Generation used to ignore stale scheduled emissions.
   private var generation: UInt64 = 0
 
+  /// Scheduler that coalesces snapshot updates.
   private lazy var scheduler = DebouncedActionScheduler(
     label: "calendar agent event relay",
     delay: 0.05,
@@ -34,6 +40,7 @@ final class CalendarAgentEventRelay {
     logger: logger.child("scheduler")
   )
 
+  /// Creates the shared calendar-agent event relay.
   private init(logger: ProcessLogger) {
     self.logger = logger
   }

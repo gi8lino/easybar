@@ -2,14 +2,21 @@ import Darwin
 import EasyBarShared
 import Foundation
 
+/// Serves calendar agent requests over a line-delimited socket protocol.
 final class CalendarSocketServer {
+  /// Active subscription state for one connected client.
   private struct Subscriber {
+    /// Query used when broadcasting snapshots to this subscriber.
     let query: CalendarAgentQuery
   }
 
+  /// Snapshot provider used to answer requests.
   private var provider: CalendarSnapshotProvider?
+  /// EasyBar app version reported to clients.
   private let appVersion: String
+  /// Logger used for socket-server diagnostics.
   private let logger: ProcessLogger
+  /// Line-delimited socket transport backing the server.
   private let transport:
     LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 

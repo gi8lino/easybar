@@ -2,6 +2,7 @@ import CoreLocation
 import EasyBarShared
 import Foundation
 
+/// Coordinates CoreLocation authorization for network data.
 final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerDelegate {
   private let locationManager = CLLocationManager()
   private let authState = NetworkAuthorizationState()

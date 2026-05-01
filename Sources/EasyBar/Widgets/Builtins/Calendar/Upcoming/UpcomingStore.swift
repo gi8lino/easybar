@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+/// Shared upcoming-calendar snapshot store used by the native upcoming popup.
 @MainActor
 final class NativeUpcomingCalendarStore: ObservableObject {
   private static var sharedInstance: NativeUpcomingCalendarStore?
@@ -15,7 +16,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
     return sharedInstance
   }
 
-  /// Handles bootstrap.
+  /// Configures the shared upcoming-calendar store.
   static func bootstrap(logger: ProcessLogger) {
     sharedInstance = NativeUpcomingCalendarStore(logger: logger)
   }

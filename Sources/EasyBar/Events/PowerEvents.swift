@@ -2,7 +2,9 @@ import EasyBarShared
 import Foundation
 import IOKit.ps
 
+/// Observes macOS power source changes.
 final class PowerEvents {
+  /// Configured shared power event source.
   private static var sharedInstance: PowerEvents?
 
   /// Returns the configured shared power event source.
@@ -19,9 +21,12 @@ final class PowerEvents {
     sharedInstance = PowerEvents(logger: logger)
   }
 
+  /// Logger used for power diagnostics.
   private let logger: ProcessLogger
 
+  /// IOKit run-loop source for power notifications.
   private var runLoopSource: Unmanaged<CFRunLoopSource>?
+  /// Last emitted charging state.
   private var lastChargingState: Bool?
 
   /// Creates one power event source.

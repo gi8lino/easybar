@@ -5,18 +5,28 @@ import Foundation
 /// Actor-owned file watcher that emits debounced config change events.
 actor FileWatcher {
 
+  /// File watcher events emitted to the runtime coordinator.
   enum Event: Sendable {
+    /// The watched config file or nearest ancestor changed.
     case changed
   }
 
+  /// File descriptor currently watched by the dispatch source.
   private var fileDescriptor: Int32 = -1
+  /// Dispatch source observing filesystem changes.
   private var source: DispatchSourceFileSystemObject?
+  /// Pending debounced change emission.
   private var debounceWorkItem: DispatchWorkItem?
+  /// Active stream continuation.
   private var continuation: AsyncStream<Event>.Continuation?
+  /// Generation used to ignore stale watcher callbacks.
   private var watcherGeneration: UInt64 = 0
+  /// Queue used to debounce filesystem events.
   private let debounceQueue = DispatchQueue(label: "easybar.file-watcher.debounce", qos: .utility)
+  /// Logger used for file watcher diagnostics.
   private let logger: ProcessLogger
 
+  /// Creates one config file watcher.
   init(
     logger: ProcessLogger
   ) {

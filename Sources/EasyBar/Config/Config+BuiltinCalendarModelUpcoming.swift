@@ -2,12 +2,15 @@ import Foundation
 
 extension Config.CalendarBuiltinConfig {
 
+  /// Upcoming calendar popup config.
   struct Upcoming {
+    /// Upcoming event query settings.
     struct Events {
       var days: Int
       var excludePastEvents: Bool
     }
 
+    /// Upcoming popup visual style.
     struct Popup {
       var backgroundColorHex: String
       var borderColorHex: String
@@ -20,7 +23,9 @@ extension Config.CalendarBuiltinConfig {
       var marginY: Double
     }
 
+    /// Event query settings.
     var events: Events
+    /// Popup visual style.
     var popup: Popup
   }
 }

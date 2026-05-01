@@ -5,6 +5,7 @@ extension Config {
 
   /// Built-in volume widget config.
   struct VolumeBuiltinConfig {
+    /// Volume display content settings.
     struct Content {
       var mutedIcon: String
       var lowIcon: String
@@ -15,14 +16,19 @@ extension Config {
       var step: Double
     }
 
+    /// Volume slider behavior settings.
     struct Slider {
       var expandToSliderOnHover: Bool
       var width: Double
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Volume-specific content settings.
     var content: Content
+    /// Slider behavior settings.
     var slider: Slider
 
     var enabled: Bool {
@@ -85,6 +91,7 @@ extension Config {
       set { slider.width = newValue }
     }
 
+    /// Default volume widget config.
     static let `default` = VolumeBuiltinConfig(
       placement: .init(
         enabled: false,

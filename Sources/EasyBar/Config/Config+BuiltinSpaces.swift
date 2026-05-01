@@ -6,6 +6,7 @@ extension Config {
 
   /// Built-in spaces widget config.
   struct SpacesBuiltinConfig {
+    /// Spaces layout behavior settings.
     struct Layout {
       var spacing: Double
       var hideEmpty: Bool
@@ -28,6 +29,7 @@ extension Config {
       var clickToFocusApp: Bool
     }
 
+    /// Spaces label text settings.
     struct Text {
       var size: Double
       var weight: String
@@ -50,6 +52,7 @@ extension Config {
       }
     }
 
+    /// Spaces app-icon settings.
     struct Icons {
       var size: Double
       var spacing: Double
@@ -59,6 +62,7 @@ extension Config {
       var focusedAppBorderWidth: Double
     }
 
+    /// Spaces color settings.
     struct Colors {
       var activeBackgroundHex: String
       var inactiveBackgroundHex: String
@@ -67,11 +71,17 @@ extension Config {
       var focusedAppBorderHex: String
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Layout behavior settings.
     var layout: Layout
+    /// Text style settings.
     var text: Text
+    /// Icon style settings.
     var icons: Icons
+    /// Color settings.
     var colors: Colors
 
     var enabled: Bool {
@@ -89,6 +99,7 @@ extension Config {
       set { placement.order = newValue }
     }
 
+    /// Default spaces widget config.
     static let `default` = SpacesBuiltinConfig(
       placement: .init(
         enabled: false,

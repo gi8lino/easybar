@@ -2,6 +2,7 @@ import Foundation
 
 extension Config.CalendarBuiltinConfig.Month.Popup {
 
+  /// Agenda list settings for the month popup.
   struct AgendaStyle {
     var layout: Config.MonthCalendarPopupLayout
     var appointmentsScrollable: Bool

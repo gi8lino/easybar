@@ -2,7 +2,9 @@ import EasyBarShared
 import Foundation
 import SystemConfiguration
 
+/// Watches SystemConfiguration network state.
 final class NetworkSystemMonitor {
+  /// Dynamic store keys that should trigger refreshes.
   private static let watchedNetworkPatterns: [CFString] = [
     "State:/Network/Global/IPv4" as CFString,
     "State:/Network/Global/IPv6" as CFString,

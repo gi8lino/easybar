@@ -5,12 +5,16 @@ extension Config {
 
   /// Built-in time widget config.
   struct TimeBuiltinConfig {
+    /// Time format settings.
     struct Content {
       var format: String
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Time-specific content settings.
     var content: Content
 
     var enabled: Bool {
@@ -33,6 +37,7 @@ extension Config {
       set { content.format = newValue }
     }
 
+    /// Default time widget config.
     static let `default` = TimeBuiltinConfig(
       placement: .init(
         enabled: false,

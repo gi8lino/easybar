@@ -5,12 +5,16 @@ extension Config {
 
   /// Built-in date widget config.
   struct DateBuiltinConfig {
+    /// Date format settings.
     struct Content {
       var format: String
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Date-specific content settings.
     var content: Content
 
     var enabled: Bool {
@@ -33,6 +37,7 @@ extension Config {
       set { content.format = newValue }
     }
 
+    /// Default date widget config.
     static let `default` = DateBuiltinConfig(
       placement: .init(
         enabled: false,

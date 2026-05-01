@@ -2,11 +2,14 @@ import EasyBarShared
 import EventKit
 import Foundation
 
+/// Builds calendar snapshots and applies calendar event mutations.
 final class CalendarSnapshotProvider {
+  /// Bridges EventKit travel-time storage that is not exposed as public Swift API.
   private enum EventTravelTimeBridge {
+    /// Key-value coding key used by EventKit for travel time.
     static let key = "travelTime"
 
-    /// Handles get seconds.
+    /// Reads positive travel time from one EventKit event.
     static func getSeconds(from event: EKEvent) -> TimeInterval? {
       let selector = NSSelectorFromString(key)
       guard event.responds(to: selector) else { return nil }
@@ -19,7 +22,7 @@ final class CalendarSnapshotProvider {
       return nil
     }
 
-    /// Handles set seconds.
+    /// Writes travel time onto one EventKit event.
     static func setSeconds(_ seconds: TimeInterval?, on event: EKEvent) {
       guard let seconds, seconds > 0 else {
         event.setValue(NSNumber(value: 0), forKey: key)
@@ -30,20 +33,33 @@ final class CalendarSnapshotProvider {
     }
   }
 
+  /// Locale used for stable date formatting.
   private static let formatterLocale = Locale(identifier: "en_US_POSIX")
+  /// Calendar used for stable date formatting.
   private static let formatterCalendar = Calendar(identifier: .gregorian)
+  /// Time zone used for user-facing calendar output.
   private static let formatterTimeZone = TimeZone.autoupdatingCurrent
+  /// Protects cached birthday formatters.
   private static let birthdayFormatterLock = NSLock()
+  /// Cached birthday formatters keyed by format string.
   private static var birthdayFormatters: [String: DateFormatter] = [:]
 
+  /// Formatter for timed event rows.
   private static let eventTimeFormatter: DateFormatter = makeFormatter(format: "HH:mm")
+  /// Formatter for future day section titles.
   private static let dayTitleFormatter: DateFormatter = makeFormatter(format: "dd.MM.yyyy")
 
+  /// EventKit store used for reads and mutations.
   private let eventStore = EKEventStore()
+  /// Shared authorization state used by the provider and controller.
   private let authState = CalendarAuthorizationState()
+  /// Logger used for snapshot and mutation diagnostics.
   private let logger: ProcessLogger
+  /// Controller that owns calendar permission flow.
   private let authorizationController: CalendarAuthorizationController
+  /// EventKit change observer token.
   private var observer: NSObjectProtocol?
+  /// Callback invoked when calendar data may have changed.
   private var onChange: (() -> Void)?
 
   /// Creates one calendar snapshot provider that logs through the provided logger.
@@ -869,6 +885,7 @@ extension CalendarSnapshotProvider {
   }
 }
 
+/// Errors raised while creating or updating calendar events.
 enum CalendarAgentCreateError: LocalizedError {
   case accessDenied
   case invalidDateRange
@@ -886,6 +903,7 @@ enum CalendarAgentCreateError: LocalizedError {
   }
 }
 
+/// Errors raised while mutating existing calendar events.
 enum CalendarAgentMutationError: LocalizedError {
   case eventNotFound
 

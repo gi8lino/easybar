@@ -1,9 +1,13 @@
 import EventKit
 import Foundation
 
+/// Stores calendar authorization state safely across EventKit callbacks.
 final class CalendarAuthorizationState {
+  /// Protects authorization state shared across callbacks.
   private let lock = NSLock()
+  /// Last observed EventKit authorization status.
   private var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
+  /// Tracks access granted by the current process before EventKit status catches up.
   private var accessGrantedInProcess = false
 
   /// Stores the latest calendar authorization status.

@@ -5,17 +5,27 @@ import Foundation
 ///
 /// Concrete wrappers only provide the request builder and snapshot sink.
 final class CalendarAgentStreamController {
+  /// Human-readable stream label used in logs.
   private let label: String
+  /// Returns the current socket path.
   private let socketPath: () -> String
+  /// Builds the current subscribe or refresh request.
   private let makeRequest: () -> CalendarAgentRequest
+  /// Applies decoded snapshots to the caller state.
   private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
+  /// Clears caller state after errors or disconnects.
   private let clearState: () -> Void
+  /// Metrics key used for this stream.
   private let metricsAgent: MetricsCoordinator.AgentKey
+  /// Wake-triggered refresh controller.
   private let wakeRefreshController: AgentWakeRefreshController
+  /// Logger used for stream diagnostics.
   private let logger: ProcessLogger
 
+  /// Whether the stream lifecycle is active.
   private var started = false
 
+  /// Socket client that owns the calendar-agent stream.
   private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
     label: label,
     socketPath: socketPath,

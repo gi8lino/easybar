@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+/// Provides authorization-aware network snapshots.
 public final class NetworkSnapshotProvider {
   private let componentName: String
   private let authorizer: NetworkLocationAuthorizationController

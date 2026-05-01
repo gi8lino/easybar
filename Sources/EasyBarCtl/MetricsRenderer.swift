@@ -3,12 +3,15 @@ import Foundation
 
 /// Renders metrics output.
 enum MetricsRenderer {
+  /// Number of historical samples rendered in watch-mode sparklines.
   private static let watchGraphWidth = 32
+  /// Formatter used for metrics snapshot timestamps.
   private static let timestampFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
     return formatter
   }()
+  /// Formatter used for memory values.
   private static let byteFormatter: ByteCountFormatter = {
     let formatter = ByteCountFormatter()
     formatter.allowedUnits = [.useKB, .useMB, .useGB]
@@ -18,7 +21,7 @@ enum MetricsRenderer {
     return formatter
   }()
 
-  /// Handles snapshot text.
+  /// Renders a complete one-shot metrics snapshot.
   static func snapshotText(_ snapshot: IPC.MetricsSnapshot) -> String {
     let sections = [
       header(snapshot, live: false),
@@ -32,7 +35,7 @@ enum MetricsRenderer {
     return sections.filter { !$0.isEmpty }.joined(separator: "\n\n")
   }
 
-  /// Handles watch text.
+  /// Renders one live metrics frame for watch mode.
   static func watchText(_ snapshot: IPC.MetricsSnapshot, history: MetricsHistory) -> String {
     let sections = [
       header(snapshot, live: true),
@@ -47,13 +50,13 @@ enum MetricsRenderer {
     return sections.filter { !$0.isEmpty }.joined(separator: "\n\n") + "\n"
   }
 
-  /// Handles header.
+  /// Renders the metrics title and timestamp.
   private static func header(_ snapshot: IPC.MetricsSnapshot, live: Bool) -> String {
     let mode = live ? "live" : "snapshot"
     return "EasyBar metrics (\(mode))  \(timestamp(snapshot.timestamp))"
   }
 
-  /// Handles graphs.
+  /// Renders watch-mode graph rows from recent metric history.
   private static func graphs(_ snapshot: IPC.MetricsSnapshot, history: MetricsHistory) -> String {
     let lines = [
       row([
@@ -97,7 +100,7 @@ enum MetricsRenderer {
     return (["Graphs"] + lines).joined(separator: "\n")
   }
 
-  /// Handles processes.
+  /// Renders EasyBar and Lua process metrics.
   private static func processes(_ snapshot: IPC.MetricsSnapshot) -> String {
     let lines = [
       "Processes",
@@ -108,7 +111,7 @@ enum MetricsRenderer {
     return lines.joined(separator: "\n")
   }
 
-  /// Handles runtime.
+  /// Renders runtime counters and rates.
   private static func runtime(_ snapshot: IPC.MetricsSnapshot) -> String {
     let runtime = snapshot.runtime
 
@@ -183,7 +186,7 @@ enum MetricsRenderer {
     ].joined(separator: "\n")
   }
 
-  /// Handles agents.
+  /// Renders per-agent connection and process metrics.
   private static func agents(_ snapshot: IPC.MetricsSnapshot) -> String {
     let header = row([
       column("name", width: 10),
@@ -216,7 +219,7 @@ enum MetricsRenderer {
     return (["Agents", header] + body).joined(separator: "\n")
   }
 
-  /// Handles widgets.
+  /// Renders per-widget update metrics.
   private static func widgets(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.widgets.isEmpty else {
       return "Widgets\nnone"
@@ -241,7 +244,7 @@ enum MetricsRenderer {
     return (["Widgets", header] + body).joined(separator: "\n")
   }
 
-  /// Handles events.
+  /// Renders per-event totals, rates, drops, and coalescing counts.
   private static func events(_ snapshot: IPC.MetricsSnapshot) -> String {
     guard !snapshot.events.isEmpty else {
       return "Events\nnone"
@@ -268,7 +271,7 @@ enum MetricsRenderer {
     return (["Events", header] + body).joined(separator: "\n")
   }
 
-  /// Handles process header.
+  /// Renders the shared process table header.
   private static func processHeader() -> String {
     row([
       column("name", width: 10),
@@ -279,7 +282,7 @@ enum MetricsRenderer {
     ])
   }
 
-  /// Handles process line.
+  /// Renders one process metrics row.
   private static func processLine(_ process: IPC.ProcessMetrics) -> String {
     row([
       column(process.name, width: 10),
@@ -290,7 +293,7 @@ enum MetricsRenderer {
     ])
   }
 
-  /// Handles graph line.
+  /// Renders one graph table row.
   private static func graphLine(
     label: String,
     current: String,
@@ -307,7 +310,7 @@ enum MetricsRenderer {
     ])
   }
 
-  /// Handles sparkline.
+  /// Renders recent numeric values as a fixed-width sparkline.
   private static func sparkline(
     _ values: [Double],
     absoluteMax: Double? = nil,
@@ -335,12 +338,12 @@ enum MetricsRenderer {
     return "[" + String(repeating: " ", count: leadingPadding) + String(rendered) + "]"
   }
 
-  /// Handles timestamp.
+  /// Formats a snapshot timestamp for display.
   private static func timestamp(_ date: Date) -> String {
     timestampFormatter.string(from: date)
   }
 
-  /// Handles relative.
+  /// Formats an optional date as elapsed seconds from now.
   private static func relative(_ date: Date?) -> String {
     guard let date else { return "-" }
 
@@ -348,12 +351,12 @@ enum MetricsRenderer {
     return "\(delta)s"
   }
 
-  /// Handles yes no.
+  /// Formats a Boolean value as `yes` or `no`.
   private static func yesNo(_ value: Bool) -> String {
     value ? "yes" : "no"
   }
 
-  /// Handles number.
+  /// Formats an optional numeric metric value.
   private static func number(_ value: Double?) -> String {
     guard let value else { return "-" }
 
@@ -368,7 +371,7 @@ enum MetricsRenderer {
     return String(format: "%.1f", value)
   }
 
-  /// Handles percent.
+  /// Formats an optional percentage metric value.
   private static func percent(_ value: Double?) -> String {
     guard let value else { return "-" }
 
@@ -383,34 +386,37 @@ enum MetricsRenderer {
     return String(format: "%.1f%%", value)
   }
 
-  /// Handles bytes.
+  /// Formats an optional byte count.
   private static func bytes(_ value: UInt64?) -> String {
     guard let value else { return "-" }
     return byteFormatter.string(fromByteCount: Int64(value))
   }
 
-  /// Handles sample interval.
+  /// Formats the metrics sample interval.
   private static func sampleInterval(_ value: Double) -> String {
     "\(number(value))s"
   }
 
-  /// Handles average.
+  /// Returns the arithmetic mean for a series of values.
   private static func average(_ values: [Double]) -> Double? {
     guard !values.isEmpty else { return nil }
     return values.reduce(0, +) / Double(values.count)
   }
 
-  /// Handles row.
+  /// Joins preformatted columns into one table row.
   private static func row(_ columns: [String]) -> String {
     columns.joined(separator: "  ")
   }
 
+  /// Horizontal alignment for fixed-width table columns.
   private enum ColumnAlignment {
+    /// Left-aligns column text.
     case left
+    /// Right-aligns column text.
     case right
   }
 
-  /// Handles column.
+  /// Pads or truncates one value to a fixed-width column.
   private static func column(_ value: String, width: Int, alignment: ColumnAlignment = .left)
     -> String
   {

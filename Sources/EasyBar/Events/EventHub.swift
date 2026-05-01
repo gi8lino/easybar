@@ -11,7 +11,9 @@ extension LuaEventSink: EventPayloadSink {}
 
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
+  /// Configured shared event hub instance.
   private static var sharedInstance: EventHub?
+  /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
 
   /// Returns the configured shared event hub.
@@ -34,16 +36,25 @@ actor EventHub {
     )
   }
 
+  /// Logger used for event diagnostics.
   private let logger: ProcessLogger
+  /// Sink that forwards selected events into Lua.
   private let luaEventSink: EventPayloadSink
 
+  /// Active stream subscribers keyed by id.
   private var subscribers: [UUID: Subscriber] = [:]
+  /// Latest payload cached for each replayable event.
   private var replayablePayloads: [String: EasyBarEventPayload] = [:]
+  /// App events currently requested by Lua.
   private var luaForwardedAppEvents = Set<String>()
 
+  /// Subscriber filters and continuation.
   private struct Subscriber {
+    /// Optional event-name filter.
     let eventNames: Set<String>?
+    /// Optional widget target filter.
     let widgetTargetIDs: Set<String>?
+    /// Stream continuation used to deliver payloads.
     let continuation: AsyncStream<EasyBarEventPayload>.Continuation
   }
 

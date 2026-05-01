@@ -1,12 +1,13 @@
 import Foundation
 
+/// Renders the native CPU sparkline widget.
 struct CPURenderer: NativeWidgetRenderer {
 
   typealias Snapshot = CPUSparklineNativeWidget.Snapshot
 
   let rootID: String
 
-  /// Creates nodes.
+  /// Builds the CPU sparkline nodes for the current snapshot.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     [
       BuiltinNativeNodeFactory.makeSparklineNode(

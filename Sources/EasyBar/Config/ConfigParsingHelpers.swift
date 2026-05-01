@@ -307,7 +307,7 @@ extension Config {
       .lowercased()
   }
 
-  /// Returns required string.
+  /// Returns a required TOML string or throws a typed config error.
   func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {
     if let string = value.string {
       return string
@@ -320,7 +320,7 @@ extension Config {
     )
   }
 
-  /// Returns required bool.
+  /// Returns a required TOML bool or throws a typed config error.
   func requiredBool(_ value: any TOMLValueConvertible, path: String) throws -> Bool {
     if let bool = value.bool {
       return bool
@@ -333,7 +333,7 @@ extension Config {
     )
   }
 
-  /// Returns required int.
+  /// Returns a required TOML integer or throws a typed config error.
   func requiredInt(_ value: any TOMLValueConvertible, path: String) throws -> Int {
     if let int = value.int {
       return int
@@ -346,7 +346,7 @@ extension Config {
     )
   }
 
-  /// Returns required number.
+  /// Returns a required TOML number or throws a typed config error.
   func requiredNumber(_ value: any TOMLValueConvertible, path: String) throws -> Double {
     if let double = value.double {
       return double
@@ -363,7 +363,7 @@ extension Config {
     )
   }
 
-  /// Returns required string array.
+  /// Returns a required TOML string array or throws a typed config error.
   func requiredStringArray(_ value: any TOMLValueConvertible, path: String) throws -> [String] {
     guard let array = value.array else {
       throw ConfigError.invalidType(
@@ -378,7 +378,7 @@ extension Config {
     }
   }
 
-  /// Returns required string table.
+  /// Returns a required TOML string table or throws a typed config error.
   func requiredStringTable(
     _ value: any TOMLValueConvertible,
     path: String
@@ -397,7 +397,7 @@ extension Config {
     }
   }
 
-  /// Describes the value.
+  /// Returns a stable type description for one TOML value.
   func describe(_ value: any TOMLValueConvertible) -> String {
     if let string = value.string {
       return "string(\(string.debugDescription))"
@@ -426,37 +426,37 @@ extension Config {
     return "unknown"
   }
 
-  /// Returns optional string.
+  /// Returns an optional TOML string when present.
   func optionalString(_ value: (any TOMLValueConvertible)?, path: String) throws -> String? {
     guard let value else { return nil }
     return try requiredString(value, path: path)
   }
 
-  /// Returns optional bool.
+  /// Returns an optional TOML bool when present.
   func optionalBool(_ value: (any TOMLValueConvertible)?, path: String) throws -> Bool? {
     guard let value else { return nil }
     return try requiredBool(value, path: path)
   }
 
-  /// Returns optional int.
+  /// Returns an optional TOML integer when present.
   func optionalInt(_ value: (any TOMLValueConvertible)?, path: String) throws -> Int? {
     guard let value else { return nil }
     return try requiredInt(value, path: path)
   }
 
-  /// Returns optional number.
+  /// Returns an optional TOML number when present.
   func optionalNumber(_ value: (any TOMLValueConvertible)?, path: String) throws -> Double? {
     guard let value else { return nil }
     return try requiredNumber(value, path: path)
   }
 
-  /// Returns optional string array.
+  /// Returns an optional TOML string array when present.
   func optionalStringArray(_ value: (any TOMLValueConvertible)?, path: String) throws -> [String]? {
     guard let value else { return nil }
     return try requiredStringArray(value, path: path)
   }
 
-  /// Returns optional string table.
+  /// Returns an optional TOML string table when present.
   func optionalStringTable(
     _ value: (any TOMLValueConvertible)?,
     path: String

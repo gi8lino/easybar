@@ -4,6 +4,7 @@ import Foundation
 /// Main-actor owner of native event source subscriptions.
 @MainActor
 final class EventManager {
+  /// Configured shared event manager instance.
   private static var sharedInstance: EventManager?
 
   /// Returns the configured shared event manager.
@@ -33,31 +34,51 @@ final class EventManager {
     sharedInstance = EventManager(logger: logger.child("manager"))
   }
 
+  /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
 
+  /// Native event source managed by subscription demand.
   private enum ManagedSource: Hashable {
+    /// System wake notifications.
     case systemWake
+    /// System sleep notifications.
     case sleep
+    /// Active space change notifications.
     case spaceChange
+    /// Frontmost app change notifications.
     case appSwitch
+    /// Display configuration notifications.
     case displayChange
+    /// Power source and charging notifications.
     case powerSource
+    /// Volume and mute notifications.
     case volume
+    /// Minute timer source.
     case minuteTick
+    /// Second timer source.
     case secondTick
   }
 
+  /// External description of required native event sources.
   struct SubscriptionPlan: Equatable {
+    /// Required source names.
     let sources: Set<String>
+    /// Requested interval timer cadence.
     let interval: TimeInterval?
   }
 
+  /// Logger used for event manager diagnostics.
   private let logger: ProcessLogger
 
+  /// Event names requested by Lua widgets.
   private var luaRequestedEvents = Set<String>()
+  /// Event names requested by native widgets.
   private var nativeRequestedEvents = Set<String>()
+  /// Last applied merged subscription set.
   private var activeRequestedEvents = Set<String>()
+  /// Currently active native event sources.
   private var activeSources = Set<ManagedSource>()
+  /// Currently active interval timer cadence.
   private var activeInterval: TimeInterval?
 
   /// Creates one event manager.

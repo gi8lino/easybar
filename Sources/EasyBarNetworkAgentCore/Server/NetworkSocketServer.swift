@@ -2,8 +2,11 @@ import Darwin
 import EasyBarShared
 import Foundation
 
+/// Serves network-agent socket requests.
 final class NetworkSocketServer {
+  /// One subscribed client field selection.
   private struct Subscriber {
+    /// Fields requested by the subscriber.
     let fields: [NetworkAgentField]
   }
 

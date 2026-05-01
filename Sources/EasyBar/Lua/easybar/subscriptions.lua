@@ -1,9 +1,12 @@
 --- Module contract:
 --- Owns event subscriptions, interval scheduling, and handler dispatch.
 --- Returns one helper object with subscribe/handle_event/required_events.
+--- Subscription module table.
 local M = {}
+--- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
 
+--- Driver event prefix used for interval callbacks.
 local INTERVAL_TICK_PREFIX = "interval_tick:"
 
 --- Returns one positive whole-second interval or nil.

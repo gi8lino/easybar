@@ -3,18 +3,30 @@ import Foundation
 
 /// Unix socket server used to receive external triggers.
 final class SocketServer {
+  /// Concrete line-delimited socket transport used by the server.
+  /// Concrete line-delimited socket transport used by the server.
   private typealias Transport = LineSocketServerTransport<
     IPC.Request,
     IPC.Request,
     IPC.Message
   >
 
+  /// Logger used for socket-server diagnostics.
+  /// Logger used for socket-server diagnostics.
   private let logger: ProcessLogger
 
+  /// Active socket transport instance.
+  /// Active socket transport instance.
   private var transport: Transport
+  /// Current Unix-domain socket path.
+  /// Current Unix-domain socket path.
   private var socketPath: String
+  /// Handler invoked for accepted non-metrics commands.
+  /// Handler invoked for accepted non-metrics commands.
   private var commandHandler: ((IPC.Command) -> Void)?
 
+  /// Creates a socket server bound to the configured socket path.
+  /// Creates a socket server bound to the configured socket path.
   init(
     logger: ProcessLogger,
     socketPath: String = SharedRuntimeConfig.current.easyBarSocketPath

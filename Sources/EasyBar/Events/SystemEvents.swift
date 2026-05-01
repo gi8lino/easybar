@@ -2,7 +2,9 @@ import AppKit
 import EasyBarShared
 import Foundation
 
+/// Observes AppKit and workspace system events.
 final class SystemEvents {
+  /// Configured shared system event source.
   private static var sharedInstance: SystemEvents?
 
   /// Returns the configured shared system event source.
@@ -19,17 +21,27 @@ final class SystemEvents {
     sharedInstance = SystemEvents(logger: logger)
   }
 
+  /// Logger used for system event diagnostics.
   private let logger: ProcessLogger
 
+  /// Active notification observers keyed by kind.
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
+  /// Queue used to coalesce wake notifications.
   private let wakeQueue = DispatchQueue(label: "easybar.system-events.wake")
+  /// Pending coalesced wake emission.
   private var pendingWakeWorkItem: DispatchWorkItem?
 
+  /// Notification observer category.
   private enum ObserverKind: Hashable {
+    /// System wake observer.
     case systemWake
+    /// System sleep observer.
     case sleep
+    /// Active space observer.
     case spaceChange
+    /// Frontmost app observer.
     case appSwitch
+    /// Display configuration observer.
     case displayChange
   }
 

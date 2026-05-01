@@ -3,17 +3,21 @@ import Foundation
 
 /// Shared event-name catalog and Lua parity checks.
 enum EventCatalog {
+  /// Synthetic event name used to force widget refreshes.
   static let forcedEventName = "forced"
+  /// App events that are not exposed as Lua event tokens.
   private static let internalAppEventNames: Set<String> = [
     AppEvent.manualRefresh.rawValue,
     AppEvent.intervalTick.rawValue,
   ]
 
+  /// Event names exposed to Lua widget token matching.
   static let luaTokenEventNames: Set<String> = Set(AppEvent.allCases.map(\.rawValue))
     .subtracting(internalAppEventNames)
     .union(Set(WidgetEvent.allCases.map(\.rawValue)))
     .union([forcedEventName])
 
+  /// App event names that Lua can subscribe to as drivers.
   static let luaDriverEventNames: Set<String> = Set(AppEvent.allCases.map(\.rawValue))
     .subtracting(internalAppEventNames)
     .union([forcedEventName])
@@ -131,27 +135,43 @@ enum EventCatalog {
   }
 }
 
+/// Decoded event-name sets from the generated catalog.
 private struct GeneratedCatalog {
+  /// Generated Lua token event names.
   let luaTokenNames: Set<String>
+  /// Generated Lua driver event names.
   let luaDriverNames: Set<String>
+  /// Generated mouse button names.
   let mouseButtons: Set<String>
+  /// Generated scroll direction names.
   let scrollDirections: Set<String>
 }
 
+/// Bundle manifest produced by the event catalog generator.
 private struct GeneratedCatalogManifest: Decodable {
+  /// Generated forced event entry.
   let forcedEvent: GeneratedCatalogEvent
+  /// Generated app event entries.
   let appEvents: [GeneratedCatalogEvent]
+  /// Generated widget event groups.
   let widgetGroups: [GeneratedCatalogWidgetGroup]
+  /// Generated mouse button names.
   let mouseButtons: [String]
+  /// Generated scroll direction names.
   let scrollDirections: [String]
 }
 
+/// Generated widget event group.
 private struct GeneratedCatalogWidgetGroup: Decodable {
+  /// Events in this widget group.
   let events: [GeneratedCatalogEvent]
 }
 
+/// Generated event entry.
 private struct GeneratedCatalogEvent: Decodable {
+  /// Runtime event name.
   let runtimeName: String
+  /// Whether Lua may subscribe to this app event as a driver.
   let driver: Bool
 
   init(from decoder: Decoder) throws {

@@ -4,20 +4,28 @@ import SwiftUI
 
 /// Global EasyBar configuration loaded from disk.
 final class Config: ObservableObject {
+  /// Shared process-wide config instance.
   static let shared = Config()
 
+  /// Context in which config loading failed.
   enum LoadFailureContext {
+    /// Initial startup could not load config.
     case initialLoad
+    /// Reload failed and the previous config stayed active.
     case reloadKeptPreviousConfig
   }
 
+  /// Captures the latest config load failure.
   struct LoadFailureState {
+    /// Underlying load or validation error.
     let error: any Error
+    /// Load phase where the error occurred.
     let context: LoadFailureContext
   }
 
   // MARK: - Sections
 
+  /// App-level config values.
   struct AppSection {
     var widgetsPath: String
     var luaPath: String
@@ -28,17 +36,20 @@ final class Config: ObservableObject {
     var develop: Bool
   }
 
+  /// Logging config values.
   struct LoggingSection {
     var enabled: Bool
     var level: ProcessLogLevel
     var directory: String
   }
 
+  /// Calendar agent config values.
   struct CalendarAgentSection {
     var enabled: Bool
     var socketPath: String
   }
 
+  /// Network agent config values.
   struct NetworkAgentSection {
     var enabled: Bool
     var socketPath: String
@@ -46,6 +57,7 @@ final class Config: ObservableObject {
     var allowUnauthorizedNonSensitiveFields: Bool
   }
 
+  /// Bar layout and color config values.
   struct BarSection {
     var height: CGFloat
     var paddingX: CGFloat
@@ -204,7 +216,9 @@ final class Config: ObservableObject {
 
   // MARK: - Transient config state
 
+  /// Most recent config load failure, when any.
   private(set) var loadFailureState: LoadFailureState?
+  /// Runtime directories required by parsed config.
   var registeredDirectories: [String: RequiredDirectory] = [:]
 
   private init() {

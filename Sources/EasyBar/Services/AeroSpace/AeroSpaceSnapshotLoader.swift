@@ -2,8 +2,11 @@ import Foundation
 
 /// One resolved snapshot of AeroSpace state.
 struct AeroSpaceSnapshot {
+  /// Workspace items to publish.
   let spaces: [SpaceItem]
+  /// Focused application when known.
   let focusedApp: SpaceApp?
+  /// Focused window layout mode.
   let focusedLayoutMode: AeroSpaceLayoutMode
 }
 
@@ -236,24 +239,36 @@ enum AeroSpaceSnapshotLoader {
   }
 }
 
+/// Raw workspace state parsed from AeroSpace output.
 private struct WorkspaceDTO {
+  /// Workspace name.
   let name: String
+  /// Whether the workspace is focused.
   let isFocused: Bool
+  /// Whether the workspace is visible.
   let isVisible: Bool
 }
 
+/// Focus and visibility flags for one workspace.
 private struct WorkspaceState {
+  /// Whether the workspace is focused.
   let isFocused: Bool
+  /// Whether the workspace is visible.
   let isVisible: Bool
 
+  /// Default workspace state when AeroSpace state output is missing.
   static let `default` = WorkspaceState(
     isFocused: false,
     isVisible: false
   )
 }
 
+/// Raw window state parsed from AeroSpace output.
 private struct WindowDTO {
+  /// Workspace containing the window.
   let workspace: String
+  /// Workspace name.
   let name: String
+  /// App bundle path reported for the window.
   let bundlePath: String
 }

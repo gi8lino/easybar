@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 
+/// Shared month-calendar snapshot store used by the native month popup.
 final class NativeMonthCalendarStore: ObservableObject {
   private static var sharedInstance: NativeMonthCalendarStore?
 
@@ -14,7 +15,7 @@ final class NativeMonthCalendarStore: ObservableObject {
     return sharedInstance
   }
 
-  /// Handles bootstrap.
+  /// Configures the shared month-calendar store.
   static func bootstrap(logger: ProcessLogger) {
     sharedInstance = NativeMonthCalendarStore(logger: logger)
   }

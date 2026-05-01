@@ -3,6 +3,7 @@ import TOMLKit
 
 extension Config {
 
+  /// Wi-Fi text display mode.
   enum BuiltinWiFiDisplayMode: String, CaseIterable {
     case none
     case tooltip
@@ -10,11 +11,14 @@ extension Config {
     case always
   }
 
+  /// Wi-Fi expanded text style.
   struct BuiltinWiFiExpand {
     var textColorHex: String
   }
 
+  /// Built-in Wi-Fi widget config.
   struct WiFiBuiltinConfig {
+    /// Wi-Fi content and color settings.
     struct Content {
       var displayMode: BuiltinWiFiDisplayMode
       var disconnectedText: String
@@ -23,10 +27,15 @@ extension Config {
       var inactiveColorHex: String
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Wi-Fi-specific content settings.
     var content: Content
+    /// Expanded text style.
     var expand: BuiltinWiFiExpand
+    /// Tooltip popup style.
     var popup: BuiltinPopupStyle
 
     var enabled: Bool {
@@ -74,6 +83,7 @@ extension Config {
       set { expand.textColorHex = newValue }
     }
 
+    /// Default Wi-Fi widget config.
     static let `default` = WiFiBuiltinConfig(
       placement: .init(
         enabled: false,
@@ -119,7 +129,7 @@ extension Config {
     )
   }
 
-  /// Parses wi fi builtin.
+  /// Parses the built-in Wi-Fi widget.
   func parseWiFiBuiltin(from builtins: TOMLTable) throws {
     guard let wifi = builtins["wifi"]?.table else { return }
 
@@ -163,7 +173,7 @@ extension Config {
 }
 
 extension Config {
-  /// Parses wi fi content.
+  /// Parses Wi-Fi content settings.
   fileprivate func parseWiFiContent(
     from table: TOMLTable,
     fallback: WiFiBuiltinConfig.Content
@@ -195,7 +205,7 @@ extension Config {
     )
   }
 
-  /// Parses wi fi expand.
+  /// Parses Wi-Fi expanded text settings.
   fileprivate func parseWiFiExpand(
     from table: TOMLTable,
     fallback: BuiltinWiFiExpand

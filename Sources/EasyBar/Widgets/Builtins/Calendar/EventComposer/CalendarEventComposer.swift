@@ -3,9 +3,11 @@ import Combine
 import EasyBarShared
 import Foundation
 
+/// View model for creating, editing, and deleting calendar events through the agent.
 @MainActor
 final class CalendarEventComposer: ObservableObject {
 
+  /// Writable calendar option shown in the composer picker.
   struct CalendarOption: Identifiable, Equatable {
     let id: String
     let title: String
@@ -15,6 +17,7 @@ final class CalendarEventComposer: ObservableObject {
     }
   }
 
+  /// One editable alert row in the composer.
   struct AlertRow: Identifiable, Equatable {
     let id: UUID
     var option: AlertOption
@@ -27,16 +30,19 @@ final class CalendarEventComposer: ObservableObject {
     }
   }
 
+  /// Current composer mode.
   enum Mode {
     case create
     case edit(eventIdentifier: String)
   }
 
+  /// Lightweight validation result used by form parsing helpers.
   enum Validation<Value> {
     case success(Value)
     case failure(String)
   }
 
+  /// Built-in alert lead-time options.
   enum AlertOption: String, CaseIterable, Identifiable {
     case none
     case atTime = "at_time"
@@ -98,6 +104,7 @@ final class CalendarEventComposer: ObservableObject {
     }
   }
 
+  /// Built-in travel-time options.
   enum TravelTimeOption: String, CaseIterable, Identifiable {
     case none
     case fiveMinutes = "5_minutes"

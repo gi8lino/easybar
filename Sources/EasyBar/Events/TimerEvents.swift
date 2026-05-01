@@ -1,7 +1,9 @@
 import EasyBarShared
 import Foundation
 
+/// Owns app event timers.
 final class TimerEvents {
+  /// Configured shared timer event source.
   private static var sharedInstance: TimerEvents?
 
   /// Returns the configured shared timer event source.
@@ -18,10 +20,14 @@ final class TimerEvents {
     sharedInstance = TimerEvents(logger: logger)
   }
 
+  /// Logger used for timer diagnostics.
   private let logger: ProcessLogger
 
+  /// Timer for minute ticks.
   private var minuteTimer: Timer?
+  /// Timer for second ticks.
   private var secondTimer: Timer?
+  /// Timer for Lua interval ticks.
   private var intervalTimer: Timer?
 
   /// Creates one timer event source.

@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Hex color helpers for config strings.
 extension String {
 
   /// Returns the hex text normalized for shared color checks.
@@ -15,6 +16,7 @@ extension String {
   }
 }
 
+/// SwiftUI color helpers.
 extension Color {
 
   /// Creates a color from `RRGGBB` or `RRGGBBAA` hex text.

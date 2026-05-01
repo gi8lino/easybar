@@ -1,12 +1,13 @@
 import Foundation
 
+/// Lifecycle contract implemented by all native widgets.
 @MainActor
 protocol NativeWidget: AnyObject {
   var rootID: String { get }
   var appEventSubscriptions: Set<String> { get }
-  /// Handles start.
+  /// Starts the widget.
   func start()
-  /// Handles stop.
+  /// Stops the widget and clears rendered state.
   func stop()
   /// Reloads configuration.
   func reload()

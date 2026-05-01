@@ -4,12 +4,17 @@ import Foundation
 
 /// Samples lightweight process stats for EasyBar, Lua, and helper agents.
 final class ProcessSampler {
+  /// Previous CPU sample used to compute utilization.
   private struct CPUSample {
+    /// Sample timestamp.
     let sampledAt: TimeInterval
+    /// Cumulative user plus system CPU time.
     let totalCPUTime: UInt64
   }
 
+  /// Cached CPU samples keyed by process id.
   private var previousCPUSamples: [Int32: CPUSample] = [:]
+  /// Protects cached CPU samples.
   private let lock = NSLock()
 
   /// Samples the current EasyBar process.
@@ -60,7 +65,7 @@ final class ProcessSampler {
     }
   }
 
-  /// Handles resolve cpupercent.
+  /// Computes CPU percentage from the previous process sample.
   private func resolveCPUPercent(pid: Int32, totalCPUTime: UInt64, now: Date) -> Double? {
     withLock {
       let timestamp = now.timeIntervalSinceReferenceDate
@@ -82,7 +87,7 @@ final class ProcessSampler {
     }
   }
 
-  /// Handles read task info.
+  /// Reads task memory, thread, and CPU counters for one process.
   private func readTaskInfo(for pid: Int32) -> (
     residentSizeBytes: UInt64, threadCount: Int, totalCPUTime: UInt64
   )? {
@@ -109,7 +114,7 @@ final class ProcessSampler {
     )
   }
 
-  /// Handles first pid.
+  /// Returns the first process id with the given executable name.
   private func firstPID(named executableName: String) -> Int32? {
     let estimatedCount = Int(proc_listallpids(nil, 0))
     let capacity = max(estimatedCount + 32, 256)
@@ -134,7 +139,7 @@ final class ProcessSampler {
     return nil
   }
 
-  /// Handles with lock.
+  /// Runs one closure while holding the sampler lock.
   private func withLock<T>(_ body: () -> T) -> T {
     lock.lock()
     defer { lock.unlock() }

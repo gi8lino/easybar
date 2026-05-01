@@ -59,6 +59,7 @@ extension IPC {
       }
     }
 
+    /// Decodes one IPC request.
     public init(from decoder: Decoder) throws {
       let container = try decoder.container(keyedBy: CodingKeys.self)
       let command = try container.decode(Command.self, forKey: .command)
@@ -70,7 +71,7 @@ extension IPC {
       }
     }
 
-    /// Handles encode.
+    /// Encodes one IPC request.
     public func encode(to encoder: Encoder) throws {
       var container = encoder.container(keyedBy: CodingKeys.self)
 
@@ -137,6 +138,7 @@ extension IPC {
       }
     }
 
+    /// Decodes one IPC message.
     public init(from decoder: Decoder) throws {
       let container = try decoder.container(keyedBy: CodingKeys.self)
       let kind = try container.decode(Kind.self, forKey: .kind)
@@ -153,7 +155,7 @@ extension IPC {
       }
     }
 
-    /// Handles encode.
+    /// Encodes one IPC message.
     public func encode(to encoder: Encoder) throws {
       var container = encoder.container(keyedBy: CodingKeys.self)
 

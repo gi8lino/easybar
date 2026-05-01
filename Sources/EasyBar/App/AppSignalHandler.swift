@@ -5,11 +5,16 @@ import Foundation
 /// Bridges terminal/process signals into normal AppKit termination.
 @MainActor
 final class AppSignalHandler {
+  /// Logger used for signal diagnostics.
   private let logger: ProcessLogger
+  /// Callback invoked when a termination signal is received.
   private let requestTermination: () -> Void
 
+  /// Dispatch source for SIGINT.
   private var sigintSource: DispatchSourceSignal?
+  /// Dispatch source for SIGTERM.
   private var sigtermSource: DispatchSourceSignal?
+  /// Whether signal handling is currently active.
   private var started = false
 
   /// Creates one signal handler.

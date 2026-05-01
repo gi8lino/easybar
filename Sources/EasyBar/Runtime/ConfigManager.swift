@@ -3,10 +3,14 @@ import Foundation
 
 /// Actor-owned access to config mutation and runtime-facing config reads.
 actor ConfigManager {
+  /// Shared actor used for runtime config access.
   static let shared = ConfigManager()
 
+  /// Result of one config reload attempt.
   struct ReloadResult: Sendable {
+    /// Whether reload completed without validation errors.
     let succeeded: Bool
+    /// User-facing reload error when reload failed.
     let errorMessage: String?
   }
 

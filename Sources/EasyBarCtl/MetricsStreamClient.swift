@@ -4,9 +4,10 @@ import Foundation
 
 /// Streaming client for `--metrics --watch`.
 struct MetricsStreamClient {
+  /// Unix-domain socket path used for the metrics stream.
   let socketPath: String
 
-  /// Handles stream.
+  /// Opens a socket, sends the metrics request, and handles streamed messages line by line.
   func stream(
     request: IPC.Request,
     handleMessage: (IPC.Message) throws -> Void
@@ -76,7 +77,7 @@ struct MetricsStreamClient {
     }
   }
 
-  /// Handles send all.
+  /// Writes the full encoded request payload to the socket.
   private func sendAll(fd: Int32, data: Data) throws {
     try data.withUnsafeBytes { rawBuffer in
       guard let base = rawBuffer.baseAddress else { return }
@@ -98,7 +99,7 @@ struct MetricsStreamClient {
     }
   }
 
-  /// Handles next line.
+  /// Removes and returns the next newline-delimited payload from pending data.
   private func nextLine(from pending: inout Data) -> Data? {
     guard let newlineIndex = pending.firstIndex(of: 0x0A) else {
       return nil

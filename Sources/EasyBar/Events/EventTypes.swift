@@ -60,27 +60,41 @@ enum ScrollDirection: String, CaseIterable, Sendable {
 
 /// Strongly typed event payload used inside Swift.
 struct EasyBarEventPayload: Sendable {
+  /// App-wide event kind, when this is an app event.
   let appEvent: AppEvent?
+  /// Widget-scoped event kind, when this is a widget event.
   let widgetEvent: WidgetEvent?
 
+  /// Source widget identifier.
   let widgetID: String?
+  /// Target widget identifier for routed events.
   let targetWidgetID: String?
+  /// Frontmost app name associated with the event.
   let appName: String?
+  /// Network interface name associated with the event.
   let interfaceName: String?
+  /// Mouse button associated with the event.
   let button: MouseButton?
+  /// Scroll direction associated with the event.
   let direction: ScrollDirection?
 
+  /// Charging state associated with the event.
   let charging: Bool?
+  /// Mute state associated with the event.
   let muted: Bool?
+  /// Whether the primary network interface is a tunnel.
   let primaryInterfaceIsTunnel: Bool?
 
+  /// Numeric value associated with the event.
   let value: Double?
+  /// Horizontal scroll delta.
   let deltaX: Double?
+  /// Vertical scroll delta.
   let deltaY: Double?
 
   // MARK: - Builders
 
-  /// Handles app.
+  /// Builds an app-wide event payload.
   static func app(
     _ event: AppEvent,
     appName: String? = nil,
@@ -99,7 +113,7 @@ struct EasyBarEventPayload: Sendable {
     )
   }
 
-  /// Handles widget.
+  /// Builds a widget-scoped event payload.
   static func widget(
     _ event: WidgetEvent,
     widgetID: String,
@@ -124,6 +138,7 @@ struct EasyBarEventPayload: Sendable {
 
   // MARK: - Public
 
+  /// Runtime event name.
   var eventName: String {
     appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
@@ -205,7 +220,7 @@ struct EasyBarEventPayload: Sendable {
 
   // MARK: - Internal
 
-  /// Creates payload.
+  /// Creates one event payload from optional app or widget context.
   private static func makePayload(
     appEvent: AppEvent? = nil,
     widgetEvent: WidgetEvent? = nil,

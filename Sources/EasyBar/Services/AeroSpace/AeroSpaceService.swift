@@ -25,7 +25,9 @@ final class AeroSpaceService: ObservableObject {
     sharedInstance = AeroSpaceService(logger: logger)
   }
 
+  /// Published workspace list used by spaces widgets.
   @Published private(set) var spaces: [SpaceItem] = []
+  /// Stable id of the focused application.
   @Published private(set) var focusedAppID: String?
 
   /// Resolved focused app used by `FrontAppNativeWidget`.
@@ -34,22 +36,36 @@ final class AeroSpaceService: ObservableObject {
   /// Resolved layout mode used by `AeroSpaceModeNativeWidget`.
   @Published private(set) var focusedLayoutMode: AeroSpaceLayoutMode = .unknown
 
+  /// Locked service coordination state.
   private struct CoordinationState {
+    /// Registered widget consumers.
     var consumers = Set<String>()
+    /// Observer for frontmost app changes.
     var appSwitchObserver: NSObjectProtocol?
+    /// Observer for app launches.
     var appLaunchObserver: NSObjectProtocol?
+    /// Observer for app terminations.
     var appTerminationObserver: NSObjectProtocol?
+    /// Delayed refresh scheduled after app launch.
     var pendingLaunchRefresh: DispatchWorkItem?
+    /// Whether the service is active.
     var running = false
+    /// Generation used to ignore stale refresh work.
     var generation: UInt64 = 0
   }
 
+  /// Logger used for AeroSpace diagnostics.
   private let logger: ProcessLogger
+  /// Queue used for AeroSpace refresh work.
   private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
+  /// Runner for AeroSpace CLI commands.
   private let commandRunner: AeroSpaceCommandRunner
+  /// Protects coordination state.
   private let stateLock = NSLock()
+  /// Current locked coordination state.
   private var coordination = CoordinationState()
 
+  /// Creates the shared AeroSpace service.
   private init(logger: ProcessLogger) {
     self.logger = logger
     self.commandRunner = AeroSpaceCommandRunner(logger: logger.child("commands"))
@@ -535,5 +551,6 @@ extension AeroSpaceService {
 }
 
 extension Notification.Name {
+  /// Notification posted when AeroSpace-derived state changes.
   static let easyBarAeroSpaceDidUpdate = Notification.Name("easybar.aerospace.did-update")
 }

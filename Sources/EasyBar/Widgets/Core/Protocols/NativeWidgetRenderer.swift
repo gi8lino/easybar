@@ -1,7 +1,8 @@
 import Foundation
 
+/// Renders a native widget snapshot into node state.
 protocol NativeWidgetRenderer {
   associatedtype Snapshot
-  /// Creates nodes.
+  /// Builds node state for one snapshot.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState]
 }

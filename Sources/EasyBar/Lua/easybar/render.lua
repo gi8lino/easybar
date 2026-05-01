@@ -1,10 +1,14 @@
 --- Module contract:
 --- Owns registry-to-render-tree conversion and change-aware tree emission.
 --- Returns helpers that emit flattened widget trees for the Swift host.
+--- Render module table.
 local M = {}
+--- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
 
+--- Last encoded tree payload by root id.
 local last_emitted = {}
+--- Default shell style applied to root bar widgets.
 local DEFAULT_ROOT_SHELL_STYLE = {
 	background = {
 		color = "#1a1a1a",
@@ -17,7 +21,9 @@ local DEFAULT_ROOT_SHELL_STYLE = {
 		padding_bottom = 4,
 	},
 }
+--- Default foreground color for popup content.
 local DEFAULT_POPUP_TEXT_COLOR = "#cdd6f4"
+--- Default popup container style.
 local DEFAULT_POPUP_STYLE = {
 	background = {
 		color = "#111111",

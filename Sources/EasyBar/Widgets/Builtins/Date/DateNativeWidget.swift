@@ -1,5 +1,6 @@
 import Foundation
 
+/// Native date widget backed by the shared formatted-clock controller.
 @MainActor
 final class DateNativeWidget: NativeWidget {
 
@@ -15,12 +16,12 @@ final class DateNativeWidget: NativeWidget {
 
   var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }
 
-  /// Handles start.
+  /// Starts the date widget.
   func start() {
     controller.start()
   }
 
-  /// Handles stop.
+  /// Stops the date widget.
   func stop() {
     controller.stop()
   }

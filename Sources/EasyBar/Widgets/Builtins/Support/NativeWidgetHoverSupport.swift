@@ -1,7 +1,9 @@
+/// Display modes that can be mapped to inline label visibility.
 protocol InlineLabelDisplayMode {
   var inlineLabelVisibility: InlineLabelVisibility { get }
 }
 
+/// Resolved inline label visibility behavior.
 enum InlineLabelVisibility {
   case hidden
   case tooltipOnly
@@ -9,8 +11,9 @@ enum InlineLabelVisibility {
   case always
 }
 
+/// Shared hover helpers for native widgets with expandable labels.
 enum NativeWidgetHoverSupport {
-  /// Handles update hover state.
+  /// Updates hover state from a widget mouse event.
   static func updateHoverState(_ event: WidgetEvent, isHovered: inout Bool) -> Bool {
     switch event {
     case .mouseEntered:
@@ -28,7 +31,7 @@ enum NativeWidgetHoverSupport {
     }
   }
 
-  /// Handles shows inline label.
+  /// Returns whether an inline label should be visible.
   static func showsInlineLabel(
     text: String,
     mode: some InlineLabelDisplayMode,

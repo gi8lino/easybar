@@ -1,7 +1,9 @@
 --- Module contract:
 --- Owns host-event normalization and runtime dispatch into the registry.
 --- Returns helpers that validate payloads and trigger re-renders.
+--- Event dispatch module table.
 local M = {}
+--- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
 
 --- Returns a validated canonical Lua event table.

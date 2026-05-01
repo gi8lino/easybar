@@ -4,7 +4,9 @@ import SwiftUI
 /// Presents a floating window that explains config load or reload failures.
 @MainActor
 final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
+  /// Currently presented config error window.
   private var window: NSWindow?
+  /// Hosting controller reused for the error content view.
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
 
   /// Presents the current config failure state in a dedicated floating window.
@@ -97,19 +99,26 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   }
 }
 
+/// SwiftUI content for config load and reload errors.
 private struct ConfigErrorContentView: View {
+  /// Failure state to explain to the user.
   let state: Config.LoadFailureState
+  /// Path to the config file that failed.
   let configPath: String
+  /// Callback used by the Close button.
   let onClose: () -> Void
 
+  /// Failure as a structured config error when available.
   private var configError: ConfigError? {
     state.error as? ConfigError
   }
 
+  /// Config key path associated with the failure.
   private var issuePathText: String? {
     configError?.configPath
   }
 
+  /// Detailed user-facing error text.
   private var detailText: String {
     if let configError {
       return configError.detail
@@ -118,6 +127,7 @@ private struct ConfigErrorContentView: View {
     return normalizedText(state.error.localizedDescription)
   }
 
+  /// Window title text for the failure context.
   private var title: String {
     switch state.context {
     case .initialLoad:
@@ -127,6 +137,7 @@ private struct ConfigErrorContentView: View {
     }
   }
 
+  /// Short explanation of the current fallback behavior.
   private var summary: String {
     switch state.context {
     case .initialLoad:
@@ -137,6 +148,7 @@ private struct ConfigErrorContentView: View {
     }
   }
 
+  /// Renders the error summary, details, and actions.
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
       Label(title, systemImage: "exclamationmark.triangle.fill")
@@ -213,7 +225,7 @@ private struct ConfigErrorContentView: View {
     )
   }
 
-  /// Handles normalized text.
+  /// Collapses whitespace in fallback error text.
   private func normalizedText(_ value: String) -> String {
     value
       .components(separatedBy: .whitespacesAndNewlines)
@@ -221,7 +233,7 @@ private struct ConfigErrorContentView: View {
       .joined(separator: " ")
   }
 
-  /// Handles open config.
+  /// Opens the config file in Finder or the default editor.
   private func openConfig() {
     let url = URL(fileURLWithPath: configPath)
     NSWorkspace.shared.open(url)

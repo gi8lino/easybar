@@ -20,11 +20,13 @@ extension Config {
 
   /// Built-in calendar widget config.
   struct CalendarBuiltinConfig {
+    /// Calendar include and exclude filters.
     struct Filters {
       var includedCalendarNames: [String]
       var excludedCalendarNames: [String]
     }
 
+    /// Appointment row display settings.
     struct Appointments {
       var itemIndent: Double
       var eventTextColorHex: String
@@ -46,6 +48,7 @@ extension Config {
       var alertIconColorHex: String?
     }
 
+    /// Birthday display settings.
     struct Birthdays {
       var showBirthdays: Bool
       var birthdaysShowAge: Bool
@@ -53,15 +56,25 @@ extension Config {
       var birthdayIconColorHex: String?
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Popup mode used by the calendar widget.
     var popupMode: CalendarPopupMode
+    /// Anchor rendering settings.
     var anchor: Anchor
+    /// Calendar filter settings.
     var filters: Filters
+    /// Appointment row settings.
     var appointments: Appointments
+    /// Birthday row settings.
     var birthdays: Birthdays
+    /// Event composer settings.
     var composer: Composer
+    /// Upcoming popup settings.
     var upcoming: Upcoming
+    /// Month popup settings.
     var month: Month
 
     var enabled: Bool {
@@ -79,6 +92,7 @@ extension Config {
       set { placement.order = newValue }
     }
 
+    /// Default calendar widget config.
     static let `default` = CalendarBuiltinConfig(
       placement: .init(
         enabled: false,

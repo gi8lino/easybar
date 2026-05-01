@@ -1,5 +1,6 @@
 import Foundation
 
+/// Native spaces widget backed by `AeroSpaceService` state.
 @MainActor
 final class SpacesNativeWidget: NativeWidget {
 
@@ -8,7 +9,7 @@ final class SpacesNativeWidget: NativeWidget {
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
   private lazy var renderer = SpacesRenderer(rootID: rootID)
 
-  /// Handles start.
+  /// Starts the spaces widget and registers AeroSpace interest.
   func start() {
     AeroSpaceService.shared.registerConsumer(rootID)
 
@@ -19,14 +20,14 @@ final class SpacesNativeWidget: NativeWidget {
     publish()
   }
 
-  /// Handles stop.
+  /// Stops the spaces widget and removes observers.
   func stop() {
     aeroSpaceObserver.stop()
     AeroSpaceService.shared.unregisterConsumer(rootID)
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
-  /// Handles publish.
+  /// Publishes the current spaces widget nodes.
   private func publish() {
     WidgetStore.shared.apply(
       root: rootID,

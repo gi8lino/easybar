@@ -3,10 +3,12 @@ import Foundation
 
 /// Collects lightweight runtime metrics and streams coalesced snapshots on demand.
 final class MetricsCoordinator {
+  /// Helper agent tracked by metrics.
   enum AgentKey: String, CaseIterable {
     case calendar
     case network
 
+    /// Name shown in metrics output.
     var displayName: String {
       switch self {
       case .calendar:
@@ -16,6 +18,7 @@ final class MetricsCoordinator {
       }
     }
 
+    /// Bundle identifier for the helper app.
     var bundleIdentifier: String {
       switch self {
       case .calendar:
@@ -25,6 +28,7 @@ final class MetricsCoordinator {
       }
     }
 
+    /// Process name used for sampling.
     var processName: String {
       switch self {
       case .calendar:
@@ -35,17 +39,27 @@ final class MetricsCoordinator {
     }
   }
 
+  /// Mutable counters for one helper agent.
   private struct AgentState {
+    /// Number of active socket connections.
     var activeConnections = 0
+    /// Whether the agent has connected at least once.
     var everConnected = false
+    /// Total decoded messages.
     var messagesTotal = 0
+    /// Total reconnects after the first connection.
     var reconnectsTotal = 0
+    /// Total refresh requests.
     var refreshesTotal = 0
+    /// Total decode failures.
     var decodeErrorsTotal = 0
+    /// Timestamp of the last decoded message.
     var lastMessageAt: Date?
+    /// Timestamp of the last disconnect.
     var lastDisconnectAt: Date?
   }
 
+  /// Counter snapshot used to compute rates.
   private struct SampleCounters {
     var totalEvents: Int
     var droppedEvents: Int
@@ -61,6 +75,7 @@ final class MetricsCoordinator {
     var coalescedEventCounts: [String: Int]
   }
 
+  /// Locked mutable metrics state.
   private struct State {
     var streamingSubscriberFDs = Set<Int32>()
     var luaPID: Int32?
@@ -98,16 +113,24 @@ final class MetricsCoordinator {
     var lastSampleAt: Date?
   }
 
+  /// Shared process-wide metrics coordinator.
   static let shared = MetricsCoordinator()
 
+  /// Protects mutable metrics state.
   private let lock = NSLock()
+  /// Queue used for periodic sampling.
   private let queue = DispatchQueue(label: "easybar.metrics", qos: .utility)
+  /// Metrics sampling interval.
   private let sampleIntervalSeconds: TimeInterval = 1
+  /// Process sampler for EasyBar, Lua, and agents.
   private let processSampler = ProcessSampler()
 
+  /// Current locked metrics state.
   private var state = State()
+  /// Periodic streaming timer.
   private var timer: DispatchSourceTimer?
 
+  /// Callback invoked for streamed snapshots.
   var onSnapshot: ((IPC.MetricsSnapshot) -> Void)?
 
   private init() {}
@@ -301,7 +324,7 @@ final class MetricsCoordinator {
     }
   }
 
-  /// Starts timer.
+  /// Starts periodic metrics sampling.
   private func startTimer() {
     queue.async {
       guard self.timer == nil else { return }
@@ -319,7 +342,7 @@ final class MetricsCoordinator {
     }
   }
 
-  /// Stops timer.
+  /// Stops periodic metrics sampling.
   private func stopTimer() {
     queue.async {
       self.timer?.cancel()
@@ -332,7 +355,7 @@ final class MetricsCoordinator {
     }
   }
 
-  /// Handles collect snapshot.
+  /// Collects one metrics snapshot and updates rate baselines when enabled.
   private func collectSnapshot(collectionEnabled: Bool) -> IPC.MetricsSnapshot {
     let now = Date()
 
@@ -524,7 +547,7 @@ final class MetricsCoordinator {
     return snapshot
   }
 
-  /// Handles rate.
+  /// Computes a per-second rate from cumulative counters.
   private func rate(
     current: Int,
     previous: Int?,
@@ -538,7 +561,7 @@ final class MetricsCoordinator {
     return Double(delta) / interval
   }
 
-  /// Handles with lock.
+  /// Runs one closure while holding the metrics lock.
   private func withLock<T>(_ body: () -> T) -> T {
     lock.lock()
     defer { lock.unlock() }

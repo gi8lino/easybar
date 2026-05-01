@@ -5,6 +5,7 @@ extension Config {
 
   /// Built-in AeroSpace mode widget config.
   struct AeroSpaceModeBuiltinConfig {
+    /// Text and icon settings for the mode widget.
     struct Content {
       var showIcon: Bool
       var showText: Bool
@@ -24,8 +25,11 @@ extension Config {
       var unknownText: String
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// Mode-specific content settings.
     var content: Content
 
     var enabled: Bool {
@@ -113,6 +117,7 @@ extension Config {
       set { content.unknownText = newValue }
     }
 
+    /// Default AeroSpace mode widget config.
     static let `default` = AeroSpaceModeBuiltinConfig(
       placement: .init(
         enabled: false,

@@ -46,58 +46,72 @@ public struct SharedRuntimeConfig {
 
   // MARK: - Compatibility accessors
 
+  /// Compatibility accessor for the widgets path.
   public var widgetsPath: String {
     app.widgetsPath
   }
 
+  /// Compatibility accessor for the lock directory.
   public var lockDirectory: String {
     app.lockDirectory
   }
 
+  /// Compatibility accessor for the editor stub path.
   public var widgetEditorStubPath: String {
     app.widgetEditorStubPath
   }
 
+  /// Compatibility accessor for logging enablement.
   public var loggingEnabled: Bool {
     logging.enabled
   }
 
+  /// Compatibility accessor for the log level.
   public var loggingLevel: ProcessLogLevel {
     logging.level
   }
 
+  /// Compatibility accessor for the log directory.
   public var loggingDirectory: String {
     logging.directory
   }
 
+  /// Compatibility accessor for the EasyBar socket path.
   public var easyBarSocketPath: String {
     easyBar.socketPath
   }
 
+  /// Compatibility accessor for calendar-agent enablement.
   public var calendarAgentEnabled: Bool {
     calendarAgent.enabled
   }
 
+  /// Compatibility accessor for the calendar-agent socket path.
   public var calendarAgentSocketPath: String {
     calendarAgent.socketPath
   }
 
+  /// Compatibility accessor for network-agent enablement.
   public var networkAgentEnabled: Bool {
     networkAgent.enabled
   }
 
+  /// Compatibility accessor for the network-agent socket path.
   public var networkAgentSocketPath: String {
     networkAgent.socketPath
   }
 
+  /// Compatibility accessor for the network-agent refresh interval.
   public var networkAgentRefreshIntervalSeconds: TimeInterval {
     networkAgent.refreshIntervalSeconds
   }
 
+  /// Compatibility accessor for unauthorized non-sensitive fields.
   public var networkAgentAllowUnauthorizedFieldsWithoutLocation: Bool {
     networkAgent.allowUnauthorizedFieldsWithoutLocation
   }
 
+  /// Compatibility alias for unauthorized non-sensitive fields.
   public var networkAgentAllowUnauthorizedNonSensitiveFields: Bool {
     networkAgent.allowUnauthorizedFieldsWithoutLocation
   }
@@ -109,6 +123,7 @@ public struct SharedAppRuntimeConfig {
   public let lockDirectory: String
   public let widgetEditorStubPath: String
 
+  /// Creates one app runtime config.
   public init(
     widgetsPath: String,
     lockDirectory: String,
@@ -126,6 +141,7 @@ public struct SharedLoggingRuntimeConfig {
   public let level: ProcessLogLevel
   public let directory: String
 
+  /// Creates one logging runtime config.
   public init(
     enabled: Bool,
     level: ProcessLogLevel,
@@ -141,6 +157,7 @@ public struct SharedLoggingRuntimeConfig {
 public struct SharedEasyBarRuntimeConfig {
   public let socketPath: String
 
+  /// Creates one EasyBar socket config.
   public init(socketPath: String) {
     self.socketPath = socketPath
   }
@@ -151,6 +168,7 @@ public struct SharedCalendarAgentRuntimeConfig {
   public let enabled: Bool
   public let socketPath: String
 
+  /// Creates one calendar-agent runtime config.
   public init(
     enabled: Bool,
     socketPath: String
@@ -167,6 +185,7 @@ public struct SharedNetworkAgentRuntimeConfig {
   public let refreshIntervalSeconds: TimeInterval
   public let allowUnauthorizedFieldsWithoutLocation: Bool
 
+  /// Creates one network-agent runtime config.
   public init(
     enabled: Bool,
     socketPath: String,

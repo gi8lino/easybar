@@ -2,7 +2,9 @@ import CoreAudio
 import EasyBarShared
 import Foundation
 
+/// Observes CoreAudio output volume and mute changes.
 final class VolumeEvents {
+  /// Configured shared volume event source.
   private static var sharedInstance: VolumeEvents?
 
   /// Returns the configured shared volume event source.
@@ -19,15 +21,22 @@ final class VolumeEvents {
     sharedInstance = VolumeEvents(logger: logger)
   }
 
+  /// Logger used for volume diagnostics.
   private let logger: ProcessLogger
 
+  /// Current default output device id.
   private var currentDeviceID: AudioDeviceID?
+  /// Whether volume observation is active.
   private var isSubscribed = false
 
+  /// Listener for default output device changes.
   private var defaultDeviceListener: AudioObjectPropertyListenerBlock?
+  /// Listener for output volume changes.
   private var volumeListener: AudioObjectPropertyListenerBlock?
+  /// Listener for output mute changes.
   private var muteListener: AudioObjectPropertyListenerBlock?
 
+  /// Last emitted mute state.
   private var lastMutedState: Bool?
 
   /// Creates one volume event source.

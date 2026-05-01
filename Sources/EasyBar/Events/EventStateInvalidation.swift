@@ -16,8 +16,10 @@ enum EventStateInvalidation: CaseIterable {
   case workspaceChange
   case spaceModeChange
 
+  /// Async provider that builds the latest replay payload.
   typealias Provider = @Sendable () async -> EasyBarEventPayload?
 
+  /// Runtime event name represented by this invalidation.
   var eventName: String {
     switch self {
     case .systemWake: return AppEvent.systemWoke.rawValue
@@ -36,6 +38,7 @@ enum EventStateInvalidation: CaseIterable {
     }
   }
 
+  /// Provider for the latest payload of this invalidation.
   var provider: Provider {
     switch self {
     case .systemWake:

@@ -13,9 +13,14 @@ enum AeroSpaceLayoutMode: String, Codable {
 
 /// A single running application shown inside a workspace.
 struct SpaceApp: Identifiable, Hashable {
+  /// Stable application identity.
   let id: String
+  /// Application bundle identifier.
   let bundleID: String
+  /// Display name shown in the bar.
+  /// Workspace display name.
   let name: String
+  /// Bundle path used for icons and activation.
   let bundlePath: String?
 
   /// Returns the application icon if the bundle path is known.
@@ -27,9 +32,15 @@ struct SpaceApp: Identifiable, Hashable {
 
 /// A workspace shown in the bar.
 struct SpaceItem: Identifiable, Hashable {
+  /// Stable application identity.
   let id: String
+  /// Display name shown in the bar.
+  /// Workspace display name.
   let name: String
+  /// Whether this workspace is focused.
   let isFocused: Bool
+  /// Whether this workspace is visible.
   let isVisible: Bool
+  /// Apps currently shown in this workspace.
   let apps: [SpaceApp]
 }

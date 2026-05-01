@@ -3,6 +3,7 @@ import Foundation
 
 /// Runs the AeroSpace CLI and returns trimmed stdout.
 final class AeroSpaceCommandRunner {
+  /// Logger used for AeroSpace command diagnostics.
   private let logger: ProcessLogger
 
   /// Creates one AeroSpace command runner.

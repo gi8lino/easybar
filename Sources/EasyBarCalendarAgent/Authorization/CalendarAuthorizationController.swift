@@ -2,12 +2,18 @@ import EasyBarShared
 import EventKit
 import Foundation
 
+/// Coordinates EventKit authorization state, prompts, and retries.
 final class CalendarAuthorizationController {
+  /// EventKit store used to inspect and request calendar access.
   private let eventStore: EKEventStore
+  /// Thread-safe authorization state cache.
   private let authState: CalendarAuthorizationState
+  /// Logger used for authorization diagnostics.
   private let logger: ProcessLogger
+  /// Backoff helper for retrying unresolved authorization prompts.
   private let retryBackoff: AuthorizationRetryBackoff
 
+  /// Callback invoked once access is resolved as usable.
   private var onResolvedChange: (() -> Void)?
 
   /// Creates one calendar authorization controller.

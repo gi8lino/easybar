@@ -12,6 +12,7 @@ public final class LineSocketServerTransport<
     public let fd: Int32
     public let subscriber: Subscriber
 
+    /// Creates one subscriber entry.
     public init(fd: Int32, subscriber: Subscriber) {
       self.fd = fd
       self.subscriber = subscriber
@@ -58,6 +59,7 @@ public final class LineSocketServerTransport<
     )
   }
 
+  /// Stops the server before deallocation.
   deinit {
     stop()
   }

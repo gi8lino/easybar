@@ -2,6 +2,7 @@ import Foundation
 
 extension Config.CalendarBuiltinConfig.Month.Popup {
 
+  /// Month popup container style.
   struct Style {
     var backgroundColorHex: String
     var borderColorHex: String
@@ -14,6 +15,7 @@ extension Config.CalendarBuiltinConfig.Month.Popup {
     var marginY: Double
   }
 
+  /// Month calendar grid style.
   struct CalendarStyle {
     var showWeekNumbers: Bool
     var showEventIndicators: Bool
@@ -31,6 +33,7 @@ extension Config.CalendarBuiltinConfig.Month.Popup {
     var indicatorColorHex: String
   }
 
+  /// Month popup selection style.
   struct SelectionStyle {
     var selectedTextColorHex: String
     var selectedBackgroundColorHex: String

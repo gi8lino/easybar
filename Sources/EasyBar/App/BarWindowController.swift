@@ -5,11 +5,16 @@ import SwiftUI
 /// Hosts the top-level borderless bar window.
 @MainActor
 final class BarWindowController: NSWindowController {
+  /// Callback for manual refresh menu actions.
   var onRefresh: (() -> Void)?
+  /// Callback for config reload menu actions.
   var onReloadConfig: (() -> Void)?
+  /// Callback for Lua runtime restart menu actions.
   var onRestartLuaRuntime: (() -> Void)?
 
+  /// Logger used for window diagnostics.
   private let logger: ProcessLogger
+  /// Hosting view containing the SwiftUI bar content.
   private let hostingView: BarHostingView<BarContentView>
 
   /// Creates a borderless bar window pinned to the top of the screen.

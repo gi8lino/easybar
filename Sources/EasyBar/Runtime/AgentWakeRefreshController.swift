@@ -3,11 +3,16 @@ import Foundation
 
 /// Shares the wake-triggered refresh observation used by app-side agent services.
 final class AgentWakeRefreshController {
+  /// Human-readable service label used in logs and queue names.
   private let label: String
+  /// Debounce delay before running a wake refresh.
   private let delay: TimeInterval
+  /// Logger used for wake-refresh diagnostics.
   private let logger: ProcessLogger
+  /// Observer for app-wide wake events.
   private let eventObserver = EasyBarEventObserver()
 
+  /// Scheduler that coalesces wake refresh requests.
   private lazy var scheduler = DebouncedActionScheduler(
     label: "\(label) wake refresh",
     delay: delay,
@@ -17,6 +22,7 @@ final class AgentWakeRefreshController {
     logger: logger.child("scheduler")
   )
 
+  /// Creates a wake refresh controller.
   init(
     label: String,
     delay: TimeInterval = 0.20,

@@ -6,6 +6,7 @@ public struct ProcessLogField {
   public let key: String
   public let value: Any?
 
+  /// Creates one structured log field.
   public init(_ key: String, _ value: Any?) {
     self.key = key
     self.value = value

@@ -1,7 +1,9 @@
 --- Module contract:
 --- Owns widget item state, property normalization, and item tree mutation.
 --- Returns one registry object with item CRUD helpers and raw `_state`.
+--- Registry module table.
 local M = {}
+--- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
 
 --- Deep-merges one source table into one target table.

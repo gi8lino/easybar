@@ -5,6 +5,7 @@ extension Config {
 
   /// Built-in CPU widget config.
   struct CPUBuiltinConfig {
+    /// CPU graph content settings.
     struct Content {
       var label: String
       var historySize: Int
@@ -12,8 +13,11 @@ extension Config {
       var colorHex: String?
     }
 
+    /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
+    /// Shared visual style settings.
     var style: BuiltinWidgetStyle
+    /// CPU-specific content settings.
     var content: Content
 
     var enabled: Bool {
@@ -51,6 +55,7 @@ extension Config {
       set { content.colorHex = newValue }
     }
 
+    /// Default CPU widget config.
     static let `default` = CPUBuiltinConfig(
       placement: .init(
         enabled: false,

@@ -1,8 +1,10 @@
 --- Module contract:
 --- Owns the public EasyBar Lua API surface for one runtime registry.
 --- Returns a registry-like object consumed by the loader, events, and renderer.
+--- Public EasyBar API module table.
 local M = {}
 
+--- Directory containing this module and its siblings.
 local base_dir = debug.getinfo(1, "S").source:match("^@(.*/)")
 
 --- Loads one sibling runtime module.
@@ -16,10 +18,14 @@ local function load_module(name)
 	return chunk()
 end
 
+--- Event token module used by widget subscriptions.
 local event_tokens = load_module("event_tokens")
+--- Registry module used to store widget node state.
 local registry_module = load_module("registry")
+--- Subscription module used for event and interval callbacks.
 local subscriptions_module = load_module("subscriptions")
 
+--- Supported widget log levels.
 local LOG_LEVELS = {
 	trace = "trace",
 	debug = "debug",
@@ -28,6 +34,7 @@ local LOG_LEVELS = {
 	error = "error",
 }
 
+--- Supported EasyBar node kinds.
 local KINDS = {
 	item = "item",
 	row = "row",

@@ -1,7 +1,9 @@
 --- Module contract:
 --- Owns JSON encoding and decoding for Swift-Lua process messages.
 --- Returns one table with `encode(...)` and `decode(...)`.
+--- JSON module table.
 local M = {}
+--- Optional UTF-8 library used for unicode escape decoding.
 local utf8lib = rawget(_G, "utf8")
 
 --- Encodes one Lua string as a JSON string literal.
@@ -88,9 +90,12 @@ function M.encode(value)
 	return encode_value(value)
 end
 
+--- Recursive-descent JSON parser.
 local Parser = {}
+--- Parser metatable.
 Parser.__index = Parser
 
+--- Creates one parser for a JSON string.
 function Parser:new(text)
 	return setmetatable({
 		text = text,
@@ -99,16 +104,19 @@ function Parser:new(text)
 	}, self)
 end
 
+--- Returns the current character without advancing.
 function Parser:peek()
 	return self.text:sub(self.pos, self.pos)
 end
 
+--- Returns the current character and advances.
 function Parser:next()
 	local char = self.text:sub(self.pos, self.pos)
 	self.pos = self.pos + 1
 	return char
 end
 
+--- Advances past JSON whitespace.
 function Parser:skip_whitespace()
 	while self.pos <= self.len do
 		local char = self:peek()
@@ -120,6 +128,7 @@ function Parser:skip_whitespace()
 	end
 end
 
+--- Consumes one expected character.
 function Parser:expect(expected)
 	local actual = self:next()
 	if actual ~= expected then
@@ -127,6 +136,7 @@ function Parser:expect(expected)
 	end
 end
 
+--- Parses one JSON string.
 function Parser:parse_string()
 	self:expect('"')
 
@@ -183,6 +193,7 @@ function Parser:parse_string()
 	error("unterminated string")
 end
 
+--- Parses one JSON number.
 function Parser:parse_number()
 	local start = self.pos
 
@@ -235,6 +246,7 @@ function Parser:parse_number()
 	return value
 end
 
+--- Parses true, false, or null.
 function Parser:parse_literal()
 	if self.text:sub(self.pos, self.pos + 3) == "true" then
 		self.pos = self.pos + 4
@@ -254,6 +266,7 @@ function Parser:parse_literal()
 	error("invalid literal")
 end
 
+--- Parses one JSON array.
 function Parser:parse_array()
 	self:expect("[")
 	self:skip_whitespace()
@@ -282,6 +295,7 @@ function Parser:parse_array()
 	return out
 end
 
+--- Parses one JSON object.
 function Parser:parse_object()
 	self:expect("{")
 	self:skip_whitespace()
@@ -314,6 +328,7 @@ function Parser:parse_object()
 	return out
 end
 
+--- Parses one JSON value.
 function Parser:parse_value()
 	self:skip_whitespace()
 

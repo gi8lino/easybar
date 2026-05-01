@@ -2,7 +2,9 @@ import Foundation
 
 extension Config.CalendarBuiltinConfig {
 
+  /// Calendar event composer config.
   struct Composer {
+    /// Composer visual style settings.
     struct Style {
       var backgroundColorHex: String
       var borderColorHex: String
@@ -13,6 +15,7 @@ extension Config.CalendarBuiltinConfig {
       var headerTextColorHex: String
     }
 
+    /// Composer labels, defaults, and copy.
     struct Content {
       var createTitle: String
       var editTitle: String
@@ -41,7 +44,9 @@ extension Config.CalendarBuiltinConfig {
       var deleteConfirmationMessage: String
     }
 
+    /// Composer visual style.
     var style: Style
+    /// Composer text and default values.
     var content: Content
 
     var backgroundColorHex: String {

@@ -48,13 +48,20 @@ private struct AppController {
   }
 }
 
+/// Describes a command-line option accepted by `easybarctl`.
 private struct CLIOption {
+  /// Long-form option flag, such as `--metrics`.
   let flag: String
+  /// Optional short-form alias, such as `-m`.
   let short: String?
+  /// IPC command triggered by this option, when the option is a command.
   let command: IPC.Command?
+  /// Human-readable help text shown in usage output.
   let description: String
+  /// Optional value placeholder shown after the option in usage output.
   let placeholder: String?
 
+  /// Creates a command-line option descriptor.
   init(
     flag: String,
     short: String? = nil,
@@ -70,16 +77,24 @@ private struct CLIOption {
   }
 }
 
+/// Parsed command-line configuration.
 private struct ParsedArguments {
+  /// Command selected by the user.
   let command: IPC.Command
+  /// Unix-domain socket path used to contact the running EasyBar process.
   let socketPath: String
+  /// Whether debug logging was requested.
   let debugEnabled: Bool
+  /// Whether metrics should be streamed continuously.
   let watchMetrics: Bool
 }
 
+/// Shared runtime context for CLI operations.
 private struct AppContext {
+  /// Logger used for optional debug output.
   private let logger: ProcessLogger
 
+  /// Creates a context and enables debug logging when requested.
   init(debugEnabled: Bool) {
     let envEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
     logger = ProcessLogger(
@@ -92,12 +107,17 @@ private struct AppContext {
   }
 }
 
+/// Errors used to control CLI flow and user-facing output.
 private enum AppError: Error {
+  /// Requests usage output.
   case showUsage
+  /// Requests version output.
   case showVersion
+  /// Carries a user-facing error message.
   case message(String)
 }
 
+/// Prints user-facing CLI output.
 private enum CLIOutput {
   /// Prints an error.
   static func printError(_ message: String) {
@@ -138,34 +158,41 @@ private enum CLIOutput {
   }
 }
 
+/// Defines supported command-line options and formatting helpers.
 private enum CLI {
+  /// Option used to override the EasyBar IPC socket path.
   static let socketOption = CLIOption(
     flag: "--socket",
     short: "-s",
     description: "Override socket path",
     placeholder: "path"
   )
+  /// Option used to enable debug output.
   static let debugOption = CLIOption(
     flag: "--debug",
     short: "-d",
     description: "Enable debug output"
   )
+  /// Option used to print the app version.
   static let versionOption = CLIOption(
     flag: "--version",
     short: "-v",
     description: "Show the easybar version"
   )
+  /// Option used to print usage help.
   static let helpOption = CLIOption(
     flag: "--help",
     short: "-h",
     description: "Show this help"
   )
+  /// Option used to stream metrics continuously.
   static let watchOption = CLIOption(
     flag: "--watch",
     short: "-w",
     description: "Keep streaming metrics and render rolling graphs"
   )
 
+  /// Command options that map directly to IPC commands.
   static let cmdOptions: [CLIOption] = [
     .init(
       flag: "--workspace-changed",
@@ -205,6 +232,7 @@ private enum CLI {
     ),
   ]
 
+  /// App-level options that configure CLI behavior.
   static let appOptions: [CLIOption] = [
     socketOption,
     watchOption,

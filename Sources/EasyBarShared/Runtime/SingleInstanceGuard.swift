@@ -16,8 +16,10 @@ public enum SingleInstanceLockResult: Equatable {
 public final class SingleInstanceGuard {
   private var lockFileHandle: FileHandle?
 
+  /// Creates one single-instance guard.
   public init() {}
 
+  /// Closes the held lock file.
   deinit {
     lockFileHandle?.closeFile()
   }

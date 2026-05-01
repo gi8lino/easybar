@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+/// Main-actor store containing all currently rendered widget nodes.
 @MainActor
 final class WidgetStore: ObservableObject {
   static let shared = WidgetStore()
@@ -10,7 +11,7 @@ final class WidgetStore: ObservableObject {
   private var nodeMap: [String: WidgetNodeState] = [:]
   private var rootIndex: [String: Set<String>] = [:]
 
-  /// Handles apply.
+  /// Replaces all nodes for one widget root.
   func apply(root: String, nodes updates: [WidgetNodeState]) {
     for id in existingIDs(for: root) {
       nodeMap.removeValue(forKey: id)
@@ -20,7 +21,7 @@ final class WidgetStore: ObservableObject {
     nodes = nodeMap.values.sorted(by: sortNodes)
   }
 
-  /// Handles clear.
+  /// Clears all rendered widget nodes.
   func clear() {
     nodeMap.removeAll()
     rootIndex.removeAll()
@@ -42,35 +43,35 @@ final class WidgetStore: ObservableObject {
     nodes = nodeMap.values.sorted(by: sortNodes)
   }
 
-  /// Handles top level nodes.
+  /// Returns top-level nodes for one bar position.
   func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
     sortedPublishedNodes {
       $0.isTopLevel && $0.position == position
     }
   }
 
-  /// Handles children.
+  /// Returns non-popup children for one parent node.
   func children(of parentID: String) -> [WidgetNodeState] {
     sortedPublishedNodes {
       $0.parent == parentID && !$0.isPopupAnchor && !$0.isPopupContent
     }
   }
 
-  /// Handles anchor children.
+  /// Returns popup anchor children for one parent node.
   func anchorChildren(of parentID: String) -> [WidgetNodeState] {
     sortedPublishedNodes {
       $0.parent == parentID && $0.isPopupAnchor
     }
   }
 
-  /// Handles popup children.
+  /// Returns popup content children for one parent node.
   func popupChildren(of parentID: String) -> [WidgetNodeState] {
     sortedPublishedNodes {
       $0.parent == parentID && $0.isPopupContent
     }
   }
 
-  /// Handles sort nodes.
+  /// Sorts nodes by position, order, and id.
   private func sortNodes(_ lhs: WidgetNodeState, _ rhs: WidgetNodeState) -> Bool {
     if lhs.position != rhs.position {
       return lhs.position.rawValue < rhs.position.rawValue

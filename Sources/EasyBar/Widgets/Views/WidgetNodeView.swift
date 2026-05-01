@@ -1,6 +1,7 @@
 import EasyBarShared
 import SwiftUI
 
+/// Recursive SwiftUI renderer for one widget node.
 struct WidgetNodeView: View {
   let node: WidgetNodeState
   let logger: ProcessLogger

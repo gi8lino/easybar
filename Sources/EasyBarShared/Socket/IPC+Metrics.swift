@@ -13,6 +13,7 @@ extension IPC {
     public let widgets: [WidgetMetrics]
     public let events: [CounterMetrics]
 
+    /// Creates one metrics snapshot.
     public init(
       timestamp: Date,
       collectionEnabled: Bool,
@@ -45,6 +46,7 @@ extension IPC {
     public let residentSizeBytes: UInt64?
     public let threadCount: Int?
 
+    /// Creates one process metrics payload.
     public init(
       name: String,
       running: Bool,
@@ -86,6 +88,7 @@ extension IPC {
     public let lastTreeNodeCount: Int?
     public let lastTreeAt: Date?
 
+    /// Creates one runtime metrics payload.
     public init(
       subscriberCount: Int,
       luaRestartCount: Int,
@@ -146,6 +149,7 @@ extension IPC {
     public let lastMessageAt: Date?
     public let lastDisconnectAt: Date?
 
+    /// Creates one agent metrics payload.
     public init(
       name: String,
       connected: Bool,
@@ -179,6 +183,7 @@ extension IPC {
     public let lastNodeCount: Int
     public let lastUpdatedAt: Date?
 
+    /// Creates one widget metrics payload.
     public init(
       id: String,
       updatesTotal: Int,
@@ -204,6 +209,7 @@ extension IPC {
     public let coalescedTotal: Int
     public let coalescedPerSecond: Double
 
+    /// Creates one counter metrics payload.
     public init(
       name: String,
       total: Int,
