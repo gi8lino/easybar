@@ -5,7 +5,7 @@
 --- Event token module table.
 local M = {}
 
---- App events that may be requested from the Swift driver.
+---- App events that may be requested from the Swift driver.
 local DRIVER_EVENTS = {
 	system_woke = true,
 	sleep = true,
@@ -49,7 +49,7 @@ local function make_event_token(name)
 	}
 end
 
---- Public event token namespace exposed to widgets.
+---- Public event token namespace exposed to widgets.
 M.tokens = {
 	forced = make_event_token("forced"),
 	system_woke = make_event_token("system_woke"),
@@ -95,7 +95,7 @@ M.tokens = {
 	},
 }
 
---- Driver event lookup table used by subscription discovery.
+---- Driver event lookup table used by subscription discovery.
 M.driver_events = DRIVER_EVENTS
 
 --- Extracts the runtime event name from one `easybar.events` token.
