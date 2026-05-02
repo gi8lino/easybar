@@ -54,7 +54,7 @@ final class CalendarAuthorizationState {
 
   /// Returns the current permission state as a stable string.
   func permissionState() -> String {
-    describe(currentStatus())
+    return describe(currentStatus())
   }
 
   /// Converts one authorization status into a stable string.

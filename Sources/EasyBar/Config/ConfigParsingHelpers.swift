@@ -467,6 +467,6 @@ extension Config {
 
   /// Parses one optional path string and expands `~` when present.
   func optionalExpandedPath(_ value: (any TOMLValueConvertible)?, path: String) throws -> String? {
-    expandedPath(try optionalString(value, path: path))
+    return expandedPath(try optionalString(value, path: path))
   }
 }

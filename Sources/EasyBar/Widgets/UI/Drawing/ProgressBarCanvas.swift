@@ -34,17 +34,17 @@ struct ProgressBarCanvas: View {
 
   /// Returns the filled progress rect.
   private func fillRect(size: CGSize) -> CGRect {
-    CGRect(x: 0, y: 0, width: fillWidth(size: size), height: size.height)
+    return CGRect(x: 0, y: 0, width: fillWidth(size: size), height: size.height)
   }
 
   /// Returns the filled width clamped to the canvas width.
   private func fillWidth(size: CGSize) -> CGFloat {
-    max(0, min(size.width, size.width * normalizedValue))
+    return max(0, min(size.width, size.width * normalizedValue))
   }
 
   /// Returns the rounded track corner radius.
   private func cornerRadius(size: CGSize) -> CGFloat {
-    size.height / 2
+    return size.height / 2
   }
 
   /// Returns the current value normalized into the 0...1 range.

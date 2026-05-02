@@ -92,7 +92,7 @@ final class NativeWidgetRegistry {
 
   /// Builds the enabled native widget list from the current config.
   private func makeEnabledWidgets() -> [NativeWidget] {
-    registrations().compactMap(makeWidgetIfEnabled)
+    return registrations().compactMap(makeWidgetIfEnabled)
   }
 
   /// Returns the native widget registration list for the current config.

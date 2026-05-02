@@ -41,5 +41,5 @@ public func expandedPath(_ value: String?) -> String? {
 
 /// Returns one expanded path environment value when present.
 public func expandedEnvironmentPath(named name: String) -> String? {
-  expandedPath(stringEnvironmentValue(named: name))
+  return expandedPath(stringEnvironmentValue(named: name))
 }

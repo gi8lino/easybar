@@ -589,12 +589,12 @@ extension CalendarSnapshotProvider {
 
   /// Resolves travel time from the best available source.
   private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
-    EventTravelTimeBridge.getSeconds(from: event)
+    return EventTravelTimeBridge.getSeconds(from: event)
   }
 
   /// Returns whether the event has at least one visible non-travel alert.
   private func hasVisibleAlert(alertOffsetsSeconds: [TimeInterval]) -> Bool {
-    !alertOffsetsSeconds.isEmpty
+    return !alertOffsetsSeconds.isEmpty
   }
 
   /// Returns visible non-travel alert lead times.
@@ -825,7 +825,7 @@ extension CalendarSnapshotProvider {
 
   /// Formats one event time for popup display.
   private func formatEventTime(_ date: Date) -> String {
-    Self.eventTimeFormatter.string(from: date)
+    return Self.eventTimeFormatter.string(from: date)
   }
 
   /// Returns one rendered end time for timed events when it differs from the start.
@@ -841,12 +841,12 @@ extension CalendarSnapshotProvider {
 
   /// Formats one day header for popup display.
   private func formatDayTitle(_ date: Date) -> String {
-    Self.dayTitleFormatter.string(from: date)
+    return Self.dayTitleFormatter.string(from: date)
   }
 
   /// Formats one birthday date using the configured format.
   private func formatBirthdayDate(_ date: Date, format: String) -> String {
-    Self.birthdayFormatter(for: format).string(from: date)
+    return Self.birthdayFormatter(for: format).string(from: date)
   }
 }
 

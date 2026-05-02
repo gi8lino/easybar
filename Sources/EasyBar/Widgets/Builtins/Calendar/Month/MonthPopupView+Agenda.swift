@@ -110,7 +110,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns whether the given event is a birthday event.
   func isBirthdayEvent(_ event: EasyBarShared.CalendarAgentEvent) -> Bool {
-    event.id.hasPrefix("birthday-")
+    return event.id.hasPrefix("birthday-")
   }
 
   /// Returns the currently selected events.

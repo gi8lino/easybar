@@ -114,7 +114,7 @@ struct ProgressSliderWidgetView: View {
 
   /// Returns the knob offset inside the current width.
   private func knobOffset(in width: CGFloat) -> CGFloat {
-    width * normalizedValue
+    return width * normalizedValue
   }
 
   /// Converts one drag position into a stepped value.

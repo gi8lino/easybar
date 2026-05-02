@@ -19,7 +19,7 @@ final class ProcessSampler {
 
   /// Samples the current EasyBar process.
   func sampleCurrentProcess(named name: String, now: Date) -> IPC.ProcessMetrics {
-    sampleProcess(named: name, pid: Int32(ProcessInfo.processInfo.processIdentifier), now: now)
+    return sampleProcess(named: name, pid: Int32(ProcessInfo.processInfo.processIdentifier), now: now)
   }
 
   /// Samples one arbitrary process identifier when it is available.

@@ -10,7 +10,7 @@ public enum ProcessLogLevel: String, Codable, CaseIterable, Sendable {
 
   /// Returns whether a message at the given level should be emitted.
   public func allows(_ level: ProcessLogLevel) -> Bool {
-    level.rank >= rank
+    return level.rank >= rank
   }
 
   /// Returns the normalized level for one free-form string.

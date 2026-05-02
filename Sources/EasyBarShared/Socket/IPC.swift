@@ -36,7 +36,7 @@ extension IPC {
 
     /// Builds one metrics request.
     public static func makeMetrics(watch: Bool = false) -> Self {
-      .metrics(watch: watch)
+      return .metrics(watch: watch)
     }
 
     /// Returns the command represented by this request.

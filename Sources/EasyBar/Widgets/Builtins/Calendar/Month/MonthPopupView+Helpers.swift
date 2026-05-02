@@ -121,7 +121,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the centered twelve-year page start for one year.
   func centeredYearPageStart(for year: Int) -> Int {
-    max(year - 5, 1)
+    return max(year - 5, 1)
   }
 
   /// Selects the first visible event day after a month jump when the current day is empty.

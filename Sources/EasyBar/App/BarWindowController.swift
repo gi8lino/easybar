@@ -153,7 +153,7 @@ final class BarWindowController: NSWindowController {
 
   /// Returns whether the developer section should be visible.
   private func shouldShowDeveloperSection(_ shiftRequested: Bool) -> Bool {
-    Config.shared.develop || shiftRequested
+    return Config.shared.develop || shiftRequested
   }
 
   /// Returns the runtime control menu items.
@@ -298,7 +298,7 @@ final class BarWindowController: NSWindowController {
 
   /// Returns a human-readable connected/disconnected label.
   private func connectionLabel(_ connected: Bool) -> String {
-    connected ? "Connected" : "Disconnected"
+    return connected ? "Connected" : "Disconnected"
   }
 
   /// Returns the current calendar permission label.

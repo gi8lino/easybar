@@ -221,7 +221,7 @@ struct CalendarAppointmentsListView: View {
 
   /// Returns whether the event is rendered as a birthday.
   private func isBirthdayEvent(_ event: CalendarAgentEvent) -> Bool {
-    event.id.hasPrefix("birthday-")
+    return event.id.hasPrefix("birthday-")
   }
 
   /// Returns the calendar indicator color for one event.
@@ -237,6 +237,6 @@ struct CalendarAppointmentsListView: View {
 
   /// Converts one hex string into a SwiftUI color.
   private func color(_ hex: String) -> Color {
-    Color(hex: hex)
+    return Color(hex: hex)
   }
 }

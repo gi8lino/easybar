@@ -86,7 +86,7 @@ final class NativeMonthCalendarStore: ObservableObject {
 
   /// Returns whether one day has at least one event.
   func hasEvents(on date: Date) -> Bool {
-    !eventsForDay(date).isEmpty
+    return !eventsForDay(date).isEmpty
   }
 
   /// Prepares the subscribed month preload range for one visible month and radius.

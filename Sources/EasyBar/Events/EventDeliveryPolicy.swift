@@ -24,7 +24,7 @@ enum EventDeliveryPolicy {
 
   /// Returns whether one event should be delivered only to matching widget observers.
   static func routesDirectlyToWidgets(_ eventName: String) -> Bool {
-    WidgetEvent(rawValue: eventName) != nil
+    return WidgetEvent(rawValue: eventName) != nil
   }
 
   /// Returns the default buffering policy for one subscription set.

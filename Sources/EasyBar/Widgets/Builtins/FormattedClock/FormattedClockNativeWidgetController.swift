@@ -7,7 +7,7 @@ final class FormattedDateFormatterCache {
 
   /// Formats one date with a cached formatter for the given format.
   func string(from date: Date, format: String) -> String {
-    formatter(for: format).string(from: date)
+    return formatter(for: format).string(from: date)
   }
 
   /// Returns a cached formatter for the given date format.
@@ -99,7 +99,7 @@ enum FormattedClockRefreshPolicy {
 
   /// Returns the refresh event required by the given date format.
   static func event(for format: String) -> AppEvent {
-    containsSecondPrecision(format) ? .secondTick : .minuteTick
+    return containsSecondPrecision(format) ? .secondTick : .minuteTick
   }
 
   /// Detects real second-based fields while ignoring quoted literals in the date format string.

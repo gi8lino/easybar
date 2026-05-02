@@ -359,7 +359,7 @@ extension WidgetNodeView {
 
   /// Returns the custom image or system file icon for one image path.
   func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
-    customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
+    return customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
   }
 
   @ViewBuilder

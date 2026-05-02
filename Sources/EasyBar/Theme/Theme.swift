@@ -25,7 +25,7 @@ enum Theme {
 
   /// Returns the shared icon font used by popups and other icon-only text.
   static func iconFont(size: CGFloat) -> Font {
-    .custom(iconFontFamily, size: size)
+    return .custom(iconFontFamily, size: size)
   }
 
   /// Border color for the focused app icon inside spaces.

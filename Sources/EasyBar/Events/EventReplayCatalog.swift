@@ -9,7 +9,7 @@ enum EventReplayCatalog {
 
   /// Returns whether the given event name participates in replay caching.
   static func isReplayable(_ eventName: String) -> Bool {
-    orderedEventNames.contains(eventName)
+    return orderedEventNames.contains(eventName)
   }
 
   /// Returns replayable payloads for the requested event names in stable order.

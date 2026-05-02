@@ -62,7 +62,7 @@ public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable {
 
   /// Returns whether the namespace contains the provided field.
   public func contains(_ field: NetworkAgentField) -> Bool {
-    field.rawValue.hasPrefix(fieldPrefix)
+    return field.rawValue.hasPrefix(fieldPrefix)
   }
 }
 
@@ -263,12 +263,12 @@ public struct NetworkAgentRequest: Codable {
 
   /// Builds one fetch request.
   public static func fetch(_ fields: [NetworkAgentField]) -> Self {
-    Self(command: .fetch, fields: fields)
+    return Self(command: .fetch, fields: fields)
   }
 
   /// Builds one subscribe request.
   public static func subscribe(_ fields: [NetworkAgentField]) -> Self {
-    Self(command: .subscribe, fields: fields)
+    return Self(command: .subscribe, fields: fields)
   }
 }
 

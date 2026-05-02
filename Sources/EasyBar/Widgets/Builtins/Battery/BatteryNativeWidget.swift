@@ -269,6 +269,6 @@ extension BatteryNativeWidget {
 
   /// Resolves the color used when the battery is unavailable.
   private func resolvedUnavailableColor(config: Config.BatteryBuiltinConfig) -> String? {
-    config.colors.unavailableColorHex
+    return config.colors.unavailableColorHex
   }
 }

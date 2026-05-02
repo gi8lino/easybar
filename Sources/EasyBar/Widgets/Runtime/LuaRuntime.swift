@@ -40,6 +40,7 @@ actor LuaRuntime {
   /// Sets the current stdout line handler for the Lua runtime.
   func setStdoutHandler(_ handler: @escaping @Sendable (String) -> Void) {
     stdoutHandler = handler
+    return
   }
 
   /// Starts the Lua runtime if it is not already running.

@@ -590,6 +590,6 @@ extension NativeMonthCalendarPopupView {
 
   /// Converts one hex string into SwiftUI color.
   func color(_ hex: String) -> Color {
-    Color(hex: hex)
+    return Color(hex: hex)
   }
 }

@@ -55,12 +55,12 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
   /// Returns whether location access is currently authorized.
   func isAuthorized() -> Bool {
-    authState.isAuthorized()
+    return authState.isAuthorized()
   }
 
   /// Returns the current permission label.
   func permissionState() -> String {
-    authState.permissionState()
+    return authState.permissionState()
   }
 
   /// Handles one location authorization change.

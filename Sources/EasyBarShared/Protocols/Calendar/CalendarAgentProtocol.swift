@@ -240,27 +240,27 @@ public struct CalendarAgentRequest: Codable, Sendable {
 
   /// Builds one fetch request.
   public static func fetch(_ query: CalendarAgentQuery) -> Self {
-    Self(command: .fetch, query: query)
+    return Self(command: .fetch, query: query)
   }
 
   /// Builds one subscribe request.
   public static func subscribe(_ query: CalendarAgentQuery) -> Self {
-    Self(command: .subscribe, query: query)
+    return Self(command: .subscribe, query: query)
   }
 
   /// Builds one create-event request.
   public static func createEvent(_ payload: CalendarAgentCreateEvent) -> Self {
-    Self(command: .createEvent, createEvent: payload)
+    return Self(command: .createEvent, createEvent: payload)
   }
 
   /// Builds one update-event request.
   public static func updateEvent(_ payload: CalendarAgentUpdateEvent) -> Self {
-    Self(command: .updateEvent, updateEvent: payload)
+    return Self(command: .updateEvent, updateEvent: payload)
   }
 
   /// Builds one delete-event request.
   public static func deleteEvent(_ payload: CalendarAgentDeleteEvent) -> Self {
-    Self(command: .deleteEvent, deleteEvent: payload)
+    return Self(command: .deleteEvent, deleteEvent: payload)
   }
 }
 

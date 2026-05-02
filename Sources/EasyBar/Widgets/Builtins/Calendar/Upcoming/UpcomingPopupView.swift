@@ -140,6 +140,6 @@ struct NativeUpcomingCalendarPopupView: View {
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
-    Color(hex: hex)
+    return Color(hex: hex)
   }
 }

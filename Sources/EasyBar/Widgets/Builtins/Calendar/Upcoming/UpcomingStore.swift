@@ -104,7 +104,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
 
   /// Returns whether one day has at least one event.
   func hasEvents(on date: Date) -> Bool {
-    !overlappingEvents(on: date).isEmpty
+    return !overlappingEvents(on: date).isEmpty
   }
 
   /// Publishes one calendar snapshot update.

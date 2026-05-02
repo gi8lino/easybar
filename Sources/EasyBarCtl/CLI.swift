@@ -243,7 +243,7 @@ private enum CLI {
 
   /// Formats one help row.
   static func formatOption(_ option: String, _ description: String) -> String {
-    "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
+    return "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
   }
 
   /// Renders one option label.
@@ -263,7 +263,7 @@ private enum CLI {
 
   /// Checks whether an argument matches an option.
   static func matches(_ option: CLIOption, argument: String) -> Bool {
-    option.flag == argument || option.short == argument
+    return option.flag == argument || option.short == argument
   }
 
   /// Returns the value from `--flag=value`.

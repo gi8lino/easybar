@@ -56,17 +56,17 @@ final class CalendarAuthorizationController {
 
   /// Returns whether calendar access is currently effective.
   func effectiveAccessGranted() -> Bool {
-    authState.effectiveAccessGranted()
+    return authState.effectiveAccessGranted()
   }
 
   /// Returns the current permission state string.
   func permissionState() -> String {
-    authState.permissionState()
+    return authState.permissionState()
   }
 
   /// Returns the stable label for a specific EventKit status.
   func describe(_ status: EKAuthorizationStatus) -> String {
-    authState.describe(status)
+    return authState.describe(status)
   }
 
   /// Requests calendar access when the current state allows it.

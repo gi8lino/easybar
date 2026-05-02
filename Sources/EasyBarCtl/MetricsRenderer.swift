@@ -340,7 +340,7 @@ enum MetricsRenderer {
 
   /// Formats a snapshot timestamp for display.
   private static func timestamp(_ date: Date) -> String {
-    timestampFormatter.string(from: date)
+    return timestampFormatter.string(from: date)
   }
 
   /// Formats an optional date as elapsed seconds from now.
@@ -353,7 +353,7 @@ enum MetricsRenderer {
 
   /// Formats a Boolean value as `yes` or `no`.
   private static func yesNo(_ value: Bool) -> String {
-    value ? "yes" : "no"
+    return value ? "yes" : "no"
   }
 
   /// Formats an optional numeric metric value.
@@ -394,7 +394,7 @@ enum MetricsRenderer {
 
   /// Formats the metrics sample interval.
   private static func sampleInterval(_ value: Double) -> String {
-    "\(number(value))s"
+    return "\(number(value))s"
   }
 
   /// Returns the arithmetic mean for a series of values.
@@ -405,7 +405,7 @@ enum MetricsRenderer {
 
   /// Joins preformatted columns into one table row.
   private static func row(_ columns: [String]) -> String {
-    columns.joined(separator: "  ")
+    return columns.joined(separator: "  ")
   }
 
   /// Horizontal alignment for fixed-width table columns.

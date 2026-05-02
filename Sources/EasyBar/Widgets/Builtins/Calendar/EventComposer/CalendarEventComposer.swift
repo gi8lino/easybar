@@ -517,7 +517,7 @@ extension CalendarEventComposer {
 extension CalendarEventComposer {
   /// Returns the configured default alert option.
   private func resolvedDefaultAlert() -> AlertOption {
-    AlertOption(rawValue: config.defaultAlert) ?? .tenMinutes
+    return AlertOption(rawValue: config.defaultAlert) ?? .tenMinutes
   }
 
   /// Returns the configured default alert rows.
@@ -561,7 +561,7 @@ extension CalendarEventComposer {
 
   /// Returns the configured default travel-time option.
   private func resolvedDefaultTravelTime() -> TravelTimeOption {
-    TravelTimeOption(rawValue: config.defaultTravelTime) ?? .none
+    return TravelTimeOption(rawValue: config.defaultTravelTime) ?? .none
   }
 
   /// Resolves one travel-time selection from saved seconds.
@@ -668,7 +668,7 @@ extension CalendarEventComposer {
 
   /// Formats one minute-based duration string for custom rows.
   private func customMinutesText(from seconds: TimeInterval) -> String {
-    String(max(1, Int((seconds / 60).rounded())))
+    return String(max(1, Int((seconds / 60).rounded())))
   }
 }
 
@@ -821,11 +821,11 @@ extension CalendarEventComposer {
 
   /// Returns the configured title for one alert option.
   func title(for option: AlertOption) -> String {
-    config.alertLabels[option.rawValue] ?? option.fallbackTitle
+    return config.alertLabels[option.rawValue] ?? option.fallbackTitle
   }
 
   /// Returns the configured title for one travel-time option.
   func title(for option: TravelTimeOption) -> String {
-    config.travelTimeLabels[option.rawValue] ?? option.fallbackTitle
+    return config.travelTimeLabels[option.rawValue] ?? option.fallbackTitle
   }
 }

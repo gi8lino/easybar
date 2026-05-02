@@ -49,7 +49,7 @@ struct MetricsHistory {
 
   /// Returns the retained values for one metric series.
   func values(for key: String) -> [Double] {
-    series[key] ?? []
+    return series[key] ?? []
   }
 
   /// Adds one value to a metric series and trims it to the configured limit.

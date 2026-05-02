@@ -14,7 +14,7 @@ public struct ProcessLogField {
 
   /// Builds one typed process log field for contextual `.field(...)` call sites.
   public static func field(_ key: String, _ value: Any?) -> ProcessLogField {
-    ProcessLogField(key, value)
+    return ProcessLogField(key, value)
   }
 }
 

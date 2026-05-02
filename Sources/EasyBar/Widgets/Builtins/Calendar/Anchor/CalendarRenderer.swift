@@ -157,6 +157,6 @@ extension CalendarRenderer {
 
   /// Formats one date using the configured calendar anchor format.
   private func format(_ date: Date, _ format: String) -> String {
-    formatterCache.string(from: date, format: format)
+    return formatterCache.string(from: date, format: format)
   }
 }

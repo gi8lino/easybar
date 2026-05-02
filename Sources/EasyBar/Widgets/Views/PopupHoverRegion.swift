@@ -7,7 +7,7 @@ struct PopupHoverRegion: NSViewRepresentable {
 
   /// Creates the coordinator that forwards hover changes.
   func makeCoordinator() -> Coordinator {
-    Coordinator(onHoverChanged: onHoverChanged)
+    return Coordinator(onHoverChanged: onHoverChanged)
   }
 
   /// Creates the AppKit hover region.

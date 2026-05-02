@@ -20,21 +20,21 @@ public enum SharedPathDefaults {
 
   /// Returns the default config path in the current user's home directory.
   public static func defaultConfigPath() -> URL {
-    homeRelativePath(defaultConfigRelativePath)
+    return homeRelativePath(defaultConfigRelativePath)
   }
 
   /// Returns the default widgets path in the current user's home directory.
   public static func defaultWidgetsPath() -> URL {
-    homeRelativePath(defaultWidgetsRelativePath)
+    return homeRelativePath(defaultWidgetsRelativePath)
   }
 
   /// Returns the default logging directory in the current user's home directory.
   public static func defaultLoggingDirectory() -> URL {
-    homeRelativePath(defaultLoggingDirectoryRelativePath)
+    return homeRelativePath(defaultLoggingDirectoryRelativePath)
   }
 
   /// Returns the default widget editor stub path in the current user's home directory.
   public static func defaultWidgetEditorStubPath() -> URL {
-    homeRelativePath(defaultWidgetEditorStubRelativePath)
+    return homeRelativePath(defaultWidgetEditorStubRelativePath)
   }
 }

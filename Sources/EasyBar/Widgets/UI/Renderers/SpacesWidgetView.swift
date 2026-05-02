@@ -96,7 +96,7 @@ struct SpacesWidgetView: View {
 
   /// Returns the number of hidden apps for one space.
   private func hiddenAppCount(for space: SpaceItem) -> Int {
-    max(0, space.apps.count - visibleApps(for: space).count)
+    return max(0, space.apps.count - visibleApps(for: space).count)
   }
 
   /// Returns horizontal pill padding for one space.
@@ -154,22 +154,22 @@ struct SpacesWidgetView: View {
 
   /// Returns the text color for one space.
   private func spaceTextColor(for space: SpaceItem) -> Color {
-    space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+    return space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
   }
 
   /// Returns the background color for one space.
   private func spaceBackgroundColor(for space: SpaceItem) -> Color {
-    space.isFocused ? Theme.spaceActiveBackground : Theme.spaceInactiveBackground
+    return space.isFocused ? Theme.spaceActiveBackground : Theme.spaceInactiveBackground
   }
 
   /// Returns the border color for one space.
   private func spaceBorderColor(for space: SpaceItem) -> Color {
-    space.isFocused ? Theme.spaceActiveBorder : Theme.spaceInactiveBorder
+    return space.isFocused ? Theme.spaceActiveBorder : Theme.spaceInactiveBorder
   }
 
   /// Returns whether the space uses the collapsed inactive layout.
   private func isCollapsedInactiveSpace(_ space: SpaceItem) -> Bool {
-    config.layout.collapseInactive && !space.isFocused
+    return config.layout.collapseInactive && !space.isFocused
   }
 }
 

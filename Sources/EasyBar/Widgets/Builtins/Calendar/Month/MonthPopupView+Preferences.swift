@@ -6,6 +6,7 @@ struct MonthCalendarGridFramePreferenceKey: PreferenceKey {
   /// Handles reduce.
   static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
     value = nextValue()
+    return
   }
 }
 

@@ -86,7 +86,7 @@ final class WidgetStore: ObservableObject {
 
   /// Returns all stored node ids for one widget root.
   private func existingIDs(for root: String) -> Set<String> {
-    rootIndex[root] ?? []
+    return rootIndex[root] ?? []
   }
 
   /// Stores updated nodes and returns their ids.

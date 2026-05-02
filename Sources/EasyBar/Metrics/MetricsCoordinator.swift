@@ -174,7 +174,7 @@ final class MetricsCoordinator {
 
   /// Builds one point-in-time snapshot.
   func snapshot() -> IPC.MetricsSnapshot {
-    collectSnapshot(collectionEnabled: isStreamingActive)
+    return collectSnapshot(collectionEnabled: isStreamingActive)
   }
 
   /// Records one emitted event.
