@@ -110,12 +110,12 @@ private struct ConfigErrorContentView: View {
 
   /// Failure as a structured config error when available.
   private var configError: ConfigError? {
-    state.error as? ConfigError
+    return state.error as? ConfigError
   }
 
   /// Config key path associated with the failure.
   private var issuePathText: String? {
-    configError?.configPath
+    return configError?.configPath
   }
 
   /// Detailed user-facing error text.

@@ -84,27 +84,27 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
   /// Returns whether this node is attached directly to the bar.
   var isTopLevel: Bool {
-    parent == nil || parent == ""
+    return parent == nil || parent == ""
   }
 
   /// Returns whether this node has a non-empty parent id.
   var hasParent: Bool {
-    !isTopLevel
+    return !isTopLevel
   }
 
   /// Returns whether this node is the built-in calendar root.
   var isCalendarRoot: Bool {
-    root == "builtin_calendar"
+    return root == "builtin_calendar"
   }
 
   /// Returns whether this node is a popup anchor child.
   var isPopupAnchor: Bool {
-    role == .popupAnchor
+    return role == .popupAnchor
   }
 
   /// Returns whether this node is popup content.
   var isPopupContent: Bool {
-    role == .popupContent
+    return role == .popupContent
   }
 
   /// Returns whether this node should own hover interactions.
@@ -127,12 +127,12 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
   /// Returns whether this node should own mouse-down interactions.
   var isMouseDownInteractive: Bool {
-    receivesMouseDown == true
+    return receivesMouseDown == true
   }
 
   /// Returns whether this node should own mouse-up interactions.
   var isMouseUpInteractive: Bool {
-    receivesMouseUp == true
+    return receivesMouseUp == true
   }
 
   /// Returns whether this node should own click interactions.
@@ -149,6 +149,6 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
 
   /// Returns whether this node should own scroll interactions.
   var isMouseScrollInteractive: Bool {
-    receivesMouseScroll == true
+    return receivesMouseScroll == true
   }
 }

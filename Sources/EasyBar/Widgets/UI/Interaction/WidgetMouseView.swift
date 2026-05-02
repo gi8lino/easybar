@@ -114,7 +114,7 @@ final class MouseTrackingNSView: NSView {
 
   /// Returns whether this surface needs direct event ownership.
   private var handlesDirectMouseEvents: Bool {
-    emitsMouseDown || emitsMouseUp || emitsMouseClick || emitsMouseScroll
+    return emitsMouseDown || emitsMouseUp || emitsMouseClick || emitsMouseScroll
   }
 
   /// Rebuilds tracking areas after layout updates.

@@ -120,7 +120,7 @@ struct NativeMonthCalendarPopupView: View {
 extension NativeMonthCalendarPopupView {
   /// Returns the popup corner radius.
   var popupCornerRadius: CGFloat {
-    max(CGFloat(config.cornerRadius), 12)
+    return max(CGFloat(config.cornerRadius), 12)
   }
 
   /// Returns the fixed popup width for the active layout.

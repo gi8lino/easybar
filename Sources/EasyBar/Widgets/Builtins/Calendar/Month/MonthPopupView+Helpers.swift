@@ -71,7 +71,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the visible month year.
   var visibleYear: Int {
-    resolvedCalendar.component(.year, from: visibleMonth)
+    return resolvedCalendar.component(.year, from: visibleMonth)
   }
 
   /// Returns the visible month title including year.

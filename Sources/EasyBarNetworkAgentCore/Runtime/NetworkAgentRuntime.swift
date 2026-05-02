@@ -37,7 +37,7 @@ public final class NetworkAgentRuntime {
 
   /// Returns whether the network agent should run.
   public var isEnabled: Bool {
-    config.isEnabled
+    return config.isEnabled
   }
 
   /// Starts snapshot delivery and the network socket server.

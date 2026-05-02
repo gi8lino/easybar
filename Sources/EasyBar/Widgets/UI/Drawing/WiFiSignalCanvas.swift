@@ -61,17 +61,17 @@ struct WiFiSignalCanvas: View {
 
   /// Returns whether the indicator should render as connected.
   private var isConnected: Bool {
-    state == "connected"
+    return state == "connected"
   }
 
   /// Returns whether the indicator should render as disconnected.
   private var isDisconnected: Bool {
-    state == "disconnected"
+    return state == "disconnected"
   }
 
   /// Returns whether the indicator should render as denied.
   private var isDenied: Bool {
-    state == "denied"
+    return state == "denied"
   }
 
   /// Returns the resolved outer-arc color for one signal level.

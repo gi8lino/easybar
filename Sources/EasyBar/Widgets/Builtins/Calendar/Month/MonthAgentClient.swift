@@ -51,7 +51,7 @@ final class MonthCalendarAgentClient {
 
   /// Returns whether the month-calendar agent client is currently active.
   var isConnected: Bool {
-    stream.isConnected
+    return stream.isConnected
   }
 
   /// Starts the month-calendar agent socket client when enabled.

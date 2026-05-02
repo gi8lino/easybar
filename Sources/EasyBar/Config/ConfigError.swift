@@ -28,6 +28,6 @@ enum ConfigError: Error, LocalizedError {
   }
 
   var errorDescription: String? {
-    "\(configPath): \(detail)"
+    return "\(configPath): \(detail)"
   }
 }

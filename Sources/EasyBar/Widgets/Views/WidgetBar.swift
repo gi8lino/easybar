@@ -18,6 +18,6 @@ struct WidgetBar: View {
 
   /// Returns the rendered top-level nodes for this bar position.
   private var topLevelNodes: [WidgetNodeState] {
-    store.topLevelNodes(for: position)
+    return store.topLevelNodes(for: position)
   }
 }

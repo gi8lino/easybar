@@ -213,7 +213,8 @@ final class BarWindowController: NSWindowController {
 
   /// Returns whether either calendar popup client is currently connected.
   private var calendarAgentConnected: Bool {
-    UpcomingCalendarAgentClient.shared.isConnected || MonthCalendarAgentClient.shared.isConnected
+    return UpcomingCalendarAgentClient.shared.isConnected
+      || MonthCalendarAgentClient.shared.isConnected
   }
 
   /// Appends one section of items and a trailing separator.
@@ -318,7 +319,7 @@ final class BarWindowController: NSWindowController {
 
   /// Returns the current Wi-Fi/location permission label.
   private var wifiPermissionLabel: String {
-    NativeWiFiStore.shared.snapshot?.permissionState ?? "unknown"
+    return NativeWiFiStore.shared.snapshot?.permissionState ?? "unknown"
   }
 
   /// Refreshes the current runtime through the app layer.

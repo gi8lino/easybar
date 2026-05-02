@@ -23,7 +23,7 @@ enum WidgetNodeKind: String, Codable {
 
   /// Returns whether this kind renders as a horizontal child container.
   var isRowLikeContainer: Bool {
-    self == .row || self == .group
+    return self == .row || self == .group
   }
 
   /// Returns whether this kind renders inside the interactive content wrapper.
@@ -36,12 +36,12 @@ enum WidgetNodeKind: String, Codable {
 
   /// Returns whether this kind renders through a dedicated custom view.
   var isCustomRenderedKind: Bool {
-    self == .spaces || self == .wifiIndicator
+    return self == .spaces || self == .wifiIndicator
   }
 
   /// Returns whether this kind renders through a dedicated container view.
   var isDedicatedContainerKind: Bool {
-    self == .column || self == .popup
+    return self == .column || self == .popup
   }
 }
 

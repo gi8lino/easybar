@@ -37,42 +37,42 @@ struct WidgetNodeStyle: ViewModifier {
 
   /// Returns the resolved leading padding.
   private var leadingPadding: CGFloat {
-    CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
+    return CGFloat(node.paddingLeft ?? node.paddingX ?? 0)
   }
 
   /// Returns the resolved trailing padding.
   private var trailingPadding: CGFloat {
-    CGFloat(node.paddingRight ?? node.paddingX ?? 0)
+    return CGFloat(node.paddingRight ?? node.paddingX ?? 0)
   }
 
   /// Returns the resolved top padding.
   private var topPadding: CGFloat {
-    CGFloat(node.paddingTop ?? node.paddingY ?? 0)
+    return CGFloat(node.paddingTop ?? node.paddingY ?? 0)
   }
 
   /// Returns the resolved bottom padding.
   private var bottomPadding: CGFloat {
-    CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
+    return CGFloat(node.paddingBottom ?? node.paddingY ?? 0)
   }
 
   /// Returns the resolved leading margin.
   private var leadingMargin: CGFloat {
-    CGFloat(node.marginLeft ?? node.marginX ?? 0)
+    return CGFloat(node.marginLeft ?? node.marginX ?? 0)
   }
 
   /// Returns the resolved trailing margin.
   private var trailingMargin: CGFloat {
-    CGFloat(node.marginRight ?? node.marginX ?? 0)
+    return CGFloat(node.marginRight ?? node.marginX ?? 0)
   }
 
   /// Returns the resolved top margin.
   private var topMargin: CGFloat {
-    CGFloat(node.marginTop ?? node.marginY ?? 0)
+    return CGFloat(node.marginTop ?? node.marginY ?? 0)
   }
 
   /// Returns the resolved bottom margin.
   private var bottomMargin: CGFloat {
-    CGFloat(node.marginBottom ?? node.marginY ?? 0)
+    return CGFloat(node.marginBottom ?? node.marginY ?? 0)
   }
 
   /// Returns the resolved frame width.
@@ -87,27 +87,27 @@ struct WidgetNodeStyle: ViewModifier {
 
   /// Returns the resolved node corner radius.
   private var cornerRadius: CGFloat {
-    CGFloat(node.cornerRadius ?? 0)
+    return CGFloat(node.cornerRadius ?? 0)
   }
 
   /// Returns the resolved node border width.
   private var borderWidth: CGFloat {
-    CGFloat(node.borderWidth ?? 0)
+    return CGFloat(node.borderWidth ?? 0)
   }
 
   /// Returns the resolved vertical offset.
   private var verticalOffset: CGFloat {
-    CGFloat(node.yOffset ?? 0)
+    return CGFloat(node.yOffset ?? 0)
   }
 
   /// Returns the resolved background color.
   private var backgroundColor: Color {
-    resolvedColor(node.backgroundColor)
+    return resolvedColor(node.backgroundColor)
   }
 
   /// Returns the resolved border color.
   private var borderColor: Color {
-    resolvedColor(node.borderColor)
+    return resolvedColor(node.borderColor)
   }
 
   /// Resolves one optional node color or clears it.

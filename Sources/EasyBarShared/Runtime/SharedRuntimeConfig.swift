@@ -48,72 +48,72 @@ public struct SharedRuntimeConfig {
 
   /// Compatibility accessor for the widgets path.
   public var widgetsPath: String {
-    app.widgetsPath
+    return app.widgetsPath
   }
 
   /// Compatibility accessor for the lock directory.
   public var lockDirectory: String {
-    app.lockDirectory
+    return app.lockDirectory
   }
 
   /// Compatibility accessor for the editor stub path.
   public var widgetEditorStubPath: String {
-    app.widgetEditorStubPath
+    return app.widgetEditorStubPath
   }
 
   /// Compatibility accessor for logging enablement.
   public var loggingEnabled: Bool {
-    logging.enabled
+    return logging.enabled
   }
 
   /// Compatibility accessor for the log level.
   public var loggingLevel: ProcessLogLevel {
-    logging.level
+    return logging.level
   }
 
   /// Compatibility accessor for the log directory.
   public var loggingDirectory: String {
-    logging.directory
+    return logging.directory
   }
 
   /// Compatibility accessor for the EasyBar socket path.
   public var easyBarSocketPath: String {
-    easyBar.socketPath
+    return easyBar.socketPath
   }
 
   /// Compatibility accessor for calendar-agent enablement.
   public var calendarAgentEnabled: Bool {
-    calendarAgent.enabled
+    return calendarAgent.enabled
   }
 
   /// Compatibility accessor for the calendar-agent socket path.
   public var calendarAgentSocketPath: String {
-    calendarAgent.socketPath
+    return calendarAgent.socketPath
   }
 
   /// Compatibility accessor for network-agent enablement.
   public var networkAgentEnabled: Bool {
-    networkAgent.enabled
+    return networkAgent.enabled
   }
 
   /// Compatibility accessor for the network-agent socket path.
   public var networkAgentSocketPath: String {
-    networkAgent.socketPath
+    return networkAgent.socketPath
   }
 
   /// Compatibility accessor for the network-agent refresh interval.
   public var networkAgentRefreshIntervalSeconds: TimeInterval {
-    networkAgent.refreshIntervalSeconds
+    return networkAgent.refreshIntervalSeconds
   }
 
   /// Compatibility accessor for unauthorized non-sensitive fields.
   public var networkAgentAllowUnauthorizedFieldsWithoutLocation: Bool {
-    networkAgent.allowUnauthorizedFieldsWithoutLocation
+    return networkAgent.allowUnauthorizedFieldsWithoutLocation
   }
 
   /// Compatibility alias for unauthorized non-sensitive fields.
   public var networkAgentAllowUnauthorizedNonSensitiveFields: Bool {
-    networkAgent.allowUnauthorizedFieldsWithoutLocation
+    return networkAgent.allowUnauthorizedFieldsWithoutLocation
   }
 }
 

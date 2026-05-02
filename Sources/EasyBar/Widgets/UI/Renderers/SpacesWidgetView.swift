@@ -180,7 +180,7 @@ private struct AppIconView: View {
   let isFocusedApp: Bool
 
   private var config: Config.SpacesBuiltinConfig {
-    Config.shared.builtinSpaces
+    return Config.shared.builtinSpaces
   }
 
   /// Returns the app icon size.
@@ -199,12 +199,12 @@ private struct AppIconView: View {
 
   /// Returns the app icon corner radius.
   private var cornerRadius: CGFloat {
-    CGFloat(config.icons.cornerRadius)
+    return CGFloat(config.icons.cornerRadius)
   }
 
   /// Returns the app icon border color.
   private var borderColor: Color {
-    isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear
+    return isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear
   }
 
   /// Renders one app icon slot.
@@ -227,7 +227,7 @@ private struct AppIconView: View {
   /// Returns the rendered app icon or fallback initial.
   @ViewBuilder
   private var content: some View {
-    iconContent()
+    return iconContent()
   }
 
   /// Returns the app icon image or the text fallback.

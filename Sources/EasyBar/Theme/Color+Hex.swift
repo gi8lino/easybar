@@ -12,7 +12,7 @@ extension String {
 
   /// Returns whether this hex string resolves to a fully transparent color.
   var isFullyTransparentHexColor: Bool {
-    normalizedHexColor.isEmpty || normalizedHexColor == "00000000"
+    return normalizedHexColor.isEmpty || normalizedHexColor == "00000000"
   }
 }
 

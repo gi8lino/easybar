@@ -36,12 +36,12 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the spacing used in horizontal layouts.
   var horizontalContentSpacing: CGFloat {
-    CGFloat(config.spacing)
+    return CGFloat(config.spacing)
   }
 
   /// Returns the spacing used in vertical layouts.
   var verticalContentSpacing: CGFloat {
-    CGFloat(config.spacing + 6)
+    return CGFloat(config.spacing + 6)
   }
 
   /// Returns the minimum popup width for the current layout.
@@ -56,12 +56,12 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the fixed width used by the calendar pane.
   var calendarContainerWidth: CGFloat {
-    260
+    return 260
   }
 
   /// Builds the full calendar section with grid and today helper.
   var calendarSectionView: some View {
-    calendarContainerView
+    return calendarContainerView
   }
 
   /// Builds the calendar container.
@@ -126,17 +126,17 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns whether the current popup layout is vertical.
   var isVerticalLayout: Bool {
-    !isHorizontalLayout
+    return !isHorizontalLayout
   }
 
   /// Returns the minimum height of the appointments area.
   var appointmentsMinHeight: CGFloat {
-    CGFloat(min(config.appointmentsMinHeight, config.appointmentsMaxHeight))
+    return CGFloat(min(config.appointmentsMinHeight, config.appointmentsMaxHeight))
   }
 
   /// Returns the maximum height of the appointments area.
   var appointmentsMaxHeight: CGFloat {
-    CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
+    return CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
   }
 }
 
@@ -290,7 +290,7 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the weekday symbols in calendar order.
   var weekdaySymbols: [String] {
-    reorderMondayFirstWeekdaySymbolsToCalendarOrder(config.resolvedWeekdaySymbols)
+    return reorderMondayFirstWeekdaySymbolsToCalendarOrder(config.resolvedWeekdaySymbols)
   }
 
   /// Reorders Monday-first weekday symbols into the current calendar order.

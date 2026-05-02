@@ -83,7 +83,7 @@ final class CalendarAgentStreamController {
 
   /// Returns whether the stream currently has an active connection.
   var isConnected: Bool {
-    started && client.isConnected
+    return started && client.isConnected
   }
 
   /// Starts the stream when the calendar agent is enabled.

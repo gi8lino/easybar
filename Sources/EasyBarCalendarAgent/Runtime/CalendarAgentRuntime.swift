@@ -29,7 +29,7 @@ final class CalendarAgentRuntime {
 
   /// Returns whether the calendar agent should run.
   var isEnabled: Bool {
-    config.isEnabled
+    return config.isEnabled
   }
 
   /// Starts snapshot delivery and the calendar socket server.

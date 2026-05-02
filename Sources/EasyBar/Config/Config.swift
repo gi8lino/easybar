@@ -197,7 +197,7 @@ final class Config: ObservableObject {
   }
 
   var barShowsBorder: Bool {
-    !barBorderHex.isFullyTransparentHexColor
+    return !barBorderHex.isFullyTransparentHexColor
   }
 
   // MARK: - Builtins

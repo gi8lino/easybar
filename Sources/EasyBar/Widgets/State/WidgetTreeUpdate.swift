@@ -15,27 +15,27 @@ struct WidgetTreeUpdate: Codable {
 
   /// Returns whether this update contains subscriptions.
   var isSubscriptions: Bool {
-    type == .subscriptions
+    return type == .subscriptions
   }
 
   /// Returns whether this update is the runtime ready signal.
   var isReady: Bool {
-    type == .ready
+    return type == .ready
   }
 
   /// Returns whether this update contains a widget tree.
   var isTree: Bool {
-    type == .tree
+    return type == .tree
   }
 
   /// Returns the subscribed event names or an empty list.
   var subscribedEvents: [String] {
-    events ?? []
+    return events ?? []
   }
 
   /// Returns whether this update includes a decoded tree payload.
   var hasTreePayload: Bool {
-    root != nil && nodes != nil
+    return root != nil && nodes != nil
   }
 
   /// Returns the decoded tree payload when present.

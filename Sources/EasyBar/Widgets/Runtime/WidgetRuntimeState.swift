@@ -13,7 +13,7 @@ struct WidgetRuntimeState {
 
   /// Returns whether the engine can emit the initial event batch.
   var canEmitInitialEvents: Bool {
-    isReady && hasSubscriptions && !didEmitInitialEvents
+    return isReady && hasSubscriptions && !didEmitInitialEvents
   }
 
   /// Resets all tracked runtime handshake state.

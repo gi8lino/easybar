@@ -44,7 +44,7 @@ final class UpcomingCalendarAgentClient {
 
   /// Returns whether the upcoming-calendar agent client is currently active.
   var isConnected: Bool {
-    stream.isConnected
+    return stream.isConnected
   }
 
   /// Starts the upcoming-calendar agent socket client when enabled.

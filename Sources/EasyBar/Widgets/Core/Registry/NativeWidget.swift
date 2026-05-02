@@ -15,7 +15,7 @@ protocol NativeWidget: AnyObject {
 
 extension NativeWidget {
   var appEventSubscriptions: Set<String> {
-    []
+    return []
   }
 
   /// Reloads configuration.

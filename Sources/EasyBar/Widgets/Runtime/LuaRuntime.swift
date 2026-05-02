@@ -34,7 +34,7 @@ actor LuaRuntime {
 
   /// Returns the running Lua process identifier when available.
   var processIdentifier: Int32? {
-    processController.processIdentifier
+    return processController.processIdentifier
   }
 
   /// Sets the current stdout line handler for the Lua runtime.

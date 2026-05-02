@@ -76,7 +76,7 @@ final class FormattedClockNativeWidgetController {
   }
 
   private var refreshEvent: AppEvent {
-    FormattedClockRefreshPolicy.event(for: snapshotProvider().format)
+    return FormattedClockRefreshPolicy.event(for: snapshotProvider().format)
   }
 
   /// Publishes the current formatted timestamp.

@@ -57,7 +57,7 @@ public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable {
 
   /// Prefix shared by every field in this namespace.
   public var fieldPrefix: String {
-    rawValue + "."
+    return rawValue + "."
   }
 
   /// Returns whether the namespace contains the provided field.

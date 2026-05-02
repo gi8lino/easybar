@@ -88,7 +88,7 @@ extension WidgetNodeView {
   }
 
   var hasIcon: Bool {
-    !node.icon.isEmpty
+    return !node.icon.isEmpty
   }
 
   var hasSymbol: Bool {
@@ -102,7 +102,7 @@ extension WidgetNodeView {
   }
 
   var hasLabel: Bool {
-    !node.text.isEmpty
+    return !node.text.isEmpty
   }
 
   var hasCustomSymbolFill: Bool {
@@ -111,27 +111,27 @@ extension WidgetNodeView {
   }
 
   var iconResolvedColor: Color {
-    color(node.iconColor ?? node.color)
+    return color(node.iconColor ?? node.color)
   }
 
   var labelResolvedColor: Color {
-    color(node.labelColor ?? node.color)
+    return color(node.labelColor ?? node.color)
   }
 
   var iconResolvedFont: Font? {
-    fontValue(size: node.iconFontSize ?? node.fontSize)
+    return fontValue(size: node.iconFontSize ?? node.fontSize)
   }
 
   var labelResolvedFont: Font? {
-    fontValue(size: node.labelFontSize ?? node.fontSize)
+    return fontValue(size: node.labelFontSize ?? node.fontSize)
   }
 
   var symbolResolvedFont: Font {
-    .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
+    return .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
   }
 
   var symbolResolvedFontSize: CGFloat {
-    CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    return CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
   }
 
   var symbolOverlayResolvedFont: Font {
@@ -199,7 +199,7 @@ extension WidgetNodeView {
   }
 
   var symbolFillHeight: CGFloat {
-    symbolCanvasSize.height * CGFloat(node.symbolFillHeightFactor ?? 0)
+    return symbolCanvasSize.height * CGFloat(node.symbolFillHeightFactor ?? 0)
   }
 
   var symbolFillOffset: CGSize {
@@ -210,12 +210,12 @@ extension WidgetNodeView {
   }
 
   var symbolFillCornerRadius: CGFloat {
-    symbolResolvedFontSize * CGFloat(node.symbolFillCornerRadiusFactor ?? 0)
+    return symbolResolvedFontSize * CGFloat(node.symbolFillCornerRadiusFactor ?? 0)
   }
 
   @ViewBuilder
   var imageView: some View {
-    renderedImageView()
+    return renderedImageView()
   }
 
   @ViewBuilder
@@ -350,11 +350,11 @@ extension WidgetNodeView {
   }
 
   var imageSize: CGFloat {
-    CGFloat(node.imageSize ?? 14)
+    return CGFloat(node.imageSize ?? 14)
   }
 
   var imageCornerRadius: CGFloat {
-    CGFloat(node.imageCornerRadius ?? 4)
+    return CGFloat(node.imageCornerRadius ?? 4)
   }
 
   /// Returns the custom image or system file icon for one image path.

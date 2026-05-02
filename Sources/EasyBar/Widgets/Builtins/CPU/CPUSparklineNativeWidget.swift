@@ -117,7 +117,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Returns the configured sample history size.
   private var historySize: Int {
-    max(2, Config.shared.builtinCPU.historySize)
+    return max(2, Config.shared.builtinCPU.historySize)
   }
 
   /// Reads cumulative CPU tick counters from Mach.

@@ -4,7 +4,7 @@ import SwiftUI
 
 extension WidgetNodeView {
   var nodeColor: Color {
-    color(node.color)
+    return color(node.color)
   }
 
   /// Resolves an optional hex color or falls back to the default text color.
@@ -86,79 +86,79 @@ extension WidgetNodeView {
   }
 
   var stackSpacing: CGFloat {
-    CGFloat(node.spacing ?? 6)
+    return CGFloat(node.spacing ?? 6)
   }
 
   var itemSpacing: CGFloat {
-    CGFloat(node.spacing ?? 4)
+    return CGFloat(node.spacing ?? 4)
   }
 
   var currentValue: Double {
-    node.value ?? 0
+    return node.value ?? 0
   }
 
   var minValue: Double {
-    node.min ?? 0
+    return node.min ?? 0
   }
 
   var maxValue: Double {
-    node.max ?? 100
+    return node.max ?? 100
   }
 
   var stepValue: Double {
-    node.step ?? 1
+    return node.step ?? 1
   }
 
   var progressWidth: CGFloat {
-    CGFloat(node.width ?? 64)
+    return CGFloat(node.width ?? 64)
   }
 
   var progressHeight: CGFloat {
-    CGFloat(node.height ?? 8)
+    return CGFloat(node.height ?? 8)
   }
 
   var sparklineWidth: CGFloat {
-    CGFloat(node.width ?? 64)
+    return CGFloat(node.width ?? 64)
   }
 
   var sparklineHeight: CGFloat {
-    CGFloat(node.height ?? 18)
+    return CGFloat(node.height ?? 18)
   }
 
   var sparklineLineWidth: CGFloat {
-    CGFloat(node.lineWidth ?? 1.5)
+    return CGFloat(node.lineWidth ?? 1.5)
   }
 
   var nodeWidth: CGFloat? {
-    cgFloat(node.width)
+    return cgFloat(node.width)
   }
 
   var children: [WidgetNodeState] {
-    store.children(of: node.id)
+    return store.children(of: node.id)
   }
 
   var anchorChildren: [WidgetNodeState] {
-    store.anchorChildren(of: node.id)
+    return store.anchorChildren(of: node.id)
   }
 
   var popupChildren: [WidgetNodeState] {
-    store.popupChildren(of: node.id)
+    return store.popupChildren(of: node.id)
   }
 
   var hasAnchorChildren: Bool {
-    !anchorChildren.isEmpty
+    return !anchorChildren.isEmpty
   }
 
   var hasPopupChildren: Bool {
-    !popupChildren.isEmpty
+    return !popupChildren.isEmpty
   }
 
   var calendarRootPopupMode: Config.CalendarPopupMode {
-    Config.shared.builtinCalendar.popupMode
+    return Config.shared.builtinCalendar.popupMode
   }
 
   var calendarRootHasPopup: Bool {
-    calendarRootPopupMode != .none
+    return calendarRootPopupMode != .none
   }
 
   var nodeCanPresentPopup: Bool {
@@ -198,6 +198,6 @@ extension WidgetNodeView {
   }
 
   var nodeStyle: WidgetNodeStyle {
-    WidgetNodeStyle(node: node)
+    return WidgetNodeStyle(node: node)
   }
 }

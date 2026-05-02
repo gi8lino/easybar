@@ -140,7 +140,7 @@ struct EasyBarEventPayload: Sendable {
 
   /// Runtime event name.
   var eventName: String {
-    appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
+    return appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
 
   /// New structured encoding for Lua.

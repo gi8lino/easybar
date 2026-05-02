@@ -352,7 +352,7 @@ extension CalendarEventComposerView {
 extension CalendarEventComposerView {
   /// Returns the corner radius used by the panel.
   private var panelCornerRadius: CGFloat {
-    max(CGFloat(config.cornerRadius), 12)
+    return max(CGFloat(config.cornerRadius), 12)
   }
 
   /// Builds one subtle grouped section container.

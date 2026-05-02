@@ -67,7 +67,7 @@ final class NetworkAgentClient {
 
   /// Returns whether the client currently has an open socket.
   var isConnected: Bool {
-    client.isConnected
+    return client.isConnected
   }
 
   /// Starts the network agent client.

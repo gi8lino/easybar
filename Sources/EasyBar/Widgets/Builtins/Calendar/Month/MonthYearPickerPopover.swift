@@ -91,6 +91,6 @@ extension MonthYearPickerPopover {
 
   /// Returns the years shown on the current page.
   fileprivate var pageYears: [Int] {
-    Array(pageStartYear..<(pageStartYear + 12))
+    return Array(pageStartYear..<(pageStartYear + 12))
   }
 }

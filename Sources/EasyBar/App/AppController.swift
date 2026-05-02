@@ -138,7 +138,7 @@ final class AppController {
 
   /// Returns whether AppKit termination should bypass graceful shutdown.
   var shouldTerminateImmediately: Bool {
-    forceImmediateTermination
+    return forceImmediateTermination
   }
 
   /// Terminates the application immediately.
