@@ -25,7 +25,7 @@ struct NativeMonthCalendarPopupView: View {
   struct AgendaRow: Identifiable {
     enum Kind {
       case dayHeader(Date)
-      case event(NativeMonthCalendarEvent)
+      case event(EasyBarShared.CalendarAgentEvent)
     }
 
     let id: String

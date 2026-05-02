@@ -1,3 +1,4 @@
+import EasyBarShared
 import SwiftUI
 
 struct NativeUpcomingCalendarPopupView: View {
@@ -93,7 +94,7 @@ struct NativeUpcomingCalendarPopupView: View {
   }
 
   /// Returns the visible events for one day using the current upcoming filtering mode.
-  private func events(for date: Date) -> [NativeUpcomingCalendarEvent] {
+  private func events(for date: Date) -> [EasyBarShared.CalendarAgentEvent] {
     let startOfDay = resolvedCalendar.startOfDay(for: date)
     guard let endOfDay = resolvedCalendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       return []
@@ -130,7 +131,7 @@ struct NativeUpcomingCalendarPopupView: View {
   }
 
   /// Opens the shared event composer for one existing appointment.
-  private func openComposer(for event: NativeUpcomingCalendarEvent) {
+  private func openComposer(for event: EasyBarShared.CalendarAgentEvent) {
     composerPanel.present(event: event) {
       MonthCalendarAgentClient.shared.refresh()
       UpcomingCalendarAgentClient.shared.refresh()

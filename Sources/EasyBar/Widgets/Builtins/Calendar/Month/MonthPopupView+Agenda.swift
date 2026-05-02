@@ -1,3 +1,4 @@
+import EasyBarShared
 import SwiftUI
 
 // MARK: - Selection And Agenda
@@ -108,12 +109,12 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns whether the given event is a birthday event.
-  func isBirthdayEvent(_ event: NativeMonthCalendarEvent) -> Bool {
+  func isBirthdayEvent(_ event: EasyBarShared.CalendarAgentEvent) -> Bool {
     event.id.hasPrefix("birthday-")
   }
 
   /// Returns the currently selected events.
-  var selectedEvents: [NativeMonthCalendarEvent] {
+  var selectedEvents: [EasyBarShared.CalendarAgentEvent] {
     store.eventsInRange(from: selectedStartDate, to: selectedEndDate)
       .sorted { lhs, rhs in
         let lhsDate = displayDate(for: lhs)
@@ -339,7 +340,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the display date used to group one event in the agenda.
-  func displayDate(for event: NativeMonthCalendarEvent) -> Date {
+  func displayDate(for event: EasyBarShared.CalendarAgentEvent) -> Date {
     let eventStartDay = resolvedCalendar.startOfDay(for: event.startDate)
     let selectionStartDay = resolvedCalendar.startOfDay(
       for: min(selectedStartDate, selectedEndDate))

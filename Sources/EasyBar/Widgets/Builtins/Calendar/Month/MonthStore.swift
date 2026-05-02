@@ -21,8 +21,8 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
-  @Published private(set) var sections: [NativeMonthCalendarPopupSection] = []
-  @Published private(set) var events: [NativeMonthCalendarEvent] = []
+  @Published private(set) var sections: [EasyBarShared.CalendarAgentSection] = []
+  @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 
   private var subscribedMonthRangeStart: Date?
   private var subscribedMonthRangeEnd: Date?
@@ -56,7 +56,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping one day.
-  func eventsForDay(_ date: Date) -> [NativeMonthCalendarEvent] {
+  func eventsForDay(_ date: Date) -> [EasyBarShared.CalendarAgentEvent] {
     let calendar = Calendar.current
     let startOfDay = calendar.startOfDay(for: date)
 
@@ -70,7 +70,7 @@ final class NativeMonthCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping the inclusive day range.
-  func eventsInRange(from startDate: Date, to endDate: Date) -> [NativeMonthCalendarEvent] {
+  func eventsInRange(from startDate: Date, to endDate: Date) -> [EasyBarShared.CalendarAgentEvent] {
     let calendar = Calendar.current
     let startOfRange = calendar.startOfDay(for: startDate)
     let endDayStart = calendar.startOfDay(for: endDate)

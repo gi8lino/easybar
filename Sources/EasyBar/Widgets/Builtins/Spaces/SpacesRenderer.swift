@@ -1,12 +1,10 @@
 /// Renders the native spaces widget root.
 struct SpacesRenderer: NativeWidgetRenderer {
 
-  typealias Snapshot = Config.SpacesBuiltinConfig
-
   let rootID: String
 
   /// Builds the native spaces node for the current config.
-  func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+  func makeNodes(snapshot: Config.SpacesBuiltinConfig) -> [WidgetNodeState] {
     [
       BuiltinNativeNodeFactory.makeSpacesNode(
         rootID: rootID,

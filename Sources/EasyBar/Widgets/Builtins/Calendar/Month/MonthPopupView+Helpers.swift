@@ -1,3 +1,4 @@
+import EasyBarShared
 import SwiftUI
 
 // MARK: - Logging And Helpers
@@ -31,7 +32,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Opens the separate event composer popup for one existing appointment.
-  func openComposer(for event: NativeMonthCalendarEvent) {
+  func openComposer(for event: EasyBarShared.CalendarAgentEvent) {
     composerPanel.present(event: event) {
       refreshCalendarViews()
     }

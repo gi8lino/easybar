@@ -22,7 +22,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
-  @Published private(set) var events: [NativeUpcomingCalendarEvent] = []
+  @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 
   private let calendar = Calendar.current
   let logger: ProcessLogger
@@ -49,7 +49,7 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping one day.
-  func overlappingEvents(on date: Date) -> [NativeUpcomingCalendarEvent] {
+  func overlappingEvents(on date: Date) -> [EasyBarShared.CalendarAgentEvent] {
     let startOfDay = calendar.startOfDay(for: date)
     guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       logger.debug(
@@ -73,7 +73,9 @@ final class NativeUpcomingCalendarStore: ObservableObject {
   }
 
   /// Returns all events overlapping the inclusive day range.
-  func overlappingEvents(from startDate: Date, to endDate: Date) -> [NativeUpcomingCalendarEvent] {
+  func overlappingEvents(from startDate: Date, to endDate: Date) -> [EasyBarShared
+    .CalendarAgentEvent]
+  {
     let startOfRange = calendar.startOfDay(for: startDate)
     let endDayStart = calendar.startOfDay(for: endDate)
 

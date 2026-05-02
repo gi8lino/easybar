@@ -1,3 +1,4 @@
+import EasyBarShared
 import SwiftUI
 
 // MARK: - Top-Level Layout
@@ -463,7 +464,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the indicator color for one event, falling back to the configured default.
-  func normalizedIndicatorColorHex(for event: NativeMonthCalendarEvent) -> String {
+  func normalizedIndicatorColorHex(for event: EasyBarShared.CalendarAgentEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
       !hex.isEmpty
     {
