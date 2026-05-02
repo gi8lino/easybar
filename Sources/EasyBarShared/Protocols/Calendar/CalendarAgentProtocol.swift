@@ -437,8 +437,7 @@ public struct CalendarAgentSection: Codable, Identifiable, Equatable, Sendable {
   public var items: [CalendarAgentItem]
 
   /// Creates one calendar snapshot section.
-  public init(id: String, title: String, kind: CalendarAgentSectionKind, items: [CalendarAgentItem])
-  {
+  public init(id: String, title: String, kind: CalendarAgentSectionKind, items: [CalendarAgentItem]) {
     self.id = id
     self.title = title
     self.kind = kind

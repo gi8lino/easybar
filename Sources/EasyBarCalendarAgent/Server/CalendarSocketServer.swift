@@ -17,8 +17,7 @@ final class CalendarSocketServer {
   /// Logger used for socket-server diagnostics.
   private let logger: ProcessLogger
   /// Line-delimited socket transport backing the server.
-  private let transport:
-    LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
   init(

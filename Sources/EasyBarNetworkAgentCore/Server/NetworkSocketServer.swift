@@ -16,8 +16,7 @@ final class NetworkSocketServer {
   private let appVersion: String
   private let allowUnauthorizedNonSensitiveFields: Bool
   private let logger: ProcessLogger
-  private let transport:
-    LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
+  private let transport: LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
   init(

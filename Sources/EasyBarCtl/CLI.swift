@@ -402,8 +402,7 @@ private func parseSocketArgument(
 }
 
 /// Sends one IPC command.
-private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws
-{
+private func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws {
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
   let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
