@@ -4,22 +4,22 @@
 
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.
 
-It combines fast native widgets with flexible Lua widgets, so you can use built-ins for common system data and add custom widgets when you need something more specific. EasyBar is designed for a clean workflow on macOS and integrates especially well with AeroSpace.
+It combines fast native widgets with flexible Lua widgets. Use built-ins for common system data, then add custom Lua widgets when you need something specific. EasyBar is designed for a clean macOS workflow and integrates especially well with AeroSpace.
 
 ## Inspiration and scope
 
 EasyBar is heavily inspired by [SketchyBar](https://github.com/FelixKratz/SketchyBar).
 
-I used SketchyBar for years and it is a great product. EasyBar is not meant as a replacement. It is a more opinionated project that reflects my own setup and trade-offs.
+I used SketchyBar for years, and it is a great product. EasyBar is not meant to be a drop-in replacement. It is a more opinionated project that reflects my own setup and trade-offs.
 
-A few choices are intentional:
+Some choices are intentional:
 
 - EasyBar is built specifically around AeroSpace
 - there are no plans to support yabai
-- the project prefers native Swift code wherever possible
-- Lua is supported for custom widgets, but the core direction is to keep as much logic and UI in Swift as practical
+- native Swift code is preferred wherever possible
+- Lua is supported for custom widgets, but the core direction is Swift-first
 
-So while EasyBar shares some ideas with SketchyBar, it aims to be a different kind of tool: a personal, strongly opinionated macOS bar focused on a Swift-first architecture and an AeroSpace-based workflow.
+EasyBar shares some ideas with SketchyBar, but aims to be a different kind of tool: a personal, strongly opinionated macOS bar focused on native Swift UI, helper agents, and an AeroSpace-based workflow.
 
 ## Features
 
@@ -30,6 +30,7 @@ So while EasyBar shares some ideas with SketchyBar, it aims to be a different ki
 - Calendar and network helper agents for permission-sensitive data
 - Homebrew install and service workflow
 - Logging and startup diagnostics for troubleshooting
+- Lightweight runtime metrics
 
 ## Screenshots
 
@@ -57,7 +58,9 @@ Install EasyBar:
 brew install gi8lino/tap/easybar
 ```
 
-This also installs the calendar and network helper agents. Start all services:
+This also installs the calendar and network helper agents.
+
+Start all services:
 
 ```bash
 brew services start gi8lino/tap/easybar-calendar-agent
@@ -66,25 +69,112 @@ brew services start gi8lino/tap/easybar
 ```
 
 > [!NOTE]
-> By using EasyBar, you acknowledge that it is not notarized.
+> EasyBar is not notarized.
 >
 > Notarization is one of Apple's distribution checks. In practice, it means sending binaries to Apple and dealing with their packaging and approval flow.
 >
 > I do not mind the general idea of signing or notarization. I specifically do not want to spend time dealing with Apple's developer account, notarization pipeline, and release bureaucracy for this project.
 >
-> The Homebrew install is meant to work out of the box in the common case. If macOS still blocks EasyBar or one of its helper agents with a Gatekeeper or malware verification warning on your machine, remove the quarantine attribute and start the services again.
+> The Homebrew install is meant to work out of the box in the common case. If macOS blocks EasyBar or one of its helper agents with a Gatekeeper or malware verification warning, remove the quarantine attribute and start the services again.
 
-If macOS blocks the app or CLI with a Gatekeeper or malware verification warning, remove quarantine and start it again:
+If macOS blocks the app, helper agents, or CLI, remove quarantine:
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
 xattr -d com.apple.quarantine "$(command -v easybar)"
+```
+
+Then restart the services:
+
+```bash
 brew services start gi8lino/tap/easybar-calendar-agent
 brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
+
+## Configuration
+
+EasyBar reads its runtime config from:
+
+```text
+~/.config/easybar/config.toml
+```
+
+You can override that path with:
+
+```bash
+EASYBAR_CONFIG_PATH=/path/to/config.toml
+```
+
+A small example:
+
+```toml
+[app.env]
+PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+[builtins.spaces]
+enabled = true
+
+[builtins.calendar]
+enabled = true
+```
+
+`[app.env]` is passed into the Lua runtime and widget shell commands. This is the right place to make GUI-launched widgets see tools like `tailscale`, `kubectl`, or custom scripts without depending on shell startup files.
+
+The repository includes two config examples:
+
+- [config.defaults.toml](./config.defaults.toml)
+  Full reference file with the current defaults and supported sections.
+
+- [config.minimal.toml](./config.minimal.toml)
+  Small starter example with a native `system` group.
+
+Config details, native groups, and example layouts are documented in [docs/CONFIG.md](./docs/CONFIG.md).
+
+## AeroSpace integration
+
+EasyBar relies on AeroSpace callbacks to refresh workspace, focus, and layout-mode state immediately.
+
+Add these hooks to your AeroSpace config:
+
+```toml
+exec-on-workspace-change = [
+  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
+]
+
+on-focus-changed = [
+  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
+]
+```
+
+These callbacks keep built-in AeroSpace widgets in sync when the focused workspace or focused window changes.
+
+If you use the built-in AeroSpace mode widget, also trigger EasyBar whenever you change the current layout mode.
+
+Example:
+
+```toml
+alt-e = [
+  'layout tiles horizontal',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-v = [
+  'layout tiles vertical',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-s = [
+  'layout v_accordion',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+alt-shift-space = [
+  'layout floating tiling',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+```
+
+Without these callbacks, EasyBar can still refresh manually, but AeroSpace-derived widgets may look stale until the next refresh.
 
 ## Logging
 
@@ -110,40 +200,41 @@ Supported levels:
 Behavior:
 
 - `trace` includes everything, including very verbose trace logs
+- `debug` includes debug output, info, warnings, and errors
 - `info` writes normal operational logs
-- `debug` includes debug output in addition to info, warnings, and errors
 - `warn` keeps only warnings and errors
 - `error` keeps only error logs
 
-When file logging is enabled, EasyBar writes:
+When file logging is enabled, EasyBar writes these files into the configured logging directory:
 
 - `easybar.out`
 - `calendar-agent.out`
 - `network-agent.out`
 
-into the configured logging directory.
-
-The app and helper agents no longer use legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` environment toggles. For normal app and agent logging, use `logging.level` in `config.toml`.
+The app and helper agents no longer use the legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` environment toggles. For normal app and agent logging, use `logging.level` in `config.toml`.
 
 The `easybar` CLI still supports debug output independently through:
 
-- `easybar --debug`
-- `EASYBAR_DEBUG=1 easybar ...`
+```bash
+easybar --debug
+EASYBAR_DEBUG=1 easybar ...
+```
 
-That CLI-only environment behavior is just for the control client and does not change the main app or agent log level.
+This CLI-only environment behavior is only for the control client. It does not change the main app or agent log level.
 
 ## Agents
 
 EasyBar uses two small helper agents:
 
 - `easybar-calendar-agent`
-  owns `EventKit`, requests Calendar permission, watches calendar changes, and pushes cached snapshots to EasyBar over a local Unix socket
+  Owns `EventKit`, requests Calendar permission, watches calendar changes, and pushes cached snapshots to EasyBar over a local Unix socket.
+
 - `easybar-network-agent`
-  owns Wi-Fi and network state that depends on location permission, watches network changes, and pushes field updates to EasyBar over a local Unix socket
+  Owns Wi-Fi and network state that depends on Location Services permission, watches network changes, and pushes field updates to EasyBar over a local Unix socket.
 
 This keeps permission-sensitive APIs out of the main UI process and makes those widgets more reliable.
 
-Both agents are enabled by default and can be turned off independently in `config.toml` with:
+Both agents are enabled by default. They can be turned off independently in `config.toml`:
 
 ```toml
 [agents.calendar]
@@ -153,7 +244,7 @@ enabled = true
 enabled = true
 ```
 
-For the network agent, you can also decide what happens when location permission is denied:
+For the network agent, you can also decide what happens when Location Services permission is denied:
 
 ```toml
 [agents.network]
@@ -197,13 +288,21 @@ Supported commands:
 - `reload_config`
 - `metrics`
 
-`easybar` already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
+The `easybar` CLI already speaks this protocol, so most users should use the CLI instead of talking to the socket directly.
 
-### Refresh vs restart-lua-runtime vs reload-config
+## Runtime control
 
-EasyBar exposes three different runtime control actions because they solve different problems.
+EasyBar exposes three runtime control actions because they solve different problems.
 
-`easybar --refresh`:
+### Refresh
+
+Use:
+
+```bash
+easybar --refresh
+```
+
+This:
 
 - refreshes the bar and widgets using the currently loaded config
 - pulls fresh data from agents
@@ -211,24 +310,43 @@ EasyBar exposes three different runtime control actions because they solve diffe
 - does not reread `config.toml` from disk
 - does not restart the Lua runtime
 
-`easybar --restart-lua-runtime`:
+Use this when the config is already correct and you want fresh UI state or fresh agent-backed data.
+
+### Restart Lua runtime
+
+Use:
+
+```bash
+easybar --restart-lua-runtime
+```
+
+This:
 
 - stops the current Lua runtime
 - starts a fresh Lua runtime process
-- reloads Lua widget files and resets Lua-side widget state
+- reloads Lua widget files
+- resets Lua-side widget state
 - does not reread `config.toml` from disk
 
-`easybar --reload-config`:
+Use this when the Lua side is stuck, stale, or needs a full runtime reset.
+
+### Reload config
+
+Use:
+
+```bash
+easybar --reload-config
+```
+
+This:
 
 - reloads `config.toml` from disk
 - rebuilds EasyBar using the new config
 - reapplies native widgets and Lua runtime state against the updated configuration
 
-Use `--refresh` when the config is already correct and you want fresh UI state or fresh agent-backed data.
-Use `--restart-lua-runtime` when the Lua side is stuck, stale, or needs a full runtime reset.
-Use `--reload-config` when you changed the config file itself.
+Use this when you changed the config file itself.
 
-### Metrics
+## Metrics
 
 EasyBar can stream lightweight internal metrics over the main socket.
 
@@ -256,74 +374,9 @@ The metrics stream includes:
 
 The periodic sampler stays off until a metrics client asks for it, so normal idle runtime does not keep collecting process samples when nobody is watching.
 
-### AeroSpace layout mode example
-
-If you use the built-in AeroSpace mode widget, you should trigger EasyBar whenever you change the current layout mode in AeroSpace.
-
-For example:
-
-```toml
-alt-e = [
-  'layout tiles horizontal',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-alt-v = [
-  'layout tiles vertical',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-alt-s = [
-  'layout v_accordion',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-alt-shift-space = [
-  'layout floating tiling',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-```
-
-That tells EasyBar to refresh its AeroSpace-derived state after the layout mode changes, so widgets like the built-in AeroSpace mode widget update immediately.
-
-## Configuration
-
-EasyBar reads its runtime config from:
-
-```text
-~/.config/easybar/config.toml
-```
-
-You can override that path with:
-
-```bash
-EASYBAR_CONFIG_PATH=/path/to/config.toml
-```
-
-A small example:
-
-```toml
-[app.env]
-PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-
-[builtins.spaces]
-enabled = true
-
-[builtins.calendar]
-enabled = true
-```
-
-`[app.env]` is passed into the Lua runtime and widget shell commands. This is the right place to make GUI-launched widgets see tools like `tailscale`, `kubectl`, or custom scripts without depending on shell startup files.
-
-The repository includes two config examples:
-
-- [config.defaults.toml](./config.defaults.toml)
-  full reference file with the current defaults and supported sections
-- [config.minimal.toml](./config.minimal.toml)
-  smaller starter example with a native `system` group
-
-Config details, native groups, and example layouts are documented in [docs/CONFIG.md](./docs/CONFIG.md).
-
 ## Troubleshooting
 
-When something is wrong, the first thing to do is check whether EasyBar and its helper agents are actually running, whether they are duplicated, and whether the logs show a clear startup warning.
+When something is wrong, first check whether EasyBar and its helper agents are running, whether duplicate processes exist, and whether the logs show a startup warning.
 
 ### Quick checks
 
@@ -341,7 +394,7 @@ pgrep -fl easybar-calendar-agent
 pgrep -fl easybar-network-agent
 ```
 
-Check that only one main EasyBar process is running. EasyBar now refuses to start when another instance already holds its lock, but duplicate service or manual launches are still the first thing to rule out.
+Check that only one main EasyBar process is running. EasyBar refuses to start when another instance already holds its lock, but duplicate service or manual launches are still the first thing to rule out.
 
 Check the control socket with the CLI:
 
@@ -381,9 +434,15 @@ tail -n 200 ~/Library/Logs/Homebrew/easybar-calendar-agent/*.log
 tail -n 200 ~/Library/Logs/Homebrew/easybar-network-agent/*.log
 ```
 
-If your Homebrew setup writes logs somewhere else on your machine, use `brew services info easybar` and the corresponding agent services to find the actual paths.
+If your Homebrew setup writes logs somewhere else, use these commands to find the actual paths:
 
-For very verbose app and agent troubleshooting, temporarily raise the level to:
+```bash
+brew services info easybar
+brew services info easybar-calendar-agent
+brew services info easybar-network-agent
+```
+
+For very verbose app and agent troubleshooting, temporarily raise the level to `trace`:
 
 ```toml
 [logging]
@@ -391,9 +450,7 @@ enabled = true
 level = "trace"
 ```
 
-### Common problems and fixes
-
-#### EasyBar does not appear
+### EasyBar does not appear
 
 Check whether the service is running:
 
@@ -415,13 +472,13 @@ brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
 
-If nothing appears, check logs for startup warnings and macOS permission or quarantine problems.
+If nothing appears, check logs for startup warnings, macOS permission issues, or quarantine problems.
 
-#### Another instance is already running
+### Another instance is already running
 
-EasyBar now uses a single-instance guard. If a second instance starts, it logs a warning and exits.
+EasyBar uses a single-instance guard. If a second instance starts, it logs a warning and exits.
 
-You can detect duplicates with:
+Detect duplicates with:
 
 ```bash
 pgrep -fl EasyBar
@@ -434,11 +491,11 @@ pkill -x EasyBar
 brew services restart gi8lino/tap/easybar
 ```
 
-If you are also testing local builds from `dist/`, stop all services first so you do not mix service and manual runs.
+If you are testing local builds from `dist/`, stop all services first so you do not mix service and manual runs.
 
-#### Nerd Font icons look wrong or are clipped
+### Nerd Font icons look wrong or are clipped
 
-EasyBar expects `Symbols Nerd Font Mono` for several icons. On startup it checks whether the font is installed and logs a warning if it is missing.
+EasyBar expects `Symbols Nerd Font Mono` for several icons. On startup, it checks whether the font is installed and logs a warning if it is missing.
 
 You can inspect installed fonts in Font Book, or from the terminal:
 
@@ -446,9 +503,11 @@ You can inspect installed fonts in Font Book, or from the terminal:
 system_profiler SPFontsDataType | grep -B2 -A4 "Symbols Nerd Font Mono"
 ```
 
-If the font is missing, install Nerd Fonts and restart EasyBar. If the font is installed after EasyBar already started, restart the app and agents so the font check and layout run again.
+If the font is missing, install Nerd Fonts and restart EasyBar.
 
-#### Calendar widget is empty
+If the font was installed after EasyBar already started, restart the app and agents so the font check and layout run again.
+
+### Calendar widget is empty
 
 Make sure the calendar agent is running:
 
@@ -457,7 +516,9 @@ brew services list | grep easybar-calendar-agent
 pgrep -fl easybar-calendar-agent
 ```
 
-Then grant Calendar access in macOS settings. EasyBar exposes menu actions to open the relevant settings pages, and the calendar agent permission state is shown in the bar context menu.
+Then grant Calendar access in macOS settings.
+
+EasyBar exposes menu actions to open the relevant settings pages, and the calendar agent permission state is shown in the bar context menu.
 
 If you changed permissions and nothing updates, restart the calendar agent and EasyBar:
 
@@ -466,7 +527,7 @@ brew services restart gi8lino/tap/easybar-calendar-agent
 brew services restart gi8lino/tap/easybar
 ```
 
-#### Wi-Fi or network widget is empty
+### Wi-Fi or network widget is empty
 
 Make sure the network agent is running:
 
@@ -484,25 +545,57 @@ brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
 
-#### AeroSpace mode widget does not update
+### AeroSpace widgets do not update
 
-If your AeroSpace mode widget does not change after switching layouts, make sure your AeroSpace bindings call:
+Make sure your AeroSpace config calls EasyBar after relevant state changes.
 
-```bash
-easybar --space-mode-changed
+Workspace changes should call:
+
+```toml
+exec-on-workspace-change = [
+  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
+]
 ```
 
-For example, after every `layout ...` command in your AeroSpace config, add an `exec-and-forget` call to EasyBar. Without that trigger, EasyBar may not know that the layout mode changed yet.
+Focus changes should call:
 
-#### Spaces widget misses an app launch or quit
+```toml
+on-focus-changed = [
+  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
+]
+```
+
+If your AeroSpace mode widget does not change after switching layouts, call EasyBar after every relevant `layout ...` command:
+
+```toml
+alt-e = [
+  'layout tiles horizontal',
+  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
+]
+```
+
+Without these callbacks, AeroSpace-derived widgets may look stale until a manual refresh.
+
+You can trigger one manually with:
+
+```bash
+easybar --refresh
+```
+
+### Spaces widget misses an app launch or quit
 
 The built-in spaces widget refreshes AeroSpace-derived state from a mix of AeroSpace callbacks and macOS app lifecycle notifications.
 
-- Workspace and focus changes should be wired from AeroSpace with:
-  - `easybar --workspace-changed`
-  - `easybar --focus-changed`
-- App quits are also refreshed from macOS termination notifications.
-- App launches use a short delayed refresh so background apps such as Docker have a chance to create their first window before EasyBar asks AeroSpace for `list-windows`.
+Workspace and focus changes should be wired from AeroSpace with:
+
+```bash
+easybar --workspace-changed
+easybar --focus-changed
+```
+
+App quits are also refreshed from macOS termination notifications.
+
+App launches use a short delayed refresh so background apps such as Docker have a chance to create their first window before EasyBar asks AeroSpace for `list-windows`.
 
 If icons still look stale after a launch, trigger a manual refresh once:
 
@@ -510,9 +603,11 @@ If icons still look stale after a launch, trigger a manual refresh once:
 easybar --refresh
 ```
 
-#### Config changes do not apply
+### Config changes do not apply
 
-If `watch_config = false`, EasyBar will not automatically reload config changes. Either enable config watching or reload manually:
+If `watch_config = false`, EasyBar will not automatically reload config changes.
+
+Either enable config watching or reload manually:
 
 ```bash
 easybar --reload-config
@@ -520,7 +615,7 @@ easybar --reload-config
 
 If a reload is rejected, EasyBar keeps the last valid config and logs the parse or validation error. Check the logs instead of assuming the new file was accepted.
 
-#### Lua widgets stop updating
+### Lua widgets stop updating
 
 First try a normal refresh:
 
@@ -528,7 +623,7 @@ First try a normal refresh:
 easybar --refresh
 ```
 
-That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and it does not restart the Lua runtime.
+That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and does not restart the Lua runtime.
 
 If the Lua side itself seems stuck, restart it explicitly:
 
@@ -538,7 +633,9 @@ easybar --restart-lua-runtime
 
 The bar context menu item does the same thing:
 
-- `Restart Lua Runtime`
+```text
+Restart Lua Runtime
+```
 
 If that is still not enough, restart the whole app:
 
@@ -566,35 +663,42 @@ brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
-That clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
+This clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
 
 ## Packages and targets
 
-EasyBar is split into a few Swift packages/targets:
+EasyBar is split into a few Swift packages and targets:
 
 - `EasyBarShared`
-  shared models, config loading, IPC types, and common utilities
+  Shared models, config loading, IPC types, and common utilities.
+
 - `EasyBar`
-  the main macOS status bar app
+  The main macOS status bar app.
+
 - `EasyBarCtl`
-  the `easybar` command-line client for talking to the control socket
+  The `easybar` command-line client for talking to the control socket.
+
 - `EasyBarCalendarAgent`
-  helper app that owns EventKit and calendar snapshots
+  Helper app that owns EventKit and calendar snapshots.
+
 - `EasyBarNetworkAgent`
-  helper app that owns Wi-Fi and network observation
+  Helper app that owns Wi-Fi and network observation.
+
 - `EasyBarNetworkAgentCore`
-  shared network-agent implementation used by EasyBarNetworkAgent and also reused by the standalone wifi-snitch project
+  Shared network-agent implementation used by EasyBarNetworkAgent and also reused by the standalone wifi-snitch project.
 
 For implementation details, see the docs in [`docs/`](./docs/).
 
 ## Docs
 
 - [docs/CONFIG.md](./docs/CONFIG.md)
-  config structure, native groups, and box-model rules
+  Config structure, native groups, and box-model rules.
+
 - [docs/AGENTS.md](./docs/AGENTS.md)
-  calendar and network agents, permissions, and how EasyBar uses them
+  Calendar and network agents, permissions, and how EasyBar uses them.
+
 - [docs/LUA_WIDGETS.md](./docs/LUA_WIDGETS.md)
-  Lua widget authoring and interaction model
+  Lua widget authoring and interaction model.
 
 ## Developer menu
 
@@ -602,7 +706,7 @@ EasyBar includes a hidden developer section in the bar context menu.
 
 By default, it only appears when you hold `Shift` and right-click the bar.
 
-You can also make it always visible in `config.toml` with:
+You can also make it always visible in `config.toml`:
 
 ```toml
 develop = true
