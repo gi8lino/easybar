@@ -6,6 +6,10 @@ local M = {}
 --- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
 
+--- Returns one no-op callback when a hook is missing.
+local function noop()
+end
+
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
 	if type(source) ~= "table" then
@@ -130,7 +134,12 @@ local function remove_recursive(state, id)
 end
 
 --- Returns one new registry object.
-function M.new()
+function M.new(hooks)
+	hooks = hooks or {}
+
+	local on_mutation = type(hooks.on_mutation) == "function" and hooks.on_mutation or noop
+	local before_exec_callback = type(hooks.before_exec_callback) == "function" and hooks.before_exec_callback or noop
+
 	local state = {
 		items = {},
 		item_order = {},
@@ -174,6 +183,8 @@ function M.new()
 		if is_new then
 			state.item_order[#state.item_order + 1] = id
 		end
+
+		on_mutation()
 	end
 
 	--- Returns one merged property table using registry normalization rules.
@@ -188,6 +199,7 @@ function M.new()
 	function registry.set(id, props)
 		local item = registry.ensure_item_exists(id)
 		deep_merge(item.props, normalize_props(props or {}))
+		on_mutation()
 	end
 
 	--- Returns one copied item property table.
@@ -199,6 +211,7 @@ function M.new()
 	--- Removes one item and its descendants.
 	function registry.remove(id)
 		remove_recursive(state, id)
+		on_mutation()
 	end
 
 	--- Runs one shell command.
@@ -214,6 +227,7 @@ function M.new()
 		end
 
 		if type(callback) == "function" then
+			before_exec_callback()
 			return callback(output)
 		end
 

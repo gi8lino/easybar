@@ -97,8 +97,8 @@ local function valid_interval(value)
 end
 
 --- Builds one widget-scoped EasyBar API instance.
-function M.new(log)
-	local registry = registry_module.new()
+function M.new(log, hooks)
+	local registry = registry_module.new(hooks)
 	local subscriptions = subscriptions_module.new(registry._state, registry.ensure_item_exists, log, event_tokens)
 
 	local function log_widget(source, level, ...)

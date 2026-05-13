@@ -49,7 +49,28 @@ if not widget_dir or widget_dir == "" then
 end
 
 --- Runtime registry and widget API instance.
-local registry = api.new(log)
+local registry
+local render_dirty = false
+
+--- Marks the current runtime state as needing one render flush.
+local function mark_render_dirty()
+	render_dirty = true
+end
+
+--- Emits the current tree snapshot when a Lua turn mutated widget state.
+local function flush_pending_render(force)
+	if not force and not render_dirty then
+		return
+	end
+
+	render.emit_all(registry, log, json)
+	render_dirty = false
+end
+
+registry = api.new(log, {
+	on_mutation = mark_render_dirty,
+	before_exec_callback = flush_pending_render,
+})
 
 io.stdout:setvbuf("line")
 io.stderr:setvbuf("line")
@@ -65,7 +86,7 @@ io.stdout:write('{"type":"ready"}' .. "\n")
 io.stdout:flush()
 
 -- Emit the full initial widget trees once the runtime handshake is complete.
-render.emit_all(registry, log, json)
+flush_pending_render(true)
 
 while true do
 	local line = io.read()
@@ -82,6 +103,6 @@ while true do
 		log.error("runtime ignored invalid json payload=" .. tostring(line))
 	else
 		local event = events.normalize_event(payload)
-		events.dispatch_event(registry, event, render, log, json)
+		events.dispatch_event(registry, event, flush_pending_render, log)
 	end
 end
