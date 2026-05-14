@@ -141,6 +141,21 @@ final class EventCatalogTests: XCTestCase {
   }
 
   @MainActor
+  /// Handles test subscription plan prefers smallest positive interval subscription.
+  func testSubscriptionPlanPrefersSmallestPositiveIntervalSubscription() {
+    let plan = EventManager.subscriptionPlan(
+      for: [
+        "interval_tick:10",
+        "interval_tick:2.5",
+        "interval_tick:5",
+      ]
+    )
+
+    XCTAssertEqual(plan.sources, [])
+    XCTAssertEqual(plan.interval, 2.5)
+  }
+
+  @MainActor
   /// Handles test subscription plan ignores invalid interval subscription.
   func testSubscriptionPlanIgnoresInvalidIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(

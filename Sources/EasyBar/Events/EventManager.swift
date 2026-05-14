@@ -299,15 +299,14 @@ final class EventManager {
 
   /// Returns the shared Lua interval cadence requested by the runtime.
   private static func intervalTickInterval(in subscriptions: Set<String>) -> TimeInterval? {
-    for name in subscriptions {
-      guard name.hasPrefix(intervalTickPrefix) else { continue }
+    subscriptions.compactMap { name in
+      guard name.hasPrefix(intervalTickPrefix) else { return nil }
 
       let rawValue = String(name.dropFirst(intervalTickPrefix.count))
-      guard let interval = TimeInterval(rawValue), interval > 0 else { continue }
+      guard let interval = TimeInterval(rawValue), interval > 0 else { return nil }
 
       return interval
     }
-
-    return nil
+    .min()
   }
 }
