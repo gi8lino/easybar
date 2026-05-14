@@ -23,7 +23,7 @@ actor LuaRuntime {
   private let processController: LuaProcessController
   private let transport: LuaTransport
 
-  private var stdoutHandler: (@Sendable (String) -> Void)?
+  private var lineHandler: (@Sendable (String) -> Void)?
 
   /// Creates one Lua runtime.
   init(logger: ProcessLogger) {
@@ -37,23 +37,28 @@ actor LuaRuntime {
     return processController.processIdentifier
   }
 
-  /// Sets the current stdout line handler for the Lua runtime.
-  func setStdoutHandler(_ handler: @escaping @Sendable (String) -> Void) {
-    stdoutHandler = handler
+  /// Sets the current transport line handler for the Lua runtime.
+  func setLineHandler(_ handler: @escaping @Sendable (String) -> Void) {
+    lineHandler = handler
     return
   }
 
   /// Starts the Lua runtime if it is not already running.
   func start() {
-    guard let result = processController.start() else { return }
+    guard let context = processController.launchContext() else { return }
 
-    transport.attach(
-      input: result.input,
-      output: result.output,
-      error: result.error,
-      stdoutHandler: stdoutHandler ?? { _ in }
+    let resources = LuaProcessController.LaunchResources()
+
+    transport.startListening(
+      socketPath: context.luaSocketPath,
+      error: resources.error,
+      lineHandler: lineHandler ?? { _ in }
     )
-    transport.startReading()
+
+    guard let result = processController.start(context: context, resources: resources) else {
+      transport.shutdown()
+      return
+    }
 
     MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
     logger.debug(
@@ -70,7 +75,7 @@ actor LuaRuntime {
     logger.debug("lua runtime facade shutdown completed")
   }
 
-  /// Sends one encoded event line to the Lua runtime stdin.
+  /// Sends one encoded event line to the Lua runtime socket transport.
   func send(_ string: String) {
     transport.send(string)
   }

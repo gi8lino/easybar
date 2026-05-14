@@ -8,6 +8,7 @@ extension Config {
 
     appSection.widgetsPath = runtime.widgetsPath
     appSection.lockDirectory = runtime.lockDirectory
+    appSection.luaSocketPath = runtime.luaSocketPath
     appSection.widgetEditorStubPath = runtime.widgetEditorStubPath
 
     loggingSection.directory = runtime.loggingDirectory

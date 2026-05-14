@@ -56,6 +56,11 @@ public struct SharedRuntimeConfig {
     return app.lockDirectory
   }
 
+  /// Compatibility accessor for the Lua runtime socket path.
+  public var luaSocketPath: String {
+    return app.luaSocketPath
+  }
+
   /// Compatibility accessor for the editor stub path.
   public var widgetEditorStubPath: String {
     return app.widgetEditorStubPath
@@ -121,16 +126,19 @@ public struct SharedRuntimeConfig {
 public struct SharedAppRuntimeConfig {
   public let widgetsPath: String
   public let lockDirectory: String
+  public let luaSocketPath: String
   public let widgetEditorStubPath: String
 
   /// Creates one app runtime config.
   public init(
     widgetsPath: String,
     lockDirectory: String,
+    luaSocketPath: String,
     widgetEditorStubPath: String
   ) {
     self.widgetsPath = widgetsPath
     self.lockDirectory = lockDirectory
+    self.luaSocketPath = luaSocketPath
     self.widgetEditorStubPath = widgetEditorStubPath
   }
 }

@@ -8,6 +8,7 @@ public enum SharedEnvironmentKeys {
   public static let configPath = "EASYBAR_CONFIG_PATH"
 
   public static let lockDirectory = "EASYBAR_LOCK_DIR"
+  public static let luaSocketPath = "EASYBAR_LUA_SOCKET_PATH"
 
   public static let loggingEnabled = "EASYBAR_LOGGING_ENABLED"
   public static let loggingLevel = "EASYBAR_LOG_LEVEL"

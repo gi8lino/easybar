@@ -8,7 +8,8 @@ For the public widget API, see [LUA_WIDGETS.md](./LUA_WIDGETS.md).
 ## Overview
 
 EasyBar does not embed Lua in-process.
-It starts a separate Lua process and communicates with it over stdin/stdout/stderr.
+It starts a separate Lua process and communicates with it over a dedicated Unix
+socket, while keeping stderr reserved for logs.
 
 That gives us:
 
@@ -16,6 +17,7 @@ That gives us:
 - simpler reloads
 - clean widget state reset on restart
 - plain JSON transport between Swift and Lua
+- transport isolation from process logs
 
 At a high level:
 
@@ -23,9 +25,10 @@ At a high level:
 2. Lua loads every widget file from the widget directory.
 3. Lua reports which driver events it needs.
 4. Swift starts only those event sources.
-5. Swift sends normalized events to Lua as JSON lines.
-6. Lua updates widget state and emits rendered trees as JSON lines.
-7. Swift decodes those trees and updates the UI store.
+5. Swift sends normalized events to Lua as JSON lines over the Lua socket.
+6. `EasyBarLuaLauncher` attaches that socket to Lua's stdin/stdout, so the Lua runtime still speaks line I/O while Swift owns the socket lifecycle.
+7. Lua updates widget state and emits rendered trees as JSON lines over that same socket.
+8. Swift decodes those trees and updates the UI store.
 
 ## Sequence
 
@@ -33,7 +36,7 @@ At a high level:
 sequenceDiagram
     participant App as "AppController / RuntimeCoordinator"
     participant Engine as "WidgetEngine"
-    participant Proc as "LuaProcessController / LuaTransport"
+    participant Proc as "LuaProcessController / LuaTransport / EasyBarLuaLauncher"
     participant Lua as "runtime.lua"
     participant API as "api.lua registry"
     participant Render as "render.lua"
@@ -42,7 +45,7 @@ sequenceDiagram
 
     App->>Engine: start scripted runtime
     Engine->>Proc: start()
-    Proc->>Lua: launch runtime.lua with widget dir
+    Proc->>Lua: launch launcher, connect Lua socket, exec runtime.lua
     Lua->>API: load widgets and build registry
     Lua-->>Engine: subscriptions JSON
     Lua-->>Engine: ready JSON
@@ -67,13 +70,16 @@ sequenceDiagram
   starts and stops the Lua process
 
 - `LuaTransport.swift`
-  owns stdin/stdout/stderr pipes
+  owns the dedicated Lua socket plus stderr log handling
+
+- `EasyBarLuaLauncher`
+  connects the configured Lua socket and then execs the Lua interpreter
 
 - `LuaLogBridge.swift`
   converts structured Lua stderr lines into normal Swift logs
 
 - `LuaRuntime.swift`
-  small facade over process + transport
+  small facade over process + socket transport
 
 - `WidgetEngine.swift`
   owns the runtime handshake, subscriptions, and tree updates
@@ -93,7 +99,7 @@ sequenceDiagram
 ### Lua side
 
 - `runtime.lua`
-  runtime bootstrap and main loop
+  runtime bootstrap and main loop over socket-backed stdin/stdout
 
 - `loader.lua`
   loads widget files into isolated environments
@@ -128,13 +134,14 @@ Runner flow:
   starts the widget engine as part of runtime startup
 
 - `WidgetEngine.swift`
-  registers for Lua stdout notifications
+  registers for Lua transport lines
 
 - `LuaRuntime.swift`
-  starts the process and attaches transport
+  starts the launcher, opens the Lua socket listener, and attaches transport
 
 - `LuaProcessController.swift`
-  launches Lua with:
+  launches the Lua launcher with:
+  - configured Lua socket path
   - bundled `runtime.lua`
   - configured widget directory
 
@@ -160,7 +167,7 @@ This:
 
 - removes observers
 - stops handlers
-- closes pipes
+- closes the Lua socket
 - terminates the process group
 
 ### Reload
@@ -290,7 +297,7 @@ From `EventHub.swift`.
 Each event:
 
 - notifies Swift listeners
-- is sent to Lua as JSON
+- is sent to Lua as JSON over the dedicated socket
 
 ### 2. Lua declares subscriptions
 
@@ -367,7 +374,8 @@ No diffing needed.
 
 ## Logging
 
-Lua logs to stderr.
+Lua logs still go to stderr.
+Only the structured runtime protocol moved to the dedicated Lua socket.
 
 Structured format:
 
@@ -406,11 +414,11 @@ This is the complete runtime path from system event to UI:
 
 1. system event occurs, for example Wi-Fi change
 2. Swift event source emits through `EventHub`
-3. event is forwarded to Lua via stdin JSON
+3. event is forwarded to Lua via socket JSON
 4. Lua normalizes and dispatches it
 5. widget handlers update registry state
 6. renderer builds a new tree
-7. Lua emits JSON tree via stdout
+7. Lua emits JSON tree via the same socket
 8. Swift decodes and applies it to `WidgetStore`
 9. Swift UI updates accordingly
 
@@ -445,6 +453,13 @@ level = "trace"
 lua Sources/EasyBar/Lua/runtime.lua <widget_dir>
 ```
 
+That direct invocation is still useful for Lua-only debugging, but it bypasses the
+dedicated socket transport used by the app. The full app path is:
+
+- Swift listens on `app.lua_socket_path`
+- `EasyBarLuaLauncher` connects that socket
+- Lua reads and writes through the attached standard streams
+
 ### Verify subscriptions
 
 Look for:
@@ -453,8 +468,7 @@ Look for:
 
 ### Inspect JSON traffic
 
-- stdin → events
-- stdout → trees
+- Lua socket → events and trees
 - stderr → logs
 
 ### Common issues
@@ -515,8 +529,7 @@ Look for:
 - every `*.lua` file is loaded
 - reload = full reset
 - protocol:
-  - stdin JSON in
-  - stdout JSON out
+  - Lua socket JSON in/out via `EasyBarLuaLauncher`
   - stderr logs
 
 If you change the Lua API:

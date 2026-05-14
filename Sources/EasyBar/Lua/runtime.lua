@@ -1,5 +1,5 @@
 --- Module contract:
---- Owns Lua process startup, host handshake, and stdin event processing.
+--- Owns Lua process startup, host handshake, and socket-backed standard-stream event processing.
 --- Returns nothing and runs the EasyBar Lua runtime loop.
 --- Returns the directory containing `runtime.lua`.
 local function runtime_dir()

@@ -111,6 +111,9 @@ EASYBAR_CONFIG_PATH=/path/to/config.toml
 A small example:
 
 ```toml
+[app]
+lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
+
 [app.env]
 PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
@@ -121,7 +124,7 @@ enabled = true
 enabled = true
 ```
 
-`[app.env]` is passed into the Lua runtime and widget shell commands. This is the right place to make GUI-launched widgets see tools like `tailscale`, `kubectl`, or custom scripts without depending on shell startup files.
+`[app.env]` is passed into the Lua runtime and widget shell commands. `app.lua_socket_path` controls the dedicated Unix socket used between the main app and the Lua widget runtime. This is the right place to make GUI-launched widgets see tools like `tailscale`, `kubectl`, or custom scripts without depending on shell startup files.
 
 The repository includes two config examples:
 

@@ -27,7 +27,7 @@ final class LuaEventSink {
         return
       }
 
-      logger.trace("sent to lua stdin", .field("payload", encoded))
+      logger.trace("sent to lua socket", .field("payload", encoded))
 
       Task {
         await runtime.send(encoded)

@@ -5,15 +5,15 @@ import Foundation
 /// Owns Lua process lifecycle.
 final class LuaProcessController {
   struct LaunchContext {
+    let launcherPath: String
     let runtimePath: String
     let luaPath: String
+    let luaSocketPath: String
     let widgetsPath: String
     let environment: [String: String]
   }
 
-  struct LaunchPipes {
-    let input = Pipe()
-    let output = Pipe()
+  struct LaunchResources {
     let error = Pipe()
   }
 
@@ -39,8 +39,11 @@ final class LuaProcessController {
     }
   }
 
-  /// Starts the Lua runtime process and returns its pipes.
-  func start() -> (processIdentifier: Int32, input: Pipe, output: Pipe, error: Pipe)? {
+  /// Starts the Lua runtime process using the prepared launch context.
+  func start(
+    context: LaunchContext,
+    resources: LaunchResources
+  ) -> (processIdentifier: Int32, error: Pipe)? {
     if withLock({ isShuttingDown }) {
       logger.debug("lua runtime start skipped because shutdown is in progress")
       return nil
@@ -51,14 +54,10 @@ final class LuaProcessController {
       return nil
     }
 
-    guard let context = launchContext() else { return nil }
-
     logLaunch(context: context)
 
-    let pipes = LaunchPipes()
-
     do {
-      let pid = try spawnProcess(context: context, pipes: pipes)
+      let pid = try spawnProcess(context: context, resources: resources)
 
       cancelForcedKillWorkItem()
       withLock {
@@ -75,9 +74,9 @@ final class LuaProcessController {
         .field("pgid", pid),
       )
 
-      return (pid, pipes.input, pipes.output, pipes.error)
+      return (pid, resources.error)
     } catch {
-      closeLaunchPipesAfterFailedSpawn(pipes)
+      closeLaunchResourcesAfterFailedSpawn(resources)
       logger.error(
         "failed to start lua runtime",
         .field("error", "\(error)"),

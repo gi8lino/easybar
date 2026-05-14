@@ -8,6 +8,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     SharedEnvironmentKeys.configPath,
     SharedEnvironmentKeys.loggingLevel,
     SharedEnvironmentKeys.loggingDirectory,
+    SharedEnvironmentKeys.luaSocketPath,
     SharedEnvironmentKeys.calendarAgentSocketPath,
     SharedEnvironmentKeys.networkAgentSocketPath,
     SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
@@ -42,6 +43,9 @@ final class SharedRuntimeConfigTests: XCTestCase {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-config.toml")
     let envLoggingDirectory = tempDirectoryURL.appendingPathComponent("env-logs").path
     let envRuntimeDirectory = tempDirectoryURL.appendingPathComponent("env-runtime").path
+    let envLuaSocketPath = URL(fileURLWithPath: envRuntimeDirectory)
+      .appendingPathComponent("lua.sock")
+      .path
     let envCalendarSocketPath = URL(fileURLWithPath: envRuntimeDirectory)
       .appendingPathComponent("calendar.sock")
       .path
@@ -54,6 +58,9 @@ final class SharedRuntimeConfigTests: XCTestCase {
       [logging]
       level = "info"
       directory = "\(tempDirectoryURL.appendingPathComponent("file-logs").path)"
+
+      [app]
+      lua_socket_path = "\(tempDirectoryURL.appendingPathComponent("file-runtime/lua.sock").path)"
 
       [agents.calendar]
       socket_path = "\(tempDirectoryURL.appendingPathComponent("file-runtime/calendar.sock").path)"
@@ -68,6 +75,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
     setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
     setEnvironmentValue(envLoggingDirectory, for: SharedEnvironmentKeys.loggingDirectory)
+    setEnvironmentValue(envLuaSocketPath, for: SharedEnvironmentKeys.luaSocketPath)
     setEnvironmentValue(envCalendarSocketPath, for: SharedEnvironmentKeys.calendarAgentSocketPath)
     setEnvironmentValue(envNetworkSocketPath, for: SharedEnvironmentKeys.networkAgentSocketPath)
     setEnvironmentValue("90", for: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
@@ -76,6 +84,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
 
     XCTAssertEqual(runtime.logging.level, .trace)
     XCTAssertEqual(runtime.logging.directory, envLoggingDirectory)
+    XCTAssertEqual(runtime.app.luaSocketPath, envLuaSocketPath)
     XCTAssertEqual(runtime.calendarAgent.socketPath, envCalendarSocketPath)
     XCTAssertEqual(runtime.networkAgent.socketPath, envNetworkSocketPath)
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)

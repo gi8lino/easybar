@@ -13,6 +13,11 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
     ?? expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
 
+  let luaSocketPath =
+    expandedEnvironmentPath(named: SharedEnvironmentKeys.luaSocketPath)
+    ?? expandedPath(appTable?["lua_socket_path"]?.string)
+    ?? defaultLuaSocketPath()
+
   let widgetEditorStubPath =
     expandedPath(appTable?["widget_editor_stub_path"]?.string)
     ?? SharedPathDefaults.defaultWidgetEditorStubPath().path
@@ -20,6 +25,7 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   return SharedAppRuntimeConfig(
     widgetsPath: widgetsPath,
     lockDirectory: lockDirectory,
+    luaSocketPath: luaSocketPath,
     widgetEditorStubPath: widgetEditorStubPath
   )
 }
@@ -31,9 +37,15 @@ func resolvedAppEnvironmentDefaults() -> SharedAppRuntimeConfig {
     lockDirectory:
       expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
       ?? defaultSingleInstanceLockDirectoryPath(),
+    luaSocketPath:
+      expandedEnvironmentPath(named: SharedEnvironmentKeys.luaSocketPath)
+      ?? defaultLuaSocketPath(),
     widgetEditorStubPath: SharedPathDefaults.defaultWidgetEditorStubPath().path
   )
 }
 
 /// Returns the default directory used for single-instance lock files.
 func defaultSingleInstanceLockDirectoryPath() -> String { return "/tmp/EasyBar" }
+
+/// Returns the default Unix socket path used by the Lua runtime transport.
+func defaultLuaSocketPath() -> String { return "/tmp/EasyBar/lua-runtime.sock" }

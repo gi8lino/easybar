@@ -1,6 +1,7 @@
 [app]
 widgets_dir = "~/.config/easybar/widgets" # Directory that contains your custom Lua widget files.
 lua_path = "/opt/homebrew/bin/lua" # Path to the Lua executable EasyBar uses for scripted widgets.
+lua_socket_path = "/tmp/EasyBar/lua-runtime.sock" # Unix socket path used by EasyBar and the Lua widget runtime transport.
 watch_config = true # Reloads EasyBar automatically when config.toml changes.
 lock_dir = "/tmp/EasyBar" # Directory that contains lock files used by EasyBar.
 widget_editor_stub_path = "~/.local/share/easybar/easybar_api.lua" # LuaLS/editor stub path EasyBar keeps in sync for widget authoring.

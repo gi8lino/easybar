@@ -166,8 +166,8 @@ enum MetricsRenderer {
         column(String(runtime.decodeErrors), width: 18),
       ]),
       row([
-        column("stdout/stderr", width: 16),
-        column("\(runtime.stdoutLines)/\(runtime.stderrLines)", width: 18),
+        column("transport/err", width: 16),
+        column("\(runtime.transportLines)/\(runtime.stderrLines)", width: 18),
         column("lua_writes", width: 16),
         column(String(runtime.luaWrites), width: 18),
       ]),

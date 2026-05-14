@@ -1,6 +1,8 @@
 APP_NAME := EasyBar
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
+LUA_LAUNCHER_PRODUCT := EasyBarLuaLauncher
+LUA_LAUNCHER_EXEC := EasyBarLuaLauncher
 CALENDAR_AGENT_NAME := EasyBarCalendarAgent
 CALENDAR_AGENT_PRODUCT := EasyBarCalendarAgent
 CALENDAR_AGENT_EXEC := EasyBarCalendarAgent
@@ -16,6 +18,7 @@ APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
+LUA_LAUNCHER_BIN := $(APP_MACOS)/$(LUA_LAUNCHER_EXEC)
 APP_ICON_SVG := packaging/easybar-icon.svg
 APP_ICON_FILE := $(APP_NAME)
 APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
@@ -100,7 +103,7 @@ endif
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags \
-        run-build-app run-build-calendar-agent run-build-network-agent run-build-cli
+        run-build-app run-build-lua-launcher run-build-calendar-agent run-build-network-agent run-build-cli
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -140,6 +143,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@rm -rf "$(DIST_DIR)" ".build"
 	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_MACOS)" "$(NETWORK_AGENT_RESOURCES)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
+	@$(MAKE) --no-print-directory build-lua-launcher ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-calendar-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-network-agent ARCH=$(ARCH) VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
@@ -151,7 +155,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@$(MAKE) --no-print-directory stamp-calendar-agent-plist VERSION=$(VERSION)
 	@$(MAKE) --no-print-directory stamp-network-agent-plist VERSION=$(VERSION)
-	@chmod +x "$(APP_BIN)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(CLI_BIN)"
+	@chmod +x "$(APP_BIN)" "$(LUA_LAUNCHER_BIN)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(CLI_BIN)"
 	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
 	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
 	@$(MAKE) --no-print-directory verify
@@ -181,6 +185,19 @@ ifeq ($(ARCH),universal)
 else
 	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(APP_PRODUCT)
 	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+build-lua-launcher: ## Internal target: build the Lua launcher executable for ARCH.
+ifeq ($(ARCH),universal)
+	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(LUA_LAUNCHER_PRODUCT)
+	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(LUA_LAUNCHER_PRODUCT)
+	@lipo -create \
+		".build/arm64-apple-macosx/release/$(LUA_LAUNCHER_PRODUCT)" \
+		".build/x86_64-apple-macosx/release/$(LUA_LAUNCHER_PRODUCT)" \
+		-output "$(LUA_LAUNCHER_BIN)"
+else
+	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(LUA_LAUNCHER_PRODUCT)
+	@cp ".build/$(ARCH)-apple-macosx/release/$(LUA_LAUNCHER_PRODUCT)" "$(LUA_LAUNCHER_BIN)"
 endif
 
 build-calendar-agent: ## Internal target: build the calendar agent executable for ARCH.
@@ -235,6 +252,21 @@ else
 	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(APP_PRODUCT)
 	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
 	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+run-build-lua-launcher: ## Internal target: fast local Lua launcher build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(LUA_LAUNCHER_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(LUA_LAUNCHER_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(LUA_LAUNCHER_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(LUA_LAUNCHER_PRODUCT)" \
+		-output "$(LUA_LAUNCHER_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(LUA_LAUNCHER_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(LUA_LAUNCHER_PRODUCT)" "$(LUA_LAUNCHER_BIN)"
 endif
 
 run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
@@ -391,6 +423,7 @@ verify: ## Show the built bundle structure and validate key packaged files.
 run: prepare-version ## Fast local run with debug builds and local agents.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-lua-launcher RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
@@ -401,6 +434,7 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-lua-launcher RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
@@ -411,6 +445,7 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
 	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory run-build-lua-launcher RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)

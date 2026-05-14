@@ -65,7 +65,7 @@ final class MetricsCoordinator {
     var droppedEvents: Int
     var coalescedEvents: Int
     var treeUpdates: Int
-    var stdoutLines: Int
+    var transportLines: Int
     var stderrLines: Int
     var luaWrites: Int
     var agentMessages: [AgentKey: Int]
@@ -93,7 +93,7 @@ final class MetricsCoordinator {
     var droppedEventCounts: [String: Int] = [:]
     var coalescedEventCounts: [String: Int] = [:]
 
-    var stdoutLines = 0
+    var transportLines = 0
     var stderrLines = 0
     var luaWrites = 0
     var decodeErrors = 0
@@ -203,14 +203,14 @@ final class MetricsCoordinator {
     }
   }
 
-  /// Records one line written to Lua stdin.
+  /// Records one line written to the Lua transport socket.
   func recordLuaWrite() {
     withLock { state.luaWrites += 1 }
   }
 
-  /// Records one line read from Lua stdout.
-  func recordLuaStdoutLine() {
-    withLock { state.stdoutLines += 1 }
+  /// Records one line read from the Lua transport socket.
+  func recordLuaTransportLine() {
+    withLock { state.transportLines += 1 }
   }
 
   /// Records one line read from Lua stderr.
@@ -383,7 +383,7 @@ final class MetricsCoordinator {
       droppedEvents: snapshotState.droppedEvents,
       coalescedEvents: snapshotState.coalescedEvents,
       treeUpdates: snapshotState.treeUpdates,
-      stdoutLines: snapshotState.stdoutLines,
+      transportLines: snapshotState.transportLines,
       stderrLines: snapshotState.stderrLines,
       luaWrites: snapshotState.luaWrites,
       agentMessages: AgentKey.allCases.reduce(into: [:]) { result, key in
@@ -423,7 +423,7 @@ final class MetricsCoordinator {
         interval: safeInterval,
         enabled: collectionEnabled
       ),
-      stdoutLines: snapshotState.stdoutLines,
+      transportLines: snapshotState.transportLines,
       stderrLines: snapshotState.stderrLines,
       luaWrites: snapshotState.luaWrites,
       treeUpdates: snapshotState.treeUpdates,

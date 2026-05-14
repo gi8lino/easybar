@@ -29,6 +29,7 @@ final class Config: ObservableObject {
   struct AppSection {
     var widgetsPath: String
     var luaPath: String
+    var luaSocketPath: String
     var environment: [String: String]
     var watchConfigFile: Bool
     var lockDirectory: String
@@ -92,6 +93,11 @@ final class Config: ObservableObject {
   var luaPath: String {
     get { appSection.luaPath }
     set { appSection.luaPath = newValue }
+  }
+
+  var luaSocketPath: String {
+    get { appSection.luaSocketPath }
+    set { appSection.luaSocketPath = newValue }
   }
 
   var watchConfigFile: Bool {
@@ -225,6 +231,7 @@ final class Config: ObservableObject {
     appSection = .init(
       widgetsPath: "",
       luaPath: SharedPathDefaults.defaultLuaPath,
+      luaSocketPath: "",
       environment: SharedPathDefaults.defaultLuaEnvironment,
       watchConfigFile: true,
       lockDirectory: "",

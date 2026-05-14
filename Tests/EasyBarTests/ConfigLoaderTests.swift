@@ -11,6 +11,7 @@ final class ConfigLoaderTests: XCTestCase {
     SharedEnvironmentKeys.lockDirectory,
     SharedEnvironmentKeys.loggingDirectory,
     SharedEnvironmentKeys.loggingLevel,
+    SharedEnvironmentKeys.luaSocketPath,
     SharedEnvironmentKeys.calendarAgentSocketPath,
     SharedEnvironmentKeys.networkAgentSocketPath,
     SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
@@ -54,6 +55,9 @@ final class ConfigLoaderTests: XCTestCase {
     let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
     let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
     let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
+    let luaSocketPath = URL(fileURLWithPath: runtimeDirectory)
+      .appendingPathComponent("lua.sock")
+      .path
     let calendarSocketPath = URL(fileURLWithPath: runtimeDirectory)
       .appendingPathComponent("calendar.sock")
       .path
@@ -65,6 +69,7 @@ final class ConfigLoaderTests: XCTestCase {
     setEnvironmentValue(lockDirectory, for: SharedEnvironmentKeys.lockDirectory)
     setEnvironmentValue(loggingDirectory, for: SharedEnvironmentKeys.loggingDirectory)
     setEnvironmentValue("error", for: SharedEnvironmentKeys.loggingLevel)
+    setEnvironmentValue(luaSocketPath, for: SharedEnvironmentKeys.luaSocketPath)
     setEnvironmentValue(calendarSocketPath, for: SharedEnvironmentKeys.calendarAgentSocketPath)
     setEnvironmentValue(networkSocketPath, for: SharedEnvironmentKeys.networkAgentSocketPath)
     setEnvironmentValue("42.5", for: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
@@ -77,6 +82,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.lockDirectory, lockDirectory)
     XCTAssertEqual(config.loggingDirectory, loggingDirectory)
     XCTAssertEqual(config.loggingLevel, .error)
+    XCTAssertEqual(config.luaSocketPath, luaSocketPath)
     XCTAssertEqual(config.calendarAgentSocketPath, calendarSocketPath)
     XCTAssertEqual(config.networkAgentSocketPath, networkSocketPath)
     XCTAssertEqual(config.networkAgentRefreshIntervalSeconds, 42.5)
@@ -85,6 +91,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: loggingDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
     XCTAssertEqual(config.registeredDirectories["app.lock_dir"]?.path, lockDirectory)
+    XCTAssertEqual(config.registeredDirectories["app.lua_socket_path"]?.path, luaSocketPath)
     XCTAssertEqual(config.registeredDirectories["logging.directory"]?.path, loggingDirectory)
   }
 
@@ -96,6 +103,9 @@ final class ConfigLoaderTests: XCTestCase {
     let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
     let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
     let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
+    let luaSocketPath = URL(fileURLWithPath: runtimeDirectory)
+      .appendingPathComponent("lua.sock")
+      .path
     let widgetEditorStubPath = tempDirectoryURL.appendingPathComponent("generated/api.lua").path
     let calendarSocketPath = URL(fileURLWithPath: runtimeDirectory)
       .appendingPathComponent("calendar.sock")
@@ -109,6 +119,7 @@ final class ConfigLoaderTests: XCTestCase {
       [app]
       widgets_dir = "\(widgetsDirectory)"
       lua_path = "/usr/local/bin/lua"
+      lua_socket_path = "\(luaSocketPath)"
       watch_config = false
       lock_dir = "\(lockDirectory)"
       widget_editor_stub_path = "\(widgetEditorStubPath)"
@@ -152,6 +163,7 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertNil(error)
     XCTAssertEqual(config.widgetsPath, widgetsDirectory)
     XCTAssertEqual(config.luaPath, "/usr/local/bin/lua")
+    XCTAssertEqual(config.luaSocketPath, luaSocketPath)
     XCTAssertFalse(config.watchConfigFile)
     XCTAssertEqual(config.lockDirectory, lockDirectory)
     XCTAssertEqual(config.widgetEditorStubPath, widgetEditorStubPath)

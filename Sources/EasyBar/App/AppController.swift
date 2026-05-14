@@ -231,6 +231,10 @@ final class AppController {
     )
     logger.info(
       "config details",
+      .field("lua_socket_path", Config.shared.luaSocketPath)
+    )
+    logger.info(
+      "config details",
       .field("watch_config", Config.shared.watchConfigFile)
     )
     logger.info(

@@ -6,10 +6,13 @@ extension LuaProcessController {
   /// Resolves the launch inputs for one Lua runtime process.
   func launchContext() -> LaunchContext? {
     guard let runtimePath = resolvedRuntimePath() else { return nil }
+    guard let launcherPath = resolvedLauncherPath() else { return nil }
 
     return LaunchContext(
+      launcherPath: launcherPath,
       runtimePath: runtimePath,
       luaPath: Config.shared.luaPath,
+      luaSocketPath: Config.shared.luaSocketPath,
       widgetsPath: Config.shared.widgetsPath,
       environment: Config.shared.appSection.environment
     )
@@ -25,10 +28,38 @@ extension LuaProcessController {
     return runtime.path
   }
 
+  /// Resolves the bundled Lua launcher executable path.
+  func resolvedLauncherPath() -> String? {
+    let fileManager = FileManager.default
+
+    if let executableURL = Bundle.main.executableURL {
+      let siblingPath = executableURL
+        .deletingLastPathComponent()
+        .appendingPathComponent("EasyBarLuaLauncher")
+        .path
+      if fileManager.isExecutableFile(atPath: siblingPath) {
+        return siblingPath
+      }
+    }
+
+    let moduleParentPath = Bundle.module.bundleURL.deletingLastPathComponent().path
+    let candidate = URL(fileURLWithPath: moduleParentPath)
+      .appendingPathComponent("EasyBarLuaLauncher")
+      .path
+    if fileManager.isExecutableFile(atPath: candidate) {
+      return candidate
+    }
+
+    logger.error("EasyBarLuaLauncher not found")
+    return nil
+  }
+
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
     logger.debug("starting lua runtime")
+    logger.debug("lua launcher", .field("path", context.launcherPath))
     logger.debug("lua binary", .field("path", context.luaPath))
+    logger.debug("lua socket", .field("path", context.luaSocketPath))
     logger.debug("lua script", .field("path", context.runtimePath))
     logger.debug("widgets path", .field("path", context.widgetsPath))
     logger.debug("lua env keys", .field("keys", context.environment.keys.sorted()))
@@ -38,7 +69,7 @@ extension LuaProcessController {
   ///
   /// The child becomes the leader of its own process group immediately, which avoids the
   /// racy post-launch `setpgid` handoff and guarantees subtree-isolated signal delivery.
-  func spawnProcess(context: LaunchContext, pipes: LaunchPipes) throws -> Int32 {
+  func spawnProcess(context: LaunchContext, resources: LaunchResources) throws -> Int32 {
     var fileActions: posix_spawn_file_actions_t?
     var attributes: posix_spawnattr_t?
 
@@ -58,13 +89,15 @@ extension LuaProcessController {
 
     try configureChildStandardStreams(
       fileActions: &fileActions,
-      pipes: pipes
+      resources: resources
     )
 
     try configureDedicatedProcessGroup(attributes: &attributes)
 
     let argv = try makeArgumentVector(
-      executablePath: context.luaPath,
+      executablePath: context.launcherPath,
+      socketPath: context.luaSocketPath,
+      luaPath: context.luaPath,
       runtimePath: context.runtimePath,
       widgetsPath: context.widgetsPath
     )
@@ -75,7 +108,7 @@ extension LuaProcessController {
 
     var pid: pid_t = 0
 
-    let spawnResult = context.luaPath.withCString { executablePath in
+    let spawnResult = context.launcherPath.withCString { executablePath in
       posix_spawn(
         &pid,
         executablePath,
@@ -92,12 +125,12 @@ extension LuaProcessController {
         code: Int(spawnResult),
         userInfo: [
           NSLocalizedDescriptionKey:
-            "posix_spawn failed for lua runtime executable=\(context.luaPath) errno=\(spawnResult)"
+            "posix_spawn failed for lua runtime launcher=\(context.launcherPath) errno=\(spawnResult)"
         ]
       )
     }
 
-    closeParentPipeEndsAfterSuccessfulSpawn(pipes)
+    closeParentPipeEndsAfterSuccessfulSpawn(resources)
 
     return pid
   }
@@ -212,42 +245,20 @@ extension LuaProcessController {
     }
   }
 
-  /// Configures stdin/stdout/stderr redirection for the Lua child.
+  /// Configures stderr redirection for the Lua child launcher.
   private func configureChildStandardStreams(
     fileActions: inout posix_spawn_file_actions_t?,
-    pipes: LaunchPipes
+    resources: LaunchResources
   ) throws {
     try addDup2Action(
       fileActions: &fileActions,
-      sourceFileDescriptor: pipes.input.fileHandleForReading.fileDescriptor,
-      destinationFileDescriptor: STDIN_FILENO
-    )
-
-    try addDup2Action(
-      fileActions: &fileActions,
-      sourceFileDescriptor: pipes.output.fileHandleForWriting.fileDescriptor,
-      destinationFileDescriptor: STDOUT_FILENO
-    )
-
-    try addDup2Action(
-      fileActions: &fileActions,
-      sourceFileDescriptor: pipes.error.fileHandleForWriting.fileDescriptor,
+      sourceFileDescriptor: resources.error.fileHandleForWriting.fileDescriptor,
       destinationFileDescriptor: STDERR_FILENO
     )
 
     try addCloseAction(
       fileActions: &fileActions,
-      fileDescriptor: pipes.input.fileHandleForWriting.fileDescriptor
-    )
-
-    try addCloseAction(
-      fileActions: &fileActions,
-      fileDescriptor: pipes.output.fileHandleForReading.fileDescriptor
-    )
-
-    try addCloseAction(
-      fileActions: &fileActions,
-      fileDescriptor: pipes.error.fileHandleForReading.fileDescriptor
+      fileDescriptor: resources.error.fileHandleForReading.fileDescriptor
     )
   }
 
@@ -286,11 +297,15 @@ extension LuaProcessController {
   /// Builds the argv vector for the spawned Lua runtime.
   private func makeArgumentVector(
     executablePath: String,
+    socketPath: String,
+    luaPath: String,
     runtimePath: String,
     widgetsPath: String
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     try makeCStringVector([
       executablePath,
+      socketPath,
+      luaPath,
       runtimePath,
       widgetsPath,
     ])
@@ -403,19 +418,13 @@ extension LuaProcessController {
   }
 
   /// Closes the child-side pipe ends in the parent after a successful spawn.
-  private func closeParentPipeEndsAfterSuccessfulSpawn(_ pipes: LaunchPipes) {
-    try? pipes.input.fileHandleForReading.close()
-    try? pipes.output.fileHandleForWriting.close()
-    try? pipes.error.fileHandleForWriting.close()
+  private func closeParentPipeEndsAfterSuccessfulSpawn(_ resources: LaunchResources) {
+    try? resources.error.fileHandleForWriting.close()
   }
 
-  /// Closes all launch pipes after a failed spawn attempt.
-  func closeLaunchPipesAfterFailedSpawn(_ pipes: LaunchPipes) {
-    try? pipes.input.fileHandleForReading.close()
-    try? pipes.input.fileHandleForWriting.close()
-    try? pipes.output.fileHandleForReading.close()
-    try? pipes.output.fileHandleForWriting.close()
-    try? pipes.error.fileHandleForReading.close()
-    try? pipes.error.fileHandleForWriting.close()
+  /// Closes all launch resources after a failed spawn attempt.
+  func closeLaunchResourcesAfterFailedSpawn(_ resources: LaunchResources) {
+    try? resources.error.fileHandleForReading.close()
+    try? resources.error.fileHandleForWriting.close()
   }
 }

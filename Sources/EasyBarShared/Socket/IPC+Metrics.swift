@@ -78,7 +78,7 @@ extension IPC {
     public let droppedEventsPerSecond: Double
     public let coalescedEvents: Int
     public let coalescedEventsPerSecond: Double
-    public let stdoutLines: Int
+    public let transportLines: Int
     public let stderrLines: Int
     public let luaWrites: Int
     public let treeUpdates: Int
@@ -102,7 +102,7 @@ extension IPC {
       droppedEventsPerSecond: Double,
       coalescedEvents: Int,
       coalescedEventsPerSecond: Double,
-      stdoutLines: Int,
+      transportLines: Int,
       stderrLines: Int,
       luaWrites: Int,
       treeUpdates: Int,
@@ -124,7 +124,7 @@ extension IPC {
       self.droppedEventsPerSecond = droppedEventsPerSecond
       self.coalescedEvents = coalescedEvents
       self.coalescedEventsPerSecond = coalescedEventsPerSecond
-      self.stdoutLines = stdoutLines
+      self.transportLines = transportLines
       self.stderrLines = stderrLines
       self.luaWrites = luaWrites
       self.treeUpdates = treeUpdates

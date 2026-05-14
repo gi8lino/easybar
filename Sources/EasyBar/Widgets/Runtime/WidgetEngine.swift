@@ -34,9 +34,9 @@ actor WidgetEngine {
     started = true
     runtimeState.reset()
 
-    await luaRuntime.setStdoutHandler { [weak self] line in
+    await luaRuntime.setLineHandler { [weak self] line in
       Task {
-        await self?.handleRuntimeOutput(line)
+        await self?.handleRuntimeTransportLine(line)
       }
     }
 
@@ -85,11 +85,11 @@ actor WidgetEngine {
     logger.debug("widget engine shutdown end")
   }
 
-  /// Handles one line of structured stdout from the Lua runtime.
-  func handleRuntimeOutput(_ line: String) async {
+  /// Handles one line of structured socket transport output from the Lua runtime.
+  func handleRuntimeTransportLine(_ line: String) async {
     guard started else { return }
 
-    logger.debug("lua stdout: \(line)")
+    logger.debug("lua transport: \(line)")
 
     do {
       let update = try decodeUpdate(from: line)

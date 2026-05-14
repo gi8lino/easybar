@@ -16,6 +16,11 @@ extension Config {
       try optionalString(app["lua_path"], path: "app.lua_path")
       ?? luaPath
 
+    let resolvedLuaSocketPath =
+      try optionalExpandedPath(app["lua_socket_path"], path: "app.lua_socket_path")
+      ?? luaSocketPath
+    luaSocketPath = resolvedLuaSocketPath
+
     if let configuredEnvironment = try optionalStringTable(app["env"], path: "app.env") {
       appSection.environment = Self.mergedAppEnvironment(with: configuredEnvironment)
     }
@@ -50,6 +55,12 @@ extension Config {
       for: "app.lock_dir",
       path: resolvedLockDirectory,
       kind: .directory
+    )
+
+    registerDirectoryRequirement(
+      for: "app.lua_socket_path",
+      path: resolvedLuaSocketPath,
+      kind: .parentDirectory
     )
 
     registerDirectoryRequirement(
