@@ -26,7 +26,7 @@ At a high level:
 3. Lua reports which driver events it needs.
 4. Swift starts only those event sources.
 5. Swift sends normalized events to Lua as JSON lines over the Lua socket.
-6. `EasyBarLuaLauncher` attaches that socket to Lua's stdin/stdout, so the Lua runtime still speaks line I/O while Swift owns the socket lifecycle.
+6. `EasyBarLuaRuntime` connects that socket and then execs Lua, so the Lua runtime still speaks line I/O while Swift owns the socket lifecycle.
 7. Lua updates widget state and emits rendered trees as JSON lines over that same socket.
 8. Swift decodes those trees and updates the UI store.
 
@@ -36,7 +36,7 @@ At a high level:
 sequenceDiagram
     participant App as "AppController / RuntimeCoordinator"
     participant Engine as "WidgetEngine"
-    participant Proc as "LuaProcessController / LuaTransport / EasyBarLuaLauncher"
+    participant Proc as "LuaProcessController / LuaTransport / EasyBarLuaRuntime"
     participant Lua as "runtime.lua"
     participant API as "api.lua registry"
     participant Render as "render.lua"
@@ -45,7 +45,7 @@ sequenceDiagram
 
     App->>Engine: start scripted runtime
     Engine->>Proc: start()
-    Proc->>Lua: launch launcher, connect Lua socket, exec runtime.lua
+    Proc->>Lua: launch runtime agent, connect Lua socket, exec runtime.lua
     Lua->>API: load widgets and build registry
     Lua-->>Engine: subscriptions JSON
     Lua-->>Engine: ready JSON
@@ -72,7 +72,7 @@ sequenceDiagram
 - `LuaTransport.swift`
   owns the dedicated Lua socket plus stderr log handling
 
-- `EasyBarLuaLauncher`
+- `EasyBarLuaRuntime`
   connects the configured Lua socket and then execs the Lua interpreter
 
 - `LuaLogBridge.swift`
@@ -457,7 +457,7 @@ That direct invocation is still useful for Lua-only debugging, but it bypasses t
 dedicated socket transport used by the app. The full app path is:
 
 - Swift listens on `app.lua_socket_path`
-- `EasyBarLuaLauncher` connects that socket
+- `EasyBarLuaRuntime` connects that socket
 - Lua reads and writes through the attached standard streams
 
 ### Verify subscriptions
@@ -529,7 +529,7 @@ Look for:
 - every `*.lua` file is loaded
 - reload = full reset
 - protocol:
-  - Lua socket JSON in/out via `EasyBarLuaLauncher`
+  - Lua socket JSON in/out via `EasyBarLuaRuntime`
   - stderr logs
 
 If you change the Lua API:

@@ -74,7 +74,8 @@ final class LuaTransport {
         MetricsCoordinator.shared.recordLuaWrite()
         self.logger.trace("sent to lua socket", .field("payload", string))
       } else {
-        self.logger.error("failed writing to lua socket", .field("path", self.stateQueue.sync { self.socketPath ?? "" }))
+        self.logger.error(
+          "failed writing to lua socket", .field("path", self.stateQueue.sync { self.socketPath ?? "" }))
       }
     }
   }

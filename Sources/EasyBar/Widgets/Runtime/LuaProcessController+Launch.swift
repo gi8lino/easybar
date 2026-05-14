@@ -6,10 +6,10 @@ extension LuaProcessController {
   /// Resolves the launch inputs for one Lua runtime process.
   func launchContext() -> LaunchContext? {
     guard let runtimePath = resolvedRuntimePath() else { return nil }
-    guard let launcherPath = resolvedLauncherPath() else { return nil }
+    guard let runtimeAgentPath = resolvedRuntimeAgentPath() else { return nil }
 
     return LaunchContext(
-      launcherPath: launcherPath,
+      runtimeAgentPath: runtimeAgentPath,
       runtimePath: runtimePath,
       luaPath: Config.shared.luaPath,
       luaSocketPath: Config.shared.luaSocketPath,
@@ -28,14 +28,15 @@ extension LuaProcessController {
     return runtime.path
   }
 
-  /// Resolves the bundled Lua launcher executable path.
-  func resolvedLauncherPath() -> String? {
+  /// Resolves the bundled Lua runtime agent executable path.
+  func resolvedRuntimeAgentPath() -> String? {
     let fileManager = FileManager.default
 
     if let executableURL = Bundle.main.executableURL {
-      let siblingPath = executableURL
+      let siblingPath =
+        executableURL
         .deletingLastPathComponent()
-        .appendingPathComponent("EasyBarLuaLauncher")
+        .appendingPathComponent("EasyBarLuaRuntime")
         .path
       if fileManager.isExecutableFile(atPath: siblingPath) {
         return siblingPath
@@ -44,20 +45,20 @@ extension LuaProcessController {
 
     let moduleParentPath = Bundle.module.bundleURL.deletingLastPathComponent().path
     let candidate = URL(fileURLWithPath: moduleParentPath)
-      .appendingPathComponent("EasyBarLuaLauncher")
+      .appendingPathComponent("EasyBarLuaRuntime")
       .path
     if fileManager.isExecutableFile(atPath: candidate) {
       return candidate
     }
 
-    logger.error("EasyBarLuaLauncher not found")
+    logger.error("EasyBarLuaRuntime not found")
     return nil
   }
 
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
     logger.debug("starting lua runtime")
-    logger.debug("lua launcher", .field("path", context.launcherPath))
+    logger.debug("lua runtime agent", .field("path", context.runtimeAgentPath))
     logger.debug("lua binary", .field("path", context.luaPath))
     logger.debug("lua socket", .field("path", context.luaSocketPath))
     logger.debug("lua script", .field("path", context.runtimePath))
@@ -95,7 +96,7 @@ extension LuaProcessController {
     try configureDedicatedProcessGroup(attributes: &attributes)
 
     let argv = try makeArgumentVector(
-      executablePath: context.launcherPath,
+      executablePath: context.runtimeAgentPath,
       socketPath: context.luaSocketPath,
       luaPath: context.luaPath,
       runtimePath: context.runtimePath,
@@ -108,7 +109,7 @@ extension LuaProcessController {
 
     var pid: pid_t = 0
 
-    let spawnResult = context.launcherPath.withCString { executablePath in
+    let spawnResult = context.runtimeAgentPath.withCString { executablePath in
       posix_spawn(
         &pid,
         executablePath,
@@ -125,7 +126,7 @@ extension LuaProcessController {
         code: Int(spawnResult),
         userInfo: [
           NSLocalizedDescriptionKey:
-            "posix_spawn failed for lua runtime launcher=\(context.launcherPath) errno=\(spawnResult)"
+            "posix_spawn failed for lua runtime agent=\(context.runtimeAgentPath) errno=\(spawnResult)"
         ]
       )
     }

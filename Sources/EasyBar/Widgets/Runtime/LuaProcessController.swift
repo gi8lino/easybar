@@ -4,8 +4,9 @@ import Foundation
 
 /// Owns Lua process lifecycle.
 final class LuaProcessController {
+  /// Captures the inputs needed to launch the Lua runtime agent.
   struct LaunchContext {
-    let launcherPath: String
+    let runtimeAgentPath: String
     let runtimePath: String
     let luaPath: String
     let luaSocketPath: String
@@ -13,6 +14,7 @@ final class LuaProcessController {
     let environment: [String: String]
   }
 
+  /// Captures local resources kept by the host while the runtime agent is running.
   struct LaunchResources {
     let error = Pipe()
   }

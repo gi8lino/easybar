@@ -2,25 +2,28 @@ import Darwin
 import EasyBarShared
 import Foundation
 
-private struct LauncherArguments {
+/// Captures the command-line inputs for the Lua runtime agent.
+private struct RuntimeArguments {
   let socketPath: String
   let luaPath: String
   let runtimePath: String
   let widgetsPath: String
 }
 
+/// Prints one startup error and exits the process.
 private func fail(_ message: String) -> Never {
-  fputs("EasyBarLuaLauncher: \(message)\n", stderr)
+  fputs("EasyBarLuaRuntime: \(message)\n", stderr)
   exit(1)
 }
 
-private func parseArguments() -> LauncherArguments {
+/// Parses the runtime agent command-line arguments.
+private func parseArguments() -> RuntimeArguments {
   let args = Array(CommandLine.arguments.dropFirst())
   guard args.count == 4 else {
-    fail("usage: EasyBarLuaLauncher <socket-path> <lua-path> <runtime-path> <widgets-path>")
+    fail("usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path>")
   }
 
-  return LauncherArguments(
+  return RuntimeArguments(
     socketPath: args[0],
     luaPath: args[1],
     runtimePath: args[2],
@@ -28,6 +31,7 @@ private func parseArguments() -> LauncherArguments {
   )
 }
 
+/// Connects the runtime agent to the configured Lua transport socket.
 private func connectSocket(path: String) -> Int32 {
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
@@ -57,6 +61,7 @@ private func connectSocket(path: String) -> Int32 {
   return fd
 }
 
+/// Maps the connected transport socket onto standard input and output.
 private func duplicateTransportToStandardIO(fd: Int32) {
   guard dup2(fd, STDIN_FILENO) >= 0 else {
     let message = String(cString: strerror(errno))
@@ -75,7 +80,8 @@ private func duplicateTransportToStandardIO(fd: Int32) {
   }
 }
 
-private func execLua(_ arguments: LauncherArguments) -> Never {
+/// Replaces the runtime agent process with the configured Lua interpreter.
+private func execLua(_ arguments: RuntimeArguments) -> Never {
   var argv: [UnsafeMutablePointer<CChar>?] = [
     strdup(arguments.luaPath),
     strdup(arguments.runtimePath),
@@ -101,6 +107,7 @@ private func execLua(_ arguments: LauncherArguments) -> Never {
   fail("execv failed lua=\(arguments.luaPath) error=\(message)")
 }
 
+/// Starts the Lua runtime agent.
 private func main() -> Never {
   let arguments = parseArguments()
   let fd = connectSocket(path: arguments.socketPath)
