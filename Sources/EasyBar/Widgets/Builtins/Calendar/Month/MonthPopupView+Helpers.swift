@@ -76,11 +76,11 @@ extension NativeMonthCalendarPopupView {
 
   /// Returns the visible month title including year.
   var visibleMonthTitle: String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
-    return formatter.string(from: visibleMonth)
+    return Self.formatVisibleMonthTitle(
+      visibleMonth,
+      calendar: resolvedCalendar,
+      locale: .autoupdatingCurrent
+    )
   }
 
   /// Moves the year picker one page backward.
@@ -191,6 +191,19 @@ extension NativeMonthCalendarPopupView {
   static func startOfMonth(_ date: Date, calendar: Calendar = Calendar.current) -> Date {
     let components = calendar.dateComponents([.year, .month], from: date)
     return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+  }
+
+  /// Formats one visible month title using the provided locale.
+  static func formatVisibleMonthTitle(
+    _ date: Date,
+    calendar: Calendar,
+    locale: Locale
+  ) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = calendar
+    formatter.locale = locale
+    formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
+    return formatter.string(from: date)
   }
 
   /// Formats one debug date.
