@@ -10,7 +10,8 @@ struct SpacesWidgetView: View {
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(spacing: CGFloat(config.layout.spacing)) {
-        ForEach(aeroSpaceService.spaces) { space in
+        ForEach(Self.visibleSpaces(aeroSpaceService.spaces, hideEmpty: config.layout.hideEmpty)) {
+          space in
           spacePill(for: space)
             .contentShape(Rectangle())
             .onTapGesture { focusSpaceIfEnabled(space) }
@@ -170,6 +171,12 @@ struct SpacesWidgetView: View {
   /// Returns whether the space uses the collapsed inactive layout.
   private func isCollapsedInactiveSpace(_ space: SpaceItem) -> Bool {
     return config.layout.collapseInactive && !space.isFocused
+  }
+
+  /// Returns the workspace list after applying the configured empty-space rule.
+  static func visibleSpaces(_ spaces: [SpaceItem], hideEmpty: Bool) -> [SpaceItem] {
+    guard hideEmpty else { return spaces }
+    return spaces.filter { $0.isFocused || !$0.apps.isEmpty }
   }
 }
 

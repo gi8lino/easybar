@@ -32,7 +32,6 @@ enum AeroSpaceSnapshotLoader {
           apps: deduplicateApps(groupedApps[workspace.name] ?? [], resolveAppID: resolveAppID)
         )
       }
-      .filter { !$0.apps.isEmpty }
 
     return AeroSpaceSnapshot(
       spaces: spaces,
