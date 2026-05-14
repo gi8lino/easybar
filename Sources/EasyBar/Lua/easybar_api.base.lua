@@ -184,6 +184,7 @@
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
 ---@field events EasyBarEvents Event token namespace used by `easybar.subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, callback?: fun(output: string): any): any Runs one shell command and optionally receives trimmed output.
+---@field exec_async fun(command: string, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of the current props for one node.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
@@ -231,6 +232,13 @@ function EasyBar.remove(id) end
 ---@param callback? fun(output: string): any
 ---@return any
 function EasyBar.exec(command, callback) end
+
+---Runs one shell command in the background.
+---The callback receives trimmed output and the command exit code when the job finishes.
+---@param command string
+---@param callback fun(output: string, code: integer): any
+---@return string
+function EasyBar.exec_async(command, callback) end
 
 ---All supported EasyBar event tokens and mouse constants.
 ---@type EasyBarEvents

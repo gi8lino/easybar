@@ -204,6 +204,10 @@ Event fields include:
 - `event.delta_x`
 - `event.delta_y`
 
+For interaction handlers on parent nodes, `event.target_widget_id` tells you which
+concrete child node actually received the click or hover.
+Use that when a root widget should ignore button clicks coming from popup children.
+
 Common events:
 
 - `easybar.events.forced`
@@ -229,11 +233,37 @@ relevant Lua widget callbacks when those interactions occur.
 
 ### `easybar.exec(command, callback)`
 
-Runs a shell command.
+Runs a shell command synchronously inside the Lua runtime.
+
+Use this for quick commands only.
+Long-running commands block the widget runtime until the command exits.
 
 ```lua
 easybar.exec("date +%H:%M", function(output)
     easybar.set("clock", {
+        label = {
+            string = output,
+        },
+    })
+end)
+```
+
+### `easybar.exec_async(command, callback)`
+
+Runs a shell command in the background and calls back later with the trimmed output
+and numeric exit code.
+
+This is the preferred API for package managers, network requests, and other work that
+should not block popup interaction or other widget updates.
+
+```lua
+easybar.exec_async("brew outdated --json=v2", function(output, code)
+    if code ~= 0 then
+        easybar.log(easybar.level.warn, "brew failed", code, output)
+        return
+    end
+
+    easybar.set("brew_status", {
         label = {
             string = output,
         },

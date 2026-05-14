@@ -129,6 +129,116 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0")
   }
+
+  func testExecAsyncRequestsPollingAndDeliversCompletionLater() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "idle",
+    	label = "Idle",
+    })
+
+    easybar.subscribe("brew", { easybar.events.forced }, function(_)
+    	easybar.set("brew", {
+    		icon = "busy",
+    		label = "Brew ...",
+    	})
+
+    	easybar.exec_async("printf '0'", function(output, code)
+    		easybar.set("brew", {
+    			icon = "done",
+    			label = "Brew " .. output .. " (" .. tostring(code) .. ")",
+    		})
+    	end)
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.exec-async.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let process = Process()
+    let stdinPipe = Pipe()
+    let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
+    let recorder = RuntimeUpdateRecorder()
+
+    process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
+    process.arguments = [runtimePath, widgetsDirectoryURL.path]
+    process.standardInput = stdinPipe
+    process.standardOutput = stdoutPipe
+    process.standardError = stderrPipe
+    process.environment = ProcessInfo.processInfo.environment
+
+    let stdoutObserver = RuntimeLineObserver { line in
+      guard let data = line.data(using: .utf8) else { return }
+
+      do {
+        let update = try JSONDecoder().decode(WidgetTreeUpdate.self, from: data)
+        Task {
+          await recorder.append(update)
+        }
+      } catch {
+        XCTFail("Failed decoding runtime update: \(line)")
+      }
+    }
+    stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
+
+    let stderrObserver = RuntimeLineObserver { _ in }
+    stderrObserver.attach(to: stderrPipe.fileHandleForReading)
+
+    try process.run()
+    defer {
+      stdoutObserver.invalidate()
+      stderrObserver.invalidate()
+
+      try? stdinPipe.fileHandleForWriting.close()
+
+      if process.isRunning {
+        process.terminate()
+        process.waitUntilExit()
+      }
+    }
+
+    try stdinPipe.fileHandleForWriting.write(
+      contentsOf: Data("{\"name\":\"forced\"}\n".utf8)
+    )
+
+    let busyUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.icon == "busy" }
+    )
+    XCTAssertEqual(rootNode(in: busyUpdate)?.text, "Brew ...")
+
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    try stdinPipe.fileHandleForWriting.write(
+      contentsOf: Data("{\"name\":\"interval_tick\"}\n".utf8)
+    )
+
+    let doneUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.icon == "done" }
+    )
+    XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0 (0)")
+  }
 }
 
 extension LuaRenderCoalescingTests {
@@ -147,7 +257,7 @@ extension LuaRenderCoalescingTests {
       }
 
       let update = updates[index]
-      updates.removeSubrange(...index)
+      updates.remove(at: index)
       return update
     }
   }
@@ -211,6 +321,18 @@ extension LuaRenderCoalescingTests {
   }
 
   fileprivate func nextTreeUpdate(
+    from recorder: RuntimeUpdateRecorder,
+    matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
+    timeoutNanoseconds: UInt64 = 2_000_000_000
+  ) async throws -> WidgetTreeUpdate {
+    return try await nextUpdate(
+      from: recorder,
+      matching: predicate,
+      timeoutNanoseconds: timeoutNanoseconds
+    )
+  }
+
+  fileprivate func nextUpdate(
     from recorder: RuntimeUpdateRecorder,
     matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
     timeoutNanoseconds: UInt64 = 2_000_000_000

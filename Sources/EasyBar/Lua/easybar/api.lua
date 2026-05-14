@@ -109,6 +109,27 @@ function M.new(log, hooks)
 		log.widget(source or "widget", normalize_log_level(level), join_message(...))
 	end
 
+	local function required_events()
+		local merged = {}
+
+		for _, event_name in ipairs(subscriptions.required_events()) do
+			merged[event_name] = true
+		end
+
+		for _, event_name in ipairs(registry.required_driver_events()) do
+			merged[event_name] = true
+		end
+
+		local result = {}
+
+		for event_name in pairs(merged) do
+			result[#result + 1] = event_name
+		end
+
+		table.sort(result)
+		return result
+	end
+
 	local api = {
 		_state = registry._state,
 		add = registry.add,
@@ -116,9 +137,11 @@ function M.new(log, hooks)
 		get = registry.get,
 		remove = registry.remove,
 		exec = registry.exec,
+		exec_async = registry.exec_async,
+		poll_async_jobs = registry.poll_async_jobs,
 		subscribe = subscriptions.subscribe,
 		handle_event = subscriptions.handle_event,
-		required_events = subscriptions.required_events,
+		required_events = required_events,
 	}
 
 	--- Returns one widget-scoped EasyBar API.
@@ -180,6 +203,7 @@ function M.new(log, hooks)
 		widget_api.get = api.get
 		widget_api.remove = api.remove
 		widget_api.exec = api.exec
+		widget_api.exec_async = api.exec_async
 		widget_api.subscribe = api.subscribe
 		widget_api.events = event_tokens.tokens
 		widget_api.kind = KINDS

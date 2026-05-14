@@ -10,6 +10,11 @@ local helpers = require("easybar.helpers")
 local function noop()
 end
 
+--- Quotes one shell argument for POSIX sh.
+local function shell_quote(value)
+	return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
 	if type(source) ~= "table" then
@@ -139,6 +144,16 @@ function M.new(hooks)
 
 	local on_mutation = type(hooks.on_mutation) == "function" and hooks.on_mutation or noop
 	local before_exec_callback = type(hooks.before_exec_callback) == "function" and hooks.before_exec_callback or noop
+	local before_async_callback =
+		type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
+	local on_async_jobs_changed =
+		type(hooks.on_async_jobs_changed) == "function" and hooks.on_async_jobs_changed or noop
+	local on_async_job_started =
+		type(hooks.on_async_job_started) == "function" and hooks.on_async_job_started or noop
+	local on_async_job_completed =
+		type(hooks.on_async_job_completed) == "function" and hooks.on_async_job_completed or noop
+	local on_async_callback_error =
+		type(hooks.on_async_callback_error) == "function" and hooks.on_async_callback_error or noop
 
 	local state = {
 		items = {},
@@ -146,6 +161,7 @@ function M.new(hooks)
 		subscriptions = {},
 		interval_handlers = {},
 		interval_next_due = {},
+		async_jobs = {},
 	}
 
 	local registry = {
@@ -212,6 +228,131 @@ function M.new(hooks)
 	function registry.remove(id)
 		remove_recursive(state, id)
 		on_mutation()
+	end
+
+	--- Returns one unique identifier for a background job.
+	local function make_async_job_token()
+		local micros = math.floor((os.clock() or 0) * 1000000)
+		return tostring(os.time()) .. "_" .. tostring(micros) .. "_" .. tostring(#state.async_jobs + 1)
+	end
+
+	--- Returns one temp-file base path for a background job.
+	local function async_job_base_path(token)
+		local tmpdir = os.getenv("TMPDIR") or "/tmp"
+		return tmpdir .. "/easybar-async-" .. token
+	end
+
+	--- Reads one whole file or returns the fallback.
+	local function read_file(path, fallback)
+		local handle = io.open(path, "r")
+		if not handle then
+			return fallback
+		end
+
+		local content = handle:read("*a")
+		handle:close()
+		return content or fallback
+	end
+
+	--- Deletes one async job's temp files.
+	local function clear_async_job_files(job)
+		os.remove(job.output_path)
+		os.remove(job.rc_path)
+	end
+
+	--- Returns extra driver events required by registry-owned background jobs.
+	function registry.required_driver_events()
+		if #state.async_jobs == 0 then
+			return {}
+		end
+
+		return { "interval_tick:1" }
+	end
+
+	--- Starts one background shell command and completes it through later polling.
+	function registry.exec_async(command, callback)
+		assert(
+			type(command) == "string" and command ~= "",
+			"easybar.exec_async(command, callback) requires command"
+		)
+		assert(type(callback) == "function", "easybar.exec_async(command, callback) requires callback")
+
+		local previous_count = #state.async_jobs
+		local token = make_async_job_token()
+		local base_path = async_job_base_path(token)
+		local job = {
+			token = token,
+			command = command,
+			callback = callback,
+			output_path = base_path .. ".out",
+			rc_path = base_path .. ".rc",
+			ready_to_poll = false,
+		}
+
+		local launch_script = "out="
+			.. shell_quote(job.output_path)
+			.. " rc="
+			.. shell_quote(job.rc_path)
+			.. ' ; rm -f "$out" "$rc" ; ( ( '
+			.. command
+			.. ' ) >"$out" 2>&1 ; printf \'%s\\n\' "$?" >"$rc" ) >/dev/null 2>&1 &'
+
+		local ok = os.execute("/bin/sh -c " .. shell_quote(launch_script) .. " >/dev/null 2>&1")
+		if ok == nil then
+			error("failed to start async command")
+		end
+
+		state.async_jobs[#state.async_jobs + 1] = job
+
+		if previous_count ~= #state.async_jobs then
+			on_async_jobs_changed()
+		end
+
+		on_async_job_started(token, command)
+
+		return token
+	end
+
+	--- Polls background jobs and runs ready callbacks.
+	function registry.poll_async_jobs()
+		local index = 1
+
+		while index <= #state.async_jobs do
+			local job = state.async_jobs[index]
+			if not job.ready_to_poll then
+				index = index + 1
+			else
+				local rc_text = read_file(job.rc_path, nil)
+
+				if rc_text == nil then
+					index = index + 1
+				else
+					local previous_count = #state.async_jobs
+					table.remove(state.async_jobs, index)
+
+					local code = tonumber((rc_text or ""):match("^%s*(%-?%d+)")) or 1
+					local output = trim_trailing_newlines(read_file(job.output_path, ""))
+					clear_async_job_files(job)
+
+					if previous_count ~= #state.async_jobs then
+						on_async_jobs_changed()
+					end
+
+					on_async_job_completed(job.token, code)
+
+					before_async_callback()
+
+					local ok, err = pcall(job.callback, output, code)
+					if not ok then
+						on_async_callback_error(job.command, err)
+					end
+				end
+			end
+		end
+
+		for _, job in ipairs(state.async_jobs) do
+			job.ready_to_poll = true
+		end
 	end
 
 	--- Runs one shell command.

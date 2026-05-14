@@ -51,6 +51,7 @@ end
 --- Runtime registry and widget API instance.
 local registry
 local render_dirty = false
+local last_subscription_payload = nil
 
 --- Marks the current runtime state as needing one render flush.
 local function mark_render_dirty()
@@ -67,9 +68,36 @@ local function flush_pending_render(force)
 	render_dirty = false
 end
 
+--- Emits runtime subscription requirements when they changed.
+local function emit_subscriptions(force)
+	local payload = json.encode({
+		type = "subscriptions",
+		events = registry.required_events(),
+	})
+
+	if not force and payload == last_subscription_payload then
+		return
+	end
+
+	last_subscription_payload = payload
+	io.stdout:write(payload .. "\n")
+	io.stdout:flush()
+end
+
 registry = api.new(log, {
 	on_mutation = mark_render_dirty,
 	before_exec_callback = flush_pending_render,
+	before_async_callback = flush_pending_render,
+	on_async_jobs_changed = emit_subscriptions,
+	on_async_job_started = function(token, command)
+		log.debug("lua async started token=" .. tostring(token) .. " command=" .. tostring(command))
+	end,
+	on_async_job_completed = function(token, code)
+		log.debug("lua async completed token=" .. tostring(token) .. " code=" .. tostring(code))
+	end,
+	on_async_callback_error = function(command, err)
+		log.error("lua async callback failed command=" .. tostring(command) .. " error=" .. tostring(err))
+	end,
 })
 
 io.stdout:setvbuf("line")
@@ -78,10 +106,7 @@ io.stderr:setvbuf("line")
 -- Load every user widget before announcing subscriptions to the host.
 loader.load_widgets(widget_dir, registry, log)
 
-io.stdout:write(json.encode({
-	type = "subscriptions",
-	events = registry.required_events(),
-}) .. "\n")
+emit_subscriptions(true)
 io.stdout:write('{"type":"ready"}' .. "\n")
 io.stdout:flush()
 

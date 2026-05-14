@@ -299,6 +299,12 @@ After loading widgets:
 - Lua sends required events
 - Swift enables only those
 
+The subscription list can change at runtime.
+
+For example, `easybar.exec_async(...)` temporarily adds an `interval_tick:1`
+driver subscription while background jobs are active so Lua can poll for
+completion without blocking the runtime.
+
 ### 3. Initial events
 
 Once Lua has published both its subscriptions and `ready`, `WidgetEngine` emits the
