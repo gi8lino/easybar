@@ -50,7 +50,7 @@ enum AeroSpaceSnapshotLoader {
         "list-workspaces",
         "--all",
         "--format",
-        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+        "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
       ])
     else {
       return []
@@ -170,7 +170,7 @@ enum AeroSpaceSnapshotLoader {
 
   /// Parses one workspace state line from AeroSpace output.
   private static func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
-    let parts = line.split(separator: " ").map(String.init)
+    let parts = splitPipedLine(String(line))
     guard parts.count >= 3 else { return nil }
 
     return (

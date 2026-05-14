@@ -11,9 +11,9 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
           return "1\n2"
         case [
           "list-workspaces", "--all", "--format",
-          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+          "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
         ]:
-          return "1 true true\n2 false false"
+          return "1 | true | true\n2 | false | false"
         case ["list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}"]:
           return "1 | Safari | /Applications/Safari.app"
         case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
@@ -53,5 +53,34 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
       SpacesWidgetView.visibleSpaces(spaces, hideEmpty: true).map(\.name),
       ["2", "3"]
     )
+  }
+
+  func testLoadParsesWorkspaceStateForNamesContainingSpaces() {
+    let snapshot = AeroSpaceSnapshotLoader.load(
+      run: { arguments in
+        switch arguments {
+        case ["list-workspaces", "--all", "--format", "%{workspace}"]:
+          return "Work Inbox\nDeep Focus"
+        case [
+          "list-workspaces", "--all", "--format",
+          "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
+        ]:
+          return "Work Inbox | false | true\nDeep Focus | true | true"
+        case ["list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}"]:
+          return ""
+        case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
+          return ""
+        case ["list-windows", "--focused", "--format", "%{window-layout}"]:
+          return "floating"
+        default:
+          return nil
+        }
+      },
+      resolveAppID: { name, bundlePath in bundlePath ?? name }
+    )
+
+    XCTAssertEqual(snapshot.spaces.map(\.name), ["Work Inbox", "Deep Focus"])
+    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [false, true])
+    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, true])
   }
 }
