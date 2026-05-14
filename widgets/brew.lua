@@ -51,7 +51,6 @@ local COLORS = {
 }
 
 local running = false
-local popup_open = false
 local dynamic_rows = {}
 
 local state = {
@@ -512,7 +511,7 @@ easybar.add("item", WIDGET_ID, {
 	order = 20,
 	interval = CHECK_INTERVAL_SECONDS,
 	popup = {
-		drawing = false,
+		drawing = true,
 	},
 	icon = {
 		string = ICONS.checking,
@@ -566,7 +565,7 @@ easybar.add("item", ID_TIME, {
 easybar.add("row", ID_ACTIONS, {
 	position = "popup." .. WIDGET_ID,
 	order = POPUP_ORDER.actions,
-	spacing = 6,
+	spacing = 8,
 })
 
 local button_background = {
@@ -605,31 +604,12 @@ easybar.add("item", ID_REFRESH, {
 	background = button_background,
 })
 
-easybar.subscribe(WIDGET_ID, easybar.events.mouse.clicked, function(event)
-	if event.target_widget_id ~= nil and event.target_widget_id ~= WIDGET_ID then
-		log_debug("popup toggle ignored", "target=" .. tostring(event.target_widget_id))
-		return
-	end
-
-	if event.button == nil or event.button == "left" then
-		popup_open = not popup_open
-
-		log_debug("popup toggle", "open=" .. tostring(popup_open), "running=" .. tostring(running))
-
-		easybar.set(WIDGET_ID, {
-			popup = {
-				drawing = popup_open,
-			},
-		})
-	end
-end)
-
 easybar.subscribe(WIDGET_ID, easybar.events.mouse.entered, function()
-	log_debug("mouse entered", "running=" .. tostring(running), "popup_open=" .. tostring(popup_open))
+	log_debug("mouse entered", "running=" .. tostring(running))
 end)
 
 easybar.subscribe(WIDGET_ID, easybar.events.mouse.exited, function()
-	log_debug("mouse exited", "running=" .. tostring(running), "popup_open=" .. tostring(popup_open))
+	log_debug("mouse exited", "running=" .. tostring(running))
 end)
 
 easybar.subscribe(ID_REFRESH, easybar.events.mouse.clicked, function(event)
