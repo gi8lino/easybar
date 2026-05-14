@@ -30,7 +30,7 @@ struct CalendarEventComposerView: View {
       RoundedRectangle(cornerRadius: panelCornerRadius, style: .continuous)
         .stroke(
           color(config.borderColorHex),
-          lineWidth: max(CGFloat(config.borderWidth), 1)
+          lineWidth: CalendarSurfaceMetrics.borderLineWidth(config.borderWidth)
         )
     }
     .clipShape(

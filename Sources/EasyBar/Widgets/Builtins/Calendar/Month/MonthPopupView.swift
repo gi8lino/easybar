@@ -80,7 +80,7 @@ struct NativeMonthCalendarPopupView: View {
       RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
         .stroke(
           color(config.borderColorHex),
-          lineWidth: max(CGFloat(config.borderWidth), 1)
+          lineWidth: CalendarSurfaceMetrics.borderLineWidth(config.borderWidth)
         )
     }
     .clipShape(
