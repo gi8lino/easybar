@@ -266,7 +266,7 @@ function M.new(hooks)
 			return {}
 		end
 
-		return { "interval_tick:1" }
+		return { "interval_tick:0.25" }
 	end
 
 	--- Starts one background shell command and completes it through later polling.
@@ -286,7 +286,6 @@ function M.new(hooks)
 			callback = callback,
 			output_path = base_path .. ".out",
 			rc_path = base_path .. ".rc",
-			ready_to_poll = false,
 		}
 
 		local launch_script = "out="
@@ -319,39 +318,31 @@ function M.new(hooks)
 
 		while index <= #state.async_jobs do
 			local job = state.async_jobs[index]
-			if not job.ready_to_poll then
+			local rc_text = read_file(job.rc_path, nil)
+
+			if rc_text == nil then
 				index = index + 1
 			else
-				local rc_text = read_file(job.rc_path, nil)
+				local previous_count = #state.async_jobs
+				table.remove(state.async_jobs, index)
 
-				if rc_text == nil then
-					index = index + 1
-				else
-					local previous_count = #state.async_jobs
-					table.remove(state.async_jobs, index)
+				local code = tonumber((rc_text or ""):match("^%s*(%-?%d+)")) or 1
+				local output = trim_trailing_newlines(read_file(job.output_path, ""))
+				clear_async_job_files(job)
 
-					local code = tonumber((rc_text or ""):match("^%s*(%-?%d+)")) or 1
-					local output = trim_trailing_newlines(read_file(job.output_path, ""))
-					clear_async_job_files(job)
+				if previous_count ~= #state.async_jobs then
+					on_async_jobs_changed()
+				end
 
-					if previous_count ~= #state.async_jobs then
-						on_async_jobs_changed()
-					end
+				on_async_job_completed(job.token, code)
 
-					on_async_job_completed(job.token, code)
+				before_async_callback()
 
-					before_async_callback()
-
-					local ok, err = pcall(job.callback, output, code)
-					if not ok then
-						on_async_callback_error(job.command, err)
-					end
+				local ok, err = pcall(job.callback, output, code)
+				if not ok then
+					on_async_callback_error(job.command, err)
 				end
 			end
-		end
-
-		for _, job in ipairs(state.async_jobs) do
-			job.ready_to_poll = true
 		end
 	end
 
