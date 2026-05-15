@@ -26,14 +26,14 @@ extension Config {
         data = try Data(contentsOf: fileURL)
       } catch {
         throw ConfigError.invalidValue(
-          path: "config",
+          path: "config file",
           message: "failed to read file at \(resolvedConfigPath): \(error.localizedDescription)"
         )
       }
 
       guard let text = String(data: data, encoding: .utf8) else {
         throw ConfigError.invalidValue(
-          path: "config",
+          path: "config file",
           message: "file is not valid UTF-8"
         )
       }
@@ -46,6 +46,8 @@ extension Config {
         try parseAgents(from: toml)
         try parseBar(from: toml)
         try parseBuiltins(from: toml)
+      } catch let error as TOMLParseError {
+        throw makeParseFailure(from: error, text: text)
       } catch let error as ConfigError {
         throw error
       } catch {

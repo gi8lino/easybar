@@ -45,7 +45,7 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   private func makeWindow() -> NSWindow {
     let window = NSWindow(
       contentRect: .zero,
-      styleMask: [.titled, .closable, .fullSizeContentView],
+      styleMask: [.titled, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
@@ -61,9 +61,10 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     window.isOpaque = false
     window.representedURL = nil
     window.miniwindowImage = NSApp.applicationIconImage
-    window.standardWindowButton(.documentIconButton)?.image = NSApp.applicationIconImage
+    window.standardWindowButton(.closeButton)?.isHidden = true
     window.standardWindowButton(.miniaturizeButton)?.isHidden = true
     window.standardWindowButton(.zoomButton)?.isHidden = true
+    window.standardWindowButton(.documentIconButton)?.image = NSApp.applicationIconImage
     window.contentViewController = hostingController
     window.delegate = self
     return window
@@ -113,9 +114,39 @@ private struct ConfigErrorContentView: View {
     return state.error as? ConfigError
   }
 
-  /// Config key path associated with the failure.
+  /// Config key path or source location associated with the failure.
   private var issuePathText: String? {
-    return configError?.configPath
+    guard let configError else {
+      return nil
+    }
+
+    let text = configError.configPath.trimmingCharacters(in: .whitespacesAndNewlines)
+    return text.isEmpty ? nil : text
+  }
+
+  /// Problem item/key associated with the failure.
+  private var problemItemText: String? {
+    guard let value = configError?.problemItem else {
+      return nil
+    }
+
+    let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return text.isEmpty ? nil : text
+  }
+
+  /// Problem value associated with the failure.
+  private var problemValueText: String? {
+    guard let value = configError?.problemValue else {
+      return nil
+    }
+
+    let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return text.isEmpty ? nil : text
+  }
+
+  /// Returns whether the problem metadata block should be shown.
+  private var showsProblemBlock: Bool {
+    return problemItemText != nil || problemValueText != nil
   }
 
   /// Detailed user-facing error text.
@@ -171,13 +202,44 @@ private struct ConfigErrorContentView: View {
 
       if let issuePathText {
         VStack(alignment: .leading, spacing: 6) {
-          Text("Config key")
+          Text("Config location")
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.secondary)
 
           Text(issuePathText)
             .font(.system(size: 12, design: .monospaced))
             .textSelection(.enabled)
+        }
+      }
+
+      if showsProblemBlock {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Problem")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+
+          VStack(alignment: .leading, spacing: 4) {
+            if let problemItemText {
+              HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("item:")
+                  .foregroundStyle(.secondary)
+
+                Text(problemItemText)
+                  .textSelection(.enabled)
+              }
+            }
+
+            if let problemValueText {
+              HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("value:")
+                  .foregroundStyle(.secondary)
+
+                Text(problemValueText)
+                  .textSelection(.enabled)
+              }
+            }
+          }
+          .font(.system(size: 12, design: .monospaced))
         }
       }
 
@@ -195,7 +257,7 @@ private struct ConfigErrorContentView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(10)
         }
-        .frame(minHeight: 120, maxHeight: 220)
+        .frame(minHeight: 90, maxHeight: 180)
         .background(
           RoundedRectangle(cornerRadius: 10, style: .continuous)
             .fill(Color(nsColor: .windowBackgroundColor).opacity(0.9))
@@ -227,7 +289,8 @@ private struct ConfigErrorContentView: View {
 
   /// Collapses whitespace in fallback error text.
   private func normalizedText(_ value: String) -> String {
-    value
+    return
+      value
       .components(separatedBy: .whitespacesAndNewlines)
       .filter { !$0.isEmpty }
       .joined(separator: " ")
