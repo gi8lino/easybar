@@ -272,11 +272,12 @@ private struct ConfigErrorContentView: View {
         Button("Open Config") {
           openConfig()
         }
+        .keyboardShortcut("o", modifiers: [.command])
 
         Spacer()
 
         Button("Close", action: onClose)
-          .keyboardShortcut(.defaultAction)
+          .keyboardShortcut(.cancelAction)
       }
     }
     .padding(18)
