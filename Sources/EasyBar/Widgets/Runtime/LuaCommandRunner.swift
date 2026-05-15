@@ -70,7 +70,8 @@ final class LuaCommandRunner: @unchecked Sendable {
 
     process.waitUntilExit()
 
-    let output = String(data: data, encoding: .utf8)?
+    let output =
+      String(data: data, encoding: .utf8)?
       .replacingOccurrences(of: "\r", with: "")
       .trimmingCharacters(in: .newlines) ?? ""
 

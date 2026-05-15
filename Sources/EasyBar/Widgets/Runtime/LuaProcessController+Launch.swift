@@ -60,15 +60,18 @@ extension LuaProcessController {
   func resolvedWidgetFiles(in widgetsPath: String) -> [String] {
     let widgetsURL = URL(fileURLWithPath: widgetsPath, isDirectory: true)
 
-    guard let fileURLs = try? FileManager.default.contentsOfDirectory(
-      at: widgetsURL,
-      includingPropertiesForKeys: nil
-    ) else {
+    guard
+      let fileURLs = try? FileManager.default.contentsOfDirectory(
+        at: widgetsURL,
+        includingPropertiesForKeys: nil
+      )
+    else {
       logger.warn("failed to enumerate lua widgets", .field("path", widgetsPath))
       return []
     }
 
-    return fileURLs
+    return
+      fileURLs
       .filter { $0.pathExtension == "lua" }
       .map(\.lastPathComponent)
       .sorted()
@@ -325,13 +328,14 @@ extension LuaProcessController {
     widgetsPath: String,
     widgetFiles: [String]
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
-    try makeCStringVector([
-      executablePath,
-      socketPath,
-      luaPath,
-      runtimePath,
-      widgetsPath,
-    ] + widgetFiles)
+    try makeCStringVector(
+      [
+        executablePath,
+        socketPath,
+        luaPath,
+        runtimePath,
+        widgetsPath,
+      ] + widgetFiles)
   }
 
   /// Builds the environment vector inherited by the Lua runtime.

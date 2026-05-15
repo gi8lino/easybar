@@ -278,9 +278,9 @@ extension LuaRenderCoalescingTests {
 
     private func sendCommandResponse(token: String, output: String, status: Int) throws {
       let payload = """
-      {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
-      \n
-      """
+        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
+        \n
+        """
       try stdinHandle.write(contentsOf: Data(payload.utf8))
     }
   }
