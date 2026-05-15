@@ -39,11 +39,18 @@ local COLORS = {
 	info = "#89b4fa",
 	ok = "#a6e3a1",
 	warn = "#f9e2af",
+	orange = "#fab387",
 	error = "#f38ba8",
 	muted = "#a6adc8",
 	text = "#cdd6f4",
 	button_bg = "#1e1e2e",
 	button_border = "#45475a",
+}
+
+local THRESHOLDS = {
+	[3] = COLORS.warn,
+	[5] = COLORS.orange,
+	[10] = COLORS.error,
 }
 
 local running = false
@@ -64,6 +71,7 @@ local state = {
 	error = nil,
 	status = "Checking outdated packages…",
 	last_checked = nil,
+	next_check_at = nil,
 	phase = "checking",
 }
 
@@ -77,20 +85,54 @@ local function now_label()
 	return os.date("%H:%M")
 end
 
+--- Returns a trimmed string value.
+local function trim(value)
+	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
 --- Returns the next scheduled check time as HH:MM.
 local function next_check_label()
-	local next_time = os.time() + CHECK_INTERVAL_SECONDS
-	return os.date("%H:%M", next_time)
+	if state.next_check_at == nil then
+		return "after first check"
+	end
+
+	return os.date("%H:%M", state.next_check_at)
 end
 
 --- Truncates a value to a maximum visible length.
 local function truncate(value, max)
 	value = tostring(value or "")
+
+	if max <= 1 then
+		return value:sub(1, max)
+	end
+
 	if #value <= max then
 		return value
 	end
 
 	return value:sub(1, max - 1) .. "…"
+end
+
+--- Returns the threshold color for the outdated package count.
+local function threshold_color(count)
+	local threshold_keys = {}
+
+	for key in pairs(THRESHOLDS) do
+		table.insert(threshold_keys, key)
+	end
+
+	table.sort(threshold_keys, function(a, b)
+		return a > b
+	end)
+
+	for _, threshold in ipairs(threshold_keys) do
+		if tonumber(count) >= threshold then
+			return THRESHOLDS[threshold]
+		end
+	end
+
+	return COLORS.ok
 end
 
 --- Parses Homebrew JSON package entries into normalized rows.
@@ -109,7 +151,7 @@ local function parse_package_list(entries, kind)
 
 		packages[#packages + 1] = {
 			kind = kind,
-			name = entry.name or "unknown",
+			name = entry.name or entry.token or entry.full_token or "unknown",
 			installed = installed,
 			current = entry.current_version or "?",
 			pinned = entry.pinned == true,
@@ -122,6 +164,7 @@ end
 --- Stores parsed Homebrew outdated JSON in widget state.
 local function apply_outdated_json(raw)
 	local parsed = json.decode(raw)
+
 	state.formulae = parse_package_list(parsed.formulae, "formula")
 	state.casks = parse_package_list(parsed.casks, "cask")
 	state.error = nil
@@ -139,7 +182,9 @@ end
 --- Removes all dynamically created popup rows.
 local function remove_dynamic_rows()
 	for _, row in ipairs(dynamic_rows) do
-		row:remove()
+		if row ~= nil then
+			row:remove()
+		end
 	end
 
 	dynamic_rows = {}
@@ -166,6 +211,7 @@ local function add_popup_row(id, text, opts)
 
 	local row = easybar.add(easybar.kind.item, id, props)
 	dynamic_rows[#dynamic_rows + 1] = row
+
 	return row
 end
 
@@ -180,6 +226,7 @@ local function render_list_section(title, packages, row_prefix, order, remaining
 		size = 12,
 		color = COLORS.muted,
 	})
+
 	order = order + 1
 
 	local rendered_count = 0
@@ -219,7 +266,7 @@ local function current_bar_visual()
 		end
 
 		if state.phase == "upgrading" then
-			return ICONS.upgrading, COLORS.warn
+			return ICONS.upgrading, COLORS.orange
 		end
 
 		return ICONS.checking, COLORS.warn
@@ -233,12 +280,34 @@ local function current_bar_visual()
 		return ICONS.up_to_date, COLORS.ok
 	end
 
-	return ICONS.outdated, COLORS.warn
+	return ICONS.outdated, threshold_color(total)
+end
+
+--- Returns labels for action buttons based on the current phase.
+local function action_button_labels()
+	if not running then
+		return "Upgrade now", "Update now", "Refresh"
+	end
+
+	if state.phase == "upgrading" then
+		return "Upgrading…", "Working…", "Working…"
+	end
+
+	if state.phase == "updating" then
+		return "Working…", "Updating…", "Working…"
+	end
+
+	if state.phase == "checking" then
+		return "Working…", "Working…", "Checking…"
+	end
+
+	return "Working…", "Working…", "Working…"
 end
 
 --- Renders the popup contents.
 local function render_popup()
 	local total = count_packages()
+	local count_color = threshold_color(total)
 
 	title_item:set({
 		order = POPUP_ORDER.title,
@@ -276,7 +345,7 @@ local function render_popup()
 			order = POPUP_ORDER.summary,
 			label = {
 				string = "1 outdated package",
-				color = COLORS.warn,
+				color = count_color,
 			},
 		})
 	else
@@ -284,12 +353,13 @@ local function render_popup()
 			order = POPUP_ORDER.summary,
 			label = {
 				string = tostring(total) .. " outdated packages",
-				color = COLORS.warn,
+				color = count_color,
 			},
 		})
 	end
 
 	local checked = state.last_checked or "never"
+
 	time_item:set({
 		order = POPUP_ORDER.time,
 		label = {
@@ -305,24 +375,26 @@ local function render_popup()
 		order = POPUP_ORDER.actions,
 	})
 
+	local upgrade_label, update_label, refresh_label = action_button_labels()
+
 	upgrade_button:set({
 		order = 1,
 		label = {
-			string = running and "Upgrading…" or "Upgrade now",
+			string = upgrade_label,
 		},
 	})
 
 	update_button:set({
 		order = 2,
 		label = {
-			string = running and "Updating…" or "Update now",
+			string = update_label,
 		},
 	})
 
 	refresh_button:set({
 		order = 3,
 		label = {
-			string = running and "Working…" or "Refresh",
+			string = refresh_label,
 		},
 	})
 
@@ -333,6 +405,7 @@ local function render_popup()
 			order = POPUP_ORDER.dynamic_start,
 			color = COLORS.error,
 		})
+
 		return
 	end
 
@@ -341,6 +414,7 @@ local function render_popup()
 			order = POPUP_ORDER.dynamic_start,
 			color = COLORS.muted,
 		})
+
 		return
 	end
 
@@ -355,11 +429,13 @@ local function render_popup()
 	local rendered_formulae
 	order, rendered_formulae =
 		render_list_section("Formulae", state.formulae, WIDGET_ID .. "_formula", order, available_rows)
+
 	rendered_packages = rendered_packages + rendered_formulae
 	available_rows = available_rows - rendered_formulae
 
 	local rendered_casks
 	order, rendered_casks = render_list_section("Casks", state.casks, WIDGET_ID .. "_cask", order, available_rows)
+
 	rendered_packages = rendered_packages + rendered_casks
 
 	local hidden = total - rendered_packages
@@ -423,6 +499,7 @@ local function run_brew_async(status_label, phase, command, on_success)
 
 	local token = easybar.exec_async(command, function(output, code)
 		running = false
+		state.next_check_at = os.time() + CHECK_INTERVAL_SECONDS
 
 		log_debug(
 			"run_brew_async complete",
@@ -432,7 +509,8 @@ local function run_brew_async(status_label, phase, command, on_success)
 		)
 
 		if code ~= 0 then
-			local message = truncate(output:gsub("^%s+", ""):gsub("%s+$", ""), 400)
+			local message = truncate(trim(output), 400)
+
 			if message == "" then
 				message = "brew command failed with exit code " .. tostring(code)
 			end
@@ -442,13 +520,16 @@ local function run_brew_async(status_label, phase, command, on_success)
 
 			log_debug("run_brew_async error", message)
 			render()
+
 			return
 		end
 
 		local ok, err = pcall(on_success, output)
+
 		if not ok then
 			state.error = "Could not parse brew output: " .. tostring(err)
 			state.phase = "error"
+
 			log_debug("run_brew_async parse_error", tostring(err))
 		end
 
@@ -497,6 +578,18 @@ HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
 ]]
 
 	run_brew_async("Upgrading packages…", "upgrading", command, apply_outdated_json)
+end
+
+--- Returns a fresh button background configuration.
+local function button_background()
+	return {
+		color = COLORS.button_bg,
+		border_color = COLORS.button_border,
+		border_width = 1,
+		corner_radius = 6,
+		padding_left = 8,
+		padding_right = 8,
+	}
 end
 
 easybar.default({
@@ -570,22 +663,13 @@ actions_row = easybar.add(easybar.kind.row, ID_ACTIONS, {
 	spacing = 8,
 })
 
-local button_background = {
-	color = COLORS.button_bg,
-	border_color = COLORS.button_border,
-	border_width = 1,
-	corner_radius = 6,
-	padding_left = 8,
-	padding_right = 8,
-}
-
 upgrade_button = easybar.add(easybar.kind.item, ID_UPGRADE, {
 	parent = actions_row.name,
 	order = 1,
 	label = {
 		string = "Upgrade now",
 	},
-	background = button_background,
+	background = button_background(),
 })
 
 update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
@@ -594,7 +678,7 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	label = {
 		string = "Update now",
 	},
-	background = button_background,
+	background = button_background(),
 })
 
 refresh_button = easybar.add(easybar.kind.item, ID_REFRESH, {
@@ -603,7 +687,7 @@ refresh_button = easybar.add(easybar.kind.item, ID_REFRESH, {
 	label = {
 		string = "Refresh",
 	},
-	background = button_background,
+	background = button_background(),
 })
 
 brew_widget:subscribe(easybar.events.mouse.entered, function()
