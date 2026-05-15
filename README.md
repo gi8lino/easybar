@@ -25,6 +25,7 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 - Native macOS bar window built with SwiftUI
 - Native built-in widgets plus Lua widgets
+- Object-style Lua widget API with node handles
 - AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
 - Calendar and network helper agents for permission-sensitive data
@@ -135,6 +136,35 @@ The repository includes two config examples:
   Small starter example with a native `system` group.
 
 Config details, native groups, and example layouts are documented in [docs/CONFIG.md](./docs/CONFIG.md).
+
+## Lua widgets
+
+Lua widgets create nodes with `easybar.add(...)`. The call returns a node handle, and widget code updates or subscribes through that handle.
+
+Example:
+
+```lua
+local clock = easybar.add(easybar.kind.item, "clock", {
+    position = "right",
+    order = 10,
+    interval = 60,
+    icon = "🕒",
+    label = os.date("%H:%M"),
+    on_interval = function()
+        clock:set({
+            label = os.date("%H:%M"),
+        })
+    end,
+})
+
+clock:subscribe(easybar.events.mouse.clicked, function()
+    easybar.log(easybar.level.info, "clock clicked")
+end)
+```
+
+Composite widgets should use `group` or `row` as containers and assign children with `parent = group.name`.
+
+More details live in [docs/LUA_WIDGETS.md](./docs/LUA_WIDGETS.md).
 
 ## AeroSpace integration
 

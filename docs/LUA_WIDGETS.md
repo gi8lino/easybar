@@ -1,31 +1,30 @@
 # EasyBar Lua widgets
 
-EasyBar Lua widgets are item-based.
+EasyBar Lua widgets are node-based.
 
 You do not return widget trees.
-You create items, style them, and update them by id.
+You create nodes, keep their handles, and update them with methods such as `node:set(...)` and `node:subscribe(...)`.
 
 Interaction is node-based.
 
-- subscribe on a node id: that node owns hover, click, scroll, and popup behavior
+- subscribe on a node handle: that node owns hover, click, scroll, and popup behavior
 - the subscribed node frame is the interactive surface
 - use smaller child nodes when only part of a widget should be interactive
 - use `group` when multiple child nodes should share one styled container
-- if children inside a group must be clicked independently, subscribe on the child ids
-- subscribe on the group id only when the whole group should behave as one interactive surface
+- if children inside a group must be clicked independently, subscribe on the child handles
+- subscribe on the group handle only when the whole group should behave as one interactive surface
 
 ## Default styling
 
-Lua widgets now inherit native-like styling in the most common cases, so you usually do
-not need to restate the full shell or popup style.
+Lua widgets inherit native-like styling in the most common cases, so you usually do not need to restate the full shell or popup style.
 
 ### Built-in defaults
 
-| Node shape | Default styling |
-| --- | --- |
-| bar-root `item`, `row`, `group` | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4` |
-| popup content | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
-| child items inside a parent/group | no root shell by default |
+| Node shape                        | Default styling                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| bar-root `item`, `row`, `group`   | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4`                                     |
+| popup content                     | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
+| child items inside a parent/group | no root shell by default                                                                                                   |
 
 Notes:
 
@@ -37,7 +36,9 @@ Notes:
 
 EasyBar installs a bundled LuaLS stub into:
 
-- `~/.local/share/easybar/easybar_api.lua`
+```text
+~/.local/share/easybar/easybar_api.lua
+```
 
 If your editor uses LuaLS, add a `.luarc.json` in the workspace where you edit widgets.
 
@@ -77,7 +78,7 @@ If your editor still only knows about the `easybar` global but not nested proper
 
 ### `easybar.add(kind, id, props)`
 
-Creates one item.
+Creates one node and returns a node handle.
 
 Kinds:
 
@@ -92,17 +93,21 @@ Kinds:
 - `sparkline`
 - `spaces`
 
-`group` is the right container when you want:
+The returned handle has:
 
-- a shared background
-- shared padding
-- shared popup ownership
-- parent-level interaction around multiple child items
+- `node.id`
+- `node.name`
+- `node:set(props)`
+- `node:get()`
+- `node:remove()`
+- `node:subscribe(events, handler)`
+
+`node.name` is an alias for the node id and is useful when assigning parents or popup positions.
 
 Example:
 
 ```lua
-easybar.add("item", "clock", {
+local clock = easybar.add(easybar.kind.item, "clock", {
     position = "right",
     order = 10,
     icon = {
@@ -117,7 +122,7 @@ easybar.add("item", "clock", {
 Minimal icon-only widget:
 
 ```lua
-easybar.add("item", "vpn", {
+local vpn = easybar.add(easybar.kind.item, "vpn", {
     position = "right",
     order = 20,
     icon = {
@@ -127,32 +132,39 @@ easybar.add("item", "vpn", {
 })
 ```
 
-### `easybar.set(id, props)`
+`group` is the right container when you want:
 
-Updates one item.
+- a shared background
+- shared padding
+- shared popup ownership
+- parent-level interaction around multiple child items
+
+### `node:set(props)`
+
+Updates one node.
 
 ```lua
-easybar.set("clock", {
+clock:set({
     label = {
         string = os.date("%H:%M"),
     },
 })
 ```
 
-### `easybar.remove(id)`
+### `node:remove()`
 
-Removes one item and its children.
+Removes one node and its children.
 
 ```lua
-easybar.remove("clock")
+clock:remove()
 ```
 
-### `easybar.get(id)`
+### `node:get()`
 
 Returns the current property table.
 
 ```lua
-local props = easybar.get("clock")
+local props = clock:get()
 ```
 
 ### `easybar.default(props)`
@@ -178,13 +190,13 @@ Clears all defaults.
 easybar.clear_defaults()
 ```
 
-### `easybar.subscribe(id, events, handler)`
+### `node:subscribe(events, handler)`
 
-Subscribes one item to one or more events.
+Subscribes one node to one or more events.
 
 ```lua
-easybar.subscribe("clock", { easybar.events.minute_tick, easybar.events.forced }, function(event)
-    easybar.set("clock", {
+clock:subscribe({ easybar.events.minute_tick, easybar.events.forced }, function(event)
+    clock:set({
         label = {
             string = os.date("%H:%M"),
         },
@@ -203,9 +215,11 @@ Event fields include:
 - `event.value`
 - `event.delta_x`
 - `event.delta_y`
+- `event.network`
+- `event.power`
+- `event.audio`
 
-For interaction handlers on parent nodes, `event.target_widget_id` tells you which
-concrete child node actually received the click or hover.
+For interaction handlers on parent nodes, `event.target_widget_id` tells you which concrete child node actually received the click or hover.
 Use that when a root widget should ignore button clicks coming from popup children.
 
 Common events:
@@ -224,12 +238,9 @@ Common events:
 - `easybar.events.slider.preview`
 - `easybar.events.slider.changed`
 
-App events such as `minute_tick`, `second_tick`, `network_change`, and `volume_change`
-are only forwarded into the Lua runtime when at least one Lua widget subscribes to them.
+App events such as `minute_tick`, `second_tick`, `network_change`, and `volume_change` are only forwarded into the Lua runtime when at least one Lua widget subscribes to them.
 
-Targeted interaction events such as `mouse.clicked`, `mouse.entered`, `mouse.exited`,
-`mouse.scrolled`, `slider.preview`, and `slider.changed` are still delivered to the
-relevant Lua widget callbacks when those interactions occur.
+Targeted interaction events such as `mouse.clicked`, `mouse.entered`, `mouse.exited`, `mouse.scrolled`, `slider.preview`, and `slider.changed` are delivered to the relevant Lua widget callbacks when those interactions occur.
 
 ### `easybar.exec(command, callback)`
 
@@ -240,7 +251,7 @@ Long-running commands block the widget runtime until the command exits.
 
 ```lua
 easybar.exec("date +%H:%M", function(output)
-    easybar.set("clock", {
+    clock:set({
         label = {
             string = output,
         },
@@ -250,11 +261,9 @@ end)
 
 ### `easybar.exec_async(command, callback)`
 
-Runs a shell command in the background and calls back later with the trimmed output
-and numeric exit code.
+Runs a shell command in the background and calls back later with the trimmed output and numeric exit code.
 
-This is the preferred API for package managers, network requests, and other work that
-should not block popup interaction or other widget updates.
+This is the preferred API for package managers, network requests, and other work that should not block popup interaction or other widget updates.
 
 ```lua
 easybar.exec_async("brew outdated --json=v2", function(output, code)
@@ -263,7 +272,7 @@ easybar.exec_async("brew outdated --json=v2", function(output, code)
         return
     end
 
-    easybar.set("brew_status", {
+    brew_status:set({
         label = {
             string = output,
         },
@@ -312,8 +321,7 @@ easybar.log(easybar.level.warn, "vpn toggle skipped")
 
 ## Properties
 
-The bundled LuaLS stub marks the public property tables as exact, so unknown keys in
-`icon`, `label`, `background`, `popup`, and the top-level node props should surface as editor diagnostics.
+The bundled LuaLS stub marks the public property tables as exact, so unknown keys in `icon`, `label`, `background`, `popup`, and the top-level node props should surface as editor diagnostics.
 
 ### Basic
 
@@ -336,6 +344,16 @@ icon = {
 }
 ```
 
+Image icon:
+
+```lua
+icon = {
+    image = "/path/to/icon.png",
+    image_size = 16,
+    image_corner_radius = 0,
+}
+```
+
 ### Label
 
 ```lua
@@ -344,6 +362,12 @@ label = {
     color = "#ffffff",
     font = { size = 13 },
 }
+```
+
+Shorthand:
+
+```lua
+label = "Hello"
 ```
 
 ### Background
@@ -371,7 +395,7 @@ Use `group` when multiple child nodes should share:
 Example:
 
 ```lua
-easybar.add("group", "vpn", {
+local vpn = easybar.add(easybar.kind.group, "vpn", {
     position = "right",
     order = 40,
     background = {
@@ -383,15 +407,15 @@ easybar.add("group", "vpn", {
     spacing = 6,
 })
 
-easybar.add("item", "vpn_main", {
-    parent = "vpn",
+local vpn_main = easybar.add(easybar.kind.item, "vpn_main", {
+    parent = vpn.name,
     icon = {
         string = "󰖂",
     },
 })
 
-easybar.add("item", "vpn_mode", {
-    parent = "vpn",
+local vpn_mode = easybar.add(easybar.kind.item, "vpn_mode", {
+    parent = vpn.name,
     icon = {
         string = "󰌾",
     },
@@ -402,18 +426,18 @@ Important:
 
 - the group is the shared styled container
 - each child item can still be its own interactive surface
-- if each child should react independently to clicks, subscribe on the child ids, not only on the group id
+- if each child should react independently to clicks, subscribe on the child handles, not only on the group handle
 
 Example:
 
 ```lua
-easybar.subscribe("vpn_main", easybar.events.mouse.clicked, function(event)
+vpn_main:subscribe(easybar.events.mouse.clicked, function(event)
     if event.button == nil or event.button == "left" then
         -- handle main toggle
     end
 end)
 
-easybar.subscribe("vpn_mode", easybar.events.mouse.clicked, function(event)
+vpn_mode:subscribe(easybar.events.mouse.clicked, function(event)
     if event.button == nil or event.button == "left" then
         -- handle secondary toggle
     end
@@ -425,18 +449,18 @@ Use a group-level mouse subscription only when the whole grouped widget should b
 Minimal group example:
 
 ```lua
-easybar.add("group", "vpn", {
+local vpn = easybar.add(easybar.kind.group, "vpn", {
     position = "right",
     order = 40,
 })
 
-easybar.add("item", "vpn_icon", {
-    parent = "vpn",
+easybar.add(easybar.kind.item, "vpn_icon", {
+    parent = vpn.name,
     icon = "󰖂",
 })
 
-easybar.add("item", "vpn_label", {
-    parent = "vpn",
+easybar.add(easybar.kind.item, "vpn_label", {
+    parent = vpn.name,
     label = "Active",
 })
 ```
@@ -452,16 +476,13 @@ Popup content inherits native-like defaults when you do not override them:
 - padding `8 x 6`
 - margin `0 x 8`
 
-That means a simple popup widget already renders close to the built-in popup look
-without extra popup styling.
+That means a simple popup widget already renders close to the built-in popup look without extra popup styling.
 
 The popup container style comes from the widget's `popup = { ... }` table.
-Popup child items do not automatically inherit the bar-root shell styling, so if
-you want an inner pill or "double-shell" look you should style that child
-explicitly.
+Popup child items do not automatically inherit the bar-root shell styling, so if you want an inner pill or "double-shell" look you should style that child explicitly.
 
 ```lua
-easybar.add("item", "calendar", {
+local calendar = easybar.add(easybar.kind.item, "calendar", {
     position = "right",
     order = 30,
     popup = {
@@ -469,37 +490,32 @@ easybar.add("item", "calendar", {
     },
 })
 
-easybar.subscribe("calendar", easybar.events.mouse.entered, function()
-    easybar.set("calendar", {
+calendar:subscribe(easybar.events.mouse.entered, function()
+    calendar:set({
         popup = { drawing = true },
     })
 end)
 
-easybar.subscribe("calendar", easybar.events.mouse.exited, function()
-    easybar.set("calendar", {
+calendar:subscribe(easybar.events.mouse.exited, function()
+    calendar:set({
         popup = { drawing = false },
     })
 end)
 ```
 
-## Interval updates
-
-```lua
-easybar.add("item", "clock", {
-    interval = 30,
-    on_interval = function()
-        easybar.set("clock", {
-            label = os.date("%H:%M"),
-        })
-    end,
-})
-```
-
 Minimal popup content example:
 
 ```lua
-easybar.add("item", "calendar_popup_label", {
-    position = "popup.calendar",
+local calendar = easybar.add(easybar.kind.item, "calendar", {
+    position = "right",
+    order = 30,
+    popup = {
+        drawing = false,
+    },
+})
+
+easybar.add(easybar.kind.item, "calendar_popup_label", {
+    position = "popup." .. calendar.name,
     label = "Next event: 14:00",
 })
 ```
@@ -507,7 +523,7 @@ easybar.add("item", "calendar_popup_label", {
 Explicit double-shell popup example:
 
 ```lua
-easybar.add("item", "vpn", {
+local vpn = easybar.add(easybar.kind.item, "vpn", {
     position = "right",
     order = 40,
     popup = {
@@ -523,8 +539,8 @@ easybar.add("item", "vpn", {
     },
 })
 
-easybar.add("item", "vpn_popup_label", {
-    position = "popup.vpn",
+easybar.add(easybar.kind.item, "vpn_popup_label", {
+    position = "popup." .. vpn.name,
     padding_left = 12,
     padding_right = 12,
     padding_top = 8,
@@ -540,8 +556,29 @@ easybar.add("item", "vpn_popup_label", {
 ```
 
 Use the default popup styling when you want the built-in Wi-Fi tooltip look.
-Add explicit child background and padding like the example above when you want a
-more decorated inner surface.
+Add explicit child background and padding like the example above when you want a more decorated inner surface.
+
+## Interval updates
+
+Use `interval` together with `on_interval`.
+
+```lua
+local clock
+
+clock = easybar.add(easybar.kind.item, "clock", {
+    position = "right",
+    order = 10,
+    interval = 30,
+    label = os.date("%H:%M"),
+    on_interval = function()
+        clock:set({
+            label = os.date("%H:%M"),
+        })
+    end,
+})
+```
+
+When an interval callback needs to reference its own handle, declare the variable before assigning it, as shown above.
 
 ## Recommended pattern
 
@@ -552,25 +589,26 @@ easybar.default({
     },
 })
 
-easybar.add("item", "clock", {
+local clock
+
+clock = easybar.add(easybar.kind.item, "clock", {
     position = "right",
     order = 10,
     interval = 60,
     on_interval = function()
-        easybar.set("clock", {
+        clock:set({
             label = os.date("%H:%M"),
         })
     end,
 })
 ```
 
-Bar-root Lua items already inherit the native shell by default, so you usually only
-need `easybar.default(...)` for shared child styling or widget-specific overrides.
+Bar-root Lua items already inherit the native shell by default, so you usually only need `easybar.default(...)` for shared child styling or widget-specific overrides.
 
 For example, this is often enough for a small image-based widget:
 
 ```lua
-easybar.add("item", "tailscale", {
+local tailscale = easybar.add(easybar.kind.item, "tailscale", {
     position = "right",
     order = 2,
     icon = {
@@ -584,12 +622,51 @@ easybar.add("item", "tailscale", {
 ```
 
 Use `interval` and `on_interval` when a widget must poll.
-Use `easybar.subscribe(...)` for real events such as `network_change`, `system_woke`, and `mouse.clicked`.
+Use `node:subscribe(...)` for real events such as `network_change`, `system_woke`, and `mouse.clicked`.
+
+## Full example
+
+```lua
+local enabled = false
+local toggle
+
+local function render()
+    toggle:set({
+        icon = {
+            string = enabled and "󰄬" or "󰄱",
+            color = enabled and "#30d158" or "#ff453a",
+        },
+        label = {
+            string = enabled and "ON" or "OFF",
+            color = enabled and "#30d158" or "#ff453a",
+        },
+    })
+end
+
+toggle = easybar.add(easybar.kind.item, "toggle_test", {
+    position = "right",
+    order = 1,
+})
+
+toggle:subscribe(easybar.events.forced, function()
+    render()
+end)
+
+toggle:subscribe(easybar.events.mouse.clicked, function()
+    enabled = not enabled
+    render()
+end)
+
+render()
+```
 
 ## Style guidelines
 
 - keep ids stable
+- store handles returned from `easybar.add(...)`
 - prefer `group` for composite widgets
-- use `set(...)` for all updates
+- use `node:set(...)` for updates
+- use `node:subscribe(...)` for events
+- use `node.name` for `parent` and `popup.<id>` references
 - avoid side effects outside event handlers
 - keep logic simple and state-driven

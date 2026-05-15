@@ -61,18 +61,18 @@ allow_unauthorized_non_sensitive_fields = false
 
 Supported logging levels are:
 
-* `trace`
-* `debug`
-* `info`
-* `warn`
-* `error`
+- `trace`
+- `debug`
+- `info`
+- `warn`
+- `error`
 
 Environment overrides still exist for:
 
-* config path
-* socket paths
-* network refresh interval
-* agent enablement flags when explicitly supported by the shared runtime config
+- config path
+- socket paths
+- network refresh interval
+- agent enablement flags when explicitly supported by the shared runtime config
 
 The app and agents no longer use legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` toggles for normal runtime logging. Use `logging.level` in `config.toml` instead.
 
@@ -82,8 +82,8 @@ If an agent is disabled in config, the helper app exits immediately without open
 
 Default sockets:
 
-* calendar agent: `/tmp/EasyBar/calendar-agent.sock`
-* network agent: `/tmp/EasyBar/network-agent.sock`
+- calendar agent: `/tmp/EasyBar/calendar-agent.sock`
+- network agent: `/tmp/EasyBar/network-agent.sock`
 
 EasyBar connects to those sockets directly.
 
@@ -93,44 +93,44 @@ Other local clients can also connect when they speak the same protocol.
 
 Both agents share the same transport and baseline command flow:
 
-* `ping`
-* `version`
-* `fetch`
-* `subscribe`
+- `ping`
+- `version`
+- `fetch`
+- `subscribe`
 
 The calendar agent additionally supports:
 
-* `create_event`
-* `update_event`
-* `delete_event`
+- `create_event`
+- `update_event`
+- `delete_event`
 
 Every response includes a `kind` field.
 
 Common kinds include:
 
-* `pong`
-* `version`
-* `subscribed`
-* `error`
+- `pong`
+- `version`
+- `subscribed`
+- `error`
 
 Typical behavior:
 
-* `ping`
+- `ping`
   returns one `pong`, then closes
-* `version`
+- `version`
   returns one version payload, then closes
-* `fetch`
+- `fetch`
   returns one data payload (`snapshot` for calendar, `fields` for network), then closes
-* `subscribe`
+- `subscribe`
   returns one `subscribed`
   returns one immediate data payload
   keeps the socket open for later pushes
 
 ### Transport format
 
-* newline-delimited JSON
-* one request per line
-* one response per line
+- newline-delimited JSON
+- one request per line
+- one response per line
 
 Example:
 
@@ -186,46 +186,46 @@ Understanding how data flows from agents to widgets is critical.
 
 There are three layers:
 
-1. Agent (data collection)
-2. EasyBar (mapping + normalization)
-3. Lua widgets (consumption + UI)
+1. Agent: data collection
+2. EasyBar: mapping and normalization
+3. Lua widgets: consumption and UI
 
 ## Flow overview
 
 ```mermaid
 flowchart LR
     A[Network / Calendar Agent] -->|JSON over socket| B[EasyBar App]
-    B -->|typed models| C[EventBus]
+    B -->|typed models| C[EventHub]
     C -->|normalized JSON| D[Lua Runtime]
     D -->|widget updates| E[Widget Store]
     E -->|SwiftUI render| F[Bar UI]
 ```
 
-## Example: Wi-Fi SSID
+## Example: network interface
 
-### 1. Agent response (flat fields)
+### 1. Agent response
 
 ```json
 {
-  "wifi.ssid": "Office WiFi"
+  "network.primary_interface": "en0"
 }
 ```
 
 ### 2. EasyBar internal mapping
 
-EasyBar converts flat fields into structured data:
+EasyBar converts flat fields into structured event data:
 
 ```swift
-wifi.ssid → event.wifi.ssid
+network.primary_interface → event.network.interface_name
 ```
 
 ### 3. Lua event
 
 ```json
 {
-  "name": "wifi_change",
-  "wifi": {
-    "ssid": "Office WiFi"
+  "name": "network_change",
+  "network": {
+    "interface_name": "en0"
   }
 }
 ```
@@ -233,8 +233,17 @@ wifi.ssid → event.wifi.ssid
 ### 4. Widget usage
 
 ```lua
-easybar.subscribe("network", easybar.events.wifi_change, function(event)
-    local ssid = event.wifi.ssid
+local network = easybar.add(easybar.kind.item, "network", {
+    position = "right",
+    order = 35,
+})
+
+network:subscribe(easybar.events.network_change, function(event)
+    local interface_name = event.network and event.network.interface_name or "offline"
+
+    network:set({
+        label = interface_name,
+    })
 end)
 ```
 
@@ -244,7 +253,7 @@ end)
 | -------- | ----------------------- | --------------- |
 | Agent    | flat key-value          | data collection |
 | EasyBar  | typed models            | normalization   |
-| EventBus | structured JSON         | event transport |
+| EventHub | structured JSON         | event transport |
 | Lua      | structured event object | widget logic    |
 | UI       | rendered nodes          | presentation    |
 
@@ -389,16 +398,16 @@ echo '{"command":"fetch","fields":["wifi.ssid","network.primary_interface_is_tun
 Compare:
 
 - raw agent fields
-- Lua event (`event.wifi`, `event.network`)
+- Lua event tables such as `event.network`
 
 ## 7. Debugging strategy
 
 Best order:
 
-1. agent → working?
-2. socket → returning data?
-3. EasyBar → mapping correctly?
-4. Lua → using correct fields?
+1. agent: working?
+2. socket: returning data?
+3. EasyBar: mapping correctly?
+4. Lua: using correct fields?
 
 ## Golden rule
 
@@ -534,7 +543,7 @@ Clients request only what they need.
 
 ## Field model
 
-The network agent returns a **flat map of typed values**:
+The network agent returns a flat map of typed values:
 
 ```json
 {
@@ -600,8 +609,8 @@ Important distinction:
 ```json
 {
   "name": "wifi_change",
-  "wifi": {
-    "ssid": "Office WiFi"
+  "network": {
+    "interface_name": "en0"
   }
 }
 ```

@@ -8,8 +8,7 @@ For the public widget API, see [LUA_WIDGETS.md](./LUA_WIDGETS.md).
 ## Overview
 
 EasyBar does not embed Lua in-process.
-It starts a separate Lua process and communicates with it over a dedicated Unix
-socket, while keeping stderr reserved for logs.
+It starts a separate Lua process and communicates with it over a dedicated Unix socket, while keeping stderr reserved for logs.
 
 That gives us:
 
@@ -105,7 +104,13 @@ sequenceDiagram
   loads widget files into isolated environments
 
 - `api.lua`
-  widget registry and public `easybar` API
+  public `easybar` API, node handles, and registry bridge
+
+- `registry.lua`
+  stores node state and applies property normalization
+
+- `subscriptions.lua`
+  owns node subscriptions and interval callbacks
 
 - `events.lua`
   normalizes raw payloads and dispatches them
@@ -257,11 +262,46 @@ Inside `loader.lua`:
 Important:
 
 - each widget has isolated defaults
-- all share one registry
+- all widgets share one runtime registry
+
+## Public widget API shape
+
+Lua widget authors use node handles.
+
+`easybar.add(...)` creates one node and returns its handle:
+
+```lua
+local clock = easybar.add(easybar.kind.item, "clock", {
+    position = "right",
+    order = 10,
+    label = os.date("%H:%M"),
+})
+```
+
+The returned handle owns node operations:
+
+- `node.id`
+- `node.name`
+- `node:set(props)`
+- `node:get()`
+- `node:remove()`
+- `node:subscribe(events, handler)`
+
+Example:
+
+```lua
+clock:subscribe(easybar.events.minute_tick, function()
+    clock:set({
+        label = os.date("%H:%M"),
+    })
+end)
+```
+
+Internally, `api.lua` still delegates to the registry and subscription modules by id. The id-based functions are internal implementation details, not the public widget-author API.
 
 ## The widget registry
 
-Defined in `api.lua`.
+Defined in `registry.lua`.
 
 Main state:
 
@@ -270,23 +310,23 @@ Main state:
 - `subscriptions`
 - `interval_handlers`
 - `interval_next_due`
+- `pending_async_commands`
+- `pending_command_responses`
 
-API methods mutate this registry:
+Internal registry helpers mutate this state:
 
-- `add`
-- `set`
-- `get`
-- `remove`
-- `exec`
-- `subscribe`
-- `log`
-- `events`
-- `level`
+- add node
+- set node props
+- get node props
+- remove node
+- run commands
+- store command callbacks
 
 Notable:
 
 - event tokens are used instead of raw strings
 - logging levels are exposed to widgets through `easybar.level`
+- node handles are the public API wrapper around registry operations
 
 ## Event flow
 
@@ -308,14 +348,11 @@ After loading widgets:
 
 The subscription list can change at runtime.
 
-For example, `easybar.exec_async(...)` temporarily adds an `interval_tick:1`
-driver subscription while background jobs are active so Lua can poll for
-completion without blocking the runtime.
+For example, `interval` plus `on_interval` causes Lua to request the shared interval driver cadence it needs.
 
 ### 3. Initial events
 
-Once Lua has published both its subscriptions and `ready`, `WidgetEngine` emits the
-currently subscribed initial event batch and then triggers one normal refresh pass.
+Once Lua has published both its subscriptions and `ready`, `WidgetEngine` emits the currently subscribed initial event batch and then triggers one normal refresh pass.
 
 This prevents empty UI on startup.
 
@@ -331,9 +368,9 @@ Lua runtime:
 
 1. read JSON line
 2. decode
-3. normalize (`events.lua`)
-4. dispatch
-5. render
+3. normalize with `events.lua`
+4. dispatch through subscriptions
+5. render dirty trees
 
 ## Render flow
 
@@ -341,8 +378,8 @@ Handled in `render.lua`.
 
 Key design:
 
-- widgets mutate state
-- renderer builds tree
+- widgets mutate registry state
+- renderer builds tree output from registry state
 
 ### Steps
 
@@ -354,7 +391,7 @@ Key design:
 
 ### Deduplication
 
-- last output cached
+- last output cached by root id
 - identical trees are skipped
 
 ## Swift tree application
@@ -416,7 +453,7 @@ This is the complete runtime path from system event to UI:
 2. Swift event source emits through `EventHub`
 3. event is forwarded to Lua via socket JSON
 4. Lua normalizes and dispatches it
-5. widget handlers update registry state
+5. widget handlers update registry state through node handles
 6. renderer builds a new tree
 7. Lua emits JSON tree via the same socket
 8. Swift decodes and applies it to `WidgetStore`
@@ -453,8 +490,7 @@ level = "trace"
 lua Sources/EasyBar/Lua/runtime.lua <widget_dir>
 ```
 
-That direct invocation is still useful for Lua-only debugging, but it bypasses the
-dedicated socket transport used by the app. The full app path is:
+That direct invocation is still useful for Lua-only debugging, but it bypasses the dedicated socket transport used by the app. The full app path is:
 
 - Swift listens on `app.lua_socket_path`
 - `EasyBarLuaRuntime` connects that socket
@@ -475,33 +511,41 @@ Look for:
 
 **Widgets not updating**
 
-- missing `subscribe`
+- missing `node:subscribe(...)`
 - event not emitted
+- node handle not stored before calling `render()`
 
 **No UI output**
 
 - no `ready` message
 - render failure
+- widget file failed to load
 
 **Duplicate updates**
 
+- repeated subscriptions
+- duplicate widget files
 - deduplication issue
 
 **High CPU usage**
 
 - aggressive `interval`
+- frequent `second_tick` usage
+- expensive shell commands in sync `easybar.exec(...)`
 
 ## Where to change what
 
 ### Widget API
 
 - `api.lua`
+- `easybar_api.base.lua`
 - `easybar_api.lua`
 - `LUA_WIDGETS.md`
 
 ### Driver events
 
-- `api.lua`
+- `event_tokens.lua`
+- `easybar_api.events.lua`
 - `easybar_api.lua`
 - Swift event sources
 
@@ -535,6 +579,6 @@ Look for:
 If you change the Lua API:
 
 - update runtime
-- update stub
+- update stubs
 - update docs
 - update examples
