@@ -198,6 +198,7 @@ label = "CPU" # Text label shown next to the sparkline.
 history_size = 10 # Number of samples kept in the sparkline history.
 line_width = 1.8 # Stroke width of the sparkline line.
 color = "#a6da95" # Color of the sparkline and label.
+sample_interval_seconds = 5 # Polling interval in seconds.
 
 [builtins.battery]
 enabled = false # Shows or hides the battery widget.

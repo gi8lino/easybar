@@ -17,6 +17,8 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private let eventObserver = EasyBarEventObserver()
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
+  private var lastSampleDate: Date?
+  private var isRunning = false
 
   private lazy var renderer = CPURenderer(rootID: rootID)
 
@@ -32,8 +34,12 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Starts CPU sampling and publishes the initial widget state.
   func start() {
+    guard !isRunning else { return }
+
+    isRunning = true
     samples = Array(repeating: 0, count: historySize)
     previousCPUInfo = readCPUInfo()
+    lastSampleDate = nil
 
     NativeWidgetEventDriver.start(
       observer: eventObserver,
@@ -44,11 +50,12 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
       switch event {
       case .secondTick:
-        self.sampleAndPublish()
+        self.sampleAndPublishIfNeeded()
 
       case .systemWoke:
         // Reset the baseline because CPU tick counters can jump after wake.
         self.previousCPUInfo = self.readCPUInfo()
+        self.lastSampleDate = nil
         self.publish()
 
       case .intervalTick:
@@ -64,15 +71,41 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Stops CPU sampling and removes the rendered widget nodes.
   func stop() {
+    guard isRunning else { return }
+
+    isRunning = false
     eventObserver.stop()
     samples.removeAll()
     previousCPUInfo = nil
+    lastSampleDate = nil
 
     WidgetStore.shared.apply(root: rootID, nodes: [])
   }
 
+  /// Reads one CPU sample when the configured interval has elapsed.
+  private func sampleAndPublishIfNeeded() {
+    let now = Date()
+
+    guard shouldSample(at: now) else {
+      return
+    }
+
+    sampleAndPublish(at: now)
+  }
+
+  /// Returns whether enough time has passed for the next CPU sample.
+  private func shouldSample(at date: Date) -> Bool {
+    guard let lastSampleDate else {
+      return true
+    }
+
+    return date.timeIntervalSince(lastSampleDate) >= sampleIntervalSeconds
+  }
+
   /// Reads one CPU sample and publishes the current widget state.
-  private func sampleAndPublish() {
+  private func sampleAndPublish(at date: Date) {
+    lastSampleDate = date
+
     guard let usage = readCPUUsagePercent() else {
       publish()
       return
@@ -120,8 +153,18 @@ final class CPUSparklineNativeWidget: NativeWidget {
     return max(2, Config.shared.builtinCPU.historySize)
   }
 
+  /// Returns the configured CPU sample interval in seconds.
+  private var sampleIntervalSeconds: TimeInterval {
+    return max(1, Config.shared.builtinCPU.sampleIntervalSeconds)
+  }
+
   /// Reads cumulative CPU tick counters from Mach.
   private func readCPUInfo() -> host_cpu_load_info_data_t? {
+    let host = mach_host_self()
+    defer {
+      mach_port_deallocate(mach_task_self_, host)
+    }
+
     var info = host_cpu_load_info_data_t()
     var count = mach_msg_type_number_t(
       MemoryLayout<host_cpu_load_info_data_t>.stride / MemoryLayout<integer_t>.stride
@@ -130,7 +173,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     let status = withUnsafeMutablePointer(to: &info) { pointer in
       pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { rebound in
         host_statistics(
-          mach_host_self(),
+          host,
           HOST_CPU_LOAD_INFO,
           rebound,
           &count

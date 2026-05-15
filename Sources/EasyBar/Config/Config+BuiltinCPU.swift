@@ -11,6 +11,7 @@ extension Config {
       var historySize: Int
       var lineWidth: Double
       var colorHex: String?
+      var sampleIntervalSeconds: Double
     }
 
     /// Shared placement settings.
@@ -55,6 +56,11 @@ extension Config {
       set { content.colorHex = newValue }
     }
 
+    var sampleIntervalSeconds: Double {
+      get { content.sampleIntervalSeconds }
+      set { content.sampleIntervalSeconds = newValue }
+    }
+
     /// Default CPU widget config.
     static let `default` = CPUBuiltinConfig(
       placement: .init(
@@ -80,7 +86,8 @@ extension Config {
         label: "CPU",
         historySize: 10,
         lineWidth: 1.8,
-        colorHex: "#a6da95"
+        colorHex: "#a6da95",
+        sampleIntervalSeconds: 1
       )
     )
   }
@@ -123,7 +130,14 @@ extension Config {
       colorHex: try optionalString(
         contentTable["color"],
         path: "builtins.cpu.content.color"
-      ) ?? builtinCPU.colorHex
+      ) ?? builtinCPU.colorHex,
+      sampleIntervalSeconds: max(
+        1,
+        try optionalNumber(
+          contentTable["sample_interval_seconds"],
+          path: "builtins.cpu.content.sample_interval_seconds"
+        ) ?? builtinCPU.sampleIntervalSeconds
+      )
     )
 
     builtinCPU = CPUBuiltinConfig(
