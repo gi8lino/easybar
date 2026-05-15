@@ -213,7 +213,6 @@ extension WidgetNodeView {
     return symbolResolvedFontSize * CGFloat(node.symbolFillCornerRadiusFactor ?? 0)
   }
 
-  @ViewBuilder
   var imageView: some View {
     return renderedImageView()
   }
@@ -235,8 +234,8 @@ extension WidgetNodeView {
     }
   }
 
-  @ViewBuilder
   /// Builds the base SF Symbol view.
+  @ViewBuilder
   func baseSymbolView(name: String) -> some View {
     if hasSymbolSecondaryColor {
       Image(systemName: name)
@@ -254,8 +253,8 @@ extension WidgetNodeView {
     }
   }
 
-  @ViewBuilder
   /// Builds an SF Symbol with a custom filled battery interior.
+  @ViewBuilder
   func customFilledSymbolView(name: String) -> some View {
     ZStack {
       Color.clear
@@ -290,8 +289,8 @@ extension WidgetNodeView {
     .frame(width: symbolCanvasSize.width, height: symbolCanvasSize.height)
   }
 
-  @ViewBuilder
   /// Builds the optional overlay symbol for a custom symbol view.
+  @ViewBuilder
   func overlaySymbolView(name: String) -> some View {
     let overlay = Image(systemName: name)
       .symbolRenderingMode(.monochrome)
@@ -362,8 +361,8 @@ extension WidgetNodeView {
     return customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
   }
 
-  @ViewBuilder
   /// Builds the rendered image view for one node.
+  @ViewBuilder
   func renderedImageView() -> some View {
     if hasImage, let imagePath = node.imagePath {
       let customImage = NSImage(contentsOfFile: imagePath)

@@ -232,7 +232,6 @@ private struct AppIconView: View {
   }
 
   /// Returns the rendered app icon or fallback initial.
-  @ViewBuilder
   private var content: some View {
     return iconContent()
   }
