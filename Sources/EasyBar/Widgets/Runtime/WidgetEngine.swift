@@ -23,15 +23,15 @@ actor WidgetEngine {
   }
 
   /// Starts the scripted widget runtime.
-  func start() async {
+  @discardableResult
+  func start() async -> Bool {
     guard !started else {
       logger.debug("widget engine already started")
-      return
+      return true
     }
 
     logger.debug("widget engine start begin")
 
-    started = true
     runtimeState.reset()
 
     await luaRuntime.setLineHandler { [weak self] line in
@@ -40,9 +40,15 @@ actor WidgetEngine {
       }
     }
 
-    await luaRuntime.start()
+    guard await luaRuntime.start() else {
+      logger.warn("widget engine start failed because lua runtime did not launch")
+      return false
+    }
+
+    started = true
 
     logger.debug("widget engine start end")
+    return true
   }
 
   /// Reloads the scripted widget runtime and clears rendered state.
@@ -57,7 +63,10 @@ actor WidgetEngine {
     }
 
     scriptedRoots.removeAll()
-    await start()
+    let didRestart = await start()
+    if !didRestart {
+      logger.warn("widget engine reload completed without restarting lua runtime")
+    }
 
     logger.debug("widget engine reload end")
   }

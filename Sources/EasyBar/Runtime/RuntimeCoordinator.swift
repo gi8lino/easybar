@@ -68,7 +68,10 @@ actor RuntimeCoordinator {
     }
 
     CalendarAgentEventRelay.shared.start()
-    await widgetEngine.start()
+    let didStartLuaWidgets = await widgetEngine.start()
+    if !didStartLuaWidgets {
+      logger.warn("runtime coordinator continued without lua widgets because startup failed")
+    }
     aeroSpaceService.start()
 
     await startFileWatcher()

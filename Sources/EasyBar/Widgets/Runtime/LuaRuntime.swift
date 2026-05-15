@@ -44,8 +44,9 @@ actor LuaRuntime {
   }
 
   /// Starts the Lua runtime if it is not already running.
-  func start() {
-    guard let context = processController.launchContext() else { return }
+  @discardableResult
+  func start() -> Bool {
+    guard let context = processController.launchContext() else { return false }
 
     let resources = LuaProcessController.LaunchResources()
 
@@ -57,7 +58,7 @@ actor LuaRuntime {
 
     guard let result = processController.start(context: context, resources: resources) else {
       transport.shutdown()
-      return
+      return false
     }
 
     MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
@@ -65,6 +66,7 @@ actor LuaRuntime {
       "lua runtime facade started",
       .field("pid", result.processIdentifier),
     )
+    return true
   }
 
   /// Stops the Lua runtime and clears all pipe handlers.
