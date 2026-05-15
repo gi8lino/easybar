@@ -42,10 +42,15 @@ local render = load_module("render")
 
 --- Widget directory passed by the Swift host.
 local widget_dir = arg[1]
+local widget_files = {}
 
 if not widget_dir or widget_dir == "" then
 	local home = os.getenv("HOME")
 	widget_dir = home .. "/.config/easybar/widgets"
+end
+
+for index = 2, #arg do
+	widget_files[#widget_files + 1] = arg[index]
 end
 
 --- Runtime registry and widget API instance.
@@ -104,7 +109,7 @@ io.stdout:setvbuf("line")
 io.stderr:setvbuf("line")
 
 -- Load every user widget before announcing subscriptions to the host.
-loader.load_widgets(widget_dir, registry, log)
+loader.load_widgets(widget_dir, widget_files, registry, log)
 
 emit_subscriptions(true)
 io.stdout:write('{"type":"ready"}' .. "\n")

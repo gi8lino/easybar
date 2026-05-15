@@ -14,6 +14,7 @@ extension LuaProcessController {
       luaPath: Config.shared.luaPath,
       luaSocketPath: Config.shared.luaSocketPath,
       widgetsPath: Config.shared.widgetsPath,
+      widgetFiles: resolvedWidgetFiles(in: Config.shared.widgetsPath),
       environment: Config.shared.appSection.environment
     )
   }
@@ -55,6 +56,24 @@ extension LuaProcessController {
     return nil
   }
 
+  /// Returns the sorted Lua widget filenames present in the configured widget directory.
+  func resolvedWidgetFiles(in widgetsPath: String) -> [String] {
+    let widgetsURL = URL(fileURLWithPath: widgetsPath, isDirectory: true)
+
+    guard let fileURLs = try? FileManager.default.contentsOfDirectory(
+      at: widgetsURL,
+      includingPropertiesForKeys: nil
+    ) else {
+      logger.warn("failed to enumerate lua widgets", .field("path", widgetsPath))
+      return []
+    }
+
+    return fileURLs
+      .filter { $0.pathExtension == "lua" }
+      .map(\.lastPathComponent)
+      .sorted()
+  }
+
   /// Logs one Lua runtime launch request.
   func logLaunch(context: LaunchContext) {
     logger.debug("starting lua runtime")
@@ -63,6 +82,7 @@ extension LuaProcessController {
     logger.debug("lua socket", .field("path", context.luaSocketPath))
     logger.debug("lua script", .field("path", context.runtimePath))
     logger.debug("widgets path", .field("path", context.widgetsPath))
+    logger.debug("widget files", .field("count", context.widgetFiles.count))
     logger.debug("lua env keys", .field("keys", context.environment.keys.sorted()))
   }
 
@@ -100,7 +120,8 @@ extension LuaProcessController {
       socketPath: context.luaSocketPath,
       luaPath: context.luaPath,
       runtimePath: context.runtimePath,
-      widgetsPath: context.widgetsPath
+      widgetsPath: context.widgetsPath,
+      widgetFiles: context.widgetFiles
     )
     defer { freeCStringVector(argv) }
 
@@ -301,7 +322,8 @@ extension LuaProcessController {
     socketPath: String,
     luaPath: String,
     runtimePath: String,
-    widgetsPath: String
+    widgetsPath: String,
+    widgetFiles: [String]
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     try makeCStringVector([
       executablePath,
@@ -309,7 +331,7 @@ extension LuaProcessController {
       luaPath,
       runtimePath,
       widgetsPath,
-    ])
+    ] + widgetFiles)
   }
 
   /// Builds the environment vector inherited by the Lua runtime.

@@ -15,6 +15,7 @@ final class AppController {
     let luaPath: String
     let runtimePath: String
     let widgetsPath: String
+    let widgetFiles: [String]
   }
 
   /// Runs the Lua runtime process.
@@ -33,15 +34,18 @@ final class AppController {
   /// Parses the runtime process command-line arguments.
   private func parseArguments() -> RuntimeArguments {
     let args = Array(CommandLine.arguments.dropFirst())
-    guard args.count == 4 else {
-      fail("usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path>")
+    guard args.count >= 4 else {
+      fail(
+        "usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path> [widget-file...]"
+      )
     }
 
     return RuntimeArguments(
       socketPath: args[0],
       luaPath: args[1],
       runtimePath: args[2],
-      widgetsPath: args[3]
+      widgetsPath: args[3],
+      widgetFiles: Array(args.dropFirst(4))
     )
   }
 
@@ -100,8 +104,10 @@ final class AppController {
       strdup(arguments.luaPath),
       strdup(arguments.runtimePath),
       strdup(arguments.widgetsPath),
-      nil,
     ]
+
+    argv.append(contentsOf: arguments.widgetFiles.map { strdup($0) })
+    argv.append(nil)
 
     defer {
       for case let pointer? in argv {

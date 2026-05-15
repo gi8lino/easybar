@@ -71,7 +71,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let recorder = RuntimeUpdateRecorder()
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -181,7 +181,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let recorder = RuntimeUpdateRecorder()
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe

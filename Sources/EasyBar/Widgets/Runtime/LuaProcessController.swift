@@ -11,6 +11,7 @@ final class LuaProcessController {
     let luaPath: String
     let luaSocketPath: String
     let widgetsPath: String
+    let widgetFiles: [String]
     let environment: [String: String]
   }
 

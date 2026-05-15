@@ -4,28 +4,6 @@
 --- Widget loader module table.
 local M = {}
 
---- Lists all Lua widget files in one widget directory.
-local function list_widget_files(widget_dir)
-	local files = {}
-	local command = 'ls "' .. widget_dir .. '" 2>/dev/null'
-
-	local pipe = io.popen(command)
-	if not pipe then
-		return files
-	end
-
-	for file in pipe:lines() do
-		if file:match("%.lua$") then
-			files[#files + 1] = file
-		end
-	end
-
-	pipe:close()
-	table.sort(files)
-
-	return files
-end
-
 --- Builds one isolated environment for a widget file.
 local function make_widget_env(registry, file)
 	local env = {
@@ -62,11 +40,11 @@ local function load_widget_file(widget_dir, file, registry, log)
 end
 
 --- Loads every widget file from the configured widget directory.
-function M.load_widgets(widget_dir, registry, log)
+function M.load_widgets(widget_dir, widget_files, registry, log)
 	log.info("runtime started")
 	log.info("runtime widget_dir=" .. widget_dir)
 
-	for _, file in ipairs(list_widget_files(widget_dir)) do
+	for _, file in ipairs(widget_files or {}) do
 		load_widget_file(widget_dir, file, registry, log)
 	end
 end
