@@ -162,6 +162,10 @@ actor RuntimeCoordinator {
       )
     }
 
+    await MainActor.run {
+      NotificationCenter.default.post(name: .easyBarConfigReloadDidFinish, object: nil)
+    }
+
     logger.info("reloadConfig end")
     isReloadingConfig = false
 
@@ -340,4 +344,9 @@ actor RuntimeCoordinator {
   func broadcastMetrics(_ snapshot: IPC.MetricsSnapshot) {
     socketServer.broadcastMetrics(snapshot)
   }
+}
+
+extension Notification.Name {
+  /// Posted after one config reload attempt finishes and UI should resync.
+  static let easyBarConfigReloadDidFinish = Notification.Name("easybar.configReloadDidFinish")
 }

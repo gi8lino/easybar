@@ -25,6 +25,8 @@ final class AppController {
   private var forceImmediateTermination = false
   /// Controller for the main EasyBar panel.
   private var barWindowController: BarWindowController?
+  /// Observer token for runtime config reload completion notifications.
+  private var configReloadObserver: NSObjectProtocol?
 
   /// Presenter for config load and reload errors.
   private let configErrorWindowController = ConfigErrorWindowController()
@@ -73,6 +75,7 @@ final class AppController {
     validateRequiredFonts()
     installWidgetEditorStub()
     setupBarWindowController()
+    installConfigReloadObserver()
     updateConfigErrorWindow()
     signalHandler.start()
 
@@ -121,6 +124,21 @@ final class AppController {
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
     updateConfigErrorWindow()
+  }
+
+  /// Observes runtime config reload completion so UI stays in sync.
+  private func installConfigReloadObserver() {
+    guard configReloadObserver == nil else { return }
+
+    configReloadObserver = NotificationCenter.default.addObserver(
+      forName: .easyBarConfigReloadDidFinish,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      Task { @MainActor [weak self] in
+        self?.handlePostConfigReloadUI()
+      }
+    }
   }
 
   /// Keeps the config error window in sync with the current config state.
