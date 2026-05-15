@@ -515,6 +515,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	popup = {
 		drawing = true,
 	},
+	height = 24,
 	icon = {
 		string = ICONS.checking,
 		color = COLORS.warn,
