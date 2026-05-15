@@ -4,6 +4,17 @@ import Foundation
 
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
 final class LuaTransport {
+  enum TransportError: LocalizedError {
+    case startupFailed(String)
+
+    var errorDescription: String? {
+      switch self {
+      case .startupFailed(let message):
+        return message
+      }
+    }
+  }
+
   private let logger: ProcessLogger
   private let logBridge: LuaLogBridge
 
@@ -31,7 +42,9 @@ final class LuaTransport {
     socketPath: String,
     error: Pipe,
     lineHandler: @escaping @Sendable (String) -> Void
-  ) {
+  ) throws {
+    var startupError: Error?
+
     stateQueue.sync {
       shutdownLocked()
 
@@ -41,12 +54,23 @@ final class LuaTransport {
       generation &+= 1
 
       installErrorReadabilityHandler(generation: generation)
-      listenerFD = makeListeningSocket(at: socketPath)
+      do {
+        listenerFD = try makeListeningSocket(at: socketPath)
+      } catch {
+        startupError = error
+        shutdownLocked()
+        return
+      }
+
       let currentGeneration = generation
 
       acceptQueue.async { [weak self] in
         self?.acceptConnection(generation: currentGeneration)
       }
+    }
+
+    if let startupError {
+      throw startupError
     }
   }
 
@@ -119,33 +143,28 @@ final class LuaTransport {
   }
 
   /// Creates and binds the listening Unix socket.
-  private func makeListeningSocket(at socketPath: String) -> Int32 {
+  private func makeListeningSocket(at socketPath: String) throws -> Int32 {
     let socketURL = URL(fileURLWithPath: socketPath)
     let socketDir = socketURL.deletingLastPathComponent()
 
     do {
       try FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true)
     } catch {
-      logger.error(
-        "failed to create lua socket directory",
-        .field("path", socketDir.path),
-        .field("error", "\(error)")
+      throw TransportError.startupFailed(
+        "failed to create lua socket directory path=\(socketDir.path) error=\(error)"
       )
-      return -1
     }
 
     unlink(socketPath)
 
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      logger.error("failed to create lua socket", .field("errno", errno))
-      return -1
+      throw TransportError.startupFailed("failed to create lua socket errno=\(errno)")
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      logger.error("failed to configure lua socket no-sigpipe", .field("fd", fd))
       close(fd)
-      return -1
+      throw TransportError.startupFailed("failed to configure lua socket no-sigpipe fd=\(fd)")
     }
 
     var addr = makeSockAddrUn(path: socketPath)
@@ -158,13 +177,8 @@ final class LuaTransport {
     }
 
     guard bindResult == 0 else {
-      logger.error(
-        "lua socket bind failed",
-        .field("path", socketPath),
-        .field("errno", errno)
-      )
       close(fd)
-      return -1
+      throw TransportError.startupFailed("lua socket bind failed path=\(socketPath) errno=\(errno)")
     }
 
     if chmod(socketPath, mode_t(0o600)) != 0 {
@@ -176,14 +190,9 @@ final class LuaTransport {
     }
 
     guard listen(fd, 1) == 0 else {
-      logger.error(
-        "lua socket listen failed",
-        .field("path", socketPath),
-        .field("errno", errno)
-      )
       close(fd)
       unlink(socketPath)
-      return -1
+      throw TransportError.startupFailed("lua socket listen failed path=\(socketPath) errno=\(errno)")
     }
 
     logger.info("lua socket listening", .field("socket_path", socketPath))

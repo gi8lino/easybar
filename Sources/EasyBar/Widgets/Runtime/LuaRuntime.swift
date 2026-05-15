@@ -50,11 +50,16 @@ actor LuaRuntime {
 
     let resources = LuaProcessController.LaunchResources()
 
-    transport.startListening(
-      socketPath: context.luaSocketPath,
-      error: resources.error,
-      lineHandler: lineHandler ?? { _ in }
-    )
+    do {
+      try transport.startListening(
+        socketPath: context.luaSocketPath,
+        error: resources.error,
+        lineHandler: lineHandler ?? { _ in }
+      )
+    } catch {
+      logger.error("failed to start lua transport", .field("error", "\(error)"))
+      return false
+    }
 
     guard let result = processController.start(context: context, resources: resources) else {
       transport.shutdown()
