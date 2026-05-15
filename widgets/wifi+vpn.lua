@@ -2,6 +2,8 @@ local state = {
 	vpn_connected = false,
 }
 
+local vpn
+
 local function apply_event(event)
 	if event == nil or type(event.network) ~= "table" then
 		return
@@ -32,7 +34,7 @@ end
 local function render()
 	local status = current_state()
 
-	easybar.set("vpn", {
+	vpn:set({
 		icon = {
 			string = status.icon,
 			color = status.color,
@@ -44,18 +46,19 @@ local function render()
 	})
 end
 
-easybar.add(easybar.kind.item, "vpn", {
+vpn = easybar.add(easybar.kind.item, "vpn", {
 	position = "right",
 	order = 41,
 })
 
-easybar.subscribe(
-	"vpn",
-	{ easybar.events.network_change, easybar.events.wifi_change, easybar.events.system_woke, easybar.events.forced },
-	function(event)
-		apply_event(event)
-		render()
-	end
-)
+vpn:subscribe({
+	easybar.events.network_change,
+	easybar.events.wifi_change,
+	easybar.events.system_woke,
+	easybar.events.forced,
+}, function(event)
+	apply_event(event)
+	render()
+end)
 
 render()

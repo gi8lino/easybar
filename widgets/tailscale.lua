@@ -51,6 +51,10 @@ end
 
 local tailscale = resolve_tailscale()
 
+local tailscale_icon
+local popup_label
+local popup_exit_node_label
+
 local state = {
 	tailscale_connected = false,
 	exit_node_enabled = false,
@@ -202,7 +206,7 @@ end
 local function render(snapshot)
 	local tailscale_logo_path = asset_path(current_icon_name(snapshot.tailscale_connected, snapshot.exit_node_enabled))
 
-	easybar.set("tailscale_icon", {
+	tailscale_icon:set({
 		icon = {
 			string = "",
 			image = tailscale_logo_path,
@@ -215,13 +219,13 @@ local function render(snapshot)
 		opacity = 1.0,
 	})
 
-	easybar.set("tailscale_popup_label", {
+	popup_label:set({
 		label = {
 			string = snapshot.status_detail or status_label(snapshot.tailscale_connected),
 		},
 	})
 
-	easybar.set("tailscale_popup_exit_node_label", {
+	popup_exit_node_label:set({
 		drawing = snapshot.tailscale_connected and "on" or "off",
 		label = {
 			string = snapshot.exit_node_detail,
@@ -295,7 +299,7 @@ refresh = function()
 	render(snapshot)
 end
 
-easybar.add(easybar.kind.item, "tailscale_icon", {
+tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 	position = "right",
 	order = 2,
 	interval = 10,
@@ -311,22 +315,22 @@ easybar.add(easybar.kind.item, "tailscale_icon", {
 	end,
 })
 
-easybar.add(easybar.kind.item, "tailscale_popup_label", {
-	position = "popup.tailscale_icon",
+popup_label = easybar.add(easybar.kind.item, "tailscale_popup_label", {
+	position = "popup." .. tailscale_icon.name,
 	label = {
 		string = "",
 	},
 })
 
-easybar.add(easybar.kind.item, "tailscale_popup_exit_node_label", {
-	position = "popup.tailscale_icon",
+popup_exit_node_label = easybar.add(easybar.kind.item, "tailscale_popup_exit_node_label", {
+	position = "popup." .. tailscale_icon.name,
 	drawing = "off",
 	label = {
 		string = "",
 	},
 })
 
-easybar.subscribe("tailscale_icon", {
+tailscale_icon:subscribe({
 	easybar.events.network_change,
 	easybar.events.system_woke,
 	easybar.events.forced,
@@ -334,7 +338,7 @@ easybar.subscribe("tailscale_icon", {
 	refresh()
 end)
 
-easybar.subscribe("tailscale_icon", easybar.events.mouse.clicked, function(event)
+tailscale_icon:subscribe(easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_tailscale()
 		return

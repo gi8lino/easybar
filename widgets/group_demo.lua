@@ -1,8 +1,12 @@
 local hovered = false
 local enabled = false
 
+local group
+local icon
+local label
+
 local function render()
-	easybar.set("group_demo", {
+	group:set({
 		background = {
 			color = hovered and "#2c2e45" or "#202020",
 			border_color = enabled and "#8aadf4" or "#4a4a4a",
@@ -15,14 +19,14 @@ local function render()
 		},
 	})
 
-	easybar.set("group_demo_icon", {
+	icon:set({
 		icon = {
 			string = enabled and "󰄬" or "󰄱",
 			color = enabled and "#8aadf4" or "#6e738d",
 		},
 	})
 
-	easybar.set("group_demo_label", {
+	label:set({
 		label = {
 			string = hovered and "Group Hover" or "Group",
 			color = "#cad3f5",
@@ -30,7 +34,7 @@ local function render()
 	})
 end
 
-easybar.add(easybar.kind.group, "group_demo", {
+group = easybar.add(easybar.kind.group, "group_demo", {
 	position = "right",
 	order = 5,
 	spacing = 6,
@@ -39,44 +43,44 @@ easybar.add(easybar.kind.group, "group_demo", {
 	},
 })
 
-easybar.add(easybar.kind.item, "group_demo_icon", {
-	parent = "group_demo",
+icon = easybar.add(easybar.kind.item, "group_demo_icon", {
+	parent = group.name,
 	icon = {
 		string = "󰄱",
 	},
 })
 
-easybar.add(easybar.kind.item, "group_demo_label", {
-	parent = "group_demo",
+label = easybar.add(easybar.kind.item, "group_demo_label", {
+	parent = group.name,
 	label = {
 		string = "Group",
 	},
 })
 
 easybar.add(easybar.kind.item, "group_demo_popup", {
-	position = "popup.group_demo",
+	position = "popup." .. group.name,
 	label = {
 		string = "Group popup",
 	},
 })
 
-easybar.subscribe("group_demo", easybar.events.mouse.entered, function()
+group:subscribe(easybar.events.mouse.entered, function()
 	hovered = true
-	easybar.set("group_demo", {
+	group:set({
 		popup = { drawing = true },
 	})
 	render()
 end)
 
-easybar.subscribe("group_demo", easybar.events.mouse.exited, function()
+group:subscribe(easybar.events.mouse.exited, function()
 	hovered = false
-	easybar.set("group_demo", {
+	group:set({
 		popup = { drawing = false },
 	})
 	render()
 end)
 
-easybar.subscribe("group_demo", easybar.events.mouse.clicked, function()
+group:subscribe(easybar.events.mouse.clicked, function()
 	enabled = not enabled
 	render()
 end)

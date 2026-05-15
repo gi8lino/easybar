@@ -268,6 +268,7 @@
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
+
 ---@class EasyBarLevels
 ---@field trace EasyBarLevel
 ---@field debug EasyBarLevel

@@ -102,7 +102,7 @@ M.driver_events = DRIVER_EVENTS
 function M.normalize(event)
 	assert(
 		type(event) == "table" and type(event.name) == "string" and event.name ~= "",
-		"node:subscribe(...) requires easybar.events values"
+		"easybar.subscribe(...) requires easybar.events values"
 	)
 	return event.name
 end

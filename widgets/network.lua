@@ -2,6 +2,8 @@ local state = {
 	interface_name = nil,
 }
 
+local network
+
 local function normalize_interface_name(value)
 	if type(value) ~= "string" then
 		return nil
@@ -34,14 +36,14 @@ local function label_text()
 end
 
 local function render()
-	easybar.set("network", {
+	network:set({
 		label = {
 			string = label_text(),
 		},
 	})
 end
 
-easybar.add(easybar.kind.item, "network", {
+network = easybar.add(easybar.kind.item, "network", {
 	position = "right",
 	order = 35,
 	icon = {
@@ -50,7 +52,7 @@ easybar.add(easybar.kind.item, "network", {
 	label = "",
 })
 
-easybar.subscribe("network", {
+network:subscribe({
 	easybar.events.network_change,
 	easybar.events.wifi_change,
 	easybar.events.system_woke,

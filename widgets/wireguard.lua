@@ -11,6 +11,10 @@ local function quote(s)
 	return string.format("%q", s or "")
 end
 
+local wireguard
+local wireguard_icon
+local wireguard_popup_label
+
 local state = {
 	wireguard_connected = false,
 }
@@ -114,7 +118,7 @@ local function refresh()
 	local logo_path = home .. "/.config/easybar/assets/wireguard.png"
 	local icon_opacity = wireguard_connected and 1.0 or 0.45
 
-	easybar.set("wireguard_icon", {
+	wireguard_icon:set({
 		icon = {
 			string = "",
 			image = logo_path,
@@ -127,14 +131,14 @@ local function refresh()
 		opacity = icon_opacity,
 	})
 
-	easybar.set("wireguard_popup_label", {
+	wireguard_popup_label:set({
 		label = {
 			string = status_label(wireguard_connected),
 		},
 	})
 end
 
-easybar.add(easybar.kind.group, "wireguard", {
+wireguard = easybar.add(easybar.kind.group, "wireguard", {
 	position = "right",
 	order = 2,
 	background = {
@@ -147,8 +151,8 @@ easybar.add(easybar.kind.group, "wireguard", {
 	},
 })
 
-easybar.add(easybar.kind.item, "wireguard_icon", {
-	parent = "wireguard",
+wireguard_icon = easybar.add(easybar.kind.item, "wireguard_icon", {
+	parent = wireguard.name,
 	icon = {
 		string = "",
 		image = home .. "/.config/easybar/assets/wireguard.png",
@@ -160,14 +164,14 @@ easybar.add(easybar.kind.item, "wireguard_icon", {
 	},
 })
 
-easybar.add(easybar.kind.item, "wireguard_popup_label", {
-	position = "popup.wireguard",
+wireguard_popup_label = easybar.add(easybar.kind.item, "wireguard_popup_label", {
+	position = "popup." .. wireguard.name,
 	label = {
 		string = "",
 	},
 })
 
-easybar.subscribe("wireguard", {
+wireguard:subscribe({
 	easybar.events.network_change,
 	easybar.events.forced,
 }, function(event)
@@ -175,7 +179,7 @@ easybar.subscribe("wireguard", {
 	refresh()
 end)
 
-easybar.subscribe("wireguard", easybar.events.mouse.clicked, function(event)
+wireguard:subscribe(easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_wireguard()
 	end

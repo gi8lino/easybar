@@ -1,7 +1,8 @@
 local enabled = false
+local toggle
 
 local function render()
-	easybar.set("toggle_test", {
+	toggle:set({
 		icon = {
 			string = enabled and "󰄬" or "󰄱",
 			color = enabled and "#30d158" or "#ff453a",
@@ -13,16 +14,16 @@ local function render()
 	})
 end
 
-easybar.add(easybar.kind.item, "toggle_test", {
+toggle = easybar.add(easybar.kind.item, "toggle_test", {
 	position = "right",
 	order = 1,
 })
 
-easybar.subscribe("toggle_test", easybar.events.forced, function()
+toggle:subscribe(easybar.events.forced, function()
 	render()
 end)
 
-easybar.subscribe("toggle_test", easybar.events.mouse.clicked, function()
+toggle:subscribe(easybar.events.mouse.clicked, function()
 	enabled = not enabled
 	render()
 end)

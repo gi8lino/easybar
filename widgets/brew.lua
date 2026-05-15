@@ -26,17 +26,13 @@ local POPUP_ORDER = {
 	dynamic_start = 100,
 }
 
--- Nerd Font icon set.
---
--- If one of these glyphs does not render well in your font, only change the
--- string values here.
 local ICONS = {
-	checking = "󰑐", -- sync
-	updating = "󰚰", -- refresh/update
-	upgrading = "󰏖", -- upgrade / arrow up
-	up_to_date = "󰄬", -- check circle
-	outdated = "󰚭", -- package / update available
-	error = "󰅚", -- alert / error
+	checking = "󰑐",
+	updating = "󰚰",
+	upgrading = "󰏖",
+	up_to_date = "󰄬",
+	outdated = "󰚭",
+	error = "󰅚",
 }
 
 local COLORS = {
@@ -53,13 +49,22 @@ local COLORS = {
 local running = false
 local dynamic_rows = {}
 
+local brew_widget
+local title_item
+local summary_item
+local time_item
+local actions_row
+local upgrade_button
+local update_button
+local refresh_button
+
 local state = {
 	formulae = {},
 	casks = {},
 	error = nil,
 	status = "Checking outdated packages…",
 	last_checked = nil,
-	phase = "checking", -- checking | updating | upgrading | ready | error
+	phase = "checking",
 }
 
 --- Logs a debug message with a widget-specific prefix.
@@ -133,8 +138,8 @@ end
 
 --- Removes all dynamically created popup rows.
 local function remove_dynamic_rows()
-	for _, id in ipairs(dynamic_rows) do
-		easybar.remove(id)
+	for _, row in ipairs(dynamic_rows) do
+		row:remove()
 	end
 
 	dynamic_rows = {}
@@ -159,15 +164,12 @@ local function add_popup_row(id, text, opts)
 		props.label.color = opts.color
 	end
 
-	easybar.add("item", id, props)
-	dynamic_rows[#dynamic_rows + 1] = id
+	local row = easybar.add(easybar.kind.item, id, props)
+	dynamic_rows[#dynamic_rows + 1] = row
+	return row
 end
 
 --- Renders a package section in the popup.
----
---- Returns:
----   next_order: next popup order to use
----   rendered_count: number of package rows rendered
 local function render_list_section(title, packages, row_prefix, order, remaining_rows)
 	if #packages == 0 or remaining_rows <= 0 then
 		return order, 0
@@ -238,7 +240,7 @@ end
 local function render_popup()
 	local total = count_packages()
 
-	easybar.set(ID_TITLE, {
+	title_item:set({
 		order = POPUP_ORDER.title,
 		label = {
 			string = "Homebrew",
@@ -246,7 +248,7 @@ local function render_popup()
 	})
 
 	if running then
-		easybar.set(ID_SUMMARY, {
+		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
 				string = state.status,
@@ -254,7 +256,7 @@ local function render_popup()
 			},
 		})
 	elseif state.error ~= nil then
-		easybar.set(ID_SUMMARY, {
+		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
 				string = "Could not check outdated packages",
@@ -262,7 +264,7 @@ local function render_popup()
 			},
 		})
 	elseif total == 0 then
-		easybar.set(ID_SUMMARY, {
+		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
 				string = "Everything is up to date",
@@ -270,7 +272,7 @@ local function render_popup()
 			},
 		})
 	elseif total == 1 then
-		easybar.set(ID_SUMMARY, {
+		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
 				string = "1 outdated package",
@@ -278,7 +280,7 @@ local function render_popup()
 			},
 		})
 	else
-		easybar.set(ID_SUMMARY, {
+		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
 				string = tostring(total) .. " outdated packages",
@@ -288,7 +290,7 @@ local function render_popup()
 	end
 
 	local checked = state.last_checked or "never"
-	easybar.set(ID_TIME, {
+	time_item:set({
 		order = POPUP_ORDER.time,
 		label = {
 			string = "Last checked: " .. checked .. "   Next check: " .. next_check_label(),
@@ -299,25 +301,25 @@ local function render_popup()
 		},
 	})
 
-	easybar.set(ID_ACTIONS, {
+	actions_row:set({
 		order = POPUP_ORDER.actions,
 	})
 
-	easybar.set(ID_UPGRADE, {
+	upgrade_button:set({
 		order = 1,
 		label = {
 			string = running and "Upgrading…" or "Upgrade now",
 		},
 	})
 
-	easybar.set(ID_UPDATE, {
+	update_button:set({
 		order = 2,
 		label = {
 			string = running and "Updating…" or "Update now",
 		},
 	})
 
-	easybar.set(ID_REFRESH, {
+	refresh_button:set({
 		order = 3,
 		label = {
 			string = running and "Working…" or "Refresh",
@@ -381,7 +383,7 @@ local function render_bar()
 		"total=" .. tostring(count_packages())
 	)
 
-	easybar.set(WIDGET_ID, {
+	brew_widget:set({
 		icon = {
 			string = icon,
 			color = color,
@@ -506,7 +508,7 @@ easybar.default({
 	},
 })
 
-easybar.add("item", WIDGET_ID, {
+brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	position = "right",
 	order = 20,
 	interval = CHECK_INTERVAL_SECONDS,
@@ -518,7 +520,6 @@ easybar.add("item", WIDGET_ID, {
 		color = COLORS.warn,
 		font = {
 			size = 15,
-			-- family = "Symbols Nerd Font Mono",
 		},
 	},
 	label = {
@@ -531,8 +532,8 @@ easybar.add("item", WIDGET_ID, {
 	end,
 })
 
-easybar.add("item", ID_TITLE, {
-	position = "popup." .. WIDGET_ID,
+title_item = easybar.add(easybar.kind.item, ID_TITLE, {
+	position = "popup." .. brew_widget.name,
 	order = POPUP_ORDER.title,
 	label = {
 		string = "Homebrew",
@@ -542,16 +543,16 @@ easybar.add("item", ID_TITLE, {
 	},
 })
 
-easybar.add("item", ID_SUMMARY, {
-	position = "popup." .. WIDGET_ID,
+summary_item = easybar.add(easybar.kind.item, ID_SUMMARY, {
+	position = "popup." .. brew_widget.name,
 	order = POPUP_ORDER.summary,
 	label = {
 		string = "Checking outdated packages…",
 	},
 })
 
-easybar.add("item", ID_TIME, {
-	position = "popup." .. WIDGET_ID,
+time_item = easybar.add(easybar.kind.item, ID_TIME, {
+	position = "popup." .. brew_widget.name,
 	order = POPUP_ORDER.time,
 	label = {
 		string = "Last checked: never",
@@ -562,8 +563,8 @@ easybar.add("item", ID_TIME, {
 	},
 })
 
-easybar.add("row", ID_ACTIONS, {
-	position = "popup." .. WIDGET_ID,
+actions_row = easybar.add(easybar.kind.row, ID_ACTIONS, {
+	position = "popup." .. brew_widget.name,
 	order = POPUP_ORDER.actions,
 	spacing = 8,
 })
@@ -577,8 +578,8 @@ local button_background = {
 	padding_right = 8,
 }
 
-easybar.add("item", ID_UPGRADE, {
-	parent = ID_ACTIONS,
+upgrade_button = easybar.add(easybar.kind.item, ID_UPGRADE, {
+	parent = actions_row.name,
 	order = 1,
 	label = {
 		string = "Upgrade now",
@@ -586,8 +587,8 @@ easybar.add("item", ID_UPGRADE, {
 	background = button_background,
 })
 
-easybar.add("item", ID_UPDATE, {
-	parent = ID_ACTIONS,
+update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
+	parent = actions_row.name,
 	order = 2,
 	label = {
 		string = "Update now",
@@ -595,8 +596,8 @@ easybar.add("item", ID_UPDATE, {
 	background = button_background,
 })
 
-easybar.add("item", ID_REFRESH, {
-	parent = ID_ACTIONS,
+refresh_button = easybar.add(easybar.kind.item, ID_REFRESH, {
+	parent = actions_row.name,
 	order = 3,
 	label = {
 		string = "Refresh",
@@ -604,36 +605,36 @@ easybar.add("item", ID_REFRESH, {
 	background = button_background,
 })
 
-easybar.subscribe(WIDGET_ID, easybar.events.mouse.entered, function()
+brew_widget:subscribe(easybar.events.mouse.entered, function()
 	log_debug("mouse entered", "running=" .. tostring(running))
 end)
 
-easybar.subscribe(WIDGET_ID, easybar.events.mouse.exited, function()
+brew_widget:subscribe(easybar.events.mouse.exited, function()
 	log_debug("mouse exited", "running=" .. tostring(running))
 end)
 
-easybar.subscribe(ID_REFRESH, easybar.events.mouse.clicked, function(event)
+refresh_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == "left") and not running then
 		log_debug("refresh click")
 		refresh_outdated("Checking outdated packages…")
 	end
 end)
 
-easybar.subscribe(ID_UPDATE, easybar.events.mouse.clicked, function(event)
+update_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == "left") and not running then
 		log_debug("update click")
 		update_now()
 	end
 end)
 
-easybar.subscribe(ID_UPGRADE, easybar.events.mouse.clicked, function(event)
+upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == "left") and not running then
 		log_debug("upgrade click")
 		upgrade_now()
 	end
 end)
 
-easybar.subscribe(WIDGET_ID, {
+brew_widget:subscribe({
 	easybar.events.forced,
 	easybar.events.system_woke,
 }, function()
