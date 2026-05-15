@@ -110,12 +110,7 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 		})
 
 		if not ok and log then
-			log.error(
-				"lua interval handler failed id="
-					.. tostring(id)
-					.. " error="
-					.. tostring(err)
-			)
+			log.error("lua interval handler failed id=" .. tostring(id) .. " error=" .. tostring(err))
 		end
 	end
 
@@ -178,13 +173,13 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 	--- Subscribes one item to one or more events.
 	function subscriptions.subscribe(id, events, handler)
 		ensure_item_exists(id)
-		assert(type(handler) == "function", "easybar.subscribe(id, events, handler) requires handler")
+		assert(type(handler) == "function", "node:subscribe(events, handler) requires handler")
 
 		if type(events) == "table" and type(events.name) == "string" then
 			events = { events }
 		end
 
-		assert(type(events) == "table", "easybar.subscribe(id, events, handler) requires events")
+		assert(type(events) == "table", "node:subscribe(events, handler) requires events")
 
 		local bucket = state.subscriptions[id] or {}
 		state.subscriptions[id] = bucket

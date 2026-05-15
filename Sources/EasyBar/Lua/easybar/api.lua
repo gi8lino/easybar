@@ -18,7 +18,7 @@ local function load_module(name)
 	return chunk()
 end
 
---- Event token module used by widget subscriptions.
+--- Event token module used by node subscriptions.
 local event_tokens = load_module("event_tokens")
 --- Registry module used to store widget node state.
 local registry_module = load_module("registry")
@@ -151,6 +151,57 @@ function M.new(log, hooks)
 		local widget_api = {}
 		local widget_defaults = {}
 
+		--- Merges properties into one item and optionally updates its interval callback.
+		local function set_node(id, props)
+			local interval_handler = type(props) == "table" and props.on_interval or nil
+			local item_props = strip_interval_handler(props)
+			local merged = registry.merge_props(api.get(id), item_props or {})
+
+			if interval_handler ~= nil then
+				assert(valid_interval(merged.interval), "on_interval requires interval > 0")
+			end
+
+			api.set(id, item_props)
+
+			if type(props) == "table" and props.interval ~= nil then
+				subscriptions.reset_interval_schedule(id)
+			end
+
+			if interval_handler ~= nil then
+				subscriptions.set_interval_handler(id, interval_handler)
+			end
+		end
+
+		--- Builds one node handle for the public object-style API.
+		local function make_node_handle(id)
+			local handle = {
+				id = id,
+				name = id,
+			}
+
+			--- Merges properties into this node.
+			function handle:set(props)
+				return set_node(self.id, props)
+			end
+
+			--- Returns a copy of this node's current properties.
+			function handle:get()
+				return api.get(self.id)
+			end
+
+			--- Removes this node and all descendants.
+			function handle:remove()
+				return api.remove(self.id)
+			end
+
+			--- Subscribes this node to one or more events.
+			function handle:subscribe(events, handler)
+				return api.subscribe(self.id, events, handler)
+			end
+
+			return handle
+		end
+
 		--- Sets defaults for future add(...) calls in this widget only.
 		function widget_api.default(props)
 			widget_defaults = registry.merge_props(widget_defaults, props or {})
@@ -178,34 +229,12 @@ function M.new(log, hooks)
 			if interval_handler ~= nil then
 				subscriptions.set_interval_handler(id, interval_handler)
 			end
+
+			return make_node_handle(id)
 		end
 
-		--- Merges properties into one item and optionally updates its interval callback.
-		function widget_api.set(id, props)
-			local interval_handler = type(props) == "table" and props.on_interval or nil
-			local item_props = strip_interval_handler(props)
-			local merged = registry.merge_props(api.get(id), item_props or {})
-
-			if interval_handler ~= nil then
-				assert(valid_interval(merged.interval), "on_interval requires interval > 0")
-			end
-
-			api.set(id, item_props)
-
-			if type(props) == "table" and props.interval ~= nil then
-				subscriptions.reset_interval_schedule(id)
-			end
-
-			if interval_handler ~= nil then
-				subscriptions.set_interval_handler(id, interval_handler)
-			end
-		end
-
-		widget_api.get = api.get
-		widget_api.remove = api.remove
 		widget_api.exec = api.exec
 		widget_api.exec_async = api.exec_async
-		widget_api.subscribe = api.subscribe
 		widget_api.events = event_tokens.tokens
 		widget_api.kind = KINDS
 		widget_api.level = LOG_LEVELS

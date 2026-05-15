@@ -268,7 +268,6 @@
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
-
 ---@class EasyBarLevels
 ---@field trace EasyBarLevel
 ---@field debug EasyBarLevel
@@ -288,23 +287,47 @@
 ---@field sparkline EasyBarKind
 ---@field spaces EasyBarKind
 
+---@class EasyBarNodeHandle
+---@field id string Node id.
+---@field name string Alias for `id`, useful when assigning parents.
+---@field set fun(self: EasyBarNodeHandle, props: EasyBarNodeProps) Merges props into this node.
+---@field get fun(self: EasyBarNodeHandle): EasyBarNodeProps Returns a copy of this node's props.
+---@field remove fun(self: EasyBarNodeHandle) Removes this node and all descendants.
+---@field subscribe fun(self: EasyBarNodeHandle, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes this node to runtime or interaction events.
+
 ---Widget-scoped EasyBar API injected into every widget file.
----Use it to create nodes, update props, subscribe to events, and write widget logs.
+---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
----@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps) Creates one node in the widget registry.
+---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps): EasyBarNodeHandle Creates one node and returns its handle.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
----@field events EasyBarEvents Event token namespace used by `easybar.subscribe(...)`, plus mouse constants.
----@field exec fun(command: string, callback?: fun(output: string): any): any Runs one shell command and optionally receives trimmed output.
+---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
+---@field exec fun(command: string, callback?: fun(output: string, code: integer): any): any Runs one shell command and optionally receives trimmed output and exit code.
 ---@field exec_async fun(command: string, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
----@field get fun(id: string): EasyBarNodeProps Returns a copy of the current props for one node.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
----@field remove fun(id: string) Removes one node and all descendants.
----@field set fun(id: string, props: EasyBarNodeProps) Merges props into one existing node.
----@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node to runtime or interaction events.
 local EasyBar = {}
+
+---@class EasyBarNodeHandle
+local EasyBarNodeHandle = {}
+
+---Merges properties into this node.
+---@param props EasyBarNodeProps
+function EasyBarNodeHandle:set(props) end
+
+---Returns a copy of this node's current property table.
+---@return EasyBarNodeProps
+function EasyBarNodeHandle:get() end
+
+---Removes this node and all of its descendants.
+function EasyBarNodeHandle:remove() end
+
+---Subscribes this node to one or more event tokens.
+---Interaction belongs to this node frame.
+---@param events EasyBarEventToken|EasyBarEventToken[]
+---@param handler EasyBarEventHandler
+function EasyBarNodeHandle:subscribe(events, handler) end
 
 ---Sets per-widget default properties for future `easybar.add(...)` calls.
 ---Defaults apply only within the current widget file.
@@ -314,7 +337,7 @@ function EasyBar.default(props) end
 ---Clears previously configured widget defaults.
 function EasyBar.clear_defaults() end
 
----Creates one EasyBar node.
+---Creates one EasyBar node and returns its handle.
 ---Use `easybar.kind.item` for simple widgets, `easybar.kind.group` for shared containers,
 ---and `easybar.kind.row` / `easybar.kind.column` for layout wrappers around child nodes.
 ---When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
@@ -322,26 +345,13 @@ function EasyBar.clear_defaults() end
 ---@param kind EasyBarKind
 ---@param id string
 ---@param props? EasyBarNodeProps
+---@return EasyBarNodeHandle
 function EasyBar.add(kind, id, props) end
 
----Merges properties into one existing node.
----@param id string
----@param props EasyBarNodeProps
-function EasyBar.set(id, props) end
-
----Returns a copy of the current property table for one node.
----@param id string
----@return EasyBarNodeProps
-function EasyBar.get(id) end
-
----Removes one node and all of its descendants.
----@param id string
-function EasyBar.remove(id) end
-
 ---Runs one shell command.
----When a callback is provided, the trimmed command output is passed to it.
+---When a callback is provided, the trimmed command output and exit code are passed to it.
 ---@param command string
----@param callback? fun(output: string): any
+---@param callback? fun(output: string, code: integer): any
 ---@return any
 function EasyBar.exec(command, callback) end
 
@@ -363,13 +373,6 @@ EasyBar.level = {}
 ---All supported EasyBar kind constants.
 ---@type EasyBarKinds
 EasyBar.kind = {}
-
----Subscribes one node to one or more event tokens.
----Interaction belongs to the subscribed node frame.
----@param id string
----@param events EasyBarEventToken|EasyBarEventToken[]
----@param handler EasyBarEventHandler
-function EasyBar.subscribe(id, events, handler) end
 
 ---Writes one widget-scoped log line to the EasyBar host logger.
 ---Supported levels are `trace`, `debug`, `info`, `warn`, and `error`.
