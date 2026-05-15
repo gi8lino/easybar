@@ -132,7 +132,14 @@ final class AppController {
 
     configErrorWindowController.present(
       failureState: failureState,
-      configPath: Config.shared.configPath
+      configPath: Config.shared.configPath,
+      onReload: { [weak self] in
+        guard let self else { return }
+
+        Task {
+          await self.runtimeCoordinator.reloadConfig()
+        }
+      }
     )
   }
 

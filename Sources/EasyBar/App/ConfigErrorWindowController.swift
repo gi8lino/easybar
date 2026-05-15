@@ -10,11 +10,16 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
 
   /// Presents the current config failure state in a dedicated floating window.
-  func present(failureState: Config.LoadFailureState, configPath: String) {
+  func present(
+    failureState: Config.LoadFailureState,
+    configPath: String,
+    onReload: @escaping () -> Void
+  ) {
     hostingController.rootView = AnyView(
       ConfigErrorContentView(
         state: failureState,
         configPath: configPath,
+        onReload: onReload,
         onClose: { [weak self] in
           self?.close()
         }
@@ -106,6 +111,8 @@ private struct ConfigErrorContentView: View {
   let state: Config.LoadFailureState
   /// Path to the config file that failed.
   let configPath: String
+  /// Callback used by the Reload button.
+  let onReload: () -> Void
   /// Callback used by the Close button.
   let onClose: () -> Void
 
@@ -273,6 +280,9 @@ private struct ConfigErrorContentView: View {
           openConfig()
         }
         .keyboardShortcut("o", modifiers: [.command])
+
+        Button("Reload Config", action: onReload)
+          .keyboardShortcut("r", modifiers: [.command])
 
         Spacer()
 
