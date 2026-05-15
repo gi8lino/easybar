@@ -2,10 +2,21 @@ import Foundation
 
 /// Decoded message emitted by the Lua widget runtime.
 struct WidgetTreeUpdate: Codable {
+  static let supportedProtocolVersion = 1
+
+  let protocolVersion: Int?
   let type: Kind
   let root: String?
   let nodes: [WidgetNodeState]?
   let events: [String]?
+
+  enum CodingKeys: String, CodingKey {
+    case protocolVersion = "protocol_version"
+    case type
+    case root
+    case nodes
+    case events
+  }
 
   enum Kind: String, Codable {
     case subscriptions
@@ -16,6 +27,11 @@ struct WidgetTreeUpdate: Codable {
   /// Returns whether this update contains subscriptions.
   var isSubscriptions: Bool {
     return type == .subscriptions
+  }
+
+  /// Returns whether this update uses the expected host/runtime protocol version.
+  var isSupportedProtocolVersion: Bool {
+    return protocolVersion == Self.supportedProtocolVersion
   }
 
   /// Returns whether this update is the runtime ready signal.

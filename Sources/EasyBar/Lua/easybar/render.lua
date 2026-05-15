@@ -5,6 +5,7 @@
 local M = {}
 --- Shared table-copy helpers.
 local helpers = require("easybar.helpers")
+local PROTOCOL_VERSION = 1
 
 --- Last encoded tree payload by root id.
 local last_emitted = {}
@@ -606,6 +607,7 @@ local function emit_tree(tree, log, json)
 	flatten_node(tree, root_id, nil, tree.position, nodes)
 
 	local payload = {
+		protocol_version = PROTOCOL_VERSION,
 		type = "tree",
 		root = root_id,
 		nodes = nodes,

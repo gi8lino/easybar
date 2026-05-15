@@ -102,6 +102,15 @@ actor WidgetEngine {
 
     do {
       let update = try decodeUpdate(from: line)
+      guard update.isSupportedProtocolVersion else {
+        MetricsCoordinator.shared.recordDecodeError()
+        logger.warn(
+          "unsupported lua protocol version",
+          .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
+          .field("received", update.protocolVersion.map(String.init(describing:)) ?? "nil")
+        )
+        return
+      }
       await handleUpdate(update, rawLine: line)
     } catch DecodingError.dataCorrupted {
       MetricsCoordinator.shared.recordDecodeError()

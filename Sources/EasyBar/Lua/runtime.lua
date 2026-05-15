@@ -12,6 +12,7 @@ end
 
 --- Runtime module root directory.
 local base_dir = runtime_dir()
+local PROTOCOL_VERSION = 1
 --- Adds bundled runtime modules to the Lua module path.
 package.path = base_dir .. "/?.lua;" .. package.path
 
@@ -76,6 +77,7 @@ end
 --- Emits runtime subscription requirements when they changed.
 local function emit_subscriptions(force)
 	local payload = json.encode({
+		protocol_version = PROTOCOL_VERSION,
 		type = "subscriptions",
 		events = registry.required_events(),
 	})
@@ -112,7 +114,10 @@ io.stderr:setvbuf("line")
 loader.load_widgets(widget_dir, widget_files, registry, log)
 
 emit_subscriptions(true)
-io.stdout:write('{"type":"ready"}' .. "\n")
+io.stdout:write(json.encode({
+	protocol_version = PROTOCOL_VERSION,
+	type = "ready",
+}) .. "\n")
 io.stdout:flush()
 
 -- Emit the full initial widget trees once the runtime handshake is complete.
