@@ -5,9 +5,27 @@ import Foundation
 ///
 /// This actor owns the Lua handshake state, subscriptions, and tree updates.
 actor WidgetEngine {
+  private struct LuaCommandResponse: Encodable {
+    let protocolVersion = WidgetTreeUpdate.supportedProtocolVersion
+    let type = "command_response"
+    let token: String
+    let output: String
+    let status: Int32
+
+    enum CodingKeys: String, CodingKey {
+      case protocolVersion = "protocol_version"
+      case type
+      case token
+      case output
+      case status
+    }
+  }
+
   private let logger: ProcessLogger
   private let luaRuntime: LuaRuntime
+  private let commandRunner: LuaCommandRunner
   private let decoder = JSONDecoder()
+  private let encoder = JSONEncoder()
 
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
@@ -20,6 +38,7 @@ actor WidgetEngine {
   ) {
     self.logger = logger
     self.luaRuntime = luaRuntime
+    self.commandRunner = LuaCommandRunner(logger: logger.child("commands"))
   }
 
   /// Starts the scripted widget runtime.
@@ -156,6 +175,11 @@ actor WidgetEngine {
       return
     }
 
+    guard !update.isCommandRequest else {
+      await handleCommandRequest(update, rawLine: rawLine)
+      return
+    }
+
     guard update.isTree else {
       logger.warn("unknown lua message: \(rawLine)")
       return
@@ -214,5 +238,69 @@ actor WidgetEngine {
     await MainActor.run {
       WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
     }
+  }
+
+  /// Handles one Lua command execution request.
+  private func handleCommandRequest(_ update: WidgetTreeUpdate, rawLine: String) async {
+    guard let request = update.commandRequestPayload else {
+      logger.warn("invalid lua command request: \(rawLine)")
+      return
+    }
+
+    logger.debug(
+      "lua command requested",
+      .field("token", request.token),
+      .field("sync", request.isSynchronous),
+      .field("command", request.command)
+    )
+
+    if request.isSynchronous {
+      let result = await commandRunner.run(command: request.command)
+      await sendCommandResponse(token: request.token, result: result)
+      return
+    }
+
+    let commandRunner = commandRunner
+    let luaRuntime = luaRuntime
+    let logger = logger
+    let encoder = self.encoder
+
+    Task {
+      let result = await commandRunner.run(command: request.command)
+      let response = LuaCommandResponse(
+        token: request.token,
+        output: result.output,
+        status: result.status
+      )
+
+      guard
+        let data = try? encoder.encode(response),
+        let encoded = String(data: data, encoding: .utf8)
+      else {
+        logger.error("failed to encode async lua command response", .field("token", request.token))
+        return
+      }
+
+      await luaRuntime.send(encoded)
+    }
+  }
+
+  /// Sends one command response back into the Lua runtime.
+  private func sendCommandResponse(token: String, result: LuaCommandResult) async {
+    let response = LuaCommandResponse(
+      token: token,
+      output: result.output,
+      status: result.status
+    )
+
+    guard
+      let data = try? encoder.encode(response),
+      let encoded = String(data: data, encoding: .utf8)
+    else {
+      logger.error("failed to encode lua command response", .field("token", token))
+      return
+    }
+
+    await luaRuntime.send(encoded)
   }
 }

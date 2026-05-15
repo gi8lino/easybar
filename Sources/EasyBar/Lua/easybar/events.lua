@@ -60,7 +60,6 @@ end
 function M.dispatch_event(registry, event, flush_pending_render, log)
 	log.trace("runtime dispatch event=" .. tostring(event.name))
 	registry.handle_event(event)
-	registry.poll_async_jobs()
 	flush_pending_render()
 end
 

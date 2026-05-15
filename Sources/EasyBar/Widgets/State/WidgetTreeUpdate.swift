@@ -9,6 +9,9 @@ struct WidgetTreeUpdate: Codable {
   let root: String?
   let nodes: [WidgetNodeState]?
   let events: [String]?
+  let token: String?
+  let command: String?
+  let sync: Bool?
 
   enum CodingKeys: String, CodingKey {
     case protocolVersion = "protocol_version"
@@ -16,12 +19,16 @@ struct WidgetTreeUpdate: Codable {
     case root
     case nodes
     case events
+    case token
+    case command
+    case sync
   }
 
   enum Kind: String, Codable {
     case subscriptions
     case ready
     case tree
+    case commandRequest = "command_request"
   }
 
   /// Returns whether this update contains subscriptions.
@@ -44,6 +51,11 @@ struct WidgetTreeUpdate: Codable {
     return type == .tree
   }
 
+  /// Returns whether this update is a host command execution request.
+  var isCommandRequest: Bool {
+    return type == .commandRequest
+  }
+
   /// Returns the subscribed event names or an empty list.
   var subscribedEvents: [String] {
     return events ?? []
@@ -58,5 +70,11 @@ struct WidgetTreeUpdate: Codable {
   var treePayload: (root: String, nodes: [WidgetNodeState])? {
     guard let root, let nodes else { return nil }
     return (root: root, nodes: nodes)
+  }
+
+  /// Returns the decoded command request payload when present.
+  var commandRequestPayload: (token: String, command: String, isSynchronous: Bool)? {
+    guard let token, let command, let sync else { return nil }
+    return (token: token, command: command, isSynchronous: sync)
   }
 }

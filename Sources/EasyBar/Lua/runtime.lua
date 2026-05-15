@@ -58,6 +58,7 @@ end
 local registry
 local render_dirty = false
 local last_subscription_payload = nil
+local next_command_sequence = 0
 
 --- Marks the current runtime state as needing one render flush.
 local function mark_render_dirty()
@@ -91,11 +92,120 @@ local function emit_subscriptions(force)
 	io.stdout:flush()
 end
 
+--- Sends one structured payload to the Swift host.
+local function send_payload(payload)
+	io.stdout:write(json.encode(payload) .. "\n")
+	io.stdout:flush()
+end
+
+--- Returns one unique command token.
+local function next_command_token()
+	next_command_sequence = next_command_sequence + 1
+	return tostring(next_command_sequence)
+end
+
+--- Sends one command request to the Swift host.
+local function send_command_request(command, synchronous)
+	local token = next_command_token()
+
+	send_payload({
+		protocol_version = PROTOCOL_VERSION,
+		type = "command_request",
+		token = token,
+		command = tostring(command),
+		sync = synchronous == true,
+	})
+
+	return token
+end
+
+--- Dispatches one host command response into the registry and flushes any callback mutations.
+local function handle_command_response(payload)
+	if type(payload.token) ~= "string" or payload.token == "" then
+		log.error("runtime ignored command response missing token")
+		return
+	end
+
+	local output = payload.output
+	if output == nil then
+		output = ""
+	elseif type(output) ~= "string" then
+		output = tostring(output)
+	end
+
+	registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1)
+	flush_pending_render()
+end
+
+--- Dispatches one JSON-decoded host payload by kind.
+local function handle_host_payload(payload, raw_line)
+	if type(payload) ~= "table" then
+		log.error("runtime ignored non-table host payload=" .. tostring(raw_line))
+		return
+	end
+
+	if payload.type == "command_response" then
+		handle_command_response(payload)
+		return
+	end
+
+	if type(payload.name) ~= "string" or payload.name == "" then
+		log.error("runtime ignored invalid json payload=" .. tostring(raw_line))
+		return
+	end
+
+	local event = events.normalize_event(payload)
+	events.dispatch_event(registry, event, flush_pending_render, log)
+end
+
+--- Reads, decodes, and handles one host payload line.
+local function process_next_host_message()
+	local line = io.read()
+
+	if not line then
+		return false
+	end
+
+	log.trace("runtime stdin " .. tostring(line))
+
+	local ok, payload = pcall(json.decode, line)
+
+	if not ok then
+		log.error("runtime ignored invalid json payload=" .. tostring(line))
+		return true
+	end
+
+	handle_host_payload(payload, line)
+	return true
+end
+
+--- Runs one host-owned command synchronously and returns trimmed output plus exit code.
+local function request_sync_command(command)
+	local token = send_command_request(command, true)
+
+	while true do
+		local response = registry.take_pending_command_response(token)
+		if response ~= nil then
+			return response.output, response.code
+		end
+
+		if not process_next_host_message() then
+			return "", 1
+		end
+	end
+end
+
+--- Starts one host-owned asynchronous command and returns its token.
+local function request_async_command(command)
+	return send_command_request(command, false)
+end
+
 registry = api.new(log, {
 	on_mutation = mark_render_dirty,
 	before_exec_callback = flush_pending_render,
 	before_async_callback = flush_pending_render,
-	on_async_jobs_changed = emit_subscriptions,
+	request_sync_command = request_sync_command,
+	request_async_command = request_async_command,
 	on_async_job_started = function(token, command)
 		log.debug("lua async started token=" .. tostring(token) .. " command=" .. tostring(command))
 	end,
@@ -114,30 +224,13 @@ io.stderr:setvbuf("line")
 loader.load_widgets(widget_dir, widget_files, registry, log)
 
 emit_subscriptions(true)
-io.stdout:write(json.encode({
+send_payload({
 	protocol_version = PROTOCOL_VERSION,
 	type = "ready",
-}) .. "\n")
-io.stdout:flush()
+})
 
 -- Emit the full initial widget trees once the runtime handshake is complete.
 flush_pending_render(true)
 
-while true do
-	local line = io.read()
-
-	if not line then
-		break
-	end
-
-	log.trace("runtime stdin " .. tostring(line))
-
-	local ok, payload = pcall(json.decode, line)
-
-	if not ok or type(payload) ~= "table" or type(payload.name) ~= "string" or payload.name == "" then
-		log.error("runtime ignored invalid json payload=" .. tostring(line))
-	else
-		local event = events.normalize_event(payload)
-		events.dispatch_event(registry, event, flush_pending_render, log)
-	end
+while process_next_host_message() do
 end

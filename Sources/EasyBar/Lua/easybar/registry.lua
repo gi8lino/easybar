@@ -10,11 +10,6 @@ local helpers = require("easybar.helpers")
 local function noop()
 end
 
---- Quotes one shell argument for POSIX sh.
-local function shell_quote(value)
-	return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
-end
-
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
 	if type(source) ~= "table" then
@@ -144,10 +139,12 @@ function M.new(hooks)
 
 	local on_mutation = type(hooks.on_mutation) == "function" and hooks.on_mutation or noop
 	local before_exec_callback = type(hooks.before_exec_callback) == "function" and hooks.before_exec_callback or noop
+	local request_sync_command =
+		type(hooks.request_sync_command) == "function" and hooks.request_sync_command or nil
+	local request_async_command =
+		type(hooks.request_async_command) == "function" and hooks.request_async_command or nil
 	local before_async_callback =
 		type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
-	local on_async_jobs_changed =
-		type(hooks.on_async_jobs_changed) == "function" and hooks.on_async_jobs_changed or noop
 	local on_async_job_started =
 		type(hooks.on_async_job_started) == "function" and hooks.on_async_job_started or noop
 	local on_async_job_completed =
@@ -161,7 +158,8 @@ function M.new(hooks)
 		subscriptions = {},
 		interval_handlers = {},
 		interval_next_due = {},
-		async_jobs = {},
+		pending_async_commands = {},
+		pending_command_responses = {},
 	}
 
 	local registry = {
@@ -233,137 +231,87 @@ function M.new(hooks)
 	--- Returns one unique identifier for a background job.
 	local function make_async_job_token()
 		local micros = math.floor((os.clock() or 0) * 1000000)
-		return tostring(os.time()) .. "_" .. tostring(micros) .. "_" .. tostring(#state.async_jobs + 1)
-	end
-
-	--- Returns one temp-file base path for a background job.
-	local function async_job_base_path(token)
-		local tmpdir = os.getenv("TMPDIR") or "/tmp"
-		return tmpdir .. "/easybar-async-" .. token
-	end
-
-	--- Reads one whole file or returns the fallback.
-	local function read_file(path, fallback)
-		local handle = io.open(path, "r")
-		if not handle then
-			return fallback
-		end
-
-		local content = handle:read("*a")
-		handle:close()
-		return content or fallback
-	end
-
-	--- Deletes one async job's temp files.
-	local function clear_async_job_files(job)
-		os.remove(job.output_path)
-		os.remove(job.rc_path)
+		return tostring(os.time()) .. "_" .. tostring(micros) .. "_" .. tostring(#state.item_order + 1)
 	end
 
 	--- Returns extra driver events required by registry-owned background jobs.
 	function registry.required_driver_events()
-		if #state.async_jobs == 0 then
-			return {}
-		end
-
-		return { "interval_tick:0.25" }
+		return {}
 	end
 
-	--- Starts one background shell command and completes it through later polling.
+	--- Stores or dispatches one command response delivered by the Swift host.
+	function registry.handle_command_response(token, output, code)
+		assert(type(token) == "string" and token ~= "", "command response requires token")
+
+		local pending = state.pending_async_commands[token]
+
+		if pending == nil then
+			state.pending_command_responses[token] = {
+				output = trim_trailing_newlines(output),
+				code = tonumber(code) or 1,
+			}
+			return false
+		end
+
+		state.pending_async_commands[token] = nil
+
+		local normalized_output = trim_trailing_newlines(output)
+		local normalized_code = tonumber(code) or 1
+
+		on_async_job_completed(token, normalized_code)
+		before_async_callback()
+
+		local ok, err = pcall(pending.callback, normalized_output, normalized_code)
+		if not ok then
+			on_async_callback_error(pending.command, err)
+		end
+
+		return true
+	end
+
+	--- Returns and clears one stored synchronous command response by token.
+	function registry.take_pending_command_response(token)
+		local response = state.pending_command_responses[token]
+		state.pending_command_responses[token] = nil
+		return response
+	end
+
+	--- Starts one background host-owned shell command.
 	function registry.exec_async(command, callback)
 		assert(
 			type(command) == "string" and command ~= "",
 			"easybar.exec_async(command, callback) requires command"
 		)
 		assert(type(callback) == "function", "easybar.exec_async(command, callback) requires callback")
+		assert(type(request_async_command) == "function", "easybar.exec_async unavailable without host runner")
 
-		local previous_count = #state.async_jobs
-		local token = make_async_job_token()
-		local base_path = async_job_base_path(token)
-		local job = {
-			token = token,
+		local token = request_async_command(command) or make_async_job_token()
+
+		state.pending_async_commands[token] = {
 			command = command,
 			callback = callback,
-			output_path = base_path .. ".out",
-			rc_path = base_path .. ".rc",
 		}
-
-		local launch_script = "out="
-			.. shell_quote(job.output_path)
-			.. " rc="
-			.. shell_quote(job.rc_path)
-			.. ' ; rm -f "$out" "$rc" ; ( ( '
-			.. command
-			.. ' ) >"$out" 2>&1 ; printf \'%s\\n\' "$?" >"$rc" ) >/dev/null 2>&1 &'
-
-		local ok = os.execute("/bin/sh -c " .. shell_quote(launch_script) .. " >/dev/null 2>&1")
-		if ok == nil then
-			error("failed to start async command")
-		end
-
-		state.async_jobs[#state.async_jobs + 1] = job
-
-		if previous_count ~= #state.async_jobs then
-			on_async_jobs_changed()
-		end
 
 		on_async_job_started(token, command)
 
 		return token
 	end
 
-	--- Polls background jobs and runs ready callbacks.
-	function registry.poll_async_jobs()
-		local index = 1
-
-		while index <= #state.async_jobs do
-			local job = state.async_jobs[index]
-			local rc_text = read_file(job.rc_path, nil)
-
-			if rc_text == nil then
-				index = index + 1
-			else
-				local previous_count = #state.async_jobs
-				table.remove(state.async_jobs, index)
-
-				local code = tonumber((rc_text or ""):match("^%s*(%-?%d+)")) or 1
-				local output = trim_trailing_newlines(read_file(job.output_path, ""))
-				clear_async_job_files(job)
-
-				if previous_count ~= #state.async_jobs then
-					on_async_jobs_changed()
-				end
-
-				on_async_job_completed(job.token, code)
-
-				before_async_callback()
-
-				local ok, err = pcall(job.callback, output, code)
-				if not ok then
-					on_async_callback_error(job.command, err)
-				end
-			end
-		end
-	end
-
-	--- Runs one shell command.
+	--- Runs one host-owned shell command.
 	function registry.exec(command, callback)
 		assert(type(command) == "string" and command ~= "", "easybar.exec(command, callback) requires command")
+		assert(type(request_sync_command) == "function", "easybar.exec unavailable without host runner")
 
-		local pipe = io.popen(command .. " 2>/dev/null")
-		local output = ""
-
-		if pipe then
-			output = trim_trailing_newlines(pipe:read("*a") or "")
-			pipe:close()
-		end
+		before_exec_callback()
+		local output, code = request_sync_command(command)
+		output = trim_trailing_newlines(output)
+		code = tonumber(code) or 1
 
 		if type(callback) == "function" then
-			before_exec_callback()
-			return callback(output)
+			return callback(output, code)
 		end
 
-		return output
+		return output, code
 	end
 
 	return registry

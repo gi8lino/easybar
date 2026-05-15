@@ -5,6 +5,7 @@ import XCTest
 @testable import EasyBar
 
 final class LuaRenderCoalescingTests: XCTestCase {
+  private let decoder = JSONDecoder()
   private var tempDirectoryURL: URL!
 
   override func setUpWithError() throws {
@@ -69,6 +70,12 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let stdoutPipe = Pipe()
     let stderrPipe = Pipe()
     let recorder = RuntimeUpdateRecorder()
+    let hostBridge = RuntimeHostBridge(
+      recorder: recorder,
+      decoder: decoder,
+      stdinHandle: stdinPipe.fileHandleForWriting,
+      asyncResponseDelayNanoseconds: 0
+    )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
     process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
@@ -78,15 +85,12 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.environment = ProcessInfo.processInfo.environment
 
     let stdoutObserver = RuntimeLineObserver { line in
-      guard let data = line.data(using: .utf8) else { return }
-
-      do {
-        let update = try JSONDecoder().decode(WidgetTreeUpdate.self, from: data)
-        Task {
-          await recorder.append(update)
+      Task {
+        do {
+          try await hostBridge.handleRuntimeLine(line)
+        } catch {
+          XCTFail("Failed handling runtime update: \(line) error=\(error)")
         }
-      } catch {
-        XCTFail("Failed decoding runtime update: \(line)")
       }
     }
     stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
@@ -130,7 +134,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0")
   }
 
-  func testExecAsyncRequestsPollingAndDeliversCompletionLater() async throws {
+  func testExecAsyncDeliversCompletionLaterWithoutPollingTick() async throws {
     let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
     try FileManager.default.createDirectory(
       at: widgetsDirectoryURL,
@@ -179,6 +183,12 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let stdoutPipe = Pipe()
     let stderrPipe = Pipe()
     let recorder = RuntimeUpdateRecorder()
+    let hostBridge = RuntimeHostBridge(
+      recorder: recorder,
+      decoder: decoder,
+      stdinHandle: stdinPipe.fileHandleForWriting,
+      asyncResponseDelayNanoseconds: 50_000_000
+    )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
     process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
@@ -188,15 +198,12 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.environment = ProcessInfo.processInfo.environment
 
     let stdoutObserver = RuntimeLineObserver { line in
-      guard let data = line.data(using: .utf8) else { return }
-
-      do {
-        let update = try JSONDecoder().decode(WidgetTreeUpdate.self, from: data)
-        Task {
-          await recorder.append(update)
+      Task {
+        do {
+          try await hostBridge.handleRuntimeLine(line)
+        } catch {
+          XCTFail("Failed handling runtime update: \(line) error=\(error)")
         }
-      } catch {
-        XCTFail("Failed decoding runtime update: \(line)")
       }
     }
     stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
@@ -227,12 +234,6 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
     XCTAssertEqual(rootNode(in: busyUpdate)?.text, "Brew ...")
 
-    try await Task.sleep(nanoseconds: 50_000_000)
-
-    try stdinPipe.fileHandleForWriting.write(
-      contentsOf: Data("{\"name\":\"interval_tick\"}\n".utf8)
-    )
-
     let doneUpdate = try await nextTreeUpdate(
       from: recorder,
       matching: { [self] in rootNode(in: $0)?.icon == "done" }
@@ -242,6 +243,48 @@ final class LuaRenderCoalescingTests: XCTestCase {
 }
 
 extension LuaRenderCoalescingTests {
+  fileprivate actor RuntimeHostBridge {
+    private let recorder: RuntimeUpdateRecorder
+    private let decoder: JSONDecoder
+    private let stdinHandle: FileHandle
+    private let asyncResponseDelayNanoseconds: UInt64
+
+    init(
+      recorder: RuntimeUpdateRecorder,
+      decoder: JSONDecoder,
+      stdinHandle: FileHandle,
+      asyncResponseDelayNanoseconds: UInt64
+    ) {
+      self.recorder = recorder
+      self.decoder = decoder
+      self.stdinHandle = stdinHandle
+      self.asyncResponseDelayNanoseconds = asyncResponseDelayNanoseconds
+    }
+
+    func handleRuntimeLine(_ line: String) async throws {
+      let update = try decoder.decode(WidgetTreeUpdate.self, from: Data(line.utf8))
+
+      if let request = update.commandRequestPayload {
+        if !request.isSynchronous && asyncResponseDelayNanoseconds > 0 {
+          try await Task.sleep(nanoseconds: asyncResponseDelayNanoseconds)
+        }
+
+        try sendCommandResponse(token: request.token, output: "0", status: 0)
+        return
+      }
+
+      await recorder.append(update)
+    }
+
+    private func sendCommandResponse(token: String, output: String, status: Int) throws {
+      let payload = """
+      {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
+      \n
+      """
+      try stdinHandle.write(contentsOf: Data(payload.utf8))
+    }
+  }
+
   fileprivate actor RuntimeUpdateRecorder {
     private var updates: [WidgetTreeUpdate] = []
 
