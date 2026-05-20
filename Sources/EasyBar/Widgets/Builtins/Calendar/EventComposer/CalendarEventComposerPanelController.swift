@@ -7,6 +7,11 @@ import SwiftUI
 /// Manages a floating panel for the shared calendar event composer.
 @MainActor
 final class CalendarEventComposerPanelController: ObservableObject {
+  private enum SnapshotSource {
+    case month
+    case upcoming
+  }
+
   private var panel: NSPanel?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var composer: CalendarEventComposer?
@@ -16,7 +21,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     defaultDate: Date,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer()
+    let composer = makeComposer(snapshotSource: .month)
     composer.prepare(defaultDate: defaultDate)
     self.composer = composer
 
@@ -47,7 +52,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     event: CalendarAgentEvent,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer()
+    let composer = makeComposer(snapshotSource: .upcoming)
     composer.prepare(event: event)
     self.composer = composer
 
@@ -146,13 +151,27 @@ final class CalendarEventComposerPanelController: ObservableObject {
   }
 
   /// Builds one reusable composer view model wired to EasyBar stores and agent clients.
-  private func makeComposer() -> CalendarEventComposer {
-    CalendarEventComposer(
-      config: Config.shared.builtinCalendar.composer.calendarUIConfig,
-      snapshotPublisher: NativeMonthCalendarStore.shared.$snapshot.eraseToAnyPublisher(),
-      refreshSnapshots: {
+  private func makeComposer(snapshotSource: SnapshotSource) -> CalendarEventComposer {
+    let snapshotPublisher: AnyPublisher<CalendarAgentSnapshot?, Never>
+    let refreshSnapshots: () -> Void
+
+    switch snapshotSource {
+    case .month:
+      snapshotPublisher = NativeMonthCalendarStore.shared.$snapshot.eraseToAnyPublisher()
+      refreshSnapshots = {
         MonthCalendarAgentClient.shared.refresh()
-      },
+      }
+    case .upcoming:
+      snapshotPublisher = NativeUpcomingCalendarStore.shared.$snapshot.eraseToAnyPublisher()
+      refreshSnapshots = {
+        UpcomingCalendarAgentClient.shared.refresh()
+      }
+    }
+
+    return CalendarEventComposer(
+      config: Config.shared.builtinCalendar.composer.calendarUIConfig,
+      snapshotPublisher: snapshotPublisher,
+      refreshSnapshots: refreshSnapshots,
       createEvent: { event, completion in
         MonthCalendarAgentClient.shared.createEvent(event, completion: completion)
       },
