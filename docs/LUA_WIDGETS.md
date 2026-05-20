@@ -40,6 +40,14 @@ EasyBar installs a bundled LuaLS stub into:
 ~/.local/share/easybar/easybar_api.lua
 ```
 
+That installed file is the combined public stub.
+If you are working on EasyBar itself, the split source files are:
+
+- `Sources/EasyBar/Lua/easybar_api.base.lua`
+- `Sources/EasyBar/Lua/easybar_api.events.lua`
+
+Those source files are merged into the installed `easybar_api.lua` stub during generation.
+
 If your editor uses LuaLS, add a `.luarc.json` in the workspace where you edit widgets.
 
 That gives you:

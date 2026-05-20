@@ -155,6 +155,11 @@
 ---@field borderWidth? number Legacy direct border width alias.
 ---@field cornerRadius? number Legacy direct corner radius alias.
 
+-- Generated event annotations are inserted below when producing `easybar_api.lua`.
+-- The standalone generated source lives in `easybar_api.events.lua`.
+-- EasyBar generated event stub. Do not edit by hand.
+-- Source of truth: Sources/EasyBar/Events/event_catalog.json
+-- Regenerate with: scripts/generate_event_catalog.py
 ---@alias EasyBarEventName
 ---| '"interval"'
 ---| '"forced"'

@@ -539,8 +539,13 @@ Look for:
 
 - `api.lua`
 - `easybar_api.base.lua`
+- `easybar_api.events.lua`
 - `easybar_api.lua`
 - `LUA_WIDGETS.md`
+
+`easybar_api.base.lua` is the hand-edited source stub.
+`easybar_api.events.lua` is generated from the event catalog.
+`easybar_api.lua` is the combined generated artifact that EasyBar installs for LuaLS/editor support.
 
 ### Driver events
 
