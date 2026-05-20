@@ -18,7 +18,7 @@ APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
 APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
-APP_RESOURCE_BUNDLE := $(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)
+APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
 
@@ -244,7 +244,7 @@ else
 endif
 
 copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
-	@mkdir -p "$(APP_RESOURCES)"
+	@mkdir -p "$(APP_BUNDLE)"
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
 	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
