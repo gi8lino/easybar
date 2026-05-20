@@ -18,8 +18,10 @@ APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
 APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
+APP_RESOURCE_BUNDLE := $(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
+
 APP_ICON_SVG := packaging/easybar-icon.svg
 APP_ICON_FILE := $(APP_NAME)
 APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
@@ -49,8 +51,6 @@ NETWORK_AGENT_ICON_ICNS := $(NETWORK_AGENT_RESOURCES)/$(NETWORK_AGENT_ICON_FILE)
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
 PLIST_TEMPLATE := Sources/EasyBarApp/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
-
-APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
@@ -243,6 +243,7 @@ else
 endif
 
 copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
+	@mkdir -p "$(APP_RESOURCES)"
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
 	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
