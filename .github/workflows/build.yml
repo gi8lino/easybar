@@ -55,44 +55,22 @@ jobs:
       - name: Clean build directories
         shell: bash
         run: |
-          rm -rf .build dist
+          make clean
 
-      - name: Build universal release artifact
+      - name: Build release package
         shell: bash
         run: |
-          make release \
+          make package \
             ARCH=universal \
             VERSION="${{ steps.version.outputs.version }}" \
             BUNDLE_ID="${BUNDLE_ID}"
 
-      - name: Verify bundled artifacts
+      - name: Verify release package
         shell: bash
         run: |
-          file "dist/EasyBar.app/Contents/MacOS/EasyBar"
-          file "dist/EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"
-          file "dist/EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"
-          file "dist/easybar"
-          test -f "dist/EasyBar.app/Contents/Info.plist"
-          test -f "dist/EasyBarCalendarAgent.app/Contents/Info.plist"
-          test -f "dist/EasyBarNetworkAgent.app/Contents/Info.plist"
-          test -d "dist/EasyBar.app/EasyBar_EasyBar.bundle"
-          test -f "dist/EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"
-          test -f "dist/EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"
-          test -f "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
-          plutil -p "dist/EasyBar.app/Contents/Info.plist"
-
-      - name: Print build fingerprints
-        shell: bash
-        run: |
-          shasum -a 256 "dist/EasyBar.app/Contents/MacOS/EasyBar"
-          shasum -a 256 "dist/EasyBar.app/Contents/Info.plist"
-          shasum -a 256 "dist/EasyBar.app/EasyBar_EasyBar.bundle/easybar_api.lua"
-          codesign -dv --verbose=4 "dist/EasyBar.app" 2>&1 || true
-
-      - name: Print package checksum
-        shell: bash
-        run: |
-          shasum -a 256 "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+          make verify-release \
+            ARCH=universal \
+            VERSION="${{ steps.version.outputs.version }}"
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7

@@ -102,7 +102,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
-        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources verify \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
@@ -174,7 +174,8 @@ package: bundle ## Create the release ZIP consumed by the Homebrew formula.
 	@rm -rf "$(PACKAGE_STAGE)"
 	@echo "Created $(PACKAGE_ZIP)"
 
-release: package ## Build the zipped release artifact.
+release: package ## Build and verify the zipped release artifact.
+	@$(MAKE) --no-print-directory verify-release VERSION=$(VERSION) ARCH=$(ARCH)
 	@echo "Release artifact ready: $(PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
@@ -364,6 +365,19 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@ls -1 "$(APP_CONTENTS)"
 	@echo "Packaged Resources:"
 	@ls -1 "$(APP_RESOURCES)" 2>/dev/null || true
+
+verify-release: ## Validate the release package and print release fingerprints.
+	@$(MAKE) --no-print-directory verify
+	@test -f "$(PACKAGE_ZIP)"
+	@test -f "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
+	@echo "Release package:"
+	@ls -lh "$(PACKAGE_ZIP)"
+	@echo "Build fingerprints:"
+	@shasum -a 256 "$(APP_BIN)"
+	@shasum -a 256 "$(PLIST)"
+	@shasum -a 256 "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
+	@shasum -a 256 "$(PACKAGE_ZIP)"
+	@codesign -dv --verbose=4 "$(APP_BUNDLE)" 2>&1 || true
 
 run: prepare-version ## Fast local run with debug builds and local agents.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
