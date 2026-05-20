@@ -54,7 +54,7 @@ PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
 PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUILD_INFO := Sources/EasyBarShared/Build/BuildInfo.swift
-LUA_API_STUB := Sources/EasyBar/Lua/easybar_api.lua
+LUA_API_STUB := Sources/EasyBarApp/Lua/easybar_api.lua
 
 BUNDLE_ID ?= com.gi8lino.EasyBar
 VERSION ?= dev

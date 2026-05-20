@@ -1,5 +1,5 @@
 -- EasyBar generated event stub. Do not edit by hand.
--- Source of truth: Sources/EasyBar/Events/event_catalog.json
+-- Source of truth: Sources/EasyBarApp/Events/event_catalog.json
 -- Regenerate with: scripts/generate_event_catalog.py
 ---@alias EasyBarEventName
 ---| '"interval"'

@@ -14,7 +14,7 @@ let package = Package(
     .library(name: "EasyBarCalendarPresentation", targets: ["EasyBarCalendarPresentation"]),
     .library(name: "EasyBarCalendarUI", targets: ["EasyBarCalendarUI"]),
     .library(name: "EasyBarNetworkAgentCore", targets: ["EasyBarNetworkAgentCore"]),
-    .executable(name: "EasyBar", targets: ["EasyBar"]),
+    .executable(name: "EasyBar", targets: ["EasyBarApp"]),
     .executable(name: "EasyBarLuaRuntime", targets: ["EasyBarLuaRuntime"]),
     .executable(name: "easybar", targets: ["EasyBarCtl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
@@ -71,7 +71,7 @@ let package = Package(
       path: "Sources/EasyBarNetworkAgentCore"
     ),
     .executableTarget(
-      name: "EasyBar",
+      name: "EasyBarApp",
       dependencies: [
         "EasyBarShared",
         "EasyBarCalendarConfig",
@@ -79,7 +79,7 @@ let package = Package(
         "EasyBarCalendarUI",
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
-      path: "Sources/EasyBar",
+      path: "Sources/EasyBarApp",
       exclude: [
         "Info.plist",
         "Lua/easybar_api.base.lua",
@@ -131,7 +131,7 @@ let package = Package(
     .testTarget(
       name: "EasyBarTests",
       dependencies: [
-        "EasyBar",
+        "EasyBarApp",
         "EasyBarLuaRuntime",
         "EasyBarShared",
         "EasyBarCalendarConfig",
