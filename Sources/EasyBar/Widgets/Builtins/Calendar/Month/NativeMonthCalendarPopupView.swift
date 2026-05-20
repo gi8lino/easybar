@@ -10,9 +10,9 @@ struct NativeMonthCalendarPopupView: View {
     CalendarMonthPopupView(
       store: NativeMonthCalendarStore.shared,
       logger: NativeMonthCalendarStore.shared.logger,
-      config: Config.shared.builtinCalendar.month.popup.calendarMonthPopupConfig,
-      appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
-      birthdays: Config.shared.builtinCalendar.birthdays.calendarBirthdayStyle,
+      config: Config.shared.builtinCalendar.calendarMonthPopupUIConfig,
+      appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
+      birthdays: Config.shared.builtinCalendar.birthdayCalendarUIStyle,
       emptyText: Config.shared.builtinCalendar.appointments.emptyText,
       onVisibleMonthChanged: { visibleMonth in
         MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)

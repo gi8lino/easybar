@@ -28,8 +28,8 @@ final class CalendarEventComposerPanelController: ObservableObject {
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
-        config: Config.shared.builtinCalendar.composer.calendarUIConfig,
-        appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
+        config: Config.shared.builtinCalendar.calendarComposerUIConfig,
+        appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -59,8 +59,8 @@ final class CalendarEventComposerPanelController: ObservableObject {
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
-        config: Config.shared.builtinCalendar.composer.calendarUIConfig,
-        appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
+        config: Config.shared.builtinCalendar.calendarComposerUIConfig,
+        appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -169,7 +169,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     }
 
     return CalendarEventComposer(
-      config: Config.shared.builtinCalendar.composer.calendarUIConfig,
+      config: Config.shared.builtinCalendar.calendarComposerUIConfig,
       snapshotPublisher: snapshotPublisher,
       refreshSnapshots: refreshSnapshots,
       createEvent: { event, completion in

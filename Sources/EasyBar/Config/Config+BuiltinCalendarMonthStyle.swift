@@ -84,7 +84,7 @@ extension Config {
       )
     }
 
-    let resolvedWeekdaySymbols = Self.resolveMonthWeekdaySymbols(
+    let resolvedWeekdaySymbols = CalendarBuiltinConfig.resolveMonthWeekdaySymbols(
       format: weekdayFormat,
       manualSymbols: weekdaySymbols
     )
@@ -217,58 +217,5 @@ extension Config {
     }
 
     return trimmed
-  }
-
-  /// Resolves final localized weekday labels in Monday-to-Sunday order.
-  static func resolveMonthWeekdaySymbols(
-    format: String,
-    manualSymbols: [String]?
-  ) -> [String] {
-    if let manualSymbols {
-      return manualSymbols
-    }
-
-    let formatter = DateFormatter()
-
-    let sundayFirstSymbols: [String]
-    switch format {
-    case "d":
-      sundayFirstSymbols =
-        formatter.veryShortStandaloneWeekdaySymbols
-        ?? formatter.veryShortWeekdaySymbols
-        ?? ["S", "M", "T", "W", "T", "F", "S"]
-
-    case "dd":
-      let baseSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-      sundayFirstSymbols = baseSymbols.map { String($0.prefix(2)) }
-
-    case "ddd":
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-    default:
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    }
-
-    return normalizeSundayFirstWeekdaySymbolsToMondayFirst(sundayFirstSymbols)
-  }
-
-  /// Converts Sunday-first weekday symbols into Monday-first order.
-  private static func normalizeSundayFirstWeekdaySymbolsToMondayFirst(_ symbols: [String])
-    -> [String]
-  {
-    guard symbols.count == 7 else {
-      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    }
-
-    return Array(symbols[1...6]) + [symbols[0]]
   }
 }

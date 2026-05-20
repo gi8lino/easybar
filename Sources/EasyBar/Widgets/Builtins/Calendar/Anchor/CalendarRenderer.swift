@@ -41,8 +41,8 @@ extension CalendarRenderer {
   private func makeStack(_ snapshot: Snapshot) -> [WidgetNodeState] {
     let config = snapshot.config
     let anchor = config.anchor
-    let placement = config.placement
-    let style = config.style
+    let placement = Config.BuiltinWidgetPlacement(config.placement)
+    let style = Config.BuiltinWidgetStyle(config.style)
 
     return [
       BuiltinNativeNodeFactory.makeRowContainerNode(
@@ -96,8 +96,8 @@ extension CalendarRenderer {
   private func makeInline(_ snapshot: Snapshot) -> [WidgetNodeState] {
     let config = snapshot.config
     let anchor = config.anchor
-    let placement = config.placement
-    let style = config.style
+    let placement = Config.BuiltinWidgetPlacement(config.placement)
+    let style = Config.BuiltinWidgetStyle(config.style)
 
     return [
       BuiltinNativeNodeFactory.makeRowContainerNode(
@@ -143,8 +143,8 @@ extension CalendarRenderer {
     [
       BuiltinNativeNodeFactory.makeItemNode(
         rootID: rootID,
-        placement: snapshot.config.placement,
-        style: snapshot.config.style,
+        placement: .init(snapshot.config.placement),
+        style: .init(snapshot.config.style),
         text: format(snapshot.now, snapshot.config.anchor.itemFormat)
       )
     ]

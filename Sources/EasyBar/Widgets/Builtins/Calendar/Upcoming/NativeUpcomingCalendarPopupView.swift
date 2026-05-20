@@ -9,9 +9,9 @@ struct NativeUpcomingCalendarPopupView: View {
   var body: some View {
     CalendarUpcomingPopupView(
       store: NativeUpcomingCalendarStore.shared,
-      config: Config.shared.builtinCalendar.calendarUpcomingPopupConfig,
-      appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
-      birthdays: Config.shared.builtinCalendar.birthdays.calendarBirthdayStyle,
+      config: Config.shared.builtinCalendar.calendarUpcomingPopupUIConfig,
+      appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
+      birthdays: Config.shared.builtinCalendar.birthdayCalendarUIStyle,
       emptyText: Config.shared.builtinCalendar.appointments.emptyText,
       onEventTap: { event in
         composerPanel.present(event: event) {

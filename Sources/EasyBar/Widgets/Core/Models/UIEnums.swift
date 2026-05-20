@@ -1,11 +1,9 @@
+import EasyBarCalendarConfig
+import EasyBarShared
 import Foundation
 
-/// Fixed placement used by bar widgets and nodes.
-enum WidgetPosition: String, Codable, CaseIterable {
-  case left
-  case center
-  case right
-}
+typealias CalendarAnchorLayout = EasyBarCalendarConfig.CalendarAnchorLayout
+typealias WidgetPosition = EasyBarShared.WidgetPosition
 
 /// Fixed node kinds rendered by SwiftUI.
 enum WidgetNodeKind: String, Codable {
@@ -49,11 +47,4 @@ enum WidgetNodeKind: String, Codable {
 enum WidgetNodeRole: String, Codable {
   case popupAnchor = "popup-anchor"
   case popupContent = "popup-content"
-}
-
-/// Supported layouts for the native calendar anchor.
-enum CalendarAnchorLayout: String, Codable {
-  case item
-  case stack
-  case inline
 }

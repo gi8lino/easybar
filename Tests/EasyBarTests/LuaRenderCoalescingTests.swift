@@ -85,12 +85,10 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.environment = ProcessInfo.processInfo.environment
 
     let stdoutObserver = RuntimeLineObserver { line in
-      Task {
-        do {
-          try await hostBridge.handleRuntimeLine(line)
-        } catch {
-          XCTFail("Failed handling runtime update: \(line) error=\(error)")
-        }
+      do {
+        try await hostBridge.handleRuntimeLine(line)
+      } catch {
+        XCTFail("Failed handling runtime update: \(line) error=\(error)")
       }
     }
     stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
@@ -198,12 +196,10 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.environment = ProcessInfo.processInfo.environment
 
     let stdoutObserver = RuntimeLineObserver { line in
-      Task {
-        do {
-          try await hostBridge.handleRuntimeLine(line)
-        } catch {
-          XCTFail("Failed handling runtime update: \(line) error=\(error)")
-        }
+      do {
+        try await hostBridge.handleRuntimeLine(line)
+      } catch {
+        XCTFail("Failed handling runtime update: \(line) error=\(error)")
       }
     }
     stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
@@ -293,12 +289,10 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.environment = ProcessInfo.processInfo.environment
 
     let stdoutObserver = RuntimeLineObserver { line in
-      Task {
-        do {
-          try await hostBridge.handleRuntimeLine(line)
-        } catch {
-          XCTFail("Failed handling runtime update: \(line) error=\(error)")
-        }
+      do {
+        try await hostBridge.handleRuntimeLine(line)
+      } catch {
+        XCTFail("Failed handling runtime update: \(line) error=\(error)")
       }
     }
     stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
@@ -348,6 +342,7 @@ extension LuaRenderCoalescingTests {
 
     func handleRuntimeLine(_ line: String) async throws {
       let update = try decoder.decode(WidgetTreeUpdate.self, from: Data(line.utf8))
+      await recorder.record(summary: describe(update))
 
       if let request = update.commandRequestPayload {
         if !request.isSynchronous && asyncResponseDelayNanoseconds > 0 {
@@ -361,6 +356,27 @@ extension LuaRenderCoalescingTests {
       await recorder.append(update)
     }
 
+    private func describe(_ update: WidgetTreeUpdate) -> String {
+      switch update.type {
+      case .subscriptions:
+        return "subscriptions:\(update.subscribedEvents.joined(separator: ","))"
+      case .ready:
+        return "ready"
+      case .commandRequest:
+        if let request = update.commandRequestPayload {
+          return "command_request:\(request.command):sync=\(request.isSynchronous)"
+        }
+        return "command_request"
+      case .tree:
+        if let payload = update.treePayload,
+          let root = payload.nodes.first(where: { $0.id == payload.root })
+        {
+          return "tree:\(payload.root):icon=\(root.icon):text=\(root.text)"
+        }
+        return "tree"
+      }
+    }
+
     private func sendCommandResponse(token: String, output: String, status: Int) throws {
       let payload = """
         {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
@@ -372,9 +388,14 @@ extension LuaRenderCoalescingTests {
 
   fileprivate actor RuntimeUpdateRecorder {
     private var updates: [WidgetTreeUpdate] = []
+    private var summaries: [String] = []
 
     func append(_ update: WidgetTreeUpdate) {
       updates.append(update)
+    }
+
+    func record(summary: String) {
+      summaries.append(summary)
     }
 
     func takeFirst(
@@ -388,13 +409,18 @@ extension LuaRenderCoalescingTests {
       updates.remove(at: index)
       return update
     }
+
+    func debugSummaries() -> [String] {
+      summaries
+    }
   }
 
   fileprivate final class RuntimeLineObserver {
-    private let handleLine: @Sendable (String) -> Void
+    private let handleLine: @Sendable (String) async -> Void
     private var buffer = Data()
+    private var pendingLineTask: Task<Void, Never>?
 
-    init(handleLine: @escaping @Sendable (String) -> Void) {
+    init(handleLine: @escaping @Sendable (String) async -> Void) {
       self.handleLine = handleLine
     }
 
@@ -424,13 +450,15 @@ extension LuaRenderCoalescingTests {
             continue
           }
 
-          self.handleLine(line)
+          self.enqueue(line)
         }
       }
     }
 
     func invalidate() {
       buffer.removeAll()
+      pendingLineTask?.cancel()
+      pendingLineTask = nil
     }
 
     private func emitBufferedLineIfNeeded() {
@@ -444,7 +472,21 @@ extension LuaRenderCoalescingTests {
       }
 
       buffer.removeAll()
-      handleLine(line)
+      enqueue(line)
+    }
+
+    private func enqueue(_ line: String) {
+      let previousTask = pendingLineTask
+
+      pendingLineTask = Task {
+        _ = await previousTask?.result
+
+        guard !Task.isCancelled else {
+          return
+        }
+
+        await handleLine(line)
+      }
     }
   }
 
@@ -475,11 +517,14 @@ extension LuaRenderCoalescingTests {
       try await Task.sleep(nanoseconds: 10_000_000)
     }
 
+    let summaries = await recorder.debugSummaries().joined(separator: " | ")
+
     throw NSError(
       domain: "LuaRenderCoalescingTests",
       code: 1,
       userInfo: [
-        NSLocalizedDescriptionKey: "Timed out waiting for matching widget tree update"
+        NSLocalizedDescriptionKey:
+          "Timed out waiting for matching widget tree update; seen updates: \(summaries)"
       ]
     )
   }

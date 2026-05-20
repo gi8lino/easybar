@@ -314,10 +314,14 @@
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, callback?: fun(output: string, code: integer): any): any Runs one shell command and optionally receives trimmed output and exit code.
 ---@field exec_async fun(command: string, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
+---@field get fun(id: string): EasyBarNodeProps Returns a copy of one node's props by id.
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
+---@field remove fun(id: string) Removes one node and all descendants by id.
+---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
+---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
 local EasyBar = {}
 
 ---@class EasyBarNodeHandle
@@ -347,6 +351,26 @@ function EasyBar.default(props) end
 
 ---Clears previously configured widget defaults.
 function EasyBar.clear_defaults() end
+
+---Merges properties into one existing node by id.
+---@param id string
+---@param props EasyBarNodeProps
+function EasyBar.set(id, props) end
+
+---Returns a copy of one existing node's current property table.
+---@param id string
+---@return EasyBarNodeProps
+function EasyBar.get(id) end
+
+---Removes one existing node and all of its descendants by id.
+---@param id string
+function EasyBar.remove(id) end
+
+---Subscribes one existing node to one or more event tokens by id.
+---@param id string
+---@param events EasyBarEventToken|EasyBarEventToken[]
+---@param handler EasyBarEventHandler
+function EasyBar.subscribe(id, events, handler) end
 
 ---Creates one EasyBar node and returns its handle.
 ---Use `easybar.kind.item` for simple widgets, `easybar.kind.group` for shared containers,

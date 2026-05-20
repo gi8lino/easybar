@@ -214,6 +214,26 @@ function M.new(log, hooks)
 			widget_defaults = {}
 		end
 
+		--- Merges properties into one existing node by id.
+		function widget_api.set(id, props)
+			return set_node(id, props)
+		end
+
+		--- Returns a copy of one existing node's current properties.
+		function widget_api.get(id)
+			return api.get(id)
+		end
+
+		--- Removes one existing node and all descendants.
+		function widget_api.remove(id)
+			return api.remove(id)
+		end
+
+		--- Subscribes one existing node to one or more events.
+		function widget_api.subscribe(id, events, handler)
+			return api.subscribe(id, events, handler)
+		end
+
 		--- Adds one item using this widget's scoped defaults.
 		function widget_api.add(kind, id, props)
 			local interval_handler = type(props) == "table" and props.on_interval or nil

@@ -1,7 +1,7 @@
 import EasyBarCalendarPresentation
 import Foundation
 
-extension Config.CalendarBuiltinConfig {
+public extension CalendarBuiltinConfig {
   var presentationFilters: CalendarRequestFilters {
     CalendarRequestFilters(
       includedCalendarNames: filters.includedCalendarNames,
