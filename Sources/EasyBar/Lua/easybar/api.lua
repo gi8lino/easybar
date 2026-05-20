@@ -20,6 +20,8 @@ end
 
 --- Event token module used by node subscriptions.
 local event_tokens = load_module("event_tokens")
+--- JSON helper module exposed through the public widget API.
+local json_module = load_module("json")
 --- Registry module used to store widget node state.
 local registry_module = load_module("registry")
 --- Subscription module used for event and interval callbacks.
@@ -236,6 +238,7 @@ function M.new(log, hooks)
 		widget_api.exec = api.exec
 		widget_api.exec_async = api.exec_async
 		widget_api.events = event_tokens.tokens
+		widget_api.json = json_module
 		widget_api.kind = KINDS
 		widget_api.level = LOG_LEVELS
 

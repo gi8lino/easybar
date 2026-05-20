@@ -240,6 +240,91 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0 (0)")
   }
+
+  func testPublicWidgetApiExposesJsonHelper() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    local payload = easybar.json.decode('{"name":"brew","count":2}')
+
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = payload.name,
+    	label = tostring(payload.count),
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.public-json.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let process = Process()
+    let stdinPipe = Pipe()
+    let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
+    let recorder = RuntimeUpdateRecorder()
+    let hostBridge = RuntimeHostBridge(
+      recorder: recorder,
+      decoder: decoder,
+      stdinHandle: stdinPipe.fileHandleForWriting,
+      asyncResponseDelayNanoseconds: 0
+    )
+
+    process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.standardInput = stdinPipe
+    process.standardOutput = stdoutPipe
+    process.standardError = stderrPipe
+    process.environment = ProcessInfo.processInfo.environment
+
+    let stdoutObserver = RuntimeLineObserver { line in
+      Task {
+        do {
+          try await hostBridge.handleRuntimeLine(line)
+        } catch {
+          XCTFail("Failed handling runtime update: \(line) error=\(error)")
+        }
+      }
+    }
+    stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
+
+    let stderrObserver = RuntimeLineObserver { _ in }
+    stderrObserver.attach(to: stderrPipe.fileHandleForReading)
+
+    try process.run()
+    defer {
+      stdoutObserver.invalidate()
+      stderrObserver.invalidate()
+
+      try? stdinPipe.fileHandleForWriting.close()
+
+      if process.isRunning {
+        process.terminate()
+        process.waitUntilExit()
+      }
+    }
+
+    let initialUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.icon == "brew" }
+    )
+    XCTAssertEqual(rootNode(in: initialUpdate)?.text, "2")
+  }
 }
 
 extension LuaRenderCoalescingTests {

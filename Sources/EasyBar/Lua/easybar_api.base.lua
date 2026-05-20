@@ -186,6 +186,10 @@
 ---@field remove fun(self: EasyBarNodeHandle) Removes this node and all descendants.
 ---@field subscribe fun(self: EasyBarNodeHandle, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes this node to runtime or interaction events.
 
+---@class EasyBarJson
+---@field encode fun(value: any): string Encodes one Lua value tree into a JSON string.
+---@field decode fun(text: string): any Decodes one JSON string into Lua values.
+
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
@@ -195,6 +199,7 @@
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, callback?: fun(output: string, code: integer): any): any Runs one shell command and optionally receives trimmed output and exit code.
 ---@field exec_async fun(command: string, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
+---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
@@ -252,6 +257,10 @@ function EasyBar.exec(command, callback) end
 ---@param callback fun(output: string, code: integer): any
 ---@return string
 function EasyBar.exec_async(command, callback) end
+
+---Encodes and decodes JSON values from Lua widgets.
+---@type EasyBarJson
+EasyBar.json = {}
 
 ---All supported EasyBar event tokens and mouse constants.
 ---@type EasyBarEvents

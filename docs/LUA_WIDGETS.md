@@ -198,6 +198,23 @@ Clears all defaults.
 easybar.clear_defaults()
 ```
 
+### `easybar.json`
+
+Encodes Lua values to JSON strings and decodes JSON strings back into Lua values.
+
+Use this instead of reaching into bundled runtime modules directly.
+
+```lua
+local payload = easybar.json.decode('{"name":"brew","count":2}')
+
+easybar.log(easybar.level.debug, payload.name, payload.count)
+```
+
+Available helpers:
+
+- `easybar.json.encode(value)`
+- `easybar.json.decode(text)`
+
 ### `node:subscribe(events, handler)`
 
 Subscribes one node to one or more events.

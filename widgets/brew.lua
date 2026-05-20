@@ -3,8 +3,6 @@
 -- Icon-only widget for the bar, with a popup that shows outdated packages and
 -- actions for refresh, update, and upgrade.
 
-local json = require("easybar.json")
-
 local WIDGET_ID = "brew_outdated"
 
 local ID_TITLE = WIDGET_ID .. "_title"
@@ -163,7 +161,7 @@ end
 
 --- Stores parsed Homebrew outdated JSON in widget state.
 local function apply_outdated_json(raw)
-	local parsed = json.decode(raw)
+	local parsed = easybar.json.decode(raw)
 
 	state.formulae = parse_package_list(parsed.formulae, "formula")
 	state.casks = parse_package_list(parsed.casks, "cask")
