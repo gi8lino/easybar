@@ -1,8 +1,9 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
-/// Renders the popup for the native month-calendar widget.
-struct NativeMonthCalendarPopupView: View {
+/// Renders the reusable month-calendar popup.
+public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
 
   struct DayCell: Identifiable {
     let id = UUID()
@@ -22,24 +23,43 @@ struct NativeMonthCalendarPopupView: View {
     let fraction: CGFloat
   }
 
-  struct AgendaRow: Identifiable {
-    enum Kind {
-      case dayHeader(Date)
-      case event(EasyBarShared.CalendarAgentEvent)
-    }
+  typealias AgendaRow = CalendarAgendaBuilder.Entry
 
-    let id: String
-    let kind: Kind
-  }
-
-  @ObservedObject var store = NativeMonthCalendarStore.shared
-  var logger: ProcessLogger { store.logger }
-  let config = Config.shared.builtinCalendar.month.popup
-  let appointments = Config.shared.builtinCalendar.appointments
-  let birthdays = Config.shared.builtinCalendar.birthdays
+  @ObservedObject var store: Store
+  let logger: ProcessLogger
+  let config: CalendarMonthPopupConfig
+  let appointmentsStyle: CalendarAppointmentsStyle
+  let birthdays: CalendarBirthdayStyle
+  let emptyText: String
+  let onVisibleMonthChanged: (Date) -> Void
+  let onCreateEvent: (Date, @escaping () -> Void) -> Void
+  let onEditEvent: (CalendarAgentEvent, @escaping () -> Void) -> Void
+  let onRefreshRequested: () -> Void
   let calendar = Calendar.current
 
-  @StateObject var composerPanel = CalendarEventComposerPanelController()
+  public init(
+    store: Store,
+    logger: ProcessLogger,
+    config: CalendarMonthPopupConfig,
+    appointmentsStyle: CalendarAppointmentsStyle,
+    birthdays: CalendarBirthdayStyle,
+    emptyText: String,
+    onVisibleMonthChanged: @escaping (Date) -> Void,
+    onCreateEvent: @escaping (Date, @escaping () -> Void) -> Void,
+    onEditEvent: @escaping (CalendarAgentEvent, @escaping () -> Void) -> Void,
+    onRefreshRequested: @escaping () -> Void
+  ) {
+    self.store = store
+    self.logger = logger
+    self.config = config
+    self.appointmentsStyle = appointmentsStyle
+    self.birthdays = birthdays
+    self.emptyText = emptyText
+    self.onVisibleMonthChanged = onVisibleMonthChanged
+    self.onCreateEvent = onCreateEvent
+    self.onEditEvent = onEditEvent
+    self.onRefreshRequested = onRefreshRequested
+  }
 
   @State var visibleMonth = Self.startOfMonth(Date())
   @State var selectedStartDate = Date()
@@ -57,7 +77,7 @@ struct NativeMonthCalendarPopupView: View {
   @State var shouldAutoSelectVisibleMonthEvent = false
 
   /// Renders the month calendar popup.
-  var body: some View {
+  public var body: some View {
     ZStack {
       popupLayoutView
 
@@ -80,7 +100,7 @@ struct NativeMonthCalendarPopupView: View {
       RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
         .stroke(
           color(config.borderColorHex),
-          lineWidth: CalendarSurfaceMetrics.borderLineWidth(config.borderWidth)
+          lineWidth: CalendarUIPrimitives.borderLineWidth(config.borderWidth)
         )
     }
     .clipShape(
@@ -90,11 +110,11 @@ struct NativeMonthCalendarPopupView: View {
     .padding(.vertical, CGFloat(config.marginY))
     .onAppear {
       syncSelectionIntoVisibleMonth()
-      MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
+      onVisibleMonthChanged(visibleMonth)
       logSelection("on_appear")
     }
     .onChange(of: visibleMonth) { _, newValue in
-      MonthCalendarAgentClient.shared.focusVisibleMonth(newValue)
+      onVisibleMonthChanged(newValue)
     }
     .onChange(of: selectedStartDate) { _, _ in
       logSelection("selected_start_changed")
@@ -117,7 +137,7 @@ struct NativeMonthCalendarPopupView: View {
 
 // MARK: - Styling
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Returns the popup corner radius.
   var popupCornerRadius: CGFloat {
     return max(CGFloat(config.cornerRadius), 12)

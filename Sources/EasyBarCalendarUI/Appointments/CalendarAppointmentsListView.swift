@@ -1,31 +1,120 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
+/// Reusable style values for calendar appointments lists.
+public struct CalendarAppointmentsStyle: Sendable {
+  public let secondaryTextColorHex: String
+  public let emptyTextColorHex: String
+  public let eventTextColorHex: String
+  public let travelTextColorHex: String
+  public let travelIconColorHex: String?
+  public let alertIconColorHex: String?
+  public let showCalendarName: Bool
+  public let showLocation: Bool
+  public let showTravelTime: Bool
+  public let showEndTime: Bool
+  public let showAlertIcon: Bool
+  public let showAllDayLabel: Bool
+  public let allDayLabel: String
+  public let showHolidayAllDayLabel: Bool
+  public let alertIcon: String
+  public let travelIcon: String
+  public let itemIndent: Double
+
+  public init(
+    secondaryTextColorHex: String,
+    emptyTextColorHex: String,
+    eventTextColorHex: String,
+    travelTextColorHex: String,
+    travelIconColorHex: String?,
+    alertIconColorHex: String?,
+    showCalendarName: Bool,
+    showLocation: Bool,
+    showTravelTime: Bool,
+    showEndTime: Bool,
+    showAlertIcon: Bool,
+    showAllDayLabel: Bool,
+    allDayLabel: String,
+    showHolidayAllDayLabel: Bool,
+    alertIcon: String,
+    travelIcon: String,
+    itemIndent: Double
+  ) {
+    self.secondaryTextColorHex = secondaryTextColorHex
+    self.emptyTextColorHex = emptyTextColorHex
+    self.eventTextColorHex = eventTextColorHex
+    self.travelTextColorHex = travelTextColorHex
+    self.travelIconColorHex = travelIconColorHex
+    self.alertIconColorHex = alertIconColorHex
+    self.showCalendarName = showCalendarName
+    self.showLocation = showLocation
+    self.showTravelTime = showTravelTime
+    self.showEndTime = showEndTime
+    self.showAlertIcon = showAlertIcon
+    self.showAllDayLabel = showAllDayLabel
+    self.allDayLabel = allDayLabel
+    self.showHolidayAllDayLabel = showHolidayAllDayLabel
+    self.alertIcon = alertIcon
+    self.travelIcon = travelIcon
+    self.itemIndent = itemIndent
+  }
+}
+
 /// One render row in a calendar appointments list.
-struct CalendarAppointmentsListRow: Identifiable {
-  enum Kind {
+public struct CalendarAppointmentsListRow: Identifiable {
+  public enum Kind {
     case dayHeader(Date)
     case event(CalendarAgentEvent)
   }
 
-  let id: String
-  let kind: Kind
+  public let id: String
+  public let kind: Kind
+
+  public init(id: String, kind: Kind) {
+    self.id = id
+    self.kind = kind
+  }
 }
 
-/// Shared appointments list used by month and upcoming calendar popups.
-struct CalendarAppointmentsListView: View {
-  let title: String?
-  let rows: [CalendarAppointmentsListRow]
-  let emptyText: String
-  let style: Config.CalendarBuiltinConfig.Appointments
-  let birthdayIcon: String
-  let birthdayIconColorHex: String?
-  let defaultIndicatorColorHex: String
-  let calendar: Calendar
-  let dateHeaderText: (Date) -> String
-  let onEventTap: ((CalendarAgentEvent) -> Void)?
+/// Shared appointments list used by calendar month and upcoming surfaces.
+public struct CalendarAppointmentsListView: View {
+  public let title: String?
+  public let rows: [CalendarAppointmentsListRow]
+  public let emptyText: String
+  public let style: CalendarAppointmentsStyle
+  public let birthdayIcon: String
+  public let birthdayIconColorHex: String?
+  public let defaultIndicatorColorHex: String
+  public let calendar: Calendar
+  public let dateHeaderText: (Date) -> String
+  public let onEventTap: ((CalendarAgentEvent) -> Void)?
 
-  var body: some View {
+  public init(
+    title: String?,
+    rows: [CalendarAppointmentsListRow],
+    emptyText: String,
+    style: CalendarAppointmentsStyle,
+    birthdayIcon: String,
+    birthdayIconColorHex: String?,
+    defaultIndicatorColorHex: String,
+    calendar: Calendar,
+    dateHeaderText: @escaping (Date) -> String,
+    onEventTap: ((CalendarAgentEvent) -> Void)?
+  ) {
+    self.title = title
+    self.rows = rows
+    self.emptyText = emptyText
+    self.style = style
+    self.birthdayIcon = birthdayIcon
+    self.birthdayIconColorHex = birthdayIconColorHex
+    self.defaultIndicatorColorHex = defaultIndicatorColorHex
+    self.calendar = calendar
+    self.dateHeaderText = dateHeaderText
+    self.onEventTap = onEventTap
+  }
+
+  public var body: some View {
     VStack(alignment: .leading, spacing: 4) {
       if let title, !title.isEmpty {
         Text(title)
@@ -47,7 +136,6 @@ struct CalendarAppointmentsListView: View {
               .foregroundStyle(color(style.secondaryTextColorHex))
               .padding(.top, 2)
               .padding(.bottom, 1)
-
           case .event(let event):
             appointmentRow(event)
           }
@@ -57,29 +145,22 @@ struct CalendarAppointmentsListView: View {
     .frame(maxWidth: .infinity, alignment: .topLeading)
   }
 
-  /// Builds one tappable or static appointment row.
   private func appointmentRow(_ event: CalendarAgentEvent) -> some View {
-    let isBirthday = isBirthdayEvent(event)
+    let isBirthday = CalendarAgendaBuilder.isBirthdayEvent(event)
     let content = appointmentRowContent(event, showsChevron: !isBirthday && onEventTap != nil)
 
     if let onEventTap, !isBirthday {
       return AnyView(
         content
           .contentShape(Rectangle())
-          .onTapGesture {
-            onEventTap(event)
-          }
+          .onTapGesture { onEventTap(event) }
       )
     }
 
     return AnyView(content)
   }
 
-  /// Builds the visible content for one appointment row.
-  private func appointmentRowContent(
-    _ event: CalendarAgentEvent,
-    showsChevron: Bool
-  ) -> some View {
+  private func appointmentRowContent(_ event: CalendarAgentEvent, showsChevron: Bool) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Rectangle()
         .fill(color(indicatorColorHex(for: event)))
@@ -91,19 +172,13 @@ struct CalendarAppointmentsListView: View {
         appointmentTitleView(for: event)
         appointmentEndTimeView(for: event)
 
-        if style.showCalendarName,
-          let calendarName = event.calendarName,
-          !calendarName.isEmpty
-        {
+        if style.showCalendarName, let calendarName = event.calendarName, !calendarName.isEmpty {
           Text(calendarName)
             .font(.system(size: 11, weight: .regular))
             .foregroundStyle(color(style.secondaryTextColorHex))
         }
 
-        if style.showLocation,
-          let locationText = event.location,
-          !locationText.isEmpty
-        {
+        if style.showLocation, let locationText = event.location, !locationText.isEmpty {
           Text(locationText)
             .font(.system(size: 11, weight: .regular))
             .foregroundStyle(color(style.secondaryTextColorHex))
@@ -123,26 +198,24 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Builds the primary appointment title row.
   private func appointmentTitleView(for event: CalendarAgentEvent) -> some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       if event.isAllDay {
         let prefix = appointmentPrefix(for: event)
-
         if !prefix.isEmpty {
           Text(prefix)
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(color(style.secondaryTextColorHex))
         }
       } else {
-        Text(CalendarEventPresentation.formattedEventTime(event.startDate, calendar: calendar))
+        Text(CalendarEventFormatter.formattedEventTime(event.startDate, calendar: calendar))
           .font(.system(size: 13, weight: .medium))
           .foregroundStyle(color(style.eventTextColorHex))
       }
 
-      if isBirthdayEvent(event) {
+      if CalendarAgendaBuilder.isBirthdayEvent(event) {
         Text(birthdayIcon)
-          .font(Theme.iconFont(size: 13))
+          .font(CalendarUIPrimitives.iconFont(size: 13))
           .foregroundStyle(color(birthdayIconColorHex ?? style.eventTextColorHex))
       }
 
@@ -154,10 +227,9 @@ struct CalendarAppointmentsListView: View {
 
       if !event.isAllDay {
         Spacer(minLength: 0)
-
         if style.showAlertIcon, event.hasAlert {
           Text(style.alertIcon)
-            .font(Theme.iconFont(size: 11))
+            .font(CalendarUIPrimitives.iconFont(size: 11))
             .foregroundStyle(color(style.alertIconColorHex ?? style.travelTextColorHex))
         }
       }
@@ -165,14 +237,12 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Builds optional metadata shown above the appointment title.
   private func appointmentMetaTopView(for event: CalendarAgentEvent) -> some View {
     if !event.isAllDay,
       style.showTravelTime,
       let travelTimeSeconds = event.travelTimeSeconds,
-      let travelTimeText = CalendarEventPresentation.travelTimeText(
-        travelTimeSeconds: travelTimeSeconds),
-      let departureTimeText = CalendarEventPresentation.travelDepartureTimeText(
+      let travelTimeText = CalendarEventFormatter.travelTimeText(travelTimeSeconds: travelTimeSeconds),
+      let departureTimeText = CalendarEventFormatter.travelDepartureTimeText(
         startDate: event.startDate,
         travelTimeSeconds: travelTimeSeconds,
         calendar: calendar
@@ -182,11 +252,9 @@ struct CalendarAppointmentsListView: View {
         Text(departureTimeText)
           .font(.system(size: 10, weight: .medium))
           .foregroundStyle(color(style.travelTextColorHex))
-
         Text(style.travelIcon)
-          .font(Theme.iconFont(size: 11))
+          .font(CalendarUIPrimitives.iconFont(size: 11))
           .foregroundStyle(color(style.travelIconColorHex ?? style.travelTextColorHex))
-
         Text(travelTimeText)
           .font(.system(size: 10, weight: .medium))
           .foregroundStyle(color(style.travelTextColorHex))
@@ -195,10 +263,9 @@ struct CalendarAppointmentsListView: View {
   }
 
   @ViewBuilder
-  /// Builds the optional appointment end-time label.
   private func appointmentEndTimeView(for event: CalendarAgentEvent) -> some View {
     if style.showEndTime,
-      let endTimeText = CalendarEventPresentation.endTimeText(
+      let endTimeText = CalendarEventFormatter.endTimeText(
         startDate: event.startDate,
         endDate: event.endDate,
         isAllDay: event.isAllDay,
@@ -211,32 +278,21 @@ struct CalendarAppointmentsListView: View {
     }
   }
 
-  /// Returns the all-day prefix shown before an event title.
   private func appointmentPrefix(for event: CalendarAgentEvent) -> String {
     guard event.isAllDay else { return "" }
-    guard !isBirthdayEvent(event) else { return "" }
+    guard !CalendarAgendaBuilder.isBirthdayEvent(event) else { return "" }
     guard !event.isHoliday || style.showHolidayAllDayLabel else { return "" }
     return style.showAllDayLabel ? style.allDayLabel : ""
   }
 
-  /// Returns whether the event is rendered as a birthday.
-  private func isBirthdayEvent(_ event: CalendarAgentEvent) -> Bool {
-    return event.id.hasPrefix("birthday-")
-  }
-
-  /// Returns the calendar indicator color for one event.
   private func indicatorColorHex(for event: CalendarAgentEvent) -> String {
-    if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
-      !hex.isEmpty
-    {
+    if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines), !hex.isEmpty {
       return hex
     }
-
     return defaultIndicatorColorHex
   }
 
-  /// Converts one hex string into a SwiftUI color.
   private func color(_ hex: String) -> Color {
-    return Color(hex: hex)
+    Color(calendarHex: hex)
   }
 }

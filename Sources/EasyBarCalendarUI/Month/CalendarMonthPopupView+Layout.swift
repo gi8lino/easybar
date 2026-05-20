@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Top-Level Layout
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Builds the configured popup layout.
   @ViewBuilder
   var popupLayoutView: some View {
@@ -142,7 +142,7 @@ extension NativeMonthCalendarPopupView {
 
 // MARK: - Header
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Builds the popup month header.
   var headerView: some View {
     VStack(spacing: 10) {
@@ -192,7 +192,7 @@ extension NativeMonthCalendarPopupView {
 
           if !icon.isEmpty {
             Text(icon)
-              .font(Theme.iconFont(size: 11))
+              .font(CalendarUIPrimitives.iconFont(size: 11))
               .foregroundStyle(color(config.headerTextColorHex))
           }
 
@@ -270,7 +270,7 @@ extension NativeMonthCalendarPopupView {
 
 // MARK: - Weekday Header
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Builds the weekday header row.
   var weekdayHeaderView: some View {
     HStack(spacing: 6) {
@@ -315,7 +315,7 @@ extension NativeMonthCalendarPopupView {
 
 // MARK: - Grid
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Builds the visible month grid.
   var monthGridView: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -464,7 +464,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the indicator color for one event, falling back to the configured default.
-  func normalizedIndicatorColorHex(for event: EasyBarShared.CalendarAgentEvent) -> String {
+  func normalizedIndicatorColorHex(for event: CalendarAgentEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
       !hex.isEmpty
     {
@@ -535,7 +535,7 @@ extension NativeMonthCalendarPopupView {
 
 // MARK: - Styling
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Returns the foreground color for one day cell.
   func dayForeground(_ day: DayCell) -> Color {
     if isSelected(day.date) {
@@ -590,6 +590,6 @@ extension NativeMonthCalendarPopupView {
 
   /// Converts one hex string into SwiftUI color.
   func color(_ hex: String) -> Color {
-    return Color(hex: hex)
+    return Color(calendarHex: hex)
   }
 }

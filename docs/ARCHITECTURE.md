@@ -15,7 +15,13 @@ EasyBar is split into a few focused targets:
 - `EasyBarCtl`
   the `easybar` command-line client
 - `EasyBarCalendarAgent`
-  helper app that owns calendar access and EventKit operations
+  helper app entrypoint for the calendar agent
+- `EasyBarCalendarCore`
+  shared reusable calendar-agent logic used by `EasyBarCalendarAgent` and intended for future standalone calendar clients
+- `EasyBarCalendarPresentation`
+  shared reusable calendar request and presentation helpers used by `EasyBar` and intended for future standalone calendar clients
+- `EasyBarCalendarUI`
+  shared reusable calendar SwiftUI components and composer state used by `EasyBar` and intended for future standalone calendar clients
 - `EasyBarNetworkAgent`
   helper app that owns Wi-Fi and network observation
 - `EasyBarNetworkAgentCore`
@@ -214,7 +220,9 @@ EasyBar consumes that data and renders UI from it.
 
 ## Calendar agent
 
-The `EasyBarCalendarAgent` target owns `EventKit`.
+`EasyBarCalendarCore` owns the reusable EventKit-facing calendar agent implementation.
+
+`EasyBarCalendarAgent` is the thin app shell around that core.
 
 It is responsible for:
 
@@ -226,7 +234,7 @@ It is responsible for:
 - creating, updating, and deleting events
 - pushing updates to subscribed clients
 
-This keeps all calendar permission and mutation logic out of the main app process.
+This keeps all calendar permission and mutation logic out of the main app process while making the agent internals reusable from other apps.
 
 The calendar agent communicates with EasyBar over a local Unix socket with newline-delimited JSON messages.
 
@@ -420,7 +428,13 @@ A useful way to think about the targets is:
 - `Sources/EasyBarCtl`
   command-line control client
 - `Sources/EasyBarCalendarAgent`
-  calendar permission and snapshot service
+  calendar-agent executable entrypoint and app lifecycle
+- `Sources/EasyBarCalendarCore`
+  reusable calendar-agent internals
+- `Sources/EasyBarCalendarPresentation`
+  reusable calendar request and presentation helpers
+- `Sources/EasyBarCalendarUI`
+  reusable calendar SwiftUI components and composer state
 - `Sources/EasyBarNetworkAgent`
   network-agent executable entrypoint and app lifecycle
 - `Sources/EasyBarNetworkAgentCore`
@@ -478,6 +492,9 @@ A practical guideline:
 - put code in `EasyBarShared` if it is used across executables or defines a boundary contract
 - put code in `EasyBar` if it is UI-facing or app-coordination logic
 - put code in an agent target if it owns permission-sensitive collection or mutation logic
+- put code in `EasyBarCalendarCore` if it is reusable calendar-agent internals, not app entrypoint code
+- put code in `EasyBarCalendarPresentation` if it is reusable calendar request or presentation logic that should not depend on EasyBar widget infrastructure
+- put code in `EasyBarCalendarUI` if it is reusable calendar SwiftUI or calendar-only view state that should not depend on EasyBar panels, widget trees, or app shell wiring
 - put code in `EasyBarNetworkAgentCore` if it is reusable network-agent internals, not app entrypoint code
 - put code in Lua only when the feature is meant to be scriptable or user-customizable
 

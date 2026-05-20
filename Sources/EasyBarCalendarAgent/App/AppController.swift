@@ -1,4 +1,5 @@
 import AppKit
+import EasyBarCalendarCore
 import EasyBarShared
 
 /// App-level controller for the calendar agent process.

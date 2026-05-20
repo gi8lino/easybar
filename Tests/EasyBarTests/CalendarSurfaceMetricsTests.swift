@@ -1,17 +1,17 @@
 import XCTest
 
-@testable import EasyBar
+@testable import EasyBarCalendarUI
 
 final class CalendarSurfaceMetricsTests: XCTestCase {
   func testBorderLineWidthAllowsZeroToHideBorder() {
-    XCTAssertEqual(CalendarSurfaceMetrics.borderLineWidth(0), 0)
+    XCTAssertEqual(CalendarUIPrimitives.borderLineWidth(0), 0)
   }
 
   func testBorderLineWidthPreservesPositiveWidths() {
-    XCTAssertEqual(CalendarSurfaceMetrics.borderLineWidth(2.5), 2.5)
+    XCTAssertEqual(CalendarUIPrimitives.borderLineWidth(2.5), 2.5)
   }
 
   func testBorderLineWidthClampsNegativeWidthsToZero() {
-    XCTAssertEqual(CalendarSurfaceMetrics.borderLineWidth(-3), 0)
+    XCTAssertEqual(CalendarUIPrimitives.borderLineWidth(-3), 0)
   }
 }

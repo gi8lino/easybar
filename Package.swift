@@ -9,6 +9,9 @@ let package = Package(
   ],
   products: [
     .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
+    .library(name: "EasyBarCalendarCore", targets: ["EasyBarCalendarCore"]),
+    .library(name: "EasyBarCalendarPresentation", targets: ["EasyBarCalendarPresentation"]),
+    .library(name: "EasyBarCalendarUI", targets: ["EasyBarCalendarUI"]),
     .library(name: "EasyBarNetworkAgentCore", targets: ["EasyBarNetworkAgentCore"]),
     .executable(name: "EasyBar", targets: ["EasyBar"]),
     .executable(name: "EasyBarLuaRuntime", targets: ["EasyBarLuaRuntime"]),
@@ -28,6 +31,28 @@ let package = Package(
       path: "Sources/EasyBarShared"
     ),
     .target(
+      name: "EasyBarCalendarCore",
+      dependencies: [
+        "EasyBarShared"
+      ],
+      path: "Sources/EasyBarCalendarCore"
+    ),
+    .target(
+      name: "EasyBarCalendarPresentation",
+      dependencies: [
+        "EasyBarShared"
+      ],
+      path: "Sources/EasyBarCalendarPresentation"
+    ),
+    .target(
+      name: "EasyBarCalendarUI",
+      dependencies: [
+        "EasyBarShared",
+        "EasyBarCalendarPresentation",
+      ],
+      path: "Sources/EasyBarCalendarUI"
+    ),
+    .target(
       name: "EasyBarNetworkAgentCore",
       dependencies: [
         "EasyBarShared"
@@ -38,6 +63,8 @@ let package = Package(
       name: "EasyBar",
       dependencies: [
         "EasyBarShared",
+        "EasyBarCalendarPresentation",
+        "EasyBarCalendarUI",
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBar",
@@ -70,7 +97,8 @@ let package = Package(
     .executableTarget(
       name: "EasyBarCalendarAgent",
       dependencies: [
-        "EasyBarShared"
+        "EasyBarShared",
+        "EasyBarCalendarCore",
       ],
       path: "Sources/EasyBarCalendarAgent",
       exclude: [
@@ -94,6 +122,7 @@ let package = Package(
         "EasyBar",
         "EasyBarLuaRuntime",
         "EasyBarShared",
+        "EasyBarCalendarUI",
       ],
       path: "Tests/EasyBarTests"
     ),

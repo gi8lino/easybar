@@ -1,39 +1,53 @@
 import EasyBarShared
 import SwiftUI
 
-struct NativeUpcomingCalendarPopupView: View {
-
-  @ObservedObject private var store = NativeUpcomingCalendarStore.shared
-  @StateObject private var composerPanel = CalendarEventComposerPanelController()
-
-  private let popup = Config.shared.builtinCalendar.upcoming.popup
-  private let appointments = Config.shared.builtinCalendar.appointments
-  private let birthdays = Config.shared.builtinCalendar.birthdays
-  private let monthPopup = Config.shared.builtinCalendar.month.popup
-  private let upcoming = Config.shared.builtinCalendar.upcoming
+public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View {
 
   private var resolvedCalendar: Calendar {
     var calendar = Calendar.current
 
-    if let firstWeekday = monthPopup.firstWeekday {
+    if let firstWeekday = config.firstWeekday {
       calendar.firstWeekday = firstWeekday
     }
 
     return calendar
   }
 
-  /// Renders the native upcoming-calendar popup content.
-  var body: some View {
-    VStack(alignment: .leading, spacing: popup.spacing) {
+  @ObservedObject private var store: Store
+  private let config: CalendarUpcomingPopupConfig
+  private let appointmentsStyle: CalendarAppointmentsStyle
+  private let birthdays: CalendarBirthdayStyle
+  private let emptyText: String
+  private let onEventTap: (CalendarAgentEvent) -> Void
+
+  public init(
+    store: Store,
+    config: CalendarUpcomingPopupConfig,
+    appointmentsStyle: CalendarAppointmentsStyle,
+    birthdays: CalendarBirthdayStyle,
+    emptyText: String,
+    onEventTap: @escaping (CalendarAgentEvent) -> Void
+  ) {
+    self.store = store
+    self.config = config
+    self.appointmentsStyle = appointmentsStyle
+    self.birthdays = birthdays
+    self.emptyText = emptyText
+    self.onEventTap = onEventTap
+  }
+
+  /// Renders the reusable upcoming-calendar popup content.
+  public var body: some View {
+    VStack(alignment: .leading, spacing: config.spacing) {
       ForEach(upcomingDates, id: \.self) { date in
         CalendarAppointmentsListView(
           title: title(for: date),
           rows: appointmentRows(for: date),
-          emptyText: appointments.emptyText,
-          style: appointments,
+          emptyText: emptyText,
+          style: appointmentsStyle,
           birthdayIcon: birthdays.birthdayIcon,
           birthdayIconColorHex: birthdays.birthdayIconColorHex,
-          defaultIndicatorColorHex: monthPopup.indicatorColorHex,
+          defaultIndicatorColorHex: config.defaultIndicatorColorHex,
           calendar: resolvedCalendar,
           dateHeaderText: formattedDayHeader,
           onEventTap: { event in
@@ -43,21 +57,21 @@ struct NativeUpcomingCalendarPopupView: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, popup.paddingX)
-    .padding(.vertical, popup.paddingY)
-    .background(color(popup.backgroundColorHex))
+    .padding(.horizontal, config.paddingX)
+    .padding(.vertical, config.paddingY)
+    .background(color(config.backgroundColorHex))
     .overlay {
-      RoundedRectangle(cornerRadius: popup.cornerRadius)
+      RoundedRectangle(cornerRadius: config.cornerRadius)
         .stroke(
-          color(popup.borderColorHex),
-          lineWidth: popup.borderWidth
+          color(config.borderColorHex),
+          lineWidth: config.borderWidth
         )
     }
     .clipShape(
-      RoundedRectangle(cornerRadius: popup.cornerRadius)
+      RoundedRectangle(cornerRadius: config.cornerRadius)
     )
-    .padding(.horizontal, popup.marginX)
-    .padding(.vertical, popup.marginY)
+    .padding(.horizontal, config.marginX)
+    .padding(.vertical, config.marginY)
     .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
   }
 
@@ -65,7 +79,7 @@ struct NativeUpcomingCalendarPopupView: View {
   private var upcomingDates: [Date] {
     let start = resolvedCalendar.startOfDay(for: Date())
 
-    return (0..<max(1, upcoming.events.days)).compactMap { offset in
+    return (0..<max(1, config.days)).compactMap { offset in
       resolvedCalendar.date(byAdding: .day, value: offset, to: start)
     }
   }
@@ -94,7 +108,7 @@ struct NativeUpcomingCalendarPopupView: View {
   }
 
   /// Returns the visible events for one day using the current upcoming filtering mode.
-  private func events(for date: Date) -> [EasyBarShared.CalendarAgentEvent] {
+  private func events(for date: Date) -> [CalendarAgentEvent] {
     let startOfDay = resolvedCalendar.startOfDay(for: date)
     guard let endOfDay = resolvedCalendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       return []
@@ -102,7 +116,7 @@ struct NativeUpcomingCalendarPopupView: View {
 
     let now = Date()
     let effectiveStart =
-      upcoming.events.excludePastEvents && resolvedCalendar.isDateInToday(date)
+      config.excludePastEvents && resolvedCalendar.isDateInToday(date)
       ? max(startOfDay, now) : startOfDay
 
     return store.events
@@ -126,20 +140,17 @@ struct NativeUpcomingCalendarPopupView: View {
   private func formattedDayHeader(_ date: Date) -> String {
     let formatter = DateFormatter()
     formatter.calendar = resolvedCalendar
-    formatter.dateFormat = monthPopup.selectionDateFormat
+    formatter.dateFormat = config.selectionDateFormat
     return formatter.string(from: date)
   }
 
   /// Opens the shared event composer for one existing appointment.
-  private func openComposer(for event: EasyBarShared.CalendarAgentEvent) {
-    composerPanel.present(event: event) {
-      MonthCalendarAgentClient.shared.refresh()
-      UpcomingCalendarAgentClient.shared.refresh()
-    }
+  private func openComposer(for event: CalendarAgentEvent) {
+    onEventTap(event)
   }
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
-    return Color(hex: hex)
+    return Color(calendarHex: hex)
   }
 }

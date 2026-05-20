@@ -1,3 +1,4 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import Foundation
 
@@ -67,40 +68,21 @@ final class UpcomingCalendarAgentClient {
     let now = Date()
     let calendarConfig = Config.shared.builtinCalendar
     let upcoming = calendarConfig.upcoming
-    let appointments = calendarConfig.appointments
-    let birthdays = calendarConfig.birthdays
-    let filters = calendarConfig.filters
-    let requestedRange = CalendarNativeWidget.requestedDateRange(
-      config: calendarConfig,
-      now: now
+    let options = calendarConfig.presentationUpcomingRequestOptions
+    let requestedRange = CalendarRequestFactory.requestedUpcomingDateRange(
+      now: now,
+      dayCount: options.dayCount
     )
 
     logger.debug(
       "requesting upcoming calendar snapshot",
       .field("start", requestedRange.start.timeIntervalSince1970),
       .field("end", requestedRange.end.timeIntervalSince1970),
-      .field("days", upcoming.events.days),
+      .field("days", options.dayCount),
       .field("exclude_past_events", upcoming.events.excludePastEvents),
-      .field("show_birthdays", birthdays.showBirthdays),
+      .field("show_birthdays", options.birthdays.showBirthdays),
     )
 
-    let query = CalendarAgentQuery(
-      startDate: requestedRange.start,
-      endDate: requestedRange.end,
-      sectionStartDate: nil,
-      sectionDayCount: nil,
-      showBirthdays: birthdays.showBirthdays,
-      emptyText: appointments.emptyText,
-      birthdaysTitle: "",
-      birthdaysDateFormat: "dd.MM.yyyy",
-      birthdaysShowAge: birthdays.birthdaysShowAge,
-      includedCalendarNames: filters.includedCalendarNames,
-      excludedCalendarNames: filters.excludedCalendarNames
-    )
-
-    return CalendarAgentRequest(
-      command: .subscribe,
-      query: query
-    )
+    return CalendarRequestFactory.makeUpcomingSubscribeRequest(now: now, options: options)
   }
 }

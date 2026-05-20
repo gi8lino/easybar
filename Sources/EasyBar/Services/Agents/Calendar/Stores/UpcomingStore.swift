@@ -1,9 +1,10 @@
+import EasyBarCalendarUI
 import EasyBarShared
 import Foundation
 
 /// Shared upcoming-calendar snapshot store used by the native upcoming popup.
 @MainActor
-final class NativeUpcomingCalendarStore: ObservableObject {
+final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
   private static var sharedInstance: NativeUpcomingCalendarStore?
 
   static var shared: NativeUpcomingCalendarStore {

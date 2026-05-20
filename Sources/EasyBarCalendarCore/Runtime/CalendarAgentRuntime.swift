@@ -6,14 +6,14 @@ import Foundation
 /// This type owns the long-running calendar agent services: snapshot
 /// collection, calendar mutation handling, and socket delivery.
 @MainActor
-final class CalendarAgentRuntime {
+public final class CalendarAgentRuntime {
   private let config: CalendarAgentRuntimeConfig
   private let snapshotProvider: CalendarSnapshotProvider
   private let socketServer: CalendarSocketServer
   private let logger: ProcessLogger
 
   /// Builds the calendar agent runtime from one host-provided config.
-  init(
+  public init(
     config: CalendarAgentRuntimeConfig,
     logger: ProcessLogger
   ) {
@@ -28,13 +28,13 @@ final class CalendarAgentRuntime {
   }
 
   /// Returns whether the calendar agent should run.
-  var isEnabled: Bool {
+  public var isEnabled: Bool {
     return config.isEnabled
   }
 
   /// Starts snapshot delivery and the calendar socket server.
   @discardableResult
-  func start() -> Bool {
+  public func start() -> Bool {
     guard isEnabled else {
       logger.info(
         "calendar agent disabled in config",
@@ -59,7 +59,7 @@ final class CalendarAgentRuntime {
   }
 
   /// Stops the calendar socket server and snapshot provider.
-  func stop() {
+  public func stop() {
     socketServer.stop()
     snapshotProvider.stop()
   }

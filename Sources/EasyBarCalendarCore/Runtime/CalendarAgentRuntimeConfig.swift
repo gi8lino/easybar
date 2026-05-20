@@ -2,22 +2,22 @@ import EasyBarShared
 import Foundation
 
 /// Configuration for one calendar agent runtime instance.
-struct CalendarAgentRuntimeConfig {
+public struct CalendarAgentRuntimeConfig {
   /// Whether the calendar agent is enabled.
-  let isEnabled: Bool
+  public let isEnabled: Bool
   /// Human-readable process name used in startup logs.
-  let processName: String
+  public let processName: String
   /// Component name used in disabled-state logs.
-  let componentName: String
+  public let componentName: String
   /// EasyBar app version reported by the agent.
-  let appVersion: String
+  public let appVersion: String
   /// Path to the active EasyBar config.
-  let configPath: String
+  public let configPath: String
   /// Unix-domain socket path used by the calendar agent.
-  let socketPath: String
+  public let socketPath: String
 
   /// Builds one calendar agent runtime config.
-  init(
+  public init(
     isEnabled: Bool,
     processName: String,
     componentName: String,
@@ -34,7 +34,7 @@ struct CalendarAgentRuntimeConfig {
   }
 
   /// Builds the default EasyBar calendar agent runtime config.
-  static func easyBar(
+  public static func easyBar(
     runtimeConfig: SharedRuntimeConfig,
     appVersion: String
   ) -> CalendarAgentRuntimeConfig {

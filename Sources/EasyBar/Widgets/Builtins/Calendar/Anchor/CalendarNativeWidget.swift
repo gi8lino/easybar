@@ -107,22 +107,6 @@ final class CalendarNativeWidget: NativeWidget {
     )
   }
 
-  /// Returns the fetch range required by the upcoming popup.
-  static func requestedDateRange(
-    config: Config.CalendarBuiltinConfig,
-    now: Date
-  ) -> DateInterval {
-    let calendar = Calendar.current
-    let start = calendar.startOfDay(for: now)
-    let dayCount = max(1, config.upcoming.events.days)
-
-    let end =
-      calendar.date(byAdding: .day, value: dayCount, to: start)
-      ?? now.addingTimeInterval(TimeInterval(dayCount * 86_400))
-
-    return DateInterval(start: start, end: end)
-  }
-
   /// Returns the cheapest tick cadence that keeps the active anchor layout current.
   private static func refreshEvent(for config: Config.CalendarBuiltinConfig) -> AppEvent {
     let needsSecondPrecision = activeFormats(for: config).contains { format in

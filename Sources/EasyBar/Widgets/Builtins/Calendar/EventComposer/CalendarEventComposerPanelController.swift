@@ -1,4 +1,6 @@
 import AppKit
+import Combine
+import EasyBarCalendarUI
 import EasyBarShared
 import SwiftUI
 
@@ -14,13 +16,15 @@ final class CalendarEventComposerPanelController: ObservableObject {
     defaultDate: Date,
     onChanged: @escaping () -> Void
   ) {
-    let composer = CalendarEventComposer()
+    let composer = makeComposer()
     composer.prepare(defaultDate: defaultDate)
     self.composer = composer
 
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
+        config: Config.shared.builtinCalendar.composer.calendarUIConfig,
+        appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -43,13 +47,15 @@ final class CalendarEventComposerPanelController: ObservableObject {
     event: CalendarAgentEvent,
     onChanged: @escaping () -> Void
   ) {
-    let composer = CalendarEventComposer()
+    let composer = makeComposer()
     composer.prepare(event: event)
     self.composer = composer
 
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
+        config: Config.shared.builtinCalendar.composer.calendarUIConfig,
+        appointmentsStyle: Config.shared.builtinCalendar.appointments.calendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -137,5 +143,30 @@ final class CalendarEventComposerPanelController: ObservableObject {
     panel.standardWindowButton(.zoomButton)?.isHidden = true
 
     return panel
+  }
+
+  /// Builds one reusable composer view model wired to EasyBar stores and agent clients.
+  private func makeComposer() -> CalendarEventComposer {
+    CalendarEventComposer(
+      config: Config.shared.builtinCalendar.composer.calendarUIConfig,
+      snapshotPublisher: NativeMonthCalendarStore.shared.$snapshot.eraseToAnyPublisher(),
+      refreshSnapshots: {
+        MonthCalendarAgentClient.shared.refresh()
+      },
+      createEvent: { event, completion in
+        MonthCalendarAgentClient.shared.createEvent(event, completion: completion)
+      },
+      updateEvent: { event, completion in
+        MonthCalendarAgentClient.shared.updateEvent(event, completion: completion)
+      },
+      deleteEvent: { event, completion in
+        MonthCalendarAgentClient.shared.deleteEvent(event, completion: completion)
+      },
+      openCalendarApp: {
+        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal")
+        else { return }
+        NSWorkspace.shared.open(appURL)
+      }
+    )
   }
 }

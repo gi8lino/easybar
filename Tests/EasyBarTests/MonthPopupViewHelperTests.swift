@@ -1,6 +1,7 @@
+import EasyBarShared
 import XCTest
 
-@testable import EasyBar
+@testable import EasyBarCalendarUI
 
 final class MonthPopupViewHelperTests: XCTestCase {
   func testFormatVisibleMonthTitleHonorsProvidedLocale() {
@@ -16,8 +17,26 @@ final class MonthPopupViewHelperTests: XCTestCase {
     expectedFormatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
 
     XCTAssertEqual(
-      NativeMonthCalendarPopupView.formatVisibleMonthTitle(date, calendar: calendar, locale: locale),
+      CalendarMonthPopupView<StubMonthCalendarPopupStore>.formatVisibleMonthTitle(
+        date,
+        calendar: calendar,
+        locale: locale
+      ),
       expectedFormatter.string(from: date)
     )
+  }
+}
+
+@MainActor
+private final class StubMonthCalendarPopupStore: CalendarMonthPopupStore {
+  var snapshot: CalendarAgentSnapshot?
+  var events: [CalendarAgentEvent] = []
+
+  func eventsInRange(from startDate: Date, to endDate: Date) -> [CalendarAgentEvent] {
+    return []
+  }
+
+  func hasEvents(on date: Date) -> Bool {
+    return false
   }
 }

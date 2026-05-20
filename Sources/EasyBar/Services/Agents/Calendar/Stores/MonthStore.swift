@@ -1,8 +1,9 @@
+import EasyBarCalendarUI
 import EasyBarShared
 import Foundation
 
 /// Shared month-calendar snapshot store used by the native month popup.
-final class NativeMonthCalendarStore: ObservableObject {
+final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   private static var sharedInstance: NativeMonthCalendarStore?
 
   static var shared: NativeMonthCalendarStore {

@@ -1,9 +1,9 @@
 import Foundation
 
 /// Formatting helpers for calendar event rows.
-enum CalendarEventPresentation {
+public enum CalendarEventFormatter {
   /// Formats one event time using the provided calendar.
-  static func formattedEventTime(_ date: Date, calendar: Calendar) -> String {
+  public static func formattedEventTime(_ date: Date, calendar: Calendar) -> String {
     let formatter = DateFormatter()
     formatter.calendar = calendar
     formatter.dateFormat = "HH:mm"
@@ -11,7 +11,7 @@ enum CalendarEventPresentation {
   }
 
   /// Returns the rendered end time for timed events when it differs from the start.
-  static func endTimeText(
+  public static func endTimeText(
     startDate: Date,
     endDate: Date,
     isAllDay: Bool,
@@ -27,7 +27,7 @@ enum CalendarEventPresentation {
   }
 
   /// Returns the rendered departure time when travel time is present.
-  static func travelDepartureTimeText(
+  public static func travelDepartureTimeText(
     startDate: Date,
     travelTimeSeconds: TimeInterval,
     calendar: Calendar
@@ -39,7 +39,7 @@ enum CalendarEventPresentation {
   }
 
   /// Returns the rendered travel-time text when available.
-  static func travelTimeText(travelTimeSeconds: TimeInterval) -> String? {
+  public static func travelTimeText(travelTimeSeconds: TimeInterval) -> String? {
     guard travelTimeSeconds > 0 else { return nil }
 
     let minutes = Int((travelTimeSeconds / 60).rounded())

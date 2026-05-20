@@ -1,7 +1,11 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import Foundation
 
+/// Agent client used by the reusable month-calendar popup.
+@MainActor
 final class MonthCalendarAgentClient {
+  /// Shared month-calendar agent client instance.
   private static var sharedInstance: MonthCalendarAgentClient?
 
   /// Returns the configured shared month-calendar agent client.
@@ -20,16 +24,25 @@ final class MonthCalendarAgentClient {
     sharedInstance = MonthCalendarAgentClient(logger: logger)
   }
 
+  /// Logger used for month-calendar agent diagnostics.
   private let logger: ProcessLogger
 
+  /// Queue used to stage wider month preload requests without blocking the main actor.
   private let preloadQueue = DispatchQueue(
     label: "easybar.month-calendar.preload",
     qos: .utility
   )
+
+  /// Month radii loaded around the currently visible month.
   private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
+
+  /// Delay schedule for staged month preload requests.
   private let preloadDelays: [TimeInterval] = [0.0, 0.20, 0.75, 1.75, 3.5, 6.5, 10.0]
+
+  /// Pending staged month preload work items.
   private var preloadWorkItems: [DispatchWorkItem] = []
 
+  /// Long-lived calendar-agent stream controller.
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "month calendar agent client",
     socketPath: { Config.shared.calendarAgentSocketPath },
@@ -45,6 +58,7 @@ final class MonthCalendarAgentClient {
     logger: logger.child("stream")
   )
 
+  /// Creates one month-calendar agent client.
   private init(logger: ProcessLogger) {
     self.logger = logger
   }
@@ -71,8 +85,13 @@ final class MonthCalendarAgentClient {
 
     for (index, radius) in preloadRadii.enumerated() {
       let delay = preloadDelays[min(index, preloadDelays.count - 1)]
-      let workItem = DispatchWorkItem { [weak self] in
-        self?.refreshMonthSubscriptionIfNeeded(for: visibleMonth, radius: radius)
+      let workItem = DispatchWorkItem {
+        Task { @MainActor in
+          MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(
+            for: visibleMonth,
+            radius: radius
+          )
+        }
       }
 
       preloadWorkItems.append(workItem)
@@ -145,7 +164,7 @@ final class MonthCalendarAgentClient {
   ) {
     let socketPath = Config.shared.calendarAgentSocketPath
 
-    DispatchQueue.global(qos: .userInitiated).async { [logger] in
+    DispatchQueue.global(qos: .userInitiated).async {
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,
@@ -153,38 +172,62 @@ final class MonthCalendarAgentClient {
         )
 
         Task { @MainActor in
-          switch response.kind {
-          case successKind:
-            self.refresh()
-            UpcomingCalendarAgentClient.shared.refresh()
-            completion(true, nil)
-
-          case .error:
-            let message = response.message ?? "unknown"
-            logger.error(
-              "month calendar mutation failed",
-              .field("message", message),
-            )
-            completion(false, message)
-
-          default:
-            logger.error(
-              "month calendar mutation unexpected response",
-              .field("response", response.kind.rawValue),
-            )
-            completion(false, "unexpected_response")
-          }
+          MonthCalendarAgentClient.shared.handleMutationResponse(
+            response,
+            successKind: successKind,
+            completion: completion
+          )
         }
       } catch {
         Task { @MainActor in
-          logger.error(
-            "month calendar mutation failed",
-            .field("error", error),
+          MonthCalendarAgentClient.shared.handleMutationError(
+            error,
+            completion: completion
           )
-          completion(false, error.localizedDescription)
         }
       }
     }
+  }
+
+  /// Handles one calendar-agent mutation response on the main actor.
+  private func handleMutationResponse(
+    _ response: CalendarAgentMessage,
+    successKind: CalendarAgentMessageKind,
+    completion: (_ success: Bool, _ message: String?) -> Void
+  ) {
+    switch response.kind {
+    case successKind:
+      refresh()
+      UpcomingCalendarAgentClient.shared.refresh()
+      completion(true, nil)
+
+    case .error:
+      let message = response.message ?? "unknown"
+      logger.error(
+        "month calendar mutation failed",
+        .field("message", message)
+      )
+      completion(false, message)
+
+    default:
+      logger.error(
+        "month calendar mutation unexpected response",
+        .field("response", response.kind.rawValue)
+      )
+      completion(false, "unexpected_response")
+    }
+  }
+
+  /// Handles one calendar-agent mutation failure on the main actor.
+  private func handleMutationError(
+    _ error: Error,
+    completion: (_ success: Bool, _ message: String?) -> Void
+  ) {
+    logger.error(
+      "month calendar mutation failed",
+      .field("error", error)
+    )
+    completion(false, error.localizedDescription)
   }
 
   /// Builds the current month-calendar fetch request.
@@ -198,34 +241,19 @@ final class MonthCalendarAgentClient {
     }
 
     let calendarConfig = Config.shared.builtinCalendar
-    let birthdays = calendarConfig.birthdays
-    let filters = calendarConfig.filters
+    let options = calendarConfig.presentationMonthRequestOptions
 
     logger.debug(
       "requesting month calendar snapshot",
       .field("start", requestedRange.start.timeIntervalSince1970),
       .field("end", requestedRange.end.timeIntervalSince1970),
-      .field("show_birthdays", birthdays.showBirthdays),
-      .field("birthdays_show_age", birthdays.birthdaysShowAge),
+      .field("show_birthdays", options.birthdays.showBirthdays),
+      .field("birthdays_show_age", options.birthdays.showAge)
     )
 
-    let query = CalendarAgentQuery(
-      startDate: requestedRange.start,
-      endDate: requestedRange.end,
-      sectionStartDate: nil,
-      sectionDayCount: nil,
-      showBirthdays: birthdays.showBirthdays,
-      emptyText: calendarConfig.appointments.emptyText,
-      birthdaysTitle: "",
-      birthdaysDateFormat: "dd.MM.yyyy",
-      birthdaysShowAge: birthdays.birthdaysShowAge,
-      includedCalendarNames: filters.includedCalendarNames,
-      excludedCalendarNames: filters.excludedCalendarNames
-    )
-
-    return CalendarAgentRequest(
-      command: .subscribe,
-      query: query
+    return CalendarRequestFactory.makeMonthSubscribeRequest(
+      range: requestedRange,
+      options: options
     )
   }
 

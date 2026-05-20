@@ -1,9 +1,10 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
 // MARK: - Selection And Agenda
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Builds the appointments container, optionally scrollable.
   @ViewBuilder
   var appointmentsContainerView: some View {
@@ -67,8 +68,8 @@ extension NativeMonthCalendarPopupView {
     CalendarAppointmentsListView(
       title: nil,
       rows: appointmentListRows,
-      emptyText: appointments.emptyText,
-      style: appointments,
+      emptyText: emptyText,
+      style: appointmentsStyle,
       birthdayIcon: birthdays.birthdayIcon,
       birthdayIconColorHex: birthdays.birthdayIconColorHex,
       defaultIndicatorColorHex: config.indicatorColorHex,
@@ -108,13 +109,8 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
-  /// Returns whether the given event is a birthday event.
-  func isBirthdayEvent(_ event: EasyBarShared.CalendarAgentEvent) -> Bool {
-    return event.id.hasPrefix("birthday-")
-  }
-
   /// Returns the currently selected events.
-  var selectedEvents: [EasyBarShared.CalendarAgentEvent] {
+  var selectedEvents: [CalendarAgentEvent] {
     store.eventsInRange(from: selectedStartDate, to: selectedEndDate)
       .sorted { lhs, rhs in
         let lhsDate = displayDate(for: lhs)
@@ -124,26 +120,7 @@ extension NativeMonthCalendarPopupView {
           return lhsDate < rhsDate
         }
 
-        let lhsIsBirthday = isBirthdayEvent(lhs)
-        let rhsIsBirthday = isBirthdayEvent(rhs)
-
-        if lhsIsBirthday != rhsIsBirthday {
-          return lhsIsBirthday && !rhsIsBirthday
-        }
-
-        if lhs.isAllDay != rhs.isAllDay {
-          return lhs.isAllDay && !rhs.isAllDay
-        }
-
-        if lhs.startDate != rhs.startDate {
-          return lhs.startDate < rhs.startDate
-        }
-
-        if lhs.endDate != rhs.endDate {
-          return lhs.endDate < rhs.endDate
-        }
-
-        return lhs.id < rhs.id
+        return CalendarAgendaBuilder.eventSortOrder(lhs: lhs, rhs: rhs)
       }
   }
 
@@ -155,87 +132,19 @@ extension NativeMonthCalendarPopupView {
       return rows
     }
 
-    var limited: [AgendaRow] = []
-    var visibleEventCount = 0
-    let maxVisible = max(1, config.maxVisibleAppointments)
-
-    for row in rows {
-      switch row.kind {
-      case .dayHeader:
-        limited.append(row)
-
-      case .event:
-        guard visibleEventCount < maxVisible else { break }
-        limited.append(row)
-        visibleEventCount += 1
-      }
-    }
-
-    while limited.last.map({
-      if case .dayHeader = $0.kind { return true }
-      return false
-    }) == true {
-      _ = limited.popLast()
-    }
-
-    return limited
+    return CalendarAgendaBuilder.limitedVisibleEntries(
+      rows,
+      maxVisibleEvents: config.maxVisibleAppointments
+    )
   }
 
   /// Returns all agenda rows for the current selection.
   var agendaRows: [AgendaRow] {
-    guard !selectedEvents.isEmpty else { return [] }
-
-    guard selectionSpansMultipleDays else {
-      return selectedEvents.map { event in
-        AgendaRow(id: event.id, kind: .event(event))
-      }
-    }
-
-    let grouped = Dictionary(grouping: selectedEvents, by: displayDate(for:))
-    let sortedDates = grouped.keys.sorted()
-
-    var rows: [AgendaRow] = []
-
-    for date in sortedDates {
-      rows.append(
-        AgendaRow(
-          id: "header-\(resolvedCalendar.startOfDay(for: date).timeIntervalSince1970)",
-          kind: .dayHeader(date)
-        )
-      )
-
-      let dayEvents =
-        (grouped[date] ?? [])
-        .sorted { lhs, rhs in
-          let lhsIsBirthday = isBirthdayEvent(lhs)
-          let rhsIsBirthday = isBirthdayEvent(rhs)
-
-          if lhsIsBirthday != rhsIsBirthday {
-            return lhsIsBirthday && !rhsIsBirthday
-          }
-
-          if lhs.isAllDay != rhs.isAllDay {
-            return lhs.isAllDay && !rhs.isAllDay
-          }
-
-          if lhs.startDate != rhs.startDate {
-            return lhs.startDate < rhs.startDate
-          }
-
-          if lhs.endDate != rhs.endDate {
-            return lhs.endDate < rhs.endDate
-          }
-
-          return lhs.id < rhs.id
-        }
-
-      rows.append(
-        contentsOf: dayEvents.map { event in
-          AgendaRow(id: event.id, kind: .event(event))
-        })
-    }
-
-    return rows
+    return CalendarAgendaBuilder.build(
+      events: selectedEvents,
+      selectionSpansMultipleDays: selectionSpansMultipleDays,
+      calendar: resolvedCalendar
+    )
   }
 
   /// Starts one pointer interaction.
@@ -340,7 +249,7 @@ extension NativeMonthCalendarPopupView {
   }
 
   /// Returns the display date used to group one event in the agenda.
-  func displayDate(for event: EasyBarShared.CalendarAgentEvent) -> Date {
+  func displayDate(for event: CalendarAgentEvent) -> Date {
     let eventStartDay = resolvedCalendar.startOfDay(for: event.startDate)
     let selectionStartDay = resolvedCalendar.startOfDay(
       for: min(selectedStartDate, selectedEndDate))

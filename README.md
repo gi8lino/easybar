@@ -714,6 +714,15 @@ EasyBar is split into a few Swift packages and targets:
 - `EasyBarCalendarAgent`
   Helper app that owns EventKit and calendar snapshots.
 
+- `EasyBarCalendarCore`
+  Shared calendar-agent implementation used by `EasyBarCalendarAgent` and ready to be reused by future standalone calendar apps.
+
+- `EasyBarCalendarPresentation`
+  Shared calendar request-building and presentation helpers used by `EasyBar` and ready to be reused by future standalone calendar apps.
+
+- `EasyBarCalendarUI`
+  Shared calendar SwiftUI components and composer state used by `EasyBar` and ready to be reused by future standalone calendar apps.
+
 - `EasyBarNetworkAgent`
   Helper app that owns Wi-Fi and network observation.
 

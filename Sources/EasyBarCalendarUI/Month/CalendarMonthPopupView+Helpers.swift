@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Logging And Helpers
 
-extension NativeMonthCalendarPopupView {
+extension CalendarMonthPopupView {
   /// Returns the calendar resolved for month popup rendering.
   var resolvedCalendar: Calendar {
     var resolved = calendar
@@ -23,25 +23,24 @@ extension NativeMonthCalendarPopupView {
     }
   }
 
-  /// Opens the separate event composer popup for a new appointment.
+  /// Opens the host-provided event composer for a new appointment.
   func openComposer() {
     let defaultDate = resolvedCalendar.startOfDay(for: min(selectedStartDate, selectedEndDate))
-    composerPanel.present(defaultDate: defaultDate) {
+    onCreateEvent(defaultDate) {
       refreshCalendarViews()
     }
   }
 
-  /// Opens the separate event composer popup for one existing appointment.
-  func openComposer(for event: EasyBarShared.CalendarAgentEvent) {
-    composerPanel.present(event: event) {
+  /// Opens the host-provided event composer for one existing appointment.
+  func openComposer(for event: CalendarAgentEvent) {
+    onEditEvent(event) {
       refreshCalendarViews()
     }
   }
 
   /// Refreshes calendar-backed views after a create, update, or delete.
   func refreshCalendarViews() {
-    MonthCalendarAgentClient.shared.refresh()
-    UpcomingCalendarAgentClient.shared.refresh()
+    onRefreshRequested()
   }
 
   /// Returns the best matching selection date inside one target month.
