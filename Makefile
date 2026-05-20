@@ -1,4 +1,5 @@
 APP_NAME := EasyBar
+APP_TARGET := EasyBarApp
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
 LUA_RUNTIME_PRODUCT := EasyBarLuaRuntime
@@ -10,7 +11,7 @@ NETWORK_AGENT_NAME := EasyBarNetworkAgent
 NETWORK_AGENT_PRODUCT := EasyBarNetworkAgent
 NETWORK_AGENT_EXEC := EasyBarNetworkAgent
 CLI_PRODUCT := easybar
-RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_PRODUCT).bundle
+RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_TARGET).bundle
 
 DIST_DIR := dist
 APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
@@ -22,6 +23,7 @@ LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
 APP_ICON_SVG := packaging/easybar-icon.svg
 APP_ICON_FILE := $(APP_NAME)
 APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
+
 CALENDAR_AGENT_BUNDLE := $(DIST_DIR)/$(CALENDAR_AGENT_NAME).app
 CALENDAR_AGENT_CONTENTS := $(CALENDAR_AGENT_BUNDLE)/Contents
 CALENDAR_AGENT_MACOS := $(CALENDAR_AGENT_CONTENTS)/MacOS
@@ -32,6 +34,7 @@ CALENDAR_AGENT_PLIST := $(CALENDAR_AGENT_CONTENTS)/Info.plist
 CALENDAR_AGENT_ICON_SVG := packaging/easybar-calendar-agent-icon.svg
 CALENDAR_AGENT_ICON_FILE := $(CALENDAR_AGENT_NAME)
 CALENDAR_AGENT_ICON_ICNS := $(CALENDAR_AGENT_RESOURCES)/$(CALENDAR_AGENT_ICON_FILE).icns
+
 NETWORK_AGENT_BUNDLE := $(DIST_DIR)/$(NETWORK_AGENT_NAME).app
 NETWORK_AGENT_CONTENTS := $(NETWORK_AGENT_BUNDLE)/Contents
 NETWORK_AGENT_MACOS := $(NETWORK_AGENT_CONTENTS)/MacOS
@@ -42,11 +45,11 @@ NETWORK_AGENT_PLIST := $(NETWORK_AGENT_CONTENTS)/Info.plist
 NETWORK_AGENT_ICON_SVG := packaging/easybar-network-agent-icon.svg
 NETWORK_AGENT_ICON_FILE := $(NETWORK_AGENT_NAME)
 NETWORK_AGENT_ICON_ICNS := $(NETWORK_AGENT_RESOURCES)/$(NETWORK_AGENT_ICON_FILE).icns
+
 CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
-PLIST_TEMPLATE := Sources/EasyBar/Info.plist
+PLIST_TEMPLATE := Sources/EasyBarApp/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
 
-# SwiftPM places the copied resource bundle at the app bundle root in this setup.
 APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
 
 PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
@@ -99,10 +102,10 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
-        build-app build-calendar-agent build-network-agent build-cli copy-resources verify \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources verify \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
-        tag-patch tag-minor tag-major push-tags \
+        tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli
 
 help: ## Display this help.
@@ -115,7 +118,7 @@ generate-event-catalog: ## Regenerate Lua event catalog files from the shared ma
 
 all: build ## Build the default artifacts.
 
-prepare-version: ## Update Sources/EasyBarShared/Build/BuildInfo.swift with the selected VERSION.
+prepare-version: ## Update BuildInfo.swift and Lua API stub with the selected VERSION.
 	@$(MAKE) --no-print-directory generate-event-catalog
 	@mkdir -p "$(dir $(BUILD_INFO))"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
@@ -239,66 +242,6 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-run-build-app: ## Internal target: fast local app build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(APP_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(APP_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(APP_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(APP_PRODUCT)" \
-		-output "$(APP_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(APP_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(APP_PRODUCT)" "$(APP_BIN)"
-endif
-
-run-build-lua-runtime: ## Internal target: fast local Lua runtime build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(LUA_RUNTIME_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(LUA_RUNTIME_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
-		-output "$(LUA_RUNTIME_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(LUA_RUNTIME_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
-endif
-
-run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
-	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
-		-output "$(CALENDAR_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CALENDAR_AGENT_PRODUCT)
-	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
-endif
-
-run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(NETWORK_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(NETWORK_AGENT_PRODUCT)
-	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
-		-output "$(NETWORK_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(NETWORK_AGENT_PRODUCT)
-	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
-endif
-
 copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
@@ -366,7 +309,7 @@ stamp-network-agent-plist: ## Internal target: stamp version into the network ag
 	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || \
 		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)"
 
-sign: ## Sign the app bundle, calendar agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
+sign: ## Sign the app bundle, calendar agent, network agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
 	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
 		echo "Signing artifacts with ad-hoc identity"; \
 		codesign --force --deep --sign - "$(APP_BUNDLE)"; \
@@ -400,6 +343,7 @@ notarize: ## Notarize the app bundle when NOTARY_SUBMIT=1 and a keychain profile
 verify: ## Show the built bundle structure and validate key packaged files.
 	@echo "Built $(ARCH) artifacts:"
 	@file "$(APP_BIN)"
+	@file "$(LUA_RUNTIME_BIN)"
 	@file "$(CALENDAR_AGENT_BIN)"
 	@file "$(NETWORK_AGENT_BIN)"
 	@file "$(CLI_BIN)"
@@ -453,6 +397,66 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
 
+run-build-app: ## Internal target: fast local app build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(APP_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(APP_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(APP_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(APP_PRODUCT)" \
+		-output "$(APP_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(APP_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(APP_PRODUCT)" "$(APP_BIN)"
+endif
+
+run-build-lua-runtime: ## Internal target: fast local Lua runtime build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(LUA_RUNTIME_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(LUA_RUNTIME_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
+		-output "$(LUA_RUNTIME_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(LUA_RUNTIME_PRODUCT)
+	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
+endif
+
+run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
+	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
+		-output "$(CALENDAR_AGENT_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CALENDAR_AGENT_PRODUCT)
+	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
+endif
+
+run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
+ifeq ($(RUN_ARCH),universal)
+	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(NETWORK_AGENT_PRODUCT)
+	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(NETWORK_AGENT_PRODUCT)
+	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@lipo -create \
+		".build/arm64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
+		".build/x86_64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
+		-output "$(NETWORK_AGENT_BIN)"
+else
+	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(NETWORK_AGENT_PRODUCT)
+	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
+	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
+endif
+
 run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
 ifeq ($(RUN_ARCH),universal)
 	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CLI_PRODUCT)
@@ -490,7 +494,7 @@ dev: prepare-version ## Fast debug run without bundling.
 clean-dist: ## Remove dist/.
 	@rm -rf "$(DIST_DIR)"
 
-clean: ## Remove dist/, .build, and reset BuildInfo.swift to its placeholder version.
+clean: ## Remove dist/, .build, and reset BuildInfo.swift and Lua API stub to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"dev\"", text, count=1); \
