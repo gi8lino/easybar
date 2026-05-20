@@ -1,8 +1,8 @@
 import EasyBarCalendarUI
 import Foundation
 
-public extension CalendarBuiltinConfig {
-  var appointmentsCalendarUIStyle: CalendarAppointmentsStyle {
+extension CalendarBuiltinConfig {
+  public var appointmentsCalendarUIStyle: CalendarAppointmentsStyle {
     CalendarAppointmentsStyle(
       secondaryTextColorHex: appointments.secondaryTextColorHex,
       emptyTextColorHex: appointments.emptyTextColorHex,
@@ -24,14 +24,14 @@ public extension CalendarBuiltinConfig {
     )
   }
 
-  var birthdayCalendarUIStyle: CalendarBirthdayStyle {
+  public var birthdayCalendarUIStyle: CalendarBirthdayStyle {
     CalendarBirthdayStyle(
       birthdayIcon: birthdays.birthdayIcon,
       birthdayIconColorHex: birthdays.birthdayIconColorHex
     )
   }
 
-  var calendarComposerUIConfig: CalendarComposerConfig {
+  public var calendarComposerUIConfig: CalendarComposerConfig {
     CalendarComposerConfig(
       createTitle: composer.createTitle,
       editTitle: composer.editTitle,
@@ -69,7 +69,7 @@ public extension CalendarBuiltinConfig {
     )
   }
 
-  var calendarMonthPopupUIConfig: CalendarMonthPopupConfig {
+  public var calendarMonthPopupUIConfig: CalendarMonthPopupConfig {
     CalendarMonthPopupConfig(
       backgroundColorHex: month.popup.backgroundColorHex,
       borderColorHex: month.popup.borderColorHex,
@@ -114,7 +114,7 @@ public extension CalendarBuiltinConfig {
     )
   }
 
-  var calendarUpcomingPopupUIConfig: CalendarUpcomingPopupConfig {
+  public var calendarUpcomingPopupUIConfig: CalendarUpcomingPopupConfig {
     CalendarUpcomingPopupConfig(
       days: upcoming.events.days,
       excludePastEvents: upcoming.events.excludePastEvents,
@@ -134,8 +134,8 @@ public extension CalendarBuiltinConfig {
   }
 }
 
-private extension MonthCalendarPopupLayout {
-  var calendarMonthPopupLayout: CalendarMonthPopupLayout {
+extension MonthCalendarPopupLayout {
+  fileprivate var calendarMonthPopupLayout: CalendarMonthPopupLayout {
     switch self {
     case .calendarAppointmentsHorizontal:
       return .calendarAppointmentsHorizontal

@@ -1,22 +1,22 @@
 import EasyBarCalendarPresentation
 import Foundation
 
-public extension CalendarBuiltinConfig {
-  var presentationFilters: CalendarRequestFilters {
+extension CalendarBuiltinConfig {
+  public var presentationFilters: CalendarRequestFilters {
     CalendarRequestFilters(
       includedCalendarNames: filters.includedCalendarNames,
       excludedCalendarNames: filters.excludedCalendarNames
     )
   }
 
-  var presentationBirthdays: CalendarBirthdayRequestOptions {
+  public var presentationBirthdays: CalendarBirthdayRequestOptions {
     CalendarBirthdayRequestOptions(
       showBirthdays: birthdays.showBirthdays,
       showAge: birthdays.birthdaysShowAge
     )
   }
 
-  var presentationUpcomingRequestOptions: CalendarUpcomingRequestOptions {
+  public var presentationUpcomingRequestOptions: CalendarUpcomingRequestOptions {
     CalendarUpcomingRequestOptions(
       dayCount: upcoming.events.days,
       emptyText: appointments.emptyText,
@@ -25,7 +25,7 @@ public extension CalendarBuiltinConfig {
     )
   }
 
-  var presentationMonthRequestOptions: CalendarMonthRequestOptions {
+  public var presentationMonthRequestOptions: CalendarMonthRequestOptions {
     CalendarMonthRequestOptions(
       emptyText: appointments.emptyText,
       birthdays: presentationBirthdays,

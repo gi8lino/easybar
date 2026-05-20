@@ -1002,8 +1002,8 @@ public struct CalendarBuiltinConfig {
   }
 }
 
-public extension CalendarBuiltinConfig {
-  static let `default` = CalendarBuiltinConfig(
+extension CalendarBuiltinConfig {
+  public static let `default` = CalendarBuiltinConfig(
     placement: .init(enabled: false, position: .right, order: 60),
     style: .init(
       icon: "",
@@ -1186,7 +1186,7 @@ public extension CalendarBuiltinConfig {
     )
   )
 
-  static func resolveMonthWeekdaySymbols(
+  public static func resolveMonthWeekdaySymbols(
     format: String,
     manualSymbols: [String]?
   ) -> [String] {
