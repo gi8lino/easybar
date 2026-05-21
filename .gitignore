@@ -3,8 +3,8 @@ dist/
 .swiftpm/
 
 # mkdocs
-site/
-.venv-docs/
+docs/site/
+docs/.venv/
 
 .DS_Store
 todo.txt
