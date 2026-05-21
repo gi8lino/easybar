@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import EasyBar
+@testable import EasyBarApp
 
 final class ConfigSnapshotTests: XCTestCase {
   private var originalSnapshot: ConfigSnapshot!

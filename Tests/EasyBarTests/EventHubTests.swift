@@ -1,7 +1,7 @@
 import EasyBarShared
 import XCTest
 
-@testable import EasyBar
+@testable import EasyBarApp
 
 final class EventHubTests: XCTestCase {
   /// Creates hub.
