@@ -1,4 +1,4 @@
-AP_NAME := EasyBar
+APP_NAME := EasyBar
 APP_TARGET := EasyBarApp
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
@@ -108,7 +108,7 @@ endif
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
-				demo
+        demo
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -246,8 +246,18 @@ copy-resources: ## Internal target: copy SwiftPM resource bundles into the app b
 	@mkdir -p "$(APP_BUNDLE)"
 	@rm -rf "$(APP_RESOURCE_BUNDLE)"
 ifeq ($(ARCH),universal)
+	@test -d ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" || { \
+		echo "Missing resource bundle: .build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)"; \
+		find .build/arm64-apple-macosx/release -maxdepth 1 -name '*.bundle' -print; \
+		exit 1; \
+	}
 	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 else
+	@test -d ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" || { \
+		echo "Missing resource bundle: .build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)"; \
+		find ".build/$(ARCH)-apple-macosx/release" -maxdepth 1 -name '*.bundle' -print; \
+		exit 1; \
+	}
 	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 endif
 
@@ -595,28 +605,27 @@ clean-docs: ## Remove generated docs output and docs virtualenv.
 
 ##@ Icons
 
-SVG       := packaging/easybar-icon.svg
-ICON_DIR  := docs/assets/icons
+SVG := packaging/easybar-icon.svg
+ICON_DIR := docs/assets/icons
 ICON_SIZES := 16x16 32x32 48x48 64x64
 
 .PHONY: favicon
-favicon: ## Create favicons
+favicon: ## Create favicons.
 	@mkdir -p $(ICON_DIR)
 	@for size in $(ICON_SIZES); do \
-	  outfile=favicon-$$size.png; \
-	  echo "create $$outfile"; \
-	  convert $(SVG) \
-	    -fuzz 5% -transparent white \
-	    -background none \
-	    -resize $$size \
-	    $(ICON_DIR)/$$outfile \
-	    >/dev/null 2>&1; \
+		outfile=favicon-$$size.png; \
+		echo "create $$outfile"; \
+		convert $(SVG) \
+			-fuzz 5% -transparent white \
+			-background none \
+			-resize $$size \
+			$(ICON_DIR)/$$outfile \
+			>/dev/null 2>&1; \
 	done
 	@echo "create apple-touch-icon.png"
 	@convert $(SVG) \
-	  -fuzz 5% -transparent white \
-	  -background none \
-	  -resize 180x180 \
-	  $(ICON_DIR)/apple-touch-icon.png \
-	  >/dev/null 2>&1
-
+		-fuzz 5% -transparent white \
+		-background none \
+		-resize 180x180 \
+		$(ICON_DIR)/apple-touch-icon.png \
+		>/dev/null 2>&1
