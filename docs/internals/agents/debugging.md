@@ -112,11 +112,11 @@ brew services restart gi8lino/tap/easybar-calendar-agent
 
 ## Debugging Lua vs Agent
 
-| Problem | Likely source |
-| --- | --- |
-| No socket response | agent |
-| JSON correct but widget wrong | Lua |
-| Event missing field | EasyBar mapping |
+| Problem                       | Likely source   |
+| ----------------------------- | --------------- |
+| No socket response            | agent           |
+| JSON correct but widget wrong | Lua             |
+| Event missing field           | EasyBar mapping |
 
 ## Inspect raw agent output
 
@@ -143,6 +143,10 @@ Best order:
 
 Always debug from the bottom up:
 
-```text
-Agent → Socket → EasyBar → Lua → UI
+```mermaid
+flowchart LR
+    Agent["Agent"] --> Socket["Socket"]
+    Socket --> EasyBar["EasyBar"]
+    EasyBar --> Lua["Lua"]
+    Lua --> UI["UI"]
 ```

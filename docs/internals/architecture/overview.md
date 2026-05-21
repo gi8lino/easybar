@@ -12,26 +12,23 @@ It has:
 
 ## High-level runtime
 
-```text
-AeroSpace / macOS events / user input
-                │
-                ▼
-            EasyBar app
-                │
-     ┌──────────┼──────────┐
-     │          │          │
-     ▼          ▼          ▼
- Lua runtime   calendar    network
-  process       agent       agent
-                │            │
-                ▼            ▼
-             EventKit   CoreWLAN / network APIs
+```mermaid
+flowchart TB
+    Input["AeroSpace / macOS events / user input"] --> App["EasyBar app"]
+
+    App --> Lua["Lua runtime process"]
+    App --> Calendar["Calendar agent"]
+    App --> Network["Network agent"]
+
+    Calendar --> EventKit["EventKit"]
+    Network --> CoreWLAN["CoreWLAN / network APIs"]
 ```
 
 There is also a separate CLI process:
 
-```text
-easybar CLI ─────► EasyBar control socket
+```mermaid
+flowchart LR
+    CLI["easybar CLI"] --> Socket["EasyBar control socket"]
 ```
 
 ## Design goals

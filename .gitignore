@@ -2,6 +2,10 @@ dist/
 .build/
 .swiftpm/
 
+# mkdocs
+site/
+.venv-docs/
+
 .DS_Store
 todo.txt
 

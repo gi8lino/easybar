@@ -20,6 +20,26 @@ That gives the project:
 
 ## High-level flow
 
+```mermaid
+flowchart TD
+    Start["Swift starts the Lua runtime process"]
+    Load["Lua loads widget files"]
+    Subscriptions["Lua reports required driver events"]
+    Sources["Swift starts required native event sources"]
+    Events["Swift sends normalized events over the Lua socket"]
+    State["Lua updates widget state"]
+    Trees["Lua emits rendered trees"]
+    Store["Swift updates WidgetStore"]
+
+    Start --> Load
+    Load --> Subscriptions
+    Subscriptions --> Sources
+    Sources --> Events
+    Events --> State
+    State --> Trees
+    Trees --> Store
+```
+
 1. Swift starts the Lua runtime process.
 2. Lua loads every widget file from the widget directory.
 3. Lua reports which driver events it needs.

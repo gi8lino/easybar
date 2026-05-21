@@ -11,17 +11,13 @@ EasyBar reacts to several kinds of events:
 
 ## Simplified flow
 
-```text
-system event / app trigger / AeroSpace callback
-                    │
-                    ▼
-               EasyBar event layer
-                    │
-        ┌───────────┼───────────┐
-        │           │           │
-        ▼           ▼           ▼
-   native widget   Lua runtime   agent fetch/subscription
-     updates         updates          handling
+```mermaid
+flowchart TB
+    Trigger["system event / app trigger / AeroSpace callback"] --> EventLayer["EasyBar event layer"]
+
+    EventLayer --> Native["native widget updates"]
+    EventLayer --> Lua["Lua runtime updates"]
+    EventLayer --> Agent["agent fetch / subscription handling"]
 ```
 
 The important design choice is that EasyBar acts as the coordinator.

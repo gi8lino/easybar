@@ -561,6 +561,29 @@ generate-event-catalog: ## Regenerate Lua event catalog files from the shared ma
 demo: ## Populate the demo calendar with random events.
 	@zsh scripts/populate-demo-calendar.zsh demo
 
+##@ Docs
+
+DOCS_VENV := .venv-docs
+DOCS_PYTHON := $(DOCS_VENV)/bin/python
+DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
+
+$(DOCS_PYTHON):
+	@python3 -m venv $(DOCS_VENV)
+
+$(DOCS_STAMP): requirements-docs.txt | $(DOCS_PYTHON)
+	@$(DOCS_PYTHON) -m pip install --upgrade pip
+	@$(DOCS_PYTHON) -m pip install -r requirements-docs.txt
+	@touch $(DOCS_STAMP)
+
+serve-docs: $(DOCS_STAMP) ## Serve the docs locally.
+	@$(DOCS_PYTHON) -m mkdocs serve
+
+build-docs: $(DOCS_STAMP) ## Build the docs locally.
+	@$(DOCS_PYTHON) -m mkdocs build --strict
+
+clean-docs: ## Remove generated docs output and docs virtualenv.
+	@rm -rf site $(DOCS_VENV)
+
 ##@ Icons
 
 SVG       := packaging/easybar-icon.svg
