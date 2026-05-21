@@ -37,11 +37,11 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 **Calendar**
 
-![month_calendar](./assets/month_calendar.png)
+![month_calendar](./assets/month.png)
 
 **Upcoming**
 
-![upcoming](./assets/upcoming.png)
+![upcoming_calendar](./assets/upcoming.png)
 
 ## Install
 
