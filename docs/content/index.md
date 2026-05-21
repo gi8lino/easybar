@@ -8,6 +8,16 @@ It combines fast native widgets with flexible Lua widgets. Use built-ins for com
 
 EasyBar is designed for a clean macOS workflow and integrates especially well with AeroSpace.
 
+## Start here
+
+If you're new to EasyBar, this is the quickest path:
+
+1. Follow [Installation](getting-started/installation.md).
+2. Confirm where EasyBar reads config in [Config Path](getting-started/configuration-path.md).
+3. Skim [Configuration Overview](configuration/overview.md).
+4. Open [Lua Widgets](lua/overview.md) when you want custom behavior.
+5. Use [Troubleshooting](runtime/troubleshooting.md) if the bar or agents do not come up cleanly.
+
 ## Features
 
 - Native macOS bar window built with SwiftUI
@@ -20,7 +30,13 @@ EasyBar is designed for a clean macOS workflow and integrates especially well wi
 - Logging and startup diagnostics for troubleshooting
 - Lightweight runtime metrics
 
-## Inspiration and scope
+## How EasyBar is meant to be used
+
+- Start with built-in widgets for battery, Wi-Fi, spaces, calendar, and other system-integrated data.
+- Reach for Lua widgets when you need custom display logic, event handling, shell integration, or app-specific behavior.
+- Keep platform-sensitive logic in native code when possible, and treat Lua as the extension layer.
+
+## Project scope
 
 EasyBar is heavily inspired by [SketchyBar](https://github.com/FelixKratz/SketchyBar).
 
