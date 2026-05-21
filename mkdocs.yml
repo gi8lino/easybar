@@ -1,0 +1,105 @@
+site_name: EasyBar
+site_description: A lightweight, scriptable macOS status bar built with SwiftUI and Lua.
+site_url: https://gi8lino.github.io/easybar/
+
+repo_url: https://github.com/gi8lino/easybar
+repo_name: gi8lino/easybar
+
+theme:
+  name: material
+  logo: packages/easybar-icon.svg
+  favicon: packages/easybar-icon.svg
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.select
+
+nav:
+  - Home: index.md
+
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - macOS Quarantine: getting-started/macos-quarantine.md
+      - Config Path: getting-started/configuration-path.md
+      - AeroSpace Integration: getting-started/aerospace.md
+
+  - Configuration:
+      - Overview: configuration/overview.md
+      - App Settings: configuration/app.md
+      - Environment: configuration/environment.md
+      - Logging: configuration/logging.md
+      - Agents: configuration/agents.md
+      - Built-ins: configuration/builtins.md
+      - Native Groups: configuration/native-groups.md
+      - Box Model: configuration/box-model.md
+      - Developer Menu: configuration/developer-menu.md
+      - Example Configs: configuration/example-configs.md
+
+  - Lua Widgets:
+      - Overview: lua/overview.md
+      - Editor Support: lua/editor-support.md
+      - API: lua/api.md
+      - Events: lua/events.md
+      - Properties: lua/properties.md
+      - Grouping: lua/grouping.md
+      - Popups: lua/popups.md
+      - Intervals: lua/intervals.md
+      - Commands: lua/commands.md
+      - Logging: lua/logging.md
+      - Examples: lua/examples.md
+      - Style Guidelines: lua/style-guidelines.md
+
+  - Runtime:
+      - Control: runtime/control.md
+      - Metrics: runtime/metrics.md
+      - Troubleshooting: runtime/troubleshooting.md
+      - Recovery: runtime/recovery.md
+
+  - Internals:
+      - Architecture:
+          - Overview: internals/architecture/overview.md
+          - Targets: internals/architecture/targets.md
+          - Process Model: internals/architecture/process-model.md
+          - Shared Layer: internals/architecture/shared-layer.md
+          - CLI: internals/architecture/cli.md
+          - Control Socket: internals/architecture/control-socket.md
+          - Event Flow: internals/architecture/event-flow.md
+          - Boundaries: internals/architecture/boundaries.md
+      - Agents:
+          - Overview: internals/agents/overview.md
+          - Protocol: internals/agents/protocol.md
+          - Calendar Agent: internals/agents/calendar-agent.md
+          - Network Agent: internals/agents/network-agent.md
+          - Debugging: internals/agents/debugging.md
+      - Lua Runtime:
+          - Overview: internals/lua-runtime/overview.md
+          - Lifecycle: internals/lua-runtime/lifecycle.md
+          - Widget Loading: internals/lua-runtime/widget-loading.md
+          - Registry: internals/lua-runtime/registry.md
+          - Events: internals/lua-runtime/events.md
+          - Rendering: internals/lua-runtime/rendering.md
+          - Logging: internals/lua-runtime/logging.md
+          - Debugging: internals/lua-runtime/debugging.md
+          - Contributor Notes: internals/lua-runtime/contributor-notes.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

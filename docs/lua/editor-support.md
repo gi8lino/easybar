@@ -1,0 +1,52 @@
+# Editor Support
+
+EasyBar installs a bundled LuaLS stub into:
+
+```text
+~/.local/share/easybar/easybar_api.lua
+```
+
+That installed file is the combined public stub.
+
+If you are working on EasyBar itself, the split source files are:
+
+- `Sources/EasyBar/Lua/easybar_api.base.lua`
+- `Sources/EasyBar/Lua/easybar_api.events.lua`
+
+Those source files are merged into the installed `easybar_api.lua` stub during generation.
+
+## LuaLS setup
+
+If your editor uses LuaLS, add a `.luarc.json` in the workspace where you edit widgets.
+
+That gives you:
+
+- no `unknown global 'easybar'` warning
+- hover documentation
+- autocomplete for the `easybar` API
+- diagnostics and autocomplete for supported node properties such as `background.border_width`, `popup.drawing`, `interval`, and `on_interval`
+
+## Suggested setup
+
+1. Start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`.
+2. Add `~/.config/easybar/widgets/.luarc.json`.
+3. Open `~/.config/easybar/widgets` or `~/.config` as your editor workspace.
+
+Example `.luarc.json`:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "Lua 5.4"
+  },
+  "workspace": {
+    "library": ["~/.local/share/easybar/easybar_api.lua"]
+  },
+  "diagnostics": {
+    "globals": ["easybar"]
+  }
+}
+```
+
+If your editor still only knows about the `easybar` global but not nested property tables, restart EasyBar once so it reinstalls the latest `easybar_api.lua` stub.
