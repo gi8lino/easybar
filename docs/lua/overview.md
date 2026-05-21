@@ -1,10 +1,10 @@
-# Lua Widgets Overview
+# Lua Widgets
 
 EasyBar Lua widgets are node-based.
 
 You do not return widget trees. You create nodes, keep their handles, and update them with methods such as `node:set(...)` and `node:subscribe(...)`.
 
-## Basic idea
+A minimal widget looks like this:
 
 ```lua
 local clock
@@ -12,8 +12,8 @@ local clock
 clock = easybar.add(easybar.kind.item, "clock", {
     position = "right",
     order = 10,
-    interval = 60,
     label = os.date("%H:%M"),
+    interval = 60,
     on_interval = function()
         clock:set({
             label = os.date("%H:%M"),
@@ -22,23 +22,25 @@ clock = easybar.add(easybar.kind.item, "clock", {
 })
 ```
 
-## Interaction model
+## Mental model
 
-Interaction is node-based.
+Lua widgets follow this model:
 
-- Subscribe on a node handle.
-- The subscribed node frame is the interactive surface.
-- Use smaller child nodes when only part of a widget should be interactive.
-- Use `group` when multiple child nodes should share one styled container.
-- If children inside a group must be clicked independently, subscribe on the child handles.
-- Subscribe on the group handle only when the whole group should behave as one interactive surface.
+1. create nodes with `easybar.add(...)`
+2. store returned handles
+3. update nodes with `node:set(...)`
+4. subscribe to events with `node:subscribe(...)`
+5. let EasyBar render the current node state
 
-## Default styling
+The Lua runtime is for custom widgets and user-specific behavior. Built-in platform-integrated widgets should usually stay native when possible.
 
-Lua widgets inherit native-like styling in the most common cases, so you usually do not need to restate the full shell or popup style.
+## Generated reference
 
-| Node shape                        | Default styling                                                                                                            |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| bar-root `item`, `row`, `group`   | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4`                                     |
-| popup content                     | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
-| child items inside a parent/group | no root shell by default                                                                                                   |
+The API reference is generated from the LuaLS stub:
+
+- [Functions](reference/functions.md)
+- [Node kinds](reference/node-kinds.md)
+- [Events](reference/events.md)
+- [Properties](reference/properties.md)
+
+Use the guides for concepts and patterns. Use the reference pages for exact API details.

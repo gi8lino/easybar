@@ -1,25 +1,49 @@
 # Grouping
 
-Use `group` when multiple child nodes should share:
+Use `group` when multiple child nodes should share one visual container.
+
+A group is useful when you want:
 
 - one background
 - one border
 - one padding box
-- one popup owner
+- shared spacing
+- shared popup ownership
+- parent-level interaction around multiple child items
 
-## Group example
+## Basic group
 
 ```lua
 local vpn = easybar.add(easybar.kind.group, "vpn", {
     position = "right",
     order = 40,
+    spacing = 6,
+})
+
+easybar.add(easybar.kind.item, "vpn_icon", {
+    parent = vpn.name,
+    icon = "󰖂",
+})
+
+easybar.add(easybar.kind.item, "vpn_label", {
+    parent = vpn.name,
+    label = "Active",
+})
+```
+
+## Styled group
+
+```lua
+local vpn = easybar.add(easybar.kind.group, "vpn", {
+    position = "right",
+    order = 40,
+    spacing = 6,
     background = {
         color = "#202020",
         border_color = "#4a4a4a",
         border_width = 1,
         corner_radius = 8,
     },
-    spacing = 6,
 })
 
 local vpn_main = easybar.add(easybar.kind.item, "vpn_main", {
@@ -37,14 +61,9 @@ local vpn_mode = easybar.add(easybar.kind.item, "vpn_mode", {
 })
 ```
 
-## Important rules
+## Interaction
 
-- The group is the shared styled container.
-- Each child item can still be its own interactive surface.
-- If each child should react independently to clicks, subscribe on the child handles, not only on the group handle.
-- Use a group-level mouse subscription only when the whole grouped widget should behave like one single click target.
-
-## Independent child clicks
+Subscribe on child handles when each child should behave independently:
 
 ```lua
 vpn_main:subscribe(easybar.events.mouse.clicked, function(event)
@@ -55,26 +74,9 @@ end)
 
 vpn_mode:subscribe(easybar.events.mouse.clicked, function(event)
     if event.button == nil or event.button == "left" then
-        -- handle secondary toggle
+        -- handle secondary action
     end
 end)
 ```
 
-## Minimal group
-
-```lua
-local vpn = easybar.add(easybar.kind.group, "vpn", {
-    position = "right",
-    order = 40,
-})
-
-easybar.add(easybar.kind.item, "vpn_icon", {
-    parent = vpn.name,
-    icon = "󰖂",
-})
-
-easybar.add(easybar.kind.item, "vpn_label", {
-    parent = vpn.name,
-    label = "Active",
-})
-```
+Subscribe on the group handle only when the whole grouped widget should behave like one click target.

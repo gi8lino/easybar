@@ -15,7 +15,7 @@ If you are working on EasyBar itself, the split source files are:
 
 Those source files are merged into the installed `easybar_api.lua` stub during generation.
 
-## LuaLS setup
+## LuaLS workspace setup
 
 If your editor uses LuaLS, add a `.luarc.json` in the workspace where you edit widgets.
 
@@ -26,11 +26,11 @@ That gives you:
 - autocomplete for the `easybar` API
 - diagnostics and autocomplete for supported node properties such as `background.border_width`, `popup.drawing`, `interval`, and `on_interval`
 
-## Suggested setup
+Suggested setup:
 
-1. Start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`.
-2. Add `~/.config/easybar/widgets/.luarc.json`.
-3. Open `~/.config/easybar/widgets` or `~/.config` as your editor workspace.
+1. start EasyBar once so it installs `~/.local/share/easybar/easybar_api.lua`
+2. add `~/.config/easybar/widgets/.luarc.json`
+3. open `~/.config/easybar/widgets` or `~/.config` as your editor workspace
 
 Example `.luarc.json`:
 

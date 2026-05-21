@@ -567,6 +567,8 @@ DOCS_VENV := .venv-docs
 DOCS_PYTHON := $(DOCS_VENV)/bin/python
 DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
 
+.PHONY: generate-lua-docs serve-docs build-docs clean-docs
+
 $(DOCS_PYTHON):
 	@python3 -m venv $(DOCS_VENV)
 
@@ -575,14 +577,17 @@ $(DOCS_STAMP): requirements-docs.txt | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r requirements-docs.txt
 	@touch $(DOCS_STAMP)
 
-serve-docs: $(DOCS_STAMP) ## Serve the docs locally.
+generate-lua-docs: ## Generate Lua reference docs from LuaLS stubs.
+	@python3 scripts/generate_lua_reference_docs.py
+
+serve-docs: $(DOCS_STAMP) generate-lua-docs ## Serve the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs serve
 
-build-docs: $(DOCS_STAMP) ## Build the docs locally.
+build-docs: $(DOCS_STAMP) generate-lua-docs ## Build the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs build --strict
 
 clean-docs: ## Remove generated docs output and docs virtualenv.
-	@rm -rf site $(DOCS_VENV)
+	@rm -rf site $(DOCS_VENV) docs/lua/reference
 
 ##@ Icons
 

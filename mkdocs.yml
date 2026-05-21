@@ -43,23 +43,27 @@ nav:
 
   - Lua Widgets:
       - Overview: lua/overview.md
-      - Editor Support: lua/editor-support.md
-      - API: lua/api.md
-      - Events: lua/events.md
-      - Properties: lua/properties.md
-      - Grouping: lua/grouping.md
-      - Popups: lua/popups.md
-      - Intervals: lua/intervals.md
-      - Commands: lua/commands.md
-      - Logging: lua/logging.md
-      - Examples: lua/examples.md
-      - Style Guidelines: lua/style-guidelines.md
+      - Guides:
+          - Editor Support: lua/guides/editor-support.md
+          - Grouping: lua/guides/grouping.md
+          - Popups: lua/guides/popups.md
+          - Intervals: lua/guides/intervals.md
+          - Commands: lua/guides/commands.md
+          - Logging: lua/guides/logging.md
+          - Examples: lua/guides/examples.md
+          - Style Guidelines: lua/guides/style-guidelines.md
+      - Reference:
+          - Overview: lua/reference/index.md
+          - Functions: lua/reference/functions.md
+          - Node Kinds: lua/reference/node-kinds.md
+          - Events: lua/reference/events.md
+          - Properties: lua/reference/properties.md
 
-  - Runtime:
-      - Control: runtime/control.md
-      - Metrics: runtime/metrics.md
-      - Troubleshooting: runtime/troubleshooting.md
-      - Recovery: runtime/recovery.md
+      - Runtime:
+          - Control: runtime/control.md
+          - Metrics: runtime/metrics.md
+          - Troubleshooting: runtime/troubleshooting.md
+          - Recovery: runtime/recovery.md
 
   - Internals:
       - Architecture:

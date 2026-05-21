@@ -36,6 +36,9 @@ jobs:
       - name: Install docs dependencies
         run: pip install -r requirements-docs.txt
 
+      - name: Generate Lua reference docs
+        run: python scripts/generate_lua_reference_docs.py
+
       - name: Build docs
         run: mkdocs build --strict
 
