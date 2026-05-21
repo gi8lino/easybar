@@ -1,4 +1,25 @@
 {
+  "docs": {
+    "eventNameAlias": "Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.",
+    "eventNameAliasExtra": "In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.",
+    "networkEventData": "Structured network-specific fields that may be present on network-related events.",
+    "powerEventData": "Structured power-specific fields that may be present on charging or power-source events.",
+    "audioEventData": "Structured audio-specific fields that may be present on mute or volume events.",
+    "event": "The event payload object delivered to event handlers.",
+    "eventExtra": "Different event families populate different optional fields.",
+    "eventHandler": "The callback signature used by `node:subscribe(...)` and `easybar.subscribe(...)`.",
+    "eventToken": "Opaque subscribe token object passed through from `easybar.events.*`.",
+    "mouseButtonsClass": "Convenience constants mirrored under `easybar.events.mouse.buttons`.",
+    "scrollDirectionsClass": "Convenience constants mirrored under `easybar.events.mouse.directions`.",
+    "mouseEventsClass": "Mouse-specific interaction tokens and convenience constants nested under `easybar.events.mouse`.",
+    "sliderEventsClass": "Slider-specific interaction tokens nested under `easybar.events.slider`.",
+    "eventsClass": "Namespace object exposed as `easybar.events`.",
+    "eventsClassExtra": "Use these tokens when subscribing widgets instead of hard-coding event-name strings."
+  },
+  "intervalEvent": {
+    "runtimeName": "interval",
+    "doc": "Internal timer callback name used when `interval` and `on_interval` are configured on a node."
+  },
   "forcedEvent": {
     "luaField": "forced",
     "runtimeName": "forced",
@@ -188,14 +209,35 @@
     }
   ],
   "mouseButtons": [
-    "left",
-    "right",
-    "middle"
+    {
+      "value": "left",
+      "doc": "Matches the primary mouse button."
+    },
+    {
+      "value": "right",
+      "doc": "Matches the secondary mouse button."
+    },
+    {
+      "value": "middle",
+      "doc": "Matches the middle mouse button."
+    }
   ],
   "scrollDirections": [
-    "up",
-    "down",
-    "left",
-    "right"
+    {
+      "value": "up",
+      "doc": "Matches upward scrolling."
+    },
+    {
+      "value": "down",
+      "doc": "Matches downward scrolling."
+    },
+    {
+      "value": "left",
+      "doc": "Matches leftward scrolling."
+    },
+    {
+      "value": "right",
+      "doc": "Matches rightward scrolling."
+    }
   ]
 }
