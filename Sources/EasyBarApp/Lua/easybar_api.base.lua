@@ -1,55 +1,95 @@
 -- EasyBar Lua API stub version: dev
 ---@meta
 
+---Logging levels accepted by `easybar.log(...)`.
 ---@alias EasyBarLevel
+---Verbose diagnostic logging intended for deep debugging.
 ---| '"trace"'
+---Useful development-time logging with lower volume than `trace`.
 ---| '"debug"'
+---Normal informational logging.
 ---| '"info"'
+---Warnings about unexpected but recoverable conditions.
 ---| '"warn"'
+---Errors that indicate a widget or runtime problem.
 ---| '"error"'
 
+---Literal node kinds accepted by `easybar.add(...)`.
+---In normal widget code, prefer the `easybar.kind.*` constants over raw strings.
 ---@alias EasyBarKind
+---Basic widget node for most text, icon, and interaction cases.
 ---| '"item"'
+---Horizontal layout container for child nodes.
 ---| '"row"'
+---Vertical layout container for child nodes.
 ---| '"column"'
+---Shared container that lets multiple child nodes look and behave like one widget.
 ---| '"group"'
+---Popup container node used for richer attached surfaces.
 ---| '"popup"'
+---Interactive scalar control that emits slider events.
 ---| '"slider"'
+---Read-only scalar meter for current numeric values.
 ---| '"progress"'
+---Combined progress-style display with slider interaction.
 ---| '"progress_slider"'
+---Compact line-chart style node for a list of samples.
 ---| '"sparkline"'
+---Specialized workspace or space indicator style node.
 ---| '"spaces"'
 
+---Mouse button names that may appear in event payloads.
 ---@alias EasyBarMouseButton
+---Primary mouse button.
 ---| '"left"'
+---Secondary mouse button.
 ---| '"right"'
+---Middle mouse button.
 ---| '"middle"'
 
+---Scroll directions that may appear in event payloads.
 ---@alias EasyBarScrollDirection
+---Upward scrolling.
 ---| '"up"'
+---Downward scrolling.
 ---| '"down"'
+---Leftward scrolling.
 ---| '"left"'
+---Rightward scrolling.
 ---| '"right"'
 
+---Boolean-like values accepted by some properties.
+---EasyBar accepts both native Lua booleans and the string forms `"on"` and `"off"`.
 ---@alias EasyBarBoolLike boolean
+---String form treated as enabled or visible.
 ---| '"on"'
+---String form treated as disabled or hidden.
 ---| '"off"'
 
+---Root-level bar positions used by top-level nodes.
 ---@alias EasyBarRootPosition
+---Left bar region.
 ---| '"left"'
+---Center bar region.
 ---| '"center"'
+---Right bar region.
 ---| '"right"'
 
+---Placement string for a node.
+---At the root level this is usually `left`, `center`, or `right`; popup children use `popup.<parent-id>`.
 ---@alias EasyBarPosition string
 
+---Font override fields used by label and icon content.
 ---@class (exact) EasyBarFontProps
 ---@field size? number Font size in points.
 
+---Detailed label configuration used when a plain label value is not enough.
 ---@class (exact) EasyBarLabelProps
 ---@field string? string Label text.
 ---@field color? string Hex color override for the label.
 ---@field font? EasyBarFontProps Label font overrides.
 
+---Detailed icon configuration used when a plain icon value is not enough.
 ---@class (exact) EasyBarIconProps
 ---@field string? string Icon glyph text.
 ---@field color? string Hex color override for the icon.
@@ -59,11 +99,13 @@
 ---@field image_corner_radius? number Image corner radius in points.
 ---@field padding_right? number Additional spacing between icon and label.
 
+---Standalone image configuration for nodes that render an image instead of text.
 ---@class (exact) EasyBarImageProps
 ---@field path? string Image path.
 ---@field size? number Image size in points.
 ---@field corner_radius? number Image corner radius in points.
 
+---Shared surface styling fields used by nodes and popups.
 ---@class (exact) EasyBarBackgroundProps
 ---@field color? string Background fill color.
 ---@field border_color? string Border stroke color.
@@ -74,12 +116,14 @@
 ---@field padding_top? number Top padding in points.
 ---@field padding_bottom? number Bottom padding in points.
 
+---Outer spacing fields that push a node away from surrounding content.
 ---@class (exact) EasyBarMarginProps
 ---@field margin_left? number Left margin in points.
 ---@field margin_right? number Right margin in points.
 ---@field margin_top? number Top margin in points.
 ---@field margin_bottom? number Bottom margin in points.
 
+---Container-level popup properties for visibility, layout, and surface styling.
 ---@class (exact) EasyBarPopupProps
 ---@field drawing? EasyBarBoolLike Whether popup content is shown.
 ---@field background? EasyBarBackgroundProps Popup background styling.
@@ -109,9 +153,12 @@
 ---@field borderWidth? number Legacy direct border width alias.
 ---@field cornerRadius? number Legacy direct corner radius alias.
 
+---Accepted shorthand forms for label content.
 ---@alias EasyBarLabelLike string|number|boolean|EasyBarLabelProps
+---Accepted shorthand forms for icon content.
 ---@alias EasyBarIconLike string|number|boolean|EasyBarIconProps
 
+---The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 ---@class (exact) EasyBarNodeProps
 ---@field position? EasyBarPosition Root nodes use `left`, `center`, or `right`; popup children use `popup.<id>`.
 ---@field order? integer Render order within one bar position.
@@ -159,6 +206,7 @@
 -- The standalone generated source lives in `easybar_api.events.lua`.
 -- GENERATED SECTION: easybar.events
 
+---Namespace object exposed as `easybar.level`.
 ---@class EasyBarLevels
 ---@field trace EasyBarLevel
 ---@field debug EasyBarLevel
@@ -166,17 +214,19 @@
 ---@field warn EasyBarLevel
 ---@field error EasyBarLevel
 
+---Namespace object exposed as `easybar.kind`.
+---These fields are the ergonomic way to pass node kinds to `easybar.add(...)`.
 ---@class EasyBarKinds
----@field item EasyBarKind
----@field row EasyBarKind
----@field column EasyBarKind
----@field group EasyBarKind
----@field popup EasyBarKind
----@field slider EasyBarKind
----@field progress EasyBarKind
----@field progress_slider EasyBarKind
----@field sparkline EasyBarKind
----@field spaces EasyBarKind
+---@field item EasyBarKind Use for most ordinary widgets with icon, label, and interaction support.
+---@field row EasyBarKind Use when several child nodes should be laid out horizontally.
+---@field column EasyBarKind Use when several child nodes should be laid out vertically.
+---@field group EasyBarKind Use when multiple child nodes should share one styled container.
+---@field popup EasyBarKind Use for explicit popup container composition.
+---@field slider EasyBarKind Use for interactive scalar controls.
+---@field progress EasyBarKind Use for read-only scalar meters.
+---@field progress_slider EasyBarKind Use when you want slider interaction with progress-style presentation.
+---@field sparkline EasyBarKind Use for compact numeric trend lines.
+---@field spaces EasyBarKind Use for workspace or space indicator style nodes.
 
 ---@class EasyBarNodeHandle
 ---@field id string Node id.

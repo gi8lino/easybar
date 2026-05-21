@@ -11,13 +11,18 @@ Generated from LuaLS class and field annotations.
 
 ### `EasyBarBoolLike`
 
-| Value |
-| ----- |
-| `boolean` |
-| `"on"` |
-| `"off"` |
+Boolean-like values accepted by some properties.
+EasyBar accepts both native Lua booleans and the string forms `"on"` and `"off"`.
+
+| Value | Meaning |
+| ----- | ------- |
+| `boolean` |  |
+| `"on"` | String form treated as enabled or visible. |
+| `"off"` | String form treated as disabled or hidden. |
 
 ### `EasyBarIconLike`
+
+Accepted shorthand forms for icon content.
 
 | Value |
 | ----- |
@@ -28,6 +33,8 @@ Generated from LuaLS class and field annotations.
 
 ### `EasyBarLabelLike`
 
+Accepted shorthand forms for label content.
+
 | Value |
 | ----- |
 | `string` |
@@ -37,21 +44,33 @@ Generated from LuaLS class and field annotations.
 
 ### `EasyBarPosition`
 
+Placement string for a node.
+At the root level this is usually `left`, `center`, or `right`; popup children use `popup.<parent-id>`.
+
 | Value |
 | ----- |
 | `string` |
 
 ### `EasyBarRootPosition`
 
-| Value |
-| ----- |
-| `"left"` |
-| `"center"` |
-| `"right"` |
+Root-level bar positions used by top-level nodes.
+
+| Value | Meaning |
+| ----- | ------- |
+| `"left"` | Left bar region. |
+| `"center"` | Center bar region. |
+| `"right"` | Right bar region. |
+
+## Reading This Page
+
+Use `EasyBarNodeProps` for the main node property table passed to `easybar.add(...)` and `node:set(...)`.
+The smaller `*Props` tables describe nested objects such as `icon`, `label`, `background`, and `popup`.
 
 ## `EasyBarBackgroundProps`
 
 Modifiers: `exact`.
+
+Shared surface styling fields used by nodes and popups.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -68,6 +87,8 @@ Modifiers: `exact`.
 
 Modifiers: `exact`.
 
+Font override fields used by label and icon content.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `size` _(optional)_ | `number` | Font size in points. |
@@ -75,6 +96,8 @@ Modifiers: `exact`.
 ## `EasyBarIconProps`
 
 Modifiers: `exact`.
+
+Detailed icon configuration used when a plain icon value is not enough.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -90,6 +113,8 @@ Modifiers: `exact`.
 
 Modifiers: `exact`.
 
+Standalone image configuration for nodes that render an image instead of text.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `path` _(optional)_ | `string` | Image path. |
@@ -99,6 +124,8 @@ Modifiers: `exact`.
 ## `EasyBarLabelProps`
 
 Modifiers: `exact`.
+
+Detailed label configuration used when a plain label value is not enough.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -110,6 +137,8 @@ Modifiers: `exact`.
 
 Modifiers: `exact`.
 
+Outer spacing fields that push a node away from surrounding content.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `margin_left` _(optional)_ | `number` | Left margin in points. |
@@ -120,6 +149,8 @@ Modifiers: `exact`.
 ## `EasyBarNodeProps`
 
 Modifiers: `exact`.
+
+The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -168,6 +199,8 @@ Modifiers: `exact`.
 ## `EasyBarPopupProps`
 
 Modifiers: `exact`.
+
+Container-level popup properties for visibility, layout, and surface styling.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |

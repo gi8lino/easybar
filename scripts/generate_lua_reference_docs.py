@@ -48,10 +48,16 @@ class FunctionDoc:
 
 
 @dataclasses.dataclass
+class AliasValueDoc:
+    value: str
+    description: str = ""
+
+
+@dataclasses.dataclass
 class AliasDoc:
     name: str
     description: str = ""
-    values: list[str] = dataclasses.field(default_factory=list)
+    values: list[AliasValueDoc] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
@@ -105,8 +111,8 @@ def normalize_alias_value(text: str) -> str:
     return value
 
 
-def alias_values(text: str) -> list[str]:
-    return [normalize_alias_value(part) for part in text.split("|") if part.strip()]
+def alias_values(text: str) -> list[AliasValueDoc]:
+    return [AliasValueDoc(value=normalize_alias_value(part)) for part in text.split("|") if part.strip()]
 
 
 def split_type_and_description(text: str) -> tuple[str, str]:
@@ -224,8 +230,11 @@ def parse_lua_stub(paths: list[Path]) -> ParsedDocs:
                 continue
 
             if current_alias and (match := UNION_VALUE_RE.match(stripped)):
-                current_alias.values.append(
-                    normalize_alias_value(match.group(1)))
+                current_alias.values.append(AliasValueDoc(
+                    value=normalize_alias_value(match.group(1)),
+                    description="\n".join(pending_description).strip(),
+                ))
+                pending_description = []
                 continue
 
             if match := PARAM_RE.match(stripped):
@@ -368,9 +377,15 @@ def render_alias(alias: AliasDoc, level: str = "##") -> list[str]:
     if alias.description:
         lines += [alias.description, ""]
     if alias.values:
-        lines += ["| Value |", "| ----- |"]
-        for value in alias.values:
-            lines.append(f"| `{md_escape(value)}` |")
+        if any(value.description for value in alias.values):
+            lines += ["| Value | Meaning |", "| ----- | ------- |"]
+            for value in alias.values:
+                lines.append(
+                    f"| `{md_escape(value.value)}` | {md_escape(value.description)} |")
+        else:
+            lines += ["| Value |", "| ----- |"]
+            for value in alias.values:
+                lines.append(f"| `{md_escape(value.value)}` |")
         lines.append("")
     else:
         lines += ["_No literal values documented._", ""]
@@ -427,6 +442,14 @@ def render_properties(parsed: ParsedDocs) -> str:
         lines += ["## Common Value Types", ""]
         for alias in aliases:
             lines += render_alias(alias, level="###")
+
+    lines += [
+        "## Reading This Page",
+        "",
+        "Use `EasyBarNodeProps` for the main node property table passed to `easybar.add(...)` and `node:set(...)`.",
+        "The smaller `*Props` tables describe nested objects such as `icon`, `label`, `background`, and `popup`.",
+        "",
+    ]
 
     if not classes:
         lines.append("_No property classes found._")

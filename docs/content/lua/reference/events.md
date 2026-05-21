@@ -9,39 +9,44 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarEventName`
 
-| Value |
-| ----- |
-| `"interval"` |
-| `"forced"` |
-| `"system_woke"` |
-| `"sleep"` |
-| `"space_change"` |
-| `"app_switch"` |
-| `"display_change"` |
-| `"power_source_change"` |
-| `"charging_state_change"` |
-| `"wifi_change"` |
-| `"network_change"` |
-| `"volume_change"` |
-| `"mute_change"` |
-| `"minute_tick"` |
-| `"second_tick"` |
-| `"calendar_change"` |
-| `"focus_change"` |
-| `"workspace_change"` |
-| `"space_mode_change"` |
-| `"mouse.entered"` |
-| `"mouse.exited"` |
-| `"mouse.clicked"` |
-| `"mouse.down"` |
-| `"mouse.up"` |
-| `"mouse.scrolled"` |
-| `"slider.preview"` |
-| `"slider.changed"` |
+Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.
+In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.
+
+| Value | Meaning |
+| ----- | ------- |
+| `"interval"` | Internal timer callback name used when `interval` and `on_interval` are configured on a node. |
+| `"forced"` | Fired when EasyBar or `easybar` triggers a manual refresh. |
+| `"system_woke"` | Fired after the system wakes from sleep. |
+| `"sleep"` | Fired before the system goes to sleep. |
+| `"space_change"` | Fired when the active macOS space changes. |
+| `"app_switch"` | Fired when the frontmost app changes. |
+| `"display_change"` | Fired when attached displays change. |
+| `"power_source_change"` | Fired when the power source changes. |
+| `"charging_state_change"` | Fired when charging starts or stops. |
+| `"wifi_change"` | Fired when Wi-Fi state or SSID changes. |
+| `"network_change"` | Fired when network routing or tunnel state changes. |
+| `"volume_change"` | Fired when output volume changes. |
+| `"mute_change"` | Fired when mute state changes. |
+| `"minute_tick"` | Fired once per minute. |
+| `"second_tick"` | Fired once per second. |
+| `"calendar_change"` | Fired when the calendar snapshot updates. |
+| `"focus_change"` | Fired when workspace focus changes. |
+| `"workspace_change"` | Fired when workspace layout or selection changes. |
+| `"space_mode_change"` | Fired when the AeroSpace layout mode changes. |
+| `"mouse.entered"` | Fired when the pointer enters the subscribed node frame. |
+| `"mouse.exited"` | Fired when the pointer leaves the subscribed node frame. |
+| `"mouse.clicked"` | Fired when the subscribed node is clicked. |
+| `"mouse.down"` | Fired on mouse button press over the subscribed node. |
+| `"mouse.up"` | Fired on mouse button release over the subscribed node. |
+| `"mouse.scrolled"` | Fired when the pointer scrolls over the subscribed node. |
+| `"slider.preview"` | Fired while a slider is being previewed or dragged. |
+| `"slider.changed"` | Fired when a slider value is committed. |
 
 ## Supporting Aliases
 
 ### `EasyBarEventHandler`
+
+The callback signature used by `node:subscribe(...)` and `easybar.subscribe(...)`.
 
 | Value |
 | ----- |
@@ -49,22 +54,29 @@ Generated from LuaLS aliases and event namespace classes.
 
 ### `EasyBarMouseButton`
 
-| Value |
-| ----- |
-| `"left"` |
-| `"right"` |
-| `"middle"` |
+Mouse button names that may appear in event payloads.
+
+| Value | Meaning |
+| ----- | ------- |
+| `"left"` | Primary mouse button. |
+| `"right"` | Secondary mouse button. |
+| `"middle"` | Middle mouse button. |
 
 ### `EasyBarScrollDirection`
 
-| Value |
-| ----- |
-| `"up"` |
-| `"down"` |
-| `"left"` |
-| `"right"` |
+Scroll directions that may appear in event payloads.
+
+| Value | Meaning |
+| ----- | ------- |
+| `"up"` | Upward scrolling. |
+| `"down"` | Downward scrolling. |
+| `"left"` | Leftward scrolling. |
+| `"right"` | Rightward scrolling. |
 
 ## `EasyBarEvent`
+
+The event payload object delivered to event handlers.
+Different event families populate different optional fields.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -83,11 +95,16 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarEventToken`
 
+Opaque subscribe token object passed through from `easybar.events.*`.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `name` | `EasyBarEventName` | The canonical runtime event name sent by EasyBar. |
 
 ## `EasyBarEvents`
+
+Namespace object exposed as `easybar.events`.
+Use these tokens when subscribing widgets instead of hard-coding event-name strings.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -114,6 +131,8 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarMouseEvents`
 
+Mouse-specific interaction tokens and convenience constants nested under `easybar.events.mouse`.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `entered` _(optional)_ | `EasyBarEventToken` | Fired when the pointer enters the subscribed node frame. |
@@ -134,6 +153,8 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarSliderEvents`
 
+Slider-specific interaction tokens nested under `easybar.events.slider`.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `preview` _(optional)_ | `EasyBarEventToken` | Fired while a slider is being previewed or dragged. |
@@ -141,22 +162,28 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarMouseButtons`
 
+Convenience constants mirrored under `easybar.events.mouse.buttons`.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `left` | `EasyBarMouseButton` |  |
-| `right` | `EasyBarMouseButton` |  |
-| `middle` | `EasyBarMouseButton` |  |
+| `left` | `EasyBarMouseButton` | Matches the primary mouse button. |
+| `right` | `EasyBarMouseButton` | Matches the secondary mouse button. |
+| `middle` | `EasyBarMouseButton` | Matches the middle mouse button. |
 
 ## `EasyBarScrollDirections`
 
+Convenience constants mirrored under `easybar.events.mouse.directions`.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
-| `up` | `EasyBarScrollDirection` |  |
-| `down` | `EasyBarScrollDirection` |  |
-| `left` | `EasyBarScrollDirection` |  |
-| `right` | `EasyBarScrollDirection` |  |
+| `up` | `EasyBarScrollDirection` | Matches upward scrolling. |
+| `down` | `EasyBarScrollDirection` | Matches downward scrolling. |
+| `left` | `EasyBarScrollDirection` | Matches leftward scrolling. |
+| `right` | `EasyBarScrollDirection` | Matches rightward scrolling. |
 
 ## `EasyBarNetworkEventData`
+
+Structured network-specific fields that may be present on network-related events.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |
@@ -165,11 +192,15 @@ Generated from LuaLS aliases and event namespace classes.
 
 ## `EasyBarPowerEventData`
 
+Structured power-specific fields that may be present on charging or power-source events.
+
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `charging` _(optional)_ | `boolean` | Whether the current power source is charging. |
 
 ## `EasyBarAudioEventData`
+
+Structured audio-specific fields that may be present on mute or volume events.
 
 | Property | Type | Description |
 | -------- | ---- | ----------- |

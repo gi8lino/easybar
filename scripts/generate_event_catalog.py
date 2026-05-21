@@ -189,25 +189,48 @@ def render_lua_api_block(manifest: dict) -> str:
             for event in group["events"]
         ]
     )
+    event_docs = {
+        "interval": "Internal timer callback name used when `interval` and `on_interval` are configured on a node.",
+        forced["runtimeName"]: forced["doc"],
+    }
+    event_docs.update({event["runtimeName"]: event["doc"] for event in app_events})
+    event_docs.update({
+        event["runtimeName"]: event["doc"]
+        for group in manifest["widgetGroups"]
+        for event in group["events"]
+    })
 
     lines = [
         "-- EasyBar generated event stub. Do not edit by hand.",
         "-- Source of truth: Sources/EasyBarApp/Events/event_catalog.json",
         "-- Regenerate with: scripts/generate_event_catalog.py",
+        "---Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.",
+        "---In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.",
         "---@alias EasyBarEventName",
-        *quoted_union(event_names),
+    ]
+    for event_name in event_names:
+        lines.extend([
+            f'---{event_docs[event_name]}',
+            f'---| \'"{event_name}"\'',
+        ])
+    lines.extend([
         "",
+        "---Structured network-specific fields that may be present on network-related events.",
         "---@class EasyBarNetworkEventData",
         "---@field primary_interface_is_tunnel? boolean Whether the current primary network interface is a tunnel.",
         "---@field interface_name? string The network interface name when provided.",
         "",
+        "---Structured power-specific fields that may be present on charging or power-source events.",
         "---@class EasyBarPowerEventData",
         "---@field charging? boolean Whether the current power source is charging.",
         "",
+        "---Structured audio-specific fields that may be present on mute or volume events.",
         "---@class EasyBarAudioEventData",
         "---@field muted? boolean Whether the current audio output is muted.",
         "---@field value? number The current audio-related value when provided.",
         "",
+        "---The event payload object delivered to event handlers.",
+        "---Different event families populate different optional fields.",
         "---@class EasyBarEvent",
         "---@field name string The dispatched event name.",
         "---@field widget_id? string The subscribed widget id receiving the event.",
@@ -222,23 +245,37 @@ def render_lua_api_block(manifest: dict) -> str:
         "---@field power? EasyBarPowerEventData Structured power event data.",
         "---@field audio? EasyBarAudioEventData Structured audio event data.",
         "",
+        "---The callback signature used by `node:subscribe(...)` and `easybar.subscribe(...)`.",
         "---@alias EasyBarEventHandler fun(event: EasyBarEvent)",
         "",
+        "---Opaque subscribe token object passed through from `easybar.events.*`.",
         "---@class EasyBarEventToken",
         "---@field name EasyBarEventName The canonical runtime event name sent by EasyBar.",
         "",
+        "---Convenience constants mirrored under `easybar.events.mouse.buttons`.",
         "---@class EasyBarMouseButtons",
-    ]
+    ])
 
     for value in mouse_buttons:
-        lines.append(f"---@field {value} EasyBarMouseButton")
+        description = {
+            "left": "Matches the primary mouse button.",
+            "right": "Matches the secondary mouse button.",
+            "middle": "Matches the middle mouse button.",
+        }[value]
+        lines.append(f"---@field {value} EasyBarMouseButton {description}")
 
-    lines.extend(["", "---@class EasyBarScrollDirections"])
+    lines.extend(["", "---Convenience constants mirrored under `easybar.events.mouse.directions`.", "---@class EasyBarScrollDirections"])
     for value in scroll_directions:
-        lines.append(f"---@field {value} EasyBarScrollDirection")
+        description = {
+            "up": "Matches upward scrolling.",
+            "down": "Matches downward scrolling.",
+            "left": "Matches leftward scrolling.",
+            "right": "Matches rightward scrolling.",
+        }[value]
+        lines.append(f"---@field {value} EasyBarScrollDirection {description}")
 
     mouse = widget_groups["mouse"]
-    lines.extend(["", "---@class EasyBarMouseEvents"])
+    lines.extend(["", "---Mouse-specific interaction tokens and convenience constants nested under `easybar.events.mouse`.", "---@class EasyBarMouseEvents"])
     for event in mouse["events"]:
         lines.append(
             f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
@@ -259,6 +296,7 @@ def render_lua_api_block(manifest: dict) -> str:
             "---@field buttons EasyBarMouseButtons Nested mouse-button constants.",
             "---@field directions EasyBarScrollDirections Nested scroll-direction constants.",
             "",
+            "---Slider-specific interaction tokens nested under `easybar.events.slider`.",
             "---@class EasyBarSliderEvents",
         ]
     )
@@ -269,7 +307,7 @@ def render_lua_api_block(manifest: dict) -> str:
             f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
         )
 
-    lines.extend(["", "---@class EasyBarEvents"])
+    lines.extend(["", "---Namespace object exposed as `easybar.events`.", "---Use these tokens when subscribing widgets instead of hard-coding event-name strings.", "---@class EasyBarEvents"])
     lines.append(
         f'---@field {forced["luaField"]}? EasyBarEventToken {forced["doc"]}'
     )

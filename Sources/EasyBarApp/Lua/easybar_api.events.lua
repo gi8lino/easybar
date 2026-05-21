@@ -1,46 +1,80 @@
 -- EasyBar generated event stub. Do not edit by hand.
 -- Source of truth: Sources/EasyBarApp/Events/event_catalog.json
 -- Regenerate with: scripts/generate_event_catalog.py
+---Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.
+---In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.
 ---@alias EasyBarEventName
+---Internal timer callback name used when `interval` and `on_interval` are configured on a node.
 ---| '"interval"'
+---Fired when EasyBar or `easybar` triggers a manual refresh.
 ---| '"forced"'
+---Fired after the system wakes from sleep.
 ---| '"system_woke"'
+---Fired before the system goes to sleep.
 ---| '"sleep"'
+---Fired when the active macOS space changes.
 ---| '"space_change"'
+---Fired when the frontmost app changes.
 ---| '"app_switch"'
+---Fired when attached displays change.
 ---| '"display_change"'
+---Fired when the power source changes.
 ---| '"power_source_change"'
+---Fired when charging starts or stops.
 ---| '"charging_state_change"'
+---Fired when Wi-Fi state or SSID changes.
 ---| '"wifi_change"'
+---Fired when network routing or tunnel state changes.
 ---| '"network_change"'
+---Fired when output volume changes.
 ---| '"volume_change"'
+---Fired when mute state changes.
 ---| '"mute_change"'
+---Fired once per minute.
 ---| '"minute_tick"'
+---Fired once per second.
 ---| '"second_tick"'
+---Fired when the calendar snapshot updates.
 ---| '"calendar_change"'
+---Fired when workspace focus changes.
 ---| '"focus_change"'
+---Fired when workspace layout or selection changes.
 ---| '"workspace_change"'
+---Fired when the AeroSpace layout mode changes.
 ---| '"space_mode_change"'
+---Fired when the pointer enters the subscribed node frame.
 ---| '"mouse.entered"'
+---Fired when the pointer leaves the subscribed node frame.
 ---| '"mouse.exited"'
+---Fired when the subscribed node is clicked.
 ---| '"mouse.clicked"'
+---Fired on mouse button press over the subscribed node.
 ---| '"mouse.down"'
+---Fired on mouse button release over the subscribed node.
 ---| '"mouse.up"'
+---Fired when the pointer scrolls over the subscribed node.
 ---| '"mouse.scrolled"'
+---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
+---Fired when a slider value is committed.
 ---| '"slider.changed"'
 
+---Structured network-specific fields that may be present on network-related events.
 ---@class EasyBarNetworkEventData
 ---@field primary_interface_is_tunnel? boolean Whether the current primary network interface is a tunnel.
 ---@field interface_name? string The network interface name when provided.
 
+---Structured power-specific fields that may be present on charging or power-source events.
 ---@class EasyBarPowerEventData
 ---@field charging? boolean Whether the current power source is charging.
 
+---Structured audio-specific fields that may be present on mute or volume events.
 ---@class EasyBarAudioEventData
 ---@field muted? boolean Whether the current audio output is muted.
 ---@field value? number The current audio-related value when provided.
 
+---The event payload object delivered to event handlers.
+---Different event families populate different optional fields.
 ---@class EasyBarEvent
 ---@field name string The dispatched event name.
 ---@field widget_id? string The subscribed widget id receiving the event.
@@ -55,22 +89,27 @@
 ---@field power? EasyBarPowerEventData Structured power event data.
 ---@field audio? EasyBarAudioEventData Structured audio event data.
 
+---The callback signature used by `node:subscribe(...)` and `easybar.subscribe(...)`.
 ---@alias EasyBarEventHandler fun(event: EasyBarEvent)
 
+---Opaque subscribe token object passed through from `easybar.events.*`.
 ---@class EasyBarEventToken
 ---@field name EasyBarEventName The canonical runtime event name sent by EasyBar.
 
+---Convenience constants mirrored under `easybar.events.mouse.buttons`.
 ---@class EasyBarMouseButtons
----@field left EasyBarMouseButton
----@field right EasyBarMouseButton
----@field middle EasyBarMouseButton
+---@field left EasyBarMouseButton Matches the primary mouse button.
+---@field right EasyBarMouseButton Matches the secondary mouse button.
+---@field middle EasyBarMouseButton Matches the middle mouse button.
 
+---Convenience constants mirrored under `easybar.events.mouse.directions`.
 ---@class EasyBarScrollDirections
----@field up EasyBarScrollDirection
----@field down EasyBarScrollDirection
----@field left EasyBarScrollDirection
----@field right EasyBarScrollDirection
+---@field up EasyBarScrollDirection Matches upward scrolling.
+---@field down EasyBarScrollDirection Matches downward scrolling.
+---@field left EasyBarScrollDirection Matches leftward scrolling.
+---@field right EasyBarScrollDirection Matches rightward scrolling.
 
+---Mouse-specific interaction tokens and convenience constants nested under `easybar.events.mouse`.
 ---@class EasyBarMouseEvents
 ---@field entered? EasyBarEventToken Fired when the pointer enters the subscribed node frame.
 ---@field exited? EasyBarEventToken Fired when the pointer leaves the subscribed node frame.
@@ -88,10 +127,13 @@
 ---@field buttons EasyBarMouseButtons Nested mouse-button constants.
 ---@field directions EasyBarScrollDirections Nested scroll-direction constants.
 
+---Slider-specific interaction tokens nested under `easybar.events.slider`.
 ---@class EasyBarSliderEvents
 ---@field preview? EasyBarEventToken Fired while a slider is being previewed or dragged.
 ---@field changed? EasyBarEventToken Fired when a slider value is committed.
 
+---Namespace object exposed as `easybar.events`.
+---Use these tokens when subscribing widgets instead of hard-coding event-name strings.
 ---@class EasyBarEvents
 ---@field forced? EasyBarEventToken Fired when EasyBar or `easybar` triggers a manual refresh.
 ---@field system_woke? EasyBarEventToken Fired after the system wakes from sleep.
