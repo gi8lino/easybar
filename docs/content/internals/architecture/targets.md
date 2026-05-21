@@ -6,7 +6,7 @@ EasyBar is split into a few focused targets.
 
 - `EasyBarShared`
   Shared models, config loading, socket paths, IPC types, logging utilities, environment keys, and common runtime helpers.
-- `EasyBar`
+- `EasyBarApp`
   The main macOS status bar application.
 - `EasyBarCtl`
   The `easybar` command-line client.
@@ -29,7 +29,7 @@ A useful way to think about the targets is:
 
 - `Sources/EasyBarShared`
   process-boundary types and shared utilities
-- `Sources/EasyBar`
+- `Sources/EasyBarApp`
   app lifecycle, UI, event coordination, native widgets, Lua supervision
 - `Sources/EasyBarCtl`
   command-line control client
