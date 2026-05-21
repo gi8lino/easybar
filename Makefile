@@ -106,13 +106,11 @@ endif
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
-        run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli
+        run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
+				demo
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
-
-generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate_event_catalog.py
 
 ##@ Build
 
@@ -554,3 +552,11 @@ push-tags: ## Push commits and tags to origin.
 
 tag: ## Show latest tag.
 	@echo "Latest version: $(LATEST_TAG)"
+
+##@ Tools
+
+generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
+	@python3 scripts/generate_event_catalog.py
+
+demo: ## Populate the demo calendar with random events.
+	@zsh scripts/populate-demo-calendar.zsh demo
