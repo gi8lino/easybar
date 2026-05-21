@@ -34,9 +34,10 @@ public enum CalendarAgendaBuilder {
       }
     }
 
-    let resolvedDisplayDate: (CalendarAgentEvent) -> Date = displayedDate ?? { event in
-      self.displayDate(for: event, calendar: calendar)
-    }
+    let resolvedDisplayDate: (CalendarAgentEvent) -> Date =
+      displayedDate ?? { event in
+        self.displayDate(for: event, calendar: calendar)
+      }
     let grouped = Dictionary(grouping: events, by: resolvedDisplayDate)
     let sortedDates = grouped.keys.sorted()
 
