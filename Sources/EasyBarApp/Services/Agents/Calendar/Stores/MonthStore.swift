@@ -1,3 +1,4 @@
+import EasyBarCalendarPresentation
 import EasyBarCalendarUI
 import EasyBarShared
 import Foundation
@@ -56,20 +57,6 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
     publish(snapshot: nil)
   }
 
-  /// Returns all events overlapping one day.
-  func eventsForDay(_ date: Date) -> [EasyBarShared.CalendarAgentEvent] {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: date)
-
-    guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-      return []
-    }
-
-    return events.filter { event in
-      event.startDate < endOfDay && event.endDate > startOfDay
-    }
-  }
-
   /// Returns all events overlapping the inclusive day range.
   func eventsInRange(from startDate: Date, to endDate: Date) -> [EasyBarShared.CalendarAgentEvent] {
     let calendar = Calendar.current
@@ -94,33 +81,13 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar)
     -> Bool
   {
-    let startOfVisibleMonth = startOfMonth(visibleMonth, calendar: calendar)
+    let startOfVisibleMonth = CalendarMonthRangeBuilder.startOfMonth(visibleMonth, calendar: calendar)
     let normalizedRadius = max(radius, 0)
-
-    let preparedRange: DateInterval?
-
-    if normalizedRadius == 0 {
-      preparedRange = visibleGridRange(for: startOfVisibleMonth, calendar: calendar)
-    } else {
-      guard
-        let start = calendar.date(
-          byAdding: .month,
-          value: -normalizedRadius,
-          to: startOfVisibleMonth
-        ),
-        let afterEndMonth = calendar.date(
-          byAdding: .month,
-          value: normalizedRadius + 1,
-          to: startOfVisibleMonth
-        )
-      else {
-        return false
-      }
-
-      let normalizedStart = calendar.startOfDay(for: start)
-      let normalizedEnd = calendar.startOfDay(for: afterEndMonth)
-      preparedRange = DateInterval(start: normalizedStart, end: normalizedEnd)
-    }
+    let preparedRange = CalendarMonthRangeBuilder.subscriptionRange(
+      for: startOfVisibleMonth,
+      radius: normalizedRadius,
+      calendar: calendar
+    )
 
     guard let preparedRange else { return false }
 
@@ -176,33 +143,6 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
 
     DispatchQueue.main.async(execute: applyChange)
   }
-
-  /// Returns the first day of one month.
-  private func startOfMonth(_ date: Date, calendar: Calendar) -> Date {
-    let components = calendar.dateComponents([.year, .month], from: date)
-    return calendar.date(from: components) ?? calendar.startOfDay(for: date)
-  }
-
-  /// Returns the exact displayed grid range for one visible month.
-  private func visibleGridRange(for visibleMonth: Date, calendar: Calendar) -> DateInterval? {
-    let monthStart = startOfMonth(visibleMonth, calendar: calendar)
-
-    guard
-      let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart),
-      let monthInterval = calendar.dateInterval(of: .month, for: monthStart),
-      let firstWeek = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
-      let lastVisibleDay = calendar.date(byAdding: .day, value: -1, to: monthEnd),
-      let lastWeek = calendar.dateInterval(of: .weekOfYear, for: lastVisibleDay)
-    else {
-      return nil
-    }
-
-    return DateInterval(
-      start: calendar.startOfDay(for: firstWeek.start),
-      end: calendar.startOfDay(for: lastWeek.end)
-    )
-  }
-
   /// Formats one debug date string.
   private func debugDate(_ date: Date) -> String {
     let formatter = ISO8601DateFormatter()

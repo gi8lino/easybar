@@ -19,16 +19,7 @@ public protocol CalendarMonthPopupStore: ObservableObject {
 extension CalendarMonthPopupStore {
   /// Returns all events overlapping one calendar day.
   public func eventsForDay(_ date: Date) -> [CalendarAgentEvent] {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: date)
-
-    guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-      return []
-    }
-
-    return events.filter { event in
-      event.startDate < endOfDay && event.endDate > startOfDay
-    }
+    eventsInRange(from: date, to: date)
   }
 }
 
