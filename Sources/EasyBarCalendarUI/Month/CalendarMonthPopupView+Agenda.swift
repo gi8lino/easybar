@@ -143,7 +143,10 @@ extension CalendarMonthPopupView {
     return CalendarAgendaBuilder.build(
       events: selectedEvents,
       selectionSpansMultipleDays: selectionSpansMultipleDays,
-      calendar: resolvedCalendar
+      calendar: resolvedCalendar,
+      displayedDate: { event in
+        displayDate(for: event)
+      }
     )
   }
 

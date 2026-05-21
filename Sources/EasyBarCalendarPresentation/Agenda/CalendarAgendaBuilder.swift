@@ -23,7 +23,8 @@ public enum CalendarAgendaBuilder {
   public static func build(
     events: [CalendarAgentEvent],
     selectionSpansMultipleDays: Bool,
-    calendar: Calendar
+    calendar: Calendar,
+    displayedDate: ((CalendarAgentEvent) -> Date)? = nil
   ) -> [Entry] {
     guard !events.isEmpty else { return [] }
 
@@ -33,7 +34,10 @@ public enum CalendarAgendaBuilder {
       }
     }
 
-    let grouped = Dictionary(grouping: events, by: { displayDate(for: $0, calendar: calendar) })
+    let resolvedDisplayDate: (CalendarAgentEvent) -> Date = displayedDate ?? { event in
+      self.displayDate(for: event, calendar: calendar)
+    }
+    let grouped = Dictionary(grouping: events, by: resolvedDisplayDate)
     let sortedDates = grouped.keys.sorted()
 
     var rows: [Entry] = []
