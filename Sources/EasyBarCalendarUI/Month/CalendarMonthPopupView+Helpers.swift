@@ -1,3 +1,4 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
@@ -188,8 +189,7 @@ extension CalendarMonthPopupView {
 
   /// Returns the first day of one month.
   static func startOfMonth(_ date: Date, calendar: Calendar = Calendar.current) -> Date {
-    let components = calendar.dateComponents([.year, .month], from: date)
-    return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+    CalendarMonthRangeBuilder.startOfMonth(date, calendar: calendar)
   }
 
   /// Formats one visible month title using the provided locale.

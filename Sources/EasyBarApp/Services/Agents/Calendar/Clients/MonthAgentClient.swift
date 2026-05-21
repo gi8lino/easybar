@@ -260,12 +260,9 @@ final class MonthCalendarAgentClient {
   /// Returns the default month preload range around the given reference date.
   private func defaultRequestedDateRange(referenceDate: Date) -> DateInterval {
     let calendar = resolvedCalendar()
+    let currentMonthStart = CalendarMonthRangeBuilder.startOfMonth(referenceDate, calendar: calendar)
 
-    let currentMonthStart =
-      calendar.date(from: calendar.dateComponents([.year, .month], from: referenceDate))
-      ?? calendar.startOfDay(for: referenceDate)
-
-    return visibleGridRange(for: currentMonthStart, calendar: calendar)
+    return CalendarMonthRangeBuilder.visibleGridRange(for: currentMonthStart, calendar: calendar)
       ?? DateInterval(
         start: currentMonthStart,
         end:
@@ -291,25 +288,4 @@ final class MonthCalendarAgentClient {
     return calendar
   }
 
-  /// Returns the exact displayed grid range for one visible month.
-  private func visibleGridRange(for visibleMonth: Date, calendar: Calendar) -> DateInterval? {
-    let monthStart =
-      calendar.date(from: calendar.dateComponents([.year, .month], from: visibleMonth))
-      ?? calendar.startOfDay(for: visibleMonth)
-
-    guard
-      let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart),
-      let monthInterval = calendar.dateInterval(of: .month, for: monthStart),
-      let firstWeek = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
-      let lastVisibleDay = calendar.date(byAdding: .day, value: -1, to: monthEnd),
-      let lastWeek = calendar.dateInterval(of: .weekOfYear, for: lastVisibleDay)
-    else {
-      return nil
-    }
-
-    return DateInterval(
-      start: calendar.startOfDay(for: firstWeek.start),
-      end: calendar.startOfDay(for: lastWeek.end)
-    )
-  }
 }
