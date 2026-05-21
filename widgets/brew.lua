@@ -1,7 +1,7 @@
 -- Homebrew outdated widget for EasyBar.
 --
 -- Icon-only widget for the bar, with a popup that shows outdated packages and
--- actions for refresh, update, and upgrade.
+-- actions for updating Homebrew metadata and upgrading packages.
 
 local WIDGET_ID = "brew_outdated"
 
@@ -11,7 +11,6 @@ local ID_TIME = WIDGET_ID .. "_time"
 local ID_ACTIONS = WIDGET_ID .. "_actions"
 local ID_UPGRADE = WIDGET_ID .. "_upgrade"
 local ID_UPDATE = WIDGET_ID .. "_update"
-local ID_REFRESH = WIDGET_ID .. "_refresh"
 
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
@@ -61,7 +60,6 @@ local time_item
 local actions_row
 local upgrade_button
 local update_button
-local refresh_button
 
 local state = {
 	formulae = {},
@@ -284,22 +282,22 @@ end
 --- Returns labels for action buttons based on the current phase.
 local function action_button_labels()
 	if not running then
-		return "Upgrade now", "Update now", "Refresh"
+		return "Upgrade now", "Update metadata"
 	end
 
 	if state.phase == "upgrading" then
-		return "Upgrading…", "Working…", "Working…"
+		return "Upgrading…", "Working…"
 	end
 
 	if state.phase == "updating" then
-		return "Working…", "Updating…", "Working…"
+		return "Working…", "Updating…"
 	end
 
 	if state.phase == "checking" then
-		return "Working…", "Working…", "Checking…"
+		return "Working…", "Checking…"
 	end
 
-	return "Working…", "Working…", "Working…"
+	return "Working…", "Working…"
 end
 
 --- Renders the popup contents.
@@ -373,7 +371,7 @@ local function render_popup()
 		order = POPUP_ORDER.actions,
 	})
 
-	local upgrade_label, update_label, refresh_label = action_button_labels()
+	local upgrade_label, update_label = action_button_labels()
 
 	upgrade_button:set({
 		order = 1,
@@ -386,13 +384,6 @@ local function render_popup()
 		order = 2,
 		label = {
 			string = update_label,
-		},
-	})
-
-	refresh_button:set({
-		order = 3,
-		label = {
-			string = refresh_label,
 		},
 	})
 
@@ -537,8 +528,8 @@ local function run_brew_async(status_label, phase, command, on_success)
 	log_debug("run_brew_async token", tostring(token))
 end
 
---- Refreshes the outdated list without updating Homebrew metadata.
-local function refresh_outdated(status_label)
+--- Checks outdated packages without updating Homebrew metadata.
+local function check_outdated(status_label)
 	run_brew_async(
 		status_label or "Checking outdated packages…",
 		"checking",
@@ -547,7 +538,7 @@ local function refresh_outdated(status_label)
 	)
 end
 
---- Updates Homebrew metadata, then refreshes outdated packages.
+--- Updates Homebrew metadata, then checks outdated packages.
 local function update_now()
 	run_brew_async(
 		"Updating Homebrew metadata…",
@@ -557,7 +548,7 @@ local function update_now()
 	)
 end
 
---- Upgrades packages, then refreshes outdated packages.
+--- Upgrades packages, then checks outdated packages.
 local function upgrade_now()
 	local command = [[
 tmp="${TMPDIR:-/tmp}/easybar-brew-upgrade.$$"
@@ -619,7 +610,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	},
 	on_interval = function()
 		if not running then
-			refresh_outdated("Checking outdated packages…")
+			check_outdated("Checking outdated packages…")
 		end
 	end,
 })
@@ -674,16 +665,7 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	parent = actions_row.name,
 	order = 2,
 	label = {
-		string = "Update now",
-	},
-	background = button_background(),
-})
-
-refresh_button = easybar.add(easybar.kind.item, ID_REFRESH, {
-	parent = actions_row.name,
-	order = 3,
-	label = {
-		string = "Refresh",
+		string = "Update metadata",
 	},
 	background = button_background(),
 })
@@ -694,13 +676,6 @@ end)
 
 brew_widget:subscribe(easybar.events.mouse.exited, function()
 	log_debug("mouse exited", "running=" .. tostring(running))
-end)
-
-refresh_button:subscribe(easybar.events.mouse.clicked, function(event)
-	if (event.button == nil or event.button == "left") and not running then
-		log_debug("refresh click")
-		refresh_outdated("Checking outdated packages…")
-	end
 end)
 
 update_button:subscribe(easybar.events.mouse.clicked, function(event)
@@ -717,13 +692,10 @@ upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 	end
 end)
 
-brew_widget:subscribe({
-	easybar.events.forced,
-	easybar.events.system_woke,
-}, function()
+brew_widget:subscribe(easybar.events.forced, function()
 	if not running then
-		refresh_outdated("Checking outdated packages…")
+		check_outdated("Checking outdated packages…")
 	end
 end)
 
-refresh_outdated("Checking outdated packages…")
+check_outdated("Checking outdated packages…")
