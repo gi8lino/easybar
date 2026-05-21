@@ -1,7 +1,7 @@
 # EasyBar
 
-![EasyBar](./docs/assets/icons/favicon-64x64.png)
-![EasyBar screenshot](./docs/assets/bar.png)
+![EasyBar](./docs/content/assets/icons/favicon-64x64.png)
+![EasyBar screenshot](./docs/content/assets/bar.png)
 
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.
 
@@ -35,11 +35,7 @@ brew services start gi8lino/tap/easybar
 
 ## Documentation
 
-Full documentation is available here:
-
-```text
-https://gi8lino.github.io/easybar/
-```
+Full documentation is available here: [https://gi8lino.github.io/easybar/](https://gi8lino.github.io/easybar/)
 
 Start with:
 
@@ -73,23 +69,23 @@ The repository includes:
 
 ### Calendar
 
-![Calendar screenshot](./docs/assets/month.png)
+![Calendar screenshot](./docs/content/assets/month.png)
 
 ### Upcoming
 
-![Upcoming screenshot](./docs/assets/upcoming.png)
+![Upcoming screenshot](./docs/content/assets/upcoming.png)
 
 ### CPU
 
-![CPU screenshot](./docs/assets/cpu.png)
+![CPU screenshot](./docs/content/assets/cpu.png)
 
 ### Front app
 
-![Front app screenshot](./docs/assets/front_app.png)
+![Front app screenshot](./docs/content/assets/front_app.png)
 
 ### Context menu
 
-![Context menu screenshot](./docs/assets/context.png)
+![Context menu screenshot](./docs/content/assets/context.png)
 
 ## License
 
