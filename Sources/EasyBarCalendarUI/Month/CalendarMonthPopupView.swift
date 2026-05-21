@@ -6,13 +6,14 @@ import SwiftUI
 public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
 
   struct DayCell: Identifiable {
-    let id = UUID()
+    let id: String
     let date: Date
     let isCurrentMonth: Bool
   }
 
   struct WeekRow: Identifiable {
-    let id = UUID()
+    let id: String
+    let weekStartDate: Date
     let weekNumber: Int
     let days: [DayCell]
   }

@@ -505,6 +505,7 @@ extension CalendarMonthPopupView {
         }
 
         return DayCell(
+          id: "\(resolvedCalendar.startOfDay(for: date).timeIntervalSince1970)",
           date: date,
           isCurrentMonth: resolvedCalendar.isDate(
             date,
@@ -516,6 +517,8 @@ extension CalendarMonthPopupView {
 
       rows.append(
         WeekRow(
+          id: "\(resolvedCalendar.startOfDay(for: currentWeekStart).timeIntervalSince1970)",
+          weekStartDate: currentWeekStart,
           weekNumber: weekNumber,
           days: days
         )
