@@ -1,5 +1,6 @@
 # EasyBar
 
+![EasyBar](./docs/assets/icons/favicon-64x64.png)
 ![EasyBar screenshot](./docs/assets/bar.png)
 
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.

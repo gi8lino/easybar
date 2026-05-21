@@ -560,3 +560,31 @@ generate-event-catalog: ## Regenerate Lua event catalog files from the shared ma
 
 demo: ## Populate the demo calendar with random events.
 	@zsh scripts/populate-demo-calendar.zsh demo
+
+##@ Icons
+
+SVG       := packaging/easybar-icon.svg
+ICON_DIR  := docs/assets/icons
+ICON_SIZES := 16x16 32x32 48x48 64x64
+
+.PHONY: favicon
+favicon: ## Create favicons
+	@mkdir -p $(ICON_DIR)
+	@for size in $(ICON_SIZES); do \
+	  outfile=favicon-$$size.png; \
+	  echo "create $$outfile"; \
+	  convert $(SVG) \
+	    -fuzz 5% -transparent white \
+	    -background none \
+	    -resize $$size \
+	    $(ICON_DIR)/$$outfile \
+	    >/dev/null 2>&1; \
+	done
+	@echo "create apple-touch-icon.png"
+	@convert $(SVG) \
+	  -fuzz 5% -transparent white \
+	  -background none \
+	  -resize 180x180 \
+	  $(ICON_DIR)/apple-touch-icon.png \
+	  >/dev/null 2>&1
+

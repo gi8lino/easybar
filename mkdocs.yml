@@ -7,8 +7,8 @@ repo_name: gi8lino/easybar
 
 theme:
   name: material
-  logo: packages/easybar-icon.svg
-  favicon: packages/easybar-icon.svg
+  logo: assets/icons/apple-touch-icon.png
+  favicon: assets/icons/favicon-64x64.png
   features:
     - navigation.sections
     - navigation.expand
