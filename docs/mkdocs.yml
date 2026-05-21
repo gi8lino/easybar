@@ -4,21 +4,29 @@ site_url: https://gi8lino.github.io/easybar/
 
 repo_url: https://github.com/gi8lino/easybar
 repo_name: gi8lino/easybar
+edit_uri: blob/main/docs/content/
+
+docs_dir: content
+site_dir: .site
 
 theme:
   name: material
   logo: assets/icons/apple-touch-icon.png
   favicon: assets/icons/favicon-64x64.png
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - navigation.footer
     - navigation.indexes
+    - navigation.tracking
+    - navigation.top
     - search.highlight
     - search.suggest
     - content.code.copy
     - content.code.select
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md

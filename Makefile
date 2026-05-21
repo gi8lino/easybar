@@ -563,7 +563,10 @@ demo: ## Populate the demo calendar with random events.
 
 ##@ Docs
 
-DOCS_VENV := .venv-docs
+DOCS_DIR := docs
+DOCS_CONFIG := $(DOCS_DIR)/mkdocs.yml
+DOCS_REQUIREMENTS := $(DOCS_DIR)/requirements.txt
+DOCS_VENV := $(DOCS_DIR)/.venv
 DOCS_PYTHON := $(DOCS_VENV)/bin/python
 DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
 
@@ -572,22 +575,22 @@ DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
 $(DOCS_PYTHON):
 	@python3 -m venv $(DOCS_VENV)
 
-$(DOCS_STAMP): requirements-docs.txt | $(DOCS_PYTHON)
+$(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install --upgrade pip
-	@$(DOCS_PYTHON) -m pip install -r requirements-docs.txt
+	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
 generate-lua-docs: ## Generate Lua reference docs from LuaLS stubs.
-	@python3 scripts/generate_lua_reference_docs.py
+	@python3 scripts/generate_lua_reference_docs.py --output docs/content/lua/reference
 
 serve-docs: $(DOCS_STAMP) generate-lua-docs ## Serve the docs locally.
-	@$(DOCS_PYTHON) -m mkdocs serve
+	@$(DOCS_PYTHON) -m mkdocs serve -f $(DOCS_CONFIG)
 
 build-docs: $(DOCS_STAMP) generate-lua-docs ## Build the docs locally.
-	@$(DOCS_PYTHON) -m mkdocs build --strict
+	@$(DOCS_PYTHON) -m mkdocs build --strict -f $(DOCS_CONFIG)
 
 clean-docs: ## Remove generated docs output and docs virtualenv.
-	@rm -rf site $(DOCS_VENV) docs/lua/reference
+	@rm -rf docs/.site $(DOCS_VENV) docs/content/lua/reference
 
 ##@ Icons
 

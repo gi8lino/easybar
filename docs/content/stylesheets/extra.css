@@ -1,0 +1,90 @@
+/* ----------------------------- */
+/* Clean MkDocs Material sidebar */
+/* ----------------------------- */
+
+.md-sidebar--primary {
+  border-right: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Reset heavy custom styling */
+.md-nav--primary .md-nav__link {
+  margin: 0;
+  padding: 0.28rem 0.55rem;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+/* Normal hover */
+.md-nav--primary .md-nav__link:hover {
+  background: var(--md-default-fg-color--lightest);
+}
+
+/* Active page: subtle pill + left accent */
+.md-nav--primary .md-nav__link--active,
+.md-nav--primary .md-nav__item--active > .md-nav__link {
+  position: relative;
+  background: var(--md-accent-fg-color--transparent);
+  color: var(--md-accent-fg-color);
+  font-weight: 700;
+}
+
+.md-nav--primary .md-nav__link--active::before,
+.md-nav--primary .md-nav__item--active > .md-nav__link::before {
+  content: "";
+  position: absolute;
+  left: -0.45rem;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 0.15rem;
+  border-radius: 999px;
+  background: var(--md-accent-fg-color);
+}
+
+/* Top-level sections: Lua Widgets, Runtime, Internals */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {
+  margin-top: 1.1rem;
+  margin-bottom: 0.25rem;
+  padding: 0;
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* Subsection headings: Guides, Reference, Architecture, Agents */
+.md-nav--primary .md-nav__item--section > .md-nav__link,
+.md-nav--primary .md-nav__item--section > label.md-nav__link {
+  margin-top: 0.85rem;
+  margin-bottom: 0.25rem;
+  padding: 0;
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Nested lists: cleaner indentation, no timeline look */
+.md-nav--primary .md-nav__list .md-nav__list {
+  margin-left: 0.35rem;
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Avoid double-heavy nested borders */
+.md-nav--primary .md-nav__list .md-nav__list .md-nav__list {
+  border-left: none;
+}
+
+/* Less giant vertical spacing */
+.md-nav--primary .md-nav__item {
+  margin: 0.08rem 0;
+}
