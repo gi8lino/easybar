@@ -54,11 +54,3 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 ### Context menu
 
 ![Context menu screenshot](assets/context.png)
-
-## Start here
-
-- [Installation](getting-started/installation.md)
-- [Configuration](configuration/overview.md)
-- [AeroSpace Integration](getting-started/aerospace.md)
-- [Lua Widgets](lua/overview.md)
-- [Troubleshooting](runtime/troubleshooting.md)

@@ -40,15 +40,3 @@ Use `config.minimal.toml` when you want a shorter starting point.
   Native built-in widget configuration.
 - `[builtins.groups.*]`
   Native widget groups.
-
-## Pages
-
-- [App Settings](app.md)
-- [Environment](environment.md)
-- [Logging](logging.md)
-- [Agents](agents.md)
-- [Built-ins](builtins.md)
-- [Native Groups](native-groups.md)
-- [Box Model](box-model.md)
-- [Developer Menu](developer-menu.md)
-- [Example Configs](example-configs.md)

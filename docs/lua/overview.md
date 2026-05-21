@@ -37,22 +37,8 @@ Interaction is node-based.
 
 Lua widgets inherit native-like styling in the most common cases, so you usually do not need to restate the full shell or popup style.
 
-| Node shape | Default styling |
-| --- | --- |
-| bar-root `item`, `row`, `group` | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4` |
-| popup content | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
-| child items inside a parent/group | no root shell by default |
-
-## Pages
-
-- [Editor Support](editor-support.md)
-- [API](api.md)
-- [Events](events.md)
-- [Properties](properties.md)
-- [Grouping](grouping.md)
-- [Popups](popups.md)
-- [Intervals](intervals.md)
-- [Commands](commands.md)
-- [Logging](logging.md)
-- [Examples](examples.md)
-- [Style Guidelines](style-guidelines.md)
+| Node shape                        | Default styling                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| bar-root `item`, `row`, `group`   | background `#1a1a1a`, border `#333333` width `1`, corner radius `8`, padding `8/8/4/4`                                     |
+| popup content                     | text color `#cdd6f4`, background `#111111`, border `#444444` width `1`, corner radius `8`, padding `8 x 6`, margin `0 x 8` |
+| child items inside a parent/group | no root shell by default                                                                                                   |
