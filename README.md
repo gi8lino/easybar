@@ -43,6 +43,18 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 ![upcoming_calendar](./assets/upcoming.png)
 
+**CPU**
+
+![cpu](./assets/cpu.png)
+
+**Front App**
+
+![front_app](./assets/front_app.png)
+
+**Context**
+
+![context](./assets/context.png)
+
 ## Install
 
 EasyBar is distributed through Homebrew in the `gi8lino/tap` tap.
