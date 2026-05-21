@@ -16,7 +16,7 @@ let package = Package(
     .library(name: "EasyBarNetworkAgentCore", targets: ["EasyBarNetworkAgentCore"]),
     .executable(name: "EasyBar", targets: ["EasyBarApp"]),
     .executable(name: "EasyBarLuaRuntime", targets: ["EasyBarLuaRuntime"]),
-    .executable(name: "easybar", targets: ["EasyBarCtl"]),
+    .executable(name: "EasyBarCtl", targets: ["EasyBarCtl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
     .executable(name: "EasyBarNetworkAgent", targets: ["EasyBarNetworkAgent"]),
   ],

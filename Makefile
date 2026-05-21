@@ -1,4 +1,4 @@
-APP_NAME := EasyBar
+AP_NAME := EasyBar
 APP_TARGET := EasyBarApp
 APP_EXEC := EasyBar
 APP_PRODUCT := EasyBar
@@ -10,7 +10,8 @@ CALENDAR_AGENT_EXEC := EasyBarCalendarAgent
 NETWORK_AGENT_NAME := EasyBarNetworkAgent
 NETWORK_AGENT_PRODUCT := EasyBarNetworkAgent
 NETWORK_AGENT_EXEC := EasyBarNetworkAgent
-CLI_PRODUCT := easybar
+CLI_PRODUCT := EasyBarCtl
+CLI_EXEC := easybar
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_TARGET).bundle
 
 DIST_DIR := dist
@@ -48,7 +49,7 @@ NETWORK_AGENT_ICON_SVG := packaging/easybar-network-agent-icon.svg
 NETWORK_AGENT_ICON_FILE := $(NETWORK_AGENT_NAME)
 NETWORK_AGENT_ICON_ICNS := $(NETWORK_AGENT_RESOURCES)/$(NETWORK_AGENT_ICON_FILE).icns
 
-CLI_BIN := $(DIST_DIR)/$(CLI_PRODUCT)
+CLI_BIN := $(DIST_DIR)/$(CLI_EXEC)
 PLIST_TEMPLATE := Sources/EasyBarApp/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
 
