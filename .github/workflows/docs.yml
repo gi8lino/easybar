@@ -36,7 +36,7 @@ jobs:
         run: pip install -r docs/requirements.txt
 
       - name: Generate Lua reference docs
-        run: python tools/generate_lua_reference_docs.py --output docs/content/lua/reference
+        run: python scripts/generate_lua_reference_docs.py --output docs/content/lua/reference
 
       - name: Build docs
         run: mkdocs build --strict -f docs/mkdocs.yml
