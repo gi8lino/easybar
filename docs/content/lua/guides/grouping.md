@@ -2,6 +2,8 @@
 
 Use `group` when multiple child nodes should share one visual container.
 
+For terminology such as node, handle, and popup owner, see [Conventions](../conventions.md).
+
 A group is useful when you want:
 
 - one background
@@ -80,3 +82,9 @@ end)
 ```
 
 Subscribe on the group handle only when the whole grouped widget should behave like one click target.
+
+## Related pages
+
+- [Style Popups And Groups](style-popups-and-groups.md)
+- [Popups](popups.md)
+- [Properties](../reference/properties.md)

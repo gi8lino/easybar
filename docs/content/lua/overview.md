@@ -11,6 +11,8 @@ Lua widgets are the right tool when you want:
 - event-driven behavior tied to app changes, mouse input, timers, or helper-agent updates
 - small personal workflows without touching the native Swift codebase
 
+If you have not decided whether Lua is the right tool yet, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
+
 A minimal widget looks like this:
 
 ```lua
@@ -43,6 +45,8 @@ The Lua runtime is for custom widgets and user-specific behavior. Built-in platf
 
 ## What to read next
 
+- [Conventions](conventions.md) for EasyBar terminology used across the docs
+- [First Widget](guides/first-widget.md) for a step-by-step starting point
 - [Functions](reference/functions.md) for the creation and update API
 - [Events](reference/events.md) for subscriptions and payload shapes
 - [Properties](reference/properties.md) for node styling and layout fields

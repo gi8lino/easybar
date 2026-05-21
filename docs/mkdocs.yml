@@ -18,6 +18,7 @@ theme:
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.indexes
+    - navigation.footer
     - navigation.tracking
     - navigation.top
     - search.highlight
@@ -36,6 +37,7 @@ nav:
       - macOS Quarantine: getting-started/macos-quarantine.md
       - Config Path: getting-started/configuration-path.md
       - AeroSpace Integration: getting-started/aerospace.md
+      - Built-ins Vs Lua: getting-started/builtins-vs-lua.md
 
   - Configuration:
       - Overview: configuration/overview.md
@@ -51,7 +53,12 @@ nav:
 
   - Lua Widgets:
       - Overview: lua/overview.md
+      - Conventions: lua/conventions.md
+      - API Summary: lua/api-summary.md
       - Guides:
+          - First Widget: lua/guides/first-widget.md
+          - Subscribe To Events: lua/guides/subscribe-to-events.md
+          - Style Popups And Groups: lua/guides/style-popups-and-groups.md
           - Editor Support: lua/guides/editor-support.md
           - Grouping: lua/guides/grouping.md
           - Popups: lua/guides/popups.md

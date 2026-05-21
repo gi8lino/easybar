@@ -22,6 +22,8 @@ widgets_dir = "~/.config/easybar/widgets"
 
 Every `*.lua` file in this directory is loaded by the Lua runtime.
 
+If you are creating your first custom widget, continue with [First Widget](../lua/guides/first-widget.md).
+
 ## `lua_path`
 
 The Lua executable used for the Lua widget runtime.
@@ -41,6 +43,8 @@ lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
 ```
 
 This socket is separate from stderr logs. Runtime protocol messages use JSON over the Lua socket.
+
+See [Runtime Control](../runtime/control.md) and [Lua Runtime Overview](../internals/lua-runtime/overview.md).
 
 ## `develop`
 

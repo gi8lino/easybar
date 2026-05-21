@@ -4,6 +4,8 @@ Popups attach extra content to a bar node.
 
 The parent widget controls whether the popup is visible. Popup child nodes use a `position` value of `popup.<parent-id>`.
 
+If you also need several always-visible child nodes around the same trigger, combine this guide with [Grouping](grouping.md).
+
 ## Minimal popup
 
 ```lua
@@ -85,3 +87,9 @@ easybar.add(easybar.kind.item, "vpn_popup_label", {
     label = "WireGuard active",
 })
 ```
+
+## Related pages
+
+- [Style Popups And Groups](style-popups-and-groups.md)
+- [Properties](../reference/properties.md)
+- [Events](../reference/events.md)

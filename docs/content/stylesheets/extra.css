@@ -44,6 +44,29 @@
   background: var(--md-accent-fg-color);
 }
 
+/* Section labels should stay plain even when their subtree is active */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link,
+.md-nav--primary .md-nav__item--section > .md-nav__link,
+.md-nav--primary .md-nav__item--section > label.md-nav__link {
+  position: static;
+}
+
+.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > label.md-nav__link,
+.md-nav--primary .md-nav__item--section.md-nav__item--active > .md-nav__link,
+.md-nav--primary .md-nav__item--section.md-nav__item--active > label.md-nav__link {
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > .md-nav__link::before,
+.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > label.md-nav__link::before,
+.md-nav--primary .md-nav__item--section.md-nav__item--active > .md-nav__link::before,
+.md-nav--primary .md-nav__item--section.md-nav__item--active > label.md-nav__link::before {
+  content: none;
+}
+
 /* Top-level sections: Lua Widgets, Runtime, Internals */
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
 .md-nav--primary > .md-nav__list > .md-nav__item > label.md-nav__link {

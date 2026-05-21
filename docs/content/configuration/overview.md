@@ -24,6 +24,8 @@ The repository ships two config examples:
 Use `config.defaults.toml` when you want the complete reference.
 Use `config.minimal.toml` when you want a shorter starting point.
 
+If you are unsure whether a widget belongs in config or in a Lua file, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
+
 ## Important sections
 
 - `[app]`
@@ -40,3 +42,11 @@ Use `config.minimal.toml` when you want a shorter starting point.
   Native built-in widget configuration.
 - `[builtins.groups.*]`
   Native widget groups.
+
+## When configuration is enough
+
+Stay in `config.toml` when EasyBar already provides the widget you need as a built-in and you mainly want to control placement, grouping, or styling.
+
+Move to Lua when you need custom interaction, shell-command integration, or custom event-driven behavior.
+
+See [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md) and [Lua Widgets](../lua/overview.md).

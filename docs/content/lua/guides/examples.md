@@ -2,6 +2,8 @@
 
 This page shows complete Lua widget patterns.
 
+If you are just starting out, read [First Widget](first-widget.md) before using these as templates.
+
 ## Toggle widget
 
 ```lua
@@ -72,3 +74,9 @@ local tailscale = easybar.add(easybar.kind.item, "tailscale", {
     },
 })
 ```
+
+## Related pages
+
+- [Subscribe To Events](subscribe-to-events.md)
+- [Style Popups And Groups](style-popups-and-groups.md)
+- [API Summary](../api-summary.md)

@@ -14,9 +14,10 @@ If you're new to EasyBar, this is the quickest path:
 
 1. Follow [Installation](getting-started/installation.md).
 2. Confirm where EasyBar reads config in [Config Path](getting-started/configuration-path.md).
-3. Skim [Configuration Overview](configuration/overview.md).
-4. Open [Lua Widgets](lua/overview.md) when you want custom behavior.
-5. Use [Troubleshooting](runtime/troubleshooting.md) if the bar or agents do not come up cleanly.
+3. Decide between [Built-ins Vs Lua](getting-started/builtins-vs-lua.md).
+4. Skim [Configuration Overview](configuration/overview.md).
+5. Open [Lua Widgets](lua/overview.md) when you want custom behavior.
+6. Use [Troubleshooting](runtime/troubleshooting.md) if the bar or agents do not come up cleanly.
 
 ## Features
 
@@ -35,6 +36,8 @@ If you're new to EasyBar, this is the quickest path:
 - Start with built-in widgets for battery, Wi-Fi, spaces, calendar, and other system-integrated data.
 - Reach for Lua widgets when you need custom display logic, event handling, shell integration, or app-specific behavior.
 - Keep platform-sensitive logic in native code when possible, and treat Lua as the extension layer.
+
+If you are choosing between the two, start with [Built-ins Vs Lua](getting-started/builtins-vs-lua.md).
 
 ## Project scope
 

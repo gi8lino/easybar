@@ -49,9 +49,3 @@ Trigger one refresh through the CLI:
 ```bash
 easybar --refresh
 ```
-
-## Next steps
-
-- [macOS Quarantine](macos-quarantine.md)
-- [Config Path](configuration-path.md)
-- [AeroSpace Integration](aerospace.md)
