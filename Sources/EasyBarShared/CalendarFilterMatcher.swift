@@ -22,6 +22,51 @@ public struct CalendarFilterTarget: Equatable, Sendable {
 
 /// Shared calendar include/exclude matching semantics.
 public enum CalendarFilterMatcher {
+  /// Returns whether one target passes split title, calendar-id, and source-id filters.
+  public static func matches(
+    _ target: CalendarFilterTarget,
+    includedTitleTokens: [String],
+    excludedTitleTokens: [String],
+    includedCalendarIDTokens: [String],
+    excludedCalendarIDTokens: [String],
+    includedSourceIDTokens: [String],
+    excludedSourceIDTokens: [String]
+  ) -> Bool {
+    let includedTitles = Set(includedTitleTokens.compactMap(normalizedToken))
+    let excludedTitles = Set(excludedTitleTokens.compactMap(normalizedToken))
+    let includedCalendarIDs = Set(includedCalendarIDTokens.compactMap(normalizedToken))
+    let excludedCalendarIDs = Set(excludedCalendarIDTokens.compactMap(normalizedToken))
+    let includedSourceIDs = Set(includedSourceIDTokens.compactMap(normalizedToken))
+    let excludedSourceIDs = Set(excludedSourceIDTokens.compactMap(normalizedToken))
+
+    let title = normalizedToken(target.title)
+    let calendarID = normalizedToken(target.identifier ?? "")
+    let sourceID = normalizedToken(target.sourceIdentifier ?? "")
+
+    let hasIncludedFilters =
+      !includedTitles.isEmpty || !includedCalendarIDs.isEmpty || !includedSourceIDs.isEmpty
+
+    let matchesIncluded =
+      matchesToken(title, filters: includedTitles)
+      || matchesToken(calendarID, filters: includedCalendarIDs)
+      || matchesToken(sourceID, filters: includedSourceIDs)
+
+    if hasIncludedFilters && !matchesIncluded {
+      return false
+    }
+
+    let matchesExcluded =
+      matchesToken(title, filters: excludedTitles)
+      || matchesToken(calendarID, filters: excludedCalendarIDs)
+      || matchesToken(sourceID, filters: excludedSourceIDs)
+
+    if matchesExcluded {
+      return false
+    }
+
+    return true
+  }
+
   /// Returns whether one target passes the configured include/exclude filters.
   public static func matches(
     _ target: CalendarFilterTarget,
@@ -71,5 +116,11 @@ public enum CalendarFilterMatcher {
         normalizedToken(target.identifier ?? ""),
         normalizedToken(target.sourceIdentifier ?? ""),
       ].compactMap { $0 })
+  }
+
+  /// Returns whether one normalized candidate token matches the provided filters.
+  public static func matchesToken(_ candidate: String?, filters: Set<String>) -> Bool {
+    guard let candidate, !filters.isEmpty else { return false }
+    return filters.contains(candidate)
   }
 }

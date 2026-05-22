@@ -450,8 +450,12 @@ birthday_icon = "" # Leading icon shown for birthday appointments.
 birthday_icon_color = "" # Color of the birthday icon. When omitted, event_text_color is used.
 
 [builtins.calendar.filters]
-included_calendar_names = [] # Optional allowlist of calendar names. Empty means all calendars are eligible.
-excluded_calendar_names = [] # Optional denylist of calendar names applied after the allowlist.
+included_calendar_names = [] # Optional allowlist of visible Calendar.app names. Empty means all calendars are eligible.
+excluded_calendar_names = [] # Optional denylist of visible Calendar.app names applied after the allowlist.
+included_calendar_ids = [] # Optional advanced allowlist of exact calendar identifiers.
+excluded_calendar_ids = [] # Optional advanced denylist of exact calendar identifiers.
+included_calendar_source_ids = [] # Optional advanced allowlist of exact calendar source identifiers.
+excluded_calendar_source_ids = [] # Optional advanced denylist of exact calendar source identifiers.
 
 [builtins.calendar.month.popup.style]
 background_color = "#111111" # Background color of the month popup.

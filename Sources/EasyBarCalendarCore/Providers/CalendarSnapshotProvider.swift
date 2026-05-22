@@ -157,8 +157,12 @@ final class CalendarSnapshotProvider {
       .field("section_start", String(describing: query.sectionStartDate)),
       .field("section_day_count", String(describing: query.sectionDayCount)),
       .field("show_birthdays", query.showBirthdays),
-      .field("included", query.includedCalendarNames),
-      .field("excluded", query.excludedCalendarNames),
+      .field("included_calendar_names", query.includedCalendarNames),
+      .field("excluded_calendar_names", query.excludedCalendarNames),
+      .field("included_calendar_ids", query.includedCalendarIDs),
+      .field("excluded_calendar_ids", query.excludedCalendarIDs),
+      .field("included_calendar_source_ids", query.includedCalendarSourceIDs),
+      .field("excluded_calendar_source_ids", query.excludedCalendarSourceIDs),
       .field("writable_calendars", snapshot.writableCalendars.count),
       .field("events", snapshot.events.count),
       .field("sections", snapshot.sections.count),
@@ -526,8 +530,12 @@ extension CalendarSnapshotProvider {
             sourceTitle: calendar.source.title,
             sourceIdentifier: calendar.source.sourceIdentifier
           ),
-          includeTokens: query.includedCalendarNames,
-          excludeTokens: query.excludedCalendarNames
+          includedTitleTokens: query.includedCalendarNames,
+          excludedTitleTokens: query.excludedCalendarNames,
+          includedCalendarIDTokens: query.includedCalendarIDs,
+          excludedCalendarIDTokens: query.excludedCalendarIDs,
+          includedSourceIDTokens: query.includedCalendarSourceIDs,
+          excludedSourceIDTokens: query.excludedCalendarSourceIDs
         )
       }
   }

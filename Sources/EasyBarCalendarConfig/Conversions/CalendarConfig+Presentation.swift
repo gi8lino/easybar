@@ -5,7 +5,11 @@ extension CalendarBuiltinConfig {
   public var presentationFilters: CalendarRequestFilters {
     CalendarRequestFilters(
       includedCalendarNames: filters.includedCalendarNames,
-      excludedCalendarNames: filters.excludedCalendarNames
+      excludedCalendarNames: filters.excludedCalendarNames,
+      includedCalendarIDs: filters.includedCalendarIDs,
+      excludedCalendarIDs: filters.excludedCalendarIDs,
+      includedCalendarSourceIDs: filters.includedCalendarSourceIDs,
+      excludedCalendarSourceIDs: filters.excludedCalendarSourceIDs
     )
   }
 

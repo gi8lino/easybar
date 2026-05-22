@@ -1,7 +1,7 @@
 import Foundation
 
 /// Stable protocol version used by the calendar agent socket.
-public let calendarAgentProtocolVersion = "2"
+public let calendarAgentProtocolVersion = "3"
 
 /// Stable structured error codes returned by the calendar agent.
 public enum CalendarAgentErrorCode: String, Codable, Equatable, Sendable {
@@ -80,10 +80,18 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
   public var birthdaysDateFormat: String
   /// Whether birthday ages should be shown.
   public var birthdaysShowAge: Bool
-  /// Optional allowlist of calendar names. Empty means all calendars.
+  /// Optional allowlist of visible calendar names. Empty means all calendars.
   public var includedCalendarNames: [String]
-  /// Optional denylist of calendar names.
+  /// Optional denylist of visible calendar names.
   public var excludedCalendarNames: [String]
+  /// Optional allowlist of calendar identifiers.
+  public var includedCalendarIDs: [String]
+  /// Optional denylist of calendar identifiers.
+  public var excludedCalendarIDs: [String]
+  /// Optional allowlist of calendar source identifiers.
+  public var includedCalendarSourceIDs: [String]
+  /// Optional denylist of calendar source identifiers.
+  public var excludedCalendarSourceIDs: [String]
 
   /// Creates one calendar agent query.
   public init(
@@ -97,7 +105,11 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     birthdaysDateFormat: String,
     birthdaysShowAge: Bool,
     includedCalendarNames: [String] = [],
-    excludedCalendarNames: [String] = []
+    excludedCalendarNames: [String] = [],
+    includedCalendarIDs: [String] = [],
+    excludedCalendarIDs: [String] = [],
+    includedCalendarSourceIDs: [String] = [],
+    excludedCalendarSourceIDs: [String] = []
   ) {
     self.startDate = startDate
     self.endDate = endDate
@@ -110,6 +122,10 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     self.birthdaysShowAge = birthdaysShowAge
     self.includedCalendarNames = includedCalendarNames
     self.excludedCalendarNames = excludedCalendarNames
+    self.includedCalendarIDs = includedCalendarIDs
+    self.excludedCalendarIDs = excludedCalendarIDs
+    self.includedCalendarSourceIDs = includedCalendarSourceIDs
+    self.excludedCalendarSourceIDs = excludedCalendarSourceIDs
   }
 }
 

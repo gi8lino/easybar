@@ -63,6 +63,21 @@ For the native `spaces` widget:
 - `[builtins.spaces]` controls the outer container placement and shared box model.
 - `[builtins.spaces.layout]` controls the internal workspace-pill layout.
 
+## Calendar filters
+
+Calendar filters are configured under `[builtins.calendar.filters]`.
+
+Use `included_calendar_names` and `excluded_calendar_names` for the visible calendar titles you see in Calendar.app.
+
+For advanced exact matching, you can also use:
+
+- `included_calendar_ids`
+- `excluded_calendar_ids`
+- `included_calendar_source_ids`
+- `excluded_calendar_source_ids`
+
+Excludes always win over includes, and blank filter entries are ignored.
+
 ## When to switch to Lua
 
 Stay with built-ins when the widget already exists and you mainly need native placement and styling.

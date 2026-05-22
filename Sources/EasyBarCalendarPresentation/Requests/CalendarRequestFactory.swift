@@ -3,15 +3,33 @@ import Foundation
 
 /// Calendar filters shared across calendar clients.
 public struct CalendarRequestFilters: Equatable, Sendable {
+  /// Optional visible calendar-title allowlist.
   public let includedCalendarNames: [String]
+  /// Optional visible calendar-title denylist.
   public let excludedCalendarNames: [String]
+  /// Optional advanced calendar-identifier allowlist.
+  public let includedCalendarIDs: [String]
+  /// Optional advanced calendar-identifier denylist.
+  public let excludedCalendarIDs: [String]
+  /// Optional advanced calendar-source-identifier allowlist.
+  public let includedCalendarSourceIDs: [String]
+  /// Optional advanced calendar-source-identifier denylist.
+  public let excludedCalendarSourceIDs: [String]
 
   public init(
     includedCalendarNames: [String] = [],
-    excludedCalendarNames: [String] = []
+    excludedCalendarNames: [String] = [],
+    includedCalendarIDs: [String] = [],
+    excludedCalendarIDs: [String] = [],
+    includedCalendarSourceIDs: [String] = [],
+    excludedCalendarSourceIDs: [String] = []
   ) {
     self.includedCalendarNames = includedCalendarNames
     self.excludedCalendarNames = excludedCalendarNames
+    self.includedCalendarIDs = includedCalendarIDs
+    self.excludedCalendarIDs = excludedCalendarIDs
+    self.includedCalendarSourceIDs = includedCalendarSourceIDs
+    self.excludedCalendarSourceIDs = excludedCalendarSourceIDs
   }
 }
 
@@ -117,7 +135,11 @@ public enum CalendarRequestFactory {
         birthdaysDateFormat: options.birthdaysDateFormat,
         birthdaysShowAge: options.birthdays.showAge,
         includedCalendarNames: options.filters.includedCalendarNames,
-        excludedCalendarNames: options.filters.excludedCalendarNames
+        excludedCalendarNames: options.filters.excludedCalendarNames,
+        includedCalendarIDs: options.filters.includedCalendarIDs,
+        excludedCalendarIDs: options.filters.excludedCalendarIDs,
+        includedCalendarSourceIDs: options.filters.includedCalendarSourceIDs,
+        excludedCalendarSourceIDs: options.filters.excludedCalendarSourceIDs
       )
     )
   }
@@ -140,7 +162,11 @@ public enum CalendarRequestFactory {
         birthdaysDateFormat: options.birthdaysDateFormat,
         birthdaysShowAge: options.birthdays.showAge,
         includedCalendarNames: options.filters.includedCalendarNames,
-        excludedCalendarNames: options.filters.excludedCalendarNames
+        excludedCalendarNames: options.filters.excludedCalendarNames,
+        includedCalendarIDs: options.filters.includedCalendarIDs,
+        excludedCalendarIDs: options.filters.excludedCalendarIDs,
+        includedCalendarSourceIDs: options.filters.includedCalendarSourceIDs,
+        excludedCalendarSourceIDs: options.filters.excludedCalendarSourceIDs
       )
     )
   }

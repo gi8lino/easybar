@@ -95,10 +95,25 @@ public struct CalendarBuiltinConfig {
   public struct Filters {
     public var includedCalendarNames: [String]
     public var excludedCalendarNames: [String]
+    public var includedCalendarIDs: [String]
+    public var excludedCalendarIDs: [String]
+    public var includedCalendarSourceIDs: [String]
+    public var excludedCalendarSourceIDs: [String]
 
-    public init(includedCalendarNames: [String], excludedCalendarNames: [String]) {
+    public init(
+      includedCalendarNames: [String],
+      excludedCalendarNames: [String],
+      includedCalendarIDs: [String],
+      excludedCalendarIDs: [String],
+      includedCalendarSourceIDs: [String],
+      excludedCalendarSourceIDs: [String]
+    ) {
       self.includedCalendarNames = includedCalendarNames
       self.excludedCalendarNames = excludedCalendarNames
+      self.includedCalendarIDs = includedCalendarIDs
+      self.excludedCalendarIDs = excludedCalendarIDs
+      self.includedCalendarSourceIDs = includedCalendarSourceIDs
+      self.excludedCalendarSourceIDs = excludedCalendarSourceIDs
     }
   }
 
@@ -1029,7 +1044,14 @@ extension CalendarBuiltinConfig {
       topTextColorHex: "#ffffff",
       bottomTextColorHex: "#d0d0d0"
     ),
-    filters: .init(includedCalendarNames: [], excludedCalendarNames: []),
+    filters: .init(
+      includedCalendarNames: [],
+      excludedCalendarNames: [],
+      includedCalendarIDs: [],
+      excludedCalendarIDs: [],
+      includedCalendarSourceIDs: [],
+      excludedCalendarSourceIDs: []
+    ),
     appointments: .init(
       itemIndent: 8,
       eventTextColorHex: "#d0d0d0",

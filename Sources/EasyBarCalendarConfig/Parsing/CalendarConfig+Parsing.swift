@@ -195,7 +195,23 @@ private struct CalendarBuiltinConfigParser {
       excludedCalendarNames: try optionalStringArray(
         table["excluded_calendar_names"],
         path: "\(rootPath).filters.excluded_calendar_names"
-      ) ?? fallback.excludedCalendarNames
+      ) ?? fallback.excludedCalendarNames,
+      includedCalendarIDs: try optionalStringArray(
+        table["included_calendar_ids"],
+        path: "\(rootPath).filters.included_calendar_ids"
+      ) ?? fallback.includedCalendarIDs,
+      excludedCalendarIDs: try optionalStringArray(
+        table["excluded_calendar_ids"],
+        path: "\(rootPath).filters.excluded_calendar_ids"
+      ) ?? fallback.excludedCalendarIDs,
+      includedCalendarSourceIDs: try optionalStringArray(
+        table["included_calendar_source_ids"],
+        path: "\(rootPath).filters.included_calendar_source_ids"
+      ) ?? fallback.includedCalendarSourceIDs,
+      excludedCalendarSourceIDs: try optionalStringArray(
+        table["excluded_calendar_source_ids"],
+        path: "\(rootPath).filters.excluded_calendar_source_ids"
+      ) ?? fallback.excludedCalendarSourceIDs
     )
   }
 
