@@ -516,23 +516,20 @@ extension CalendarSnapshotProvider {
 
   /// Returns the filtered non-birthday calendars for the query.
   private func filteredRegularCalendars(query: CalendarAgentQuery) -> [EKCalendar] {
-    let calendars = eventStore.calendars(for: .event).filter { $0.type != .birthday }
-    let included = normalizedNameSet(query.includedCalendarNames)
-    let excluded = normalizedNameSet(query.excludedCalendarNames)
-
-    return calendars.filter { calendar in
-      let normalizedTitle = normalizedCalendarName(calendar.title)
-
-      if excluded.contains(normalizedTitle) {
-        return false
+    eventStore.calendars(for: .event)
+      .filter { $0.type != .birthday }
+      .filter { calendar in
+        CalendarFilterMatcher.matches(
+          CalendarFilterTarget(
+            title: calendar.title,
+            identifier: calendar.calendarIdentifier,
+            sourceTitle: calendar.source.title,
+            sourceIdentifier: calendar.source.sourceIdentifier
+          ),
+          includedFilters: query.includedCalendarNames,
+          excludedFilters: query.excludedCalendarNames
+        )
       }
-
-      if included.isEmpty {
-        return true
-      }
-
-      return included.contains(normalizedTitle)
-    }
   }
 
   /// Resolves one writable calendar for creation or update.
@@ -569,15 +566,6 @@ extension CalendarSnapshotProvider {
     guard !trimmed.isEmpty else { return nil }
 
     return eventStore.event(withIdentifier: trimmed)
-  }
-
-  /// Returns one normalized calendar-name set.
-  private func normalizedNameSet(_ values: [String]) -> Set<String> {
-    Set(
-      values
-        .map { normalizedCalendarName($0) }
-        .filter { !$0.isEmpty }
-    )
   }
 
   /// Normalizes one calendar name for matching.
