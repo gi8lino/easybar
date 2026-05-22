@@ -82,8 +82,11 @@ enum EventCatalog {
         withExtension: "json",
         subdirectory: "Events"
       ),
+      URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .appendingPathComponent("event_catalog.json"),
       URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        .appendingPathComponent("Sources/EasyBar/Events/event_catalog.json"),
+        .appendingPathComponent("Sources/EasyBarApp/Events/event_catalog.json"),
     ].compactMap { $0 }
 
     guard
@@ -108,8 +111,8 @@ enum EventCatalog {
     return GeneratedCatalog(
       luaTokenNames: tokenNames,
       luaDriverNames: driverNames,
-      mouseButtons: Set(catalog.mouseButtons),
-      scrollDirections: Set(catalog.scrollDirections)
+      mouseButtons: Set(catalog.mouseButtons.map(\.value)),
+      scrollDirections: Set(catalog.scrollDirections.map(\.value))
     )
   }
 
@@ -156,9 +159,9 @@ private struct GeneratedCatalogManifest: Decodable {
   /// Generated widget event groups.
   let widgetGroups: [GeneratedCatalogWidgetGroup]
   /// Generated mouse button names.
-  let mouseButtons: [String]
+  let mouseButtons: [GeneratedCatalogValue]
   /// Generated scroll direction names.
-  let scrollDirections: [String]
+  let scrollDirections: [GeneratedCatalogValue]
 }
 
 /// Generated widget event group.
@@ -184,4 +187,10 @@ private struct GeneratedCatalogEvent: Decodable {
     case runtimeName
     case driver
   }
+}
+
+/// Generated manifest value entry.
+private struct GeneratedCatalogValue: Decodable {
+  /// Raw catalog value.
+  let value: String
 }

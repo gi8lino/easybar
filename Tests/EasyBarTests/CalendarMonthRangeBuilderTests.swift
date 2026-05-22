@@ -44,7 +44,15 @@ final class CalendarMonthRangeBuilderTests: XCTestCase {
   }
 
   func testPopupSurfaceSizeMatchesMode() {
-    XCTAssertEqual(CalendarBuiltinConfig.default.popupSurfaceSize.width, 360)
-    XCTAssertEqual(CalendarBuiltinConfig.default.popupSurfaceSize.height, 520)
+    var config = CalendarBuiltinConfig.default
+
+    XCTAssertEqual(config.popupMode, .month)
+    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 560, height: 560))
+
+    config.popupMode = .upcoming
+    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 360, height: 520))
+
+    config.popupMode = .none
+    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 280, height: 96))
   }
 }

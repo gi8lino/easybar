@@ -79,6 +79,10 @@ NEXT_MAJOR := $(shell python3 -c 'm,n,p=map(int,"$(CURRENT_VERSION)".split("."))
 
 SWIFT_BUILD_RELEASE := swift build -c release
 SWIFT_BUILD_DEBUG := swift build -c debug
+LOCAL_HOME := $(CURDIR)/.home
+LOCAL_CACHE_DIR := $(CURDIR)/.cache
+LOCAL_CLANG_MODULE_CACHE := $(CURDIR)/.build/clang-module-cache
+LOCAL_SWIFT_ENV := HOME="$(LOCAL_HOME)" XDG_CACHE_HOME="$(LOCAL_CACHE_DIR)" CLANG_MODULE_CACHE_PATH="$(LOCAL_CLANG_MODULE_CACHE)"
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -102,7 +106,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all generate-event-catalog prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
+.PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -127,6 +131,13 @@ path.write_text(updated)'
 updated = re.sub(r"^-- EasyBar Lua API stub version: .*$$", "-- EasyBar Lua API stub version: $(VERSION)", text, count=1, flags=re.MULTILINE); \
 path.write_text(updated)'
 
+generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
+	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
+		"$(LOCAL_HOME)/Library/org.swift.swiftpm/security" \
+		"$(LOCAL_HOME)/Library/Caches/org.swift.swiftpm" \
+		"$(LOCAL_CACHE_DIR)" \
+		"$(LOCAL_CLANG_MODULE_CACHE)"
+
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
 
 app: prepare-version ## Build only the app executable for the selected ARCH.
@@ -138,8 +149,8 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
 
-test: generate-event-catalog ## Run the Swift test suite.
-	@swift test
+test: generate-event-catalog generate-swift-env ## Run the Swift test suite.
+	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@rm -rf "$(DIST_DIR)" ".build"
