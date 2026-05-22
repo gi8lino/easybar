@@ -526,8 +526,8 @@ extension CalendarSnapshotProvider {
             sourceTitle: calendar.source.title,
             sourceIdentifier: calendar.source.sourceIdentifier
           ),
-          includedFilters: query.includedCalendarNames,
-          excludedFilters: query.excludedCalendarNames
+          includeTokens: query.includedCalendarNames,
+          excludeTokens: query.excludedCalendarNames
         )
       }
   }

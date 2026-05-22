@@ -8,8 +8,8 @@ final class CalendarFilterMatcherTests: XCTestCase {
     XCTAssertTrue(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: ["feries"],
-        excludedFilters: []
+        includeTokens: ["feries"],
+        excludeTokens: []
       )
     )
   }
@@ -25,15 +25,15 @@ final class CalendarFilterMatcherTests: XCTestCase {
     XCTAssertTrue(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: ["source-456"],
-        excludedFilters: []
+        includeTokens: ["source-456"],
+        excludeTokens: []
       )
     )
     XCTAssertTrue(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: ["icloud"],
-        excludedFilters: []
+        includeTokens: ["icloud"],
+        excludeTokens: []
       )
     )
   }
@@ -44,8 +44,8 @@ final class CalendarFilterMatcherTests: XCTestCase {
     XCTAssertFalse(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: ["work"],
-        excludedFilters: ["work"]
+        includeTokens: ["work"],
+        excludeTokens: ["work"]
       )
     )
   }
@@ -56,15 +56,15 @@ final class CalendarFilterMatcherTests: XCTestCase {
     XCTAssertTrue(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: ["   "],
-        excludedFilters: []
+        includeTokens: ["   "],
+        excludeTokens: []
       )
     )
     XCTAssertTrue(
       CalendarFilterMatcher.matches(
         target,
-        includedFilters: [],
-        excludedFilters: ["   "]
+        includeTokens: [],
+        excludeTokens: ["   "]
       )
     )
   }

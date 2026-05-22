@@ -25,11 +25,11 @@ public enum CalendarFilterMatcher {
   /// Returns whether one target passes the configured include/exclude filters.
   public static func matches(
     _ target: CalendarFilterTarget,
-    includedFilters: [String],
-    excludedFilters: [String]
+    includeTokens: [String],
+    excludeTokens: [String]
   ) -> Bool {
-    let included = Set(includedFilters.compactMap(normalizedToken))
-    let excluded = Set(excludedFilters.compactMap(normalizedToken))
+    let included = Set(includeTokens.compactMap(normalizedToken))
+    let excluded = Set(excludeTokens.compactMap(normalizedToken))
 
     if !included.isEmpty && !matchesAnyFilter(target, filters: included) {
       return false
