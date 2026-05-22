@@ -58,14 +58,19 @@ public enum CalendarFilterMatcher {
   ) -> Bool {
     guard !filters.isEmpty else { return false }
 
-    let candidates = Set(
+    let candidates = normalizedCandidates(for: target)
+
+    return !candidates.isDisjoint(with: filters)
+  }
+
+  /// Returns the normalized candidate tokens for one target.
+  public static func normalizedCandidates(for target: CalendarFilterTarget) -> Set<String> {
+    Set(
       [
         normalizedToken(target.title),
         normalizedToken(target.identifier ?? ""),
         normalizedToken(target.sourceTitle ?? ""),
         normalizedToken(target.sourceIdentifier ?? ""),
       ].compactMap { $0 })
-
-    return !candidates.isDisjoint(with: filters)
   }
 }
