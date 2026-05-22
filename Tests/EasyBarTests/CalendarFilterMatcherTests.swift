@@ -14,7 +14,7 @@ final class CalendarFilterMatcherTests: XCTestCase {
     )
   }
 
-  func testMatchesCalendarIdentifierAndSourceFields() {
+  func testMatchesCalendarIdentifierAndSourceIdentifier() {
     let target = CalendarFilterTarget(
       title: "Work",
       identifier: "calendar-123",
@@ -29,7 +29,7 @@ final class CalendarFilterMatcherTests: XCTestCase {
         excludeTokens: []
       )
     )
-    XCTAssertTrue(
+    XCTAssertFalse(
       CalendarFilterMatcher.matches(
         target,
         includeTokens: ["icloud"],

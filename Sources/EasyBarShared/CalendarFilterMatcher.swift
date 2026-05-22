@@ -69,7 +69,6 @@ public enum CalendarFilterMatcher {
       [
         normalizedToken(target.title),
         normalizedToken(target.identifier ?? ""),
-        normalizedToken(target.sourceTitle ?? ""),
         normalizedToken(target.sourceIdentifier ?? ""),
       ].compactMap { $0 })
   }
