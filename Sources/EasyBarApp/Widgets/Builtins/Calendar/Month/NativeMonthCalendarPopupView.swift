@@ -3,6 +3,7 @@ import SwiftUI
 
 /// EasyBar adapter for the reusable month-calendar popup.
 struct NativeMonthCalendarPopupView: View {
+  @ObservedObject private var config = Config.shared
   @StateObject private var composerPanel = CalendarEventComposerPanelController()
 
   /// Renders the EasyBar-wired month-calendar popup.
@@ -10,10 +11,10 @@ struct NativeMonthCalendarPopupView: View {
     CalendarMonthPopupView(
       store: NativeMonthCalendarStore.shared,
       logger: NativeMonthCalendarStore.shared.logger,
-      config: Config.shared.builtinCalendar.calendarMonthPopupUIConfig,
-      appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
-      birthdays: Config.shared.builtinCalendar.birthdayCalendarUIStyle,
-      emptyText: Config.shared.builtinCalendar.appointments.emptyText,
+      config: config.builtinCalendar.calendarMonthPopupUIConfig,
+      appointmentsStyle: config.builtinCalendar.appointmentsCalendarUIStyle,
+      birthdays: config.builtinCalendar.birthdayCalendarUIStyle,
+      emptyText: config.builtinCalendar.appointments.emptyText,
       onVisibleMonthChanged: { visibleMonth in
         MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
       },

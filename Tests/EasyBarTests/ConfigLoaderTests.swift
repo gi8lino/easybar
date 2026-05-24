@@ -200,6 +200,37 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
   }
 
+  /// Handles test reload applies month popup agenda layout overrides.
+  func testReloadAppliesMonthPopupAgendaLayoutOverride() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("calendar-layout.toml")
+
+    try writeConfig(
+      """
+      [builtins.calendar]
+      enabled = true
+
+      [builtins.calendar.month.popup.agenda]
+      layout = "appointments_calendar_vertical"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(
+      config.builtinCalendar.month.popup.layout,
+      .appointmentsCalendarVertical
+    )
+    XCTAssertEqual(
+      config.builtinCalendar.calendarMonthPopupUIConfig.layout,
+      .appointmentsCalendarVertical
+    )
+  }
+
   /// Handles test reload returns config error for invalid logging level.
   func testReloadReturnsConfigErrorForInvalidLoggingLevel() throws {
     let config = Config.shared

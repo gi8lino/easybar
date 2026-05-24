@@ -28,28 +28,31 @@ final class MonthPopupViewHelperTests: XCTestCase {
   }
 
   @MainActor
-  func testMinimumPopupWidthUsesConfiguredSpacingForHorizontalLayouts() {
-    let view = makeMonthPopupView(
-      layout: .calendarAppointmentsHorizontal,
-      spacing: 37
-    )
+  func testMinimumPopupWidthCalculatesCalendarFirstHorizontalLayout() {
+    let view = makeMonthPopupView(layout: .calendarAppointmentsHorizontal, spacing: 37)
 
     XCTAssertEqual(view.minimumPopupWidth, 260 + 220 + 37)
   }
 
   @MainActor
-  func testMinimumPopupWidthIgnoresOrderWithinSameOrientation() {
-    let calendarFirst = makeMonthPopupView(
-      layout: .calendarAppointmentsVertical,
-      spacing: 12
-    )
-    let appointmentsFirst = makeMonthPopupView(
-      layout: .appointmentsCalendarVertical,
-      spacing: 48
-    )
+  func testMinimumPopupWidthCalculatesAppointmentsFirstHorizontalLayout() {
+    let view = makeMonthPopupView(layout: .appointmentsCalendarHorizontal, spacing: 14)
 
-    XCTAssertEqual(calendarFirst.minimumPopupWidth, 320)
-    XCTAssertEqual(appointmentsFirst.minimumPopupWidth, 320)
+    XCTAssertEqual(view.minimumPopupWidth, 260 + 220 + 14)
+  }
+
+  @MainActor
+  func testMinimumPopupWidthCalculatesCalendarFirstVerticalLayout() {
+    let view = makeMonthPopupView(layout: .calendarAppointmentsVertical, spacing: 12)
+
+    XCTAssertEqual(view.minimumPopupWidth, 260)
+  }
+
+  @MainActor
+  func testMinimumPopupWidthCalculatesAppointmentsFirstVerticalLayout() {
+    let view = makeMonthPopupView(layout: .appointmentsCalendarVertical, spacing: 48)
+
+    XCTAssertEqual(view.minimumPopupWidth, 260)
   }
 }
 
