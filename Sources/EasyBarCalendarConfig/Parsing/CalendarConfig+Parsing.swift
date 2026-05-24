@@ -74,17 +74,6 @@ extension CalendarBuiltinConfig {
   }
 }
 
-/// TOML parsing error for shared calendar config parsing.
-private struct CalendarConfigParseError: LocalizedError {
-  let path: String
-  let expected: String
-  let actual: String
-
-  var errorDescription: String? {
-    "invalid value at \(path): expected \(expected), got \(actual)"
-  }
-}
-
 /// Parser implementation for `CalendarBuiltinConfig`.
 private struct CalendarBuiltinConfigParser {
   let rootPath: String
@@ -1010,7 +999,7 @@ private struct CalendarBuiltinConfigParser {
   }
 
   /// Builds one parser error.
-  private func invalid(path: String, expected: String, actual: String) -> CalendarConfigParseError {
-    CalendarConfigParseError(path: path, expected: expected, actual: actual)
+  private func invalid(path: String, expected: String, actual: String) -> CalendarConfigError {
+    CalendarConfigError(configPath: path, expected: expected, actual: actual)
   }
 }
