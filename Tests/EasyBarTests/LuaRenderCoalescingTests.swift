@@ -319,6 +319,120 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
     XCTAssertEqual(rootNode(in: initialUpdate)?.text, "2")
   }
+
+  func testIntervalSubscriptionChangesAreReemittedAfterWidgetMutation() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    local brew
+
+    brew = easybar.add("item", "brew", {
+    	position = "right",
+    	interval = 60,
+    	label = "60",
+    	on_interval = function()
+    		brew:set({
+    			label = "tick",
+    		})
+    	end,
+    })
+
+    brew:subscribe(easybar.events.forced, function()
+    	brew:set({
+    		interval = 5,
+    		label = "5",
+    		on_interval = function()
+    			brew:set({
+    				label = "tick-fast",
+    			})
+    		end,
+    	})
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.interval-resubscribe.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let process = Process()
+    let stdinPipe = Pipe()
+    let stdoutPipe = Pipe()
+    let stderrPipe = Pipe()
+    let recorder = RuntimeUpdateRecorder()
+    let hostBridge = RuntimeHostBridge(
+      recorder: recorder,
+      decoder: decoder,
+      stdinHandle: stdinPipe.fileHandleForWriting,
+      asyncResponseDelayNanoseconds: 0
+    )
+
+    process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.standardInput = stdinPipe
+    process.standardOutput = stdoutPipe
+    process.standardError = stderrPipe
+    process.environment = ProcessInfo.processInfo.environment
+
+    let stdoutObserver = RuntimeLineObserver { line in
+      do {
+        try await hostBridge.handleRuntimeLine(line)
+      } catch {
+        XCTFail("Failed handling runtime update: \(line) error=\(error)")
+      }
+    }
+    stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
+
+    let stderrObserver = RuntimeLineObserver { _ in }
+    stderrObserver.attach(to: stderrPipe.fileHandleForReading)
+
+    try process.run()
+    defer {
+      stdoutObserver.invalidate()
+      stderrObserver.invalidate()
+
+      try? stdinPipe.fileHandleForWriting.close()
+
+      if process.isRunning {
+        process.terminate()
+        process.waitUntilExit()
+      }
+    }
+
+    let initialSubscriptions = try await nextUpdate(
+      from: recorder,
+      matching: { update in
+        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:60"]
+      }
+    )
+    XCTAssertEqual(Set(initialSubscriptions.subscribedEvents), ["forced", "interval_tick:60"])
+
+    try stdinPipe.fileHandleForWriting.write(
+      contentsOf: Data("{\"name\":\"forced\"}\n".utf8)
+    )
+
+    let updatedSubscriptions = try await nextUpdate(
+      from: recorder,
+      matching: { update in
+        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:5"]
+      }
+    )
+    XCTAssertEqual(Set(updatedSubscriptions.subscribedEvents), ["forced", "interval_tick:5"])
+  }
 }
 
 extension LuaRenderCoalescingTests {

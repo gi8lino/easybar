@@ -92,6 +92,12 @@ local function emit_subscriptions(force)
 	io.stdout:flush()
 end
 
+--- Flushes pending runtime outputs after one logical Lua turn.
+local function flush_pending_outputs(force_render, force_subscriptions)
+	flush_pending_render(force_render)
+	emit_subscriptions(force_subscriptions)
+end
+
 --- Sends one structured payload to the Swift host.
 local function send_payload(payload)
 	io.stdout:write(json.encode(payload) .. "\n")
@@ -134,7 +140,7 @@ local function handle_command_response(payload)
 	end
 
 	registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1)
-	flush_pending_render()
+	flush_pending_outputs(false, false)
 end
 
 --- Dispatches one JSON-decoded host payload by kind.
@@ -155,7 +161,9 @@ local function handle_host_payload(payload, raw_line)
 	end
 
 	local event = events.normalize_event(payload)
-	events.dispatch_event(registry, event, flush_pending_render, log)
+	events.dispatch_event(registry, event, function(force_render)
+		flush_pending_outputs(force_render, false)
+	end, log)
 end
 
 --- Reads, decodes, and handles one host payload line.
@@ -230,7 +238,7 @@ send_payload({
 })
 
 -- Emit the full initial widget trees once the runtime handshake is complete.
-flush_pending_render(true)
+flush_pending_outputs(true, false)
 
 while process_next_host_message() do
 end

@@ -67,7 +67,6 @@ local state = {
 	error = nil,
 	status = "Checking outdated packages…",
 	last_checked = nil,
-	next_check_at = nil,
 	phase = "checking",
 }
 
@@ -86,13 +85,17 @@ local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+--- Returns the next interval boundary after the current moment.
+local function next_interval_boundary()
+	local now = os.time()
+	local interval = CHECK_INTERVAL_SECONDS
+	local next_step = math.floor(now / interval) + 1
+	return next_step * interval
+end
+
 --- Returns the next scheduled check time as HH:MM.
 local function next_check_label()
-	if state.next_check_at == nil then
-		return "after first check"
-	end
-
-	return os.date("%H:%M", state.next_check_at)
+	return os.date("%H:%M", next_interval_boundary())
 end
 
 --- Truncates a value to a maximum visible length.
@@ -488,7 +491,6 @@ local function run_brew_async(status_label, phase, command, on_success)
 
 	local token = easybar.exec_async(command, function(output, code)
 		running = false
-		state.next_check_at = os.time() + CHECK_INTERVAL_SECONDS
 
 		log_debug(
 			"run_brew_async complete",
