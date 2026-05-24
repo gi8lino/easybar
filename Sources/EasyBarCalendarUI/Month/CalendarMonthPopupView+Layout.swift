@@ -48,15 +48,25 @@ extension CalendarMonthPopupView {
   var minimumPopupWidth: CGFloat {
     switch config.layout {
     case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
-      return 560
+      return calendarContainerWidth + horizontalAgendaMinimumWidth + max(horizontalContentSpacing, 0)
     case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
-      return 320
+      return verticalPopupMinimumWidth
     }
   }
 
   /// Returns the fixed width used by the calendar pane.
   var calendarContainerWidth: CGFloat {
     return 260
+  }
+
+  /// Returns the minimum width reserved for the agenda in horizontal layouts.
+  var horizontalAgendaMinimumWidth: CGFloat {
+    return 220
+  }
+
+  /// Returns the minimum popup width used by vertical layouts.
+  var verticalPopupMinimumWidth: CGFloat {
+    return 320
   }
 
   /// Builds the full calendar section with grid and today helper.
@@ -108,7 +118,7 @@ extension CalendarMonthPopupView {
       appointmentsContainerView
     }
     .frame(
-      minWidth: isHorizontalLayout ? 220 : nil,
+      minWidth: isHorizontalLayout ? horizontalAgendaMinimumWidth : nil,
       maxWidth: .infinity,
       alignment: .topLeading
     )

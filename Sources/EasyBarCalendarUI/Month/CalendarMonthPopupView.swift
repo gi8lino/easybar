@@ -146,11 +146,6 @@ extension CalendarMonthPopupView {
 
   /// Returns the fixed popup width for the active layout.
   var popupWidth: CGFloat {
-    switch config.layout {
-    case .calendarAppointmentsHorizontal, .appointmentsCalendarHorizontal:
-      return 560
-    case .calendarAppointmentsVertical, .appointmentsCalendarVertical:
-      return 260
-    }
+    return minimumPopupWidth
   }
 }

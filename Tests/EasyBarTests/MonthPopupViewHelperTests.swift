@@ -4,6 +4,7 @@ import XCTest
 @testable import EasyBarCalendarUI
 
 final class MonthPopupViewHelperTests: XCTestCase {
+  @MainActor
   func testFormatVisibleMonthTitleHonorsProvidedLocale() {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
@@ -25,6 +26,31 @@ final class MonthPopupViewHelperTests: XCTestCase {
       expectedFormatter.string(from: date)
     )
   }
+
+  @MainActor
+  func testMinimumPopupWidthUsesConfiguredSpacingForHorizontalLayouts() {
+    let view = makeMonthPopupView(
+      layout: .calendarAppointmentsHorizontal,
+      spacing: 37
+    )
+
+    XCTAssertEqual(view.minimumPopupWidth, 260 + 220 + 37)
+  }
+
+  @MainActor
+  func testMinimumPopupWidthIgnoresOrderWithinSameOrientation() {
+    let calendarFirst = makeMonthPopupView(
+      layout: .calendarAppointmentsVertical,
+      spacing: 12
+    )
+    let appointmentsFirst = makeMonthPopupView(
+      layout: .appointmentsCalendarVertical,
+      spacing: 48
+    )
+
+    XCTAssertEqual(calendarFirst.minimumPopupWidth, 320)
+    XCTAssertEqual(appointmentsFirst.minimumPopupWidth, 320)
+  }
 }
 
 @MainActor
@@ -38,5 +64,107 @@ private final class StubMonthCalendarPopupStore: CalendarMonthPopupStore {
 
   func hasEvents(on date: Date) -> Bool {
     return false
+  }
+}
+
+@MainActor
+private func makeMonthPopupView(
+  layout: CalendarMonthPopupLayout,
+  spacing: Double
+) -> CalendarMonthPopupView<StubMonthCalendarPopupStore> {
+  return CalendarMonthPopupView(
+    store: StubMonthCalendarPopupStore(),
+    logger: ProcessLogger(label: "test", minimumLevel: .error),
+    config: .testValue(layout: layout, spacing: spacing),
+    appointmentsStyle: .testValue,
+    birthdays: .testValue,
+    emptyText: "No events",
+    onVisibleMonthChanged: { _ in },
+    onCreateEvent: { _, _ in },
+    onEditEvent: { _, _ in },
+    onRefreshRequested: {}
+  )
+}
+
+extension CalendarMonthPopupConfig {
+  fileprivate static func testValue(
+    layout: CalendarMonthPopupLayout,
+    spacing: Double
+  ) -> CalendarMonthPopupConfig {
+    return CalendarMonthPopupConfig(
+      backgroundColorHex: "#000000",
+      borderColorHex: "#ffffff",
+      borderWidth: 1,
+      cornerRadius: 12,
+      paddingX: 0,
+      paddingY: 0,
+      spacing: spacing,
+      marginX: 0,
+      marginY: 0,
+      showWeekNumbers: false,
+      showEventIndicators: true,
+      headerTextColorHex: "#ffffff",
+      weekdayTextColorHex: "#ffffff",
+      firstWeekday: nil,
+      resolvedWeekdaySymbols: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      dayTextColorHex: "#ffffff",
+      outsideMonthTextColorHex: "#999999",
+      todayCellBackgroundColorHex: "#222222",
+      todayCellBorderColorHex: "#ffffff",
+      todayCellBorderWidth: 1,
+      indicatorColorHex: "#00ff00",
+      selectedTextColorHex: "#000000",
+      selectedBackgroundColorHex: "#ffffff",
+      selectionDateFormat: "EEE d MMM",
+      selectionDateSeparator: " - ",
+      allowsRangeSelection: true,
+      resetSelectionOnThirdTap: true,
+      layout: layout,
+      appointmentsScrollable: true,
+      appointmentsMinHeight: 120,
+      appointmentsMaxHeight: 240,
+      agendaTitle: "Agenda",
+      maxVisibleAppointments: 5,
+      anchorDateFormat: "EEE d MMM",
+      anchorTextColorHex: nil,
+      anchorShowDateText: true,
+      todayButtonTitle: "Today",
+      todayButtonIcon: "􀉉",
+      todayButtonBorderColorHex: "#ffffff",
+      todayButtonBorderWidth: 1
+    )
+  }
+}
+
+extension CalendarAppointmentsStyle {
+  fileprivate static var testValue: CalendarAppointmentsStyle {
+    return CalendarAppointmentsStyle(
+      secondaryTextColorHex: "#999999",
+      emptyTextColorHex: "#777777",
+      eventTextColorHex: "#ffffff",
+      travelTextColorHex: "#bbbbbb",
+      travelIconColorHex: nil,
+      alertIconColorHex: nil,
+      showCalendarName: true,
+      showLocation: true,
+      showTravelTime: true,
+      showEndTime: true,
+      showAlertIcon: true,
+      showAllDayLabel: true,
+      allDayLabel: "All day",
+      showHolidayAllDayLabel: false,
+      alertIcon: "!",
+      travelIcon: ">",
+      itemIndent: 0
+    )
+  }
+}
+
+extension CalendarBirthdayStyle {
+  fileprivate static var testValue: CalendarBirthdayStyle {
+    return CalendarBirthdayStyle(
+      birthdayIcon: "*",
+      birthdayIconColorHex: nil
+    )
   }
 }
