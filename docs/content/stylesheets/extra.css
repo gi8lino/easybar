@@ -111,3 +111,11 @@
 .md-nav--primary .md-nav__item {
   margin: 0.08rem 0;
 }
+
+/* Compact screenshots should resize through layout, not transforms, so they stay aligned. */
+.md-typeset img.screenshot-compact {
+  display: block;
+  width: min(100%, 420px);
+  height: auto;
+  margin: 0 auto;
+}

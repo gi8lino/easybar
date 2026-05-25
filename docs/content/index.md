@@ -1,6 +1,6 @@
 # EasyBar
 
-![EasyBar screenshot](assets/bar.png)
+[![EasyBar screenshot](assets/bar.png)](assets/bar.png)
 
 EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua.
 
@@ -56,20 +56,20 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 ### Calendar
 
-![Calendar screenshot](assets/month.png)
+[![Calendar screenshot](assets/month.png){ .screenshot-compact }](assets/month.png)
 
 ### Upcoming
 
-![Upcoming screenshot](assets/upcoming.png)
+[![Upcoming screenshot](assets/upcoming.png){ .screenshot-compact }](assets/upcoming.png)
 
 ### CPU
 
-![CPU screenshot](assets/cpu.png)
+[![CPU screenshot](assets/cpu.png)](assets/cpu.png)
 
 ### Front app
 
-![Front app screenshot](assets/front_app.png)
+[![Front app screenshot](assets/front_app.png)](assets/front_app.png)
 
 ### Context menu
 
-![Context menu screenshot](assets/context.png)
+[![Context menu screenshot](assets/context.png)](assets/context.png)
