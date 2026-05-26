@@ -1,0 +1,149 @@
+import Darwin
+import EasyBarShared
+import Foundation
+import XCTest
+
+@testable import EasyBarApp
+
+final class MetricsStreamingTests: XCTestCase {
+  private var socketDirectoryURL: URL!
+  private var socketPath: String!
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+
+    socketDirectoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-metrics-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: socketDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    socketPath = socketDirectoryURL.appendingPathComponent("easybar.sock").path
+    MetricsCoordinator.shared.resetStreaming()
+  }
+
+  override func tearDownWithError() throws {
+    MetricsCoordinator.shared.resetStreaming()
+    if let socketDirectoryURL {
+      try? FileManager.default.removeItem(at: socketDirectoryURL)
+    }
+    try super.tearDownWithError()
+  }
+
+  func testMetricsWatchStopsSamplingAfterClientDisconnects() async throws {
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    server.start { _ in }
+    defer { server.stop() }
+
+    var clientFD = try connectUnixSocket(path: socketPath)
+    defer {
+      if clientFD >= 0 {
+        shutdown(clientFD, SHUT_RDWR)
+        close(clientFD)
+      }
+    }
+
+    try sendMetricsWatchRequest(to: clientFD)
+    _ = try readLine(from: clientFD)
+
+    try await waitUntil("metrics streaming to start") {
+      MetricsCoordinator.shared.isStreamingActive
+    }
+
+    shutdown(clientFD, SHUT_RDWR)
+    close(clientFD)
+    clientFD = -1
+
+    try await waitUntil("metrics streaming to stop") {
+      !MetricsCoordinator.shared.isStreamingActive
+    }
+  }
+
+  private func connectUnixSocket(path: String) throws -> Int32 {
+    let clientFD = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard clientFD >= 0 else {
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
+
+    guard configureNoSigPipe(fd: clientFD) else {
+      close(clientFD)
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
+
+    var address = makeSockAddrUn(path: path)
+    let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    let didConnect = withUnsafePointer(to: &address) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        connect(clientFD, $0, addressLength)
+      }
+    }
+
+    guard didConnect == 0 else {
+      let errorCode = errno
+      close(clientFD)
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errorCode))
+    }
+
+    return clientFD
+  }
+
+  private func sendMetricsWatchRequest(to clientFD: Int32) throws {
+    let encoder = JSONEncoder()
+    let data = try encoder.encode(IPC.Request.makeMetrics(watch: true)) + Data([0x0A])
+    XCTAssertTrue(writeAll(data, to: clientFD))
+  }
+
+  private func readLine(from clientFD: Int32) throws -> String {
+    var buffer = Data()
+    var byte = UInt8(0)
+
+    while true {
+      let count = read(clientFD, &byte, 1)
+
+      if count == 1 {
+        if byte == 0x0A {
+          break
+        }
+
+        buffer.append(byte)
+        continue
+      }
+
+      if count < 0 && errno == EINTR {
+        continue
+      }
+
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
+
+    guard let line = String(data: buffer, encoding: .utf8) else {
+      XCTFail("Metrics response was not valid UTF-8")
+      return ""
+    }
+
+    return line
+  }
+
+  private func waitUntil(
+    _ description: String,
+    timeoutNanoseconds: UInt64 = 1_000_000_000,
+    condition: @escaping () -> Bool
+  ) async throws {
+    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+
+    while DispatchTime.now().uptimeNanoseconds < deadline {
+      if condition() {
+        return
+      }
+
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    XCTFail("Timed out waiting for \(description)")
+  }
+}

@@ -28,6 +28,7 @@ public final class LineSocketServerTransport<
   private let socketPath: String
   private let serverLabel: String
   private let logger: ProcessLogger
+  private let onSubscriberRemoved: ((Int32) -> Void)?
 
   private let stateLock = NSLock()
   private let acceptQueue: DispatchQueue
@@ -41,11 +42,13 @@ public final class LineSocketServerTransport<
   public init(
     socketPath: String,
     serverLabel: String,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
     self.serverLabel = serverLabel
     self.logger = logger
+    self.onSubscriberRemoved = onSubscriberRemoved
 
     acceptQueue = DispatchQueue(
       label: "\(serverLabel).socket.accept",
@@ -226,18 +229,15 @@ public final class LineSocketServerTransport<
   /// Removes one subscriber and closes its socket.
   @discardableResult
   public func removeSubscriber(fd: Int32) -> Bool {
-    stateLock.lock()
-    let existed = subscribers.removeValue(forKey: fd) != nil
-    stateLock.unlock()
-
-    shutdown(fd, SHUT_RDWR)
-    close(fd)
+    let existed = removeSubscriberRecord(fd: fd)
+    closeClientSocket(fd)
 
     if existed {
       logger.debug(
         "\(serverLabel) subscriber removed",
         .field("fd", "\(fd)"),
       )
+      onSubscriberRemoved?(fd)
     }
 
     return existed
@@ -311,7 +311,7 @@ public final class LineSocketServerTransport<
 
           switch disposition {
           case .close:
-            close(clientFD)
+            closeClientConnection(clientFD)
             return
 
           case .keepOpen:
@@ -322,7 +322,7 @@ public final class LineSocketServerTransport<
             "\(serverLabel) request decode failed",
             .field("error", "\(error)"),
           )
-          close(clientFD)
+          closeClientConnection(clientFD)
           return
         }
       }
@@ -338,7 +338,7 @@ public final class LineSocketServerTransport<
       }
 
       if count == 0 {
-        close(clientFD)
+        closeClientConnection(clientFD)
         return
       }
 
@@ -351,8 +351,36 @@ public final class LineSocketServerTransport<
         .field("fd", "\(clientFD)"),
         .field("errno", "\(errno)"),
       )
-      close(clientFD)
+      closeClientConnection(clientFD)
       return
+    }
+  }
+
+  /// Removes one subscriber record without touching the socket.
+  private func removeSubscriberRecord(fd: Int32) -> Bool {
+    stateLock.lock()
+    let existed = subscribers.removeValue(forKey: fd) != nil
+    stateLock.unlock()
+    return existed
+  }
+
+  /// Closes one client socket.
+  private func closeClientSocket(_ clientFD: Int32) {
+    shutdown(clientFD, SHUT_RDWR)
+    close(clientFD)
+  }
+
+  /// Closes one client socket and removes any active subscriber entry.
+  private func closeClientConnection(_ clientFD: Int32) {
+    let removedSubscriber = removeSubscriberRecord(fd: clientFD)
+    closeClientSocket(clientFD)
+
+    if removedSubscriber {
+      logger.debug(
+        "\(serverLabel) subscriber removed",
+        .field("fd", "\(clientFD)"),
+      )
+      onSubscriberRemoved?(clientFD)
     }
   }
 

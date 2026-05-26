@@ -112,7 +112,6 @@ final class SocketServer {
     for subscriber in transport.subscribersSnapshot() {
       if !transport.send(message, to: subscriber.fd) {
         _ = transport.removeSubscriber(fd: subscriber.fd)
-        MetricsCoordinator.shared.removeStreamingSubscriber(fd: subscriber.fd)
       }
     }
   }
@@ -134,7 +133,6 @@ final class SocketServer {
       )
 
       guard sent else {
-        MetricsCoordinator.shared.removeStreamingSubscriber(fd: clientFD)
         return .close
       }
 
@@ -163,7 +161,10 @@ final class SocketServer {
     Transport(
       socketPath: socketPath,
       serverLabel: "easybar",
-      logger: logger
+      logger: logger,
+      onSubscriberRemoved: { fd in
+        MetricsCoordinator.shared.removeStreamingSubscriber(fd: fd)
+      }
     )
   }
 }
