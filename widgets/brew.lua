@@ -66,6 +66,7 @@ local state = {
 	casks = {},
 	error = nil,
 	status = "Checking outdated packages…",
+	last_attempted_at = nil,
 	last_checked = nil,
 	phase = "checking",
 }
@@ -80,22 +81,32 @@ local function now_label()
 	return os.date("%H:%M")
 end
 
+--- Returns the current Unix timestamp.
+local function now_timestamp()
+	return os.time()
+end
+
 --- Returns a trimmed string value.
 local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
---- Returns the next interval boundary after the current moment.
-local function next_interval_boundary()
-	local now = os.time()
-	local interval = CHECK_INTERVAL_SECONDS
-	local next_step = math.floor(now / interval) + 1
-	return next_step * interval
+--- Returns whether the widget should run another brew check now.
+local function check_due()
+	if state.last_attempted_at == nil then
+		return true
+	end
+
+	return (now_timestamp() - state.last_attempted_at) >= CHECK_INTERVAL_SECONDS
 end
 
---- Returns the next scheduled check time as HH:MM.
+--- Returns the next scheduled check time as HH:MM or `now` when overdue.
 local function next_check_label()
-	return os.date("%H:%M", next_interval_boundary())
+	if check_due() then
+		return "now"
+	end
+
+	return os.date("%H:%M", state.last_attempted_at + CHECK_INTERVAL_SECONDS)
 end
 
 --- Truncates a value to a maximum visible length.
@@ -478,6 +489,7 @@ local function run_brew_async(status_label, phase, command, on_success)
 	running = true
 	state.status = status_label
 	state.error = nil
+	state.last_attempted_at = now_timestamp()
 	state.phase = phase or "checking"
 
 	log_debug(
@@ -538,6 +550,15 @@ local function check_outdated(status_label)
 		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
 		apply_outdated_json
 	)
+end
+
+--- Runs one outdated check only when the widget is due.
+local function refresh_if_due(status_label)
+	if running or not check_due() then
+		return
+	end
+
+	check_outdated(status_label or "Checking outdated packages…")
 end
 
 --- Updates Homebrew metadata, then checks outdated packages.
@@ -611,9 +632,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 		string = "",
 	},
 	on_interval = function()
-		if not running then
-			check_outdated("Checking outdated packages…")
-		end
+		refresh_if_due("Checking outdated packages…")
 	end,
 })
 
@@ -692,6 +711,14 @@ upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 		log_debug("upgrade click")
 		upgrade_now()
 	end
+end)
+
+brew_widget:subscribe({
+	easybar.events.system_woke,
+	easybar.events.session_active,
+}, function(event)
+	log_debug("lifecycle event", tostring(event and event.name), "due=" .. tostring(check_due()))
+	refresh_if_due("Checking outdated packages…")
 end)
 
 brew_widget:subscribe(easybar.events.forced, function()

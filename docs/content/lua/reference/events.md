@@ -17,6 +17,8 @@ In normal widget code, prefer `easybar.events.*` tokens over comparing raw strin
 | `"interval"` | Internal timer callback name used when `interval` and `on_interval` are configured on a node. |
 | `"forced"` | Fired when EasyBar or `easybar` triggers a manual refresh. |
 | `"system_woke"` | Fired after the system wakes from sleep. |
+| `"session_active"` | Fired when the macOS user session becomes active. |
+| `"session_inactive"` | Fired when the macOS user session resigns active status. |
 | `"sleep"` | Fired before the system goes to sleep. |
 | `"space_change"` | Fired when the active macOS space changes. |
 | `"app_switch"` | Fired when the frontmost app changes. |
@@ -110,6 +112,8 @@ Use these tokens when subscribing widgets instead of hard-coding event-name stri
 | -------- | ---- | ----------- |
 | `forced` _(optional)_ | `EasyBarEventToken` | Fired when EasyBar or `easybar` triggers a manual refresh. |
 | `system_woke` _(optional)_ | `EasyBarEventToken` | Fired after the system wakes from sleep. |
+| `session_active` _(optional)_ | `EasyBarEventToken` | Fired when the macOS user session becomes active. |
+| `session_inactive` _(optional)_ | `EasyBarEventToken` | Fired when the macOS user session resigns active status. |
 | `sleep` _(optional)_ | `EasyBarEventToken` | Fired before the system goes to sleep. |
 | `space_change` _(optional)_ | `EasyBarEventToken` | Fired when the active macOS space changes. |
 | `app_switch` _(optional)_ | `EasyBarEventToken` | Fired when the frontmost app changes. |

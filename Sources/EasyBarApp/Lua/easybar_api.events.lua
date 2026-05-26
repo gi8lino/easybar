@@ -10,6 +10,10 @@
 ---| '"forced"'
 ---Fired after the system wakes from sleep.
 ---| '"system_woke"'
+---Fired when the macOS user session becomes active.
+---| '"session_active"'
+---Fired when the macOS user session resigns active status.
+---| '"session_inactive"'
 ---Fired before the system goes to sleep.
 ---| '"sleep"'
 ---Fired when the active macOS space changes.
@@ -137,6 +141,8 @@
 ---@class EasyBarEvents
 ---@field forced? EasyBarEventToken Fired when EasyBar or `easybar` triggers a manual refresh.
 ---@field system_woke? EasyBarEventToken Fired after the system wakes from sleep.
+---@field session_active? EasyBarEventToken Fired when the macOS user session becomes active.
+---@field session_inactive? EasyBarEventToken Fired when the macOS user session resigns active status.
 ---@field sleep? EasyBarEventToken Fired before the system goes to sleep.
 ---@field space_change? EasyBarEventToken Fired when the active macOS space changes.
 ---@field app_switch? EasyBarEventToken Fired when the frontmost app changes.

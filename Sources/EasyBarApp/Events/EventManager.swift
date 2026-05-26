@@ -41,6 +41,10 @@ final class EventManager {
   private enum ManagedSource: Hashable {
     /// System wake notifications.
     case systemWake
+    /// Session active notifications.
+    case sessionActive
+    /// Session inactive notifications.
+    case sessionInactive
     /// System sleep notifications.
     case sleep
     /// Active space change notifications.
@@ -184,6 +188,10 @@ final class EventManager {
       switch source {
       case .systemWake:
         SystemEvents.shared.subscribeSystemWake()
+      case .sessionActive:
+        SystemEvents.shared.subscribeSessionActive()
+      case .sessionInactive:
+        SystemEvents.shared.subscribeSessionInactive()
       case .sleep:
         SystemEvents.shared.subscribeSleep()
       case .spaceChange:
@@ -210,6 +218,10 @@ final class EventManager {
       switch source {
       case .systemWake:
         SystemEvents.shared.unsubscribeSystemWake()
+      case .sessionActive:
+        SystemEvents.shared.unsubscribeSessionActive()
+      case .sessionInactive:
+        SystemEvents.shared.unsubscribeSessionInactive()
       case .sleep:
         SystemEvents.shared.unsubscribeSleep()
       case .spaceChange:
@@ -244,6 +256,14 @@ final class EventManager {
 
     if subscriptions.contains(AppEvent.systemWoke.rawValue) {
       sources.insert(.systemWake)
+    }
+
+    if subscriptions.contains(AppEvent.sessionActive.rawValue) {
+      sources.insert(.sessionActive)
+    }
+
+    if subscriptions.contains(AppEvent.sessionInactive.rawValue) {
+      sources.insert(.sessionInactive)
     }
 
     if subscriptions.contains(AppEvent.sleep.rawValue) {

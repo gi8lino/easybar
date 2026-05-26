@@ -8,6 +8,8 @@ local M = {}
 ---- App events that may be requested from the Swift driver.
 local DRIVER_EVENTS = {
 	system_woke = true,
+	session_active = true,
+	session_inactive = true,
 	sleep = true,
 	space_change = true,
 	app_switch = true,
@@ -53,6 +55,8 @@ end
 M.tokens = {
 	forced = make_event_token("forced"),
 	system_woke = make_event_token("system_woke"),
+	session_active = make_event_token("session_active"),
+	session_inactive = make_event_token("session_inactive"),
 	sleep = make_event_token("sleep"),
 	space_change = make_event_token("space_change"),
 	app_switch = make_event_token("app_switch"),

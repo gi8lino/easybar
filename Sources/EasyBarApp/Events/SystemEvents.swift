@@ -35,6 +35,10 @@ final class SystemEvents {
   private enum ObserverKind: Hashable {
     /// System wake observer.
     case systemWake
+    /// Session became active observer.
+    case sessionActive
+    /// Session became inactive observer.
+    case sessionInactive
     /// System sleep observer.
     case sleep
     /// Active space observer.
@@ -69,6 +73,60 @@ final class SystemEvents {
   /// Stops observation for system wake notifications.
   func unsubscribeSystemWake() {
     removeObserver(.systemWake)
+  }
+
+  /// Starts observation for session active notifications.
+  func subscribeSessionActive() {
+    guard observers[.sessionActive] == nil else { return }
+
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.sessionDidBecomeActiveNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.logger.debug("received workspace sessionDidBecomeActive notification")
+
+      Task {
+        await EventHub.shared.emit(.sessionActive)
+      }
+    }
+
+    observers[.sessionActive] = observer
+    logger.debug("subscribed session_active")
+  }
+
+  /// Stops observation for session active notifications.
+  func unsubscribeSessionActive() {
+    removeObserver(.sessionActive)
+  }
+
+  /// Starts observation for session inactive notifications.
+  func subscribeSessionInactive() {
+    guard observers[.sessionInactive] == nil else { return }
+
+    let observer = NSWorkspace.shared.notificationCenter.addObserver(
+      forName: NSWorkspace.sessionDidResignActiveNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.logger.debug("received workspace sessionDidResignActive notification")
+
+      Task {
+        await EventHub.shared.emit(.sessionInactive)
+      }
+    }
+
+    observers[.sessionInactive] = observer
+    logger.debug("subscribed session_inactive")
+  }
+
+  /// Stops observation for session inactive notifications.
+  func unsubscribeSessionInactive() {
+    removeObserver(.sessionInactive)
   }
 
   /// Starts observation for system sleep notifications.
@@ -196,6 +254,8 @@ final class SystemEvents {
     pendingWakeWorkItem?.cancel()
     pendingWakeWorkItem = nil
     unsubscribeSystemWake()
+    unsubscribeSessionActive()
+    unsubscribeSessionInactive()
     unsubscribeSleep()
     unsubscribeSpaceChange()
     unsubscribeAppSwitch()

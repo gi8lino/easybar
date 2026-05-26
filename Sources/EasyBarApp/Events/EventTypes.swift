@@ -5,6 +5,8 @@ enum AppEvent: String, CaseIterable, Sendable {
   case manualRefresh = "manual_refresh"
 
   case systemWoke = "system_woke"
+  case sessionActive = "session_active"
+  case sessionInactive = "session_inactive"
   case sleep = "sleep"
   case spaceChange = "space_change"
   case appSwitch = "app_switch"

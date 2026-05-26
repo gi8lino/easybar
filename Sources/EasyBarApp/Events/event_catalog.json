@@ -34,6 +34,20 @@
       "doc": "Fired after the system wakes from sleep."
     },
     {
+      "swiftCase": "sessionActive",
+      "luaField": "session_active",
+      "runtimeName": "session_active",
+      "driver": true,
+      "doc": "Fired when the macOS user session becomes active."
+    },
+    {
+      "swiftCase": "sessionInactive",
+      "luaField": "session_inactive",
+      "runtimeName": "session_inactive",
+      "driver": true,
+      "doc": "Fired when the macOS user session resigns active status."
+    },
+    {
       "swiftCase": "sleep",
       "luaField": "sleep",
       "runtimeName": "sleep",
