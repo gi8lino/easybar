@@ -59,6 +59,7 @@ local registry
 local render_dirty = false
 local last_subscription_payload = nil
 local next_command_sequence = 0
+local runtime_command_session = tostring({}):gsub("[^%w]", "_")
 
 --- Marks the current runtime state as needing one render flush.
 local function mark_render_dirty()
@@ -107,7 +108,7 @@ end
 --- Returns one unique command token.
 local function next_command_token()
 	next_command_sequence = next_command_sequence + 1
-	return tostring(next_command_sequence)
+	return runtime_command_session .. ":" .. tostring(next_command_sequence)
 end
 
 --- Sends one command request to the Swift host.

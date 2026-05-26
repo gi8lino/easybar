@@ -30,6 +30,7 @@ actor WidgetEngine {
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
   private var started = false
+  private var runtimeSessionID: UInt64 = 0
 
   /// Creates one widget engine.
   init(
@@ -64,6 +65,7 @@ actor WidgetEngine {
       return false
     }
 
+    runtimeSessionID &+= 1
     started = true
 
     logger.debug("widget engine start end")
@@ -261,27 +263,15 @@ actor WidgetEngine {
     }
 
     let commandRunner = commandRunner
-    let luaRuntime = luaRuntime
-    let logger = logger
-    let encoder = self.encoder
+    let runtimeSessionID = self.runtimeSessionID
 
-    Task {
+    Task { [weak self] in
       let result = await commandRunner.run(command: request.command)
-      let response = LuaCommandResponse(
+      await self?.sendAsyncCommandResponse(
         token: request.token,
-        output: result.output,
-        status: result.status
+        result: result,
+        runtimeSessionID: runtimeSessionID
       )
-
-      guard
-        let data = try? encoder.encode(response),
-        let encoded = String(data: data, encoding: .utf8)
-      else {
-        logger.error("failed to encode async lua command response", .field("token", request.token))
-        return
-      }
-
-      await luaRuntime.send(encoded)
     }
   }
 
@@ -302,5 +292,24 @@ actor WidgetEngine {
     }
 
     await luaRuntime.send(encoded)
+  }
+
+  /// Sends one async command response only when the originating runtime session is still active.
+  private func sendAsyncCommandResponse(
+    token: String,
+    result: LuaCommandResult,
+    runtimeSessionID: UInt64
+  ) async {
+    guard started, self.runtimeSessionID == runtimeSessionID else {
+      logger.info(
+        "dropping stale async lua command response",
+        .field("token", token),
+        .field("runtime_session_id", runtimeSessionID),
+        .field("current_runtime_session_id", self.runtimeSessionID)
+      )
+      return
+    }
+
+    await sendCommandResponse(token: token, result: result)
   }
 }

@@ -237,6 +237,121 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0 (0)")
   }
 
+  func testStaleCommandResponseFromPreviousRuntimeDoesNotSatisfyNewSyncCommand() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.stale-command-response.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "idle",
+    	label = "Idle",
+    })
+
+    easybar.subscribe("brew", { easybar.events.forced }, function(_)
+    	easybar.exec_async("printf 'old'", function(output)
+    		easybar.set("brew", {
+    			label = output,
+    		})
+    	end)
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("old.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let oldRecorder = RuntimeUpdateRecorder()
+    let oldRuntime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "old.lua",
+      recorder: oldRecorder,
+      decoder: decoder,
+      autoRespondToCommands: false
+    )
+    defer { oldRuntime.stop() }
+
+    try oldRuntime.sendHostEvent("{\"name\":\"forced\"}\n")
+
+    let oldRequest = try await nextCommandRequest(
+      from: oldRecorder,
+      matching: { !$0.isSynchronous && $0.command == "printf 'old'" }
+    )
+
+    oldRuntime.stop()
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "idle",
+    	label = "Idle",
+    })
+
+    easybar.subscribe("brew", { easybar.events.forced }, function(_)
+    	easybar.exec("printf 'fresh'", function(output)
+    		easybar.set("brew", {
+    			icon = "done",
+    			label = output,
+    		})
+    	end)
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("new.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let newRecorder = RuntimeUpdateRecorder()
+    let newRuntime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "new.lua",
+      recorder: newRecorder,
+      decoder: decoder,
+      autoRespondToCommands: false
+    )
+    defer { newRuntime.stop() }
+
+    try newRuntime.sendHostEvent("{\"name\":\"forced\"}\n")
+
+    let newRequest = try await nextCommandRequest(
+      from: newRecorder,
+      matching: { $0.isSynchronous && $0.command == "printf 'fresh'" }
+    )
+
+    try newRuntime.sendCommandResponse(
+      token: oldRequest.token,
+      output: "stale",
+      status: 0
+    )
+    try newRuntime.sendCommandResponse(
+      token: newRequest.token,
+      output: "fresh",
+      status: 0
+    )
+
+    let doneUpdate = try await nextTreeUpdate(
+      from: newRecorder,
+      matching: { [self] in rootNode(in: $0)?.icon == "done" }
+    )
+    XCTAssertEqual(rootNode(in: doneUpdate)?.text, "fresh")
+  }
+
   func testPublicWidgetApiExposesJsonHelper() async throws {
     let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
     try FileManager.default.createDirectory(
@@ -436,22 +551,31 @@ final class LuaRenderCoalescingTests: XCTestCase {
 }
 
 extension LuaRenderCoalescingTests {
+  fileprivate struct RuntimeCommandRequest: Equatable {
+    let token: String
+    let command: String
+    let isSynchronous: Bool
+  }
+
   fileprivate actor RuntimeHostBridge {
     private let recorder: RuntimeUpdateRecorder
     private let decoder: JSONDecoder
     private let stdinHandle: FileHandle
     private let asyncResponseDelayNanoseconds: UInt64
+    private let autoRespondToCommands: Bool
 
     init(
       recorder: RuntimeUpdateRecorder,
       decoder: JSONDecoder,
       stdinHandle: FileHandle,
-      asyncResponseDelayNanoseconds: UInt64
+      asyncResponseDelayNanoseconds: UInt64,
+      autoRespondToCommands: Bool = true
     ) {
       self.recorder = recorder
       self.decoder = decoder
       self.stdinHandle = stdinHandle
       self.asyncResponseDelayNanoseconds = asyncResponseDelayNanoseconds
+      self.autoRespondToCommands = autoRespondToCommands
     }
 
     func handleRuntimeLine(_ line: String) async throws {
@@ -459,6 +583,16 @@ extension LuaRenderCoalescingTests {
       await recorder.record(summary: describe(update))
 
       if let request = update.commandRequestPayload {
+        await recorder.append(
+          RuntimeCommandRequest(
+            token: request.token,
+            command: request.command,
+            isSynchronous: request.isSynchronous
+          )
+        )
+
+        guard autoRespondToCommands else { return }
+
         if !request.isSynchronous && asyncResponseDelayNanoseconds > 0 {
           try await Task.sleep(nanoseconds: asyncResponseDelayNanoseconds)
         }
@@ -502,10 +636,15 @@ extension LuaRenderCoalescingTests {
 
   fileprivate actor RuntimeUpdateRecorder {
     private var updates: [WidgetTreeUpdate] = []
+    private var commandRequests: [RuntimeCommandRequest] = []
     private var summaries: [String] = []
 
     func append(_ update: WidgetTreeUpdate) {
       updates.append(update)
+    }
+
+    func append(_ request: RuntimeCommandRequest) {
+      commandRequests.append(request)
     }
 
     func record(summary: String) {
@@ -526,6 +665,89 @@ extension LuaRenderCoalescingTests {
 
     func debugSummaries() -> [String] {
       summaries
+    }
+
+    func takeFirstCommandRequest(
+      matching predicate: @escaping (RuntimeCommandRequest) -> Bool
+    ) -> RuntimeCommandRequest? {
+      guard let index = commandRequests.firstIndex(where: predicate) else {
+        return nil
+      }
+
+      let request = commandRequests[index]
+      commandRequests.remove(at: index)
+      return request
+    }
+  }
+
+  fileprivate final class RuntimeProcess {
+    private let process = Process()
+    private let stdinPipe = Pipe()
+    private let stdoutPipe = Pipe()
+    private let stderrPipe = Pipe()
+    private let stdoutObserver: RuntimeLineObserver
+    private let stderrObserver: RuntimeLineObserver
+
+    init(
+      runtimePath: String,
+      widgetsDirectoryURL: URL,
+      widgetFile: String,
+      recorder: RuntimeUpdateRecorder,
+      decoder: JSONDecoder,
+      autoRespondToCommands: Bool
+    ) throws {
+      let hostBridge = RuntimeHostBridge(
+        recorder: recorder,
+        decoder: decoder,
+        stdinHandle: stdinPipe.fileHandleForWriting,
+        asyncResponseDelayNanoseconds: 0,
+        autoRespondToCommands: autoRespondToCommands
+      )
+
+      process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
+      process.arguments = [runtimePath, widgetsDirectoryURL.path, widgetFile]
+      process.standardInput = stdinPipe
+      process.standardOutput = stdoutPipe
+      process.standardError = stderrPipe
+      process.environment = ProcessInfo.processInfo.environment
+
+      stdoutObserver = RuntimeLineObserver { line in
+        do {
+          try await hostBridge.handleRuntimeLine(line)
+        } catch {
+          XCTFail("Failed handling runtime update: \(line) error=\(error)")
+        }
+      }
+      stdoutObserver.attach(to: stdoutPipe.fileHandleForReading)
+
+      stderrObserver = RuntimeLineObserver { _ in }
+      stderrObserver.attach(to: stderrPipe.fileHandleForReading)
+
+      try process.run()
+    }
+
+    func sendHostEvent(_ payload: String) throws {
+      try stdinPipe.fileHandleForWriting.write(contentsOf: Data(payload.utf8))
+    }
+
+    func sendCommandResponse(token: String, output: String, status: Int) throws {
+      let payload = """
+        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
+        \n
+        """
+      try sendHostEvent(payload)
+    }
+
+    func stop() {
+      stdoutObserver.invalidate()
+      stderrObserver.invalidate()
+
+      try? stdinPipe.fileHandleForWriting.close()
+
+      if process.isRunning {
+        process.terminate()
+        process.waitUntilExit()
+      }
     }
   }
 
@@ -639,6 +861,33 @@ extension LuaRenderCoalescingTests {
       userInfo: [
         NSLocalizedDescriptionKey:
           "Timed out waiting for matching widget tree update; seen updates: \(summaries)"
+      ]
+    )
+  }
+
+  fileprivate func nextCommandRequest(
+    from recorder: RuntimeUpdateRecorder,
+    matching predicate: @escaping (RuntimeCommandRequest) -> Bool,
+    timeoutNanoseconds: UInt64 = 2_000_000_000
+  ) async throws -> RuntimeCommandRequest {
+    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+
+    while DispatchTime.now().uptimeNanoseconds < deadline {
+      if let request = await recorder.takeFirstCommandRequest(matching: predicate) {
+        return request
+      }
+
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    let summaries = await recorder.debugSummaries().joined(separator: " | ")
+
+    throw NSError(
+      domain: "LuaRenderCoalescingTests",
+      code: 2,
+      userInfo: [
+        NSLocalizedDescriptionKey:
+          "Timed out waiting for matching command request; seen updates: \(summaries)"
       ]
     )
   }
