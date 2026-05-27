@@ -100,11 +100,7 @@ easybar --reload-config
 
 ## Theme file format
 
-A theme file has a top-level `name` and a `[colors]` table.
-
 ```toml
-name = "my-theme"
-
 [colors]
 background = "#111111"
 surface = "#1a1a1a"
