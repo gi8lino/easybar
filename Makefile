@@ -28,6 +28,7 @@ LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
 APP_ICON_SVG := packaging/easybar-icon.svg
 APP_ICON_FILE := $(APP_NAME)
 APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
+ICON_FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
 
 CALENDAR_AGENT_BUNDLE := $(DIST_DIR)/$(CALENDAR_AGENT_NAME).app
 CALENDAR_AGENT_CONTENTS := $(CALENDAR_AGENT_BUNDLE)/Contents
@@ -324,6 +325,10 @@ icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconu
 		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
 		exit 1; \
 	}
+	@test -f "$(ICON_FONT)" || { \
+		echo "Missing icon font: $(ICON_FONT)"; \
+		exit 1; \
+	}
 	@mkdir -p "$(APP_RESOURCES)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_RESOURCES)"
 	@set -e; \
 	for spec in \
@@ -339,8 +344,11 @@ icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconu
 		test -f "$$svg" || { echo "Missing icon SVG: $$svg"; exit 1; }; \
 		rm -rf "$$tmp_dir" "$$render_dir" "$$icns"; \
 		mkdir -p "$$tmp_dir" "$$render_dir"; \
-		"$(IMAGE_CONVERT)" "$$svg" \
+		"$(IMAGE_CONVERT)" \
 			-background none \
+			-font "$(ICON_FONT)" \
+			-density 1024 \
+			"$$svg" \
 			-resize 1024x1024 \
 			-gravity center \
 			-extent 1024x1024 \
@@ -702,21 +710,29 @@ favicon: ## Create favicons.
 		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
 		exit 1; \
 	}
+	@test -f "$(ICON_FONT)" || { \
+		echo "Missing icon font: $(ICON_FONT)"; \
+		exit 1; \
+	}
 	@mkdir -p $(ICON_DIR)
 	@for size in $(ICON_SIZES); do \
 		outfile=favicon-$$size.png; \
 		echo "create $$outfile"; \
-		"$(IMAGE_CONVERT)" $(SVG) \
-			-fuzz 5% -transparent white \
+		"$(IMAGE_CONVERT)" \
 			-background none \
+			-font "$(ICON_FONT)" \
+			"$(SVG)" \
+			-fuzz 5% -transparent white \
 			-resize $$size \
 			$(ICON_DIR)/$$outfile \
 			>/dev/null 2>&1; \
 	done
 	@echo "create apple-touch-icon.png"
-	@"$(IMAGE_CONVERT)" $(SVG) \
-		-fuzz 5% -transparent white \
+	@"$(IMAGE_CONVERT)" \
 		-background none \
+		-font "$(ICON_FONT)" \
+		"$(SVG)" \
+		-fuzz 5% -transparent white \
 		-resize 180x180 \
 		$(ICON_DIR)/apple-touch-icon.png \
 		>/dev/null 2>&1
