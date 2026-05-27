@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import EasyBarShared
 import Foundation
 
@@ -380,8 +381,10 @@ final class AppController {
     do {
       let bundledData = try Data(contentsOf: bundledStub)
       let existingData = try? Data(contentsOf: installedStub)
+      let bundledHash = sha256Hex(for: bundledData)
+      let existingHash = existingData.map(sha256Hex)
 
-      guard bundledData != existingData else {
+      guard bundledHash != existingHash else {
         return
       }
 
@@ -393,6 +396,8 @@ final class AppController {
 
       logger.info(
         "installed widget editor stub",
+        .field("bundled_hash", bundledHash),
+        .field("previous_hash", existingHash ?? "<missing>"),
         .field("path", installedStub.path)
       )
     } catch {
@@ -401,6 +406,11 @@ final class AppController {
         .field("error", error)
       )
     }
+  }
+
+  /// Returns the SHA-256 digest for one Lua editor stub payload.
+  private func sha256Hex(for data: Data) -> String {
+    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
   }
 
   /// Starts one shared shutdown task when the app is still running.
