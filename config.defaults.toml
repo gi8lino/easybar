@@ -11,8 +11,8 @@ develop = false # Enables developer-only features like the config editor.
 PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" # Environment overrides passed into the Lua runtime and widget shell commands.
 
 [theme]
-name = "mocha"
-themes_dir = "~/.config/easybar/themes"
+name = "default" # Name of the default theme. Must match a theme file name without the .toml extension.
+themes_dir = "~/.config/easybar/themes" # Directory that contains your custom theme files.
 
 [logging]
 enabled = false # Mirrors stdout and stderr into per-process log files when true.
@@ -35,17 +35,17 @@ padding_x = 10 # Horizontal left and right padding inside the bar.
 extend_behind_notch = true # Makes the bar span the full top edge, including the area behind the notch.
 
 [bar.colors]
-background = "#111111" # Background color of the bar.
-border = "#00000000" # Bottom border color of the bar. Use a visible color to opt in.
+background = "theme.background" # Background color of the bar.
+border = "theme.transparent" # Bottom border color of the bar. Use a visible color to opt in.
 
 [builtins.spaces]
 enabled = false # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
 icon = "" # Unused fallback icon for the spaces root widget.
-text_color = "" # Fallback text color for the spaces root widget.
-background_color = "#00000000" # Background color behind the whole spaces block.
-border_color = "#00000000" # Border color around the whole spaces block.
+text_color = "theme.text_secondary" # Fallback text color for the spaces root widget.
+background_color = "theme.transparent" # Background color behind the whole spaces block.
+border_color = "theme.transparent" # Border color around the whole spaces block.
 border_width = 0 # Border width around the whole spaces block.
 corner_radius = 0 # Corner radius around the whole spaces block.
 margin_x = 0 # Horizontal outer margin around the spaces root container.
@@ -79,8 +79,8 @@ click_to_focus_app = true # Activates an app when its icon is clicked.
 [builtins.spaces.text]
 size = 12 # Font size of the space label.
 weight = "semibold" # Font weight of the space label.
-focused_color = "#d0d0d0" # Text color of the focused space label.
-inactive_color = "#d0d0d0" # Text color of inactive space labels.
+focused_color = "theme.text" # Text color of the focused space label.
+inactive_color = "theme.text_secondary" # Text color of inactive space labels.
 
 [builtins.spaces.icons]
 size = 20 # Default app icon size in a space.
@@ -91,11 +91,11 @@ border_width = 1 # Border width of normal app icons.
 focused_app_border_width = 1 # Border width of the focused app icon.
 
 [builtins.spaces.colors]
-active_background = "#2b2b2b" # Background color of the focused space pill.
-inactive_background = "#1a1a1a" # Background color of inactive space pills.
-active_border = "#444444" # Border color of the focused space pill.
-inactive_border = "#00000000" # Border color of inactive space pills.
-focused_app_border = "#00000000" # Border color of the focused app icon.
+active_background = "theme.surface_elevated" # Background color of the focused space pill.
+inactive_background = "theme.surface" # Background color of inactive space pills.
+active_border = "theme.border_strong" # Border color of the focused space pill.
+inactive_border = "theme.transparent" # Border color of inactive space pills.
+focused_app_border = "theme.transparent" # Border color of the focused app icon.
 
 [builtins.front_app]
 enabled = false # Shows or hides the front-app widget.
@@ -104,9 +104,9 @@ order = 20 # Sort order among widgets in the same position.
 
 [builtins.front_app.style]
 icon = "􀈔" # Fallback icon when no app icon is available.
-text_color = "#ffffff" # Text color of the widget.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget.
+background_color = "theme.surface" # Background color of the widget.
+border_color = "theme.border" # Border color of the widget.
 border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -130,9 +130,9 @@ order = 30 # Sort order among widgets in the same position.
 
 [builtins.aerospace_mode.style]
 icon = "" # Leading icon of the widget. The mode-specific icon comes from content settings.
-text_color = "#ffffff" # Text color of the widget.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget.
+background_color = "theme.surface" # Background color of the widget.
+border_color = "theme.border" # Border color of the widget.
 border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -172,22 +172,22 @@ order = 10 # Sort order among widgets in the same position.
 #order = 40 # Sort order among widgets in the same position.
 #
 #[builtins.groups.system.style]
-#background_color = "#1a1a1a" # Background color of the native group.
-#border_color = "#333333" # Border color of the native group.
+#background_color = "theme.surface" # Background color of the native group.
+#border_color = "theme.border" # Border color of the native group.
 #border_width = 1 # Border width of the native group.
 #corner_radius = 8 # Corner radius of the native group.
 #margin_x = 0 # Horizontal outer margin around the native group.
 #margin_y = 0 # Vertical outer margin around the native group.
-#padding_x = 8 # Horizontal inner padding of the native group.
-#padding_y = 2 # Vertical inner padding of the native group.
+#padding_x = 8 # Horizontal inner padding around the native group.
+#padding_y = 2 # Vertical inner padding around the native group.
 #spacing = 6 # Gap between native child widgets in the group.
 #opacity = 1 # Overall opacity of the native group.
 
 [builtins.cpu.style]
 icon = "󰍛" # Leading icon of the widget.
-text_color = "" # Text color of the widget when no content color is set.
-background_color = "" # Background color of the widget.
-border_color = "" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget when no content color is set.
+background_color = "theme.transparent" # Background color of the widget.
+border_color = "theme.transparent" # Border color of the widget.
 border_width = 0 # Border width of the widget.
 corner_radius = 0 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -201,7 +201,7 @@ opacity = 1 # Overall opacity of the widget.
 label = "CPU" # Text label shown next to the sparkline.
 history_size = 10 # Number of samples kept in the sparkline history.
 line_width = 1.8 # Stroke width of the sparkline line.
-color = "#a6da95" # Color of the sparkline and label.
+color = "theme.success_secondary" # Color of the sparkline and label.
 sample_interval_seconds = 5 # Polling interval in seconds.
 
 [builtins.battery]
@@ -212,9 +212,9 @@ order = 20 # Sort order among widgets in the same position.
 
 [builtins.battery.style]
 icon = "🔋" # Fallback or default battery icon.
-text_color = "#cdd6f4" # Used when color_mode is fixed or data is unavailable.
-background_color = "#00000000" # Background color of the widget.
-border_color = "#00000000" # Border color of the widget.
+text_color = "theme.text" # Used when color_mode is fixed or data is unavailable.
+background_color = "theme.transparent" # Background color of the widget.
+border_color = "theme.transparent" # Border color of the widget.
 border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -228,25 +228,25 @@ opacity = 1.0 # Overall opacity of the widget.
 unavailable_text = "n/a" # Fallback text shown when battery data is unavailable.
 icon_size = 18 # Font size of the battery icon.
 color_mode = "fixed" # Battery color mode: dynamic | fixed.
-fixed_color = "#cdd6f4" # Color used only when color_mode = "fixed".
+fixed_color = "theme.text" # Color used only when color_mode = "fixed".
 display_mode = "expand" # Display mode: none | tooltip | expand | always.
 
 [builtins.battery.colors]
-high = "#a6e3a1" # Color used for 70-100%.
-medium = "#f9e2af" # Color used for 50-69%.
-low = "#fab387" # Color used for 30-49%.
-critical = "#f38ba8" # Color used for 0-29%.
-frame = "#6c7086" # Secondary palette color for the battery frame.
-overlay_outline = "#000000F0" # Outline color drawn behind battery overlay symbols.
-charging_overlay = "#FFFFFFFF" # Color of the charging bolt overlay.
-external_power_overlay = "#FFFFFFFF" # Color of the plugged-in holding overlay.
-on_hold_overlay = "#FFFFFFFF" # Color of the on-hold pause overlay.
-unavailable = "#6c7086" # Color used when battery data is unavailable.
+high = "theme.success" # Color used for 70-100%.
+medium = "theme.warning" # Color used for 50-69%.
+low = "theme.orange" # Color used for 30-49%.
+critical = "theme.error" # Color used for 0-29%.
+frame = "theme.muted" # Secondary palette color for the battery frame.
+overlay_outline = "theme.overlay_outline" # Outline color drawn behind battery overlay symbols.
+charging_overlay = "theme.overlay_text" # Color of the charging bolt overlay.
+external_power_overlay = "theme.overlay_text" # Color of the plugged-in holding overlay.
+on_hold_overlay = "theme.overlay_text" # Color of the on-hold pause overlay.
+unavailable = "theme.muted" # Color used when battery data is unavailable.
 
 [builtins.battery.tooltip]
-text_color = "#cdd6f4" # Text color used in the tooltip.
-background_color = "#111111" # Background color of the tooltip.
-border_color = "#444444" # Border color of the tooltip.
+text_color = "theme.text" # Text color used in the tooltip.
+background_color = "theme.background" # Background color of the tooltip.
+border_color = "theme.border_strong" # Border color of the tooltip.
 border_width = 1 # Border width of the tooltip.
 corner_radius = 8 # Corner radius of the tooltip.
 padding_x = 8 # Horizontal inner padding of the tooltip.
@@ -262,9 +262,9 @@ order = 30 # Sort order among widgets in the same position.
 
 [builtins.wifi.style]
 icon = "" # Unused fallback icon for the Wi-Fi root widget.
-text_color = "#ffffff" # Default text color for the Wi-Fi widget root.
-background_color = "#00000000" # Background color of the widget.
-border_color = "#00000000" # Border color of the widget.
+text_color = "theme.text" # Default text color for the Wi-Fi widget root.
+background_color = "theme.transparent" # Background color of the widget.
+border_color = "theme.transparent" # Border color of the widget.
 border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -278,16 +278,16 @@ opacity = 1 # Overall opacity of the widget.
 display_mode = "tooltip" # Display mode: none | tooltip | expand | always.
 disconnected_text = "disconnected" # Inline or tooltip text shown when Wi-Fi is not connected.
 denied_text = "denied" # Inline or tooltip text shown when Wi-Fi permission is unavailable.
-active_color = "#cdd6f4" # Color of active signal bars.
-inactive_color = "#6c7086" # Color of inactive signal bars.
+active_color = "theme.text" # Color of active signal bars.
+inactive_color = "theme.muted" # Color of inactive signal bars.
 
 [builtins.wifi.expand]
-text_color = "#ffffff" # Text color of the inline label used in expand or always mode.
+text_color = "theme.text" # Text color of the inline label used in expand or always mode.
 
 [builtins.wifi.tooltip]
-text_color = "#cdd6f4" # Text color used in the tooltip.
-background_color = "#111111" # Background color of the tooltip.
-border_color = "#444444" # Border color of the tooltip.
+text_color = "theme.text" # Text color used in the tooltip.
+background_color = "theme.background" # Background color of the tooltip.
+border_color = "theme.border_strong" # Border color of the tooltip.
 border_width = 1 # Border width of the tooltip.
 corner_radius = 8 # Corner radius of the tooltip.
 padding_x = 8 # Horizontal inner padding of the tooltip.
@@ -302,9 +302,9 @@ order = 20 # Sort order among widgets in the same position.
 
 [builtins.volume.style]
 icon = "" # Leading icon of the compact widget.
-text_color = "#cdd6f4" # Text color of the widget.
-background_color = "#00000000" # Background color of the widget.
-border_color = "#00000000" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget.
+background_color = "theme.transparent" # Background color of the widget.
+border_color = "theme.transparent" # Border color of the widget.
 border_width = 0 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -335,9 +335,9 @@ popup_mode = "month" # Popup mode: none | upcoming | month.
 
 [builtins.calendar.style]
 icon = "" # Optional leading icon for the calendar anchor.
-text_color = "#ffffff" # Default text color of the anchor.
-background_color = "#1a1a1a" # Background color of the anchor widget.
-border_color = "#333333" # Border color of the anchor widget.
+text_color = "theme.text" # Default text color of the anchor.
+background_color = "theme.surface" # Background color of the anchor widget.
+border_color = "theme.border" # Border color of the anchor widget.
 border_width = 1 # Border width of the anchor widget.
 corner_radius = 8 # Corner radius of the anchor widget.
 margin_x = 0 # Horizontal outer margin around the anchor widget.
@@ -353,8 +353,8 @@ item_format = "EEE, MMM d" # Format used when anchor layout is item.
 top_format = "HH:mm" # Top line format used in stack or inline layouts.
 bottom_format = "d. MMM" # Bottom or second line format used in stack or inline layouts.
 line_spacing = 0 # Vertical spacing between top and bottom lines in stack layout.
-top_text_color = "#ffffff" # Text color of the top line.
-bottom_text_color = "#d0d0d0" # Text color of the bottom line.
+top_text_color = "theme.text" # Text color of the top line.
+bottom_text_color = "theme.text_secondary" # Text color of the bottom line.
 
 [builtins.calendar.composer]
 create_title = "New Appointment" # Panel title shown when creating an appointment.
@@ -382,13 +382,13 @@ default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes |
 default_travel_time = "none" # Default travel time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours.
 
 [builtins.calendar.composer.style]
-background_color = "#111111" # Background color of the appointment composer panel.
-border_color = "#444444" # Border and divider color of the appointment composer panel.
+background_color = "theme.background" # Background color of the appointment composer panel.
+border_color = "theme.border_strong" # Border and divider color of the appointment composer panel.
 border_width = 1 # Border width of the appointment composer panel.
 corner_radius = 10 # Corner radius of the appointment composer panel.
 padding_x = 14 # Horizontal inner padding of the appointment composer panel.
 padding_y = 14 # Vertical inner padding of the appointment composer panel.
-header_text_color = "#ffffff" # Header title color of the appointment composer panel.
+header_text_color = "theme.text" # Header title color of the appointment composer panel.
 
 [builtins.calendar.composer.alert_labels]
 none = "None" # Label shown for no alert.
@@ -417,8 +417,8 @@ days = 3 # Number of days of upcoming events shown in the popup.
 exclude_past_events = false # Hides already-finished or already-started items from today's section when true.
 
 [builtins.calendar.upcoming.popup]
-background_color = "#111111" # Background color of the upcoming popup.
-border_color = "#444444" # Border color of the upcoming popup.
+background_color = "theme.background" # Background color of the upcoming popup.
+border_color = "theme.border_strong" # Border color of the upcoming popup.
 border_width = 1 # Border width of the upcoming popup.
 corner_radius = 10 # Corner radius of the upcoming popup.
 padding_x = 10 # Horizontal inner padding of the upcoming popup.
@@ -429,10 +429,10 @@ spacing = 8 # Vertical spacing between popup sections.
 
 [builtins.calendar.appointments]
 item_indent = 8 # Left indent for appointment rows.
-event_text_color = "#d0d0d0" # Text color of appointment rows.
-empty_text_color = "#c0c0c0" # Text color of the appointments empty state.
-secondary_text_color = "#91d7e3" # Text color of secondary appointment details and section headings.
-travel_text_color = "#8a8a8a" # Muted text color used for travel-time and end-time rows.
+event_text_color = "theme.text_secondary" # Text color of appointment rows.
+empty_text_color = "theme.text_tertiary" # Text color of the appointments empty state.
+secondary_text_color = "theme.accent" # Text color of secondary appointment details and section headings.
+travel_text_color = "theme.muted_secondary" # Muted text color used for travel-time and end-time rows.
 empty_text = "No appointments" # Text shown when an appointment section has no events.
 show_calendar_name = false # Shows the source calendar name for appointments.
 show_all_day_label = true # Shows "All day" for all-day events except birthdays, which omit it.
@@ -442,16 +442,16 @@ show_location = true # Shows the event location line when present.
 show_travel_time = true # Shows the travel-time line when present.
 show_end_time = true # Shows the end-time line for timed appointments.
 travel_icon = "" # Leading icon shown for travel-time rows.
-travel_icon_color = "#8a8a8a" # Color of the travel-time icon.
+travel_icon_color = "theme.muted_secondary" # Color of the travel-time icon.
 show_alert_icon = false # Shows a small alert icon on timed appointments with at least one non-travel alert.
 alert_icon = "" # Optional icon shown when show_alert_icon is true and the event has an alert.
-alert_icon_color = "#8a8a8a" # Color of the alert icon.
+alert_icon_color = "theme.muted_secondary" # Color of the alert icon.
 
 [builtins.calendar.birthdays]
 show_birthdays = true # Includes birthday calendars in both month and upcoming appointment lists.
 birthdays_show_age = true # Shows parsed ages for birthday appointments when available.
 birthday_icon = "" # Leading icon shown for birthday appointments.
-birthday_icon_color = "" # Color of the birthday icon. When omitted, event_text_color is used.
+birthday_icon_color = "theme.accent_soft" # Color of the birthday icon. When omitted, event_text_color is used.
 
 [builtins.calendar.filters]
 included_calendar_names = [] # Optional allowlist of visible Calendar.app names. Empty means all calendars are eligible.
@@ -462,8 +462,8 @@ included_calendar_source_ids = [] # Optional advanced allowlist of exact calenda
 excluded_calendar_source_ids = [] # Optional advanced denylist of exact calendar source identifiers.
 
 [builtins.calendar.month.popup.style]
-background_color = "#111111" # Background color of the month popup.
-border_color = "#444444" # Border color of the month popup.
+background_color = "theme.background" # Background color of the month popup.
+border_color = "theme.border_strong" # Border color of the month popup.
 border_width = 1 # Border width of the month popup.
 corner_radius = 10 # Corner radius of the month popup.
 padding_x = 10 # Horizontal inner padding of the month popup.
@@ -475,21 +475,21 @@ margin_y = 8 # Vertical outer margin around the whole month popup.
 [builtins.calendar.month.popup.calendar]
 show_week_numbers = true # Shows week numbers in the calendar grid.
 show_event_indicators = true # Shows dots under days that contain events.
-header_text_color = "#ffffff" # Text color of the month header and appointments title.
-weekday_text_color = "#91d7e3" # Text color of the weekday labels.
+header_text_color = "theme.text" # Text color of the month header and appointments title.
+weekday_text_color = "theme.accent" # Text color of the weekday labels.
 first_weekday = 2 # First weekday used by the month grid. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting.
 weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
 # weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels in Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
-day_text_color = "#d0d0d0" # Text color of days in the current month.
-outside_month_text_color = "#6e738d" # Text color of leading and trailing days outside the current month.
+day_text_color = "theme.text_secondary" # Text color of days in the current month.
+outside_month_text_color = "theme.outside_month" # Text color of leading and trailing days outside the current month.
 today_cell_background_color = "" # Background color of today's day cell when it is not selected.
-today_cell_border_color = "#FF0000" # Border color of today's day cell when it is not selected.
+today_cell_border_color = "theme.danger" # Border color of today's day cell when it is not selected.
 today_cell_border_width = 1.4 # Border width of today's day cell when it is not selected.
-indicator_color = "#8bd5ca" # Default color of day event indicators when an event has no calendar color.
+indicator_color = "theme.accent_soft" # Default color of day event indicators when an event has no calendar color.
 
 [builtins.calendar.month.popup.selection]
-selected_text_color = "#0B1020" # Text color of selected day cells.
-selected_background_color = "#89B4FA" # Background color of selected day cells.
+selected_text_color = "theme.selection_text" # Text color of selected day cells.
+selected_background_color = "theme.selection_background" # Background color of selected day cells.
 selection_date_format = "yyyy-MM-dd" # Date header format used when a multi-day range is selected.
 selection_date_separator = " - " # Separator used between start and end dates when a date range is selected.
 allows_range_selection = true # Allows selecting a date range by dragging across days.
@@ -505,12 +505,12 @@ max_visible_appointments = 8 # Maximum number of visible appointments when scrol
 
 [builtins.calendar.month.popup.anchor]
 anchor_date_format = "EEE d MMM" # Anchor date format used when popup_mode = "month" and anchor layout = "item".
-anchor_text_color = "#ffffff" # Anchor text color used when popup_mode = "month".
+anchor_text_color = "theme.text" # Anchor text color used when popup_mode = "month".
 anchor_show_date_text = true # Shows the date text in the anchor when popup_mode = "month".
 
 [builtins.calendar.month.popup.today_button]
 title = "Today" # Title of the Today button.
-border_color = "#3F2F6B" # Border color of the Today button.
+border_color = "theme.today_button_border" # Border color of the Today button.
 border_width = 1.5 # Border width of the Today button.
 icon = "" # Optional leading icon of the Today button, for example 󰃭.
 
@@ -521,9 +521,9 @@ order = 40 # Sort order among widgets in the same position.
 
 [builtins.time.style]
 icon = "🕒" # Leading icon of the widget.
-text_color = "#ffffff" # Text color of the widget.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget.
+background_color = "theme.surface" # Background color of the widget.
+border_color = "theme.border" # Border color of the widget.
 border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
@@ -543,9 +543,9 @@ order = 50 # Sort order among widgets in the same position.
 
 [builtins.date.style]
 icon = "📅" # Leading icon of the widget.
-text_color = "#ffffff" # Text color of the widget.
-background_color = "#1a1a1a" # Background color of the widget.
-border_color = "#333333" # Border color of the widget.
+text_color = "theme.text" # Text color of the widget.
+background_color = "theme.surface" # Background color of the widget.
+border_color = "theme.border" # Border color of the widget.
 border_width = 1 # Border width of the widget.
 corner_radius = 8 # Corner radius of the widget background.
 margin_x = 0 # Horizontal outer margin around the widget.
