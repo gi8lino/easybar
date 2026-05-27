@@ -19,18 +19,6 @@ local function normalize_interval(value)
 	return math.max(1, math.floor(number))
 end
 
---- Returns the greatest common divisor for two positive integers.
-local function gcd(left, right)
-	left = math.abs(left)
-	right = math.abs(right)
-
-	while right ~= 0 do
-		left, right = right, left % right
-	end
-
-	return left
-end
-
 --- Returns one handler event table scoped to one subscribed item.
 local function make_handler_event(id, event)
 	local handler_event = helpers.deep_copy(event)
@@ -114,60 +102,16 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 		end
 	end
 
-	--- Returns the cadence needed to drive every registered interval callback.
-	local function required_interval_tick_interval()
-		local interval
-
-		for _, id in ipairs(state.item_order) do
-			local item = state.items[id]
-			local handler = state.interval_handlers[id]
-
-			if item ~= nil and type(handler) == "function" then
-				local value = normalize_interval(item.props.interval)
-
-				if value ~= nil then
-					interval = interval == nil and value or gcd(interval, value)
-				end
-			end
-		end
-
-		return interval
-	end
-
-	--- Emits due interval callbacks for widgets with `interval`.
-	local function dispatch_interval_if_due()
-		local now = os.time()
-
-		for _, id in ipairs(state.item_order) do
-			local item = state.items[id]
-
-			if item ~= nil and type(state.interval_handlers[id]) == "function" then
-				local interval = normalize_interval(item.props.interval) or 0
-
-				if interval > 0 then
-					local next_due = state.interval_next_due[id] or 0
-
-					if now >= next_due then
-						state.interval_next_due[id] = now + interval
-						dispatch_interval_handler_for(id)
-					end
-				end
-			end
-		end
-	end
-
 	--- Registers one widget-local interval callback.
 	function subscriptions.set_interval_handler(id, handler)
 		ensure_item_exists(id)
 		assert(type(handler) == "function", "on_interval must be a function")
 		state.interval_handlers[id] = handler
-		state.interval_next_due[id] = 0
 	end
 
 	--- Resets one widget-local interval schedule after its cadence changes.
 	function subscriptions.reset_interval_schedule(id)
 		ensure_item_exists(id)
-		state.interval_next_due[id] = 0
 	end
 
 	--- Subscribes one item to one or more events.
@@ -194,7 +138,10 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 	--- Handles one incoming normalized EasyBar event.
 	function subscriptions.handle_event(event)
 		if event.name == "interval_tick" then
-			dispatch_interval_if_due()
+			local target = event.widget_id or event.target_widget_id
+			if target ~= nil then
+				dispatch_interval_handler_for(target)
+			end
 		end
 
 		dispatch_targeted(event)
@@ -216,9 +163,17 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 			end
 		end
 
-		local interval = required_interval_tick_interval()
-		if interval ~= nil then
-			events[INTERVAL_TICK_PREFIX .. tostring(interval)] = true
+		for _, id in ipairs(state.item_order) do
+			local item = state.items[id]
+			local handler = state.interval_handlers[id]
+
+			if item ~= nil and type(handler) == "function" then
+				local interval = normalize_interval(item.props.interval)
+
+				if interval ~= nil then
+					events[INTERVAL_TICK_PREFIX .. tostring(id) .. ":" .. tostring(interval)] = true
+				end
+			end
 		end
 
 		local result = {}

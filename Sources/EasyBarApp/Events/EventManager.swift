@@ -36,7 +36,6 @@ final class EventManager {
 
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
-
   /// Native event source managed by subscription demand.
   private enum ManagedSource: Hashable {
     /// System wake notifications.
@@ -67,8 +66,8 @@ final class EventManager {
   struct SubscriptionPlan: Equatable {
     /// Required source names.
     let sources: Set<String>
-    /// Requested interval timer cadence.
-    let interval: TimeInterval?
+    /// Requested widget-scoped interval schedules.
+    let intervalSchedules: Set<WidgetIntervalSchedule>
   }
 
   /// Logger used for event manager diagnostics.
@@ -82,8 +81,8 @@ final class EventManager {
   private var activeRequestedEvents = Set<String>()
   /// Currently active native event sources.
   private var activeSources = Set<ManagedSource>()
-  /// Currently active interval timer cadence.
-  private var activeInterval: TimeInterval?
+  /// Currently active widget-scoped interval schedules.
+  private var activeIntervalSchedules = Set<WidgetIntervalSchedule>()
 
   /// Creates one event manager.
   private init(logger: ProcessLogger) {
@@ -124,7 +123,7 @@ final class EventManager {
     stopActiveSources()
     activeRequestedEvents.removeAll()
     activeSources.removeAll()
-    activeInterval = nil
+    activeIntervalSchedules.removeAll()
 
     logger.debug("event manager stopAll end")
   }
@@ -143,8 +142,8 @@ final class EventManager {
     let desiredSources = Self.requiredSources(for: mergedRequestedEvents)
     let sourcesToAdd = desiredSources.subtracting(activeSources)
     let sourcesToRemove = activeSources.subtracting(desiredSources)
-    let desiredInterval = Self.intervalTickInterval(in: mergedRequestedEvents)
-    let intervalChanged = desiredInterval != activeInterval
+    let desiredIntervalSchedules = Self.intervalTickSchedules(in: mergedRequestedEvents)
+    let intervalChanged = desiredIntervalSchedules != activeIntervalSchedules
 
     logger.debug(
       "event manager refresh begin",
@@ -154,27 +153,23 @@ final class EventManager {
       .field("removed_events", "\(removedEvents)"),
       .field("source_add", "\(sourcesToAdd)"),
       .field("source_remove", "\(sourcesToRemove)"),
-      .field("interval", "\(String(describing: desiredInterval))"),
-      .field("previous_interval", "\(String(describing: activeInterval))"),
+      .field("interval_schedules", "\(desiredIntervalSchedules)"),
+      .field("previous_interval_schedules", "\(activeIntervalSchedules)"),
       .field("lua_requested_events", "\(luaRequestedEvents)"),
       .field("native_requested_events", "\(nativeRequestedEvents)"),
     )
 
     unsubscribeSources(sourcesToRemove)
 
-    if intervalChanged, activeInterval != nil {
-      TimerEvents.shared.stopIntervalTimer()
-    }
-
     activeRequestedEvents = mergedRequestedEvents
     subscribeSources(sourcesToAdd)
 
-    if intervalChanged, let desiredInterval {
-      TimerEvents.shared.startIntervalTimer(interval: desiredInterval)
+    if intervalChanged {
+      TimerEvents.shared.replaceIntervalTimers(schedules: desiredIntervalSchedules)
     }
 
     activeSources = desiredSources
-    activeInterval = desiredInterval
+    activeIntervalSchedules = desiredIntervalSchedules
 
     logger.debug(
       "event manager refresh end",
@@ -313,20 +308,25 @@ final class EventManager {
       ) { result, source in
         result.insert(source)
       },
-      interval: intervalTickInterval(in: subscriptions)
+      intervalSchedules: intervalTickSchedules(in: subscriptions)
     )
   }
 
-  /// Returns the shared Lua interval cadence requested by the runtime.
-  private static func intervalTickInterval(in subscriptions: Set<String>) -> TimeInterval? {
-    subscriptions.compactMap { name in
-      guard name.hasPrefix(intervalTickPrefix) else { return nil }
+  /// Returns the widget-scoped Lua interval schedules requested by the runtime.
+  private static func intervalTickSchedules(in subscriptions: Set<String>) -> Set<WidgetIntervalSchedule> {
+    Set(
+      subscriptions.compactMap { name in
+        guard name.hasPrefix(intervalTickPrefix) else { return nil }
 
-      let rawValue = String(name.dropFirst(intervalTickPrefix.count))
-      guard let interval = TimeInterval(rawValue), interval > 0 else { return nil }
+        let rawValue = String(name.dropFirst(intervalTickPrefix.count))
+        let parts = rawValue.split(separator: ":", omittingEmptySubsequences: false)
 
-      return interval
-    }
-    .min()
+        guard parts.count == 2 else { return nil }
+
+        let widgetID = String(parts[0])
+        guard !widgetID.isEmpty, let interval = TimeInterval(parts[1]), interval > 0 else { return nil }
+
+        return WidgetIntervalSchedule(widgetID: widgetID, interval: interval)
+      })
   }
 }

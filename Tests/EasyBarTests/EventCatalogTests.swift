@@ -44,11 +44,11 @@ final class EventCatalogTests: XCTestCase {
         AppEvent.chargingStateChange.rawValue,
         AppEvent.powerSourceChange.rawValue,
         AppEvent.secondTick.rawValue,
-        "interval_tick:5",
+        "interval_tick:brew:5",
       ]
     )
 
-    XCTAssertEqual(plan.interval, 5)
+    XCTAssertEqual(plan.intervalSchedules, [WidgetIntervalSchedule(widgetID: "brew", interval: 5)])
     XCTAssertTrue(plan.sources.contains("powerSource"))
     XCTAssertTrue(plan.sources.contains("secondTick"))
     XCTAssertFalse(plan.sources.contains("minuteTick"))
@@ -60,7 +60,7 @@ final class EventCatalogTests: XCTestCase {
     let plan = EventManager.subscriptionPlan(for: [])
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -81,7 +81,7 @@ final class EventCatalogTests: XCTestCase {
     XCTAssertTrue(plan.sources.contains("spaceChange"))
     XCTAssertTrue(plan.sources.contains("appSwitch"))
     XCTAssertTrue(plan.sources.contains("displayChange"))
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -95,7 +95,7 @@ final class EventCatalogTests: XCTestCase {
     )
 
     XCTAssertEqual(plan.sources, ["powerSource"])
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -109,7 +109,7 @@ final class EventCatalogTests: XCTestCase {
     )
 
     XCTAssertEqual(plan.sources, ["volume"])
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -124,7 +124,7 @@ final class EventCatalogTests: XCTestCase {
 
     XCTAssertTrue(plan.sources.contains("minuteTick"))
     XCTAssertTrue(plan.sources.contains("secondTick"))
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -132,27 +132,34 @@ final class EventCatalogTests: XCTestCase {
   func testSubscriptionPlanParsesPositiveIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(
       for: [
-        "interval_tick:2.5"
+        "interval_tick:brew:2.5"
       ]
     )
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertEqual(plan.interval, 2.5)
+    XCTAssertEqual(plan.intervalSchedules, [WidgetIntervalSchedule(widgetID: "brew", interval: 2.5)])
   }
 
   @MainActor
-  /// Handles test subscription plan prefers smallest positive interval subscription.
-  func testSubscriptionPlanPrefersSmallestPositiveIntervalSubscription() {
+  /// Handles test subscription plan keeps every valid widget interval subscription.
+  func testSubscriptionPlanKeepsEveryValidWidgetIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(
       for: [
-        "interval_tick:10",
-        "interval_tick:2.5",
-        "interval_tick:5",
+        "interval_tick:brew:10",
+        "interval_tick:clock:2.5",
+        "interval_tick:calendar:5",
       ]
     )
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertEqual(plan.interval, 2.5)
+    XCTAssertEqual(
+      plan.intervalSchedules,
+      [
+        WidgetIntervalSchedule(widgetID: "brew", interval: 10),
+        WidgetIntervalSchedule(widgetID: "clock", interval: 2.5),
+        WidgetIntervalSchedule(widgetID: "calendar", interval: 5),
+      ]
+    )
   }
 
   @MainActor
@@ -160,12 +167,12 @@ final class EventCatalogTests: XCTestCase {
   func testSubscriptionPlanIgnoresInvalidIntervalSubscription() {
     let plan = EventManager.subscriptionPlan(
       for: [
-        "interval_tick:not-a-number"
+        "interval_tick:brew:not-a-number"
       ]
     )
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 
   @MainActor
@@ -173,21 +180,21 @@ final class EventCatalogTests: XCTestCase {
   func testSubscriptionPlanIgnoresZeroAndNegativeIntervalSubscriptions() {
     let zeroPlan = EventManager.subscriptionPlan(
       for: [
-        "interval_tick:0"
+        "interval_tick:brew:0"
       ]
     )
 
     let negativePlan = EventManager.subscriptionPlan(
       for: [
-        "interval_tick:-5"
+        "interval_tick:brew:-5"
       ]
     )
 
     XCTAssertEqual(zeroPlan.sources, [])
-    XCTAssertNil(zeroPlan.interval)
+    XCTAssertEqual(zeroPlan.intervalSchedules, [])
 
     XCTAssertEqual(negativePlan.sources, [])
-    XCTAssertNil(negativePlan.interval)
+    XCTAssertEqual(negativePlan.intervalSchedules, [])
   }
 
   @MainActor
@@ -200,6 +207,6 @@ final class EventCatalogTests: XCTestCase {
     )
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertNil(plan.interval)
+    XCTAssertEqual(plan.intervalSchedules, [])
   }
 }

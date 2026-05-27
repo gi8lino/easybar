@@ -99,6 +99,7 @@ struct EasyBarEventPayload: Sendable {
   /// Builds an app-wide event payload.
   static func app(
     _ event: AppEvent,
+    widgetID: String? = nil,
     appName: String? = nil,
     interfaceName: String? = nil,
     charging: Bool? = nil,
@@ -107,6 +108,7 @@ struct EasyBarEventPayload: Sendable {
   ) -> EasyBarEventPayload {
     makePayload(
       appEvent: event,
+      widgetID: widgetID,
       appName: appName,
       interfaceName: interfaceName,
       charging: charging,

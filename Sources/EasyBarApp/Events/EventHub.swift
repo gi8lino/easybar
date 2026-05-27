@@ -134,6 +134,11 @@ actor EventHub {
     await emit(.app(event, appName: appName))
   }
 
+  /// Emits one app-wide event scoped to one widget id.
+  func emit(_ event: AppEvent, widgetID: String) async {
+    await emit(.app(event, widgetID: widgetID))
+  }
+
   /// Emits one app-wide event with interface name context.
   func emit(_ event: AppEvent, interfaceName: String) async {
     await emit(.app(event, interfaceName: interfaceName))

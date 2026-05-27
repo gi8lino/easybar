@@ -1,6 +1,12 @@
 import EasyBarShared
 import Foundation
 
+/// Widget-scoped interval schedule requested by the Lua runtime.
+struct WidgetIntervalSchedule: Hashable, Sendable {
+  let widgetID: String
+  let interval: TimeInterval
+}
+
 /// Owns app event timers.
 final class TimerEvents {
   /// Configured shared timer event source.
@@ -27,8 +33,8 @@ final class TimerEvents {
   private var minuteTimer: Timer?
   /// Timer for second ticks.
   private var secondTimer: Timer?
-  /// Timer for Lua interval ticks.
-  private var intervalTimer: Timer?
+  /// Timers for widget-scoped Lua interval callbacks.
+  private var intervalTimers: [String: Timer] = [:]
 
   /// Creates one timer event source.
   private init(logger: ProcessLogger) {
@@ -71,32 +77,44 @@ final class TimerEvents {
     secondTimer = nil
   }
 
-  /// Starts the interval timer used by Lua `interval` callbacks.
-  func startIntervalTimer(interval: TimeInterval) {
-    intervalTimer?.invalidate()
-    intervalTimer = makeAlignedTimer(
-      interval: interval,
-      tolerance: min(1, max(0.05, interval * 0.05)),
-      event: .intervalTick
-    )
+  /// Replaces every widget-scoped interval timer used by Lua `interval` callbacks.
+  func replaceIntervalTimers(schedules: Set<WidgetIntervalSchedule>) {
+    stopIntervalTimers()
 
-    logger.debug(
-      "interval timer started",
-      .field("interval", interval),
-    )
+    for schedule in schedules {
+      let timer = makeRepeatingTimer(
+        interval: schedule.interval,
+        tolerance: min(1, max(0.05, schedule.interval * 0.05))
+      ) { [widgetID = schedule.widgetID] in
+        Task {
+          await EventHub.shared.emit(.intervalTick, widgetID: widgetID)
+        }
+      }
+
+      intervalTimers[schedule.widgetID] = timer
+
+      logger.debug(
+        "interval timer started",
+        .field("widget_id", schedule.widgetID),
+        .field("interval", schedule.interval),
+      )
+    }
   }
 
-  /// Stops the interval timer.
-  func stopIntervalTimer() {
-    intervalTimer?.invalidate()
-    intervalTimer = nil
+  /// Stops every widget-scoped interval timer.
+  func stopIntervalTimers() {
+    for timer in intervalTimers.values {
+      timer.invalidate()
+    }
+
+    intervalTimers.removeAll()
   }
 
   /// Stops and clears all active timers.
   func stopAll() {
     stopMinuteTimer()
     stopSecondTimer()
-    stopIntervalTimer()
+    stopIntervalTimers()
   }
 
   /// Starts one repeating timer aligned to the next real wall-clock boundary.
@@ -113,6 +131,25 @@ final class TimerEvents {
       Task {
         await EventHub.shared.emit(event)
       }
+    }
+
+    timer.tolerance = tolerance
+    RunLoop.main.add(timer, forMode: .common)
+    return timer
+  }
+
+  /// Starts one repeating timer relative to its creation time.
+  private func makeRepeatingTimer(
+    interval: TimeInterval,
+    tolerance: TimeInterval,
+    onFire: @escaping () -> Void
+  ) -> Timer {
+    let timer = Timer(
+      fire: Date().addingTimeInterval(interval),
+      interval: interval,
+      repeats: true
+    ) { _ in
+      onFire()
     }
 
     timer.tolerance = tolerance

@@ -632,7 +632,9 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 		string = "",
 	},
 	on_interval = function()
-		refresh_if_due("Checking outdated packages…")
+		if not running then
+			check_outdated("Checking outdated packages…")
+		end
 	end,
 })
 

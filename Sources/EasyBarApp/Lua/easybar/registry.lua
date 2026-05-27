@@ -123,7 +123,6 @@ local function remove_recursive(state, id)
 	state.items[id] = nil
 	state.subscriptions[id] = nil
 	state.interval_handlers[id] = nil
-	state.interval_next_due[id] = nil
 
 	for index, value in ipairs(state.item_order) do
 		if value == id then
@@ -157,7 +156,6 @@ function M.new(hooks)
 		item_order = {},
 		subscriptions = {},
 		interval_handlers = {},
-		interval_next_due = {},
 		pending_async_commands = {},
 		pending_command_responses = {},
 	}

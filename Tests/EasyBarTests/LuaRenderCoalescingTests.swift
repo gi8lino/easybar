@@ -531,10 +531,10 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let initialSubscriptions = try await nextUpdate(
       from: recorder,
       matching: { update in
-        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:60"]
+        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:brew:60"]
       }
     )
-    XCTAssertEqual(Set(initialSubscriptions.subscribedEvents), ["forced", "interval_tick:60"])
+    XCTAssertEqual(Set(initialSubscriptions.subscribedEvents), ["forced", "interval_tick:brew:60"])
 
     try stdinPipe.fileHandleForWriting.write(
       contentsOf: Data("{\"name\":\"forced\"}\n".utf8)
@@ -543,10 +543,10 @@ final class LuaRenderCoalescingTests: XCTestCase {
     let updatedSubscriptions = try await nextUpdate(
       from: recorder,
       matching: { update in
-        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:5"]
+        update.isSubscriptions && Set(update.subscribedEvents) == ["forced", "interval_tick:brew:5"]
       }
     )
-    XCTAssertEqual(Set(updatedSubscriptions.subscribedEvents), ["forced", "interval_tick:5"])
+    XCTAssertEqual(Set(updatedSubscriptions.subscribedEvents), ["forced", "interval_tick:brew:5"])
   }
 }
 

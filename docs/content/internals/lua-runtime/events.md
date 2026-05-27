@@ -20,7 +20,8 @@ After loading widgets:
 
 The subscription list can change at runtime.
 
-For example, `interval` plus `on_interval` causes Lua to request the shared interval driver cadence it needs.
+For example, `interval` plus `on_interval` causes Lua to request one
+widget-scoped interval schedule such as `interval_tick:brew:1800`.
 
 ## 3. Initial events
 
@@ -43,6 +44,20 @@ Lua runtime:
 3. normalizes with `events.lua`
 4. dispatches through subscriptions
 5. renders dirty trees
+
+## Interval flow
+
+```mermaid
+flowchart LR
+    A["Lua widget registers interval handler"] --> B["Lua exports interval_tick:<widget_id>:<seconds>"]
+    B --> C["Swift EventManager parses widget schedule"]
+    C --> D["TimerEvents starts per-widget repeating timer"]
+    D --> E["Timer fires for that widget"]
+    E --> F["EventHub emits interval_tick with widget_id"]
+    F --> G["Lua subscriptions dispatch that widget's on_interval"]
+    G --> H["Widget mutates registry state"]
+    H --> I["Renderer flushes updated tree"]
+```
 
 ## End-to-end data flow
 

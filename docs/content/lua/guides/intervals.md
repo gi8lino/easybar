@@ -2,6 +2,11 @@
 
 Use `interval` with `on_interval` when a widget needs to poll.
 
+EasyBar schedules intervals per widget. If a widget sets `interval = 1800`,
+the backend starts that widget's timer when the widget registers its interval
+handler and fires `on_interval` 1800 seconds later, then every 1800 seconds
+after that. It does not wait for the next wall-clock boundary.
+
 ```lua
 local clock
 
@@ -17,6 +22,28 @@ clock = easybar.add(easybar.kind.item, "clock", {
     end,
 })
 ```
+
+## Flow
+
+```mermaid
+flowchart TD
+    A["Widget loads in Lua"] --> B["Widget declares interval and on_interval"]
+    B --> C["Lua publishes widget-scoped interval subscription"]
+    C --> D["Swift EventManager stores widget schedule"]
+    D --> E["Swift TimerEvents starts repeating timer for that widget"]
+    E --> F["Interval elapses"]
+    F --> G["Swift emits targeted interval_tick for that widget"]
+    G --> H["Lua dispatches only that widget's on_interval handler"]
+    H --> I["Widget updates state and re-renders"]
+    I --> E
+```
+
+## Timing semantics
+
+- `interval = 60` means 60 seconds after registration, then every 60 seconds after that.
+- Each widget owns its own cadence.
+- Changing `interval` replaces that widget's schedule with a new one.
+- Removing the widget removes its interval schedule.
 
 ## Referencing the node itself
 
