@@ -308,9 +308,10 @@ extension Config {
     themesDir: String
   ) throws -> ThemeColors {
     let fileName = try themeFileName(for: name)
+    let fileManager = FileManager.default
 
     if let userThemeURL = userThemeURL(fileName: fileName, themesDir: themesDir),
-      FileManager.default.fileExists(atPath: userThemeURL.path)
+      fileManager.fileExists(atPath: userThemeURL.path)
     {
       return try loadThemeFile(
         at: userThemeURL,
@@ -318,11 +319,11 @@ extension Config {
       )
     }
 
-    if let bundledThemeURL = Bundle.module.url(
-      forResource: fileName,
-      withExtension: "toml",
-      subdirectory: "Themes"
-    ) {
+    for bundledThemeURL in bundledThemeCandidateURLs(fileName: fileName) {
+      guard fileManager.fileExists(atPath: bundledThemeURL.path) else {
+        continue
+      }
+
       return try loadThemeFile(
         at: bundledThemeURL,
         path: "bundled theme \(fileName).toml"
@@ -333,6 +334,68 @@ extension Config {
       path: "theme.name",
       message: "theme '\(name)' was not found in \(themesDir) or bundled themes"
     )
+  }
+
+  /// Returns all bundled and development theme lookup candidates for one theme file.
+  private func bundledThemeCandidateURLs(fileName: String) -> [URL] {
+    var candidates: [URL] = []
+
+    if let moduleThemeURL = Bundle.module.url(
+      forResource: fileName,
+      withExtension: "toml",
+      subdirectory: "Themes"
+    ) {
+      candidates.append(moduleThemeURL)
+    }
+
+    if let resourceURL = Bundle.main.resourceURL {
+      candidates.append(
+        resourceURL
+          .appendingPathComponent("Themes", isDirectory: true)
+          .appendingPathComponent("\(fileName).toml")
+      )
+    }
+
+    if let executableURL = Bundle.main.executableURL {
+      let executableDirectory = executableURL.deletingLastPathComponent()
+
+      candidates.append(
+        executableDirectory
+          .deletingLastPathComponent()
+          .appendingPathComponent("Resources", isDirectory: true)
+          .appendingPathComponent("Themes", isDirectory: true)
+          .appendingPathComponent("\(fileName).toml")
+      )
+
+      candidates.append(
+        executableDirectory
+          .appendingPathComponent("Themes", isDirectory: true)
+          .appendingPathComponent("\(fileName).toml")
+      )
+    }
+
+    candidates.append(
+      URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+        .appendingPathComponent("themes", isDirectory: true)
+        .appendingPathComponent("\(fileName).toml")
+    )
+
+    return uniqueThemeCandidateURLs(candidates)
+  }
+
+  /// Returns theme candidate URLs without duplicate paths.
+  private func uniqueThemeCandidateURLs(_ urls: [URL]) -> [URL] {
+    var seen: Set<String> = []
+    var unique: [URL] = []
+
+    for url in urls {
+      let path = url.standardizedFileURL.path
+      guard !seen.contains(path) else { continue }
+      seen.insert(path)
+      unique.append(url)
+    }
+
+    return unique
   }
 
   /// Loads and parses one complete theme TOML file.

@@ -110,7 +110,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
-        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources verify verify-release \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
@@ -280,6 +280,10 @@ endif
 		exit 1; \
 	}
 	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+	@test -f "$(APP_THEMES_DIR)/default.toml" || { \
+		echo "Missing bundled theme: $(APP_THEMES_DIR)/default.toml"; \
+		exit 1; \
+	}
 
 copy-debug-resources: ## Internal target: copy debug SwiftPM resource bundles and root assets into the app bundle.
 	@mkdir -p "$(APP_BUNDLE)" "$(APP_RESOURCES)"
@@ -304,6 +308,16 @@ endif
 		exit 1; \
 	}
 	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+	@test -f "$(APP_THEMES_DIR)/default.toml" || { \
+		echo "Missing debug bundled theme: $(APP_THEMES_DIR)/default.toml"; \
+		exit 1; \
+	}
+
+prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle metadata.
+	@mkdir -p "$(APP_CONTENTS)"
+	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
+	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
+	@touch "$(APP_BUNDLE)"
 
 icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
 	@command -v "$(IMAGE_CONVERT)" >/dev/null 2>&1 || { \
@@ -463,6 +477,7 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@"$(APP_BIN)"
@@ -475,6 +490,7 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
@@ -487,6 +503,7 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
