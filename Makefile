@@ -581,7 +581,7 @@ generate-event-catalog: ## Regenerate Lua event catalog files from the shared ma
 	@python3 scripts/generate_event_catalog.py
 
 demo: ## Populate the demo calendar with random events.
-	@zsh scripts/populate-demo-calendar.zsh demo
+	@swift scripts/populate-demo-calendar.swift demo
 
 ##@ Docs
 
