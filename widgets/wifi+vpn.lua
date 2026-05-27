@@ -4,6 +4,11 @@ local state = {
 
 local vpn
 
+local COLORS = {
+	connected = easybar.theme.ref.accent,
+	disconnected = easybar.theme.ref.muted,
+}
+
 local function apply_event(event)
 	if event == nil or type(event.network) ~= "table" then
 		return
@@ -20,14 +25,14 @@ local function current_state()
 		return {
 			icon = "󰦝",
 			label = "VPN On",
-			color = "#91d7e3",
+			color = COLORS.connected,
 		}
 	end
 
 	return {
 		icon = "󰌾",
 		label = "VPN Off",
-		color = "#6e738d",
+		color = COLORS.disconnected,
 	}
 end
 

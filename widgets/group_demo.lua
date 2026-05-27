@@ -5,11 +5,21 @@ local group
 local icon
 local label
 
+local COLORS = {
+	surface = easybar.theme.ref.surface,
+	hover = easybar.theme.ref.surface_hover,
+	accent = easybar.theme.ref.accent_secondary,
+	muted = easybar.theme.ref.muted,
+	text = easybar.theme.ref.text,
+	border = easybar.theme.ref.border_strong,
+	popup_bg = easybar.theme.ref.background,
+}
+
 local function render()
 	group:set({
 		background = {
-			color = hovered and "#2c2e45" or "#202020",
-			border_color = enabled and "#8aadf4" or "#4a4a4a",
+			color = hovered and COLORS.hover or COLORS.surface,
+			border_color = enabled and COLORS.accent or COLORS.border,
 			border_width = 1,
 			corner_radius = 8,
 			padding_left = 8,
@@ -22,14 +32,14 @@ local function render()
 	icon:set({
 		icon = {
 			string = enabled and "󰄬" or "󰄱",
-			color = enabled and "#8aadf4" or "#6e738d",
+			color = enabled and COLORS.accent or COLORS.muted,
 		},
 	})
 
 	label:set({
 		label = {
 			string = hovered and "Group Hover" or "Group",
-			color = "#cad3f5",
+			color = COLORS.text,
 		},
 	})
 end
@@ -40,6 +50,14 @@ group = easybar.add(easybar.kind.group, "group_demo", {
 	spacing = 6,
 	popup = {
 		drawing = false,
+		background = {
+			color = COLORS.popup_bg,
+			border_color = COLORS.border,
+			border_width = 1,
+			corner_radius = 8,
+		},
+		padding_x = 10,
+		padding_y = 8,
 	},
 })
 
@@ -47,6 +65,7 @@ icon = easybar.add(easybar.kind.item, "group_demo_icon", {
 	parent = group.name,
 	icon = {
 		string = "󰄱",
+		color = COLORS.muted,
 	},
 })
 
@@ -54,6 +73,7 @@ label = easybar.add(easybar.kind.item, "group_demo_label", {
 	parent = group.name,
 	label = {
 		string = "Group",
+		color = COLORS.text,
 	},
 })
 
@@ -61,6 +81,7 @@ easybar.add(easybar.kind.item, "group_demo_popup", {
 	position = "popup." .. group.name,
 	label = {
 		string = "Group popup",
+		color = COLORS.text,
 	},
 })
 

@@ -33,15 +33,16 @@ local ICONS = {
 }
 
 local COLORS = {
-	info = "#89b4fa",
-	ok = "#a6e3a1",
-	warn = "#f9e2af",
-	orange = "#fab387",
-	error = "#f38ba8",
-	muted = "#a6adc8",
-	text = "#cdd6f4",
-	button_bg = "#1e1e2e",
-	button_border = "#45475a",
+	info = easybar.theme.ref.accent_secondary,
+	ok = easybar.theme.ref.success,
+	warn = easybar.theme.ref.warning,
+	orange = easybar.theme.ref.orange,
+	error = easybar.theme.ref.error,
+	muted = easybar.theme.ref.muted,
+	text = easybar.theme.ref.text,
+	popup_bg = easybar.theme.ref.background,
+	button_bg = easybar.theme.ref.surface,
+	button_border = easybar.theme.ref.border_strong,
 }
 
 local THRESHOLDS = {
@@ -209,15 +210,12 @@ local function add_popup_row(id, text, opts)
 		order = opts.order,
 		label = {
 			string = text,
+			color = opts.color or COLORS.text,
 			font = {
 				size = opts.size or 12,
 			},
 		},
 	}
-
-	if opts.color ~= nil then
-		props.label.color = opts.color
-	end
 
 	local row = easybar.add(easybar.kind.item, id, props)
 	dynamic_rows[#dynamic_rows + 1] = row
@@ -323,6 +321,7 @@ local function render_popup()
 		order = POPUP_ORDER.title,
 		label = {
 			string = "Homebrew",
+			color = COLORS.text,
 		},
 	})
 
@@ -391,6 +390,7 @@ local function render_popup()
 		order = 1,
 		label = {
 			string = upgrade_label,
+			color = COLORS.text,
 		},
 	})
 
@@ -398,6 +398,7 @@ local function render_popup()
 		order = 2,
 		label = {
 			string = update_label,
+			color = COLORS.text,
 		},
 	})
 
@@ -619,6 +620,15 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	interval = CHECK_INTERVAL_SECONDS,
 	popup = {
 		drawing = true,
+		background = {
+			color = COLORS.popup_bg,
+			border_color = COLORS.button_border,
+			border_width = 1,
+			corner_radius = 8,
+		},
+		padding_x = 10,
+		padding_y = 8,
+		spacing = 6,
 	},
 	height = 24,
 	icon = {
@@ -643,6 +653,7 @@ title_item = easybar.add(easybar.kind.item, ID_TITLE, {
 	order = POPUP_ORDER.title,
 	label = {
 		string = "Homebrew",
+		color = COLORS.text,
 		font = {
 			size = 13,
 		},
@@ -654,6 +665,7 @@ summary_item = easybar.add(easybar.kind.item, ID_SUMMARY, {
 	order = POPUP_ORDER.summary,
 	label = {
 		string = "Checking outdated packages…",
+		color = COLORS.text,
 	},
 })
 
@@ -680,6 +692,7 @@ upgrade_button = easybar.add(easybar.kind.item, ID_UPGRADE, {
 	order = 1,
 	label = {
 		string = "Upgrade now",
+		color = COLORS.text,
 	},
 	background = button_background(),
 })
@@ -689,6 +702,7 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	order = 2,
 	label = {
 		string = "Update metadata",
+		color = COLORS.text,
 	},
 	background = button_background(),
 })

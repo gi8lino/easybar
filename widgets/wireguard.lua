@@ -3,6 +3,14 @@ package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/
 
 local secrets = require("secrets")
 
+local COLORS = {
+	text = easybar.theme.ref.text,
+	muted = easybar.theme.ref.muted,
+	success = easybar.theme.ref.success,
+	popup_bg = easybar.theme.ref.background,
+	border = easybar.theme.ref.border_strong,
+}
+
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -134,6 +142,7 @@ local function refresh()
 	wireguard_popup_label:set({
 		label = {
 			string = status_label(wireguard_connected),
+			color = wireguard_connected and COLORS.success or COLORS.muted,
 		},
 	})
 end
@@ -148,6 +157,14 @@ wireguard = easybar.add(easybar.kind.group, "wireguard", {
 	spacing = 0,
 	popup = {
 		drawing = true,
+		background = {
+			color = COLORS.popup_bg,
+			border_color = COLORS.border,
+			border_width = 1,
+			corner_radius = 8,
+		},
+		padding_x = 10,
+		padding_y = 8,
 	},
 })
 
@@ -168,6 +185,7 @@ wireguard_popup_label = easybar.add(easybar.kind.item, "wireguard_popup_label", 
 	position = "popup." .. wireguard.name,
 	label = {
 		string = "",
+		color = COLORS.muted,
 	},
 })
 

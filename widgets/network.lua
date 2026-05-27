@@ -4,6 +4,12 @@ local state = {
 
 local network
 
+local COLORS = {
+	text = easybar.theme.ref.text,
+	muted = easybar.theme.ref.muted,
+	accent = easybar.theme.ref.accent,
+}
+
 local function normalize_interface_name(value)
 	if type(value) ~= "string" then
 		return nil
@@ -36,9 +42,17 @@ local function label_text()
 end
 
 local function render()
+	local connected = state.interface_name ~= nil
+	local color = connected and COLORS.text or COLORS.muted
+
 	network:set({
+		icon = {
+			string = "📶",
+			color = connected and COLORS.accent or COLORS.muted,
+		},
 		label = {
 			string = label_text(),
+			color = color,
 		},
 	})
 end
@@ -48,8 +62,12 @@ network = easybar.add(easybar.kind.item, "network", {
 	order = 35,
 	icon = {
 		string = "📶",
+		color = COLORS.muted,
 	},
-	label = "",
+	label = {
+		string = "",
+		color = COLORS.muted,
+	},
 })
 
 network:subscribe({

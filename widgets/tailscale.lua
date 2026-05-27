@@ -7,6 +7,15 @@ local function shell_quote(s)
 	return "'" .. s:gsub("'", [['"'"']]) .. "'"
 end
 
+local COLORS = {
+	text = easybar.theme.ref.text,
+	muted = easybar.theme.ref.muted,
+	success = easybar.theme.ref.success,
+	accent = easybar.theme.ref.accent,
+	popup_bg = easybar.theme.ref.background,
+	border = easybar.theme.ref.border_strong,
+}
+
 local function script_dir()
 	local source = debug.getinfo(1, "S").source or ""
 	local path = source:gsub("^@", "")
@@ -205,6 +214,8 @@ end
 
 local function render(snapshot)
 	local tailscale_logo_path = asset_path(current_icon_name(snapshot.tailscale_connected, snapshot.exit_node_enabled))
+	local status_color = snapshot.tailscale_connected and COLORS.success or COLORS.muted
+	local exit_node_color = snapshot.exit_node_enabled and COLORS.accent or COLORS.muted
 
 	tailscale_icon:set({
 		icon = {
@@ -222,6 +233,7 @@ local function render(snapshot)
 	popup_label:set({
 		label = {
 			string = snapshot.status_detail or status_label(snapshot.tailscale_connected),
+			color = status_color,
 		},
 	})
 
@@ -229,6 +241,7 @@ local function render(snapshot)
 		drawing = snapshot.tailscale_connected and "on" or "off",
 		label = {
 			string = snapshot.exit_node_detail,
+			color = exit_node_color,
 		},
 	})
 end
@@ -309,6 +322,15 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 	},
 	popup = {
 		drawing = "on",
+		background = {
+			color = COLORS.popup_bg,
+			border_color = COLORS.border,
+			border_width = 1,
+			corner_radius = 8,
+		},
+		padding_x = 10,
+		padding_y = 8,
+		spacing = 6,
 	},
 	on_interval = function()
 		refresh()
@@ -319,6 +341,7 @@ popup_label = easybar.add(easybar.kind.item, "tailscale_popup_label", {
 	position = "popup." .. tailscale_icon.name,
 	label = {
 		string = "",
+		color = COLORS.text,
 	},
 })
 
@@ -327,6 +350,7 @@ popup_exit_node_label = easybar.add(easybar.kind.item, "tailscale_popup_exit_nod
 	drawing = "off",
 	label = {
 		string = "",
+		color = COLORS.muted,
 	},
 })
 

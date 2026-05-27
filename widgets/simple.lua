@@ -1,15 +1,22 @@
 local enabled = false
 local toggle
 
+local COLORS = {
+	on = easybar.theme.ref.success,
+	off = easybar.theme.ref.error,
+}
+
 local function render()
+	local color = enabled and COLORS.on or COLORS.off
+
 	toggle:set({
 		icon = {
 			string = enabled and "󰄬" or "󰄱",
-			color = enabled and "#30d158" or "#ff453a",
+			color = color,
 		},
 		label = {
 			string = enabled and "ON" or "OFF",
-			color = enabled and "#30d158" or "#ff453a",
+			color = color,
 		},
 	})
 end
