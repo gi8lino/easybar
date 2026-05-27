@@ -39,6 +39,17 @@ jobs:
           xcrun --show-sdk-path
           xcrun --show-sdk-version
 
+      - name: Install ImageMagick
+        shell: bash
+        run: |
+          if ! command -v magick >/dev/null 2>&1; then
+          brew update
+          brew install imagemagick
+          fi
+
+          echo "IMAGE_CONVERT=$(command -v magick)" >> "$GITHUB_ENV"
+          magick -version
+
       - name: Derive version from tag
         id: version
         shell: bash
