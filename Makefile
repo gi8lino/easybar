@@ -85,6 +85,7 @@ LOCAL_HOME := $(CURDIR)/.home
 LOCAL_CACHE_DIR := $(CURDIR)/.cache
 LOCAL_CLANG_MODULE_CACHE := $(CURDIR)/.build/clang-module-cache
 LOCAL_SWIFT_ENV := HOME="$(LOCAL_HOME)" XDG_CACHE_HOME="$(LOCAL_CACHE_DIR)" CLANG_MODULE_CACHE_PATH="$(LOCAL_CLANG_MODULE_CACHE)"
+IMAGE_CONVERT ?= magick
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -173,6 +174,7 @@ bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@chmod +x "$(APP_BIN)" "$(LUA_RUNTIME_BIN)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(CLI_BIN)"
 	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
 	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
+	@touch "$(APP_BUNDLE)" "$(CALENDAR_AGENT_BUNDLE)" "$(NETWORK_AGENT_BUNDLE)"
 	@$(MAKE) --no-print-directory verify
 
 package: bundle ## Create the release ZIP consumed by the Homebrew formula.
@@ -303,7 +305,11 @@ endif
 	}
 	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
-icons: ## Generate .icns files from the SVG icons and copy them into each app bundle.
+icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
+	@command -v "$(IMAGE_CONVERT)" >/dev/null 2>&1 || { \
+		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
+		exit 1; \
+	}
 	@mkdir -p "$(APP_RESOURCES)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_RESOURCES)"
 	@set -e; \
 	for spec in \
@@ -315,11 +321,17 @@ icons: ## Generate .icns files from the SVG icons and copy them into each app bu
 		base="$$(basename "$$icns" .icns)"; \
 		tmp_dir="$(DIST_DIR)/.$$base.iconset"; \
 		render_dir="$(DIST_DIR)/.$$base.render"; \
-		rm -rf "$$tmp_dir" "$$render_dir"; \
+		rendered_png="$$render_dir/icon_1024x1024.png"; \
+		test -f "$$svg" || { echo "Missing icon SVG: $$svg"; exit 1; }; \
+		rm -rf "$$tmp_dir" "$$render_dir" "$$icns"; \
 		mkdir -p "$$tmp_dir" "$$render_dir"; \
-		qlmanage -t -s 1024 -o "$$render_dir" "$$svg" >/dev/null 2>&1; \
-		rendered_png="$$render_dir/$$(basename "$$svg").png"; \
-		test -f "$$rendered_png"; \
+		"$(IMAGE_CONVERT)" "$$svg" \
+			-background none \
+			-resize 1024x1024 \
+			-gravity center \
+			-extent 1024x1024 \
+			"$$rendered_png"; \
+		test -f "$$rendered_png" || { echo "Could not render SVG icon: $$svg"; exit 1; }; \
 		cp "$$rendered_png" "$$tmp_dir/icon_512x512@2x.png"; \
 		sips -z 16 16 "$$rendered_png" --out "$$tmp_dir/icon_16x16.png" >/dev/null; \
 		sips -z 32 32 "$$rendered_png" --out "$$tmp_dir/icon_16x16@2x.png" >/dev/null; \
@@ -331,6 +343,7 @@ icons: ## Generate .icns files from the SVG icons and copy them into each app bu
 		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_256x256@2x.png" >/dev/null; \
 		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_512x512.png" >/dev/null; \
 		iconutil -c icns "$$tmp_dir" -o "$$icns"; \
+		test -s "$$icns" || { echo "Could not create icon: $$icns"; exit 1; }; \
 		rm -rf "$$tmp_dir" "$$render_dir"; \
 	done
 
@@ -405,6 +418,12 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@test -f "$(NETWORK_AGENT_PLIST)"
 	@test -d "$(APP_RESOURCE_BUNDLE)"
 	@test -d "$(APP_THEMES_DIR)"
+	@test -s "$(APP_ICON_ICNS)"
+	@test -s "$(CALENDAR_AGENT_ICON_ICNS)"
+	@test -s "$(NETWORK_AGENT_ICON_ICNS)"
+	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(PLIST)")" = "$(APP_ICON_FILE)"
+	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(CALENDAR_AGENT_PLIST)")" = "$(CALENDAR_AGENT_ICON_FILE)"
+	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(NETWORK_AGENT_PLIST)")" = "$(NETWORK_AGENT_ICON_FILE)"
 	@echo "Info.plist:"
 	@plutil -p "$(PLIST)"
 	@echo "Calendar agent Info.plist:"
@@ -428,6 +447,9 @@ verify-release: ## Validate the release package and print release fingerprints.
 	@echo "Build fingerprints:"
 	@shasum -a 256 "$(APP_BIN)"
 	@shasum -a 256 "$(PLIST)"
+	@shasum -a 256 "$(APP_ICON_ICNS)"
+	@shasum -a 256 "$(CALENDAR_AGENT_ICON_ICNS)"
+	@shasum -a 256 "$(NETWORK_AGENT_ICON_ICNS)"
 	@shasum -a 256 "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
 	@shasum -a 256 "$(APP_THEMES_DIR)/default.toml"
 	@shasum -a 256 "$(PACKAGE_ZIP)"
@@ -659,11 +681,15 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 .PHONY: favicon
 favicon: ## Create favicons.
+	@command -v "$(IMAGE_CONVERT)" >/dev/null 2>&1 || { \
+		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
+		exit 1; \
+	}
 	@mkdir -p $(ICON_DIR)
 	@for size in $(ICON_SIZES); do \
 		outfile=favicon-$$size.png; \
 		echo "create $$outfile"; \
-		convert $(SVG) \
+		"$(IMAGE_CONVERT)" $(SVG) \
 			-fuzz 5% -transparent white \
 			-background none \
 			-resize $$size \
@@ -671,7 +697,7 @@ favicon: ## Create favicons.
 			>/dev/null 2>&1; \
 	done
 	@echo "create apple-touch-icon.png"
-	@convert $(SVG) \
+	@"$(IMAGE_CONVERT)" $(SVG) \
 		-fuzz 5% -transparent white \
 		-background none \
 		-resize 180x180 \
