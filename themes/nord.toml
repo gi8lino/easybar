@@ -1,0 +1,12 @@
+[colors]
+background = "#2e3440"
+surface = "#3b4252"
+surface_elevated = "#434c5e"
+text = "#eceff4"
+muted = "#8693a7"
+accent = "#88c0d0"
+success = "#a3be8c"
+warning = "#ebcb8b"
+error = "#bf616a"
+border = "#4c566a"
+transparent = "#00000000"

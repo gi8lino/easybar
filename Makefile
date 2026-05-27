@@ -15,11 +15,13 @@ CLI_EXEC := easybar
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_TARGET).bundle
 
 DIST_DIR := dist
+THEMES_DIR := themes
 APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
 APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
 APP_RESOURCE_BUNDLE := $(APP_BUNDLE)/$(RESOURCE_BUNDLE_NAME)
+APP_THEMES_DIR := $(APP_RESOURCES)/Themes
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
 
@@ -107,7 +109,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
-        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources verify verify-release \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
@@ -253,9 +255,9 @@ else
 	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
 endif
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles into the app bundle.
-	@mkdir -p "$(APP_BUNDLE)"
-	@rm -rf "$(APP_RESOURCE_BUNDLE)"
+copy-resources: ## Internal target: copy SwiftPM resource bundles and root assets into the app bundle.
+	@mkdir -p "$(APP_BUNDLE)" "$(APP_RESOURCES)"
+	@rm -rf "$(APP_RESOURCE_BUNDLE)" "$(APP_THEMES_DIR)"
 ifeq ($(ARCH),universal)
 	@test -d ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" || { \
 		echo "Missing resource bundle: .build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)"; \
@@ -271,6 +273,35 @@ else
 	}
 	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
 endif
+	@test -d "$(THEMES_DIR)" || { \
+		echo "Missing themes directory: $(THEMES_DIR)"; \
+		exit 1; \
+	}
+	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+
+copy-debug-resources: ## Internal target: copy debug SwiftPM resource bundles and root assets into the app bundle.
+	@mkdir -p "$(APP_BUNDLE)" "$(APP_RESOURCES)"
+	@rm -rf "$(APP_RESOURCE_BUNDLE)" "$(APP_THEMES_DIR)"
+ifeq ($(RUN_ARCH),universal)
+	@test -d ".build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" || { \
+		echo "Missing resource bundle: .build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)"; \
+		find .build/arm64-apple-macosx/debug -maxdepth 1 -name '*.bundle' -print; \
+		exit 1; \
+	}
+	@cp -R ".build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
+else
+	@test -d ".build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" || { \
+		echo "Missing resource bundle: .build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)"; \
+		find ".build/$(RUN_ARCH)-apple-macosx/debug" -maxdepth 1 -name '*.bundle' -print; \
+		exit 1; \
+	}
+	@cp -R ".build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
+endif
+	@test -d "$(THEMES_DIR)" || { \
+		echo "Missing themes directory: $(THEMES_DIR)"; \
+		exit 1; \
+	}
+	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
 icons: ## Generate .icns files from the SVG icons and copy them into each app bundle.
 	@mkdir -p "$(APP_RESOURCES)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_RESOURCES)"
@@ -373,6 +404,7 @@ verify: ## Show the built bundle structure and validate key packaged files.
 	@test -f "$(CALENDAR_AGENT_PLIST)"
 	@test -f "$(NETWORK_AGENT_PLIST)"
 	@test -d "$(APP_RESOURCE_BUNDLE)"
+	@test -d "$(APP_THEMES_DIR)"
 	@echo "Info.plist:"
 	@plutil -p "$(PLIST)"
 	@echo "Calendar agent Info.plist:"
@@ -390,12 +422,14 @@ verify-release: ## Validate the release package and print release fingerprints.
 	@$(MAKE) --no-print-directory verify
 	@test -f "$(PACKAGE_ZIP)"
 	@test -f "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
+	@test -f "$(APP_THEMES_DIR)/default.toml"
 	@echo "Release package:"
 	@ls -lh "$(PACKAGE_ZIP)"
 	@echo "Build fingerprints:"
 	@shasum -a 256 "$(APP_BIN)"
 	@shasum -a 256 "$(PLIST)"
 	@shasum -a 256 "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
+	@shasum -a 256 "$(APP_THEMES_DIR)/default.toml"
 	@shasum -a 256 "$(PACKAGE_ZIP)"
 	@codesign -dv --verbose=4 "$(APP_BUNDLE)" 2>&1 || true
 
@@ -406,6 +440,7 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@"$(APP_BIN)"
@@ -417,6 +452,7 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
@@ -428,6 +464,7 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
 	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
+	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
 	@nohup "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 	@nohup "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"

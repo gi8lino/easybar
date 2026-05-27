@@ -90,7 +90,6 @@ let package = Package(
         .copy("Lua/runtime.lua"),
         .copy("Lua/easybar_api.lua"),
         .copy("Lua/easybar"),
-        .copy("Themes"),
       ]
     ),
     .executableTarget(
