@@ -57,8 +57,13 @@ In the source tree, bundled themes should live in the app target:
 ```text
 Sources/EasyBarApp/Themes/
 ├── default.toml
+├── dracula.toml
+├── everforest-dark.toml
+├── gruvbox-dark.toml
 ├── mocha.toml
 ├── nord.toml
+├── rose-pine.toml
+├── solarized-dark.toml
 └── tokyo-night.toml
 ```
 
@@ -135,36 +140,36 @@ today_button_border = "#3F2F6B"
 
 Every complete theme should define the full semantic palette:
 
-| Token              | Purpose                                            |
-| ------------------ | -------------------------------------------------- |
-| `background`       | Main bar and popup background.                     |
-| `surface`          | Normal widget or inactive surface background.      |
-| `surface_elevated` | Focused, active, or raised surface background.     |
-| `surface_hover`    | Hover or highlighted surface background.           |
-| `text`             | Primary text color.                                |
-| `text_secondary`   | Secondary body or label text color.                |
-| `text_tertiary`    | Tertiary text color for quieter labels.            |
-| `muted`            | Secondary, inactive, or unavailable text color.    |
-| `muted_secondary`  | Secondary muted tone for softer supporting content. |
-| `outside_month`    | Calendar text color for days outside the month.    |
-| `accent`           | Accent color for highlights and secondary details. |
-| `accent_secondary` | Secondary accent for supporting highlights.        |
-| `accent_soft`      | Softer accent for subtle emphasis.                 |
-| `success`          | Positive or healthy status color.                  |
-| `success_secondary` | Secondary positive color for supporting signals.  |
-| `warning`          | Warning status color.                              |
-| `orange`           | Orange status color for low or degraded states.    |
-| `error`            | Error or critical status color.                    |
-| `danger`           | Strong danger color for urgent attention.          |
-| `border`           | Normal border color.                               |
-| `border_strong`    | Emphasized border color.                           |
-| `border_subtle`    | Subtle or transparent border color.                |
-| `selection_text`   | Text color drawn on selected surfaces.             |
-| `selection_background` | Background color used for selected surfaces.  |
-| `transparent`      | Fully transparent color, usually `#00000000`.      |
-| `overlay_outline`  | Overlay outline color with alpha.                  |
-| `overlay_text`     | High-contrast overlay glyph or text color.         |
-| `today_button_border` | Border color for the calendar today button.    |
+| Token                  | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `background`           | Main bar and popup background.                      |
+| `surface`              | Normal widget or inactive surface background.       |
+| `surface_elevated`     | Focused, active, or raised surface background.      |
+| `surface_hover`        | Hover or highlighted surface background.            |
+| `text`                 | Primary text color.                                 |
+| `text_secondary`       | Secondary body or label text color.                 |
+| `text_tertiary`        | Tertiary text color for quieter labels.             |
+| `muted`                | Secondary, inactive, or unavailable text color.     |
+| `muted_secondary`      | Secondary muted tone for softer supporting content. |
+| `outside_month`        | Calendar text color for days outside the month.     |
+| `accent`               | Accent color for highlights and secondary details.  |
+| `accent_secondary`     | Secondary accent for supporting highlights.         |
+| `accent_soft`          | Softer accent for subtle emphasis.                  |
+| `success`              | Positive or healthy status color.                   |
+| `success_secondary`    | Secondary positive color for supporting signals.    |
+| `warning`              | Warning status color.                               |
+| `orange`               | Orange status color for low or degraded states.     |
+| `error`                | Error or critical status color.                     |
+| `danger`               | Strong danger color for urgent attention.           |
+| `border`               | Normal border color.                                |
+| `border_strong`        | Emphasized border color.                            |
+| `border_subtle`        | Subtle or transparent border color.                 |
+| `selection_text`       | Text color drawn on selected surfaces.              |
+| `selection_background` | Background color used for selected surfaces.        |
+| `transparent`          | Fully transparent color, usually `#00000000`.       |
+| `overlay_outline`      | Overlay outline color with alpha.                   |
+| `overlay_text`         | High-contrast overlay glyph or text color.          |
+| `today_button_border`  | Border color for the calendar today button.         |
 
 ## Color references
 
@@ -249,6 +254,7 @@ easybar.add(easybar.kind.item, "clock", {
 ```
 
 `easybar.theme.ref.<token>` always mirrors the supported theme token names.
+
 ## Override theme colors
 
 You can override individual theme tokens in `config.toml`:
