@@ -3,11 +3,11 @@ import TOMLKit
 
 extension Config {
   /// Default popup text color.
-  static let builtinPopupDefaultTextColorHex = "#cdd6f4"
+  static let builtinPopupDefaultTextColorHex = ThemeSection.default.colors.textSecondary
   /// Default popup background color.
-  static let builtinPopupDefaultBackgroundColorHex = "#111111"
+  static let builtinPopupDefaultBackgroundColorHex = ThemeSection.default.colors.background
   /// Default popup border color.
-  static let builtinPopupDefaultBorderColorHex = "#444444"
+  static let builtinPopupDefaultBorderColorHex = ThemeSection.default.colors.borderStrong
   /// Default popup border width.
   static let builtinPopupDefaultBorderWidth = 1.0
   /// Default popup corner radius.

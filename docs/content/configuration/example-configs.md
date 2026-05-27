@@ -14,7 +14,16 @@ It is useful for:
 - discovering all available keys
 - checking default values
 - seeing all supported built-ins
+- checking theme configuration
 - comparing your local config against the project defaults
+
+The defaults file includes the theme section:
+
+```toml
+[theme]
+name = "mocha"
+themes_dir = "~/.config/easybar/themes"
+```
 
 ## `config.minimal.toml`
 
@@ -27,6 +36,16 @@ It includes a compact setup with common built-ins such as:
 - Wi-Fi
 - calendar
 - one native `system` group
+
+It should also include only the theme settings needed to select a theme.
+
+Example:
+
+```toml
+[theme]
+name = "mocha"
+themes_dir = "~/.config/easybar/themes"
+```
 
 ## Copy a starter config
 
@@ -42,3 +61,27 @@ Then reload EasyBar:
 ```bash
 easybar --reload-config
 ```
+
+## Add a custom theme
+
+Create a custom theme directory:
+
+```bash
+mkdir -p ~/.config/easybar/themes
+```
+
+Add a custom theme file:
+
+```text
+~/.config/easybar/themes/my-theme.toml
+```
+
+Then select it in `config.toml`:
+
+```toml
+[theme]
+name = "my-theme"
+themes_dir = "~/.config/easybar/themes"
+```
+
+See [Themes](themes.md) for the theme file format.

@@ -5,13 +5,6 @@ import TOMLKit
 extension Config {
 
   /// Loads configuration from disk.
-  ///
-  /// Resolution order:
-  /// - built-in defaults already present on the config instance
-  /// - TOML file values when the config file exists
-  /// - per-section environment overrides
-  /// - per-section directory registration
-  /// - required directory creation
   func load() throws {
     resetRegisteredDirectories()
 
@@ -44,6 +37,8 @@ extension Config {
         try parseApp(from: toml)
         try parseLogging(from: toml)
         try parseAgents(from: toml)
+        try parseTheme(from: toml)
+        applyThemeDefaults()
         try parseBar(from: toml)
         try parseBuiltins(from: toml)
       } catch let error as TOMLParseError {
@@ -60,6 +55,8 @@ extension Config {
       try parseApp(from: TOMLTable())
       try parseLogging(from: TOMLTable())
       try parseAgents(from: TOMLTable())
+      try parseTheme(from: TOMLTable())
+      applyThemeDefaults()
       try parseBar(from: TOMLTable())
     }
 

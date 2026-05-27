@@ -20,7 +20,7 @@ enum Theme {
 
   /// Fallback text color for views and nodes without a color.
   static var defaultTextColor: Color {
-    return Color.white
+    return Color(hex: Config.shared.themeTextColorHex)
   }
 
   /// Returns the shared icon font used by popups and other icon-only text.

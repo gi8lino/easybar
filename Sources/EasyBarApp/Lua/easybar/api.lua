@@ -1,6 +1,7 @@
 --- Module contract:
 --- Owns the public EasyBar Lua API surface for one runtime registry.
 --- Returns a registry-like object consumed by the loader, events, and renderer.
+
 --- Public EasyBar API module table.
 local M = {}
 
@@ -22,6 +23,8 @@ end
 local event_tokens = load_module("event_tokens")
 --- JSON helper module exposed through the public widget API.
 local json_module = load_module("json")
+--- Active theme module exposed through the public widget API.
+local theme_module = load_module("theme")
 --- Registry module used to store widget node state.
 local registry_module = load_module("registry")
 --- Subscription module used for event and interval callbacks.
@@ -145,6 +148,7 @@ function M.new(log, hooks)
 		subscribe = subscriptions.subscribe,
 		handle_event = subscriptions.handle_event,
 		required_events = required_events,
+		theme = theme_module.current(),
 	}
 
 	--- Returns one widget-scoped EasyBar API.
@@ -261,6 +265,7 @@ function M.new(log, hooks)
 		widget_api.json = json_module
 		widget_api.kind = KINDS
 		widget_api.level = LOG_LEVELS
+		widget_api.theme = theme_module.current()
 
 		--- Writes one widget log line through the host logger.
 		function widget_api.log(level, ...)

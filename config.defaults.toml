@@ -10,6 +10,10 @@ develop = false # Enables developer-only features like the config editor.
 [app.env]
 PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" # Environment overrides passed into the Lua runtime and widget shell commands.
 
+[theme]
+name = "mocha"
+themes_dir = "~/.config/easybar/themes"
+
 [logging]
 enabled = false # Mirrors stdout and stderr into per-process log files when true.
 level = "info" # Minimum log level: trace | debug | info | warn | error.

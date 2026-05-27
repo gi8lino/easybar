@@ -1,0 +1,42 @@
+[colors]
+# Core surfaces
+background = "#111111"
+surface = "#1a1a1a"
+surface_elevated = "#2b2b2b"
+surface_hover = "#202020"
+
+# Text
+text = "#ffffff"
+text_secondary = "#d0d0d0"
+text_tertiary = "#c0c0c0"
+muted = "#6c7086"
+muted_secondary = "#8a8a8a"
+outside_month = "#6e738d"
+
+# Borders
+border = "#333333"
+border_strong = "#444444"
+border_subtle = "#00000000"
+
+# Accents
+accent = "#91d7e3"
+accent_secondary = "#89B4FA"
+accent_soft = "#8bd5ca"
+
+# Status
+success = "#a6e3a1"
+success_secondary = "#a6da95"
+warning = "#f9e2af"
+orange = "#fab387"
+error = "#f38ba8"
+danger = "#FF0000"
+
+# Selection
+selection_text = "#0B1020"
+selection_background = "#89B4FA"
+
+# Special
+transparent = "#00000000"
+overlay_outline = "#000000F0"
+overlay_text = "#FFFFFFFF"
+today_button_border = "#3F2F6B"

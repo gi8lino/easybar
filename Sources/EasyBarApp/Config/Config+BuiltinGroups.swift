@@ -35,20 +35,7 @@ extension Config {
       let style = try parseBuiltinStyle(
         from: styleTable,
         path: "builtins.groups.\(key).style",
-        fallback: .init(
-          icon: "",
-          textColorHex: nil,
-          backgroundColorHex: "#1a1a1a",
-          borderColorHex: "#333333",
-          borderWidth: 1,
-          cornerRadius: 8,
-          marginX: 0,
-          marginY: 0,
-          paddingX: 8,
-          paddingY: 4,
-          spacing: 6,
-          opacity: 1
-        )
+        fallback: defaultBuiltinGroupStyle()
       )
 
       guard placement.enabled else { continue }

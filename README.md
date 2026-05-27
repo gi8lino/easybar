@@ -10,6 +10,7 @@ It combines native built-in widgets with custom Lua widgets and is designed for 
 
 - Native macOS bar window built with SwiftUI
 - Built-in widgets plus scriptable Lua widgets
+- File-based themes with bundled and custom TOML palettes
 - AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
 - Calendar and network helper agents
@@ -40,6 +41,7 @@ Start with:
 
 - Installation
 - Configuration
+- Themes
 - AeroSpace Integration
 - Lua Widgets
 - Troubleshooting
@@ -63,6 +65,16 @@ The repository includes:
 
 - [`config.defaults.toml`](./config.defaults.toml)
 - [`config.minimal.toml`](./config.minimal.toml)
+
+Themes are selected in `config.toml`:
+
+```toml
+[theme]
+name = "mocha"
+themes_dir = "~/.config/easybar/themes"
+```
+
+EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundled themes.
 
 ## Screenshots
 

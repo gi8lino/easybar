@@ -22,6 +22,36 @@ enabled = true
 enabled = true
 ```
 
+## Theme defaults
+
+Built-ins receive visual defaults from the selected theme.
+
+For example, a theme can provide default colors for:
+
+- text
+- surfaces
+- borders
+- status colors
+- popup backgrounds
+- active and inactive states
+
+Explicit built-in config still wins.
+
+Example:
+
+```toml
+[theme]
+name = "mocha"
+
+[builtins.time.style]
+text_color = "#ffffff"
+background_color = "#090909"
+```
+
+Here the time widget uses the explicit colors instead of the theme defaults.
+
+See [Themes](themes.md).
+
 ## Groups
 
 Built-ins can be attached to native groups:
@@ -80,7 +110,7 @@ Excludes always win over includes, and blank filter entries are ignored.
 
 ## When to switch to Lua
 
-Stay with built-ins when the widget already exists and you mainly need native placement and styling.
+Stay with built-ins when the widget already exists and you mainly need native placement, grouping, theming, or styling.
 
 Switch to Lua when you need:
 

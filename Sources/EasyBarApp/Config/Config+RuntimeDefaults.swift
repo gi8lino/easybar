@@ -20,6 +20,8 @@ extension Config {
     networkAgentSection.refreshIntervalSeconds = runtime.networkAgentRefreshIntervalSeconds
     networkAgentSection.allowUnauthorizedNonSensitiveFields =
       runtime.networkAgentAllowUnauthorizedNonSensitiveFields
+
+    themeSection.themesDir = defaultThemesDir()
   }
 
   /// Restores all static defaults before parsing again.
@@ -27,6 +29,7 @@ extension Config {
     resetAppDefaults()
     resetLoggingDefaults()
     resetAgentDefaults()
+    resetThemeDefaults()
     resetBarDefaults()
     resetBuiltinDefaults()
   }
@@ -59,5 +62,13 @@ extension Config {
     networkAgentSection.enabled = true
     networkAgentSection.refreshIntervalSeconds = 60
     networkAgentSection.allowUnauthorizedNonSensitiveFields = false
+  }
+
+  /// Returns the default user theme directory next to the active config file.
+  private func defaultThemesDir() -> String {
+    URL(fileURLWithPath: configPath)
+      .deletingLastPathComponent()
+      .appendingPathComponent("themes", isDirectory: true)
+      .path
   }
 }

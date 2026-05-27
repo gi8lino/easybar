@@ -37,6 +37,13 @@ struct ConfigSnapshot {
     let allowUnauthorizedNonSensitiveFields: Bool
   }
 
+  /// Theme config snapshot.
+  struct Theme {
+    let name: String
+    let themesDir: String
+    let colors: Config.ThemeColors
+  }
+
   /// Built-in widget config snapshot.
   struct Builtins {
     let cpu: Config.CPUBuiltinConfig
@@ -60,6 +67,8 @@ struct ConfigSnapshot {
   let calendarAgent: CalendarAgent
   /// Network agent config values.
   let networkAgent: NetworkAgent
+  /// Theme config values.
+  let theme: Theme
   /// Bar config values.
   let bar: Config.BarSection
   /// Built-in widget config values.

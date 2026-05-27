@@ -62,6 +62,7 @@ Once the basic widget works, you can add:
 
 - an icon through `icon = { string = "..." }`
 - colors through `label.color` or `color`
+- theme-driven colors through `easybar.theme.colors.text` or `easybar.theme.ref.text`
 - click behavior through `node:subscribe(...)`
 - a popup through the `popup` property
 

@@ -34,20 +34,21 @@ nav:
 
   - Getting Started:
       - Installation: getting-started/installation.md
-      - macOS Quarantine: getting-started/macos-quarantine.md
       - Config Path: getting-started/configuration-path.md
-      - AeroSpace Integration: getting-started/aerospace.md
       - Built-ins Vs Lua: getting-started/builtins-vs-lua.md
+      - AeroSpace Integration: getting-started/aerospace.md
+      - macOS Quarantine: getting-started/macos-quarantine.md
 
   - Configuration:
       - Overview: configuration/overview.md
       - App Settings: configuration/app.md
       - Environment: configuration/environment.md
-      - Logging: configuration/logging.md
-      - Agents: configuration/agents.md
+      - Themes: configuration/themes.md
       - Built-ins: configuration/builtins.md
       - Native Groups: configuration/native-groups.md
       - Box Model: configuration/box-model.md
+      - Agents: configuration/agents.md
+      - Logging: configuration/logging.md
       - Developer Menu: configuration/developer-menu.md
       - Example Configs: configuration/example-configs.md
 

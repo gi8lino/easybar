@@ -58,6 +58,81 @@ final class Config: ObservableObject {
     var allowUnauthorizedNonSensitiveFields: Bool
   }
 
+  /// Theme color tokens used as defaults and references.
+  struct ThemeColors: Equatable {
+    var background: String
+    var surface: String
+    var surfaceElevated: String
+    var surfaceHover: String
+    var text: String
+    var textSecondary: String
+    var textTertiary: String
+    var muted: String
+    var mutedSecondary: String
+    var outsideMonth: String
+    var accent: String
+    var accentSecondary: String
+    var accentSoft: String
+    var success: String
+    var successSecondary: String
+    var warning: String
+    var orange: String
+    var error: String
+    var danger: String
+    var border: String
+    var borderStrong: String
+    var borderSubtle: String
+    var selectionText: String
+    var selectionBackground: String
+    var transparent: String
+    var overlayOutline: String
+    var overlayText: String
+    var todayButtonBorder: String
+  }
+
+  /// Theme config values.
+  struct ThemeSection: Equatable {
+    var name: String
+    var themesDir: String
+    var colors: ThemeColors
+
+    /// Bootstrap fallback used before the bundled default theme is parsed.
+    static let `default` = ThemeSection(
+      name: "default",
+      themesDir: "",
+      colors: .init(
+        background: "#111111",
+        surface: "#1a1a1a",
+        surfaceElevated: "#2b2b2b",
+        surfaceHover: "#202020",
+        text: "#ffffff",
+        textSecondary: "#d0d0d0",
+        textTertiary: "#c0c0c0",
+        muted: "#6c7086",
+        mutedSecondary: "#8a8a8a",
+        outsideMonth: "#6e738d",
+        accent: "#91d7e3",
+        accentSecondary: "#89B4FA",
+        accentSoft: "#8bd5ca",
+        success: "#a6e3a1",
+        successSecondary: "#a6da95",
+        warning: "#f9e2af",
+        orange: "#fab387",
+        error: "#f38ba8",
+        danger: "#FF0000",
+        border: "#333333",
+        borderStrong: "#444444",
+        borderSubtle: "#00000000",
+        selectionText: "#0B1020",
+        selectionBackground: "#89B4FA",
+        transparent: "#00000000",
+        overlayOutline: "#000000F0",
+        overlayText: "#FFFFFFFF",
+        todayButtonBorder: "#3F2F6B"
+      )
+    )
+  }
+
   /// Bar layout and color config values.
   struct BarSection {
     var height: CGFloat
@@ -70,8 +145,8 @@ final class Config: ObservableObject {
       height: 32,
       paddingX: 10,
       extendBehindNotch: true,
-      backgroundHex: "#111111",
-      borderHex: "#00000000"
+      backgroundHex: ThemeSection.default.colors.background,
+      borderHex: ThemeSection.default.colors.transparent
     )
   }
 
@@ -81,6 +156,7 @@ final class Config: ObservableObject {
   var loggingSection: LoggingSection
   var calendarAgentSection: CalendarAgentSection
   var networkAgentSection: NetworkAgentSection
+  var themeSection: ThemeSection
   var barSection: BarSection
 
   // MARK: - App compatibility accessors
@@ -175,6 +251,52 @@ final class Config: ObservableObject {
     set { networkAgentSection.allowUnauthorizedNonSensitiveFields = newValue }
   }
 
+  // MARK: - Theme accessors
+
+  var themeName: String {
+    get { themeSection.name }
+    set { themeSection.name = newValue }
+  }
+
+  var themesDir: String {
+    get { themeSection.themesDir }
+    set { themeSection.themesDir = newValue }
+  }
+
+  var themeColors: ThemeColors {
+    get { themeSection.colors }
+    set { themeSection.colors = newValue }
+  }
+
+  var themeBackgroundHex: String { themeSection.colors.background }
+  var themeSurfaceHex: String { themeSection.colors.surface }
+  var themeSurfaceElevatedHex: String { themeSection.colors.surfaceElevated }
+  var themeSurfaceHoverHex: String { themeSection.colors.surfaceHover }
+  var themeTextColorHex: String { themeSection.colors.text }
+  var themeTextSecondaryColorHex: String { themeSection.colors.textSecondary }
+  var themeTextTertiaryColorHex: String { themeSection.colors.textTertiary }
+  var themeMutedColorHex: String { themeSection.colors.muted }
+  var themeMutedSecondaryColorHex: String { themeSection.colors.mutedSecondary }
+  var themeOutsideMonthColorHex: String { themeSection.colors.outsideMonth }
+  var themeAccentColorHex: String { themeSection.colors.accent }
+  var themeAccentSecondaryColorHex: String { themeSection.colors.accentSecondary }
+  var themeAccentSoftColorHex: String { themeSection.colors.accentSoft }
+  var themeSuccessColorHex: String { themeSection.colors.success }
+  var themeSuccessSecondaryColorHex: String { themeSection.colors.successSecondary }
+  var themeWarningColorHex: String { themeSection.colors.warning }
+  var themeOrangeColorHex: String { themeSection.colors.orange }
+  var themeErrorColorHex: String { themeSection.colors.error }
+  var themeDangerColorHex: String { themeSection.colors.danger }
+  var themeBorderColorHex: String { themeSection.colors.border }
+  var themeBorderStrongColorHex: String { themeSection.colors.borderStrong }
+  var themeBorderSubtleColorHex: String { themeSection.colors.borderSubtle }
+  var themeSelectionTextColorHex: String { themeSection.colors.selectionText }
+  var themeSelectionBackgroundColorHex: String { themeSection.colors.selectionBackground }
+  var themeTransparentColorHex: String { themeSection.colors.transparent }
+  var themeOverlayOutlineColorHex: String { themeSection.colors.overlayOutline }
+  var themeOverlayTextColorHex: String { themeSection.colors.overlayText }
+  var themeTodayButtonBorderColorHex: String { themeSection.colors.todayButtonBorder }
+
   // MARK: - Bar compatibility accessors
 
   var barHeight: CGFloat {
@@ -253,6 +375,7 @@ final class Config: ObservableObject {
       refreshIntervalSeconds: 0,
       allowUnauthorizedNonSensitiveFields: false
     )
+    themeSection = .default
     barSection = .default
 
     resetDerivedDefaults()
@@ -299,6 +422,11 @@ final class Config: ObservableObject {
   func resetToDefaults() {
     resetStaticDefaults()
     resetDerivedDefaults()
+  }
+
+  /// Restores theme defaults.
+  func resetThemeDefaults() {
+    themeSection = .default
   }
 
   /// Restores bar defaults.

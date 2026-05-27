@@ -45,6 +45,12 @@ Use `group` when multiple child nodes belong together visually.
 
 Use child subscriptions when only specific parts should be clickable.
 
+## Prefer theme values for shared styling
+
+Use `easybar.theme.colors.<token>` when you want one resolved hex color in Lua.
+
+Use `easybar.theme.ref.<token>` when a node color field should stay coupled to the active theme.
+
 ## Use events before polling
 
 Prefer event subscriptions for real runtime events.

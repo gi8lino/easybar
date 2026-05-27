@@ -16,13 +16,15 @@ If you're new to EasyBar, this is the quickest path:
 2. Confirm where EasyBar reads config in [Config Path](getting-started/configuration-path.md).
 3. Decide between [Built-ins Vs Lua](getting-started/builtins-vs-lua.md).
 4. Skim [Configuration Overview](configuration/overview.md).
-5. Open [Lua Widgets](lua/overview.md) when you want custom behavior.
-6. Use [Troubleshooting](runtime/troubleshooting.md) if the bar or agents do not come up cleanly.
+5. Choose or customize a [Theme](configuration/themes.md).
+6. Open [Lua Widgets](lua/overview.md) when you want custom behavior.
+7. Use [Troubleshooting](runtime/troubleshooting.md) if the bar or agents do not come up cleanly.
 
 ## Features
 
 - Native macOS bar window built with SwiftUI
 - Native built-in widgets plus Lua widgets
+- File-based themes with bundled and custom TOML palettes
 - Object-style Lua widget API with node handles
 - AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
@@ -34,10 +36,12 @@ If you're new to EasyBar, this is the quickest path:
 ## How EasyBar is meant to be used
 
 - Start with built-in widgets for battery, Wi-Fi, spaces, calendar, and other system-integrated data.
+- Use a bundled theme or a custom TOML theme for shared visual defaults.
+- Override exact colors in `config.toml` when a specific widget should look different.
 - Reach for Lua widgets when you need custom display logic, event handling, shell integration, or app-specific behavior.
 - Keep platform-sensitive logic in native code when possible, and treat Lua as the extension layer.
 
-If you are choosing between the two, start with [Built-ins Vs Lua](getting-started/builtins-vs-lua.md).
+If you are choosing between built-ins and Lua, start with [Built-ins Vs Lua](getting-started/builtins-vs-lua.md).
 
 ## Project scope
 

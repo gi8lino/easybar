@@ -30,6 +30,11 @@ extension Config {
         allowUnauthorizedNonSensitiveFields:
           networkAgentSection.allowUnauthorizedNonSensitiveFields
       ),
+      theme: .init(
+        name: themeSection.name,
+        themesDir: themeSection.themesDir,
+        colors: themeSection.colors
+      ),
       bar: barSection,
       builtins: .init(
         cpu: builtinCPU,
@@ -50,6 +55,7 @@ extension Config {
   /// Restores one previous config snapshot.
   func apply(_ snapshot: ConfigSnapshot) {
     applyAppSnapshot(snapshot)
+    applyThemeSnapshot(snapshot)
     applyBarSnapshot(snapshot)
     applyBuiltinSnapshot(snapshot)
   }
@@ -84,6 +90,15 @@ extension Config {
       refreshIntervalSeconds: snapshot.networkAgent.refreshIntervalSeconds,
       allowUnauthorizedNonSensitiveFields:
         snapshot.networkAgent.allowUnauthorizedNonSensitiveFields
+    )
+  }
+
+  /// Restores the theme config snapshot.
+  func applyThemeSnapshot(_ snapshot: ConfigSnapshot) {
+    themeSection = .init(
+      name: snapshot.theme.name,
+      themesDir: snapshot.theme.themesDir,
+      colors: snapshot.theme.colors
     )
   }
 

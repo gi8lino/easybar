@@ -15,7 +15,7 @@ extension LuaProcessController {
       luaSocketPath: Config.shared.luaSocketPath,
       widgetsPath: Config.shared.widgetsPath,
       widgetFiles: resolvedWidgetFiles(in: Config.shared.widgetsPath),
-      environment: Config.shared.appSection.environment
+      environment: luaRuntimeEnvironment()
     )
   }
 
@@ -39,6 +39,7 @@ extension LuaProcessController {
         .deletingLastPathComponent()
         .appendingPathComponent("EasyBarLuaRuntime")
         .path
+
       if fileManager.isExecutableFile(atPath: siblingPath) {
         return siblingPath
       }
@@ -48,6 +49,7 @@ extension LuaProcessController {
     let candidate = URL(fileURLWithPath: moduleParentPath)
       .appendingPathComponent("EasyBarLuaRuntime")
       .path
+
     if fileManager.isExecutableFile(atPath: candidate) {
       return candidate
     }
@@ -61,18 +63,23 @@ extension LuaProcessController {
     let widgetsURL = URL(fileURLWithPath: widgetsPath, isDirectory: true)
 
     guard
-      let fileURLs = try? FileManager.default.contentsOfDirectory(
+      let files = try? FileManager.default.contentsOfDirectory(
         at: widgetsURL,
-        includingPropertiesForKeys: nil
+        includingPropertiesForKeys: [.isRegularFileKey],
+        options: [.skipsHiddenFiles]
       )
     else {
-      logger.warn("failed to enumerate lua widgets", .field("path", widgetsPath))
       return []
     }
 
     return
-      fileURLs
-      .filter { $0.pathExtension == "lua" }
+      files
+      .filter { url in
+        guard url.pathExtension == "lua" else { return false }
+
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+        return values?.isRegularFile == true
+      }
       .map(\.lastPathComponent)
       .sorted()
   }
@@ -90,9 +97,6 @@ extension LuaProcessController {
   }
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
-  ///
-  /// The child becomes the leader of its own process group immediately, which avoids the
-  /// racy post-launch `setpgid` handoff and guarantees subtree-isolated signal delivery.
   func spawnProcess(context: LaunchContext, resources: LaunchResources) throws -> Int32 {
     var fileActions: posix_spawn_file_actions_t?
     var attributes: posix_spawnattr_t?
@@ -181,52 +185,57 @@ extension LuaProcessController {
     }
 
     source.resume()
+
     withLock {
       terminationSource = source
     }
   }
 
-  /// Handles Lua process termination and related cleanup logging.
+  /// Handles one observed Lua runtime termination.
   func handleTermination(pid: Int32) {
-    cancelForcedKillWorkItem()
+    var status: Int32 = 0
+    let waitResult = waitpid(pid, &status, WNOHANG)
 
-    var rawStatus: Int32 = 0
-    let waitResult = waitpid(pid, &rawStatus, 0)
-
-    let status: Int32
     if waitResult == pid {
-      status = normalizedTerminationStatus(from: rawStatus)
-    } else {
-      let code = errno
-      logger.warn("waitpid failed for lua runtime", .field("pid", pid), .field("errno", code))
-      status = 1
+      logTermination(pid: pid, status: status)
+    } else if waitResult < 0 && errno != ECHILD {
+      logger.warn(
+        "failed to reap lua runtime",
+        .field("pid", pid),
+        .field("errno", errno)
+      )
     }
 
     clearTrackedProcessIfMatching(pid: pid)
-    logTerminationStatus(status, processIdentifier: pid)
-  }
-
-  /// Converts a raw `waitpid` status into the log/status shape used elsewhere.
-  ///
-  /// For normal exit the low 7 bits are zero and the exit code is stored in the high byte.
-  /// For signal termination the low 7 bits contain the terminating signal number.
-  func normalizedTerminationStatus(from rawStatus: Int32) -> Int32 {
-    let signal = rawStatus & 0x7f
-
-    if signal == 0 {
-      return (rawStatus >> 8) & 0xff
-    }
-
-    return signal
   }
 
   /// Logs one Lua runtime termination status.
-  func logTerminationStatus(_ status: Int32, processIdentifier: Int32) {
-    guard status != 0 else {
-      logger.info(
-        "lua runtime terminated",
+  private func logTermination(pid processIdentifier: Int32, status: Int32) {
+    if waitStatusExited(status) {
+      let exitCode = waitStatusExitCode(status)
+
+      if exitCode == 0 {
+        logger.debug(
+          "lua runtime exited",
+          .field("pid", processIdentifier),
+          .field("code", exitCode)
+        )
+      } else {
+        logger.warn(
+          "lua runtime exited",
+          .field("pid", processIdentifier),
+          .field("code", exitCode)
+        )
+      }
+
+      return
+    }
+
+    if waitStatusSignaled(status) {
+      logger.warn(
+        "lua runtime terminated by signal",
         .field("pid", processIdentifier),
-        .field("status", status)
+        .field("signal", waitStatusTerminationSignal(status))
       )
       return
     }
@@ -236,6 +245,32 @@ extension LuaProcessController {
       .field("pid", processIdentifier),
       .field("status", status)
     )
+  }
+
+  /// Returns the low wait-status byte used by Darwin wait macros.
+  private func waitStatusCode(_ status: Int32) -> Int32 {
+    return status & 0x7f
+  }
+
+  /// Returns whether one wait status represents normal process exit.
+  private func waitStatusExited(_ status: Int32) -> Bool {
+    return waitStatusCode(status) == 0
+  }
+
+  /// Returns the process exit code from one wait status.
+  private func waitStatusExitCode(_ status: Int32) -> Int32 {
+    return (status >> 8) & 0xff
+  }
+
+  /// Returns whether one wait status represents signal termination.
+  private func waitStatusSignaled(_ status: Int32) -> Bool {
+    let code = waitStatusCode(status)
+    return code != 0x7f && code != 0
+  }
+
+  /// Returns the terminating signal from one wait status.
+  private func waitStatusTerminationSignal(_ status: Int32) -> Int32 {
+    return waitStatusCode(status)
   }
 
   /// Initializes one `posix_spawn_file_actions_t`.
@@ -288,9 +323,6 @@ extension LuaProcessController {
   }
 
   /// Configures the child to become leader of a dedicated process group.
-  ///
-  /// With `POSIX_SPAWN_SETPGROUP` and pgroup `0`, the spawned child becomes the leader
-  /// of its own process group at spawn time.
   private func configureDedicatedProcessGroup(
     attributes: inout posix_spawnattr_t?
   ) throws {
@@ -335,7 +367,8 @@ extension LuaProcessController {
         luaPath,
         runtimePath,
         widgetsPath,
-      ] + widgetFiles)
+      ] + widgetFiles
+    )
   }
 
   /// Builds the environment vector inherited by the Lua runtime.
@@ -369,6 +402,7 @@ extension LuaProcessController {
         for previousIndex in 0..<index {
           free(buffer[previousIndex])
         }
+
         buffer.deallocate()
 
         throw NSError(
@@ -453,5 +487,12 @@ extension LuaProcessController {
   func closeLaunchResourcesAfterFailedSpawn(_ resources: LaunchResources) {
     try? resources.error.fileHandleForReading.close()
     try? resources.error.fileHandleForWriting.close()
+  }
+
+  /// Returns the Lua runtime environment with app config and resolved theme values.
+  private func luaRuntimeEnvironment() -> [String: String] {
+    Config.shared.appSection.environment.merging(Config.shared.luaThemeEnvironment()) {
+      _, themeValue in themeValue
+    }
   }
 }
