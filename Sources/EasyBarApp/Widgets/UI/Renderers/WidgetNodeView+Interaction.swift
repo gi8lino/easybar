@@ -122,9 +122,7 @@ extension WidgetNodeView {
 
   @ViewBuilder
   var nodeMouseOverlay: some View {
-    if node.isMouseHoverInteractive || node.isMouseDownInteractive || node.isMouseUpInteractive
-      || node.isMouseClickInteractive || node.isMouseScrollInteractive
-    {
+    if node.hasMouseInteractionHandlers {
       nodeEventSurface(tracksHover: node.isMouseHoverInteractive)
     }
   }
@@ -141,9 +139,7 @@ extension WidgetNodeView {
 
   @ViewBuilder
   var popupAnchorMouseOverlay: some View {
-    if nodeCanPresentPopup || node.isMouseHoverInteractive || node.isMouseDownInteractive
-      || node.isMouseUpInteractive || node.isMouseClickInteractive || node.isMouseScrollInteractive
-    {
+    if nodeCanPresentPopup || node.hasMouseInteractionHandlers {
       GeometryReader { proxy in
         WidgetMouseView(
           widgetID: node.root,

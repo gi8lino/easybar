@@ -151,4 +151,10 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var isMouseScrollInteractive: Bool {
     return receivesMouseScroll == true
   }
+
+  /// Returns whether this node needs any mouse interaction surface.
+  var hasMouseInteractionHandlers: Bool {
+    return isMouseHoverInteractive || isMouseDownInteractive || isMouseUpInteractive
+      || isMouseClickInteractive || isMouseScrollInteractive
+  }
 }
