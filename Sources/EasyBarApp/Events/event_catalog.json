@@ -18,7 +18,7 @@
   },
   "intervalEvent": {
     "runtimeName": "interval",
-    "doc": "Internal timer callback name used when `interval` and `on_interval` are configured on a node."
+    "doc": "Internal timer callback name delivered to the widget whose own `interval` schedule elapsed."
   },
   "forcedEvent": {
     "luaField": "forced",

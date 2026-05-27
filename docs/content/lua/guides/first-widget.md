@@ -43,7 +43,7 @@ The arguments are:
 - `position = "right"` places the node on the right side of the bar
 - `order = 10` controls render ordering among other root nodes
 - `label = ...` sets the displayed text
-- `interval = 60` asks EasyBar to call `on_interval` every 60 seconds
+- `interval = 60` asks EasyBar to call `on_interval` 60 seconds after the widget registers, then every 60 seconds after that
 - `on_interval = function() ... end` updates the node in place
 
 The `clock` variable stores the handle returned by EasyBar, which lets the callback call `clock:set(...)` later.

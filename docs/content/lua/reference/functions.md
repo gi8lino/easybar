@@ -13,7 +13,7 @@ Creates one EasyBar node and returns its handle.
 Use `easybar.kind.item` for simple widgets, `easybar.kind.group` for shared containers,
 and `easybar.kind.row` / `easybar.kind.column` for layout wrappers around child nodes.
 When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
-on the configured cadence without requiring an event subscription.
+on this widget's own repeating schedule without requiring an event subscription.
 
 ### Parameters
 

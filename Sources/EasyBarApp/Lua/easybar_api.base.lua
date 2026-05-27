@@ -169,7 +169,7 @@
 ---@field opacity? number Opacity from `0` to `1`.
 ---@field y_offset? number Vertical offset in points.
 ---@field interval? number Polling interval in seconds.
----@field on_interval? fun() Interval callback executed on the configured cadence.
+---@field on_interval? fun() Interval callback executed on this widget's own interval schedule.
 ---@field color? string Primary foreground color.
 ---@field icon? EasyBarIconLike Icon table or shorthand value.
 ---@field label? EasyBarLabelLike Label table or shorthand value.
@@ -311,7 +311,7 @@ function EasyBar.subscribe(id, events, handler) end
 ---Use `easybar.kind.item` for simple widgets, `easybar.kind.group` for shared containers,
 ---and `easybar.kind.row` / `easybar.kind.column` for layout wrappers around child nodes.
 ---When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
----on the configured cadence without requiring an event subscription.
+---on this widget's own repeating schedule without requiring an event subscription.
 ---@param kind EasyBarKind
 ---@param id string
 ---@param props? EasyBarNodeProps

@@ -163,7 +163,7 @@ The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 | `opacity` _(optional)_ | `number` | Opacity from `0` to `1`. |
 | `y_offset` _(optional)_ | `number` | Vertical offset in points. |
 | `interval` _(optional)_ | `number` | Polling interval in seconds. |
-| `on_interval` _(optional)_ | `fun()` | Interval callback executed on the configured cadence. |
+| `on_interval` _(optional)_ | `fun()` | Interval callback executed on this widget's own interval schedule. |
 | `color` _(optional)_ | `string` | Primary foreground color. |
 | `icon` _(optional)_ | `EasyBarIconLike` | Icon table or shorthand value. |
 | `label` _(optional)_ | `EasyBarLabelLike` | Label table or shorthand value. |

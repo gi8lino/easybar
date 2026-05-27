@@ -14,7 +14,7 @@ In normal widget code, prefer `easybar.events.*` tokens over comparing raw strin
 
 | Value | Meaning |
 | ----- | ------- |
-| `"interval"` | Internal timer callback name used when `interval` and `on_interval` are configured on a node. |
+| `"interval"` | Internal timer callback name delivered to the widget whose own `interval` schedule elapsed. |
 | `"forced"` | Fired when EasyBar or `easybar` triggers a manual refresh. |
 | `"system_woke"` | Fired after the system wakes from sleep. |
 | `"session_active"` | Fired when the macOS user session becomes active. |
