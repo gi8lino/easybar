@@ -1,7 +1,7 @@
 -- Homebrew outdated widget for EasyBar.
 --
 -- Icon-only widget for the bar, with a popup that shows outdated packages and
--- actions for updating Homebrew metadata and upgrading packages.
+-- actions for updating Homebrew and upgrading packages.
 
 local WIDGET_ID = "brew_outdated"
 
@@ -92,7 +92,7 @@ local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
---- Returns whether the widget should run another brew check now.
+--- Returns whether the widget should run another Homebrew update now.
 local function check_due()
 	if state.last_attempted_at == nil then
 		return true
@@ -294,7 +294,7 @@ end
 --- Returns labels for action buttons based on the current phase.
 local function action_button_labels()
 	if not running then
-		return "Upgrade now", "Update metadata"
+		return "Upgrade now", "Update"
 	end
 
 	if state.phase == "upgrading" then
@@ -543,7 +543,7 @@ local function run_brew_async(status_label, phase, command, on_success)
 	log_debug("run_brew_async token", tostring(token))
 end
 
---- Checks outdated packages without updating Homebrew metadata.
+--- Checks outdated packages without updating Homebrew.
 local function check_outdated(status_label)
 	run_brew_async(
 		status_label or "Checking outdated packages…",
@@ -553,23 +553,34 @@ local function check_outdated(status_label)
 	)
 end
 
---- Runs one outdated check only when the widget is due.
-local function refresh_if_due(status_label)
+--- Updates Homebrew, then checks outdated packages.
+local function update_now()
+	local command = [[
+tmp="${TMPDIR:-/tmp}/easybar-brew-update.$$"
+
+brew update >"$tmp" 2>&1
+update_rc=$?
+
+if [ "$update_rc" -ne 0 ]; then
+  tail -n 40 "$tmp"
+  rm -f "$tmp"
+  exit "$update_rc"
+fi
+
+rm -f "$tmp"
+HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
+]]
+
+	run_brew_async("Updating Homebrew…", "updating", command, apply_outdated_json)
+end
+
+--- Updates Homebrew only when the widget is due.
+local function update_if_due()
 	if running or not check_due() then
 		return
 	end
 
-	check_outdated(status_label or "Checking outdated packages…")
-end
-
---- Updates Homebrew metadata, then checks outdated packages.
-local function update_now()
-	run_brew_async(
-		"Updating Homebrew metadata…",
-		"updating",
-		"brew update >/dev/null 2>&1 && HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
-		apply_outdated_json
-	)
+	update_now()
 end
 
 --- Upgrades packages, then checks outdated packages.
@@ -643,7 +654,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	},
 	on_interval = function()
 		if not running then
-			check_outdated("Checking outdated packages…")
+			update_now()
 		end
 	end,
 })
@@ -701,7 +712,7 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	parent = actions_row.name,
 	order = 2,
 	label = {
-		string = "Update metadata",
+		string = "Update",
 		color = COLORS.text,
 	},
 	background = button_background(),
@@ -734,7 +745,7 @@ brew_widget:subscribe({
 	easybar.events.session_active,
 }, function(event)
 	log_debug("lifecycle event", tostring(event and event.name), "due=" .. tostring(check_due()))
-	refresh_if_due("Checking outdated packages…")
+	update_if_due()
 end)
 
 brew_widget:subscribe(easybar.events.forced, function()
@@ -743,4 +754,4 @@ brew_widget:subscribe(easybar.events.forced, function()
 	end
 end)
 
-check_outdated("Checking outdated packages…")
+update_now()
