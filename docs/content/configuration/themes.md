@@ -59,7 +59,10 @@ EasyBar.app/Contents/Resources/Themes/
 ├── default.toml
 ├── dracula.toml
 ├── everforest-dark.toml
+├── frappe.toml
 ├── gruvbox-dark.toml
+├── latte.toml
+├── macchiato.toml
 ├── mocha.toml
 ├── nord.toml
 ├── rose-pine.toml
