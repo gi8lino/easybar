@@ -97,3 +97,7 @@ EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundl
 ### Context menu
 
 <img src="./docs/content/assets/context.png" alt="Context menu screenshot" width="500">
+
+## License
+
+This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
