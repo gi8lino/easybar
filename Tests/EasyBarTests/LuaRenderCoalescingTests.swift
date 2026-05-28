@@ -8,6 +8,12 @@ final class LuaRenderCoalescingTests: XCTestCase {
   private let decoder = JSONDecoder()
   private var tempDirectoryURL: URL!
 
+  private static var luaRuntimeEnvironment: [String: String] {
+    ProcessInfo.processInfo.environment.merging(Config.shared.luaThemeEnvironment()) {
+      _, themeValue in themeValue
+    }
+  }
+
   override func setUpWithError() throws {
     try super.setUpWithError()
     tempDirectoryURL = try makeTemporaryDirectory()
@@ -82,7 +88,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = ProcessInfo.processInfo.environment
+    process.environment = Self.luaRuntimeEnvironment
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -193,7 +199,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = ProcessInfo.processInfo.environment
+    process.environment = Self.luaRuntimeEnvironment
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -401,7 +407,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = ProcessInfo.processInfo.environment
+    process.environment = Self.luaRuntimeEnvironment
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -501,7 +507,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = ProcessInfo.processInfo.environment
+    process.environment = Self.luaRuntimeEnvironment
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -709,7 +715,7 @@ extension LuaRenderCoalescingTests {
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
-      process.environment = ProcessInfo.processInfo.environment
+      process.environment = LuaRenderCoalescingTests.luaRuntimeEnvironment
 
       stdoutObserver = RuntimeLineObserver { line in
         do {
