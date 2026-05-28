@@ -110,7 +110,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop dev icons \
+.PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -603,10 +603,6 @@ stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@pkill -f "$(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)" >/dev/null 2>&1 || true
 	@pkill -f "$(CALENDAR_AGENT_BUNDLE)/Contents/MacOS/$(CALENDAR_AGENT_EXEC)" >/dev/null 2>&1 || true
 	@pkill -f "$(NETWORK_AGENT_BUNDLE)/Contents/MacOS/$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
-
-dev: prepare-version ## Fast debug run without bundling.
-	@EASYBAR_LOG_LEVEL=debug $(SWIFT_BUILD_DEBUG) --product $(APP_PRODUCT)
-	@EASYBAR_LOG_LEVEL=debug swift run -c debug $(APP_PRODUCT)
 
 ##@ Cleanup
 
