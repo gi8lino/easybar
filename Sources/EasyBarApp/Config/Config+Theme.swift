@@ -103,6 +103,25 @@ extension Config {
 }
 
 extension Config {
+  /// Applies the standard transparent built-in chrome.
+  private func applyTransparentBuiltinStyle(
+    _ style: inout BuiltinWidgetStyle,
+    textColorHex: String? = nil
+  ) {
+    style.textColorHex = textColorHex ?? themeTextColorHex
+    style.backgroundColorHex = themeTransparentColorHex
+    style.borderColorHex = themeTransparentColorHex
+  }
+
+  /// Applies the standard surface-style built-in chrome.
+  private func applySurfaceBuiltinStyle(
+    _ style: inout BuiltinWidgetStyle,
+    textColorHex: String? = nil
+  ) {
+    style.textColorHex = textColorHex ?? themeTextColorHex
+    style.backgroundColorHex = themeSurfaceHex
+    style.borderColorHex = themeBorderColorHex
+  }
 
   /// Applies theme defaults to the bar.
   private func applyThemeBarDefaults() {
@@ -126,17 +145,13 @@ extension Config {
 
   /// Applies theme defaults to the CPU built-in.
   private func applyThemeCPUSparklineDefaults() {
-    builtinCPU.style.textColorHex = themeTextColorHex
-    builtinCPU.style.backgroundColorHex = themeTransparentColorHex
-    builtinCPU.style.borderColorHex = themeTransparentColorHex
+    applyTransparentBuiltinStyle(&builtinCPU.style)
     builtinCPU.colorHex = themeSuccessSecondaryColorHex
   }
 
   /// Applies theme defaults to the battery built-in.
   private func applyThemeBatteryDefaults() {
-    builtinBattery.style.textColorHex = themeTextColorHex
-    builtinBattery.style.backgroundColorHex = themeTransparentColorHex
-    builtinBattery.style.borderColorHex = themeTransparentColorHex
+    applyTransparentBuiltinStyle(&builtinBattery.style)
 
     builtinBattery.fixedColorHex = themeTextColorHex
     builtinBattery.colors.highColorHex = themeSuccessColorHex
@@ -155,9 +170,7 @@ extension Config {
 
   /// Applies theme defaults to the spaces built-in.
   private func applyThemeSpacesDefaults() {
-    builtinSpaces.style.textColorHex = themeTextColorHex
-    builtinSpaces.style.backgroundColorHex = themeTransparentColorHex
-    builtinSpaces.style.borderColorHex = themeTransparentColorHex
+    applyTransparentBuiltinStyle(&builtinSpaces.style)
 
     builtinSpaces.text.focusedColorHex = themeTextSecondaryColorHex
     builtinSpaces.text.inactiveColorHex = themeTextSecondaryColorHex
@@ -171,30 +184,22 @@ extension Config {
 
   /// Applies theme defaults to the front app built-in.
   private func applyThemeFrontAppDefaults() {
-    builtinFrontApp.style.textColorHex = themeTextColorHex
-    builtinFrontApp.style.backgroundColorHex = themeSurfaceHex
-    builtinFrontApp.style.borderColorHex = themeBorderColorHex
+    applySurfaceBuiltinStyle(&builtinFrontApp.style)
   }
 
   /// Applies theme defaults to the AeroSpace mode built-in.
   private func applyThemeAeroSpaceModeDefaults() {
-    builtinAeroSpaceMode.style.textColorHex = themeTextColorHex
-    builtinAeroSpaceMode.style.backgroundColorHex = themeSurfaceHex
-    builtinAeroSpaceMode.style.borderColorHex = themeBorderColorHex
+    applySurfaceBuiltinStyle(&builtinAeroSpaceMode.style)
   }
 
   /// Applies theme defaults to the volume built-in.
   private func applyThemeVolumeDefaults() {
-    builtinVolume.style.textColorHex = themeTextColorHex
-    builtinVolume.style.backgroundColorHex = themeTransparentColorHex
-    builtinVolume.style.borderColorHex = themeTransparentColorHex
+    applyTransparentBuiltinStyle(&builtinVolume.style)
   }
 
   /// Applies theme defaults to the Wi-Fi built-in.
   private func applyThemeWiFiDefaults() {
-    builtinWiFi.style.textColorHex = themeTextColorHex
-    builtinWiFi.style.backgroundColorHex = themeTransparentColorHex
-    builtinWiFi.style.borderColorHex = themeTransparentColorHex
+    applyTransparentBuiltinStyle(&builtinWiFi.style)
 
     builtinWiFi.activeColorHex = themeTextColorHex
     builtinWiFi.inactiveColorHex = themeMutedColorHex
@@ -272,16 +277,12 @@ extension Config {
 
   /// Applies theme defaults to the time built-in.
   private func applyThemeTimeDefaults() {
-    builtinTime.style.textColorHex = themeTextColorHex
-    builtinTime.style.backgroundColorHex = themeSurfaceHex
-    builtinTime.style.borderColorHex = themeBorderColorHex
+    applySurfaceBuiltinStyle(&builtinTime.style)
   }
 
   /// Applies theme defaults to the date built-in.
   private func applyThemeDateDefaults() {
-    builtinDate.style.textColorHex = themeTextColorHex
-    builtinDate.style.backgroundColorHex = themeSurfaceHex
-    builtinDate.style.borderColorHex = themeBorderColorHex
+    applySurfaceBuiltinStyle(&builtinDate.style)
   }
 
   /// Returns the default tooltip popup style derived from the active theme.

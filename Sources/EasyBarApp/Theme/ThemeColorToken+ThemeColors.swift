@@ -1,5 +1,5 @@
-private extension ThemeColorToken {
-  static let themeColorKeyPaths: [ThemeColorToken: WritableKeyPath<Config.ThemeColors, String>] = [
+extension ThemeColorToken {
+  fileprivate static let themeColorKeyPaths: [ThemeColorToken: WritableKeyPath<Config.ThemeColors, String>] = [
     .background: \.background,
     .surface: \.surface,
     .surfaceElevated: \.surfaceElevated,
@@ -30,7 +30,7 @@ private extension ThemeColorToken {
     .todayButtonBorder: \.todayButtonBorder,
   ]
 
-  var themeColorKeyPath: WritableKeyPath<Config.ThemeColors, String> {
+  fileprivate var themeColorKeyPath: WritableKeyPath<Config.ThemeColors, String> {
     guard let keyPath = Self.themeColorKeyPaths[self] else {
       preconditionFailure("missing theme color key path for \(rawValue)")
     }
