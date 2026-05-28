@@ -30,8 +30,6 @@ extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
-
   - Getting Started:
       - Installation: getting-started/installation.md
       - Config Path: getting-started/configuration-path.md
