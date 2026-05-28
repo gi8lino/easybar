@@ -34,7 +34,7 @@ EasyBar resolves themes in this order:
 
 ```text
 1. user theme: themes_dir/<name>.toml
-2. bundled theme: app bundle Themes/<name>.toml
+2. bundled theme: app bundle EasyBar.app/Contents/Resources/Themes/<name>.toml
 3. error if the theme does not exist
 ```
 
@@ -55,7 +55,7 @@ Bundled themes ship inside the app bundle.
 In the source tree, bundled themes should live in the app target:
 
 ```text
-Sources/EasyBarApp/Themes/
+EasyBar.app/Contents/Resources/Themes/
 ├── default.toml
 ├── dracula.toml
 ├── everforest-dark.toml
@@ -315,16 +315,32 @@ check that one of these files exists:
 
 ```text
 ~/.config/easybar/themes/tokyo-night.toml
-Sources/EasyBarApp/Themes/tokyo-night.toml
+EasyBar.app/Contents/Resources/Themes/tokyo-night.toml
 ```
 
-For bundled themes, make sure `Package.swift` includes:
+For bundled themes, make sure the repository root contains the selected theme file:
 
-```swift
-.copy("Themes")
+```text
+themes/tokyo-night.toml
 ```
 
-Then rebuild the app bundle.
+Then rebuild or run through the Makefile so the root `themes/` directory is copied into the app bundle:
+
+```bash
+make bundle
+```
+
+For local development, use:
+
+```bash
+make run
+```
+
+Both targets package bundled themes into:
+
+```text
+EasyBar.app/Contents/Resources/Themes/
+```
 
 ### Theme changes do not apply
 
