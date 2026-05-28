@@ -105,7 +105,7 @@ final class ConfigLoaderTests: XCTestCase {
       .deletingLastPathComponent()
     let bundledThemeURL =
       repoRootURL
-      .appendingPathComponent("Sources/EasyBarApp/Themes/default.toml")
+      .appendingPathComponent("themes/default.toml")
 
     let themeText = try String(contentsOf: bundledThemeURL, encoding: .utf8)
     let expectedColors: [ThemeColorToken: String] = [
@@ -191,8 +191,8 @@ final class ConfigLoaderTests: XCTestCase {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()
-    let themesDirectoryURL = repoRootURL.appendingPathComponent("Sources/EasyBarApp/Themes")
-    let bundledThemeNames = ["default", "mocha", "nord", "tokyo-night"]
+    let themesDirectoryURL = repoRootURL.appendingPathComponent("themes")
+    let bundledThemeNames = ["default", "tokyo-night"]
 
     for themeName in bundledThemeNames {
       let themeText = try String(
