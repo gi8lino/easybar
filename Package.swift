@@ -84,9 +84,11 @@ let package = Package(
         "Info.plist",
         "Lua/easybar_api.base.lua",
         "Lua/easybar_api.events.lua",
+        "Lua/easybar_api.themes.lua",
       ],
       resources: [
         .copy("Events/event_catalog.json"),
+        .copy("Theme/theme_tokens.json"),
         .copy("Lua/runtime.lua"),
         .copy("Lua/easybar_api.lua"),
         .copy("Lua/easybar"),

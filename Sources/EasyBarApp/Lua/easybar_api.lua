@@ -395,6 +395,10 @@
 ---@field encode fun(value: any): string Encodes one Lua value tree into a JSON string.
 ---@field decode fun(text: string): any Decodes one JSON string into Lua values.
 
+-- GENERATED SECTION: easybar.themes
+-- EasyBar generated theme stub. Do not edit by hand.
+-- Source of truth: Sources/EasyBarApp/Theme/theme_tokens.json
+-- Regenerate with: scripts/generate_theme_tokens.py
 ---Resolved active theme colors.
 ---@class EasyBarThemeColors
 ---@field background string Main bar and popup background color.
@@ -464,6 +468,7 @@
 ---@field name string Active theme name from `[theme].name`.
 ---@field colors EasyBarThemeColors Resolved theme colors.
 ---@field ref EasyBarThemeRefs Theme reference strings such as `theme.text`.
+-- END GENERATED SECTION: easybar.themes
 
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.

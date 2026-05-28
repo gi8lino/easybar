@@ -8,37 +8,20 @@ local M = {}
 --- Environment variable containing the resolved theme JSON.
 local THEME_ENV = "EASYBAR_THEME_JSON"
 
+--- Loads the sibling generated theme token module.
+local function load_theme_tokens()
+	local base_dir = debug.getinfo(1, "S").source:match("^@(.*/)")
+	local chunk, err = loadfile(base_dir .. "theme_tokens.lua")
+
+	if not chunk then
+		error("failed to load easybar theme tokens module: " .. tostring(err))
+	end
+
+	return chunk()
+end
+
 --- Supported theme color tokens.
-local COLOR_KEYS = {
-	"background",
-	"surface",
-	"surface_elevated",
-	"surface_hover",
-	"text",
-	"text_secondary",
-	"text_tertiary",
-	"muted",
-	"muted_secondary",
-	"outside_month",
-	"accent",
-	"accent_secondary",
-	"accent_soft",
-	"success",
-	"success_secondary",
-	"warning",
-	"orange",
-	"error",
-	"danger",
-	"border",
-	"border_strong",
-	"border_subtle",
-	"selection_text",
-	"selection_background",
-	"transparent",
-	"overlay_outline",
-	"overlay_text",
-	"today_button_border",
-}
+local COLOR_KEYS = load_theme_tokens().keys
 
 --- Returns one deep copy of a table.
 local function deep_copy(value)

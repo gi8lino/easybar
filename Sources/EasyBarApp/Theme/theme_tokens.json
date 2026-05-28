@@ -1,0 +1,144 @@
+{
+  "tokens": [
+    {
+      "name": "background",
+      "swiftCase": "background",
+      "doc": "Main bar and popup background color."
+    },
+    {
+      "name": "surface",
+      "swiftCase": "surface",
+      "doc": "Normal widget or inactive surface color."
+    },
+    {
+      "name": "surface_elevated",
+      "swiftCase": "surfaceElevated",
+      "doc": "Focused, active, or raised surface color."
+    },
+    {
+      "name": "surface_hover",
+      "swiftCase": "surfaceHover",
+      "doc": "Hover or highlighted surface color."
+    },
+    {
+      "name": "text",
+      "swiftCase": "text",
+      "doc": "Primary text color."
+    },
+    {
+      "name": "text_secondary",
+      "swiftCase": "textSecondary",
+      "doc": "Secondary body or label text color."
+    },
+    {
+      "name": "text_tertiary",
+      "swiftCase": "textTertiary",
+      "doc": "Tertiary text color for quieter labels."
+    },
+    {
+      "name": "muted",
+      "swiftCase": "muted",
+      "doc": "Secondary, inactive, or unavailable text color."
+    },
+    {
+      "name": "muted_secondary",
+      "swiftCase": "mutedSecondary",
+      "doc": "Secondary muted tone for softer supporting content."
+    },
+    {
+      "name": "outside_month",
+      "swiftCase": "outsideMonth",
+      "doc": "Calendar text color for days outside the active month."
+    },
+    {
+      "name": "accent",
+      "swiftCase": "accent",
+      "doc": "Accent color."
+    },
+    {
+      "name": "accent_secondary",
+      "swiftCase": "accentSecondary",
+      "doc": "Secondary accent color for supporting highlights."
+    },
+    {
+      "name": "accent_soft",
+      "swiftCase": "accentSoft",
+      "doc": "Softer accent color for subtle emphasis."
+    },
+    {
+      "name": "success",
+      "swiftCase": "success",
+      "doc": "Positive or healthy status color."
+    },
+    {
+      "name": "success_secondary",
+      "swiftCase": "successSecondary",
+      "doc": "Secondary positive color for supporting signals."
+    },
+    {
+      "name": "warning",
+      "swiftCase": "warning",
+      "doc": "Warning status color."
+    },
+    {
+      "name": "orange",
+      "swiftCase": "orange",
+      "doc": "Orange status color for low or degraded states."
+    },
+    {
+      "name": "error",
+      "swiftCase": "error",
+      "doc": "Error or critical status color."
+    },
+    {
+      "name": "danger",
+      "swiftCase": "danger",
+      "doc": "Strong danger color for urgent attention."
+    },
+    {
+      "name": "border",
+      "swiftCase": "border",
+      "doc": "Normal border color."
+    },
+    {
+      "name": "border_strong",
+      "swiftCase": "borderStrong",
+      "doc": "Emphasized border color."
+    },
+    {
+      "name": "border_subtle",
+      "swiftCase": "borderSubtle",
+      "doc": "Subtle or transparent border color."
+    },
+    {
+      "name": "selection_text",
+      "swiftCase": "selectionText",
+      "doc": "Text color drawn on top of selected surfaces."
+    },
+    {
+      "name": "selection_background",
+      "swiftCase": "selectionBackground",
+      "doc": "Background color used for selected surfaces."
+    },
+    {
+      "name": "transparent",
+      "swiftCase": "transparent",
+      "doc": "Fully transparent color."
+    },
+    {
+      "name": "overlay_outline",
+      "swiftCase": "overlayOutline",
+      "doc": "Overlay outline color with alpha."
+    },
+    {
+      "name": "overlay_text",
+      "swiftCase": "overlayText",
+      "doc": "High-contrast overlay glyph or text color."
+    },
+    {
+      "name": "today_button_border",
+      "swiftCase": "todayButtonBorder",
+      "doc": "Border color used by the calendar today button."
+    }
+  ]
+}

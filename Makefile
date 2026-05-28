@@ -110,7 +110,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all generate-event-catalog generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop icons \
+.PHONY: help all generate-event-catalog generate-theme-tokens generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
@@ -126,6 +126,7 @@ help: ## Display this help.
 all: build ## Build the default artifacts.
 
 prepare-version: ## Update BuildInfo.swift and Lua API stub with the selected VERSION.
+	@$(MAKE) --no-print-directory generate-theme-tokens
 	@$(MAKE) --no-print-directory generate-event-catalog
 	@mkdir -p "$(dir $(BUILD_INFO))"
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
@@ -153,8 +154,11 @@ cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
 
-test: generate-event-catalog generate-swift-env ## Run the Swift test suite.
+test: generate-theme-tokens generate-event-catalog generate-swift-env ## Run the Swift test suite.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
+
+generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
+	@python3 scripts/generate_theme_tokens.py
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@rm -rf "$(DIST_DIR)" ".build"
