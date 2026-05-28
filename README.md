@@ -80,24 +80,20 @@ EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundl
 
 ### Calendar
 
-![Calendar screenshot](./docs/content/assets/month.png)
+<img src="./docs/content/assets/month.png" alt="Calendar screenshot" width="320">
 
 ### Upcoming
 
-![Upcoming screenshot](./docs/content/assets/upcoming.png)
+<img src="./docs/content/assets/upcoming.png" alt="Upcoming screenshot" width="320">
 
 ### CPU
 
-![CPU screenshot](./docs/content/assets/cpu.png)
+<img src="./docs/content/assets/cpu.png" alt="CPU screenshot" width="500">
 
 ### Front app
 
-![Front app screenshot](./docs/content/assets/front_app.png)
+<img src="./docs/content/assets/front_app.png" alt="Front app screenshot" width="500">
 
 ### Context menu
 
-![Context menu screenshot](./docs/content/assets/context.png)
-
-## License
-
-This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
+<img src="./docs/content/assets/context.png" alt="Context menu screenshot" width="500">
