@@ -7,9 +7,16 @@ enabled = true
 enabled = true
 group = "system"
 
+[builtins.calendar]
+enabled = true
+
 [builtins.wifi]
 enabled = true
 group = "system"
 
-[builtins.calendar]
-enabled = true
+[builtins.wifi.content]
+mode = "details"
+
+[builtins.wifi.fields]
+ssid = true
+
