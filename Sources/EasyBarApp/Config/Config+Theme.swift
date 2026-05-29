@@ -203,7 +203,7 @@ extension Config {
 
     builtinWiFi.activeColorHex = themeTextColorHex
     builtinWiFi.inactiveColorHex = themeMutedColorHex
-    builtinWiFi.expandTextColorHex = themeTextColorHex
+    builtinWiFi.inlineTextColorHex = themeTextColorHex
     builtinWiFi.popup = defaultBuiltinPopupStyle()
   }
 

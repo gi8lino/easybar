@@ -143,16 +143,71 @@ extension Config {
     )
   }
 
-  /// Parses one Wi-Fi display mode.
-  func parseWiFiDisplayMode(
+  /// Parses one Wi-Fi content mode.
+  func parseWiFiContentMode(
     _ value: String,
     path: String
-  ) throws -> BuiltinWiFiDisplayMode {
+  ) throws -> BuiltinWiFiContentMode {
     try parseStringEnum(
       value,
-      as: BuiltinWiFiDisplayMode.self,
+      as: BuiltinWiFiContentMode.self,
       path: path
     )
+  }
+
+  /// Parses one Wi-Fi content surface.
+  func parseWiFiContentSurface(
+    _ value: String,
+    path: String
+  ) throws -> BuiltinWiFiContentSurface {
+    try parseStringEnum(
+      value,
+      as: BuiltinWiFiContentSurface.self,
+      path: path
+    )
+  }
+
+  /// Parses one Wi-Fi hover surface.
+  func parseWiFiHoverSurface(
+    _ value: String,
+    path: String
+  ) throws -> BuiltinWiFiHoverSurface {
+    try parseStringEnum(
+      value,
+      as: BuiltinWiFiHoverSurface.self,
+      path: path
+    )
+  }
+
+  /// Parses one Wi-Fi field selector.
+  func parseWiFiField(
+    _ value: String?,
+    path: String
+  ) throws -> NetworkAgentField? {
+    guard let value else { return nil }
+
+    let normalized = normalizedEnumValue(value)
+
+    guard let field = NetworkAgentField(rawValue: normalized) else {
+      let expected = NetworkAgentField.allCases
+        .filter(NetworkAgentFieldNamespace.wifi.contains)
+        .map(\.rawValue)
+        .sorted()
+        .joined(separator: ", ")
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one of \(expected)"
+      )
+    }
+
+    guard NetworkAgentFieldNamespace.wifi.contains(field) else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected one Wi-Fi field"
+      )
+    }
+
+    return field
   }
 
   /// Parses one calendar popup mode.

@@ -275,14 +275,42 @@ spacing = 6 # Gap between the signal bars and optional inline label.
 opacity = 1 # Overall opacity of the widget.
 
 [builtins.wifi.content]
-display_mode = "tooltip" # Display mode: none | tooltip | expand | always.
-disconnected_text = "disconnected" # Inline or tooltip text shown when Wi-Fi is not connected.
-denied_text = "denied" # Inline or tooltip text shown when Wi-Fi permission is unavailable.
+mode = "field" # Content mode: icon | field | details.
+field = "wifi.ssid" # Wi-Fi field to render when mode = "field".
+surface = "hover" # Visibility timing: always | hover.
+hover_surface = "popup" # Hover presentation: popup | inline.
+disconnected_text = "disconnected" # Text shown for SSID when Wi-Fi is not connected.
+denied_text = "denied" # Text shown for SSID when Wi-Fi permission is unavailable.
 active_color = "theme.text" # Color of active signal bars.
 inactive_color = "theme.muted" # Color of inactive signal bars.
 
-[builtins.wifi.expand]
-text_color = "theme.text" # Text color of the inline label used in expand or always mode.
+[builtins.wifi.inline]
+text_color = "theme.text" # Text color used for inline field or details content.
+
+[builtins.wifi.fields]
+ssid = false # Adds the current Wi-Fi SSID to details mode.
+ipv4_address = false # Adds the current Wi-Fi IPv4 address to details mode.
+ipv6_address = false # Adds the current Wi-Fi IPv6 address to details mode.
+bssid = false # Adds the current Wi-Fi BSSID to details mode.
+interface = false # Adds the current Wi-Fi interface name to details mode.
+hardware_address = false # Adds the current Wi-Fi hardware address to details mode.
+power = false # Adds the current Wi-Fi power state to details mode.
+service_active = false # Adds the CoreWLAN service state to details mode.
+rssi = false # Adds the signal strength in dBm to details mode.
+noise = false # Adds the noise floor in dBm to details mode.
+snr = false # Adds the signal-to-noise ratio in dB to details mode.
+link_quality = false # Adds the derived link quality percentage to details mode.
+tx_rate = false # Adds the current transmit rate to details mode.
+channel = false # Adds the current Wi-Fi channel to details mode.
+channel_band = false # Adds the current Wi-Fi band to details mode.
+channel_width = false # Adds the current Wi-Fi channel width to details mode.
+security = false # Adds the current Wi-Fi security mode to details mode.
+phy_mode = false # Adds the current Wi-Fi PHY mode to details mode.
+interface_mode = false # Adds the current Wi-Fi interface mode to details mode.
+country_code = false # Adds the current Wi-Fi country code to details mode.
+roaming = false # Adds whether access-point roaming was detected to details mode.
+ssid_changed_at = false # Adds the last SSID change timestamp to details mode.
+interface_changed_at = false # Adds the last interface change timestamp to details mode.
 
 [builtins.wifi.tooltip]
 text_color = "theme.text" # Text color used in the tooltip.

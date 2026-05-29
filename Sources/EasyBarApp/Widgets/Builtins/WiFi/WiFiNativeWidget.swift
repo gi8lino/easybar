@@ -22,12 +22,12 @@ final class WiFiNativeWidget: NativeWidget {
   struct Snapshot {
     let config: Config.WiFiBuiltinConfig
     let network: NetworkAgentSnapshot?
-    let labelText: String
+    let content: WiFiPresentation.Content
     let signalLevel: Int
     let visualState: WiFiPresentation.VisualState
     let activeColorHex: String
     let inactiveColorHex: String
-    let labelVisible: Bool
+    let inlineContentVisible: Bool
     let popupVisible: Bool
   }
 
@@ -99,13 +99,13 @@ final class WiFiNativeWidget: NativeWidget {
     return Snapshot(
       config: config,
       network: network,
-      labelText: presentation.labelText,
+      content: presentation.content,
       signalLevel: presentation.signalLevel,
       visualState: presentation.visualState,
       activeColorHex: presentation.activeColorHex,
       inactiveColorHex: presentation.inactiveColorHex,
-      labelVisible: shouldShowInlineLabel(config: config, text: presentation.labelText),
-      popupVisible: shouldShowPopupLabel(config: config, text: presentation.labelText)
+      inlineContentVisible: shouldShowInlineContent(config: config),
+      popupVisible: shouldShowPopupContent(config: config)
     )
   }
 }
@@ -135,23 +135,18 @@ extension WiFiNativeWidget {
     publish()
   }
 
-  /// Returns whether the Wi-Fi label should be visible inline.
-  private func shouldShowInlineLabel(
-    config: Config.WiFiBuiltinConfig,
-    text: String
-  ) -> Bool {
-    NativeWidgetHoverSupport.showsInlineLabel(
-      text: text,
-      mode: config.displayMode,
-      isHovered: isHovered
-    )
+  /// Returns whether inline content should be visible.
+  private func shouldShowInlineContent(config: Config.WiFiBuiltinConfig) -> Bool {
+    switch config.surface {
+    case .always:
+      return true
+    case .hover:
+      return config.hoverSurface == .inline && isHovered
+    }
   }
 
-  /// Returns whether the Wi-Fi label should be shown in a popup.
-  private func shouldShowPopupLabel(
-    config: Config.WiFiBuiltinConfig,
-    text: String
-  ) -> Bool {
-    config.displayMode == .tooltip && !text.isEmpty
+  /// Returns whether popup content should be visible.
+  private func shouldShowPopupContent(config: Config.WiFiBuiltinConfig) -> Bool {
+    config.surface == .hover && config.hoverSurface == .popup
   }
 }

@@ -155,9 +155,29 @@ final class NetworkAgentClient {
         permissionState: "denied",
         generatedAt: Date(),
         ssid: nil,
+        ipv4Address: nil,
+        ipv6Address: nil,
+        bssid: nil,
         interfaceName: nil,
+        hardwareAddress: nil,
+        power: nil,
+        serviceActive: nil,
         primaryInterfaceIsTunnel: false,
-        rssi: nil
+        rssi: nil,
+        noise: nil,
+        snr: nil,
+        linkQuality: nil,
+        txRate: nil,
+        channel: nil,
+        channelBand: nil,
+        channelWidth: nil,
+        security: nil,
+        phyMode: nil,
+        interfaceMode: nil,
+        countryCode: nil,
+        roaming: nil,
+        ssidChangedAt: nil,
+        interfaceChangedAt: nil
       )
     )
   }

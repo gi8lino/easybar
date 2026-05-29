@@ -208,6 +208,28 @@ enum BuiltinNativeNodeFactory {
     )
   }
 
+  /// Builds one child row node.
+  static func makeRowNode(
+    rootID: String,
+    parentID: String,
+    rowID: String,
+    position: WidgetPosition,
+    order: Int,
+    spacing: Double?,
+    visible: Bool = true
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: rowID,
+      root: rootID,
+      kind: .row,
+      parent: parentID,
+      position: position,
+      order: order,
+      visible: visible,
+      spacing: spacing
+    )
+  }
+
   /// Builds one popup anchor row attached to the popup root.
   static func makePopupAnchorRowNode(
     rootID: String,
@@ -251,6 +273,42 @@ enum BuiltinNativeNodeFactory {
       id: contentID,
       root: rootID,
       kind: .column,
+      parent: rootID,
+      position: position,
+      order: order,
+      visible: visible,
+      role: .popupContent,
+      paddingX: paddingX,
+      paddingY: paddingY,
+      spacing: spacing,
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      cornerRadius: cornerRadius,
+      opacity: opacity
+    )
+  }
+
+  /// Builds one popup content row attached to the popup root.
+  static func makePopupContentRowNode(
+    rootID: String,
+    contentID: String,
+    position: WidgetPosition,
+    order: Int = 0,
+    visible: Bool = true,
+    paddingX: Double? = 0,
+    paddingY: Double? = 0,
+    spacing: Double? = 4,
+    backgroundColor: String? = nil,
+    borderColor: String? = nil,
+    borderWidth: Double? = nil,
+    cornerRadius: Double? = nil,
+    opacity: Double? = 1
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: contentID,
+      root: rootID,
+      kind: .row,
       parent: rootID,
       position: position,
       order: order,

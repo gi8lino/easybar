@@ -102,7 +102,7 @@ public struct NetworkAgentFieldNamespaceSpec {
   /// Short help text for humans.
   public let help: String
 
-  /// Creates one network-agent namespace selector spec.
+  /// Creates one shared network-agent namespace selector.
   public init(namespace: NetworkAgentFieldNamespace, help: String) {
     self.namespace = namespace
     self.help = help
@@ -300,9 +300,29 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     .locationPermissionState,
     .generatedAt,
     .ssid,
+    .ipv4Address,
+    .ipv6Address,
+    .bssid,
     .interfaceName,
+    .hardwareAddress,
+    .power,
+    .serviceActive,
     .primaryInterfaceIsTunnel,
     .rssi,
+    .noise,
+    .snr,
+    .linkQuality,
+    .txRate,
+    .channel,
+    .channelBand,
+    .channelWidth,
+    .security,
+    .phyMode,
+    .interfaceMode,
+    .countryCode,
+    .roaming,
+    .ssidChangedAt,
+    .interfaceChangedAt,
   ]
 
   /// Whether location/Wi-Fi access is currently granted.
@@ -313,12 +333,52 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
   public var generatedAt: Date
   /// Active Wi-Fi SSID when available.
   public var ssid: String?
+  /// Primary network IPv4 address when available.
+  public var ipv4Address: String?
+  /// Primary network IPv6 address when available.
+  public var ipv6Address: String?
+  /// Active Wi-Fi BSSID when available.
+  public var bssid: String?
   /// Active Wi-Fi interface name when available.
   public var interfaceName: String?
+  /// Active Wi-Fi hardware address when available.
+  public var hardwareAddress: String?
+  /// Wi-Fi power state when available.
+  public var power: Bool?
+  /// Wi-Fi service availability when available.
+  public var serviceActive: Bool?
   /// Whether the current primary interface is a tunnel.
   public var primaryInterfaceIsTunnel: Bool
   /// Raw or smoothed RSSI value when available.
   public var rssi: Int?
+  /// Noise floor when available.
+  public var noise: Int?
+  /// Signal-to-noise ratio when available.
+  public var snr: Int?
+  /// Link quality percentage when available.
+  public var linkQuality: Int?
+  /// Current transmit rate when available.
+  public var txRate: Int?
+  /// Current Wi-Fi channel when available.
+  public var channel: Int?
+  /// Current Wi-Fi band when available.
+  public var channelBand: String?
+  /// Current Wi-Fi channel width when available.
+  public var channelWidth: String?
+  /// Current Wi-Fi security mode when available.
+  public var security: String?
+  /// Current Wi-Fi PHY mode when available.
+  public var phyMode: String?
+  /// Current Wi-Fi interface mode when available.
+  public var interfaceMode: String?
+  /// Current Wi-Fi country code when available.
+  public var countryCode: String?
+  /// Whether roaming was detected when available.
+  public var roaming: Bool?
+  /// Last SSID change timestamp when available.
+  public var ssidChangedAt: String?
+  /// Last interface change timestamp when available.
+  public var interfaceChangedAt: String?
 
   /// Creates one network snapshot payload.
   public init(
@@ -326,17 +386,57 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
     permissionState: String,
     generatedAt: Date,
     ssid: String?,
+    ipv4Address: String?,
+    ipv6Address: String?,
+    bssid: String?,
     interfaceName: String?,
+    hardwareAddress: String?,
+    power: Bool?,
+    serviceActive: Bool?,
     primaryInterfaceIsTunnel: Bool,
-    rssi: Int?
+    rssi: Int?,
+    noise: Int?,
+    snr: Int?,
+    linkQuality: Int?,
+    txRate: Int?,
+    channel: Int?,
+    channelBand: String?,
+    channelWidth: String?,
+    security: String?,
+    phyMode: String?,
+    interfaceMode: String?,
+    countryCode: String?,
+    roaming: Bool?,
+    ssidChangedAt: String?,
+    interfaceChangedAt: String?
   ) {
     self.accessGranted = accessGranted
     self.permissionState = permissionState
     self.generatedAt = generatedAt
     self.ssid = ssid
+    self.ipv4Address = ipv4Address
+    self.ipv6Address = ipv6Address
+    self.bssid = bssid
     self.interfaceName = interfaceName
+    self.hardwareAddress = hardwareAddress
+    self.power = power
+    self.serviceActive = serviceActive
     self.primaryInterfaceIsTunnel = primaryInterfaceIsTunnel
     self.rssi = rssi
+    self.noise = noise
+    self.snr = snr
+    self.linkQuality = linkQuality
+    self.txRate = txRate
+    self.channel = channel
+    self.channelBand = channelBand
+    self.channelWidth = channelWidth
+    self.security = security
+    self.phyMode = phyMode
+    self.interfaceMode = interfaceMode
+    self.countryCode = countryCode
+    self.roaming = roaming
+    self.ssidChangedAt = ssidChangedAt
+    self.interfaceChangedAt = interfaceChangedAt
   }
 
   /// Builds one typed snapshot from field-query values.
@@ -357,9 +457,29 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
       permissionState: permissionState,
       generatedAt: generatedAt,
       ssid: fields[NetworkAgentField.ssid.rawValue]?.stringValue,
+      ipv4Address: fields[NetworkAgentField.ipv4Address.rawValue]?.stringValue,
+      ipv6Address: fields[NetworkAgentField.ipv6Address.rawValue]?.stringValue,
+      bssid: fields[NetworkAgentField.bssid.rawValue]?.stringValue,
       interfaceName: fields[NetworkAgentField.interfaceName.rawValue]?.stringValue,
+      hardwareAddress: fields[NetworkAgentField.hardwareAddress.rawValue]?.stringValue,
+      power: fields[NetworkAgentField.power.rawValue]?.boolValue,
+      serviceActive: fields[NetworkAgentField.serviceActive.rawValue]?.boolValue,
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
-      rssi: fields[NetworkAgentField.rssi.rawValue]?.intValue
+      rssi: fields[NetworkAgentField.rssi.rawValue]?.intValue,
+      noise: fields[NetworkAgentField.noise.rawValue]?.intValue,
+      snr: fields[NetworkAgentField.snr.rawValue]?.intValue,
+      linkQuality: fields[NetworkAgentField.linkQuality.rawValue]?.intValue,
+      txRate: fields[NetworkAgentField.txRate.rawValue]?.intValue,
+      channel: fields[NetworkAgentField.channel.rawValue]?.intValue,
+      channelBand: fields[NetworkAgentField.channelBand.rawValue]?.stringValue,
+      channelWidth: fields[NetworkAgentField.channelWidth.rawValue]?.stringValue,
+      security: fields[NetworkAgentField.security.rawValue]?.stringValue,
+      phyMode: fields[NetworkAgentField.phyMode.rawValue]?.stringValue,
+      interfaceMode: fields[NetworkAgentField.interfaceMode.rawValue]?.stringValue,
+      countryCode: fields[NetworkAgentField.countryCode.rawValue]?.stringValue,
+      roaming: fields[NetworkAgentField.roaming.rawValue]?.boolValue,
+      ssidChangedAt: fields[NetworkAgentField.ssidChangedAt.rawValue]?.stringValue,
+      interfaceChangedAt: fields[NetworkAgentField.interfaceChangedAt.rawValue]?.stringValue
     )
   }
 }

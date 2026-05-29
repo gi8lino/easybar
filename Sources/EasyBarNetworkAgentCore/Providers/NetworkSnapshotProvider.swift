@@ -90,6 +90,8 @@ public final class NetworkSnapshotProvider {
       .field("permission_state", permissionState),
       .field("ssid", wifi.ssid ?? "<none>"),
       .field("interface", wifi.interfaceName ?? "<none>"),
+      .field("ipv4_address", network.ipv4Address ?? "<none>"),
+      .field("ipv6_address", network.ipv6Address ?? "<none>"),
       .field("rssi", wifi.rssi.map(String.init) ?? "<none>"),
       .field("primary_is_tunnel", network.primaryInterfaceIsTunnel),
     )
@@ -99,9 +101,29 @@ public final class NetworkSnapshotProvider {
       permissionState: permissionState,
       generatedAt: now,
       ssid: wifi.ssid,
+      ipv4Address: network.ipv4Address,
+      ipv6Address: network.ipv6Address,
+      bssid: wifi.bssid,
       interfaceName: wifi.interfaceName,
+      hardwareAddress: wifi.hardwareAddress,
+      power: wifi.power,
+      serviceActive: wifi.serviceActive,
       primaryInterfaceIsTunnel: network.primaryInterfaceIsTunnel,
-      rssi: wifi.rssi
+      rssi: wifi.rssi,
+      noise: wifi.noise,
+      snr: wifi.snr,
+      linkQuality: wifi.linkQuality,
+      txRate: wifi.txRate,
+      channel: wifi.channel,
+      channelBand: wifi.channelBand,
+      channelWidth: wifi.channelWidth,
+      security: wifi.security,
+      phyMode: wifi.phyMode,
+      interfaceMode: wifi.interfaceMode,
+      countryCode: wifi.countryCode,
+      roaming: wifi.roaming,
+      ssidChangedAt: wifi.ssidChangedAt,
+      interfaceChangedAt: wifi.interfaceChangedAt
     )
   }
 

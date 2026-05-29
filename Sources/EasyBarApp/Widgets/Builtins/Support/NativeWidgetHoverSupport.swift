@@ -64,18 +64,3 @@ extension Config.BuiltinBatteryDisplayMode: InlineLabelDisplayMode {
     }
   }
 }
-
-extension Config.BuiltinWiFiDisplayMode: InlineLabelDisplayMode {
-  var inlineLabelVisibility: InlineLabelVisibility {
-    switch self {
-    case .none:
-      return .hidden
-    case .tooltip:
-      return .tooltipOnly
-    case .expand:
-      return .hover
-    case .always:
-      return .always
-    }
-  }
-}
