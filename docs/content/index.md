@@ -70,6 +70,10 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 [![CPU screenshot](assets/cpu.png)](assets/cpu.png)
 
+### Wifi
+
+[![WiFi screenshot](assets/wifi.png)](assets/wifi.png)
+
 ### Front app
 
 [![Front app screenshot](assets/front_app.png)](assets/front_app.png)

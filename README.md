@@ -94,6 +94,10 @@ EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundl
 
 <img src="./docs/content/assets/front_app.png" alt="Front app screenshot" width="500">
 
+### Wifi
+
+<img src="./docs/content/assets/wifi.png" alt="Wifi details view screenshot" width="500">
+
 ### Context menu
 
 <img src="./docs/content/assets/context.png" alt="Context menu screenshot" width="500">
