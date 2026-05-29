@@ -310,7 +310,7 @@
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
----@field version string EasyBar application version.
+---@field version string EasyBar application version (`__EASYBAR_VERSION__`).
 ---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps): EasyBarNodeHandle Creates one node and returns its handle.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
@@ -401,8 +401,7 @@ function EasyBar.exec(command, callback) end
 ---@return string
 function EasyBar.exec_async(command, callback) end
 
----EasyBar application version.
----Example: `"__EASYBAR_VERSION__"`.
+---EasyBar application version (`__EASYBAR_VERSION__`).
 ---@type string
 EasyBar.version = "__EASYBAR_VERSION__"
 
