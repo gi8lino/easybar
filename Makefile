@@ -132,9 +132,6 @@ prepare-version: ## Update BuildInfo.swift and Lua API stub with the selected VE
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \
 path.write_text(updated)'
-	@python3 -c 'from pathlib import Path; import re; path = Path("$(LUA_API_STUB)"); text = path.read_text(); \
-updated = re.sub(r"^-- EasyBar Lua API stub version: .*$$", "-- EasyBar Lua API stub version: $(VERSION)", text, count=1, flags=re.MULTILINE); \
-path.write_text(updated)'
 
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
@@ -618,9 +615,7 @@ clean: ## Remove dist/, .build, and reset BuildInfo.swift and Lua API stub to de
 	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
 updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"dev\"", text, count=1); \
 path.write_text(updated)'
-	@python3 -c 'from pathlib import Path; import re; path = Path("$(LUA_API_STUB)"); text = path.read_text(); \
-updated = re.sub(r"^-- EasyBar Lua API stub version: .*$$", "-- EasyBar Lua API stub version: dev", text, count=1, flags=re.MULTILINE); \
-path.write_text(updated)'
+	@python3 scripts/generate_event_catalog.py --version dev
 
 ##@ Info
 
@@ -662,7 +657,7 @@ tag: ## Show latest tag.
 ##@ Tools
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate_event_catalog.py
+	@python3 scripts/generate_event_catalog.py --version "$(VERSION)"
 
 demo: ## Populate the demo calendar with random events.
 	@swift scripts/populate-demo-calendar.swift demo

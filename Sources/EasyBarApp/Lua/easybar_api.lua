@@ -473,6 +473,7 @@
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
+---@field version string EasyBar application version.
 ---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps): EasyBarNodeHandle Creates one node and returns its handle.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
@@ -562,6 +563,11 @@ function EasyBar.exec(command, callback) end
 ---@param callback fun(output: string, code: integer): any
 ---@return string
 function EasyBar.exec_async(command, callback) end
+
+---EasyBar application version.
+---Example: `"dev"`.
+---@type string
+EasyBar.version = "dev"
 
 ---Encodes and decodes JSON values from Lua widgets.
 ---@type EasyBarJson

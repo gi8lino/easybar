@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ LUA_API_BASE_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar_api.base.lua"
 LUA_API_EVENTS_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar_api.events.lua"
 LUA_API_STUB_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar_api.lua"
 LUA_API_INSERT_MARKER = "-- GENERATED SECTION: easybar.events"
+LUA_API_VERSION_PLACEHOLDER = "__EASYBAR_VERSION__"
 
 
 def load_manifest() -> dict:
@@ -332,7 +334,7 @@ def render_lua_api_block(manifest: dict) -> str:
     return "\n".join(lines)
 
 
-def rebuild_lua_api_stub(manifest: dict) -> None:
+def rebuild_lua_api_stub(manifest: dict, version: str) -> None:
     """Regenerate the standalone Lua API stub from the base file and event annotations."""
     generated_events = render_lua_api_block(manifest)
     LUA_API_EVENTS_PATH.write_text(generated_events)
@@ -343,17 +345,25 @@ def rebuild_lua_api_stub(manifest: dict) -> None:
             "could not find generated event API insertion marker in easybar_api.base.lua"
         )
 
-    combined = base.replace(LUA_API_INSERT_MARKER,
-                            generated_events, 1).rstrip()
+    combined = base.replace(LUA_API_INSERT_MARKER, generated_events, 1)
+    combined = combined.replace(LUA_API_VERSION_PLACEHOLDER, version).rstrip()
     LUA_API_STUB_PATH.write_text(f"{combined}\n")
 
 
 def main() -> None:
     """Generate Lua runtime event tokens and API annotation files."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--version",
+        default="dev",
+        help="Version string stamped into the generated Lua API stub.",
+    )
+    args = parser.parse_args()
+
     manifest = load_manifest()
 
     EVENT_TOKENS_PATH.write_text(render_event_tokens(manifest))
-    rebuild_lua_api_stub(manifest)
+    rebuild_lua_api_stub(manifest, args.version)
 
 
 if __name__ == "__main__":
