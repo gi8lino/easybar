@@ -179,35 +179,35 @@ extension Config {
     )
   }
 
-  /// Parses one Wi-Fi field selector.
-  func parseWiFiField(
+  /// Parses one exact network-agent field name.
+  func parseNetworkAgentField(
     _ value: String?,
+    allowedFields: [NetworkAgentField]? = nil,
     path: String
   ) throws -> NetworkAgentField? {
     guard let value else { return nil }
 
     let normalized = normalizedEnumValue(value)
+    let allowedFields = allowedFields ?? NetworkAgentField.allCases
 
-    guard let field = NetworkAgentField(rawValue: normalized) else {
-      let expected = NetworkAgentField.allCases
-        .filter(NetworkAgentFieldNamespace.wifi.contains)
-        .map(\.rawValue)
-        .sorted()
-        .joined(separator: ", ")
+    guard let field = NetworkAgentField(rawValue: normalized),
+      allowedFields.contains(field)
+    else {
       throw ConfigError.invalidValue(
         path: path,
-        message: "expected one of \(expected)"
-      )
-    }
-
-    guard NetworkAgentFieldNamespace.wifi.contains(field) else {
-      throw ConfigError.invalidValue(
-        path: path,
-        message: "expected one Wi-Fi field"
+        message: "expected one of \(networkAgentFieldDescription(allowedFields))"
       )
     }
 
     return field
+  }
+
+  /// Returns a stable description for network-agent fields.
+  private func networkAgentFieldDescription(_ fields: [NetworkAgentField]) -> String {
+    fields
+      .map(\.rawValue)
+      .sorted()
+      .joined(separator: ", ")
   }
 
   /// Parses one calendar popup mode.

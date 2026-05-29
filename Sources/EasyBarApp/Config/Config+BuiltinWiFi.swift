@@ -276,11 +276,12 @@ extension Config {
         ) ?? fallback.mode.rawValue,
         path: "builtins.wifi.content.mode"
       ),
-      field: try parseWiFiField(
+      field: try parseNetworkAgentField(
         try optionalString(
           table["field"],
           path: "builtins.wifi.content.field"
         ),
+        allowedFields: NetworkAgentSnapshot.snapshotFieldSet,
         path: "builtins.wifi.content.field"
       ) ?? fallback.field,
       surface: try parseWiFiContentSurface(
@@ -336,8 +337,10 @@ extension Config {
   ) throws -> BuiltinWiFiFields {
     BuiltinWiFiFields(
       ssid: try optionalBool(table["ssid"], path: "builtins.wifi.fields.ssid") ?? fallback.ssid,
-      ipv4Address: try optionalBool(table["ipv4_address"], path: "builtins.wifi.fields.ipv4") ?? fallback.ipv4Address,
-      ipv6Address: try optionalBool(table["ipv6_address"], path: "builtins.wifi.fields.ipv6") ?? fallback.ipv6Address,
+      ipv4Address: try optionalBool(table["ipv4_address"], path: "builtins.wifi.fields.ipv4_address")
+        ?? fallback.ipv4Address,
+      ipv6Address: try optionalBool(table["ipv6_address"], path: "builtins.wifi.fields.ipv6_address")
+        ?? fallback.ipv6Address,
       bssid: try optionalBool(table["bssid"], path: "builtins.wifi.fields.bssid") ?? fallback.bssid,
       interfaceName: try optionalBool(table["interface"], path: "builtins.wifi.fields.interface")
         ?? fallback.interfaceName,

@@ -142,6 +142,17 @@ struct WiFiPresentation {
       return disconnectedFallback(for: field, config: config, inDetails: inDetails)
     }
 
+    switch field {
+    case .generatedAt:
+      return NetworkAgentSnapshot.dateFormatter.string(from: snapshot.generatedAt)
+    case .locationAuthorized:
+      return boolText(snapshot.accessGranted)
+    case .locationPermissionState:
+      return snapshot.permissionState
+    default:
+      break
+    }
+
     guard snapshot.accessGranted else {
       return deniedFallback(for: field, config: config, inDetails: inDetails)
     }
@@ -160,9 +171,11 @@ struct WiFiPresentation {
     case .hardwareAddress:
       return snapshot.hardwareAddress
     case .power:
-      return snapshot.power.map { $0 ? "on" : "off" }
+      return snapshot.power.map { boolText($0) }
     case .serviceActive:
       return snapshot.serviceActive.map { $0 ? "active" : "inactive" }
+    case .primaryInterfaceIsTunnel:
+      return boolText(snapshot.primaryInterfaceIsTunnel)
     case .rssi:
       return snapshot.rssi.map { "\($0) dBm" }
     case .noise:
@@ -188,7 +201,7 @@ struct WiFiPresentation {
     case .countryCode:
       return snapshot.countryCode
     case .roaming:
-      return snapshot.roaming.map { $0 ? "yes" : "no" }
+      return snapshot.roaming.map(boolText)
     case .ssidChangedAt:
       return snapshot.ssidChangedAt
     case .interfaceChangedAt:
@@ -221,6 +234,8 @@ struct WiFiPresentation {
   /// Returns one stable, user-facing label for the provided field.
   private static func fieldLabel(for field: NetworkAgentField) -> String {
     switch field {
+    case .generatedAt:
+      return "Generated"
     case .ssid:
       return "SSID"
     case .ipv4Address:
@@ -237,6 +252,8 @@ struct WiFiPresentation {
       return "Power"
     case .serviceActive:
       return "Service"
+    case .primaryInterfaceIsTunnel:
+      return "Primary Is Tunnel"
     case .rssi:
       return "Signal"
     case .noise:
@@ -267,9 +284,24 @@ struct WiFiPresentation {
       return "SSID Changed"
     case .interfaceChangedAt:
       return "Interface Changed"
+    case .locationAuthorized:
+      return "Location Authorized"
+    case .locationPermissionState:
+      return "Location Permission"
     default:
-      return field.rawValue
+      return humanizedFieldName(field.rawValue)
     }
+  }
+
+  /// Returns a compact boolean value for display.
+  private static func boolText(_ value: Bool) -> String {
+    value ? "yes" : "no"
+  }
+
+  /// Humanizes one network-agent field name for display fallback labels.
+  private static func humanizedFieldName(_ value: String) -> String {
+    let key = value.split(separator: ".").last.map(String.init) ?? value
+    return humanizedIdentifier(key)
   }
 
   /// Humanizes Wi-Fi enum-like identifiers for display.
