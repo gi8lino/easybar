@@ -14,111 +14,17 @@ struct WiFiRenderer: NativeWidgetRenderer {
 
   /// Builds the Wi-Fi nodes for the current snapshot.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    if snapshot.config.surface == .hover && snapshot.config.hoverSurface == .popup {
-      return makePopupNodes(snapshot: snapshot)
-    }
-
-    return makeInlineNodes(snapshot: snapshot)
-  }
-}
-
-// MARK: - Inline Layout
-
-extension WiFiRenderer {
-  /// Creates inline nodes.
-  private func makeInlineNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    var nodes = makeAnchorNodes(snapshot: snapshot)
-
-    guard snapshot.inlineContentVisible else {
-      return nodes
-    }
-
-    appendInlineContentNodes(snapshot: snapshot, to: &nodes)
-    return nodes
-  }
-
-  /// Appends inline field or details nodes only when they should take layout space.
-  private func appendInlineContentNodes(snapshot: Snapshot, to nodes: inout [WidgetNodeState]) {
-    switch snapshot.content {
-    case .icon:
-      break
-
-    case .field(let text):
-      guard !text.isEmpty else { return }
-
-      nodes.append(
-        BuiltinNativeNodeFactory.makeChildItemNode(
-          rootID: rootID,
-          parentID: rootID,
-          childID: "\(rootID)_label",
-          position: snapshot.config.placement.position,
-          order: 1,
-          text: text,
-          color: snapshot.config.inlineTextColorHex,
-          spacing: 4
-        )
-      )
-
-    case .details(let rows):
-      appendInlineDetailGrid(
-        rows: rows,
-        snapshot: snapshot,
-        to: &nodes
-      )
-    }
-  }
-
-  /// Appends a two-column inline detail grid.
-  private func appendInlineDetailGrid(
-    rows: [WiFiPresentation.DetailRow],
-    snapshot: Snapshot,
-    to nodes: inout [WidgetNodeState]
-  ) {
-    guard !rows.isEmpty else { return }
-
-    let gridID = "\(rootID)_details"
-
-    nodes.append(
-      BuiltinNativeNodeFactory.makeRowNode(
-        rootID: rootID,
-        parentID: rootID,
-        rowID: gridID,
-        position: snapshot.config.placement.position,
-        order: 1,
-        spacing: DetailLayout.columnSpacing
-      )
-    )
-
-    appendDetailColumns(
-      rows: rows,
-      parentID: gridID,
-      idPrefix: "\(rootID)_detail",
-      position: snapshot.config.placement.position,
-      color: snapshot.config.inlineTextColorHex,
-      visible: true,
-      to: &nodes
-    )
-  }
-}
-
-// MARK: - Popup Layout
-
-extension WiFiRenderer {
-  /// Creates popup nodes.
-  private func makePopupNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     var nodes = makeAnchorNodes(snapshot: snapshot)
 
     switch snapshot.content {
     case .icon:
       break
-
-    case .field(let text):
-      appendPopupField(
-        text: text,
+    case .inline(let text):
+      appendInlineText(
+        text,
         snapshot: snapshot,
         to: &nodes
       )
-
     case .details(let rows):
       appendPopupDetailGrid(
         rows: rows,
@@ -129,50 +35,42 @@ extension WiFiRenderer {
 
     return nodes
   }
+}
 
-  /// Appends popup content for a single field value.
-  private func appendPopupField(
-    text: String,
+// MARK: - Inline Layout
+
+extension WiFiRenderer {
+  /// Appends one inline text node next to the Wi-Fi signal bars.
+  private func appendInlineText(
+    _ text: String,
     snapshot: Snapshot,
     to nodes: inout [WidgetNodeState]
   ) {
-    guard !text.isEmpty else { return }
-
-    let popup = snapshot.config.popup
-    var popupNode = BuiltinNativeNodeFactory.makePopupContentColumnNode(
-      rootID: rootID,
-      contentID: "\(rootID)_popup",
-      position: snapshot.config.placement.position,
-      order: 0,
-      visible: snapshot.popupVisible,
-      paddingX: popup.paddingX,
-      paddingY: popup.paddingY,
-      spacing: 4,
-      backgroundColor: popup.backgroundColorHex,
-      borderColor: popup.borderColorHex,
-      borderWidth: popup.borderWidth,
-      cornerRadius: popup.cornerRadius,
-      opacity: 1
-    )
-    popupNode.marginX = popup.marginX
-    popupNode.marginY = popup.marginY
-    nodes.append(popupNode)
+    guard snapshot.inlineContentVisible, !text.isEmpty else { return }
 
     nodes.append(
       BuiltinNativeNodeFactory.makeChildItemNode(
         rootID: rootID,
-        parentID: "\(rootID)_popup",
-        childID: "\(rootID)_popup_text",
+        parentID: rootID,
+        childID: "\(rootID)_label",
         position: snapshot.config.placement.position,
-        order: 0,
+        order: 1,
         text: text,
-        color: popup.textColorHex ?? snapshot.config.inlineTextColorHex,
-        visible: snapshot.popupVisible
+        color: snapshot.config.inlineTextColorHex,
+        spacing: 4
       )
     )
   }
+}
 
+// MARK: - Popup Layout
+
+extension WiFiRenderer {
   /// Appends popup content as two real columns: labels and values.
+  ///
+  /// Popup detail nodes must stay visible in the widget tree. The generic popup
+  /// controller decides when the panel is presented; hiding these nodes here
+  /// makes the panel open with empty content on the first hover.
   private func appendPopupDetailGrid(
     rows: [WiFiPresentation.DetailRow],
     snapshot: Snapshot,
@@ -188,7 +86,7 @@ extension WiFiRenderer {
       contentID: gridID,
       position: snapshot.config.placement.position,
       order: 0,
-      visible: snapshot.popupVisible,
+      visible: true,
       paddingX: popup.paddingX,
       paddingY: popup.paddingY,
       spacing: DetailLayout.columnSpacing,
@@ -208,7 +106,6 @@ extension WiFiRenderer {
       idPrefix: "\(rootID)_popup_detail",
       position: snapshot.config.placement.position,
       color: popup.textColorHex ?? snapshot.config.inlineTextColorHex,
-      visible: snapshot.popupVisible,
       to: &nodes
     )
   }
@@ -249,7 +146,6 @@ extension WiFiRenderer {
     idPrefix: String,
     position: WidgetPosition,
     color: String?,
-    visible: Bool,
     to nodes: inout [WidgetNodeState]
   ) {
     let labelColumnID = "\(idPrefix)_labels"
@@ -287,7 +183,7 @@ extension WiFiRenderer {
           order: index,
           text: "\(row.labelText):",
           color: color,
-          visible: visible,
+          visible: true,
           spacing: 0
         )
       )
@@ -301,7 +197,7 @@ extension WiFiRenderer {
           order: index,
           text: row.valueText,
           color: color,
-          visible: visible,
+          visible: true,
           spacing: 0
         )
       )

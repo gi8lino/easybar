@@ -167,18 +167,6 @@ extension Config {
     )
   }
 
-  /// Parses one Wi-Fi hover surface.
-  func parseWiFiHoverSurface(
-    _ value: String,
-    path: String
-  ) throws -> BuiltinWiFiHoverSurface {
-    try parseStringEnum(
-      value,
-      as: BuiltinWiFiHoverSurface.self,
-      path: path
-    )
-  }
-
   /// Parses one exact network-agent field name.
   func parseNetworkAgentField(
     _ value: String?,

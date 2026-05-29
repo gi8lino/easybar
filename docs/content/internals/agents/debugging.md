@@ -136,7 +136,7 @@ brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
 
-### IPv4 or IPv6 missing in the Wi-Fi details popup
+### IPv4 or IPv6 missing in the Wi-Fi widget
 
 The built-in Wi-Fi widget renders IPv4 and IPv6 from the network-agent fields:
 
@@ -152,15 +152,15 @@ echo '{"command":"fetch","fields":["network.ipv4_address","network.ipv6_address"
 
 If the raw fields are missing, the issue is in the network agent or system network state.
 
-If the raw fields are present but the popup does not show them, check your config:
+If the raw fields are present but the widget does not show them, check your config:
 
 ```toml
 [builtins.wifi.content]
 mode = "details"
 
 [builtins.wifi.fields]
-ipv4 = true
-ipv6 = true
+ipv4_address = true
+ipv6_address = true
 ```
 
 Then reload config:

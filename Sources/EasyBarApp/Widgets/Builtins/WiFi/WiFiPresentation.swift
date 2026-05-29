@@ -17,7 +17,7 @@ struct WiFiPresentation {
 
   enum Content {
     case icon
-    case field(String)
+    case inline(String)
     case details([DetailRow])
   }
 
@@ -72,18 +72,23 @@ struct WiFiPresentation {
     switch config.mode {
     case .icon:
       return .icon
-    case .field:
-      let field = config.field ?? .ssid
-      guard
-        let text = fieldValue(for: field, snapshot: snapshot, config: config, inDetails: false)
-      else {
-        return .icon
-      }
-      return .field(text)
+    case .inline:
+      let text = inlineText(snapshot: snapshot, config: config)
+      return text.isEmpty ? .icon : .inline(text)
     case .details:
       let rows = detailRows(snapshot: snapshot, config: config)
       return rows.isEmpty ? .icon : .details(rows)
     }
+  }
+
+  /// Resolves the configured inline field values into one joined string.
+  private static func inlineText(
+    snapshot: NetworkAgentSnapshot?,
+    config: Config.WiFiBuiltinConfig
+  ) -> String {
+    detailRows(snapshot: snapshot, config: config)
+      .map(\.valueText)
+      .joined(separator: config.inlineSeparator)
   }
 
   /// Resolves one detail row list in a stable, user-facing order.
@@ -91,6 +96,20 @@ struct WiFiPresentation {
     snapshot: NetworkAgentSnapshot?,
     config: Config.WiFiBuiltinConfig
   ) -> [DetailRow] {
+    enabledFields(config: config).compactMap { field in
+      guard let value = fieldValue(for: field, snapshot: snapshot, config: config) else {
+        return nil
+      }
+
+      return DetailRow(
+        labelText: fieldLabel(for: field),
+        valueText: value
+      )
+    }
+  }
+
+  /// Returns enabled fields in stable display order.
+  private static func enabledFields(config: Config.WiFiBuiltinConfig) -> [NetworkAgentField] {
     let fields: [(enabled: Bool, field: NetworkAgentField)] = [
       (config.fields.ssid, .ssid),
       (config.fields.ipv4Address, .ipv4Address),
@@ -117,29 +136,17 @@ struct WiFiPresentation {
       (config.fields.interfaceChangedAt, .interfaceChangedAt),
     ]
 
-    return fields.compactMap { entry in
-      guard entry.enabled else { return nil }
-      guard let value = fieldValue(for: entry.field, snapshot: snapshot, config: config, inDetails: true)
-      else {
-        return nil
-      }
-
-      return DetailRow(
-        labelText: fieldLabel(for: entry.field),
-        valueText: value
-      )
-    }
+    return fields.compactMap { $0.enabled ? $0.field : nil }
   }
 
   /// Resolves one Wi-Fi field into displayable text.
   private static func fieldValue(
     for field: NetworkAgentField,
     snapshot: NetworkAgentSnapshot?,
-    config: Config.WiFiBuiltinConfig,
-    inDetails: Bool
+    config: Config.WiFiBuiltinConfig
   ) -> String? {
     guard let snapshot else {
-      return disconnectedFallback(for: field, config: config, inDetails: inDetails)
+      return disconnectedFallback(for: field, config: config)
     }
 
     switch field {
@@ -154,7 +161,7 @@ struct WiFiPresentation {
     }
 
     guard snapshot.accessGranted else {
-      return deniedFallback(for: field, config: config, inDetails: inDetails)
+      return deniedFallback(for: field, config: config)
     }
 
     switch field {
@@ -171,7 +178,7 @@ struct WiFiPresentation {
     case .hardwareAddress:
       return snapshot.hardwareAddress
     case .power:
-      return snapshot.power.map { boolText($0) }
+      return snapshot.power.map(boolText)
     case .serviceActive:
       return snapshot.serviceActive.map { $0 ? "active" : "inactive" }
     case .primaryInterfaceIsTunnel:
@@ -214,8 +221,7 @@ struct WiFiPresentation {
   /// Returns fallback text for disconnected Wi-Fi states.
   private static func disconnectedFallback(
     for field: NetworkAgentField,
-    config: Config.WiFiBuiltinConfig,
-    inDetails: Bool
+    config: Config.WiFiBuiltinConfig
   ) -> String? {
     guard field == .ssid else { return nil }
     return config.disconnectedText
@@ -224,8 +230,7 @@ struct WiFiPresentation {
   /// Returns fallback text for denied Wi-Fi states.
   private static func deniedFallback(
     for field: NetworkAgentField,
-    config: Config.WiFiBuiltinConfig,
-    inDetails: Bool
+    config: Config.WiFiBuiltinConfig
   ) -> String? {
     guard field == .ssid else { return nil }
     return config.deniedText

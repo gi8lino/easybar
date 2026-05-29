@@ -97,7 +97,7 @@ For the native `spaces` widget:
 
 The native Wi-Fi widget is configured under `[builtins.wifi]`.
 
-It renders signal bars as the anchor. Optional text or detailed network information can be shown inline, always, or in a hover popup.
+It always renders signal bars as the anchor. Content modes decide whether additional network values are shown inline or in a popup.
 
 ```toml
 [builtins.wifi]
@@ -121,7 +121,7 @@ padding_y = 0
 spacing = 6
 ```
 
-`spacing` controls the gap between the signal bars and any inline content.
+`spacing` controls the gap between the signal bars and inline content.
 
 ### Wi-Fi content mode
 
@@ -129,87 +129,101 @@ The Wi-Fi widget supports three content modes:
 
 ```toml
 [builtins.wifi.content]
-mode = "field" # icon | field | details
+mode = "inline" # icon | inline | details
 ```
 
-| Mode      | Behavior                               |
-| --------- | -------------------------------------- |
-| `icon`    | Shows only the Wi-Fi signal bars.      |
-| `field`   | Shows one selected field such as SSID. |
-| `details` | Shows all enabled detail fields.       |
+| Mode      | Behavior                                                                        |
+| --------- | ------------------------------------------------------------------------------- |
+| `icon`    | Shows only the Wi-Fi signal bars.                                               |
+| `inline`  | Shows enabled field values as one joined inline string next to the signal bars. |
+| `details` | Shows enabled fields as label/value rows in a popup.                            |
 
-When `mode = "field"`, choose the rendered field with:
-
-```toml
-[builtins.wifi.content]
-field = "wifi.ssid"
-```
-
-Common field values include:
-
-- `wifi.ssid`
-- `network.ipv4_address`
-- `network.ipv6_address`
-- `wifi.rssi`
-- `wifi.link_quality`
-- `wifi.tx_rate`
+The same `[builtins.wifi.fields]` toggles drive both `inline` and `details` mode.
 
 ### Wi-Fi surface behavior
 
-The `surface` setting controls when content is visible:
+The `surface` setting controls when the selected content mode is visible:
 
 ```toml
 [builtins.wifi.content]
 surface = "hover" # always | hover
 ```
 
-| Surface  | Behavior                                                    |
-| -------- | ----------------------------------------------------------- |
-| `always` | Content is always visible.                                  |
-| `hover`  | Content is shown only while the pointer is over the widget. |
+| Surface  | Behavior                                                                        |
+| -------- | ------------------------------------------------------------------------------- |
+| `always` | The selected content mode is visible immediately.                               |
+| `hover`  | The selected content mode is visible only while the pointer is over the widget. |
 
-When `surface = "hover"`, `hover_surface` controls where the content appears:
+`inline` mode always renders inside the bar.
+
+`details` mode always renders in the popup.
+
+`surface` only controls whether the selected mode is shown immediately or on hover. There is no separate `hover_surface` setting.
+
+### Wi-Fi inline mode
+
+Inline mode joins enabled field values with `inline_separator`:
 
 ```toml
 [builtins.wifi.content]
-hover_surface = "popup" # popup | inline
+mode = "inline"
+surface = "hover"
+inline_separator = " | "
+
+[builtins.wifi.fields]
+ssid = true
+ipv4_address = true
+ipv6_address = true
 ```
 
-| Hover surface | Behavior                                                 |
-| ------------- | -------------------------------------------------------- |
-| `popup`       | Shows field or details content in a tooltip-style popup. |
-| `inline`      | Expands the bar widget inline while hovered.             |
+Example inline output:
 
-### Wi-Fi details
+```text
+Sunrise_Wi-Fi_831720 | 10.0.0.91 | fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
+```
 
-Details mode uses `[builtins.wifi.fields]`.
+The separator is used only by `mode = "inline"`.
 
-Each enabled field becomes one detail row:
+### Wi-Fi details mode
+
+Details mode uses the same enabled fields, but renders them as label/value rows in the popup:
 
 ```toml
 [builtins.wifi.content]
 mode = "details"
 surface = "hover"
-hover_surface = "popup"
 
 [builtins.wifi.fields]
 ssid = true
-ipv4 = true
-ipv6 = true
+ipv4_address = true
+ipv6_address = true
 rssi = true
 link_quality = true
 tx_rate = true
 ```
 
-In details mode, labels and values are rendered as two aligned columns.
+Details mode does not render rows inside the bar. It always uses the popup layout.
 
-Available fields:
+Example details output:
+
+```text
+SSID:         Sunrise_Wi-Fi_831720
+IPv4 Address: 10.0.0.91
+IPv6 Address: fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
+Signal:       -57 dBm
+Link Quality: 100%
+Rate:         864 Mbps
+```
+
+### Wi-Fi fields
+
+Available field toggles:
 
 | Config key             | Displayed value                            |
 | ---------------------- | ------------------------------------------ |
 | `ssid`                 | Current Wi-Fi SSID.                        |
-| `ipv4`                 | Primary IPv4 address.                      |
-| `ipv6`                 | Primary IPv6 address.                      |
+| `ipv4_address`         | Primary IPv4 address.                      |
+| `ipv6_address`         | Primary IPv6 address.                      |
 | `bssid`                | Current access point BSSID.                |
 | `interface`            | Wi-Fi interface name, such as `en0`.       |
 | `hardware_address`     | Wi-Fi hardware MAC address.                |
@@ -231,7 +245,7 @@ Available fields:
 | `ssid_changed_at`      | Last SSID change timestamp.                |
 | `interface_changed_at` | Last interface change timestamp.           |
 
-The `ipv4` and `ipv6` values are primary network addresses from the network agent. They are rendered by the Wi-Fi widget, but their wire fields are `network.ipv4_address` and `network.ipv6_address`.
+The `ipv4_address` and `ipv6_address` values are primary network addresses from the network agent. They are rendered by the Wi-Fi widget, but their wire fields are `network.ipv4_address` and `network.ipv6_address`.
 
 ### Wi-Fi popup style
 
@@ -254,7 +268,7 @@ margin_y = 8
 
 The network agent owns Wi-Fi observation.
 
-Wi-Fi-specific fields require Location Services permission on macOS. If permission is missing, the widget shows the configured denied text:
+Wi-Fi-specific fields require Location Services permission on macOS. If permission is missing, the widget shows the configured denied text for SSID:
 
 ```toml
 [builtins.wifi.content]

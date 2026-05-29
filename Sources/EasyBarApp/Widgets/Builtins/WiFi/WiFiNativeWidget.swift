@@ -28,7 +28,6 @@ final class WiFiNativeWidget: NativeWidget {
     let activeColorHex: String
     let inactiveColorHex: String
     let inlineContentVisible: Bool
-    let popupVisible: Bool
   }
 
   // MARK: - Lifecycle
@@ -104,8 +103,7 @@ final class WiFiNativeWidget: NativeWidget {
       visualState: presentation.visualState,
       activeColorHex: presentation.activeColorHex,
       inactiveColorHex: presentation.inactiveColorHex,
-      inlineContentVisible: shouldShowInlineContent(config: config),
-      popupVisible: shouldShowPopupContent(config: config)
+      inlineContentVisible: shouldShowInlineContent(config: config)
     )
   }
 }
@@ -137,16 +135,13 @@ extension WiFiNativeWidget {
 
   /// Returns whether inline content should be visible.
   private func shouldShowInlineContent(config: Config.WiFiBuiltinConfig) -> Bool {
+    guard config.mode == .inline else { return false }
+
     switch config.surface {
     case .always:
       return true
     case .hover:
-      return config.hoverSurface == .inline && isHovered
+      return isHovered
     }
-  }
-
-  /// Returns whether popup content should be visible.
-  private func shouldShowPopupContent(config: Config.WiFiBuiltinConfig) -> Bool {
-    config.surface == .hover && config.hoverSurface == .popup
   }
 }

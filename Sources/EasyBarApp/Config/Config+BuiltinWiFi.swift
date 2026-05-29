@@ -7,7 +7,7 @@ extension Config {
   /// Wi-Fi content mode.
   enum BuiltinWiFiContentMode: String, CaseIterable {
     case icon
-    case field
+    case inline
     case details
   }
 
@@ -15,12 +15,6 @@ extension Config {
   enum BuiltinWiFiContentSurface: String, CaseIterable {
     case always
     case hover
-  }
-
-  /// Wi-Fi hover presentation surface.
-  enum BuiltinWiFiHoverSurface: String, CaseIterable {
-    case popup
-    case inline
   }
 
   /// Wi-Fi inline text style.
@@ -60,9 +54,8 @@ extension Config {
     /// Wi-Fi content and color settings.
     struct Content {
       var mode: BuiltinWiFiContentMode
-      var field: NetworkAgentField?
       var surface: BuiltinWiFiContentSurface
-      var hoverSurface: BuiltinWiFiHoverSurface
+      var inlineSeparator: String
       var disconnectedText: String
       var deniedText: String
       var activeColorHex: String
@@ -102,19 +95,14 @@ extension Config {
       set { content.mode = newValue }
     }
 
-    var field: NetworkAgentField? {
-      get { content.field }
-      set { content.field = newValue }
-    }
-
     var surface: BuiltinWiFiContentSurface {
       get { content.surface }
       set { content.surface = newValue }
     }
 
-    var hoverSurface: BuiltinWiFiHoverSurface {
-      get { content.hoverSurface }
-      set { content.hoverSurface = newValue }
+    var inlineSeparator: String {
+      get { content.inlineSeparator }
+      set { content.inlineSeparator = newValue }
     }
 
     var disconnectedText: String {
@@ -165,10 +153,9 @@ extension Config {
         opacity: 1
       ),
       content: .init(
-        mode: .field,
-        field: .ssid,
+        mode: .icon,
         surface: .hover,
-        hoverSurface: .popup,
+        inlineSeparator: " | ",
         disconnectedText: "disconnected",
         deniedText: "denied",
         activeColorHex: "#cdd6f4",
@@ -276,14 +263,6 @@ extension Config {
         ) ?? fallback.mode.rawValue,
         path: "builtins.wifi.content.mode"
       ),
-      field: try parseNetworkAgentField(
-        try optionalString(
-          table["field"],
-          path: "builtins.wifi.content.field"
-        ),
-        allowedFields: NetworkAgentSnapshot.snapshotFieldSet,
-        path: "builtins.wifi.content.field"
-      ) ?? fallback.field,
       surface: try parseWiFiContentSurface(
         try optionalString(
           table["surface"],
@@ -291,13 +270,10 @@ extension Config {
         ) ?? fallback.surface.rawValue,
         path: "builtins.wifi.content.surface"
       ),
-      hoverSurface: try parseWiFiHoverSurface(
-        try optionalString(
-          table["hover_surface"],
-          path: "builtins.wifi.content.hover_surface"
-        ) ?? fallback.hoverSurface.rawValue,
-        path: "builtins.wifi.content.hover_surface"
-      ),
+      inlineSeparator: try optionalString(
+        table["inline_separator"],
+        path: "builtins.wifi.content.inline_separator"
+      ) ?? fallback.inlineSeparator,
       disconnectedText: try optionalString(
         table["disconnected_text"],
         path: "builtins.wifi.content.disconnected_text"
@@ -330,31 +306,43 @@ extension Config {
     )
   }
 
-  /// Parses Wi-Fi detail field toggles.
+  /// Parses Wi-Fi field toggles.
   fileprivate func parseWiFiFields(
     from table: TOMLTable,
     fallback: BuiltinWiFiFields
   ) throws -> BuiltinWiFiFields {
     BuiltinWiFiFields(
       ssid: try optionalBool(table["ssid"], path: "builtins.wifi.fields.ssid") ?? fallback.ssid,
-      ipv4Address: try optionalBool(table["ipv4_address"], path: "builtins.wifi.fields.ipv4_address")
-        ?? fallback.ipv4Address,
-      ipv6Address: try optionalBool(table["ipv6_address"], path: "builtins.wifi.fields.ipv6_address")
-        ?? fallback.ipv6Address,
-      bssid: try optionalBool(table["bssid"], path: "builtins.wifi.fields.bssid") ?? fallback.bssid,
+      ipv4Address: try optionalBool(
+        table["ipv4_address"],
+        path: "builtins.wifi.fields.ipv4_address"
+      ) ?? fallback.ipv4Address,
+      ipv6Address: try optionalBool(
+        table["ipv6_address"],
+        path: "builtins.wifi.fields.ipv6_address"
+      ) ?? fallback.ipv6Address,
+      bssid: try optionalBool(table["bssid"], path: "builtins.wifi.fields.bssid")
+        ?? fallback.bssid,
       interfaceName: try optionalBool(table["interface"], path: "builtins.wifi.fields.interface")
         ?? fallback.interfaceName,
-      hardwareAddress: try optionalBool(table["hardware_address"], path: "builtins.wifi.fields.hardware_address")
-        ?? fallback.hardwareAddress,
-      power: try optionalBool(table["power"], path: "builtins.wifi.fields.power") ?? fallback.power,
-      serviceActive: try optionalBool(table["service_active"], path: "builtins.wifi.fields.service_active")
-        ?? fallback.serviceActive,
+      hardwareAddress: try optionalBool(
+        table["hardware_address"],
+        path: "builtins.wifi.fields.hardware_address"
+      ) ?? fallback.hardwareAddress,
+      power: try optionalBool(table["power"], path: "builtins.wifi.fields.power")
+        ?? fallback.power,
+      serviceActive: try optionalBool(
+        table["service_active"],
+        path: "builtins.wifi.fields.service_active"
+      ) ?? fallback.serviceActive,
       rssi: try optionalBool(table["rssi"], path: "builtins.wifi.fields.rssi") ?? fallback.rssi,
       noise: try optionalBool(table["noise"], path: "builtins.wifi.fields.noise")
         ?? fallback.noise,
       snr: try optionalBool(table["snr"], path: "builtins.wifi.fields.snr") ?? fallback.snr,
-      linkQuality: try optionalBool(table["link_quality"], path: "builtins.wifi.fields.link_quality")
-        ?? fallback.linkQuality,
+      linkQuality: try optionalBool(
+        table["link_quality"],
+        path: "builtins.wifi.fields.link_quality"
+      ) ?? fallback.linkQuality,
       txRate: try optionalBool(table["tx_rate"], path: "builtins.wifi.fields.tx_rate")
         ?? fallback.txRate,
       channel: try optionalBool(table["channel"], path: "builtins.wifi.fields.channel")

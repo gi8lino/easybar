@@ -103,7 +103,7 @@ Common network fields include:
 - `network.internet_reachable`
 - `network.captive_portal`
 
-The built-in Wi-Fi widget can render `network.ipv4_address` and `network.ipv6_address` in its details view. They are network fields, not CoreWLAN fields.
+The built-in Wi-Fi widget can render `network.ipv4_address` and `network.ipv6_address` in inline and details views. They are network fields, not CoreWLAN fields.
 
 ### Auth fields
 
@@ -190,7 +190,13 @@ Agent response:
 }
 ```
 
-Native Wi-Fi details:
+Native Wi-Fi inline view:
+
+```text
+Office WiFi | 10.0.0.91 | fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
+```
+
+Native Wi-Fi details view:
 
 ```text
 SSID:         Office WiFi
@@ -198,7 +204,7 @@ IPv4 Address: 10.0.0.91
 IPv6 Address: fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
 ```
 
-The native widget owns the final display layout. In details mode, it renders labels and values in separate columns.
+The native widget owns the final display layout. In inline mode, it joins enabled field values with the configured inline separator. In details mode, it renders labels and values in separate columns.
 
 ## Relationship to Lua events
 
