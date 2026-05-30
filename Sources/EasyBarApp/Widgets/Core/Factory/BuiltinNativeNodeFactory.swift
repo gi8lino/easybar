@@ -389,6 +389,8 @@ enum BuiltinNativeNodeFactory {
     fontSize: Double? = nil,
     iconFontSize: Double? = nil,
     labelFontSize: Double? = nil,
+    iconOffsetX: Double? = nil,
+    iconOffsetY: Double? = nil,
     spacing: Double? = 4
   ) -> WidgetNodeState {
     makeChildNode(
@@ -426,6 +428,8 @@ enum BuiltinNativeNodeFactory {
       fontSize: fontSize,
       iconFontSize: iconFontSize,
       labelFontSize: labelFontSize,
+      iconOffsetX: iconOffsetX,
+      iconOffsetY: iconOffsetY,
       spacing: spacing
     )
   }
@@ -607,6 +611,8 @@ enum BuiltinNativeNodeFactory {
     fontSize: Double? = nil,
     iconFontSize: Double? = nil,
     labelFontSize: Double? = nil,
+    iconOffsetX: Double? = nil,
+    iconOffsetY: Double? = nil,
     value: Double? = nil,
     min: Double? = nil,
     max: Double? = nil,
@@ -662,6 +668,8 @@ enum BuiltinNativeNodeFactory {
       fontSize: fontSize,
       iconFontSize: iconFontSize,
       labelFontSize: labelFontSize,
+      iconOffsetX: iconOffsetX,
+      iconOffsetY: iconOffsetY,
       value: value,
       min: min,
       max: max,
@@ -720,6 +728,8 @@ enum BuiltinNativeNodeFactory {
     fontSize: Double? = nil,
     iconFontSize: Double? = nil,
     labelFontSize: Double? = nil,
+    iconOffsetX: Double? = nil,
+    iconOffsetY: Double? = nil,
     value: Double? = nil,
     min: Double? = nil,
     max: Double? = nil,
@@ -780,6 +790,8 @@ enum BuiltinNativeNodeFactory {
       fontSize: fontSize,
       iconFontSize: iconFontSize,
       labelFontSize: labelFontSize,
+      iconOffsetX: iconOffsetX,
+      iconOffsetY: iconOffsetY,
       value: value,
       min: min,
       max: max,

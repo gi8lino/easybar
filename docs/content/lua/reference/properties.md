@@ -108,6 +108,8 @@ Detailed icon configuration used when a plain icon value is not enough.
 | `image_size` _(optional)_          | `number`           | Image size in points.                      |
 | `image_corner_radius` _(optional)_ | `number`           | Image corner radius in points.             |
 | `padding_right` _(optional)_       | `number`           | Additional spacing between icon and label. |
+| `offset_x` _(optional)_            | `number`           | Horizontal visual icon offset in points.   |
+| `offset_y` _(optional)_            | `number`           | Vertical visual icon offset in points.     |
 
 ## `EasyBarImageProps`
 

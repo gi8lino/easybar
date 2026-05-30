@@ -50,6 +50,8 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var fontSize: Double?
   var iconFontSize: Double?
   var labelFontSize: Double?
+  var iconOffsetX: Double?
+  var iconOffsetY: Double?
 
   var value: Double?
   var min: Double?

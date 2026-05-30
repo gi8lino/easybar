@@ -294,7 +294,7 @@ end
 --- Returns labels for action buttons based on the current phase.
 local function action_button_labels()
 	if not running then
-		return "Upgrade now", "Update"
+		return "Upgrade", "Update"
 	end
 
 	if state.phase == "upgrading" then
@@ -648,6 +648,8 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 		font = {
 			size = 15,
 		},
+		offset_x = -1,
+		offset_y = 0,
 	},
 	label = {
 		string = "",

@@ -144,6 +144,24 @@ local function resolve_icon_font_size(props)
 	return nil
 end
 
+--- Resolves the horizontal visual offset for icon content.
+local function resolve_icon_offset_x(props)
+	if type(props.icon) == "table" then
+		return tonumber(props.icon.offset_x or props.icon.x_offset or props.icon.offsetX)
+	end
+
+	return nil
+end
+
+--- Resolves the vertical visual offset for icon content.
+local function resolve_icon_offset_y(props)
+	if type(props.icon) == "table" then
+		return tonumber(props.icon.offset_y or props.icon.y_offset or props.icon.offsetY)
+	end
+
+	return nil
+end
+
 --- Resolves the configured image path for one node.
 local function resolve_image_path(props)
 	if type(props.icon) == "table" and type(props.icon.image) == "string" then
@@ -253,6 +271,15 @@ end
 --- Returns whether one item should receive the default root shell styling.
 local function uses_default_root_shell(item)
 	return is_bar_root_item(item) and item.kind ~= "popup"
+end
+
+--- Returns true or nil so optional Swift booleans keep their fallback behavior.
+local function true_or_nil(value)
+	if value == true then
+		return true
+	end
+
+	return nil
 end
 
 --- Builds one minimal render node with shared defaults applied.
@@ -380,6 +407,8 @@ local function make_node(registry, id, item, root_position, children)
 	node.imageCornerRadius = resolve_image_corner_radius(resolved_props)
 	node.iconFontSize = resolve_icon_font_size(resolved_props)
 	node.labelFontSize = resolve_label_font_size(resolved_props)
+	node.iconOffsetX = resolve_icon_offset_x(resolved_props)
+	node.iconOffsetY = resolve_icon_offset_y(resolved_props)
 	node.value = tonumber(resolved_props.value)
 	node.min = tonumber(resolved_props.min)
 	node.max = tonumber(resolved_props.max)
@@ -421,6 +450,7 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		parent = parent_id,
 		position = position,
 		order = tonumber(node.order or 0) or 0,
+		role = node.role,
 		icon = node.icon or "",
 		text = node.text or "",
 		color = node.color or "",
@@ -431,41 +461,48 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 		imageCornerRadius = tonumber(node.imageCornerRadius),
 		iconFontSize = tonumber(node.iconFontSize),
 		labelFontSize = tonumber(node.labelFontSize),
+		iconOffsetX = tonumber(node.iconOffsetX),
+		iconOffsetY = tonumber(node.iconOffsetY),
 		visible = node.visible ~= false,
-		receivesMouseHover = node.receivesMouseHover == true,
-		receivesMouseDown = node.receivesMouseDown == true,
-		receivesMouseUp = node.receivesMouseUp == true,
-		receivesMouseClick = node.receivesMouseClick == true,
-		receivesMouseScroll = node.receivesMouseScroll == true,
-		role = node.role,
+		receivesMouseHover = true_or_nil(node.receivesMouseHover),
+		receivesMouseDown = true_or_nil(node.receivesMouseDown),
+		receivesMouseUp = true_or_nil(node.receivesMouseUp),
+		receivesMouseClick = true_or_nil(node.receivesMouseClick),
+		receivesMouseScroll = true_or_nil(node.receivesMouseScroll),
 		value = tonumber(node.value),
 		min = tonumber(node.min),
 		max = tonumber(node.max),
 		step = tonumber(node.step),
 		values = node.values,
 		lineWidth = tonumber(node.lineWidth),
-		paddingX = node.paddingX,
-		paddingY = node.paddingY,
-		paddingLeft = node.paddingLeft,
-		paddingRight = node.paddingRight,
-		paddingTop = node.paddingTop,
-		paddingBottom = node.paddingBottom,
-		marginX = node.marginX,
-		marginY = node.marginY,
-		marginLeft = node.marginLeft,
-		marginRight = node.marginRight,
-		marginTop = node.marginTop,
-		marginBottom = node.marginBottom,
-		spacing = node.spacing,
+		paddingX = tonumber(node.paddingX),
+		paddingY = tonumber(node.paddingY),
+		paddingLeft = tonumber(node.paddingLeft),
+		paddingRight = tonumber(node.paddingRight),
+		paddingTop = tonumber(node.paddingTop),
+		paddingBottom = tonumber(node.paddingBottom),
+		marginX = tonumber(node.marginX),
+		marginY = tonumber(node.marginY),
+		marginLeft = tonumber(node.marginLeft),
+		marginRight = tonumber(node.marginRight),
+		marginTop = tonumber(node.marginTop),
+		marginBottom = tonumber(node.marginBottom),
+		spacing = tonumber(node.spacing),
 		backgroundColor = node.backgroundColor,
 		borderColor = node.borderColor,
-		borderWidth = node.borderWidth,
-		cornerRadius = node.cornerRadius,
-		opacity = node.opacity,
-		width = node.width,
-		height = node.height,
-		yOffset = node.yOffset,
+		borderWidth = tonumber(node.borderWidth),
+		cornerRadius = tonumber(node.cornerRadius),
+		opacity = tonumber(node.opacity),
+		width = tonumber(node.width),
+		height = tonumber(node.height),
+		yOffset = tonumber(node.yOffset),
 	}
+
+	if type(node.children) == "table" then
+		for _, child in ipairs(node.children) do
+			flatten_node(child, root_id, id, position, out)
+		end
+	end
 
 	if type(node.anchorChildren) == "table" then
 		for _, child in ipairs(node.anchorChildren) do
@@ -480,31 +517,24 @@ local function flatten_node(node, root_id, parent_id, inherited_position, out)
 			flatten_node(child, root_id, id, position, out)
 		end
 	end
-
-	if type(node.children) == "table" then
-		for _, child in ipairs(node.children) do
-			flatten_node(child, root_id, id, position, out)
-		end
-	end
 end
 
---- Returns item ids in their declared widget order.
-local function ordered_ids(registry)
-	return registry._state.item_order
-end
-
---- Returns one registry item by id.
+--- Returns one item by id.
 local function item_by_id(registry, id)
 	return registry._state.items[id]
 end
 
---- Returns direct non-popup child ids for one parent node.
+--- Returns registered ids in deterministic order.
+local function ordered_ids(registry)
+	return registry._state.item_order or {}
+end
+
+--- Returns regular child ids for one parent.
 local function regular_children_of(registry, parent_id)
 	local children = {}
 
 	for _, id in ipairs(ordered_ids(registry)) do
 		local item = item_by_id(registry, id)
-
 		if item ~= nil and regular_parent_id(item) == parent_id then
 			children[#children + 1] = id
 		end
@@ -513,14 +543,13 @@ local function regular_children_of(registry, parent_id)
 	return children
 end
 
---- Returns direct popup child ids for one popup anchor node.
-local function popup_children_of(registry, anchor_id)
+--- Returns popup child ids for one parent.
+local function popup_children_of(registry, parent_id)
 	local children = {}
 
 	for _, id in ipairs(ordered_ids(registry)) do
 		local item = item_by_id(registry, id)
-
-		if item ~= nil and popup_parent_id(item) == anchor_id then
+		if item ~= nil and popup_parent_id(item) == parent_id then
 			children[#children + 1] = id
 		end
 	end
@@ -528,12 +557,12 @@ local function popup_children_of(registry, anchor_id)
 	return children
 end
 
---- Returns one internal id that cannot collide with user-declared ids.
+--- Returns a stable internal popup node id.
 local function internal_popup_id(id, suffix)
-	return id .. "__easybar_" .. suffix
+	return id .. "__" .. suffix
 end
 
---- Builds the render tree for one root widget id.
+--- Builds one nested render tree.
 local function build_tree(registry, id, root_position)
 	local item = item_by_id(registry, id)
 	if item == nil then

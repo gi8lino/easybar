@@ -126,6 +126,13 @@ extension WidgetNodeView {
     return fontValue(size: node.labelFontSize ?? node.fontSize)
   }
 
+  var iconOffset: CGSize {
+    CGSize(
+      width: CGFloat(node.iconOffsetX ?? 0),
+      height: CGFloat(node.iconOffsetY ?? 0)
+    )
+  }
+
   var symbolResolvedFont: Font {
     return .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
   }
@@ -215,6 +222,7 @@ extension WidgetNodeView {
 
   var imageView: some View {
     return renderedImageView()
+      .offset(iconOffset)
   }
 
   @ViewBuilder
@@ -231,6 +239,7 @@ extension WidgetNodeView {
           overlaySymbolView(name: overlayName)
         }
       }
+      .offset(iconOffset)
     }
   }
 
@@ -319,10 +328,22 @@ extension WidgetNodeView {
   @ViewBuilder
   var iconText: some View {
     if hasIcon && !hasSymbol {
-      Text(node.icon)
+      Text(paddedIconDisplayString)
         .font(iconResolvedFont)
         .foregroundStyle(iconResolvedColor)
+        .fixedSize()
+        .offset(iconOffset)
     }
+  }
+
+  /// Returns the icon string with narrow side padding.
+  ///
+  /// Some Nerd Font and private-use glyphs have visual overhangs that SwiftUI
+  /// measures too tightly when rendered as a bare `Text`. The six-per-em spaces
+  /// widen the text run enough to avoid clipping without requiring widget
+  /// authors to add fake spaces to their icon strings.
+  private var paddedIconDisplayString: String {
+    return "\u{2006}\(node.icon)\u{2006}"
   }
 
   @ViewBuilder
