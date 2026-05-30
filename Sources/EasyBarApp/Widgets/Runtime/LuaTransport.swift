@@ -4,6 +4,7 @@ import Foundation
 
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
 final class LuaTransport {
+  /// Startup errors surfaced while preparing the transport.
   enum TransportError: LocalizedError {
     case startupFailed(String)
 
@@ -209,7 +210,7 @@ final class LuaTransport {
 
     let clientFD = accept(listenerFD, nil, nil)
     guard clientFD >= 0 else {
-      if errno != EINVAL && errno != EBADF {
+      if shouldLogAcceptFailure(errnoValue: errno) {
         logger.error("lua socket accept failed", .field("errno", errno))
       }
       return
@@ -258,7 +259,7 @@ final class LuaTransport {
       let count = read(fd, &chunk, chunk.count)
 
       if count <= 0 {
-        if count < 0 && errno == EINTR {
+        if shouldRetryInterruptedRead(count: count, errnoValue: errno) {
           return
         }
 
@@ -363,5 +364,15 @@ final class LuaTransport {
   /// Stops the readability handler for one error pipe.
   private func stopReadabilityHandler(for pipe: Pipe?) {
     pipe?.fileHandleForReading.readabilityHandler = nil
+  }
+
+  /// Returns whether an `accept` failure is unexpected enough to log.
+  private func shouldLogAcceptFailure(errnoValue: Int32) -> Bool {
+    return errnoValue != EINVAL && errnoValue != EBADF
+  }
+
+  /// Returns whether the current read failure should simply retry the socket read loop.
+  private func shouldRetryInterruptedRead(count: Int, errnoValue: Int32) -> Bool {
+    return count < 0 && errnoValue == EINTR
   }
 }

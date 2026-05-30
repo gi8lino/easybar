@@ -276,7 +276,7 @@ final class MetricsCoordinator {
     withLock {
       var agentState = state.agents[agent] ?? AgentState()
 
-      if agentState.activeConnections == 0 && agentState.everConnected {
+      if shouldCountReconnect(for: agentState) {
         agentState.reconnectsTotal += 1
       }
 
@@ -322,6 +322,11 @@ final class MetricsCoordinator {
       agentState.decodeErrorsTotal += 1
       state.agents[agent] = agentState
     }
+  }
+
+  /// Returns whether opening the next connection counts as a reconnect.
+  private func shouldCountReconnect(for agentState: AgentState) -> Bool {
+    return agentState.activeConnections == 0 && agentState.everConnected
   }
 
   /// Starts periodic metrics sampling.

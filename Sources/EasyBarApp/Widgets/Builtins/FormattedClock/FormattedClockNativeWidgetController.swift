@@ -122,7 +122,7 @@ enum FormattedClockRefreshPolicy {
         continue
       }
 
-      if !inQuotedLiteral && (character == "s" || character == "S") {
+      if isSecondPrecisionToken(character, inQuotedLiteral: inQuotedLiteral) {
         return true
       }
 
@@ -130,5 +130,13 @@ enum FormattedClockRefreshPolicy {
     }
 
     return false
+  }
+
+  /// Returns whether the character represents an unquoted second-precision token.
+  private static func isSecondPrecisionToken(
+    _ character: Character,
+    inQuotedLiteral: Bool
+  ) -> Bool {
+    return !inQuotedLiteral && (character == "s" || character == "S")
   }
 }

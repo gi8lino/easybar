@@ -319,7 +319,7 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
     throw AppError.message("no command flag provided")
   }
 
-  if watchMetrics && command != .metrics {
+  if usesWatchWithoutMetricsCommand(watchMetrics: watchMetrics, command: command) {
     throw AppError.message("--watch may only be used with --metrics")
   }
 
@@ -329,6 +329,11 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
     debugEnabled: debugEnabled,
     watchMetrics: watchMetrics
   )
+}
+
+/// Returns whether `--watch` was provided for a non-metrics command.
+private func usesWatchWithoutMetricsCommand(watchMetrics: Bool, command: IPC.Command) -> Bool {
+  return watchMetrics && command != .metrics
 }
 
 /// Parses one app-level option.

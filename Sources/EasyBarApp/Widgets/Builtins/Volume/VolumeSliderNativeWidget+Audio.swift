@@ -100,7 +100,12 @@ extension VolumeSliderNativeWidget {
     let wroteLeft = writeSystemVolumeScalar(scalar, deviceID: deviceID, element: 1)
     let wroteRight = writeSystemVolumeScalar(scalar, deviceID: deviceID, element: 2)
 
-    if clamped > 0, wroteMain || wroteLeft || wroteRight {
+    if shouldUnmuteAfterVolumeWrite(
+      clampedVolume: clamped,
+      wroteMain: wroteMain,
+      wroteLeft: wroteLeft,
+      wroteRight: wroteRight
+    ) {
       setMutedState(false, deviceID: deviceID)
     }
   }
@@ -183,5 +188,16 @@ extension VolumeSliderNativeWidget {
       UInt32(MemoryLayout<UInt32>.size),
       &value
     )
+  }
+
+  /// Returns whether a successful non-zero volume write should also clear mute.
+  private func shouldUnmuteAfterVolumeWrite(
+    clampedVolume: Double,
+    wroteMain: Bool,
+    wroteLeft: Bool,
+    wroteRight: Bool
+  ) -> Bool {
+    let wroteAnyChannel = wroteMain || wroteLeft || wroteRight
+    return clampedVolume > 0 && wroteAnyChannel
   }
 }

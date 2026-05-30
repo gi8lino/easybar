@@ -203,7 +203,7 @@ final class NetworkAgentClient {
           primaryInterfaceIsTunnel: false
         )
 
-        if previous?.ssid != nil || previous?.interfaceName != nil {
+        if self.shouldEmitWiFiChangeAfterReset(previous: previous) {
           await EventHub.shared.emit(.wifiChange)
         }
       }
@@ -238,5 +238,10 @@ final class NetworkAgentClient {
         }
       }
     }
+  }
+
+  /// Returns whether clearing the published state should also emit a Wi-Fi change event.
+  private func shouldEmitWiFiChangeAfterReset(previous: NetworkAgentSnapshot?) -> Bool {
+    return previous?.ssid != nil || previous?.interfaceName != nil
   }
 }

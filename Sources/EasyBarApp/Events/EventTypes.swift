@@ -181,7 +181,7 @@ struct EasyBarEventPayload: Sendable {
       payload["delta_y"] = deltaY
     }
 
-    if primaryInterfaceIsTunnel != nil || interfaceName != nil {
+    if hasNetworkPayload {
       var network: [String: Any] = [:]
 
       if let primaryInterfaceIsTunnel {
@@ -201,7 +201,7 @@ struct EasyBarEventPayload: Sendable {
       ]
     }
 
-    if muted != nil || value != nil {
+    if hasAudioPayload {
       var audio: [String: Any] = [:]
 
       if let muted {
@@ -257,5 +257,15 @@ struct EasyBarEventPayload: Sendable {
       deltaX: deltaX,
       deltaY: deltaY
     )
+  }
+
+  /// Returns whether the payload should include the nested network block.
+  private var hasNetworkPayload: Bool {
+    return primaryInterfaceIsTunnel != nil || interfaceName != nil
+  }
+
+  /// Returns whether the payload should include the nested audio block.
+  private var hasAudioPayload: Bool {
+    return muted != nil || value != nil
   }
 }

@@ -2,11 +2,16 @@ import Foundation
 
 /// Portable calendar identity used by shared filter matching.
 public struct CalendarFilterTarget: Equatable, Sendable {
+  /// Human-readable calendar title.
   public let title: String
+  /// Stable calendar identifier when available.
   public let identifier: String?
+  /// Human-readable source title when available.
   public let sourceTitle: String?
+  /// Stable source identifier when available.
   public let sourceIdentifier: String?
 
+  /// Creates one shared calendar filter target.
   public init(
     title: String,
     identifier: String? = nil,
@@ -51,7 +56,10 @@ public enum CalendarFilterMatcher {
       || matchesToken(calendarID, filters: includedCalendarIDs)
       || matchesToken(sourceID, filters: includedSourceIDs)
 
-    if hasIncludedFilters && !matchesIncluded {
+    if shouldRejectMissingIncludedMatch(
+      hasIncludedFilters: hasIncludedFilters,
+      matchesIncluded: matchesIncluded
+    ) {
       return false
     }
 
@@ -76,7 +84,7 @@ public enum CalendarFilterMatcher {
     let included = Set(includeTokens.compactMap(normalizedToken))
     let excluded = Set(excludeTokens.compactMap(normalizedToken))
 
-    if !included.isEmpty && !matchesAnyFilter(target, filters: included) {
+    if shouldRejectMissingLegacyIncludedMatch(target, included: included) {
       return false
     }
 
@@ -122,5 +130,21 @@ public enum CalendarFilterMatcher {
   public static func matchesToken(_ candidate: String?, filters: Set<String>) -> Bool {
     guard let candidate, !filters.isEmpty else { return false }
     return filters.contains(candidate)
+  }
+
+  /// Returns whether the target should be rejected because required include filters did not match.
+  private static func shouldRejectMissingIncludedMatch(
+    hasIncludedFilters: Bool,
+    matchesIncluded: Bool
+  ) -> Bool {
+    return hasIncludedFilters && !matchesIncluded
+  }
+
+  /// Returns whether legacy include filters reject the provided target.
+  private static func shouldRejectMissingLegacyIncludedMatch(
+    _ target: CalendarFilterTarget,
+    included: Set<String>
+  ) -> Bool {
+    return !included.isEmpty && !matchesAnyFilter(target, filters: included)
   }
 }

@@ -330,11 +330,16 @@ public final class ProcessLogger {
 
   /// Returns whether the current mode should append subsystem details.
   private func shouldAppendSubsystem(for level: ProcessLogLevel) -> Bool {
-    if sharedState.minimumLevel == .debug || sharedState.minimumLevel == .trace {
+    if isVerboseMinimumLevel {
       return true
     }
 
     return level == .warn || level == .error
+  }
+
+  /// Returns whether the logger is configured for a verbose minimum level.
+  private var isVerboseMinimumLevel: Bool {
+    return sharedState.minimumLevel == .debug || sharedState.minimumLevel == .trace
   }
 
   /// Renders caller-provided fields plus logger-managed metadata.

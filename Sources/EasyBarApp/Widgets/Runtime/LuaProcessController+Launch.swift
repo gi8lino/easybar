@@ -198,7 +198,7 @@ extension LuaProcessController {
 
     if waitResult == pid {
       logTermination(pid: pid, status: status)
-    } else if waitResult < 0 && errno != ECHILD {
+    } else if shouldLogReapFailure(waitResult: waitResult, errnoValue: errno) {
       logger.warn(
         "failed to reap lua runtime",
         .field("pid", pid),
@@ -207,6 +207,11 @@ extension LuaProcessController {
     }
 
     clearTrackedProcessIfMatching(pid: pid)
+  }
+
+  /// Returns whether a failed reap should be logged for the observed child process.
+  private func shouldLogReapFailure(waitResult: Int32, errnoValue: Int32) -> Bool {
+    return waitResult < 0 && errnoValue != ECHILD
   }
 
   /// Logs one Lua runtime termination status.

@@ -417,11 +417,16 @@ extension CalendarMonthPopupView {
 
   /// Returns the font weight for one day cell.
   func fontWeight(for day: DayCell) -> Font.Weight {
-    if isSelected(day.date) || resolvedCalendar.isDateInToday(day.date) {
+    if shouldEmphasizeDay(day.date) {
       return .semibold
     }
 
     return .medium
+  }
+
+  /// Returns whether the day should render with emphasized typography.
+  func shouldEmphasizeDay(_ date: Date) -> Bool {
+    return isSelected(date) || resolvedCalendar.isDateInToday(date)
   }
 
   /// Builds the appointment-indicator bar for one day.

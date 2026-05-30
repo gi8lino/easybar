@@ -10,7 +10,7 @@ extension VolumeSliderNativeWidget {
       return false
     }
 
-    if isAdjustingSlider && (event == .volumeChange || event == .muteChange) {
+    if shouldIgnoreExternalAudioEvent(event) {
       return true
     }
 
@@ -89,5 +89,11 @@ extension VolumeSliderNativeWidget {
     }
 
     publish()
+  }
+
+  /// Returns whether one incoming app event should be ignored while the slider is being dragged.
+  private func shouldIgnoreExternalAudioEvent(_ event: AppEvent) -> Bool {
+    let isExternalAudioEvent = event == .volumeChange || event == .muteChange
+    return isAdjustingSlider && isExternalAudioEvent
   }
 }

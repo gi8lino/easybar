@@ -217,7 +217,7 @@ extension CalendarMonthPopupView {
     guard let startDate = resolvedDay(at: value.startLocation) else { return }
     let endDate = resolvedDay(at: value.location) ?? startDate
 
-    if !dragDidCrossIntoAnotherDay || startDate == endDate {
+    if shouldCollapseDragSelection(startDate: startDate, endDate: endDate) {
       selectedStartDate = startDate
       selectedEndDate = startDate
       logger.debug(
@@ -235,6 +235,11 @@ extension CalendarMonthPopupView {
       .field("start", "\(debugDate(selectedStartDate))"),
       .field("end", "\(debugDate(selectedEndDate))"),
     )
+  }
+
+  /// Returns whether the finished drag should collapse back to a single selected day.
+  func shouldCollapseDragSelection(startDate: Date, endDate: Date) -> Bool {
+    return !dragDidCrossIntoAnotherDay || startDate == endDate
   }
 
   /// Formats one grouped selection date header.

@@ -4,29 +4,40 @@ import Foundation
 /// Render-ready Wi-Fi label, details, and icon presentation.
 struct WiFiPresentation {
 
+  /// Visual styling state for the rendered Wi-Fi content.
   enum VisualState: String {
     case connected
     case disconnected
     case denied
   }
 
+  /// One labeled detail row shown in details mode.
   struct DetailRow {
+    /// User-facing label shown for the field.
     let labelText: String
+    /// User-facing value shown for the field.
     let valueText: String
   }
 
+  /// Renderable content variants supported by the Wi-Fi widget.
   enum Content {
     case icon
     case inline(String)
     case details([DetailRow])
   }
 
+  /// Renderable content chosen for the current snapshot and config.
   let content: Content
+  /// Signal level bucket in the 0...3 range.
   let signalLevel: Int
+  /// Visual state used for tinting and fallback behavior.
   let visualState: VisualState
+  /// Tint used when Wi-Fi is active.
   let activeColorHex: String
+  /// Tint used when Wi-Fi is inactive or unavailable.
   let inactiveColorHex: String
 
+  /// Creates one Wi-Fi presentation from the latest network snapshot.
   init(snapshot: NetworkAgentSnapshot?, config: Config.WiFiBuiltinConfig) {
     content = Self.content(snapshot: snapshot, config: config)
     signalLevel = Self.signalLevel(snapshot: snapshot)
@@ -318,7 +329,7 @@ struct WiFiPresentation {
 
     return parts.map { part in
       let raw = String(part)
-      if raw.hasPrefix("wpa") || raw.hasPrefix("wep") {
+      if isSecurityIdentifier(raw) {
         return raw.uppercased()
       }
       return raw.capitalized
@@ -332,5 +343,10 @@ struct WiFiPresentation {
       .replacingOccurrences(of: "mhz", with: " MHz")
       .replacingOccurrences(of: "  ", with: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  /// Returns whether the identifier is a security acronym that should stay uppercase.
+  private static func isSecurityIdentifier(_ value: String) -> Bool {
+    return value.hasPrefix("wpa") || value.hasPrefix("wep")
   }
 }

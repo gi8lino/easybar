@@ -5,19 +5,28 @@ import Foundation
 /// View model for creating, editing, and deleting calendar events through injected actions.
 @MainActor
 public final class CalendarEventComposer: ObservableObject {
+  /// Stable picker item describing one writable calendar.
   public struct CalendarOption: Identifiable, Equatable {
+    /// Stable calendar identifier.
     public let id: String
+    /// Human-readable calendar title.
     public let title: String
+    /// Creates one selectable calendar option.
     public init(id: String, title: String) {
       self.id = id
       self.title = title
     }
   }
 
+  /// Mutable row backing one alert selection entry.
   public struct AlertRow: Identifiable, Equatable {
+    /// Stable row identifier for SwiftUI diffing.
     public let id: UUID
+    /// Selected alert preset.
     public var option: AlertOption
+    /// Custom alert lead time in minutes when `option == .custom`.
     public var customMinutesText: String
+    /// Creates one alert row.
     public init(id: UUID = UUID(), option: AlertOption, customMinutesText: String = "") {
       self.id = id
       self.option = option
@@ -174,25 +183,32 @@ public final class CalendarEventComposer: ObservableObject {
       .store(in: &cancellables)
   }
 
+  /// Returns whether the current form contents can be saved.
   public var canSave: Bool {
     accessGranted && !isSaving && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       && !selectedCalendarID.isEmpty
   }
-  public var canDelete: Bool {
-    if case .edit = mode { return accessGranted && !isSaving }
-    return false
-  }
+  /// Returns whether the currently loaded event can be deleted.
+  public var canDelete: Bool { canDeleteCurrentEvent }
+  /// Returns the current panel title.
   public var panelTitle: String {
     switch mode {
     case .create: config.createTitle
     case .edit: config.editTitle
     }
   }
+  /// Returns the save button title for the current mode.
   public var saveButtonTitle: String {
     switch mode {
     case .create: isSaving ? "\(config.saveLabel)..." : config.saveLabel
     case .edit: isSaving ? "\(config.updateLabel)..." : config.updateLabel
     }
+  }
+
+  /// Returns whether the current mode represents an editable event and no save is in progress.
+  private var canDeleteCurrentEvent: Bool {
+    guard case .edit = mode else { return false }
+    return accessGranted && !isSaving
   }
 
   public func prepare(defaultDate: Date) {

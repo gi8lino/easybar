@@ -139,7 +139,7 @@ extension WidgetNodeView {
 
   @ViewBuilder
   var popupAnchorMouseOverlay: some View {
-    if nodeCanPresentPopup || node.hasMouseInteractionHandlers {
+    if shouldShowPopupAnchorMouseOverlay {
       GeometryReader { proxy in
         WidgetMouseView(
           widgetID: node.root,
@@ -157,6 +157,11 @@ extension WidgetNodeView {
         .contentShape(Rectangle())
       }
     }
+  }
+
+  /// Returns whether the popup anchor needs an AppKit mouse overlay.
+  var shouldShowPopupAnchorMouseOverlay: Bool {
+    return nodeCanPresentPopup || node.hasMouseInteractionHandlers
   }
 
   /// Emits a widget hover event for this node.
