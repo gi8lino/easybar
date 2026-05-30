@@ -43,8 +43,8 @@ jobs:
         shell: bash
         run: |
           if ! command -v magick >/dev/null 2>&1; then
-          brew update
-          brew install imagemagick
+            brew update
+            brew install imagemagick
           fi
 
           echo "IMAGE_CONVERT=$(command -v magick)" >> "$GITHUB_ENV"
@@ -67,6 +67,11 @@ jobs:
         shell: bash
         run: |
           make clean
+
+      - name: Run tests
+        shell: bash
+        run: |
+          make test
 
       - name: Build release package
         shell: bash
