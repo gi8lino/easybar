@@ -70,8 +70,22 @@ jobs:
 
       - name: Run tests
         shell: bash
+        timeout-minutes: 10
         run: |
-          make test
+          swift test > test.log 2>&1 || {
+            echo "---- extracted failures ----"
+            grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed)" test.log || true
+            echo "---- full test log ----"
+            cat test.log
+            exit 1
+          }
+
+      - name: Upload test log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-test-log
+          path: test.log
 
       - name: Build release package
         shell: bash
