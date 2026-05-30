@@ -337,7 +337,7 @@ extension Config {
     )
   }
 
-  /// Returns all bundled and development theme lookup candidates for one theme file.
+  /// Returns all bundled theme lookup candidates for one theme file.
   private func bundledThemeCandidateURLs(fileName: String) -> [URL] {
     var candidates: [URL] = []
 
@@ -374,12 +374,6 @@ extension Config {
           .appendingPathComponent("\(fileName).toml")
       )
     }
-
-    candidates.append(
-      URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-        .appendingPathComponent("themes", isDirectory: true)
-        .appendingPathComponent("\(fileName).toml")
-    )
 
     return uniqueThemeCandidateURLs(candidates)
   }

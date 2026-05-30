@@ -30,7 +30,11 @@ final class ConfigLoaderTests: XCTestCase {
     originalEnvironment = environmentKeys.reduce(into: [:]) { result, key in
       result[key] = ProcessInfo.processInfo.environment[key]
     }
+
     tempDirectoryURL = try makeTemporaryDirectory()
+    try copyThemeFixtures(
+      to: tempDirectoryURL.appendingPathComponent("themes", isDirectory: true)
+    )
   }
 
   /// Handles tear down with error.
@@ -99,10 +103,7 @@ final class ConfigLoaderTests: XCTestCase {
   func testBootstrapThemePaletteMatchesBundledDefaultTheme() throws {
     let config = Config.shared
     config.resetToDefaults()
-    let repoRootURL = URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
+    let repoRootURL = repoRootURL()
     let bundledThemeURL =
       repoRootURL
       .appendingPathComponent("themes/default.toml")
@@ -187,11 +188,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test bundled themes define the full rich theme palette.
   func testBundledThemesDefineEveryRichThemeToken() throws {
-    let repoRootURL = URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-    let themesDirectoryURL = repoRootURL.appendingPathComponent("themes")
+    let themesDirectoryURL = repoRootURL().appendingPathComponent("themes")
     let bundledThemeNames = ["default", "tokyo-night"]
 
     for themeName in bundledThemeNames {
@@ -697,6 +694,25 @@ extension ConfigLoaderTests {
     )
 
     return directoryURL
+  }
+
+  /// Returns the repository root URL.
+  fileprivate func repoRootURL() -> URL {
+    URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+  }
+
+  /// Copies bundled theme fixtures into a test-local themes directory.
+  fileprivate func copyThemeFixtures(to destinationURL: URL) throws {
+    let sourceURL = repoRootURL().appendingPathComponent("themes", isDirectory: true)
+
+    if FileManager.default.fileExists(atPath: destinationURL.path) {
+      try FileManager.default.removeItem(at: destinationURL)
+    }
+
+    try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
   }
 
   /// Handles write config.
