@@ -79,12 +79,24 @@ jobs:
         shell: bash
         timeout-minutes: 10
         run: |
-          swift test > test.log 2>&1 || {
+          set -euo pipefail
+
+          swift test > test.log 2>&1 &
+          test_pid=$!
+
+          while kill -0 "$test_pid" 2>/dev/null; do
+            sleep 30
+            echo "---- swift test still running; last 80 lines ----"
+            tail -n 80 test.log || true
+          done
+
+          wait "$test_pid" || {
+            status=$?
             echo "---- extracted failures ----"
             grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed)" test.log || true
             echo "---- full test log ----"
             cat test.log
-            exit 1
+            exit "$status"
           }
 
       - name: Upload test log
