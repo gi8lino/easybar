@@ -147,7 +147,7 @@ end
 --- Resolves the horizontal visual offset for icon content.
 local function resolve_icon_offset_x(props)
 	if type(props.icon) == "table" then
-		return tonumber(props.icon.offset_x or props.icon.x_offset or props.icon.offsetX)
+		return tonumber(props.icon.offset_x)
 	end
 
 	return nil
@@ -156,7 +156,7 @@ end
 --- Resolves the vertical visual offset for icon content.
 local function resolve_icon_offset_y(props)
 	if type(props.icon) == "table" then
-		return tonumber(props.icon.offset_y or props.icon.y_offset or props.icon.offsetY)
+		return tonumber(props.icon.offset_y)
 	end
 
 	return nil
