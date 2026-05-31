@@ -328,7 +328,7 @@ extension WidgetNodeView {
   @ViewBuilder
   var iconText: some View {
     if hasIcon && !hasSymbol {
-      Text(paddedIconDisplayString)
+      Text(iconDisplayString)
         .font(iconResolvedFont)
         .foregroundStyle(iconResolvedColor)
         .fixedSize()
@@ -336,13 +336,14 @@ extension WidgetNodeView {
     }
   }
 
-  /// Returns the icon string with narrow side padding.
+  /// Returns the icon string to render for the current node.
   ///
   /// Some Nerd Font and private-use glyphs have visual overhangs that SwiftUI
-  /// measures too tightly when rendered as a bare `Text`. The six-per-em spaces
-  /// widen the text run enough to avoid clipping without requiring widget
-  /// authors to add fake spaces to their icon strings.
-  private var paddedIconDisplayString: String {
+  /// measures too tightly when rendered as a bare `Text`. For icon-only items,
+  /// six-per-em spaces widen the text run enough to avoid clipping without
+  /// requiring widget authors to add fake spaces to their icon strings.
+  private var iconDisplayString: String {
+    guard !hasLabel else { return node.icon }
     return "\u{2006}\(node.icon)\u{2006}"
   }
 
