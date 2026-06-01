@@ -489,6 +489,7 @@
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
 ---@field remove fun(id: string) Removes one node and all descendants by id.
 ---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
+---@field unset fun(id: string, paths: string|string[]) Removes one or more nested property paths from one node by id.
 ---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
 ---@field theme EasyBarTheme Active resolved theme.
 local EasyBar = {}
@@ -506,6 +507,10 @@ function EasyBarNodeHandle:get() end
 
 ---Removes this node and all of its descendants.
 function EasyBarNodeHandle:remove() end
+
+---Removes one or more nested properties from this node.
+---@param paths string|string[]
+function EasyBarNodeHandle:unset(paths) end
 
 ---Subscribes this node to one or more event tokens.
 ---Interaction belongs to this node frame.
@@ -525,6 +530,11 @@ function EasyBar.clear_defaults() end
 ---@param id string
 ---@param props EasyBarNodeProps
 function EasyBar.set(id, props) end
+
+---Removes one or more nested properties from one existing node by id.
+---@param id string
+---@param paths string|string[]
+function EasyBar.unset(id, paths) end
 
 ---Returns a copy of one existing node's current property table.
 ---@param id string

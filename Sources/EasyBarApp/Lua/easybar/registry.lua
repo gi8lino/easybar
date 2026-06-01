@@ -27,6 +27,62 @@ local function deep_merge(target, source)
 	return target
 end
 
+--- Splits one dot-separated property path into stable segments.
+local function split_path(path)
+	local segments = {}
+
+	for segment in tostring(path):gmatch("[^%.]+") do
+		segments[#segments + 1] = segment
+	end
+
+	return segments
+end
+
+--- Removes one nested key path from a table and prunes emptied tables.
+local function unset_path(target, path)
+	if type(target) ~= "table" then
+		return false
+	end
+
+	local segments = split_path(path)
+	if #segments == 0 then
+		return false
+	end
+
+	local stack = {}
+	local cursor = target
+
+	for index = 1, #segments - 1 do
+		local key = segments[index]
+		if type(cursor[key]) ~= "table" then
+			return false
+		end
+
+		stack[#stack + 1] = {
+			parent = cursor,
+			key = key,
+		}
+		cursor = cursor[key]
+	end
+
+	local leaf = segments[#segments]
+	if cursor[leaf] == nil then
+		return false
+	end
+
+	cursor[leaf] = nil
+
+	for index = #stack, 1, -1 do
+		local entry = stack[index]
+		if next(entry.parent[entry.key]) ~= nil then
+			break
+		end
+		entry.parent[entry.key] = nil
+	end
+
+	return true
+end
+
 --- Normalizes one flexible boolean option into a real Lua boolean.
 local function normalize_bool(value, default)
 	if value == nil then
@@ -224,6 +280,28 @@ function M.new(hooks)
 	function registry.remove(id)
 		remove_recursive(state, id)
 		on_mutation()
+	end
+
+	--- Removes one or more nested property paths from one item.
+	function registry.unset(id, paths)
+		local item = registry.ensure_item_exists(id)
+		local changed = false
+
+		if type(paths) == "string" and paths ~= "" then
+			changed = unset_path(item.props, paths) or changed
+		elseif type(paths) == "table" then
+			for _, path in ipairs(paths) do
+				if type(path) == "string" and path ~= "" then
+					changed = unset_path(item.props, path) or changed
+				end
+			end
+		else
+			error("easybar.unset(id, paths) requires one string path or an array of string paths")
+		end
+
+		if changed then
+			on_mutation()
+		end
 	end
 
 	--- Returns one unique identifier for a background job.

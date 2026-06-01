@@ -417,6 +417,74 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertEqual(clearUpdate.clearRootID, "brew")
   }
 
+  func testUnsetClearsNestedProperties() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    local brew = easybar.add("item", "brew", {
+    	position = "right",
+    	label = {
+    		string = "Idle",
+    		color = "#ff0000",
+    	},
+    })
+
+    brew:subscribe(easybar.events.forced, function()
+    	brew:unset("label.color")
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.unset.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      autoRespondToCommands: true
+    )
+    defer {
+      runtime.stop()
+    }
+
+    let initialUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+    )
+    XCTAssertEqual(rootNode(in: initialUpdate)?.labelColor, "#ff0000")
+
+    try runtime.sendHostEvent("{\"name\":\"forced\"}\n")
+
+    let updated = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in
+        let root = rootNode(in: $0)
+        return root?.id == "brew" && root?.labelColor == nil
+      }
+    )
+
+    XCTAssertNil(rootNode(in: updated)?.labelColor)
+  }
+
   func testPublicWidgetApiExposesJsonHelper() async throws {
     let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
     try FileManager.default.createDirectory(

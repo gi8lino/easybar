@@ -122,6 +122,17 @@ Merges properties into one existing node by id.
 | `id` | `string` |  |
 | `props` | `EasyBarNodeProps` |  |
 
+## `EasyBar.unset`
+
+Removes one or more nested property paths from one existing node by id.
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `id` | `string` |  |
+| `paths` | `string\|string[]` |  |
+
 ## `EasyBar.subscribe`
 
 Subscribes one existing node to one or more event tokens by id.
@@ -155,6 +166,16 @@ Merges properties into this node.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `props` | `EasyBarNodeProps` |  |
+
+## `EasyBarNodeHandle:unset`
+
+Removes one or more nested properties from this node.
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `paths` | `string\|string[]` |  |
 
 ## `EasyBarNodeHandle:subscribe`
 

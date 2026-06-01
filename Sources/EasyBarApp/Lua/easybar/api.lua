@@ -139,6 +139,7 @@ function M.new(log, hooks)
 		_state = registry._state,
 		add = registry.add,
 		set = registry.set,
+		unset = registry.unset,
 		get = registry.get,
 		remove = registry.remove,
 		exec = registry.exec,
@@ -200,6 +201,11 @@ function M.new(log, hooks)
 				return api.remove(self.id)
 			end
 
+			--- Removes one or more nested properties from this node.
+			function handle:unset(paths)
+				return api.unset(self.id, paths)
+			end
+
 			--- Subscribes this node to one or more events.
 			function handle:subscribe(events, handler)
 				return api.subscribe(self.id, events, handler)
@@ -226,6 +232,11 @@ function M.new(log, hooks)
 		--- Returns a copy of one existing node's current properties.
 		function widget_api.get(id)
 			return api.get(id)
+		end
+
+		--- Removes one or more nested properties from one existing node.
+		function widget_api.unset(id, paths)
+			return api.unset(id, paths)
 		end
 
 		--- Removes one existing node and all descendants.
