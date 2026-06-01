@@ -12,7 +12,8 @@ extension Config {
         watchConfigFile: appSection.watchConfigFile,
         lockDirectory: appSection.lockDirectory,
         widgetEditorStubPath: appSection.widgetEditorStubPath,
-        develop: appSection.develop
+        develop: appSection.develop,
+        luaCommandLimits: appSection.luaCommandLimits
       ),
       logging: .init(
         enabled: loggingSection.enabled,
@@ -70,7 +71,8 @@ extension Config {
       watchConfigFile: snapshot.app.watchConfigFile,
       lockDirectory: snapshot.app.lockDirectory,
       widgetEditorStubPath: snapshot.app.widgetEditorStubPath,
-      develop: snapshot.app.develop
+      develop: snapshot.app.develop,
+      luaCommandLimits: snapshot.app.luaCommandLimits
     )
 
     loggingSection = .init(

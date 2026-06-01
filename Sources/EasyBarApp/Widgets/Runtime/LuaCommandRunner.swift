@@ -9,6 +9,14 @@ struct LuaCommandResult: Sendable {
 
 /// Executes Lua-requested shell commands in the host process.
 final class LuaCommandRunner: @unchecked Sendable {
+  struct Limits: Sendable {
+    let timeoutSeconds: TimeInterval
+    let maxOutputBytes: Int
+
+    static let timedOutStatus: Int32 = 124
+    static let outputLimitStatus: Int32 = 65
+  }
+
   private let logger: ProcessLogger
   private let queue = DispatchQueue(label: "easybar.lua-command-runner", qos: .utility)
 
@@ -18,16 +26,16 @@ final class LuaCommandRunner: @unchecked Sendable {
   }
 
   /// Runs one shell command through `/bin/sh -lc`.
-  func run(command: String) async -> LuaCommandResult {
+  func run(command: String, limits: Limits) async -> LuaCommandResult {
     await withCheckedContinuation { continuation in
       queue.async { [logger] in
-        continuation.resume(returning: Self.execute(command: command, logger: logger))
+        continuation.resume(returning: Self.execute(command: command, limits: limits, logger: logger))
       }
     }
   }
 
   /// Performs one blocking command execution and captures combined output.
-  private static func execute(command: String, logger: ProcessLogger) -> LuaCommandResult {
+  private static func execute(command: String, limits: Limits, logger: ProcessLogger) -> LuaCommandResult {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
     process.arguments = ["-lc", command]
@@ -37,6 +45,38 @@ final class LuaCommandRunner: @unchecked Sendable {
     process.standardError = pipe
 
     let handle = pipe.fileHandleForReading
+    var outputData = Data()
+    var exceededOutputLimit = false
+    var timedOut = false
+    let stateLock = NSLock()
+    let completionSemaphore = DispatchSemaphore(value: 0)
+    let deadline = DispatchTime.now() + limits.timeoutSeconds
+
+    handle.readabilityHandler = { readableHandle in
+      let chunk = readableHandle.availableData
+
+      stateLock.lock()
+      defer { stateLock.unlock() }
+
+      guard !chunk.isEmpty else {
+        completionSemaphore.signal()
+        return
+      }
+
+      let remainingBytes = max(0, limits.maxOutputBytes - outputData.count)
+      if remainingBytes > 0 {
+        outputData.append(chunk.prefix(remainingBytes))
+      }
+
+      if outputData.count >= limits.maxOutputBytes {
+        exceededOutputLimit = true
+        readableHandle.readabilityHandler = nil
+        if process.isRunning {
+          process.terminate()
+        }
+        completionSemaphore.signal()
+      }
+    }
 
     do {
       try process.run()
@@ -52,28 +92,69 @@ final class LuaCommandRunner: @unchecked Sendable {
       )
     }
 
-    let data: Data
+    let waitResult = completionSemaphore.wait(timeout: deadline)
+    if waitResult == .timedOut {
+      timedOut = true
+      handle.readabilityHandler = nil
+      if process.isRunning {
+        process.terminate()
+      }
+    }
+
+    process.waitUntilExit()
+    handle.readabilityHandler = nil
+
     do {
-      data = try handle.readToEnd() ?? Data()
+      let trailingData = try handle.readToEnd() ?? Data()
+      stateLock.lock()
+      let remainingBytes = max(0, limits.maxOutputBytes - outputData.count)
+      if remainingBytes > 0 {
+        outputData.append(trailingData.prefix(remainingBytes))
+      }
+      if outputData.count >= limits.maxOutputBytes && !trailingData.isEmpty {
+        exceededOutputLimit = true
+      }
+      stateLock.unlock()
     } catch {
       logger.warn(
         "failed to read lua command output",
         .field("command", command),
         .field("error", "\(error)")
       )
-      process.waitUntilExit()
       return LuaCommandResult(
         output: "failed to read command output: \(error)",
         status: process.terminationStatus == 0 ? 1 : process.terminationStatus
       )
     }
 
-    process.waitUntilExit()
-
     let output =
-      String(data: data, encoding: .utf8)?
+      String(data: outputData, encoding: .utf8)?
       .replacingOccurrences(of: "\r", with: "")
       .trimmingCharacters(in: .newlines) ?? ""
+
+    if timedOut {
+      logger.warn(
+        "lua command timed out",
+        .field("command", command),
+        .field("timeout_seconds", limits.timeoutSeconds)
+      )
+      return LuaCommandResult(
+        output: output,
+        status: Limits.timedOutStatus
+      )
+    }
+
+    if exceededOutputLimit {
+      logger.warn(
+        "lua command output exceeded limit",
+        .field("command", command),
+        .field("max_output_bytes", limits.maxOutputBytes)
+      )
+      return LuaCommandResult(
+        output: output,
+        status: Limits.outputLimitStatus
+      )
+    }
 
     if process.terminationStatus != 0 {
       logger.debug(

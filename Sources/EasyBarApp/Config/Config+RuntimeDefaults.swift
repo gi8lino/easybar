@@ -40,6 +40,11 @@ extension Config {
     appSection.environment = SharedPathDefaults.defaultLuaEnvironment
     appSection.watchConfigFile = true
     appSection.develop = false
+    appSection.luaCommandLimits = .init(
+      timeoutSeconds: 5,
+      maxOutputBytes: 64 * 1024,
+      maxAsyncJobs: 8
+    )
   }
 
   /// Returns the configured app environment merged onto the runtime defaults.

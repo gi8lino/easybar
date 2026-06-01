@@ -58,3 +58,18 @@ develop = true
 By default, the developer section is hidden unless you hold `Shift` and right-click the bar.
 
 See [Developer Menu](developer-menu.md).
+
+## `lua_commands`
+
+Command execution limits for `easybar.exec(...)` and `easybar.exec_async(...)`.
+
+```toml
+[app.lua_commands]
+timeout_seconds = 5
+max_output_bytes = 65536
+max_async_jobs = 8
+```
+
+- `timeout_seconds`: hard timeout for one command before EasyBar terminates it.
+- `max_output_bytes`: maximum combined stdout and stderr captured for one command.
+- `max_async_jobs`: maximum concurrent `easybar.exec_async(...)` jobs before new jobs are rejected.

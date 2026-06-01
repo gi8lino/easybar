@@ -3,6 +3,8 @@
 EasyBar exposes shell command helpers for Lua widgets.
 
 Use commands carefully. Long-running synchronous commands block the Lua runtime.
+EasyBar also enforces configurable host-side limits for command timeout, captured output size,
+and concurrent async jobs through `[app.lua_commands]`.
 
 ## Synchronous commands
 

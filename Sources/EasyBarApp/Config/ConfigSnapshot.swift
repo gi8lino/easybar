@@ -14,6 +14,7 @@ struct ConfigSnapshot {
     let lockDirectory: String
     let widgetEditorStubPath: String
     let develop: Bool
+    let luaCommandLimits: Config.AppSection.LuaCommandLimits
   }
 
   /// Logging config snapshot.

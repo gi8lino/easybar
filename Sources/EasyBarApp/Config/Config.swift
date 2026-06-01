@@ -27,6 +27,12 @@ final class Config: ObservableObject {
 
   /// App-level config values.
   struct AppSection {
+    struct LuaCommandLimits: Equatable {
+      var timeoutSeconds: TimeInterval
+      var maxOutputBytes: Int
+      var maxAsyncJobs: Int
+    }
+
     var widgetsPath: String
     var luaPath: String
     var luaSocketPath: String
@@ -35,6 +41,7 @@ final class Config: ObservableObject {
     var lockDirectory: String
     var widgetEditorStubPath: String
     var develop: Bool
+    var luaCommandLimits: LuaCommandLimits
   }
 
   /// Logging config values.
@@ -194,6 +201,21 @@ final class Config: ObservableObject {
   var develop: Bool {
     get { appSection.develop }
     set { appSection.develop = newValue }
+  }
+
+  var luaCommandTimeoutSeconds: TimeInterval {
+    get { appSection.luaCommandLimits.timeoutSeconds }
+    set { appSection.luaCommandLimits.timeoutSeconds = newValue }
+  }
+
+  var luaCommandMaxOutputBytes: Int {
+    get { appSection.luaCommandLimits.maxOutputBytes }
+    set { appSection.luaCommandLimits.maxOutputBytes = newValue }
+  }
+
+  var luaCommandMaxAsyncJobs: Int {
+    get { appSection.luaCommandLimits.maxAsyncJobs }
+    set { appSection.luaCommandLimits.maxAsyncJobs = newValue }
   }
 
   var loggingEnabled: Bool {
@@ -358,7 +380,12 @@ final class Config: ObservableObject {
       watchConfigFile: true,
       lockDirectory: "",
       widgetEditorStubPath: "",
-      develop: false
+      develop: false,
+      luaCommandLimits: .init(
+        timeoutSeconds: 5,
+        maxOutputBytes: 64 * 1024,
+        maxAsyncJobs: 8
+      )
     )
     loggingSection = .init(
       enabled: false,

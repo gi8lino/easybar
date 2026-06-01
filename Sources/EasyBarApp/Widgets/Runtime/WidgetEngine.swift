@@ -31,6 +31,7 @@ actor WidgetEngine {
   private var scriptedRoots = Set<String>()
   private var started = false
   private var runtimeSessionID: UInt64 = 0
+  private var activeAsyncCommandCount = 0
 
   /// Creates one widget engine.
   init(
@@ -53,6 +54,7 @@ actor WidgetEngine {
     logger.debug("widget engine start begin")
 
     runtimeState.reset()
+    activeAsyncCommandCount = 0
 
     await luaRuntime.setLineHandler { [weak self] line in
       Task {
@@ -103,6 +105,7 @@ actor WidgetEngine {
 
     started = false
     runtimeState.reset()
+    activeAsyncCommandCount = 0
 
     await EventHub.shared.clearLuaForwardedAppEvents()
 
@@ -269,6 +272,13 @@ actor WidgetEngine {
       return
     }
 
+    let commandLimits = await MainActor.run {
+      LuaCommandRunner.Limits(
+        timeoutSeconds: Config.shared.luaCommandTimeoutSeconds,
+        maxOutputBytes: Config.shared.luaCommandMaxOutputBytes
+      )
+    }
+
     logger.debug(
       "lua command requested",
       .field("token", request.token),
@@ -277,16 +287,38 @@ actor WidgetEngine {
     )
 
     if request.isSynchronous {
-      let result = await commandRunner.run(command: request.command)
+      let result = await commandRunner.run(command: request.command, limits: commandLimits)
       await sendCommandResponse(token: request.token, result: result)
       return
     }
 
+    let maxAsyncJobs = await MainActor.run {
+      Config.shared.luaCommandMaxAsyncJobs
+    }
+    guard activeAsyncCommandCount < maxAsyncJobs else {
+      logger.warn(
+        "lua async command rejected because limit was reached",
+        .field("token", request.token),
+        .field("active_async_jobs", activeAsyncCommandCount),
+        .field("max_async_jobs", maxAsyncJobs),
+        .field("command", request.command)
+      )
+      await sendCommandResponse(
+        token: request.token,
+        result: LuaCommandResult(
+          output: "easybar.exec_async rejected: max async job limit reached",
+          status: 69
+        )
+      )
+      return
+    }
+
+    activeAsyncCommandCount += 1
     let commandRunner = commandRunner
     let runtimeSessionID = self.runtimeSessionID
 
     Task { [weak self] in
-      let result = await commandRunner.run(command: request.command)
+      let result = await commandRunner.run(command: request.command, limits: commandLimits)
       await self?.sendAsyncCommandResponse(
         token: request.token,
         result: result,
@@ -320,6 +352,8 @@ actor WidgetEngine {
     result: LuaCommandResult,
     runtimeSessionID: UInt64
   ) async {
+    activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
+
     guard started, self.runtimeSessionID == runtimeSessionID else {
       logger.info(
         "dropping stale async lua command response",

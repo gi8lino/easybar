@@ -45,6 +45,38 @@ extension Config {
       try optionalBool(app["develop"], path: "app.develop")
       ?? develop
 
+    let luaCommands = app["lua_commands"]?.table ?? TOMLTable()
+    luaCommandTimeoutSeconds =
+      try optionalNumber(luaCommands["timeout_seconds"], path: "app.lua_commands.timeout_seconds")
+      ?? luaCommandTimeoutSeconds
+    luaCommandMaxOutputBytes =
+      try optionalInt(luaCommands["max_output_bytes"], path: "app.lua_commands.max_output_bytes")
+      ?? luaCommandMaxOutputBytes
+    luaCommandMaxAsyncJobs =
+      try optionalInt(luaCommands["max_async_jobs"], path: "app.lua_commands.max_async_jobs")
+      ?? luaCommandMaxAsyncJobs
+
+    if luaCommandTimeoutSeconds <= 0 {
+      throw ConfigError.invalidValue(
+        path: "app.lua_commands.timeout_seconds",
+        message: "expected a value greater than 0"
+      )
+    }
+
+    if luaCommandMaxOutputBytes <= 0 {
+      throw ConfigError.invalidValue(
+        path: "app.lua_commands.max_output_bytes",
+        message: "expected a value greater than 0"
+      )
+    }
+
+    if luaCommandMaxAsyncJobs <= 0 {
+      throw ConfigError.invalidValue(
+        path: "app.lua_commands.max_async_jobs",
+        message: "expected a value greater than 0"
+      )
+    }
+
     registerDirectoryRequirement(
       for: "app.widgets_dir",
       path: resolvedWidgetsPath,
