@@ -1,6 +1,8 @@
 dist/
 .build/
 .swiftpm/
+.cache/
+.home/
 
 # mkdocs
 docs/site/
@@ -8,4 +10,3 @@ docs/.venv/
 
 .DS_Store
 todo.txt
-

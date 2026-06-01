@@ -1,0 +1,31 @@
+name: pr
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-verify-generated:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select pinned Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26"
+
+      - name: Run tests
+        run: make test
+
+      - name: Verify generated artifacts are current
+        run: |
+          make generate-theme-tokens
+          make generate-event-catalog
+          make generate-lua-docs
+          git diff --exit-code
