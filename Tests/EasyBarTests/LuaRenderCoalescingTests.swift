@@ -7,20 +7,30 @@ import XCTest
 
 final class LuaRenderCoalescingTests: XCTestCase {
   private let decoder = JSONDecoder()
-  private var tempDirectoryURL: URL!
 
-  private static var luaRuntimeEnvironment: [String: String] {
-    ProcessInfo.processInfo.environment.merging(Config.shared.luaThemeEnvironment()) {
-      _, themeValue in themeValue
-    }
-  }
+  private var originalConfigSnapshot: ConfigSnapshot!
+  private var tempDirectoryURL: URL!
+  private var configFileURL: URL!
+  private var lockDirectoryURL: URL!
+  private var loggingDirectoryURL: URL!
+  private var runtimeDirectoryURL: URL!
 
   override func setUpWithError() throws {
     try super.setUpWithError()
+
+    originalConfigSnapshot = Config.shared.snapshot()
+    Config.shared.resetToDefaults()
+
     tempDirectoryURL = try makeTemporaryDirectory()
+    configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
+    lockDirectoryURL = tempDirectoryURL.appendingPathComponent("locks", isDirectory: true)
+    loggingDirectoryURL = tempDirectoryURL.appendingPathComponent("logs", isDirectory: true)
+    runtimeDirectoryURL = tempDirectoryURL.appendingPathComponent("runtime", isDirectory: true)
   }
 
   override func tearDownWithError() throws {
+    Config.shared.apply(originalConfigSnapshot)
+
     if let tempDirectoryURL {
       try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
@@ -29,11 +39,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testExecCallbackFlushesIntermediateRenderBeforeFinalMutation() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     easybar.add("item", "brew", {
@@ -89,7 +95,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = Self.luaRuntimeEnvironment
+    process.environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -137,11 +143,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testExecAsyncDeliversCompletionLaterWithoutPollingTick() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     easybar.add("item", "brew", {
@@ -197,7 +199,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = Self.luaRuntimeEnvironment
+    process.environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -239,11 +241,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testStaleCommandResponseFromPreviousRuntimeDoesNotSatisfyNewSyncCommand() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     let logger = ProcessLogger(
       label: "lua.stale-command-response.test",
@@ -283,6 +281,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "old.lua",
       recorder: oldRecorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: false
     )
     defer { oldRuntime.stop() }
@@ -324,6 +323,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "new.lua",
       recorder: newRecorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: false
     )
     defer { newRuntime.stop() }
@@ -354,11 +354,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testRemovingRootEmitsExplicitClearRootUpdate() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     local brew = easybar.add("item", "brew", {
@@ -394,6 +390,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "brew.lua",
       recorder: recorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: true
     )
     defer {
@@ -418,11 +415,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testUnsetClearsNestedProperties() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     local brew = easybar.add("item", "brew", {
@@ -460,6 +453,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "brew.lua",
       recorder: recorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: true
     )
     defer {
@@ -486,11 +480,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testInvalidBooleanValueFallsBackOutsideStrictMode() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     easybar.add("item", "brew", {
@@ -522,6 +512,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "brew.lua",
       recorder: recorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: true,
       environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "0"]
     )
@@ -538,11 +529,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testInvalidBooleanValueFailsInStrictMode() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     easybar.add("item", "brew", {
@@ -574,6 +561,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       widgetFile: "brew.lua",
       recorder: recorder,
       decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
       autoRespondToCommands: true,
       environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "1"]
     )
@@ -590,11 +578,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testPublicWidgetApiExposesJsonHelper() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     local payload = easybar.json.decode('{"name":"brew","count":2}')
@@ -638,7 +622,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = Self.luaRuntimeEnvironment
+    process.environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -670,11 +654,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   func testIntervalSubscriptionChangesAreReemittedAfterWidgetMutation() async throws {
-    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
-    try FileManager.default.createDirectory(
-      at: widgetsDirectoryURL,
-      withIntermediateDirectories: true
-    )
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
     local brew
@@ -735,7 +715,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
-    process.environment = Self.luaRuntimeEnvironment
+    process.environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
 
     let stdoutObserver = RuntimeLineObserver { line in
       do {
@@ -927,6 +907,7 @@ extension LuaRenderCoalescingTests {
       widgetFile: String,
       recorder: RuntimeUpdateRecorder,
       decoder: JSONDecoder,
+      environment: [String: String],
       autoRespondToCommands: Bool,
       environmentOverrides: [String: String] = [:]
     ) throws {
@@ -943,7 +924,7 @@ extension LuaRenderCoalescingTests {
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
-      process.environment = LuaRenderCoalescingTests.luaRuntimeEnvironment.merging(environmentOverrides) {
+      process.environment = environment.merging(environmentOverrides) {
         _, override in override
       }
 
@@ -1170,6 +1151,121 @@ extension LuaRenderCoalescingTests {
     return directoryURL
   }
 
+  fileprivate func makeWidgetsDirectory() throws -> URL {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent(
+      "widgets",
+      isDirectory: true
+    )
+
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    return widgetsDirectoryURL
+  }
+
+  fileprivate func luaRuntimeEnvironment(
+    for widgetsDirectoryURL: URL
+  ) throws -> [String: String] {
+    try writeTestConfig(widgetsDirectoryURL: widgetsDirectoryURL)
+
+    var environment = ProcessInfo.processInfo.environment
+
+    for key in Array(environment.keys) where key.hasPrefix("EASYBAR_") {
+      environment.removeValue(forKey: key)
+    }
+
+    for key in sharedRuntimeEnvironmentKeys {
+      environment.removeValue(forKey: key)
+    }
+
+    let luaSocketPath = runtimeDirectoryURL.appendingPathComponent("lua.sock").path
+    let calendarSocketPath = runtimeDirectoryURL.appendingPathComponent("calendar.sock").path
+    let networkSocketPath = runtimeDirectoryURL.appendingPathComponent("network.sock").path
+
+    environment[SharedEnvironmentKeys.configPath] = configFileURL.path
+    environment[SharedEnvironmentKeys.lockDirectory] = lockDirectoryURL.path
+    environment[SharedEnvironmentKeys.loggingDirectory] = loggingDirectoryURL.path
+    environment[SharedEnvironmentKeys.loggingLevel] = "error"
+    environment[SharedEnvironmentKeys.luaSocketPath] = luaSocketPath
+    environment[SharedEnvironmentKeys.calendarAgentSocketPath] = calendarSocketPath
+    environment[SharedEnvironmentKeys.networkAgentSocketPath] = networkSocketPath
+    environment[SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds] = "60"
+
+    environment.merge(Config.shared.luaThemeEnvironment()) {
+      _, testValue in testValue
+    }
+
+    return environment
+  }
+
+  fileprivate var sharedRuntimeEnvironmentKeys: [String] {
+    [
+      SharedEnvironmentKeys.configPath,
+      SharedEnvironmentKeys.lockDirectory,
+      SharedEnvironmentKeys.loggingDirectory,
+      SharedEnvironmentKeys.loggingLevel,
+      SharedEnvironmentKeys.luaSocketPath,
+      SharedEnvironmentKeys.calendarAgentSocketPath,
+      SharedEnvironmentKeys.networkAgentSocketPath,
+      SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
+    ]
+  }
+
+  fileprivate func writeTestConfig(widgetsDirectoryURL: URL) throws {
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+    try FileManager.default.createDirectory(
+      at: lockDirectoryURL,
+      withIntermediateDirectories: true
+    )
+    try FileManager.default.createDirectory(
+      at: loggingDirectoryURL,
+      withIntermediateDirectories: true
+    )
+    try FileManager.default.createDirectory(
+      at: runtimeDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    let luaSocketPath = runtimeDirectoryURL.appendingPathComponent("lua.sock").path
+    let calendarSocketPath = runtimeDirectoryURL.appendingPathComponent("calendar.sock").path
+    let networkSocketPath = runtimeDirectoryURL.appendingPathComponent("network.sock").path
+
+    try """
+    [app]
+    widgets_dir = "\(tomlEscaped(widgetsDirectoryURL.path))"
+    lua_path = "\(tomlEscaped(SharedPathDefaults.defaultLuaPath))"
+    lua_socket_path = "\(tomlEscaped(luaSocketPath))"
+    watch_config = false
+    lock_dir = "\(tomlEscaped(lockDirectoryURL.path))"
+    develop = false
+
+    [logging]
+    enabled = false
+    level = "error"
+    directory = "\(tomlEscaped(loggingDirectoryURL.path))"
+
+    [agents.calendar]
+    enabled = false
+    socket_path = "\(tomlEscaped(calendarSocketPath))"
+
+    [agents.network]
+    enabled = false
+    socket_path = "\(tomlEscaped(networkSocketPath))"
+    refresh_interval_seconds = 60
+    allow_unauthorized_non_sensitive_fields = false
+    """.write(to: configFileURL, atomically: true, encoding: .utf8)
+  }
+
+  fileprivate func tomlEscaped(_ value: String) -> String {
+    value
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+  }
 }
 
 /// Terminates one spawned runtime process without risking an indefinite wait in CI.
