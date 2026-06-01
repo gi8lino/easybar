@@ -496,7 +496,14 @@ extension LuaProcessController {
 
   /// Returns the Lua runtime environment with app config and resolved theme values.
   private func luaRuntimeEnvironment() -> [String: String] {
-    Config.shared.appSection.environment.merging(Config.shared.luaThemeEnvironment()) {
+    Config.shared.appSection.environment
+      .merging(Config.shared.luaThemeEnvironment()) {
+        _, themeValue in themeValue
+      }
+      .merging([
+        "EASYBAR_STRICT_PUBLIC_API":
+          Config.shared.develop || Config.shared.loggingLevel.allows(.trace) ? "1" : "0"
+      ]) {
       _, themeValue in themeValue
     }
   }

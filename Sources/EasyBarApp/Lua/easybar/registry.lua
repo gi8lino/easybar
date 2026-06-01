@@ -83,8 +83,25 @@ local function unset_path(target, path)
 	return true
 end
 
+--- Reports one invalid public API value and optionally raises in strict mode.
+local function invalid_public_value(path, value, expected, fallback, report, strict)
+	if strict then
+		error(
+			"invalid easybar value for "
+				.. tostring(path)
+				.. ": expected "
+				.. tostring(expected)
+				.. ", got "
+				.. tostring(value)
+		)
+	end
+
+	report(path, value, expected, fallback)
+	return fallback
+end
+
 --- Normalizes one flexible boolean option into a real Lua boolean.
-local function normalize_bool(value, default)
+local function normalize_bool(value, default, path, report, strict)
 	if value == nil then
 		return default
 	end
@@ -97,7 +114,7 @@ local function normalize_bool(value, default)
 		return false
 	end
 
-	return default
+	return invalid_public_value(path, value, "true, false, 'on', or 'off'", default, report, strict)
 end
 
 --- Normalizes shorthand string-ish values into `{ string = ... }` tables.
@@ -116,7 +133,7 @@ local function normalize_string_prop(value)
 end
 
 --- Normalizes item props into the shape expected by the renderer.
-local function normalize_props(props)
+local function normalize_props(props, report, strict)
 	local normalized = helpers.deep_copy(props or {})
 
 	if normalized.label ~= nil then
@@ -128,11 +145,12 @@ local function normalize_props(props)
 	end
 
 	if normalized.drawing ~= nil then
-		normalized.drawing = normalize_bool(normalized.drawing, true)
+		normalized.drawing = normalize_bool(normalized.drawing, true, "drawing", report, strict)
 	end
 
 	if type(normalized.popup) == "table" and normalized.popup.drawing ~= nil then
-		normalized.popup.drawing = normalize_bool(normalized.popup.drawing, false)
+		normalized.popup.drawing =
+			normalize_bool(normalized.popup.drawing, false, "popup.drawing", report, strict)
 	end
 
 	return normalized
@@ -206,6 +224,9 @@ function M.new(hooks)
 		type(hooks.on_async_job_completed) == "function" and hooks.on_async_job_completed or noop
 	local on_async_callback_error =
 		type(hooks.on_async_callback_error) == "function" and hooks.on_async_callback_error or noop
+	local on_invalid_public_api =
+		type(hooks.on_invalid_public_api) == "function" and hooks.on_invalid_public_api or noop
+	local strict_public_api = hooks.strict_public_api == true
 
 	local state = {
 		items = {},
@@ -237,8 +258,8 @@ function M.new(hooks)
 		assert(type(id) == "string" and id ~= "", "easybar.add(kind, id, props) requires id")
 
 		local merged = {}
-		deep_merge(merged, normalize_props(defaults or {}))
-		deep_merge(merged, normalize_props(props or {}))
+		deep_merge(merged, normalize_props(defaults or {}, on_invalid_public_api, strict_public_api))
+		deep_merge(merged, normalize_props(props or {}, on_invalid_public_api, strict_public_api))
 
 		local is_new = state.items[id] == nil
 
@@ -258,15 +279,15 @@ function M.new(hooks)
 	--- Returns one merged property table using registry normalization rules.
 	function registry.merge_props(defaults, props)
 		local merged = {}
-		deep_merge(merged, normalize_props(defaults or {}))
-		deep_merge(merged, normalize_props(props or {}))
+		deep_merge(merged, normalize_props(defaults or {}, on_invalid_public_api, strict_public_api))
+		deep_merge(merged, normalize_props(props or {}, on_invalid_public_api, strict_public_api))
 		return merged
 	end
 
 	--- Merges properties into one item.
 	function registry.set(id, props)
 		local item = registry.ensure_item_exists(id)
-		deep_merge(item.props, normalize_props(props or {}))
+		deep_merge(item.props, normalize_props(props or {}, on_invalid_public_api, strict_public_api))
 		on_mutation()
 	end
 

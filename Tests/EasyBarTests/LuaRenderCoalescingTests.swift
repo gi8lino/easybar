@@ -485,6 +485,110 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertNil(rootNode(in: updated)?.labelColor)
   }
 
+  func testInvalidBooleanValueFallsBackOutsideStrictMode() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	drawing = "maybe",
+    	label = "Idle",
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.invalid-bool-fallback.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      autoRespondToCommands: true,
+      environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "0"]
+    )
+    defer {
+      runtime.stop()
+    }
+
+    let update = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+    )
+
+    XCTAssertTrue(rootNode(in: update)?.visible ?? false)
+  }
+
+  func testInvalidBooleanValueFailsInStrictMode() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	drawing = "maybe",
+    	label = "Idle",
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.invalid-bool-strict.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      autoRespondToCommands: true,
+      environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "1"]
+    )
+    defer {
+      runtime.stop()
+    }
+
+    try await expectNoUpdate(
+      from: recorder,
+      matching: { update in
+        update.isTree
+      }
+    )
+  }
+
   func testPublicWidgetApiExposesJsonHelper() async throws {
     let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
     try FileManager.default.createDirectory(
@@ -823,7 +927,8 @@ extension LuaRenderCoalescingTests {
       widgetFile: String,
       recorder: RuntimeUpdateRecorder,
       decoder: JSONDecoder,
-      autoRespondToCommands: Bool
+      autoRespondToCommands: Bool,
+      environmentOverrides: [String: String] = [:]
     ) throws {
       let hostBridge = RuntimeHostBridge(
         recorder: recorder,
@@ -838,7 +943,9 @@ extension LuaRenderCoalescingTests {
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
-      process.environment = LuaRenderCoalescingTests.luaRuntimeEnvironment
+      process.environment = LuaRenderCoalescingTests.luaRuntimeEnvironment.merging(environmentOverrides) {
+        _, override in override
+      }
 
       stdoutObserver = RuntimeLineObserver { line in
         do {
@@ -1016,6 +1123,28 @@ extension LuaRenderCoalescingTests {
           "Timed out waiting for matching command request; seen updates: \(summaries)"
       ]
     )
+  }
+
+  fileprivate func expectNoUpdate(
+    from recorder: RuntimeUpdateRecorder,
+    matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
+    timeoutNanoseconds: UInt64 = 300_000_000
+  ) async throws {
+    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+
+    while DispatchTime.now().uptimeNanoseconds < deadline {
+      if let update = await recorder.takeFirst(matching: predicate) {
+        throw NSError(
+          domain: "LuaRenderCoalescingTests",
+          code: 3,
+          userInfo: [
+            NSLocalizedDescriptionKey: "Unexpected update: \(update.type)"
+          ]
+        )
+      }
+
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
   }
 
   fileprivate func rootNode(in update: WidgetTreeUpdate) -> WidgetNodeState? {

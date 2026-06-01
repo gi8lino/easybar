@@ -60,6 +60,7 @@ local render_dirty = false
 local last_subscription_payload = nil
 local next_command_sequence = 0
 local runtime_command_session = tostring({}):gsub("[^%w]", "_")
+local strict_public_api = os.getenv("EASYBAR_STRICT_PUBLIC_API") == "1"
 
 --- Marks the current runtime state as needing one render flush.
 local function mark_render_dirty()
@@ -224,6 +225,19 @@ registry = api.new(log, {
 	on_async_callback_error = function(command, err)
 		log.error("lua async callback failed command=" .. tostring(command) .. " error=" .. tostring(err))
 	end,
+	on_invalid_public_api = function(path, value, expected, fallback)
+		log.warn(
+			"lua normalized invalid public api value path="
+				.. tostring(path)
+				.. " value="
+				.. tostring(value)
+				.. " expected="
+				.. tostring(expected)
+				.. " fallback="
+				.. tostring(fallback)
+		)
+	end,
+	strict_public_api = strict_public_api,
 })
 
 io.stdout:setvbuf("line")
