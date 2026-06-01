@@ -1,6 +1,7 @@
 import EasyBarShared
 import Foundation
 import XCTest
+import Darwin
 
 @testable import EasyBarApp
 
@@ -109,10 +110,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
 
       try? stdinPipe.fileHandleForWriting.close()
 
-      if process.isRunning {
-        process.terminate()
-        process.waitUntilExit()
-      }
+      terminate(process)
     }
 
     let initialUpdate = try await nextTreeUpdate(
@@ -220,10 +218,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
 
       try? stdinPipe.fileHandleForWriting.close()
 
-      if process.isRunning {
-        process.terminate()
-        process.waitUntilExit()
-      }
+      terminate(process)
     }
 
     try stdinPipe.fileHandleForWriting.write(
@@ -428,10 +423,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
 
       try? stdinPipe.fileHandleForWriting.close()
 
-      if process.isRunning {
-        process.terminate()
-        process.waitUntilExit()
-      }
+      terminate(process)
     }
 
     let initialUpdate = try await nextTreeUpdate(
@@ -528,10 +520,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
 
       try? stdinPipe.fileHandleForWriting.close()
 
-      if process.isRunning {
-        process.terminate()
-        process.waitUntilExit()
-      }
+      terminate(process)
     }
 
     let initialSubscriptions = try await nextUpdate(
@@ -750,10 +739,7 @@ extension LuaRenderCoalescingTests {
 
       try? stdinPipe.fileHandleForWriting.close()
 
-      if process.isRunning {
-        process.terminate()
-        process.waitUntilExit()
-      }
+      terminate(process)
     }
   }
 
@@ -920,4 +906,23 @@ extension LuaRenderCoalescingTests {
 
     return directoryURL
   }
+
+}
+
+/// Terminates one spawned runtime process without risking an indefinite wait in CI.
+fileprivate func terminate(_ process: Process, gracePeriodNanoseconds: UInt64 = 500_000_000) {
+  guard process.isRunning else { return }
+
+  process.terminate()
+  let deadline = DispatchTime.now().uptimeNanoseconds + gracePeriodNanoseconds
+
+  while process.isRunning && DispatchTime.now().uptimeNanoseconds < deadline {
+    usleep(10_000)
+  }
+
+  if process.isRunning {
+    kill(process.processIdentifier, SIGKILL)
+  }
+
+  process.waitUntilExit()
 }

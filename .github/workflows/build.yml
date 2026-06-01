@@ -81,12 +81,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          swift test > test.log 2>&1 &
+          make test > test.log 2>&1 &
           test_pid=$!
 
           while kill -0 "$test_pid" 2>/dev/null; do
             sleep 30
-            echo "---- swift test still running; last 80 lines ----"
+            echo "---- make test still running; last 80 lines ----"
             tail -n 80 test.log || true
           done
 
