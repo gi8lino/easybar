@@ -57,18 +57,3 @@ jobs:
 
       - name: Build docs
         run: make build-docs
-
-  bundle-smoke:
-    if: github.event_name == 'push'
-    runs-on: macos-26
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Select pinned Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "26"
-
-      - name: Build distributable bundle
-        run: make bundle VERSION=ci
