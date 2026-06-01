@@ -1,0 +1,235 @@
+import Foundation
+
+extension CalendarBuiltinConfig {
+  public static let `default` = CalendarBuiltinConfig(
+    placement: .init(enabled: false, position: .right, order: 60),
+    style: .init(
+      icon: "",
+      textColorHex: "#ffffff",
+      backgroundColorHex: "#1a1a1a",
+      borderColorHex: "#333333",
+      borderWidth: 1,
+      cornerRadius: 8,
+      marginX: 0,
+      marginY: 0,
+      paddingX: 8,
+      paddingY: 4,
+      spacing: 6,
+      opacity: 1
+    ),
+    popupMode: .month,
+    anchor: .init(
+      itemFormat: "EEE, MMM d",
+      layout: .stack,
+      topFormat: "HH:mm",
+      bottomFormat: "d. MMM",
+      lineSpacing: 0,
+      topTextColorHex: "#ffffff",
+      bottomTextColorHex: "#d0d0d0"
+    ),
+    filters: .init(
+      includedCalendarNames: [],
+      excludedCalendarNames: [],
+      includedCalendarIDs: [],
+      excludedCalendarIDs: [],
+      includedCalendarSourceIDs: [],
+      excludedCalendarSourceIDs: []
+    ),
+    appointments: .init(
+      itemIndent: 8,
+      eventTextColorHex: "#d0d0d0",
+      emptyTextColorHex: "#c0c0c0",
+      secondaryTextColorHex: "#91d7e3",
+      travelTextColorHex: "#8a8a8a",
+      emptyText: "No appointments",
+      showCalendarName: false,
+      showAllDayLabel: true,
+      showHolidayAllDayLabel: false,
+      allDayLabel: "All day",
+      showLocation: true,
+      showTravelTime: true,
+      showEndTime: true,
+      travelIcon: "",
+      travelIconColorHex: "#8a8a8a",
+      showAlertIcon: false,
+      alertIcon: "",
+      alertIconColorHex: "#8a8a8a"
+    ),
+    birthdays: .init(
+      showBirthdays: true,
+      birthdaysShowAge: true,
+      birthdayIcon: "",
+      birthdayIconColorHex: nil
+    ),
+    composer: .init(
+      style: .init(
+        backgroundColorHex: "#111111",
+        borderColorHex: "#444444",
+        borderWidth: 1,
+        cornerRadius: 10,
+        paddingX: 14,
+        paddingY: 14,
+        headerTextColorHex: "#ffffff"
+      ),
+      content: .init(
+        createTitle: "New Appointment",
+        editTitle: "Edit Appointment",
+        titleLabel: "Title",
+        locationLabel: "Location",
+        calendarLabel: "Calendar",
+        titlePlaceholder: "What are you doing?",
+        locationPlaceholder: "Where are you going?",
+        defaultCalendarName: nil,
+        defaultAlert: "1_hour",
+        defaultTravelTime: "none",
+        alertLabels: [
+          "none": "None",
+          "at_time": "At time of event",
+          "5_minutes": "5 minutes before",
+          "10_minutes": "10 minutes before",
+          "15_minutes": "15 minutes before",
+          "30_minutes": "30 minutes before",
+          "1_hour": "1 hour before",
+          "1_day": "1 day before",
+          "custom": "Custom",
+        ],
+        travelTimeLabels: [
+          "none": "None",
+          "5_minutes": "5 minutes",
+          "10_minutes": "10 minutes",
+          "15_minutes": "15 minutes",
+          "20_minutes": "20 minutes",
+          "30_minutes": "30 minutes",
+          "45_minutes": "45 minutes",
+          "1_hour": "1 hour",
+          "90_minutes": "1.5 hours",
+          "2_hours": "2 hours",
+          "custom": "Custom",
+        ],
+        startLabel: "Begin",
+        endLabel: "End",
+        allDayLabel: "All day",
+        travelTimeLabel: "Travel time",
+        alertLabel: "Alert",
+        addAlertLabel: "Add alert",
+        openCalendarLabel: "Calendar",
+        cancelLabel: "Cancel",
+        saveLabel: "Save",
+        updateLabel: "Update",
+        removeLabel: "Remove",
+        deleteConfirmationTitle: "Remove appointment?",
+        deleteConfirmationMessage: "This action cannot be undone."
+      )
+    ),
+    upcoming: .init(
+      events: .init(days: 3, excludePastEvents: false),
+      popup: .init(
+        backgroundColorHex: "#111111",
+        borderColorHex: "#444444",
+        borderWidth: 1,
+        cornerRadius: 10,
+        paddingX: 10,
+        paddingY: 8,
+        spacing: 8,
+        marginX: 8,
+        marginY: 8
+      )
+    ),
+    month: .init(
+      popup: .init(
+        style: .init(
+          backgroundColorHex: "#111111",
+          borderColorHex: "#444444",
+          borderWidth: 1,
+          cornerRadius: 10,
+          paddingX: 10,
+          paddingY: 8,
+          spacing: 8,
+          marginX: 8,
+          marginY: 8
+        ),
+        calendar: .init(
+          showWeekNumbers: true,
+          showEventIndicators: true,
+          headerTextColorHex: "#ffffff",
+          weekdayTextColorHex: "#91d7e3",
+          firstWeekday: nil,
+          weekdayFormat: "dd",
+          weekdaySymbols: nil,
+          resolvedWeekdaySymbols: resolveMonthWeekdaySymbols(format: "dd", manualSymbols: nil),
+          dayTextColorHex: "#d0d0d0",
+          outsideMonthTextColorHex: "#6e738d",
+          todayCellBackgroundColorHex: "#00000000",
+          todayCellBorderColorHex: "#FF0000",
+          todayCellBorderWidth: 1.4,
+          indicatorColorHex: "#8bd5ca"
+        ),
+        selection: .init(
+          selectedTextColorHex: "#0B1020",
+          selectedBackgroundColorHex: "#89B4FA",
+          selectionDateFormat: "yyyy-MM-dd",
+          selectionDateSeparator: " - ",
+          allowsRangeSelection: true,
+          resetSelectionOnThirdTap: true
+        ),
+        agenda: .init(
+          layout: .calendarAppointmentsVertical,
+          appointmentsScrollable: true,
+          appointmentsMinHeight: 140,
+          appointmentsMaxHeight: 240,
+          agendaTitle: "Appointments",
+          maxVisibleAppointments: 8
+        ),
+        anchor: .init(dateFormat: "EEE d MMM", textColorHex: "#ffffff", showDateText: true),
+        todayButton: .init(
+          title: "Today",
+          icon: "",
+          borderColorHex: "#3F2F6B",
+          borderWidth: 1.5
+        )
+      )
+    )
+  )
+
+  public static func resolveMonthWeekdaySymbols(
+    format: String,
+    manualSymbols: [String]?
+  ) -> [String] {
+    if let manualSymbols {
+      return manualSymbols
+    }
+
+    let formatter = DateFormatter()
+    let sundayFirstSymbols: [String]
+
+    switch format {
+    case "d":
+      sundayFirstSymbols =
+        formatter.veryShortStandaloneWeekdaySymbols
+        ?? formatter.veryShortWeekdaySymbols
+        ?? ["S", "M", "T", "W", "T", "F", "S"]
+    case "dd":
+      let baseSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      sundayFirstSymbols = baseSymbols.map { String($0.prefix(2)) }
+    case "ddd":
+      sundayFirstSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    default:
+      sundayFirstSymbols =
+        formatter.shortStandaloneWeekdaySymbols
+        ?? formatter.shortWeekdaySymbols
+        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    }
+
+    guard sundayFirstSymbols.count == 7 else {
+      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    }
+
+    return Array(sundayFirstSymbols[1...6]) + [sundayFirstSymbols[0]]
+  }
+}
