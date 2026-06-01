@@ -17,11 +17,11 @@ on this widget's own repeating schedule without requiring an event subscription.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `kind` | `EasyBarKind` |  |
-| `id` | `string` |  |
-| `props` _(optional)_ | `EasyBarNodeProps` |  |
+| Name                 | Type               | Description |
+| -------------------- | ------------------ | ----------- |
+| `kind`               | `EasyBarKind`      |             |
+| `id`                 | `string`           |             |
+| `props` _(optional)_ | `EasyBarNodeProps` |             |
 
 ### Returns
 
@@ -38,9 +38,9 @@ Defaults apply only within the current widget file.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `props` | `EasyBarNodeProps` |  |
+| Name    | Type               | Description |
+| ------- | ------------------ | ----------- |
+| `props` | `EasyBarNodeProps` |             |
 
 ## `EasyBar.exec`
 
@@ -49,10 +49,10 @@ When a callback is provided, the trimmed command output and exit code are passed
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `command` | `string` |  |
-| `callback` _(optional)_ | `fun(output: string, code: integer): any` |  |
+| Name                    | Type                                      | Description |
+| ----------------------- | ----------------------------------------- | ----------- |
+| `command`               | `string`                                  |             |
+| `callback` _(optional)_ | `fun(output: string, code: integer): any` |             |
 
 ### Returns
 
@@ -65,10 +65,10 @@ The callback receives trimmed output and the command exit code when the job fini
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `command` | `string` |  |
-| `callback` | `fun(output: string, code: integer): any` |  |
+| Name       | Type                                      | Description |
+| ---------- | ----------------------------------------- | ----------- |
+| `command`  | `string`                                  |             |
+| `callback` | `fun(output: string, code: integer): any` |             |
 
 ### Returns
 
@@ -80,9 +80,9 @@ Returns a copy of one existing node's current property table.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `id` | `string` |  |
+| Name | Type     | Description |
+| ---- | -------- | ----------- |
+| `id` | `string` |             |
 
 ### Returns
 
@@ -96,10 +96,10 @@ Which messages are actually emitted depends on the host logging level.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `level` | `EasyBarLevel\|string` |  |
-| `...` | `any` |  |
+| Name    | Type                   | Description |
+| ------- | ---------------------- | ----------- |
+| `level` | `EasyBarLevel\|string` |             |
+| `...`   | `any`                  |             |
 
 ## `EasyBar.remove`
 
@@ -107,9 +107,9 @@ Removes one existing node and all of its descendants by id.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `id` | `string` |  |
+| Name | Type     | Description |
+| ---- | -------- | ----------- |
+| `id` | `string` |             |
 
 ## `EasyBar.set`
 
@@ -117,21 +117,10 @@ Merges properties into one existing node by id.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `id` | `string` |  |
-| `props` | `EasyBarNodeProps` |  |
-
-## `EasyBar.unset`
-
-Removes one or more nested property paths from one existing node by id.
-
-### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `id` | `string` |  |
-| `paths` | `string\|string[]` |  |
+| Name    | Type               | Description |
+| ------- | ------------------ | ----------- |
+| `id`    | `string`           |             |
+| `props` | `EasyBarNodeProps` |             |
 
 ## `EasyBar.subscribe`
 
@@ -139,11 +128,22 @@ Subscribes one existing node to one or more event tokens by id.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `id` | `string` |  |
-| `events` | `EasyBarEventToken\|EasyBarEventToken[]` |  |
-| `handler` | `EasyBarEventHandler` |  |
+| Name      | Type                                     | Description |
+| --------- | ---------------------------------------- | ----------- |
+| `id`      | `string`                                 |             |
+| `events`  | `EasyBarEventToken\|EasyBarEventToken[]` |             |
+| `handler` | `EasyBarEventHandler`                    |             |
+
+## `EasyBar.unset`
+
+Removes one or more nested properties from one existing node by id.
+
+### Parameters
+
+| Name    | Type               | Description |
+| ------- | ------------------ | ----------- |
+| `id`    | `string`           |             |
+| `paths` | `string\|string[]` |             |
 
 ## `EasyBarNodeHandle:get`
 
@@ -163,19 +163,9 @@ Merges properties into this node.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `props` | `EasyBarNodeProps` |  |
-
-## `EasyBarNodeHandle:unset`
-
-Removes one or more nested properties from this node.
-
-### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `paths` | `string\|string[]` |  |
+| Name    | Type               | Description |
+| ------- | ------------------ | ----------- |
+| `props` | `EasyBarNodeProps` |             |
 
 ## `EasyBarNodeHandle:subscribe`
 
@@ -184,7 +174,17 @@ Interaction belongs to this node frame.
 
 ### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `events` | `EasyBarEventToken\|EasyBarEventToken[]` |  |
-| `handler` | `EasyBarEventHandler` |  |
+| Name      | Type                                     | Description |
+| --------- | ---------------------------------------- | ----------- |
+| `events`  | `EasyBarEventToken\|EasyBarEventToken[]` |             |
+| `handler` | `EasyBarEventHandler`                    |             |
+
+## `EasyBarNodeHandle:unset`
+
+Removes one or more nested properties from this node.
+
+### Parameters
+
+| Name    | Type               | Description |
+| ------- | ------------------ | ----------- |
+| `paths` | `string\|string[]` |             |

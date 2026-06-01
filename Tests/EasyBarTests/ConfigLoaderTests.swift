@@ -104,11 +104,11 @@ final class ConfigLoaderTests: XCTestCase {
     let configFileURL = tempDirectoryURL.appendingPathComponent("lua-command-limits.toml")
 
     try """
-      [app.lua_commands]
-      timeout_seconds = 2.5
-      max_output_bytes = 2048
-      max_async_jobs = 3
-      """.write(to: configFileURL, atomically: true, encoding: .utf8)
+    [app.lua_commands]
+    timeout_seconds = 2.5
+    max_output_bytes = 2048
+    max_async_jobs = 3
+    """.write(to: configFileURL, atomically: true, encoding: .utf8)
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
@@ -125,9 +125,9 @@ final class ConfigLoaderTests: XCTestCase {
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-lua-command-timeout.toml")
 
     try """
-      [app.lua_commands]
-      timeout_seconds = 0
-      """.write(to: configFileURL, atomically: true, encoding: .utf8)
+    [app.lua_commands]
+    timeout_seconds = 0
+    """.write(to: configFileURL, atomically: true, encoding: .utf8)
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 

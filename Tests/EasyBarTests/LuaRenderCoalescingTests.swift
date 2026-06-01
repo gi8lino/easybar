@@ -1,7 +1,7 @@
+import Darwin
 import EasyBarShared
 import Foundation
 import XCTest
-import Darwin
 
 @testable import EasyBarApp
 
@@ -1173,7 +1173,7 @@ extension LuaRenderCoalescingTests {
 }
 
 /// Terminates one spawned runtime process without risking an indefinite wait in CI.
-fileprivate func terminate(_ process: Process, gracePeriodNanoseconds: UInt64 = 500_000_000) {
+private func terminate(_ process: Process, gracePeriodNanoseconds: UInt64 = 500_000_000) {
   guard process.isRunning else { return }
 
   process.terminate()

@@ -52,18 +52,36 @@
   position: static;
 }
 
-.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > .md-nav__link,
-.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > label.md-nav__link,
+.md-nav--primary
+  > .md-nav__list
+  > .md-nav__item.md-nav__item--active
+  > .md-nav__link,
+.md-nav--primary
+  > .md-nav__list
+  > .md-nav__item.md-nav__item--active
+  > label.md-nav__link,
 .md-nav--primary .md-nav__item--section.md-nav__item--active > .md-nav__link,
-.md-nav--primary .md-nav__item--section.md-nav__item--active > label.md-nav__link {
+.md-nav--primary
+  .md-nav__item--section.md-nav__item--active
+  > label.md-nav__link {
   background: transparent;
   color: var(--md-default-fg-color--light);
 }
 
-.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > .md-nav__link::before,
-.md-nav--primary > .md-nav__list > .md-nav__item.md-nav__item--active > label.md-nav__link::before,
-.md-nav--primary .md-nav__item--section.md-nav__item--active > .md-nav__link::before,
-.md-nav--primary .md-nav__item--section.md-nav__item--active > label.md-nav__link::before {
+.md-nav--primary
+  > .md-nav__list
+  > .md-nav__item.md-nav__item--active
+  > .md-nav__link::before,
+.md-nav--primary
+  > .md-nav__list
+  > .md-nav__item.md-nav__item--active
+  > label.md-nav__link::before,
+.md-nav--primary
+  .md-nav__item--section.md-nav__item--active
+  > .md-nav__link::before,
+.md-nav--primary
+  .md-nav__item--section.md-nav__item--active
+  > label.md-nav__link::before {
   content: none;
 }
 

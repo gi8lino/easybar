@@ -99,20 +99,17 @@ Modifiers: `exact`.
 
 Detailed icon configuration used when a plain icon value is not enough.
 
-| Property                           | Type               | Description                                |
-| ---------------------------------- | ------------------ | ------------------------------------------ |
-| `string` _(optional)_              | `string`           | Icon glyph text.                           |
-| `color` _(optional)_               | `string`           | Hex color override for the icon.           |
-| `font` _(optional)_                | `EasyBarFontProps` | Icon font overrides.                       |
-| `image` _(optional)_               | `string`           | Image path to render instead of icon text. |
-| `image_size` _(optional)_          | `number`           | Image size in points.                      |
-| `image_corner_radius` _(optional)_ | `number`           | Image corner radius in points.             |
+| Property                           | Type               | Description                                                              |
+| ---------------------------------- | ------------------ | ------------------------------------------------------------------------ |
+| `string` _(optional)_              | `string`           | Icon glyph text.                                                         |
+| `color` _(optional)_               | `string`           | Hex color override for the icon.                                         |
+| `font` _(optional)_                | `EasyBarFontProps` | Icon font overrides.                                                     |
+| `image` _(optional)_               | `string`           | Image path to render instead of icon text.                               |
+| `image_size` _(optional)_          | `number`           | Image size in points.                                                    |
+| `image_corner_radius` _(optional)_ | `number`           | Image corner radius in points.                                           |
 | `padding_right` _(optional)_       | `number`           | Additional layout spacing between the icon and following inline content. |
-| `offset_x` _(optional)_            | `number`           | Horizontal visual icon offset in points without changing layout spacing.  |
-| `offset_y` _(optional)_            | `number`           | Vertical visual icon offset in points without changing layout spacing.    |
-
-Use `padding_right` to create more room between icon content and whatever follows it in the same item.
-Use `offset_x` and `offset_y` for small visual nudges when the icon's measured bounds look slightly off.
+| `offset_x` _(optional)_            | `number`           | Horizontal visual icon offset in points without changing layout spacing. |
+| `offset_y` _(optional)_            | `number`           | Vertical visual icon offset in points without changing layout spacing.   |
 
 ## `EasyBarImageProps`
 
