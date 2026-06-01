@@ -1172,10 +1172,12 @@ extension LuaRenderCoalescingTests {
 
     var environment = ProcessInfo.processInfo.environment
 
+    // Clean up any existing EasyBar environment variables.
     for key in Array(environment.keys) where key.hasPrefix("EASYBAR_") {
       environment.removeValue(forKey: key)
     }
 
+    // Clean up any existing shared runtime environment variables.
     for key in sharedRuntimeEnvironmentKeys {
       environment.removeValue(forKey: key)
     }
@@ -1193,6 +1195,7 @@ extension LuaRenderCoalescingTests {
     environment[SharedEnvironmentKeys.networkAgentSocketPath] = networkSocketPath
     environment[SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds] = "60"
 
+    // Merge in the theme environment.
     environment.merge(Config.shared.luaThemeEnvironment()) {
       _, testValue in testValue
     }
@@ -1262,7 +1265,8 @@ extension LuaRenderCoalescingTests {
   }
 
   fileprivate func tomlEscaped(_ value: String) -> String {
-    value
+    return
+      value
       .replacingOccurrences(of: "\\", with: "\\\\")
       .replacingOccurrences(of: "\"", with: "\\\"")
   }
@@ -1283,5 +1287,5 @@ private func terminate(_ process: Process, gracePeriodNanoseconds: UInt64 = 500_
     kill(process.processIdentifier, SIGKILL)
   }
 
-  process.waitUntilExit()
+  return process.waitUntilExit()
 }
