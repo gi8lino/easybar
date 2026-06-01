@@ -19,7 +19,8 @@ struct AppServices {
   /// Bootstraps shared service instances and captures the resulting dependency graph.
   @MainActor
   static func bootstrap(logger: ProcessLogger) -> AppServices {
-    LuaRuntime.bootstrap(logger: logger.child("lua"))
+    let config = Config.shared
+    LuaRuntime.bootstrap(logger: logger.child("lua"), config: config)
     let bootstrappedLuaRuntime = LuaRuntime.shared
 
     EventManager.bootstrap(
@@ -27,18 +28,18 @@ struct AppServices {
       luaRuntime: bootstrappedLuaRuntime
     )
 
-    NativeWidgetRegistry.bootstrap(logger: logger.child("widgets"))
+    NativeWidgetRegistry.bootstrap(logger: logger.child("widgets"), config: config)
     AeroSpaceService.bootstrap(logger: logger.child("aerospace"))
     CalendarAgentEventRelay.bootstrap(logger: logger.child("calendar_relay"))
-    NetworkAgentClient.bootstrap(logger: logger.child("network_agent"))
+    NetworkAgentClient.bootstrap(logger: logger.child("network_agent"), config: config)
     NativeWiFiStore.bootstrap(logger: logger.child("wifi_store"))
     NativeMonthCalendarStore.bootstrap(logger: logger.child("month_store"))
     NativeUpcomingCalendarStore.bootstrap(logger: logger.child("upcoming_store"))
-    MonthCalendarAgentClient.bootstrap(logger: logger.child("month_agent"))
-    UpcomingCalendarAgentClient.bootstrap(logger: logger.child("upcoming_agent"))
+    MonthCalendarAgentClient.bootstrap(logger: logger.child("month_agent"), config: config)
+    UpcomingCalendarAgentClient.bootstrap(logger: logger.child("upcoming_agent"), config: config)
 
     return AppServices(
-      config: Config.shared,
+      config: config,
       luaRuntime: LuaRuntime.shared,
       eventHub: EventHub.shared,
       eventManager: EventManager.shared,

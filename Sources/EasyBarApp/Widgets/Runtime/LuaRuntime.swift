@@ -9,8 +9,8 @@ actor LuaRuntime {
   )
 
   /// Configures the shared Lua runtime.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = LuaRuntime(logger: logger)
+  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
+    shared = LuaRuntime(logger: logger, config: config)
   }
 
   private let logger: ProcessLogger
@@ -20,9 +20,9 @@ actor LuaRuntime {
   private var lineHandler: (@Sendable (String) -> Void)?
 
   /// Creates one Lua runtime.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, config: Config = .shared) {
     self.logger = logger
-    self.processController = LuaProcessController(logger: logger.child("process"))
+    self.processController = LuaProcessController(logger: logger.child("process"), config: config)
     self.transport = LuaTransport(logger: logger.child("transport"))
   }
 

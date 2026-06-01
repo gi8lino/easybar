@@ -7,16 +7,18 @@ import Foundation
 final class MonthCalendarAgentClient {
   /// Shared month-calendar agent client instance.
   static var shared = MonthCalendarAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.month_agent")
+    logger: ProcessLogger(label: "easybar.bootstrap.month_agent"),
+    config: .shared
   )
 
   /// Configures the shared month-calendar agent client.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = MonthCalendarAgentClient(logger: logger)
+  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
+    shared = MonthCalendarAgentClient(logger: logger, config: config)
   }
 
   /// Logger used for month-calendar agent diagnostics.
   private let logger: ProcessLogger
+  private let config: Config
 
   /// Queue used to stage wider month preload requests without blocking the main actor.
   private let preloadQueue = DispatchQueue(
@@ -36,7 +38,7 @@ final class MonthCalendarAgentClient {
   /// Long-lived calendar-agent stream controller.
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "month calendar agent client",
-    socketPath: { Config.shared.calendarAgentSocketPath },
+    socketPath: { [config] in config.calendarAgentSocketPath },
     makeRequest: { [weak self] in
       self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
@@ -50,8 +52,9 @@ final class MonthCalendarAgentClient {
   )
 
   /// Creates one month-calendar agent client.
-  private init(logger: ProcessLogger) {
+  private init(logger: ProcessLogger, config: Config) {
     self.logger = logger
+    self.config = config
   }
 
   /// Returns whether the month-calendar agent client is currently active.
@@ -61,7 +64,7 @@ final class MonthCalendarAgentClient {
 
   /// Starts the month-calendar agent socket client when enabled.
   func start() {
-    stream.start(enabled: Config.shared.calendarAgentEnabled)
+    stream.start(enabled: config.calendarAgentEnabled)
   }
 
   /// Stops the month-calendar agent socket client.
@@ -153,7 +156,7 @@ final class MonthCalendarAgentClient {
     successKind: CalendarAgentMessageKind,
     completion: @escaping (_ success: Bool, _ message: String?) -> Void
   ) {
-    let socketPath = Config.shared.calendarAgentSocketPath
+    let socketPath = config.calendarAgentSocketPath
 
     DispatchQueue.global(qos: .userInitiated).async {
       do {
@@ -231,7 +234,7 @@ final class MonthCalendarAgentClient {
       requestedRange = defaultRequestedDateRange(referenceDate: Date())
     }
 
-    let calendarConfig = Config.shared.builtinCalendar
+    let calendarConfig = config.builtinCalendar
     let options = calendarConfig.presentationMonthRequestOptions
 
     logger.debug(
@@ -272,7 +275,7 @@ final class MonthCalendarAgentClient {
   private func resolvedCalendar() -> Calendar {
     var calendar = Calendar.current
 
-    if let firstWeekday = Config.shared.builtinCalendar.month.popup.firstWeekday {
+    if let firstWeekday = config.builtinCalendar.month.popup.firstWeekday {
       calendar.firstWeekday = firstWeekday
     }
 

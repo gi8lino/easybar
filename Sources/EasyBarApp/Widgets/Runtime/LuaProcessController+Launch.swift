@@ -11,10 +11,10 @@ extension LuaProcessController {
     return LaunchContext(
       runtimeAgentPath: runtimeAgentPath,
       runtimePath: runtimePath,
-      luaPath: Config.shared.luaPath,
-      luaSocketPath: Config.shared.luaSocketPath,
-      widgetsPath: Config.shared.widgetsPath,
-      widgetFiles: resolvedWidgetFiles(in: Config.shared.widgetsPath),
+      luaPath: config.luaPath,
+      luaSocketPath: config.luaSocketPath,
+      widgetsPath: config.widgetsPath,
+      widgetFiles: resolvedWidgetFiles(in: config.widgetsPath),
       environment: luaRuntimeEnvironment()
     )
   }
@@ -496,13 +496,13 @@ extension LuaProcessController {
 
   /// Returns the Lua runtime environment with app config and resolved theme values.
   private func luaRuntimeEnvironment() -> [String: String] {
-    Config.shared.appSection.environment
-      .merging(Config.shared.luaThemeEnvironment()) {
+    config.appSection.environment
+      .merging(config.luaThemeEnvironment()) {
         _, themeValue in themeValue
       }
       .merging([
         "EASYBAR_STRICT_PUBLIC_API":
-          Config.shared.develop || Config.shared.loggingLevel.allows(.trace) ? "1" : "0"
+          config.develop || config.loggingLevel.allows(.trace) ? "1" : "0"
       ]) {
         _, themeValue in themeValue
       }

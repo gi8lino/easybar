@@ -5,16 +5,18 @@ import Foundation
 final class NetworkAgentClient {
   /// Shared network-agent client.
   static var shared = NetworkAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.network_agent")
+    logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
+    config: .shared
   )
 
   /// Configures the shared network-agent client.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NetworkAgentClient(logger: logger)
+  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
+    shared = NetworkAgentClient(logger: logger, config: config)
   }
 
   /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
+  private let config: Config
   /// Whether the client lifecycle is active.
   private var started = false
 
@@ -27,7 +29,7 @@ final class NetworkAgentClient {
   /// Socket client that owns the network-agent stream.
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
-    socketPath: { Config.shared.networkAgentSocketPath },
+    socketPath: { [config] in config.networkAgentSocketPath },
     subscribeRequest: {
       NetworkAgentRequest(command: .subscribe, fields: NativeWiFiRequestedFields.snapshot)
     },
@@ -53,8 +55,9 @@ final class NetworkAgentClient {
   )
 
   /// Creates the shared network-agent client.
-  private init(logger: ProcessLogger) {
+  private init(logger: ProcessLogger, config: Config) {
     self.logger = logger
+    self.config = config
   }
 
   /// Returns whether the client currently has an open socket.

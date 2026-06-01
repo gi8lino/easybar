@@ -22,6 +22,7 @@ actor WidgetEngine {
   }
 
   private let logger: ProcessLogger
+  private let configManager: ConfigManager
   private let luaRuntime: LuaRuntime
   private let commandRunner: LuaCommandRunner
   private let decoder = JSONDecoder()
@@ -36,9 +37,11 @@ actor WidgetEngine {
   /// Creates one widget engine.
   init(
     logger: ProcessLogger,
-    luaRuntime: LuaRuntime
+    luaRuntime: LuaRuntime,
+    configManager: ConfigManager = .shared
   ) {
     self.logger = logger
+    self.configManager = configManager
     self.luaRuntime = luaRuntime
     self.commandRunner = LuaCommandRunner(logger: logger.child("commands"))
   }
@@ -272,12 +275,12 @@ actor WidgetEngine {
       return
     }
 
-    let commandLimits = await MainActor.run {
+    let commandSettings = await configManager.luaCommandSettings()
+    let commandLimits =
       LuaCommandRunner.Limits(
-        timeoutSeconds: Config.shared.luaCommandTimeoutSeconds,
-        maxOutputBytes: Config.shared.luaCommandMaxOutputBytes
+        timeoutSeconds: commandSettings.timeoutSeconds,
+        maxOutputBytes: commandSettings.maxOutputBytes
       )
-    }
 
     logger.debug(
       "lua command requested",
@@ -292,9 +295,7 @@ actor WidgetEngine {
       return
     }
 
-    let maxAsyncJobs = await MainActor.run {
-      Config.shared.luaCommandMaxAsyncJobs
-    }
+    let maxAsyncJobs = commandSettings.maxAsyncJobs
     guard activeAsyncCommandCount < maxAsyncJobs else {
       logger.warn(
         "lua async command rejected because limit was reached",

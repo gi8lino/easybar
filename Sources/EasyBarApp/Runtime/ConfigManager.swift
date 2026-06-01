@@ -3,6 +3,12 @@ import Foundation
 
 /// Actor-owned access to config mutation and runtime-facing config reads.
 actor ConfigManager {
+  struct LuaCommandSettings: Sendable {
+    let timeoutSeconds: TimeInterval
+    let maxOutputBytes: Int
+    let maxAsyncJobs: Int
+  }
+
   /// Shared actor used for runtime config access.
   static let shared = ConfigManager()
 
@@ -70,6 +76,17 @@ actor ConfigManager {
   func loggingDirectory() async -> String {
     await MainActor.run {
       Config.shared.loggingDirectory
+    }
+  }
+
+  /// Returns the current Lua command execution settings.
+  func luaCommandSettings() async -> LuaCommandSettings {
+    await MainActor.run {
+      LuaCommandSettings(
+        timeoutSeconds: Config.shared.luaCommandTimeoutSeconds,
+        maxOutputBytes: Config.shared.luaCommandMaxOutputBytes,
+        maxAsyncJobs: Config.shared.luaCommandMaxAsyncJobs
+      )
     }
   }
 }

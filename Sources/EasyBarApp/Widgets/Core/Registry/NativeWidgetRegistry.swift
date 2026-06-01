@@ -10,19 +10,22 @@ final class NativeWidgetRegistry {
 
   /// Shared native widget registry.
   static var shared = NativeWidgetRegistry(
-    logger: ProcessLogger(label: "easybar.bootstrap.native_widgets")
+    logger: ProcessLogger(label: "easybar.bootstrap.native_widgets"),
+    config: .shared
   )
 
   /// Configures the shared native widget registry.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NativeWidgetRegistry(logger: logger)
+  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
+    shared = NativeWidgetRegistry(logger: logger, config: config)
   }
 
   private let logger: ProcessLogger
+  private let config: Config
   private var widgets: [NativeWidget] = []
 
-  private init(logger: ProcessLogger) {
+  private init(logger: ProcessLogger, config: Config) {
     self.logger = logger
+    self.config = config
   }
 
   /// Starts all enabled native widgets.
@@ -90,18 +93,18 @@ final class NativeWidgetRegistry {
   /// Returns the native widget registration list for the current config.
   private func registrations() -> [Registration] {
     [
-      Registration(enabled: Config.shared.builtinSpaces.enabled) { SpacesNativeWidget() },
-      Registration(enabled: Config.shared.builtinBattery.enabled) { BatteryNativeWidget() },
-      Registration(enabled: Config.shared.builtinFrontApp.enabled) { FrontAppNativeWidget() },
-      Registration(enabled: Config.shared.builtinAeroSpaceMode.enabled) {
+      Registration(enabled: config.builtinSpaces.enabled) { SpacesNativeWidget() },
+      Registration(enabled: config.builtinBattery.enabled) { BatteryNativeWidget() },
+      Registration(enabled: config.builtinFrontApp.enabled) { FrontAppNativeWidget() },
+      Registration(enabled: config.builtinAeroSpaceMode.enabled) {
         AeroSpaceModeNativeWidget()
       },
-      Registration(enabled: Config.shared.builtinVolume.enabled) { VolumeSliderNativeWidget() },
-      Registration(enabled: Config.shared.builtinWiFi.enabled) { WiFiNativeWidget() },
-      Registration(enabled: Config.shared.builtinDate.enabled) { DateNativeWidget() },
-      Registration(enabled: Config.shared.builtinTime.enabled) { TimeNativeWidget() },
-      Registration(enabled: Config.shared.builtinCalendar.enabled) { CalendarNativeWidget() },
-      Registration(enabled: Config.shared.builtinCPU.enabled) { CPUSparklineNativeWidget() },
+      Registration(enabled: config.builtinVolume.enabled) { VolumeSliderNativeWidget() },
+      Registration(enabled: config.builtinWiFi.enabled) { WiFiNativeWidget() },
+      Registration(enabled: config.builtinDate.enabled) { DateNativeWidget() },
+      Registration(enabled: config.builtinTime.enabled) { TimeNativeWidget() },
+      Registration(enabled: config.builtinCalendar.enabled) { CalendarNativeWidget() },
+      Registration(enabled: config.builtinCPU.enabled) { CPUSparklineNativeWidget() },
     ]
   }
 
@@ -128,17 +131,17 @@ final class NativeWidgetRegistry {
   private func logConfig() {
     logger.info(
       "native widget config",
-      .field("spaces", Config.shared.builtinSpaces.enabled),
-      .field("battery", Config.shared.builtinBattery.enabled),
-      .field("front_app", Config.shared.builtinFrontApp.enabled),
-      .field("aerospace_mode", Config.shared.builtinAeroSpaceMode.enabled),
-      .field("volume", Config.shared.builtinVolume.enabled),
-      .field("wifi", Config.shared.builtinWiFi.enabled),
-      .field("date", Config.shared.builtinDate.enabled),
-      .field("time", Config.shared.builtinTime.enabled),
-      .field("calendar", Config.shared.builtinCalendar.enabled),
-      .field("calendar_popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
-      .field("cpu", Config.shared.builtinCPU.enabled),
+      .field("spaces", config.builtinSpaces.enabled),
+      .field("battery", config.builtinBattery.enabled),
+      .field("front_app", config.builtinFrontApp.enabled),
+      .field("aerospace_mode", config.builtinAeroSpaceMode.enabled),
+      .field("volume", config.builtinVolume.enabled),
+      .field("wifi", config.builtinWiFi.enabled),
+      .field("date", config.builtinDate.enabled),
+      .field("time", config.builtinTime.enabled),
+      .field("calendar", config.builtinCalendar.enabled),
+      .field("calendar_popup_mode", config.builtinCalendar.popupMode.rawValue),
+      .field("cpu", config.builtinCPU.enabled),
     )
   }
 

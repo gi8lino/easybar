@@ -6,19 +6,21 @@ import Foundation
 final class UpcomingCalendarAgentClient {
   /// Shared upcoming-calendar agent client.
   static var shared = UpcomingCalendarAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent")
+    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent"),
+    config: .shared
   )
 
   /// Configures the shared upcoming-calendar agent client.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = UpcomingCalendarAgentClient(logger: logger)
+  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
+    shared = UpcomingCalendarAgentClient(logger: logger, config: config)
   }
 
   private let logger: ProcessLogger
+  private let config: Config
 
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
-    socketPath: { Config.shared.calendarAgentSocketPath },
+    socketPath: { [config] in config.calendarAgentSocketPath },
     makeRequest: { [weak self] in
       self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
@@ -31,8 +33,9 @@ final class UpcomingCalendarAgentClient {
     logger: logger.child("stream")
   )
 
-  private init(logger: ProcessLogger) {
+  private init(logger: ProcessLogger, config: Config) {
     self.logger = logger
+    self.config = config
   }
 
   /// Returns whether the upcoming-calendar agent client is currently active.
@@ -42,7 +45,7 @@ final class UpcomingCalendarAgentClient {
 
   /// Starts the upcoming-calendar agent socket client when enabled.
   func start() {
-    stream.start(enabled: Config.shared.calendarAgentEnabled)
+    stream.start(enabled: config.calendarAgentEnabled)
   }
 
   /// Stops the upcoming-calendar agent socket client.
@@ -58,7 +61,7 @@ final class UpcomingCalendarAgentClient {
   /// Builds the current upcoming-calendar request.
   private func makeRequest() -> CalendarAgentRequest {
     let now = Date()
-    let calendarConfig = Config.shared.builtinCalendar
+    let calendarConfig = config.builtinCalendar
     let upcoming = calendarConfig.upcoming
     let options = calendarConfig.presentationUpcomingRequestOptions
     let requestedRange = CalendarRequestFactory.requestedUpcomingDateRange(

@@ -260,36 +260,36 @@ final class AppController {
     )
     logger.info(
       "config details",
-      .field("watch_config", Config.shared.watchConfigFile)
+      .field("watch_config", services.config.watchConfigFile)
     )
     logger.info(
       "config details",
-      .field("calendar_agent_enabled", Config.shared.calendarAgentEnabled),
-      .field("socket", Config.shared.calendarAgentSocketPath)
+      .field("calendar_agent_enabled", services.config.calendarAgentEnabled),
+      .field("socket", services.config.calendarAgentSocketPath)
     )
     logger.info(
       "config details",
-      .field("network_agent_enabled", Config.shared.networkAgentEnabled),
-      .field("socket", Config.shared.networkAgentSocketPath),
-      .field("refresh_interval_seconds", Config.shared.networkAgentRefreshIntervalSeconds)
+      .field("network_agent_enabled", services.config.networkAgentEnabled),
+      .field("socket", services.config.networkAgentSocketPath),
+      .field("refresh_interval_seconds", services.config.networkAgentRefreshIntervalSeconds)
     )
     logger.info(
       "config details",
-      .field("calendar_builtin_enabled", Config.shared.builtinCalendar.enabled),
-      .field("popup_mode", Config.shared.builtinCalendar.popupMode.rawValue),
-      .field("anchor_layout", Config.shared.builtinCalendar.anchor.layout.rawValue),
-      .field("position", Config.shared.builtinCalendar.position.rawValue)
+      .field("calendar_builtin_enabled", services.config.builtinCalendar.enabled),
+      .field("popup_mode", services.config.builtinCalendar.popupMode.rawValue),
+      .field("anchor_layout", services.config.builtinCalendar.anchor.layout.rawValue),
+      .field("position", services.config.builtinCalendar.position.rawValue)
     )
     logger.info(
       "config details",
-      .field("wifi_builtin_enabled", Config.shared.builtinWiFi.enabled),
-      .field("position", Config.shared.builtinWiFi.position.rawValue)
+      .field("wifi_builtin_enabled", services.config.builtinWiFi.enabled),
+      .field("position", services.config.builtinWiFi.position.rawValue)
     )
     logger.info(
       "config details",
-      .field("bar_height", Config.shared.barHeight),
-      .field("padding_x", Config.shared.barPaddingX),
-      .field("extend_behind_notch", Config.shared.barExtendBehindNotch)
+      .field("bar_height", services.config.barHeight),
+      .field("padding_x", services.config.barPaddingX),
+      .field("extend_behind_notch", services.config.barExtendBehindNotch)
     )
   }
 
@@ -326,7 +326,7 @@ final class AppController {
 
   /// Logs the configured environment overrides passed to the Lua runtime.
   private func logConfiguredEnvironment() {
-    let environment = Config.shared.appSection.environment
+    let environment = services.config.appSection.environment
 
     guard !environment.isEmpty else {
       logger.info(
@@ -375,7 +375,7 @@ final class AppController {
       return
     }
 
-    let installedStub = URL(fileURLWithPath: Config.shared.widgetEditorStubPath)
+    let installedStub = URL(fileURLWithPath: services.config.widgetEditorStubPath)
 
     do {
       let bundledData = try Data(contentsOf: bundledStub)
