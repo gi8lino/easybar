@@ -97,9 +97,9 @@
 ---@field image? string Image path to render instead of icon text.
 ---@field image_size? number Image size in points.
 ---@field image_corner_radius? number Image corner radius in points.
----@field padding_right? number Additional spacing between icon and label.
----@field offset_x? number Horizontal visual icon offset in points.
----@field offset_y? number Vertical visual icon offset in points.
+---@field padding_right? number Additional layout spacing between the icon and following inline content.
+---@field offset_x? number Horizontal visual icon offset in points without changing layout spacing.
+---@field offset_y? number Vertical visual icon offset in points without changing layout spacing.
 
 ---Standalone image configuration for nodes that render an image instead of text.
 ---@class (exact) EasyBarImageProps
