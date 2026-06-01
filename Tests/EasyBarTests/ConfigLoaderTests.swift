@@ -99,6 +99,45 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.registeredDirectories["logging.directory"]?.path, loggingDirectory)
   }
 
+  func testInitialLoadAppliesConfigFileOverridesExplicitly() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("initial-load.toml")
+
+    try """
+    [logging]
+    level = "debug"
+
+    [app]
+    develop = true
+    """.write(to: configFileURL, atomically: true, encoding: .utf8)
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.loadInitialState()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.loggingLevel, .debug)
+    XCTAssertTrue(config.develop)
+    XCTAssertNil(config.loadFailureState)
+  }
+
+  func testInitialLoadCapturesFailureStateWithoutPrintingDuringInit() throws {
+    let config = Config.shared
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-initial-load.toml")
+
+    try """
+    [logging]
+    level = "definitely_not_a_level"
+    """.write(to: configFileURL, atomically: true, encoding: .utf8)
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.loadInitialState()
+
+    XCTAssertNotNil(error)
+    XCTAssertEqual(config.loadFailureState?.context, .initialLoad)
+  }
+
   func testReloadAppliesLuaCommandLimits() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("lua-command-limits.toml")
