@@ -177,6 +177,11 @@ actor WidgetEngine {
       return
     }
 
+    guard !update.isClearRoot else {
+      await handleClearRoot(update, rawLine: rawLine)
+      return
+    }
+
     guard !update.isCommandRequest else {
       await handleCommandRequest(update, rawLine: rawLine)
       return
@@ -239,6 +244,21 @@ actor WidgetEngine {
 
     await MainActor.run {
       WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
+    }
+  }
+
+  /// Handles one explicit root-clear update from Lua.
+  private func handleClearRoot(_ update: WidgetTreeUpdate, rawLine: String) async {
+    guard let rootID = update.clearRootID else {
+      logger.warn("invalid lua clear-root update: \(rawLine)")
+      return
+    }
+
+    scriptedRoots.remove(rootID)
+    logger.debug("decoded widget root clear", .field("root", rootID))
+
+    await MainActor.run {
+      WidgetStore.shared.clear(roots: [rootID])
     }
   }
 

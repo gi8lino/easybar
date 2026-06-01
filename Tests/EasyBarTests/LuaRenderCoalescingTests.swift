@@ -353,6 +353,70 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "fresh")
   }
 
+  func testRemovingRootEmitsExplicitClearRootUpdate() async throws {
+    let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: widgetsDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    try """
+    local brew = easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "idle",
+    	label = "Idle",
+    })
+
+    brew:subscribe(easybar.events.forced, function()
+    	brew:remove()
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.clear-root.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      autoRespondToCommands: true
+    )
+    defer {
+      runtime.stop()
+    }
+
+    let initialUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+    )
+    XCTAssertEqual(rootNode(in: initialUpdate)?.text, "Idle")
+
+    try runtime.sendHostEvent("{\"name\":\"forced\"}\n")
+
+    let clearUpdate = try await nextUpdate(
+      from: recorder,
+      matching: { update in
+        update.isClearRoot && update.clearRootID == "brew"
+      }
+    )
+    XCTAssertEqual(clearUpdate.clearRootID, "brew")
+  }
+
   func testPublicWidgetApiExposesJsonHelper() async throws {
     let widgetsDirectoryURL = tempDirectoryURL.appendingPathComponent("widgets", isDirectory: true)
     try FileManager.default.createDirectory(
@@ -605,6 +669,8 @@ extension LuaRenderCoalescingTests {
         return "subscriptions:\(update.subscribedEvents.joined(separator: ","))"
       case .ready:
         return "ready"
+      case .clearRoot:
+        return "clear_root:\(update.clearRootID ?? "unknown")"
       case .commandRequest:
         if let request = update.commandRequestPayload {
           return "command_request:\(request.command):sync=\(request.isSynchronous)"

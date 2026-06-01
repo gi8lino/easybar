@@ -28,6 +28,7 @@ struct WidgetTreeUpdate: Codable {
     case subscriptions
     case ready
     case tree
+    case clearRoot = "clear_root"
     case commandRequest = "command_request"
   }
 
@@ -51,6 +52,11 @@ struct WidgetTreeUpdate: Codable {
     return type == .tree
   }
 
+  /// Returns whether this update explicitly clears one rendered root.
+  var isClearRoot: Bool {
+    return type == .clearRoot
+  }
+
   /// Returns whether this update is a host command execution request.
   var isCommandRequest: Bool {
     return type == .commandRequest
@@ -70,6 +76,12 @@ struct WidgetTreeUpdate: Codable {
   var treePayload: (root: String, nodes: [WidgetNodeState])? {
     guard let root, let nodes else { return nil }
     return (root: root, nodes: nodes)
+  }
+
+  /// Returns the root identifier to clear when present.
+  var clearRootID: String? {
+    guard isClearRoot else { return nil }
+    return root
   }
 
   /// Returns the decoded command request payload when present.

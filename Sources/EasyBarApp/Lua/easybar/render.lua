@@ -661,18 +661,45 @@ local function emit_tree(tree, log, json)
 	end
 end
 
+--- Emits one explicit root-clear update for a removed root.
+local function emit_root_clear(root_id, log, json)
+	local payload = {
+		protocol_version = PROTOCOL_VERSION,
+		type = "clear_root",
+		root = root_id,
+	}
+
+	last_emitted[root_id] = nil
+
+	io.stdout:write(json.encode(payload) .. "\n")
+	io.stdout:flush()
+
+	if log then
+		log.debug("render clear root=" .. root_id)
+	end
+end
+
 --- Emits all root widget trees for the current registry state.
 function M.emit_all(registry, log, json)
+	local live_roots = {}
+
 	for _, id in ipairs(root_ids(registry)) do
 		local item = item_by_id(registry, id)
 
 		if item ~= nil then
+			live_roots[id] = true
 			local root_position = normalize_position(item.props.position)
 			local tree = build_tree(registry, id, root_position)
 
 			if tree ~= nil then
 				emit_tree(tree, log, json)
 			end
+		end
+	end
+
+	for root_id in pairs(last_emitted) do
+		if not live_roots[root_id] then
+			emit_root_clear(root_id, log, json)
 		end
 	end
 end

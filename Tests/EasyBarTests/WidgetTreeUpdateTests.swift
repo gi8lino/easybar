@@ -20,4 +20,14 @@ final class WidgetTreeUpdateTests: XCTestCase {
 
     XCTAssertFalse(update.isSupportedProtocolVersion)
   }
+
+  func testClearRootPayloadIsDecoded() throws {
+    let update = try JSONDecoder().decode(
+      WidgetTreeUpdate.self,
+      from: Data(#"{"protocol_version":1,"type":"clear_root","root":"clock"}"#.utf8)
+    )
+
+    XCTAssertTrue(update.isClearRoot)
+    XCTAssertEqual(update.clearRootID, "clock")
+  }
 }
