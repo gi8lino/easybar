@@ -4,21 +4,14 @@ import IOKit.ps
 
 /// Observes macOS power source changes.
 final class PowerEvents {
-  /// Configured shared power event source.
-  private static var sharedInstance: PowerEvents?
-
-  /// Returns the configured shared power event source.
-  static var shared: PowerEvents {
-    guard let sharedInstance else {
-      fatalError("PowerEvents.bootstrap(logger:) must be called before PowerEvents.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared power event source.
+  static var shared = PowerEvents(
+    logger: ProcessLogger(label: "easybar.bootstrap.power_events")
+  )
 
   /// Configures the shared power event source.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = PowerEvents(logger: logger)
+    shared = PowerEvents(logger: logger)
   }
 
   /// Logger used for power diagnostics.

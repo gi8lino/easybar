@@ -8,6 +8,8 @@ import Foundation
 actor RuntimeCoordinator {
   /// Logger used for runtime coordination diagnostics.
   private let logger: ProcessLogger
+  /// Explicit runtime dependencies resolved by the app shell.
+  private let services: AppServices
   /// Actor used for config reloads and runtime config reads.
   private let configManager = ConfigManager.shared
   /// Watches config changes when enabled.
@@ -18,7 +20,7 @@ actor RuntimeCoordinator {
   private let widgetEngine: WidgetEngine
 
   /// Shared AeroSpace integration service.
-  private let aeroSpaceService = AeroSpaceService.shared
+  private let aeroSpaceService: AeroSpaceService
   /// IPC server for external commands and metrics.
   private let socketServer: SocketServer
   /// Shared runtime metrics collector.
@@ -40,10 +42,12 @@ actor RuntimeCoordinator {
   private var queuedLuaRuntimeRestart = false
 
   /// Creates one runtime coordinator.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, services: AppServices) {
     self.logger = logger
+    self.services = services
     self.fileWatcher = FileWatcher(logger: logger.child("file_watcher"))
-    luaRuntime = LuaRuntime.shared
+    luaRuntime = services.luaRuntime
+    aeroSpaceService = services.aeroSpaceService
 
     widgetEngine = WidgetEngine(
       logger: logger.child("widget_engine"),
@@ -64,10 +68,10 @@ actor RuntimeCoordinator {
     await configureLogging()
 
     await MainActor.run {
-      NativeWidgetRegistry.shared.start()
+      services.nativeWidgetRegistry.start()
     }
 
-    CalendarAgentEventRelay.shared.start()
+    services.calendarAgentEventRelay.start()
     let didStartLuaWidgets = await widgetEngine.start()
     if !didStartLuaWidgets {
       logger.warn("runtime coordinator continued without lua widgets because startup failed")
@@ -101,12 +105,12 @@ actor RuntimeCoordinator {
     metricsCoordinator.onSnapshot = nil
     socketServer.stop()
     aeroSpaceService.stop()
-    CalendarAgentEventRelay.shared.stop()
+    services.calendarAgentEventRelay.stop()
 
     await widgetEngine.shutdown()
 
     await MainActor.run {
-      NativeWidgetRegistry.shared.stop()
+      services.nativeWidgetRegistry.stop()
     }
 
     logger.info("runtime coordinator stop end")
@@ -140,7 +144,7 @@ actor RuntimeCoordinator {
     }
 
     await MainActor.run {
-      NativeWidgetRegistry.shared.reload()
+      services.nativeWidgetRegistry.reload()
     }
     guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
       return

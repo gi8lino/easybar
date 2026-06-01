@@ -3,22 +3,14 @@ import Foundation
 
 /// Streams Wi-Fi and network state from the network agent.
 final class NetworkAgentClient {
-  /// Configured shared network-agent client.
-  private static var sharedInstance: NetworkAgentClient?
-
-  /// Returns the configured shared network-agent client.
-  static var shared: NetworkAgentClient {
-    guard let sharedInstance else {
-      fatalError(
-        "NetworkAgentClient.bootstrap(logger:) must be called before NetworkAgentClient.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared network-agent client.
+  static var shared = NetworkAgentClient(
+    logger: ProcessLogger(label: "easybar.bootstrap.network_agent")
+  )
 
   /// Configures the shared network-agent client.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = NetworkAgentClient(logger: logger)
+    shared = NetworkAgentClient(logger: logger)
   }
 
   /// Logger used for network-agent diagnostics.

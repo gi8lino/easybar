@@ -8,22 +8,14 @@ final class NativeWidgetRegistry {
     let makeWidget: () -> NativeWidget
   }
 
-  private static var sharedInstance: NativeWidgetRegistry?
-
-  /// Returns the configured shared native widget registry.
-  static var shared: NativeWidgetRegistry {
-    guard let sharedInstance else {
-      fatalError(
-        "NativeWidgetRegistry.bootstrap(logger:) must be called before NativeWidgetRegistry.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  /// Shared native widget registry.
+  static var shared = NativeWidgetRegistry(
+    logger: ProcessLogger(label: "easybar.bootstrap.native_widgets")
+  )
 
   /// Configures the shared native widget registry.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = NativeWidgetRegistry(logger: logger)
+    shared = NativeWidgetRegistry(logger: logger)
   }
 
   private let logger: ProcessLogger

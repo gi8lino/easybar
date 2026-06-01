@@ -9,28 +9,27 @@ protocol EventPayloadSink {
 
 extension LuaEventSink: EventPayloadSink {}
 
+private struct NoOpEventPayloadSink: EventPayloadSink {
+  func enqueue(_ payload: EasyBarEventPayload) {}
+}
+
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
-  /// Configured shared event hub instance.
-  private static var sharedInstance: EventHub?
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
 
-  /// Returns the configured shared event hub.
-  static var shared: EventHub {
-    guard let sharedInstance else {
-      fatalError("EventHub.bootstrap(logger:luaRuntime:) must be called before EventHub.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared event hub instance, initialized with a no-op sink until bootstrap.
+  static var shared = EventHub(
+    logger: ProcessLogger(label: "easybar.bootstrap.event_hub"),
+    luaEventSink: NoOpEventPayloadSink()
+  )
 
   /// Configures the shared event hub.
   static func bootstrap(
     logger: ProcessLogger,
     luaRuntime: LuaRuntime
   ) {
-    sharedInstance = EventHub(
+    shared = EventHub(
       logger: logger,
       luaRuntime: luaRuntime
     )

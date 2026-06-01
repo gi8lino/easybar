@@ -6,22 +6,13 @@ import Foundation
 @MainActor
 final class MonthCalendarAgentClient {
   /// Shared month-calendar agent client instance.
-  private static var sharedInstance: MonthCalendarAgentClient?
-
-  /// Returns the configured shared month-calendar agent client.
-  static var shared: MonthCalendarAgentClient {
-    guard let sharedInstance else {
-      fatalError(
-        "MonthCalendarAgentClient.bootstrap(logger:) must be called before MonthCalendarAgentClient.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  static var shared = MonthCalendarAgentClient(
+    logger: ProcessLogger(label: "easybar.bootstrap.month_agent")
+  )
 
   /// Configures the shared month-calendar agent client.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = MonthCalendarAgentClient(logger: logger)
+    shared = MonthCalendarAgentClient(logger: logger)
   }
 
   /// Logger used for month-calendar agent diagnostics.

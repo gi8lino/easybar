@@ -3,20 +3,14 @@ import Foundation
 
 /// Actor-owned facade for the Lua runtime used by scripted widgets.
 actor LuaRuntime {
-  private static var sharedInstance: LuaRuntime?
-
-  /// Returns the configured shared Lua runtime.
-  static var shared: LuaRuntime {
-    guard let sharedInstance else {
-      fatalError("LuaRuntime.bootstrap(logger:) must be called before LuaRuntime.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared Lua runtime facade.
+  static var shared = LuaRuntime(
+    logger: ProcessLogger(label: "easybar.bootstrap.lua_runtime")
+  )
 
   /// Configures the shared Lua runtime.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = LuaRuntime(logger: logger)
+    shared = LuaRuntime(logger: logger)
   }
 
   private let logger: ProcessLogger

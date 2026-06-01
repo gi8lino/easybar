@@ -4,18 +4,10 @@ import Foundation
 /// Main-actor owner of native event source subscriptions.
 @MainActor
 final class EventManager {
-  /// Configured shared event manager instance.
-  private static var sharedInstance: EventManager?
-
-  /// Returns the configured shared event manager.
-  static var shared: EventManager {
-    guard let sharedInstance else {
-      fatalError(
-        "EventManager.bootstrap(logger:luaRuntime:) must be called before EventManager.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared event manager instance.
+  static var shared = EventManager(
+    logger: ProcessLogger(label: "easybar.bootstrap.event_manager")
+  )
 
   /// Configures the shared event manager and event-source dependencies.
   static func bootstrap(
@@ -31,7 +23,7 @@ final class EventManager {
     TimerEvents.bootstrap(logger: logger.child("timer"))
     VolumeEvents.bootstrap(logger: logger.child("volume"))
 
-    sharedInstance = EventManager(logger: logger.child("manager"))
+    shared = EventManager(logger: logger.child("manager"))
   }
 
   /// Prefix used for Lua interval subscriptions.

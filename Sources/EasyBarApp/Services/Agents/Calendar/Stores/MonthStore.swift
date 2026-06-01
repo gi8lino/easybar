@@ -5,21 +5,13 @@ import Foundation
 
 /// Shared month-calendar snapshot store used by the native month popup.
 final class NativeMonthCalendarStore: CalendarMonthPopupStore {
-  private static var sharedInstance: NativeMonthCalendarStore?
-
-  static var shared: NativeMonthCalendarStore {
-    guard let sharedInstance else {
-      fatalError(
-        "NativeMonthCalendarStore.bootstrap(logger:) must be called before NativeMonthCalendarStore.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  static var shared = NativeMonthCalendarStore(
+    logger: ProcessLogger(label: "easybar.bootstrap.month_store")
+  )
 
   /// Configures the shared month-calendar store.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = NativeMonthCalendarStore(logger: logger)
+    shared = NativeMonthCalendarStore(logger: logger)
   }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?

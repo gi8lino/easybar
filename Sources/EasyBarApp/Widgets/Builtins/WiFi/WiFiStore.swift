@@ -3,19 +3,13 @@ import Foundation
 
 @MainActor
 final class NativeWiFiStore: ObservableObject {
-  private static var sharedInstance: NativeWiFiStore?
-
-  static var shared: NativeWiFiStore {
-    guard let sharedInstance else {
-      fatalError("NativeWiFiStore.bootstrap(logger:) must be called before NativeWiFiStore.shared")
-    }
-
-    return sharedInstance
-  }
+  static var shared = NativeWiFiStore(
+    logger: ProcessLogger(label: "easybar.bootstrap.wifi_store")
+  )
 
   /// Handles bootstrap.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = NativeWiFiStore(logger: logger)
+    shared = NativeWiFiStore(logger: logger)
   }
 
   static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")

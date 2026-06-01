@@ -8,6 +8,8 @@ import Foundation
 final class AppController {
   /// Logger used for app-shell diagnostics.
   private let logger: ProcessLogger
+  /// Explicit app-wide service graph bootstrapped during startup wiring.
+  private let services: AppServices
   /// Coordinates runtime startup, refresh, reload, and shutdown.
   private let runtimeCoordinator: RuntimeCoordinator
   /// Converts process signals into graceful termination requests.
@@ -37,8 +39,11 @@ final class AppController {
   /// Creates the app shell with its process logger.
   init(logger: ProcessLogger) {
     self.logger = logger
-    Self.bootstrapSharedDependencies(logger: logger.child("services"))
-    self.runtimeCoordinator = RuntimeCoordinator(logger: logger.child("runtime"))
+    self.services = Self.bootstrapSharedDependencies(logger: logger.child("services"))
+    self.runtimeCoordinator = RuntimeCoordinator(
+      logger: logger.child("runtime"),
+      services: services
+    )
   }
 
   /// Starts the app shell and the actor-owned runtime.
@@ -46,9 +51,17 @@ final class AppController {
     guard !started else { return }
     started = true
 
+    if let error = services.config.loadInitialState() {
+      logger.error(
+        "initial config load failed",
+        .field("config_path", services.config.configPath),
+        .field("error", "\(error)")
+      )
+    }
+
     switch instanceGuard.acquireLock(
       processName: "easybar",
-      directory: Config.shared.lockDirectory
+      directory: services.config.lockDirectory
     ) {
     case .acquired:
       break
@@ -144,14 +157,14 @@ final class AppController {
 
   /// Keeps the config error window in sync with the current config state.
   func updateConfigErrorWindow() {
-    guard let failureState = Config.shared.loadFailureState else {
+    guard let failureState = services.config.loadFailureState else {
       configErrorWindowController.close()
       return
     }
 
     configErrorWindowController.present(
       failureState: failureState,
-      configPath: Config.shared.configPath,
+      configPath: services.config.configPath,
       onReload: { [weak self] in
         guard let self else { return }
 
@@ -175,30 +188,16 @@ final class AppController {
   }
 
   /// Bootstraps all shared logger-owning services before runtime startup begins.
-  private static func bootstrapSharedDependencies(logger: ProcessLogger) {
-    LuaRuntime.bootstrap(logger: logger.child("lua"))
-    EventManager.bootstrap(
-      logger: logger.child("events"),
-      luaRuntime: LuaRuntime.shared
-    )
-
-    NativeWidgetRegistry.bootstrap(logger: logger.child("widgets"))
-    AeroSpaceService.bootstrap(logger: logger.child("aerospace"))
-    CalendarAgentEventRelay.bootstrap(logger: logger.child("calendar_relay"))
-    NetworkAgentClient.bootstrap(logger: logger.child("network_agent"))
-    NativeWiFiStore.bootstrap(logger: logger.child("wifi_store"))
-    NativeMonthCalendarStore.bootstrap(logger: logger.child("month_store"))
-    NativeUpcomingCalendarStore.bootstrap(logger: logger.child("upcoming_store"))
-    MonthCalendarAgentClient.bootstrap(logger: logger.child("month_agent"))
-    UpcomingCalendarAgentClient.bootstrap(logger: logger.child("upcoming_agent"))
+  private static func bootstrapSharedDependencies(logger: ProcessLogger) -> AppServices {
+    AppServices.bootstrap(logger: logger)
   }
 
   /// Configures file logging from the current app config.
   private func configureLogging() {
     logger.configureRuntimeLogging(
-      minimumLevel: Config.shared.loggingLevel,
-      fileLoggingEnabled: Config.shared.loggingEnabled,
-      fileLoggingPath: easyBarLogPath(in: Config.shared.loggingDirectory)
+      minimumLevel: services.config.loggingLevel,
+      fileLoggingEnabled: services.config.loggingEnabled,
+      fileLoggingPath: easyBarLogPath(in: services.config.loggingDirectory)
     )
   }
 
@@ -234,7 +233,7 @@ final class AppController {
   private func logStartup() {
     logProcessStartup(
       processName: "easybar",
-      configPath: Config.shared.configPath,
+      configPath: services.config.configPath,
       socketPath: SharedRuntimeConfig.current.easyBarSocketPath,
       logger: logger
     )
@@ -249,15 +248,15 @@ final class AppController {
   private func logConfigDetails() {
     logger.info(
       "config details",
-      .field("widgets_path", Config.shared.widgetsPath)
+      .field("widgets_path", services.config.widgetsPath)
     )
     logger.info(
       "config details",
-      .field("lua_path", Config.shared.luaPath)
+      .field("lua_path", services.config.luaPath)
     )
     logger.info(
       "config details",
-      .field("lua_socket_path", Config.shared.luaSocketPath)
+      .field("lua_socket_path", services.config.luaSocketPath)
     )
     logger.info(
       "config details",

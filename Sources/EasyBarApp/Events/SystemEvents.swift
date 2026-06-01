@@ -4,21 +4,14 @@ import Foundation
 
 /// Observes AppKit and workspace system events.
 final class SystemEvents {
-  /// Configured shared system event source.
-  private static var sharedInstance: SystemEvents?
-
-  /// Returns the configured shared system event source.
-  static var shared: SystemEvents {
-    guard let sharedInstance else {
-      fatalError("SystemEvents.bootstrap(logger:) must be called before SystemEvents.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared system event source.
+  static var shared = SystemEvents(
+    logger: ProcessLogger(label: "easybar.bootstrap.system_events")
+  )
 
   /// Configures the shared system event source.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = SystemEvents(logger: logger)
+    shared = SystemEvents(logger: logger)
   }
 
   /// Logger used for system event diagnostics.

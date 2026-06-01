@@ -4,22 +4,14 @@ import Foundation
 
 @MainActor
 final class UpcomingCalendarAgentClient {
-  private static var sharedInstance: UpcomingCalendarAgentClient?
-
-  /// Returns the configured shared upcoming-calendar agent client.
-  static var shared: UpcomingCalendarAgentClient {
-    guard let sharedInstance else {
-      fatalError(
-        "UpcomingCalendarAgentClient.bootstrap(logger:) must be called before UpcomingCalendarAgentClient.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  /// Shared upcoming-calendar agent client.
+  static var shared = UpcomingCalendarAgentClient(
+    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent")
+  )
 
   /// Configures the shared upcoming-calendar agent client.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = UpcomingCalendarAgentClient(logger: logger)
+    shared = UpcomingCalendarAgentClient(logger: logger)
   }
 
   private let logger: ProcessLogger

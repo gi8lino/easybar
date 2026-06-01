@@ -5,21 +5,13 @@ import Foundation
 /// Shared upcoming-calendar snapshot store used by the native upcoming popup.
 @MainActor
 final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
-  private static var sharedInstance: NativeUpcomingCalendarStore?
-
-  static var shared: NativeUpcomingCalendarStore {
-    guard let sharedInstance else {
-      fatalError(
-        "NativeUpcomingCalendarStore.bootstrap(logger:) must be called before NativeUpcomingCalendarStore.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  static var shared = NativeUpcomingCalendarStore(
+    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_store")
+  )
 
   /// Configures the shared upcoming-calendar store.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = NativeUpcomingCalendarStore(logger: logger)
+    shared = NativeUpcomingCalendarStore(logger: logger)
   }
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?

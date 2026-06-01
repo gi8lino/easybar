@@ -4,21 +4,14 @@ import Foundation
 
 /// Observes CoreAudio output volume and mute changes.
 final class VolumeEvents {
-  /// Configured shared volume event source.
-  private static var sharedInstance: VolumeEvents?
-
-  /// Returns the configured shared volume event source.
-  static var shared: VolumeEvents {
-    guard let sharedInstance else {
-      fatalError("VolumeEvents.bootstrap(logger:) must be called before VolumeEvents.shared")
-    }
-
-    return sharedInstance
-  }
+  /// Shared volume event source.
+  static var shared = VolumeEvents(
+    logger: ProcessLogger(label: "easybar.bootstrap.volume_events")
+  )
 
   /// Configures the shared volume event source.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = VolumeEvents(logger: logger)
+    shared = VolumeEvents(logger: logger)
   }
 
   /// Logger used for volume diagnostics.

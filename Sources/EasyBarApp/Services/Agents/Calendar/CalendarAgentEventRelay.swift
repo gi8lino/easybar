@@ -3,23 +3,14 @@ import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
 final class CalendarAgentEventRelay {
-  /// Configured shared calendar-agent event relay.
-  private static var sharedInstance: CalendarAgentEventRelay?
-
-  /// Returns the configured shared calendar-agent event relay.
-  static var shared: CalendarAgentEventRelay {
-    guard let sharedInstance else {
-      fatalError(
-        "CalendarAgentEventRelay.bootstrap(logger:) must be called before CalendarAgentEventRelay.shared"
-      )
-    }
-
-    return sharedInstance
-  }
+  /// Shared calendar-agent event relay.
+  static var shared = CalendarAgentEventRelay(
+    logger: ProcessLogger(label: "easybar.bootstrap.calendar_relay")
+  )
 
   /// Configures the shared calendar-agent event relay.
   static func bootstrap(logger: ProcessLogger) {
-    sharedInstance = CalendarAgentEventRelay(logger: logger)
+    shared = CalendarAgentEventRelay(logger: logger)
   }
 
   /// Serial queue for relay state and debouncing.
