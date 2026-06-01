@@ -7,6 +7,20 @@ on:
       - main
 
 jobs:
+  format:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Select pinned Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26"
+
+      - name: Lint Swift formatting
+        run: swift format lint --recursive .
+
   test-and-verify-generated:
     runs-on: macos-26
 
@@ -29,3 +43,32 @@ jobs:
           make generate-event-catalog
           make generate-lua-docs
           git diff --exit-code
+
+  docs:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Select pinned Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26"
+
+      - name: Build docs
+        run: make build-docs
+
+  bundle-smoke:
+    if: github.event_name == 'push'
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Select pinned Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26"
+
+      - name: Build distributable bundle
+        run: make bundle VERSION=ci
