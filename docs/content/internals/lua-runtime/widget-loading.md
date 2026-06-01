@@ -22,6 +22,18 @@ Inside `loader.lua`:
 - all widgets share one runtime registry
 - every `*.lua` file in the widget directory is loaded
 - reload is a full reset
+- widget environments fall back to `_G`, so isolation is about local state, not security
+
+## Trust model
+
+EasyBar widget files are trusted local scripts.
+
+`loader.lua` gives each file its own table so widget-local variables and defaults do not leak into
+other widget files, but that table uses `_G` as a fallback. In practice that means widgets still
+have broad access to standard Lua globals and whatever the host process exposes through the normal
+Lua environment.
+
+This is not a sandbox. Do not treat third-party widget files as untrusted code.
 
 ## Public widget API shape
 

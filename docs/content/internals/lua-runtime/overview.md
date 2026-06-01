@@ -77,7 +77,7 @@ flowchart TD
 - `runtime.lua`
   runtime bootstrap and main loop over socket-backed stdin/stdout
 - `loader.lua`
-  loads widget files into isolated environments
+  loads widget files into per-file environments that still fall back to `_G`
 - `api.lua`
   public `easybar` API, node handles, and registry bridge
 - `registry.lua`
@@ -92,3 +92,11 @@ flowchart TD
   small JSON encoder/decoder
 - `log.lua`
   structured stderr logging
+
+## Trust model
+
+The Lua runtime is isolated as a separate process, but widget code is still trusted code.
+
+Per-file widget environments help keep locals and defaults separate between widget files. They do
+not sandbox execution, because the environment falls back to `_G`. Any widget file you load should
+be treated like any other local script you chose to execute on your machine.

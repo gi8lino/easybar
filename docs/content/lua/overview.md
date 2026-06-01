@@ -13,6 +13,9 @@ Lua widgets are the right tool when you want:
 
 If you have not decided whether Lua is the right tool yet, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
 
+Lua widgets should be treated as trusted local scripts.
+EasyBar gives each widget file its own API scope, but it does not sandbox arbitrary widget code.
+
 A minimal widget looks like this:
 
 ```lua
