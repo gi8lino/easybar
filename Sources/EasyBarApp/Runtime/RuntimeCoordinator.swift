@@ -6,6 +6,92 @@ import Foundation
 /// This is the single owner of startup, shutdown, reload, file watching,
 /// socket command handling, and runtime refresh orchestration.
 actor RuntimeCoordinator {
+  /// Actor-owned lifecycle operations that can be queued while another one is running.
+  private enum LifecycleOperation: String {
+    case reloadConfig
+    case restartLuaRuntime
+  }
+
+  /// Mutable runtime lifecycle state used to serialize reload/restart work.
+  private struct LifecycleState {
+    /// Whether runtime services are currently started.
+    var started = false
+    /// Generation used to cancel stale lifecycle work.
+    var generation: UInt64 = 0
+    /// Whether a config reload is in progress.
+    var isReloadingConfig = false
+    /// Whether a Lua runtime restart is in progress.
+    var isRestartingLuaRuntime = false
+    /// Whether another config reload should run after current work.
+    var queuedConfigReload = false
+    /// Whether another Lua restart should run after current work.
+    var queuedLuaRuntimeRestart = false
+
+    /// Advances the lifecycle generation and returns the new value.
+    mutating func advanceGeneration() -> UInt64 {
+      generation &+= 1
+      return generation
+    }
+
+    /// Returns whether the runtime is currently busy with another lifecycle operation.
+    var isBusy: Bool {
+      isReloadingConfig || isRestartingLuaRuntime
+    }
+
+    /// Queues the provided lifecycle operation.
+    mutating func queue(_ operation: LifecycleOperation) {
+      switch operation {
+      case .reloadConfig:
+        queuedConfigReload = true
+      case .restartLuaRuntime:
+        queuedLuaRuntimeRestart = true
+      }
+    }
+
+    /// Marks one lifecycle operation as started.
+    mutating func begin(_ operation: LifecycleOperation) {
+      switch operation {
+      case .reloadConfig:
+        isReloadingConfig = true
+      case .restartLuaRuntime:
+        isRestartingLuaRuntime = true
+      }
+    }
+
+    /// Marks one lifecycle operation as finished.
+    mutating func end(_ operation: LifecycleOperation) {
+      switch operation {
+      case .reloadConfig:
+        isReloadingConfig = false
+      case .restartLuaRuntime:
+        isRestartingLuaRuntime = false
+      }
+    }
+
+    /// Clears queued and in-flight lifecycle work.
+    mutating func resetWork() {
+      isReloadingConfig = false
+      isRestartingLuaRuntime = false
+      queuedConfigReload = false
+      queuedLuaRuntimeRestart = false
+    }
+
+    /// Dequeues the next pending lifecycle operation in priority order.
+    mutating func dequeueNextOperation() -> LifecycleOperation? {
+      if queuedConfigReload {
+        queuedConfigReload = false
+        return .reloadConfig
+      }
+
+      if queuedLuaRuntimeRestart {
+        queuedLuaRuntimeRestart = false
+        return .restartLuaRuntime
+      }
+
+      return nil
+    }
+  }
+
   /// Logger used for runtime coordination diagnostics.
   private let logger: ProcessLogger
   /// Explicit runtime dependencies resolved by the app shell.
@@ -28,18 +114,8 @@ actor RuntimeCoordinator {
 
   /// Task consuming config watcher events.
   private var watcherTask: Task<Void, Never>?
-  /// Whether runtime services are currently started.
-  private var started = false
-  /// Generation used to cancel stale lifecycle work.
-  private var lifecycleGeneration: UInt64 = 0
-  /// Whether a config reload is in progress.
-  private var isReloadingConfig = false
-  /// Whether a Lua runtime restart is in progress.
-  private var isRestartingLuaRuntime = false
-  /// Whether another config reload should run after current work.
-  private var queuedConfigReload = false
-  /// Whether another Lua restart should run after current work.
-  private var queuedLuaRuntimeRestart = false
+  /// Mutable runtime lifecycle bookkeeping.
+  private var lifecycleState = LifecycleState()
 
   /// Creates one runtime coordinator.
   init(logger: ProcessLogger, services: AppServices) {
@@ -59,9 +135,9 @@ actor RuntimeCoordinator {
 
   /// Starts the actor-owned runtime.
   func start() async {
-    guard !started else { return }
-    started = true
-    lifecycleGeneration &+= 1
+    guard !lifecycleState.started else { return }
+    lifecycleState.started = true
+    _ = lifecycleState.advanceGeneration()
 
     logger.info("runtime coordinator start begin")
 
@@ -86,16 +162,13 @@ actor RuntimeCoordinator {
 
   /// Stops the actor-owned runtime.
   func stop() async {
-    guard started else { return }
-    started = false
-    lifecycleGeneration &+= 1
+    guard lifecycleState.started else { return }
+    lifecycleState.started = false
+    _ = lifecycleState.advanceGeneration()
 
     logger.info("runtime coordinator stop begin")
 
-    isReloadingConfig = false
-    isRestartingLuaRuntime = false
-    queuedConfigReload = false
-    queuedLuaRuntimeRestart = false
+    lifecycleState.resetWork()
 
     watcherTask?.cancel()
     watcherTask = nil
@@ -118,40 +191,42 @@ actor RuntimeCoordinator {
 
   /// Reloads config and reapplies all dependent runtime state.
   func reloadConfig() async {
-    if isReloadingConfig || isRestartingLuaRuntime {
-      queuedConfigReload = true
-      logger.info("reloadConfig busy; queueing another reload")
+    let operation = LifecycleOperation.reloadConfig
+
+    if lifecycleState.isBusy {
+      lifecycleState.queue(operation)
+      logger.info("\(operation.rawValue) busy; queueing another reload")
       return
     }
 
-    let generation = lifecycleGeneration
-    isReloadingConfig = true
-    logger.info("reloadConfig begin")
+    let generation = lifecycleState.generation
+    lifecycleState.begin(operation)
+    logger.info("\(operation.rawValue) begin")
 
     let result = await configManager.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     await configureLogging()
-    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     await widgetEngine.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     await MainActor.run {
       services.nativeWidgetRegistry.reload()
     }
-    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     await restartFileWatcher()
-    guard shouldContinueLifecycleWork(generation: generation, operation: "reloadConfig") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
@@ -170,53 +245,33 @@ actor RuntimeCoordinator {
       NotificationCenter.default.post(name: .easyBarConfigReloadDidFinish, object: nil)
     }
 
-    logger.info("reloadConfig end")
-    isReloadingConfig = false
-
-    if queuedConfigReload {
-      queuedConfigReload = false
-      await reloadConfig()
-      return
-    }
-
-    if queuedLuaRuntimeRestart {
-      queuedLuaRuntimeRestart = false
-      await restartLuaRuntime()
-    }
+    logger.info("\(operation.rawValue) end")
+    await finishLifecycleOperation(operation)
   }
 
   /// Restarts the Lua/widget runtime and reapplies native widgets afterward.
   func restartLuaRuntime() async {
-    if isReloadingConfig || isRestartingLuaRuntime {
-      queuedLuaRuntimeRestart = true
-      logger.info("restartLuaRuntime busy; queueing another restart")
+    let operation = LifecycleOperation.restartLuaRuntime
+
+    if lifecycleState.isBusy {
+      lifecycleState.queue(operation)
+      logger.info("\(operation.rawValue) busy; queueing another restart")
       return
     }
 
-    let generation = lifecycleGeneration
-    isRestartingLuaRuntime = true
-    logger.info("restartLuaRuntime begin")
+    let generation = lifecycleState.generation
+    lifecycleState.begin(operation)
+    logger.info("\(operation.rawValue) begin")
 
     await widgetEngine.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: "restartLuaRuntime") else {
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     aeroSpaceService.triggerRefresh()
 
-    logger.info("restartLuaRuntime end")
-    isRestartingLuaRuntime = false
-
-    if queuedConfigReload {
-      queuedConfigReload = false
-      await reloadConfig()
-      return
-    }
-
-    if queuedLuaRuntimeRestart {
-      queuedLuaRuntimeRestart = false
-      await restartLuaRuntime()
-    }
+    logger.info("\(operation.rawValue) end")
+    await finishLifecycleOperation(operation)
   }
 
   /// Refreshes the current runtime without reloading config.
@@ -303,22 +358,38 @@ actor RuntimeCoordinator {
   }
 
   /// Returns whether one in-flight lifecycle operation is still allowed to mutate runtime state.
-  private func shouldContinueLifecycleWork(generation: UInt64, operation: String) -> Bool {
-    guard started, lifecycleGeneration == generation else {
-      if lifecycleGeneration == generation {
-        isReloadingConfig = false
-        isRestartingLuaRuntime = false
+  private func shouldContinueLifecycleWork(
+    generation: UInt64,
+    operation: LifecycleOperation
+  ) -> Bool {
+    guard lifecycleState.started, lifecycleState.generation == generation else {
+      if lifecycleState.generation == generation {
+        lifecycleState.resetWork()
       }
 
       logger.info(
-        "\(operation) aborted because runtime stopped or restarted",
+        "\(operation.rawValue) aborted because runtime stopped or restarted",
         .field("generation", "\(generation)"),
-        .field("current_generation", "\(lifecycleGeneration)"),
+        .field("current_generation", "\(lifecycleState.generation)"),
       )
       return false
     }
 
     return true
+  }
+
+  /// Marks one lifecycle operation finished and runs the next queued operation when present.
+  private func finishLifecycleOperation(_ operation: LifecycleOperation) async {
+    lifecycleState.end(operation)
+
+    switch lifecycleState.dequeueNextOperation() {
+    case .reloadConfig:
+      await reloadConfig()
+    case .restartLuaRuntime:
+      await restartLuaRuntime()
+    case nil:
+      break
+    }
   }
 
   /// Starts the IPC socket server.
