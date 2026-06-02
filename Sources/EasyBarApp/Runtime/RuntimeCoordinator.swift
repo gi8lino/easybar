@@ -97,7 +97,7 @@ actor RuntimeCoordinator {
   /// Explicit runtime dependencies resolved by the app shell.
   private let services: AppServices
   /// Actor used for config reloads and runtime config reads.
-  private let configManager = ConfigManager.shared
+  private let configManager: ConfigManager
   /// Watches config changes when enabled.
   private let fileWatcher: FileWatcher
   /// Shared Lua runtime process owner.
@@ -110,7 +110,7 @@ actor RuntimeCoordinator {
   /// IPC server for external commands and metrics.
   private let socketServer: SocketServer
   /// Shared runtime metrics collector.
-  private let metricsCoordinator = MetricsCoordinator.shared
+  private let metricsCoordinator: MetricsCoordinator
 
   /// Task consuming config watcher events.
   private var watcherTask: Task<Void, Never>?
@@ -121,13 +121,20 @@ actor RuntimeCoordinator {
   init(logger: ProcessLogger, services: AppServices) {
     self.logger = logger
     self.services = services
+    self.configManager = services.configManager
     self.fileWatcher = FileWatcher(logger: logger.child("file_watcher"))
+    self.metricsCoordinator = services.metricsCoordinator
     luaRuntime = services.luaRuntime
     aeroSpaceService = services.aeroSpaceService
 
     widgetEngine = WidgetEngine(
       logger: logger.child("widget_engine"),
-      luaRuntime: luaRuntime
+      luaRuntime: luaRuntime,
+      configManager: services.configManager,
+      eventHub: services.eventHub,
+      eventManager: services.eventManager,
+      widgetStore: services.widgetStore,
+      metricsCoordinator: services.metricsCoordinator
     )
 
     socketServer = SocketServer(logger: logger.child("socket_server"))
@@ -278,7 +285,7 @@ actor RuntimeCoordinator {
   func refreshRuntime() async {
     logger.info("refreshRuntime begin")
     aeroSpaceService.triggerRefresh()
-    await EventHub.shared.emit(.manualRefresh)
+    await services.eventHub.emit(.manualRefresh)
     logger.info("refreshRuntime end")
   }
 
@@ -292,15 +299,15 @@ actor RuntimeCoordinator {
     switch command {
     case .workspaceChanged:
       aeroSpaceService.triggerRefresh()
-      await EventHub.shared.emit(.workspaceChange)
+      await services.eventHub.emit(.workspaceChange)
 
     case .focusChanged:
       aeroSpaceService.triggerRefresh()
-      await EventHub.shared.emit(.focusChange)
+      await services.eventHub.emit(.focusChange)
 
     case .spaceModeChanged:
       aeroSpaceService.triggerRefresh()
-      await EventHub.shared.emit(.spaceModeChange)
+      await services.eventHub.emit(.spaceModeChange)
 
     case .manualRefresh:
       await refreshRuntime()

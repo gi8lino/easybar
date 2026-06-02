@@ -3,9 +3,11 @@ import EasyBarShared
 /// Explicitly bootstrapped app services used by the app shell and runtime coordinator.
 struct AppServices {
   let config: Config
+  let configManager: ConfigManager
   let luaRuntime: LuaRuntime
   let eventHub: EventHub
   let eventManager: EventManager
+  let widgetStore: WidgetStore
   let nativeWidgetRegistry: NativeWidgetRegistry
   let aeroSpaceService: AeroSpaceService
   let calendarAgentEventRelay: CalendarAgentEventRelay
@@ -15,6 +17,7 @@ struct AppServices {
   let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
   let monthCalendarAgentClient: MonthCalendarAgentClient
   let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
+  let metricsCoordinator: MetricsCoordinator
 
   /// Bootstraps shared service instances and captures the resulting dependency graph.
   @MainActor
@@ -40,9 +43,11 @@ struct AppServices {
 
     return AppServices(
       config: config,
+      configManager: ConfigManager.shared,
       luaRuntime: LuaRuntime.shared,
       eventHub: EventHub.shared,
       eventManager: EventManager.shared,
+      widgetStore: WidgetStore.shared,
       nativeWidgetRegistry: NativeWidgetRegistry.shared,
       aeroSpaceService: AeroSpaceService.shared,
       calendarAgentEventRelay: CalendarAgentEventRelay.shared,
@@ -51,7 +56,8 @@ struct AppServices {
       nativeMonthCalendarStore: NativeMonthCalendarStore.shared,
       nativeUpcomingCalendarStore: NativeUpcomingCalendarStore.shared,
       monthCalendarAgentClient: MonthCalendarAgentClient.shared,
-      upcomingCalendarAgentClient: UpcomingCalendarAgentClient.shared
+      upcomingCalendarAgentClient: UpcomingCalendarAgentClient.shared,
+      metricsCoordinator: MetricsCoordinator.shared
     )
   }
 }

@@ -24,6 +24,10 @@ actor WidgetEngine {
   private let logger: ProcessLogger
   private let configManager: ConfigManager
   private let luaRuntime: LuaRuntime
+  private let eventHub: EventHub
+  private let eventManager: EventManager
+  private let widgetStore: WidgetStore
+  private let metricsCoordinator: MetricsCoordinator
   private let commandRunner: LuaCommandRunner
   private let protocolDecoder = WidgetRuntimeProtocolDecoder()
   private let encoder = JSONEncoder()
@@ -38,11 +42,19 @@ actor WidgetEngine {
   init(
     logger: ProcessLogger,
     luaRuntime: LuaRuntime,
-    configManager: ConfigManager = .shared
+    configManager: ConfigManager,
+    eventHub: EventHub,
+    eventManager: EventManager,
+    widgetStore: WidgetStore,
+    metricsCoordinator: MetricsCoordinator
   ) {
     self.logger = logger
     self.configManager = configManager
     self.luaRuntime = luaRuntime
+    self.eventHub = eventHub
+    self.eventManager = eventManager
+    self.widgetStore = widgetStore
+    self.metricsCoordinator = metricsCoordinator
     self.commandRunner = LuaCommandRunner(logger: logger.child("commands"))
   }
 
@@ -85,7 +97,7 @@ actor WidgetEngine {
     await shutdown()
 
     await MainActor.run {
-      WidgetStore.shared.clear(roots: rootsToClear)
+      widgetStore.clear(roots: rootsToClear)
     }
 
     scriptedRoots.removeAll()
@@ -110,10 +122,10 @@ actor WidgetEngine {
     runtimeState.reset()
     activeAsyncCommandCount = 0
 
-    await EventHub.shared.clearLuaForwardedAppEvents()
+    await eventHub.clearLuaForwardedAppEvents()
 
     await MainActor.run {
-      EventManager.shared.stopLuaSubscriptions()
+      eventManager.stopLuaSubscriptions()
     }
 
     await luaRuntime.shutdown()
@@ -131,19 +143,19 @@ actor WidgetEngine {
       let message = try protocolDecoder.decodeMessage(from: line)
       await handleRuntimeMessage(message)
     } catch WidgetRuntimeProtocolError.unsupportedProtocolVersion(let version) {
-        MetricsCoordinator.shared.recordDecodeError()
+      metricsCoordinator.recordDecodeError()
         logger.warn(
           "unsupported lua protocol version",
           .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
           .field("received", version.map(String.init(describing:)) ?? "nil")
         )
     } catch DecodingError.dataCorrupted {
-      MetricsCoordinator.shared.recordDecodeError()
+      metricsCoordinator.recordDecodeError()
       logger.warn("invalid utf8: \(line)")
     } catch WidgetRuntimeProtocolError.invalidPayload(let message) {
       logger.warn(message)
     } catch {
-      MetricsCoordinator.shared.recordDecodeError()
+      metricsCoordinator.recordDecodeError()
       logger.warn("json decode failed: \(line)")
       logger.debug("decode error: \(error)")
     }
@@ -156,8 +168,8 @@ actor WidgetEngine {
     runtimeState.didEmitInitialEvents = true
     logger.debug("emitting replayable widget events")
 
-    await EventHub.shared.emitReplayableState(for: runtimeState.requiredEvents)
-    await EventHub.shared.emit(.manualRefresh)
+    await eventHub.emitReplayableState(for: runtimeState.requiredEvents)
+    await eventHub.emit(.manualRefresh)
   }
 
   /// Handles one decoded runtime message.
@@ -185,17 +197,17 @@ actor WidgetEngine {
     runtimeState.requiredEvents = requiredEvents
     runtimeState.hasSubscriptions = true
 
-    MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
+    metricsCoordinator.recordLuaSubscriptions(runtimeState.requiredEvents)
     logger.debug(
       "required events updated",
       .field("events", runtimeState.requiredEvents),
     )
 
     let requiredEvents = runtimeState.requiredEvents
-    await EventHub.shared.setLuaForwardedAppEvents(requiredEvents)
+    await eventHub.setLuaForwardedAppEvents(requiredEvents)
 
     await MainActor.run {
-      EventManager.shared.start(subscriptions: requiredEvents)
+      eventManager.start(subscriptions: requiredEvents)
     }
 
     await emitInitialEventsIfPossible()
@@ -206,7 +218,7 @@ actor WidgetEngine {
     logger.debug("lua runtime handshake received")
 
     runtimeState.isReady = true
-    MetricsCoordinator.shared.recordLuaReady()
+    metricsCoordinator.recordLuaReady()
 
     await emitInitialEventsIfPossible()
   }
@@ -220,10 +232,10 @@ actor WidgetEngine {
       .field("root", root),
       .field("nodes", nodes.count)
     )
-    MetricsCoordinator.shared.recordTreeUpdate(root: root, nodeCount: nodes.count)
+    metricsCoordinator.recordTreeUpdate(root: root, nodeCount: nodes.count)
 
     await MainActor.run {
-      WidgetStore.shared.apply(root: root, nodes: nodes)
+      widgetStore.apply(root: root, nodes: nodes)
     }
   }
 
@@ -233,7 +245,7 @@ actor WidgetEngine {
     logger.debug("decoded widget root clear", .field("root", rootID))
 
     await MainActor.run {
-      WidgetStore.shared.clear(roots: [rootID])
+      widgetStore.clear(roots: [rootID])
     }
   }
 
