@@ -1,7 +1,6 @@
-import AppKit
 import Foundation
 
-/// Shared helpers for macOS app-shell startup, locking, logging, and termination.
+/// Shared helpers for macOS app-shell startup, locking, and logging.
 public enum AppShellSupport {
   /// Configures runtime logging for one app shell.
   public static func configureLogging(
@@ -44,12 +43,5 @@ public enum AppShellSupport {
       )
       return false
     }
-  }
-
-  /// Terminates the current AppKit application and exits if AppKit returns unexpectedly.
-  @MainActor
-  public static func terminateApplication(exitCode: Int32 = 0) -> Never {
-    NSApp.terminate(nil)
-    Foundation.exit(exitCode)
   }
 }

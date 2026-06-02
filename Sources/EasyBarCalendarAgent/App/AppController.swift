@@ -15,13 +15,14 @@ final class AppController {
   private var runtime: CalendarAgentRuntime?
 
   /// Starts the calendar agent app shell and runtime.
-  func start() {
+  @discardableResult
+  func start() -> Bool {
     let sharedConfig = SharedRuntimeConfig.current
 
     configureLogging(sharedConfig: sharedConfig)
 
     guard acquireInstanceLock(sharedConfig: sharedConfig) else {
-      terminateApplication()
+      return false
     }
 
     let runtimeConfig = CalendarAgentRuntimeConfig.easyBar(
@@ -37,8 +38,11 @@ final class AppController {
     NSApp.setActivationPolicy(.accessory)
 
     guard runtime?.start() == true else {
-      terminateApplication()
+      runtime = nil
+      return false
     }
+
+    return true
   }
 
   /// Stops the calendar agent runtime.
@@ -67,10 +71,5 @@ final class AppController {
       alreadyRunningMessage: "easybar-calendar-agent already running",
       failureMessage: "easybar-calendar-agent failed to acquire single-instance lock"
     )
-  }
-
-  /// Terminates the application immediately.
-  private func terminateApplication() -> Never {
-    AppShellSupport.terminateApplication()
   }
 }

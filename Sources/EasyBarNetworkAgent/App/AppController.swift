@@ -16,13 +16,14 @@ final class AppController: NetworkAuthorizationPromptPresenter {
   private var presentedAuthorizationPrompt = false
 
   /// Starts the network agent app shell and runtime.
-  func start() {
+  @discardableResult
+  func start() -> Bool {
     let sharedConfig = SharedRuntimeConfig.current
 
     configureLogging(sharedConfig: sharedConfig)
 
     guard acquireInstanceLock(sharedConfig: sharedConfig) else {
-      terminateApplication()
+      return false
     }
 
     let runtimeConfig = NetworkAgentRuntimeConfig.easyBar(
@@ -39,8 +40,11 @@ final class AppController: NetworkAuthorizationPromptPresenter {
     NSApp.setActivationPolicy(.accessory)
 
     guard runtime?.start() == true else {
-      terminateApplication()
+      runtime = nil
+      return false
     }
+
+    return true
   }
 
   /// Stops the network agent runtime.
@@ -94,10 +98,5 @@ final class AppController: NetworkAuthorizationPromptPresenter {
       alreadyRunningMessage: "easybar-network-agent already running",
       failureMessage: "easybar-network-agent failed to acquire instance lock"
     )
-  }
-
-  /// Terminates the application immediately.
-  private func terminateApplication() -> Never {
-    AppShellSupport.terminateApplication()
   }
 }

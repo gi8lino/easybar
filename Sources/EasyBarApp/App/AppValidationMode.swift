@@ -4,19 +4,24 @@ import Foundation
 enum AppValidationMode {
   private static let validationEnvironmentKey = "EASYBAR_VALIDATE_CONFIG_ONLY"
 
-  /// Runs config validation and exits when validation mode is requested.
-  static func runIfRequested() -> Bool {
+  /// Runs config validation when validation mode is requested and returns the process exit code.
+  static func exitCodeIfRequested() -> Int32? {
     guard ProcessInfo.processInfo.environment[validationEnvironmentKey] == "1" else {
-      return false
+      return nil
     }
 
+    return validateConfig()
+  }
+
+  /// Validates the current config and returns the desired process exit code.
+  private static func validateConfig() -> Int32 {
     do {
       let result = try ConfigValidator.validate()
       fputs("config valid: \(result.configPath)\n", stdout)
-      Foundation.exit(0)
+      return 0
     } catch {
       fputs("easybar: \(error)\n", stderr)
-      Foundation.exit(1)
+      return 1
     }
   }
 }

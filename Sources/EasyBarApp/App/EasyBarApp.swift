@@ -1,19 +1,23 @@
-import SwiftUI
+import AppKit
+import Foundation
 
-/// The application entry point.
+/// Process entry point for EasyBar.
 @main
-struct EasyBarApp: App {
-  init() {
-    _ = AppValidationMode.runIfRequested()
-  }
-
-  /// Bridges SwiftUI app lifecycle with AppKit lifecycle hooks.
-  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-  /// Provides the minimal scene hierarchy required by SwiftUI.
-  var body: some Scene {
-    Settings {
-      EmptyView()
+enum EasyBarAppMain {
+  /// Runs validation-only mode or starts the AppKit application loop.
+  @MainActor
+  static func main() {
+    if let validationExitCode = AppValidationMode.exitCodeIfRequested() {
+      Foundation.exit(validationExitCode)
     }
+
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
+
+    app.delegate = delegate
+    app.run()
+
+    delegate.stop()
+    Foundation.exit(delegate.exitCode)
   }
 }

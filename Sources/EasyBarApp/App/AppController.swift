@@ -12,10 +12,12 @@ final class AppController {
   private let services: AppServices
   /// Coordinates runtime startup, refresh, reload, and shutdown.
   private let runtimeCoordinator: RuntimeCoordinator
+  /// Callback used to ask the app delegate to start graceful termination.
+  private let requestAppTermination: () -> Void
   /// Converts process signals into graceful termination requests.
   private lazy var signalHandler = AppSignalHandler(logger: logger.child("signals")) {
     [weak self] in
-    self?.requestTermination()
+    self?.requestAppTermination()
   }
 
   /// Whether the app shell has completed startup.
@@ -24,8 +26,6 @@ final class AppController {
   private var shutdownTask: Task<Void, Never>?
   /// Task that waits for graceful shutdown before terminating AppKit.
   private var terminationRequestTask: Task<Void, Never>?
-  /// Whether AppKit termination should proceed immediately.
-  private var forceImmediateTermination = false
   /// Controller for the main EasyBar panel.
   private var barWindowController: BarWindowController?
   /// Observer token for runtime config reload completion notifications.
@@ -37,8 +37,12 @@ final class AppController {
   private let instanceGuard = SingleInstanceGuard()
 
   /// Creates the app shell with its process logger.
-  init(logger: ProcessLogger) {
+  init(
+    logger: ProcessLogger,
+    requestAppTermination: @escaping () -> Void
+  ) {
     self.logger = logger
+    self.requestAppTermination = requestAppTermination
     self.services = Self.bootstrapSharedDependencies(logger: logger.child("services"))
     self.runtimeCoordinator = RuntimeCoordinator(
       logger: logger.child("runtime"),
@@ -47,8 +51,9 @@ final class AppController {
   }
 
   /// Starts the app shell and the actor-owned runtime.
-  func start() {
-    guard !started else { return }
+  @discardableResult
+  func start() -> Bool {
+    guard !started else { return true }
     started = true
 
     if let error = services.config.loadInitialState() {
@@ -60,7 +65,8 @@ final class AppController {
     }
 
     guard acquireInstanceLock() else {
-      terminateApplication()
+      started = false
+      return false
     }
 
     NSApp.setActivationPolicy(.accessory)
@@ -77,6 +83,8 @@ final class AppController {
     Task {
       await runtimeCoordinator.start()
     }
+
+    return true
   }
 
   /// Acquires the single-instance lock for the main EasyBar process.
@@ -104,13 +112,8 @@ final class AppController {
     self.shutdownTask = nil
   }
 
-  /// Requests graceful shutdown, then terminates once cleanup is complete.
-  func requestTermination() {
-    guard !forceImmediateTermination else {
-      NSApp.terminate(nil)
-      return
-    }
-
+  /// Requests graceful shutdown, then calls the completion once cleanup is complete.
+  func requestTermination(completion: @escaping @MainActor () -> Void) {
     guard terminationRequestTask == nil else { return }
 
     terminationRequestTask = Task { [weak self] in
@@ -120,8 +123,7 @@ final class AppController {
 
       await MainActor.run {
         self.terminationRequestTask = nil
-        self.forceImmediateTermination = true
-        NSApp.terminate(nil)
+        completion()
       }
     }
   }
@@ -166,17 +168,6 @@ final class AppController {
         }
       }
     )
-  }
-
-  /// Returns whether AppKit termination should bypass graceful shutdown.
-  var shouldTerminateImmediately: Bool {
-    return forceImmediateTermination
-  }
-
-  /// Terminates the application immediately.
-  private func terminateApplication() -> Never {
-    forceImmediateTermination = true
-    AppShellSupport.terminateApplication()
   }
 
   /// Bootstraps all shared logger-owning services before runtime startup begins.

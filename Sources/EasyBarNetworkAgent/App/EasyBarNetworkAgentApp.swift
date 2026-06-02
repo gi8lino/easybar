@@ -1,20 +1,19 @@
-import SwiftUI
+import AppKit
+import Foundation
 
-/// SwiftUI entry point for the network agent app.
-///
-/// The app delegates lifecycle handling to `AppDelegate` and does not
-/// expose a user-facing window.
+/// Process entry point for the network agent.
 @main
-struct EasyBarNetworkAgentApp: App {
-  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+enum EasyBarNetworkAgentMain {
+  /// Starts the AppKit application loop and exits with the delegate's final code.
+  @MainActor
+  static func main() {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
 
-  /// Provides the minimal scene hierarchy required by SwiftUI.
-  ///
-  /// The network agent runs as an accessory process, so the Settings scene
-  /// intentionally renders no visible content.
-  var body: some Scene {
-    Settings {
-      EmptyView()
-    }
+    app.delegate = delegate
+    app.run()
+
+    delegate.stop()
+    Foundation.exit(delegate.exitCode)
   }
 }

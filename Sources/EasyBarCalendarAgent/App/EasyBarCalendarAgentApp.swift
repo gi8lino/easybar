@@ -1,17 +1,19 @@
-import SwiftUI
+import AppKit
+import Foundation
 
-/// SwiftUI entry point for the calendar agent app.
-///
-/// Lifecycle work is delegated to `AppDelegate`; the agent does not
-/// expose a user-facing window.
+/// Process entry point for the calendar agent.
 @main
-struct EasyBarCalendarAgentApp: App {
-  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+enum EasyBarCalendarAgentMain {
+  /// Starts the AppKit application loop and exits with the delegate's final code.
+  @MainActor
+  static func main() {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
 
-  /// Provides the minimal scene hierarchy required by SwiftUI.
-  var body: some Scene {
-    Settings {
-      EmptyView()
-    }
+    app.delegate = delegate
+    app.run()
+
+    delegate.stop()
+    Foundation.exit(delegate.exitCode)
   }
 }
