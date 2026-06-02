@@ -18,9 +18,9 @@ final class AppController {
   func start() {
     let sharedConfig = SharedRuntimeConfig.current
 
-    configureLogging(runtimeConfig: sharedConfig)
+    configureLogging(sharedConfig: sharedConfig)
 
-    guard acquireInstanceLock(runtimeConfig: sharedConfig) else {
+    guard acquireInstanceLock(sharedConfig: sharedConfig) else {
       terminateApplication()
     }
 
@@ -47,45 +47,30 @@ final class AppController {
   }
 
   /// Configures process logging from the shared runtime config.
-  private func configureLogging(runtimeConfig: SharedRuntimeConfig) {
-    logger.configureRuntimeLogging(
-      minimumLevel: runtimeConfig.loggingLevel,
-      fileLoggingEnabled: runtimeConfig.loggingEnabled,
-      fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
-        .appendingPathComponent("calendar-agent.out")
-        .path
+  private func configureLogging(sharedConfig: SharedRuntimeConfig) {
+    AppShellSupport.configureLogging(
+      logger: logger,
+      minimumLevel: sharedConfig.loggingLevel,
+      fileLoggingEnabled: sharedConfig.loggingEnabled,
+      loggingDirectory: sharedConfig.loggingDirectory,
+      logFileName: "calendar-agent.out"
     )
   }
 
   /// Acquires the single-instance lock for the calendar agent process.
-  private func acquireInstanceLock(runtimeConfig: SharedRuntimeConfig) -> Bool {
-    switch instanceGuard.acquireLock(
+  private func acquireInstanceLock(sharedConfig: SharedRuntimeConfig) -> Bool {
+    AppShellSupport.acquireInstanceLock(
+      instanceGuard: instanceGuard,
       processName: "easybar-calendar-agent",
-      directory: runtimeConfig.lockDirectory
-    ) {
-    case .acquired:
-      return true
-
-    case .alreadyRunning(let lockPath):
-      logger.warn(
-        "easybar-calendar-agent already running",
-        .field("lock_path", lockPath)
-      )
-      return false
-
-    case .failed(let lockPath, let reason):
-      logger.error(
-        "easybar-calendar-agent failed to acquire single-instance lock",
-        .field("lock_path", lockPath),
-        .field("reason", reason)
-      )
-      return false
-    }
+      directory: sharedConfig.lockDirectory,
+      logger: logger,
+      alreadyRunningMessage: "easybar-calendar-agent already running",
+      failureMessage: "easybar-calendar-agent failed to acquire single-instance lock"
+    )
   }
 
   /// Terminates the application immediately.
   private func terminateApplication() -> Never {
-    NSApp.terminate(nil)
-    fatalError("Application should have terminated")
+    AppShellSupport.terminateApplication()
   }
 }

@@ -19,9 +19,9 @@ final class AppController: NetworkAuthorizationPromptPresenter {
   func start() {
     let sharedConfig = SharedRuntimeConfig.current
 
-    configureLogging(runtimeConfig: sharedConfig)
+    configureLogging(sharedConfig: sharedConfig)
 
-    guard acquireInstanceLock(runtimeConfig: sharedConfig) else {
+    guard acquireInstanceLock(sharedConfig: sharedConfig) else {
       terminateApplication()
     }
 
@@ -74,45 +74,30 @@ final class AppController: NetworkAuthorizationPromptPresenter {
   }
 
   /// Configures process logging from the shared runtime config.
-  private func configureLogging(runtimeConfig: SharedRuntimeConfig) {
-    logger.configureRuntimeLogging(
-      minimumLevel: runtimeConfig.loggingLevel,
-      fileLoggingEnabled: runtimeConfig.loggingEnabled,
-      fileLoggingPath: URL(fileURLWithPath: runtimeConfig.loggingDirectory)
-        .appendingPathComponent("network-agent.out")
-        .path
+  private func configureLogging(sharedConfig: SharedRuntimeConfig) {
+    AppShellSupport.configureLogging(
+      logger: logger,
+      minimumLevel: sharedConfig.loggingLevel,
+      fileLoggingEnabled: sharedConfig.loggingEnabled,
+      loggingDirectory: sharedConfig.loggingDirectory,
+      logFileName: "network-agent.out"
     )
   }
 
   /// Acquires the single-instance lock for the network agent process.
-  private func acquireInstanceLock(runtimeConfig: SharedRuntimeConfig) -> Bool {
-    switch instanceGuard.acquireLock(
+  private func acquireInstanceLock(sharedConfig: SharedRuntimeConfig) -> Bool {
+    AppShellSupport.acquireInstanceLock(
+      instanceGuard: instanceGuard,
       processName: "easybar-network-agent",
-      directory: runtimeConfig.lockDirectory
-    ) {
-    case .acquired:
-      return true
-
-    case .alreadyRunning(let lockPath):
-      logger.warn(
-        "easybar-network-agent already running",
-        .field("lock_path", lockPath)
-      )
-      return false
-
-    case .failed(let lockPath, let reason):
-      logger.error(
-        "easybar-network-agent failed to acquire instance lock",
-        .field("lock_path", lockPath),
-        .field("reason", reason)
-      )
-      return false
-    }
+      directory: sharedConfig.lockDirectory,
+      logger: logger,
+      alreadyRunningMessage: "easybar-network-agent already running",
+      failureMessage: "easybar-network-agent failed to acquire instance lock"
+    )
   }
 
   /// Terminates the application immediately.
   private func terminateApplication() -> Never {
-    NSApp.terminate(nil)
-    fatalError("Application should have terminated")
+    AppShellSupport.terminateApplication()
   }
 }

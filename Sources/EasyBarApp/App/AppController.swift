@@ -59,26 +59,7 @@ final class AppController {
       )
     }
 
-    switch instanceGuard.acquireLock(
-      processName: "easybar",
-      directory: services.config.lockDirectory
-    ) {
-    case .acquired:
-      break
-
-    case .alreadyRunning(let lockPath):
-      logger.warn(
-        "easybar already running",
-        .field("lock_path", lockPath)
-      )
-      terminateApplication()
-
-    case .failed(let lockPath, let reason):
-      logger.error(
-        "easybar failed to acquire instance lock",
-        .field("lock_path", "\(lockPath)"),
-        .field("reason", "\(reason)")
-      )
+    guard acquireInstanceLock() else {
       terminateApplication()
     }
 
@@ -96,6 +77,18 @@ final class AppController {
     Task {
       await runtimeCoordinator.start()
     }
+  }
+
+  /// Acquires the single-instance lock for the main EasyBar process.
+  private func acquireInstanceLock() -> Bool {
+    AppShellSupport.acquireInstanceLock(
+      instanceGuard: instanceGuard,
+      processName: "easybar",
+      directory: services.config.lockDirectory,
+      logger: logger,
+      alreadyRunningMessage: "easybar already running",
+      failureMessage: "easybar failed to acquire instance lock"
+    )
   }
 
   /// Stops the actor-owned runtime.
@@ -183,8 +176,7 @@ final class AppController {
   /// Terminates the application immediately.
   private func terminateApplication() -> Never {
     forceImmediateTermination = true
-    NSApp.terminate(nil)
-    fatalError("Application should have terminated")
+    AppShellSupport.terminateApplication()
   }
 
   /// Bootstraps all shared logger-owning services before runtime startup begins.
@@ -194,10 +186,12 @@ final class AppController {
 
   /// Configures file logging from the current app config.
   private func configureLogging() {
-    logger.configureRuntimeLogging(
+    AppShellSupport.configureLogging(
+      logger: logger,
       minimumLevel: services.config.loggingLevel,
       fileLoggingEnabled: services.config.loggingEnabled,
-      fileLoggingPath: easyBarLogPath(in: services.config.loggingDirectory)
+      loggingDirectory: services.config.loggingDirectory,
+      logFileName: "easybar.out"
     )
   }
 
