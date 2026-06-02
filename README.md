@@ -76,6 +76,34 @@ themes_dir = "~/.config/easybar/themes"
 
 EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundled themes.
 
+## Developing
+
+Quickstart for contributors:
+
+```bash
+make test
+make stop
+make run-debug
+```
+
+Useful build and runtime commands:
+
+- `make test` runs the full Swift test suite.
+- `make build` builds the local app, agents, and CLI artifacts.
+- `make run-debug` starts EasyBar with verbose logging for local debugging.
+- `make stop` stops the running EasyBar app and helper agents cleanly.
+- `.build/arm64-apple-macosx/debug/EasyBarCtl --validate-config --config /path/to/config.toml` performs a dry-run config validation without starting the bar.
+
+Helpful entry points in the codebase:
+
+- `Sources/EasyBarApp/App` contains the main app shell and startup wiring.
+- `Sources/EasyBarApp/Runtime` contains config reload, file watching, and socket orchestration.
+- `Sources/EasyBarApp/Widgets` contains native widgets, Lua runtime integration, and rendered widget state.
+- `Sources/EasyBarCalendarAgent` and `Sources/EasyBarNetworkAgent` contain the helper agent apps.
+- `Sources/EasyBarShared` contains shared runtime, logging, socket, and protocol code used across targets.
+
+If you want the architectural map before editing code, start with the docs sections for Architecture, Agents, and Lua Runtime in [the project docs](https://gi8lino.github.io/easybar/).
+
 ## Screenshots
 
 ### Calendar
