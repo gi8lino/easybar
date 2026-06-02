@@ -144,11 +144,11 @@ actor WidgetEngine {
       await handleRuntimeMessage(message)
     } catch WidgetRuntimeProtocolError.unsupportedProtocolVersion(let version) {
       metricsCoordinator.recordDecodeError()
-        logger.warn(
-          "unsupported lua protocol version",
-          .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
-          .field("received", version.map(String.init(describing:)) ?? "nil")
-        )
+      logger.warn(
+        "unsupported lua protocol version",
+        .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
+        .field("received", version.map(String.init(describing:)) ?? "nil")
+      )
     } catch DecodingError.dataCorrupted {
       metricsCoordinator.recordDecodeError()
       logger.warn("invalid utf8: \(line)")
