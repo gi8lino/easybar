@@ -25,7 +25,7 @@ actor WidgetEngine {
   private let configManager: ConfigManager
   private let luaRuntime: LuaRuntime
   private let commandRunner: LuaCommandRunner
-  private let decoder = JSONDecoder()
+  private let protocolDecoder = WidgetRuntimeProtocolDecoder()
   private let encoder = JSONEncoder()
 
   private var runtimeState = WidgetRuntimeState()
@@ -128,36 +128,25 @@ actor WidgetEngine {
     logger.debug("lua transport: \(line)")
 
     do {
-      let update = try decodeUpdate(from: line)
-      guard update.isSupportedProtocolVersion else {
+      let message = try protocolDecoder.decodeMessage(from: line)
+      await handleRuntimeMessage(message)
+    } catch WidgetRuntimeProtocolError.unsupportedProtocolVersion(let version) {
         MetricsCoordinator.shared.recordDecodeError()
         logger.warn(
           "unsupported lua protocol version",
           .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
-          .field("received", update.protocolVersion.map(String.init(describing:)) ?? "nil")
+          .field("received", version.map(String.init(describing:)) ?? "nil")
         )
-        return
-      }
-      await handleUpdate(update, rawLine: line)
     } catch DecodingError.dataCorrupted {
       MetricsCoordinator.shared.recordDecodeError()
       logger.warn("invalid utf8: \(line)")
+    } catch WidgetRuntimeProtocolError.invalidPayload(let message) {
+      logger.warn(message)
     } catch {
       MetricsCoordinator.shared.recordDecodeError()
       logger.warn("json decode failed: \(line)")
       logger.debug("decode error: \(error)")
     }
-  }
-
-  /// Decodes one structured runtime update line.
-  private func decodeUpdate(from line: String) throws -> WidgetTreeUpdate {
-    guard let data = line.data(using: .utf8) else {
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: [], debugDescription: "invalid utf8")
-      )
-    }
-
-    return try decoder.decode(WidgetTreeUpdate.self, from: data)
   }
 
   /// Emits initial events after both subscriptions and readiness are known.
@@ -171,39 +160,29 @@ actor WidgetEngine {
     await EventHub.shared.emit(.manualRefresh)
   }
 
-  /// Handles one decoded Lua runtime update.
-  private func handleUpdate(_ update: WidgetTreeUpdate, rawLine: String) async {
-    guard !update.isSubscriptions else {
-      await handleSubscriptions(update)
-      return
-    }
-
-    guard !update.isReady else {
+  /// Handles one decoded runtime message.
+  private func handleRuntimeMessage(_ message: WidgetRuntimeMessage) async {
+    switch message {
+    case .subscriptions(let requiredEvents):
+      await handleSubscriptions(requiredEvents)
+    case .ready:
       await handleReady()
-      return
+    case .tree(let root, let nodes):
+      await handleTree(root: root, nodes: nodes)
+    case .clearRoot(let rootID):
+      await handleClearRoot(rootID: rootID)
+    case .commandRequest(let token, let command, let isSynchronous):
+      await handleCommandRequest(
+        token: token,
+        command: command,
+        isSynchronous: isSynchronous
+      )
     }
-
-    guard !update.isClearRoot else {
-      await handleClearRoot(update, rawLine: rawLine)
-      return
-    }
-
-    guard !update.isCommandRequest else {
-      await handleCommandRequest(update, rawLine: rawLine)
-      return
-    }
-
-    guard update.isTree else {
-      logger.warn("unknown lua message: \(rawLine)")
-      return
-    }
-
-    await handleTree(update, rawLine: rawLine)
   }
 
   /// Handles one subscription update from Lua.
-  private func handleSubscriptions(_ update: WidgetTreeUpdate) async {
-    runtimeState.requiredEvents = Set(update.subscribedEvents)
+  private func handleSubscriptions(_ requiredEvents: Set<String>) async {
+    runtimeState.requiredEvents = requiredEvents
     runtimeState.hasSubscriptions = true
 
     MetricsCoordinator.shared.recordLuaSubscriptions(runtimeState.requiredEvents)
@@ -233,33 +212,23 @@ actor WidgetEngine {
   }
 
   /// Handles one rendered widget tree update.
-  private func handleTree(_ update: WidgetTreeUpdate, rawLine: String) async {
-    guard let tree = update.treePayload else {
-      logger.warn("unknown lua message: \(rawLine)")
-      return
-    }
-
-    scriptedRoots.insert(tree.root)
+  private func handleTree(root: String, nodes: [WidgetNodeState]) async {
+    scriptedRoots.insert(root)
 
     logger.debug(
       "decoded widget tree",
-      .field("root", tree.root),
-      .field("nodes", tree.nodes.count)
+      .field("root", root),
+      .field("nodes", nodes.count)
     )
-    MetricsCoordinator.shared.recordTreeUpdate(root: tree.root, nodeCount: tree.nodes.count)
+    MetricsCoordinator.shared.recordTreeUpdate(root: root, nodeCount: nodes.count)
 
     await MainActor.run {
-      WidgetStore.shared.apply(root: tree.root, nodes: tree.nodes)
+      WidgetStore.shared.apply(root: root, nodes: nodes)
     }
   }
 
   /// Handles one explicit root-clear update from Lua.
-  private func handleClearRoot(_ update: WidgetTreeUpdate, rawLine: String) async {
-    guard let rootID = update.clearRootID else {
-      logger.warn("invalid lua clear-root update: \(rawLine)")
-      return
-    }
-
+  private func handleClearRoot(rootID: String) async {
     scriptedRoots.remove(rootID)
     logger.debug("decoded widget root clear", .field("root", rootID))
 
@@ -269,12 +238,11 @@ actor WidgetEngine {
   }
 
   /// Handles one Lua command execution request.
-  private func handleCommandRequest(_ update: WidgetTreeUpdate, rawLine: String) async {
-    guard let request = update.commandRequestPayload else {
-      logger.warn("invalid lua command request: \(rawLine)")
-      return
-    }
-
+  private func handleCommandRequest(
+    token: String,
+    command: String,
+    isSynchronous: Bool
+  ) async {
     let commandSettings = await configManager.luaCommandSettings()
     let commandLimits =
       LuaCommandRunner.Limits(
@@ -284,14 +252,14 @@ actor WidgetEngine {
 
     logger.debug(
       "lua command requested",
-      .field("token", request.token),
-      .field("sync", request.isSynchronous),
-      .field("command", request.command)
+      .field("token", token),
+      .field("sync", isSynchronous),
+      .field("command", command)
     )
 
-    if request.isSynchronous {
-      let result = await commandRunner.run(command: request.command, limits: commandLimits)
-      await sendCommandResponse(token: request.token, result: result)
+    if isSynchronous {
+      let result = await commandRunner.run(command: command, limits: commandLimits)
+      await sendCommandResponse(token: token, result: result)
       return
     }
 
@@ -299,13 +267,13 @@ actor WidgetEngine {
     guard activeAsyncCommandCount < maxAsyncJobs else {
       logger.warn(
         "lua async command rejected because limit was reached",
-        .field("token", request.token),
+        .field("token", token),
         .field("active_async_jobs", activeAsyncCommandCount),
         .field("max_async_jobs", maxAsyncJobs),
-        .field("command", request.command)
+        .field("command", command)
       )
       await sendCommandResponse(
-        token: request.token,
+        token: token,
         result: LuaCommandResult(
           output: "easybar.exec_async rejected: max async job limit reached",
           status: 69
@@ -319,9 +287,9 @@ actor WidgetEngine {
     let runtimeSessionID = self.runtimeSessionID
 
     Task { [weak self] in
-      let result = await commandRunner.run(command: request.command, limits: commandLimits)
+      let result = await commandRunner.run(command: command, limits: commandLimits)
       await self?.sendAsyncCommandResponse(
-        token: request.token,
+        token: token,
         result: result,
         runtimeSessionID: runtimeSessionID
       )
