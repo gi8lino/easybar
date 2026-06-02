@@ -591,8 +591,8 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .trace)
   }
 
-  /// Handles test reload uses legacy logging debug when level is absent.
-  func testReloadUsesLegacyLoggingDebugWhenLevelIsAbsent() throws {
+  /// Handles test reload rejects legacy logging debug when level is absent.
+  func testReloadRejectsLegacyLoggingDebugWhenLevelIsAbsent() throws {
     let config = Config.shared
     let configFileURL = tempDirectoryURL.appendingPathComponent("legacy-logging.toml")
 
@@ -608,8 +608,39 @@ final class ConfigLoaderTests: XCTestCase {
 
     let error = config.reload()
 
-    XCTAssertNil(error)
-    XCTAssertEqual(config.loggingLevel, .debug)
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "logging.debug")
+    XCTAssertEqual(message, "logging.debug is no longer supported; use logging.level")
+  }
+
+  /// Handles test validate does not create directories for valid staged config.
+  func testValidateDoesNotCreateDirectories() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("validate-only.toml")
+    let widgetsDirectory = tempDirectoryURL.appendingPathComponent("widgets-only").path
+    let lockDirectory = tempDirectoryURL.appendingPathComponent("locks-only").path
+    let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs-only").path
+
+    try writeConfig(
+      """
+      [app]
+      widgets_dir = "\(widgetsDirectory)"
+      lock_dir = "\(lockDirectory)"
+
+      [logging]
+      directory = "\(loggingDirectory)"
+      level = "info"
+      """,
+      to: configFileURL
+    )
+
+    _ = try Config.validate(configPathOverride: configFileURL.path)
+
+    XCTAssertFalse(FileManager.default.fileExists(atPath: widgetsDirectory))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: lockDirectory))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: loggingDirectory))
   }
 
   /// Handles test reload expands tilde paths from config file.

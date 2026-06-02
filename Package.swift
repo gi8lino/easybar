@@ -104,7 +104,7 @@ let package = Package(
     .executableTarget(
       name: "EasyBarCtl",
       dependencies: [
-        "EasyBarShared"
+        "EasyBarShared",
       ],
       path: "Sources/EasyBarCtl"
     ),

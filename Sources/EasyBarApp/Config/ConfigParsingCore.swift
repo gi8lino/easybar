@@ -106,6 +106,13 @@ extension Config {
   func parseLogging(from toml: TOMLTable) throws {
     let logging = toml["logging"]?.table ?? TOMLTable()
 
+    if logging["debug"] != nil {
+      throw ConfigError.invalidValue(
+        path: "logging.debug",
+        message: "logging.debug is no longer supported; use logging.level"
+      )
+    }
+
     loggingEnabled =
       try optionalBool(logging["enabled"], path: "logging.enabled")
       ?? loggingEnabled
@@ -115,8 +122,6 @@ extension Config {
         configuredLevel,
         path: "logging.level"
       )
-    } else if let legacyLevel = legacyConfigLogLevel(from: logging) {
-      loggingLevel = legacyLevel
     }
 
     if let envLevel = try environmentLogLevelOverride() {

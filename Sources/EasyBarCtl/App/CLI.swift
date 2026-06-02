@@ -19,15 +19,22 @@ private struct AppController {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
-      if parsed.command == .metrics {
-        if parsed.watchMetrics {
-          try streamMetrics(to: parsed.socketPath, context: context)
+      switch parsed.action {
+      case .validateConfig:
+        try validateConfig(configPath: parsed.configPath, context: context)
+      case .command(let command):
+        let socketPath = parsed.socketPath ?? SharedRuntimeConfig.current.easyBarSocketPath
+
+        if command == .metrics {
+          if parsed.watchMetrics {
+            try streamMetrics(to: socketPath, context: context)
+          } else {
+            let snapshot = try fetchMetricsSnapshot(from: socketPath, context: context)
+            CLIOutput.printMetricsSnapshot(snapshot)
+          }
         } else {
-          let snapshot = try fetchMetricsSnapshot(from: parsed.socketPath, context: context)
-          CLIOutput.printMetricsSnapshot(snapshot)
+          try sendCommand(command, to: socketPath, context: context)
         }
-      } else {
-        try sendCommand(parsed.command, to: parsed.socketPath, context: context)
       }
 
       return 0
@@ -79,14 +86,22 @@ private struct CLIOption {
 
 /// Parsed command-line configuration.
 private struct ParsedArguments {
-  /// Command selected by the user.
-  let command: IPC.Command
+  /// Action selected by the user.
+  let action: CLIAction
   /// Unix-domain socket path used to contact the running EasyBar process.
-  let socketPath: String
+  let socketPath: String?
+  /// Optional config path override used by validation.
+  let configPath: String?
   /// Whether debug logging was requested.
   let debugEnabled: Bool
   /// Whether metrics should be streamed continuously.
   let watchMetrics: Bool
+}
+
+/// Supported top-level CLI actions.
+private enum CLIAction: Equatable {
+  case command(IPC.Command)
+  case validateConfig
 }
 
 /// Shared runtime context for CLI operations.
@@ -167,6 +182,12 @@ private enum CLI {
     description: "Override socket path",
     placeholder: "path"
   )
+  /// Option used to override the config path for validation.
+  static let configOption = CLIOption(
+    flag: "--config",
+    description: "Override config path for validation",
+    placeholder: "path"
+  )
   /// Option used to enable debug output.
   static let debugOption = CLIOption(
     flag: "--debug",
@@ -190,6 +211,11 @@ private enum CLI {
     flag: "--watch",
     short: "-w",
     description: "Keep streaming metrics and render rolling graphs"
+  )
+  /// Option used to validate config without contacting the running app.
+  static let validateConfigOption = CLIOption(
+    flag: "--validate-config",
+    description: "Validate config without starting EasyBar"
   )
 
   /// Command options that map directly to IPC commands.
@@ -230,11 +256,13 @@ private enum CLI {
       command: .metrics,
       description: "Print a metrics snapshot or stream live metrics with --watch"
     ),
+    validateConfigOption,
   ]
 
   /// App-level options that configure CLI behavior.
   static let appOptions: [CLIOption] = [
     socketOption,
+    configOption,
     watchOption,
     debugOption,
     versionOption,
@@ -281,8 +309,9 @@ private enum CLI {
 
 /// Parses CLI arguments.
 private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
-  var selectedCommand: IPC.Command?
-  var socketPath = SharedRuntimeConfig.current.easyBarSocketPath
+  var selectedAction: CLIAction?
+  var socketPath: String?
+  var configPath: String?
   var debugEnabled = false
   var watchMetrics = false
 
@@ -295,19 +324,21 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
       arguments: arguments,
       index: i,
       socketPath: &socketPath,
+      configPath: &configPath,
       debugEnabled: &debugEnabled,
-      watchMetrics: &watchMetrics
+      watchMetrics: &watchMetrics,
+      selectedAction: &selectedAction
     ) {
       i = nextIndex
       continue
     }
 
     if let command = CLI.command(for: arg) {
-      guard selectedCommand == nil else {
+      guard selectedAction == nil else {
         throw AppError.message("only one command flag may be specified")
       }
 
-      selectedCommand = command
+      selectedAction = .command(command)
       i += 1
       continue
     }
@@ -315,25 +346,29 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
     throw AppError.message("unknown argument '\(arg)'")
   }
 
-  guard let command = selectedCommand else {
+  guard let action = selectedAction else {
     throw AppError.message("no command flag provided")
   }
 
-  if usesWatchWithoutMetricsCommand(watchMetrics: watchMetrics, command: command) {
+  if watchMetrics, action != .command(.metrics) {
     throw AppError.message("--watch may only be used with --metrics")
   }
 
+  if socketPath != nil, action == .validateConfig {
+    throw AppError.message("--socket may not be used with --validate-config")
+  }
+
+  if configPath != nil, action != .validateConfig {
+    throw AppError.message("--config may only be used with --validate-config")
+  }
+
   return ParsedArguments(
-    command: command,
+    action: action,
     socketPath: socketPath,
+    configPath: configPath,
     debugEnabled: debugEnabled,
     watchMetrics: watchMetrics
   )
-}
-
-/// Returns whether `--watch` was provided for a non-metrics command.
-private func usesWatchWithoutMetricsCommand(watchMetrics: Bool, command: IPC.Command) -> Bool {
-  return watchMetrics && command != .metrics
 }
 
 /// Parses one app-level option.
@@ -341,9 +376,11 @@ private func parseAppArgument(
   _ argument: String,
   arguments: [String],
   index: Int,
-  socketPath: inout String,
+  socketPath: inout String?,
+  configPath: inout String?,
   debugEnabled: inout Bool,
-  watchMetrics: inout Bool
+  watchMetrics: inout Bool,
+  selectedAction: inout CLIAction?
 ) throws -> Int? {
   if CLI.matches(CLI.helpOption, argument: argument) {
     throw AppError.showUsage
@@ -363,6 +400,15 @@ private func parseAppArgument(
     return index + 1
   }
 
+  if CLI.matches(CLI.validateConfigOption, argument: argument) {
+    guard selectedAction == nil else {
+      throw AppError.message("only one command flag may be specified")
+    }
+
+    selectedAction = .validateConfig
+    return index + 1
+  }
+
   if let parsedSocketArgument = try parseSocketArgument(
     argument,
     arguments: arguments,
@@ -372,24 +418,35 @@ private func parseAppArgument(
     return parsedSocketArgument.nextIndex
   }
 
+  if let parsedConfigArgument = try parseValueArgument(
+    option: CLI.configOption,
+    argument,
+    arguments: arguments,
+    index: index
+  ) {
+    configPath = parsedConfigArgument.value
+    return parsedConfigArgument.nextIndex
+  }
+
   return nil
 }
 
-/// Parses `--socket`.
-private func parseSocketArgument(
+/// Parses one `--flag value` or `--flag=value` option.
+private func parseValueArgument(
+  option: CLIOption,
   _ argument: String,
   arguments: [String],
   index: Int
-) throws -> (socketPath: String, nextIndex: Int)? {
-  if let value = CLI.inlineValue(for: CLI.socketOption, argument: argument) {
+) throws -> (value: String, nextIndex: Int)? {
+  if let value = CLI.inlineValue(for: option, argument: argument) {
     guard !value.isEmpty else {
-      throw AppError.message("missing value for \(CLI.socketOption.flag)")
+      throw AppError.message("missing value for \(option.flag)")
     }
 
     return (value, index + 1)
   }
 
-  guard CLI.matches(CLI.socketOption, argument: argument) else {
+  guard CLI.matches(option, argument: argument) else {
     return nil
   }
 
@@ -398,12 +455,30 @@ private func parseSocketArgument(
     throw AppError.message("missing value for \(argument)")
   }
 
-  let socketPath = arguments[nextIndex]
-  guard !socketPath.isEmpty else {
+  let value = arguments[nextIndex]
+  guard !value.isEmpty else {
     throw AppError.message("missing value for \(argument)")
   }
 
-  return (socketPath, nextIndex + 1)
+  return (value, nextIndex + 1)
+}
+
+/// Parses `--socket`.
+private func parseSocketArgument(
+  _ argument: String,
+  arguments: [String],
+  index: Int
+) throws -> (socketPath: String, nextIndex: Int)? {
+  if let parsed = try parseValueArgument(
+    option: CLI.socketOption,
+    argument,
+    arguments: arguments,
+    index: index
+  ) {
+    return (socketPath: parsed.value, nextIndex: parsed.nextIndex)
+  }
+
+  return nil
 }
 
 /// Sends one IPC command.
@@ -477,4 +552,87 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
   }
 
   context.debug("metrics stream ended")
+}
+
+/// Validates config by running the EasyBar app in dry-run validation mode.
+private func validateConfig(configPath: String?, context: AppContext) throws {
+  let appPath = try resolveEasyBarExecutablePath()
+  context.debug("validating config with app executable at \(appPath)")
+
+  let process = Process()
+  let outputPipe = Pipe()
+  let errorPipe = Pipe()
+
+  process.executableURL = URL(fileURLWithPath: appPath)
+  process.standardOutput = outputPipe
+  process.standardError = errorPipe
+
+  var environment = ProcessInfo.processInfo.environment
+  environment["EASYBAR_VALIDATE_CONFIG_ONLY"] = "1"
+  if let configPath {
+    environment[SharedEnvironmentKeys.configPath] = configPath
+  }
+  process.environment = environment
+
+  try process.run()
+  process.waitUntilExit()
+
+  let output = String(
+    data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
+    encoding: .utf8
+  ) ?? ""
+  let errorOutput = String(
+    data: errorPipe.fileHandleForReading.readDataToEndOfFile(),
+    encoding: .utf8
+  ) ?? ""
+
+  if process.terminationStatus == 0 {
+    if !output.isEmpty {
+      fputs(output, stdout)
+    }
+    return
+  }
+
+  let message =
+    errorOutput
+    .split(whereSeparator: \.isNewline)
+    .joined(separator: "\n")
+    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+  if !message.isEmpty {
+    throw AppError.message(message)
+  }
+
+  throw AppError.message("config validation failed")
+}
+
+/// Resolves the EasyBar app executable used for dry-run validation.
+private func resolveEasyBarExecutablePath() throws -> String {
+  let fileManager = FileManager.default
+
+  if let configuredPath = ProcessInfo.processInfo.environment["EASYBAR_APP_PATH"],
+    fileManager.isExecutableFile(atPath: configuredPath)
+  {
+    return configuredPath
+  }
+
+  let cliExecutableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+  let executableDirectory = cliExecutableURL.deletingLastPathComponent()
+  let candidates = [
+    executableDirectory.appendingPathComponent("EasyBar").path,
+    executableDirectory
+      .appendingPathComponent("EasyBar.app")
+      .appendingPathComponent("Contents")
+      .appendingPathComponent("MacOS")
+      .appendingPathComponent("EasyBar")
+      .path,
+  ]
+
+  if let match = candidates.first(where: { fileManager.isExecutableFile(atPath: $0) }) {
+    return match
+  }
+
+  throw AppError.message(
+    "unable to locate EasyBar executable for config validation; set EASYBAR_APP_PATH"
+  )
 }

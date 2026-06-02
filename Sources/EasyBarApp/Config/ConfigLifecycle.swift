@@ -1,3 +1,4 @@
+import Darwin
 import EasyBarShared
 import Foundation
 
@@ -50,14 +51,33 @@ extension Config {
   }
 
   /// Builds one staged config state without mutating the live singleton.
-  private static func makeLoadedState() throws -> LoadedState {
+  private static func makeLoadedState(validateOnly: Bool = false) throws -> LoadedState {
     let staged = Self.makeUnloadedConfig()
     staged.resetToDefaults()
-    try staged.load()
+    try staged.load(validateOnly: validateOnly)
 
     return LoadedState(
       snapshot: staged.snapshot(),
       registeredDirectories: staged.registeredDirectories
     )
+  }
+
+  /// Validates config without mutating the live singleton or creating directories.
+  static func validate(configPathOverride: String? = nil) throws -> LoadedState {
+    let originalConfigPath = ProcessInfo.processInfo.environment[SharedEnvironmentKeys.configPath]
+
+    if let configPathOverride {
+      setenv(SharedEnvironmentKeys.configPath, configPathOverride, 1)
+    }
+
+    defer {
+      if let originalConfigPath {
+        setenv(SharedEnvironmentKeys.configPath, originalConfigPath, 1)
+      } else {
+        unsetenv(SharedEnvironmentKeys.configPath)
+      }
+    }
+
+    return try makeLoadedState(validateOnly: true)
   }
 }

@@ -5,7 +5,7 @@ import TOMLKit
 extension Config {
 
   /// Loads configuration from disk.
-  func load() throws {
+  func load(validateOnly: Bool = false) throws {
     resetRegisteredDirectories()
 
     let resolvedConfigPath = configPath
@@ -60,7 +60,9 @@ extension Config {
       try parseBar(from: TOMLTable())
     }
 
-    try ensureRequiredDirectoriesExist()
+    if !validateOnly {
+      try ensureRequiredDirectoriesExist()
+    }
   }
 
   /// Returns the config path override from the environment when present.

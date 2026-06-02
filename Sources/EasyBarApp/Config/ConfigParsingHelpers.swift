@@ -110,15 +110,6 @@ extension Config {
     )
   }
 
-  /// Returns the legacy boolean logging override mapped into a log level.
-  func legacyConfigLogLevel(from table: TOMLTable) -> ProcessLogLevel? {
-    guard let debugEnabled = table["debug"]?.bool else {
-      return nil
-    }
-
-    return debugEnabled ? .debug : .info
-  }
-
   /// Parses one battery color mode.
   func parseBatteryColorMode(
     _ value: String,
