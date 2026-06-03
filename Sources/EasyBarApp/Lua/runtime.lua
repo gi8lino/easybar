@@ -60,7 +60,6 @@ local render_dirty = false
 local last_subscription_payload = nil
 local next_command_sequence = 0
 local runtime_command_session = tostring({}):gsub("[^%w]", "_")
-local strict_public_api = os.getenv("EASYBAR_STRICT_PUBLIC_API") == "1"
 local default_exec_options = {
 	timeout_seconds = tonumber(os.getenv("EASYBAR_LUA_COMMAND_TIMEOUT_SECONDS")),
 	max_output_bytes = tonumber(os.getenv("EASYBAR_LUA_COMMAND_MAX_OUTPUT_BYTES")),
@@ -241,19 +240,16 @@ registry = api.new(log, {
 	on_async_callback_error = function(command, err)
 		log.error("lua async callback failed command=" .. tostring(command) .. " error=" .. tostring(err))
 	end,
-	on_invalid_public_api = function(path, value, expected, fallback)
-		log.warn(
-			"lua normalized invalid public api value path="
+	on_invalid_public_api = function(path, value, expected)
+		log.error(
+			"lua rejected invalid public api value path="
 				.. tostring(path)
 				.. " value="
 				.. tostring(value)
 				.. " expected="
 				.. tostring(expected)
-				.. " fallback="
-				.. tostring(fallback)
 		)
 	end,
-	strict_public_api = strict_public_api,
 	default_exec_options = default_exec_options,
 })
 

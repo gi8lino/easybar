@@ -501,8 +501,6 @@ extension LuaProcessController {
         _, themeValue in themeValue
       }
       .merging([
-        "EASYBAR_STRICT_PUBLIC_API":
-          config.develop || config.loggingLevel.allows(.trace) ? "1" : "0",
         SharedEnvironmentKeys.luaCommandTimeoutSeconds:
           String(config.luaCommandTimeoutSeconds),
         SharedEnvironmentKeys.luaCommandMaxOutputBytes:

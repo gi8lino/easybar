@@ -647,56 +647,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertNil(rootNode(in: updated)?.labelColor)
   }
 
-  func testInvalidBooleanValueFallsBackOutsideStrictMode() async throws {
-    let widgetsDirectoryURL = try makeWidgetsDirectory()
-
-    try """
-    easybar.add("item", "brew", {
-    	position = "right",
-    	drawing = "maybe",
-    	label = "Idle",
-    })
-    """.write(
-      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
-      atomically: true,
-      encoding: .utf8
-    )
-
-    let logger = ProcessLogger(
-      label: "lua.invalid-bool-fallback.test",
-      minimumLevel: .error
-    )
-    let runtimeController = LuaProcessController(logger: logger)
-
-    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
-      XCTFail("Missing bundled runtime.lua")
-      return
-    }
-
-    let recorder = RuntimeUpdateRecorder()
-    let runtime = try RuntimeProcess(
-      runtimePath: runtimePath,
-      widgetsDirectoryURL: widgetsDirectoryURL,
-      widgetFile: "brew.lua",
-      recorder: recorder,
-      decoder: decoder,
-      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
-      autoRespondToCommands: true,
-      environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "0"]
-    )
-    defer {
-      runtime.stop()
-    }
-
-    let update = try await nextTreeUpdate(
-      from: recorder,
-      matching: { [self] in rootNode(in: $0)?.id == "brew" }
-    )
-
-    XCTAssertTrue(rootNode(in: update)?.visible ?? false)
-  }
-
-  func testInvalidBooleanValueFailsInStrictMode() async throws {
+  func testInvalidBooleanValuePreventsWidgetFromLoading() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
@@ -730,8 +681,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
       recorder: recorder,
       decoder: decoder,
       environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
-      autoRespondToCommands: true,
-      environmentOverrides: ["EASYBAR_STRICT_PUBLIC_API": "1"]
+      autoRespondToCommands: true
     )
     defer {
       runtime.stop()
@@ -1081,8 +1031,7 @@ extension LuaRenderCoalescingTests {
       recorder: RuntimeUpdateRecorder,
       decoder: JSONDecoder,
       environment: [String: String],
-      autoRespondToCommands: Bool,
-      environmentOverrides: [String: String] = [:]
+      autoRespondToCommands: Bool
     ) throws {
       let hostBridge = RuntimeHostBridge(
         recorder: recorder,
@@ -1097,9 +1046,7 @@ extension LuaRenderCoalescingTests {
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
-      process.environment = environment.merging(environmentOverrides) {
-        _, override in override
-      }
+      process.environment = environment
 
       stdoutObserver = RuntimeLineObserver { line in
         do {
@@ -1451,18 +1398,26 @@ extension LuaRenderCoalescingTests {
 
 /// Terminates one spawned runtime process without risking an indefinite wait in CI.
 private func terminate(_ process: Process, gracePeriodNanoseconds: UInt64 = 500_000_000) {
-  guard process.isRunning else { return }
+  guard process.isRunning else {
+    return
+  }
 
   process.terminate()
-  let deadline = DispatchTime.now().uptimeNanoseconds + gracePeriodNanoseconds
+  waitForProcessExit(process, timeoutNanoseconds: gracePeriodNanoseconds)
+
+  guard process.isRunning else {
+    return
+  }
+
+  kill(process.processIdentifier, SIGKILL)
+  waitForProcessExit(process, timeoutNanoseconds: gracePeriodNanoseconds)
+}
+
+/// Waits briefly for a process to exit without blocking the test process indefinitely.
+private func waitForProcessExit(_ process: Process, timeoutNanoseconds: UInt64) {
+  let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
 
   while process.isRunning && DispatchTime.now().uptimeNanoseconds < deadline {
     usleep(10_000)
   }
-
-  if process.isRunning {
-    kill(process.processIdentifier, SIGKILL)
-  }
-
-  return process.waitUntilExit()
 }
