@@ -36,7 +36,7 @@ final class MetricsStreamingTests: XCTestCase {
       logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
       socketPath: socketPath
     )
-    server.start { _ in }
+    server.start(handler: { _ in }, validateConfigHandler: { _ in .rejected(message: "unused") })
     defer { server.stop() }
 
     var clientFD = try connectUnixSocket(path: socketPath)
@@ -61,6 +61,31 @@ final class MetricsStreamingTests: XCTestCase {
     try await waitUntil("metrics streaming to stop") {
       !MetricsCoordinator.shared.isStreamingActive
     }
+  }
+
+  func testValidateConfigRequestReturnsValidatedPath() async throws {
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    server.start(
+      handler: { _ in },
+      validateConfigHandler: { configPath in
+        .configValidated(configPath: configPath ?? "<default>")
+      }
+    )
+    defer { server.stop() }
+
+    let client = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+    let configPath = socketDirectoryURL.appendingPathComponent("config.toml").path
+
+    let response = try client.send(request: .makeValidateConfig(configPath: configPath))
+
+    guard case .configValidated(let validatedPath) = response else {
+      return XCTFail("Expected configValidated response, got \(response)")
+    }
+
+    XCTAssertEqual(validatedPath, configPath)
   }
 
   private func connectUnixSocket(path: String) throws -> Int32 {

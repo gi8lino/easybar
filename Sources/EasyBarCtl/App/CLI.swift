@@ -19,12 +19,13 @@ private struct AppController {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
+      let socketPath = parsed.socketPath ?? SharedRuntimeConfig.current.easyBarSocketPath
+
       switch parsed.action {
       case .validateConfig:
-        try validateConfig(configPath: parsed.configPath, context: context)
-      case .command(let command):
-        let socketPath = parsed.socketPath ?? SharedRuntimeConfig.current.easyBarSocketPath
+        try validateConfig(configPath: parsed.configPath, socketPath: socketPath, context: context)
 
+      case .command(let command):
         if command == .metrics {
           if parsed.watchMetrics {
             try streamMetrics(to: socketPath, context: context)
@@ -111,9 +112,10 @@ private struct AppContext {
 
   /// Creates a context and enables debug logging when requested.
   init(debugEnabled: Bool) {
-    let envEnabled = boolEnvironmentValue(named: "EASYBAR_DEBUG") ?? false
     logger = ProcessLogger(
-      label: "easybarctl", minimumLevel: (debugEnabled || envEnabled) ? .debug : .info)
+      label: "easybarctl",
+      minimumLevel: debugEnabled ? .debug : .info
+    )
   }
 
   /// Logs a debug line.
@@ -182,40 +184,46 @@ private enum CLI {
     description: "Override socket path",
     placeholder: "path"
   )
+
   /// Option used to override the config path for validation.
   static let configOption = CLIOption(
     flag: "--config",
     description: "Override config path for validation",
     placeholder: "path"
   )
+
   /// Option used to enable debug output.
   static let debugOption = CLIOption(
     flag: "--debug",
     short: "-d",
     description: "Enable debug output"
   )
+
   /// Option used to print the app version.
   static let versionOption = CLIOption(
     flag: "--version",
     short: "-v",
     description: "Show the easybar version"
   )
+
   /// Option used to print usage help.
   static let helpOption = CLIOption(
     flag: "--help",
     short: "-h",
     description: "Show this help"
   )
+
   /// Option used to stream metrics continuously.
   static let watchOption = CLIOption(
     flag: "--watch",
     short: "-w",
     description: "Keep streaming metrics and render rolling graphs"
   )
-  /// Option used to validate config without contacting the running app.
+
+  /// Option used to validate config through the running EasyBar app.
   static let validateConfigOption = CLIOption(
     flag: "--validate-config",
-    description: "Validate config without starting EasyBar"
+    description: "Ask the running EasyBar app to validate config"
   )
 
   /// Command options that map directly to IPC commands.
@@ -352,10 +360,6 @@ private func parseArguments(_ arguments: [String]) throws -> ParsedArguments {
 
   if watchMetrics, action != .command(.metrics) {
     throw AppError.message("--watch may only be used with --metrics")
-  }
-
-  if socketPath != nil, action == .validateConfig {
-    throw AppError.message("--socket may not be used with --validate-config")
   }
 
   if configPath != nil, action != .validateConfig {
@@ -496,6 +500,10 @@ private func sendCommand(_ command: IPC.Command, to socketPath: String, context:
     context.debug("decoded response kind='rejected' message='\(message ?? "<nil>")'")
     throw AppError.message(message ?? "command rejected")
 
+  case .configValidated:
+    context.debug("decoded response kind='config_validated' message='<nil>'")
+    throw AppError.message("unexpected config validation response")
+
   case .metrics:
     context.debug("decoded response kind='metrics' message='<nil>'")
     throw AppError.message("unexpected metrics response")
@@ -520,7 +528,7 @@ private func fetchMetricsSnapshot(from socketPath: String, context: AppContext) 
   case .rejected(let message):
     throw AppError.message(message ?? "metrics unavailable")
 
-  case .accepted:
+  case .accepted, .configValidated:
     throw AppError.message("metrics unavailable")
   }
 }
@@ -546,7 +554,7 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
     case .rejected(let message):
       throw AppError.message(message ?? "metrics rejected")
 
-    case .accepted:
+    case .accepted, .configValidated:
       return
     }
   }
@@ -554,87 +562,46 @@ private func streamMetrics(to socketPath: String, context: AppContext) throws {
   context.debug("metrics stream ended")
 }
 
-/// Validates config by running the EasyBar app in dry-run validation mode.
-private func validateConfig(configPath: String?, context: AppContext) throws {
-  let appPath = try resolveEasyBarExecutablePath()
-  context.debug("validating config with app executable at \(appPath)")
+/// Asks the running EasyBar app to validate config through the control socket.
+private func validateConfig(configPath: String?, socketPath: String, context: AppContext) throws {
+  let requestedConfigPath = explicitValidationConfigPath(configPath)
 
-  let process = Process()
-  let outputPipe = Pipe()
-  let errorPipe = Pipe()
-
-  process.executableURL = URL(fileURLWithPath: appPath)
-  process.standardOutput = outputPipe
-  process.standardError = errorPipe
-
-  var environment = ProcessInfo.processInfo.environment
-  environment["EASYBAR_VALIDATE_CONFIG_ONLY"] = "1"
-  if let configPath {
-    environment[SharedEnvironmentKeys.configPath] = configPath
-  }
-  process.environment = environment
-
-  try process.run()
-  process.waitUntilExit()
-
-  let output =
-    String(
-      data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
-      encoding: .utf8
-    ) ?? ""
-  let errorOutput =
-    String(
-      data: errorPipe.fileHandleForReading.readDataToEndOfFile(),
-      encoding: .utf8
-    ) ?? ""
-
-  if process.terminationStatus == 0 {
-    if !output.isEmpty {
-      fputs(output, stdout)
-    }
-    return
+  if let requestedConfigPath {
+    context.debug("requesting config validation for \(requestedConfigPath) through \(socketPath)")
+  } else {
+    context.debug("requesting default config validation through \(socketPath)")
   }
 
-  let message =
-    errorOutput
-    .split(whereSeparator: \.isNewline)
-    .joined(separator: "\n")
-    .trimmingCharacters(in: .whitespacesAndNewlines)
+  let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+  let response = try transport.send(
+    request: .makeValidateConfig(configPath: requestedConfigPath)
+  )
 
-  if !message.isEmpty {
-    throw AppError.message(message)
+  switch response {
+  case .configValidated(let validatedPath):
+    fputs("config valid: \(validatedPath)\n", stdout)
+
+  case .rejected(let message):
+    throw AppError.message(message ?? "config validation failed")
+
+  case .accepted:
+    throw AppError.message("config validation did not return a result")
+
+  case .metrics:
+    throw AppError.message("unexpected metrics response")
   }
-
-  throw AppError.message("config validation failed")
 }
 
-/// Resolves the EasyBar app executable used for dry-run validation.
-private func resolveEasyBarExecutablePath() throws -> String {
-  let fileManager = FileManager.default
-
-  if let configuredPath = ProcessInfo.processInfo.environment["EASYBAR_APP_PATH"],
-    fileManager.isExecutableFile(atPath: configuredPath)
-  {
-    return configuredPath
+/// Returns the explicit validation path from CLI or environment overrides.
+private func explicitValidationConfigPath(_ configPath: String?) -> String? {
+  if let configPath, !configPath.isEmpty {
+    return configPath
   }
 
-  let cliExecutableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
-  let executableDirectory = cliExecutableURL.deletingLastPathComponent()
-  let candidates = [
-    executableDirectory.appendingPathComponent("EasyBar").path,
-    executableDirectory
-      .appendingPathComponent("EasyBar.app")
-      .appendingPathComponent("Contents")
-      .appendingPathComponent("MacOS")
-      .appendingPathComponent("EasyBar")
-      .path,
-  ]
-
-  if let match = candidates.first(where: { fileManager.isExecutableFile(atPath: $0) }) {
-    return match
+  let environmentPath = ProcessInfo.processInfo.environment[SharedEnvironmentKeys.configPath]
+  guard let environmentPath, !environmentPath.isEmpty else {
+    return nil
   }
 
-  throw AppError.message(
-    "unable to locate EasyBar executable for config validation; set EASYBAR_APP_PATH"
-  )
+  return environmentPath
 }

@@ -643,6 +643,34 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: loggingDirectory))
   }
 
+  /// Handles test validate prefers explicit config path over environment override.
+  func testValidatePrefersExplicitConfigPathOverEnvironmentOverride() throws {
+    let explicitConfigFileURL = tempDirectoryURL.appendingPathComponent("explicit-validate.toml")
+    let environmentConfigFileURL = tempDirectoryURL.appendingPathComponent("environment-validate.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "debug"
+      """,
+      to: explicitConfigFileURL
+    )
+
+    try writeConfig(
+      """
+      [logging]
+      level = "definitely_not_a_level"
+      """,
+      to: environmentConfigFileURL
+    )
+
+    setEnvironmentValue(environmentConfigFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let loadedState = try Config.validate(configPathOverride: explicitConfigFileURL.path)
+
+    XCTAssertEqual(loadedState.snapshot.logging.level, .debug)
+  }
+
   /// Handles test reload expands tilde paths from config file.
   func testReloadExpandsTildePathsFromConfigFile() throws {
     let config = Config.shared

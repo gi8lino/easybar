@@ -19,6 +19,8 @@ final class SocketServer {
   private var socketPath: String
   /// Handler invoked for accepted non-metrics commands.
   private var commandHandler: ((IPC.Command) -> Void)?
+  /// Handler invoked for config validation requests.
+  private var validateConfigHandler: ((String?) async -> IPC.Message)?
 
   /// Creates a socket server bound to the configured socket path.
   init(
@@ -34,8 +36,12 @@ final class SocketServer {
   }
 
   /// Starts the socket listener.
-  func start(handler: @escaping (IPC.Command) -> Void) {
+  func start(
+    handler: @escaping (IPC.Command) -> Void,
+    validateConfigHandler: @escaping (String?) async -> IPC.Message
+  ) {
     commandHandler = handler
+    self.validateConfigHandler = validateConfigHandler
 
     let activeTransport = transport
 
@@ -100,6 +106,7 @@ final class SocketServer {
   /// Stops the socket listener.
   func stop() {
     commandHandler = nil
+    validateConfigHandler = nil
 
     MetricsCoordinator.shared.resetStreaming()
     transport.stop()
@@ -125,32 +132,73 @@ final class SocketServer {
   ) -> Transport.ClientDisposition {
     logger.debug("socket dispatching command '\(request.command.rawValue)'")
 
-    if request.command == .metrics {
-      let snapshot = MetricsCoordinator.shared.snapshot()
-      let sent = transport.send(
-        .metrics(snapshot),
-        to: clientFD
+    switch request {
+    case .metrics(let watch):
+      return handleMetricsRequest(
+        clientFD: clientFD,
+        watch: watch,
+        request: request,
+        transport: transport
       )
 
-      guard sent else {
-        return .close
-      }
+    case .validateConfig(let configPath):
+      return handleValidateConfigRequest(
+        clientFD: clientFD,
+        configPath: configPath,
+        transport: transport
+      )
 
-      guard request.watch else {
-        return .close
-      }
+    case .command(let command):
+      _ = transport.send(.accepted, to: clientFD)
+      handler(command)
+      return .close
+    }
+  }
 
-      transport.addSubscriber(request, for: clientFD)
-      MetricsCoordinator.shared.addStreamingSubscriber(fd: clientFD)
+  /// Handles one metrics request.
+  private func handleMetricsRequest(
+    clientFD: Int32,
+    watch: Bool,
+    request: IPC.Request,
+    transport: Transport
+  ) -> Transport.ClientDisposition {
+    let snapshot = MetricsCoordinator.shared.snapshot()
+    let sent = transport.send(
+      .metrics(snapshot),
+      to: clientFD
+    )
 
-      return .keepOpen
+    guard sent else {
+      return .close
     }
 
-    _ = transport.send(.accepted, to: clientFD)
+    guard watch else {
+      return .close
+    }
 
-    handler(request.command)
+    transport.addSubscriber(request, for: clientFD)
+    MetricsCoordinator.shared.addStreamingSubscriber(fd: clientFD)
 
-    return .close
+    return .keepOpen
+  }
+
+  /// Handles one config validation request using the app's real config validator.
+  private func handleValidateConfigRequest(
+    clientFD: Int32,
+    configPath: String?,
+    transport: Transport
+  ) -> Transport.ClientDisposition {
+    guard let validateConfigHandler else {
+      _ = transport.send(.rejected(message: "config validation unavailable"), to: clientFD)
+      return .close
+    }
+
+    Task {
+      let response = await validateConfigHandler(configPath)
+      _ = transport.send(response, to: clientFD)
+    }
+
+    return .keepOpen
   }
 
   /// Creates one transport bound to the given socket path.

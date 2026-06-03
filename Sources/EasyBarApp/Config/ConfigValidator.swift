@@ -5,6 +5,7 @@ import Foundation
 public enum ConfigValidator {
   /// Result of one validation run.
   public struct Result {
+    /// Resolved path of the validated config file.
     public let configPath: String
   }
 
@@ -13,7 +14,7 @@ public enum ConfigValidator {
     _ = try Config.validate(configPathOverride: configPathOverride)
 
     let resolvedPath =
-      configPathOverride
+      expandedPath(configPathOverride)
       ?? expandedPath(ProcessInfo.processInfo.environment[SharedEnvironmentKeys.configPath])
       ?? SharedPathDefaults.defaultConfigPath().path
 

@@ -140,52 +140,69 @@ actor RuntimeCoordinator {
     socketServer = SocketServer(logger: logger.child("socket_server"))
   }
 
-  /// Starts the actor-owned runtime.
+  /// Starts the runtime and all related services.
   func start() async {
-    guard !lifecycleState.started else { return }
-    lifecycleState.started = true
-    _ = lifecycleState.advanceGeneration()
+    guard !lifecycleState.started else {
+      logger.warn("runtime coordinator already started")
+      return
+    }
 
+    let generation = lifecycleState.advanceGeneration()
+    lifecycleState.started = true
     logger.info("runtime coordinator start begin")
 
     await configureLogging()
+    guard shouldContinueStartup(generation: generation) else { return }
+
+    let loadResult = await configManager.loadInitialConfig()
+    if let errorMessage = loadResult.errorMessage {
+      logger.warn(
+        "initial config load completed with error",
+        .field("error", errorMessage),
+      )
+    }
+    guard shouldContinueStartup(generation: generation) else { return }
+
+    await configureLogging()
+    guard shouldContinueStartup(generation: generation) else { return }
 
     await MainActor.run {
       services.nativeWidgetRegistry.start()
     }
+    guard shouldContinueStartup(generation: generation) else { return }
 
-    services.calendarAgentEventRelay.start()
-    let didStartLuaWidgets = await widgetEngine.start()
-    if !didStartLuaWidgets {
-      logger.warn("runtime coordinator continued without lua widgets because startup failed")
-    }
-    aeroSpaceService.start()
+    await widgetEngine.start()
+    guard shouldContinueStartup(generation: generation) else { return }
 
     await startFileWatcher()
+    guard shouldContinueStartup(generation: generation) else { return }
+
     startSocketServer()
+
+    aeroSpaceService.triggerRefresh()
 
     logger.info("runtime coordinator start end")
   }
 
-  /// Stops the actor-owned runtime.
+  /// Stops the runtime and all related services.
   func stop() async {
-    guard lifecycleState.started else { return }
-    lifecycleState.started = false
-    _ = lifecycleState.advanceGeneration()
+    guard lifecycleState.started else {
+      logger.info("runtime coordinator stop ignored because it is not started")
+      return
+    }
 
     logger.info("runtime coordinator stop begin")
 
+    lifecycleState.started = false
+    _ = lifecycleState.advanceGeneration()
     lifecycleState.resetWork()
 
     watcherTask?.cancel()
     watcherTask = nil
-
     await fileWatcher.stop()
 
     metricsCoordinator.onSnapshot = nil
     socketServer.stop()
-    aeroSpaceService.stop()
-    services.calendarAgentEventRelay.stop()
 
     await widgetEngine.shutdown()
 
@@ -289,6 +306,31 @@ actor RuntimeCoordinator {
     logger.info("refreshRuntime end")
   }
 
+  /// Validates config through the serialized config manager path.
+  func validateConfig(configPathOverride: String?) async -> IPC.Message {
+    logger.info(
+      "validateConfig begin",
+      .field("config_path_override", configPathOverride ?? "<default>")
+    )
+
+    let result = await configManager.validateConfig(configPathOverride: configPathOverride)
+
+    if let errorMessage = result.errorMessage {
+      logger.warn(
+        "validateConfig failed",
+        .field("config_path", result.configPath),
+        .field("error", errorMessage)
+      )
+      return .rejected(message: errorMessage)
+    }
+
+    logger.info(
+      "validateConfig succeeded",
+      .field("config_path", result.configPath)
+    )
+    return .configValidated(configPath: result.configPath)
+  }
+
   /// Handles one incoming IPC command.
   func handleSocketCommand(_ command: IPC.Command) async {
     logger.info(
@@ -317,6 +359,9 @@ actor RuntimeCoordinator {
 
     case .restartLuaRuntime:
       await restartLuaRuntime()
+
+    case .validateConfig:
+      break
 
     case .metrics:
       break
@@ -399,6 +444,20 @@ actor RuntimeCoordinator {
     }
   }
 
+  /// Returns whether startup work can still continue for the provided generation.
+  private func shouldContinueStartup(generation: UInt64) -> Bool {
+    guard lifecycleState.started, lifecycleState.generation == generation else {
+      logger.info(
+        "startup aborted because runtime stopped or restarted",
+        .field("generation", "\(generation)"),
+        .field("current_generation", "\(lifecycleState.generation)"),
+      )
+      return false
+    }
+
+    return true
+  }
+
   /// Starts the IPC socket server.
   private func startSocketServer() {
     metricsCoordinator.onSnapshot = { [weak self] snapshot in
@@ -413,6 +472,12 @@ actor RuntimeCoordinator {
       Task {
         await self.handleSocketCommand(command)
       }
+    } validateConfigHandler: { [weak self] configPathOverride in
+      guard let self else {
+        return .rejected(message: "config validation unavailable")
+      }
+
+      return await self.validateConfig(configPathOverride: configPathOverride)
     }
   }
 

@@ -3,6 +3,13 @@ import Foundation
 
 /// Actor-owned access to config mutation and runtime-facing config reads.
 actor ConfigManager {
+  struct ValidationResult: Sendable {
+    /// Resolved path of the validated config file.
+    let configPath: String
+    /// User-facing validation error when validation failed.
+    let errorMessage: String?
+  }
+
   struct LuaCommandSettings: Sendable {
     let timeoutSeconds: TimeInterval
     let maxOutputBytes: Int
@@ -18,6 +25,25 @@ actor ConfigManager {
     let succeeded: Bool
     /// User-facing reload error when reload failed.
     let errorMessage: String?
+  }
+
+  /// Loads the active config during app startup and returns a stable result.
+  func loadInitialConfig() async -> ReloadResult {
+    await MainActor.run {
+      let error = Config.shared.loadInitialState()
+
+      if let error {
+        return ReloadResult(
+          succeeded: false,
+          errorMessage: String(describing: error)
+        )
+      }
+
+      return ReloadResult(
+        succeeded: true,
+        errorMessage: nil
+      )
+    }
   }
 
   /// Reloads the active config and returns a stable result.
@@ -36,6 +62,24 @@ actor ConfigManager {
         succeeded: true,
         errorMessage: nil
       )
+    }
+  }
+
+  /// Validates config without mutating live runtime state.
+  func validateConfig(configPathOverride: String? = nil) async -> ValidationResult {
+    await MainActor.run {
+      do {
+        let result = try ConfigValidator.validate(configPathOverride: configPathOverride)
+        return ValidationResult(
+          configPath: result.configPath,
+          errorMessage: nil
+        )
+      } catch {
+        return ValidationResult(
+          configPath: Self.resolvedValidationConfigPath(configPathOverride),
+          errorMessage: Self.validationErrorMessage(error)
+        )
+      }
     }
   }
 
@@ -88,5 +132,27 @@ actor ConfigManager {
         maxAsyncJobs: Config.shared.luaCommandMaxAsyncJobs
       )
     }
+  }
+
+  /// Returns the resolved config path used for validation status and errors.
+  private static func resolvedValidationConfigPath(_ configPathOverride: String?) -> String {
+    if let resolvedOverride = expandedPath(configPathOverride) {
+      return resolvedOverride
+    }
+
+    return expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
+      ?? SharedPathDefaults.defaultConfigPath().path
+  }
+
+  /// Returns a concise user-facing validation error message.
+  private static func validationErrorMessage(_ error: any Error) -> String {
+    if let localizedError = error as? LocalizedError,
+      let description = localizedError.errorDescription,
+      !description.isEmpty
+    {
+      return description
+    }
+
+    return "\(error)"
   }
 }

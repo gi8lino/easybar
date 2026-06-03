@@ -7,10 +7,6 @@ enum EasyBarAppMain {
   /// Runs validation-only mode or starts the AppKit application loop.
   @MainActor
   static func main() {
-    if let validationExitCode = AppValidationMode.exitCodeIfRequested() {
-      Foundation.exit(validationExitCode)
-    }
-
     let app = NSApplication.shared
     let delegate = AppDelegate()
 

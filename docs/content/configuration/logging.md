@@ -44,15 +44,27 @@ The main app and helper agents use this config-driven level instead of legacy `E
 
 `EASYBAR_CONFIG_PATH` remains the main environment override for the runtime config file.
 
-The `easybar` CLI may still support its own debug flag or CLI-only debug env handling, but that is separate from app and agent runtime logging.
+The `easybar` CLI can enable its own debug output explicitly with `--debug`. This does not change the main app or agent log level.
 
 ## CLI debug output
 
-The `easybar` CLI can enable debug output independently through:
+Use `--debug` when you want CLI-side diagnostics:
 
 ```bash
-easybar --debug
-EASYBAR_DEBUG=1 easybar ...
+easybar --debug --metrics
+easybar --debug --validate-config --config /path/to/config.toml
 ```
 
-This CLI-only behavior does not change the main app or agent log level.
+````
+
+This keeps validation explicit:
+
+```bash
+easybar --validate-config --config /path/to/config.toml
+````
+
+or:
+
+```bash
+EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
+```

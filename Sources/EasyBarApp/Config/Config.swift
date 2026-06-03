@@ -7,6 +7,9 @@ final class Config: ObservableObject {
   /// Shared process-wide config instance.
   static let shared = Config()
 
+  /// Explicit config path override used by staged validation loads.
+  private let configPathOverride: String?
+
   /// Context in which config loading failed.
   enum LoadFailureContext: Equatable {
     /// Initial startup could not load config.
@@ -237,7 +240,9 @@ final class Config: ObservableObject {
   /// Runtime directories required by parsed config.
   var registeredDirectories: [String: RequiredDirectory] = [:]
 
-  private init() {
+  private init(configPathOverride: String? = nil) {
+    self.configPathOverride = expandedPath(configPathOverride)
+
     appSection = .init(
       widgetsPath: "",
       luaPath: SharedPathDefaults.defaultLuaPath,
@@ -275,12 +280,16 @@ final class Config: ObservableObject {
   }
 
   /// Builds one unloaded config instance for staged parsing work.
-  static func makeUnloadedConfig() -> Config {
-    Config()
+  static func makeUnloadedConfig(configPathOverride: String? = nil) -> Config {
+    Config(configPathOverride: configPathOverride)
   }
 
   /// Absolute path to the active config file.
   var configPath: String {
+    if let configPathOverride {
+      return configPathOverride
+    }
+
     if let override = environmentConfigPathOverride() {
       return override
     }

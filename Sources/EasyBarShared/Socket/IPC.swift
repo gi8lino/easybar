@@ -12,26 +12,37 @@ extension IPC {
     case manualRefresh = "manual_refresh"
     case restartLuaRuntime = "restart_lua_runtime"
     case reloadConfig = "reload_config"
+    case validateConfig = "validate_config"
     case metrics = "metrics"
   }
 
   /// One IPC request sent to the EasyBar socket.
   public enum Request: Codable {
     case command(Command)
+    case validateConfig(configPath: String?)
     case metrics(watch: Bool)
 
     private enum CodingKeys: String, CodingKey {
       case command
+      case configPath = "config_path"
       case watch
     }
 
     /// Builds one non-streaming IPC command request.
     public static func makeCommand(_ command: Command) -> Self {
-      if command == .metrics {
+      switch command {
+      case .metrics:
         return .metrics(watch: false)
+      case .validateConfig:
+        return .validateConfig(configPath: nil)
+      default:
+        return .command(command)
       }
+    }
 
-      return .command(command)
+    /// Builds one config validation request.
+    public static func makeValidateConfig(configPath: String? = nil) -> Self {
+      return .validateConfig(configPath: configPath)
     }
 
     /// Builds one metrics request.
@@ -44,15 +55,27 @@ extension IPC {
       switch self {
       case .command(let command):
         return command
+      case .validateConfig:
+        return .validateConfig
       case .metrics:
         return .metrics
+      }
+    }
+
+    /// Returns the config path requested for validation, when present.
+    public var configPath: String? {
+      switch self {
+      case .validateConfig(let configPath):
+        return configPath
+      case .command, .metrics:
+        return nil
       }
     }
 
     /// Returns whether this request keeps the metrics stream open.
     public var watch: Bool {
       switch self {
-      case .command:
+      case .command, .validateConfig:
         return false
       case .metrics(let watch):
         return watch
@@ -64,9 +87,14 @@ extension IPC {
       let container = try decoder.container(keyedBy: CodingKeys.self)
       let command = try container.decode(Command.self, forKey: .command)
 
-      if command == .metrics {
+      switch command {
+      case .metrics:
         self = .metrics(watch: try container.decodeIfPresent(Bool.self, forKey: .watch) ?? false)
-      } else {
+      case .validateConfig:
+        self = .validateConfig(
+          configPath: try container.decodeIfPresent(String.self, forKey: .configPath)
+        )
+      default:
         self = .command(command)
       }
     }
@@ -78,6 +106,10 @@ extension IPC {
       switch self {
       case .command(let command):
         try container.encode(command, forKey: .command)
+
+      case .validateConfig(let configPath):
+        try container.encode(Command.validateConfig, forKey: .command)
+        try container.encodeIfPresent(configPath, forKey: .configPath)
 
       case .metrics(let watch):
         try container.encode(Command.metrics, forKey: .command)
@@ -93,16 +125,19 @@ extension IPC {
     public enum Kind: String, Codable {
       case accepted
       case rejected
+      case configValidated = "config_validated"
       case metrics
     }
 
     case accepted
     case rejected(message: String?)
+    case configValidated(configPath: String)
     case metrics(MetricsSnapshot)
 
     private enum CodingKeys: String, CodingKey {
       case kind
       case message
+      case configPath = "config_path"
       case metrics
     }
 
@@ -113,6 +148,8 @@ extension IPC {
         return .accepted
       case .rejected:
         return .rejected
+      case .configValidated:
+        return .configValidated
       case .metrics:
         return .metrics
       }
@@ -123,7 +160,17 @@ extension IPC {
       switch self {
       case .rejected(let message):
         return message
-      case .accepted, .metrics:
+      case .accepted, .configValidated, .metrics:
+        return nil
+      }
+    }
+
+    /// Returns the validated config path when present.
+    public var configPath: String? {
+      switch self {
+      case .configValidated(let configPath):
+        return configPath
+      case .accepted, .rejected, .metrics:
         return nil
       }
     }
@@ -133,7 +180,7 @@ extension IPC {
       switch self {
       case .metrics(let snapshot):
         return snapshot
-      case .accepted, .rejected:
+      case .accepted, .rejected, .configValidated:
         return nil
       }
     }
@@ -149,6 +196,11 @@ extension IPC {
 
       case .rejected:
         self = .rejected(message: try container.decodeIfPresent(String.self, forKey: .message))
+
+      case .configValidated:
+        self = .configValidated(
+          configPath: try container.decode(String.self, forKey: .configPath)
+        )
 
       case .metrics:
         self = .metrics(try container.decode(MetricsSnapshot.self, forKey: .metrics))
@@ -166,6 +218,10 @@ extension IPC {
       case .rejected(let message):
         try container.encode(Kind.rejected, forKey: .kind)
         try container.encodeIfPresent(message, forKey: .message)
+
+      case .configValidated(let configPath):
+        try container.encode(Kind.configValidated, forKey: .kind)
+        try container.encode(configPath, forKey: .configPath)
 
       case .metrics(let snapshot):
         try container.encode(Kind.metrics, forKey: .kind)
