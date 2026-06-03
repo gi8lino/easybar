@@ -168,6 +168,7 @@ actor RuntimeCoordinator {
 
     await MainActor.run {
       services.nativeWidgetRegistry.start()
+      aeroSpaceService.start()
     }
     guard shouldContinueStartup(generation: generation) else { return }
 
@@ -208,6 +209,7 @@ actor RuntimeCoordinator {
 
     await MainActor.run {
       services.nativeWidgetRegistry.stop()
+      aeroSpaceService.stop()
     }
 
     logger.info("runtime coordinator stop end")
