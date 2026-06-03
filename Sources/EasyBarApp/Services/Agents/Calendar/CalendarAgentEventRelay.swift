@@ -32,7 +32,7 @@ final class CalendarAgentEventRelay {
   )
 
   /// Creates the shared calendar-agent event relay.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

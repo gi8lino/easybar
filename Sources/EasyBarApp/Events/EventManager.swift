@@ -77,7 +77,7 @@ final class EventManager {
   private var activeIntervalSchedules = Set<WidgetIntervalSchedule>()
 
   /// Creates one event manager.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

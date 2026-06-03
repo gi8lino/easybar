@@ -30,7 +30,7 @@ final class TimerEvents {
   private var intervalTimers: [String: Timer] = [:]
 
   /// Creates one timer event source.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

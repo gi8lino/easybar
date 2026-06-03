@@ -20,7 +20,7 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
   private let calendar = Calendar.current
   let logger: ProcessLogger
 
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

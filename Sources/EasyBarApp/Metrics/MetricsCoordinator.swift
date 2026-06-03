@@ -114,7 +114,7 @@ final class MetricsCoordinator {
   }
 
   /// Shared process-wide metrics coordinator.
-  static let shared = MetricsCoordinator()
+  static var shared = MetricsCoordinator()
 
   /// Protects mutable metrics state.
   private let lock = NSLock()
@@ -133,7 +133,7 @@ final class MetricsCoordinator {
   /// Callback invoked for streamed snapshots.
   var onSnapshot: ((IPC.MetricsSnapshot) -> Void)?
 
-  private init() {}
+  init() {}
 
   /// Returns whether metrics streaming is currently active.
   var isStreamingActive: Bool {

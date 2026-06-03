@@ -58,7 +58,7 @@ actor EventHub {
   }
 
   /// Creates one production event hub.
-  private init(
+  init(
     logger: ProcessLogger,
     luaRuntime: LuaRuntime
   ) {

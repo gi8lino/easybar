@@ -4,7 +4,7 @@ import SwiftUI
 /// Main-actor store containing all currently rendered widget nodes.
 @MainActor
 final class WidgetStore: ObservableObject {
-  static let shared = WidgetStore()
+  static var shared = WidgetStore()
 
   @Published private(set) var nodes: [WidgetNodeState] = []
 

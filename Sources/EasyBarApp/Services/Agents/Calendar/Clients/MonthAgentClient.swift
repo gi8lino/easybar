@@ -52,7 +52,7 @@ final class MonthCalendarAgentClient {
   )
 
   /// Creates one month-calendar agent client.
-  private init(logger: ProcessLogger, config: Config) {
+  init(logger: ProcessLogger, config: Config) {
     self.logger = logger
     self.config = config
   }

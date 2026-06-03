@@ -23,7 +23,7 @@ final class PowerEvents {
   private var lastChargingState: Bool?
 
   /// Creates one power event source.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

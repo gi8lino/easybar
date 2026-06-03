@@ -33,7 +33,7 @@ final class UpcomingCalendarAgentClient {
     logger: logger.child("stream")
   )
 
-  private init(logger: ProcessLogger, config: Config) {
+  init(logger: ProcessLogger, config: Config) {
     self.logger = logger
     self.config = config
   }

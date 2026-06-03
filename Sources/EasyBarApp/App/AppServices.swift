@@ -1,12 +1,20 @@
 import EasyBarShared
 
-/// Explicitly bootstrapped app services used by the app shell and runtime coordinator.
+/// Explicitly owned app services used by the app shell and runtime coordinator.
+///
+/// AppServices is the production dependency graph. The legacy `*.shared` globals
+/// are updated from this graph as a compatibility layer for older UI and widget
+/// code that has not been dependency-injected yet.
 struct AppServices {
   let config: Config
   let configManager: ConfigManager
   let luaRuntime: LuaRuntime
   let eventHub: EventHub
   let eventManager: EventManager
+  let systemEvents: SystemEvents
+  let powerEvents: PowerEvents
+  let timerEvents: TimerEvents
+  let volumeEvents: VolumeEvents
   let widgetStore: WidgetStore
   let nativeWidgetRegistry: NativeWidgetRegistry
   let aeroSpaceService: AeroSpaceService
@@ -19,45 +27,95 @@ struct AppServices {
   let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
   let metricsCoordinator: MetricsCoordinator
 
-  /// Bootstraps shared service instances and captures the resulting dependency graph.
+  /// Creates the production app dependency graph.
   @MainActor
   static func bootstrap(logger: ProcessLogger) -> AppServices {
     let config = Config.shared
-    LuaRuntime.bootstrap(logger: logger.child("lua"), config: config)
-    let bootstrappedLuaRuntime = LuaRuntime.shared
+    let configManager = ConfigManager()
+    let metricsCoordinator = MetricsCoordinator()
+    let luaRuntime = LuaRuntime(logger: logger.child("lua"), config: config)
 
-    EventManager.bootstrap(
-      logger: logger.child("events"),
-      luaRuntime: bootstrappedLuaRuntime
+    let eventsLogger = logger.child("events")
+    let eventHub = EventHub(
+      logger: eventsLogger.child("hub"),
+      luaRuntime: luaRuntime
+    )
+    let systemEvents = SystemEvents(logger: eventsLogger.child("system"))
+    let powerEvents = PowerEvents(logger: eventsLogger.child("power"))
+    let timerEvents = TimerEvents(logger: eventsLogger.child("timer"))
+    let volumeEvents = VolumeEvents(logger: eventsLogger.child("volume"))
+    let eventManager = EventManager(logger: eventsLogger.child("manager"))
+
+    let widgetStore = WidgetStore()
+    let nativeWidgetRegistry = NativeWidgetRegistry(
+      logger: logger.child("widgets"),
+      config: config
+    )
+    let aeroSpaceService = AeroSpaceService(logger: logger.child("aerospace"))
+    let calendarAgentEventRelay = CalendarAgentEventRelay(logger: logger.child("calendar_relay"))
+    let networkAgentClient = NetworkAgentClient(logger: logger.child("network_agent"), config: config)
+    let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
+    let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
+    let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
+      logger: logger.child("upcoming_store")
+    )
+    let monthCalendarAgentClient = MonthCalendarAgentClient(
+      logger: logger.child("month_agent"),
+      config: config
+    )
+    let upcomingCalendarAgentClient = UpcomingCalendarAgentClient(
+      logger: logger.child("upcoming_agent"),
+      config: config
     )
 
-    NativeWidgetRegistry.bootstrap(logger: logger.child("widgets"), config: config)
-    AeroSpaceService.bootstrap(logger: logger.child("aerospace"))
-    CalendarAgentEventRelay.bootstrap(logger: logger.child("calendar_relay"))
-    NetworkAgentClient.bootstrap(logger: logger.child("network_agent"), config: config)
-    NativeWiFiStore.bootstrap(logger: logger.child("wifi_store"))
-    NativeMonthCalendarStore.bootstrap(logger: logger.child("month_store"))
-    NativeUpcomingCalendarStore.bootstrap(logger: logger.child("upcoming_store"))
-    MonthCalendarAgentClient.bootstrap(logger: logger.child("month_agent"), config: config)
-    UpcomingCalendarAgentClient.bootstrap(logger: logger.child("upcoming_agent"), config: config)
-
-    return AppServices(
+    let services = AppServices(
       config: config,
-      configManager: ConfigManager.shared,
-      luaRuntime: LuaRuntime.shared,
-      eventHub: EventHub.shared,
-      eventManager: EventManager.shared,
-      widgetStore: WidgetStore.shared,
-      nativeWidgetRegistry: NativeWidgetRegistry.shared,
-      aeroSpaceService: AeroSpaceService.shared,
-      calendarAgentEventRelay: CalendarAgentEventRelay.shared,
-      networkAgentClient: NetworkAgentClient.shared,
-      nativeWiFiStore: NativeWiFiStore.shared,
-      nativeMonthCalendarStore: NativeMonthCalendarStore.shared,
-      nativeUpcomingCalendarStore: NativeUpcomingCalendarStore.shared,
-      monthCalendarAgentClient: MonthCalendarAgentClient.shared,
-      upcomingCalendarAgentClient: UpcomingCalendarAgentClient.shared,
-      metricsCoordinator: MetricsCoordinator.shared
+      configManager: configManager,
+      luaRuntime: luaRuntime,
+      eventHub: eventHub,
+      eventManager: eventManager,
+      systemEvents: systemEvents,
+      powerEvents: powerEvents,
+      timerEvents: timerEvents,
+      volumeEvents: volumeEvents,
+      widgetStore: widgetStore,
+      nativeWidgetRegistry: nativeWidgetRegistry,
+      aeroSpaceService: aeroSpaceService,
+      calendarAgentEventRelay: calendarAgentEventRelay,
+      networkAgentClient: networkAgentClient,
+      nativeWiFiStore: nativeWiFiStore,
+      nativeMonthCalendarStore: nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+      monthCalendarAgentClient: monthCalendarAgentClient,
+      upcomingCalendarAgentClient: upcomingCalendarAgentClient,
+      metricsCoordinator: metricsCoordinator
     )
+
+    services.installSharedCompatibilityLayer()
+    return services
+  }
+
+  /// Mirrors owned service instances into legacy shared accessors.
+  @MainActor
+  private func installSharedCompatibilityLayer() {
+    ConfigManager.shared = configManager
+    MetricsCoordinator.shared = metricsCoordinator
+    LuaRuntime.shared = luaRuntime
+    EventHub.shared = eventHub
+    EventManager.shared = eventManager
+    SystemEvents.shared = systemEvents
+    PowerEvents.shared = powerEvents
+    TimerEvents.shared = timerEvents
+    VolumeEvents.shared = volumeEvents
+    WidgetStore.shared = widgetStore
+    NativeWidgetRegistry.shared = nativeWidgetRegistry
+    AeroSpaceService.shared = aeroSpaceService
+    CalendarAgentEventRelay.shared = calendarAgentEventRelay
+    NetworkAgentClient.shared = networkAgentClient
+    NativeWiFiStore.shared = nativeWiFiStore
+    NativeMonthCalendarStore.shared = nativeMonthCalendarStore
+    NativeUpcomingCalendarStore.shared = nativeUpcomingCalendarStore
+    MonthCalendarAgentClient.shared = monthCalendarAgentClient
+    UpcomingCalendarAgentClient.shared = upcomingCalendarAgentClient
   }
 }

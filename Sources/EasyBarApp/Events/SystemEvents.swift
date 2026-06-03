@@ -43,7 +43,7 @@ final class SystemEvents {
   }
 
   /// Creates one system event source.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

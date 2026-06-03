@@ -47,7 +47,7 @@ final class NativeWiFiStore: ObservableObject {
     let interfaceChangedAt: String?
   }
 
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 

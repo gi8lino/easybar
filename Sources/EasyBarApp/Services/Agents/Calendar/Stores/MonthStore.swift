@@ -25,7 +25,7 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
 
   let logger: ProcessLogger
 
-  private init(
+  init(
     logger: ProcessLogger
   ) {
     self.logger = logger

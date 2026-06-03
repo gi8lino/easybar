@@ -58,7 +58,7 @@ final class AeroSpaceService: ObservableObject {
   private var coordination = CoordinationState()
 
   /// Creates the shared AeroSpace service.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
     self.commandRunner = AeroSpaceCommandRunner(logger: logger.child("commands"))
   }

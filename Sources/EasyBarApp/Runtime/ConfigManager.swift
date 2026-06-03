@@ -17,7 +17,7 @@ actor ConfigManager {
   }
 
   /// Shared actor used for runtime config access.
-  static let shared = ConfigManager()
+  static var shared = ConfigManager()
 
   /// Result of one config reload attempt.
   struct ReloadResult: Sendable {

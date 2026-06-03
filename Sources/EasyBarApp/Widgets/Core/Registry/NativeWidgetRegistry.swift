@@ -23,7 +23,7 @@ final class NativeWidgetRegistry {
   private let config: Config
   private var widgets: [NativeWidget] = []
 
-  private init(logger: ProcessLogger, config: Config) {
+  init(logger: ProcessLogger, config: Config) {
     self.logger = logger
     self.config = config
   }

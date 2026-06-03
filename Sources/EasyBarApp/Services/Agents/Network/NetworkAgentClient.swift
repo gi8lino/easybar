@@ -55,7 +55,7 @@ final class NetworkAgentClient {
   )
 
   /// Creates the shared network-agent client.
-  private init(logger: ProcessLogger, config: Config) {
+  init(logger: ProcessLogger, config: Config) {
     self.logger = logger
     self.config = config
   }

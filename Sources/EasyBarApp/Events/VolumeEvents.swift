@@ -33,7 +33,7 @@ final class VolumeEvents {
   private var lastMutedState: Bool?
 
   /// Creates one volume event source.
-  private init(logger: ProcessLogger) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 
