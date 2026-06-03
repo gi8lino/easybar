@@ -8,16 +8,18 @@ and concurrent async jobs through `[app.lua_commands]`.
 
 ## Synchronous commands
 
-`easybar.exec(command, options, callback?)` runs a command synchronously.
+`easybar.exec(command, options?)` runs a command synchronously and returns output plus exit code.
 
 ```lua
-easybar.exec("date +%H:%M", {}, function(output)
+local output, code = easybar.exec("date +%H:%M", easybar.DEFAULT_EXEC_OPTIONS)
+
+if code == 0 then
     clock:set({
         label = {
             string = output,
         },
     })
-end)
+end
 ```
 
 Use this only for fast commands.
@@ -57,6 +59,7 @@ end)
 - `max_output_bytes`
 
 Leave `options` as `{}` when you want the global defaults from `[app.lua_commands]`.
+Use `easybar.DEFAULT_EXEC_OPTIONS` when you want to reference the current configured host defaults directly.
 
 ## Environment
 

@@ -45,7 +45,7 @@ Defaults apply only within the current widget file.
 ## `EasyBar.exec`
 
 Runs one shell command.
-When a callback is provided, the trimmed command output and exit code are passed to it.
+Returns trimmed command output and exit code.
 
 ### Parameters
 
@@ -53,11 +53,11 @@ When a callback is provided, the trimmed command output and exit code are passed
 | ---- | ---- | ----------- |
 | `command` | `string` |  |
 | `options` _(optional)_ | `EasyBarCommandOptions` |  |
-| `callback` _(optional)_ | `fun(output: string, code: integer): any` |  |
 
 ### Returns
 
-- `any`
+- `string`
+- `integer`
 
 ## `EasyBar.exec_async`
 

@@ -13,6 +13,8 @@ public enum SharedEnvironmentKeys {
   public static let loggingEnabled = "EASYBAR_LOGGING_ENABLED"
   public static let loggingLevel = "EASYBAR_LOG_LEVEL"
   public static let loggingDirectory = "EASYBAR_LOGGING_DIRECTORY"
+  public static let luaCommandTimeoutSeconds = "EASYBAR_LUA_COMMAND_TIMEOUT_SECONDS"
+  public static let luaCommandMaxOutputBytes = "EASYBAR_LUA_COMMAND_MAX_OUTPUT_BYTES"
 
   public static let easyBarSocketPath = "EASYBAR_SOCKET_PATH"
 

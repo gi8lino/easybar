@@ -14,8 +14,10 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
-local BREW_COMMAND_OPTIONS = {
-	timeout_seconds = 30,
+local EXEC = {
+	brew = {
+		timeout_seconds = 30,
+	},
 }
 
 local POPUP_ORDER = {
@@ -505,7 +507,7 @@ local function run_brew_async(status_label, phase, command, on_success)
 
 	render()
 
-	local token = easybar.exec_async(command, BREW_COMMAND_OPTIONS, function(output, code)
+	local token = easybar.exec_async(command, EXEC.brew, function(output, code)
 		running = false
 
 		log_debug(

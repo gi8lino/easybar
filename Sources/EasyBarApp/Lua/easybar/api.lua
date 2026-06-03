@@ -105,6 +105,28 @@ end
 function M.new(log, hooks)
 	local registry = registry_module.new(hooks)
 	local subscriptions = subscriptions_module.new(registry._state, registry.ensure_item_exists, log, event_tokens)
+	local default_exec_options = type(hooks.default_exec_options) == "table" and hooks.default_exec_options or {}
+
+	local function readonly_copy(values, name)
+		local copy = {}
+
+		for key, value in pairs(values) do
+			copy[key] = value
+		end
+
+		local proxy = {}
+
+		return setmetatable(proxy, {
+			__index = copy,
+			__newindex = function()
+				error(tostring(name) .. " is read-only")
+			end,
+			__pairs = function()
+				return pairs(copy)
+			end,
+			__metatable = false,
+		})
+	end
 
 	local function log_widget(source, level, ...)
 		if not log or type(log.widget) ~= "function" then
@@ -138,6 +160,7 @@ function M.new(log, hooks)
 	local api = {
 		_state = registry._state,
 		add = registry.add,
+		DEFAULT_EXEC_OPTIONS = readonly_copy(default_exec_options, "easybar.DEFAULT_EXEC_OPTIONS"),
 		set = registry.set,
 		unset = registry.unset,
 		get = registry.get,
@@ -272,6 +295,7 @@ function M.new(log, hooks)
 
 		widget_api.exec = api.exec
 		widget_api.exec_async = api.exec_async
+		widget_api.DEFAULT_EXEC_OPTIONS = api.DEFAULT_EXEC_OPTIONS
 		widget_api.events = event_tokens.tokens
 		widget_api.json = json_module
 		widget_api.kind = KINDS

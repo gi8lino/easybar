@@ -481,12 +481,13 @@
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
+---@field DEFAULT_EXEC_OPTIONS EasyBarCommandOptions Read-only table exposing the current host default command limits.
 ---@field version string EasyBar application version (`dev`).
 ---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps): EasyBarNodeHandle Creates one node and returns its handle.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
----@field exec fun(command: string, options?: EasyBarCommandOptions, callback?: fun(output: string, code: integer): any): any Runs one shell command and optionally receives trimmed output and exit code.
+---@field exec fun(command: string, options?: EasyBarCommandOptions): string, integer Runs one shell command and returns trimmed output plus exit code.
 ---@field exec_async fun(command: string, options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of one node's props by id.
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
@@ -569,12 +570,12 @@ function EasyBar.subscribe(id, events, handler) end
 function EasyBar.add(kind, id, props) end
 
 ---Runs one shell command.
----When a callback is provided, the trimmed command output and exit code are passed to it.
+---Returns trimmed command output and exit code.
 ---@param command string
 ---@param options? EasyBarCommandOptions
----@param callback? fun(output: string, code: integer): any
----@return any
-function EasyBar.exec(command, options, callback) end
+---@return string
+---@return integer
+function EasyBar.exec(command, options) end
 
 ---Runs one shell command in the background.
 ---The callback receives trimmed output and the command exit code when the job finishes.
@@ -587,6 +588,10 @@ function EasyBar.exec_async(command, options, callback) end
 ---EasyBar application version (`dev`).
 ---@type string
 EasyBar.version = "dev"
+
+---Read-only table exposing the current host default command limits.
+---@type EasyBarCommandOptions
+EasyBar.DEFAULT_EXEC_OPTIONS = {}
 
 ---Encodes and decodes JSON values from Lua widgets.
 ---@type EasyBarJson

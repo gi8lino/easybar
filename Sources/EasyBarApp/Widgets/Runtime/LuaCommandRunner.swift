@@ -157,6 +157,24 @@ final class LuaCommandRunner: @unchecked Sendable {
     }
 
     if process.terminationStatus != 0 {
+      if process.terminationStatus == 127 {
+        let message =
+          output.isEmpty
+          ? "command not found: \(command)"
+          : "command not found: \(command)\n\(output)"
+
+        logger.warn(
+          "lua command not found",
+          .field("command", command),
+          .field("status", process.terminationStatus)
+        )
+
+        return LuaCommandResult(
+          output: message,
+          status: process.terminationStatus
+        )
+      }
+
       logger.debug(
         "lua command exited non-zero",
         .field("command", command),

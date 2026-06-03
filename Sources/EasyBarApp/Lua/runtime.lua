@@ -61,6 +61,10 @@ local last_subscription_payload = nil
 local next_command_sequence = 0
 local runtime_command_session = tostring({}):gsub("[^%w]", "_")
 local strict_public_api = os.getenv("EASYBAR_STRICT_PUBLIC_API") == "1"
+local default_exec_options = {
+	timeout_seconds = tonumber(os.getenv("EASYBAR_LUA_COMMAND_TIMEOUT_SECONDS")),
+	max_output_bytes = tonumber(os.getenv("EASYBAR_LUA_COMMAND_MAX_OUTPUT_BYTES")),
+}
 
 --- Marks the current runtime state as needing one render flush.
 local function mark_render_dirty()
@@ -250,6 +254,7 @@ registry = api.new(log, {
 		)
 	end,
 	strict_public_api = strict_public_api,
+	default_exec_options = default_exec_options,
 })
 
 io.stdout:setvbuf("line")

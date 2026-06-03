@@ -57,4 +57,19 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertEqual(result.status, LuaCommandRunner.Limits.outputLimitStatus)
     XCTAssertLessThanOrEqual(result.output.utf8.count, 128)
   }
+
+  func testRunReportsCommandNotFoundClearly() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      command: "__easybar_missing_command__",
+      limits: defaultLimits
+    )
+
+    XCTAssertEqual(result.status, 127)
+    XCTAssertTrue(result.output.contains("command not found"))
+    XCTAssertTrue(result.output.contains("__easybar_missing_command__"))
+  }
 }

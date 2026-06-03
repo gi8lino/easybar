@@ -373,6 +373,11 @@ function M.new(hooks)
 		return response
 	end
 
+	local COMMAND_OPTION_KEYS = {
+		timeout_seconds = true,
+		max_output_bytes = true,
+	}
+
 	--- Normalizes optional host command overrides for one exec call.
 	local function normalize_command_options(options, signature)
 		if options == nil then
@@ -382,6 +387,16 @@ function M.new(hooks)
 		assert(type(options) == "table", signature .. " requires options table or nil")
 
 		local normalized = {}
+
+		for key in pairs(options) do
+			assert(
+				COMMAND_OPTION_KEYS[key] == true,
+				signature
+					.. " received unknown option '"
+					.. tostring(key)
+					.. "'; expected timeout_seconds or max_output_bytes"
+			)
+		end
 
 		if options.timeout_seconds ~= nil then
 			local timeout_seconds = tonumber(options.timeout_seconds)
@@ -411,11 +426,12 @@ function M.new(hooks)
 	end
 
 	--- Starts one background host-owned shell command.
-	function registry.exec_async(command, options, callback)
+	function registry.exec_async(command, options, callback, ...)
 		assert(
 			type(command) == "string" and command ~= "",
 			"easybar.exec_async(command, options, callback) requires command"
 		)
+		assert(select("#", ...) == 0, "easybar.exec_async(command, options, callback) does not accept extra arguments")
 		assert(
 			type(callback) == "function",
 			"easybar.exec_async(command, options, callback) requires callback"
@@ -437,23 +453,19 @@ function M.new(hooks)
 	end
 
 	--- Runs one host-owned shell command.
-	function registry.exec(command, options, callback)
+	function registry.exec(command, options, ...)
 		assert(
 			type(command) == "string" and command ~= "",
-			"easybar.exec(command, options, callback) requires command"
+			"easybar.exec(command, options) requires command"
 		)
+		assert(select("#", ...) == 0, "easybar.exec(command, options) does not accept a callback")
 		assert(type(request_sync_command) == "function", "easybar.exec unavailable without host runner")
 
-		local normalized_options =
-			normalize_command_options(options, "easybar.exec(command, options, callback)")
+		local normalized_options = normalize_command_options(options, "easybar.exec(command, options)")
 		before_exec_callback()
 		local output, code = request_sync_command(command, normalized_options)
 		output = trim_trailing_newlines(output)
 		code = tonumber(code) or 1
-
-		if type(callback) == "function" then
-			return callback(output, code)
-		end
 
 		return output, code
 	end

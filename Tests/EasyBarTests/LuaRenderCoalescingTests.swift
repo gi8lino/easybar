@@ -54,12 +54,11 @@ final class LuaRenderCoalescingTests: XCTestCase {
     		label = "Brew ...",
     	})
 
-    	easybar.exec("printf '0'", {}, function(output)
-    		easybar.set("brew", {
-    			icon = "done",
-    			label = "Brew " .. output,
-    		})
-    	end)
+    	local output = easybar.exec("printf '0'", {})
+    	easybar.set("brew", {
+    		icon = "done",
+    		label = "Brew " .. output,
+    	})
     end)
     """.write(
       to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
@@ -257,11 +256,14 @@ final class LuaRenderCoalescingTests: XCTestCase {
     	}, function(_, _)
     	end)
 
-    	easybar.exec("printf 'sync'", {
+    	local output, code = easybar.exec("printf 'sync'", {
     		timeout_seconds = 9.5,
     		max_output_bytes = 2048,
-    	}, function(_, _)
-    	end)
+    	})
+
+    	easybar.set("brew", {
+    		label = output .. ":" .. tostring(code),
+    	})
     end)
     """.write(
       to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
@@ -307,6 +309,104 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
     XCTAssertEqual(syncRequest.timeoutSeconds, 9.5)
     XCTAssertEqual(syncRequest.maxOutputBytes, 2048)
+  }
+
+  func testDefaultExecOptionsExposeConfiguredHostLimits() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+
+    try """
+    local defaults = easybar.DEFAULT_EXEC_OPTIONS
+
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "defaults",
+    	label = tostring(defaults.timeout_seconds) .. ":" .. tostring(defaults.max_output_bytes),
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.default-exec-options.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
+      autoRespondToCommands: true
+    )
+    defer { runtime.stop() }
+
+    let update = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+    )
+
+    XCTAssertEqual(rootNode(in: update)?.icon, "defaults")
+    XCTAssertEqual(rootNode(in: update)?.text, "5:65536")
+  }
+
+  func testUnknownExecOptionKeyPreventsWidgetFromLoading() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+
+    try """
+    local output = easybar.exec("printf '0'", {
+    	timeout_second = 1,
+    })
+
+    easybar.add("item", "brew", {
+    	position = "right",
+    	label = output,
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.invalid-exec-option.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
+      autoRespondToCommands: true
+    )
+    defer { runtime.stop() }
+
+    try await expectNoUpdate(
+      from: recorder,
+      matching: { update in
+        update.isTree
+      }
+    )
   }
 
   func testStaleCommandResponseFromPreviousRuntimeDoesNotSatisfyNewSyncCommand() async throws {
@@ -372,12 +472,11 @@ final class LuaRenderCoalescingTests: XCTestCase {
     })
 
     easybar.subscribe("brew", { easybar.events.forced }, function(_)
-    	easybar.exec("printf 'fresh'", {}, function(output)
-    		easybar.set("brew", {
-    			icon = "done",
-    			label = output,
-    		})
-    	end)
+    	local output = easybar.exec("printf 'fresh'", {})
+    	easybar.set("brew", {
+    		icon = "done",
+    		label = output,
+    	})
     end)
     """.write(
       to: widgetsDirectoryURL.appendingPathComponent("new.lua"),
@@ -1264,6 +1363,8 @@ extension LuaRenderCoalescingTests {
     environment[SharedEnvironmentKeys.lockDirectory] = lockDirectoryURL.path
     environment[SharedEnvironmentKeys.loggingDirectory] = loggingDirectoryURL.path
     environment[SharedEnvironmentKeys.loggingLevel] = "error"
+    environment[SharedEnvironmentKeys.luaCommandTimeoutSeconds] = "5"
+    environment[SharedEnvironmentKeys.luaCommandMaxOutputBytes] = "65536"
     environment[SharedEnvironmentKeys.luaSocketPath] = luaSocketPath
     environment[SharedEnvironmentKeys.calendarAgentSocketPath] = calendarSocketPath
     environment[SharedEnvironmentKeys.networkAgentSocketPath] = networkSocketPath
@@ -1283,6 +1384,8 @@ extension LuaRenderCoalescingTests {
       SharedEnvironmentKeys.lockDirectory,
       SharedEnvironmentKeys.loggingDirectory,
       SharedEnvironmentKeys.loggingLevel,
+      SharedEnvironmentKeys.luaCommandTimeoutSeconds,
+      SharedEnvironmentKeys.luaCommandMaxOutputBytes,
       SharedEnvironmentKeys.luaSocketPath,
       SharedEnvironmentKeys.calendarAgentSocketPath,
       SharedEnvironmentKeys.networkAgentSocketPath,
