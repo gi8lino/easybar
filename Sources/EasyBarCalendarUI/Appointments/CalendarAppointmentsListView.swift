@@ -2,65 +2,6 @@ import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
-/// Reusable style values for calendar appointments lists.
-public struct CalendarAppointmentsStyle: Sendable {
-  public let secondaryTextColorHex: String
-  public let emptyTextColorHex: String
-  public let eventTextColorHex: String
-  public let travelTextColorHex: String
-  public let travelIconColorHex: String?
-  public let alertIconColorHex: String?
-  public let showCalendarName: Bool
-  public let showLocation: Bool
-  public let showTravelTime: Bool
-  public let showEndTime: Bool
-  public let showAlertIcon: Bool
-  public let showAllDayLabel: Bool
-  public let allDayLabel: String
-  public let showHolidayAllDayLabel: Bool
-  public let alertIcon: String
-  public let travelIcon: String
-  public let itemIndent: Double
-
-  public init(
-    secondaryTextColorHex: String,
-    emptyTextColorHex: String,
-    eventTextColorHex: String,
-    travelTextColorHex: String,
-    travelIconColorHex: String?,
-    alertIconColorHex: String?,
-    showCalendarName: Bool,
-    showLocation: Bool,
-    showTravelTime: Bool,
-    showEndTime: Bool,
-    showAlertIcon: Bool,
-    showAllDayLabel: Bool,
-    allDayLabel: String,
-    showHolidayAllDayLabel: Bool,
-    alertIcon: String,
-    travelIcon: String,
-    itemIndent: Double
-  ) {
-    self.secondaryTextColorHex = secondaryTextColorHex
-    self.emptyTextColorHex = emptyTextColorHex
-    self.eventTextColorHex = eventTextColorHex
-    self.travelTextColorHex = travelTextColorHex
-    self.travelIconColorHex = travelIconColorHex
-    self.alertIconColorHex = alertIconColorHex
-    self.showCalendarName = showCalendarName
-    self.showLocation = showLocation
-    self.showTravelTime = showTravelTime
-    self.showEndTime = showEndTime
-    self.showAlertIcon = showAlertIcon
-    self.showAllDayLabel = showAllDayLabel
-    self.allDayLabel = allDayLabel
-    self.showHolidayAllDayLabel = showHolidayAllDayLabel
-    self.alertIcon = alertIcon
-    self.travelIcon = travelIcon
-    self.itemIndent = itemIndent
-  }
-}
-
 /// One render row in a calendar appointments list.
 public struct CalendarAppointmentsListRow: Identifiable {
   public enum Kind {
@@ -202,6 +143,7 @@ public struct CalendarAppointmentsListView: View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       if event.isAllDay {
         let prefix = appointmentPrefix(for: event)
+
         if !prefix.isEmpty {
           Text(prefix)
             .font(.system(size: 11, weight: .medium))
@@ -220,43 +162,21 @@ public struct CalendarAppointmentsListView: View {
       }
 
       Text(event.title)
-        .font(.system(size: 13, weight: .medium))
+        .font(.system(size: 13, weight: .regular))
         .foregroundStyle(color(style.eventTextColorHex))
-        .lineLimit(2)
-        .multilineTextAlignment(.leading)
-
-      if !event.isAllDay {
-        Spacer(minLength: 0)
-        if style.showAlertIcon, event.hasAlert {
-          Text(style.alertIcon)
-            .font(CalendarUIPrimitives.iconFont(size: 11))
-            .foregroundStyle(color(style.alertIconColorHex ?? style.travelTextColorHex))
-        }
-      }
+        .lineLimit(1)
     }
   }
 
   @ViewBuilder
   private func appointmentMetaTopView(for event: CalendarAgentEvent) -> some View {
-    if !event.isAllDay,
-      style.showTravelTime,
-      let travelTimeSeconds = event.travelTimeSeconds,
-      let travelTimeText = CalendarEventFormatter.travelTimeText(travelTimeSeconds: travelTimeSeconds),
-      let departureTimeText = CalendarEventFormatter.travelDepartureTimeText(
-        startDate: event.startDate,
-        travelTimeSeconds: travelTimeSeconds,
-        calendar: calendar
-      )
-    {
+    if shouldShowAlertIcon(for: event) {
       HStack(alignment: .firstTextBaseline, spacing: 4) {
-        Text(departureTimeText)
-          .font(.system(size: 10, weight: .medium))
-          .foregroundStyle(color(style.travelTextColorHex))
-        Text(style.travelIcon)
-          .font(CalendarUIPrimitives.iconFont(size: 11))
-          .foregroundStyle(color(style.travelIconColorHex ?? style.travelTextColorHex))
-        Text(travelTimeText)
-          .font(.system(size: 10, weight: .medium))
+        Text(style.alertIcon)
+          .font(CalendarUIPrimitives.iconFont(size: 10))
+          .foregroundStyle(color(style.alertIconColorHex ?? style.travelTextColorHex))
+        Text("Alert")
+          .font(.system(size: 11, weight: .regular))
           .foregroundStyle(color(style.travelTextColorHex))
       }
     }
@@ -264,17 +184,33 @@ public struct CalendarAppointmentsListView: View {
 
   @ViewBuilder
   private func appointmentEndTimeView(for event: CalendarAgentEvent) -> some View {
-    if style.showEndTime,
-      let endTimeText = CalendarEventFormatter.endTimeText(
-        startDate: event.startDate,
-        endDate: event.endDate,
-        isAllDay: event.isAllDay,
-        calendar: calendar
-      )
-    {
-      Text(endTimeText)
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(color(style.travelTextColorHex))
+    if !event.isAllDay {
+      if style.showEndTime,
+        let endTime = CalendarEventFormatter.endTimeText(
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: event.isAllDay,
+          calendar: calendar
+        )
+      {
+        Text("until \(endTime)")
+          .font(.system(size: 11, weight: .regular))
+          .foregroundStyle(color(style.secondaryTextColorHex))
+      }
+
+      if style.showTravelTime,
+        let travelTimeSeconds = event.travelTimeSeconds,
+        let travelText = CalendarEventFormatter.travelTimeText(travelTimeSeconds: travelTimeSeconds)
+      {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+          Text(style.travelIcon)
+            .font(CalendarUIPrimitives.iconFont(size: 11))
+            .foregroundStyle(color(style.travelIconColorHex ?? style.travelTextColorHex))
+          Text(travelText)
+            .font(.system(size: 11, weight: .regular))
+            .foregroundStyle(color(style.travelTextColorHex))
+        }
+      }
     }
   }
 
@@ -282,13 +218,23 @@ public struct CalendarAppointmentsListView: View {
     guard event.isAllDay else { return "" }
     guard !CalendarAgendaBuilder.isBirthdayEvent(event) else { return "" }
     guard !event.isHoliday || style.showHolidayAllDayLabel else { return "" }
+
     return style.showAllDayLabel ? style.allDayLabel : ""
+  }
+
+  private func shouldShowAlertIcon(for event: CalendarAgentEvent) -> Bool {
+    guard style.showAlertIcon else { return false }
+    guard event.hasAlert else { return false }
+    guard !event.isAllDay else { return false }
+
+    return true
   }
 
   private func indicatorColorHex(for event: CalendarAgentEvent) -> String {
     if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines), !hex.isEmpty {
       return hex
     }
+
     return defaultIndicatorColorHex
   }
 

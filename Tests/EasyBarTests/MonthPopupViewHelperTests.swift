@@ -1,3 +1,4 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import XCTest
 

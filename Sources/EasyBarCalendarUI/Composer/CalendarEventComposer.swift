@@ -1,4 +1,5 @@
 import Combine
+import EasyBarCalendarPresentation
 import EasyBarShared
 import Foundation
 
@@ -9,8 +10,10 @@ public final class CalendarEventComposer: ObservableObject {
   public struct CalendarOption: Identifiable, Equatable {
     /// Stable calendar identifier.
     public let id: String
+
     /// Human-readable calendar title.
     public let title: String
+
     /// Creates one selectable calendar option.
     public init(id: String, title: String) {
       self.id = id
@@ -22,10 +25,13 @@ public final class CalendarEventComposer: ObservableObject {
   public struct AlertRow: Identifiable, Equatable {
     /// Stable row identifier for SwiftUI diffing.
     public let id: UUID
+
     /// Selected alert preset.
     public var option: AlertOption
+
     /// Custom alert lead time in minutes when `option == .custom`.
     public var customMinutesText: String
+
     /// Creates one alert row.
     public init(id: UUID = UUID(), option: AlertOption, customMinutesText: String = "") {
       self.id = id
@@ -34,121 +40,201 @@ public final class CalendarEventComposer: ObservableObject {
     }
   }
 
-  public enum Mode {
+  /// Composer mode.
+  public enum Mode: Equatable {
     case create
     case edit(eventIdentifier: String)
   }
 
-  enum Validation<Value> {
-    case success(Value)
-    case failure(String)
-  }
-
+  /// Alert presets supported by the composer.
   public enum AlertOption: String, CaseIterable, Identifiable {
     case none
     case atTime = "at_time"
     case fiveMinutes = "5_minutes"
     case tenMinutes = "10_minutes"
-    case
-      fifteenMinutes = "15_minutes"
+    case fifteenMinutes = "15_minutes"
     case thirtyMinutes = "30_minutes"
     case oneHour = "1_hour"
-    case
-      oneDay = "1_day"
+    case oneDay = "1_day"
     case custom
+
     public var id: String { rawValue }
-    var fallbackTitle: String {
-      switch self {
-      case .none: "None"
-      case .atTime: "At time of event"
-      case .fiveMinutes: "5 minutes before"
-      case .tenMinutes: "10 minutes before"
-      case .fifteenMinutes: "15 minutes before"
-      case .thirtyMinutes: "30 minutes before"
-      case .oneHour: "1 hour before"
-      case .oneDay: "1 day before"
-      case .custom: "Custom"
-      }
-    }
+
     var leadTimeSeconds: TimeInterval? {
       switch self {
-      case .none: nil
-      case .atTime: 0
-      case .fiveMinutes: 300
-      case .tenMinutes: 600
-      case .fifteenMinutes: 900
-      case .thirtyMinutes: 1800
-      case .oneHour: 3600
-      case .oneDay: 86_400
-      case .custom: nil
+      case .none:
+        return nil
+      case .atTime:
+        return 0
+      case .fiveMinutes:
+        return 5 * 60
+      case .tenMinutes:
+        return 10 * 60
+      case .fifteenMinutes:
+        return 15 * 60
+      case .thirtyMinutes:
+        return 30 * 60
+      case .oneHour:
+        return 60 * 60
+      case .oneDay:
+        return 24 * 60 * 60
+      case .custom:
+        return nil
+      }
+    }
+
+    private var fallbackTitle: String {
+      switch self {
+      case .none:
+        return "None"
+      case .atTime:
+        return "At time of event"
+      case .fiveMinutes:
+        return "5 minutes before"
+      case .tenMinutes:
+        return "10 minutes before"
+      case .fifteenMinutes:
+        return "15 minutes before"
+      case .thirtyMinutes:
+        return "30 minutes before"
+      case .oneHour:
+        return "1 hour before"
+      case .oneDay:
+        return "1 day before"
+      case .custom:
+        return "Custom"
+      }
+    }
+
+    static func from(configValue: String) -> AlertOption {
+      AlertOption(rawValue: configValue) ?? .oneHour
+    }
+
+    func title(config: CalendarComposerConfig) -> String {
+      switch self {
+      case .custom:
+        return fallbackTitle
+      default:
+        return config.alertLabels[rawValue] ?? fallbackTitle
       }
     }
   }
 
+  /// Travel-time presets supported by the composer.
   public enum TravelTimeOption: String, CaseIterable, Identifiable {
     case none
     case fiveMinutes = "5_minutes"
     case tenMinutes = "10_minutes"
     case fifteenMinutes = "15_minutes"
-    case
-      twentyMinutes = "20_minutes"
+    case twentyMinutes = "20_minutes"
     case thirtyMinutes = "30_minutes"
     case fortyFiveMinutes = "45_minutes"
-    case
-      oneHour = "1_hour"
+    case oneHour = "1_hour"
     case ninetyMinutes = "90_minutes"
     case twoHours = "2_hours"
     case custom
+
     public var id: String { rawValue }
-    var fallbackTitle: String {
-      switch self {
-      case .none: "None"
-      case .fiveMinutes: "5 minutes"
-      case .tenMinutes: "10 minutes"
-      case .fifteenMinutes: "15 minutes"
-      case .twentyMinutes: "20 minutes"
-      case .thirtyMinutes: "30 minutes"
-      case .fortyFiveMinutes: "45 minutes"
-      case .oneHour: "1 hour"
-      case .ninetyMinutes: "1.5 hours"
-      case .twoHours: "2 hours"
-      case .custom: "Custom"
-      }
-    }
+
     var seconds: TimeInterval? {
       switch self {
-      case .none: nil
-      case .fiveMinutes: 300
-      case .tenMinutes: 600
-      case .fifteenMinutes: 900
-      case .twentyMinutes: 1200
-      case .thirtyMinutes: 1800
-      case .fortyFiveMinutes: 2700
-      case .oneHour: 3600
-      case .ninetyMinutes: 5400
-      case .twoHours: 7200
-      case .custom: nil
+      case .none:
+        return nil
+      case .fiveMinutes:
+        return 5 * 60
+      case .tenMinutes:
+        return 10 * 60
+      case .fifteenMinutes:
+        return 15 * 60
+      case .twentyMinutes:
+        return 20 * 60
+      case .thirtyMinutes:
+        return 30 * 60
+      case .fortyFiveMinutes:
+        return 45 * 60
+      case .oneHour:
+        return 60 * 60
+      case .ninetyMinutes:
+        return 90 * 60
+      case .twoHours:
+        return 2 * 60 * 60
+      case .custom:
+        return nil
+      }
+    }
+
+    private var fallbackTitle: String {
+      switch self {
+      case .none:
+        return "None"
+      case .fiveMinutes:
+        return "5 minutes"
+      case .tenMinutes:
+        return "10 minutes"
+      case .fifteenMinutes:
+        return "15 minutes"
+      case .twentyMinutes:
+        return "20 minutes"
+      case .thirtyMinutes:
+        return "30 minutes"
+      case .fortyFiveMinutes:
+        return "45 minutes"
+      case .oneHour:
+        return "1 hour"
+      case .ninetyMinutes:
+        return "1.5 hours"
+      case .twoHours:
+        return "2 hours"
+      case .custom:
+        return "Custom"
+      }
+    }
+
+    static func from(configValue: String) -> TravelTimeOption {
+      TravelTimeOption(rawValue: configValue) ?? .none
+    }
+
+    func title(config: CalendarComposerConfig) -> String {
+      switch self {
+      case .custom:
+        return fallbackTitle
+      default:
+        return config.travelTimeLabels[rawValue] ?? fallbackTitle
       }
     }
   }
 
-  @Published public private(set) var calendars: [CalendarOption] = []
-  @Published public private(set) var accessGranted = false
-  @Published public private(set) var isSaving = false
+  private struct Draft {
+    let title: String
+    let location: String?
+    let calendarID: String
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+    let alertOffsetsSeconds: [TimeInterval]
+    let travelTimeSeconds: TimeInterval?
+  }
+
+  private enum Validation<Value> {
+    case success(Value)
+    case failure(String)
+  }
+
   @Published public private(set) var mode: Mode = .create
   @Published public var title = ""
+  @Published public var location = ""
+  @Published public var selectedCalendarID = ""
   @Published public var startDate = Date()
   @Published public var endDate = Date()
-  @Published public var startTime = Date()
-  @Published public var endTime = Date()
   @Published public var isAllDay = false
-  @Published public var selectedCalendarID = ""
-  @Published public var location = ""
-  @Published public var alertRows: [AlertRow] = [.init(option: .tenMinutes)]
-  @Published public var travelTime: TravelTimeOption = .none
-  @Published public var customTravelTimeMinutes = ""
-  @Published public var errorMessage: String?
-  @Published public var infoMessage: String?
+  @Published public var selectedTravelTime: TravelTimeOption = .none
+  @Published public var customTravelMinutesText = ""
+  @Published public var alertRows: [AlertRow] = []
+  @Published public private(set) var calendarOptions: [CalendarOption] = []
+  @Published public private(set) var errorMessage: String?
+  @Published public private(set) var infoMessage: String?
+  @Published public private(set) var isSaving = false
+  @Published public private(set) var accessGranted = true
 
   private let calendar = Calendar.current
   private let config: CalendarComposerConfig
@@ -179,415 +265,541 @@ public final class CalendarEventComposer: ObservableObject {
 
     snapshotPublisher
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] snapshot in self?.applySnapshot(snapshot) }
+      .sink { [weak self] snapshot in
+        self?.applySnapshot(snapshot)
+      }
       .store(in: &cancellables)
+
+    reset(using: Date())
   }
 
   /// Returns whether the current form contents can be saved.
   public var canSave: Bool {
-    accessGranted && !isSaving && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    accessGranted
+      && !isSaving
+      && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       && !selectedCalendarID.isEmpty
   }
-  /// Returns whether the currently loaded event can be deleted.
-  public var canDelete: Bool { canDeleteCurrentEvent }
-  /// Returns the current panel title.
-  public var panelTitle: String {
-    switch mode {
-    case .create: config.createTitle
-    case .edit: config.editTitle
-    }
-  }
-  /// Returns the save button title for the current mode.
-  public var saveButtonTitle: String {
-    switch mode {
-    case .create: isSaving ? "\(config.saveLabel)..." : config.saveLabel
-    case .edit: isSaving ? "\(config.updateLabel)..." : config.updateLabel
-    }
-  }
 
-  /// Returns whether the current mode represents an editable event and no save is in progress.
-  private var canDeleteCurrentEvent: Bool {
+  /// Returns whether the currently loaded event can be deleted.
+  public var canDelete: Bool {
     guard case .edit = mode else { return false }
     return accessGranted && !isSaving
   }
 
+  /// Returns the current panel title.
+  public var panelTitle: String {
+    switch mode {
+    case .create:
+      return config.createTitle
+    case .edit:
+      return config.editTitle
+    }
+  }
+
+  /// Returns the available alert options.
+  public var alertOptions: [AlertOption] {
+    AlertOption.allCases
+  }
+
+  /// Returns the available travel-time options.
+  public var travelTimeOptions: [TravelTimeOption] {
+    TravelTimeOption.allCases
+  }
+
+  /// Returns a localized or configured label for an alert option.
+  public func alertLabel(for option: AlertOption) -> String {
+    option.title(config: config)
+  }
+
+  /// Returns a localized or configured label for a travel-time option.
+  public func travelTimeLabel(for option: TravelTimeOption) -> String {
+    option.title(config: config)
+  }
+
+  /// Adds one new alert row.
+  public func addAlertRow() {
+    alertRows.append(AlertRow(option: .tenMinutes))
+  }
+
+  /// Removes one alert row.
+  public func removeAlertRow(id: UUID) {
+    guard alertRows.count > 1 else {
+      alertRows = [AlertRow(option: .none)]
+      return
+    }
+
+    alertRows.removeAll { $0.id == id }
+  }
+
+  /// Prepares the composer for creating a new event.
   public func prepare(defaultDate: Date) {
     mode = .create
     preferredCalendarID = nil
     preferredCalendarName = normalizedOptionalText(config.defaultCalendarName)
-    let normalizedDate = calendar.startOfDay(for: defaultDate)
-    reset(using: normalizedDate)
+
+    reset(using: defaultDate)
+    clearMessages()
     refreshSnapshots()
   }
 
+  /// Prepares the composer for editing an existing event.
   public func prepare(event: CalendarAgentEvent) {
-    let normalizedStartDate = calendar.startOfDay(for: event.startDate)
-    let normalizedEndReference =
-      event.isAllDay
-      ? calendar.date(byAdding: .day, value: -1, to: event.endDate) ?? event.startDate
-      : event.endDate
-    let normalizedEndDate = calendar.startOfDay(for: normalizedEndReference)
-    reset(using: normalizedStartDate)
-    guard let eventIdentifier = resolvedEventIdentifier(from: event) else {
+    clearMessages()
+
+    guard let eventIdentifier = event.eventIdentifier ?? resolvedEventIdentifier(from: event) else {
+      mode = .create
+      reset(using: event.startDate)
       errorMessage = "This appointment cannot be edited."
+      refreshSnapshots()
       return
     }
+
     mode = .edit(eventIdentifier: eventIdentifier)
     title = event.title
-    startDate = normalizedStartDate
-    endDate = normalizedEndDate
-    startTime = event.startDate
-    endTime = event.endDate
-    isAllDay = event.isAllDay
     location = event.location ?? ""
-    alertRows = resolvedAlertRows(from: event.alertOffsetsSeconds)
-    let travelTimeSelection = resolvedTravelTimeSelection(from: event.travelTimeSeconds)
-    travelTime = travelTimeSelection.option
-    customTravelTimeMinutes = travelTimeSelection.customMinutesText
-    preferredCalendarID = normalizedOptionalText(event.calendarID)
-    preferredCalendarName = normalizedOptionalText(event.calendarName)
+    preferredCalendarID = event.calendarID
+    preferredCalendarName = event.calendarName
+    selectedCalendarID = event.calendarID ?? selectedCalendarID
+    startDate = event.startDate
+    endDate = displayedEndDate(for: event)
+    isAllDay = event.isAllDay
+
+    selectedTravelTime =
+      travelOption(for: event.travelTimeSeconds)
+      ?? (event.travelTimeSeconds == nil ? .none : .custom)
+
+    customTravelMinutesText = customMinutesText(
+      knownSeconds: selectedTravelTime.seconds,
+      actualSeconds: event.travelTimeSeconds
+    )
+
+    alertRows = initialAlertRows(
+      offsets: event.alertOffsetsSeconds,
+      defaultAlert: config.defaultAlert
+    )
+
+    refreshSnapshots()
   }
 
-  public func reset(using defaultDate: Date) {
-    let normalizedDate = calendar.startOfDay(for: defaultDate)
-    title = ""
-    startDate = normalizedDate
-    endDate = normalizedDate
-    startTime = defaultStartTime(on: normalizedDate)
-    endTime = defaultEndTime(on: normalizedDate)
-    isAllDay = false
-    location = ""
-    alertRows = resolvedDefaultAlertRows()
-    travelTime = resolvedDefaultTravelTime()
-    customTravelTimeMinutes = ""
-    errorMessage = nil
-    infoMessage = nil
-    isSaving = false
-  }
-
+  /// Saves the current form as a create or update mutation.
   public func save(onSuccess: @escaping () -> Void) {
     clearMessages()
-    guard accessGranted else {
-      errorMessage = "Calendar access is not available."
-      return
-    }
-    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmedTitle.isEmpty else {
-      errorMessage = "Please enter a title."
-      return
-    }
-    guard let selectedCalendar = selectedCalendarOption else {
-      errorMessage = "Please select a calendar."
-      return
-    }
-    let resolvedDates = resolvedEventDates()
-    guard resolvedDates.start < resolvedDates.end else {
-      errorMessage = "The end time must be after the start time."
-      return
-    }
-    let resolvedAlertOffsetsSeconds: [TimeInterval]
-    switch validatedAlertOffsetsSeconds() {
-    case .success(let offsetsSeconds): resolvedAlertOffsetsSeconds = offsetsSeconds
+
+    switch makeDraft() {
     case .failure(let message):
       errorMessage = message
-      return
-    }
-    let resolvedTravelTimeSeconds: TimeInterval?
-    switch validatedTravelTimeSeconds() {
-    case .success(let seconds): resolvedTravelTimeSeconds = seconds
-    case .failure(let message):
-      errorMessage = message
-      return
-    }
-    isSaving = true
-    switch mode {
-    case .create:
-      createEventAction(
-        CalendarAgentCreateEvent(
-          title: trimmedTitle, startDate: resolvedDates.start, endDate: resolvedDates.end, isAllDay: isAllDay,
-          calendarID: selectedCalendar.id, location: normalizedOptionalText(location),
-          alertOffsetsSeconds: resolvedAlertOffsetsSeconds, travelTimeSeconds: resolvedTravelTimeSeconds)
-      ) { [weak self] success, message in
-        self?.handleMutationResult(
-          success: success, failureMessage: message, successMessage: "Appointment created.", onSuccess: onSuccess)
-      }
-    case .edit(let eventIdentifier):
-      updateEventAction(
-        CalendarAgentUpdateEvent(
-          eventIdentifier: eventIdentifier, title: trimmedTitle, startDate: resolvedDates.start,
-          endDate: resolvedDates.end, isAllDay: isAllDay, calendarID: selectedCalendar.id,
-          location: normalizedOptionalText(location), alertOffsetsSeconds: resolvedAlertOffsetsSeconds,
-          travelTimeSeconds: resolvedTravelTimeSeconds)
-      ) { [weak self] success, message in
-        self?.handleMutationResult(
-          success: success, failureMessage: message, successMessage: "Appointment updated.", onSuccess: onSuccess)
+
+    case .success(let draft):
+      isSaving = true
+
+      switch mode {
+      case .create:
+        createEventAction(makeCreateEvent(from: draft)) { [weak self] success, message in
+          Task { @MainActor in
+            self?.handleMutationResult(
+              success: success,
+              failureMessage: message,
+              successMessage: "Appointment created.",
+              onSuccess: onSuccess
+            )
+          }
+        }
+
+      case .edit(let eventIdentifier):
+        updateEventAction(makeUpdateEvent(from: draft, eventIdentifier: eventIdentifier)) {
+          [weak self] success, message in
+          Task { @MainActor in
+            self?.handleMutationResult(
+              success: success,
+              failureMessage: message,
+              successMessage: "Appointment updated.",
+              onSuccess: onSuccess
+            )
+          }
+        }
       }
     }
   }
 
+  /// Deletes the current event.
   public func delete(onSuccess: @escaping () -> Void) {
     clearMessages()
-    guard accessGranted else {
-      errorMessage = "Calendar access is not available."
-      return
-    }
+
     guard case .edit(let eventIdentifier) = mode else {
-      errorMessage = "Nothing to delete."
+      errorMessage = "No appointment is selected."
       return
     }
+
     isSaving = true
+
     deleteEventAction(CalendarAgentDeleteEvent(eventIdentifier: eventIdentifier)) { [weak self] success, message in
-      self?.handleMutationResult(
-        success: success, failureMessage: message, successMessage: "Appointment removed.", onSuccess: onSuccess)
+      Task { @MainActor in
+        self?.handleMutationResult(
+          success: success,
+          failureMessage: message,
+          successMessage: "Appointment removed.",
+          onSuccess: onSuccess
+        )
+      }
     }
   }
 
-  public func openCalendarApp() { openCalendarAppAction() }
-  public func addAlert() { alertRows.append(.init(option: resolvedDefaultAlert())) }
-  public func removeAlert(id: UUID) { alertRows.removeAll { $0.id == id } }
-  public func setAlert(_ option: AlertOption, id: UUID) {
-    guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
-    if option == .custom, alertRows[index].customMinutesText.isEmpty {
-      alertRows[index].customMinutesText = defaultCustomMinutesText(for: alertRows[index].option)
-    }
-    alertRows[index].option = option
-  }
-  public func setCustomAlertMinutes(_ value: String, id: UUID) {
-    guard let index = alertRows.firstIndex(where: { $0.id == id }) else { return }
-    alertRows[index].customMinutesText = value
-  }
-  public func setTravelTime(_ option: TravelTimeOption) {
-    if option == .custom, customTravelTimeMinutes.isEmpty {
-      customTravelTimeMinutes = defaultCustomMinutesText(for: travelTime)
-    }
-    travelTime = option
-  }
-  public func customAlertMinutes(for id: UUID) -> String {
-    alertRows.first(where: { $0.id == id })?.customMinutesText ?? ""
-  }
-  public func title(for option: AlertOption) -> String { config.alertLabels[option.rawValue] ?? option.fallbackTitle }
-  public func title(for option: TravelTimeOption) -> String {
-    config.travelTimeLabels[option.rawValue] ?? option.fallbackTitle
+  /// Opens Calendar.app.
+  public func openCalendarApp() {
+    openCalendarAppAction()
   }
 
   private func applySnapshot(_ snapshot: CalendarAgentSnapshot?) {
-    guard let snapshot else {
-      accessGranted = false
-      calendars = []
+    accessGranted = snapshot?.accessGranted ?? false
+
+    let options =
+      snapshot?
+      .writableCalendars
+      .map { CalendarOption(id: $0.id, title: $0.title) }
+      ?? []
+
+    calendarOptions = options
+
+    guard !options.isEmpty else {
       selectedCalendarID = ""
       return
     }
-    accessGranted = snapshot.accessGranted
-    calendars = snapshot.writableCalendars.map { CalendarOption(id: $0.id, title: $0.title) }
-    applyPreferredCalendarSelectionIfNeeded()
-  }
-  private func applyPreferredCalendarSelectionIfNeeded() {
-    if let preferredCalendarID, let preferred = calendars.first(where: { $0.id == preferredCalendarID }) {
-      selectedCalendarID = preferred.id
+
+    if let preferredCalendarID,
+      options.contains(where: { $0.id == preferredCalendarID })
+    {
+      selectedCalendarID = preferredCalendarID
       return
     }
+
+    if !selectedCalendarID.isEmpty,
+      options.contains(where: { $0.id == selectedCalendarID })
+    {
+      return
+    }
+
     if let preferredCalendarName,
-      let preferred = calendars.first(where: {
-        $0.title.compare(preferredCalendarName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+      let match = options.first(where: {
+        $0.title.localizedCaseInsensitiveCompare(preferredCalendarName) == .orderedSame
       })
     {
-      selectedCalendarID = preferred.id
+      selectedCalendarID = match.id
       return
     }
-    if selectedCalendarID.isEmpty, let firstCalendar = calendars.first {
-      selectedCalendarID = firstCalendar.id
-      return
+
+    selectedCalendarID = options[0].id
+  }
+
+  private func reset(using date: Date) {
+    let defaultStart = defaultStartTime(on: date)
+    let defaultEnd = defaultEndTime(on: date)
+
+    title = ""
+    location = ""
+    startDate = defaultStart
+    endDate = defaultEnd
+    isAllDay = false
+    selectedTravelTime = TravelTimeOption.from(configValue: config.defaultTravelTime)
+    customTravelMinutesText = defaultCustomMinutesText(for: selectedTravelTime)
+    alertRows = [AlertRow(option: AlertOption.from(configValue: config.defaultAlert))]
+    selectedCalendarID = resolvedInitialCalendarID()
+  }
+
+  private func resolvedInitialCalendarID() -> String {
+    if let preferredCalendarID,
+      calendarOptions.contains(where: { $0.id == preferredCalendarID })
+    {
+      return preferredCalendarID
     }
-    if !calendars.contains(where: { $0.id == selectedCalendarID }) { selectedCalendarID = calendars.first?.id ?? "" }
-  }
-  private var selectedCalendarOption: CalendarOption? { calendars.first { $0.id == selectedCalendarID } }
-  private func resolvedDefaultAlert() -> AlertOption { AlertOption(rawValue: config.defaultAlert) ?? .tenMinutes }
-  private func resolvedDefaultAlertRows() -> [AlertRow] {
-    let option = resolvedDefaultAlert()
-    return option == .none ? [] : [AlertRow(option: option)]
-  }
 
-  private func resolvedAlertRows(from offsetsSeconds: [TimeInterval]) -> [AlertRow] {
-    let resolved = offsetsSeconds.compactMap(resolvedAlertRow(from:))
-    return resolved.isEmpty ? [] : resolved
-  }
-
-  private func resolvedAlertRow(from seconds: TimeInterval) -> AlertRow? {
-    guard seconds >= 0 else { return nil }
-
-    switch Int(seconds.rounded()) {
-    case 0:
-      return AlertRow(option: .atTime)
-    case 300:
-      return AlertRow(option: .fiveMinutes)
-    case 600:
-      return AlertRow(option: .tenMinutes)
-    case 900:
-      return AlertRow(option: .fifteenMinutes)
-    case 1800:
-      return AlertRow(option: .thirtyMinutes)
-    case 3600:
-      return AlertRow(option: .oneHour)
-    case 86_400:
-      return AlertRow(option: .oneDay)
-    default:
-      return AlertRow(option: .custom, customMinutesText: customMinutesText(from: seconds))
+    if let preferredCalendarName,
+      let match = calendarOptions.first(where: {
+        $0.title.localizedCaseInsensitiveCompare(preferredCalendarName) == .orderedSame
+      })
+    {
+      return match.id
     }
-  }
-  private func resolvedDefaultTravelTime() -> TravelTimeOption {
-    TravelTimeOption(rawValue: config.defaultTravelTime) ?? .none
-  }
-  private func resolvedTravelTimeSelection(from seconds: TimeInterval?)
-    -> (option: TravelTimeOption, customMinutesText: String)
-  {
-    guard let seconds else { return (.none, "") }
 
-    switch Int(seconds.rounded()) {
-    case 300:
-      return (.fiveMinutes, "")
-    case 600:
-      return (.tenMinutes, "")
-    case 900:
-      return (.fifteenMinutes, "")
-    case 1200:
-      return (.twentyMinutes, "")
-    case 1800:
-      return (.thirtyMinutes, "")
-    case 2700:
-      return (.fortyFiveMinutes, "")
-    case 3600:
-      return (.oneHour, "")
-    case 5400:
-      return (.ninetyMinutes, "")
-    case 7200:
-      return (.twoHours, "")
-    default:
-      return (.custom, customMinutesText(from: seconds))
+    if !selectedCalendarID.isEmpty,
+      calendarOptions.contains(where: { $0.id == selectedCalendarID })
+    {
+      return selectedCalendarID
     }
-  }
-  private func validatedAlertOffsetsSeconds() -> Validation<[TimeInterval]> {
-    var offsetsSeconds: [TimeInterval] = []
 
-    for row in alertRows {
-      switch validatedAlertOffsetSeconds(for: row) {
-      case .success(let offset):
-        if let offset {
-          offsetsSeconds.append(offset)
-        }
+    return calendarOptions.first?.id ?? ""
+  }
+
+  private func makeDraft() -> Validation<Draft> {
+    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard !trimmedTitle.isEmpty else {
+      return .failure("Title is required.")
+    }
+
+    guard !selectedCalendarID.isEmpty else {
+      return .failure("No writable calendar is selected.")
+    }
+
+    switch normalizedDateRange() {
+    case .failure(let message):
+      return .failure(message)
+
+    case .success(let range):
+      switch normalizedTravelTimeSeconds() {
       case .failure(let message):
         return .failure(message)
+
+      case .success(let travelTimeSeconds):
+        switch normalizedAlertOffsets() {
+        case .failure(let message):
+          return .failure(message)
+
+        case .success(let alertOffsetsSeconds):
+          return .success(
+            Draft(
+              title: trimmedTitle,
+              location: normalizedOptionalText(location),
+              calendarID: selectedCalendarID,
+              startDate: range.start,
+              endDate: range.end,
+              isAllDay: isAllDay,
+              alertOffsetsSeconds: alertOffsetsSeconds,
+              travelTimeSeconds: travelTimeSeconds
+            )
+          )
+        }
+      }
+    }
+  }
+
+  private func makeCreateEvent(from draft: Draft) -> CalendarAgentCreateEvent {
+    CalendarAgentCreateEvent(
+      title: draft.title,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      isAllDay: draft.isAllDay,
+      calendarID: draft.calendarID,
+      location: draft.location,
+      alertOffsetsSeconds: draft.alertOffsetsSeconds,
+      travelTimeSeconds: draft.travelTimeSeconds
+    )
+  }
+
+  private func makeUpdateEvent(
+    from draft: Draft,
+    eventIdentifier: String
+  ) -> CalendarAgentUpdateEvent {
+    CalendarAgentUpdateEvent(
+      eventIdentifier: eventIdentifier,
+      title: draft.title,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      isAllDay: draft.isAllDay,
+      calendarID: draft.calendarID,
+      location: draft.location,
+      alertOffsetsSeconds: draft.alertOffsetsSeconds,
+      travelTimeSeconds: draft.travelTimeSeconds
+    )
+  }
+
+  private func normalizedDateRange() -> Validation<(start: Date, end: Date)> {
+    if isAllDay {
+      let startOfDay = calendar.startOfDay(for: startDate)
+      let endDay = calendar.startOfDay(for: max(startDate, endDate))
+      let exclusiveEnd =
+        calendar.date(byAdding: .day, value: 1, to: endDay)
+        ?? endDay.addingTimeInterval(86_400)
+
+      return .success((startOfDay, exclusiveEnd))
+    }
+
+    guard endDate > startDate else {
+      return .failure("End time must be after start time.")
+    }
+
+    return .success((startDate, endDate))
+  }
+
+  private func normalizedTravelTimeSeconds() -> Validation<TimeInterval?> {
+    guard selectedTravelTime == .custom else {
+      return .success(selectedTravelTime.seconds)
+    }
+
+    let trimmed = customTravelMinutesText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard !trimmed.isEmpty else {
+      return .success(nil)
+    }
+
+    guard let minutes = Int(trimmed), minutes >= 0 else {
+      return .failure("Travel time must be a positive number of minutes.")
+    }
+
+    return .success(TimeInterval(minutes * 60))
+  }
+
+  private func normalizedAlertOffsets() -> Validation<[TimeInterval]> {
+    var offsets: [TimeInterval] = []
+
+    for row in alertRows {
+      switch row.option {
+      case .none:
+        continue
+
+      case .custom:
+        let trimmed = row.customMinutesText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let minutes = Int(trimmed), minutes >= 0 else {
+          return .failure("Custom alerts must be positive numbers of minutes.")
+        }
+
+        offsets.append(TimeInterval(minutes * 60))
+
+      default:
+        if let seconds = row.option.leadTimeSeconds {
+          offsets.append(seconds)
+        }
       }
     }
 
-    return .success(offsetsSeconds)
+    return .success(offsets)
   }
 
-  private func validatedAlertOffsetSeconds(for row: AlertRow) -> Validation<TimeInterval?> {
-    if row.option != .custom {
-      return .success(row.option.leadTimeSeconds)
+  private func initialAlertRows(
+    offsets: [TimeInterval],
+    defaultAlert: String
+  ) -> [AlertRow] {
+    guard !offsets.isEmpty else {
+      return [AlertRow(option: AlertOption.from(configValue: defaultAlert))]
     }
 
-    switch validatedCustomMinutes(
-      row.customMinutesText,
-      emptyMessage: "Enter custom alert minutes.",
-      invalidMessage: "Custom alert minutes must be a positive whole number."
-    ) {
-    case .success(let minutes):
-      return .success(TimeInterval(minutes * 60))
-    case .failure(let message):
-      return .failure(message)
+    return offsets.map { offset in
+      if let option = alertOption(for: offset) {
+        return AlertRow(
+          option: option,
+          customMinutesText: defaultCustomMinutesText(for: option)
+        )
+      }
+
+      return AlertRow(
+        option: .custom,
+        customMinutesText: customMinutesText(from: offset)
+      )
     }
   }
 
-  private func validatedTravelTimeSeconds() -> Validation<TimeInterval?> {
-    if travelTime != .custom {
-      return .success(travelTime.seconds)
+  private func alertOption(for seconds: TimeInterval) -> AlertOption? {
+    AlertOption.allCases.first { option in
+      guard let leadTimeSeconds = option.leadTimeSeconds else { return false }
+      return Int(leadTimeSeconds) == Int(seconds)
+    }
+  }
+
+  private func travelOption(for seconds: TimeInterval?) -> TravelTimeOption? {
+    guard let seconds else { return nil }
+
+    return TravelTimeOption.allCases.first { option in
+      guard let optionSeconds = option.seconds else { return false }
+      return Int(optionSeconds) == Int(seconds)
+    }
+  }
+
+  private func displayedEndDate(for event: CalendarAgentEvent) -> Date {
+    guard event.isAllDay else {
+      return event.endDate
     }
 
-    switch validatedCustomMinutes(
-      customTravelTimeMinutes,
-      emptyMessage: "Enter custom travel time minutes.",
-      invalidMessage: "Custom travel time minutes must be a positive whole number."
-    ) {
-    case .success(let minutes):
-      return .success(TimeInterval(minutes * 60))
-    case .failure(let message):
-      return .failure(message)
+    let startDay = calendar.startOfDay(for: event.startDate)
+    let endDay = calendar.startOfDay(for: event.endDate)
+
+    guard endDay > startDay else {
+      return startDay
     }
+
+    return calendar.date(byAdding: .day, value: -1, to: endDay) ?? startDay
   }
-  private func validatedCustomMinutes(_ value: String, emptyMessage: String, invalidMessage: String) -> Validation<Int>
-  {
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return .failure(emptyMessage) }
-    guard let minutes = Int(trimmed), minutes > 0 else { return .failure(invalidMessage) }
-    return .success(minutes)
-  }
-  private func customMinutesText(from seconds: TimeInterval) -> String { String(max(1, Int((seconds / 60).rounded()))) }
-  private func resolvedEventDates() -> (start: Date, end: Date) {
-    if isAllDay {
-      let startOfDay = calendar.startOfDay(for: startDate)
-      let endDayStart = calendar.startOfDay(for: endDate)
-      let endExclusive =
-        calendar.date(byAdding: .day, value: 1, to: endDayStart) ?? endDayStart.addingTimeInterval(86_400)
-      return (startOfDay, endExclusive)
-    }
-    let start = combinedDate(day: startDate, time: startTime)
-    var end = combinedDate(day: endDate, time: endTime)
-    if end <= start { end = calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3600) }
-    return (start, end)
-  }
-  private func combinedDate(day: Date, time: Date) -> Date {
-    let dayComponents = calendar.dateComponents([.year, .month, .day], from: day)
-    let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
-    var merged = DateComponents()
-    merged.year = dayComponents.year
-    merged.month = dayComponents.month
-    merged.day = dayComponents.day
-    merged.hour = timeComponents.hour
-    merged.minute = timeComponents.minute
-    return calendar.date(from: merged) ?? day
-  }
+
   private func defaultStartTime(on date: Date) -> Date {
     let startOfDay = calendar.startOfDay(for: date)
     return calendar.date(byAdding: .hour, value: 9, to: startOfDay) ?? startOfDay
   }
+
   private func defaultEndTime(on date: Date) -> Date {
     let start = defaultStartTime(on: date)
     return calendar.date(byAdding: .hour, value: 1, to: start) ?? start.addingTimeInterval(3600)
   }
+
   private func resolvedEventIdentifier(from event: CalendarAgentEvent) -> String? {
-    guard !event.id.hasPrefix("birthday-") else { return nil }
-    let trimmedID = event.id
+    guard !event.id.hasPrefix("birthday-") else {
+      return nil
+    }
+
     let suffix = "-\(event.startDate.timeIntervalSince1970)"
-    guard trimmedID.hasSuffix(suffix) else { return trimmedID.isEmpty ? nil : trimmedID }
-    return String(trimmedID.dropLast(suffix.count))
+
+    guard event.id.hasSuffix(suffix) else {
+      return event.id.isEmpty ? nil : event.id
+    }
+
+    let resolved = String(event.id.dropLast(suffix.count))
+    return resolved.isEmpty ? nil : resolved
   }
+
   private func handleMutationResult(
-    success: Bool, failureMessage: String?, successMessage: String, onSuccess: @escaping () -> Void
+    success: Bool,
+    failureMessage: String?,
+    successMessage: String,
+    onSuccess: @escaping () -> Void
   ) {
     isSaving = false
-    if success {
-      infoMessage = successMessage
-      onSuccess()
+
+    guard success else {
+      errorMessage = "Failed: \(failureMessage ?? "unknown error")"
       return
     }
-    errorMessage = "Failed: \(failureMessage ?? "unknown error")"
+
+    infoMessage = successMessage
+    refreshSnapshots()
+    onSuccess()
   }
+
   private func normalizedOptionalText(_ value: String?) -> String? {
     guard let value else { return nil }
+
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
   }
+
   private func clearMessages() {
     errorMessage = nil
     infoMessage = nil
   }
+
   private func defaultCustomMinutesText(for option: AlertOption) -> String {
-    guard let seconds = option.leadTimeSeconds, seconds > 0 else { return "" }
+    guard let seconds = option.leadTimeSeconds, seconds > 0 else {
+      return ""
+    }
+
     return customMinutesText(from: seconds)
   }
+
   private func defaultCustomMinutesText(for option: TravelTimeOption) -> String {
-    guard let seconds = option.seconds, seconds > 0 else { return "" }
+    guard let seconds = option.seconds, seconds > 0 else {
+      return ""
+    }
+
     return customMinutesText(from: seconds)
+  }
+
+  private func customMinutesText(knownSeconds: TimeInterval?, actualSeconds: TimeInterval?) -> String {
+    guard knownSeconds == nil, let actualSeconds else {
+      return ""
+    }
+
+    return customMinutesText(from: actualSeconds)
+  }
+
+  private func customMinutesText(from seconds: TimeInterval) -> String {
+    "\(max(0, Int((seconds / 60).rounded())))"
   }
 }

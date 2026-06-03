@@ -1,3 +1,4 @@
+import EasyBarCalendarPresentation
 import EasyBarShared
 import SwiftUI
 
@@ -75,7 +76,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     .frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
   }
 
-  /// Returns the three dates rendered by the upcoming popup.
+  /// Returns the dates rendered by the upcoming popup.
   private var upcomingDates: [Date] {
     let start = resolvedCalendar.startOfDay(for: Date())
 
@@ -110,6 +111,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
   /// Returns the visible events for one day using the current upcoming filtering mode.
   private func events(for date: Date) -> [CalendarAgentEvent] {
     let startOfDay = resolvedCalendar.startOfDay(for: date)
+
     guard let endOfDay = resolvedCalendar.date(byAdding: .day, value: 1, to: startOfDay) else {
       return []
     }
@@ -117,22 +119,15 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     let now = Date()
     let effectiveStart =
       config.excludePastEvents && resolvedCalendar.isDateInToday(date)
-      ? max(startOfDay, now) : startOfDay
+      ? max(startOfDay, now)
+      : startOfDay
 
     return store.events
       .filter { event in
         event.startDate < endOfDay && event.endDate > effectiveStart
       }
       .sorted { lhs, rhs in
-        if lhs.startDate != rhs.startDate {
-          return lhs.startDate < rhs.startDate
-        }
-
-        if lhs.endDate != rhs.endDate {
-          return lhs.endDate < rhs.endDate
-        }
-
-        return lhs.id < rhs.id
+        CalendarAgendaBuilder.eventSortOrder(lhs: lhs, rhs: rhs)
       }
   }
 
@@ -151,6 +146,6 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
 
   /// Converts one hex string into SwiftUI color.
   private func color(_ hex: String) -> Color {
-    return Color(calendarHex: hex)
+    Color(calendarHex: hex)
   }
 }

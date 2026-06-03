@@ -1,4 +1,4 @@
-import EasyBarCalendarUI
+import EasyBarCalendarPresentation
 import Foundation
 
 extension CalendarBuiltinConfig {

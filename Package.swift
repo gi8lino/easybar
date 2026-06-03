@@ -58,7 +58,6 @@ let package = Package(
       dependencies: [
         "EasyBarShared",
         "EasyBarCalendarPresentation",
-        "EasyBarCalendarUI",
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarCalendarConfig"
@@ -137,6 +136,7 @@ let package = Package(
         "EasyBarLuaRuntime",
         "EasyBarShared",
         "EasyBarCalendarConfig",
+        "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
       ],
       path: "Tests/EasyBarTests"
