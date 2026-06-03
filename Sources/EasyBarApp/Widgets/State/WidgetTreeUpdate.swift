@@ -12,6 +12,8 @@ struct WidgetTreeUpdate: Codable {
   let token: String?
   let command: String?
   let sync: Bool?
+  let timeoutSeconds: TimeInterval?
+  let maxOutputBytes: Int?
 
   enum CodingKeys: String, CodingKey {
     case protocolVersion = "protocol_version"
@@ -22,6 +24,8 @@ struct WidgetTreeUpdate: Codable {
     case token
     case command
     case sync
+    case timeoutSeconds = "timeout_seconds"
+    case maxOutputBytes = "max_output_bytes"
   }
 
   enum Kind: String, Codable {
@@ -85,8 +89,22 @@ struct WidgetTreeUpdate: Codable {
   }
 
   /// Returns the decoded command request payload when present.
-  var commandRequestPayload: (token: String, command: String, isSynchronous: Bool)? {
+  var commandRequestPayload:
+    (
+      token: String,
+      command: String,
+      isSynchronous: Bool,
+      timeoutSeconds: TimeInterval?,
+      maxOutputBytes: Int?
+    )?
+  {
     guard let token, let command, let sync else { return nil }
-    return (token: token, command: command, isSynchronous: sync)
+    return (
+      token: token,
+      command: command,
+      isSynchronous: sync,
+      timeoutSeconds: timeoutSeconds,
+      maxOutputBytes: maxOutputBytes
+    )
   }
 }

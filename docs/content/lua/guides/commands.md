@@ -8,10 +8,10 @@ and concurrent async jobs through `[app.lua_commands]`.
 
 ## Synchronous commands
 
-`easybar.exec(...)` runs a command synchronously.
+`easybar.exec(command, options, callback?)` runs a command synchronously.
 
 ```lua
-easybar.exec("date +%H:%M", function(output)
+easybar.exec("date +%H:%M", {}, function(output)
     clock:set({
         label = {
             string = output,
@@ -24,7 +24,7 @@ Use this only for fast commands.
 
 ## Asynchronous commands
 
-`easybar.exec_async(...)` runs a command in the background and calls back later with output and exit code.
+`easybar.exec_async(command, options, callback)` runs a command in the background and calls back later with output and exit code.
 
 This is preferred for:
 
@@ -35,7 +35,9 @@ This is preferred for:
 - anything that should not block other widgets
 
 ```lua
-easybar.exec_async("brew outdated --json=v2", function(output, code)
+easybar.exec_async("brew outdated --json=v2", {
+    timeout_seconds = 15,
+}, function(output, code)
     if code ~= 0 then
         easybar.log(easybar.level.warn, "brew failed", code, output)
         return
@@ -48,6 +50,13 @@ easybar.exec_async("brew outdated --json=v2", function(output, code)
     })
 end)
 ```
+
+`options` accepts:
+
+- `timeout_seconds`
+- `max_output_bytes`
+
+Leave `options` as `{}` when you want the global defaults from `[app.lua_commands]`.
 
 ## Environment
 

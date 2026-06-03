@@ -6,7 +6,13 @@ enum WidgetRuntimeMessage {
   case ready
   case tree(root: String, nodes: [WidgetNodeState])
   case clearRoot(String)
-  case commandRequest(token: String, command: String, isSynchronous: Bool)
+  case commandRequest(
+    token: String,
+    command: String,
+    isSynchronous: Bool,
+    timeoutSeconds: TimeInterval?,
+    maxOutputBytes: Int?
+  )
 }
 
 /// Decodes and classifies structured messages emitted by the Lua widget runtime.
@@ -46,10 +52,29 @@ struct WidgetRuntimeProtocolDecoder {
           "invalid lua command request: \(line)"
         )
       }
+
+      if let timeoutSeconds = request.timeoutSeconds,
+        !timeoutSeconds.isFinite || timeoutSeconds <= 0
+      {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua command timeout override: \(line)"
+        )
+      }
+
+      if let maxOutputBytes = request.maxOutputBytes,
+        maxOutputBytes <= 0
+      {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua command output override: \(line)"
+        )
+      }
+
       return .commandRequest(
         token: request.token,
         command: request.command,
-        isSynchronous: request.isSynchronous
+        isSynchronous: request.isSynchronous,
+        timeoutSeconds: request.timeoutSeconds,
+        maxOutputBytes: request.maxOutputBytes
       )
     }
   }

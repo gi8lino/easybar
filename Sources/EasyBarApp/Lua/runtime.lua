@@ -113,16 +113,28 @@ local function next_command_token()
 end
 
 --- Sends one command request to the Swift host.
-local function send_command_request(command, synchronous)
+local function send_command_request(command, synchronous, options)
 	local token = next_command_token()
 
-	send_payload({
+	local payload = {
 		protocol_version = PROTOCOL_VERSION,
 		type = "command_request",
 		token = token,
 		command = tostring(command),
 		sync = synchronous == true,
-	})
+	}
+
+	if type(options) == "table" then
+		if options.timeout_seconds ~= nil then
+			payload.timeout_seconds = options.timeout_seconds
+		end
+
+		if options.max_output_bytes ~= nil then
+			payload.max_output_bytes = options.max_output_bytes
+		end
+	end
+
+	send_payload(payload)
 
 	return token
 end
@@ -190,8 +202,8 @@ local function process_next_host_message()
 end
 
 --- Runs one host-owned command synchronously and returns trimmed output plus exit code.
-local function request_sync_command(command)
-	local token = send_command_request(command, true)
+local function request_sync_command(command, options)
+	local token = send_command_request(command, true, options)
 
 	while true do
 		local response = registry.take_pending_command_response(token)
@@ -206,8 +218,8 @@ local function request_sync_command(command)
 end
 
 --- Starts one host-owned asynchronous command and returns its token.
-local function request_async_command(command)
-	return send_command_request(command, false)
+local function request_async_command(command, options)
+	return send_command_request(command, false, options)
 end
 
 registry = api.new(log, {

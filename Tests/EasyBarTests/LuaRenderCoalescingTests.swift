@@ -54,7 +54,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     		label = "Brew ...",
     	})
 
-    	easybar.exec("printf '0'", function(output)
+    	easybar.exec("printf '0'", {}, function(output)
     		easybar.set("brew", {
     			icon = "done",
     			label = "Brew " .. output,
@@ -158,7 +158,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     		label = "Brew ...",
     	})
 
-    	easybar.exec_async("printf '0'", function(output, code)
+    	easybar.exec_async("printf '0'", {}, function(output, code)
     		easybar.set("brew", {
     			icon = "done",
     			label = "Brew " .. output .. " (" .. tostring(code) .. ")",
@@ -240,6 +240,75 @@ final class LuaRenderCoalescingTests: XCTestCase {
     XCTAssertEqual(rootNode(in: doneUpdate)?.text, "Brew 0 (0)")
   }
 
+  func testExecAndExecAsyncIncludePerCommandLimitOverrides() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	icon = "idle",
+    	label = "Idle",
+    })
+
+    easybar.subscribe("brew", { easybar.events.forced }, function(_)
+    	easybar.exec_async("printf 'async'", {
+    		timeout_seconds = 12,
+    		max_output_bytes = 4096,
+    	}, function(_, _)
+    	end)
+
+    	easybar.exec("printf 'sync'", {
+    		timeout_seconds = 9.5,
+    		max_output_bytes = 2048,
+    	}, function(_, _)
+    	end)
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.command-override-request.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
+      autoRespondToCommands: false
+    )
+    defer { runtime.stop() }
+
+    try runtime.sendHostEvent("{\"name\":\"forced\"}\n")
+
+    let asyncRequest = try await nextCommandRequest(
+      from: recorder,
+      matching: { !$0.isSynchronous && $0.command == "printf 'async'" }
+    )
+    XCTAssertEqual(asyncRequest.timeoutSeconds, 12)
+    XCTAssertEqual(asyncRequest.maxOutputBytes, 4096)
+
+    let syncRequest = try await nextCommandRequest(
+      from: recorder,
+      matching: { $0.isSynchronous && $0.command == "printf 'sync'" }
+    )
+    XCTAssertEqual(syncRequest.timeoutSeconds, 9.5)
+    XCTAssertEqual(syncRequest.maxOutputBytes, 2048)
+  }
+
   func testStaleCommandResponseFromPreviousRuntimeDoesNotSatisfyNewSyncCommand() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 
@@ -262,7 +331,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     })
 
     easybar.subscribe("brew", { easybar.events.forced }, function(_)
-    	easybar.exec_async("printf 'old'", function(output)
+    	easybar.exec_async("printf 'old'", {}, function(output)
     		easybar.set("brew", {
     			label = output,
     		})
@@ -303,7 +372,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     })
 
     easybar.subscribe("brew", { easybar.events.forced }, function(_)
-    	easybar.exec("printf 'fresh'", function(output)
+    	easybar.exec("printf 'fresh'", {}, function(output)
     		easybar.set("brew", {
     			icon = "done",
     			label = output,
@@ -766,6 +835,8 @@ extension LuaRenderCoalescingTests {
     let token: String
     let command: String
     let isSynchronous: Bool
+    let timeoutSeconds: TimeInterval?
+    let maxOutputBytes: Int?
   }
 
   fileprivate actor RuntimeHostBridge {
@@ -798,7 +869,9 @@ extension LuaRenderCoalescingTests {
           RuntimeCommandRequest(
             token: request.token,
             command: request.command,
-            isSynchronous: request.isSynchronous
+            isSynchronous: request.isSynchronous,
+            timeoutSeconds: request.timeoutSeconds,
+            maxOutputBytes: request.maxOutputBytes
           )
         )
 
@@ -825,7 +898,8 @@ extension LuaRenderCoalescingTests {
         return "clear_root:\(update.clearRootID ?? "unknown")"
       case .commandRequest:
         if let request = update.commandRequestPayload {
-          return "command_request:\(request.command):sync=\(request.isSynchronous)"
+          return
+            "command_request:\(request.command):sync=\(request.isSynchronous):timeout=\(String(describing: request.timeoutSeconds)):max_output=\(String(describing: request.maxOutputBytes))"
         }
         return "command_request"
       case .tree:

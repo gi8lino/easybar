@@ -183,11 +183,13 @@ actor WidgetEngine {
       await handleTree(root: root, nodes: nodes)
     case .clearRoot(let rootID):
       await handleClearRoot(rootID: rootID)
-    case .commandRequest(let token, let command, let isSynchronous):
+    case .commandRequest(let token, let command, let isSynchronous, let timeoutSeconds, let maxOutputBytes):
       await handleCommandRequest(
         token: token,
         command: command,
-        isSynchronous: isSynchronous
+        isSynchronous: isSynchronous,
+        timeoutSecondsOverride: timeoutSeconds,
+        maxOutputBytesOverride: maxOutputBytes
       )
     }
   }
@@ -253,20 +255,24 @@ actor WidgetEngine {
   private func handleCommandRequest(
     token: String,
     command: String,
-    isSynchronous: Bool
+    isSynchronous: Bool,
+    timeoutSecondsOverride: TimeInterval?,
+    maxOutputBytesOverride: Int?
   ) async {
     let commandSettings = await configManager.luaCommandSettings()
     let commandLimits =
       LuaCommandRunner.Limits(
-        timeoutSeconds: commandSettings.timeoutSeconds,
-        maxOutputBytes: commandSettings.maxOutputBytes
+        timeoutSeconds: timeoutSecondsOverride ?? commandSettings.timeoutSeconds,
+        maxOutputBytes: maxOutputBytesOverride ?? commandSettings.maxOutputBytes
       )
 
     logger.debug(
       "lua command requested",
       .field("token", token),
       .field("sync", isSynchronous),
-      .field("command", command)
+      .field("command", command),
+      .field("timeout_seconds", commandLimits.timeoutSeconds),
+      .field("max_output_bytes", commandLimits.maxOutputBytes)
     )
 
     if isSynchronous {

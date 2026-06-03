@@ -373,16 +373,58 @@ function M.new(hooks)
 		return response
 	end
 
+	--- Normalizes optional host command overrides for one exec call.
+	local function normalize_command_options(options, signature)
+		if options == nil then
+			return nil
+		end
+
+		assert(type(options) == "table", signature .. " requires options table or nil")
+
+		local normalized = {}
+
+		if options.timeout_seconds ~= nil then
+			local timeout_seconds = tonumber(options.timeout_seconds)
+			assert(
+				timeout_seconds ~= nil and timeout_seconds > 0,
+				signature .. " requires options.timeout_seconds > 0"
+			)
+			normalized.timeout_seconds = timeout_seconds
+		end
+
+		if options.max_output_bytes ~= nil then
+			local max_output_bytes = tonumber(options.max_output_bytes)
+			assert(
+				max_output_bytes ~= nil
+					and max_output_bytes > 0
+					and math.floor(max_output_bytes) == max_output_bytes,
+				signature .. " requires options.max_output_bytes as positive integer"
+			)
+			normalized.max_output_bytes = max_output_bytes
+		end
+
+		if next(normalized) == nil then
+			return nil
+		end
+
+		return normalized
+	end
+
 	--- Starts one background host-owned shell command.
-	function registry.exec_async(command, callback)
+	function registry.exec_async(command, options, callback)
 		assert(
 			type(command) == "string" and command ~= "",
-			"easybar.exec_async(command, callback) requires command"
+			"easybar.exec_async(command, options, callback) requires command"
 		)
-		assert(type(callback) == "function", "easybar.exec_async(command, callback) requires callback")
+		assert(
+			type(callback) == "function",
+			"easybar.exec_async(command, options, callback) requires callback"
+		)
 		assert(type(request_async_command) == "function", "easybar.exec_async unavailable without host runner")
 
-		local token = request_async_command(command) or make_async_job_token()
+		local normalized_options =
+			normalize_command_options(options, "easybar.exec_async(command, options, callback)")
+		local token = request_async_command(command, normalized_options) or make_async_job_token()
 
 		state.pending_async_commands[token] = {
 			command = command,
@@ -395,12 +437,17 @@ function M.new(hooks)
 	end
 
 	--- Runs one host-owned shell command.
-	function registry.exec(command, callback)
-		assert(type(command) == "string" and command ~= "", "easybar.exec(command, callback) requires command")
+	function registry.exec(command, options, callback)
+		assert(
+			type(command) == "string" and command ~= "",
+			"easybar.exec(command, options, callback) requires command"
+		)
 		assert(type(request_sync_command) == "function", "easybar.exec unavailable without host runner")
 
+		local normalized_options =
+			normalize_command_options(options, "easybar.exec(command, options, callback)")
 		before_exec_callback()
-		local output, code = request_sync_command(command)
+		local output, code = request_sync_command(command, normalized_options)
 		output = trim_trailing_newlines(output)
 		code = tonumber(code) or 1
 

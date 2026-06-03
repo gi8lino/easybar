@@ -19,7 +19,7 @@ Use the full reference when you need exact property tables or event payload type
 - `easybar.default(props)`
   Set widget-local default properties for future `add(...)` calls.
 - `easybar.exec(...)` and `easybar.exec_async(...)`
-  Run shell commands from a widget.
+  Run shell commands from a widget, with optional per-call command limits.
 - `easybar.log(level, ...)`
   Write widget-scoped log output.
 
