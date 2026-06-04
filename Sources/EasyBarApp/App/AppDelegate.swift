@@ -24,20 +24,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Starts EasyBar after AppKit finishes launching.
   func applicationDidFinishLaunching(_ notification: Notification) {
+    writeEasyBarBootstrapLog("applicationDidFinishLaunching")
+
     guard appController.start() else {
+      writeEasyBarBootstrapErrorLog("AppController.start failed")
       exitCode = 1
       terminationCleanupCompleted = true
       NSApp.terminate(nil)
       return
     }
+
+    writeEasyBarBootstrapLog("AppController.start completed")
   }
 
   /// Requests graceful shutdown before allowing AppKit termination.
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     guard !terminationCleanupCompleted else {
+      writeEasyBarBootstrapLog("applicationShouldTerminate terminateNow")
       return .terminateNow
     }
 
+    writeEasyBarBootstrapLog("applicationShouldTerminate requesting graceful shutdown")
     requestTermination(exitCode: 0)
     return .terminateCancel
   }

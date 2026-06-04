@@ -39,7 +39,7 @@ final class AeroSpaceService: ObservableObject {
     /// Observer for app terminations.
     var appTerminationObserver: NSObjectProtocol?
     /// Delayed refresh scheduled after app launch.
-    var pendingLaunchRefresh: DispatchWorkItem?
+    var pendingLaunchRefresh: Task<Void, Never>?
     /// Whether the service is active.
     var running = false
     /// Generation used to ignore stale refresh work.
@@ -48,14 +48,10 @@ final class AeroSpaceService: ObservableObject {
 
   /// Logger used for AeroSpace diagnostics.
   private let logger: ProcessLogger
-  /// Queue used for AeroSpace refresh work.
-  private let refreshQueue = DispatchQueue(label: "easybar.aerospace.refresh", qos: .userInitiated)
   /// Runner for AeroSpace CLI commands.
   private let commandRunner: AeroSpaceCommandRunner
-  /// Protects coordination state.
-  private let stateLock = NSLock()
   /// Current locked coordination state.
-  private var coordination = CoordinationState()
+  private let coordination = LockedState(CoordinationState())
 
   /// Creates the shared AeroSpace service.
   init(logger: ProcessLogger) {
@@ -69,17 +65,17 @@ final class AeroSpaceService: ObservableObject {
 extension AeroSpaceService {
   /// Returns whether any native widget currently needs AeroSpace state.
   private var hasConsumers: Bool {
-    withLock { !coordination.consumers.isEmpty }
+    withLock { !$0.consumers.isEmpty }
   }
 
   /// Returns the current registered consumer count.
   private var consumerCount: Int {
-    withLock { coordination.consumers.count }
+    withLock { $0.consumers.count }
   }
 
   /// Starts the service.
   func start() {
-    let shouldStart = withLock { () -> Bool in
+    let shouldStart = withLock { coordination -> Bool in
       guard !coordination.running else { return false }
       coordination.running = true
       coordination.generation &+= 1
@@ -98,7 +94,7 @@ extension AeroSpaceService {
 
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
-    let observers = withLock { () -> [NSObjectProtocol] in
+    let observers = withLock { coordination -> [NSObjectProtocol] in
       guard coordination.running else { return [] }
       coordination.running = false
       coordination.generation &+= 1
@@ -122,7 +118,7 @@ extension AeroSpaceService {
 
   /// Registers one widget that depends on AeroSpace state.
   func registerConsumer(_ id: String) {
-    let count = withLock { () -> Int in
+    let count = withLock { coordination -> Int in
       coordination.consumers.insert(id)
       return coordination.consumers.count
     }
@@ -138,7 +134,7 @@ extension AeroSpaceService {
 
   /// Unregisters one widget that no longer depends on AeroSpace state.
   func unregisterConsumer(_ id: String) {
-    let count = withLock { () -> Int in
+    let count = withLock { coordination -> Int in
       coordination.consumers.remove(id)
       return coordination.consumers.count
     }
@@ -166,7 +162,7 @@ extension AeroSpaceService {
       .field("consumers", consumerCount)
     )
 
-    refreshQueue.async { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
     }
@@ -179,7 +175,7 @@ extension AeroSpaceService {
       .field("workspace", workspace)
     )
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       guard let self else { return }
 
       self.spaces = self.spaces.map { space in
@@ -193,7 +189,7 @@ extension AeroSpaceService {
       }
     }
 
-    refreshQueue.async { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
@@ -219,7 +215,7 @@ extension AeroSpaceService {
       return
     }
 
-    DispatchQueue.main.async { [logger] in
+    Task { @MainActor [logger] in
       let configuration = NSWorkspace.OpenConfiguration()
       configuration.activates = true
 
@@ -252,7 +248,7 @@ extension AeroSpaceService {
       .field("consumers", consumerCount)
     )
 
-    refreshQueue.async { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
     }
@@ -264,7 +260,7 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Listens for app activation so focused-app UI can update immediately.
   fileprivate func subscribeAppSwitches() {
-    let shouldInstall = withLock { coordination.appSwitchObserver == nil }
+    let shouldInstall = withLock { $0.appSwitchObserver == nil }
     guard shouldInstall else { return }
 
     let observer = NSWorkspace.shared.notificationCenter.addObserver(
@@ -283,7 +279,7 @@ extension AeroSpaceService {
       self.applyOptimisticFocusedApp(from: app)
     }
 
-    withLock {
+    withLock { coordination in
       if coordination.appSwitchObserver == nil {
         coordination.appSwitchObserver = observer
       }
@@ -294,7 +290,7 @@ extension AeroSpaceService {
 
   /// Listens for app launches and schedules one delayed refresh.
   fileprivate func subscribeAppLaunch() {
-    let shouldInstall = withLock { coordination.appLaunchObserver == nil }
+    let shouldInstall = withLock { $0.appLaunchObserver == nil }
     guard shouldInstall else { return }
 
     let observer = NSWorkspace.shared.notificationCenter.addObserver(
@@ -313,7 +309,7 @@ extension AeroSpaceService {
       self.scheduleLaunchRefresh(for: app)
     }
 
-    withLock {
+    withLock { coordination in
       if coordination.appLaunchObserver == nil {
         coordination.appLaunchObserver = observer
       }
@@ -324,7 +320,7 @@ extension AeroSpaceService {
 
   /// Listens for app termination so workspace icons refresh after apps quit.
   fileprivate func subscribeAppTermination() {
-    let shouldInstall = withLock { coordination.appTerminationObserver == nil }
+    let shouldInstall = withLock { $0.appTerminationObserver == nil }
     guard shouldInstall else { return }
 
     let observer = NSWorkspace.shared.notificationCenter.addObserver(
@@ -348,7 +344,7 @@ extension AeroSpaceService {
       self.refresh()
     }
 
-    withLock {
+    withLock { coordination in
       if coordination.appTerminationObserver == nil {
         coordination.appTerminationObserver = observer
       }
@@ -367,12 +363,16 @@ extension AeroSpaceService {
     )
 
     let generation = currentGeneration()
-    var workItem: DispatchWorkItem?
-    let refreshWorkItem = DispatchWorkItem { [weak self] in
+    let refreshTask = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: 600_000_000)
+      } catch {
+        return
+      }
+
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
-      guard let workItem else { return }
-      self.clearPendingLaunchRefresh(workItem)
+      self.clearPendingLaunchRefresh(refreshTaskID: generation)
 
       self.logger.debug(
         "aerospace delayed launch refresh firing",
@@ -380,25 +380,22 @@ extension AeroSpaceService {
       )
       self.refresh()
     }
-    workItem = refreshWorkItem
 
-    withLock {
-      coordination.pendingLaunchRefresh = refreshWorkItem
+    withLock { coordination in
+      coordination.pendingLaunchRefresh = refreshTask
     }
-
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: refreshWorkItem)
   }
 
   /// Cancels any delayed launch refresh once a stronger signal arrives first.
   fileprivate func cancelPendingLaunchRefresh(reason: String) {
-    let workItem = withLock { () -> DispatchWorkItem? in
-      let workItem = coordination.pendingLaunchRefresh
+    let task = withLock { coordination -> Task<Void, Never>? in
+      let task = coordination.pendingLaunchRefresh
       coordination.pendingLaunchRefresh = nil
-      return workItem
+      return task
     }
 
-    guard let workItem else { return }
-    workItem.cancel()
+    guard let task else { return }
+    task.cancel()
     logger.debug(
       "aerospace delayed launch refresh canceled",
       .field("reason", reason)
@@ -406,9 +403,9 @@ extension AeroSpaceService {
   }
 
   /// Clears the pending launch refresh if it still matches the fired work item.
-  fileprivate func clearPendingLaunchRefresh(_ workItem: DispatchWorkItem) {
-    withLock {
-      guard coordination.pendingLaunchRefresh === workItem else { return }
+  fileprivate func clearPendingLaunchRefresh(refreshTaskID generation: UInt64) {
+    withLock { coordination in
+      guard coordination.generation == generation else { return }
       coordination.pendingLaunchRefresh = nil
     }
   }
@@ -459,7 +456,7 @@ extension AeroSpaceService {
       resolveAppID: resolvedAppID(name:bundlePath:)
     )
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
@@ -519,26 +516,24 @@ extension AeroSpaceService {
 
   /// Returns whether the service is still allowed to execute the queued refresh work.
   fileprivate func shouldExecute(generation: UInt64) -> Bool {
-    withLock {
-      coordination.running && coordination.generation == generation
+    withLock { state in
+      state.running && state.generation == generation
     }
   }
 
   /// Returns the current refresh generation.
   fileprivate func currentGeneration() -> UInt64 {
-    withLock { coordination.generation }
+    withLock { $0.generation }
   }
 
   /// Returns whether the service is currently running.
   fileprivate var isRunning: Bool {
-    withLock { coordination.running }
+    withLock { $0.running }
   }
 
   /// Runs one closure while holding the service state lock.
-  fileprivate func withLock<T>(_ body: () -> T) -> T {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-    return body()
+  private func withLock<T>(_ body: @Sendable (inout CoordinationState) -> T) -> T {
+    coordination.withLock(body)
   }
 }
 

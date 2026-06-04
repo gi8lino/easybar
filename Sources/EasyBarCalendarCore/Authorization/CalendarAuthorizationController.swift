@@ -117,7 +117,7 @@ final class CalendarAuthorizationController {
         self.retryBackoff.reset()
         self.authState.markGrantedInProcess()
 
-        DispatchQueue.main.async {
+        Task { @MainActor in
           self.onResolvedChange?()
         }
       }

@@ -1,26 +1,24 @@
 import CoreLocation
+import EasyBarShared
 import Foundation
 
 /// Stores the current CoreLocation authorization status for the network agent.
 final class NetworkAuthorizationState {
-  private let lock = NSLock()
-  private var status: CLAuthorizationStatus = .notDetermined
+  private let state = LockedState(CLAuthorizationStatus.notDetermined)
 
   /// Creates one authorization state wrapper.
   init() {}
 
   /// Stores the latest location authorization status.
   func setStatus(_ newStatus: CLAuthorizationStatus) {
-    lock.lock()
-    status = newStatus
-    lock.unlock()
+    state.withLock { status in
+      status = newStatus
+    }
   }
 
   /// Returns the last known authorization status.
   func currentStatus() -> CLAuthorizationStatus {
-    lock.lock()
-    defer { lock.unlock() }
-    return status
+    state.withLock { $0 }
   }
 
   /// Returns whether Wi-Fi access is currently authorized.

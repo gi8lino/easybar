@@ -28,20 +28,14 @@ final class MonthCalendarAgentClient {
   /// Active calendar built-in config snapshot.
   private var calendarConfig: Config.CalendarBuiltinConfig
 
-  /// Queue used to stage wider month preload requests without blocking the main actor.
-  private let preloadQueue = DispatchQueue(
-    label: "easybar.month-calendar.preload",
-    qos: .utility
-  )
-
   /// Month radii loaded around the currently visible month.
   private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
 
   /// Delay schedule for staged month preload requests.
   private let preloadDelays: [TimeInterval] = [0.0, 0.20, 0.75, 1.75, 3.5, 6.5, 10.0]
 
-  /// Pending staged month preload work items.
-  private var preloadWorkItems: [DispatchWorkItem] = []
+  /// Pending staged month preload tasks.
+  private var preloadTasks: [Task<Void, Never>] = []
 
   /// Long-lived calendar-agent stream controller.
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
@@ -114,17 +108,21 @@ final class MonthCalendarAgentClient {
 
     for (index, radius) in preloadRadii.enumerated() {
       let delay = preloadDelays[min(index, preloadDelays.count - 1)]
-      let workItem = DispatchWorkItem {
-        Task { @MainActor in
-          MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(
-            for: visibleMonth,
-            radius: radius
-          )
+      let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
+      let task = Task { @MainActor in
+        do {
+          try await Task.sleep(nanoseconds: nanoseconds)
+        } catch {
+          return
         }
+
+        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(
+          for: visibleMonth,
+          radius: radius
+        )
       }
 
-      preloadWorkItems.append(workItem)
-      preloadQueue.asyncAfter(deadline: .now() + delay, execute: workItem)
+      preloadTasks.append(task)
     }
   }
 
@@ -193,14 +191,14 @@ final class MonthCalendarAgentClient {
   ) {
     let socketPath = calendarAgentConfig.socketPath
 
-    DispatchQueue.global(qos: .userInitiated).async {
+    Task.detached(priority: .userInitiated) {
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,
           socketPath: socketPath
         )
 
-        Task { @MainActor in
+        await MainActor.run {
           MonthCalendarAgentClient.shared.handleMutationResponse(
             response,
             successKind: successKind,
@@ -208,7 +206,7 @@ final class MonthCalendarAgentClient {
           )
         }
       } catch {
-        Task { @MainActor in
+        await MainActor.run {
           MonthCalendarAgentClient.shared.handleMutationError(
             error,
             completion: completion
@@ -301,8 +299,8 @@ final class MonthCalendarAgentClient {
 
   /// Cancels any pending staged month expansion.
   private func cancelStagedPreload() {
-    preloadWorkItems.forEach { $0.cancel() }
-    preloadWorkItems.removeAll()
+    preloadTasks.forEach { $0.cancel() }
+    preloadTasks.removeAll()
   }
 
   /// Returns the calendar resolved for month-grid subscription ranges.

@@ -3,7 +3,7 @@ import EasyBarShared
 import Foundation
 
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
-final class LuaTransport {
+final class LuaTransport: @unchecked Sendable {
   /// Startup errors surfaced while preparing the transport.
   enum TransportError: LocalizedError {
     case startupFailed(String)
@@ -16,21 +16,21 @@ final class LuaTransport {
     }
   }
 
+  private struct State {
+    var generation: UInt64 = 0
+    var socketPath: String?
+    var listenerFD: Int32 = -1
+    var clientFD: Int32 = -1
+    var errorPipe: Pipe?
+    var acceptTask: Task<Void, Never>?
+    var readTask: Task<Void, Never>?
+    var stderrTask: Task<Void, Never>?
+    var lineHandler: (@Sendable (String) -> Void)?
+  }
+
   private let logger: ProcessLogger
   private let logBridge: LuaLogBridge
-
-  private let stateQueue = DispatchQueue(label: "easybar.lua.transport.state")
-  private let writeQueue = DispatchQueue(label: "easybar.lua.transport.write")
-  private let acceptQueue = DispatchQueue(label: "easybar.lua.transport.accept", qos: .utility)
-  private let readQueue = DispatchQueue(label: "easybar.lua.transport.read", qos: .utility)
-
-  private var generation: UInt64 = 0
-  private var socketPath: String?
-  private var listenerFD: Int32 = -1
-  private var clientFD: Int32 = -1
-  private var errorPipe: Pipe?
-  private var readSource: DispatchSourceRead?
-  private var lineHandler: (@Sendable (String) -> Void)?
+  private let state = LockedState(State())
 
   /// Creates one Lua transport.
   init(logger: ProcessLogger) {
@@ -44,105 +44,103 @@ final class LuaTransport {
     error: Pipe,
     lineHandler: @escaping @Sendable (String) -> Void
   ) throws {
-    var startupError: Error?
+    shutdown()
 
-    stateQueue.sync {
-      shutdownLocked()
+    let listenerFD = try makeListeningSocket(at: socketPath)
+    let generation = state.withLock { state -> UInt64 in
+      state.socketPath = socketPath
+      state.errorPipe = error
+      state.lineHandler = lineHandler
+      state.listenerFD = listenerFD
+      state.generation &+= 1
+      return state.generation
+    }
 
-      self.socketPath = socketPath
-      self.errorPipe = error
-      self.lineHandler = lineHandler
-      generation &+= 1
-
-      installErrorReadabilityHandler(generation: generation)
-      do {
-        listenerFD = try makeListeningSocket(at: socketPath)
-      } catch {
-        startupError = error
-        shutdownLocked()
-        return
-      }
-
-      let currentGeneration = generation
-
-      acceptQueue.async { [weak self] in
-        self?.acceptConnection(generation: currentGeneration)
+    let stderrFD = error.fileHandleForReading.fileDescriptor
+    let stderrTask = Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
+      self.readLinesFromFD(stderrFD, generation: generation) { [weak self] line in
+        Task {
+          await MetricsCoordinator.shared.recordLuaStderrLine()
+        }
+        self?.logBridge.handle(line)
       }
     }
 
-    if let startupError {
-      throw startupError
+    let acceptTask = Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
+      self.acceptConnection(generation: generation)
+    }
+
+    state.withLock { state in
+      guard state.generation == generation else {
+        stderrTask.cancel()
+        acceptTask.cancel()
+        return
+      }
+      state.stderrTask = stderrTask
+      state.acceptTask = acceptTask
     }
   }
 
-  /// Stops socket, stderr handling, and all active read sources.
+  /// Stops socket, stderr handling, and all active read tasks.
   func shutdown() {
-    stateQueue.sync {
-      shutdownLocked()
+    let snapshot = state.withLock { state -> State in
+      state.generation &+= 1
+      let snapshot = state
+      state.socketPath = nil
+      state.listenerFD = -1
+      state.clientFD = -1
+      state.errorPipe = nil
+      state.acceptTask = nil
+      state.readTask = nil
+      state.stderrTask = nil
+      state.lineHandler = nil
+      return snapshot
     }
+
+    snapshot.acceptTask?.cancel()
+    snapshot.readTask?.cancel()
+    snapshot.stderrTask?.cancel()
+
+    if snapshot.clientFD >= 0 {
+      Darwin.shutdown(snapshot.clientFD, SHUT_RDWR)
+      close(snapshot.clientFD)
+    }
+
+    if snapshot.listenerFD >= 0 {
+      Darwin.shutdown(snapshot.listenerFD, SHUT_RDWR)
+      close(snapshot.listenerFD)
+    }
+
+    if let socketPath = snapshot.socketPath {
+      unlink(socketPath)
+    }
+
+    try? snapshot.errorPipe?.fileHandleForReading.close()
+    try? snapshot.errorPipe?.fileHandleForWriting.close()
   }
 
   /// Sends one encoded event line to the Lua runtime socket.
   func send(_ string: String) {
     guard let data = (string + "\n").data(using: .utf8) else { return }
 
-    writeQueue.async { [weak self] in
-      guard let self else { return }
+    let fd = state.withLock { $0.clientFD }
+    guard fd >= 0 else {
+      logger.debug("cannot send event, lua socket not connected")
+      return
+    }
 
-      let fd = self.stateQueue.sync { self.clientFD }
-      guard fd >= 0 else {
-        self.logger.debug("cannot send event, lua socket not connected")
-        return
-      }
-
+    Task.detached(priority: .utility) { [logger] in
       if writeAll(data, to: fd) {
         Task {
           await MetricsCoordinator.shared.recordLuaWrite()
         }
-        self.logger.trace("sent to lua socket", .field("payload", string))
+        logger.trace("sent to lua socket", .field("payload", string))
       } else {
-        self.logger.error(
-          "failed writing to lua socket", .field("path", self.stateQueue.sync { self.socketPath ?? "" }))
+        logger.error("failed writing to lua socket")
       }
     }
-  }
-
-  /// Stops all transport resources under the state lock.
-  private func shutdownLocked() {
-    generation &+= 1
-
-    readSource?.cancel()
-    readSource = nil
-
-    stopReadabilityHandler(for: errorPipe)
-
-    let currentListener = listenerFD
-    let currentClient = clientFD
-    let currentSocketPath = socketPath
-    let currentErrorPipe = errorPipe
-
-    listenerFD = -1
-    clientFD = -1
-    socketPath = nil
-    errorPipe = nil
-    lineHandler = nil
-
-    if currentClient >= 0 {
-      Darwin.shutdown(currentClient, SHUT_RDWR)
-      close(currentClient)
-    }
-
-    if currentListener >= 0 {
-      Darwin.shutdown(currentListener, SHUT_RDWR)
-      close(currentListener)
-    }
-
-    if let currentSocketPath {
-      unlink(currentSocketPath)
-    }
-
-    try? currentErrorPipe?.fileHandleForReading.close()
-    try? currentErrorPipe?.fileHandleForWriting.close()
   }
 
   /// Creates and binds the listening Unix socket.
@@ -204,8 +202,8 @@ final class LuaTransport {
 
   /// Accepts one runtime connection when still current.
   private func acceptConnection(generation: UInt64) {
-    let listenerFD = stateQueue.sync {
-      self.generation == generation ? self.listenerFD : -1
+    let listenerFD = state.withLock { state in
+      state.generation == generation ? state.listenerFD : -1
     }
 
     guard listenerFD >= 0 else { return }
@@ -224,134 +222,102 @@ final class LuaTransport {
       return
     }
 
-    let shouldInstall = stateQueue.sync { () -> Bool in
-      guard self.generation == generation else {
-        return false
+    let lineHandler = state.withLock { state -> (@Sendable (String) -> Void)? in
+      guard state.generation == generation else {
+        return nil
       }
 
-      self.clientFD = clientFD
-      self.installReadSourceLocked(fd: clientFD, generation: generation)
-      return true
+      state.clientFD = clientFD
+      return state.lineHandler
     }
 
-    if shouldInstall {
-      logger.debug("lua socket connected", .field("fd", clientFD))
-    } else {
+    guard let lineHandler else {
       close(clientFD)
+      return
     }
-  }
 
-  /// Installs the raw line reader for one connected Lua socket.
-  private func installReadSourceLocked(fd: Int32, generation: UInt64) {
-    let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: readQueue)
-    var buffer = Data()
-
-    source.setEventHandler { [weak self] in
+    let readTask = Task.detached(priority: .utility) { [weak self] in
       guard let self else { return }
-
-      let stillCurrent = self.stateQueue.sync {
-        self.generation == generation && self.clientFD == fd
-      }
-      guard stillCurrent else {
-        source.cancel()
-        return
-      }
-
-      var chunk = [UInt8](repeating: 0, count: 4096)
-      let count = read(fd, &chunk, chunk.count)
-
-      if count <= 0 {
-        if shouldRetryInterruptedRead(count: count, errnoValue: errno) {
-          return
-        }
-
-        source.cancel()
-        self.stateQueue.sync {
-          if self.clientFD == fd {
-            self.clientFD = -1
-          }
-        }
-        close(fd)
-        return
-      }
-
-      buffer.append(chunk, count: count)
-
-      while let newlineIndex = buffer.firstIndex(of: 0x0A) {
-        let lineData = buffer.prefix(upTo: newlineIndex)
-        buffer.removeSubrange(...newlineIndex)
-
-        guard let line = self.decodeLine(from: lineData) else { continue }
+      self.readLinesFromFD(clientFD, generation: generation) { [weak self] line in
         Task {
           await MetricsCoordinator.shared.recordLuaTransportLine()
         }
-        self.logger.debug("lua socket raw: \(line)")
-        self.lineHandler?(line)
-      }
-    }
-
-    source.setCancelHandler {
-      buffer.removeAll()
-    }
-
-    source.resume()
-    readSource = source
-  }
-
-  /// Installs the stderr handler used for Lua/widget logs and runtime failures.
-  private func installErrorReadabilityHandler(generation: UInt64) {
-    guard let pipe = errorPipe else { return }
-
-    installReadabilityHandler(on: pipe, generation: generation) { [logBridge] line in
-      Task {
-        await MetricsCoordinator.shared.recordLuaStderrLine()
-      }
-      logBridge.handle(line)
-    }
-  }
-
-  /// Installs one buffered newline-delimited readability handler on a pipe.
-  private func installReadabilityHandler(
-    on pipe: Pipe,
-    generation: UInt64,
-    handleLine: @escaping (String) -> Void
-  ) {
-    var buffer = Data()
-
-    pipe.fileHandleForReading.readabilityHandler = { [weak self, weak pipe] handle in
-      guard let self, let pipe else { return }
-
-      let stillCurrent = self.stateQueue.sync {
-        self.generation == generation && pipe === self.errorPipe
+        self?.logger.debug("lua socket raw: \(line)")
+        lineHandler(line)
       }
 
-      guard stillCurrent else {
-        handle.readabilityHandler = nil
+      self.clearClientFD(clientFD, generation: generation)
+    }
+
+    state.withLock { state in
+      guard state.generation == generation, state.clientFD == clientFD else {
+        readTask.cancel()
         return
       }
+      state.readTask = readTask
+    }
 
-      let data = handle.availableData
+    logger.debug("lua socket connected", .field("fd", clientFD))
+  }
 
-      if data.isEmpty {
-        if let line = self.decodeLine(from: buffer[...]) {
+  /// Reads buffered newline-delimited UTF-8 lines from one fd until it closes.
+  private func readLinesFromFD(
+    _ fd: Int32,
+    generation: UInt64,
+    handleLine: @escaping @Sendable (String) -> Void
+  ) {
+    var pending = Data()
+    var buffer = [UInt8](repeating: 0, count: 4096)
+
+    while !Task.isCancelled, isCurrent(generation: generation) {
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return Darwin.read(fd, baseAddress, rawBuffer.count)
+      }
+
+      if count > 0 {
+        pending.append(contentsOf: buffer.prefix(count))
+        while let newlineIndex = pending.firstIndex(of: 0x0A) {
+          let lineData = pending.prefix(upTo: newlineIndex)
+          pending.removeSubrange(...newlineIndex)
+          guard let line = decodeLine(from: lineData) else { continue }
           handleLine(line)
         }
+        continue
+      }
 
-        buffer.removeAll()
-        handle.readabilityHandler = nil
+      if count == 0 {
+        if let line = decodeLine(from: pending[...]) {
+          handleLine(line)
+        }
         return
       }
 
-      buffer.append(data)
-
-      while let newlineIndex = buffer.firstIndex(of: 0x0A) {
-        let lineData = buffer.prefix(upTo: newlineIndex)
-        buffer.removeSubrange(...newlineIndex)
-
-        guard let line = self.decodeLine(from: lineData) else { continue }
-        handleLine(line)
+      if shouldRetryInterruptedRead(count: count, errnoValue: errno) {
+        continue
       }
+
+      return
     }
+  }
+
+  /// Clears one client fd when it still matches the active generation.
+  private func clearClientFD(_ fd: Int32, generation: UInt64) {
+    let shouldClose = state.withLock { state -> Bool in
+      guard state.generation == generation, state.clientFD == fd else { return false }
+      state.clientFD = -1
+      state.readTask = nil
+      return true
+    }
+
+    guard shouldClose else { return }
+    Darwin.shutdown(fd, SHUT_RDWR)
+    close(fd)
+  }
+
+  /// Returns whether the generation is still active.
+  private func isCurrent(generation: UInt64) -> Bool {
+    state.withLock { $0.generation == generation }
   }
 
   /// Decodes one non-empty UTF-8 line.
@@ -365,11 +331,6 @@ final class LuaTransport {
     }
 
     return line
-  }
-
-  /// Stops the readability handler for one error pipe.
-  private func stopReadabilityHandler(for pipe: Pipe?) {
-    pipe?.fileHandleForReading.readabilityHandler = nil
   }
 
   /// Returns whether an `accept` failure is unexpected enough to log.

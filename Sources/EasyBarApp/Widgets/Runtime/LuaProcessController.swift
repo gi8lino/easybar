@@ -22,12 +22,12 @@ final class LuaProcessController {
 
   let logger: ProcessLogger
 
-  private let stateLock = NSLock()
+  private let stateLock = LockedState(())
   fileprivate(set) var processIdentifierValue: Int32?
   fileprivate(set) var processGroupIdentifier: Int32?
   fileprivate(set) var isShuttingDown = false
-  var terminationSource: DispatchSourceProcess?
-  var forcedKillWorkItem: DispatchWorkItem?
+  var terminationTask: Task<Void, Never>?
+  var forcedKillTask: Task<Void, Never>?
   private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
 
   /// Creates one Lua process controller.
@@ -132,13 +132,13 @@ final class LuaProcessController {
   /// Clears the currently tracked Lua process state.
   func clearTrackedProcessState() {
     let clearedState = withLock {
-      () -> (DispatchSourceProcess?, DispatchWorkItem?, [CheckedContinuation<Void, Never>]) in
-      let source = terminationSource
-      let workItem = forcedKillWorkItem
+      () -> (Task<Void, Never>?, Task<Void, Never>?, [CheckedContinuation<Void, Never>]) in
+      let source = terminationTask
+      let workItem = forcedKillTask
       let waiters = shutdownWaiters
 
-      terminationSource = nil
-      forcedKillWorkItem = nil
+      terminationTask = nil
+      forcedKillTask = nil
       processIdentifierValue = nil
       processGroupIdentifier = nil
       isShuttingDown = false
@@ -201,9 +201,6 @@ final class LuaProcessController {
 
   /// Runs one closure while holding the process-state lock.
   func withLock<T>(_ body: () -> T) -> T {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-
-    return body()
+    stateLock.withLock { _ in body() }
   }
 }

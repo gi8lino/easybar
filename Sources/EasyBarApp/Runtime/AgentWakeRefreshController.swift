@@ -16,9 +16,6 @@ final class AgentWakeRefreshController {
   private lazy var scheduler = DebouncedActionScheduler(
     label: "\(label) wake refresh",
     delay: delay,
-    queue: DispatchQueue(
-      label: "easybar.\(label.replacingOccurrences(of: " ", with: "-")).wake"
-    ),
     logger: logger.child("scheduler")
   )
 
@@ -34,7 +31,7 @@ final class AgentWakeRefreshController {
   }
 
   /// Starts observing `system_woke` and schedules the refresh callback.
-  func start(refresh: @escaping () -> Void) {
+  func start(refresh: @escaping @Sendable () -> Void) {
     eventObserver.start(eventNames: [AppEvent.systemWoke.rawValue]) { [weak self] payload in
       guard let self else { return }
       guard payload.appEvent == .systemWoke else { return }

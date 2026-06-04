@@ -56,23 +56,27 @@ extension Array where Element == ProcessLogField {
 }
 
 /// Shared process logger with consistent formatting across app, agents, and CLI.
-public final class ProcessLogger {
+public final class ProcessLogger: @unchecked Sendable {
   /// Reserved field keys managed by the logger itself.
   private enum ReservedFieldKey {
     static let subsystem = "subsystem"
   }
 
   /// Shared mutable logger state.
-  private final class SharedState {
-    let lock = NSLock()
+  private struct LoggerState {
     var fileHandle: FileHandle?
     var minimumLevel: ProcessLogLevel
     var fileLoggingEnabled = false
     var fileLoggingPath = ""
+  }
+
+  /// Shared locked logger state.
+  private final class SharedState {
+    let state: LockedState<LoggerState>
 
     /// Creates shared logger state.
     init(minimumLevel: ProcessLogLevel) {
-      self.minimumLevel = minimumLevel
+      state = LockedState(LoggerState(minimumLevel: minimumLevel))
     }
   }
 
@@ -111,33 +115,24 @@ public final class ProcessLogger {
 
   /// Current minimum log level.
   public var minimumLevel: ProcessLogLevel {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    return sharedState.minimumLevel
+    sharedState.state.withLock { $0.minimumLevel }
   }
 
   /// Whether file logging is enabled.
   public var fileLoggingEnabled: Bool {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    return sharedState.fileLoggingEnabled
+    sharedState.state.withLock { $0.fileLoggingEnabled }
   }
 
   /// Current file logging path.
   public var fileLoggingPath: String {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    return sharedState.fileLoggingPath
+    sharedState.state.withLock { $0.fileLoggingPath }
   }
 
   /// Updates the current minimum log level.
   public func setMinimumLevel(_ level: ProcessLogLevel) {
-    sharedState.lock.lock()
-    sharedState.minimumLevel = level
-    sharedState.lock.unlock()
+    sharedState.state.withLock { state in
+      state.minimumLevel = level
+    }
   }
 
   /// Configures minimum level and optional file logging.
@@ -152,130 +147,118 @@ public final class ProcessLogger {
 
   /// Configures optional mirroring into one file.
   public func configureFileLogging(enabled: Bool, path: String) {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
+    var warning: String?
 
-    sharedState.fileHandle?.closeFile()
-    sharedState.fileHandle = nil
-    sharedState.fileLoggingEnabled = enabled
-    sharedState.fileLoggingPath = path
+    sharedState.state.withLock { state in
+      state.fileHandle?.closeFile()
+      state.fileHandle = nil
+      state.fileLoggingEnabled = enabled
+      state.fileLoggingPath = path
 
-    guard enabled, !path.isEmpty else { return }
+      guard enabled, !path.isEmpty else { return }
 
-    let url = URL(fileURLWithPath: path)
-    let directoryURL = url.deletingLastPathComponent()
+      let url = URL(fileURLWithPath: path)
+      let directoryURL = url.deletingLastPathComponent()
 
-    do {
-      try FileManager.default.createDirectory(
-        at: directoryURL,
-        withIntermediateDirectories: true,
-        attributes: nil
-      )
+      do {
+        try FileManager.default.createDirectory(
+          at: directoryURL,
+          withIntermediateDirectories: true,
+          attributes: nil
+        )
 
-      if !FileManager.default.fileExists(atPath: url.path) {
-        FileManager.default.createFile(atPath: url.path, contents: nil)
+        if !FileManager.default.fileExists(atPath: url.path) {
+          FileManager.default.createFile(atPath: url.path, contents: nil)
+        }
+
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.seekToEnd()
+        state.fileHandle = handle
+      } catch {
+        state.fileLoggingEnabled = false
+        warning = "failed to open log file at \(path): \(error)"
       }
+    }
 
-      let handle = try FileHandle(forWritingTo: url)
-      try handle.seekToEnd()
-      sharedState.fileHandle = handle
-    } catch {
-      sharedState.fileLoggingEnabled = false
-      writeUnlocked(
-        level: .warn,
-        message: "failed to open log file at \(path): \(error)",
-        fields: [],
-        stream: stderr
-      )
+    if let warning {
+      write(level: .warn, message: warning, fields: [], stream: stderr)
     }
   }
 
   /// Writes one trace message.
   public func trace(_ message: String) {
     guard shouldLog(.trace) else { return }
-
     write(level: .trace, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one trace message with typed fields.
   public func trace(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.trace) else { return }
-
     write(level: .trace, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one debug message.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
-
     write(level: .debug, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one debug message with typed fields.
   public func debug(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.debug) else { return }
-
     write(level: .debug, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one info message.
   public func info(_ message: String) {
     guard shouldLog(.info) else { return }
-
     write(level: .info, message: message, fields: [], stream: stdout)
   }
 
   /// Writes one info message with typed fields.
   public func info(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.info) else { return }
-
     write(level: .info, message: message, fields: fields, stream: stdout)
   }
 
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
-
     write(level: .warn, message: message, fields: [], stream: stderr)
   }
 
   /// Writes one warning message with typed fields.
   public func warn(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.warn) else { return }
-
     write(level: .warn, message: message, fields: fields, stream: stderr)
   }
 
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
-
     write(level: .error, message: message, fields: [], stream: stderr)
   }
 
   /// Writes one error message with typed fields.
   public func error(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.error) else { return }
-
     write(level: .error, message: message, fields: fields, stream: stderr)
   }
 
   /// Writes one raw message and mirrors it to the log file.
   public func writeRaw(_ message: String, to stream: UnsafeMutablePointer<FILE>?) {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    fputs(message + "\n", stream)
-    fflush(stream)
-    writeFileUnlocked(message)
+    sharedState.state.withLock { state in
+      fputs(message + "\n", stream)
+      fflush(stream)
+      writeFile(message, state: &state)
+    }
   }
 
   /// Returns whether one level should be logged.
   private func shouldLog(_ level: ProcessLogLevel) -> Bool {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    return sharedState.minimumLevel.allows(level)
+    sharedState.state.withLock { state in
+      state.minimumLevel.allows(level)
+    }
   }
 
   /// Writes one formatted message.
@@ -285,34 +268,33 @@ public final class ProcessLogger {
     fields: [ProcessLogField],
     stream: UnsafeMutablePointer<FILE>?
   ) {
-    sharedState.lock.lock()
-    defer { sharedState.lock.unlock() }
-
-    writeUnlocked(level: level, message: message, fields: fields, stream: stream)
-  }
-
-  /// Writes one formatted message while locked.
-  private func writeUnlocked(
-    level: ProcessLogLevel,
-    message: String,
-    fields: [ProcessLogField],
-    stream: UnsafeMutablePointer<FILE>?
-  ) {
-    let line = formattedLine(level: level, message: message, fields: fields)
-
-    fputs(line + "\n", stream)
-    fflush(stream)
-    writeFileUnlocked(line)
+    sharedState.state.withLock { state in
+      let line = formattedLine(
+        level: level,
+        message: message,
+        fields: fields,
+        minimumLevel: state.minimumLevel
+      )
+      fputs(line + "\n", stream)
+      fflush(stream)
+      writeFile(line, state: &state)
+    }
   }
 
   /// Builds one formatted log line.
   private func formattedLine(
     level: ProcessLogLevel,
     message: String,
-    fields: [ProcessLogField]
+    fields: [ProcessLogField],
+    minimumLevel: ProcessLogLevel
   ) -> String {
     let renderedLevel = level.formattedTag
-    let renderedMessage = renderedMessage(level: level, message: message, fields: fields)
+    let renderedMessage = renderedMessage(
+      level: level,
+      message: message,
+      fields: fields,
+      minimumLevel: minimumLevel
+    )
     return "[\(Self.formatter.string(from: Date()))] [\(renderedLevel)] \(renderedMessage)"
   }
 
@@ -320,40 +302,52 @@ public final class ProcessLogger {
   private func renderedMessage(
     level: ProcessLogLevel,
     message: String,
-    fields: [ProcessLogField]
+    fields: [ProcessLogField],
+    minimumLevel: ProcessLogLevel
   ) -> String {
-    let renderedFields = renderedFields(level: level, fields: fields)
+    let renderedFields = renderedFields(
+      level: level,
+      fields: fields,
+      minimumLevel: minimumLevel
+    )
     guard !renderedFields.isEmpty else { return message }
 
     return "\(message) \(renderedFields)"
   }
 
   /// Returns whether the current mode should append subsystem details.
-  private func shouldAppendSubsystem(for level: ProcessLogLevel) -> Bool {
-    if isVerboseMinimumLevel {
+  private func shouldAppendSubsystem(
+    for level: ProcessLogLevel,
+    minimumLevel: ProcessLogLevel
+  ) -> Bool {
+    if minimumLevel == .debug || minimumLevel == .trace {
       return true
     }
 
     return level == .warn || level == .error
   }
 
-  /// Returns whether the logger is configured for a verbose minimum level.
-  private var isVerboseMinimumLevel: Bool {
-    return sharedState.minimumLevel == .debug || sharedState.minimumLevel == .trace
-  }
-
   /// Renders caller-provided fields plus logger-managed metadata.
-  private func renderedFields(level: ProcessLogLevel, fields: [ProcessLogField]) -> String {
-    let metadataFields = metadataFields(for: level, existingFields: fields)
+  private func renderedFields(
+    level: ProcessLogLevel,
+    fields: [ProcessLogField],
+    minimumLevel: ProcessLogLevel
+  ) -> String {
+    let metadataFields = metadataFields(
+      for: level,
+      existingFields: fields,
+      minimumLevel: minimumLevel
+    )
     return formatLogFields(fields + metadataFields)
   }
 
   /// Builds logger-managed metadata fields for the current line.
   private func metadataFields(
     for level: ProcessLogLevel,
-    existingFields: [ProcessLogField]
+    existingFields: [ProcessLogField],
+    minimumLevel: ProcessLogLevel
   ) -> [ProcessLogField] {
-    guard shouldAppendSubsystem(for: level) else { return [] }
+    guard shouldAppendSubsystem(for: level, minimumLevel: minimumLevel) else { return [] }
     guard !existingFields.containsField(named: ReservedFieldKey.subsystem) else {
       return []
     }
@@ -362,21 +356,27 @@ public final class ProcessLogger {
   }
 
   /// Writes one line to the configured log file.
-  private func writeFileUnlocked(_ line: String) {
+  private func writeFile(_ line: String, state: inout LoggerState) {
     guard let data = (line + "\n").data(using: .utf8) else { return }
+    guard state.fileLoggingEnabled, let fileHandle = state.fileHandle else { return }
 
     do {
-      try sharedState.fileHandle?.write(contentsOf: data)
+      try fileHandle.write(contentsOf: data)
     } catch {
-      sharedState.fileLoggingEnabled = false
+      state.fileLoggingEnabled = false
       fputs(
-        formattedLine(level: .warn, message: "failed writing log file: \(error)", fields: [])
+        formattedLine(
+          level: .warn,
+          message: "failed writing log file: \(error)",
+          fields: [],
+          minimumLevel: state.minimumLevel
+        )
           + "\n",
         stderr
       )
       fflush(stderr)
-      sharedState.fileHandle?.closeFile()
-      sharedState.fileHandle = nil
+      state.fileHandle?.closeFile()
+      state.fileHandle = nil
     }
   }
 }

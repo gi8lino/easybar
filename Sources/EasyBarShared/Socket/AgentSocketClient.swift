@@ -2,7 +2,16 @@ import Darwin
 import Foundation
 
 /// Shared newline-delimited client transport used by app-side and helper-process agent clients.
-public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
+public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @unchecked Sendable {
+  private struct State {
+    var socketFD: Int32 = -1
+    var running = false
+    var connectionTask: Task<Void, Never>?
+    var reconnectTask: Task<Void, Never>?
+    var nextReconnectDelayOverride: TimeInterval?
+    var activeConnectionID: UInt64 = 0
+  }
+
   private let label: String
   private let socketPath: () -> String
   private let subscribeRequest: () -> Request
@@ -13,16 +22,8 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   private let onDecodedMessage: (() -> Void)?
   private let onDecodeError: (() -> Void)?
   private let logger: ProcessLogger
-
-  private let lock = NSLock()
-  private let queue: DispatchQueue
   private let reconnectDelay: TimeInterval = 2
-
-  private var socketFD: Int32 = -1
-  private var running = false
-  private var reconnectWorkItem: DispatchWorkItem?
-  private var nextReconnectDelayOverride: TimeInterval?
-  private var activeConnectionID: UInt64 = 0
+  private let state = LockedState(State())
 
   /// Creates one shared agent client transport.
   public init(
@@ -47,52 +48,51 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     self.onDecodedMessage = onDecodedMessage
     self.onDecodeError = onDecodeError
     self.logger = logger
-
-    queue = DispatchQueue(
-      label: "easybar.\(label.replacingOccurrences(of: " ", with: "-"))",
-      qos: .utility
-    )
   }
 
   /// Returns whether the client currently has an open socket.
   public var isConnected: Bool {
-    withLock {
-      running && socketFD >= 0
+    state.withLock { state in
+      state.running && state.socketFD >= 0
     }
   }
 
   /// Starts the client connection loop.
   public func start() {
-    let shouldConnect = withLock { () -> Bool in
-      guard !running else { return false }
-
-      running = true
+    let shouldConnect = state.withLock { state -> Bool in
+      guard !state.running else { return false }
+      state.running = true
       return true
     }
 
     guard shouldConnect else { return }
-
     connect()
   }
 
   /// Stops the client and clears published state.
   public func stop() {
-    let currentFD = withLock { () -> Int32 in
-      running = false
-      reconnectWorkItem?.cancel()
-      reconnectWorkItem = nil
-      nextReconnectDelayOverride = nil
+    let snapshot = state.withLock { state -> (Int32, Task<Void, Never>?, Task<Void, Never>?) in
+      state.running = false
+      state.nextReconnectDelayOverride = nil
 
-      let currentFD = socketFD
-      socketFD = -1
-      activeConnectionID &+= 1
+      let currentFD = state.socketFD
+      let connectionTask = state.connectionTask
+      let reconnectTask = state.reconnectTask
 
-      return currentFD
+      state.socketFD = -1
+      state.connectionTask = nil
+      state.reconnectTask = nil
+      state.activeConnectionID &+= 1
+
+      return (currentFD, connectionTask, reconnectTask)
     }
 
-    if currentFD >= 0 {
-      shutdown(currentFD, SHUT_RDWR)
-      close(currentFD)
+    snapshot.1?.cancel()
+    snapshot.2?.cancel()
+
+    if snapshot.0 >= 0 {
+      shutdown(snapshot.0, SHUT_RDWR)
+      close(snapshot.0)
     }
 
     clearState()
@@ -100,8 +100,8 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
   /// Overrides the delay used for the next reconnect attempt.
   public func setNextReconnectDelay(_ delay: TimeInterval?) {
-    withLock {
-      nextReconnectDelayOverride = delay
+    state.withLock { state in
+      state.nextReconnectDelayOverride = delay
     }
   }
 
@@ -117,37 +117,54 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
   }
 
-  /// Starts one connection attempt on the internal queue.
+  /// Starts one connection attempt on a Swift task.
   private func connect() {
-    queue.async {
-      guard self.isRunning() else { return }
-
-      let resolvedSocketPath = self.socketPath()
-      guard let fd = self.openConnectedSocket(socketPath: resolvedSocketPath) else {
-        self.scheduleReconnect()
-        return
-      }
-
-      guard let connectionID = self.activateConnectedSocketFD(fd) else {
-        shutdown(fd, SHUT_RDWR)
-        close(fd)
-        return
-      }
-
-      self.onConnected?()
-      self.logger.info(
-        "\(self.label) connected",
-        .field("socket", resolvedSocketPath),
-      )
-
-      guard self.send(self.subscribeRequest(), to: fd) else {
-        self.logger.warn("\(self.label) failed to send subscribe request")
-        self.handleDisconnect(fd: fd, connectionID: connectionID)
-        return
-      }
-
-      self.readLoop(fd: fd, connectionID: connectionID)
+    let task = Task.detached(priority: .utility) { [weak self] in
+      guard let self else { return }
+      await self.runConnectionAttempt()
     }
+
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.running else { return true }
+      state.connectionTask?.cancel()
+      state.connectionTask = task
+      return false
+    }
+
+    if shouldCancel {
+      task.cancel()
+    }
+  }
+
+  /// Performs one connection attempt and read loop.
+  private func runConnectionAttempt() async {
+    guard isRunning() else { return }
+
+    let resolvedSocketPath = socketPath()
+    guard let fd = openConnectedSocket(socketPath: resolvedSocketPath) else {
+      scheduleReconnect()
+      return
+    }
+
+    guard let connectionID = activateConnectedSocketFD(fd) else {
+      shutdown(fd, SHUT_RDWR)
+      close(fd)
+      return
+    }
+
+    onConnected?()
+    logger.info(
+      "\(label) connected",
+      .field("socket", resolvedSocketPath),
+    )
+
+    guard send(subscribeRequest(), to: fd) else {
+      logger.warn("\(label) failed to send subscribe request")
+      handleDisconnect(fd: fd, connectionID: connectionID)
+      return
+    }
+
+    readLoop(fd: fd, connectionID: connectionID)
   }
 
   /// Reads newline-delimited messages until the socket disconnects.
@@ -155,7 +172,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     var buffer = [UInt8](repeating: 0, count: 4096)
     var pending = Data()
 
-    while isActiveConnection(fd: fd, connectionID: connectionID) {
+    while isActiveConnection(fd: fd, connectionID: connectionID), !Task.isCancelled {
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(fd, baseAddress, rawBuffer.count)
@@ -193,7 +210,6 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
       pending.removeSubrange(...newlineIndex)
 
       guard !line.isEmpty else { continue }
-
       handleMessageData(Data(line))
     }
   }
@@ -201,7 +217,6 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
   /// Decodes one trailing line without a terminating newline when present.
   private func flushPendingLine(_ pending: inout Data) {
     guard !pending.isEmpty else { return }
-
     handleMessageData(pending)
     pending.removeAll()
   }
@@ -243,86 +258,102 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
 
   /// Schedules one reconnect attempt.
   private func scheduleReconnect() {
-    let workItem = DispatchWorkItem { [weak self] in
+    let scheduledDelay = state.withLock { state -> TimeInterval? in
+      state.reconnectTask?.cancel()
+
+      guard state.running else { return nil }
+
+      let delay = state.nextReconnectDelayOverride ?? reconnectDelay
+      state.nextReconnectDelayOverride = nil
+      return delay
+    }
+
+    guard let scheduledDelay else { return }
+
+    let nanoseconds = UInt64(max(scheduledDelay, 0) * 1_000_000_000)
+    let task = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: nanoseconds)
+      } catch {
+        return
+      }
+
       self?.connect()
     }
 
-    let (shouldSchedule, scheduledDelay) = withLock { () -> (Bool, TimeInterval) in
-      reconnectWorkItem?.cancel()
-
-      guard running else {
-        return (false, reconnectDelay)
-      }
-
-      reconnectWorkItem = workItem
-
-      let delay = nextReconnectDelayOverride ?? reconnectDelay
-      nextReconnectDelayOverride = nil
-
-      return (true, delay)
-    }
-
-    guard shouldSchedule else { return }
-
-    logger.debug(
-      "\(label) scheduling reconnect",
-      .field("delay", scheduledDelay),
-    )
-    queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
-  }
-
-  /// Sends one encoded request line to the connected socket.
-  private func send(_ request: Request, to fd: Int32) -> Bool {
-    let encoder = JSONEncoder()
-    encoder.dateEncodingStrategy = .iso8601
-
-    do {
-      let data = try encoder.encode(request) + Data([0x0A])
-      return writeAll(data, to: fd)
-    } catch {
-      logger.warn(
-        "\(label) failed to encode request",
-        .field("error", error),
-      )
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.running else { return true }
+      state.reconnectTask = task
       return false
     }
+
+    if shouldCancel {
+      task.cancel()
+    }
   }
 
-  /// Returns whether the client is still running.
+  /// Returns whether the client is meant to be running.
   private func isRunning() -> Bool {
-    withLock {
-      running
-    }
+    state.withLock { $0.running }
   }
 
-  /// Returns whether the given socket still belongs to the active connection.
-  private func isActiveConnection(fd: Int32, connectionID: UInt64) -> Bool {
-    withLock {
-      running && socketFD == fd && activeConnectionID == connectionID
-    }
-  }
-
-  /// Returns the current connection snapshot.
+  /// Returns the currently active connection tuple.
   private func currentConnection() -> (fd: Int32, id: UInt64) {
-    withLock {
-      (socketFD, activeConnectionID)
+    state.withLock { state in
+      (state.socketFD, state.activeConnectionID)
     }
   }
 
-  /// Opens and connects one Unix socket.
+  /// Stores one newly connected socket when still running.
+  private func activateConnectedSocketFD(_ fd: Int32) -> UInt64? {
+    state.withLock { state -> UInt64? in
+      guard state.running else { return nil }
+
+      if state.socketFD >= 0, state.socketFD != fd {
+        shutdown(state.socketFD, SHUT_RDWR)
+        close(state.socketFD)
+      }
+
+      state.socketFD = fd
+      state.activeConnectionID &+= 1
+      return state.activeConnectionID
+    }
+  }
+
+  /// Clears the active fd if it still matches the given connection.
+  private func clearConnectedSocketFD(_ fd: Int32, connectionID: UInt64) -> Bool {
+    state.withLock { state -> Bool in
+      guard state.socketFD == fd, state.activeConnectionID == connectionID else {
+        return false
+      }
+
+      state.socketFD = -1
+      state.connectionTask = nil
+      return true
+    }
+  }
+
+  /// Returns whether the fd still represents the active connection.
+  private func isActiveConnection(fd: Int32, connectionID: UInt64) -> Bool {
+    state.withLock { state in
+      state.running && state.socketFD == fd && state.activeConnectionID == connectionID
+    }
+  }
+
+  /// Opens one connected Unix socket.
   private func openConnectedSocket(socketPath: String) -> Int32? {
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      logger.error(
-        "\(label) failed to create socket",
+      logger.warn(
+        "\(label) socket creation failed",
         .field("errno", errno),
       )
       return nil
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      logger.error(
-        "\(label) failed to configure socket no-sigpipe",
+      logger.warn(
+        "\(label) failed to configure no-sigpipe",
         .field("fd", fd),
       )
       close(fd)
@@ -339,11 +370,6 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     }
 
     guard connectResult == 0 else {
-      logger.debug(
-        "\(label) connect failed",
-        .field("socket", socketPath),
-        .field("errno", errno)
-      )
       close(fd)
       return nil
     }
@@ -351,38 +377,21 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable> {
     return fd
   }
 
-  /// Stores one connected socket descriptor and returns its connection id.
-  private func activateConnectedSocketFD(_ fd: Int32) -> UInt64? {
-    withLock {
-      guard running else { return nil }
+  /// Encodes and sends one request line.
+  private func send(_ request: Request, to fd: Int32) -> Bool {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    encoder.dateEncodingStrategy = .iso8601
 
-      reconnectWorkItem?.cancel()
-      reconnectWorkItem = nil
-
-      socketFD = fd
-      activeConnectionID &+= 1
-
-      return activeConnectionID
+    do {
+      let data = try encoder.encode(request) + Data([0x0A])
+      return writeAll(data, to: fd)
+    } catch {
+      logger.warn(
+        "\(label) failed to encode request",
+        .field("error", error),
+      )
+      return false
     }
-  }
-
-  /// Clears the current socket descriptor when it matches one disconnected client.
-  private func clearConnectedSocketFD(_ fd: Int32, connectionID: UInt64) -> Bool {
-    withLock {
-      guard socketFD == fd, activeConnectionID == connectionID else {
-        return false
-      }
-
-      socketFD = -1
-      return true
-    }
-  }
-
-  /// Runs one closure while holding the client lock.
-  private func withLock<T>(_ body: () -> T) -> T {
-    lock.lock()
-    defer { lock.unlock() }
-
-    return body()
   }
 }

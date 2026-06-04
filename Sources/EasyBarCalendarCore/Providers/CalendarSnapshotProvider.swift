@@ -39,10 +39,8 @@ final class CalendarSnapshotProvider {
   private static let formatterCalendar = Calendar(identifier: .gregorian)
   /// Time zone used for user-facing calendar output.
   private static let formatterTimeZone = TimeZone.autoupdatingCurrent
-  /// Protects cached birthday formatters.
-  private static let birthdayFormatterLock = NSLock()
   /// Cached birthday formatters keyed by format string.
-  private static var birthdayFormatters: [String: DateFormatter] = [:]
+  private static let birthdayFormatters = LockedState([String: DateFormatter]())
 
   /// Formatter for timed event rows.
   private static let eventTimeFormatter: DateFormatter = makeFormatter(format: "HH:mm")
@@ -206,7 +204,7 @@ final class CalendarSnapshotProvider {
       .field("location", event.location ?? ""),
     )
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       self?.onChange?()
     }
 
@@ -256,7 +254,7 @@ final class CalendarSnapshotProvider {
       .field("location", event.location ?? ""),
     )
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       self?.onChange?()
     }
   }
@@ -281,7 +279,7 @@ final class CalendarSnapshotProvider {
       .field("title", event.title ?? "Untitled"),
     )
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       self?.onChange?()
     }
   }
@@ -338,16 +336,15 @@ final class CalendarSnapshotProvider {
 
   /// Returns a cached birthday formatter for one format string.
   private static func birthdayFormatter(for format: String) -> DateFormatter {
-    birthdayFormatterLock.lock()
-    defer { birthdayFormatterLock.unlock() }
+    birthdayFormatters.withLock { formatters in
+      if let formatter = formatters[format] {
+        return formatter
+      }
 
-    if let formatter = birthdayFormatters[format] {
+      let formatter = makeFormatter(format: format)
+      formatters[format] = formatter
       return formatter
     }
-
-    let formatter = makeFormatter(format: format)
-    birthdayFormatters[format] = formatter
-    return formatter
   }
 }
 

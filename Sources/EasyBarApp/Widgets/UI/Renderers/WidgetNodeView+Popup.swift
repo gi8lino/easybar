@@ -30,7 +30,12 @@ extension WidgetNodeView {
 
   /// Schedules a delayed popup close check.
   func schedulePopupCloseCheck() {
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+    Task { @MainActor in
+      do {
+        try await Task.sleep(nanoseconds: 80_000_000)
+      } catch {
+        return
+      }
       closePopupIfIdle()
     }
   }

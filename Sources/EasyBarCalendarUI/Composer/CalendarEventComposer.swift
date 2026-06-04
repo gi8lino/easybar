@@ -264,7 +264,7 @@ public final class CalendarEventComposer: ObservableObject {
     self.openCalendarAppAction = openCalendarApp
 
     snapshotPublisher
-      .receive(on: DispatchQueue.main)
+      .receive(on: RunLoop.main)
       .sink { [weak self] snapshot in
         self?.applySnapshot(snapshot)
       }

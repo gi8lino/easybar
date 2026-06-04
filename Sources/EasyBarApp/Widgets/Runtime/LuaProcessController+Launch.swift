@@ -166,43 +166,36 @@ extension LuaProcessController {
 
   /// Installs exit observation for the spawned Lua child.
   func installTerminationSource(for pid: Int32) {
-    let previousSource = withLock { () -> DispatchSourceProcess? in
-      let previousSource = terminationSource
-      terminationSource = nil
-      return previousSource
+    let previousTask = withLock { () -> Task<Void, Never>? in
+      let previousTask = terminationTask
+      terminationTask = nil
+      return previousTask
     }
 
-    previousSource?.cancel()
+    previousTask?.cancel()
 
-    let source = DispatchSource.makeProcessSource(
-      identifier: pid,
-      eventMask: .exit,
-      queue: .global(qos: .utility)
-    )
-
-    source.setEventHandler { [weak self] in
-      self?.handleTermination(pid: pid)
+    let task = Task.detached(priority: .utility) { [weak self] in
+      var status: Int32 = 0
+      let waitResult = waitpid(pid, &status, 0)
+      guard !Task.isCancelled else { return }
+      guard let self else { return }
+      self.handleTermination(pid: pid, waitResult: waitResult, status: status, errnoValue: errno)
     }
-
-    source.resume()
 
     withLock {
-      terminationSource = source
+      terminationTask = task
     }
   }
 
   /// Handles one observed Lua runtime termination.
-  func handleTermination(pid: Int32) {
-    var status: Int32 = 0
-    let waitResult = waitpid(pid, &status, WNOHANG)
-
+  func handleTermination(pid: Int32, waitResult: Int32, status: Int32, errnoValue: Int32) {
     if waitResult == pid {
       logTermination(pid: pid, status: status)
-    } else if shouldLogReapFailure(waitResult: waitResult, errnoValue: errno) {
+    } else if shouldLogReapFailure(waitResult: waitResult, errnoValue: errnoValue) {
       logger.warn(
         "failed to reap lua runtime",
         .field("pid", pid),
-        .field("errno", errno)
+        .field("errno", errnoValue)
       )
     }
 

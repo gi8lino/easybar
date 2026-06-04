@@ -55,7 +55,7 @@ final class SocketServer {
         return .close
       }
 
-      return self.handle(
+      return await self.handle(
         clientFD: clientFD,
         request: request,
         handler: handler,
@@ -103,7 +103,7 @@ final class SocketServer {
         return .close
       }
 
-      return self.handle(
+      return await self.handle(
         clientFD: clientFD,
         request: request,
         handler: commandHandler,
@@ -140,12 +140,12 @@ final class SocketServer {
     request: IPC.Request,
     handler: @escaping (IPC.Command) -> Void,
     transport: Transport
-  ) -> Transport.ClientDisposition {
+  ) async -> Transport.ClientDisposition {
     logger.debug("socket dispatching command '\(request.command.rawValue)'")
 
     switch request {
     case .metrics(let watch):
-      return handleMetricsRequest(
+      return await handleMetricsRequest(
         clientFD: clientFD,
         watch: watch,
         request: request,
@@ -153,7 +153,7 @@ final class SocketServer {
       )
 
     case .validateConfig(let configPath):
-      return handleValidateConfigRequest(
+      return await handleValidateConfigRequest(
         clientFD: clientFD,
         configPath: configPath,
         transport: transport
@@ -172,12 +172,9 @@ final class SocketServer {
     watch: Bool,
     request: IPC.Request,
     transport: Transport
-  ) -> Transport.ClientDisposition {
-    let snapshot = currentMetricsSnapshot()
-    let sent = transport.send(
-      .metrics(snapshot),
-      to: clientFD
-    )
+  ) async -> Transport.ClientDisposition {
+    let snapshot = await metricsCoordinator.snapshot()
+    let sent = transport.send(.metrics(snapshot), to: clientFD)
 
     guard sent else {
       return .close
@@ -188,30 +185,9 @@ final class SocketServer {
     }
 
     transport.addSubscriber(request, for: clientFD)
-    Task { [metricsCoordinator] in
-      await metricsCoordinator.addStreamingSubscriber(fd: clientFD)
-    }
+    await metricsCoordinator.addStreamingSubscriber(fd: clientFD)
 
     return .keepOpen
-  }
-
-  /// Returns one current metrics snapshot from the actor for the synchronous socket handler.
-  private func currentMetricsSnapshot() -> IPC.MetricsSnapshot {
-    let semaphore = DispatchSemaphore(value: 0)
-    var snapshot: IPC.MetricsSnapshot?
-
-    Task { [metricsCoordinator] in
-      snapshot = await metricsCoordinator.snapshot()
-      semaphore.signal()
-    }
-
-    semaphore.wait()
-
-    guard let snapshot else {
-      preconditionFailure("metrics snapshot task completed without a snapshot")
-    }
-
-    return snapshot
   }
 
   /// Handles one config validation request using the app's real config validator.
@@ -219,18 +195,15 @@ final class SocketServer {
     clientFD: Int32,
     configPath: String?,
     transport: Transport
-  ) -> Transport.ClientDisposition {
+  ) async -> Transport.ClientDisposition {
     guard let validateConfigHandler else {
       _ = transport.send(.rejected(message: "config validation unavailable"), to: clientFD)
       return .close
     }
 
-    Task {
-      let response = await validateConfigHandler(configPath)
-      _ = transport.send(response, to: clientFD)
-    }
-
-    return .keepOpen
+    let response = await validateConfigHandler(configPath)
+    _ = transport.send(response, to: clientFD)
+    return .close
   }
 
   /// Creates one transport bound to the given socket path.

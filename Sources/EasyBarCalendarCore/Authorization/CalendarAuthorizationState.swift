@@ -1,55 +1,53 @@
+import EasyBarShared
 import EventKit
 import Foundation
 
 /// Stores calendar authorization state safely across EventKit callbacks.
 final class CalendarAuthorizationState {
-  /// Protects authorization state shared across callbacks.
-  private let lock = NSLock()
-  /// Last observed EventKit authorization status.
-  private var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
-  /// Tracks access granted by the current process before EventKit status catches up.
-  private var accessGrantedInProcess = false
+  private struct State {
+    var status: EKAuthorizationStatus = EKEventStore.authorizationStatus(for: .event)
+    var accessGrantedInProcess = false
+  }
+
+  /// Last observed EventKit authorization status and in-process grant marker.
+  private let state = LockedState(State())
 
   /// Stores the latest calendar authorization status.
   func setStatus(_ newStatus: EKAuthorizationStatus) {
-    lock.lock()
-    status = newStatus
+    state.withLock { state in
+      state.status = newStatus
 
-    switch newStatus {
-    case .authorized, .fullAccess:
-      break
-    default:
-      accessGrantedInProcess = false
+      switch newStatus {
+      case .authorized, .fullAccess:
+        break
+      default:
+        state.accessGrantedInProcess = false
+      }
     }
-
-    lock.unlock()
   }
 
   /// Marks access as granted after an in-process prompt succeeds.
   func markGrantedInProcess() {
-    lock.lock()
-    accessGrantedInProcess = true
-    lock.unlock()
+    state.withLock { state in
+      state.accessGrantedInProcess = true
+    }
   }
 
   /// Returns whether calendar access is currently effective.
   func effectiveAccessGranted() -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-
-    switch status {
-    case .authorized, .fullAccess:
-      return true
-    default:
-      return accessGrantedInProcess
+    state.withLock { state in
+      switch state.status {
+      case .authorized, .fullAccess:
+        return true
+      default:
+        return state.accessGrantedInProcess
+      }
     }
   }
 
   /// Returns the last known authorization status.
   func currentStatus() -> EKAuthorizationStatus {
-    lock.lock()
-    defer { lock.unlock() }
-    return status
+    state.withLock { $0.status }
   }
 
   /// Returns the current permission state as a stable string.

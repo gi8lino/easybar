@@ -44,7 +44,7 @@ final class NetworkSystemMonitor {
         { _, _, info in
           guard let info else { return }
           let monitor = Unmanaged<NetworkSystemMonitor>.fromOpaque(info).takeUnretainedValue()
-          DispatchQueue.main.async {
+          Task { @MainActor in
             monitor.handleNetworkStoreChange()
           }
         },

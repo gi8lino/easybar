@@ -3,6 +3,11 @@ import EasyBarShared
 import Foundation
 
 /// Actor-owned file watcher that emits debounced config change events.
+///
+/// The public boundary stays Swift-concurrency based through `AsyncStream`,
+/// while the low-level filesystem notification uses `DispatchSourceFileSystemObject`.
+/// This keeps the efficient kernel-backed watcher without leaking GCD into the
+/// runtime coordinator.
 actor FileWatcher {
 
   /// File watcher events emitted to the runtime coordinator.
@@ -11,25 +16,31 @@ actor FileWatcher {
     case changed
   }
 
-  /// File descriptor currently watched by the dispatch source.
+  /// Resolved filesystem path currently watched by the dispatch source.
+  private struct WatchTarget {
+    /// Path passed to `open(..., O_EVTONLY)`.
+    let path: String
+    /// Human-readable target kind used in logs.
+    let kind: String
+  }
+
+  /// File descriptor currently owned by the dispatch source.
   private var fileDescriptor: Int32 = -1
   /// Dispatch source observing filesystem changes.
   private var source: DispatchSourceFileSystemObject?
-  /// Pending debounced change emission.
-  private var debounceWorkItem: DispatchWorkItem?
   /// Active stream continuation.
   private var continuation: AsyncStream<Event>.Continuation?
+  /// Active debounce task.
+  private var debounceTask: Task<Void, Never>?
   /// Generation used to ignore stale watcher callbacks.
   private var watcherGeneration: UInt64 = 0
-  /// Queue used to debounce filesystem events.
-  private let debounceQueue = DispatchQueue(label: "easybar.file-watcher.debounce", qos: .utility)
+  /// Queue used by the dispatch source event handler.
+  private let sourceQueue = DispatchQueue(label: "easybar.file-watcher.source", qos: .utility)
   /// Logger used for file watcher diagnostics.
   private let logger: ProcessLogger
 
   /// Creates one config file watcher.
-  init(
-    logger: ProcessLogger
-  ) {
+  init(logger: ProcessLogger) {
     self.logger = logger
   }
 
@@ -58,21 +69,17 @@ actor FileWatcher {
   /// Stops the active watcher.
   func stop() {
     watcherGeneration &+= 1
-    debounceWorkItem?.cancel()
-    debounceWorkItem = nil
+
+    debounceTask?.cancel()
+    debounceTask = nil
 
     continuation?.finish()
     continuation = nil
 
-    source?.setEventHandler {}
-    source?.setCancelHandler {}
-    source?.cancel()
-    source = nil
-
-    closeDescriptor()
+    cancelSource()
   }
 
-  /// Installs one watcher when enabled and the file can be opened.
+  /// Installs one dispatch-source watcher when config watching is enabled.
   private func install(
     continuation: AsyncStream<Event>.Continuation,
     configPath: String,
@@ -92,99 +99,142 @@ actor FileWatcher {
       }
     }
 
-    guard enabled else { return }
-
-    guard let watchTarget = openWatchTarget(for: configPath) else {
-      logger.warn(
-        "file watcher failed to open watch target",
-        .field("path", configPath))
+    guard enabled else {
+      logger.debug("config file watcher disabled")
       return
     }
 
-    fileDescriptor = watchTarget.fd
+    guard let target = resolveWatchTarget(configPath: configPath) else {
+      logger.warn(
+        "config file watcher could not resolve watch target",
+        .field("path", configPath)
+      )
+      return
+    }
+
+    let descriptor = open(target.path, O_EVTONLY)
+
+    guard descriptor >= 0 else {
+      logger.warn(
+        "config file watcher could not open watch target",
+        .field("path", target.path),
+        .field("errno", errno)
+      )
+      return
+    }
+
+    fileDescriptor = descriptor
+
+    let watchSource = DispatchSource.makeFileSystemObjectSource(
+      fileDescriptor: descriptor,
+      eventMask: [.write, .delete, .rename, .extend, .attrib, .link, .revoke],
+      queue: sourceQueue
+    )
+
+    watchSource.setEventHandler { [weak self] in
+      Task {
+        await self?.handleFilesystemEvent(
+          generation: generation,
+          configPath: configPath
+        )
+      }
+    }
+
+    watchSource.setCancelHandler {
+      close(descriptor)
+    }
+
+    source = watchSource
+    watchSource.resume()
+
     logger.debug(
-      "file watcher watching",
-      .field("path", "\(watchTarget.path)"),
-      .field("target", "\(configPath)"),
+      "config file watcher started",
+      .field("path", configPath),
+      .field("watch_target", target.path),
+      .field("watch_target_kind", target.kind)
     )
-
-    let queue = DispatchQueue(label: "easybar.file-watcher", qos: .utility)
-    let source = DispatchSource.makeFileSystemObjectSource(
-      fileDescriptor: watchTarget.fd,
-      eventMask: [.write, .delete, .rename, .attrib, .extend, .link, .revoke],
-      queue: queue
-    )
-
-    source.setEventHandler { [weak self] in
-      Task {
-        await self?.scheduleReloadEvent()
-      }
-    }
-
-    source.setCancelHandler { [weak self] in
-      Task {
-        await self?.closeDescriptor()
-      }
-    }
-
-    self.source = source
-    source.resume()
   }
 
-  /// Stops the watcher only when the terminating stream still owns the active installation.
+  /// Handles one filesystem event from the dispatch source.
+  private func handleFilesystemEvent(
+    generation: UInt64,
+    configPath: String
+  ) {
+    guard generation == watcherGeneration else { return }
+
+    debounceTask?.cancel()
+    debounceTask = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: 250_000_000)
+      } catch {
+        return
+      }
+
+      await self?.emitChanged(
+        generation: generation,
+        configPath: configPath
+      )
+    }
+  }
+
+  /// Emits one debounced changed event if the watcher generation is still active.
+  private func emitChanged(
+    generation: UInt64,
+    configPath: String
+  ) {
+    guard generation == watcherGeneration else { return }
+
+    logger.debug(
+      "config file changed",
+      .field("path", configPath)
+    )
+
+    continuation?.yield(.changed)
+  }
+
+  /// Handles stream termination from the consumer side.
   private func handleTermination(generation: UInt64) {
     guard generation == watcherGeneration else { return }
     stop()
   }
 
-  /// Schedules one debounced change event.
-  private func scheduleReloadEvent() {
-    debounceWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      Task {
-        await self?.emitChanged()
-      }
-    }
-
-    debounceWorkItem = workItem
-
-    debounceQueue.asyncAfter(
-      deadline: .now() + 0.25,
-      execute: workItem
-    )
-  }
-
-  /// Emits one debounced changed event.
-  private func emitChanged() {
-    continuation?.yield(.changed)
-  }
-
-  /// Opens the config file when present, otherwise the nearest existing ancestor.
-  private func openWatchTarget(for configPath: String) -> (fd: Int32, path: String)? {
-    var candidateURL = URL(fileURLWithPath: configPath)
-
-    while true {
-      let candidatePath = candidateURL.path
-      let fd = open(candidatePath, O_EVTONLY)
-
-      if fd >= 0 {
-        return (fd, candidatePath)
-      }
-
-      let parentURL = candidateURL.deletingLastPathComponent()
-      guard parentURL.path != candidatePath else {
-        return nil
-      }
-
-      candidateURL = parentURL
-    }
-  }
-
-  /// Closes the watched file descriptor when present.
-  private func closeDescriptor() {
-    guard fileDescriptor >= 0 else { return }
-    close(fileDescriptor)
+  /// Cancels the dispatch source and lets its cancel handler close the descriptor.
+  private func cancelSource() {
+    let activeSource = source
+    source = nil
     fileDescriptor = -1
+
+    activeSource?.setEventHandler {}
+    activeSource?.cancel()
+  }
+
+  /// Resolves the best filesystem path to watch for one config path.
+  private func resolveWatchTarget(configPath: String) -> WatchTarget? {
+    let path = NSString(string: configPath).expandingTildeInPath
+    let fileManager = FileManager.default
+
+    var isDirectory = ObjCBool(false)
+
+    if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
+      return WatchTarget(
+        path: path,
+        kind: isDirectory.boolValue ? "directory" : "file"
+      )
+    }
+
+    let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
+    isDirectory = ObjCBool(false)
+
+    guard
+      fileManager.fileExists(atPath: parent, isDirectory: &isDirectory),
+      isDirectory.boolValue
+    else {
+      return nil
+    }
+
+    return WatchTarget(
+      path: parent,
+      kind: "parent_directory"
+    )
   }
 }

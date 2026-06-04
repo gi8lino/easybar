@@ -2,14 +2,8 @@ import Darwin
 import EasyBarShared
 import Foundation
 
-/// Queue used for deferred forced termination of the Lua process.
-private let easyBarLuaTerminationQueue = DispatchQueue(
-  label: "easybar.lua.termination",
-  qos: .utility
-)
-
 /// Grace period between terminate and forced kill.
-private let easyBarLuaTerminationGracePeriod: DispatchTimeInterval = .milliseconds(150)
+private let easyBarLuaTerminationGracePeriodNanoseconds: UInt64 = 150_000_000
 
 extension LuaProcessController {
   /// Terminates the Lua runtime process tree and schedules one forced kill fallback.
@@ -33,7 +27,13 @@ extension LuaProcessController {
       kill(processIdentifier, SIGTERM)
     }
 
-    let workItem = DispatchWorkItem { [weak self] in
+    let task = Task.detached(priority: .utility) { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: easyBarLuaTerminationGracePeriodNanoseconds)
+      } catch {
+        return
+      }
+
       guard let self else { return }
       guard easyBarProcessIsRunning(processIdentifier) else { return }
 
@@ -51,24 +51,19 @@ extension LuaProcessController {
     }
 
     withLock {
-      forcedKillWorkItem = workItem
+      forcedKillTask = task
     }
-
-    easyBarLuaTerminationQueue.asyncAfter(
-      deadline: .now() + easyBarLuaTerminationGracePeriod,
-      execute: workItem
-    )
   }
 
   /// Cancels the pending forced kill work item when present.
   func cancelForcedKillWorkItem() {
-    let workItem = withLock { () -> DispatchWorkItem? in
-      let workItem = forcedKillWorkItem
-      forcedKillWorkItem = nil
-      return workItem
+    let task = withLock { () -> Task<Void, Never>? in
+      let task = forcedKillTask
+      forcedKillTask = nil
+      return task
     }
 
-    workItem?.cancel()
+    task?.cancel()
   }
 }
 

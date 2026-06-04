@@ -53,38 +53,64 @@ final class AppController {
   /// Starts the app shell and the actor-owned runtime.
   @discardableResult
   func start() -> Bool {
-    guard !started else { return true }
+    guard !started else {
+      writeEasyBarBootstrapLog("AppController.start skipped because app is already started")
+      return true
+    }
+
+    writeEasyBarBootstrapLog("AppController.start begin")
     started = true
 
+    writeEasyBarBootstrapLog("loading initial config")
     if let error = services.config.loadInitialState() {
+      writeEasyBarBootstrapErrorLog(
+        "initial config load failed config_path=\(services.config.configPath) error=\(error)"
+      )
       logger.error(
         "initial config load failed",
         .field("config_path", services.config.configPath),
         .field("error", "\(error)")
       )
+    } else {
+      writeEasyBarBootstrapLog("initial config loaded path=\(services.config.configPath)")
     }
 
+    writeEasyBarBootstrapLog("applying runtime configuration")
     services.applyRuntimeConfiguration(services.config.snapshot())
+    writeEasyBarBootstrapLog("runtime configuration applied")
 
+    writeEasyBarBootstrapLog("acquiring single instance lock")
     guard acquireInstanceLock() else {
+      writeEasyBarBootstrapErrorLog("single instance lock acquisition failed")
       started = false
       return false
     }
+    writeEasyBarBootstrapLog("single instance lock acquired")
 
     NSApp.setActivationPolicy(.accessory)
+    writeEasyBarBootstrapLog("activation policy set to accessory")
 
+    writeEasyBarBootstrapLog("configuring process logging")
     configureLogging()
+    writeEasyBarBootstrapLog("process logging configured")
+
     logStartup()
     validateRequiredFonts()
     installWidgetEditorStub()
+
+    writeEasyBarBootstrapLog("presenting bar window")
     setupBarWindowController()
+    writeEasyBarBootstrapLog("bar window presented")
+
     installConfigReloadObserver()
     updateConfigErrorWindow()
     signalHandler.start()
+    writeEasyBarBootstrapLog("signal handler started")
 
     Task {
       await runtimeCoordinator.start()
     }
+    writeEasyBarBootstrapLog("runtime coordinator start scheduled")
 
     return true
   }

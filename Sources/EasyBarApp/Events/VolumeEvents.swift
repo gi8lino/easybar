@@ -327,7 +327,7 @@ final class VolumeEvents {
     return AudioObjectAddPropertyListenerBlock(
       objectID,
       &address,
-      DispatchQueue.main,
+      nil,
       block
     )
   }
@@ -343,7 +343,7 @@ final class VolumeEvents {
     return AudioObjectRemovePropertyListenerBlock(
       objectID,
       &address,
-      DispatchQueue.main,
+      nil,
       block
     )
   }

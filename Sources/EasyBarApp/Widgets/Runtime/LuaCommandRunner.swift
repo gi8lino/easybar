@@ -18,7 +18,6 @@ final class LuaCommandRunner: @unchecked Sendable {
   }
 
   private let logger: ProcessLogger
-  private let queue = DispatchQueue(label: "easybar.lua-command-runner", qos: .utility)
 
   /// Creates one Lua command runner.
   init(logger: ProcessLogger) {
@@ -28,132 +27,207 @@ final class LuaCommandRunner: @unchecked Sendable {
   /// Runs one shell command through `/bin/sh -lc`.
   func run(command: String, limits: Limits) async -> LuaCommandResult {
     await withCheckedContinuation { continuation in
-      queue.async { [logger] in
-        continuation.resume(returning: Self.execute(command: command, limits: limits, logger: logger))
-      }
+      let execution = CommandExecution(
+        command: command,
+        limits: limits,
+        logger: logger,
+        continuation: continuation
+      )
+      execution.start()
     }
   }
+}
 
-  /// Performs one blocking command execution and captures combined output.
-  private static func execute(command: String, limits: Limits, logger: ProcessLogger) -> LuaCommandResult {
-    let process = Process()
+/// Owns one asynchronous process execution.
+///
+/// The process handlers intentionally capture this object strongly. That keeps
+/// the checked continuation alive until one terminal path resumes it. `complete`
+/// clears the handlers and cancels the timeout task, which breaks the temporary
+/// retain cycle.
+private final class CommandExecution: @unchecked Sendable {
+  private struct State {
+    var outputData = Data()
+    var exceededOutputLimit = false
+    var timedOut = false
+    var completed = false
+    var continuation: CheckedContinuation<LuaCommandResult, Never>?
+  }
+
+  private let command: String
+  private let limits: LuaCommandRunner.Limits
+  private let logger: ProcessLogger
+  private let process = Process()
+  private let pipe = Pipe()
+  private let state: LockedState<State>
+  private var timeoutTask: Task<Void, Never>?
+
+  init(
+    command: String,
+    limits: LuaCommandRunner.Limits,
+    logger: ProcessLogger,
+    continuation: CheckedContinuation<LuaCommandResult, Never>
+  ) {
+    self.command = command
+    self.limits = limits
+    self.logger = logger
+    self.state = LockedState(State(continuation: continuation))
+  }
+
+  /// Starts the process and installs async completion handlers.
+  func start() {
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
     process.arguments = ["-lc", command]
-
-    let pipe = Pipe()
     process.standardOutput = pipe
     process.standardError = pipe
 
     let handle = pipe.fileHandleForReading
-    var outputData = Data()
-    var exceededOutputLimit = false
-    var timedOut = false
-    let stateLock = NSLock()
-    let completionSemaphore = DispatchSemaphore(value: 0)
-    let deadline = DispatchTime.now() + limits.timeoutSeconds
 
     handle.readabilityHandler = { readableHandle in
-      let chunk = readableHandle.availableData
+      self.readAvailableOutput(from: readableHandle)
+    }
 
-      stateLock.lock()
-      defer { stateLock.unlock() }
-
-      guard !chunk.isEmpty else {
-        completionSemaphore.signal()
-        return
-      }
-
-      let remainingBytes = max(0, limits.maxOutputBytes - outputData.count)
-      if remainingBytes > 0 {
-        outputData.append(chunk.prefix(remainingBytes))
-      }
-
-      if outputData.count >= limits.maxOutputBytes {
-        exceededOutputLimit = true
-        readableHandle.readabilityHandler = nil
-        if process.isRunning {
-          process.terminate()
-        }
-        completionSemaphore.signal()
-      }
+    process.terminationHandler = { process in
+      self.finish(process: process)
     }
 
     do {
       try process.run()
     } catch {
+      handle.readabilityHandler = nil
+
       logger.warn(
         "failed to launch lua command",
         .field("command", command),
         .field("error", "\(error)")
       )
-      return LuaCommandResult(
-        output: "failed to launch command: \(error)",
-        status: 1
+
+      complete(
+        LuaCommandResult(output: "failed to launch command: \(error)", status: 1)
       )
+      return
     }
 
-    let waitResult = completionSemaphore.wait(timeout: deadline)
-    if waitResult == .timedOut {
-      timedOut = true
-      handle.readabilityHandler = nil
-      if process.isRunning {
-        process.terminate()
-      }
-    }
+    scheduleTimeout()
+  }
 
-    process.waitUntilExit()
-    handle.readabilityHandler = nil
+  /// Reads currently available command output without blocking.
+  private func readAvailableOutput(from handle: FileHandle) {
+    let chunk = handle.availableData
 
-    do {
-      let trailingData = try handle.readToEnd() ?? Data()
-      stateLock.lock()
-      let remainingBytes = max(0, limits.maxOutputBytes - outputData.count)
+    guard !chunk.isEmpty else { return }
+
+    let shouldTerminate = state.withLock { state -> Bool in
+      guard !state.completed else { return false }
+
+      let remainingBytes = max(0, limits.maxOutputBytes - state.outputData.count)
       if remainingBytes > 0 {
-        outputData.append(trailingData.prefix(remainingBytes))
+        state.outputData.append(chunk.prefix(remainingBytes))
       }
-      if outputData.count >= limits.maxOutputBytes && !trailingData.isEmpty {
-        exceededOutputLimit = true
+
+      if state.outputData.count >= limits.maxOutputBytes {
+        state.exceededOutputLimit = true
+        return true
       }
-      stateLock.unlock()
-    } catch {
-      logger.warn(
-        "failed to read lua command output",
-        .field("command", command),
-        .field("error", "\(error)")
-      )
-      return LuaCommandResult(
-        output: "failed to read command output: \(error)",
-        status: process.terminationStatus == 0 ? 1 : process.terminationStatus
+
+      return false
+    }
+
+    if shouldTerminate, process.isRunning {
+      pipe.fileHandleForReading.readabilityHandler = nil
+      process.terminate()
+    }
+  }
+
+  /// Schedules the hard timeout for this command.
+  private func scheduleTimeout() {
+    guard limits.timeoutSeconds > 0 else { return }
+
+    let timeoutNanoseconds = UInt64(limits.timeoutSeconds * 1_000_000_000)
+
+    timeoutTask = Task {
+      do {
+        try await Task.sleep(nanoseconds: timeoutNanoseconds)
+      } catch {
+        return
+      }
+
+      self.handleTimeout()
+    }
+  }
+
+  /// Handles one timeout event.
+  private func handleTimeout() {
+    let shouldTerminate = state.withLock { state -> Bool in
+      guard !state.completed else { return false }
+      state.timedOut = true
+      return true
+    }
+
+    if shouldTerminate, process.isRunning {
+      pipe.fileHandleForReading.readabilityHandler = nil
+      process.terminate()
+    }
+  }
+
+  /// Finishes after the process has terminated.
+  private func finish(process: Process) {
+    pipe.fileHandleForReading.readabilityHandler = nil
+
+    if let remainingData = try? pipe.fileHandleForReading.readToEnd() {
+      appendRemainingOutput(remainingData)
+    }
+
+    complete(result(for: process))
+  }
+
+  /// Appends final output read after process termination.
+  private func appendRemainingOutput(_ data: Data) {
+    guard !data.isEmpty else { return }
+
+    state.withLock { state in
+      guard !state.completed else { return }
+
+      let remainingBytes = max(0, limits.maxOutputBytes - state.outputData.count)
+      if remainingBytes > 0 {
+        state.outputData.append(data.prefix(remainingBytes))
+      }
+
+      if state.outputData.count >= limits.maxOutputBytes {
+        state.exceededOutputLimit = true
+      }
+    }
+  }
+
+  /// Builds the final command result from captured state.
+  private func result(for process: Process) -> LuaCommandResult {
+    let snapshot = state.withLock { state in
+      (
+        outputData: state.outputData,
+        exceededOutputLimit: state.exceededOutputLimit,
+        timedOut: state.timedOut
       )
     }
 
     let output =
-      String(data: outputData, encoding: .utf8)?
-      .replacingOccurrences(of: "\r", with: "")
-      .trimmingCharacters(in: .newlines) ?? ""
+      String(data: snapshot.outputData, encoding: .utf8)?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-    if timedOut {
+    if snapshot.timedOut {
       logger.warn(
         "lua command timed out",
         .field("command", command),
         .field("timeout_seconds", limits.timeoutSeconds)
       )
-      return LuaCommandResult(
-        output: output,
-        status: Limits.timedOutStatus
-      )
+      return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.timedOutStatus)
     }
 
-    if exceededOutputLimit {
+    if snapshot.exceededOutputLimit {
       logger.warn(
         "lua command output exceeded limit",
         .field("command", command),
         .field("max_output_bytes", limits.maxOutputBytes)
       )
-      return LuaCommandResult(
-        output: output,
-        status: Limits.outputLimitStatus
-      )
+      return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.outputLimitStatus)
     }
 
     if process.terminationStatus != 0 {
@@ -169,10 +243,7 @@ final class LuaCommandRunner: @unchecked Sendable {
           .field("status", process.terminationStatus)
         )
 
-        return LuaCommandResult(
-          output: message,
-          status: process.terminationStatus
-        )
+        return LuaCommandResult(output: message, status: process.terminationStatus)
       }
 
       logger.debug(
@@ -182,9 +253,26 @@ final class LuaCommandRunner: @unchecked Sendable {
       )
     }
 
-    return LuaCommandResult(
-      output: output,
-      status: process.terminationStatus
-    )
+    return LuaCommandResult(output: output, status: process.terminationStatus)
+  }
+
+  /// Resumes the continuation exactly once.
+  private func complete(_ result: LuaCommandResult) {
+    let continuation = state.withLock { state -> CheckedContinuation<LuaCommandResult, Never>? in
+      guard !state.completed else { return nil }
+
+      state.completed = true
+      let continuation = state.continuation
+      state.continuation = nil
+      return continuation
+    }
+
+    timeoutTask?.cancel()
+    timeoutTask = nil
+
+    process.terminationHandler = nil
+    pipe.fileHandleForReading.readabilityHandler = nil
+
+    continuation?.resume(returning: result)
   }
 }

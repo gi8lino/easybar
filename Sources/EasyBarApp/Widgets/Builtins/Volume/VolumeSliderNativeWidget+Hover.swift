@@ -6,20 +6,23 @@ extension VolumeSliderNativeWidget {
   func scheduleAutoHide() {
     cancelAutoHide()
 
-    let work = DispatchWorkItem { [weak self] in
+    autoHideTask = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: 800_000_000)
+      } catch {
+        return
+      }
+
       guard let self else { return }
       self.isHovered = false
       self.publish()
     }
-
-    autoHideWorkItem = work
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
   }
 
   /// Cancels a pending auto-hide.
   func cancelAutoHide() {
-    autoHideWorkItem?.cancel()
-    autoHideWorkItem = nil
+    autoHideTask?.cancel()
+    autoHideTask = nil
   }
 
   /// Resolves the volume icon.

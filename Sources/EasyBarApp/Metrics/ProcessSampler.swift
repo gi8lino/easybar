@@ -3,6 +3,10 @@ import EasyBarShared
 import Foundation
 
 /// Samples lightweight process stats for EasyBar, Lua, and helper agents.
+///
+/// `ProcessSampler` is owned by `MetricsCoordinator`, which is an actor. That
+/// actor already serializes access, so the sampler itself no longer needs a
+/// separate lock around CPU baseline state.
 final class ProcessSampler {
   /// Previous CPU sample used to compute utilization.
   private struct CPUSample {
@@ -14,8 +18,6 @@ final class ProcessSampler {
 
   /// Cached CPU samples keyed by process id.
   private var previousCPUSamples: [Int32: CPUSample] = [:]
-  /// Protects cached CPU samples.
-  private let lock = NSLock()
 
   /// Samples the current EasyBar process.
   func sampleCurrentProcess(named name: String, now: Date) -> IPC.ProcessMetrics {
@@ -29,9 +31,7 @@ final class ProcessSampler {
     }
 
     guard let info = readTaskInfo(for: pid) else {
-      _ = withLock {
-        previousCPUSamples.removeValue(forKey: pid)
-      }
+      previousCPUSamples.removeValue(forKey: pid)
       return IPC.ProcessMetrics(name: name, running: false, pid: pid)
     }
 
@@ -60,31 +60,26 @@ final class ProcessSampler {
   /// Clears cached CPU deltas for one process when it fully goes away.
   func clear(pid: Int32?) {
     guard let pid else { return }
-    _ = withLock {
-      previousCPUSamples.removeValue(forKey: pid)
-    }
+    previousCPUSamples.removeValue(forKey: pid)
   }
 
   /// Computes CPU percentage from the previous process sample.
   private func resolveCPUPercent(pid: Int32, totalCPUTime: UInt64, now: Date) -> Double? {
-    withLock {
-      let timestamp = now.timeIntervalSinceReferenceDate
-      defer {
-        previousCPUSamples[pid] = CPUSample(sampledAt: timestamp, totalCPUTime: totalCPUTime)
-      }
-
-      guard let previous = previousCPUSamples[pid] else {
-        return nil
-      }
-
-      let wallDelta = timestamp - previous.sampledAt
-      guard wallDelta > 0 else { return nil }
-
-      let cpuDelta =
-        totalCPUTime >= previous.totalCPUTime ? totalCPUTime - previous.totalCPUTime : 0
-      let cpuSeconds = Double(cpuDelta) / 1_000_000_000
-      return (cpuSeconds / wallDelta) * 100
+    let timestamp = now.timeIntervalSinceReferenceDate
+    defer {
+      previousCPUSamples[pid] = CPUSample(sampledAt: timestamp, totalCPUTime: totalCPUTime)
     }
+
+    guard let previous = previousCPUSamples[pid] else {
+      return nil
+    }
+
+    let wallDelta = timestamp - previous.sampledAt
+    guard wallDelta > 0 else { return nil }
+
+    let cpuDelta = totalCPUTime >= previous.totalCPUTime ? totalCPUTime - previous.totalCPUTime : 0
+    let cpuSeconds = Double(cpuDelta) / 1_000_000_000
+    return (cpuSeconds / wallDelta) * 100
   }
 
   /// Reads task memory, thread, and CPU counters for one process.
@@ -94,13 +89,7 @@ final class ProcessSampler {
     var taskInfo = proc_taskinfo()
     let expectedSize = Int32(MemoryLayout<proc_taskinfo>.stride)
 
-    let result = proc_pidinfo(
-      pid,
-      PROC_PIDTASKINFO,
-      0,
-      &taskInfo,
-      expectedSize
-    )
+    let result = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &taskInfo, expectedSize)
 
     guard result == expectedSize else {
       return nil
@@ -137,12 +126,5 @@ final class ProcessSampler {
     }
 
     return nil
-  }
-
-  /// Runs one closure while holding the sampler lock.
-  private func withLock<T>(_ body: () -> T) -> T {
-    lock.lock()
-    defer { lock.unlock() }
-    return body()
   }
 }

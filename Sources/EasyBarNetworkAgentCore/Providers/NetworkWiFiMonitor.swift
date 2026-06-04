@@ -5,19 +5,22 @@ import Foundation
 /// Watches CoreWLAN Wi-Fi state.
 final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private let smoothingFactor = 0.35
-  private let stateLock = NSLock()
+  private struct TrackingState {
+    var smoothedRSSI: Double?
+    var lastSSID: String?
+    var lastBSSID: String?
+    var lastInterface: String?
+    var ssidChangedAt: Date?
+    var interfaceChangedAt: Date?
+    var roaming = false
+  }
+
+  private let trackingState = LockedState(TrackingState())
   private let componentName: String
   private let logger: ProcessLogger
 
   private var onChange: (() -> Void)?
   private var wifiClient: CWWiFiClient?
-  private var smoothedRSSI: Double?
-  private var lastSSID: String?
-  private var lastBSSID: String?
-  private var lastInterface: String?
-  private var ssidChangedAt: Date?
-  private var interfaceChangedAt: Date?
-  private var roaming = false
 
   /// Creates one Wi-Fi monitor that logs through the provided logger.
   init(componentName: String, logger: ProcessLogger) {
@@ -71,15 +74,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     wifiClient = nil
     onChange = nil
 
-    stateLock.lock()
-    smoothedRSSI = nil
-    lastSSID = nil
-    lastBSSID = nil
-    lastInterface = nil
-    ssidChangedAt = nil
-    interfaceChangedAt = nil
-    roaming = false
-    stateLock.unlock()
+    trackingState.withLock { state in
+      state = TrackingState()
+    }
   }
 
   /// Returns the current normalized Wi-Fi state.
@@ -209,25 +206,24 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
   /// Smooths RSSI so the UI does not jump on every sample.
   private func smoothedRSSIValue(from rssi: Int?) -> Int? {
-    stateLock.lock()
-    defer { stateLock.unlock() }
+    trackingState.withLock { state in
+      guard let rssi else {
+        state.smoothedRSSI = nil
+        logger.debug(
+          "\(componentName) RSSI unavailable",
+          .field("rssi", "<none>"),
+        )
+        return nil
+      }
 
-    guard let rssi else {
-      smoothedRSSI = nil
-      logger.debug(
-        "\(componentName) RSSI unavailable",
-        .field("rssi", "<none>"),
-      )
-      return nil
+      guard let smoothedRSSI = state.smoothedRSSI else {
+        state.smoothedRSSI = Double(rssi)
+        return rssi
+      }
+
+      state.smoothedRSSI = (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
+      return Int((state.smoothedRSSI ?? Double(rssi)).rounded())
     }
-
-    guard let smoothedRSSI else {
-      self.smoothedRSSI = Double(rssi)
-      return rssi
-    }
-
-    self.smoothedRSSI = (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
-    return Int((self.smoothedRSSI ?? Double(rssi)).rounded())
   }
 
   /// Updates cached SSID and interface change tracking.
@@ -237,33 +233,37 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     interface: String?,
     now: Date
   ) -> (roaming: Bool, ssidChangedAt: String?, interfaceChangedAt: String?) {
-    stateLock.lock()
-    defer { stateLock.unlock() }
+    trackingState.withLock { state in
+      if state.lastSSID != ssid {
+        state.ssidChangedAt = now
+      }
 
-    if lastSSID != ssid {
-      ssidChangedAt = now
+      if state.lastInterface != interface {
+        state.interfaceChangedAt = now
+      }
+
+      if state.lastSSID == ssid,
+        ssid != nil,
+        state.lastBSSID != nil,
+        bssid != nil,
+        state.lastBSSID != bssid
+      {
+        state.roaming = true
+      } else {
+        state.roaming = false
+      }
+
+      state.lastSSID = ssid
+      state.lastBSSID = bssid
+      state.lastInterface = interface
+
+      return (
+        roaming: state.roaming,
+        ssidChangedAt: state.ssidChangedAt.map(NetworkWiFiSnapshot.fieldDateFormatter.string(from:)),
+        interfaceChangedAt: state.interfaceChangedAt.map(
+          NetworkWiFiSnapshot.fieldDateFormatter.string(from:))
+      )
     }
-
-    if lastInterface != interface {
-      interfaceChangedAt = now
-    }
-
-    if lastSSID == ssid, ssid != nil, lastBSSID != nil, bssid != nil, lastBSSID != bssid {
-      roaming = true
-    } else {
-      roaming = false
-    }
-
-    lastSSID = ssid
-    lastBSSID = bssid
-    lastInterface = interface
-
-    return (
-      roaming: roaming,
-      ssidChangedAt: ssidChangedAt.map(NetworkWiFiSnapshot.fieldDateFormatter.string(from:)),
-      interfaceChangedAt: interfaceChangedAt.map(
-        NetworkWiFiSnapshot.fieldDateFormatter.string(from:))
-    )
   }
 
   /// Filters out unusable measurements from system APIs.

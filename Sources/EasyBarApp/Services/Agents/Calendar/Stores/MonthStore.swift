@@ -133,7 +133,7 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
       return
     }
 
-    DispatchQueue.main.async(execute: applyChange)
+    Task { @MainActor in applyChange() }
   }
   /// Formats one debug date string.
   private func debugDate(_ date: Date) -> String {

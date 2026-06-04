@@ -1,45 +1,35 @@
 import Foundation
 
-/// Schedules one replaceable delayed action on a dispatch queue.
-public final class DebouncedActionScheduler {
+/// Schedules one replaceable delayed action using Swift tasks.
+public final class DebouncedActionScheduler: @unchecked Sendable {
+  private struct State {
+    var pendingTask: Task<Void, Never>?
+    var generation: UInt64 = 0
+  }
+
   private let label: String?
   private let delay: TimeInterval
-  private let queue: DispatchQueue
   private let logger: ProcessLogger
-
-  private let lock = NSLock()
-
-  private var pendingWorkItem: DispatchWorkItem?
-  private var generation: UInt64 = 0
+  private let state = LockedState(State())
 
   /// Creates one debounced scheduler.
   public init(
     label: String? = nil,
     delay: TimeInterval,
-    queue: DispatchQueue = .main,
     logger: ProcessLogger
   ) {
     self.label = label
     self.delay = delay
-    self.queue = queue
     self.logger = logger
   }
 
   /// Replaces any pending action with a new delayed action.
-  public func schedule(_ action: @escaping () -> Void) {
-    let scheduledGeneration = nextGeneration()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      guard self.finishScheduledAction(generation: scheduledGeneration) else { return }
-
-      action()
+  public func schedule(_ action: @escaping @Sendable () -> Void) {
+    let scheduledGeneration = state.withLock { state -> UInt64 in
+      state.generation &+= 1
+      state.pendingTask?.cancel()
+      return state.generation
     }
-
-    lock.lock()
-    pendingWorkItem?.cancel()
-    pendingWorkItem = workItem
-    lock.unlock()
 
     if let label {
       logger.debug(
@@ -48,39 +38,51 @@ public final class DebouncedActionScheduler {
       )
     }
 
-    queue.asyncAfter(deadline: .now() + delay, execute: workItem)
+    let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
+    let task = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: nanoseconds)
+      } catch {
+        return
+      }
+
+      guard let self else { return }
+      guard self.finishScheduledAction(generation: scheduledGeneration) else { return }
+      action()
+    }
+
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.generation == scheduledGeneration else { return true }
+      state.pendingTask = task
+      return false
+    }
+
+    if shouldCancel {
+      task.cancel()
+    }
   }
 
   /// Cancels any pending action.
   public func cancel() {
-    lock.lock()
+    let task = state.withLock { state -> Task<Void, Never>? in
+      state.generation &+= 1
+      let task = state.pendingTask
+      state.pendingTask = nil
+      return task
+    }
 
-    generation &+= 1
-    pendingWorkItem?.cancel()
-    pendingWorkItem = nil
-
-    lock.unlock()
-  }
-
-  /// Advances and returns the scheduler generation.
-  private func nextGeneration() -> UInt64 {
-    lock.lock()
-    defer { lock.unlock() }
-
-    generation &+= 1
-    return generation
+    task?.cancel()
   }
 
   /// Clears the pending action if it is still the currently scheduled generation.
   private func finishScheduledAction(generation scheduledGeneration: UInt64) -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
+    state.withLock { state -> Bool in
+      guard state.generation == scheduledGeneration else {
+        return false
+      }
 
-    guard generation == scheduledGeneration else {
-      return false
+      state.pendingTask = nil
+      return true
     }
-
-    pendingWorkItem = nil
-    return true
   }
 }

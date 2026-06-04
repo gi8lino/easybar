@@ -19,7 +19,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   let eventObserver = EasyBarEventObserver()
   var isHovered = false
   var isAdjustingSlider = false
-  var autoHideWorkItem: DispatchWorkItem?
+  var autoHideTask: Task<Void, Never>?
   private lazy var renderer = VolumeRenderer(rootID: rootID)
 
   struct SystemVolumeState {

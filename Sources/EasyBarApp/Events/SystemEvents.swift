@@ -19,10 +19,8 @@ final class SystemEvents {
 
   /// Active notification observers keyed by kind.
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
-  /// Queue used to coalesce wake notifications.
-  private let wakeQueue = DispatchQueue(label: "easybar.system-events.wake")
   /// Pending coalesced wake emission.
-  private var pendingWakeWorkItem: DispatchWorkItem?
+  private var pendingWakeTask: Task<Void, Never>?
 
   /// Notification observer category.
   private enum ObserverKind: Hashable {
@@ -244,8 +242,8 @@ final class SystemEvents {
 
   /// Removes every registered system observer.
   func stopAll() {
-    pendingWakeWorkItem?.cancel()
-    pendingWakeWorkItem = nil
+    pendingWakeTask?.cancel()
+    pendingWakeTask = nil
     unsubscribeSystemWake()
     unsubscribeSessionActive()
     unsubscribeSessionInactive()
@@ -260,22 +258,22 @@ final class SystemEvents {
   private func scheduleWakeEmission() {
     logger.debug("received workspace didWake notification")
 
-    pendingWakeWorkItem?.cancel()
+    pendingWakeTask?.cancel()
 
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-
-      DispatchQueue.main.async {
-        self.logger.debug("emitting coalesced system_woke")
-
-        Task {
-          await EventHub.shared.emit(.systemWoke)
-        }
+    pendingWakeTask = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: 150_000_000)
+      } catch {
+        return
       }
-    }
 
-    pendingWakeWorkItem = workItem
-    wakeQueue.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+      guard let self else { return }
+      await MainActor.run {
+        self.logger.debug("emitting coalesced system_woke")
+      }
+
+      await EventHub.shared.emit(.systemWoke)
+    }
   }
 
   /// Removes one registered observer when present.

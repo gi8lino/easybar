@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
-final class CalendarAgentEventRelay {
+final class CalendarAgentEventRelay: @unchecked Sendable {
   /// Shared calendar-agent event relay.
   static var shared = CalendarAgentEventRelay(
     logger: ProcessLogger(label: "easybar.bootstrap.calendar_relay")
@@ -13,21 +13,20 @@ final class CalendarAgentEventRelay {
     shared = CalendarAgentEventRelay(logger: logger)
   }
 
-  /// Serial queue for relay state and debouncing.
-  private let queue = DispatchQueue(label: "easybar.calendar-agent.event-relay")
+  private struct State {
+    var running = false
+    var generation: UInt64 = 0
+  }
+
   /// Logger used for relay diagnostics.
   private let logger: ProcessLogger
-
-  /// Whether the relay is active.
-  private var running = false
-  /// Generation used to ignore stale scheduled emissions.
-  private var generation: UInt64 = 0
+  /// Locked relay state.
+  private let state = LockedState(State())
 
   /// Scheduler that coalesces snapshot updates.
   private lazy var scheduler = DebouncedActionScheduler(
     label: "calendar agent event relay",
     delay: 0.05,
-    queue: queue,
     logger: logger.child("scheduler")
   )
 
@@ -38,19 +37,19 @@ final class CalendarAgentEventRelay {
 
   /// Activates the relay for runtime event delivery.
   func start() {
-    queue.async {
-      self.running = true
-      self.generation &+= 1
+    state.withLock { state in
+      state.running = true
+      state.generation &+= 1
     }
   }
 
   /// Cancels pending emissions and disables the relay.
   func stop() {
-    queue.async {
-      self.running = false
-      self.generation &+= 1
-      self.scheduler.cancel()
+    state.withLock { state in
+      state.running = false
+      state.generation &+= 1
     }
+    scheduler.cancel()
   }
 
   /// Schedules one debounced `calendar_change` emission.
@@ -59,21 +58,22 @@ final class CalendarAgentEventRelay {
   /// underlying EventKit change. This relay collapses those near-simultaneous
   /// updates into one app-wide event.
   func noteSnapshotUpdate() {
-    queue.async { [weak self] in
+    let generation = state.withLock { state -> UInt64? in
+      guard state.running else { return nil }
+      return state.generation
+    }
+
+    guard let generation else { return }
+
+    scheduler.schedule { [weak self] in
       guard let self else { return }
-      guard self.running else { return }
+      let shouldEmit = self.state.withLock { state in
+        state.running && state.generation == generation
+      }
+      guard shouldEmit else { return }
 
-      let generation = self.generation
-
-      self.scheduler.schedule { [weak self] in
-        guard let self else { return }
-        guard self.running, self.generation == generation else { return }
-
-        DispatchQueue.main.async {
-          Task {
-            await EventHub.shared.emit(.calendarChange)
-          }
-        }
+      Task {
+        await EventHub.shared.emit(.calendarChange)
       }
     }
   }

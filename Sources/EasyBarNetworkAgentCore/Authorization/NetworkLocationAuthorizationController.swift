@@ -67,7 +67,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     let status = manager.authorizationStatus
 
-    DispatchQueue.main.async { [weak self] in
+    Task { @MainActor [weak self] in
       guard let self else { return }
 
       self.authState.setStatus(status)

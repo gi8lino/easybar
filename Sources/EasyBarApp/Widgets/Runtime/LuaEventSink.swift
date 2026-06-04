@@ -5,7 +5,6 @@ import Foundation
 final class LuaEventSink {
   private let runtime: LuaRuntime
   private let logger: ProcessLogger
-  private let queue = DispatchQueue(label: "easybar.lua-event-sink")
 
   /// Creates one Lua event sink.
   init(
@@ -18,7 +17,7 @@ final class LuaEventSink {
 
   /// Enqueues one event payload for Lua delivery.
   func enqueue(_ payload: EasyBarEventPayload) {
-    queue.async { [runtime, logger] in
+    Task { [runtime, logger] in
       guard let encoded = Self.encodedPayload(payload) else {
         logger.error(
           "failed to encode lua event payload",
@@ -28,10 +27,7 @@ final class LuaEventSink {
       }
 
       logger.trace("sent to lua socket", .field("payload", encoded))
-
-      Task {
-        await runtime.send(encoded)
-      }
+      await runtime.send(encoded)
     }
   }
 

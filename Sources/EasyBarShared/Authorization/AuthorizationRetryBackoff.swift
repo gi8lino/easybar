@@ -1,74 +1,85 @@
 import Foundation
 
-/// Schedules incremental authorization retries on one dispatch queue.
-public final class AuthorizationRetryBackoff {
-  private let delays: [TimeInterval]
-  private let queue: DispatchQueue
-  private let logger: ProcessLogger
-  private let lock = NSLock()
+/// Schedules incremental authorization retries using Swift tasks.
+public final class AuthorizationRetryBackoff: @unchecked Sendable {
+  private struct State {
+    var scheduledTask: Task<Void, Never>?
+    var attemptIndex = 0
+  }
 
-  private var scheduledWorkItem: DispatchWorkItem?
-  private var attemptIndex = 0
+  private let delays: [TimeInterval]
+  private let logger: ProcessLogger
+  private let state = LockedState(State())
 
   /// Builds one retry scheduler with incremental delays capped at the last value.
   public init(
     delays: [TimeInterval] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 60],
-    queue: DispatchQueue = .main,
     logger: ProcessLogger
   ) {
     self.delays = delays
-    self.queue = queue
     self.logger = logger
   }
 
   /// Cancels any pending retry and resets the delay sequence.
   public func reset() {
-    let workItem = withLock { () -> DispatchWorkItem? in
-      let workItem = scheduledWorkItem
-      scheduledWorkItem = nil
-      attemptIndex = 0
-      return workItem
+    let task = state.withLock { state -> Task<Void, Never>? in
+      let task = state.scheduledTask
+      state.scheduledTask = nil
+      state.attemptIndex = 0
+      return task
     }
 
-    workItem?.cancel()
+    task?.cancel()
   }
 
   /// Schedules the next retry attempt when none is currently pending.
-  public func schedule(_ action: @escaping () -> Void) {
-    var workItem: DispatchWorkItem?
-
-    let scheduledDelay = withLock { () -> TimeInterval? in
-      guard scheduledWorkItem == nil else {
+  public func schedule(_ action: @escaping @Sendable () -> Void) {
+    let scheduledDelay = state.withLock { state -> TimeInterval? in
+      guard state.scheduledTask == nil else {
         return nil
       }
 
-      let delay = delayForCurrentAttempt()
-      attemptIndex += 1
-
-      let nextWorkItem = DispatchWorkItem { [weak self] in
-        guard let self else { return }
-        guard self.clearScheduledWorkItem() else { return }
-
-        action()
-      }
-
-      scheduledWorkItem = nextWorkItem
-      workItem = nextWorkItem
-
+      let delay = delayForAttempt(state.attemptIndex)
+      state.attemptIndex += 1
       return delay
     }
 
-    guard let scheduledDelay, let workItem else { return }
+    guard let scheduledDelay else { return }
 
     logger.debug(
       "authorization retry scheduled",
       .field("delay", "\(scheduledDelay)"),
     )
-    queue.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
+
+    let nanoseconds = UInt64(max(scheduledDelay, 0) * 1_000_000_000)
+    let task = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: nanoseconds)
+      } catch {
+        return
+      }
+
+      guard let self else { return }
+      guard self.clearScheduledTask() else { return }
+
+      await MainActor.run {
+        action()
+      }
+    }
+
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.scheduledTask == nil else { return true }
+      state.scheduledTask = task
+      return false
+    }
+
+    if shouldCancel {
+      task.cancel()
+    }
   }
 
-  /// Returns the delay for the current retry attempt.
-  private func delayForCurrentAttempt() -> TimeInterval {
+  /// Returns the delay for one retry attempt.
+  private func delayForAttempt(_ attemptIndex: Int) -> TimeInterval {
     guard !delays.isEmpty else {
       return 0
     }
@@ -76,23 +87,15 @@ public final class AuthorizationRetryBackoff {
     return delays[min(attemptIndex, delays.count - 1)]
   }
 
-  /// Clears the current scheduled item after it has fired.
-  private func clearScheduledWorkItem() -> Bool {
-    withLock {
-      guard scheduledWorkItem != nil else {
+  /// Clears the current scheduled task after it has fired.
+  private func clearScheduledTask() -> Bool {
+    state.withLock { state -> Bool in
+      guard state.scheduledTask != nil else {
         return false
       }
 
-      scheduledWorkItem = nil
+      state.scheduledTask = nil
       return true
     }
-  }
-
-  /// Runs one closure while holding the backoff lock.
-  private func withLock<T>(_ body: () -> T) -> T {
-    lock.lock()
-    defer { lock.unlock() }
-
-    return body()
   }
 }

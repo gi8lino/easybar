@@ -228,7 +228,7 @@ final class NetworkAgentClient {
 
   /// Clears the shared Wi-Fi state and optionally emits the corresponding app events.
   private func clearPublishedState(notify: Bool) {
-    DispatchQueue.main.async {
+    Task { @MainActor in
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.clear()
 
@@ -250,7 +250,7 @@ final class NetworkAgentClient {
 
   /// Publishes one snapshot to the shared store on the main queue and emits app events.
   private func publish(snapshot: NetworkAgentSnapshot) {
-    DispatchQueue.main.async {
+    Task { @MainActor in
       guard self.started else { return }
 
       let previous = NativeWiFiStore.shared.snapshot
