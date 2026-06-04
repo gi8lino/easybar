@@ -185,7 +185,7 @@ actor EventHub {
 
   /// Emits one fully constructed payload.
   func emit(_ payload: EasyBarEventPayload) async {
-    MetricsCoordinator.shared.recordEvent(
+    await MetricsCoordinator.shared.recordEvent(
       name: payload.eventName,
       isWidgetEvent: payload.widgetEvent != nil
     )
@@ -202,7 +202,7 @@ actor EventHub {
       let result = subscriber.continuation.yield(payload)
 
       if case .dropped = result {
-        MetricsCoordinator.shared.recordEventBackpressure(
+        await MetricsCoordinator.shared.recordEventBackpressure(
           name: payload.eventName,
           coalesced: deliveryPolicy == .coalescing
         )

@@ -15,15 +15,20 @@ actor RuntimeSocketCommandAdapter {
     socketServer: SocketServer? = nil
   ) {
     self.metricsCoordinator = metricsCoordinator
-    self.socketServer = socketServer ?? SocketServer(logger: logger)
+    self.socketServer =
+      socketServer
+      ?? SocketServer(
+        logger: logger,
+        metricsCoordinator: metricsCoordinator
+      )
   }
 
   /// Starts accepting socket commands and config validation requests.
   func start(
     commandHandler: @escaping (IPC.Command) async -> Void,
     validateConfigHandler: @escaping (String?) async -> IPC.Message
-  ) {
-    metricsCoordinator.onSnapshot = { [weak self] snapshot in
+  ) async {
+    await metricsCoordinator.setSnapshotHandler { [weak self] snapshot in
       Task {
         await self?.broadcastMetrics(snapshot)
       }
@@ -39,8 +44,8 @@ actor RuntimeSocketCommandAdapter {
   }
 
   /// Stops accepting socket commands and metrics streams.
-  func stop() {
-    metricsCoordinator.onSnapshot = nil
+  func stop() async {
+    await metricsCoordinator.setSnapshotHandler(nil)
     socketServer.stop()
   }
 

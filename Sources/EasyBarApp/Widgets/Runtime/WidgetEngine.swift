@@ -145,19 +145,19 @@ actor WidgetEngine {
       let message = try protocolDecoder.decodeMessage(from: line)
       await handleRuntimeMessage(message)
     } catch WidgetRuntimeProtocolError.unsupportedProtocolVersion(let version) {
-      metricsCoordinator.recordDecodeError()
+      await metricsCoordinator.recordDecodeError()
       logger.warn(
         "unsupported lua protocol version",
         .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
         .field("received", version.map(String.init(describing:)) ?? "nil")
       )
     } catch DecodingError.dataCorrupted {
-      metricsCoordinator.recordDecodeError()
+      await metricsCoordinator.recordDecodeError()
       logger.warn("invalid utf8: \(line)")
     } catch WidgetRuntimeProtocolError.invalidPayload(let message) {
       logger.warn(message)
     } catch {
-      metricsCoordinator.recordDecodeError()
+      await metricsCoordinator.recordDecodeError()
       logger.warn("json decode failed: \(line)")
       logger.debug("decode error: \(error)")
     }
@@ -201,7 +201,7 @@ actor WidgetEngine {
     runtimeState.requiredEvents = requiredEvents
     runtimeState.hasSubscriptions = true
 
-    metricsCoordinator.recordLuaSubscriptions(runtimeState.requiredEvents)
+    await metricsCoordinator.recordLuaSubscriptions(runtimeState.requiredEvents)
     logger.debug(
       "required events updated",
       .field("events", runtimeState.requiredEvents),
@@ -222,7 +222,7 @@ actor WidgetEngine {
     logger.debug("lua runtime handshake received")
 
     runtimeState.isReady = true
-    metricsCoordinator.recordLuaReady()
+    await metricsCoordinator.recordLuaReady()
 
     await emitInitialEventsIfPossible()
   }
@@ -236,7 +236,7 @@ actor WidgetEngine {
       .field("root", root),
       .field("nodes", nodes.count)
     )
-    metricsCoordinator.recordTreeUpdate(root: root, nodeCount: nodes.count)
+    await metricsCoordinator.recordTreeUpdate(root: root, nodeCount: nodes.count)
 
     await MainActor.run {
       widgetStore.apply(root: root, nodes: nodes)

@@ -20,11 +20,9 @@ final class MetricsStreamingTests: XCTestCase {
     )
 
     socketPath = socketDirectoryURL.appendingPathComponent("easybar.sock").path
-    MetricsCoordinator.shared.resetStreaming()
   }
 
   override func tearDownWithError() throws {
-    MetricsCoordinator.shared.resetStreaming()
     if let socketDirectoryURL {
       try? FileManager.default.removeItem(at: socketDirectoryURL)
     }
@@ -32,6 +30,13 @@ final class MetricsStreamingTests: XCTestCase {
   }
 
   func testMetricsWatchStopsSamplingAfterClientDisconnects() async throws {
+    await MetricsCoordinator.shared.resetStreaming()
+    defer {
+      Task {
+        await MetricsCoordinator.shared.resetStreaming()
+      }
+    }
+
     let server = SocketServer(
       logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
       socketPath: socketPath
@@ -51,7 +56,7 @@ final class MetricsStreamingTests: XCTestCase {
     _ = try readLine(from: clientFD)
 
     try await waitUntil("metrics streaming to start") {
-      MetricsCoordinator.shared.isStreamingActive
+      await MetricsCoordinator.shared.isStreamingActive
     }
 
     shutdown(clientFD, SHUT_RDWR)
@@ -59,11 +64,18 @@ final class MetricsStreamingTests: XCTestCase {
     clientFD = -1
 
     try await waitUntil("metrics streaming to stop") {
-      !MetricsCoordinator.shared.isStreamingActive
+      !(await MetricsCoordinator.shared.isStreamingActive)
     }
   }
 
   func testValidateConfigRequestReturnsValidatedPath() async throws {
+    await MetricsCoordinator.shared.resetStreaming()
+    defer {
+      Task {
+        await MetricsCoordinator.shared.resetStreaming()
+      }
+    }
+
     let server = SocketServer(
       logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
       socketPath: socketPath
@@ -157,12 +169,12 @@ final class MetricsStreamingTests: XCTestCase {
   private func waitUntil(
     _ description: String,
     timeoutNanoseconds: UInt64 = 1_000_000_000,
-    condition: @escaping () -> Bool
+    condition: @escaping () async -> Bool
   ) async throws {
     let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
 
     while DispatchTime.now().uptimeNanoseconds < deadline {
-      if condition() {
+      if await condition() {
         return
       }
 

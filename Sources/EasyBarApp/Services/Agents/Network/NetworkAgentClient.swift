@@ -41,16 +41,24 @@ final class NetworkAgentClient {
       self?.handleDisconnectedStateReset()
     },
     onConnected: {
-      MetricsCoordinator.shared.recordAgentConnected(.network)
+      Task {
+        await MetricsCoordinator.shared.recordAgentConnected(.network)
+      }
     },
     onDisconnected: {
-      MetricsCoordinator.shared.recordAgentDisconnected(.network)
+      Task {
+        await MetricsCoordinator.shared.recordAgentDisconnected(.network)
+      }
     },
     onDecodedMessage: {
-      MetricsCoordinator.shared.recordAgentMessage(.network)
+      Task {
+        await MetricsCoordinator.shared.recordAgentMessage(.network)
+      }
     },
     onDecodeError: {
-      MetricsCoordinator.shared.recordAgentDecodeError(.network)
+      Task {
+        await MetricsCoordinator.shared.recordAgentDecodeError(.network)
+      }
     },
     logger: logger.child("socket_client")
   )
@@ -129,7 +137,9 @@ final class NetworkAgentClient {
 
     logger.debug("network agent client manual refresh")
 
-    MetricsCoordinator.shared.recordAgentRefresh(.network)
+    Task {
+      await MetricsCoordinator.shared.recordAgentRefresh(.network)
+    }
     client.refresh()
   }
 

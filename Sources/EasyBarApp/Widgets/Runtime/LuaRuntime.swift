@@ -39,7 +39,7 @@ actor LuaRuntime {
 
   /// Starts the Lua runtime if it is not already running.
   @discardableResult
-  func start(config: ConfigSnapshot) -> Bool {
+  func start(config: ConfigSnapshot) async -> Bool {
     guard let context = processController.launchContext(config: config) else { return false }
 
     let resources = LuaProcessController.LaunchResources()
@@ -60,7 +60,7 @@ actor LuaRuntime {
       return false
     }
 
-    MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
+    await MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
     logger.debug(
       "lua runtime facade started",
       .field("pid", result.processIdentifier),
@@ -70,7 +70,7 @@ actor LuaRuntime {
 
   /// Stops the Lua runtime and clears all pipe handlers.
   func shutdown() async {
-    MetricsCoordinator.shared.recordLuaRuntimeStopped()
+    await MetricsCoordinator.shared.recordLuaRuntimeStopped()
     transport.shutdown()
     await processController.shutdownAndWait()
     logger.debug("lua runtime facade shutdown completed")

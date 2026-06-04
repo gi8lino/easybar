@@ -96,7 +96,9 @@ final class LuaTransport {
       }
 
       if writeAll(data, to: fd) {
-        MetricsCoordinator.shared.recordLuaWrite()
+        Task {
+          await MetricsCoordinator.shared.recordLuaWrite()
+        }
         self.logger.trace("sent to lua socket", .field("payload", string))
       } else {
         self.logger.error(
@@ -280,7 +282,9 @@ final class LuaTransport {
         buffer.removeSubrange(...newlineIndex)
 
         guard let line = self.decodeLine(from: lineData) else { continue }
-        MetricsCoordinator.shared.recordLuaTransportLine()
+        Task {
+          await MetricsCoordinator.shared.recordLuaTransportLine()
+        }
         self.logger.debug("lua socket raw: \(line)")
         self.lineHandler?(line)
       }
@@ -299,7 +303,9 @@ final class LuaTransport {
     guard let pipe = errorPipe else { return }
 
     installReadabilityHandler(on: pipe, generation: generation) { [logBridge] line in
-      MetricsCoordinator.shared.recordLuaStderrLine()
+      Task {
+        await MetricsCoordinator.shared.recordLuaStderrLine()
+      }
       logBridge.handle(line)
     }
   }

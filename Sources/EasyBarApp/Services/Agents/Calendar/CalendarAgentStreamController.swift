@@ -40,19 +40,27 @@ final class CalendarAgentStreamController {
     },
     onConnected: { [weak self] in
       guard let self else { return }
-      MetricsCoordinator.shared.recordAgentConnected(self.metricsAgent)
+      Task {
+        await MetricsCoordinator.shared.recordAgentConnected(self.metricsAgent)
+      }
     },
     onDisconnected: { [weak self] in
       guard let self else { return }
-      MetricsCoordinator.shared.recordAgentDisconnected(self.metricsAgent)
+      Task {
+        await MetricsCoordinator.shared.recordAgentDisconnected(self.metricsAgent)
+      }
     },
     onDecodedMessage: { [weak self] in
       guard let self else { return }
-      MetricsCoordinator.shared.recordAgentMessage(self.metricsAgent)
+      Task {
+        await MetricsCoordinator.shared.recordAgentMessage(self.metricsAgent)
+      }
     },
     onDecodeError: { [weak self] in
       guard let self else { return }
-      MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
+      Task {
+        await MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
+      }
     },
     logger: logger.child("socket_client")
   )
@@ -136,7 +144,9 @@ final class CalendarAgentStreamController {
   func refresh() {
     guard started else { return }
 
-    MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
+    Task {
+      await MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
+    }
     client.refresh()
   }
 

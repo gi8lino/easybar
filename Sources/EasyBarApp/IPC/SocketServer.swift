@@ -12,6 +12,8 @@ final class SocketServer {
 
   /// Logger used for socket-server diagnostics.
   private let logger: ProcessLogger
+  /// Shared runtime metrics collector.
+  private let metricsCoordinator: MetricsCoordinator
 
   /// Active socket transport instance.
   private var transport: Transport
@@ -25,12 +27,15 @@ final class SocketServer {
   /// Creates a socket server bound to the configured socket path.
   init(
     logger: ProcessLogger,
-    socketPath: String = SharedRuntimeConfig.current.easyBarSocketPath
+    socketPath: String = SharedRuntimeConfig.current.easyBarSocketPath,
+    metricsCoordinator: MetricsCoordinator = MetricsCoordinator.shared
   ) {
     self.logger = logger
     self.socketPath = socketPath
+    self.metricsCoordinator = metricsCoordinator
     transport = Self.makeTransport(
       socketPath: socketPath,
+      metricsCoordinator: metricsCoordinator,
       logger: logger.child("transport")
     )
   }
@@ -67,6 +72,7 @@ final class SocketServer {
       socketPath = updatedSocketPath
       transport = Self.makeTransport(
         socketPath: updatedSocketPath,
+        metricsCoordinator: metricsCoordinator,
         logger: logger.child("transport")
       )
       return
@@ -78,12 +84,15 @@ final class SocketServer {
       .field("new_path", "\(updatedSocketPath)")
     )
 
-    MetricsCoordinator.shared.resetStreaming()
+    Task {
+      await metricsCoordinator.resetStreaming()
+    }
     transport.stop()
 
     socketPath = updatedSocketPath
     transport = Self.makeTransport(
       socketPath: updatedSocketPath,
+      metricsCoordinator: metricsCoordinator,
       logger: logger.child("transport")
     )
 
@@ -108,7 +117,9 @@ final class SocketServer {
     commandHandler = nil
     validateConfigHandler = nil
 
-    MetricsCoordinator.shared.resetStreaming()
+    Task {
+      await metricsCoordinator.resetStreaming()
+    }
     transport.stop()
   }
 
@@ -162,7 +173,7 @@ final class SocketServer {
     request: IPC.Request,
     transport: Transport
   ) -> Transport.ClientDisposition {
-    let snapshot = MetricsCoordinator.shared.snapshot()
+    let snapshot = currentMetricsSnapshot()
     let sent = transport.send(
       .metrics(snapshot),
       to: clientFD
@@ -177,9 +188,30 @@ final class SocketServer {
     }
 
     transport.addSubscriber(request, for: clientFD)
-    MetricsCoordinator.shared.addStreamingSubscriber(fd: clientFD)
+    Task { [metricsCoordinator] in
+      await metricsCoordinator.addStreamingSubscriber(fd: clientFD)
+    }
 
     return .keepOpen
+  }
+
+  /// Returns one current metrics snapshot from the actor for the synchronous socket handler.
+  private func currentMetricsSnapshot() -> IPC.MetricsSnapshot {
+    let semaphore = DispatchSemaphore(value: 0)
+    var snapshot: IPC.MetricsSnapshot?
+
+    Task { [metricsCoordinator] in
+      snapshot = await metricsCoordinator.snapshot()
+      semaphore.signal()
+    }
+
+    semaphore.wait()
+
+    guard let snapshot else {
+      preconditionFailure("metrics snapshot task completed without a snapshot")
+    }
+
+    return snapshot
   }
 
   /// Handles one config validation request using the app's real config validator.
@@ -204,6 +236,7 @@ final class SocketServer {
   /// Creates one transport bound to the given socket path.
   private static func makeTransport(
     socketPath: String,
+    metricsCoordinator: MetricsCoordinator,
     logger: ProcessLogger
   ) -> Transport {
     Transport(
@@ -211,7 +244,9 @@ final class SocketServer {
       serverLabel: "easybar",
       logger: logger,
       onSubscriberRemoved: { fd in
-        MetricsCoordinator.shared.removeStreamingSubscriber(fd: fd)
+        Task {
+          await metricsCoordinator.removeStreamingSubscriber(fd: fd)
+        }
       }
     )
   }

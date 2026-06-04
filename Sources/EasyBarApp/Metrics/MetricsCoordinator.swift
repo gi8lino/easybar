@@ -2,7 +2,10 @@ import EasyBarShared
 import Foundation
 
 /// Collects lightweight runtime metrics and streams coalesced snapshots on demand.
-final class MetricsCoordinator {
+actor MetricsCoordinator {
+  /// Callback invoked for streamed snapshots.
+  typealias SnapshotHandler = (IPC.MetricsSnapshot) -> Void
+
   /// Helper agent tracked by metrics.
   enum AgentKey: String, CaseIterable {
     case calendar
@@ -75,7 +78,7 @@ final class MetricsCoordinator {
     var coalescedEventCounts: [String: Int]
   }
 
-  /// Locked mutable metrics state.
+  /// Actor-isolated mutable metrics state.
   private struct State {
     var streamingSubscriberFDs = Set<Int32>()
     var luaPID: Int32?
@@ -116,60 +119,54 @@ final class MetricsCoordinator {
   /// Shared process-wide metrics coordinator.
   static var shared = MetricsCoordinator()
 
-  /// Protects mutable metrics state.
-  private let lock = NSLock()
-  /// Queue used for periodic sampling.
-  private let queue = DispatchQueue(label: "easybar.metrics", qos: .utility)
   /// Metrics sampling interval.
   private let sampleIntervalSeconds: TimeInterval = 1
+  /// Metrics sampling interval in nanoseconds.
+  private let sampleIntervalNanoseconds: UInt64 = 1_000_000_000
   /// Process sampler for EasyBar, Lua, and agents.
   private let processSampler = ProcessSampler()
 
-  /// Current locked metrics state.
+  /// Current actor-isolated metrics state.
   private var state = State()
-  /// Periodic streaming timer.
-  private var timer: DispatchSourceTimer?
-
+  /// Periodic streaming task.
+  private var streamingTask: Task<Void, Never>?
   /// Callback invoked for streamed snapshots.
-  var onSnapshot: ((IPC.MetricsSnapshot) -> Void)?
+  private var onSnapshot: SnapshotHandler?
 
   init() {}
 
   /// Returns whether metrics streaming is currently active.
   var isStreamingActive: Bool {
-    withLock { !state.streamingSubscriberFDs.isEmpty }
+    return !state.streamingSubscriberFDs.isEmpty
+  }
+
+  /// Installs the callback invoked for streamed snapshots.
+  func setSnapshotHandler(_ handler: SnapshotHandler?) {
+    onSnapshot = handler
   }
 
   /// Starts streaming collection for one subscriber.
   func addStreamingSubscriber(fd: Int32) {
-    let shouldStart = withLock { () -> Bool in
-      let inserted = state.streamingSubscriberFDs.insert(fd).inserted
-      return inserted && state.streamingSubscriberFDs.count == 1
-    }
+    let inserted = state.streamingSubscriberFDs.insert(fd).inserted
 
-    if shouldStart {
-      startTimer()
+    if inserted && state.streamingSubscriberFDs.count == 1 {
+      startStreamingTask()
     }
   }
 
   /// Stops streaming collection for one subscriber.
   func removeStreamingSubscriber(fd: Int32) {
-    let shouldStop = withLock { () -> Bool in
-      guard state.streamingSubscriberFDs.remove(fd) != nil else { return false }
-      return state.streamingSubscriberFDs.isEmpty
-    }
+    guard state.streamingSubscriberFDs.remove(fd) != nil else { return }
 
-    if shouldStop {
-      stopTimer()
+    if state.streamingSubscriberFDs.isEmpty {
+      stopStreamingTask()
     }
   }
 
   /// Stops all streaming subscribers and sampling.
   func resetStreaming() {
-    withLock {
-      state.streamingSubscriberFDs.removeAll()
-    }
-    stopTimer()
+    state.streamingSubscriberFDs.removeAll()
+    stopStreamingTask()
   }
 
   /// Builds one point-in-time snapshot.
@@ -179,149 +176,128 @@ final class MetricsCoordinator {
 
   /// Records one emitted event.
   func recordEvent(name: String, isWidgetEvent: Bool) {
-    withLock {
-      state.totalEvents += 1
-      if isWidgetEvent {
-        state.widgetEvents += 1
-      } else {
-        state.appEvents += 1
-      }
-      state.eventCounts[name, default: 0] += 1
+    state.totalEvents += 1
+    if isWidgetEvent {
+      state.widgetEvents += 1
+    } else {
+      state.appEvents += 1
     }
+    state.eventCounts[name, default: 0] += 1
   }
 
   /// Records one event dropped or coalesced because a subscriber buffer was full.
   func recordEventBackpressure(name: String, coalesced: Bool) {
-    withLock {
-      if coalesced {
-        state.coalescedEvents += 1
-        state.coalescedEventCounts[name, default: 0] += 1
-      } else {
-        state.droppedEvents += 1
-        state.droppedEventCounts[name, default: 0] += 1
-      }
+    if coalesced {
+      state.coalescedEvents += 1
+      state.coalescedEventCounts[name, default: 0] += 1
+    } else {
+      state.droppedEvents += 1
+      state.droppedEventCounts[name, default: 0] += 1
     }
   }
 
   /// Records one line written to the Lua transport socket.
   func recordLuaWrite() {
-    withLock { state.luaWrites += 1 }
+    state.luaWrites += 1
   }
 
   /// Records one line read from the Lua transport socket.
   func recordLuaTransportLine() {
-    withLock { state.transportLines += 1 }
+    state.transportLines += 1
   }
 
   /// Records one line read from Lua stderr.
   func recordLuaStderrLine() {
-    withLock { state.stderrLines += 1 }
+    state.stderrLines += 1
   }
 
   /// Records one runtime decode failure.
   func recordDecodeError() {
-    withLock { state.decodeErrors += 1 }
+    state.decodeErrors += 1
   }
 
   /// Records the Lua runtime starting with a new PID.
   func recordLuaRuntimeStarted(pid: Int32) {
-    withLock {
-      if state.hasSeenLuaStart {
-        state.luaRestartCount += 1
-      }
-      state.hasSeenLuaStart = true
-      state.luaPID = pid
-      state.luaReady = false
+    if state.hasSeenLuaStart {
+      state.luaRestartCount += 1
     }
+    state.hasSeenLuaStart = true
+    state.luaPID = pid
+    state.luaReady = false
   }
 
   /// Records the Lua runtime stopping.
   func recordLuaRuntimeStopped() {
-    let pid = withLock { () -> Int32? in
-      let pid = state.luaPID
-      state.luaPID = nil
-      state.luaReady = false
-      state.subscribedEvents.removeAll()
-      return pid
-    }
+    let pid = state.luaPID
+    state.luaPID = nil
+    state.luaReady = false
+    state.subscribedEvents.removeAll()
 
     processSampler.clear(pid: pid)
   }
 
   /// Records the Lua runtime ready handshake.
   func recordLuaReady() {
-    withLock { state.luaReady = true }
+    state.luaReady = true
   }
 
   /// Records the subscribed runtime event set.
   func recordLuaSubscriptions(_ events: Set<String>) {
-    withLock { state.subscribedEvents = events }
+    state.subscribedEvents = events
   }
 
   /// Records one widget tree update.
   func recordTreeUpdate(root: String, nodeCount: Int, at date: Date = Date()) {
-    withLock {
-      state.treeUpdates += 1
-      state.lastTreeRoot = root
-      state.lastTreeNodeCount = nodeCount
-      state.lastTreeAt = date
-      state.widgetUpdateCounts[root, default: 0] += 1
-      state.widgetNodeCounts[root] = nodeCount
-      state.widgetLastUpdatedAt[root] = date
-    }
+    state.treeUpdates += 1
+    state.lastTreeRoot = root
+    state.lastTreeNodeCount = nodeCount
+    state.lastTreeAt = date
+    state.widgetUpdateCounts[root, default: 0] += 1
+    state.widgetNodeCounts[root] = nodeCount
+    state.widgetLastUpdatedAt[root] = date
   }
 
   /// Records one agent connection.
   func recordAgentConnected(_ agent: AgentKey) {
-    withLock {
-      var agentState = state.agents[agent] ?? AgentState()
+    var agentState = state.agents[agent] ?? AgentState()
 
-      if shouldCountReconnect(for: agentState) {
-        agentState.reconnectsTotal += 1
-      }
-
-      agentState.activeConnections += 1
-      agentState.everConnected = true
-      state.agents[agent] = agentState
+    if shouldCountReconnect(for: agentState) {
+      agentState.reconnectsTotal += 1
     }
+
+    agentState.activeConnections += 1
+    agentState.everConnected = true
+    state.agents[agent] = agentState
   }
 
   /// Records one agent disconnect.
   func recordAgentDisconnected(_ agent: AgentKey, at date: Date = Date()) {
-    withLock {
-      var agentState = state.agents[agent] ?? AgentState()
-      agentState.activeConnections = max(0, agentState.activeConnections - 1)
-      agentState.lastDisconnectAt = date
-      state.agents[agent] = agentState
-    }
+    var agentState = state.agents[agent] ?? AgentState()
+    agentState.activeConnections = max(0, agentState.activeConnections - 1)
+    agentState.lastDisconnectAt = date
+    state.agents[agent] = agentState
   }
 
   /// Records one agent refresh request.
   func recordAgentRefresh(_ agent: AgentKey) {
-    withLock {
-      var agentState = state.agents[agent] ?? AgentState()
-      agentState.refreshesTotal += 1
-      state.agents[agent] = agentState
-    }
+    var agentState = state.agents[agent] ?? AgentState()
+    agentState.refreshesTotal += 1
+    state.agents[agent] = agentState
   }
 
   /// Records one decoded agent message.
   func recordAgentMessage(_ agent: AgentKey, at date: Date = Date()) {
-    withLock {
-      var agentState = state.agents[agent] ?? AgentState()
-      agentState.messagesTotal += 1
-      agentState.lastMessageAt = date
-      state.agents[agent] = agentState
-    }
+    var agentState = state.agents[agent] ?? AgentState()
+    agentState.messagesTotal += 1
+    agentState.lastMessageAt = date
+    state.agents[agent] = agentState
   }
 
   /// Records one agent decode failure.
   func recordAgentDecodeError(_ agent: AgentKey) {
-    withLock {
-      var agentState = state.agents[agent] ?? AgentState()
-      agentState.decodeErrorsTotal += 1
-      state.agents[agent] = agentState
-    }
+    var agentState = state.agents[agent] ?? AgentState()
+    agentState.decodeErrorsTotal += 1
+    state.agents[agent] = agentState
   }
 
   /// Returns whether opening the next connection counts as a reconnect.
@@ -330,41 +306,49 @@ final class MetricsCoordinator {
   }
 
   /// Starts periodic metrics sampling.
-  private func startTimer() {
-    queue.async {
-      guard self.timer == nil else { return }
+  private func startStreamingTask() {
+    guard streamingTask == nil else { return }
 
-      let timer = DispatchSource.makeTimerSource(queue: self.queue)
-      timer.schedule(
-        deadline: .now() + self.sampleIntervalSeconds, repeating: self.sampleIntervalSeconds)
-      timer.setEventHandler { [weak self] in
-        guard let self else { return }
-        let snapshot = self.collectSnapshot(collectionEnabled: true)
-        self.onSnapshot?(snapshot)
+    let intervalNanoseconds = sampleIntervalNanoseconds
+
+    streamingTask = Task { [weak self] in
+      while !Task.isCancelled {
+        do {
+          try await Task.sleep(nanoseconds: intervalNanoseconds)
+        } catch {
+          break
+        }
+
+        guard !Task.isCancelled else { break }
+        await self?.collectAndPublishStreamingSnapshot()
       }
-      self.timer = timer
-      timer.resume()
     }
   }
 
   /// Stops periodic metrics sampling.
-  private func stopTimer() {
-    queue.async {
-      self.timer?.cancel()
-      self.timer = nil
+  private func stopStreamingTask() {
+    streamingTask?.cancel()
+    streamingTask = nil
+    state.previousCounters = nil
+    state.lastSampleAt = nil
+  }
 
-      self.withLock {
-        self.state.previousCounters = nil
-        self.state.lastSampleAt = nil
-      }
+  /// Collects and publishes one streaming snapshot when subscribers are still active.
+  private func collectAndPublishStreamingSnapshot() {
+    guard !state.streamingSubscriberFDs.isEmpty else {
+      stopStreamingTask()
+      return
     }
+
+    let snapshot = collectSnapshot(collectionEnabled: true)
+    onSnapshot?(snapshot)
   }
 
   /// Collects one metrics snapshot and updates rate baselines when enabled.
   private func collectSnapshot(collectionEnabled: Bool) -> IPC.MetricsSnapshot {
     let now = Date()
+    let snapshotState = state
 
-    let snapshotState = withLock { state }
     let appProcess = processSampler.sampleCurrentProcess(named: "EasyBar", now: now)
     let luaProcess = processSampler.sampleProcess(named: "lua", pid: snapshotState.luaPID, now: now)
     let calendarProcess = processSampler.sampleProcessNamed(
@@ -543,10 +527,8 @@ final class MetricsCoordinator {
     )
 
     if collectionEnabled {
-      withLock {
-        state.previousCounters = currentCounters
-        state.lastSampleAt = now
-      }
+      state.previousCounters = currentCounters
+      state.lastSampleAt = now
     }
 
     return snapshot
@@ -564,12 +546,5 @@ final class MetricsCoordinator {
 
     let delta = max(0, current - previous)
     return Double(delta) / interval
-  }
-
-  /// Runs one closure while holding the metrics lock.
-  private func withLock<T>(_ body: () -> T) -> T {
-    lock.lock()
-    defer { lock.unlock() }
-    return body()
   }
 }
