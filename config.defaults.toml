@@ -10,6 +10,11 @@ develop = false # Enables developer-only features like the config editor.
 [app.env]
 PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" # Environment overrides passed into the Lua runtime and widget shell commands.
 
+[app.lua_commands]
+timeout_seconds = 5 # Default hard timeout for easybar.exec and easybar.exec_async commands.
+max_output_bytes = 65536 # Default combined stdout and stderr capture limit for one command.
+max_async_jobs = 8 # Maximum concurrent easybar.exec_async jobs before new jobs are rejected.
+
 [theme]
 name = "default" # Name of the default theme. Must match a theme file name without the .toml extension.
 themes_dir = "~/.config/easybar/themes" # Directory that contains your custom theme files.
@@ -404,7 +409,7 @@ delete_confirmation_title = "Remove appointment?" # Delete confirmation title.
 delete_confirmation_message = "This action cannot be undone." # Delete confirmation message.
 title_placeholder = "What are you doing?" # Placeholder text for the composer title field.
 location_placeholder = "Where are you going?" # Placeholder text for the composer location field.
-default_calendar_name = "Personal" # Default calendar name used when creating new appointments. Use an empty string to select the first available writable calendar.
+default_calendar_name = "" # Default calendar name used when creating new appointments. Empty selects the first available writable calendar.
 default_alert = "1_hour" # Default alert lead time: none | at_time | 5_minutes | 10_minutes | 15_minutes | 30_minutes | 1_hour | 1_day.
 default_travel_time = "none" # Default travel time: none | 5_minutes | 10_minutes | 15_minutes | 20_minutes | 30_minutes | 45_minutes | 1_hour | 90_minutes | 2_hours.
 
@@ -504,7 +509,7 @@ show_week_numbers = true # Shows week numbers in the calendar grid.
 show_event_indicators = true # Shows dots under days that contain events.
 header_text_color = "theme.text" # Text color of the month header and appointments title.
 weekday_text_color = "theme.accent" # Text color of the weekday labels.
-first_weekday = 2 # First weekday used by the month grid. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting.
+# first_weekday = 2 # Optional first weekday override. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting.
 weekday_format = "dd" # Weekday label format: d | dd | ddd. dddd is not allowed.
 # weekday_symbols = ["M", "T", "W", "T", "F", "S", "S"] # Optional custom weekday labels in Monday-first order. Must contain exactly 7 entries from Monday to Sunday.
 day_text_color = "theme.text_secondary" # Text color of days in the current month.
@@ -584,5 +589,4 @@ opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
 format = "yyyy-MM-dd" # Date format string.
-
 
