@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Process logger used by the app shell.
-  private let logger = ProcessLogger(label: "easybar")
+  private let logger: ProcessLogger
 
   /// Main app controller created after logger setup.
   private lazy var appController = AppController(logger: logger.child("app")) { [weak self] in
@@ -22,29 +22,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Whether a graceful termination request is already running.
   private var terminationRequested = false
 
+  /// Creates the app delegate with the process logger created by the entry point.
+  init(logger: ProcessLogger) {
+    self.logger = logger
+    super.init()
+  }
+
   /// Starts EasyBar after AppKit finishes launching.
   func applicationDidFinishLaunching(_ notification: Notification) {
-    writeEasyBarBootstrapLog("applicationDidFinishLaunching")
+    logger.debug("applicationDidFinishLaunching")
 
     guard appController.start() else {
-      writeEasyBarBootstrapErrorLog("AppController.start failed")
+      logger.error("AppController.start failed")
       exitCode = 1
       terminationCleanupCompleted = true
       NSApp.terminate(nil)
       return
     }
 
-    writeEasyBarBootstrapLog("AppController.start completed")
+    logger.debug("AppController.start completed")
   }
 
   /// Requests graceful shutdown before allowing AppKit termination.
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     guard !terminationCleanupCompleted else {
-      writeEasyBarBootstrapLog("applicationShouldTerminate terminateNow")
+      logger.debug("applicationShouldTerminate terminateNow")
       return .terminateNow
     }
 
-    writeEasyBarBootstrapLog("applicationShouldTerminate requesting graceful shutdown")
+    logger.debug("applicationShouldTerminate requesting graceful shutdown")
     requestTermination(exitCode: 0)
     return .terminateCancel
   }

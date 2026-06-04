@@ -1,37 +1,28 @@
 import AppKit
 import Darwin
+import EasyBarShared
 import Foundation
-
-/// Writes one unfiltered bootstrap line to stdout before normal logging is available.
-func writeEasyBarBootstrapLog(_ message: String) {
-  fputs("[easybar.bootstrap] \(message)\n", stdout)
-  fflush(stdout)
-}
-
-/// Writes one unfiltered bootstrap line to stderr before normal logging is available.
-func writeEasyBarBootstrapErrorLog(_ message: String) {
-  fputs("[easybar.bootstrap] \(message)\n", stderr)
-  fflush(stderr)
-}
 
 /// Process entry point for EasyBar.
 @main
 enum EasyBarAppMain {
-  /// Runs validation-only mode or starts the AppKit application loop.
+  /// Starts the AppKit application loop and exits with the delegate's final code.
   @MainActor
   static func main() {
-    writeEasyBarBootstrapLog("main entered pid=\(getpid())")
+    let logger = ProcessLogger(label: "easybar")
+
+    logger.debug("main entered", .field("pid", getpid()))
 
     let app = NSApplication.shared
-    writeEasyBarBootstrapLog("NSApplication.shared created")
+    logger.debug("NSApplication.shared created")
 
-    let delegate = AppDelegate()
+    let delegate = AppDelegate(logger: logger)
     app.delegate = delegate
-    writeEasyBarBootstrapLog("AppDelegate installed")
+    logger.debug("AppDelegate installed")
 
-    writeEasyBarBootstrapLog("NSApplication.run starting")
+    logger.debug("NSApplication.run starting")
     app.run()
-    writeEasyBarBootstrapLog("NSApplication.run ended exit_code=\(delegate.exitCode)")
+    logger.debug("NSApplication.run ended", .field("exit_code", delegate.exitCode))
 
     delegate.stop()
     Foundation.exit(delegate.exitCode)
