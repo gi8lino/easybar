@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import EasyBarShared
 import Foundation
 
@@ -10,10 +11,8 @@ final class AppSignalHandler {
   /// Callback invoked when a termination signal is received.
   private let requestTermination: () -> Void
 
-  /// Dispatch source for SIGINT.
-  private var sigintSource: DispatchSourceSignal?
-  /// Dispatch source for SIGTERM.
-  private var sigtermSource: DispatchSourceSignal?
+  /// Task waiting for SIGINT/SIGTERM via `sigwait`.
+  private var signalTask: Task<Void, Never>?
   /// Whether signal handling is currently active.
   private var started = false
 
@@ -31,28 +30,37 @@ final class AppSignalHandler {
     guard !started else { return }
     started = true
 
-    signal(SIGINT, SIG_IGN)
-    signal(SIGTERM, SIG_IGN)
+    var signalSet = sigset_t()
+    sigemptyset(&signalSet)
+    sigaddset(&signalSet, SIGINT)
+    sigaddset(&signalSet, SIGTERM)
+    pthread_sigmask(SIG_BLOCK, &signalSet, nil)
 
-    let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
-    sigintSource.setEventHandler { [weak self] in
-      guard let self else { return }
+    signalTask = Task.detached { [weak self] in
+      var waitSet = signalSet
 
-      self.logger.info("received SIGINT")
-      self.requestTermination()
+      while !Task.isCancelled {
+        var receivedSignal: Int32 = 0
+        let result = sigwait(&waitSet, &receivedSignal)
+        guard result == 0, !Task.isCancelled else { continue }
+        let signal = receivedSignal
+
+        await MainActor.run { [weak self] in
+          guard let self, self.started else { return }
+
+          switch signal {
+          case SIGINT:
+            self.logger.info("received SIGINT")
+          case SIGTERM:
+            self.logger.info("received SIGTERM")
+          default:
+            self.logger.info("received termination signal", .field("signal", signal))
+          }
+
+          self.requestTermination()
+        }
+      }
     }
-    sigintSource.resume()
-    self.sigintSource = sigintSource
-
-    let sigtermSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
-    sigtermSource.setEventHandler { [weak self] in
-      guard let self else { return }
-
-      self.logger.info("received SIGTERM")
-      self.requestTermination()
-    }
-    sigtermSource.resume()
-    self.sigtermSource = sigtermSource
   }
 
   /// Stops listening for termination signals.
@@ -60,10 +68,7 @@ final class AppSignalHandler {
     guard started else { return }
     started = false
 
-    sigintSource?.cancel()
-    sigintSource = nil
-
-    sigtermSource?.cancel()
-    sigtermSource = nil
+    signalTask?.cancel()
+    signalTask = nil
   }
 }

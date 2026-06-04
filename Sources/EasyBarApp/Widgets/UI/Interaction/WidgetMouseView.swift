@@ -277,43 +277,51 @@ final class MouseTrackingNSView: NSView {
   }
 }
 
-private final class HoverState {
-  private let lock = NSLock()
-  private var hoveredWidgetIDs = Set<String>()
-  private var pendingExitWorkItems: [String: DispatchWorkItem] = [:]
+private final class HoverState: @unchecked Sendable {
+  private struct State {
+    var hoveredWidgetIDs = Set<String>()
+    var pendingExitTasks: [String: Task<Void, Never>] = [:]
+  }
+
+  private let state = LockedState(State())
 
   /// Marks one widget as hovered and returns whether it was newly entered.
   func enter(widgetID: String) -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-
-    pendingExitWorkItems[widgetID]?.cancel()
-    pendingExitWorkItems[widgetID] = nil
-
-    let inserted = hoveredWidgetIDs.insert(widgetID).inserted
-    return inserted
+    state.withLock { state in
+      state.pendingExitTasks[widgetID]?.cancel()
+      state.pendingExitTasks[widgetID] = nil
+      return state.hoveredWidgetIDs.insert(widgetID).inserted
+    }
   }
 
   /// Delays the hover-exit slightly so overlapping surfaces do not flicker.
-  func exit(widgetID: String, handler: @escaping () -> Void) {
-    lock.lock()
-    pendingExitWorkItems[widgetID]?.cancel()
+  func exit(widgetID: String, handler: @escaping @MainActor @Sendable () -> Void) {
+    let task = Task { [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: 80_000_000)
+      } catch {
+        return
+      }
 
-    let workItem = DispatchWorkItem { [weak self] in
       guard let self else { return }
-
-      self.lock.lock()
-      let removed = self.hoveredWidgetIDs.remove(widgetID) != nil
-      self.pendingExitWorkItems[widgetID] = nil
-      self.lock.unlock()
+      let removed = self.state.withLock { state -> Bool in
+        let removed = state.hoveredWidgetIDs.remove(widgetID) != nil
+        state.pendingExitTasks[widgetID] = nil
+        return removed
+      }
 
       guard removed else { return }
-      handler()
+      await MainActor.run {
+        handler()
+      }
     }
 
-    pendingExitWorkItems[widgetID] = workItem
-    lock.unlock()
+    let oldTask = state.withLock { state -> Task<Void, Never>? in
+      let oldTask = state.pendingExitTasks[widgetID]
+      state.pendingExitTasks[widgetID] = task
+      return oldTask
+    }
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+    oldTask?.cancel()
   }
 }
