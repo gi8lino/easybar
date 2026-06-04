@@ -95,8 +95,9 @@ final class AppController: NetworkAuthorizationPromptPresenter {
       processName: "easybar-network-agent",
       directory: sharedConfig.lockDirectory,
       logger: logger,
+      acquireMessage: "easybar-network-agent acquired instance lock",
       alreadyRunningMessage: "easybar-network-agent already running",
-      failureMessage: "easybar-network-agent failed to acquire instance lock"
+      failureMessage: "easybar-network-agent failed to acquire instance lock",
     )
   }
 }

@@ -54,63 +54,56 @@ final class AppController {
   @discardableResult
   func start() -> Bool {
     guard !started else {
-      writeEasyBarBootstrapLog("AppController.start skipped because app is already started")
+      logger.debug("AppController.start skipped because app is already started")
       return true
     }
 
-    writeEasyBarBootstrapLog("AppController.start begin")
     started = true
 
-    writeEasyBarBootstrapLog("loading initial config")
-    if let error = services.config.loadInitialState() {
-      writeEasyBarBootstrapErrorLog(
-        "initial config load failed config_path=\(services.config.configPath) error=\(error)"
-      )
+    let initialConfigError = services.config.loadInitialState()
+    configureLogging()
+    logger.debug("process logging configured")
+
+    if let error = initialConfigError {
       logger.error(
         "initial config load failed",
         .field("config_path", services.config.configPath),
         .field("error", "\(error)")
       )
     } else {
-      writeEasyBarBootstrapLog("initial config loaded path=\(services.config.configPath)")
+      logger.info(
+        "initial config loaded",
+        .field("config_path", services.config.configPath)
+      )
     }
 
-    writeEasyBarBootstrapLog("applying runtime configuration")
+    logger.debug("applying runtime configuration")
     services.applyRuntimeConfiguration(services.config.snapshot())
-    writeEasyBarBootstrapLog("runtime configuration applied")
 
-    writeEasyBarBootstrapLog("acquiring single instance lock")
     guard acquireInstanceLock() else {
-      writeEasyBarBootstrapErrorLog("single instance lock acquisition failed")
       started = false
       return false
     }
-    writeEasyBarBootstrapLog("single instance lock acquired")
 
     NSApp.setActivationPolicy(.accessory)
-    writeEasyBarBootstrapLog("activation policy set to accessory")
-
-    writeEasyBarBootstrapLog("configuring process logging")
-    configureLogging()
-    writeEasyBarBootstrapLog("process logging configured")
+    logger.debug("activation policy set to accessory")
 
     logStartup()
     validateRequiredFonts()
     installWidgetEditorStub()
 
-    writeEasyBarBootstrapLog("presenting bar window")
     setupBarWindowController()
-    writeEasyBarBootstrapLog("bar window presented")
+    logger.debug("bar window presented")
 
     installConfigReloadObserver()
     updateConfigErrorWindow()
     signalHandler.start()
-    writeEasyBarBootstrapLog("signal handler started")
+    logger.debug("signal handler started")
 
     Task {
       await runtimeCoordinator.start()
     }
-    writeEasyBarBootstrapLog("runtime coordinator start scheduled")
+    logger.debug("runtime coordinator start scheduled")
 
     return true
   }
@@ -122,8 +115,9 @@ final class AppController {
       processName: "easybar",
       directory: services.config.lockDirectory,
       logger: logger,
+      acquireMessage: "easybar acquired instance lock",
       alreadyRunningMessage: "easybar already running",
-      failureMessage: "easybar failed to acquire instance lock"
+      failureMessage: "easybar failed to acquire instance lock",
     )
   }
 

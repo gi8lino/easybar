@@ -26,11 +26,13 @@ public enum AppShellSupport {
     processName: String,
     directory: String,
     logger: ProcessLogger,
+    acquireMessage: String,
     alreadyRunningMessage: String,
     failureMessage: String
   ) -> Bool {
     switch instanceGuard.acquireLock(processName: processName, directory: directory) {
-    case .acquired:
+    case .acquired(let lockPath):
+      logger.info(acquireMessage, .field("lock_path", lockPath))
       return true
     case .alreadyRunning(let lockPath):
       logger.warn(alreadyRunningMessage, .field("lock_path", lockPath))

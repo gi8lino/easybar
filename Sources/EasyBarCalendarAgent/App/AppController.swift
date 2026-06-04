@@ -68,8 +68,9 @@ final class AppController {
       processName: "easybar-calendar-agent",
       directory: sharedConfig.lockDirectory,
       logger: logger,
+      acquireMessage: "easybar-calendar-agent acquired instance lock",
       alreadyRunningMessage: "easybar-calendar-agent already running",
-      failureMessage: "easybar-calendar-agent failed to acquire single-instance lock"
+      failureMessage: "easybar-calendar-agent failed to acquire single-instance lock",
     )
   }
 }
