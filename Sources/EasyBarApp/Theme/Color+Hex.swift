@@ -3,21 +3,14 @@ import SwiftUI
 /// Hex color helpers for config strings.
 extension String {
 
-  /// Returns this string with `theme.*` references resolved when possible.
-  var themeResolvedHexColor: String {
-    let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-    return Config.shared.resolveThemeColorHex(trimmed) ?? trimmed
-  }
-
   /// Returns the hex text normalized for shared color checks.
   var normalizedHexColor: String {
-    themeResolvedHexColor
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    trimmingCharacters(in: .whitespacesAndNewlines)
       .replacingOccurrences(of: "#", with: "")
       .uppercased()
   }
 
-  /// Returns whether this hex string resolves to a fully transparent color.
+  /// Returns whether this hex string is a fully transparent color.
   var isFullyTransparentHexColor: Bool {
     return normalizedHexColor.isEmpty || normalizedHexColor == "00000000"
   }
@@ -26,7 +19,7 @@ extension String {
 /// SwiftUI color helpers.
 extension Color {
 
-  /// Creates a color from `RRGGBB`, `RRGGBBAA`, or `theme.<token>` text.
+  /// Creates a color from `RRGGBB` or `RRGGBBAA` text.
   init(hex: String) {
     let hex = hex.normalizedHexColor
 
@@ -50,5 +43,10 @@ extension Color {
     default:
       self.init(.sRGB, red: 1, green: 1, blue: 1, opacity: 1)
     }
+  }
+
+  /// Creates a color from `RRGGBB`, `RRGGBBAA`, or `theme.<token>` text.
+  init(hex: String, snapshot: ConfigSnapshot) {
+    self.init(hex: snapshot.resolvedColorHex(hex))
   }
 }

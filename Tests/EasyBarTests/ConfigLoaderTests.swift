@@ -25,7 +25,7 @@ final class ConfigLoaderTests: XCTestCase {
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     originalSnapshot = config.snapshot()
     originalEnvironment = environmentKeys.reduce(into: [:]) { result, key in
       result[key] = ProcessInfo.processInfo.environment[key]
@@ -41,7 +41,7 @@ final class ConfigLoaderTests: XCTestCase {
   override func tearDownWithError() throws {
     restoreEnvironment()
 
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     config.apply(originalSnapshot)
     config.resetRegisteredDirectories()
 
@@ -54,7 +54,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload uses environment overrides when config file is missing.
   func testReloadUsesEnvironmentOverridesWhenConfigFileIsMissing() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let missingConfigPath = tempDirectoryURL.appendingPathComponent("missing.toml").path
     let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
     let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
@@ -100,7 +100,7 @@ final class ConfigLoaderTests: XCTestCase {
   }
 
   func testInitialLoadAppliesConfigFileOverridesExplicitly() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("initial-load.toml")
 
     try """
@@ -122,7 +122,7 @@ final class ConfigLoaderTests: XCTestCase {
   }
 
   func testInitialLoadCapturesFailureStateWithoutPrintingDuringInit() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-initial-load.toml")
 
     try """
@@ -139,7 +139,7 @@ final class ConfigLoaderTests: XCTestCase {
   }
 
   func testReloadAppliesLuaCommandLimits() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("lua-command-limits.toml")
 
     try """
@@ -160,7 +160,7 @@ final class ConfigLoaderTests: XCTestCase {
   }
 
   func testReloadRejectsNonPositiveLuaCommandTimeout() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-lua-command-timeout.toml")
 
     try """
@@ -182,7 +182,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test bootstrap theme palette stays aligned with bundled default theme.
   func testBootstrapThemePaletteMatchesBundledDefaultTheme() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     config.resetToDefaults()
     let repoRootURL = repoRootURL()
     let bundledThemeURL =
@@ -231,7 +231,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test theme token table stays in sync with theme color accessors.
   func testThemeTokenTableStaysInSyncWithThemeColorAccessors() {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     config.resetToDefaults()
 
     let expectedNames = Set(config.themeColors.valuesByName.keys)
@@ -247,7 +247,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test Lua theme environment exports resolved colors without duplicate refs.
   func testLuaThemeEnvironmentExportsResolvedColorsWithoutDuplicateRefs() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     config.resetToDefaults()
 
     let environment = config.luaThemeEnvironment()
@@ -289,7 +289,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload applies config file overrides and creates required directories.
   func testReloadAppliesConfigFileOverridesAndCreatesRequiredDirectories() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
     let widgetsDirectory = tempDirectoryURL.appendingPathComponent("widgets").path
     let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
@@ -394,7 +394,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload applies month popup agenda layout overrides.
   func testReloadAppliesMonthPopupAgendaLayoutOverride() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("calendar-layout.toml")
 
     try writeConfig(
@@ -425,7 +425,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns config error for invalid logging level.
   func testReloadReturnsConfigErrorForInvalidLoggingLevel() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid.toml")
 
     try writeConfig(
@@ -452,7 +452,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload failure keeps previous bar and builtin configuration.
   func testReloadFailureKeepsPreviousBarAndBuiltinConfiguration() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("reload-config.toml")
 
     try writeConfig(
@@ -519,7 +519,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns invalid type for bar height string value.
   func testReloadReturnsInvalidTypeForBarHeightStringValue() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-type.toml")
 
     try writeConfig(
@@ -545,7 +545,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns invalid type for logging enabled string value.
   func testReloadReturnsInvalidTypeForLoggingEnabledStringValue() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-logging-type.toml")
 
     try writeConfig(
@@ -571,7 +571,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload prefers environment logging level over toml value.
   func testReloadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("env-logging-precedence.toml")
 
     try writeConfig(
@@ -593,7 +593,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload rejects legacy logging debug when level is absent.
   func testReloadRejectsLegacyLoggingDebugWhenLevelIsAbsent() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("legacy-logging.toml")
 
     try writeConfig(
@@ -673,7 +673,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload expands tilde paths from config file.
   func testReloadExpandsTildePathsFromConfigFile() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("tilde-paths.toml")
     let homePath = FileManager.default.homeDirectoryForCurrentUser.path
 
@@ -709,7 +709,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns error when directory setting points to existing file.
   func testReloadReturnsErrorWhenDirectorySettingPointsToExistingFile() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let blockingFileURL = tempDirectoryURL.appendingPathComponent("not-a-directory")
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-directory.toml")
 
@@ -739,7 +739,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload normalizes enum values with whitespace for builtins.
   func testReloadNormalizesEnumValuesWithWhitespaceForBuiltins() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("normalized-builtins.toml")
 
     try writeConfig(
@@ -762,7 +762,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns error for unknown builtin group reference.
   func testReloadReturnsErrorForUnknownBuiltinGroupReference() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("unknown-group.toml")
 
     try writeConfig(
@@ -794,7 +794,7 @@ final class ConfigLoaderTests: XCTestCase {
 
   /// Handles test reload returns error for nested builtin group reference.
   func testReloadReturnsErrorForNestedBuiltinGroupReference() throws {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("nested-group.toml")
 
     try writeConfig(

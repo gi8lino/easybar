@@ -4,18 +4,18 @@ import Foundation
 
 extension LuaProcessController {
   /// Resolves the launch inputs for one Lua runtime process.
-  func launchContext() -> LaunchContext? {
+  func launchContext(config: ConfigSnapshot) -> LaunchContext? {
     guard let runtimePath = resolvedRuntimePath() else { return nil }
     guard let runtimeAgentPath = resolvedRuntimeAgentPath() else { return nil }
 
     return LaunchContext(
       runtimeAgentPath: runtimeAgentPath,
       runtimePath: runtimePath,
-      luaPath: config.luaPath,
-      luaSocketPath: config.luaSocketPath,
-      widgetsPath: config.widgetsPath,
-      widgetFiles: resolvedWidgetFiles(in: config.widgetsPath),
-      environment: luaRuntimeEnvironment()
+      luaPath: config.app.luaPath,
+      luaSocketPath: config.app.luaSocketPath,
+      widgetsPath: config.app.widgetsPath,
+      widgetFiles: resolvedWidgetFiles(in: config.app.widgetsPath),
+      environment: luaRuntimeEnvironment(config: config)
     )
   }
 
@@ -495,16 +495,16 @@ extension LuaProcessController {
   }
 
   /// Returns the Lua runtime environment with app config and resolved theme values.
-  private func luaRuntimeEnvironment() -> [String: String] {
-    config.appSection.environment
+  private func luaRuntimeEnvironment(config: ConfigSnapshot) -> [String: String] {
+    config.app.environment
       .merging(config.luaThemeEnvironment()) {
         _, themeValue in themeValue
       }
       .merging([
         SharedEnvironmentKeys.luaCommandTimeoutSeconds:
-          String(config.luaCommandTimeoutSeconds),
+          String(config.app.luaCommandLimits.timeoutSeconds),
         SharedEnvironmentKeys.luaCommandMaxOutputBytes:
-          String(config.luaCommandMaxOutputBytes),
+          String(config.app.luaCommandLimits.maxOutputBytes),
       ]) {
         _, themeValue in themeValue
       }

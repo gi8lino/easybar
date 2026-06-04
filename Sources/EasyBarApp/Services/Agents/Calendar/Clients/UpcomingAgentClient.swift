@@ -7,20 +7,26 @@ final class UpcomingCalendarAgentClient {
   /// Shared upcoming-calendar agent client.
   static var shared = UpcomingCalendarAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent"),
-    config: .shared
+    calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent,
+    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar
   )
 
   /// Configures the shared upcoming-calendar agent client.
-  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
-    shared = UpcomingCalendarAgentClient(logger: logger, config: config)
+  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
+    shared = UpcomingCalendarAgentClient(
+      logger: logger,
+      calendarAgentConfig: snapshot.calendarAgent,
+      calendarConfig: snapshot.builtins.calendar
+    )
   }
 
   private let logger: ProcessLogger
-  private let config: Config
+  private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
+  private var calendarConfig: Config.CalendarBuiltinConfig
 
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
-    socketPath: { [config] in config.calendarAgentSocketPath },
+    socketPath: { [weak self] in self?.calendarAgentConfig.socketPath ?? "" },
     makeRequest: { [weak self] in
       self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
@@ -33,9 +39,14 @@ final class UpcomingCalendarAgentClient {
     logger: logger.child("stream")
   )
 
-  init(logger: ProcessLogger, config: Config) {
+  init(
+    logger: ProcessLogger,
+    calendarAgentConfig: ConfigSnapshot.CalendarAgent,
+    calendarConfig: Config.CalendarBuiltinConfig
+  ) {
     self.logger = logger
-    self.config = config
+    self.calendarAgentConfig = calendarAgentConfig
+    self.calendarConfig = calendarConfig
   }
 
   /// Returns whether the upcoming-calendar agent client is currently active.
@@ -43,9 +54,31 @@ final class UpcomingCalendarAgentClient {
     return stream.isConnected
   }
 
+  /// Replaces the active calendar config snapshots.
+  func updateConfiguration(
+    calendarAgentConfig: ConfigSnapshot.CalendarAgent,
+    calendarConfig: Config.CalendarBuiltinConfig
+  ) {
+    let streamConfigChanged =
+      self.calendarAgentConfig.enabled != calendarAgentConfig.enabled
+      || self.calendarAgentConfig.socketPath != calendarAgentConfig.socketPath
+
+    self.calendarAgentConfig = calendarAgentConfig
+    self.calendarConfig = calendarConfig
+
+    guard stream.isStarted else { return }
+
+    if streamConfigChanged {
+      stream.restart(enabled: calendarAgentConfig.enabled)
+      return
+    }
+
+    refresh()
+  }
+
   /// Starts the upcoming-calendar agent socket client when enabled.
   func start() {
-    stream.start(enabled: config.calendarAgentEnabled)
+    stream.start(enabled: calendarAgentConfig.enabled)
   }
 
   /// Stops the upcoming-calendar agent socket client.
@@ -61,7 +94,6 @@ final class UpcomingCalendarAgentClient {
   /// Builds the current upcoming-calendar request.
   private func makeRequest() -> CalendarAgentRequest {
     let now = Date()
-    let calendarConfig = config.builtinCalendar
     let upcoming = calendarConfig.upcoming
     let options = calendarConfig.presentationUpcomingRequestOptions
     let requestedRange = CalendarRequestFactory.requestedUpcomingDateRange(

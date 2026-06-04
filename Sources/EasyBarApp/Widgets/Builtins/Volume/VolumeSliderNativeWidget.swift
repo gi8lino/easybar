@@ -15,6 +15,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     ]
   }
 
+  let config: Config.VolumeBuiltinConfig
   let eventObserver = EasyBarEventObserver()
   var isHovered = false
   var isAdjustingSlider = false
@@ -36,6 +37,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let value: Double
     let step: Double
     let isHovered: Bool
+  }
+
+  /// Creates the native volume widget from an immutable config section.
+  init(config: Config.VolumeBuiltinConfig) {
+    self.config = config
   }
 
   // MARK: - Lifecycle
@@ -82,7 +88,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
   /// Returns the current render snapshot.
   func makeSnapshot() -> Snapshot {
-    let config = Config.shared.builtinVolume
     let placement = config.placement
     var style = config.style
     let volumeState = currentSystemVolumeState(config: config)

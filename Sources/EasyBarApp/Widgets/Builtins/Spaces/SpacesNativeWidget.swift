@@ -6,8 +6,14 @@ final class SpacesNativeWidget: NativeWidget {
 
   let rootID = "builtin_spaces"
 
+  private let config: Config.SpacesBuiltinConfig
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
   private lazy var renderer = SpacesRenderer(rootID: rootID)
+
+  /// Creates the native spaces widget from an immutable config section.
+  init(config: Config.SpacesBuiltinConfig) {
+    self.config = config
+  }
 
   /// Starts the spaces widget and registers AeroSpace interest.
   func start() {
@@ -31,7 +37,7 @@ final class SpacesNativeWidget: NativeWidget {
   private func publish() {
     WidgetStore.shared.apply(
       root: rootID,
-      nodes: renderer.makeNodes(snapshot: Config.shared.builtinSpaces)
+      nodes: renderer.makeNodes(snapshot: config)
     )
   }
 }

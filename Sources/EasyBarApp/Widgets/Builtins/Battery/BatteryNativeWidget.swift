@@ -21,6 +21,7 @@ final class BatteryNativeWidget: NativeWidget {
     ]
   }
 
+  private let config: Config.BatteryBuiltinConfig
   private let eventObserver = EasyBarEventObserver()
   private var timer: Timer?
   private var isHovered = false
@@ -41,6 +42,11 @@ final class BatteryNativeWidget: NativeWidget {
     let colorHex: String?
     let showLabel: Bool
     let isUnavailable: Bool
+  }
+
+  /// Creates the native battery widget from an immutable config section.
+  init(config: Config.BatteryBuiltinConfig) {
+    self.config = config
   }
 
   // MARK: - Lifecycle
@@ -101,7 +107,6 @@ extension BatteryNativeWidget {
 
   /// Reads the current render snapshot from IOKit.
   private func readSnapshot() -> Snapshot {
-    let config = Config.shared.builtinBattery
     let placement = config.placement
     let style = config.style
 
@@ -240,7 +245,7 @@ extension BatteryNativeWidget {
 
   /// Hover only affects layout for inline expand mode.
   private func publishIfHoverAffectsLayout() {
-    guard Config.shared.builtinBattery.displayMode == .expand else { return }
+    guard config.displayMode == .expand else { return }
     publish()
   }
 

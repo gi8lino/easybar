@@ -100,7 +100,6 @@ struct ProgressSliderWidgetView: View {
   private var resolvedWidth: CGFloat {
     SliderWidthResolver.resolve(
       explicitWidth: width,
-      rootWidgetID: rootWidgetID,
       fallback: 72
     )
   }

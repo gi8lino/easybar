@@ -1,7 +1,7 @@
 import EasyBarShared
 import Foundation
 
-/// Actor-owned access to config mutation and runtime-facing config reads.
+/// Actor-owned access to config mutation and runtime-facing config snapshots.
 actor ConfigManager {
   struct ValidationResult: Sendable {
     /// Resolved path of the validated config file.
@@ -19,49 +19,45 @@ actor ConfigManager {
   /// Shared actor used for runtime config access.
   static var shared = ConfigManager()
 
-  /// Result of one config reload attempt.
+  /// Result of one config load or reload attempt.
   struct ReloadResult: Sendable {
     /// Whether reload completed without validation errors.
     let succeeded: Bool
     /// User-facing reload error when reload failed.
     let errorMessage: String?
+    /// Active immutable config snapshot after the load attempt.
+    let snapshot: ConfigSnapshot
+  }
+
+  /// Live config store that remains the only mutation boundary.
+  private let config: Config
+  /// Creates one config manager for a live config store.
+  init(config: Config = Config.makeUnloadedConfig()) {
+    self.config = config
   }
 
   /// Loads the active config during app startup and returns a stable result.
   func loadInitialConfig() async -> ReloadResult {
     await MainActor.run {
-      let error = Config.shared.loadInitialState()
-
-      if let error {
-        return ReloadResult(
-          succeeded: false,
-          errorMessage: String(describing: error)
-        )
-      }
-
-      return ReloadResult(
-        succeeded: true,
-        errorMessage: nil
-      )
+      let error = config.loadInitialState()
+      let snapshot = config.snapshot()
+      return Self.makeReloadResult(error: error, snapshot: snapshot)
     }
   }
 
   /// Reloads the active config and returns a stable result.
   func reload() async -> ReloadResult {
     await MainActor.run {
-      let error = Config.shared.reload()
+      let error = config.reload()
+      let snapshot = config.snapshot()
+      return Self.makeReloadResult(error: error, snapshot: snapshot)
+    }
+  }
 
-      if let error {
-        return ReloadResult(
-          succeeded: false,
-          errorMessage: String(describing: error)
-        )
-      }
-
-      return ReloadResult(
-        succeeded: true,
-        errorMessage: nil
-      )
+  /// Returns the current active immutable config snapshot.
+  func snapshot() async -> ConfigSnapshot {
+    await MainActor.run {
+      config.snapshot()
     }
   }
 
@@ -86,14 +82,14 @@ actor ConfigManager {
   /// Returns whether config watching is enabled.
   func watchConfigFileEnabled() async -> Bool {
     await MainActor.run {
-      Config.shared.watchConfigFile
+      config.watchConfigFile
     }
   }
 
   /// Returns the active config path.
   func configPath() async -> String {
     await MainActor.run {
-      Config.shared.configPath
+      config.configPath
     }
   }
 
@@ -105,33 +101,50 @@ actor ConfigManager {
   /// Returns the current minimum log level.
   func loggingLevel() async -> ProcessLogLevel {
     await MainActor.run {
-      Config.shared.loggingLevel
+      config.loggingLevel
     }
   }
 
   /// Returns whether file logging is enabled.
   func loggingEnabled() async -> Bool {
     await MainActor.run {
-      Config.shared.loggingEnabled
+      config.loggingEnabled
     }
   }
 
   /// Returns the configured logging directory.
   func loggingDirectory() async -> String {
     await MainActor.run {
-      Config.shared.loggingDirectory
+      config.loggingDirectory
     }
   }
 
   /// Returns the current Lua command execution settings.
   func luaCommandSettings() async -> LuaCommandSettings {
     await MainActor.run {
-      LuaCommandSettings(
-        timeoutSeconds: Config.shared.luaCommandTimeoutSeconds,
-        maxOutputBytes: Config.shared.luaCommandMaxOutputBytes,
-        maxAsyncJobs: Config.shared.luaCommandMaxAsyncJobs
-      )
+      Self.luaCommandSettings(from: config.snapshot())
     }
+  }
+
+  /// Builds one reload result from a stable snapshot.
+  private static func makeReloadResult(
+    error: (any Error)?,
+    snapshot: ConfigSnapshot
+  ) -> ReloadResult {
+    ReloadResult(
+      succeeded: error == nil,
+      errorMessage: error.map { String(describing: $0) },
+      snapshot: snapshot
+    )
+  }
+
+  /// Returns Lua command settings from an immutable config snapshot.
+  private static func luaCommandSettings(from snapshot: ConfigSnapshot) -> LuaCommandSettings {
+    LuaCommandSettings(
+      timeoutSeconds: snapshot.app.luaCommandLimits.timeoutSeconds,
+      maxOutputBytes: snapshot.app.luaCommandLimits.maxOutputBytes,
+      maxAsyncJobs: snapshot.app.luaCommandLimits.maxAsyncJobs
+    )
   }
 
   /// Returns the resolved config path used for validation status and errors.

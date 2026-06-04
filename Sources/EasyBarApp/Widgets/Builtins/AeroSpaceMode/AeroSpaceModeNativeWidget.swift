@@ -6,7 +6,13 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   let rootID = "builtin_aerospace_mode"
 
+  private let config: Config.AeroSpaceModeBuiltinConfig
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
+
+  /// Creates the native AeroSpace mode widget from an immutable config section.
+  init(config: Config.AeroSpaceModeBuiltinConfig) {
+    self.config = config
+  }
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
@@ -28,7 +34,6 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   /// Publishes the currently focused AeroSpace layout mode.
   private func publish() {
-    let config = Config.shared.builtinAeroSpaceMode
     let placement = config.placement
     let style = config.style
     let mode = AeroSpaceService.shared.focusedLayoutMode

@@ -9,8 +9,8 @@ actor LuaRuntime {
   )
 
   /// Configures the shared Lua runtime.
-  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
-    shared = LuaRuntime(logger: logger, config: config)
+  static func bootstrap(logger: ProcessLogger) {
+    shared = LuaRuntime(logger: logger)
   }
 
   private let logger: ProcessLogger
@@ -20,9 +20,9 @@ actor LuaRuntime {
   private var lineHandler: (@Sendable (String) -> Void)?
 
   /// Creates one Lua runtime.
-  init(logger: ProcessLogger, config: Config = .shared) {
+  init(logger: ProcessLogger) {
     self.logger = logger
-    self.processController = LuaProcessController(logger: logger.child("process"), config: config)
+    self.processController = LuaProcessController(logger: logger.child("process"))
     self.transport = LuaTransport(logger: logger.child("transport"))
   }
 
@@ -39,8 +39,8 @@ actor LuaRuntime {
 
   /// Starts the Lua runtime if it is not already running.
   @discardableResult
-  func start() -> Bool {
-    guard let context = processController.launchContext() else { return false }
+  func start(config: ConfigSnapshot) -> Bool {
+    guard let context = processController.launchContext(config: config) else { return false }
 
     let resources = LuaProcessController.LaunchResources()
 

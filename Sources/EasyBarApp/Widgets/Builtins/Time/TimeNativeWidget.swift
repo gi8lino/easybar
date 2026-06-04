@@ -5,13 +5,18 @@ import Foundation
 final class TimeNativeWidget: NativeWidget {
 
   let rootID = "builtin_time"
-  private lazy var controller = FormattedClockNativeWidgetController(rootID: rootID) {
-    let config = Config.shared.builtinTime
-    return .init(
+  private let config: Config.TimeBuiltinConfig
+  private lazy var controller = FormattedClockNativeWidgetController(rootID: rootID) { [config] in
+    .init(
       placement: config.placement,
       style: config.style,
       format: config.format
     )
+  }
+
+  /// Creates the native time widget from an immutable config section.
+  init(config: Config.TimeBuiltinConfig) {
+    self.config = config
   }
 
   var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }

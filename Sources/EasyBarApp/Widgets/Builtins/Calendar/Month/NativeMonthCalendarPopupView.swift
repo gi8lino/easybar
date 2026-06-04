@@ -3,26 +3,36 @@ import SwiftUI
 
 /// EasyBar adapter for the reusable month-calendar popup.
 struct NativeMonthCalendarPopupView: View {
-  @ObservedObject private var config = Config.shared
+  @EnvironmentObject private var configStore: ConfigSnapshotStore
   @StateObject private var composerPanel = CalendarEventComposerPanelController()
 
   /// Renders the EasyBar-wired month-calendar popup.
   var body: some View {
+    let config = configStore.snapshot.builtins.calendar
+
     CalendarMonthPopupView(
       store: NativeMonthCalendarStore.shared,
       logger: NativeMonthCalendarStore.shared.logger,
-      config: config.builtinCalendar.calendarMonthPopupUIConfig,
-      appointmentsStyle: config.builtinCalendar.appointmentsCalendarUIStyle,
-      birthdays: config.builtinCalendar.birthdayCalendarUIStyle,
-      emptyText: config.builtinCalendar.appointments.emptyText,
+      config: config.calendarMonthPopupUIConfig,
+      appointmentsStyle: config.appointmentsCalendarUIStyle,
+      birthdays: config.birthdayCalendarUIStyle,
+      emptyText: config.appointments.emptyText,
       onVisibleMonthChanged: { visibleMonth in
         MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
       },
       onCreateEvent: { defaultDate, onChanged in
-        composerPanel.present(defaultDate: defaultDate, onChanged: onChanged)
+        composerPanel.present(
+          defaultDate: defaultDate,
+          config: config,
+          onChanged: onChanged
+        )
       },
       onEditEvent: { event, onChanged in
-        composerPanel.present(event: event, onChanged: onChanged)
+        composerPanel.present(
+          event: event,
+          config: config,
+          onChanged: onChanged
+        )
       },
       onRefreshRequested: {
         MonthCalendarAgentClient.shared.refresh()

@@ -19,17 +19,18 @@ final class CalendarEventComposerPanelController: ObservableObject {
   /// Presents the composer panel for one new appointment.
   func present(
     defaultDate: Date,
+    config: Config.CalendarBuiltinConfig,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer(snapshotSource: .month)
+    let composer = makeComposer(snapshotSource: .month, config: config)
     composer.prepare(defaultDate: defaultDate)
     self.composer = composer
 
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
-        config: Config.shared.builtinCalendar.calendarComposerUIConfig,
-        appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
+        config: config.calendarComposerUIConfig,
+        appointmentsStyle: config.appointmentsCalendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -50,17 +51,18 @@ final class CalendarEventComposerPanelController: ObservableObject {
   /// Presents the composer panel for one existing appointment.
   func present(
     event: CalendarAgentEvent,
+    config: Config.CalendarBuiltinConfig,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer(snapshotSource: .upcoming)
+    let composer = makeComposer(snapshotSource: .upcoming, config: config)
     composer.prepare(event: event)
     self.composer = composer
 
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
-        config: Config.shared.builtinCalendar.calendarComposerUIConfig,
-        appointmentsStyle: Config.shared.builtinCalendar.appointmentsCalendarUIStyle,
+        config: config.calendarComposerUIConfig,
+        appointmentsStyle: config.appointmentsCalendarUIStyle,
         onCancel: { [weak self] in
           self?.close()
         },
@@ -151,7 +153,10 @@ final class CalendarEventComposerPanelController: ObservableObject {
   }
 
   /// Builds one reusable composer view model wired to EasyBar stores and agent clients.
-  private func makeComposer(snapshotSource: SnapshotSource) -> CalendarEventComposer {
+  private func makeComposer(
+    snapshotSource: SnapshotSource,
+    config: Config.CalendarBuiltinConfig
+  ) -> CalendarEventComposer {
     let snapshotPublisher: AnyPublisher<CalendarAgentSnapshot?, Never>
     let refreshSnapshots: () -> Void
 
@@ -169,7 +174,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     }
 
     return CalendarEventComposer(
-      config: Config.shared.builtinCalendar.calendarComposerUIConfig,
+      config: config.calendarComposerUIConfig,
       snapshotPublisher: snapshotPublisher,
       refreshSnapshots: refreshSnapshots,
       createEvent: { event, completion in

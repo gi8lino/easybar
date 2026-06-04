@@ -10,10 +10,10 @@ extension WidgetNodeView {
   /// Resolves an optional hex color or falls back to the default text color.
   func color(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else {
-      return Theme.defaultTextColor
+      return Theme.defaultTextColor(snapshot: configStore.snapshot)
     }
 
-    return Color(hex: hex)
+    return Color(hex: hex, snapshot: configStore.snapshot)
   }
 
   /// Returns a system font for an optional point size.
@@ -154,7 +154,7 @@ extension WidgetNodeView {
   }
 
   var calendarRootPopupMode: Config.CalendarPopupMode {
-    return Config.shared.builtinCalendar.popupMode
+    return configStore.snapshot.builtins.calendar.popupMode
   }
 
   var calendarRootHasPopup: Bool {
@@ -181,11 +181,13 @@ extension WidgetNodeView {
       case .upcoming:
         return AnyView(
           NativeUpcomingCalendarPopupView()
+            .environmentObject(configStore)
             .background(popupHoverBackground)
         )
       case .month:
         return AnyView(
           NativeMonthCalendarPopupView()
+            .environmentObject(configStore)
             .background(popupHoverBackground)
         )
       }
@@ -193,6 +195,7 @@ extension WidgetNodeView {
 
     return AnyView(
       popupContent
+        .environmentObject(configStore)
         .background(popupHoverBackground)
     )
   }

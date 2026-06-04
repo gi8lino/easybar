@@ -3,6 +3,7 @@ import SwiftUI
 /// Shared box-model styling for rendered widget nodes.
 struct WidgetNodeStyle: ViewModifier {
   let node: WidgetNodeState
+  @EnvironmentObject private var configStore: ConfigSnapshotStore
 
   /// Applies the shared box-model styling for one widget node.
   func body(content: Content) -> some View {
@@ -113,6 +114,6 @@ struct WidgetNodeStyle: ViewModifier {
   /// Resolves one optional node color or clears it.
   private func resolvedColor(_ hex: String?) -> Color {
     guard let hex, !hex.isEmpty else { return Color.clear }
-    return Color(hex: hex)
+    return Color(hex: hex, snapshot: configStore.snapshot)
   }
 }

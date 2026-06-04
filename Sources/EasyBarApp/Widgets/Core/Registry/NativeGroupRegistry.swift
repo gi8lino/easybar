@@ -10,11 +10,11 @@ final class NativeGroupRegistry {
 
   private init() {}
 
-  /// Rebuilds all native groups from the current config.
-  func reload() {
+  /// Rebuilds all native groups from the provided config snapshot.
+  func reload(groups: [Config.BuiltinGroupConfig]) {
     clear()
 
-    for group in Config.shared.builtinGroups {
+    for group in groups {
       WidgetStore.shared.apply(root: group.id, nodes: [makeNode(group)])
       publishedRootIDs.append(group.id)
     }

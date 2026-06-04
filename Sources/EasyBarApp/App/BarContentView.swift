@@ -5,13 +5,15 @@ import SwiftUI
 struct BarContentView: View {
   /// Logger passed to child widget views.
   let logger: ProcessLogger
-  /// Shared config driving bar layout and styling.
-  @ObservedObject private var config = Config.shared
+  /// Active immutable config snapshot store driving bar layout and styling.
+  @EnvironmentObject private var configStore: ConfigSnapshotStore
   /// Default font used across the bar.
   private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
 
   /// Renders left, center, and right widget regions.
   var body: some View {
+    let snapshot = configStore.snapshot
+
     HStack(spacing: 8) {
       WidgetBar(position: .left, logger: logger)
 
@@ -24,22 +26,22 @@ struct BarContentView: View {
       WidgetBar(position: .right, logger: logger)
     }
     .font(globalBarFont)
-    .padding(.horizontal, config.barPaddingX)
+    .padding(.horizontal, snapshot.bar.paddingX)
     .frame(
       maxWidth: .infinity,
-      minHeight: config.barHeight,
-      maxHeight: config.barHeight,
+      minHeight: snapshot.bar.height,
+      maxHeight: snapshot.bar.height,
       alignment: .center
     )
-    .background(Theme.barBackground)
+    .background(Theme.barBackground(snapshot: snapshot))
     .overlay(alignment: .bottom) {
-      if config.barShowsBorder {
+      if !snapshot.bar.borderHex.isFullyTransparentHexColor {
         Rectangle()
-          .fill(Theme.barBorder)
+          .fill(Theme.barBorder(snapshot: snapshot))
           .frame(height: 1)
       }
     }
-    .foregroundStyle(Theme.defaultTextColor)
+    .foregroundStyle(Theme.defaultTextColor(snapshot: snapshot))
     .ignoresSafeArea()
   }
 }

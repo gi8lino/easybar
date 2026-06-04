@@ -69,20 +69,15 @@ actor RuntimeCoordinator {
     await configureLogging()
     guard shouldContinueStartup(generation: generation) else { return }
 
-    let loadResult = await configManager.loadInitialConfig()
-    if let errorMessage = loadResult.errorMessage {
-      logger.warn(
-        "initial config load completed with error",
-        .field("error", errorMessage),
-      )
-    }
+    let startupSnapshot = await configManager.snapshot()
     guard shouldContinueStartup(generation: generation) else { return }
 
     await configureLogging()
     guard shouldContinueStartup(generation: generation) else { return }
 
     await MainActor.run {
-      services.nativeWidgetRegistry.start()
+      services.applyRuntimeConfiguration(startupSnapshot)
+      services.nativeWidgetRegistry.start(snapshot: startupSnapshot)
       aeroSpaceService.start()
     }
     guard shouldContinueStartup(generation: generation) else { return }
@@ -147,13 +142,20 @@ actor RuntimeCoordinator {
       return
     }
 
+    await MainActor.run {
+      services.applyRuntimeConfiguration(result.snapshot)
+    }
+    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+      return
+    }
+
     await widgetEngine.reload()
     guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return
     }
 
     await MainActor.run {
-      services.nativeWidgetRegistry.reload()
+      services.nativeWidgetRegistry.reload(snapshot: result.snapshot)
     }
     guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
       return

@@ -3,19 +3,21 @@ import SwiftUI
 
 /// EasyBar adapter for the reusable upcoming-calendar popup.
 struct NativeUpcomingCalendarPopupView: View {
-  @ObservedObject private var config = Config.shared
+  @EnvironmentObject private var configStore: ConfigSnapshotStore
   @StateObject private var composerPanel = CalendarEventComposerPanelController()
 
   /// Renders the EasyBar-wired upcoming-calendar popup.
   var body: some View {
+    let config = configStore.snapshot.builtins.calendar
+
     CalendarUpcomingPopupView(
       store: NativeUpcomingCalendarStore.shared,
-      config: config.builtinCalendar.calendarUpcomingPopupUIConfig,
-      appointmentsStyle: config.builtinCalendar.appointmentsCalendarUIStyle,
-      birthdays: config.builtinCalendar.birthdayCalendarUIStyle,
-      emptyText: config.builtinCalendar.appointments.emptyText,
+      config: config.calendarUpcomingPopupUIConfig,
+      appointmentsStyle: config.appointmentsCalendarUIStyle,
+      birthdays: config.birthdayCalendarUIStyle,
+      emptyText: config.appointments.emptyText,
       onEventTap: { event in
-        composerPanel.present(event: event) {
+        composerPanel.present(event: event, config: config) {
           MonthCalendarAgentClient.shared.refresh()
           UpcomingCalendarAgentClient.shared.refresh()
         }

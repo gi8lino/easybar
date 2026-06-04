@@ -18,8 +18,8 @@ final class LuaRenderCoalescingTests: XCTestCase {
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    originalConfigSnapshot = Config.shared.snapshot()
-    Config.shared.resetToDefaults()
+    originalConfigSnapshot = Config.makeUnloadedConfig().snapshot()
+    Config.makeUnloadedConfig().resetToDefaults()
 
     tempDirectoryURL = try makeTemporaryDirectory()
     configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
@@ -29,7 +29,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
   }
 
   override func tearDownWithError() throws {
-    Config.shared.apply(originalConfigSnapshot)
+    Config.makeUnloadedConfig().apply(originalConfigSnapshot)
 
     if let tempDirectoryURL {
       try? FileManager.default.removeItem(at: tempDirectoryURL)
@@ -1318,7 +1318,7 @@ extension LuaRenderCoalescingTests {
     environment[SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds] = "60"
 
     // Merge in the theme environment.
-    environment.merge(Config.shared.luaThemeEnvironment()) {
+    environment.merge(Config.makeUnloadedConfig().luaThemeEnvironment()) {
       _, testValue in testValue
     }
 

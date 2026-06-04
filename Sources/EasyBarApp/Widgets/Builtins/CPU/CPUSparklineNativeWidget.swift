@@ -14,6 +14,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     ]
   }
 
+  private let config: Config.CPUBuiltinConfig
   private let eventObserver = EasyBarEventObserver()
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
@@ -21,6 +22,11 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private var isRunning = false
 
   private lazy var renderer = CPURenderer(rootID: rootID)
+
+  /// Creates the native CPU widget from an immutable config section.
+  init(config: Config.CPUBuiltinConfig) {
+    self.config = config
+  }
 
   /// Immutable render input for the CPU widget.
   struct Snapshot {
@@ -123,8 +129,6 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Builds one render snapshot from config and current samples.
   private func makeSnapshot() -> Snapshot {
-    let config = Config.shared.builtinCPU
-
     return Snapshot(
       placement: config.placement,
       style: config.style,
@@ -150,12 +154,12 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Returns the configured sample history size.
   private var historySize: Int {
-    return max(2, Config.shared.builtinCPU.historySize)
+    return max(2, config.historySize)
   }
 
   /// Returns the configured CPU sample interval in seconds.
   private var sampleIntervalSeconds: TimeInterval {
-    return max(1, Config.shared.builtinCPU.sampleIntervalSeconds)
+    return max(1, config.sampleIntervalSeconds)
   }
 
   /// Reads cumulative CPU tick counters from Mach.

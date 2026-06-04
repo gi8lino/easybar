@@ -5,13 +5,18 @@ import Foundation
 final class DateNativeWidget: NativeWidget {
 
   let rootID = "builtin_date"
-  private lazy var controller = FormattedClockNativeWidgetController(rootID: rootID) {
-    let config = Config.shared.builtinDate
-    return .init(
+  private let config: Config.DateBuiltinConfig
+  private lazy var controller = FormattedClockNativeWidgetController(rootID: rootID) { [config] in
+    .init(
       placement: config.placement,
       style: config.style,
       format: config.format
     )
+  }
+
+  /// Creates the native date widget from an immutable config section.
+  init(config: Config.DateBuiltinConfig) {
+    self.config = config
   }
 
   var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }

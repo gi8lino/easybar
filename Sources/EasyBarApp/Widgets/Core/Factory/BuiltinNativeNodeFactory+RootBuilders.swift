@@ -30,9 +30,10 @@ extension BuiltinNativeNodeFactory {
     value: Double,
     min: Double,
     max: Double,
-    step: Double
+    step: Double,
+    width: Double? = nil
   ) -> WidgetNodeState {
-    makeRootNode(
+    var node = makeRootNode(
       id: rootID,
       kind: .slider,
       placement: placement,
@@ -45,6 +46,8 @@ extension BuiltinNativeNodeFactory {
       max: max,
       step: step
     )
+    node.width = width
+    return node
   }
 
   /// Builds one simple root progress-slider node.
@@ -56,9 +59,10 @@ extension BuiltinNativeNodeFactory {
     value: Double,
     min: Double,
     max: Double,
-    step: Double
+    step: Double,
+    width: Double? = nil
   ) -> WidgetNodeState {
-    makeRootNode(
+    var node = makeRootNode(
       id: rootID,
       kind: .progressSlider,
       placement: placement,
@@ -71,6 +75,8 @@ extension BuiltinNativeNodeFactory {
       max: max,
       step: step
     )
+    node.width = width
+    return node
   }
 
   /// Builds one root sparkline node.

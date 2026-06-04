@@ -6,17 +6,18 @@ final class NetworkAgentClient {
   /// Shared network-agent client.
   static var shared = NetworkAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
-    config: .shared
+    config: Config.makeUnloadedConfig().snapshot().networkAgent
   )
 
   /// Configures the shared network-agent client.
-  static func bootstrap(logger: ProcessLogger, config: Config = .shared) {
-    shared = NetworkAgentClient(logger: logger, config: config)
+  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
+    shared = NetworkAgentClient(logger: logger, config: snapshot.networkAgent)
   }
 
   /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
-  private let config: Config
+  /// Active network-agent config snapshot.
+  private var config: ConfigSnapshot.NetworkAgent
   /// Whether the client lifecycle is active.
   private var started = false
 
@@ -29,7 +30,7 @@ final class NetworkAgentClient {
   /// Socket client that owns the network-agent stream.
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
-    socketPath: { [config] in config.networkAgentSocketPath },
+    socketPath: { [weak self] in self?.config.socketPath ?? "" },
     subscribeRequest: {
       NetworkAgentRequest(command: .subscribe, fields: NativeWiFiRequestedFields.snapshot)
     },
@@ -55,7 +56,7 @@ final class NetworkAgentClient {
   )
 
   /// Creates the shared network-agent client.
-  init(logger: ProcessLogger, config: Config) {
+  init(logger: ProcessLogger, config: ConfigSnapshot.NetworkAgent) {
     self.logger = logger
     self.config = config
   }
@@ -65,9 +66,41 @@ final class NetworkAgentClient {
     return client.isConnected
   }
 
+  /// Replaces the active network-agent config snapshot.
+  func updateConfiguration(_ config: ConfigSnapshot.NetworkAgent) {
+    let socketPathChanged = self.config.socketPath != config.socketPath
+    let enabledChanged = self.config.enabled != config.enabled
+    self.config = config
+
+    guard started, socketPathChanged || enabledChanged else { return }
+
+    logger.info(
+      "network agent config changed; restarting client",
+      .field("socket", config.socketPath),
+      .field("enabled", config.enabled)
+    )
+
+    client.stop()
+
+    guard config.enabled else {
+      started = false
+      wakeRefreshController.stop()
+      clearPublishedState(notify: true)
+      return
+    }
+
+    client.start()
+  }
+
   /// Starts the network agent client.
   func start() {
     guard !started else { return }
+
+    guard config.enabled else {
+      logger.info("network agent client start skipped because agent is disabled")
+      clearPublishedState(notify: false)
+      return
+    }
 
     started = true
 

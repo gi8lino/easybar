@@ -13,6 +13,8 @@ final class WiFiNativeWidget: NativeWidget {
     ]
   }
 
+  private let config: Config.WiFiBuiltinConfig
+  private let networkAgentConfig: ConfigSnapshot.NetworkAgent
   private let eventObserver = EasyBarEventObserver()
   private var isHovered = false
   private var started = false
@@ -30,14 +32,21 @@ final class WiFiNativeWidget: NativeWidget {
     let inlineContentVisible: Bool
   }
 
+  /// Creates the native Wi-Fi widget from immutable config sections.
+  init(
+    config: Config.WiFiBuiltinConfig,
+    networkAgentConfig: ConfigSnapshot.NetworkAgent
+  ) {
+    self.config = config
+    self.networkAgentConfig = networkAgentConfig
+  }
+
   // MARK: - Lifecycle
 
   /// Starts the Wi-Fi widget.
   func start() {
     guard !started else { return }
     started = true
-
-    let config = Config.shared.builtinWiFi
 
     NativeWidgetEventDriver.start(
       observer: eventObserver,
@@ -54,7 +63,7 @@ final class WiFiNativeWidget: NativeWidget {
       }
     )
 
-    startedNetworkAgent = config.enabled && Config.shared.networkAgentEnabled
+    startedNetworkAgent = config.enabled && networkAgentConfig.enabled
 
     guard startedNetworkAgent else {
       publish()
@@ -91,7 +100,6 @@ final class WiFiNativeWidget: NativeWidget {
 
   /// Returns the current render snapshot.
   private func makeSnapshot() -> Snapshot {
-    let config = Config.shared.builtinWiFi
     let network = NativeWiFiStore.shared.snapshot
     let presentation = WiFiPresentation(snapshot: network, config: config)
 

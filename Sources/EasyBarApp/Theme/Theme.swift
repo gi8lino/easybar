@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Global runtime theme helpers.
+/// Runtime theme helpers that resolve colors from immutable config snapshots.
 enum Theme {
 
   /// Global icon font family used for Nerd Font / symbol-style icons.
@@ -8,19 +8,19 @@ enum Theme {
   /// Change this in one place when you want to switch the app-wide icon font.
   private static let iconFontFamily = "Symbols Nerd Font Mono"
 
-  /// Bar background color from config.
-  static var barBackground: Color {
-    return Color(hex: Config.shared.barBackgroundHex)
+  /// Returns the bar background color from the active snapshot.
+  static func barBackground(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.bar.backgroundHex, snapshot: snapshot)
   }
 
-  /// Bar border color from config.
-  static var barBorder: Color {
-    return Color(hex: Config.shared.barBorderHex)
+  /// Returns the bar border color from the active snapshot.
+  static func barBorder(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.bar.borderHex, snapshot: snapshot)
   }
 
-  /// Fallback text color for views and nodes without a color.
-  static var defaultTextColor: Color {
-    return Color(hex: Config.shared.themeTextColorHex)
+  /// Returns the fallback text color for views and nodes without a color.
+  static func defaultTextColor(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.theme.colors.text, snapshot: snapshot)
   }
 
   /// Returns the shared icon font used by popups and other icon-only text.
@@ -28,38 +28,38 @@ enum Theme {
     return .custom(iconFontFamily, size: size)
   }
 
-  /// Border color for the focused app icon inside spaces.
-  static var spaceFocusedAppBorder: Color {
-    return Color(hex: Config.shared.builtinSpaces.colors.focusedAppBorderHex)
+  /// Returns the border color for the focused app icon inside spaces.
+  static func spaceFocusedAppBorder(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.colors.focusedAppBorderHex, snapshot: snapshot)
   }
 
-  /// Focused workspace background color.
-  static var spaceActiveBackground: Color {
-    return Color(hex: Config.shared.builtinSpaces.colors.activeBackgroundHex)
+  /// Returns the focused workspace background color.
+  static func spaceActiveBackground(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.colors.activeBackgroundHex, snapshot: snapshot)
   }
 
-  /// Inactive workspace background color.
-  static var spaceInactiveBackground: Color {
-    return Color(hex: Config.shared.builtinSpaces.colors.inactiveBackgroundHex)
+  /// Returns the inactive workspace background color.
+  static func spaceInactiveBackground(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.colors.inactiveBackgroundHex, snapshot: snapshot)
   }
 
-  /// Focused workspace border color.
-  static var spaceActiveBorder: Color {
-    return Color(hex: Config.shared.builtinSpaces.colors.activeBorderHex)
+  /// Returns the focused workspace border color.
+  static func spaceActiveBorder(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.colors.activeBorderHex, snapshot: snapshot)
   }
 
-  /// Inactive workspace border color.
-  static var spaceInactiveBorder: Color {
-    return Color(hex: Config.shared.builtinSpaces.colors.inactiveBorderHex)
+  /// Returns the inactive workspace border color.
+  static func spaceInactiveBorder(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.colors.inactiveBorderHex, snapshot: snapshot)
   }
 
-  /// Focused workspace text color.
-  static var spaceFocusedText: Color {
-    return Color(hex: Config.shared.builtinSpaces.text.focusedColorHex)
+  /// Returns the focused workspace text color.
+  static func spaceFocusedText(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.text.focusedColorHex, snapshot: snapshot)
   }
 
-  /// Inactive workspace text color.
-  static var spaceInactiveText: Color {
-    return Color(hex: Config.shared.builtinSpaces.text.inactiveColorHex)
+  /// Returns the inactive workspace text color.
+  static func spaceInactiveText(snapshot: ConfigSnapshot) -> Color {
+    Color(hex: snapshot.builtins.spaces.text.inactiveColorHex, snapshot: snapshot)
   }
 }

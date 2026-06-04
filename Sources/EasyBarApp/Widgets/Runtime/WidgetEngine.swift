@@ -77,7 +77,9 @@ actor WidgetEngine {
       }
     }
 
-    guard await luaRuntime.start() else {
+    let configSnapshot = await configManager.snapshot()
+
+    guard await luaRuntime.start(config: configSnapshot) else {
       logger.warn("widget engine start failed because lua runtime did not launch")
       return false
     }

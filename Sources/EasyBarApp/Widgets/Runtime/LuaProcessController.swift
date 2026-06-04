@@ -21,7 +21,6 @@ final class LuaProcessController {
   }
 
   let logger: ProcessLogger
-  let config: Config
 
   private let stateLock = NSLock()
   fileprivate(set) var processIdentifierValue: Int32?
@@ -32,9 +31,8 @@ final class LuaProcessController {
   private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
 
   /// Creates one Lua process controller.
-  init(logger: ProcessLogger, config: Config = .shared) {
+  init(logger: ProcessLogger) {
     self.logger = logger
-    self.config = config
   }
 
   /// Returns the running Lua process identifier when available.

@@ -294,7 +294,8 @@ extension BuiltinNativeNodeFactory {
     max: Double,
     step: Double,
     color: String? = nil,
-    visible: Bool = true
+    visible: Bool = true,
+    width: Double? = nil
   ) -> WidgetNodeState {
     makeChildNode(
       id: childID,
@@ -308,7 +309,8 @@ extension BuiltinNativeNodeFactory {
       value: value,
       min: min,
       max: max,
-      step: step
+      step: step,
+      width: width
     )
   }
 
@@ -324,7 +326,8 @@ extension BuiltinNativeNodeFactory {
     max: Double,
     step: Double,
     color: String? = nil,
-    visible: Bool = true
+    visible: Bool = true,
+    width: Double? = nil
   ) -> WidgetNodeState {
     makeChildNode(
       id: childID,
@@ -338,7 +341,8 @@ extension BuiltinNativeNodeFactory {
       value: value,
       min: min,
       max: max,
-      step: step
+      step: step,
+      width: width
     )
   }
 }

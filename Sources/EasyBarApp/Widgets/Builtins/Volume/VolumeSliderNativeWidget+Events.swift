@@ -52,7 +52,7 @@ extension VolumeSliderNativeWidget {
 
   /// Expands temporarily on external volume change when configured.
   func applyExternalVolumeChange() {
-    guard Config.shared.builtinVolume.expandToSliderOnHover else { return }
+    guard config.expandToSliderOnHover else { return }
     guard !isAdjustingSlider else { return }
 
     isHovered = true
@@ -61,7 +61,7 @@ extension VolumeSliderNativeWidget {
 
   /// Applies one slider preview value without rebuilding the widget mid-drag.
   func applySliderPreviewValue(_ value: Double) {
-    let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
+    let normalized = normalizedSliderValue(value, config: config)
 
     isAdjustingSlider = true
     isHovered = true
@@ -71,9 +71,9 @@ extension VolumeSliderNativeWidget {
 
   /// Applies one slider value back to the system volume.
   func applySliderValue(_ value: Double, shouldAutoHide: Bool) {
-    let normalized = normalizedSliderValue(value, config: Config.shared.builtinVolume)
+    let normalized = normalizedSliderValue(value, config: config)
 
-    guard Config.shared.builtinVolume.expandToSliderOnHover else {
+    guard config.expandToSliderOnHover else {
       setSystemVolume(normalized)
       publish()
       return

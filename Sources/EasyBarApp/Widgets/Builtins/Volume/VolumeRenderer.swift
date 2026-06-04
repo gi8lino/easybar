@@ -22,7 +22,8 @@ struct VolumeRenderer: NativeWidgetRenderer {
         value: snapshot.value,
         min: snapshot.config.minValue,
         max: snapshot.config.maxValue,
-        step: snapshot.step
+        step: snapshot.step,
+        width: snapshot.config.sliderWidth
       )
     ]
   }
@@ -81,7 +82,8 @@ extension VolumeRenderer {
         max: snapshot.config.maxValue,
         step: snapshot.step,
         color: snapshot.style.textColorHex,
-        visible: snapshot.isHovered
+        visible: snapshot.isHovered,
+        width: snapshot.config.sliderWidth
       )
     )
 

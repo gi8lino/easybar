@@ -8,18 +8,18 @@ final class ConfigSnapshotTests: XCTestCase {
   /// Handles set up with error.
   override func setUpWithError() throws {
     try super.setUpWithError()
-    originalSnapshot = Config.shared.snapshot()
+    originalSnapshot = Config.makeUnloadedConfig().snapshot()
   }
 
   /// Handles tear down with error.
   override func tearDownWithError() throws {
-    Config.shared.apply(originalSnapshot)
+    Config.makeUnloadedConfig().apply(originalSnapshot)
     try super.tearDownWithError()
   }
 
   /// Handles test apply restores app bar and builtin state from snapshot.
   func testApplyRestoresAppBarAndBuiltinStateFromSnapshot() {
-    let config = Config.shared
+    let config = Config.makeUnloadedConfig()
 
     config.widgetsPath = "/tmp/widgets-before"
     config.loggingLevel = .debug

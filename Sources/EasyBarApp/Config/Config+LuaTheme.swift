@@ -6,18 +6,25 @@ extension Config {
 
   /// Returns environment values required by the Lua runtime.
   func luaThemeEnvironment() -> [String: String] {
+    return snapshot().luaThemeEnvironment()
+  }
+}
+
+extension ConfigSnapshot {
+  /// Returns environment values required by the Lua runtime.
+  func luaThemeEnvironment() -> [String: String] {
     guard let value = luaThemeJSONString() else {
       return [:]
     }
 
-    return [Self.luaThemeEnvironmentKey: value]
+    return [Config.luaThemeEnvironmentKey: value]
   }
 
   /// Encodes the resolved active theme for Lua widgets.
   private func luaThemeJSONString() -> String? {
     let payload: [String: Any] = [
-      "name": themeName,
-      "colors": themeColors.valuesByName,
+      "name": theme.name,
+      "colors": theme.colors.valuesByName,
     ]
 
     guard JSONSerialization.isValidJSONObject(payload) else {

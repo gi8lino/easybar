@@ -13,7 +13,7 @@ final class CalendarNativeWidget: NativeWidget {
   let rootID = "builtin_calendar"
 
   var appEventSubscriptions: Set<String> {
-    let refreshEvent = Self.refreshEvent(for: Config.shared.builtinCalendar)
+    let refreshEvent = Self.refreshEvent(for: config)
     return [
       refreshEvent.rawValue,
       AppEvent.systemWoke.rawValue,
@@ -21,6 +21,8 @@ final class CalendarNativeWidget: NativeWidget {
     ]
   }
 
+  private let config: Config.CalendarBuiltinConfig
+  private let calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private let eventObserver = EasyBarEventObserver()
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
@@ -31,6 +33,15 @@ final class CalendarNativeWidget: NativeWidget {
   struct Snapshot {
     let config: Config.CalendarBuiltinConfig
     let now: Date
+  }
+
+  /// Creates the native calendar widget from immutable config sections.
+  init(
+    config: Config.CalendarBuiltinConfig,
+    calendarAgentConfig: ConfigSnapshot.CalendarAgent
+  ) {
+    self.config = config
+    self.calendarAgentConfig = calendarAgentConfig
   }
 
   // MARK: - Lifecycle
@@ -50,14 +61,14 @@ final class CalendarNativeWidget: NativeWidget {
       guard let event = payload.appEvent else { return }
 
       switch event {
-      case Self.refreshEvent(for: Config.shared.builtinCalendar), .systemWoke, .calendarChange:
+      case Self.refreshEvent(for: self.config), .systemWoke, .calendarChange:
         self.publish()
       default:
         break
       }
     }
 
-    startedCalendarAgent = snapshot.config.enabled && Config.shared.calendarAgentEnabled
+    startedCalendarAgent = snapshot.config.enabled && calendarAgentConfig.enabled
     startedPopupMode = snapshot.config.popupMode
 
     if startedCalendarAgent {
@@ -102,7 +113,7 @@ final class CalendarNativeWidget: NativeWidget {
   /// Returns the current calendar render snapshot.
   private func currentSnapshot() -> Snapshot {
     Snapshot(
-      config: Config.shared.builtinCalendar,
+      config: config,
       now: Date()
     )
   }

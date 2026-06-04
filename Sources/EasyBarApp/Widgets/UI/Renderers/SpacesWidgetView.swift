@@ -4,7 +4,11 @@ import SwiftUI
 struct SpacesWidgetView: View {
 
   @ObservedObject private var aeroSpaceService = AeroSpaceService.shared
-  private let config = Config.shared.builtinSpaces
+  @EnvironmentObject private var configStore: ConfigSnapshotStore
+
+  private var config: Config.SpacesBuiltinConfig {
+    configStore.snapshot.builtins.spaces
+  }
 
   /// Renders the native spaces widget.
   var body: some View {
@@ -43,7 +47,9 @@ struct SpacesWidgetView: View {
           ForEach(visibleApps(for: space)) { app in
             AppIconView(
               app: app,
-              isFocusedApp: app.id == aeroSpaceService.focusedAppID
+              isFocusedApp: app.id == aeroSpaceService.focusedAppID,
+              config: config,
+              themeSnapshot: configStore.snapshot
             )
             .contentShape(Rectangle())
             .onTapGesture { focusAppIfEnabled(app) }
@@ -155,17 +161,26 @@ struct SpacesWidgetView: View {
 
   /// Returns the text color for one space.
   private func spaceTextColor(for space: SpaceItem) -> Color {
-    return space.isFocused ? Theme.spaceFocusedText : Theme.spaceInactiveText
+    let snapshot = configStore.snapshot
+    return space.isFocused
+      ? Theme.spaceFocusedText(snapshot: snapshot)
+      : Theme.spaceInactiveText(snapshot: snapshot)
   }
 
   /// Returns the background color for one space.
   private func spaceBackgroundColor(for space: SpaceItem) -> Color {
-    return space.isFocused ? Theme.spaceActiveBackground : Theme.spaceInactiveBackground
+    let snapshot = configStore.snapshot
+    return space.isFocused
+      ? Theme.spaceActiveBackground(snapshot: snapshot)
+      : Theme.spaceInactiveBackground(snapshot: snapshot)
   }
 
   /// Returns the border color for one space.
   private func spaceBorderColor(for space: SpaceItem) -> Color {
-    return space.isFocused ? Theme.spaceActiveBorder : Theme.spaceInactiveBorder
+    let snapshot = configStore.snapshot
+    return space.isFocused
+      ? Theme.spaceActiveBorder(snapshot: snapshot)
+      : Theme.spaceInactiveBorder(snapshot: snapshot)
   }
 
   /// Returns whether the space uses the collapsed inactive layout.
@@ -186,9 +201,8 @@ private struct AppIconView: View {
   let app: SpaceApp
   let isFocusedApp: Bool
 
-  private var config: Config.SpacesBuiltinConfig {
-    return Config.shared.builtinSpaces
-  }
+  let config: Config.SpacesBuiltinConfig
+  let themeSnapshot: ConfigSnapshot
 
   /// Returns the app icon size.
   private var resolvedSize: CGFloat {
@@ -211,7 +225,7 @@ private struct AppIconView: View {
 
   /// Returns the app icon border color.
   private var borderColor: Color {
-    return isFocusedApp ? Theme.spaceFocusedAppBorder : Color.clear
+    return isFocusedApp ? Theme.spaceFocusedAppBorder(snapshot: themeSnapshot) : Color.clear
   }
 
   /// Renders one app icon slot.

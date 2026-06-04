@@ -2,10 +2,8 @@ import EasyBarShared
 import Foundation
 import SwiftUI
 
-/// Global EasyBar configuration store.
+/// EasyBar configuration store owned by the app service graph.
 final class Config: ObservableObject {
-  /// Shared process-wide config instance.
-  static let shared = Config()
 
   /// Explicit config path override used by staged validation loads.
   private let configPathOverride: String?

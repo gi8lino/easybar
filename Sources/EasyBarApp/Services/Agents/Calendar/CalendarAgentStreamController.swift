@@ -81,6 +81,11 @@ final class CalendarAgentStreamController {
     )
   }
 
+  /// Returns whether the stream lifecycle is active.
+  var isStarted: Bool {
+    return started
+  }
+
   /// Returns whether the stream currently has an active connection.
   var isConnected: Bool {
     return started && client.isConnected
@@ -119,6 +124,12 @@ final class CalendarAgentStreamController {
     wakeRefreshController.stop()
     client.stop()
     clearState()
+  }
+
+  /// Restarts the stream against the latest config-derived request and socket path.
+  func restart(enabled: Bool) {
+    stop()
+    start(enabled: enabled)
   }
 
   /// Sends one fresh request built from current config and state.

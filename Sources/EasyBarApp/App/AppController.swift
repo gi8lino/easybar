@@ -64,6 +64,8 @@ final class AppController {
       )
     }
 
+    services.applyRuntimeConfiguration(services.config.snapshot())
+
     guard acquireInstanceLock() else {
       started = false
       return false
@@ -188,7 +190,10 @@ final class AppController {
 
   /// Creates and presents the main bar window controller.
   private func setupBarWindowController() {
-    let controller = BarWindowController(logger: logger.child("window"))
+    let controller = BarWindowController(
+      logger: logger.child("window"),
+      configStore: services.configSnapshotStore
+    )
     controller.onRefresh = { [weak self] in
       guard let self else { return }
 

@@ -5,6 +5,7 @@ extension Config {
   func snapshot() -> ConfigSnapshot {
     ConfigSnapshot(
       app: .init(
+        configPath: configPath,
         widgetsPath: appSection.widgetsPath,
         luaPath: appSection.luaPath,
         luaSocketPath: appSection.luaSocketPath,

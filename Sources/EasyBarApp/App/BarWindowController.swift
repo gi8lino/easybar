@@ -14,21 +14,30 @@ final class BarWindowController: NSWindowController {
 
   /// Logger used for window diagnostics.
   private let logger: ProcessLogger
+  /// Store that exposes the active immutable config snapshot to SwiftUI.
+  private let configStore: ConfigSnapshotStore
   /// Hosting view containing the SwiftUI bar content.
-  private let hostingView: BarHostingView<BarContentView>
+  private let hostingView: BarHostingView<AnyView>
 
   /// Creates a borderless bar window pinned to the top of the screen.
-  init(logger: ProcessLogger) {
+  init(
+    logger: ProcessLogger,
+    configStore: ConfigSnapshotStore
+  ) {
     self.logger = logger
+    self.configStore = configStore
 
     let screen = NSScreen.main ?? NSScreen.screens[0]
-    let frame = Self.makeFrame(for: screen)
+    let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)
     logger.info(
       "bar window initial",
       .field("target_frame", NSStringFromRect(frame)),
     )
 
-    let contentView = BarContentView(logger: logger)
+    let contentView = AnyView(
+      BarContentView(logger: logger)
+        .environmentObject(configStore)
+    )
 
     let window = BarPanel(
       contentRect: frame,
@@ -84,7 +93,7 @@ final class BarWindowController: NSWindowController {
     }
 
     let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
-    let frame = Self.makeFrame(for: screen)
+    let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)
 
     logger.info(
       "bar window reload begin",
@@ -92,7 +101,10 @@ final class BarWindowController: NSWindowController {
       .field("target_frame", NSStringFromRect(frame))
     )
 
-    hostingView.rootView = BarContentView(logger: logger)
+    hostingView.rootView = AnyView(
+      BarContentView(logger: logger)
+        .environmentObject(configStore)
+    )
     window.setFrame(frame, display: true)
     window.setContentSize(frame.size)
     window.minSize = frame.size
@@ -122,9 +134,9 @@ final class BarWindowController: NSWindowController {
   }
 
   /// Calculates the frame of the bar based on config.
-  private static func makeFrame(for screen: NSScreen) -> NSRect {
-    let height = Config.shared.barHeight
-    let baseFrame = Config.shared.barExtendBehindNotch ? screen.frame : screen.visibleFrame
+  private static func makeFrame(for screen: NSScreen, snapshot: ConfigSnapshot) -> NSRect {
+    let height = snapshot.bar.height
+    let baseFrame = snapshot.bar.extendBehindNotch ? screen.frame : screen.visibleFrame
 
     return NSRect(
       x: baseFrame.minX,
@@ -153,7 +165,7 @@ final class BarWindowController: NSWindowController {
 
   /// Returns whether the developer section should be visible.
   private func shouldShowDeveloperSection(_ shiftRequested: Bool) -> Bool {
-    return Config.shared.develop || shiftRequested
+    return configStore.snapshot.app.develop || shiftRequested
   }
 
   /// Returns the runtime control menu items.
@@ -352,19 +364,19 @@ final class BarWindowController: NSWindowController {
 
   /// Opens the active config file in Finder/default app.
   @objc private func openConfig(_ sender: Any?) {
-    let url = URL(fileURLWithPath: Config.shared.configPath)
+    let url = URL(fileURLWithPath: configStore.snapshot.app.configPath)
     NSWorkspace.shared.open(url)
   }
 
   /// Opens the configured widgets directory.
   @objc private func openWidgetsFolder(_ sender: Any?) {
-    let url = URL(fileURLWithPath: Config.shared.widgetsPath, isDirectory: true)
+    let url = URL(fileURLWithPath: configStore.snapshot.app.widgetsPath, isDirectory: true)
     NSWorkspace.shared.open(url)
   }
 
   /// Opens the configured log directory.
   @objc private func openLogFolder(_ sender: Any?) {
-    let url = URL(fileURLWithPath: Config.shared.loggingDirectory, isDirectory: true)
+    let url = URL(fileURLWithPath: configStore.snapshot.logging.directory, isDirectory: true)
     NSWorkspace.shared.open(url)
   }
 

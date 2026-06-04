@@ -7,6 +7,7 @@ struct WidgetNodeView: View {
   let logger: ProcessLogger
 
   @ObservedObject var store = WidgetStore.shared
+  @EnvironmentObject var configStore: ConfigSnapshotStore
 
   @StateObject var popupPanel = WidgetPopupPanelController()
   @State var popupPresented = false

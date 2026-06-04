@@ -6,7 +6,13 @@ final class FrontAppNativeWidget: NativeWidget {
 
   let rootID = "builtin_front_app"
 
+  private let config: Config.FrontAppBuiltinConfig
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
+
+  /// Creates the native front-app widget from an immutable config section.
+  init(config: Config.FrontAppBuiltinConfig) {
+    self.config = config
+  }
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
@@ -28,7 +34,6 @@ final class FrontAppNativeWidget: NativeWidget {
 
   /// Publishes the currently focused app.
   private func publish() {
-    let config = Config.shared.builtinFrontApp
     let placement = config.placement
     let style = config.style
     let focused = currentFocusedApp()
