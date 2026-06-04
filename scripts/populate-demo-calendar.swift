@@ -1,5 +1,6 @@
 #!/usr/bin/env swift
 import CoreGraphics
+import Darwin
 import EventKit
 import Foundation
 
@@ -17,13 +18,6 @@ private enum ScriptError: Error, LocalizedError {
     case .noWritableCalendarSource:
       return "No writable calendar source found."
     }
-  }
-}
-
-@main
-private enum DemoCalendarScript {
-  static func main() {
-    Foundation.exit(AppController().run())
   }
 }
 
@@ -378,3 +372,5 @@ private struct AppController {
     return "\(Int(seconds / 60)) minutes"
   }
 }
+
+exit(AppController().run())
