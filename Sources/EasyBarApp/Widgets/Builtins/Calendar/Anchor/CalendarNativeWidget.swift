@@ -89,6 +89,7 @@ final class CalendarNativeWidget: NativeWidget {
       stopCalendarAgent()
       NativeUpcomingCalendarStore.shared.clear()
       NativeMonthCalendarStore.shared.clear()
+      NativeComposerCalendarStore.shared.clear()
     }
 
     startedCalendarAgent = false

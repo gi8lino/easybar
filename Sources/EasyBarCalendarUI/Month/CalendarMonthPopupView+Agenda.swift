@@ -14,13 +14,16 @@ extension CalendarMonthPopupView {
       if config.appointmentsScrollable {
         ScrollView(.vertical, showsIndicators: true) {
           appointmentsContentView
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(
           maxWidth: .infinity,
-          minHeight: appointmentsMinHeight,
-          maxHeight: appointmentsMaxHeight,
+          minHeight: appointmentsScrollableHeight,
+          idealHeight: appointmentsScrollableHeight,
+          maxHeight: appointmentsScrollableHeight,
           alignment: .topLeading
         )
+        .clipped()
       } else {
         appointmentsContentView
           .frame(

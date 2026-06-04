@@ -158,6 +158,11 @@ extension CalendarMonthPopupView {
   var appointmentsMaxHeight: CGFloat {
     return CGFloat(max(config.appointmentsMinHeight, config.appointmentsMaxHeight))
   }
+
+  /// Returns the fixed height used by the scrollable appointments viewport.
+  var appointmentsScrollableHeight: CGFloat {
+    return appointmentsMaxHeight
+  }
 }
 
 // MARK: - Header
@@ -169,7 +174,12 @@ extension CalendarMonthPopupView {
       monthTitleRowView
       monthControlsRowView
     }
-    .padding(.top, 10)
+    .padding(.top, monthHeaderTopPadding)
+  }
+
+  /// Returns the top inset above the month title.
+  var monthHeaderTopPadding: CGFloat {
+    return 14
   }
 
   /// Builds the centered month-title row.

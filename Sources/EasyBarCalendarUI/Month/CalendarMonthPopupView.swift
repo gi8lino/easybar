@@ -96,7 +96,10 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
     .frame(width: popupWidth, alignment: .leading)
     .padding(.horizontal, CGFloat(config.paddingX))
     .padding(.vertical, CGFloat(config.paddingY))
-    .background(color(config.backgroundColorHex))
+    .background {
+      RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
+        .fill(color(config.backgroundColorHex))
+    }
     .overlay {
       RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
         .stroke(
@@ -104,9 +107,8 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
           lineWidth: CalendarUIPrimitives.borderLineWidth(config.borderWidth)
         )
     }
-    .clipShape(
-      RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
-    )
+    .clipShape(RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous))
     .padding(.horizontal, CGFloat(config.marginX))
     .padding(.vertical, CGFloat(config.marginY))
     .onAppear {
@@ -139,9 +141,9 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
 // MARK: - Styling
 
 extension CalendarMonthPopupView {
-  /// Returns the popup corner radius.
+  /// Returns the configured popup corner radius.
   var popupCornerRadius: CGFloat {
-    return max(CGFloat(config.cornerRadius), 12)
+    return max(CGFloat(config.cornerRadius), 0)
   }
 
   /// Returns the fixed popup width for the active layout.

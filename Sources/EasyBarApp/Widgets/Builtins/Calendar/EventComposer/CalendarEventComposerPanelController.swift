@@ -4,14 +4,22 @@ import EasyBarCalendarUI
 import EasyBarShared
 import SwiftUI
 
+/// Borderless composer panel that can still become key for text editing.
+private final class CalendarEventComposerPanel: NSPanel {
+  /// Allows text fields, pickers, and buttons inside the borderless panel to become active.
+  override var canBecomeKey: Bool {
+    true
+  }
+
+  /// Allows the composer panel to behave like the active editing window.
+  override var canBecomeMain: Bool {
+    true
+  }
+}
+
 /// Manages a floating panel for the shared calendar event composer.
 @MainActor
 final class CalendarEventComposerPanelController: ObservableObject {
-  private enum SnapshotSource {
-    case month
-    case upcoming
-  }
-
   private var panel: NSPanel?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var composer: CalendarEventComposer?
@@ -22,7 +30,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     config: Config.CalendarBuiltinConfig,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer(snapshotSource: .month, config: config)
+    let composer = makeComposer(config: config)
     composer.prepare(defaultDate: defaultDate)
     self.composer = composer
 
@@ -54,7 +62,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
     config: Config.CalendarBuiltinConfig,
     onChanged: @escaping () -> Void
   ) {
-    let composer = makeComposer(snapshotSource: .upcoming, config: config)
+    let composer = makeComposer(config: config)
     composer.prepare(event: event)
     self.composer = composer
 
@@ -126,15 +134,14 @@ final class CalendarEventComposerPanelController: ObservableObject {
 
   /// Builds the shared floating composer panel.
   private func makePanel() -> NSPanel {
-    let panel = NSPanel(
+    let panel = CalendarEventComposerPanel(
       contentRect: .zero,
-      styleMask: [.titled, .fullSizeContentView],
+      styleMask: [.borderless],
       backing: .buffered,
       defer: false
     )
+
     panel.title = "Appointment"
-    panel.titleVisibility = .hidden
-    panel.titlebarAppearsTransparent = true
     panel.isMovableByWindowBackground = true
     panel.isFloatingPanel = true
     panel.level = .floating
@@ -145,38 +152,21 @@ final class CalendarEventComposerPanelController: ObservableObject {
     panel.isOpaque = false
     panel.contentViewController = hostingController
 
-    panel.standardWindowButton(.closeButton)?.isHidden = true
-    panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-    panel.standardWindowButton(.zoomButton)?.isHidden = true
+    panel.contentView?.wantsLayer = true
+    panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
+    panel.contentView?.layer?.masksToBounds = false
 
     return panel
   }
 
-  /// Builds one reusable composer view model wired to EasyBar stores and agent clients.
-  private func makeComposer(
-    snapshotSource: SnapshotSource,
-    config: Config.CalendarBuiltinConfig
-  ) -> CalendarEventComposer {
-    let snapshotPublisher: AnyPublisher<CalendarAgentSnapshot?, Never>
-    let refreshSnapshots: () -> Void
-
-    switch snapshotSource {
-    case .month:
-      snapshotPublisher = NativeMonthCalendarStore.shared.$snapshot.eraseToAnyPublisher()
-      refreshSnapshots = {
-        MonthCalendarAgentClient.shared.refresh()
-      }
-    case .upcoming:
-      snapshotPublisher = NativeUpcomingCalendarStore.shared.$snapshot.eraseToAnyPublisher()
-      refreshSnapshots = {
-        UpcomingCalendarAgentClient.shared.refresh()
-      }
-    }
-
-    return CalendarEventComposer(
+  /// Builds one reusable composer view model wired to a fresh composer-only calendar source.
+  private func makeComposer(config: Config.CalendarBuiltinConfig) -> CalendarEventComposer {
+    CalendarEventComposer(
       config: config.calendarComposerUIConfig,
-      snapshotPublisher: snapshotPublisher,
-      refreshSnapshots: refreshSnapshots,
+      snapshotPublisher: NativeComposerCalendarStore.shared.$snapshot.eraseToAnyPublisher(),
+      refreshSnapshots: {
+        ComposerCalendarAgentClient.shared.refresh()
+      },
       createEvent: { event, completion in
         MonthCalendarAgentClient.shared.createEvent(event, completion: completion)
       },

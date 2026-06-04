@@ -492,7 +492,7 @@ excluded_calendar_source_ids = [] # Optional advanced denylist of exact calendar
 background_color = "theme.background" # Background color of the month popup.
 border_color = "theme.border_strong" # Border color of the month popup.
 border_width = 1 # Border width of the month popup.
-corner_radius = 10 # Corner radius of the month popup.
+corner_radius = 14 # Corner radius of the month popup. Set to 0 for square corners.
 padding_x = 10 # Horizontal inner padding of the month popup.
 padding_y = 8 # Vertical inner padding of the month popup.
 spacing = 8 # Gap between calendar and appointments areas and internal popup sections.
@@ -584,3 +584,5 @@ opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
 format = "yyyy-MM-dd" # Date format string.
+
+

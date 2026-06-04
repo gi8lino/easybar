@@ -226,6 +226,7 @@ final class MonthCalendarAgentClient {
     case successKind:
       refresh()
       UpcomingCalendarAgentClient.shared.refresh()
+      ComposerCalendarAgentClient.shared.refresh()
       completion(true, nil)
 
     case .error:

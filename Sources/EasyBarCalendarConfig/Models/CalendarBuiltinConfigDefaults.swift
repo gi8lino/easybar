@@ -141,7 +141,7 @@ extension CalendarBuiltinConfig {
           backgroundColorHex: "#111111",
           borderColorHex: "#444444",
           borderWidth: 1,
-          cornerRadius: 10,
+          cornerRadius: 14,
           paddingX: 10,
           paddingY: 8,
           spacing: 8,
@@ -175,7 +175,7 @@ extension CalendarBuiltinConfig {
         agenda: .init(
           layout: .calendarAppointmentsVertical,
           appointmentsScrollable: true,
-          appointmentsMinHeight: 140,
+          appointmentsMinHeight: 180,
           appointmentsMaxHeight: 240,
           agendaTitle: "Appointments",
           maxVisibleAppointments: 8

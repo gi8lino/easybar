@@ -1,3 +1,4 @@
+import CoreGraphics
 import EasyBarCalendarPresentation
 import EasyBarShared
 import XCTest
@@ -54,6 +55,20 @@ final class MonthPopupViewHelperTests: XCTestCase {
     let view = makeMonthPopupView(layout: .appointmentsCalendarVertical, spacing: 48)
 
     XCTAssertEqual(view.minimumPopupWidth, 260)
+  }
+
+  @MainActor
+  func testPopupCornerRadiusUsesConfiguredValue() {
+    let view = makeMonthPopupView(layout: .calendarAppointmentsVertical, spacing: 12)
+
+    XCTAssertEqual(view.popupCornerRadius, CGFloat(12))
+  }
+
+  @MainActor
+  func testScrollableAppointmentsHeightUsesConfiguredMaximum() {
+    let view = makeMonthPopupView(layout: .calendarAppointmentsVertical, spacing: 12)
+
+    XCTAssertEqual(view.appointmentsScrollableHeight, CGFloat(240))
   }
 }
 

@@ -24,8 +24,10 @@ struct AppServices {
   let nativeWiFiStore: NativeWiFiStore
   let nativeMonthCalendarStore: NativeMonthCalendarStore
   let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
+  let nativeComposerCalendarStore: NativeComposerCalendarStore
   let monthCalendarAgentClient: MonthCalendarAgentClient
   let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
+  let composerCalendarAgentClient: ComposerCalendarAgentClient
   let metricsCoordinator: MetricsCoordinator
 
   /// Creates the production app dependency graph.
@@ -65,6 +67,9 @@ struct AppServices {
     let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
       logger: logger.child("upcoming_store")
     )
+    let nativeComposerCalendarStore = NativeComposerCalendarStore(
+      logger: logger.child("composer_calendar_store")
+    )
     let monthCalendarAgentClient = MonthCalendarAgentClient(
       logger: logger.child("month_agent"),
       calendarAgentConfig: bootstrapSnapshot.calendarAgent,
@@ -74,6 +79,10 @@ struct AppServices {
       logger: logger.child("upcoming_agent"),
       calendarAgentConfig: bootstrapSnapshot.calendarAgent,
       calendarConfig: bootstrapSnapshot.builtins.calendar
+    )
+    let composerCalendarAgentClient = ComposerCalendarAgentClient(
+      logger: logger.child("composer_calendar_agent"),
+      calendarAgentConfig: bootstrapSnapshot.calendarAgent
     )
 
     let services = AppServices(
@@ -95,8 +104,10 @@ struct AppServices {
       nativeWiFiStore: nativeWiFiStore,
       nativeMonthCalendarStore: nativeMonthCalendarStore,
       nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+      nativeComposerCalendarStore: nativeComposerCalendarStore,
       monthCalendarAgentClient: monthCalendarAgentClient,
       upcomingCalendarAgentClient: upcomingCalendarAgentClient,
+      composerCalendarAgentClient: composerCalendarAgentClient,
       metricsCoordinator: metricsCoordinator
     )
 
@@ -117,6 +128,7 @@ struct AppServices {
       calendarAgentConfig: snapshot.calendarAgent,
       calendarConfig: snapshot.builtins.calendar
     )
+    composerCalendarAgentClient.updateConfiguration(snapshot.calendarAgent)
   }
 
   /// Mirrors owned service instances into legacy shared accessors.
@@ -139,7 +151,9 @@ struct AppServices {
     NativeWiFiStore.shared = nativeWiFiStore
     NativeMonthCalendarStore.shared = nativeMonthCalendarStore
     NativeUpcomingCalendarStore.shared = nativeUpcomingCalendarStore
+    NativeComposerCalendarStore.shared = nativeComposerCalendarStore
     MonthCalendarAgentClient.shared = monthCalendarAgentClient
     UpcomingCalendarAgentClient.shared = upcomingCalendarAgentClient
+    ComposerCalendarAgentClient.shared = composerCalendarAgentClient
   }
 }
