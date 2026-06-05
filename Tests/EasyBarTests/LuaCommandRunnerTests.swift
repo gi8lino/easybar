@@ -14,10 +14,12 @@ final class LuaCommandRunnerTests: XCTestCase {
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
     )
 
-    let result = await runner.run(command: "printf '0'", limits: defaultLimits)
+    for _ in 0..<20 {
+      let result = await runner.run(command: "printf '0'", limits: defaultLimits)
 
-    XCTAssertEqual(result.output, "0")
-    XCTAssertEqual(result.status, 0)
+      XCTAssertEqual(result.output, "0")
+      XCTAssertEqual(result.status, 0)
+    }
   }
 
   func testRunCapturesCombinedOutputAndExitStatus() async {

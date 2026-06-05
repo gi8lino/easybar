@@ -48,6 +48,9 @@ final class LuaCommandRunner: @unchecked Sendable {
 /// clears the handlers and cancels the timeout task, which breaks the temporary
 /// retain cycle.
 ///
+/// Output reads and process completion are serialized on `queue`. This avoids a
+/// race where a readability handler could consume a tiny output chunk while the
+/// termination handler completed the command before that chunk was appended.
 /// Sendability is guarded by `LockedState`; output buffers, completion flags,
 /// and continuation ownership are only mutated while holding that lock.
 private final class CommandExecution: @unchecked Sendable {
@@ -65,6 +68,9 @@ private final class CommandExecution: @unchecked Sendable {
   private let process = Process()
   private let pipe = Pipe()
   private let state: LockedState<State>
+  private let queue = DispatchQueue(
+    label: "easybar.lua-command-runner.command-execution.\(UUID().uuidString)"
+  )
   private var timeoutTask: Task<Void, Never>?
 
   init(
@@ -89,11 +95,15 @@ private final class CommandExecution: @unchecked Sendable {
     let handle = pipe.fileHandleForReading
 
     handle.readabilityHandler = { readableHandle in
-      self.readAvailableOutput(from: readableHandle)
+      self.queue.async {
+        self.readAvailableOutput(from: readableHandle)
+      }
     }
 
     process.terminationHandler = { process in
-      self.finish(process: process)
+      self.queue.async {
+        self.finish(process: process)
+      }
     }
 
     do {
@@ -118,6 +128,9 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Reads currently available command output without blocking.
   private func readAvailableOutput(from handle: FileHandle) {
+    let isCompleted = state.withLock { $0.completed }
+    guard !isCompleted else { return }
+
     let chunk = handle.availableData
 
     guard !chunk.isEmpty else { return }
@@ -157,7 +170,9 @@ private final class CommandExecution: @unchecked Sendable {
         return
       }
 
-      self.handleTimeout()
+      self.queue.async {
+        self.handleTimeout()
+      }
     }
   }
 
