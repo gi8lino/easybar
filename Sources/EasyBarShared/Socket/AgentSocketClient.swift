@@ -170,7 +170,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
   /// Reads newline-delimited messages until the socket disconnects.
   private func readLoop(fd: Int32, connectionID: UInt64) {
     var buffer = [UInt8](repeating: 0, count: 4096)
-    var pending = Data()
+    var lineDecoder = LineDelimitedJSONDecoder<Message>()
 
     while isActiveConnection(fd: fd, connectionID: connectionID), !Task.isCancelled {
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
@@ -179,13 +179,12 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       }
 
       if count > 0 {
-        pending.append(contentsOf: buffer.prefix(count))
-        processPendingLines(&pending)
+        handleDecodedMessages(lineDecoder.append(buffer.prefix(count)))
         continue
       }
 
       if count == 0 {
-        flushPendingLine(&pending)
+        handleDecodedMessages(lineDecoder.flush())
         break
       }
 
@@ -203,39 +202,21 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     handleDisconnect(fd: fd, connectionID: connectionID)
   }
 
-  /// Decodes and handles one or more pending newline-delimited messages.
-  private func processPendingLines(_ pending: inout Data) {
-    while let newlineIndex = pending.firstIndex(of: 0x0A) {
-      let line = pending.prefix(upTo: newlineIndex)
-      pending.removeSubrange(...newlineIndex)
+  /// Handles decoded message payloads and records decode failures.
+  private func handleDecodedMessages(_ results: [Result<Message, Error>]) {
+    for result in results {
+      switch result {
+      case .success(let message):
+        onDecodedMessage?()
+        handleMessage(message)
 
-      guard !line.isEmpty else { continue }
-      handleMessageData(Data(line))
-    }
-  }
-
-  /// Decodes one trailing line without a terminating newline when present.
-  private func flushPendingLine(_ pending: inout Data) {
-    guard !pending.isEmpty else { return }
-    handleMessageData(pending)
-    pending.removeAll()
-  }
-
-  /// Decodes one message payload and forwards it to the caller.
-  private func handleMessageData(_ data: Data) {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-
-    do {
-      let message = try decoder.decode(Message.self, from: data)
-      onDecodedMessage?()
-      handleMessage(message)
-    } catch {
-      onDecodeError?()
-      logger.warn(
-        "\(label) failed to decode message",
-        .field("error", error),
-      )
+      case .failure(let error):
+        onDecodeError?()
+        logger.warn(
+          "\(label) failed to decode message",
+          .field("error", error),
+        )
+      }
     }
   }
 
