@@ -103,6 +103,34 @@ extension Config {
 }
 
 extension Config {
+  /// Describes one string color default copied from the active theme into config.
+  private typealias ThemeColorDefault = (
+    target: ReferenceWritableKeyPath<Config, String>,
+    color: KeyPath<Config, String>
+  )
+
+  /// Describes one optional string color default copied from the active theme into config.
+  private typealias OptionalThemeColorDefault = (
+    target: ReferenceWritableKeyPath<Config, String?>,
+    color: KeyPath<Config, String>
+  )
+
+  /// Applies a set of theme color defaults to string-backed config values.
+  private func applyThemeColorDefaults(_ defaults: [ThemeColorDefault]) {
+    for entry in defaults {
+      self[keyPath: entry.target] = self[keyPath: entry.color]
+    }
+  }
+
+  /// Applies a set of theme color defaults to optional string-backed config values.
+  private func applyOptionalThemeColorDefaults(_ defaults: [OptionalThemeColorDefault]) {
+    for entry in defaults {
+      self[keyPath: entry.target] = self[keyPath: entry.color]
+    }
+  }
+}
+
+extension Config {
   /// Applies the standard transparent built-in chrome.
   private func applyTransparentBuiltinStyle(
     _ style: inout BuiltinWidgetStyle,
@@ -154,16 +182,18 @@ extension Config {
     applyTransparentBuiltinStyle(&builtinBattery.style)
 
     builtinBattery.fixedColorHex = themeTextColorHex
-    builtinBattery.colors.highColorHex = themeSuccessColorHex
-    builtinBattery.colors.mediumColorHex = themeWarningColorHex
-    builtinBattery.colors.lowColorHex = themeOrangeColorHex
-    builtinBattery.colors.criticalColorHex = themeDangerColorHex
-    builtinBattery.colors.frameColorHex = themeMutedColorHex
-    builtinBattery.colors.overlayOutlineColorHex = themeOverlayOutlineColorHex
-    builtinBattery.colors.chargingOverlayColorHex = themeOverlayTextColorHex
-    builtinBattery.colors.externalPowerOverlayColorHex = themeOverlayTextColorHex
-    builtinBattery.colors.onHoldOverlayColorHex = themeOverlayTextColorHex
-    builtinBattery.colors.unavailableColorHex = themeMutedColorHex
+    applyThemeColorDefaults([
+      (\.builtinBattery.colors.highColorHex, \.themeSuccessColorHex),
+      (\.builtinBattery.colors.mediumColorHex, \.themeWarningColorHex),
+      (\.builtinBattery.colors.lowColorHex, \.themeOrangeColorHex),
+      (\.builtinBattery.colors.criticalColorHex, \.themeDangerColorHex),
+      (\.builtinBattery.colors.frameColorHex, \.themeMutedColorHex),
+      (\.builtinBattery.colors.overlayOutlineColorHex, \.themeOverlayOutlineColorHex),
+      (\.builtinBattery.colors.chargingOverlayColorHex, \.themeOverlayTextColorHex),
+      (\.builtinBattery.colors.externalPowerOverlayColorHex, \.themeOverlayTextColorHex),
+      (\.builtinBattery.colors.onHoldOverlayColorHex, \.themeOverlayTextColorHex),
+      (\.builtinBattery.colors.unavailableColorHex, \.themeMutedColorHex),
+    ])
 
     builtinBattery.popup = defaultBuiltinPopupStyle()
   }
@@ -172,14 +202,15 @@ extension Config {
   private func applyThemeSpacesDefaults() {
     applyTransparentBuiltinStyle(&builtinSpaces.style)
 
-    builtinSpaces.text.focusedColorHex = themeTextSecondaryColorHex
-    builtinSpaces.text.inactiveColorHex = themeTextSecondaryColorHex
-
-    builtinSpaces.colors.activeBackgroundHex = themeSurfaceElevatedHex
-    builtinSpaces.colors.inactiveBackgroundHex = themeSurfaceHex
-    builtinSpaces.colors.activeBorderHex = themeBorderStrongColorHex
-    builtinSpaces.colors.inactiveBorderHex = themeBorderSubtleColorHex
-    builtinSpaces.colors.focusedAppBorderHex = themeBorderSubtleColorHex
+    applyThemeColorDefaults([
+      (\.builtinSpaces.text.focusedColorHex, \.themeTextSecondaryColorHex),
+      (\.builtinSpaces.text.inactiveColorHex, \.themeTextSecondaryColorHex),
+      (\.builtinSpaces.colors.activeBackgroundHex, \.themeSurfaceElevatedHex),
+      (\.builtinSpaces.colors.inactiveBackgroundHex, \.themeSurfaceHex),
+      (\.builtinSpaces.colors.activeBorderHex, \.themeBorderStrongColorHex),
+      (\.builtinSpaces.colors.inactiveBorderHex, \.themeBorderSubtleColorHex),
+      (\.builtinSpaces.colors.focusedAppBorderHex, \.themeBorderSubtleColorHex),
+    ])
   }
 
   /// Applies theme defaults to the front app built-in.
@@ -201,9 +232,11 @@ extension Config {
   private func applyThemeWiFiDefaults() {
     applyTransparentBuiltinStyle(&builtinWiFi.style)
 
-    builtinWiFi.activeColorHex = themeTextColorHex
-    builtinWiFi.inactiveColorHex = themeMutedColorHex
-    builtinWiFi.inlineTextColorHex = themeTextColorHex
+    applyThemeColorDefaults([
+      (\.builtinWiFi.activeColorHex, \.themeTextColorHex),
+      (\.builtinWiFi.inactiveColorHex, \.themeMutedColorHex),
+      (\.builtinWiFi.inlineTextColorHex, \.themeTextColorHex),
+    ])
     builtinWiFi.popup = defaultBuiltinPopupStyle()
   }
 
@@ -223,58 +256,69 @@ extension Config {
     builtinCalendar.style.backgroundColorHex = themeSurfaceHex
     builtinCalendar.style.borderColorHex = themeBorderColorHex
 
-    builtinCalendar.anchor.topTextColorHex = themeTextColorHex
-    builtinCalendar.anchor.bottomTextColorHex = themeMutedColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.anchor.topTextColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.anchor.bottomTextColorHex, \.themeMutedColorHex),
+    ])
   }
 
   /// Applies theme defaults to calendar appointment rows.
   private func applyThemeCalendarAppointmentDefaults() {
-    builtinCalendar.appointments.eventTextColorHex = themeTextColorHex
-    builtinCalendar.appointments.emptyTextColorHex = themeMutedColorHex
-    builtinCalendar.appointments.secondaryTextColorHex = themeAccentSecondaryColorHex
-    builtinCalendar.appointments.travelTextColorHex = themeMutedSecondaryColorHex
-    builtinCalendar.appointments.locationIconColorHex = themeAccentSecondaryColorHex
-    builtinCalendar.appointments.travelIconColorHex = themeMutedSecondaryColorHex
-    builtinCalendar.appointments.alertIconColorHex = themeWarningColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.appointments.eventTextColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.appointments.emptyTextColorHex, \.themeMutedColorHex),
+      (\.builtinCalendar.appointments.secondaryTextColorHex, \.themeAccentSecondaryColorHex),
+      (\.builtinCalendar.appointments.travelTextColorHex, \.themeMutedSecondaryColorHex),
+      (\.builtinCalendar.appointments.locationIconColorHex, \.themeAccentSecondaryColorHex),
+      (\.builtinCalendar.appointments.travelIconColorHex, \.themeMutedSecondaryColorHex),
+      (\.builtinCalendar.appointments.alertIconColorHex, \.themeWarningColorHex),
+    ])
   }
 
   /// Applies theme defaults to calendar birthday indicators.
   private func applyThemeCalendarBirthdayDefaults() {
-    builtinCalendar.birthdays.birthdayIconColorHex = themeAccentSoftColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.birthdays.birthdayIconColorHex, \.themeAccentSoftColorHex)
+    ])
   }
 
   /// Applies theme defaults to the calendar event composer.
   private func applyThemeCalendarComposerDefaults() {
-    builtinCalendar.composer.style.backgroundColorHex = themeBackgroundHex
-    builtinCalendar.composer.style.borderColorHex = themeBorderColorHex
-    builtinCalendar.composer.style.headerTextColorHex = themeTextColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.composer.style.backgroundColorHex, \.themeBackgroundHex),
+      (\.builtinCalendar.composer.style.borderColorHex, \.themeBorderColorHex),
+      (\.builtinCalendar.composer.style.headerTextColorHex, \.themeTextColorHex),
+    ])
   }
 
   /// Applies theme defaults to the upcoming calendar popup.
   private func applyThemeCalendarUpcomingDefaults() {
-    builtinCalendar.upcoming.popup.backgroundColorHex = themeBackgroundHex
-    builtinCalendar.upcoming.popup.borderColorHex = themeBorderColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.upcoming.popup.backgroundColorHex, \.themeBackgroundHex),
+      (\.builtinCalendar.upcoming.popup.borderColorHex, \.themeBorderColorHex),
+    ])
   }
 
   /// Applies theme defaults to the month calendar popup.
   private func applyThemeCalendarMonthDefaults() {
-    builtinCalendar.month.popup.style.backgroundColorHex = themeBackgroundHex
-    builtinCalendar.month.popup.style.borderColorHex = themeBorderStrongColorHex
+    applyThemeColorDefaults([
+      (\.builtinCalendar.month.popup.style.backgroundColorHex, \.themeBackgroundHex),
+      (\.builtinCalendar.month.popup.style.borderColorHex, \.themeBorderStrongColorHex),
+      (\.builtinCalendar.month.popup.calendar.headerTextColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.month.popup.calendar.weekdayTextColorHex, \.themeAccentColorHex),
+      (\.builtinCalendar.month.popup.calendar.dayTextColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.month.popup.calendar.outsideMonthTextColorHex, \.themeOutsideMonthColorHex),
+      (\.builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex, \.themeTransparentColorHex),
+      (\.builtinCalendar.month.popup.calendar.todayCellBorderColorHex, \.themeDangerColorHex),
+      (\.builtinCalendar.month.popup.calendar.indicatorColorHex, \.themeSuccessSecondaryColorHex),
+      (\.builtinCalendar.month.popup.selection.selectedTextColorHex, \.themeSelectionTextColorHex),
+      (\.builtinCalendar.month.popup.selection.selectedBackgroundColorHex, \.themeSelectionBackgroundColorHex),
+      (\.builtinCalendar.month.popup.todayButton.borderColorHex, \.themeTodayButtonBorderColorHex),
+    ])
 
-    builtinCalendar.month.popup.calendar.headerTextColorHex = themeTextColorHex
-    builtinCalendar.month.popup.calendar.weekdayTextColorHex = themeAccentColorHex
-    builtinCalendar.month.popup.calendar.dayTextColorHex = themeTextColorHex
-    builtinCalendar.month.popup.calendar.outsideMonthTextColorHex = themeOutsideMonthColorHex
-    builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex = themeTransparentColorHex
-    builtinCalendar.month.popup.calendar.todayCellBorderColorHex = themeDangerColorHex
-    builtinCalendar.month.popup.calendar.indicatorColorHex = themeSuccessSecondaryColorHex
-
-    builtinCalendar.month.popup.selection.selectedTextColorHex = themeSelectionTextColorHex
-    builtinCalendar.month.popup.selection.selectedBackgroundColorHex =
-      themeSelectionBackgroundColorHex
-
-    builtinCalendar.month.popup.anchor.textColorHex = themeTextColorHex
-    builtinCalendar.month.popup.todayButton.borderColorHex = themeTodayButtonBorderColorHex
+    applyOptionalThemeColorDefaults([
+      (\.builtinCalendar.month.popup.anchor.textColorHex, \.themeTextColorHex)
+    ])
   }
 
   /// Applies theme defaults to the time built-in.
