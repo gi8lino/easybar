@@ -305,44 +305,30 @@ public final class LineSocketServerTransport<
     _ clientFD: Int32,
     handler: @escaping (Int32, Request) async -> ClientDisposition
   ) async {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-
-    var pending = Data()
+    var lineDecoder = LineDelimitedJSONDecoder<Request>()
     var buffer = [UInt8](repeating: 0, count: 4096)
 
     while !Task.isCancelled {
-      if let requestData = nextLine(from: &pending) {
-        do {
-          let request = try decoder.decode(Request.self, from: requestData)
-          let disposition = await handler(clientFD, request)
-
-          switch disposition {
-          case .close:
-            closeClientConnection(clientFD)
-            return
-
-          case .keepOpen:
-            continue
-          }
-        } catch {
-          logger.warn(
-            "\(serverLabel) request decode failed",
-            .field("error", "\(error)"),
-          )
-          closeClientConnection(clientFD)
-          return
-        }
-      }
-
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(clientFD, baseAddress, rawBuffer.count)
       }
 
       if count > 0 {
-        pending.append(contentsOf: buffer.prefix(count))
-        continue
+        let disposition = await handleDecodedRequests(
+          lineDecoder.append(buffer.prefix(count)),
+          clientFD: clientFD,
+          handler: handler
+        )
+
+        switch disposition {
+        case .close:
+          closeClientConnection(clientFD)
+          return
+
+        case .keepOpen:
+          continue
+        }
       }
 
       if count == 0 {
@@ -364,6 +350,32 @@ public final class LineSocketServerTransport<
     }
 
     closeClientConnection(clientFD)
+  }
+
+  /// Dispatches decoded requests and returns the resulting socket disposition.
+  private func handleDecodedRequests(
+    _ results: [Result<Request, Error>],
+    clientFD: Int32,
+    handler: @escaping (Int32, Request) async -> ClientDisposition
+  ) async -> ClientDisposition {
+    for result in results {
+      switch result {
+      case .success(let request):
+        let disposition = await handler(clientFD, request)
+        if disposition == .close {
+          return .close
+        }
+
+      case .failure(let error):
+        logger.warn(
+          "\(serverLabel) request decode failed",
+          .field("error", "\(error)"),
+        )
+        return .close
+      }
+    }
+
+    return .keepOpen
   }
 
   /// Removes one subscriber record without touching the socket.
@@ -391,20 +403,6 @@ public final class LineSocketServerTransport<
       )
       onSubscriberRemoved?(clientFD)
     }
-  }
-
-  /// Returns the next complete non-empty line from the pending buffer when available.
-  private func nextLine(from pending: inout Data) -> Data? {
-    while let newlineIndex = pending.firstIndex(of: 0x0A) {
-      let line = Data(pending.prefix(upTo: newlineIndex))
-      pending.removeSubrange(...newlineIndex)
-
-      if !line.isEmpty {
-        return line
-      }
-    }
-
-    return nil
   }
 
   /// Returns whether the server is running.

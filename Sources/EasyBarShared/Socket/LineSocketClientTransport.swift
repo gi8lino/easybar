@@ -73,18 +73,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
     try sendAll(fd, payload + Data([0x0A]))
 
-    guard let replyData = readOneLine(from: fd), !replyData.isEmpty else {
-      throw LineSocketClientTransportError.noReply
-    }
-
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-
-    do {
-      return try decoder.decode(Response.self, from: replyData)
-    } catch {
-      throw LineSocketClientTransportError.decodeFailed("\(error)")
-    }
+    return try readOneResponse(from: fd)
   }
 
   /// Writes all bytes to the socket.
@@ -112,9 +101,9 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
   }
 
-  /// Reads bytes until newline or EOF.
-  private func readOneLine(from fd: Int32) -> Data? {
-    var data = Data()
+  /// Reads bytes until one response line decodes or EOF is reached.
+  private func readOneResponse(from fd: Int32) throws -> Response {
+    var lineDecoder = LineDelimitedJSONDecoder<Response>()
     var buffer = [UInt8](repeating: 0, count: 1024)
 
     while true {
@@ -123,20 +112,30 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
         if errno == EINTR {
           continue
         }
-        return nil
+        throw LineSocketClientTransportError.noReply
       }
 
-      if n == 0 { break }
-
-      if let newlineIndex = buffer[..<n].firstIndex(of: 0x0A) {
-        let count = buffer.distance(from: 0, to: newlineIndex)
-        data.append(buffer, count: count)
-        break
+      if n == 0 {
+        return try decodeOneResult(lineDecoder.flush())
       }
 
-      data.append(buffer, count: n)
+      let results = lineDecoder.append(buffer.prefix(n))
+      if !results.isEmpty {
+        return try decodeOneResult(results)
+      }
+    }
+  }
+
+  /// Returns the first decoded response from a line decoder result list.
+  private func decodeOneResult(_ results: [Result<Response, Error>]) throws -> Response {
+    guard let result = results.first else {
+      throw LineSocketClientTransportError.noReply
     }
 
-    return data
+    do {
+      return try result.get()
+    } catch {
+      throw LineSocketClientTransportError.decodeFailed("\(error)")
+    }
   }
 }

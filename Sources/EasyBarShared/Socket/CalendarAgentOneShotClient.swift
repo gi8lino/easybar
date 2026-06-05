@@ -9,12 +9,6 @@ public enum CalendarAgentOneShotClient {
     return encoder
   }()
 
-  private static let decoder: JSONDecoder = {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    return decoder
-  }()
-
   /// Sends one request and returns the first decoded response.
   public static func send(
     request: CalendarAgentRequest,
@@ -43,25 +37,26 @@ public enum CalendarAgentOneShotClient {
       throw CalendarAgentOneShotError.writeFailed
     }
 
-    var buffer = Data()
+    var lineDecoder = LineDelimitedJSONDecoder<CalendarAgentMessage>()
     var chunk = [UInt8](repeating: 0, count: 4096)
 
     while true {
       let count = read(fd, &chunk, chunk.count)
 
       if count > 0 {
-        buffer.append(contentsOf: chunk.prefix(count))
-
-        if let newlineIndex = buffer.firstIndex(of: 0x0A) {
-          let line = buffer.prefix(upTo: newlineIndex)
-          return try decoder.decode(CalendarAgentMessage.self, from: Data(line))
+        let results = lineDecoder.append(chunk.prefix(count))
+        if let message = try firstMessage(from: results) {
+          return message
         }
 
         continue
       }
 
       if count == 0 {
-        break
+        if let message = try firstMessage(from: lineDecoder.flush()) {
+          return message
+        }
+        throw CalendarAgentOneShotError.emptyResponse
       }
 
       if errno == EINTR {
@@ -72,6 +67,14 @@ public enum CalendarAgentOneShotClient {
     }
 
     throw CalendarAgentOneShotError.emptyResponse
+  }
+
+  /// Returns the first decoded message in a decoder result list.
+  private static func firstMessage(
+    from results: [Result<CalendarAgentMessage, Error>]
+  ) throws -> CalendarAgentMessage? {
+    guard let result = results.first else { return nil }
+    return try result.get()
   }
 
   /// Connects one Unix-domain socket to the given filesystem path.
