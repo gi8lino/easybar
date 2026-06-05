@@ -256,7 +256,7 @@ extension Config {
     builtinCalendar.style.backgroundColorHex = themeSurfaceHex
     builtinCalendar.style.borderColorHex = themeBorderColorHex
 
-    applyThemeColorDefaults([
+    applyOptionalThemeColorDefaults([
       (\.builtinCalendar.anchor.topTextColorHex, \.themeTextColorHex),
       (\.builtinCalendar.anchor.bottomTextColorHex, \.themeMutedColorHex),
     ])
