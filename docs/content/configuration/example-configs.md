@@ -17,7 +17,7 @@ It is useful for:
 - checking theme configuration
 - comparing your local config against the project defaults
 
-The defaults file includes the theme section:
+The defaults file includes the default theme section:
 
 ```toml
 [theme]
@@ -37,9 +37,9 @@ It includes a compact setup with common built-ins such as:
 - calendar
 - one native `system` group
 
-It should also include only the theme settings needed to select a theme.
+It intentionally omits theme settings and uses the app defaults. Add a `[theme]` section only when you want to select a different bundled or custom theme.
 
-Example:
+Example optional theme override:
 
 ```toml
 [theme]

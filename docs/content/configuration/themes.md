@@ -12,7 +12,7 @@ Select a theme in `config.toml`:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 themes_dir = "~/.config/easybar/themes"
 ```
 
@@ -22,8 +22,8 @@ Examples:
 
 ```text
 default -> default.toml
-mocha -> mocha.toml
 tokyo-night -> tokyo-night.toml
+my-theme -> my-theme.toml
 ```
 
 `themes_dir` is the custom theme directory.
@@ -34,7 +34,7 @@ EasyBar resolves themes in this order:
 
 ```text
 1. user theme: themes_dir/<name>.toml
-2. bundled theme: app bundle EasyBar.app/Contents/Resources/Themes/<name>.toml
+2. bundled theme: EasyBar.app/Contents/Resources/Themes/<name>.toml
 3. error if the theme does not exist
 ```
 
@@ -43,19 +43,49 @@ A user theme overrides a bundled theme with the same name.
 Example:
 
 ```text
-~/.config/easybar/themes/mocha.toml
+~/.config/easybar/themes/default.toml
 ```
 
-wins over the bundled `mocha.toml`.
+wins over the bundled `default.toml`.
+
+## Default theme
+
+The default bundled theme is:
+
+```toml
+[theme]
+name = "default"
+```
+
+This resolves to:
+
+```text
+default.toml
+```
+
+The complete default config also uses this theme name.
 
 ## Bundled themes
 
-Bundled themes ship inside the app bundle.
+Bundled themes live in the repository root `themes/` directory.
 
-In the source tree, bundled themes should live in the app target:
+During local runs and release builds, the Makefile copies that directory into the app bundle:
 
 ```text
 EasyBar.app/Contents/Resources/Themes/
+```
+
+The bundled themes directory should contain at least:
+
+```text
+themes/
+└── default.toml
+```
+
+Additional bundled themes may also live there, for example:
+
+```text
+themes/
 ├── default.toml
 ├── dracula.toml
 ├── everforest-dark.toml
@@ -70,13 +100,10 @@ EasyBar.app/Contents/Resources/Themes/
 └── tokyo-night.toml
 ```
 
-`Package.swift` should copy them as app resources:
+The Makefile verifies that `default.toml` exists after copying themes into the app bundle.
 
-```swift
-.copy("Themes")
-```
-
-Bundled themes should not be copied automatically into `~/.config/easybar/themes`, because copied files can become stale when bundled themes change.
+Bundled themes are not copied into `~/.config/easybar/themes`, because user theme files should stay user-owned and should not become stale copies of bundled files.
+Instead they are baked into the app bundle.
 
 ## Custom themes
 
@@ -260,7 +287,7 @@ You can override individual theme tokens in `config.toml`:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 
 [theme.colors]
 accent = "#8aadf4"
@@ -275,7 +302,7 @@ Explicit widget config always wins over theme defaults.
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 
 [builtins.battery.colors]
 critical = "#ff0000"
@@ -311,20 +338,20 @@ Do not put behavior or layout in theme files:
 If you see:
 
 ```text
-theme 'tokyo-night' was not found in ~/.config/easybar/themes or bundled themes
+theme 'default' was not found in ~/.config/easybar/themes or bundled themes
 ```
 
 check that one of these files exists:
 
 ```text
-~/.config/easybar/themes/tokyo-night.toml
-EasyBar.app/Contents/Resources/Themes/tokyo-night.toml
+~/.config/easybar/themes/default.toml
+EasyBar.app/Contents/Resources/Themes/default.toml
 ```
 
 For bundled themes, make sure the repository root contains the selected theme file:
 
 ```text
-themes/tokyo-night.toml
+themes/default.toml
 ```
 
 Then rebuild or run through the Makefile so the root `themes/` directory is copied into the app bundle:
