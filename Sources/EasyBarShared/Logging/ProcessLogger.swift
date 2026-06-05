@@ -71,6 +71,8 @@ public final class ProcessLogger: @unchecked Sendable {
     var minimumLevel: ProcessLogLevel
     var fileLoggingEnabled = false
     var fileLoggingPath = ""
+    var outputStream: UnsafeMutablePointer<FILE>?
+    var errorStream: UnsafeMutablePointer<FILE>?
   }
 
   /// Shared locked logger state.
@@ -78,8 +80,18 @@ public final class ProcessLogger: @unchecked Sendable {
     let state: LockedState<LoggerState>
 
     /// Creates shared logger state.
-    init(minimumLevel: ProcessLogLevel) {
-      state = LockedState(LoggerState(minimumLevel: minimumLevel))
+    init(
+      minimumLevel: ProcessLogLevel,
+      outputStream: UnsafeMutablePointer<FILE>?,
+      errorStream: UnsafeMutablePointer<FILE>?
+    ) {
+      state = LockedState(
+        LoggerState(
+          minimumLevel: minimumLevel,
+          outputStream: outputStream,
+          errorStream: errorStream
+        )
+      )
     }
   }
 
@@ -97,9 +109,18 @@ public final class ProcessLogger: @unchecked Sendable {
   private let sharedState: SharedState
 
   /// Creates one process logger.
-  public init(label: String, minimumLevel: ProcessLogLevel = .info) {
+  public init(
+    label: String,
+    minimumLevel: ProcessLogLevel = .info,
+    outputStream: UnsafeMutablePointer<FILE>? = stdout,
+    errorStream: UnsafeMutablePointer<FILE>? = stderr
+  ) {
     self.label = label
-    sharedState = SharedState(minimumLevel: minimumLevel)
+    sharedState = SharedState(
+      minimumLevel: minimumLevel,
+      outputStream: outputStream,
+      errorStream: errorStream
+    )
   }
 
   /// Creates one child logger with shared state.
@@ -184,75 +205,77 @@ public final class ProcessLogger: @unchecked Sendable {
     }
 
     if let warning {
-      write(level: .warn, message: warning, fields: [], stream: stderr)
+      write(level: .warn, message: warning, fields: [])
     }
   }
 
   /// Writes one trace message.
   public func trace(_ message: String) {
     guard shouldLog(.trace) else { return }
-    write(level: .trace, message: message, fields: [], stream: stdout)
+    write(level: .trace, message: message, fields: [])
   }
 
   /// Writes one trace message with typed fields.
   public func trace(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.trace) else { return }
-    write(level: .trace, message: message, fields: fields, stream: stdout)
+    write(level: .trace, message: message, fields: fields)
   }
 
   /// Writes one debug message.
   public func debug(_ message: String) {
     guard shouldLog(.debug) else { return }
-    write(level: .debug, message: message, fields: [], stream: stdout)
+    write(level: .debug, message: message, fields: [])
   }
 
   /// Writes one debug message with typed fields.
   public func debug(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.debug) else { return }
-    write(level: .debug, message: message, fields: fields, stream: stdout)
+    write(level: .debug, message: message, fields: fields)
   }
 
   /// Writes one info message.
   public func info(_ message: String) {
     guard shouldLog(.info) else { return }
-    write(level: .info, message: message, fields: [], stream: stdout)
+    write(level: .info, message: message, fields: [])
   }
 
   /// Writes one info message with typed fields.
   public func info(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.info) else { return }
-    write(level: .info, message: message, fields: fields, stream: stdout)
+    write(level: .info, message: message, fields: fields)
   }
 
   /// Writes one warning message.
   public func warn(_ message: String) {
     guard shouldLog(.warn) else { return }
-    write(level: .warn, message: message, fields: [], stream: stderr)
+    write(level: .warn, message: message, fields: [])
   }
 
   /// Writes one warning message with typed fields.
   public func warn(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.warn) else { return }
-    write(level: .warn, message: message, fields: fields, stream: stderr)
+    write(level: .warn, message: message, fields: fields)
   }
 
   /// Writes one error message.
   public func error(_ message: String) {
     guard shouldLog(.error) else { return }
-    write(level: .error, message: message, fields: [], stream: stderr)
+    write(level: .error, message: message, fields: [])
   }
 
   /// Writes one error message with typed fields.
   public func error(_ message: String, _ fields: ProcessLogField...) {
     guard shouldLog(.error) else { return }
-    write(level: .error, message: message, fields: fields, stream: stderr)
+    write(level: .error, message: message, fields: fields)
   }
 
   /// Writes one raw message and mirrors it to the log file.
   public func writeRaw(_ message: String, to stream: UnsafeMutablePointer<FILE>?) {
     sharedState.state.withLock { state in
-      fputs(message + "\n", stream)
-      fflush(stream)
+      if let stream {
+        fputs(message + "\n", stream)
+        fflush(stream)
+      }
       writeFile(message, state: &state)
     }
   }
@@ -268,8 +291,7 @@ public final class ProcessLogger: @unchecked Sendable {
   private func write(
     level: ProcessLogLevel,
     message: String,
-    fields: [ProcessLogField],
-    stream: UnsafeMutablePointer<FILE>?
+    fields: [ProcessLogField]
   ) {
     sharedState.state.withLock { state in
       let line = formattedLine(
@@ -278,9 +300,25 @@ public final class ProcessLogger: @unchecked Sendable {
         fields: fields,
         minimumLevel: state.minimumLevel
       )
-      fputs(line + "\n", stream)
-      fflush(stream)
+      let stream = outputStream(for: level, state: state)
+      if let stream {
+        fputs(line + "\n", stream)
+        fflush(stream)
+      }
       writeFile(line, state: &state)
+    }
+  }
+
+  /// Selects the configured process stream for one log level.
+  private func outputStream(
+    for level: ProcessLogLevel,
+    state: LoggerState
+  ) -> UnsafeMutablePointer<FILE>? {
+    switch level {
+    case .trace, .debug, .info:
+      return state.outputStream
+    case .warn, .error:
+      return state.errorStream
     }
   }
 

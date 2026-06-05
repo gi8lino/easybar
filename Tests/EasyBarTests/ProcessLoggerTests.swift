@@ -155,7 +155,7 @@ final class ProcessLoggerTests: XCTestCase {
     let fixture = try makeLogger(label: "easybar")
     defer { cleanup(fixture) }
 
-    fixture.logger.writeRaw("plain runtime output", to: stdout)
+    fixture.logger.writeRaw("plain runtime output", to: nil)
 
     let output = try readLogAndClose(fixture)
 
@@ -169,7 +169,7 @@ final class ProcessLoggerTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directoryURL) }
 
     let fileURL = directoryURL.appendingPathComponent("runtime.log")
-    let logger = ProcessLogger(label: "easybar")
+    let logger = makeQuietLogger(label: "easybar")
 
     logger.configureRuntimeLogging(
       minimumLevel: .debug,
@@ -252,13 +252,26 @@ private func makeLogger(
   let directoryURL = try makeTemporaryDirectory()
   let fileURL = directoryURL.appendingPathComponent("process.log")
 
-  let logger = ProcessLogger(label: label, minimumLevel: minimumLevel)
+  let logger = makeQuietLogger(label: label, minimumLevel: minimumLevel)
   logger.configureFileLogging(enabled: true, path: fileURL.path)
 
   return ProcessLoggerFixture(
     logger: logger,
     directoryURL: directoryURL,
     fileURL: fileURL
+  )
+}
+
+/// Creates logger with process streams muted for tests.
+private func makeQuietLogger(
+  label: String,
+  minimumLevel: ProcessLogLevel = .info
+) -> ProcessLogger {
+  ProcessLogger(
+    label: label,
+    minimumLevel: minimumLevel,
+    outputStream: nil,
+    errorStream: nil
   )
 }
 
@@ -328,7 +341,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directoryURL) }
 
     let fileURL = directoryURL.appendingPathComponent("disabled.log")
-    let logger = ProcessLogger(label: "easybar")
+    let logger = makeQuietLogger(label: "easybar")
 
     logger.configureFileLogging(enabled: false, path: fileURL.path)
     logger.info("stdout only")
@@ -340,7 +353,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
 
   /// Handles test configure file logging with empty path does not create file handle.
   func testConfigureFileLoggingWithEmptyPathDoesNotCreateFileHandle() {
-    let logger = ProcessLogger(label: "easybar")
+    let logger = makeQuietLogger(label: "easybar")
 
     logger.configureFileLogging(enabled: true, path: "")
     logger.info("stdout only")
@@ -357,7 +370,7 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
     let firstURL = directoryURL.appendingPathComponent("first.log")
     let secondURL = directoryURL.appendingPathComponent("second.log")
 
-    let logger = ProcessLogger(label: "easybar")
+    let logger = makeQuietLogger(label: "easybar")
     logger.configureFileLogging(enabled: true, path: firstURL.path)
     logger.info("first file only")
 
