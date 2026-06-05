@@ -41,7 +41,7 @@ Example:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 
 [builtins.time.style]
 text_color = "#ffffff"
@@ -338,3 +338,5 @@ Switch to Lua when you need:
 - shell-command integration or app-specific logic
 
 See [Lua Widgets](../lua/overview.md).
+
+

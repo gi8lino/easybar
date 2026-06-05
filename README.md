@@ -70,7 +70,7 @@ Themes are selected in `config.toml`:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 themes_dir = "~/.config/easybar/themes"
 ```
 
@@ -133,3 +133,5 @@ If you want the architectural map before editing code, start with the docs secti
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
+
+

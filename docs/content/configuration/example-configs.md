@@ -43,7 +43,7 @@ Example optional theme override:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 themes_dir = "~/.config/easybar/themes"
 ```
 
@@ -85,3 +85,5 @@ themes_dir = "~/.config/easybar/themes"
 ```
 
 See [Themes](themes.md) for the theme file format.
+
+

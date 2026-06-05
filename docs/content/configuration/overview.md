@@ -73,7 +73,7 @@ Example:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 themes_dir = "~/.config/easybar/themes"
 
 [theme.colors]
@@ -101,3 +101,5 @@ See [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md) and [Lua Widgets](
 - [Box Model](box-model.md)
 - [Environment](environment.md)
 - [Logging](logging.md)
+
+
