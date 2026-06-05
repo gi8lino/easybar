@@ -47,6 +47,35 @@ extension Config {
     var roaming: Bool
     var ssidChangedAt: Bool
     var interfaceChangedAt: Bool
+
+    /// Returns whether at least one detail field is enabled.
+    var hasEnabledField: Bool {
+      [
+        ssid,
+        ipv4Address,
+        ipv6Address,
+        bssid,
+        interfaceName,
+        hardwareAddress,
+        power,
+        serviceActive,
+        rssi,
+        noise,
+        snr,
+        linkQuality,
+        txRate,
+        channel,
+        channelBand,
+        channelWidth,
+        security,
+        phyMode,
+        interfaceMode,
+        countryCode,
+        roaming,
+        ssidChangedAt,
+        interfaceChangedAt,
+      ].contains(true)
+    }
   }
 
   /// Links one `[builtins.wifi.fields]` config key to its stored toggle.

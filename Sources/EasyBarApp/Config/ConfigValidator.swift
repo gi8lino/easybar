@@ -7,17 +7,22 @@ public enum ConfigValidator {
   public struct Result {
     /// Resolved path of the validated config file.
     public let configPath: String
+    /// Non-fatal configuration warnings discovered during validation.
+    public let warnings: [String]
   }
 
   /// Validates config without mutating the live app singleton state.
   public static func validate(configPathOverride: String? = nil) throws -> Result {
-    _ = try Config.validate(configPathOverride: configPathOverride)
+    let loadedState = try Config.validate(configPathOverride: configPathOverride)
 
     let resolvedPath =
       expandedPath(configPathOverride)
       ?? expandedPath(ProcessInfo.processInfo.environment[SharedEnvironmentKeys.configPath])
       ?? SharedPathDefaults.defaultConfigPath().path
 
-    return Result(configPath: resolvedPath)
+    return Result(
+      configPath: resolvedPath,
+      warnings: ConfigWarningBuilder.warnings(for: loadedState.snapshot)
+    )
   }
 }

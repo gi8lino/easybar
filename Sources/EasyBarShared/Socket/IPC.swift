@@ -131,7 +131,7 @@ extension IPC {
 
     case accepted
     case rejected(message: String?)
-    case configValidated(configPath: String)
+    case configValidated(configPath: String, warnings: [String])
     case metrics(MetricsSnapshot)
 
     private enum CodingKeys: String, CodingKey {
@@ -139,6 +139,7 @@ extension IPC {
       case message
       case configPath = "config_path"
       case metrics
+      case warnings
     }
 
     /// Returns the message kind for logging and compatibility helpers.
@@ -168,10 +169,20 @@ extension IPC {
     /// Returns the validated config path when present.
     public var configPath: String? {
       switch self {
-      case .configValidated(let configPath):
+      case .configValidated(let configPath, _):
         return configPath
       case .accepted, .rejected, .metrics:
         return nil
+      }
+    }
+
+    /// Returns validation warnings when present.
+    public var warnings: [String] {
+      switch self {
+      case .configValidated(_, let warnings):
+        return warnings
+      case .accepted, .rejected, .metrics:
+        return []
       }
     }
 
@@ -199,7 +210,8 @@ extension IPC {
 
       case .configValidated:
         self = .configValidated(
-          configPath: try container.decode(String.self, forKey: .configPath)
+          configPath: try container.decode(String.self, forKey: .configPath),
+          warnings: try container.decodeIfPresent([String].self, forKey: .warnings) ?? []
         )
 
       case .metrics:
@@ -219,9 +231,12 @@ extension IPC {
         try container.encode(Kind.rejected, forKey: .kind)
         try container.encodeIfPresent(message, forKey: .message)
 
-      case .configValidated(let configPath):
+      case .configValidated(let configPath, let warnings):
         try container.encode(Kind.configValidated, forKey: .kind)
         try container.encode(configPath, forKey: .configPath)
+        if !warnings.isEmpty {
+          try container.encode(warnings, forKey: .warnings)
+        }
 
       case .metrics(let snapshot):
         try container.encode(Kind.metrics, forKey: .kind)

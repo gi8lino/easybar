@@ -8,6 +8,8 @@ actor ConfigManager {
     let configPath: String
     /// User-facing validation error when validation failed.
     let errorMessage: String?
+    /// Non-fatal configuration warnings discovered during validation.
+    let warnings: [String]
   }
 
   struct LuaCommandSettings: Sendable {
@@ -69,12 +71,14 @@ actor ConfigManager {
         let result = try ConfigValidator.validate(configPathOverride: configPathOverride)
         return ValidationResult(
           configPath: result.configPath,
-          errorMessage: nil
+          errorMessage: nil,
+          warnings: result.warnings
         )
       } catch {
         return ValidationResult(
           configPath: Self.resolvedValidationConfigPath(configPathOverride),
-          errorMessage: Self.validationErrorMessage(error)
+          errorMessage: Self.validationErrorMessage(error),
+          warnings: []
         )
       }
     }

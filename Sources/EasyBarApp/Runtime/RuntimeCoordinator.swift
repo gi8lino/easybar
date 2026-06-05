@@ -256,11 +256,20 @@ actor RuntimeCoordinator {
       return .rejected(message: errorMessage)
     }
 
+    for warning in result.warnings {
+      logger.warn(
+        "validateConfig warning",
+        .field("config_path", result.configPath),
+        .field("warning", warning)
+      )
+    }
+
     logger.info(
       "validateConfig succeeded",
-      .field("config_path", result.configPath)
+      .field("config_path", result.configPath),
+      .field("warnings", "\(result.warnings.count)")
     )
-    return .configValidated(configPath: result.configPath)
+    return .configValidated(configPath: result.configPath, warnings: result.warnings)
   }
 
   /// Handles one incoming IPC command.

@@ -83,7 +83,7 @@ final class MetricsStreamingTests: XCTestCase {
     server.start(
       handler: { _ in },
       validateConfigHandler: { configPath in
-        .configValidated(configPath: configPath ?? "<default>")
+        .configValidated(configPath: configPath ?? "<default>", warnings: [])
       }
     )
     defer { server.stop() }
@@ -93,11 +93,12 @@ final class MetricsStreamingTests: XCTestCase {
 
     let response = try client.send(request: .makeValidateConfig(configPath: configPath))
 
-    guard case .configValidated(let validatedPath) = response else {
+    guard case .configValidated(let validatedPath, let warnings) = response else {
       return XCTFail("Expected configValidated response, got \(response)")
     }
 
     XCTAssertEqual(validatedPath, configPath)
+    XCTAssertEqual(warnings, [])
   }
 
   private func connectUnixSocket(path: String) throws -> Int32 {

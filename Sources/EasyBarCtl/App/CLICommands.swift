@@ -95,8 +95,11 @@ func validateConfig(configPath: String?, socketPath: String, context: AppContext
   )
 
   switch response {
-  case .configValidated(let validatedPath):
+  case .configValidated(let validatedPath, let warnings):
     fputs("config valid: \(validatedPath)\n", stdout)
+    for warning in warnings {
+      fputs("warning: \(warning)\n", stdout)
+    }
 
   case .rejected:
     throw rejectedResponseError(response, fallback: "config validation failed")
