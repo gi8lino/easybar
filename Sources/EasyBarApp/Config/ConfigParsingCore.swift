@@ -201,10 +201,24 @@ extension Config {
     guard let bar = toml["bar"]?.table else { return }
 
     if let height = try optionalInt(bar["height"], path: "bar.height") {
+      guard height >= 0 else {
+        throw ConfigError.invalidValue(
+          path: "bar.height",
+          message: "expected a value greater than or equal to 0"
+        )
+      }
+
       barHeight = CGFloat(height)
     }
 
     if let paddingX = try optionalInt(bar["padding_x"], path: "bar.padding_x") {
+      guard paddingX >= 0 else {
+        throw ConfigError.invalidValue(
+          path: "bar.padding_x",
+          message: "expected a value greater than or equal to 0"
+        )
+      }
+
       barPaddingX = CGFloat(paddingX)
     }
 

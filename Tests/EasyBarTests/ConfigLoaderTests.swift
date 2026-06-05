@@ -576,6 +576,54 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(actual, "string(tall)")
   }
 
+  func testReloadRejectsNegativeBarHeight() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-height.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.height")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
+  func testReloadRejectsNegativeBarPaddingX() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-padding.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      padding_x = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.padding_x")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
   /// Handles test reload returns invalid type for logging enabled string value.
   func testReloadReturnsInvalidTypeForLoggingEnabledStringValue() throws {
     let config = Config.makeUnloadedConfig()
