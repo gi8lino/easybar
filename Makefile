@@ -686,7 +686,7 @@ DOCS_VENV := $(DOCS_DIR)/.venv
 DOCS_PYTHON := $(DOCS_VENV)/bin/python
 DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
 
-.PHONY: generate-lua-docs serve-docs build-docs clean-docs
+.PHONY: generate-docs generate-lua-docs check-docs serve-docs build-docs clean-docs
 
 $(DOCS_PYTHON):
 	@python3 -m venv $(DOCS_VENV)
@@ -696,13 +696,18 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-lua-docs: ## Generate Lua reference docs from LuaLS stubs.
-	@python3 scripts/generate_lua_reference_docs.py --output docs/content/lua/reference
+generate-docs: ## Generate all checked-in docs derived from source stubs.
+	@python3 scripts/generate_docs.py
 
-serve-docs: $(DOCS_STAMP) generate-lua-docs ## Serve the docs locally.
+generate-lua-docs: generate-docs ## Alias for generate-docs.
+
+check-docs: generate-docs ## Verify generated docs are committed.
+	@git diff --exit-code docs/content/lua/reference README.md docs/content
+
+serve-docs: $(DOCS_STAMP) generate-docs ## Generate and serve the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs serve -f $(DOCS_CONFIG)
 
-build-docs: $(DOCS_STAMP) generate-lua-docs ## Build the docs locally.
+build-docs: $(DOCS_STAMP) generate-docs ## Generate and build the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs build --strict -f $(DOCS_CONFIG)
 
 clean-docs: ## Remove generated docs output and docs virtualenv.

@@ -269,6 +269,9 @@ extension Config {
       (\.builtinCalendar.appointments.emptyTextColorHex, \.themeMutedColorHex),
       (\.builtinCalendar.appointments.secondaryTextColorHex, \.themeAccentSecondaryColorHex),
       (\.builtinCalendar.appointments.travelTextColorHex, \.themeMutedSecondaryColorHex),
+    ])
+
+    applyOptionalThemeColorDefaults([
       (\.builtinCalendar.appointments.locationIconColorHex, \.themeAccentSecondaryColorHex),
       (\.builtinCalendar.appointments.travelIconColorHex, \.themeMutedSecondaryColorHex),
       (\.builtinCalendar.appointments.alertIconColorHex, \.themeWarningColorHex),
@@ -277,7 +280,7 @@ extension Config {
 
   /// Applies theme defaults to calendar birthday indicators.
   private func applyThemeCalendarBirthdayDefaults() {
-    applyThemeColorDefaults([
+    applyOptionalThemeColorDefaults([
       (\.builtinCalendar.birthdays.birthdayIconColorHex, \.themeAccentSoftColorHex)
     ])
   }

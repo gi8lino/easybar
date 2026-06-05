@@ -58,4 +58,3 @@ final class CalendarMonthRangeBuilderTests: XCTestCase {
     XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 280, height: 96))
   }
 }
-
