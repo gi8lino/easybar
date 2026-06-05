@@ -254,6 +254,14 @@ struct CalendarBuiltinConfigParser {
         table["show_location"],
         path: "\(rootPath).appointments.show_location"
       ) ?? fallback.showLocation,
+      locationIcon: try optionalString(
+        table["location_icon"],
+        path: "\(rootPath).appointments.location_icon"
+      ) ?? fallback.locationIcon,
+      locationIconColorHex: try optionalString(
+        table["location_icon_color"],
+        path: "\(rootPath).appointments.location_icon_color"
+      ) ?? fallback.locationIconColorHex,
       showTravelTime: try optionalBool(
         table["show_travel_time"],
         path: "\(rootPath).appointments.show_travel_time"

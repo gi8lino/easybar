@@ -233,6 +233,7 @@ extension Config {
     builtinCalendar.appointments.emptyTextColorHex = themeMutedColorHex
     builtinCalendar.appointments.secondaryTextColorHex = themeAccentSecondaryColorHex
     builtinCalendar.appointments.travelTextColorHex = themeMutedSecondaryColorHex
+    builtinCalendar.appointments.locationIconColorHex = themeAccentSecondaryColorHex
     builtinCalendar.appointments.travelIconColorHex = themeMutedSecondaryColorHex
     builtinCalendar.appointments.alertIconColorHex = themeWarningColorHex
   }
@@ -269,7 +270,8 @@ extension Config {
     builtinCalendar.month.popup.calendar.indicatorColorHex = themeSuccessSecondaryColorHex
 
     builtinCalendar.month.popup.selection.selectedTextColorHex = themeSelectionTextColorHex
-    builtinCalendar.month.popup.selection.selectedBackgroundColorHex = themeSelectionBackgroundColorHex
+    builtinCalendar.month.popup.selection.selectedBackgroundColorHex =
+      themeSelectionBackgroundColorHex
 
     builtinCalendar.month.popup.anchor.textColorHex = themeTextColorHex
     builtinCalendar.month.popup.todayButton.borderColorHex = themeTodayButtonBorderColorHex

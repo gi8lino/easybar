@@ -282,6 +282,22 @@ brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
 
+## Calendar appointments
+
+Appointment row details are configured under `[builtins.calendar.appointments]`.
+
+```toml
+[builtins.calendar.appointments]
+show_location = true
+location_icon = ""
+location_icon_color = "theme.accent"
+show_travel_time = true
+travel_icon = ""
+travel_icon_color = "theme.muted_secondary"
+```
+
+`location_icon` is shown before event locations in both month and upcoming popups. Set it to an empty string if you want location text without an icon. `location_icon_color` accepts the same theme references or hex colors as other calendar colors; when omitted, EasyBar uses `secondary_text_color`.
+
 ## Calendar quick actions
 
 Appointment rows in the calendar popups include an action menu.

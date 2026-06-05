@@ -6,6 +6,7 @@ public struct CalendarAppointmentsStyle: Sendable {
   public let emptyTextColorHex: String
   public let eventTextColorHex: String
   public let travelTextColorHex: String
+  public let locationIconColorHex: String?
   public let travelIconColorHex: String?
   public let alertIconColorHex: String?
   public let showCalendarName: Bool
@@ -16,6 +17,7 @@ public struct CalendarAppointmentsStyle: Sendable {
   public let showAllDayLabel: Bool
   public let allDayLabel: String
   public let showHolidayAllDayLabel: Bool
+  public let locationIcon: String
   public let alertIcon: String
   public let travelIcon: String
   public let itemIndent: Double
@@ -25,6 +27,7 @@ public struct CalendarAppointmentsStyle: Sendable {
     emptyTextColorHex: String,
     eventTextColorHex: String,
     travelTextColorHex: String,
+    locationIconColorHex: String?,
     travelIconColorHex: String?,
     alertIconColorHex: String?,
     showCalendarName: Bool,
@@ -35,6 +38,7 @@ public struct CalendarAppointmentsStyle: Sendable {
     showAllDayLabel: Bool,
     allDayLabel: String,
     showHolidayAllDayLabel: Bool,
+    locationIcon: String,
     alertIcon: String,
     travelIcon: String,
     itemIndent: Double
@@ -43,6 +47,7 @@ public struct CalendarAppointmentsStyle: Sendable {
     self.emptyTextColorHex = emptyTextColorHex
     self.eventTextColorHex = eventTextColorHex
     self.travelTextColorHex = travelTextColorHex
+    self.locationIconColorHex = locationIconColorHex
     self.travelIconColorHex = travelIconColorHex
     self.alertIconColorHex = alertIconColorHex
     self.showCalendarName = showCalendarName
@@ -53,6 +58,7 @@ public struct CalendarAppointmentsStyle: Sendable {
     self.showAllDayLabel = showAllDayLabel
     self.allDayLabel = allDayLabel
     self.showHolidayAllDayLabel = showHolidayAllDayLabel
+    self.locationIcon = locationIcon
     self.alertIcon = alertIcon
     self.travelIcon = travelIcon
     self.itemIndent = itemIndent

@@ -39,6 +39,8 @@ public struct CalendarBuiltinConfig {
     public var showHolidayAllDayLabel: Bool
     public var allDayLabel: String
     public var showLocation: Bool
+    public var locationIcon: String
+    public var locationIconColorHex: String?
     public var showTravelTime: Bool
     public var showEndTime: Bool
     public var travelIcon: String
@@ -59,6 +61,8 @@ public struct CalendarBuiltinConfig {
       showHolidayAllDayLabel: Bool,
       allDayLabel: String,
       showLocation: Bool,
+      locationIcon: String,
+      locationIconColorHex: String?,
       showTravelTime: Bool,
       showEndTime: Bool,
       travelIcon: String,
@@ -78,6 +82,8 @@ public struct CalendarBuiltinConfig {
       self.showHolidayAllDayLabel = showHolidayAllDayLabel
       self.allDayLabel = allDayLabel
       self.showLocation = showLocation
+      self.locationIcon = locationIcon
+      self.locationIconColorHex = locationIconColorHex
       self.showTravelTime = showTravelTime
       self.showEndTime = showEndTime
       self.travelIcon = travelIcon

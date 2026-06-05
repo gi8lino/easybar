@@ -47,6 +47,8 @@ extension CalendarBuiltinConfig {
       showHolidayAllDayLabel: false,
       allDayLabel: "All day",
       showLocation: true,
+      locationIcon: "",
+      locationIconColorHex: nil,
       showTravelTime: true,
       showEndTime: true,
       travelIcon: "",

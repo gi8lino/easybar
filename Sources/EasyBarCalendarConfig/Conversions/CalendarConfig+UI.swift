@@ -8,6 +8,7 @@ extension CalendarBuiltinConfig {
       emptyTextColorHex: appointments.emptyTextColorHex,
       eventTextColorHex: appointments.eventTextColorHex,
       travelTextColorHex: appointments.travelTextColorHex,
+      locationIconColorHex: appointments.locationIconColorHex,
       travelIconColorHex: appointments.travelIconColorHex,
       alertIconColorHex: appointments.alertIconColorHex,
       showCalendarName: appointments.showCalendarName,
@@ -18,6 +19,7 @@ extension CalendarBuiltinConfig {
       showAllDayLabel: appointments.showAllDayLabel,
       allDayLabel: appointments.allDayLabel,
       showHolidayAllDayLabel: appointments.showHolidayAllDayLabel,
+      locationIcon: appointments.locationIcon,
       alertIcon: appointments.alertIcon,
       travelIcon: appointments.travelIcon,
       itemIndent: appointments.itemIndent

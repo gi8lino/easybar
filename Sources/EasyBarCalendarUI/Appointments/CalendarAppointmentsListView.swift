@@ -132,9 +132,18 @@ public struct CalendarAppointmentsListView: View {
         }
 
         if style.showLocation, let locationText = event.location, !locationText.isEmpty {
-          Text(locationText)
-            .font(.system(size: 11, weight: .regular))
-            .foregroundStyle(color(style.secondaryTextColorHex))
+          HStack(alignment: .firstTextBaseline, spacing: 4) {
+            if !style.locationIcon.isEmpty {
+              Text(style.locationIcon)
+                .font(CalendarUIPrimitives.iconFont(size: 10))
+                .foregroundStyle(color(style.locationIconColorHex ?? style.secondaryTextColorHex))
+            }
+
+            Text(locationText)
+              .font(.system(size: 11, weight: .regular))
+              .foregroundStyle(color(style.secondaryTextColorHex))
+              .lineLimit(1)
+          }
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

@@ -162,6 +162,7 @@ extension CalendarAppointmentsStyle {
       emptyTextColorHex: "#777777",
       eventTextColorHex: "#ffffff",
       travelTextColorHex: "#bbbbbb",
+      locationIconColorHex: nil,
       travelIconColorHex: nil,
       alertIconColorHex: nil,
       showCalendarName: true,
@@ -172,6 +173,7 @@ extension CalendarAppointmentsStyle {
       showAllDayLabel: true,
       allDayLabel: "All day",
       showHolidayAllDayLabel: false,
+      locationIcon: "@",
       alertIcon: "!",
       travelIcon: ">",
       itemIndent: 0
