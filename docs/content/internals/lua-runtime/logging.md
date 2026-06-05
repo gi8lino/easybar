@@ -7,7 +7,7 @@ Only the structured runtime protocol moved to the dedicated Lua socket.
 ## Structured format
 
 ```text
-EASYBAR_LOG\t<level>\t<context>\tmessage
+EASYBAR_LUA_LOG\t<level>\t<context>\tmessage
 ```
 
 ## Public Lua log levels

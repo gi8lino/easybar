@@ -16,7 +16,7 @@ end
 --- Writes one structured log line to stderr.
 local function write(level, source, message)
 	io.stderr:write(
-		"EASYBAR_LOG\t"
+		"EASYBAR_LUA_LOG\t"
 			.. normalize_text(level)
 			.. "\t"
 			.. normalize_text(source)

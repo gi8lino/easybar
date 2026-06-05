@@ -4,7 +4,7 @@ import Foundation
 /// Routes structured stderr lines from the Lua runtime into the normal logger.
 final class LuaLogBridge {
   private let logger: ProcessLogger
-  private let prefix = "EASYBAR_LOG\t"
+  private let prefix = "EASYBAR_LUA_LOG\t"
 
   /// Creates one Lua log bridge.
   init(logger: ProcessLogger) {
