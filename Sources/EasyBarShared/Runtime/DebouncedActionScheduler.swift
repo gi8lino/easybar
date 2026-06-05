@@ -1,6 +1,9 @@
 import Foundation
 
 /// Schedules one replaceable delayed action using Swift tasks.
+///
+/// Sendability is guarded by `LockedState`; pending task replacement and
+/// generation checks are serialized through that lock.
 public final class DebouncedActionScheduler: @unchecked Sendable {
   private struct State {
     var pendingTask: Task<Void, Never>?

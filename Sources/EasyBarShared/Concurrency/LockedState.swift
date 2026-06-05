@@ -2,6 +2,9 @@ import Foundation
 
 /// Small shared wrapper around `NSLock` for synchronous state
 /// that still has to be queried from non-async APIs.
+///
+/// Sendability is provided by the internal `NSLock`; callers can only read or
+/// mutate the wrapped state inside `withLock`.
 public final class LockedState<State>: @unchecked Sendable {
   private let lock = NSLock()
   private var state: State

@@ -2,6 +2,9 @@ import Darwin
 import Foundation
 
 /// Shared newline-delimited client transport used by app-side and helper-process agent clients.
+///
+/// Sendability is guarded by `LockedState`; all mutable socket/task state is
+/// accessed through that lock, and callbacks are invoked outside the lock.
 public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @unchecked Sendable {
   private struct State {
     var socketFD: Int32 = -1

@@ -3,6 +3,9 @@ import Foundation
 import SwiftUI
 
 /// Complete in-memory config snapshot used for rollback.
+///
+/// This is sendable as an immutable value snapshot; mutable app configuration is
+/// copied into `let` fields before the snapshot crosses task boundaries.
 struct ConfigSnapshot: @unchecked Sendable {
   /// App-level config snapshot.
   struct App {

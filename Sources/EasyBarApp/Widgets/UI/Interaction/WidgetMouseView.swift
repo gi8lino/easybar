@@ -277,6 +277,10 @@ final class MouseTrackingNSView: NSView {
   }
 }
 
+/// Tracks hover state across delayed exit tasks.
+///
+/// Sendability is guarded by `LockedState`; hovered IDs and pending exit tasks
+/// are only accessed while holding that lock.
 private final class HoverState: @unchecked Sendable {
   private struct State {
     var hoveredWidgetIDs = Set<String>()

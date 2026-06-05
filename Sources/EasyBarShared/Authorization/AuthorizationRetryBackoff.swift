@@ -1,6 +1,9 @@
 import Foundation
 
 /// Schedules incremental authorization retries using Swift tasks.
+///
+/// Sendability is guarded by `LockedState`; retry task ownership and attempt
+/// counters are only read or changed while holding the lock.
 public final class AuthorizationRetryBackoff: @unchecked Sendable {
   private struct State {
     var scheduledTask: Task<Void, Never>?

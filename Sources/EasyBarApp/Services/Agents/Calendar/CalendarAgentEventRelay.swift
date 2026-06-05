@@ -2,6 +2,9 @@ import EasyBarShared
 import Foundation
 
 /// Coalesces calendar-agent snapshot updates into a single app-wide calendar event.
+///
+/// Sendability is guarded by `LockedState`; running state and generation checks
+/// are serialized, and the debounced scheduler owns its own locked state.
 final class CalendarAgentEventRelay: @unchecked Sendable {
   /// Shared calendar-agent event relay.
   static var shared = CalendarAgentEventRelay(

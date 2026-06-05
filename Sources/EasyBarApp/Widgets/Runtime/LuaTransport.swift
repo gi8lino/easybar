@@ -3,6 +3,9 @@ import EasyBarShared
 import Foundation
 
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
+///
+/// Sendability is guarded by `LockedState`; file descriptors, task handles, and
+/// the current line handler are all read or changed through that lock.
 final class LuaTransport: @unchecked Sendable {
   /// Startup errors surfaced while preparing the transport.
   enum TransportError: LocalizedError {

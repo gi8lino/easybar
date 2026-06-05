@@ -56,6 +56,9 @@ extension Array where Element == ProcessLogField {
 }
 
 /// Shared process logger with consistent formatting across app, agents, and CLI.
+///
+/// Sendability is guarded by the shared `LockedState`; runtime log level and
+/// file-handle changes are serialized before any write observes them.
 public final class ProcessLogger: @unchecked Sendable {
   /// Reserved field keys managed by the logger itself.
   private enum ReservedFieldKey {

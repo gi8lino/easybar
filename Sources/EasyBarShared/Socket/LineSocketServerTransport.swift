@@ -2,6 +2,9 @@ import Darwin
 import Foundation
 
 /// Serves line-delimited JSON requests over a Unix domain socket and optionally tracks subscribers.
+///
+/// Sendability is guarded by `LockedState`; server file descriptors, accept
+/// tasks, and subscribers are only mutated while holding that lock.
 public final class LineSocketServerTransport<
   Subscriber,
   Request: Decodable,

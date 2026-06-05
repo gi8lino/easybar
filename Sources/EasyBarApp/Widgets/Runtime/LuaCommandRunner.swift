@@ -8,6 +8,9 @@ struct LuaCommandResult: Sendable {
 }
 
 /// Executes Lua-requested shell commands in the host process.
+///
+/// The runner is immutable after initialization; each command execution owns
+/// its mutable state in a separate locked `CommandExecution`.
 final class LuaCommandRunner: @unchecked Sendable {
   struct Limits: Sendable {
     let timeoutSeconds: TimeInterval
@@ -44,6 +47,9 @@ final class LuaCommandRunner: @unchecked Sendable {
 /// the checked continuation alive until one terminal path resumes it. `complete`
 /// clears the handlers and cancels the timeout task, which breaks the temporary
 /// retain cycle.
+///
+/// Sendability is guarded by `LockedState`; output buffers, completion flags,
+/// and continuation ownership are only mutated while holding that lock.
 private final class CommandExecution: @unchecked Sendable {
   private struct State {
     var outputData = Data()
