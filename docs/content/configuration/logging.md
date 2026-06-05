@@ -40,11 +40,26 @@ directory = "~/.local/state/easybar"
 
 ## Notes
 
-The main app and helper agents use this config-driven level. Logging is configured in `config.toml`; there are no separate logging environment toggles.
+The main app and helper agents use the shared logging config from `config.toml`.
 
-`EASYBAR_CONFIG_PATH` remains the only public environment override for selecting the runtime config file.
+`logging.enabled` and `logging.directory` are config-only settings. They are not controlled by environment variables.
+
+`EASYBAR_LOG_LEVEL` is the only logging environment override. It temporarily overrides `logging.level` for diagnostics, for example in local `make run-debug` or service troubleshooting sessions.
+
+`EASYBAR_CONFIG_PATH` remains the public environment override for selecting the runtime config file.
 
 The `easybar` CLI can enable its own debug output explicitly with `--debug`. This does not change the main app or agent log level.
+
+## Temporary log-level override
+
+Use `EASYBAR_LOG_LEVEL` when you want more or less verbose logs without editing `config.toml`:
+
+```bash
+EASYBAR_LOG_LEVEL=debug easybar --refresh
+EASYBAR_LOG_LEVEL=trace open /Applications/EasyBar.app
+```
+
+This override affects only the minimum log level. File logging still depends on `logging.enabled` and `logging.directory` from `config.toml`.
 
 ## CLI debug output
 

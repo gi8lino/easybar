@@ -7,7 +7,8 @@ import XCTest
 
 final class ConfigLoaderTests: XCTestCase {
   private let environmentKeys = [
-    SharedEnvironmentKeys.configPath
+    SharedEnvironmentKeys.configPath,
+    SharedEnvironmentKeys.loggingLevel,
   ]
 
   private var originalEnvironment: [String: String?] = [:]
@@ -620,6 +621,28 @@ final class ConfigLoaderTests: XCTestCase {
 
     XCTAssertNil(error)
     XCTAssertEqual(config.loggingLevel, .trace)
+  }
+
+  /// Handles test reload prefers the diagnostic log-level environment override over TOML.
+  func testReloadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("env-logging-level.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "info"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue("debug", for: SharedEnvironmentKeys.loggingLevel)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.loggingLevel, .debug)
   }
 
   /// Handles test reload rejects legacy logging debug when level is absent.

@@ -320,11 +320,17 @@ final class AppController {
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
     let configOverride = env[SharedEnvironmentKeys.configPath] ?? ""
+    let logLevelOverride = env[SharedEnvironmentKeys.loggingLevel] ?? ""
 
     logger.info(
       "environment override",
       .field("key", SharedEnvironmentKeys.configPath),
       .field("value_set", !configOverride.isEmpty)
+    )
+    logger.info(
+      "environment override",
+      .field("key", SharedEnvironmentKeys.loggingLevel),
+      .field("value_set", !logLevelOverride.isEmpty)
     )
   }
 

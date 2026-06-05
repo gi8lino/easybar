@@ -47,6 +47,8 @@ Supported levels:
 
 That keeps the normal runtime logging model explicit and consistent across all long-lived processes.
 
+`EASYBAR_LOG_LEVEL` is intentionally kept as a narrow diagnostic override for the minimum log level. It does not enable file logging and does not change the configured log directory.
+
 The CLI remains slightly different on purpose:
 
 - it can enable extra local debug output with `--debug`

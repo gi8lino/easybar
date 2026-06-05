@@ -5,7 +5,8 @@ import XCTest
 
 final class SharedRuntimeConfigTests: XCTestCase {
   private let environmentKeys = [
-    SharedEnvironmentKeys.configPath
+    SharedEnvironmentKeys.configPath,
+    SharedEnvironmentKeys.loggingLevel,
   ]
 
   private var originalEnvironment: [String: String?] = [:]
@@ -77,6 +78,27 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.calendarAgent.socketPath, calendarSocketPath)
     XCTAssertEqual(runtime.networkAgent.socketPath, networkSocketPath)
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)
+  }
+
+  /// Handles test load lets the diagnostic log-level environment override TOML.
+  func testLoadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-logging-env.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "info"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
+
+    let runtime = SharedRuntimeConfig.load()
+
+    XCTAssertEqual(runtime.configPath, configFileURL.path)
+    XCTAssertEqual(runtime.logging.level, .trace)
   }
 }
 

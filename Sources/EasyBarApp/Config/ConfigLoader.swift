@@ -69,4 +69,16 @@ extension Config {
   func environmentConfigPathOverride() -> String? {
     return expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
   }
+
+  /// Returns the log-level diagnostic override from the environment when present.
+  func environmentLogLevelOverride() throws -> ProcessLogLevel? {
+    guard let value = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel) else {
+      return nil
+    }
+
+    return try parseLogLevel(
+      value,
+      path: "environment.\(SharedEnvironmentKeys.loggingLevel)"
+    )
+  }
 }

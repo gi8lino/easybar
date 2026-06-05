@@ -490,11 +490,11 @@ run: prepare-version ## Fast local run with debug builds and local agents.
 	@echo "Preparing debug app bundle"
 	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=info "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=info "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@echo "Launching $(APP_BIN)"
-	@echo "App logs: /tmp/easybar.out"
-	@env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=info "$(APP_BIN)"
+	@nohup env EASYBAR_LOG_LEVEL=info "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
+	@nohup env EASYBAR_LOG_LEVEL=info "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
+	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=info"
+	@echo "App logs follow stdout/stderr and configured logging.directory"
+	@env EASYBAR_LOG_LEVEL=info "$(APP_BIN)"
 
 run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
@@ -508,11 +508,11 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 	@echo "Preparing debug app bundle"
 	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=debug "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=debug "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
+	@nohup env EASYBAR_LOG_LEVEL=debug "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
+	@nohup env EASYBAR_LOG_LEVEL=debug "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=debug"
-	@echo "App logs: /tmp/easybar.out"
-	@env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
+	@echo "App logs follow stdout/stderr and configured logging.directory"
+	@env EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
 
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
 	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
@@ -526,11 +526,11 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@echo "Preparing debug app bundle"
 	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
 	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=trace "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=trace "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
+	@nohup env EASYBAR_LOG_LEVEL=trace "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
+	@nohup env EASYBAR_LOG_LEVEL=trace "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
 	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=trace"
-	@echo "App logs: /tmp/easybar.out"
-	@env EASYBAR_LOGGING_ENABLED=true EASYBAR_LOGGING_DIRECTORY=/tmp EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
+	@echo "App logs follow stdout/stderr and configured logging.directory"
+	@env EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
 ifeq ($(RUN_ARCH),universal)
