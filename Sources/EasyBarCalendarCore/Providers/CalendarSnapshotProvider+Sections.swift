@@ -51,6 +51,7 @@ extension CalendarSnapshotProvider {
               calendarName: event.calendarName,
               calendarColorHex: event.calendarColorHex,
               location: event.location,
+              url: event.url,
               travelTimeSeconds: event.travelTimeSeconds
             )
           }
@@ -116,6 +117,7 @@ extension CalendarSnapshotProvider {
               calendarName: event.calendarName,
               calendarColorHex: event.calendarColorHex,
               location: event.location,
+              url: event.url,
               travelTimeSeconds: event.travelTimeSeconds
             )
           }

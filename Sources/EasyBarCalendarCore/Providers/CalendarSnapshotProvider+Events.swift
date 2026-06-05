@@ -88,6 +88,7 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          url: normalizedEventURLText(for: event),
           alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
           hasAlert: hasVisibleAlert(alertOffsetsSeconds: alertOffsetsSeconds),
@@ -146,6 +147,7 @@ extension CalendarSnapshotProvider {
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
           location: normalizedOptionalText(event.location),
+          url: normalizedEventURLText(for: event),
           alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
           hasAlert: hasVisibleAlert(alertOffsetsSeconds: alertOffsetsSeconds),
@@ -342,6 +344,43 @@ extension CalendarSnapshotProvider {
     guard let value else { return nil }
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
+  }
+
+  /// Normalizes an optional URL into transport-safe text.
+  func normalizedOptionalURLText(_ value: URL?) -> String? {
+    normalizedOptionalText(value?.absoluteString)
+  }
+
+  /// Returns the best URL attached to one event.
+  func normalizedEventURLText(for event: EKEvent) -> String? {
+    if let directURL = normalizedOptionalURLText(event.url) {
+      return directURL
+    }
+
+    return firstURLText(in: [event.location, event.notes])
+  }
+
+  /// Extracts the first URL from one of the provided text fields.
+  func firstURLText(in values: [String?]) -> String? {
+    guard
+      let detector = try? NSDataDetector(
+        types: NSTextCheckingResult.CheckingType.link.rawValue
+      )
+    else {
+      return nil
+    }
+
+    for value in values {
+      guard let text = normalizedOptionalText(value) else { continue }
+      let range = NSRange(text.startIndex..<text.endIndex, in: text)
+      let matches = detector.matches(in: text, options: [], range: range)
+
+      if let url = matches.first?.url?.absoluteString {
+        return url
+      }
+    }
+
+    return nil
   }
 
   /// Formats one event time for popup display.

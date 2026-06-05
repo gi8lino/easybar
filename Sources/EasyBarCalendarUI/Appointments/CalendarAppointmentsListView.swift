@@ -29,6 +29,7 @@ public struct CalendarAppointmentsListView: View {
   public let defaultIndicatorColorHex: String
   public let calendar: Calendar
   public let dateHeaderText: (Date) -> String
+  public let eventActions: CalendarEventActions?
   public let onEventTap: ((CalendarAgentEvent) -> Void)?
 
   public init(
@@ -41,6 +42,7 @@ public struct CalendarAppointmentsListView: View {
     defaultIndicatorColorHex: String,
     calendar: Calendar,
     dateHeaderText: @escaping (Date) -> String,
+    eventActions: CalendarEventActions? = nil,
     onEventTap: ((CalendarAgentEvent) -> Void)?
   ) {
     self.title = title
@@ -52,6 +54,7 @@ public struct CalendarAppointmentsListView: View {
     self.defaultIndicatorColorHex = defaultIndicatorColorHex
     self.calendar = calendar
     self.dateHeaderText = dateHeaderText
+    self.eventActions = eventActions
     self.onEventTap = onEventTap
   }
 
@@ -88,7 +91,12 @@ public struct CalendarAppointmentsListView: View {
 
   private func appointmentRow(_ event: CalendarAgentEvent) -> some View {
     let isBirthday = CalendarAgendaBuilder.isBirthdayEvent(event)
-    let content = appointmentRowContent(event, showsChevron: !isBirthday && onEventTap != nil)
+    let showsActions = !isBirthday && hasActionMenu(for: event)
+    let content = appointmentRowContent(
+      event,
+      showsChevron: !showsActions && !isBirthday && onEventTap != nil,
+      showsActions: showsActions
+    )
 
     if let onEventTap, !isBirthday {
       return AnyView(
@@ -101,7 +109,11 @@ public struct CalendarAppointmentsListView: View {
     return AnyView(content)
   }
 
-  private func appointmentRowContent(_ event: CalendarAgentEvent, showsChevron: Bool) -> some View {
+  private func appointmentRowContent(
+    _ event: CalendarAgentEvent,
+    showsChevron: Bool,
+    showsActions: Bool
+  ) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Rectangle()
         .fill(color(indicatorColorHex(for: event)))
@@ -127,7 +139,10 @@ public struct CalendarAppointmentsListView: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
-      if showsChevron {
+      if showsActions {
+        actionMenu(for: event)
+          .padding(.top, 1)
+      } else if showsChevron {
         Image(systemName: "chevron.right")
           .font(.system(size: 10, weight: .medium))
           .foregroundStyle(color(style.secondaryTextColorHex).opacity(0.8))
@@ -136,6 +151,46 @@ public struct CalendarAppointmentsListView: View {
     }
     .padding(.leading, CGFloat(style.itemIndent))
     .padding(.vertical, 4)
+  }
+
+  private func hasActionMenu(for event: CalendarAgentEvent) -> Bool {
+    onEventTap != nil || eventActions?.hasVisibleAction(for: event) == true
+  }
+
+  @ViewBuilder
+  private func actionMenu(for event: CalendarAgentEvent) -> some View {
+    Menu {
+      if let onEventTap {
+        Button(action: { onEventTap(event) }) {
+          Label("Edit", systemImage: "pencil")
+        }
+      }
+
+      if let copyDetails = eventActions?.copyDetails {
+        Button(action: { copyDetails(event) }) {
+          Label("Copy Details", systemImage: "doc.on.doc")
+        }
+      }
+
+      if event.hasUsableURL, let openURL = eventActions?.openURL {
+        Button(action: { openURL(event) }) {
+          Label(event.urlActionTitle, systemImage: "link")
+        }
+      }
+
+      if let openCalendar = eventActions?.openCalendar {
+        Button(action: { openCalendar(event) }) {
+          Label("Open in Calendar", systemImage: "calendar")
+        }
+      }
+    } label: {
+      Image(systemName: "ellipsis.circle")
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(color(style.secondaryTextColorHex).opacity(0.9))
+        .frame(width: 22, height: 22)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 
   @ViewBuilder
@@ -231,7 +286,9 @@ public struct CalendarAppointmentsListView: View {
   }
 
   private func indicatorColorHex(for event: CalendarAgentEvent) -> String {
-    if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines), !hex.isEmpty {
+    if let hex = event.calendarColorHex?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !hex.isEmpty
+    {
       return hex
     }
 

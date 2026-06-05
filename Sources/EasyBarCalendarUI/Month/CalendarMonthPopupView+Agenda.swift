@@ -78,6 +78,7 @@ extension CalendarMonthPopupView {
       defaultIndicatorColorHex: config.indicatorColorHex,
       calendar: resolvedCalendar,
       dateHeaderText: formattedSelectionDate,
+      eventActions: eventActions,
       onEventTap: { event in
         openComposer(for: event)
       }

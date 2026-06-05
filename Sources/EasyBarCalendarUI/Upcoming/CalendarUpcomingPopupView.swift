@@ -19,6 +19,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
   private let appointmentsStyle: CalendarAppointmentsStyle
   private let birthdays: CalendarBirthdayStyle
   private let emptyText: String
+  private let eventActions: CalendarEventActions?
   private let onEventTap: (CalendarAgentEvent) -> Void
 
   public init(
@@ -27,6 +28,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     appointmentsStyle: CalendarAppointmentsStyle,
     birthdays: CalendarBirthdayStyle,
     emptyText: String,
+    eventActions: CalendarEventActions? = nil,
     onEventTap: @escaping (CalendarAgentEvent) -> Void
   ) {
     self.store = store
@@ -34,6 +36,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     self.appointmentsStyle = appointmentsStyle
     self.birthdays = birthdays
     self.emptyText = emptyText
+    self.eventActions = eventActions
     self.onEventTap = onEventTap
   }
 
@@ -51,6 +54,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
           defaultIndicatorColorHex: config.defaultIndicatorColorHex,
           calendar: resolvedCalendar,
           dateHeaderText: formattedDayHeader,
+          eventActions: eventActions,
           onEventTap: { event in
             openComposer(for: event)
           }

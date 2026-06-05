@@ -70,6 +70,7 @@ Other kinds:
 - `calendarName`
 - `calendarColorHex`
 - `location`
+- `url` (direct EventKit URL, or the first URL EasyBar can extract from location or notes)
 - `isHoliday`
 - `hasAlert`
 - `travelTimeSeconds`
@@ -86,3 +87,5 @@ Other kinds:
 The calendar agent collects calendar data and performs calendar mutations.
 
 EasyBar decides how calendar data is rendered.
+
+

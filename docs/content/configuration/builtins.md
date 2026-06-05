@@ -282,6 +282,19 @@ brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
 
+## Calendar quick actions
+
+Appointment rows in the calendar popups include an action menu.
+
+Available actions are:
+
+- `Edit`: opens the native appointment editor.
+- `Copy Details`: copies title, time range, calendar, location, and URL when available.
+- `Join Meeting` / `Open URL`: opens the event URL when Calendar.app provides one or when EasyBar can extract one from the location or notes.
+- `Open in Calendar`: opens Calendar.app.
+
+These actions are built in and do not need extra config.
+
 ## Calendar filters
 
 Calendar filters are configured under `[builtins.calendar.filters]`.
@@ -309,3 +322,5 @@ Switch to Lua when you need:
 - shell-command integration or app-specific logic
 
 See [Lua Widgets](../lua/overview.md).
+
+

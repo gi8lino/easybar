@@ -32,6 +32,7 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
   let appointmentsStyle: CalendarAppointmentsStyle
   let birthdays: CalendarBirthdayStyle
   let emptyText: String
+  let eventActions: CalendarEventActions?
   let onVisibleMonthChanged: (Date) -> Void
   let onCreateEvent: (Date, @escaping () -> Void) -> Void
   let onEditEvent: (CalendarAgentEvent, @escaping () -> Void) -> Void
@@ -45,6 +46,7 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
     appointmentsStyle: CalendarAppointmentsStyle,
     birthdays: CalendarBirthdayStyle,
     emptyText: String,
+    eventActions: CalendarEventActions? = nil,
     onVisibleMonthChanged: @escaping (Date) -> Void,
     onCreateEvent: @escaping (Date, @escaping () -> Void) -> Void,
     onEditEvent: @escaping (CalendarAgentEvent, @escaping () -> Void) -> Void,
@@ -56,6 +58,7 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
     self.appointmentsStyle = appointmentsStyle
     self.birthdays = birthdays
     self.emptyText = emptyText
+    self.eventActions = eventActions
     self.onVisibleMonthChanged = onVisibleMonthChanged
     self.onCreateEvent = onCreateEvent
     self.onEditEvent = onEditEvent

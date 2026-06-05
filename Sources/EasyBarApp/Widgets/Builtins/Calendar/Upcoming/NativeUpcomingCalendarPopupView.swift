@@ -16,6 +16,7 @@ struct NativeUpcomingCalendarPopupView: View {
       appointmentsStyle: config.appointmentsCalendarUIStyle,
       birthdays: config.birthdayCalendarUIStyle,
       emptyText: config.appointments.emptyText,
+      eventActions: CalendarEventActionFactory.makeActions(),
       onEventTap: { event in
         composerPanel.present(event: event, config: config) {
           MonthCalendarAgentClient.shared.refresh()

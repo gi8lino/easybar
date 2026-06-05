@@ -21,6 +21,29 @@ private enum ScriptError: Error, LocalizedError {
   }
 }
 
+private enum DemoURLPlacement {
+  case none
+  case eventURL
+  case notes
+  case location
+}
+
+private struct DemoLinkFixture {
+  let titleSuffix: String
+  let expectedAction: String
+  let placement: DemoURLPlacement
+  let urlString: String?
+  let locationPrefix: String?
+
+  var hasJoinMeetingAction: Bool {
+    expectedAction == "Join Meeting"
+  }
+
+  var hasOpenURLAction: Bool {
+    expectedAction == "Open URL"
+  }
+}
+
 private struct AppController {
   private let arguments = Array(CommandLine.arguments.dropFirst())
   private let store = EKEventStore()
@@ -178,6 +201,11 @@ private struct AppController {
 
     var createdCount = 0
     var travelTimeSetCount = 0
+    var joinMeetingActionCount = 0
+    var openURLActionCount = 0
+    var eventURLCount = 0
+    var notesURLCount = 0
+    var locationURLCount = 0
 
     for day in dayRange {
       let appointmentsToday = Int.random(in: 2...5)
@@ -187,9 +215,13 @@ private struct AppController {
         let startMinutes = selectedSlots[appointmentIndex]
         let durationMinutes = pick(durations)
         let endMinutes = startMinutes + durationMinutes
+        let linkFixture = demoLinkFixture(day: day, appointmentIndex: appointmentIndex)
 
-        let title = "\(pick(titles)) #\(day).\(appointmentIndex + 1)"
-        let location = pick(locations)
+        let title = "\(pick(titles)) \(linkFixture.titleSuffix) #\(day).\(appointmentIndex + 1)"
+        let location = demoLocation(
+          baseLocation: pick(locations),
+          linkFixture: linkFixture
+        )
         let mode = pick(modes)
 
         let shouldHaveTravelTime = Bool.random()
@@ -213,16 +245,37 @@ private struct AppController {
         event.location = location
         event.timeZone = TimeZone.current
 
-        event.notes = """
-          Generated demo appointment.
-          Mode: \(mode)
-          Duration: \(durationMinutes) minutes
-          Travel time: \(travelLabel(travelSeconds))
-          Seed: current-month-demo-data
-          """
+        if linkFixture.placement == .eventURL, let urlString = linkFixture.urlString {
+          event.url = URL(string: urlString)
+          eventURLCount += 1
+        }
 
-        if Bool.random() {
-          event.url = URL(string: "https://example.test/demo-calendar/\(day)-\(appointmentIndex + 1)")
+        event.notes = demoNotes(
+          mode: mode,
+          durationMinutes: durationMinutes,
+          travelSeconds: travelSeconds,
+          linkFixture: linkFixture,
+          day: day,
+          appointmentIndex: appointmentIndex
+        )
+
+        if linkFixture.hasJoinMeetingAction {
+          joinMeetingActionCount += 1
+        }
+
+        if linkFixture.hasOpenURLAction {
+          openURLActionCount += 1
+        }
+
+        switch linkFixture.placement {
+        case .none:
+          break
+        case .eventURL:
+          break
+        case .notes:
+          notesURLCount += 1
+        case .location:
+          locationURLCount += 1
         }
 
         if Bool.random() {
@@ -266,6 +319,9 @@ private struct AppController {
     try store.commit()
 
     print("Created \(createdCount) appointments in calendar \"\(calendarName)\" for the current month.")
+    print("Events expected to show Join Meeting: \(joinMeetingActionCount).")
+    print("Events expected to show Open URL: \(openURLActionCount).")
+    print("URL source coverage: event.url=\(eventURLCount), notes=\(notesURLCount), location=\(locationURLCount).")
     print("Events with actual EventKit travel time set: \(travelTimeSetCount).")
     print("Events without native travel-time support still include travel time in the notes.")
   }
@@ -340,6 +396,142 @@ private struct AppController {
     try store.saveCalendar(calendar, commit: true)
 
     return calendar
+  }
+
+  /// Returns a deterministic URL fixture so the generated calendar always covers all quick actions.
+  private func demoLinkFixture(day: Int, appointmentIndex: Int) -> DemoLinkFixture {
+    let fixtures = [
+      DemoLinkFixture(
+        titleSuffix: "[Join via event URL]",
+        expectedAction: "Join Meeting",
+        placement: .eventURL,
+        urlString: "https://meet.google.com/eas-ybar-demo",
+        locationPrefix: "Google Meet"
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Open URL via event URL]",
+        expectedAction: "Open URL",
+        placement: .eventURL,
+        urlString: "https://github.com/gi8lino/easybar",
+        locationPrefix: nil
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Join via notes]",
+        expectedAction: "Join Meeting",
+        placement: .notes,
+        urlString: "https://us06web.zoom.us/j/12345678901?pwd=easybarDemo",
+        locationPrefix: "Zoom"
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Open URL via notes]",
+        expectedAction: "Open URL",
+        placement: .notes,
+        urlString: "https://example.com/easybar/demo/roadmap",
+        locationPrefix: nil
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Join via location]",
+        expectedAction: "Join Meeting",
+        placement: .location,
+        urlString:
+          "https://teams.microsoft.com/l/meetup-join/19%3ameeting_easybar_demo%40thread.v2/0?context=%7B%22Tid%22%3A%22demo%22%2C%22Oid%22%3A%22easybar%22%7D",
+        locationPrefix: "Microsoft Teams"
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Open URL via location]",
+        expectedAction: "Open URL",
+        placement: .location,
+        urlString: "https://developer.apple.com/documentation/eventkit",
+        locationPrefix: "Reference"
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[Join Webex]",
+        expectedAction: "Join Meeting",
+        placement: .eventURL,
+        urlString: "https://example.webex.com/meet/easybar-demo",
+        locationPrefix: "Webex"
+      ),
+      DemoLinkFixture(
+        titleSuffix: "[No URL]",
+        expectedAction: "No URL action",
+        placement: .none,
+        urlString: nil,
+        locationPrefix: nil
+      ),
+    ]
+
+    return fixtures[(day + appointmentIndex) % fixtures.count]
+  }
+
+  /// Returns a location string, optionally embedding a demo URL for URL extraction testing.
+  private func demoLocation(baseLocation: String, linkFixture: DemoLinkFixture) -> String {
+    guard let urlString = linkFixture.urlString else {
+      return baseLocation
+    }
+
+    if linkFixture.placement == .location {
+      let prefix = linkFixture.locationPrefix ?? baseLocation
+      return "\(prefix): \(urlString)"
+    }
+
+    if let locationPrefix = linkFixture.locationPrefix {
+      return locationPrefix
+    }
+
+    return baseLocation
+  }
+
+  /// Returns notes with enough detail to test copy-details and URL extraction behavior.
+  private func demoNotes(
+    mode: String,
+    durationMinutes: Int,
+    travelSeconds: TimeInterval,
+    linkFixture: DemoLinkFixture,
+    day: Int,
+    appointmentIndex: Int
+  ) -> String {
+    var lines = [
+      "Generated demo appointment.",
+      "Mode: \(mode)",
+      "Duration: \(durationMinutes) minutes",
+      "Travel time: \(travelLabel(travelSeconds))",
+      "Expected quick action: \(linkFixture.expectedAction)",
+      "Demo source: \(demoSourceLabel(linkFixture.placement))",
+      "Agenda:",
+      "- Review current status",
+      "- Discuss blockers",
+      "- Agree on next owner",
+      "Follow-up: Send summary after the appointment.",
+      "Seed: current-month-demo-data-\(day)-\(appointmentIndex + 1)",
+    ]
+
+    if linkFixture.placement == .notes, let urlString = linkFixture.urlString {
+      lines.insert("Meeting or reference link: \(urlString)", at: 6)
+    }
+
+    if linkFixture.placement == .eventURL, let urlString = linkFixture.urlString {
+      lines.insert("Event URL field: \(urlString)", at: 6)
+    }
+
+    if linkFixture.placement == .location, let urlString = linkFixture.urlString {
+      lines.insert("Location contains URL: \(urlString)", at: 6)
+    }
+
+    return lines.joined(separator: "\n")
+  }
+
+  /// Returns a label for where a demo URL was stored.
+  private func demoSourceLabel(_ placement: DemoURLPlacement) -> String {
+    switch placement {
+    case .none:
+      return "none"
+    case .eventURL:
+      return "event.url"
+    case .notes:
+      return "notes"
+    case .location:
+      return "location"
+    }
   }
 
   /// Picks a random value from a non-empty array.

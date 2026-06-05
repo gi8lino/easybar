@@ -17,6 +17,7 @@ struct NativeMonthCalendarPopupView: View {
       appointmentsStyle: config.appointmentsCalendarUIStyle,
       birthdays: config.birthdayCalendarUIStyle,
       emptyText: config.appointments.emptyText,
+      eventActions: CalendarEventActionFactory.makeActions(),
       onVisibleMonthChanged: { visibleMonth in
         MonthCalendarAgentClient.shared.focusVisibleMonth(visibleMonth)
       },

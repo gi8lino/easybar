@@ -1,7 +1,7 @@
 import Foundation
 
 /// Stable protocol version used by the calendar agent socket.
-public let calendarAgentProtocolVersion = "3"
+public let calendarAgentProtocolVersion = "4"
 
 /// Stable structured error codes returned by the calendar agent.
 public enum CalendarAgentErrorCode: String, Codable, Equatable, Sendable {
@@ -345,6 +345,8 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable, Sendable {
   public var calendarColorHex: String?
   /// Optional event location.
   public var location: String?
+  /// Optional URL attached to the event.
+  public var url: String?
   /// Visible non-travel alert lead times in seconds before the event.
   public var alertOffsetsSeconds: [TimeInterval]
   /// Whether the event belongs to a holiday calendar.
@@ -366,6 +368,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable, Sendable {
     calendarName: String? = nil,
     calendarColorHex: String? = nil,
     location: String? = nil,
+    url: String? = nil,
     alertOffsetsSeconds: [TimeInterval] = [],
     isHoliday: Bool = false,
     hasAlert: Bool = false,
@@ -381,6 +384,7 @@ public struct CalendarAgentEvent: Codable, Identifiable, Equatable, Sendable {
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location
+    self.url = url
     self.alertOffsetsSeconds = alertOffsetsSeconds
     self.isHoliday = isHoliday
     self.hasAlert = hasAlert
@@ -410,6 +414,8 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
   public var calendarColorHex: String?
   /// Optional event location.
   public var location: String?
+  /// Optional URL attached to the event.
+  public var url: String?
   /// Optional travel time in seconds.
   public var travelTimeSeconds: TimeInterval?
 
@@ -425,6 +431,7 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
     calendarName: String? = nil,
     calendarColorHex: String? = nil,
     location: String? = nil,
+    url: String? = nil,
     travelTimeSeconds: TimeInterval? = nil
   ) {
     self.id = id
@@ -437,6 +444,7 @@ public struct CalendarAgentItem: Codable, Identifiable, Equatable, Sendable {
     self.calendarName = calendarName
     self.calendarColorHex = calendarColorHex
     self.location = location
+    self.url = url
     self.travelTimeSeconds = travelTimeSeconds
   }
 }
