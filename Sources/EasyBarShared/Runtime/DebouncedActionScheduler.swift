@@ -10,17 +10,20 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
   private let label: String?
   private let delay: TimeInterval
   private let logger: ProcessLogger
+  private let sleeper: any AsyncSleeper
   private let state = LockedState(State())
 
   /// Creates one debounced scheduler.
   public init(
     label: String? = nil,
     delay: TimeInterval,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    sleeper: any AsyncSleeper = TaskSleeper()
   ) {
     self.label = label
     self.delay = delay
     self.logger = logger
+    self.sleeper = sleeper
   }
 
   /// Replaces any pending action with a new delayed action.
@@ -39,9 +42,10 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
     }
 
     let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
+    let sleeper = sleeper
     let task = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: nanoseconds)
+        try await sleeper.sleep(nanoseconds: nanoseconds)
       } catch {
         return
       }

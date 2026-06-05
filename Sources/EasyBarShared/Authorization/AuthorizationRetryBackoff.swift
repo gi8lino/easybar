@@ -9,15 +9,18 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
 
   private let delays: [TimeInterval]
   private let logger: ProcessLogger
+  private let sleeper: any AsyncSleeper
   private let state = LockedState(State())
 
   /// Builds one retry scheduler with incremental delays capped at the last value.
   public init(
     delays: [TimeInterval] = [1, 2, 3, 5, 8, 13, 21, 34, 55, 60],
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    sleeper: any AsyncSleeper = TaskSleeper()
   ) {
     self.delays = delays
     self.logger = logger
+    self.sleeper = sleeper
   }
 
   /// Cancels any pending retry and resets the delay sequence.
@@ -52,9 +55,10 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
     )
 
     let nanoseconds = UInt64(max(scheduledDelay, 0) * 1_000_000_000)
+    let sleeper = sleeper
     let task = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: nanoseconds)
+        try await sleeper.sleep(nanoseconds: nanoseconds)
       } catch {
         return
       }
