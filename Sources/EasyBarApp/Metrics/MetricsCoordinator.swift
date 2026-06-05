@@ -553,7 +553,8 @@ actor MetricsCoordinator {
       .union(snapshotState.droppedEventCounts.keys)
       .union(snapshotState.coalescedEventCounts.keys)
 
-    let events = counterNames
+    let events =
+      counterNames
       .map { name in
         IPC.CounterMetrics(
           name: name,

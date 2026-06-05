@@ -13,10 +13,12 @@ final class LineDelimitedJSONDecoderTests: XCTestCase {
 
     let results = decoder.append(bytes("\n" + #"{"value":"two"}"# + "\n"))
 
-    XCTAssertEqual(try decodedMessages(from: results), [
-      Message(value: "one"),
-      Message(value: "two"),
-    ])
+    XCTAssertEqual(
+      try decodedMessages(from: results),
+      [
+        Message(value: "one"),
+        Message(value: "two"),
+      ])
   }
 
   func testSkipsEmptyLinesAndFlushesTrailingLine() throws {
