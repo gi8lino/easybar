@@ -21,7 +21,7 @@ The defaults file includes the theme section:
 
 ```toml
 [theme]
-name = "mocha"
+name = "default"
 themes_dir = "~/.config/easybar/themes"
 ```
 

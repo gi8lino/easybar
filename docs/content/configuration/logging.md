@@ -17,6 +17,16 @@ level = "info"
 directory = "~/.local/state/easybar"
 ```
 
+## Logging control
+
+| Setting | Config key | Environment override |
+| ------- | ---------- | -------------------- |
+| File logging | `logging.enabled` | none |
+| Minimum log level | `logging.level` | `EASYBAR_LOG_LEVEL` |
+| Log directory | `logging.directory` | none |
+
+Only the minimum log level has an environment override. File logging and the log directory stay config-only so the app, agents, and docs all share one explicit logging contract.
+
 ## Supported levels
 
 - `trace`
@@ -81,5 +91,3 @@ or:
 ```bash
 EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
 ```
-
-
