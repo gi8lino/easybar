@@ -43,7 +43,35 @@ jobs:
           /opt/homebrew/bin/lua -v
 
       - name: Run tests
-        run: make test
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+
+          make test > test.log 2>&1 &
+          test_pid=$!
+
+          while kill -0 "$test_pid" 2>/dev/null; do
+            sleep 30
+            echo "---- make test still running; last 80 lines ----"
+            tail -n 80 test.log || true
+          done
+
+          wait "$test_pid" || {
+            status=$?
+            echo "---- extracted failures ----"
+            grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed)" test.log || true
+            echo "---- full test log ----"
+            cat test.log
+            exit "$status"
+          }
+
+      - name: Upload test log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-test-log
+          path: test.log
 
       - name: Verify generated artifacts are current
         run: |
