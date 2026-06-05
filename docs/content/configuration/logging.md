@@ -55,13 +55,11 @@ easybar --debug --metrics
 easybar --debug --validate-config --config /path/to/config.toml
 ```
 
-````
-
 This keeps validation explicit:
 
 ```bash
 easybar --validate-config --config /path/to/config.toml
-````
+```
 
 or:
 
