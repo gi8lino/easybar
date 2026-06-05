@@ -78,6 +78,21 @@ actor MetricsCoordinator {
     var coalescedEventCounts: [String: Int]
   }
 
+  /// Inputs needed to compute per-second rates.
+  private struct RateContext {
+    let baseline: SampleCounters?
+    let interval: TimeInterval
+    let collectionEnabled: Bool
+  }
+
+  /// Process samples included in one metrics snapshot.
+  private struct ProcessSamples {
+    let app: IPC.ProcessMetrics
+    let lua: IPC.ProcessMetrics
+    let calendar: IPC.ProcessMetrics
+    let network: IPC.ProcessMetrics
+  }
+
   /// Actor-isolated mutable metrics state.
   private struct State {
     var streamingSubscriberFDs = Set<Int32>()
@@ -349,25 +364,62 @@ actor MetricsCoordinator {
     let now = Date()
     let snapshotState = state
 
-    let appProcess = processSampler.sampleCurrentProcess(named: "EasyBar", now: now)
-    let luaProcess = processSampler.sampleProcess(named: "lua", pid: snapshotState.luaPID, now: now)
-    let calendarProcess = processSampler.sampleProcessNamed(
-      named: AgentKey.calendar.processName,
-      executableName: AgentKey.calendar.processName,
-      now: now
-    )
-    let networkProcess = processSampler.sampleProcessNamed(
-      named: AgentKey.network.processName,
-      executableName: AgentKey.network.processName,
-      now: now
-    )
-
-    let baseline = snapshotState.previousCounters
     let previousSampleAt = snapshotState.lastSampleAt
     let interval = previousSampleAt.map { now.timeIntervalSince($0) } ?? sampleIntervalSeconds
     let safeInterval = interval > 0 ? interval : sampleIntervalSeconds
+    let rateContext = RateContext(
+      baseline: snapshotState.previousCounters,
+      interval: safeInterval,
+      collectionEnabled: collectionEnabled
+    )
+    let processSamples = sampleProcesses(from: snapshotState, now: now)
+    let currentCounters = sampleCounters(from: snapshotState)
 
-    let currentCounters = SampleCounters(
+    let snapshot = IPC.MetricsSnapshot(
+      timestamp: now,
+      collectionEnabled: collectionEnabled,
+      sampleIntervalSeconds: sampleIntervalSeconds,
+      process: processSamples.app,
+      lua: processSamples.lua,
+      runtime: runtimeMetrics(from: snapshotState, rateContext: rateContext),
+      agents: agentMetrics(
+        from: snapshotState,
+        processSamples: processSamples,
+        rateContext: rateContext
+      ),
+      widgets: widgetMetrics(from: snapshotState, rateContext: rateContext),
+      events: eventMetrics(from: snapshotState, rateContext: rateContext)
+    )
+
+    if collectionEnabled {
+      state.previousCounters = currentCounters
+      state.lastSampleAt = now
+    }
+
+    return snapshot
+  }
+
+  /// Samples EasyBar, Lua, and helper agent processes.
+  private func sampleProcesses(from snapshotState: State, now: Date) -> ProcessSamples {
+    return ProcessSamples(
+      app: processSampler.sampleCurrentProcess(named: "EasyBar", now: now),
+      lua: processSampler.sampleProcess(named: "lua", pid: snapshotState.luaPID, now: now),
+      calendar: processSampler.sampleProcessNamed(
+        named: AgentKey.calendar.processName,
+        executableName: AgentKey.calendar.processName,
+        now: now
+      ),
+      network: processSampler.sampleProcessNamed(
+        named: AgentKey.network.processName,
+        executableName: AgentKey.network.processName,
+        now: now
+      )
+    )
+  }
+
+  /// Captures cumulative counters for the next streaming-rate baseline.
+  private func sampleCounters(from snapshotState: State) -> SampleCounters {
+    return SampleCounters(
       totalEvents: snapshotState.totalEvents,
       droppedEvents: snapshotState.droppedEvents,
       coalescedEvents: snapshotState.coalescedEvents,
@@ -383,8 +435,16 @@ actor MetricsCoordinator {
       droppedEventCounts: snapshotState.droppedEventCounts,
       coalescedEventCounts: snapshotState.coalescedEventCounts
     )
+  }
 
-    let runtime = IPC.RuntimeMetrics(
+  /// Builds runtime counters for one snapshot.
+  private func runtimeMetrics(
+    from snapshotState: State,
+    rateContext: RateContext
+  ) -> IPC.RuntimeMetrics {
+    let baseline = rateContext.baseline
+
+    return IPC.RuntimeMetrics(
       subscriberCount: snapshotState.streamingSubscriberFDs.count,
       luaRestartCount: snapshotState.luaRestartCount,
       luaReady: snapshotState.luaReady,
@@ -395,22 +455,19 @@ actor MetricsCoordinator {
       eventsPerSecond: rate(
         current: snapshotState.totalEvents,
         previous: baseline?.totalEvents,
-        interval: safeInterval,
-        enabled: collectionEnabled
+        context: rateContext
       ),
       droppedEvents: snapshotState.droppedEvents,
       droppedEventsPerSecond: rate(
         current: snapshotState.droppedEvents,
         previous: baseline?.droppedEvents,
-        interval: safeInterval,
-        enabled: collectionEnabled
+        context: rateContext
       ),
       coalescedEvents: snapshotState.coalescedEvents,
       coalescedEventsPerSecond: rate(
         current: snapshotState.coalescedEvents,
         previous: baseline?.coalescedEvents,
-        interval: safeInterval,
-        enabled: collectionEnabled
+        context: rateContext
       ),
       transportLines: snapshotState.transportLines,
       stderrLines: snapshotState.stderrLines,
@@ -419,18 +476,24 @@ actor MetricsCoordinator {
       treeUpdatesPerSecond: rate(
         current: snapshotState.treeUpdates,
         previous: baseline?.treeUpdates,
-        interval: safeInterval,
-        enabled: collectionEnabled
+        context: rateContext
       ),
       decodeErrors: snapshotState.decodeErrors,
       lastTreeRoot: snapshotState.lastTreeRoot,
       lastTreeNodeCount: snapshotState.lastTreeNodeCount,
       lastTreeAt: snapshotState.lastTreeAt
     )
+  }
 
-    let agents = AgentKey.allCases.map { key -> IPC.AgentMetrics in
+  /// Builds helper agent metrics for one snapshot.
+  private func agentMetrics(
+    from snapshotState: State,
+    processSamples: ProcessSamples,
+    rateContext: RateContext
+  ) -> [IPC.AgentMetrics] {
+    return AgentKey.allCases.map { key -> IPC.AgentMetrics in
       let agentState = snapshotState.agents[key] ?? AgentState()
-      let processMetrics = key == .calendar ? calendarProcess : networkProcess
+      let processMetrics = key == .calendar ? processSamples.calendar : processSamples.network
 
       return IPC.AgentMetrics(
         name: key.displayName,
@@ -439,9 +502,8 @@ actor MetricsCoordinator {
         messagesTotal: agentState.messagesTotal,
         messagesPerSecond: rate(
           current: agentState.messagesTotal,
-          previous: baseline?.agentMessages[key],
-          interval: safeInterval,
-          enabled: collectionEnabled
+          previous: rateContext.baseline?.agentMessages[key],
+          context: rateContext
         ),
         reconnectsTotal: agentState.reconnectsTotal,
         refreshesTotal: agentState.refreshesTotal,
@@ -450,7 +512,13 @@ actor MetricsCoordinator {
         lastDisconnectAt: agentState.lastDisconnectAt
       )
     }
+  }
 
+  /// Builds the highest-volume widget counters for one snapshot.
+  private func widgetMetrics(
+    from snapshotState: State,
+    rateContext: RateContext
+  ) -> [IPC.WidgetMetrics] {
     let widgets = snapshotState.widgetUpdateCounts
       .map { id, total in
         IPC.WidgetMetrics(
@@ -458,9 +526,8 @@ actor MetricsCoordinator {
           updatesTotal: total,
           updatesPerSecond: rate(
             current: total,
-            previous: baseline?.widgetUpdates[id],
-            interval: safeInterval,
-            enabled: collectionEnabled
+            previous: rateContext.baseline?.widgetUpdates[id],
+            context: rateContext
           ),
           lastNodeCount: snapshotState.widgetNodeCounts[id] ?? 0,
           lastUpdatedAt: snapshotState.widgetLastUpdatedAt[id]
@@ -474,35 +541,39 @@ actor MetricsCoordinator {
       }
       .prefix(8)
 
+    return Array(widgets)
+  }
+
+  /// Builds the highest-volume event counters for one snapshot.
+  private func eventMetrics(
+    from snapshotState: State,
+    rateContext: RateContext
+  ) -> [IPC.CounterMetrics] {
     let counterNames = Set(snapshotState.eventCounts.keys)
       .union(snapshotState.droppedEventCounts.keys)
       .union(snapshotState.coalescedEventCounts.keys)
 
-    let events =
-      counterNames
+    let events = counterNames
       .map { name in
         IPC.CounterMetrics(
           name: name,
           total: snapshotState.eventCounts[name] ?? 0,
           perSecond: rate(
             current: snapshotState.eventCounts[name] ?? 0,
-            previous: baseline?.eventCounts[name],
-            interval: safeInterval,
-            enabled: collectionEnabled
+            previous: rateContext.baseline?.eventCounts[name],
+            context: rateContext
           ),
           droppedTotal: snapshotState.droppedEventCounts[name] ?? 0,
           droppedPerSecond: rate(
             current: snapshotState.droppedEventCounts[name] ?? 0,
-            previous: baseline?.droppedEventCounts[name],
-            interval: safeInterval,
-            enabled: collectionEnabled
+            previous: rateContext.baseline?.droppedEventCounts[name],
+            context: rateContext
           ),
           coalescedTotal: snapshotState.coalescedEventCounts[name] ?? 0,
           coalescedPerSecond: rate(
             current: snapshotState.coalescedEventCounts[name] ?? 0,
-            previous: baseline?.coalescedEventCounts[name],
-            interval: safeInterval,
-            enabled: collectionEnabled
+            previous: rateContext.baseline?.coalescedEventCounts[name],
+            context: rateContext
           )
         )
       }
@@ -514,37 +585,19 @@ actor MetricsCoordinator {
       }
       .prefix(8)
 
-    let snapshot = IPC.MetricsSnapshot(
-      timestamp: now,
-      collectionEnabled: collectionEnabled,
-      sampleIntervalSeconds: sampleIntervalSeconds,
-      process: appProcess,
-      lua: luaProcess,
-      runtime: runtime,
-      agents: Array(agents),
-      widgets: Array(widgets),
-      events: Array(events)
-    )
-
-    if collectionEnabled {
-      state.previousCounters = currentCounters
-      state.lastSampleAt = now
-    }
-
-    return snapshot
+    return Array(events)
   }
 
   /// Computes a per-second rate from cumulative counters.
   private func rate(
     current: Int,
     previous: Int?,
-    interval: TimeInterval,
-    enabled: Bool
+    context: RateContext
   ) -> Double {
-    guard enabled, let previous else { return 0 }
-    guard interval > 0 else { return 0 }
+    guard context.collectionEnabled, let previous else { return 0 }
+    guard context.interval > 0 else { return 0 }
 
     let delta = max(0, current - previous)
-    return Double(delta) / interval
+    return Double(delta) / context.interval
   }
 }
