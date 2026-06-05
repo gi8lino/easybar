@@ -316,16 +316,16 @@ roaming = false # Enables whether access-point roaming was detected for inline a
 ssid_changed_at = false # Enables the last SSID change timestamp for inline and details modes.
 interface_changed_at = false # Enables the last interface change timestamp for inline and details modes.
 
-[builtins.wifi.tooltip]
-text_color = "theme.text" # Text color used in the tooltip.
-background_color = "theme.background" # Background color of the tooltip.
-border_color = "theme.border_strong" # Border color of the tooltip.
-border_width = 1 # Border width of the tooltip.
-corner_radius = 8 # Corner radius of the tooltip.
-padding_x = 8 # Horizontal inner padding of the tooltip.
-padding_y = 6 # Vertical inner padding of the tooltip.
-margin_x = 0 # Horizontal outer margin around the tooltip.
-margin_y = 8 # Vertical outer margin around the tooltip.
+[builtins.wifi.popup]
+text_color = "theme.text" # Text color used in the Wi-Fi popup.
+background_color = "theme.background" # Background color of the Wi-Fi popup.
+border_color = "theme.border_strong" # Border color of the Wi-Fi popup.
+border_width = 1 # Border width of the Wi-Fi popup.
+corner_radius = 8 # Corner radius of the Wi-Fi popup.
+padding_x = 8 # Horizontal inner padding of the Wi-Fi popup.
+padding_y = 6 # Vertical inner padding of the Wi-Fi popup.
+margin_x = 0 # Horizontal outer margin around the Wi-Fi popup.
+margin_y = 8 # Vertical outer margin around the Wi-Fi popup.
 
 [builtins.volume]
 enabled = false # Shows or hides the volume widget.
@@ -591,6 +591,3 @@ opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
 format = "yyyy-MM-dd" # Date format string.
-
-
-

@@ -249,10 +249,10 @@ The `ipv4_address` and `ipv6_address` values are primary network addresses from 
 
 ### Wi-Fi popup style
 
-The Wi-Fi popup is configured under `[builtins.wifi.tooltip]`:
+The Wi-Fi popup is configured under `[builtins.wifi.popup]`:
 
 ```toml
-[builtins.wifi.tooltip]
+[builtins.wifi.popup]
 text_color = "theme.text"
 background_color = "theme.background"
 border_color = "theme.border_strong"
@@ -338,5 +338,3 @@ Switch to Lua when you need:
 - shell-command integration or app-specific logic
 
 See [Lua Widgets](../lua/overview.md).
-
-

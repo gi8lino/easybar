@@ -105,7 +105,7 @@ extension Config {
     var inline: BuiltinWiFiInline
     /// Detail field toggles.
     var fields: BuiltinWiFiFields
-    /// Tooltip popup style.
+    /// Popup style for Wi-Fi details mode.
     var popup: BuiltinPopupStyle
 
     var enabled: Bool {
@@ -250,7 +250,7 @@ extension Config {
     let contentTable = wifi["content"]?.table ?? TOMLTable()
     let inlineTable = wifi["inline"]?.table ?? TOMLTable()
     let fieldsTable = wifi["fields"]?.table ?? TOMLTable()
-    let tooltipTable = wifi["tooltip"]?.table ?? TOMLTable()
+    let popupTable = wifi["popup"]?.table ?? TOMLTable()
 
     let style = try parseBuiltinStyle(
       from: styleTable,
@@ -266,8 +266,8 @@ extension Config {
     let inline = try parseWiFiInline(from: inlineTable, fallback: builtinWiFi.inline)
     let fields = try parseWiFiFields(from: fieldsTable, fallback: builtinWiFi.fields)
     let popup = try parseBuiltinPopupStyle(
-      from: tooltipTable,
-      path: "builtins.wifi.tooltip",
+      from: popupTable,
+      path: "builtins.wifi.popup",
       fallback: builtinWiFi.popup
     )
 
