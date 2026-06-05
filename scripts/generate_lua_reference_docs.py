@@ -1,316 +1,305 @@
 #!/usr/bin/env python3
-"""Generate EasyBar Lua reference docs from LuaLS annotations.
-
-Generated docs are reference-only. Keep concept guides, examples, and patterns
-as hand-written Markdown pages under docs/content/lua/guides.
-"""
+"""Generate the Lua API reference docs from the public LuaLS stub."""
 
 from __future__ import annotations
 
-import argparse
-import dataclasses
-import re
-import shutil
+from dataclasses import dataclass, field
 from pathlib import Path
+import re
 
+ROOT = Path(__file__).resolve().parents[1]
+STUB = ROOT / "Sources/EasyBarApp/Lua/easybar_api.lua"
+OUT = ROOT / "docs/content/lua/reference"
 
-@dataclasses.dataclass
-class FieldDoc:
-    name: str
-    type_name: str
-    description: str
-    optional: bool = False
-
-
-@dataclasses.dataclass
-class ClassDoc:
-    name: str
-    description: str = ""
-    parent: str | None = None
-    modifiers: list[str] = dataclasses.field(default_factory=list)
-    fields: list[FieldDoc] = dataclasses.field(default_factory=list)
-
-
-@dataclasses.dataclass
-class ParamDoc:
-    name: str
-    type_name: str
-    description: str
-    optional: bool = False
-
-
-@dataclasses.dataclass
-class FunctionDoc:
-    name: str
-    description: str = ""
-    params: list[ParamDoc] = dataclasses.field(default_factory=list)
-    returns: list[str] = dataclasses.field(default_factory=list)
-
-
-@dataclasses.dataclass
-class AliasValueDoc:
-    value: str
-    description: str = ""
-
-
-@dataclasses.dataclass
-class AliasDoc:
-    name: str
-    description: str = ""
-    values: list[AliasValueDoc] = dataclasses.field(default_factory=list)
-
-
-@dataclasses.dataclass
-class ConstantDoc:
-    name: str
-    value: str
-    description: str = ""
-
-
-@dataclasses.dataclass
-class ParsedDocs:
-    classes: dict[str, ClassDoc] = dataclasses.field(default_factory=dict)
-    functions: dict[str, FunctionDoc] = dataclasses.field(default_factory=dict)
-    aliases: dict[str, AliasDoc] = dataclasses.field(default_factory=dict)
-    event_constants: list[ConstantDoc] = dataclasses.field(
-        default_factory=list)
-    kind_constants: list[ConstantDoc] = dataclasses.field(default_factory=list)
-
-
-CLASS_RE = re.compile(
-    r"^---@class\s+(?:\(([^)]+)\)\s+)?([A-Za-z0-9_.:]+)(?::\s*([A-Za-z0-9_.:]+))?\s*(.*)$")
-FIELD_RE = re.compile(r"^---@field\s+([A-Za-z0-9_.:\[\]-]+)(\?)?\s+(.+)$")
-PARAM_RE = re.compile(r"^---@param\s+([A-Za-z0-9_.:\[\]-]+)(\?)?\s+(.+)$")
-RETURN_RE = re.compile(r"^---@return\s+(.+)$")
-ALIAS_RE = re.compile(r"^---@alias\s+([A-Za-z0-9_.:]+)\s*(.*)$")
-FUNCTION_RE = re.compile(
-    r"^(?:function\s+([A-Za-z0-9_.:]+)\s*\(|([A-Za-z0-9_.:]+)\s*=\s*function\s*\()")
-CONST_RE = re.compile(
-    r"^(easybar\.(?:events|kind)[A-Za-z0-9_.]*)\s*=\s*['\"]([^'\"]+)['\"]")
-UNION_VALUE_RE = re.compile(r"^---\|\s*(.+?)\s*$")
-
-
-def doc_text(line: str) -> str | None:
-    if line.startswith("---@"):
-        return None
-    if line.startswith("---|"):
-        return None
-    if line.startswith("---"):
-        return line[3:].strip()
-    return None
-
-
-def md_escape(text: str) -> str:
-    return text.replace("|", "\\|").strip()
-
-
-def normalize_alias_value(text: str) -> str:
-    value = text.strip()
-    if len(value) >= 2 and value[0] == "'" and value[-1] == "'":
-        value = value[1:-1].strip()
-    return value
-
-
-def alias_values(text: str) -> list[AliasValueDoc]:
-    return [AliasValueDoc(value=normalize_alias_value(part)) for part in text.split("|") if part.strip()]
-
-
-def split_type_and_description(text: str) -> tuple[str, str]:
-    if " # " in text:
-        type_name, description = text.split(" # ", 1)
-        return type_name.strip(), description.strip()
-
-    depth_paren = 0
-    depth_bracket = 0
-    depth_brace = 0
-    quote: str | None = None
-    previous_nonspace = ""
-
-    for index, char in enumerate(text):
-        if quote:
-            if char == quote and text[index - 1:index] != "\\":
-                quote = None
-            continue
-
-        if char in {'"', "'", "`"}:
-            quote = char
-            continue
-        if char == "(":
-            depth_paren += 1
-            continue
-        if char == ")":
-            depth_paren = max(0, depth_paren - 1)
-            continue
-        if char == "[":
-            depth_bracket += 1
-            continue
-        if char == "]":
-            depth_bracket = max(0, depth_bracket - 1)
-            continue
-        if char == "{":
-            depth_brace += 1
-            continue
-        if char == "}":
-            depth_brace = max(0, depth_brace - 1)
-            continue
-        if char.isspace() and depth_paren == 0 and depth_bracket == 0 and depth_brace == 0:
-            if previous_nonspace == ":":
-                continue
-            return text[:index].strip(), text[index + 1:].strip()
-        previous_nonspace = char
-
-    return text.strip(), ""
-
-
-def parse_lua_stub(paths: list[Path]) -> ParsedDocs:
-    parsed = ParsedDocs()
-    current_class: ClassDoc | None = None
-    current_alias: AliasDoc | None = None
-    pending_description: list[str] = []
-    pending_function: FunctionDoc | None = None
-
-    def flush_function() -> None:
-        nonlocal pending_function
-        if pending_function and pending_function.name:
-            parsed.functions[pending_function.name] = pending_function
-        pending_function = None
-
-    for path in paths:
-        if not path.exists():
-            continue
-
-        for line in path.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            comment = doc_text(stripped)
-
-            if comment:
-                pending_description.append(comment)
-                continue
-
-            if match := CLASS_RE.match(stripped):
-                flush_function()
-                modifier_text, name, parent, trailing = match.groups()
-                description = "\n".join(pending_description).strip()
-                if trailing:
-                    description = f"{description}\n{trailing.strip()}".strip()
-                current_class = ClassDoc(
-                    name=name,
-                    parent=parent,
-                    description=description,
-                    modifiers=[item.strip() for item in (modifier_text or "").split(",") if item.strip()],
-                )
-                parsed.classes[name] = current_class
-                current_alias = None
-                pending_description = []
-                continue
-
-            if match := FIELD_RE.match(stripped):
-                if current_class:
-                    name, optional, remainder = match.groups()
-                    type_name, description = split_type_and_description(remainder)
-                    current_class.fields.append(FieldDoc(
-                        name=name,
-                        optional=optional == "?",
-                        type_name=type_name.strip(),
-                        description=(description or "").strip(),
-                    ))
-                pending_description = []
-                continue
-
-            if match := ALIAS_RE.match(stripped):
-                flush_function()
-                name, trailing = match.groups()
-                current_alias = AliasDoc(
-                    name=name, description="\n".join(pending_description).strip())
-                if trailing:
-                    current_alias.values.extend(alias_values(trailing))
-                parsed.aliases[name] = current_alias
-                current_class = None
-                pending_description = []
-                continue
-
-            if current_alias and (match := UNION_VALUE_RE.match(stripped)):
-                current_alias.values.append(AliasValueDoc(
-                    value=normalize_alias_value(match.group(1)),
-                    description="\n".join(pending_description).strip(),
-                ))
-                pending_description = []
-                continue
-
-            if match := PARAM_RE.match(stripped):
-                name, optional, remainder = match.groups()
-                type_name, description = split_type_and_description(remainder)
-                if pending_function is None:
-                    pending_function = FunctionDoc(
-                        name="", description="\n".join(pending_description).strip())
-                    pending_description = []
-                pending_function.params.append(ParamDoc(
-                    name=name,
-                    optional=optional == "?",
-                    type_name=type_name.strip(),
-                    description=(description or "").strip(),
-                ))
-                continue
-
-            if match := RETURN_RE.match(stripped):
-                if pending_function is None:
-                    pending_function = FunctionDoc(
-                        name="", description="\n".join(pending_description).strip())
-                    pending_description = []
-                pending_function.returns.append(match.group(1).strip())
-                continue
-
-            if match := FUNCTION_RE.match(stripped):
-                name = match.group(1) or match.group(2)
-                if pending_function is None:
-                    pending_function = FunctionDoc(
-                        name=name, description="\n".join(pending_description).strip())
-                else:
-                    pending_function.name = name
-                flush_function()
-                pending_description = []
-                continue
-
-            if match := CONST_RE.match(stripped):
-                name, value = match.groups()
-                constant = ConstantDoc(
-                    name=name, value=value, description="\n".join(pending_description).strip())
-                if name.startswith("easybar.events"):
-                    parsed.event_constants.append(constant)
-                else:
-                    parsed.kind_constants.append(constant)
-                pending_description = []
-                continue
-
-            if stripped and not stripped.startswith("---"):
-                pending_description = []
-                current_alias = None
-
-    flush_function()
-    parsed.event_constants.sort(key=lambda item: item.name)
-    parsed.kind_constants.sort(key=lambda item: item.name)
-    return parsed
-
-
-def generated_header() -> str:
-    return """<!--
+HEADER = """<!--
 This file is generated by scripts/generate_lua_reference_docs.py.
 Do not edit this file by hand. Update the LuaLS stub instead.
 -->
+
 """
 
 
-def write_file(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content.rstrip() + "\n", encoding="utf-8")
+@dataclass
+class AliasValue:
+    value: str
+    description: str = ""
 
 
-def render_index(_: ParsedDocs) -> str:
-    return f"""{generated_header()}
-# Lua Reference
+@dataclass
+class AliasDoc:
+    name: str
+    description: str
+    type_expr: str = ""
+    values: list[AliasValue] = field(default_factory=list)
+
+
+@dataclass
+class FieldDoc:
+    name: str
+    type_expr: str
+    description: str
+    optional: bool
+
+
+@dataclass
+class ClassDoc:
+    name: str
+    description: str
+    modifiers: str = ""
+    fields: list[FieldDoc] = field(default_factory=list)
+
+
+@dataclass
+class ParamDoc:
+    name: str
+    type_expr: str
+    description: str
+    optional: bool
+
+
+@dataclass
+class FunctionDoc:
+    name: str
+    description: str
+    params: list[ParamDoc] = field(default_factory=list)
+    returns: list[str] = field(default_factory=list)
+
+
+def comment_text(line: str) -> str | None:
+    if not line.startswith("---"):
+        return None
+    return line[3:].strip()
+
+
+def display_type(type_expr: str) -> str:
+    return type_expr.replace("|", "\\|")
+
+
+def table_escape(value: str) -> str:
+    return value.replace("|", "\\|")
+
+
+def normalize_lua_literal(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == "'" and value[-1] == "'":
+        return value[1:-1]
+    return value
+
+
+def heading_id(name: str) -> str:
+    return f"`{name}`"
+
+
+def parse_docs(text: str) -> tuple[dict[str, AliasDoc], dict[str, ClassDoc], dict[str, FunctionDoc]]:
+    aliases: dict[str, AliasDoc] = {}
+    classes: dict[str, ClassDoc] = {}
+    functions: dict[str, FunctionDoc] = {}
+
+    pending_comments: list[str] = []
+    pending_function_description = ""
+    pending_params: list[ParamDoc] = []
+    pending_returns: list[str] = []
+    current_alias: AliasDoc | None = None
+    current_class: ClassDoc | None = None
+    current_function: FunctionDoc | None = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        comment = comment_text(line)
+
+        if comment is not None and not comment.startswith("@") and not comment.startswith("|"):
+            pending_comments.append(comment)
+            continue
+
+        alias_match = re.match(r"---@alias\s+(\S+)(?:\s+(.+))?", line)
+        if alias_match:
+            current_alias = AliasDoc(
+                name=alias_match.group(1),
+                description=" ".join(pending_comments).strip(),
+                type_expr=(alias_match.group(2) or "").strip(),
+            )
+            aliases[current_alias.name] = current_alias
+            current_class = None
+            current_function = None
+            pending_comments = []
+            pending_function_description = ""
+            pending_params = []
+            pending_returns = []
+            continue
+
+        alias_value_match = re.match(r"---\|\s+(.+)", line)
+        if alias_value_match and current_alias:
+            current_alias.values.append(
+                AliasValue(
+                    value=normalize_lua_literal(alias_value_match.group(1)),
+                    description=" ".join(pending_comments).strip(),
+                )
+            )
+            pending_comments = []
+            continue
+
+        class_match = re.match(r"---@class(?:\s+\(([^)]+)\))?\s+(\S+)", line)
+        if class_match:
+            current_class = ClassDoc(
+                name=class_match.group(2),
+                description=" ".join(pending_comments).strip(),
+                modifiers=class_match.group(1) or "",
+            )
+            classes[current_class.name] = current_class
+            current_alias = None
+            current_function = None
+            pending_comments = []
+            pending_function_description = ""
+            pending_params = []
+            pending_returns = []
+            continue
+
+        field_match = re.match(r"---@field\s+(\S+)\s+([^\s]+)(?:\s+(.*))?", line)
+        if field_match and current_class:
+            name = field_match.group(1)
+            optional = name.endswith("?")
+            if optional:
+                name = name[:-1]
+            current_class.fields.append(
+                FieldDoc(
+                    name=name,
+                    type_expr=field_match.group(2),
+                    description=(field_match.group(3) or "").strip(),
+                    optional=optional,
+                )
+            )
+            pending_comments = []
+            continue
+
+        param_match = re.match(r"---@param\s+(\S+)\s+(.+)", line)
+        if param_match:
+            name = param_match.group(1)
+            optional = name.endswith("?")
+            if optional:
+                name = name[:-1]
+            if pending_comments and not pending_function_description:
+                pending_function_description = " ".join(pending_comments).strip()
+            pending_params.append(
+                ParamDoc(
+                    name=name,
+                    type_expr=param_match.group(2).strip(),
+                    description="",
+                    optional=optional,
+                )
+            )
+            pending_comments = []
+            continue
+
+        return_match = re.match(r"---@return\s+(.+)", line)
+        if return_match:
+            if pending_comments and not pending_function_description:
+                pending_function_description = " ".join(pending_comments).strip()
+            pending_returns.append(return_match.group(1).strip())
+            pending_comments = []
+            continue
+
+        function_match = re.match(r"function\s+([A-Za-z0-9_:.]+)\s*\(", line)
+        if function_match:
+            name = function_match.group(1)
+            current_function = FunctionDoc(
+                name=name,
+                description=pending_function_description or " ".join(pending_comments).strip(),
+                params=pending_params,
+                returns=pending_returns,
+            )
+            functions[name] = current_function
+            current_alias = None
+            current_class = None
+            pending_comments = []
+            pending_function_description = ""
+            pending_params = []
+            pending_returns = []
+            continue
+
+        pending_comments = []
+        pending_function_description = ""
+        pending_params = []
+        pending_returns = []
+
+    add_inline_function_fields(classes, functions)
+    return aliases, classes, functions
+
+
+def add_inline_function_fields(classes: dict[str, ClassDoc], functions: dict[str, FunctionDoc]) -> None:
+    """Turn function-valued class fields into reference docs when no body function exists."""
+    easybar = classes.get("EasyBar")
+    if easybar:
+        for item in easybar.fields:
+            if item.type_expr.startswith("fun("):
+                name = f"EasyBar.{item.name}"
+                functions.setdefault(name, function_from_field(name, item))
+
+    handle = classes.get("EasyBarNodeHandle")
+    if handle:
+        for item in handle.fields:
+            if item.type_expr.startswith("fun("):
+                name = f"EasyBarNodeHandle:{item.name}"
+                functions.setdefault(name, function_from_field(name, item))
+
+
+def function_from_field(name: str, field_doc: FieldDoc) -> FunctionDoc:
+    params, returns = parse_fun_type(field_doc.type_expr)
+    return FunctionDoc(
+        name=name,
+        description=field_doc.description,
+        params=params,
+        returns=returns,
+    )
+
+
+def parse_fun_type(type_expr: str) -> tuple[list[ParamDoc], list[str]]:
+    match = re.match(r"fun\((.*?)\)(?::\s*(.*))?$", type_expr)
+    if not match:
+        return [], []
+
+    raw_params = match.group(1).strip()
+    raw_returns = (match.group(2) or "").strip()
+    params: list[ParamDoc] = []
+
+    if raw_params:
+        for item in split_top_level(raw_params, ","):
+            item = item.strip()
+            if not item or ":" not in item:
+                continue
+            name, param_type = item.split(":", 1)
+            name = name.strip()
+            optional = name.endswith("?")
+            if optional:
+                name = name[:-1]
+            params.append(ParamDoc(name=name, type_expr=param_type.strip(), description="", optional=optional))
+
+    returns = [part.strip() for part in split_top_level(raw_returns, ",") if part.strip()]
+    return params, returns
+
+
+def split_top_level(text: str, delimiter: str) -> list[str]:
+    parts: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for char in text:
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+        if char == delimiter and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    parts.append("".join(current))
+    return parts
+
+
+def write_index() -> None:
+    content = HEADER + """# Lua Reference
 
 This section is generated from the EasyBar LuaLS stub and is meant to answer
-"what is the exact API surface?" quickly.
+\"what is the exact API surface?\" quickly.
 
 Use these pages for exact types, event names, and property tables. For usage
 patterns and architecture, use the hand-written guides.
@@ -342,225 +331,137 @@ Sources/EasyBarApp/Lua/easybar_api.lua
 
 If this reference is wrong, update the stub and regenerate the docs.
 """
+    (OUT / "index.md").write_text(content)
 
 
-def render_functions(parsed: ParsedDocs) -> str:
-    lines = [generated_header(), "# Functions", "",
-             "Generated from LuaLS function annotations.", ""]
-    if not parsed.functions:
-        lines.append("_No functions found._")
-        return "\n".join(lines)
-
-    for function in sorted(parsed.functions.values(), key=lambda item: item.name):
-        lines += [f"## `{function.name}`", ""]
-        if function.description:
-            lines += [function.description, ""]
-        if function.params:
-            lines += ["### Parameters", "", "| Name | Type | Description |",
-                      "| ---- | ---- | ----------- |"]
-            for param in function.params:
-                name = f"`{param.name}`"
-                if param.optional:
-                    name += " _(optional)_"
-                lines.append(
-                    f"| {name} | `{md_escape(param.type_name)}` | {md_escape(param.description)} |")
-            lines.append("")
-        if function.returns:
-            lines += ["### Returns", ""]
-            lines += [f"- `{return_type}`" for return_type in function.returns]
-            lines.append("")
-    return "\n".join(lines)
-
-
-def render_alias(alias: AliasDoc, level: str = "##") -> list[str]:
-    lines = [f"{level} `{alias.name}`", ""]
+def render_alias(alias: AliasDoc) -> list[str]:
+    lines = [f"## {heading_id(alias.name)}", ""]
     if alias.description:
-        lines += [alias.description, ""]
+      lines += [alias.description, ""]
+    if alias.type_expr:
+        lines += ["| Value |", "| ----- |", f"| `{display_type(alias.type_expr)}` |", ""]
     if alias.values:
-        if any(value.description for value in alias.values):
-            lines += ["| Value | Meaning |", "| ----- | ------- |"]
-            for value in alias.values:
-                lines.append(
-                    f"| `{md_escape(value.value)}` | {md_escape(value.description)} |")
-        else:
-            lines += ["| Value |", "| ----- |"]
-            for value in alias.values:
-                lines.append(f"| `{md_escape(value.value)}` |")
+        lines += ["| Value | Meaning |", "| ----- | ------- |"]
+        for item in alias.values:
+            lines.append(f"| `{table_escape(item.value)}` | {table_escape(item.description)} |")
         lines.append("")
-    else:
-        lines += ["_No literal values documented._", ""]
     return lines
 
 
-def render_class(class_doc: ClassDoc, level: str = "##") -> list[str]:
-    lines = [f"{level} `{class_doc.name}`", ""]
-    if class_doc.parent:
-        lines += [f"Extends `{class_doc.parent}`.", ""]
-    if class_doc.modifiers:
-        joined = ", ".join(f"`{modifier}`" for modifier in class_doc.modifiers)
-        lines += [f"Modifiers: {joined}.", ""]
-    if class_doc.description:
-        lines += [class_doc.description, ""]
-    if class_doc.fields:
+def render_class(cls: ClassDoc) -> list[str]:
+    lines = [f"## {heading_id(cls.name)}", ""]
+    if cls.modifiers:
+        lines += [f"Modifiers: `{cls.modifiers}`.", ""]
+    if cls.description:
+        lines += [cls.description, ""]
+    if cls.fields:
         lines += ["| Property | Type | Description |", "| -------- | ---- | ----------- |"]
-        for field in class_doc.fields:
-            name = f"`{field.name}`"
-            if field.optional:
+        for item in cls.fields:
+            name = f"`{item.name}`"
+            if item.optional:
                 name += " _(optional)_"
             lines.append(
-                f"| {name} | `{md_escape(field.type_name)}` | {md_escape(field.description)} |")
+                f"| {name} | `{display_type(item.type_expr)}` | {table_escape(item.description)} |"
+            )
         lines.append("")
-    else:
-        lines += ["_No fields documented._", ""]
     return lines
 
 
-def is_property_class(class_doc: ClassDoc) -> bool:
-    return class_doc.name.endswith("Props") or class_doc.name == "EasyBarNodeProps"
-
-
-def render_properties(parsed: ParsedDocs) -> str:
-    classes = [class_doc for class_doc in parsed.classes.values()
-               if is_property_class(class_doc)]
-    lines = [generated_header(), "# Properties", "",
-             "Generated from LuaLS class and field annotations.", ""]
-
-    property_alias_names = [
-        "EasyBarBoolLike",
-        "EasyBarIconLike",
-        "EasyBarLabelLike",
-        "EasyBarPosition",
-        "EasyBarRootPosition",
-    ]
-    aliases = [
-        parsed.aliases[name]
-        for name in property_alias_names
-        if name in parsed.aliases
-    ]
-
-    if aliases:
-        lines += ["## Common Value Types", ""]
-        for alias in aliases:
-            lines += render_alias(alias, level="###")
-
-    lines += [
-        "## Reading This Page",
-        "",
-        "Use `EasyBarNodeProps` for the main node property table passed to `easybar.add(...)` and `node:set(...)`.",
-        "The smaller `*Props` tables describe nested objects such as `icon`, `label`, `background`, and `popup`.",
-        "",
-    ]
-
-    if not classes:
-        lines.append("_No property classes found._")
-        return "\n".join(lines)
-
-    for class_doc in sorted(classes, key=lambda item: item.name):
-        lines += render_class(class_doc)
-    return "\n".join(lines)
-
-
-def render_node_kinds(parsed: ParsedDocs) -> str:
-    lines = [generated_header(), "# Node Kinds", "",
-             "Generated from LuaLS aliases and namespace fields.", ""]
-
-    alias = parsed.aliases.get("EasyBarKind")
-    if alias:
-        lines += render_alias(alias)
-
-    class_doc = parsed.classes.get("EasyBarKinds")
-    if class_doc:
-        lines += render_class(class_doc)
-
-    if len(lines) <= 4:
-        lines.append("_Nothing found._")
-
-    return "\n".join(lines)
-
-
-def render_events(parsed: ParsedDocs) -> str:
-    lines = [generated_header(), "# Events", "",
-             "Generated from LuaLS aliases and event namespace classes.", ""]
-
-    event_name_alias = parsed.aliases.get("EasyBarEventName")
-    if event_name_alias:
-        lines += render_alias(event_name_alias)
-
-    alias_names = [
-        "EasyBarEventHandler",
-        "EasyBarMouseButton",
-        "EasyBarScrollDirection",
-    ]
-    aliases = [parsed.aliases[name] for name in alias_names if name in parsed.aliases]
-    if aliases:
-        lines += ["## Supporting Aliases", ""]
-        for alias in aliases:
-            lines += render_alias(alias, level="###")
-
-    class_names = [
-        "EasyBarEvent",
-        "EasyBarEventToken",
-        "EasyBarEvents",
-        "EasyBarMouseEvents",
-        "EasyBarSliderEvents",
-        "EasyBarMouseButtons",
-        "EasyBarScrollDirections",
-        "EasyBarNetworkEventData",
-        "EasyBarPowerEventData",
-        "EasyBarAudioEventData",
-    ]
-    classes = [parsed.classes[name] for name in class_names if name in parsed.classes]
-    for class_doc in classes:
-        lines += render_class(class_doc)
-
-    if parsed.event_constants:
-        lines += ["## Legacy Constants", ""]
-        lines += ["| Constant | Value | Description |", "| -------- | ----- | ----------- |"]
-        for constant in parsed.event_constants:
-            lines.append(
-                f"| `{constant.name}` | `{constant.value}` | {md_escape(constant.description)} |")
+def render_function(fn: FunctionDoc) -> list[str]:
+    lines = [f"## {heading_id(fn.name)}", ""]
+    if fn.description:
+        lines += [fn.description, ""]
+    if fn.params:
+        lines += ["### Parameters", "", "| Name | Type | Description |", "| ---- | ---- | ----------- |"]
+        for param in fn.params:
+            name = f"`{param.name}`"
+            if param.optional:
+                name += " _(optional)_"
+            lines.append(f"| {name} | `{display_type(param.type_expr)}` | {table_escape(param.description)} |")
         lines.append("")
-
-    if len(lines) <= 4:
-        lines.append("_Nothing found._")
-
-    return "\n".join(lines)
-
-
-def generate_docs(input_paths: list[Path], output_dir: Path) -> None:
-    parsed = parse_lua_stub(input_paths)
-
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    write_file(output_dir / "index.md", render_index(parsed))
-    write_file(output_dir / "functions.md", render_functions(parsed))
-    write_file(output_dir / "node-kinds.md", render_node_kinds(parsed))
-    write_file(output_dir / "events.md", render_events(parsed))
-    write_file(output_dir / "properties.md", render_properties(parsed))
+    if fn.returns:
+        lines += ["### Returns", ""]
+        for ret in fn.returns:
+            lines.append(f"- `{display_type(ret)}`")
+        lines.append("")
+    return lines
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", action="append", type=Path, dest="inputs")
-    parser.add_argument("--output", type=Path,
-                        default=Path("docs/content/lua/reference"))
-    args = parser.parse_args()
+def write_functions(functions: dict[str, FunctionDoc]) -> None:
+    preferred = [
+        "EasyBar.add", "EasyBar.clear_defaults", "EasyBar.default", "EasyBar.exec",
+        "EasyBar.exec_async", "EasyBar.get", "EasyBar.log", "EasyBar.remove",
+        "EasyBar.set", "EasyBar.subscribe", "EasyBar.unset",
+        "EasyBarNodeHandle:get", "EasyBarNodeHandle:remove", "EasyBarNodeHandle:set",
+        "EasyBarNodeHandle:subscribe", "EasyBarNodeHandle:unset",
+    ]
+    ordered = [functions[name] for name in preferred if name in functions]
+    seen = {fn.name for fn in ordered}
+    ordered += [functions[name] for name in sorted(functions) if name not in seen]
 
-    inputs = args.inputs or [
-        Path("Sources/EasyBarApp/Lua/easybar_api.lua"),
-        Path("Sources/EasyBarApp/Lua/easybar_api.base.lua"),
-        Path("Sources/EasyBarApp/Lua/easybar_api.events.lua"),
+    lines = [HEADER, "# Functions", "", "Generated from LuaLS function annotations.", ""]
+    for fn in ordered:
+        lines.extend(render_function(fn))
+    (OUT / "functions.md").write_text("\n".join(lines).rstrip() + "\n")
+
+
+def write_node_kinds(aliases: dict[str, AliasDoc], classes: dict[str, ClassDoc]) -> None:
+    lines = [HEADER, "# Node Kinds", "", "Generated from LuaLS aliases and namespace fields.", ""]
+    for name in ["EasyBarKind"]:
+        if name in aliases:
+            lines.extend(render_alias(aliases[name]))
+    for name in ["EasyBarKinds"]:
+        if name in classes:
+            lines.extend(render_class(classes[name]))
+    (OUT / "node-kinds.md").write_text("\n".join(lines).rstrip() + "\n")
+
+
+def write_events(aliases: dict[str, AliasDoc], classes: dict[str, ClassDoc]) -> None:
+    names = [name for name in aliases if "Event" in name or name in {"EasyBarMouseButton", "EasyBarScrollDirection"}]
+    class_names = [name for name in classes if "Event" in name or name.endswith("EventData")]
+
+    lines = [HEADER, "# Events", "", "Generated from LuaLS aliases and event namespace classes.", ""]
+    for name in sorted(names):
+        lines.extend(render_alias(aliases[name]))
+    for name in sorted(class_names):
+        lines.extend(render_class(classes[name]))
+    (OUT / "events.md").write_text("\n".join(lines).rstrip() + "\n")
+
+
+def write_properties(aliases: dict[str, AliasDoc], classes: dict[str, ClassDoc]) -> None:
+    property_aliases = [
+        "EasyBarBoolLike", "EasyBarIconLike", "EasyBarLabelLike",
+        "EasyBarPosition", "EasyBarRootPosition",
+    ]
+    property_classes = [
+        "EasyBarBackgroundProps", "EasyBarFontProps", "EasyBarIconProps",
+        "EasyBarImageProps", "EasyBarLabelProps", "EasyBarMarginProps",
+        "EasyBarNodeProps", "EasyBarPopupProps",
     ]
 
-    existing_inputs = [path for path in inputs if path.exists()]
-    if not existing_inputs:
-        joined = "\n".join(str(path) for path in inputs)
-        raise SystemExit(f"No LuaLS stub files found. Checked:\n{joined}")
+    lines = [HEADER, "# Properties", "", "Generated from LuaLS class and field annotations.", ""]
+    lines += ["## Common Value Types", ""]
+    for name in property_aliases:
+        if name in aliases:
+            lines.extend(render_alias(aliases[name]))
+    lines += ["## Property Tables", ""]
+    for name in property_classes:
+        if name in classes:
+            lines.extend(render_class(classes[name]))
+    (OUT / "properties.md").write_text("\n".join(lines).rstrip() + "\n")
 
-    generate_docs(existing_inputs, args.output)
+
+def main() -> int:
+    aliases, classes, functions = parse_docs(STUB.read_text())
+    OUT.mkdir(parents=True, exist_ok=True)
+    write_index()
+    write_functions(functions)
+    write_node_kinds(aliases, classes)
+    write_events(aliases, classes)
+    write_properties(aliases, classes)
+    print(f"Generated Lua reference docs in {OUT.relative_to(ROOT)}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

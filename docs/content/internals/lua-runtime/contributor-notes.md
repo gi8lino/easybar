@@ -56,5 +56,6 @@ When changing the Lua API:
 
 1. update runtime code
 2. update stubs
-3. update docs
-4. update examples
+3. regenerate generated docs with `scripts/generate_docs.py`
+4. update hand-written guides and examples
+
