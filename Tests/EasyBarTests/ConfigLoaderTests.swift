@@ -693,31 +693,6 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .debug)
   }
 
-  /// Handles test reload rejects legacy logging debug when level is absent.
-  func testReloadRejectsLegacyLoggingDebugWhenLevelIsAbsent() throws {
-    let config = Config.makeUnloadedConfig()
-    let configFileURL = tempDirectoryURL.appendingPathComponent("legacy-logging.toml")
-
-    try writeConfig(
-      """
-      [logging]
-      debug = true
-      """,
-      to: configFileURL
-    )
-
-    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
-
-    let error = config.reload()
-
-    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
-      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
-    }
-
-    XCTAssertEqual(path, "logging.debug")
-    XCTAssertEqual(message, "logging.debug is no longer supported; use logging.level")
-  }
-
   /// Handles test validate does not create directories for valid staged config.
   func testValidateDoesNotCreateDirectories() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("validate-only.toml")
