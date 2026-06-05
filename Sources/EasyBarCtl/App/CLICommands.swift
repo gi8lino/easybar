@@ -6,23 +6,23 @@ import Foundation
 func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppContext) throws {
   context.debug("sending command '\(command.rawValue)' to \(socketPath)")
 
-  let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
-  let response = try transport.send(request: .makeCommand(command))
+  let response = try sendIPCRequest(
+    .makeCommand(command),
+    to: socketPath,
+    context: context
+  )
 
   switch response {
   case .accepted:
-    context.debug("decoded response kind='accepted' message='<nil>'")
+    break
 
-  case .rejected(let message):
-    context.debug("decoded response kind='rejected' message='\(message ?? "<nil>")'")
-    throw AppError.message(message ?? "command rejected")
+  case .rejected:
+    throw rejectedResponseError(response, fallback: "command rejected")
 
   case .configValidated:
-    context.debug("decoded response kind='config_validated' message='<nil>'")
     throw AppError.message("unexpected config validation response")
 
   case .metrics:
-    context.debug("decoded response kind='metrics' message='<nil>'")
     throw AppError.message("unexpected metrics response")
   }
 
@@ -35,15 +35,14 @@ func fetchMetricsSnapshot(from socketPath: String, context: AppContext) throws
 {
   context.debug("requesting metrics snapshot from \(socketPath)")
 
-  let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
-  let response = try transport.send(request: .makeMetrics())
+  let response = try sendIPCRequest(.makeMetrics(), to: socketPath, context: context)
 
   switch response {
   case .metrics(let metrics):
     return metrics
 
-  case .rejected(let message):
-    throw AppError.message(message ?? "metrics unavailable")
+  case .rejected:
+    throw rejectedResponseError(response, fallback: "metrics unavailable")
 
   case .accepted, .configValidated:
     throw AppError.message("metrics unavailable")
@@ -68,8 +67,8 @@ func streamMetrics(to socketPath: String, context: AppContext) throws {
       )
       fflush(stdout)
 
-    case .rejected(let message):
-      throw AppError.message(message ?? "metrics rejected")
+    case .rejected:
+      throw rejectedResponseError(message, fallback: "metrics rejected")
 
     case .accepted, .configValidated:
       return
@@ -89,17 +88,18 @@ func validateConfig(configPath: String?, socketPath: String, context: AppContext
     context.debug("requesting default config validation through \(socketPath)")
   }
 
-  let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
-  let response = try transport.send(
-    request: .makeValidateConfig(configPath: requestedConfigPath)
+  let response = try sendIPCRequest(
+    .makeValidateConfig(configPath: requestedConfigPath),
+    to: socketPath,
+    context: context
   )
 
   switch response {
   case .configValidated(let validatedPath):
     fputs("config valid: \(validatedPath)\n", stdout)
 
-  case .rejected(let message):
-    throw AppError.message(message ?? "config validation failed")
+  case .rejected:
+    throw rejectedResponseError(response, fallback: "config validation failed")
 
   case .accepted:
     throw AppError.message("config validation did not return a result")
@@ -121,4 +121,25 @@ private func explicitValidationConfigPath(_ configPath: String?) -> String? {
   }
 
   return environmentPath
+}
+
+/// Sends one IPC request and logs the decoded response shape.
+private func sendIPCRequest(
+  _ request: IPC.Request,
+  to socketPath: String,
+  context: AppContext
+) throws -> IPC.Message {
+  let transport = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+  let response = try transport.send(request: request)
+
+  context.debug(
+    "decoded response kind='\(response.kind.rawValue)' message='\(response.message ?? "<nil>")'"
+  )
+
+  return response
+}
+
+/// Builds one AppError from a rejected IPC response and a command-specific fallback.
+private func rejectedResponseError(_ response: IPC.Message, fallback: String) -> AppError {
+  AppError.message(response.message ?? fallback)
 }
