@@ -1,25 +1,20 @@
 import TOMLKit
 
 extension SharedRuntimeConfig {
-  /// Resolves the shared logging config from TOML plus supported environment overrides.
+  /// Resolves the shared logging config from TOML and defaults.
   static func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
     let loggingTable = toml["logging"]?.table
 
-    let enabled =
-      boolEnvironmentValue(named: SharedEnvironmentKeys.loggingEnabled)
-      ?? loggingTable?["enabled"]?.bool
-      ?? false
+    let enabled = loggingTable?["enabled"]?.bool ?? false
 
     let level = resolvedLoggingLevel(
       tomlValue: loggingTable?["level"]?.string,
       legacyDebugValue: loggingTable?["debug"]?.bool,
-      environmentName: SharedEnvironmentKeys.loggingLevel,
       fallback: .info
     )
 
     let directory =
-      expandedEnvironmentPath(named: SharedEnvironmentKeys.loggingDirectory)
-      ?? expandedPath(loggingTable?["directory"]?.string)
+      expandedPath(loggingTable?["directory"]?.string)
       ?? SharedPathDefaults.defaultLoggingDirectory().path
 
     return SharedLoggingRuntimeConfig(
@@ -29,35 +24,21 @@ extension SharedRuntimeConfig {
     )
   }
 
-  /// Resolves the shared logging config from environment overrides and defaults only.
+  /// Resolves the shared logging defaults used before a config file has been parsed.
   static func resolvedLoggingEnvironmentDefaults() -> SharedLoggingRuntimeConfig {
     SharedLoggingRuntimeConfig(
-      enabled: boolEnvironmentValue(named: SharedEnvironmentKeys.loggingEnabled) ?? false,
-      level: resolvedLoggingLevel(
-        tomlValue: nil,
-        legacyDebugValue: nil,
-        environmentName: SharedEnvironmentKeys.loggingLevel,
-        fallback: .info
-      ),
-      directory:
-        expandedEnvironmentPath(named: SharedEnvironmentKeys.loggingDirectory)
-        ?? SharedPathDefaults.defaultLoggingDirectory().path
+      enabled: false,
+      level: .info,
+      directory: SharedPathDefaults.defaultLoggingDirectory().path
     )
   }
 
-  /// Resolves the configured minimum logging level from environment or TOML.
+  /// Resolves the configured minimum logging level from TOML.
   private static func resolvedLoggingLevel(
     tomlValue: String?,
     legacyDebugValue: Bool?,
-    environmentName: String,
     fallback: ProcessLogLevel
   ) -> ProcessLogLevel {
-    if let raw = stringEnvironmentValue(named: environmentName),
-      let level = ProcessLogLevel.normalized(raw)
-    {
-      return level
-    }
-
     if let tomlValue,
       let level = ProcessLogLevel.normalized(tomlValue)
     {

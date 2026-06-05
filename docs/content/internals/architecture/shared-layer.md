@@ -50,6 +50,7 @@ That keeps the normal runtime logging model explicit and consistent across all l
 The CLI remains slightly different on purpose:
 
 - it can enable extra local debug output with `--debug`
-- it may also honor `EASYBAR_DEBUG` for CLI-only behavior
 
-That CLI-specific toggle is a developer convenience, not the main logging contract for the app or agents.
+That CLI-specific flag is a developer convenience, not the main logging contract for the app or agents.
+
+

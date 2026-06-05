@@ -316,32 +316,27 @@ final class AppController {
     }
   }
 
-  /// Logs relevant process environment overrides.
+  /// Logs relevant process environment override keys without exposing values.
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
-    let configOverride = env["\(SharedEnvironmentKeys.configPath)"] ?? ""
-    let logLevel = env["\(SharedEnvironmentKeys.loggingLevel)"] ?? ""
+    let configOverride = env[SharedEnvironmentKeys.configPath] ?? ""
 
     logger.info(
       "environment override",
       .field("key", SharedEnvironmentKeys.configPath),
-      .field("value", configOverride.isEmpty ? "<unset>" : configOverride)
-    )
-    logger.info(
-      "environment override",
-      .field("key", SharedEnvironmentKeys.loggingLevel),
-      .field("value", logLevel.isEmpty ? "<unset>" : logLevel)
+      .field("value_set", !configOverride.isEmpty)
     )
   }
 
-  /// Logs the configured environment overrides passed to the Lua runtime.
+  /// Logs the configured environment keys passed to the Lua runtime.
   private func logConfiguredEnvironment() {
     let environment = services.config.appSection.environment
 
     guard !environment.isEmpty else {
       logger.info(
         "app env",
-        .field("value", "<empty>")
+        .field("key", "<empty>"),
+        .field("value_set", false)
       )
       return
     }
@@ -351,7 +346,7 @@ final class AppController {
       logger.info(
         "app env",
         .field("key", key),
-        .field("value", value)
+        .field("value_set", !value.isEmpty)
       )
     }
   }

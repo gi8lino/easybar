@@ -2,7 +2,7 @@ import Foundation
 
 extension Config {
   /// Environment key used to pass the resolved active theme to the Lua runtime.
-  static let luaThemeEnvironmentKey = "EASYBAR_THEME_JSON"
+  static let luaThemeEnvironmentKey = "EASYBAR_INTERNAL_THEME_JSON"
 
   /// Returns environment values required by the Lua runtime.
   func luaThemeEnvironment() -> [String: String] {

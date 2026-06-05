@@ -14,6 +14,7 @@ actor ConfigManager {
     let timeoutSeconds: TimeInterval
     let maxOutputBytes: Int
     let maxAsyncJobs: Int
+    let environment: [String: String]
   }
 
   /// Shared actor used for runtime config access.
@@ -143,8 +144,16 @@ actor ConfigManager {
     LuaCommandSettings(
       timeoutSeconds: snapshot.app.luaCommandLimits.timeoutSeconds,
       maxOutputBytes: snapshot.app.luaCommandLimits.maxOutputBytes,
-      maxAsyncJobs: snapshot.app.luaCommandLimits.maxAsyncJobs
+      maxAsyncJobs: snapshot.app.luaCommandLimits.maxAsyncJobs,
+      environment: luaCommandEnvironment(from: snapshot)
     )
+  }
+
+  /// Returns the environment used by Lua shell commands.
+  private static func luaCommandEnvironment(from snapshot: ConfigSnapshot) -> [String: String] {
+    ProcessInfo.processInfo.environment.merging(snapshot.app.environment) { _, configuredValue in
+      configuredValue
+    }
   }
 
   /// Returns the resolved config path used for validation status and errors.

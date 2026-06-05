@@ -278,7 +278,11 @@ actor WidgetEngine {
     )
 
     if isSynchronous {
-      let result = await commandRunner.run(command: command, limits: commandLimits)
+      let result = await commandRunner.run(
+        command: command,
+        limits: commandLimits,
+        environment: commandSettings.environment
+      )
       await sendCommandResponse(token: token, result: result)
       return
     }
@@ -307,7 +311,11 @@ actor WidgetEngine {
     let runtimeSessionID = self.runtimeSessionID
 
     Task { [weak self] in
-      let result = await commandRunner.run(command: command, limits: commandLimits)
+      let result = await commandRunner.run(
+        command: command,
+        limits: commandLimits,
+        environment: commandSettings.environment
+      )
       await self?.sendAsyncCommandResponse(
         token: token,
         result: result,

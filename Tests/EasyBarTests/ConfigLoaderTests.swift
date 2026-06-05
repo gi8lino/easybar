@@ -7,14 +7,7 @@ import XCTest
 
 final class ConfigLoaderTests: XCTestCase {
   private let environmentKeys = [
-    SharedEnvironmentKeys.configPath,
-    SharedEnvironmentKeys.lockDirectory,
-    SharedEnvironmentKeys.loggingDirectory,
-    SharedEnvironmentKeys.loggingLevel,
-    SharedEnvironmentKeys.luaSocketPath,
-    SharedEnvironmentKeys.calendarAgentSocketPath,
-    SharedEnvironmentKeys.networkAgentSocketPath,
-    SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
+    SharedEnvironmentKeys.configPath
   ]
 
   private var originalEnvironment: [String: String?] = [:]
@@ -52,10 +45,11 @@ final class ConfigLoaderTests: XCTestCase {
     try super.tearDownWithError()
   }
 
-  /// Handles test reload uses environment overrides when config file is missing.
-  func testReloadUsesEnvironmentOverridesWhenConfigFileIsMissing() throws {
+  /// Handles test reload uses the config path environment override.
+  func testReloadUsesConfigPathEnvironmentOverride() throws {
     let config = Config.makeUnloadedConfig()
-    let missingConfigPath = tempDirectoryURL.appendingPathComponent("missing.toml").path
+    let configFileURL = tempDirectoryURL.appendingPathComponent("env-config.toml")
+    let widgetsDirectory = tempDirectoryURL.appendingPathComponent("widgets").path
     let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
     let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
     let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
@@ -69,20 +63,34 @@ final class ConfigLoaderTests: XCTestCase {
       .appendingPathComponent("network.sock")
       .path
 
-    setEnvironmentValue(missingConfigPath, for: SharedEnvironmentKeys.configPath)
-    setEnvironmentValue(lockDirectory, for: SharedEnvironmentKeys.lockDirectory)
-    setEnvironmentValue(loggingDirectory, for: SharedEnvironmentKeys.loggingDirectory)
-    setEnvironmentValue("error", for: SharedEnvironmentKeys.loggingLevel)
-    setEnvironmentValue(luaSocketPath, for: SharedEnvironmentKeys.luaSocketPath)
-    setEnvironmentValue(calendarSocketPath, for: SharedEnvironmentKeys.calendarAgentSocketPath)
-    setEnvironmentValue(networkSocketPath, for: SharedEnvironmentKeys.networkAgentSocketPath)
-    setEnvironmentValue("42.5", for: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
+    try writeConfig(
+      """
+      [app]
+      widgets_dir = "\(tomlEscaped(widgetsDirectory))"
+      lock_dir = "\(tomlEscaped(lockDirectory))"
+      lua_socket_path = "\(tomlEscaped(luaSocketPath))"
+
+      [logging]
+      directory = "\(tomlEscaped(loggingDirectory))"
+      level = "error"
+
+      [agents.calendar]
+      socket_path = "\(tomlEscaped(calendarSocketPath))"
+
+      [agents.network]
+      socket_path = "\(tomlEscaped(networkSocketPath))"
+      refresh_interval_seconds = 42.5
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
     let error = config.reload()
 
     XCTAssertNil(error)
-    XCTAssertEqual(config.configPath, missingConfigPath)
-    XCTAssertEqual(config.widgetsPath, SharedPathDefaults.defaultWidgetsPath().path)
+    XCTAssertEqual(config.configPath, configFileURL.path)
+    XCTAssertEqual(config.widgetsPath, widgetsDirectory)
     XCTAssertEqual(config.lockDirectory, lockDirectory)
     XCTAssertEqual(config.loggingDirectory, loggingDirectory)
     XCTAssertEqual(config.loggingLevel, .error)
@@ -91,12 +99,10 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.networkAgentSocketPath, networkSocketPath)
     XCTAssertEqual(config.networkAgentRefreshIntervalSeconds, 42.5)
 
+    XCTAssertTrue(FileManager.default.fileExists(atPath: widgetsDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: lockDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: loggingDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
-    XCTAssertEqual(config.registeredDirectories["app.lock_dir"]?.path, lockDirectory)
-    XCTAssertEqual(config.registeredDirectories["app.lua_socket_path"]?.path, luaSocketPath)
-    XCTAssertEqual(config.registeredDirectories["logging.directory"]?.path, loggingDirectory)
   }
 
   func testInitialLoadAppliesConfigFileOverridesExplicitly() throws {
@@ -595,21 +601,20 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(actual, "string(yes)")
   }
 
-  /// Handles test reload prefers environment logging level over toml value.
-  func testReloadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
+  /// Handles test reload applies logging level from TOML.
+  func testReloadAppliesLoggingLevelFromToml() throws {
     let config = Config.makeUnloadedConfig()
-    let configFileURL = tempDirectoryURL.appendingPathComponent("env-logging-precedence.toml")
+    let configFileURL = tempDirectoryURL.appendingPathComponent("logging-level.toml")
 
     try writeConfig(
       """
       [logging]
-      level = "info"
+      level = "trace"
       """,
       to: configFileURL
     )
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
-    setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
 
     let error = config.reload()
 
@@ -897,6 +902,13 @@ extension ConfigLoaderTests {
     } else {
       unsetenv(key)
     }
+  }
+
+  /// Escapes a string so it can be embedded in a TOML basic string.
+  fileprivate func tomlEscaped(_ value: String) -> String {
+    value
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
   }
 
   /// Handles restore environment.

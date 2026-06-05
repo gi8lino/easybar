@@ -14,6 +14,8 @@ extension LuaProcessController {
       luaPath: config.app.luaPath,
       luaSocketPath: config.app.luaSocketPath,
       widgetsPath: config.app.widgetsPath,
+      defaultCommandTimeoutSeconds: config.app.luaCommandLimits.timeoutSeconds,
+      defaultCommandMaxOutputBytes: config.app.luaCommandLimits.maxOutputBytes,
       widgetFiles: resolvedWidgetFiles(in: config.app.widgetsPath),
       environment: luaRuntimeEnvironment(config: config)
     )
@@ -128,6 +130,8 @@ extension LuaProcessController {
       luaPath: context.luaPath,
       runtimePath: context.runtimePath,
       widgetsPath: context.widgetsPath,
+      defaultCommandTimeoutSeconds: context.defaultCommandTimeoutSeconds,
+      defaultCommandMaxOutputBytes: context.defaultCommandMaxOutputBytes,
       widgetFiles: context.widgetFiles
     )
     defer { freeCStringVector(argv) }
@@ -356,6 +360,8 @@ extension LuaProcessController {
     luaPath: String,
     runtimePath: String,
     widgetsPath: String,
+    defaultCommandTimeoutSeconds: TimeInterval,
+    defaultCommandMaxOutputBytes: Int,
     widgetFiles: [String]
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     try makeCStringVector(
@@ -365,6 +371,8 @@ extension LuaProcessController {
         luaPath,
         runtimePath,
         widgetsPath,
+        String(defaultCommandTimeoutSeconds),
+        String(defaultCommandMaxOutputBytes),
       ] + widgetFiles
     )
   }
@@ -491,14 +499,6 @@ extension LuaProcessController {
   private func luaRuntimeEnvironment(config: ConfigSnapshot) -> [String: String] {
     config.app.environment
       .merging(config.luaThemeEnvironment()) {
-        _, themeValue in themeValue
-      }
-      .merging([
-        SharedEnvironmentKeys.luaCommandTimeoutSeconds:
-          String(config.app.luaCommandLimits.timeoutSeconds),
-        SharedEnvironmentKeys.luaCommandMaxOutputBytes:
-          String(config.app.luaCommandLimits.maxOutputBytes),
-      ]) {
         _, themeValue in themeValue
       }
   }

@@ -5,13 +5,7 @@ import XCTest
 
 final class SharedRuntimeConfigTests: XCTestCase {
   private let environmentKeys = [
-    SharedEnvironmentKeys.configPath,
-    SharedEnvironmentKeys.loggingLevel,
-    SharedEnvironmentKeys.loggingDirectory,
-    SharedEnvironmentKeys.luaSocketPath,
-    SharedEnvironmentKeys.calendarAgentSocketPath,
-    SharedEnvironmentKeys.networkAgentSocketPath,
-    SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
+    SharedEnvironmentKeys.configPath
   ]
 
   private var originalEnvironment: [String: String?] = [:]
@@ -38,55 +32,50 @@ final class SharedRuntimeConfigTests: XCTestCase {
     try super.tearDownWithError()
   }
 
-  /// Handles test load prefers environment overrides over toml values.
-  func testLoadPrefersEnvironmentOverridesOverTomlValues() throws {
+  /// Handles test load uses the config path environment override and TOML runtime values.
+  func testLoadUsesConfigPathEnvironmentOverrideAndTomlValues() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-config.toml")
-    let envLoggingDirectory = tempDirectoryURL.appendingPathComponent("env-logs").path
-    let envRuntimeDirectory = tempDirectoryURL.appendingPathComponent("env-runtime").path
-    let envLuaSocketPath = URL(fileURLWithPath: envRuntimeDirectory)
+    let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
+    let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
+    let luaSocketPath = URL(fileURLWithPath: runtimeDirectory)
       .appendingPathComponent("lua.sock")
       .path
-    let envCalendarSocketPath = URL(fileURLWithPath: envRuntimeDirectory)
+    let calendarSocketPath = URL(fileURLWithPath: runtimeDirectory)
       .appendingPathComponent("calendar.sock")
       .path
-    let envNetworkSocketPath = URL(fileURLWithPath: envRuntimeDirectory)
+    let networkSocketPath = URL(fileURLWithPath: runtimeDirectory)
       .appendingPathComponent("network.sock")
       .path
 
     try writeConfig(
       """
       [logging]
-      level = "info"
-      directory = "\(tempDirectoryURL.appendingPathComponent("file-logs").path)"
+      level = "trace"
+      directory = "\(loggingDirectory)"
 
       [app]
-      lua_socket_path = "\(tempDirectoryURL.appendingPathComponent("file-runtime/lua.sock").path)"
+      lua_socket_path = "\(luaSocketPath)"
 
       [agents.calendar]
-      socket_path = "\(tempDirectoryURL.appendingPathComponent("file-runtime/calendar.sock").path)"
+      socket_path = "\(calendarSocketPath)"
 
       [agents.network]
-      socket_path = "\(tempDirectoryURL.appendingPathComponent("file-runtime/network.sock").path)"
-      refresh_interval_seconds = 12
+      socket_path = "\(networkSocketPath)"
+      refresh_interval_seconds = 90
       """,
       to: configFileURL
     )
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
-    setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
-    setEnvironmentValue(envLoggingDirectory, for: SharedEnvironmentKeys.loggingDirectory)
-    setEnvironmentValue(envLuaSocketPath, for: SharedEnvironmentKeys.luaSocketPath)
-    setEnvironmentValue(envCalendarSocketPath, for: SharedEnvironmentKeys.calendarAgentSocketPath)
-    setEnvironmentValue(envNetworkSocketPath, for: SharedEnvironmentKeys.networkAgentSocketPath)
-    setEnvironmentValue("90", for: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
 
     let runtime = SharedRuntimeConfig.load()
 
+    XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.logging.level, .trace)
-    XCTAssertEqual(runtime.logging.directory, envLoggingDirectory)
-    XCTAssertEqual(runtime.app.luaSocketPath, envLuaSocketPath)
-    XCTAssertEqual(runtime.calendarAgent.socketPath, envCalendarSocketPath)
-    XCTAssertEqual(runtime.networkAgent.socketPath, envNetworkSocketPath)
+    XCTAssertEqual(runtime.logging.directory, loggingDirectory)
+    XCTAssertEqual(runtime.app.luaSocketPath, luaSocketPath)
+    XCTAssertEqual(runtime.calendarAgent.socketPath, calendarSocketPath)
+    XCTAssertEqual(runtime.networkAgent.socketPath, networkSocketPath)
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)
   }
 }

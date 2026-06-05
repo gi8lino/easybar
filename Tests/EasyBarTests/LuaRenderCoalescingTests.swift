@@ -90,7 +90,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -194,7 +194,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -736,7 +736,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -829,7 +829,7 @@ final class LuaRenderCoalescingTests: XCTestCase {
     )
 
     process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path, "brew.lua"]
+    process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe
@@ -1042,7 +1042,7 @@ extension LuaRenderCoalescingTests {
       )
 
       process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-      process.arguments = [runtimePath, widgetsDirectoryURL.path, widgetFile]
+      process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", widgetFile]
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
@@ -1302,20 +1302,7 @@ extension LuaRenderCoalescingTests {
       environment.removeValue(forKey: key)
     }
 
-    let luaSocketPath = runtimeDirectoryURL.appendingPathComponent("lua.sock").path
-    let calendarSocketPath = runtimeDirectoryURL.appendingPathComponent("calendar.sock").path
-    let networkSocketPath = runtimeDirectoryURL.appendingPathComponent("network.sock").path
-
     environment[SharedEnvironmentKeys.configPath] = configFileURL.path
-    environment[SharedEnvironmentKeys.lockDirectory] = lockDirectoryURL.path
-    environment[SharedEnvironmentKeys.loggingDirectory] = loggingDirectoryURL.path
-    environment[SharedEnvironmentKeys.loggingLevel] = "error"
-    environment[SharedEnvironmentKeys.luaCommandTimeoutSeconds] = "5"
-    environment[SharedEnvironmentKeys.luaCommandMaxOutputBytes] = "65536"
-    environment[SharedEnvironmentKeys.luaSocketPath] = luaSocketPath
-    environment[SharedEnvironmentKeys.calendarAgentSocketPath] = calendarSocketPath
-    environment[SharedEnvironmentKeys.networkAgentSocketPath] = networkSocketPath
-    environment[SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds] = "60"
 
     // Merge in the theme environment.
     environment.merge(Config.makeUnloadedConfig().luaThemeEnvironment()) {
@@ -1327,16 +1314,7 @@ extension LuaRenderCoalescingTests {
 
   fileprivate var sharedRuntimeEnvironmentKeys: [String] {
     [
-      SharedEnvironmentKeys.configPath,
-      SharedEnvironmentKeys.lockDirectory,
-      SharedEnvironmentKeys.loggingDirectory,
-      SharedEnvironmentKeys.loggingLevel,
-      SharedEnvironmentKeys.luaCommandTimeoutSeconds,
-      SharedEnvironmentKeys.luaCommandMaxOutputBytes,
-      SharedEnvironmentKeys.luaSocketPath,
-      SharedEnvironmentKeys.calendarAgentSocketPath,
-      SharedEnvironmentKeys.networkAgentSocketPath,
-      SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds,
+      SharedEnvironmentKeys.configPath
     ]
   }
 

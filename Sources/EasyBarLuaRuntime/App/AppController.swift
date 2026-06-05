@@ -15,6 +15,8 @@ final class AppController {
     let luaPath: String
     let runtimePath: String
     let widgetsPath: String
+    let defaultCommandTimeoutSeconds: String
+    let defaultCommandMaxOutputBytes: String
     let widgetFiles: [String]
   }
 
@@ -39,7 +41,7 @@ final class AppController {
   /// Parses the runtime process command-line arguments.
   private func parseArguments() throws -> RuntimeArguments {
     let args = Array(CommandLine.arguments.dropFirst())
-    guard args.count >= 4 else {
+    guard args.count >= 6 else {
       throw RuntimeBootstrapError.usage
     }
 
@@ -48,7 +50,9 @@ final class AppController {
       luaPath: args[1],
       runtimePath: args[2],
       widgetsPath: args[3],
-      widgetFiles: Array(args.dropFirst(4))
+      defaultCommandTimeoutSeconds: args[4],
+      defaultCommandMaxOutputBytes: args[5],
+      widgetFiles: Array(args.dropFirst(6))
     )
   }
 
@@ -107,6 +111,8 @@ final class AppController {
       strdup(arguments.luaPath),
       strdup(arguments.runtimePath),
       strdup(arguments.widgetsPath),
+      strdup(arguments.defaultCommandTimeoutSeconds),
+      strdup(arguments.defaultCommandMaxOutputBytes),
     ]
 
     argv.append(contentsOf: arguments.widgetFiles.map { strdup($0) })
@@ -145,7 +151,8 @@ private enum RuntimeBootstrapError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .usage:
-      return "usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path> [widget-file...]"
+      return
+        "usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path> <default-command-timeout-seconds> <default-command-max-output-bytes> [widget-file...]"
     case .socketFailed(let errno):
       return "socket failed errno=\(errno)"
     case .noSigPipeFailed:

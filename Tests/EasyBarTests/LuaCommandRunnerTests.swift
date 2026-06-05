@@ -60,6 +60,24 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertLessThanOrEqual(result.output.utf8.count, 128)
   }
 
+  func testRunUsesProvidedEnvironment() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    var environment = ProcessInfo.processInfo.environment
+    environment["EASYBAR_TEST_COMMAND_ENV"] = "from-app-env"
+
+    let result = await runner.run(
+      command: "printf \"$EASYBAR_TEST_COMMAND_ENV\"",
+      limits: defaultLimits,
+      environment: environment
+    )
+
+    XCTAssertEqual(result.output, "from-app-env")
+    XCTAssertEqual(result.status, 0)
+  }
+
   func testRunReportsCommandNotFoundClearly() async {
     let runner = LuaCommandRunner(
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)

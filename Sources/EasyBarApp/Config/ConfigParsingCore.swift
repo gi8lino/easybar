@@ -124,10 +124,6 @@ extension Config {
       )
     }
 
-    if let envLevel = try environmentLogLevelOverride() {
-      loggingLevel = envLevel
-    }
-
     let resolvedLoggingDirectory =
       try optionalExpandedPath(logging["directory"], path: "logging.directory")
       ?? loggingDirectory

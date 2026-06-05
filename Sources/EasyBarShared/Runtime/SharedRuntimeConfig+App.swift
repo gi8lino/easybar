@@ -1,6 +1,6 @@
 import TOMLKit
 
-/// Returns the resolved app config from env, TOML, and defaults.
+/// Returns the resolved app config from TOML and defaults.
 func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   let appTable = toml["app"]?.table
 
@@ -9,13 +9,11 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
     ?? SharedPathDefaults.defaultWidgetsPath().path
 
   let lockDirectory =
-    expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
-    ?? expandedPath(appTable?["lock_dir"]?.string)
+    expandedPath(appTable?["lock_dir"]?.string)
     ?? defaultSingleInstanceLockDirectoryPath()
 
   let luaSocketPath =
-    expandedEnvironmentPath(named: SharedEnvironmentKeys.luaSocketPath)
-    ?? expandedPath(appTable?["lua_socket_path"]?.string)
+    expandedPath(appTable?["lua_socket_path"]?.string)
     ?? defaultLuaSocketPath()
 
   let widgetEditorStubPath =
@@ -30,16 +28,12 @@ func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
   )
 }
 
-/// Returns the resolved app config from environment overrides and defaults only.
+/// Returns the app defaults used before a config file has been parsed.
 func resolvedAppEnvironmentDefaults() -> SharedAppRuntimeConfig {
   SharedAppRuntimeConfig(
     widgetsPath: SharedPathDefaults.defaultWidgetsPath().path,
-    lockDirectory:
-      expandedEnvironmentPath(named: SharedEnvironmentKeys.lockDirectory)
-      ?? defaultSingleInstanceLockDirectoryPath(),
-    luaSocketPath:
-      expandedEnvironmentPath(named: SharedEnvironmentKeys.luaSocketPath)
-      ?? defaultLuaSocketPath(),
+    lockDirectory: defaultSingleInstanceLockDirectoryPath(),
+    luaSocketPath: defaultLuaSocketPath(),
     widgetEditorStubPath: SharedPathDefaults.defaultWidgetEditorStubPath().path
   )
 }

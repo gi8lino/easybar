@@ -40,9 +40,9 @@ directory = "~/.local/state/easybar"
 
 ## Notes
 
-The main app and helper agents use this config-driven level instead of legacy `EASYBAR_DEBUG` or `EASYBAR_TRACE` environment toggles.
+The main app and helper agents use this config-driven level. Logging is configured in `config.toml`; there are no separate logging environment toggles.
 
-`EASYBAR_CONFIG_PATH` remains the main environment override for the runtime config file.
+`EASYBAR_CONFIG_PATH` remains the only public environment override for selecting the runtime config file.
 
 The `easybar` CLI can enable its own debug output explicitly with `--debug`. This does not change the main app or agent log level.
 
@@ -66,3 +66,5 @@ or:
 ```bash
 EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
 ```
+
+

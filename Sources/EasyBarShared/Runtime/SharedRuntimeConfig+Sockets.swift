@@ -1,39 +1,22 @@
 import Foundation
 import TOMLKit
 
-/// Returns the resolved EasyBar socket config from env, TOML, and defaults.
+/// Returns the resolved EasyBar socket config from defaults.
 func resolvedEasyBarConfig(from toml: TOMLTable) -> SharedEasyBarRuntimeConfig {
-  SharedEasyBarRuntimeConfig(
-    socketPath: resolvedSocketPath(
-      environmentName: SharedEnvironmentKeys.easyBarSocketPath,
-      tomlValue: nil,
-      fallback: defaultEasyBarSocketPath
-    )
-  )
+  SharedEasyBarRuntimeConfig(socketPath: defaultEasyBarSocketPath())
 }
 
-/// Returns the resolved EasyBar socket config from env and defaults only.
+/// Returns the resolved EasyBar socket defaults.
 func resolvedEasyBarEnvironmentDefaults() -> SharedEasyBarRuntimeConfig {
-  SharedEasyBarRuntimeConfig(
-    socketPath: resolvedSocketPath(
-      environmentName: SharedEnvironmentKeys.easyBarSocketPath,
-      tomlValue: nil,
-      fallback: defaultEasyBarSocketPath
-    )
-  )
+  SharedEasyBarRuntimeConfig(socketPath: defaultEasyBarSocketPath())
 }
 
-/// Returns the resolved calendar-agent config from env, TOML, and defaults.
+/// Returns the resolved calendar-agent config from TOML and defaults.
 func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRuntimeConfig {
   let calendarTable = toml["agents"]?["calendar"]?.table
 
-  let enabled =
-    boolEnvironmentValue(named: SharedEnvironmentKeys.calendarAgentEnabled)
-    ?? calendarTable?["enabled"]?.bool
-    ?? true
-
+  let enabled = calendarTable?["enabled"]?.bool ?? true
   let socketPath = resolvedSocketPath(
-    environmentName: SharedEnvironmentKeys.calendarAgentSocketPath,
     tomlValue: calendarTable?["socket_path"]?.string,
     fallback: defaultCalendarAgentSocketPath
   )
@@ -44,49 +27,30 @@ func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRun
   )
 }
 
-/// Returns the resolved calendar-agent config from env and defaults only.
+/// Returns the resolved calendar-agent defaults.
 func resolvedCalendarAgentEnvironmentDefaults() -> SharedCalendarAgentRuntimeConfig {
-  let enabled =
-    boolEnvironmentValue(named: SharedEnvironmentKeys.calendarAgentEnabled)
-    ?? true
-
-  let socketPath = resolvedSocketPath(
-    environmentName: SharedEnvironmentKeys.calendarAgentSocketPath,
-    tomlValue: nil,
-    fallback: defaultCalendarAgentSocketPath
-  )
-
-  return SharedCalendarAgentRuntimeConfig(
-    enabled: enabled,
-    socketPath: socketPath
+  SharedCalendarAgentRuntimeConfig(
+    enabled: true,
+    socketPath: defaultCalendarAgentSocketPath()
   )
 }
 
-/// Returns the resolved network-agent config from env, TOML, and defaults.
+/// Returns the resolved network-agent config from TOML and defaults.
 func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRuntimeConfig {
   let networkTable = toml["agents"]?["network"]?.table
 
-  let enabled =
-    boolEnvironmentValue(named: SharedEnvironmentKeys.networkAgentEnabled)
-    ?? networkTable?["enabled"]?.bool
-    ?? true
-
+  let enabled = networkTable?["enabled"]?.bool ?? true
   let socketPath = resolvedSocketPath(
-    environmentName: SharedEnvironmentKeys.networkAgentSocketPath,
     tomlValue: networkTable?["socket_path"]?.string,
     fallback: defaultNetworkAgentSocketPath
   )
 
   let refreshIntervalSeconds =
-    timeIntervalEnvironmentValue(named: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
-    ?? networkTable?["refresh_interval_seconds"]?.double
+    tomlNumber(networkTable?["refresh_interval_seconds"])
     ?? 60
 
   let allowUnauthorizedFieldsWithoutLocation =
-    boolEnvironmentValue(
-      named: SharedEnvironmentKeys.networkAgentAllowUnauthorizedNonSensitiveFields
-    )
-    ?? networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
+    networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
     ?? false
 
   return SharedNetworkAgentRuntimeConfig(
@@ -97,45 +61,22 @@ func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRunti
   )
 }
 
-/// Returns the resolved network-agent config from env and defaults only.
+/// Returns the resolved network-agent defaults.
 func resolvedNetworkAgentEnvironmentDefaults() -> SharedNetworkAgentRuntimeConfig {
-  let enabled =
-    boolEnvironmentValue(named: SharedEnvironmentKeys.networkAgentEnabled)
-    ?? true
-
-  let socketPath = resolvedSocketPath(
-    environmentName: SharedEnvironmentKeys.networkAgentSocketPath,
-    tomlValue: nil,
-    fallback: defaultNetworkAgentSocketPath
-  )
-
-  let refreshIntervalSeconds =
-    timeIntervalEnvironmentValue(named: SharedEnvironmentKeys.networkAgentRefreshIntervalSeconds)
-    ?? 60
-
-  let allowUnauthorizedFieldsWithoutLocation =
-    boolEnvironmentValue(
-      named: SharedEnvironmentKeys.networkAgentAllowUnauthorizedNonSensitiveFields
-    )
-    ?? false
-
-  return SharedNetworkAgentRuntimeConfig(
-    enabled: enabled,
-    socketPath: socketPath,
-    refreshIntervalSeconds: refreshIntervalSeconds,
-    allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
+  SharedNetworkAgentRuntimeConfig(
+    enabled: true,
+    socketPath: defaultNetworkAgentSocketPath(),
+    refreshIntervalSeconds: 60,
+    allowUnauthorizedFieldsWithoutLocation: false
   )
 }
 
-/// Returns one resolved socket path from env, TOML, and fallback defaults.
+/// Returns one resolved socket path from TOML and fallback defaults.
 func resolvedSocketPath(
-  environmentName: String,
   tomlValue: String?,
   fallback: () -> String
 ) -> String {
-  expandedEnvironmentPath(named: environmentName)
-    ?? expandedPath(tomlValue)
-    ?? fallback()
+  expandedPath(tomlValue) ?? fallback()
 }
 
 /// Returns the default Unix socket path used by EasyBar.
@@ -146,3 +87,16 @@ func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-
 
 /// Returns the default Unix socket path used by the network agent.
 func defaultNetworkAgentSocketPath() -> String { return "/tmp/EasyBar/network-agent.sock" }
+
+/// Returns one TOML number as a Double.
+private func tomlNumber(_ value: (any TOMLValueConvertible)?) -> Double? {
+  if let double = value?.double {
+    return double
+  }
+
+  if let int = value?.int {
+    return Double(int)
+  }
+
+  return nil
+}

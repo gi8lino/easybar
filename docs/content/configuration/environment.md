@@ -1,6 +1,6 @@
 # Environment
 
-Use `[app.env]` for environment variables that should be visible inside the Lua runtime and any shell commands launched by widgets.
+Use `[app.env]` for environment variables that should be visible inside the Lua runtime and any shell commands launched by widgets. EasyBar inherits the parent process environment and overlays these configured values.
 
 ## Example
 
@@ -19,9 +19,8 @@ TAILSCALE = "/usr/local/bin/tailscale"
 
 EasyBar resolves `PATH` in this order:
 
-1. If `[app.env]` sets `PATH`, EasyBar passes that exact value to the Lua runtime.
-2. If `[app.env]` does not set `PATH`, EasyBar uses the inherited app `PATH` when available.
-3. If the app itself has no usable `PATH`, EasyBar falls back to:
+1. If `[app.env]` sets `PATH`, EasyBar overlays that exact value onto the inherited process environment.
+2. If `[app.env]` does not set `PATH`, EasyBar uses the default PATH shown below so GUI-launched sessions can still find common tools.
 
 ```text
 /usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -38,3 +37,5 @@ Set `[app.env]` when Lua widgets need tools such as:
 - `kubectl`
 - custom scripts
 - package-manager commands
+
+

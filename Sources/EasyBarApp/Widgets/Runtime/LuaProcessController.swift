@@ -11,6 +11,8 @@ final class LuaProcessController {
     let luaPath: String
     let luaSocketPath: String
     let widgetsPath: String
+    let defaultCommandTimeoutSeconds: TimeInterval
+    let defaultCommandMaxOutputBytes: Int
     let widgetFiles: [String]
     let environment: [String: String]
   }

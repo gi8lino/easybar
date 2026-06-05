@@ -41,8 +41,10 @@ local events = load_module("events")
 --- Registry renderer module.
 local render = load_module("render")
 
---- Widget directory passed by the Swift host.
+--- Widget directory and command defaults passed by the Swift host.
 local widget_dir = arg[1]
+local default_command_timeout_seconds = tonumber(arg[2]) or 5
+local default_command_max_output_bytes = tonumber(arg[3]) or 65536
 local widget_files = {}
 
 if not widget_dir or widget_dir == "" then
@@ -50,7 +52,7 @@ if not widget_dir or widget_dir == "" then
 	widget_dir = home .. "/.config/easybar/widgets"
 end
 
-for index = 2, #arg do
+for index = 4, #arg do
 	widget_files[#widget_files + 1] = arg[index]
 end
 
@@ -61,8 +63,8 @@ local last_subscription_payload = nil
 local next_command_sequence = 0
 local runtime_command_session = tostring({}):gsub("[^%w]", "_")
 local default_exec_options = {
-	timeout_seconds = tonumber(os.getenv("EASYBAR_LUA_COMMAND_TIMEOUT_SECONDS")),
-	max_output_bytes = tonumber(os.getenv("EASYBAR_LUA_COMMAND_MAX_OUTPUT_BYTES")),
+	timeout_seconds = default_command_timeout_seconds,
+	max_output_bytes = default_command_max_output_bytes,
 }
 
 --- Marks the current runtime state as needing one render flush.
@@ -270,3 +272,5 @@ flush_pending_outputs(true, false)
 
 while process_next_host_message() do
 end
+
+

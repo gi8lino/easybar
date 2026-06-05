@@ -28,11 +28,16 @@ final class LuaCommandRunner: @unchecked Sendable {
   }
 
   /// Runs one shell command through `/bin/sh -lc`.
-  func run(command: String, limits: Limits) async -> LuaCommandResult {
+  func run(
+    command: String,
+    limits: Limits,
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) async -> LuaCommandResult {
     await withCheckedContinuation { continuation in
       let execution = CommandExecution(
         command: command,
         limits: limits,
+        environment: environment,
         logger: logger,
         continuation: continuation
       )
@@ -64,6 +69,7 @@ private final class CommandExecution: @unchecked Sendable {
 
   private let command: String
   private let limits: LuaCommandRunner.Limits
+  private let environment: [String: String]
   private let logger: ProcessLogger
   private let process = Process()
   private let pipe = Pipe()
@@ -76,11 +82,13 @@ private final class CommandExecution: @unchecked Sendable {
   init(
     command: String,
     limits: LuaCommandRunner.Limits,
+    environment: [String: String],
     logger: ProcessLogger,
     continuation: CheckedContinuation<LuaCommandResult, Never>
   ) {
     self.command = command
     self.limits = limits
+    self.environment = environment
     self.logger = logger
     self.state = LockedState(State(continuation: continuation))
   }
@@ -89,6 +97,7 @@ private final class CommandExecution: @unchecked Sendable {
   func start() {
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
     process.arguments = ["-lc", command]
+    process.environment = environment
     process.standardOutput = pipe
     process.standardError = pipe
 

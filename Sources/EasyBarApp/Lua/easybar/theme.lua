@@ -6,7 +6,7 @@
 local M = {}
 
 --- Environment variable containing the resolved theme JSON.
-local THEME_ENV = "EASYBAR_THEME_JSON"
+local THEME_ENV = "EASYBAR_INTERNAL_THEME_JSON"
 
 --- Loads the sibling generated theme token module.
 local function load_theme_tokens()
@@ -130,3 +130,5 @@ function M.current()
 end
 
 return M
+
+
