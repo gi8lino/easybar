@@ -137,36 +137,55 @@ actor RuntimeCoordinator {
       return
     }
 
-    await configureLogging()
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+    guard await runLifecycleStep(generation: generation, operation: operation, configureLogging)
+    else {
       return
     }
 
-    await MainActor.run {
-      services.applyRuntimeConfiguration(result.snapshot)
-    }
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+    guard
+      await runLifecycleStep(
+        generation: generation, operation: operation,
+        {
+          await MainActor.run {
+            services.applyRuntimeConfiguration(result.snapshot)
+          }
+        })
+    else {
       return
     }
 
-    await widgetEngine.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+    guard await runLifecycleStep(generation: generation, operation: operation, widgetEngine.reload)
+    else {
       return
     }
 
-    await MainActor.run {
-      services.nativeWidgetRegistry.reload(snapshot: result.snapshot)
-    }
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+    guard
+      await runLifecycleStep(
+        generation: generation, operation: operation,
+        {
+          await MainActor.run {
+            services.nativeWidgetRegistry.reload(snapshot: result.snapshot)
+          }
+        })
+    else {
       return
     }
 
-    await restartConfigWatcher()
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+    guard
+      await runLifecycleStep(generation: generation, operation: operation, restartConfigWatcher)
+    else {
       return
     }
 
-    await reloadSocketServerConfiguration()
+    guard
+      await runLifecycleStep(
+        generation: generation,
+        operation: operation,
+        reloadSocketServerConfiguration
+      )
+    else {
+      return
+    }
 
     aeroSpaceService.triggerRefresh()
 
@@ -325,6 +344,16 @@ actor RuntimeCoordinator {
     }
 
     return true
+  }
+
+  /// Runs one lifecycle step and returns whether subsequent work may continue.
+  private func runLifecycleStep(
+    generation: UInt64,
+    operation: RuntimeLifecycleOperation,
+    _ work: () async -> Void
+  ) async -> Bool {
+    await work()
+    return shouldContinueLifecycleWork(generation: generation, operation: operation)
   }
 
   /// Marks one lifecycle operation finished and runs the next queued operation when present.
