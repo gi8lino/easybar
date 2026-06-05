@@ -814,6 +814,43 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertEqual(config.builtinTime.position, .left)
   }
 
+  /// Handles test reload applies Wi-Fi popup style from the canonical table.
+  func testReloadAppliesWiFiPopupStyle() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("wifi-popup-style.toml")
+
+    try writeConfig(
+      """
+      [builtins.wifi.popup]
+      text_color = "#101010"
+      background_color = "#202020"
+      border_color = "#303030"
+      border_width = 2
+      corner_radius = 10
+      padding_x = 12
+      padding_y = 7
+      margin_x = 3
+      margin_y = 9
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.builtinWiFi.popup.textColorHex, "#101010")
+    XCTAssertEqual(config.builtinWiFi.popup.backgroundColorHex, "#202020")
+    XCTAssertEqual(config.builtinWiFi.popup.borderColorHex, "#303030")
+    XCTAssertEqual(config.builtinWiFi.popup.borderWidth, 2)
+    XCTAssertEqual(config.builtinWiFi.popup.cornerRadius, 10)
+    XCTAssertEqual(config.builtinWiFi.popup.paddingX, 12)
+    XCTAssertEqual(config.builtinWiFi.popup.paddingY, 7)
+    XCTAssertEqual(config.builtinWiFi.popup.marginX, 3)
+    XCTAssertEqual(config.builtinWiFi.popup.marginY, 9)
+  }
+
   /// Handles test reload returns error for unknown builtin group reference.
   func testReloadReturnsErrorForUnknownBuiltinGroupReference() throws {
     let config = Config.makeUnloadedConfig()
