@@ -392,6 +392,32 @@ final class ConfigLoaderTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
   }
 
+  func testReloadRejectsNegativeNetworkAgentRefreshInterval() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent(
+      "negative-network-refresh-interval.toml"
+    )
+
+    try writeConfig(
+      """
+      [agents.network]
+      refresh_interval_seconds = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "agents.network.refresh_interval_seconds")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
   /// Handles test reload applies month popup agenda layout overrides.
   func testReloadAppliesMonthPopupAgendaLayoutOverride() throws {
     let config = Config.makeUnloadedConfig()

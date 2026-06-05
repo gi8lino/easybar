@@ -176,6 +176,13 @@ extension Config {
         path: "agents.network.refresh_interval_seconds"
       ) ?? networkAgentRefreshIntervalSeconds
 
+    if networkAgentRefreshIntervalSeconds < 0 {
+      throw ConfigError.invalidValue(
+        path: "agents.network.refresh_interval_seconds",
+        message: "expected a value greater than or equal to 0"
+      )
+    }
+
     networkAgentAllowUnauthorizedNonSensitiveFields =
       try optionalBool(
         network["allow_unauthorized_non_sensitive_fields"],
