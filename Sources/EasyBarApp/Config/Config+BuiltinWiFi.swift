@@ -49,6 +49,39 @@ extension Config {
     var interfaceChangedAt: Bool
   }
 
+  /// Links one `[builtins.wifi.fields]` config key to its stored toggle.
+  private typealias BuiltinWiFiFieldToggle = (
+    configKey: String,
+    keyPath: WritableKeyPath<BuiltinWiFiFields, Bool>
+  )
+
+  /// Field toggles supported by `[builtins.wifi.fields]`.
+  private static let builtinWiFiFieldToggles: [BuiltinWiFiFieldToggle] = [
+    ("ssid", \.ssid),
+    ("ipv4_address", \.ipv4Address),
+    ("ipv6_address", \.ipv6Address),
+    ("bssid", \.bssid),
+    ("interface", \.interfaceName),
+    ("hardware_address", \.hardwareAddress),
+    ("power", \.power),
+    ("service_active", \.serviceActive),
+    ("rssi", \.rssi),
+    ("noise", \.noise),
+    ("snr", \.snr),
+    ("link_quality", \.linkQuality),
+    ("tx_rate", \.txRate),
+    ("channel", \.channel),
+    ("channel_band", \.channelBand),
+    ("channel_width", \.channelWidth),
+    ("security", \.security),
+    ("phy_mode", \.phyMode),
+    ("interface_mode", \.interfaceMode),
+    ("country_code", \.countryCode),
+    ("roaming", \.roaming),
+    ("ssid_changed_at", \.ssidChangedAt),
+    ("interface_changed_at", \.interfaceChangedAt),
+  ]
+
   /// Built-in Wi-Fi widget config.
   struct WiFiBuiltinConfig {
     /// Wi-Fi content and color settings.
@@ -311,72 +344,16 @@ extension Config {
     from table: TOMLTable,
     fallback: BuiltinWiFiFields
   ) throws -> BuiltinWiFiFields {
-    BuiltinWiFiFields(
-      ssid: try optionalBool(table["ssid"], path: "builtins.wifi.fields.ssid") ?? fallback.ssid,
-      ipv4Address: try optionalBool(
-        table["ipv4_address"],
-        path: "builtins.wifi.fields.ipv4_address"
-      ) ?? fallback.ipv4Address,
-      ipv6Address: try optionalBool(
-        table["ipv6_address"],
-        path: "builtins.wifi.fields.ipv6_address"
-      ) ?? fallback.ipv6Address,
-      bssid: try optionalBool(table["bssid"], path: "builtins.wifi.fields.bssid")
-        ?? fallback.bssid,
-      interfaceName: try optionalBool(table["interface"], path: "builtins.wifi.fields.interface")
-        ?? fallback.interfaceName,
-      hardwareAddress: try optionalBool(
-        table["hardware_address"],
-        path: "builtins.wifi.fields.hardware_address"
-      ) ?? fallback.hardwareAddress,
-      power: try optionalBool(table["power"], path: "builtins.wifi.fields.power")
-        ?? fallback.power,
-      serviceActive: try optionalBool(
-        table["service_active"],
-        path: "builtins.wifi.fields.service_active"
-      ) ?? fallback.serviceActive,
-      rssi: try optionalBool(table["rssi"], path: "builtins.wifi.fields.rssi") ?? fallback.rssi,
-      noise: try optionalBool(table["noise"], path: "builtins.wifi.fields.noise")
-        ?? fallback.noise,
-      snr: try optionalBool(table["snr"], path: "builtins.wifi.fields.snr") ?? fallback.snr,
-      linkQuality: try optionalBool(
-        table["link_quality"],
-        path: "builtins.wifi.fields.link_quality"
-      ) ?? fallback.linkQuality,
-      txRate: try optionalBool(table["tx_rate"], path: "builtins.wifi.fields.tx_rate")
-        ?? fallback.txRate,
-      channel: try optionalBool(table["channel"], path: "builtins.wifi.fields.channel")
-        ?? fallback.channel,
-      channelBand: try optionalBool(
-        table["channel_band"],
-        path: "builtins.wifi.fields.channel_band"
-      ) ?? fallback.channelBand,
-      channelWidth: try optionalBool(
-        table["channel_width"],
-        path: "builtins.wifi.fields.channel_width"
-      ) ?? fallback.channelWidth,
-      security: try optionalBool(table["security"], path: "builtins.wifi.fields.security")
-        ?? fallback.security,
-      phyMode: try optionalBool(table["phy_mode"], path: "builtins.wifi.fields.phy_mode")
-        ?? fallback.phyMode,
-      interfaceMode: try optionalBool(
-        table["interface_mode"],
-        path: "builtins.wifi.fields.interface_mode"
-      ) ?? fallback.interfaceMode,
-      countryCode: try optionalBool(
-        table["country_code"],
-        path: "builtins.wifi.fields.country_code"
-      ) ?? fallback.countryCode,
-      roaming: try optionalBool(table["roaming"], path: "builtins.wifi.fields.roaming")
-        ?? fallback.roaming,
-      ssidChangedAt: try optionalBool(
-        table["ssid_changed_at"],
-        path: "builtins.wifi.fields.ssid_changed_at"
-      ) ?? fallback.ssidChangedAt,
-      interfaceChangedAt: try optionalBool(
-        table["interface_changed_at"],
-        path: "builtins.wifi.fields.interface_changed_at"
-      ) ?? fallback.interfaceChangedAt
-    )
+    var fields = fallback
+
+    for toggle in Self.builtinWiFiFieldToggles {
+      fields[keyPath: toggle.keyPath] =
+        try optionalBool(
+          table[toggle.configKey],
+          path: "builtins.wifi.fields.\(toggle.configKey)"
+        ) ?? fields[keyPath: toggle.keyPath]
+    }
+
+    return fields
   }
 }
