@@ -125,13 +125,10 @@ help: ## Display this help.
 
 all: build ## Build the default artifacts.
 
-prepare-version: ## Update BuildInfo.swift and Lua API stub with the selected VERSION.
+prepare-version: ## Update generated build metadata and source-derived artifacts for VERSION.
 	@$(MAKE) --no-print-directory generate-theme-tokens
 	@$(MAKE) --no-print-directory generate-event-catalog
-	@mkdir -p "$(dir $(BUILD_INFO))"
-	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
-updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"$(VERSION)\"", text, count=1); \
-path.write_text(updated)'
+	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
 
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
@@ -322,53 +319,10 @@ prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle met
 	@touch "$(APP_BUNDLE)"
 
 icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
-	@command -v "$(IMAGE_CONVERT)" >/dev/null 2>&1 || { \
-		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
-		exit 1; \
-	}
-	@test -f "$(ICON_FONT)" || { \
-		echo "Missing icon font: $(ICON_FONT)"; \
-		exit 1; \
-	}
-	@mkdir -p "$(APP_RESOURCES)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_RESOURCES)"
-	@set -e; \
-	for spec in \
+	@scripts/generate_app_icons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(DIST_DIR)" \
 		"$(APP_ICON_SVG):$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_SVG):$(CALENDAR_AGENT_ICON_ICNS)" \
-		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"; do \
-		svg="$${spec%%:*}"; \
-		icns="$${spec##*:}"; \
-		base="$$(basename "$$icns" .icns)"; \
-		tmp_dir="$(DIST_DIR)/.$$base.iconset"; \
-		render_dir="$(DIST_DIR)/.$$base.render"; \
-		rendered_png="$$render_dir/icon_1024x1024.png"; \
-		test -f "$$svg" || { echo "Missing icon SVG: $$svg"; exit 1; }; \
-		rm -rf "$$tmp_dir" "$$render_dir" "$$icns"; \
-		mkdir -p "$$tmp_dir" "$$render_dir"; \
-		"$(IMAGE_CONVERT)" \
-			-background none \
-			-font "$(ICON_FONT)" \
-			-density 1024 \
-			"$$svg" \
-			-resize 1024x1024 \
-			-gravity center \
-			-extent 1024x1024 \
-			"$$rendered_png"; \
-		test -f "$$rendered_png" || { echo "Could not render SVG icon: $$svg"; exit 1; }; \
-		cp "$$rendered_png" "$$tmp_dir/icon_512x512@2x.png"; \
-		sips -z 16 16 "$$rendered_png" --out "$$tmp_dir/icon_16x16.png" >/dev/null; \
-		sips -z 32 32 "$$rendered_png" --out "$$tmp_dir/icon_16x16@2x.png" >/dev/null; \
-		sips -z 32 32 "$$rendered_png" --out "$$tmp_dir/icon_32x32.png" >/dev/null; \
-		sips -z 64 64 "$$rendered_png" --out "$$tmp_dir/icon_32x32@2x.png" >/dev/null; \
-		sips -z 128 128 "$$rendered_png" --out "$$tmp_dir/icon_128x128.png" >/dev/null; \
-		sips -z 256 256 "$$rendered_png" --out "$$tmp_dir/icon_128x128@2x.png" >/dev/null; \
-		sips -z 256 256 "$$rendered_png" --out "$$tmp_dir/icon_256x256.png" >/dev/null; \
-		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_256x256@2x.png" >/dev/null; \
-		sips -z 512 512 "$$rendered_png" --out "$$tmp_dir/icon_512x512.png" >/dev/null; \
-		iconutil -c icns "$$tmp_dir" -o "$$icns"; \
-		test -s "$$icns" || { echo "Could not create icon: $$icns"; exit 1; }; \
-		rm -rf "$$tmp_dir" "$$render_dir"; \
-	done
+		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"
 
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
 	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
@@ -627,9 +581,7 @@ clean-dist: ## Remove dist/.
 
 clean: ## Remove dist/, .build, and reset BuildInfo.swift and Lua API stub to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@python3 -c 'from pathlib import Path; import re; path = Path("$(BUILD_INFO)"); text = path.read_text(); \
-updated = re.sub(r"public static let appVersion = \".*?\"", "public static let appVersion = \"dev\"", text, count=1); \
-path.write_text(updated)'
+	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
 	@python3 scripts/generate_event_catalog.py --version dev
 
 ##@ Info
@@ -696,8 +648,8 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-docs: ## Generate all checked-in docs derived from source stubs.
-	@python3 scripts/generate_docs.py
+generate-docs: ## Generate all checked-in Lua reference docs from source stubs.
+	@python3 scripts/generate_lua_reference_docs.py
 
 generate-lua-docs: generate-docs ## Alias for generate-docs.
 
@@ -721,33 +673,4 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 .PHONY: favicon
 favicon: ## Create favicons.
-	@command -v "$(IMAGE_CONVERT)" >/dev/null 2>&1 || { \
-		echo "Missing $(IMAGE_CONVERT). Install ImageMagick or set IMAGE_CONVERT=/path/to/convert."; \
-		exit 1; \
-	}
-	@test -f "$(ICON_FONT)" || { \
-		echo "Missing icon font: $(ICON_FONT)"; \
-		exit 1; \
-	}
-	@mkdir -p $(ICON_DIR)
-	@for size in $(ICON_SIZES); do \
-		outfile=favicon-$$size.png; \
-		echo "create $$outfile"; \
-		"$(IMAGE_CONVERT)" \
-			-background none \
-			-font "$(ICON_FONT)" \
-			"$(SVG)" \
-			-fuzz 5% -transparent white \
-			-resize $$size \
-			$(ICON_DIR)/$$outfile \
-			>/dev/null 2>&1; \
-	done
-	@echo "create apple-touch-icon.png"
-	@"$(IMAGE_CONVERT)" \
-		-background none \
-		-font "$(ICON_FONT)" \
-		"$(SVG)" \
-		-fuzz 5% -transparent white \
-		-resize 180x180 \
-		$(ICON_DIR)/apple-touch-icon.png \
-		>/dev/null 2>&1
+	@scripts/generate_favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
