@@ -1,5 +1,7 @@
+import CoreGraphics
 import XCTest
 
+@testable import EasyBarApp
 @testable import EasyBarCalendarConfig
 @testable import EasyBarCalendarPresentation
 
