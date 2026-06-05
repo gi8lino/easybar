@@ -67,9 +67,9 @@ The complete default config also uses this theme name.
 
 ## Bundled themes
 
-Bundled themes live in the repository root `themes/` directory.
+Bundled themes live in the repository root `themes/` directory. That root directory is the source of truth for bundled theme files.
 
-During local runs and release builds, the Makefile copies that directory into the app bundle:
+SwiftPM does not automatically package arbitrary root-level directories into `EasyBar.app`. For that reason, local runs and release builds must go through the project Makefile. The Makefile copies the root `themes/` directory into the app bundle before launching or packaging the app:
 
 ```text
 EasyBar.app/Contents/Resources/Themes/
@@ -100,10 +100,23 @@ themes/
 └── tokyo-night.toml
 ```
 
-The Makefile verifies that `default.toml` exists after copying themes into the app bundle.
+The Makefile should verify that `default.toml` exists after copying themes into the app bundle.
 
-Bundled themes are not copied into `~/.config/easybar/themes`, because user theme files should stay user-owned and should not become stale copies of bundled files.
-Instead they are baked into the app bundle.
+Bundled themes are not copied into `~/.config/easybar/themes`, because user theme files should stay user-owned and should not become stale copies of bundled files. Instead they are baked into the app bundle.
+
+For local development, prefer:
+
+```bash
+make run
+```
+
+For release-style packaging, prefer:
+
+```bash
+make bundle
+```
+
+Avoid relying on plain `swift run EasyBar` for theme testing, because it does not stage the root `themes/` directory into the app bundle.
 
 ## Custom themes
 
@@ -354,23 +367,15 @@ For bundled themes, make sure the repository root contains the selected theme fi
 themes/default.toml
 ```
 
-Then rebuild or run through the Makefile so the root `themes/` directory is copied into the app bundle:
+Then rebuild or run through the Makefile so the root `themes/` directory is copied into the app bundle. Use `make run` for local development and `make bundle` for a release-style app bundle.
 
-```bash
-make bundle
-```
-
-For local development, use:
-
-```bash
-make run
-```
-
-Both targets package bundled themes into:
+Both targets should package bundled themes into:
 
 ```text
 EasyBar.app/Contents/Resources/Themes/
 ```
+
+Plain `swift run EasyBar` is not enough for bundled theme testing unless you have separately staged the root themes directory into the app bundle resource location.
 
 ### Theme changes do not apply
 
@@ -387,3 +392,5 @@ If `watch_config = false`, EasyBar will not reload automatically.
 Check whether that widget has an explicit color in `config.toml`.
 
 Explicit widget colors override theme defaults.
+
+
