@@ -22,7 +22,7 @@ level = "trace"
 ## Run Lua manually
 
 ```bash
-lua Sources/EasyBar/Lua/runtime.lua <widget_dir>
+lua Sources/EasyBarApp/Lua/runtime.lua <widget_dir>
 ```
 
 That direct invocation is still useful for Lua-only debugging, but it bypasses the dedicated socket transport used by the app.
@@ -67,3 +67,4 @@ Look for the `subscriptions` message after startup.
 - aggressive `interval`
 - frequent `second_tick` usage
 - expensive shell commands in sync `easybar.exec(...)`
+

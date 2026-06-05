@@ -10,8 +10,8 @@ That installed file is the combined public stub.
 
 If you are working on EasyBar itself, the split source files are:
 
-- `Sources/EasyBar/Lua/easybar_api.base.lua`
-- `Sources/EasyBar/Lua/easybar_api.events.lua`
+- `Sources/EasyBarApp/Lua/easybar_api.base.lua`
+- `Sources/EasyBarApp/Lua/easybar_api.events.lua`
 
 Those source files are merged into the installed `easybar_api.lua` stub during generation.
 
@@ -50,3 +50,4 @@ Example `.luarc.json`:
 ```
 
 If your editor still only knows about the `easybar` global but not nested property tables, restart EasyBar once so it reinstalls the latest `easybar_api.lua` stub.
+
