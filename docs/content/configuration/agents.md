@@ -54,6 +54,10 @@ When this is `true`, non-Wi-Fi fields may still be returned without location acc
 
 The default is privacy-first: requests for Wi-Fi fields fail until location access is granted.
 
+## Troubleshooting
+
+For agent process checks, socket probes, permission issues, raw field inspection, and Homebrew service logs, use [Debugging Agents](../internals/agents/debugging.md).
+
 ## More detail
 
 See the internal agent docs:
@@ -61,3 +65,4 @@ See the internal agent docs:
 - [Agents Overview](../internals/agents/overview.md)
 - [Calendar Agent](../internals/agents/calendar-agent.md)
 - [Network Agent](../internals/agents/network-agent.md)
+- [Debugging Agents](../internals/agents/debugging.md)

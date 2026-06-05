@@ -2,6 +2,8 @@
 
 When something is wrong, first check whether EasyBar and its helper agents are running, whether duplicate processes exist, and whether the logs show a startup warning.
 
+For agent-specific socket checks, permission issues, raw Wi-Fi or calendar data checks, and Homebrew agent logs, use [Debugging Agents](../internals/agents/debugging.md).
+
 ## Quick checks
 
 Check Homebrew services:
@@ -52,21 +54,7 @@ level = "debug"
 
 Then inspect the log output in your configured logging directory.
 
-If you installed with Homebrew and are using services, also check Homebrew service logs:
-
-```bash
-tail -n 200 ~/Library/Logs/Homebrew/easybar/*.log
-tail -n 200 ~/Library/Logs/Homebrew/easybar-calendar-agent/*.log
-tail -n 200 ~/Library/Logs/Homebrew/easybar-network-agent/*.log
-```
-
-If your Homebrew setup writes logs somewhere else, use these commands to find the actual paths:
-
-```bash
-brew services info easybar
-brew services info easybar-calendar-agent
-brew services info easybar-network-agent
-```
+For Homebrew service log locations and agent-specific log commands, see [Debugging Agents](../internals/agents/debugging.md).
 
 For very verbose app and agent troubleshooting, temporarily raise the level to `trace`:
 
@@ -122,5 +110,6 @@ If you are testing local builds from `dist/`, stop all services first so you do 
 ## Related pages
 
 - [Recovery](recovery.md)
+- [Debugging Agents](../internals/agents/debugging.md)
 - [macOS Quarantine](../getting-started/macos-quarantine.md)
 - [Configuration Logging](../configuration/logging.md)

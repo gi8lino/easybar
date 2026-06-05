@@ -2,16 +2,11 @@
 
 Use this page when EasyBar is stuck, stale, or behaving unexpectedly.
 
+For detailed helper-agent process checks, socket probes, permission debugging, and raw agent output inspection, see [Debugging Agents](../internals/agents/debugging.md).
+
 ## Calendar widget is empty
 
-Make sure the calendar agent is running:
-
-```bash
-brew services list | grep easybar-calendar-agent
-pgrep -fl easybar-calendar-agent
-```
-
-Then grant Calendar access in macOS settings.
+Make sure the calendar agent is enabled and running, then grant Calendar access in macOS settings.
 
 EasyBar exposes menu actions to open the relevant settings pages, and the calendar agent permission state is shown in the bar context menu.
 
@@ -22,23 +17,22 @@ brew services restart gi8lino/tap/easybar-calendar-agent
 brew services restart gi8lino/tap/easybar
 ```
 
+For deeper checks, including socket pings and logs, use [Debugging Agents](../internals/agents/debugging.md).
+
 ## Wi-Fi or network widget is empty
 
-Make sure the network agent is running:
-
-```bash
-brew services list | grep easybar-network-agent
-pgrep -fl easybar-network-agent
-```
+Make sure the network agent is enabled and running.
 
 The network agent depends on Location Services permission. If permission is denied or unresolved, Wi-Fi-specific fields may be unavailable by design.
 
-Restart the network agent after changing permission settings:
+Restart the network agent and EasyBar after changing permission settings:
 
 ```bash
 brew services restart gi8lino/tap/easybar-network-agent
 brew services restart gi8lino/tap/easybar
 ```
+
+For deeper checks, including raw Wi-Fi and network field inspection, use [Debugging Agents](../internals/agents/debugging.md).
 
 ## AeroSpace widgets do not update
 

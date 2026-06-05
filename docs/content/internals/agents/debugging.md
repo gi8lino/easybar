@@ -1,6 +1,6 @@
 # Debugging Agents
 
-When something does not work, debugging agents is usually the fastest way to find the issue.
+When something does not work, debugging agents is usually the fastest way to find the issue. This is the canonical page for helper-agent process checks, socket probes, raw field inspection, and Homebrew agent logs.
 
 ## 1. Check processes
 
