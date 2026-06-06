@@ -99,10 +99,12 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
       return "Tomorrow:"
     }
 
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = "dd.MM.yyyy"
-    return "\(formatter.string(from: date)):"
+    let dateText = CalendarDateFormatter.string(
+      from: date,
+      calendar: resolvedCalendar,
+      dateFormat: "dd.MM.yyyy"
+    )
+    return "\(dateText):"
   }
 
   /// Returns the event rows displayed for one upcoming day.
@@ -137,10 +139,11 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
 
   /// Formats one day header using the month popup selection format.
   private func formattedDayHeader(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = config.selectionDateFormat
-    return formatter.string(from: date)
+    CalendarDateFormatter.string(
+      from: date,
+      calendar: resolvedCalendar,
+      dateFormat: config.selectionDateFormat
+    )
   }
 
   /// Opens the shared event composer for one existing appointment.

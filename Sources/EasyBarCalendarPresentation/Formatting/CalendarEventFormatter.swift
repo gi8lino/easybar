@@ -4,10 +4,7 @@ import Foundation
 public enum CalendarEventFormatter {
   /// Formats one event time using the provided calendar.
   public static func formattedEventTime(_ date: Date, calendar: Calendar) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = calendar
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    CalendarDateFormatter.string(from: date, calendar: calendar, dateFormat: "HH:mm")
   }
 
   /// Returns the rendered end time for timed events when it differs from the start.

@@ -248,10 +248,11 @@ extension CalendarMonthPopupView {
 
   /// Formats one grouped selection date header.
   func formattedSelectionDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = resolvedCalendar
-    formatter.dateFormat = config.selectionDateFormat
-    return formatter.string(from: date)
+    CalendarDateFormatter.string(
+      from: date,
+      calendar: resolvedCalendar,
+      dateFormat: config.selectionDateFormat
+    )
   }
 
   /// Returns whether the active selection spans more than one day.

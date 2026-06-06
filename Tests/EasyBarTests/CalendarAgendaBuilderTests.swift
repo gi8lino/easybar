@@ -4,6 +4,42 @@ import XCTest
 @testable import EasyBarCalendarPresentation
 
 final class CalendarAgendaBuilderTests: XCTestCase {
+  func testCalendarDateFormatterUsesProvidedCalendarAndFormat() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 2 * 60 * 60) ?? .gmt
+
+    let date = Date(timeIntervalSince1970: 0)
+
+    XCTAssertEqual(
+      CalendarDateFormatter.string(from: date, calendar: calendar, dateFormat: "HH:mm"),
+      "02:00"
+    )
+  }
+
+  func testCalendarDateFormatterUsesProvidedLocaleForTemplates() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+
+    let date = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!
+    let locale = Locale(identifier: "de_CH")
+
+    let expectedFormatter = DateFormatter()
+    expectedFormatter.calendar = calendar
+    expectedFormatter.timeZone = calendar.timeZone
+    expectedFormatter.locale = locale
+    expectedFormatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
+
+    XCTAssertEqual(
+      CalendarDateFormatter.localizedString(
+        from: date,
+        calendar: calendar,
+        locale: locale,
+        template: "LLLL yyyy"
+      ),
+      expectedFormatter.string(from: date)
+    )
+  }
+
   func testBuildUsesInjectedDisplayDateForGroupedSelections() {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt

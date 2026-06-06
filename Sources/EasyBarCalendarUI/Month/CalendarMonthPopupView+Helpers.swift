@@ -198,16 +198,16 @@ extension CalendarMonthPopupView {
     calendar: Calendar,
     locale: Locale
   ) -> String {
-    let formatter = DateFormatter()
-    formatter.calendar = calendar
-    formatter.locale = locale
-    formatter.setLocalizedDateFormatFromTemplate("LLLL yyyy")
-    return formatter.string(from: date)
+    CalendarDateFormatter.localizedString(
+      from: date,
+      calendar: calendar,
+      locale: locale,
+      template: "LLLL yyyy"
+    )
   }
 
   /// Formats one debug date.
   func debugDate(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    return formatter.string(from: date)
+    CalendarDateFormatter.iso8601String(from: date)
   }
 }
