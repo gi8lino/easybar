@@ -34,7 +34,10 @@ jobs:
 
       - name: Download release archive
         shell: bash
-        run: curl -fL "${{ steps.vars.outputs.asset_url }}" -o EasyBar.zip
+        run: |
+          curl -fL --retry 5 --retry-all-errors --retry-delay 5 \
+            "${{ steps.vars.outputs.asset_url }}" \
+            -o EasyBar.zip
 
       - name: Compute SHA-256
         id: sha
@@ -66,3 +69,5 @@ jobs:
           scripts/release/commit-homebrew-formulas.sh \
             --tap-dir homebrew-tap \
             --version "${{ steps.vars.outputs.version }}"
+
+
