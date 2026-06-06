@@ -93,7 +93,7 @@ Useful build and runtime commands:
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
-- `.build/arm64-apple-macosx/debug/EasyBarCtl --validate-config --config /path/to/config.toml` asks the running EasyBar process to dry-run config validation without reloading the bar.
+- `make validate-config CONFIG=/path/to/config.toml` builds the CLI and asks EasyBar to dry-run config validation without reloading the bar.
 
 ## Generated artifacts
 
@@ -164,3 +164,5 @@ If you want the architectural map before editing code, start with the docs secti
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
+
+

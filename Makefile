@@ -112,7 +112,7 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
-        prepare-version build bundle package release app cli fmt test \
+        prepare-version build bundle package release app cli validate-config fmt test \
         clean clean-dist run run-debug run-trace stop icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -163,6 +163,13 @@ app: prepare-version ## Build only the app executable for the selected ARCH.
 
 cli: prepare-version ## Build only the CLI executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
+
+validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
+	@if [ -z "$(CONFIG)" ]; then \
+		echo "Usage: make validate-config CONFIG=/path/to/config.toml"; \
+		exit 2; \
+	fi
+	@"$(CLI_BIN)" --validate-config --config "$(CONFIG)"
 
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
