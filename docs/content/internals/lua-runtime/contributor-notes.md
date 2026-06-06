@@ -72,10 +72,12 @@ The underlying generator scripts are implementation details. Call them directly 
 
 Reusable automation scripts live under `scripts/` and are grouped by purpose:
 
+- `scripts/build/` contains build helpers used by the Makefile, such as universal product builds, resource copying, plist stamping, and bundle verification.
 - `scripts/ci/` contains CI helpers such as dependency setup and long-running Swift test logging.
-- `scripts/release/` contains release helpers such as Homebrew formula rendering and tap commits.
+- `scripts/dev/` contains local-development wrappers such as the shared run and stop flows.
+- `scripts/release/` contains release helpers such as signing, notarization, Homebrew formula rendering, release verification, and tap commits.
 
-Keep stable developer commands in the Makefile and delegate large reusable shell blocks into these scripts. This keeps local commands predictable while avoiding duplicated workflow logic.
+Keep stable developer commands in the Makefile and delegate large reusable shell blocks into these scripts. This keeps commands like `make run-debug`, `make generate`, `make build-docs`, and `make package` stable while avoiding duplicated or hard-to-review shell logic.
 
 ## Notes
 

@@ -135,10 +135,10 @@ check-generated: generate ## Verify all checked-in generated artifacts are commi
 	@git diff --exit-code
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
-	@python3 scripts/generate/theme_tokens.py
+	@python3 scripts/generate_theme_tokens.py
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate/event_catalog.py --version "$(VERSION)"
+	@python3 scripts/generate_event_catalog.py --version "$(VERSION)"
 
 ##@ Build
 
@@ -147,7 +147,7 @@ all: build ## Build the default artifacts.
 prepare-version: ## Update generated build metadata and source-derived artifacts for VERSION.
 	@$(MAKE) --no-print-directory generate-theme-tokens
 	@$(MAKE) --no-print-directory generate-event-catalog
-	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
+	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
 
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
@@ -208,125 +208,25 @@ release: package ## Build and verify the zipped release artifact.
 	@echo "Release artifact ready: $(PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
-ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(APP_PRODUCT)
-	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(APP_PRODUCT)
-	@lipo -create \
-		".build/arm64-apple-macosx/release/$(APP_PRODUCT)" \
-		".build/x86_64-apple-macosx/release/$(APP_PRODUCT)" \
-		-output "$(APP_BIN)"
-else
-	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(APP_PRODUCT)
-	@cp ".build/$(ARCH)-apple-macosx/release/$(APP_PRODUCT)" "$(APP_BIN)"
-endif
+	@scripts/build/build-product.sh release "$(ARCH)" "$(APP_PRODUCT)" "$(APP_BIN)"
 
 build-lua-runtime: ## Internal target: build the Lua runtime executable for ARCH.
-ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(LUA_RUNTIME_PRODUCT)
-	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(LUA_RUNTIME_PRODUCT)
-	@lipo -create \
-		".build/arm64-apple-macosx/release/$(LUA_RUNTIME_PRODUCT)" \
-		".build/x86_64-apple-macosx/release/$(LUA_RUNTIME_PRODUCT)" \
-		-output "$(LUA_RUNTIME_BIN)"
-else
-	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(LUA_RUNTIME_PRODUCT)
-	@cp ".build/$(ARCH)-apple-macosx/release/$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
-endif
+	@scripts/build/build-product.sh release "$(ARCH)" "$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
 
 build-calendar-agent: ## Internal target: build the calendar agent executable for ARCH.
-ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
-	@lipo -create \
-		".build/arm64-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" \
-		-output "$(CALENDAR_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(CALENDAR_AGENT_PRODUCT)
-	@cp ".build/$(ARCH)-apple-macosx/release/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
-endif
+	@scripts/build/build-product.sh release "$(ARCH)" "$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
 
 build-network-agent: ## Internal target: build the network agent executable for ARCH.
-ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(NETWORK_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(NETWORK_AGENT_PRODUCT)
-	@lipo -create \
-		".build/arm64-apple-macosx/release/$(NETWORK_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/release/$(NETWORK_AGENT_PRODUCT)" \
-		-output "$(NETWORK_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(NETWORK_AGENT_PRODUCT)
-	@cp ".build/$(ARCH)-apple-macosx/release/$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
-endif
+	@scripts/build/build-product.sh release "$(ARCH)" "$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
 
 build-cli: ## Internal target: build the CLI executable for ARCH.
-ifeq ($(ARCH),universal)
-	@$(SWIFT_BUILD_RELEASE) --arch arm64 --product $(CLI_PRODUCT)
-	@$(SWIFT_BUILD_RELEASE) --arch x86_64 --product $(CLI_PRODUCT)
-	@lipo -create \
-		".build/arm64-apple-macosx/release/$(CLI_PRODUCT)" \
-		".build/x86_64-apple-macosx/release/$(CLI_PRODUCT)" \
-		-output "$(CLI_BIN)"
-else
-	@$(SWIFT_BUILD_RELEASE) --arch $(ARCH) --product $(CLI_PRODUCT)
-	@cp ".build/$(ARCH)-apple-macosx/release/$(CLI_PRODUCT)" "$(CLI_BIN)"
-endif
+	@scripts/build/build-product.sh release "$(ARCH)" "$(CLI_PRODUCT)" "$(CLI_BIN)"
 
 copy-resources: ## Internal target: copy SwiftPM resource bundles and root assets into the app bundle.
-	@mkdir -p "$(APP_BUNDLE)" "$(APP_RESOURCES)"
-	@rm -rf "$(APP_RESOURCE_BUNDLE)" "$(APP_THEMES_DIR)"
-ifeq ($(ARCH),universal)
-	@test -d ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" || { \
-		echo "Missing resource bundle: .build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)"; \
-		find .build/arm64-apple-macosx/release -maxdepth 1 -name '*.bundle' -print; \
-		exit 1; \
-	}
-	@cp -R ".build/arm64-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
-else
-	@test -d ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" || { \
-		echo "Missing resource bundle: .build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)"; \
-		find ".build/$(ARCH)-apple-macosx/release" -maxdepth 1 -name '*.bundle' -print; \
-		exit 1; \
-	}
-	@cp -R ".build/$(ARCH)-apple-macosx/release/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
-endif
-	@test -d "$(THEMES_DIR)" || { \
-		echo "Missing themes directory: $(THEMES_DIR)"; \
-		exit 1; \
-	}
-	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
-	@test -f "$(APP_THEMES_DIR)/default.toml" || { \
-		echo "Missing bundled theme: $(APP_THEMES_DIR)/default.toml"; \
-		exit 1; \
-	}
+	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_BUNDLE)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
 copy-debug-resources: ## Internal target: copy debug SwiftPM resource bundles and root assets into the app bundle.
-	@mkdir -p "$(APP_BUNDLE)" "$(APP_RESOURCES)"
-	@rm -rf "$(APP_RESOURCE_BUNDLE)" "$(APP_THEMES_DIR)"
-ifeq ($(RUN_ARCH),universal)
-	@test -d ".build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" || { \
-		echo "Missing resource bundle: .build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)"; \
-		find .build/arm64-apple-macosx/debug -maxdepth 1 -name '*.bundle' -print; \
-		exit 1; \
-	}
-	@cp -R ".build/arm64-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
-else
-	@test -d ".build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" || { \
-		echo "Missing resource bundle: .build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)"; \
-		find ".build/$(RUN_ARCH)-apple-macosx/debug" -maxdepth 1 -name '*.bundle' -print; \
-		exit 1; \
-	}
-	@cp -R ".build/$(RUN_ARCH)-apple-macosx/debug/$(RESOURCE_BUNDLE_NAME)" "$(APP_RESOURCE_BUNDLE)"
-endif
-	@test -d "$(THEMES_DIR)" || { \
-		echo "Missing themes directory: $(THEMES_DIR)"; \
-		exit 1; \
-	}
-	@cp -R "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
-	@test -f "$(APP_THEMES_DIR)/default.toml" || { \
-		echo "Missing debug bundled theme: $(APP_THEMES_DIR)/default.toml"; \
-		exit 1; \
-	}
+	@scripts/build/copy-resources.sh debug "$(RUN_ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_BUNDLE)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
 prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle metadata.
 	@mkdir -p "$(APP_CONTENTS)"
@@ -335,260 +235,120 @@ prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle met
 	@touch "$(APP_BUNDLE)"
 
 icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
-	@scripts/assets/app_icons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(DIST_DIR)" \
+	@scripts/generate_app_icons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(DIST_DIR)" \
 		"$(APP_ICON_SVG):$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_SVG):$(CALENDAR_AGENT_ICON_ICNS)" \
 		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"
 
 stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier $(BUNDLE_ID)' "$(PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(APP_EXEC)' "$(PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(APP_NAME)' "$(PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(APP_ICON_FILE)' "$(PLIST)" >/dev/null 2>&1 || \
-		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(APP_ICON_FILE)' "$(PLIST)"
+	@scripts/build/stamp-plist.sh \
+		--plist "$(PLIST)" \
+		--bundle-id "$(BUNDLE_ID)" \
+		--version "$(VERSION)" \
+		--executable "$(APP_EXEC)" \
+		--name "$(APP_NAME)" \
+		--icon-file "$(APP_ICON_FILE)"
 
 stamp-calendar-agent-plist: ## Internal target: stamp version into the calendar agent Info.plist.
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(CALENDAR_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(CALENDAR_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(CALENDAR_AGENT_EXEC)' "$(CALENDAR_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(CALENDAR_AGENT_NAME)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(CALENDAR_AGENT_ICON_FILE)' "$(CALENDAR_AGENT_PLIST)" >/dev/null 2>&1 || \
-		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(CALENDAR_AGENT_ICON_FILE)' "$(CALENDAR_AGENT_PLIST)"
+	@scripts/build/stamp-plist.sh \
+		--plist "$(CALENDAR_AGENT_PLIST)" \
+		--version "$(VERSION)" \
+		--executable "$(CALENDAR_AGENT_EXEC)" \
+		--name "$(CALENDAR_AGENT_NAME)" \
+		--icon-file "$(CALENDAR_AGENT_ICON_FILE)"
 
 stamp-network-agent-plist: ## Internal target: stamp version into the network agent Info.plist.
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString $(VERSION)' "$(NETWORK_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion $(VERSION)' "$(NETWORK_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable $(NETWORK_AGENT_EXEC)' "$(NETWORK_AGENT_PLIST)"
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName $(NETWORK_AGENT_NAME)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || true
-	@/usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)" >/dev/null 2>&1 || \
-		/usr/libexec/PlistBuddy -c 'Set :CFBundleIconFile $(NETWORK_AGENT_ICON_FILE)' "$(NETWORK_AGENT_PLIST)"
+	@scripts/build/stamp-plist.sh \
+		--plist "$(NETWORK_AGENT_PLIST)" \
+		--version "$(VERSION)" \
+		--executable "$(NETWORK_AGENT_EXEC)" \
+		--name "$(NETWORK_AGENT_NAME)" \
+		--icon-file "$(NETWORK_AGENT_ICON_FILE)"
 
 sign: ## Sign the app bundle, calendar agent, network agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
-	@if [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
-		echo "Signing artifacts with ad-hoc identity"; \
-		codesign --force --deep --sign - "$(APP_BUNDLE)"; \
-		codesign --force --deep --sign - "$(CALENDAR_AGENT_BUNDLE)"; \
-		codesign --force --deep --sign - "$(NETWORK_AGENT_BUNDLE)"; \
-		codesign --force --sign - "$(CLI_BIN)"; \
-	else \
-		echo "Signing artifacts with $(CODESIGN_IDENTITY)"; \
-		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(APP_BUNDLE)"; \
-		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CALENDAR_AGENT_BUNDLE)"; \
-		codesign --force --deep --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(NETWORK_AGENT_BUNDLE)"; \
-		codesign --force --options runtime --timestamp --sign "$(CODESIGN_IDENTITY)" "$(CLI_BIN)"; \
-	fi
+	@scripts/release/sign-artifacts.sh \
+		"$(CODESIGN_IDENTITY)" \
+		"$(APP_BUNDLE)" \
+		"$(CALENDAR_AGENT_BUNDLE)" \
+		"$(NETWORK_AGENT_BUNDLE)" \
+		"$(CLI_BIN)"
 
 notarize: ## Notarize the app bundle when NOTARY_SUBMIT=1 and a keychain profile is configured.
-	@if [ "$(NOTARY_SUBMIT)" != "1" ]; then \
-		echo "Skipping notarization (NOTARY_SUBMIT=$(NOTARY_SUBMIT))"; \
-	elif [ "$(CODESIGN_IDENTITY)" = "-" ]; then \
-		echo "Skipping notarization for ad-hoc signed build"; \
-	elif [ -z "$(NOTARYTOOL_PROFILE)" ]; then \
-		echo "NOTARYTOOL_PROFILE is required when NOTARY_SUBMIT=1"; \
-		exit 1; \
-	else \
-		echo "Submitting $(APP_BUNDLE) for notarization"; \
-		rm -f "$(NOTARY_ZIP)"; \
-		ditto -c -k --keepParent "$(APP_BUNDLE)" "$(NOTARY_ZIP)"; \
-		xcrun notarytool submit "$(NOTARY_ZIP)" --keychain-profile "$(NOTARYTOOL_PROFILE)" --wait; \
-		xcrun stapler staple "$(APP_BUNDLE)"; \
-	fi
+	@scripts/release/notarize-app.sh \
+		"$(NOTARY_SUBMIT)" \
+		"$(CODESIGN_IDENTITY)" \
+		"$(NOTARYTOOL_PROFILE)" \
+		"$(APP_BUNDLE)" \
+		"$(NOTARY_ZIP)"
 
 verify: ## Show the built bundle structure and validate key packaged files.
-	@echo "Built $(ARCH) artifacts:"
-	@file "$(APP_BIN)"
-	@file "$(LUA_RUNTIME_BIN)"
-	@file "$(CALENDAR_AGENT_BIN)"
-	@file "$(NETWORK_AGENT_BIN)"
-	@file "$(CLI_BIN)"
-	@test -f "$(PLIST)"
-	@test -f "$(CALENDAR_AGENT_PLIST)"
-	@test -f "$(NETWORK_AGENT_PLIST)"
-	@test -d "$(APP_RESOURCE_BUNDLE)"
-	@test -d "$(APP_THEMES_DIR)"
-	@test -s "$(APP_ICON_ICNS)"
-	@test -s "$(CALENDAR_AGENT_ICON_ICNS)"
-	@test -s "$(NETWORK_AGENT_ICON_ICNS)"
-	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(PLIST)")" = "$(APP_ICON_FILE)"
-	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(CALENDAR_AGENT_PLIST)")" = "$(CALENDAR_AGENT_ICON_FILE)"
-	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(NETWORK_AGENT_PLIST)")" = "$(NETWORK_AGENT_ICON_FILE)"
-	@echo "Info.plist:"
-	@plutil -p "$(PLIST)"
-	@echo "Calendar agent Info.plist:"
-	@plutil -p "$(CALENDAR_AGENT_PLIST)"
-	@echo "Network agent Info.plist:"
-	@plutil -p "$(NETWORK_AGENT_PLIST)"
-	@echo "Packaged app root:"
-	@ls -1 "$(APP_BUNDLE)"
-	@echo "Packaged Contents:"
-	@ls -1 "$(APP_CONTENTS)"
-	@echo "Packaged Resources:"
-	@ls -1 "$(APP_RESOURCES)" 2>/dev/null || true
+	@scripts/build/verify-bundle.sh \
+		"$(ARCH)" \
+		"$(APP_BIN)" \
+		"$(LUA_RUNTIME_BIN)" \
+		"$(CALENDAR_AGENT_BIN)" \
+		"$(NETWORK_AGENT_BIN)" \
+		"$(CLI_BIN)" \
+		"$(PLIST)" \
+		"$(CALENDAR_AGENT_PLIST)" \
+		"$(NETWORK_AGENT_PLIST)" \
+		"$(APP_RESOURCE_BUNDLE)" \
+		"$(APP_THEMES_DIR)" \
+		"$(APP_ICON_ICNS)" \
+		"$(CALENDAR_AGENT_ICON_ICNS)" \
+		"$(NETWORK_AGENT_ICON_ICNS)" \
+		"$(APP_ICON_FILE)" \
+		"$(CALENDAR_AGENT_ICON_FILE)" \
+		"$(NETWORK_AGENT_ICON_FILE)" \
+		"$(APP_BUNDLE)" \
+		"$(APP_CONTENTS)" \
+		"$(APP_RESOURCES)"
 
 verify-release: ## Validate the release package and print release fingerprints.
 	@$(MAKE) --no-print-directory verify
-	@test -f "$(PACKAGE_ZIP)"
-	@test -f "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
-	@test -f "$(APP_THEMES_DIR)/default.toml"
-	@echo "Release package:"
-	@ls -lh "$(PACKAGE_ZIP)"
-	@echo "Build fingerprints:"
-	@shasum -a 256 "$(APP_BIN)"
-	@shasum -a 256 "$(PLIST)"
-	@shasum -a 256 "$(APP_ICON_ICNS)"
-	@shasum -a 256 "$(CALENDAR_AGENT_ICON_ICNS)"
-	@shasum -a 256 "$(NETWORK_AGENT_ICON_ICNS)"
-	@shasum -a 256 "$(APP_RESOURCE_BUNDLE)/easybar_api.lua"
-	@shasum -a 256 "$(APP_THEMES_DIR)/default.toml"
-	@shasum -a 256 "$(PACKAGE_ZIP)"
-	@codesign -dv --verbose=4 "$(APP_BUNDLE)" 2>&1 || true
+	@scripts/release/verify-release.sh \
+		"$(PACKAGE_ZIP)" \
+		"$(APP_BIN)" \
+		"$(PLIST)" \
+		"$(APP_ICON_ICNS)" \
+		"$(CALENDAR_AGENT_ICON_ICNS)" \
+		"$(NETWORK_AGENT_ICON_ICNS)" \
+		"$(APP_RESOURCE_BUNDLE)" \
+		"$(APP_THEMES_DIR)" \
+		"$(APP_BUNDLE)"
 
 run: prepare-version ## Fast local run with debug builds and local agents.
-	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-lua-runtime RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
-	@echo "Copying debug resources"
-	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
-	@echo "Preparing debug app bundle"
-	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
-	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOG_LEVEL=info "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOG_LEVEL=info "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=info"
-	@echo "App logs follow stdout/stderr and configured logging.directory"
-	@env EASYBAR_LOG_LEVEL=info "$(APP_BIN)"
+	@scripts/dev/run-local.sh info "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
 
 run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
-	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-lua-runtime RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
-	@echo "Copying debug resources"
-	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
-	@echo "Preparing debug app bundle"
-	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
-	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOG_LEVEL=debug "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOG_LEVEL=debug "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=debug"
-	@echo "App logs follow stdout/stderr and configured logging.directory"
-	@env EASYBAR_LOG_LEVEL=debug "$(APP_BIN)"
+	@scripts/dev/run-local.sh debug "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
 
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
-	@mkdir -p "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@$(MAKE) --no-print-directory run-build-app RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-lua-runtime RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-calendar-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-network-agent RUN_ARCH=$(RUN_ARCH)
-	@$(MAKE) --no-print-directory run-build-cli RUN_ARCH=$(RUN_ARCH)
-	@echo "Copying debug resources"
-	@$(MAKE) --no-print-directory copy-debug-resources RUN_ARCH=$(RUN_ARCH)
-	@echo "Preparing debug app bundle"
-	@$(MAKE) --no-print-directory prepare-debug-app-bundle VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
-	@echo "Starting local helper agents"
-	@nohup env EASYBAR_LOG_LEVEL=trace "$(CALENDAR_AGENT_BIN)" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
-	@nohup env EASYBAR_LOG_LEVEL=trace "$(NETWORK_AGENT_BIN)" >/tmp/easybar-network-agent.dev.log 2>&1 &
-	@echo "Launching $(APP_BIN) with EASYBAR_LOG_LEVEL=trace"
-	@echo "App logs follow stdout/stderr and configured logging.directory"
-	@env EASYBAR_LOG_LEVEL=trace "$(APP_BIN)"
+	@scripts/dev/run-local.sh trace "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(APP_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(APP_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(APP_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(APP_PRODUCT)" \
-		-output "$(APP_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(APP_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(APP_PRODUCT)" "$(APP_BIN)"
-endif
+	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)" "$(APP_BIN)"
 
 run-build-lua-runtime: ## Internal target: fast local Lua runtime build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(LUA_RUNTIME_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(LUA_RUNTIME_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" \
-		-output "$(LUA_RUNTIME_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(LUA_RUNTIME_PRODUCT)
-	@mkdir -p "$(APP_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
-endif
+	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
 
 run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CALENDAR_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CALENDAR_AGENT_PRODUCT)
-	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" \
-		-output "$(CALENDAR_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CALENDAR_AGENT_PRODUCT)
-	@mkdir -p "$(CALENDAR_AGENT_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
-endif
+	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
 
 run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(NETWORK_AGENT_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(NETWORK_AGENT_PRODUCT)
-	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" \
-		-output "$(NETWORK_AGENT_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(NETWORK_AGENT_PRODUCT)
-	@mkdir -p "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
-endif
+	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
 
 run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
-ifeq ($(RUN_ARCH),universal)
-	@$(SWIFT_BUILD_DEBUG) --arch arm64 --product $(CLI_PRODUCT)
-	@$(SWIFT_BUILD_DEBUG) --arch x86_64 --product $(CLI_PRODUCT)
-	@mkdir -p "$(DIST_DIR)"
-	@lipo -create \
-		".build/arm64-apple-macosx/debug/$(CLI_PRODUCT)" \
-		".build/x86_64-apple-macosx/debug/$(CLI_PRODUCT)" \
-		-output "$(CLI_BIN)"
-else
-	@$(SWIFT_BUILD_DEBUG) --arch $(RUN_ARCH) --product $(CLI_PRODUCT)
-	@mkdir -p "$(DIST_DIR)"
-	@cp ".build/$(RUN_ARCH)-apple-macosx/debug/$(CLI_PRODUCT)" "$(CLI_BIN)"
-endif
+	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)" "$(CLI_BIN)"
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
-	@if command -v brew >/dev/null 2>&1; then \
-		brew services stop gi8lino/tap/easybar >/dev/null 2>&1 || true; \
-		brew services stop gi8lino/tap/easybar-calendar-agent >/dev/null 2>&1 || true; \
-		brew services stop gi8lino/tap/easybar-network-agent >/dev/null 2>&1 || true; \
-	fi
-	@pkill -x "$(APP_EXEC)" >/dev/null 2>&1 || true
-	@pkill -x "$(CALENDAR_AGENT_EXEC)" >/dev/null 2>&1 || true
-	@pkill -x "$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
-	@pkill -f "$(APP_BUNDLE)/Contents/MacOS/$(APP_EXEC)" >/dev/null 2>&1 || true
-	@pkill -f "$(CALENDAR_AGENT_BUNDLE)/Contents/MacOS/$(CALENDAR_AGENT_EXEC)" >/dev/null 2>&1 || true
-	@pkill -f "$(NETWORK_AGENT_BUNDLE)/Contents/MacOS/$(NETWORK_AGENT_EXEC)" >/dev/null 2>&1 || true
+	@scripts/dev/stop-local.sh \
+		"$(APP_EXEC)" \
+		"$(CALENDAR_AGENT_EXEC)" \
+		"$(NETWORK_AGENT_EXEC)" \
+		"$(APP_BUNDLE)" \
+		"$(CALENDAR_AGENT_BUNDLE)" \
+		"$(NETWORK_AGENT_BUNDLE)"
 
 ##@ Cleanup
 
@@ -597,8 +357,8 @@ clean-dist: ## Remove dist/.
 
 clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
-	@python3 scripts/generate/event_catalog.py --version dev
+	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
+	@python3 scripts/generate_event_catalog.py --version dev
 
 ##@ Info
 
@@ -640,7 +400,7 @@ tag: ## Show latest tag.
 ##@ Tools
 
 demo: ## Populate the demo calendar with random events.
-	@swift scripts/tools/populate-demo-calendar.swift demo
+	@swift scripts/populate-demo-calendar.swift demo
 
 ##@ Docs
 
@@ -660,7 +420,7 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@touch $(DOCS_STAMP)
 
 generate-docs: ## Generate all checked-in docs from source stubs.
-	@python3 scripts/generate/lua_reference_docs.py
+	@python3 scripts/generate_lua_reference_docs.py
 
 generate-lua-docs: generate-docs ## Alias for generate-docs.
 
@@ -683,4 +443,4 @@ ICON_DIR := docs/assets/icons
 ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
-	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+	@scripts/generate_favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
