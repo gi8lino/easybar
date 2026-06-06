@@ -153,9 +153,9 @@ If you want the architectural map before editing code, start with the docs secti
 
 <img src="./docs/content/assets/front_app.png" alt="Front app screenshot" width="500">
 
-### Wifi
+### Wi-Fi
 
-<img src="./docs/content/assets/wifi.png" alt="Wifi details view screenshot" width="500">
+<img src="./docs/content/assets/wifi.png" alt="Wi-Fi details view screenshot" width="500">
 
 ### Context menu
 

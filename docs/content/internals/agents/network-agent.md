@@ -31,7 +31,7 @@ Clients request only what they need.
 {
   "kind": "fields",
   "fields": {
-    "wifi.ssid": "Office WiFi",
+    "wifi.ssid": "Office Wi-Fi",
     "network.primary_interface_is_tunnel": false
   }
 }
@@ -43,7 +43,7 @@ The network agent returns a flat map of typed values:
 
 ```json
 {
-  "wifi.ssid": "Office WiFi",
+  "wifi.ssid": "Office Wi-Fi",
   "wifi.rssi": -64,
   "network.primary_interface_is_tunnel": true
 }
@@ -186,20 +186,20 @@ Agent response:
 {
   "network.ipv4_address": "10.0.0.91",
   "network.ipv6_address": "fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4",
-  "wifi.ssid": "Office WiFi"
+  "wifi.ssid": "Office Wi-Fi"
 }
 ```
 
 Native Wi-Fi inline view:
 
 ```text
-Office WiFi | 10.0.0.91 | fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
+Office Wi-Fi | 10.0.0.91 | fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
 ```
 
 Native Wi-Fi details view:
 
 ```text
-SSID:         Office WiFi
+SSID:         Office Wi-Fi
 IPv4 Address: 10.0.0.91
 IPv6 Address: fd88:84dd:4eb:43ba:189a:8f88:cdb5:3a4
 ```
@@ -212,7 +212,7 @@ Agent response:
 
 ```json
 {
-  "wifi.ssid": "Office WiFi"
+  "wifi.ssid": "Office Wi-Fi"
 }
 ```
 
@@ -229,3 +229,5 @@ Lua event:
 
 Agents return flat data.
 Lua receives structured event data.
+
+

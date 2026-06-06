@@ -70,9 +70,9 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 
 [![CPU screenshot](assets/cpu.png)](assets/cpu.png)
 
-### Wifi
+### Wi-Fi
 
-[![WiFi screenshot](assets/wifi.png)](assets/wifi.png)
+[![Wi-Fi screenshot](assets/wifi.png)](assets/wifi.png)
 
 ### Front app
 
@@ -81,3 +81,5 @@ EasyBar shares some ideas with SketchyBar, but aims to be a different kind of to
 ### Context menu
 
 [![Context menu screenshot](assets/context.png)](assets/context.png)
+
+
