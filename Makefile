@@ -135,10 +135,10 @@ check-generated: generate ## Verify all checked-in generated artifacts are commi
 	@git diff --exit-code
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
-	@python3 scripts/generate_theme_tokens.py
+	@python3 scripts/generate/theme_tokens.py
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate_event_catalog.py --version "$(VERSION)"
+	@python3 scripts/generate/event_catalog.py --version "$(VERSION)"
 
 ##@ Build
 
@@ -147,7 +147,7 @@ all: build ## Build the default artifacts.
 prepare-version: ## Update generated build metadata and source-derived artifacts for VERSION.
 	@$(MAKE) --no-print-directory generate-theme-tokens
 	@$(MAKE) --no-print-directory generate-event-catalog
-	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
+	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
 
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
@@ -335,7 +335,7 @@ prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle met
 	@touch "$(APP_BUNDLE)"
 
 icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
-	@scripts/generate_app_icons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(DIST_DIR)" \
+	@scripts/assets/app_icons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(DIST_DIR)" \
 		"$(APP_ICON_SVG):$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_SVG):$(CALENDAR_AGENT_ICON_ICNS)" \
 		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"
@@ -597,8 +597,8 @@ clean-dist: ## Remove dist/.
 
 clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
-	@python3 scripts/generate_event_catalog.py --version dev
+	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
+	@python3 scripts/generate/event_catalog.py --version dev
 
 ##@ Info
 
@@ -640,7 +640,7 @@ tag: ## Show latest tag.
 ##@ Tools
 
 demo: ## Populate the demo calendar with random events.
-	@swift scripts/populate-demo-calendar.swift demo
+	@swift scripts/tools/populate-demo-calendar.swift demo
 
 ##@ Docs
 
@@ -660,7 +660,7 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@touch $(DOCS_STAMP)
 
 generate-docs: ## Generate all checked-in docs from source stubs.
-	@python3 scripts/generate_lua_reference_docs.py
+	@python3 scripts/generate/lua_reference_docs.py
 
 generate-lua-docs: generate-docs ## Alias for generate-docs.
 
@@ -683,4 +683,4 @@ ICON_DIR := docs/assets/icons
 ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
-	@scripts/generate_favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)

@@ -73,11 +73,11 @@ nav:
           - Events: lua/reference/events.md
           - Properties: lua/reference/properties.md
 
-      - Runtime:
-          - Control: runtime/control.md
-          - Metrics: runtime/metrics.md
-          - Troubleshooting: runtime/troubleshooting.md
-          - Recovery: runtime/recovery.md
+  - Runtime:
+      - Control: runtime/control.md
+      - Metrics: runtime/metrics.md
+      - Troubleshooting: runtime/troubleshooting.md
+      - Recovery: runtime/recovery.md
 
   - Internals:
       - Architecture:

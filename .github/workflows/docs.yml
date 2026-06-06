@@ -6,7 +6,15 @@ on:
       - main
     paths:
       - "docs/**"
+      - "Sources/EasyBarApp/Events/event_catalog.json"
+      - "Sources/EasyBarApp/Lua/easybar_api.base.lua"
+      - "Sources/EasyBarApp/Lua/easybar_api.events.lua"
+      - "Sources/EasyBarApp/Lua/easybar_api.lua"
+      - "Sources/EasyBarApp/Lua/easybar/event_tokens.lua"
+      - "Sources/EasyBarApp/Lua/easybar/theme_tokens.lua"
+      - "scripts/generate_event_catalog.py"
       - "scripts/generate_lua_reference_docs.py"
+      - "scripts/generate_theme_tokens.py"
       - "Makefile"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
@@ -62,5 +70,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-
-

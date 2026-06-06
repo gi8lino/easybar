@@ -44,6 +44,7 @@ Start with:
 - Themes
 - AeroSpace Integration
 - Lua Widgets
+- Runtime Control
 - Troubleshooting
 - Architecture
 
@@ -94,6 +95,36 @@ Useful build and runtime commands:
 - `make stop` stops the running EasyBar app and helper agents cleanly.
 - `.build/arm64-apple-macosx/debug/EasyBarCtl --validate-config --config /path/to/config.toml` asks the running EasyBar process to dry-run config validation without reloading the bar.
 
+## Generated artifacts
+
+Regenerate checked-in generated files before committing changes to theme tokens, event catalog data, Lua API stubs, or generated Lua reference docs:
+
+```bash
+make generate
+```
+
+Regenerate only generated documentation when the runtime or Lua API docs changed:
+
+```bash
+make generate-docs
+```
+
+Before opening a pull request, verify that generated files are current:
+
+```bash
+make check-generated
+```
+
+## Helper scripts
+
+Reusable automation lives under `scripts/` and is grouped by purpose:
+
+- `scripts/ci/` contains CI-only wrappers such as dependency setup and long-running Swift test logging.
+- `scripts/release/` contains release automation such as Homebrew formula rendering and tap commits.
+- Existing generator scripts remain the source of truth for generated Swift, Lua, and documentation artifacts and are still orchestrated through the Makefile.
+
+Keep local developer entrypoints in the Makefile where possible, and move only reusable implementation details into scripts. That keeps commands like `make generate`, `make build-docs`, and `make package` stable while avoiding large shell blocks in workflows.
+
 Helpful entry points in the codebase:
 
 - `Sources/EasyBarApp/App` contains the main app shell and startup wiring.
@@ -133,5 +164,3 @@ If you want the architectural map before editing code, start with the docs secti
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
-
-

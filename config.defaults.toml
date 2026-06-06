@@ -171,11 +171,11 @@ order = 10 # Sort order among widgets in the same position.
 # Example native group configuration. This is disabled by default.
 # Uncomment this block and the `group = "system"` lines below if you want
 # battery and Wi-Fi to be rendered inside one shared native container.
-#
+
 #[builtins.groups.system]
 #position = "right" # Places the native group on the left, center, or right side of the bar.
 #order = 40 # Sort order among widgets in the same position.
-#
+
 #[builtins.groups.system.style]
 #background_color = "theme.surface" # Background color of the native group.
 #border_color = "theme.border" # Border color of the native group.

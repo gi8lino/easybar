@@ -52,6 +52,12 @@ make generate
 This runs the theme-token generator, event-catalog generator, and generated docs pipeline.
 Use this before committing changes that affect generated Swift, Lua, or documentation artifacts.
 
+Verify that generated artifacts are current before opening a pull request:
+
+```bash
+make check-generated
+```
+
 ## Generated docs
 
 Regenerate only generated documentation through the Makefile:
@@ -61,6 +67,15 @@ make generate-docs
 ```
 
 The underlying generator scripts are implementation details. Call them directly only when debugging the generation pipeline.
+
+## Helper scripts
+
+Reusable automation scripts live under `scripts/` and are grouped by purpose:
+
+- `scripts/ci/` contains CI helpers such as dependency setup and long-running Swift test logging.
+- `scripts/release/` contains release helpers such as Homebrew formula rendering and tap commits.
+
+Keep stable developer commands in the Makefile and delegate large reusable shell blocks into these scripts. This keeps local commands predictable while avoiding duplicated workflow logic.
 
 ## Notes
 

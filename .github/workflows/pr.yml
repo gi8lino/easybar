@@ -33,38 +33,12 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: |
-          brew update
-
-          if [ ! -x /opt/homebrew/bin/lua ]; then
-            brew install lua
-          fi
-
-          /opt/homebrew/bin/lua -v
+        run: scripts/ci/install-lua.sh
 
       - name: Run tests
         shell: bash
         timeout-minutes: 10
-        run: |
-          set -euo pipefail
-
-          make test > test.log 2>&1 &
-          test_pid=$!
-
-          while kill -0 "$test_pid" 2>/dev/null; do
-            sleep 30
-            echo "---- make test still running; last 80 lines ----"
-            tail -n 80 test.log || true
-          done
-
-          wait "$test_pid" || {
-            status=$?
-            echo "---- extracted failures ----"
-            grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed)" test.log || true
-            echo "---- full test log ----"
-            cat test.log
-            exit "$status"
-          }
+        run: scripts/ci/run-swift-tests.sh
 
       - name: Upload test log
         if: failure()
@@ -89,5 +63,3 @@ jobs:
 
       - name: Build docs
         run: make build-docs
-
-
