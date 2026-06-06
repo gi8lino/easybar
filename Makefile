@@ -110,16 +110,35 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help all generate-event-catalog generate-theme-tokens generate-swift-env prepare-version build bundle package release app cli fmt test clean clean-dist run run-debug run-trace stop icons \
-        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
+.PHONY: help all \
+        generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
+        prepare-version build bundle package release app cli fmt test \
+        clean clean-dist run run-debug run-trace stop icons \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
+        copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
-        demo
+        demo \
+        generate-docs generate-lua-docs check-docs serve-docs build-docs clean-docs \
+        favicon
 
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Generated
+
+generate: generate-theme-tokens generate-event-catalog generate-docs ## Generate all checked-in generated artifacts.
+
+check-generated: generate ## Verify all checked-in generated artifacts are committed.
+	@git diff --exit-code
+
+generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
+	@python3 scripts/generate_theme_tokens.py
+
+generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
+	@python3 scripts/generate_event_catalog.py --version "$(VERSION)"
 
 ##@ Build
 
@@ -150,9 +169,6 @@ fmt: ## Format all Swift source files in the repository.
 
 test: generate-theme-tokens generate-event-catalog generate-swift-env ## Run the Swift test suite.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
-
-generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
-	@python3 scripts/generate_theme_tokens.py
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
 	@rm -rf "$(DIST_DIR)" ".build"
@@ -579,7 +595,7 @@ stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 clean-dist: ## Remove dist/.
 	@rm -rf "$(DIST_DIR)"
 
-clean: ## Remove dist/, .build, and reset BuildInfo.swift and Lua API stub to dev.
+clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
 	@python3 scripts/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
 	@python3 scripts/generate_event_catalog.py --version dev
@@ -623,9 +639,6 @@ tag: ## Show latest tag.
 
 ##@ Tools
 
-generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate_event_catalog.py --version "$(VERSION)"
-
 demo: ## Populate the demo calendar with random events.
 	@swift scripts/populate-demo-calendar.swift demo
 
@@ -638,8 +651,6 @@ DOCS_VENV := $(DOCS_DIR)/.venv
 DOCS_PYTHON := $(DOCS_VENV)/bin/python
 DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
 
-.PHONY: generate-docs generate-lua-docs check-docs serve-docs build-docs clean-docs
-
 $(DOCS_PYTHON):
 	@python3 -m venv $(DOCS_VENV)
 
@@ -648,13 +659,13 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-docs: ## Generate all checked-in Lua reference docs from source stubs.
+generate-docs: ## Generate all checked-in docs from source stubs.
 	@python3 scripts/generate_lua_reference_docs.py
 
 generate-lua-docs: generate-docs ## Alias for generate-docs.
 
 check-docs: generate-docs ## Verify generated docs are committed.
-	@git diff --exit-code docs/content/lua/reference README.md docs/content
+	@git diff --exit-code -- docs/content/lua/reference
 
 serve-docs: $(DOCS_STAMP) generate-docs ## Generate and serve the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs serve -f $(DOCS_CONFIG)
@@ -671,6 +682,5 @@ SVG := packaging/easybar-icon.svg
 ICON_DIR := docs/assets/icons
 ICON_SIZES := 16x16 32x32 48x48 64x64
 
-.PHONY: favicon
 favicon: ## Create favicons.
 	@scripts/generate_favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)

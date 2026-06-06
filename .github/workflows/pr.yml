@@ -74,11 +74,7 @@ jobs:
           path: test.log
 
       - name: Verify generated artifacts are current
-        run: |
-          make generate-theme-tokens
-          make generate-event-catalog
-          make generate-lua-docs
-          git diff --exit-code
+        run: make check-generated
 
   docs:
     runs-on: macos-26
@@ -93,3 +89,5 @@ jobs:
 
       - name: Build docs
         run: make build-docs
+
+

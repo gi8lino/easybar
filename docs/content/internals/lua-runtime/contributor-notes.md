@@ -41,9 +41,20 @@ Use this page when changing the Lua runtime or public Lua API.
 - `LuaProcessController.swift`
 - `LuaTransport.swift`
 
+## Generated artifacts
+
+Regenerate every checked-in generated artifact through the Makefile:
+
+```bash
+make generate
+```
+
+This runs the theme-token generator, event-catalog generator, and generated docs pipeline.
+Use this before committing changes that affect generated Swift, Lua, or documentation artifacts.
+
 ## Generated docs
 
-Regenerate all generated Lua docs and stubs through the Makefile:
+Regenerate only generated documentation through the Makefile:
 
 ```bash
 make generate-docs
