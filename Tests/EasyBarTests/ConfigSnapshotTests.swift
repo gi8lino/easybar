@@ -5,19 +5,19 @@ import XCTest
 final class ConfigSnapshotTests: XCTestCase {
   private var originalSnapshot: ConfigSnapshot!
 
-  /// Handles set up with error.
+  /// Prepares isolated state before each test.
   override func setUpWithError() throws {
     try super.setUpWithError()
     originalSnapshot = Config.makeUnloadedConfig().snapshot()
   }
 
-  /// Handles tear down with error.
+  /// Restores state mutated by the test fixture.
   override func tearDownWithError() throws {
     Config.makeUnloadedConfig().apply(originalSnapshot)
     try super.tearDownWithError()
   }
 
-  /// Handles test apply restores app bar and builtin state from snapshot.
+  /// Verifies that apply restores app bar and builtin state from snapshot.
   func testApplyRestoresAppBarAndBuiltinStateFromSnapshot() {
     let config = Config.makeUnloadedConfig()
 

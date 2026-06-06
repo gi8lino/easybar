@@ -4,7 +4,7 @@ import XCTest
 @testable import EasyBarApp
 
 final class EventHubTests: XCTestCase {
-  /// Creates hub.
+  /// Builds an event hub with logging muted and Lua delivery replaced by a no-op sink.
   private static func makeHub() -> EventHub {
     EventHub(
       logger: ProcessLogger(
@@ -16,11 +16,11 @@ final class EventHubTests: XCTestCase {
   }
 
   private final class NoopEventSink: EventPayloadSink {
-    /// Handles enqueue.
+    /// Accepts forwarded payloads without delivering them to Lua during tests.
     func enqueue(_ payload: EasyBarEventPayload) {}
   }
 
-  /// Handles test filtered subscription receives matching event only.
+  /// Verifies that filtered subscription receives matching event only.
   func testFilteredSubscriptionReceivesMatchingEventOnly() async {
     let hub = Self.makeHub()
     let stream = await hub.subscribe(eventNames: [AppEvent.systemWoke.rawValue])
@@ -34,7 +34,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.systemWoke.rawValue)
   }
 
-  /// Handles test unfiltered subscription receives app event.
+  /// Verifies that unfiltered subscription receives app event.
   func testUnfilteredSubscriptionReceivesAppEvent() async {
     let hub = Self.makeHub()
     let stream = await hub.subscribe()
@@ -47,7 +47,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.minuteTick.rawValue)
   }
 
-  /// Handles test empty event filter behaves like unfiltered subscription.
+  /// Verifies that empty event filter behaves like unfiltered subscription.
   func testEmptyEventFilterBehavesLikeUnfilteredSubscription() async {
     let hub = Self.makeHub()
     let stream = await hub.subscribe(eventNames: Set<String>())
@@ -60,7 +60,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
   }
 
-  /// Handles test replay latest replays most recent replayable state.
+  /// Verifies that replay latest replays most recent replayable state.
   func testReplayLatestReplaysMostRecentReplayableState() async {
     let hub = Self.makeHub()
 
@@ -76,7 +76,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
   }
 
-  /// Handles test replay latest uses most recent payload for replayable event.
+  /// Verifies that replay latest uses most recent payload for replayable event.
   func testReplayLatestUsesMostRecentPayloadForReplayableEvent() async {
     let hub = Self.makeHub()
 
@@ -94,7 +94,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.primaryInterfaceIsTunnel, true)
   }
 
-  /// Handles test replay latest respects event filter.
+  /// Verifies that replay latest respects event filter.
   func testReplayLatestRespectsEventFilter() async {
     let hub = Self.makeHub()
 
@@ -111,7 +111,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.secondTick.rawValue)
   }
 
-  /// Handles test replay latest without event filter replays all cached events in stable order.
+  /// Verifies that replay latest without event filter replays all cached events in stable order.
   func testReplayLatestWithoutEventFilterReplaysAllCachedEventsInStableOrder() async {
     let hub = Self.makeHub()
 
@@ -137,7 +137,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(payloads.last?.primaryInterfaceIsTunnel)
   }
 
-  /// Handles test replay latest does not emit when no cached payload exists.
+  /// Verifies that replay latest does not emit when no cached payload exists.
   func testReplayLatestDoesNotEmitWhenNoCachedPayloadExists() async {
     let hub = Self.makeHub()
 
@@ -154,7 +154,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(payload)
   }
 
-  /// Handles test replay latest does not replay non replayable widget event.
+  /// Verifies that replay latest does not replay non replayable widget event.
   func testReplayLatestDoesNotReplayNonReplayableWidgetEvent() async {
     let hub = Self.makeHub()
 
@@ -177,7 +177,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(payload)
   }
 
-  /// Handles test emit replayable state emits requested replayable events in stable order.
+  /// Verifies that emit replayable state emits requested replayable events in stable order.
   func testEmitReplayableStateEmitsRequestedReplayableEventsInStableOrder() async {
     let hub = Self.makeHub()
 
@@ -214,7 +214,7 @@ final class EventHubTests: XCTestCase {
     )
   }
 
-  /// Handles test emit replayable state ignores unknown event names.
+  /// Verifies that emit replayable state ignores unknown event names.
   func testEmitReplayableStateIgnoresUnknownEventNames() async {
     let hub = Self.makeHub()
 
@@ -233,7 +233,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(payload)
   }
 
-  /// Handles test widget events route only to matching target widget ids.
+  /// Verifies that widget events route only to matching target widget IDs.
   func testWidgetEventsRouteOnlyToMatchingTargetWidgetIDs() async {
     let hub = Self.makeHub()
 
@@ -271,7 +271,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(nonMatchingPayload)
   }
 
-  /// Handles test widget events route to matching source widget id.
+  /// Verifies that widget events route to matching source widget ID.
   func testWidgetEventsRouteToMatchingSourceWidgetID() async {
     let hub = Self.makeHub()
 
@@ -295,7 +295,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.button, .left)
   }
 
-  /// Handles test widget subscription without target filter receives matching widget event.
+  /// Verifies that widget subscription without target filter receives matching widget event.
   func testWidgetSubscriptionWithoutTargetFilterReceivesMatchingWidgetEvent() async {
     let hub = Self.makeHub()
 
@@ -322,7 +322,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.deltaY, -8)
   }
 
-  /// Handles test empty widget target filter behaves like unfiltered widget subscription.
+  /// Verifies that empty widget target filter behaves like unfiltered widget subscription.
   func testEmptyWidgetTargetFilterBehavesLikeUnfilteredWidgetSubscription() async {
     let hub = Self.makeHub()
 
@@ -347,7 +347,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.value, 0.5)
   }
 
-  /// Handles test widget event filter still requires matching event name.
+  /// Verifies that widget event filter still requires matching event name.
   func testWidgetEventFilterStillRequiresMatchingEventName() async {
     let hub = Self.makeHub()
 
@@ -375,7 +375,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(payload)
   }
 
-  /// Handles test app events ignore widget target filter when event name matches.
+  /// Verifies that app events ignore widget target filter when event name matches.
   func testAppEventsIgnoreWidgetTargetFilterWhenEventNameMatches() async {
     let hub = Self.makeHub()
 
@@ -393,7 +393,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.systemWoke.rawValue)
   }
 
-  /// Handles test app payload dictionary includes nested context.
+  /// Verifies that app payload dictionary includes nested context.
   func testAppPayloadDictionaryIncludesNestedContext() {
     let payload = EasyBarEventPayload.app(
       .networkChange,
@@ -422,7 +422,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertNil(dictionary["target_widget_id"])
   }
 
-  /// Handles test widget payload dictionary includes interaction context.
+  /// Verifies that widget payload dictionary includes interaction context.
   func testWidgetPayloadDictionaryIncludesInteractionContext() {
     let payload = EasyBarEventPayload.widget(
       .mouseScrolled,
@@ -450,7 +450,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(audio?["value"] as? Double, 0.75)
   }
 
-  /// Handles test event replay catalog identifies replayable events.
+  /// Verifies that event replay catalog identifies replayable events.
   func testEventReplayCatalogIdentifiesReplayableEvents() {
     XCTAssertTrue(EventReplayCatalog.isReplayable(AppEvent.secondTick.rawValue))
     XCTAssertTrue(EventReplayCatalog.isReplayable(AppEvent.networkChange.rawValue))
@@ -458,7 +458,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertFalse(EventReplayCatalog.isReplayable("unknown_event"))
   }
 
-  /// Handles test event delivery policy routes only widget events directly to widgets.
+  /// Verifies that event delivery policy routes only widget events directly to widgets.
   func testEventDeliveryPolicyRoutesOnlyWidgetEventsDirectlyToWidgets() {
     XCTAssertTrue(
       EventDeliveryPolicy.routesDirectlyToWidgets(
@@ -479,7 +479,7 @@ final class EventHubTests: XCTestCase {
     )
   }
 
-  /// Handles test event delivery policy classifies coalescing events.
+  /// Verifies that event delivery policy classifies coalescing events.
   func testEventDeliveryPolicyClassifiesCoalescingEvents() {
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName(AppEvent.secondTick.rawValue),
@@ -502,7 +502,7 @@ final class EventHubTests: XCTestCase {
     )
   }
 
-  /// Handles test event delivery policy classifies reliable events.
+  /// Verifies that event delivery policy classifies reliable events.
   func testEventDeliveryPolicyClassifiesReliableEvents() {
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName(AppEvent.systemWoke.rawValue),
@@ -525,7 +525,7 @@ final class EventHubTests: XCTestCase {
     )
   }
 
-  /// Handles test default buffering policy uses smallest buffer for coalescing only subscriptions.
+  /// Verifies that default buffering policy uses smallest buffer for coalescing only subscriptions.
   func testDefaultBufferingPolicyUsesSmallestBufferForCoalescingOnlySubscriptions() {
     let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
@@ -537,7 +537,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(bufferSize(for: policy), 1)
   }
 
-  /// Handles test default buffering policy uses medium buffer for mixed subscriptions.
+  /// Verifies that default buffering policy uses medium buffer for mixed subscriptions.
   func testDefaultBufferingPolicyUsesMediumBufferForMixedSubscriptions() {
     let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
@@ -549,7 +549,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(bufferSize(for: policy), 8)
   }
 
-  /// Handles test default buffering policy uses largest buffer for reliable only or unfiltered subscriptions.
+  /// Verifies that default buffering policy uses largest buffer for reliable only or unfiltered subscriptions.
   func testDefaultBufferingPolicyUsesLargestBufferForReliableOnlyOrUnfilteredSubscriptions() {
     let reliableOnlyPolicy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
@@ -563,7 +563,7 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(bufferSize(for: unfilteredPolicy), 32)
   }
 
-  /// Handles next.
+  /// Waits for one payload, timing out instead of hanging the test.
   private static func next(
     from stream: AsyncStream<EasyBarEventPayload>,
     timeoutNanoseconds: UInt64 = 1_000_000_000
@@ -575,7 +575,7 @@ final class EventHubTests: XCTestCase {
     ).first
   }
 
-  /// Handles collect.
+  /// Collects a bounded number of payloads before the timeout wins.
   private static func collect(
     from stream: AsyncStream<EasyBarEventPayload>,
     count: Int,
@@ -607,7 +607,7 @@ final class EventHubTests: XCTestCase {
     }
   }
 
-  /// Handles buffer size.
+  /// Returns the concrete buffer size from an AsyncStream buffering policy.
   private func bufferSize(
     for policy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy
   ) -> Int? {

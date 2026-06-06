@@ -12,7 +12,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
   private var originalEnvironment: [String: String?] = [:]
   private var tempDirectoryURL: URL!
 
-  /// Handles set up with error.
+  /// Prepares isolated state before each test.
   override func setUpWithError() throws {
     try super.setUpWithError()
 
@@ -22,7 +22,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     tempDirectoryURL = try makeTemporaryDirectory()
   }
 
-  /// Handles tear down with error.
+  /// Restores state mutated by the test fixture.
   override func tearDownWithError() throws {
     restoreEnvironment()
 
@@ -33,7 +33,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     try super.tearDownWithError()
   }
 
-  /// Handles test load uses the config path environment override and TOML runtime values.
+  /// Verifies that load uses the config path environment override and TOML runtime values.
   func testLoadUsesConfigPathEnvironmentOverrideAndTomlValues() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-config.toml")
     let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
@@ -80,7 +80,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)
   }
 
-  /// Handles test load lets the diagnostic log-level environment override TOML.
+  /// Verifies that load lets the diagnostic log-level environment override TOML.
   func testLoadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-logging-env.toml")
 
@@ -103,7 +103,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
 }
 
 extension SharedRuntimeConfigTests {
-  /// Creates temporary directory.
+  /// Creates an isolated temporary directory for file-system assertions.
   fileprivate func makeTemporaryDirectory() throws -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
@@ -119,7 +119,7 @@ extension SharedRuntimeConfigTests {
     return directoryURL
   }
 
-  /// Handles write config.
+  /// Writes a TOML fixture to the current test config path.
   fileprivate func writeConfig(_ content: String, to url: URL) throws {
     try FileManager.default.createDirectory(
       at: url.deletingLastPathComponent(),
@@ -128,7 +128,7 @@ extension SharedRuntimeConfigTests {
     try content.write(to: url, atomically: true, encoding: .utf8)
   }
 
-  /// Handles set environment value.
+  /// Sets or clears one environment variable while preserving its original value.
   fileprivate func setEnvironmentValue(_ value: String?, for key: String) {
     if let value {
       setenv(key, value, 1)
@@ -137,7 +137,7 @@ extension SharedRuntimeConfigTests {
     }
   }
 
-  /// Handles restore environment.
+  /// Restores environment variables captured before the test.
   fileprivate func restoreEnvironment() {
     for key in environmentKeys {
       setEnvironmentValue(originalEnvironment[key] ?? nil, for: key)
