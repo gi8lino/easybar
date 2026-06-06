@@ -41,6 +41,16 @@ Use this page when changing the Lua runtime or public Lua API.
 - `LuaProcessController.swift`
 - `LuaTransport.swift`
 
+## Generated docs
+
+Regenerate all generated Lua docs and stubs through the Makefile:
+
+```bash
+make generate-docs
+```
+
+The underlying generator scripts are implementation details. Call them directly only when debugging the generation pipeline.
+
 ## Notes
 
 - widget directory is executable Lua
@@ -56,5 +66,5 @@ When changing the Lua API:
 
 1. update runtime code
 2. update stubs
-3. regenerate generated docs with `scripts/generate_lua_reference_docs.py`
+3. run `make generate-docs`
 4. update hand-written guides and examples
