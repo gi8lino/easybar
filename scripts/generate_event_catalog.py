@@ -17,6 +17,11 @@ LUA_API_INSERT_MARKER = "-- GENERATED SECTION: easybar.events"
 LUA_API_VERSION_PLACEHOLDER = "__EASYBAR_VERSION__"
 
 
+def repo_relative(path: Path) -> str:
+    """Return a repository-relative display path for generated artifacts."""
+    return str(path.relative_to(ROOT))
+
+
 def load_manifest() -> dict:
     """Load the event catalog manifest used to generate Lua event files."""
     return json.loads(MANIFEST_PATH.read_text())
@@ -365,6 +370,12 @@ def main() -> None:
     EVENT_TOKENS_PATH.write_text(render_event_tokens(manifest))
     rebuild_lua_api_stub(manifest, args.version)
 
+    print(f"Generated event catalog artifacts for version {args.version}:")
+    for path in (EVENT_TOKENS_PATH, LUA_API_EVENTS_PATH, LUA_API_STUB_PATH):
+        print(f"- {repo_relative(path)}")
+
 
 if __name__ == "__main__":
     main()
+
+

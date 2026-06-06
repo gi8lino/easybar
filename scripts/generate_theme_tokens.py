@@ -17,6 +17,11 @@ LUA_API_THEMES_START = "-- GENERATED SECTION: easybar.themes"
 LUA_API_THEMES_END = "-- END GENERATED SECTION: easybar.themes"
 
 
+def repo_relative(path: Path) -> str:
+    """Return a repository-relative display path for generated artifacts."""
+    return str(path.relative_to(ROOT))
+
+
 def load_manifest() -> dict:
     """Load the theme token manifest used to generate Swift and Lua artifacts."""
     return json.loads(MANIFEST_PATH.read_text())
@@ -143,6 +148,17 @@ def main() -> None:
     base_text = LUA_API_BASE_PATH.read_text()
     LUA_API_BASE_PATH.write_text(replace_generated_theme_section(base_text, generated_themes))
 
+    print("Generated theme token artifacts:")
+    for path in (
+        SWIFT_OUTPUT_PATH,
+        LUA_RUNTIME_OUTPUT_PATH,
+        LUA_API_THEMES_PATH,
+        LUA_API_BASE_PATH,
+    ):
+        print(f"- {repo_relative(path)}")
+
 
 if __name__ == "__main__":
     main()
+
+
