@@ -39,6 +39,7 @@ nav:
 
   - Configuration:
       - Overview: configuration/overview.md
+      - Reference: configuration/reference.md
       - App Settings: configuration/app.md
       - Environment: configuration/environment.md
       - Themes: configuration/themes.md
@@ -121,3 +122,5 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+
+

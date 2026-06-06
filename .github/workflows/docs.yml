@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - "docs/**"
+      - "config.defaults.toml"
       - "Sources/EasyBarApp/Events/event_catalog.json"
       - "Sources/EasyBarApp/Lua/easybar_api.base.lua"
       - "Sources/EasyBarApp/Lua/easybar_api.events.lua"
       - "Sources/EasyBarApp/Lua/easybar_api.lua"
       - "Sources/EasyBarApp/Lua/easybar/event_tokens.lua"
       - "Sources/EasyBarApp/Lua/easybar/theme_tokens.lua"
+      - "scripts/generate/config_reference_docs.py"
       - "scripts/generate/event_catalog.py"
       - "scripts/generate/lua_reference_docs.py"
       - "scripts/generate/theme_tokens.py"

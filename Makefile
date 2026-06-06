@@ -121,7 +121,7 @@ endif
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
         demo \
-        generate-docs generate-lua-docs check-docs serve-docs build-docs clean-docs \
+        generate-docs generate-lua-docs generate-config-docs check-docs serve-docs build-docs clean-docs \
         favicon
 
 help: ## Display this help.
@@ -419,13 +419,16 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-docs: ## Generate all checked-in docs from source stubs.
+generate-docs: generate-lua-docs generate-config-docs ## Generate all checked-in docs from source stubs.
+
+generate-lua-docs: ## Generate Lua reference docs from source stubs.
 	@python3 scripts/generate/lua_reference_docs.py
 
-generate-lua-docs: generate-docs ## Alias for generate-docs.
+generate-config-docs: ## Generate the config reference from config.defaults.toml.
+	@python3 scripts/generate/config_reference_docs.py
 
 check-docs: generate-docs ## Verify generated docs are committed.
-	@git diff --exit-code -- docs/content/lua/reference
+	@git diff --exit-code -- docs/content/lua/reference docs/content/configuration/reference.md
 
 serve-docs: $(DOCS_STAMP) generate-docs ## Generate and serve the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs serve -f $(DOCS_CONFIG)
@@ -434,7 +437,7 @@ build-docs: $(DOCS_STAMP) generate-docs ## Generate and build the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs build --strict -f $(DOCS_CONFIG)
 
 clean-docs: ## Remove generated docs output and docs virtualenv.
-	@rm -rf docs/.site $(DOCS_VENV) docs/content/lua/reference
+	@rm -rf docs/.site $(DOCS_VENV) docs/content/lua/reference docs/content/configuration/reference.md
 
 ##@ Icons
 
@@ -444,3 +447,5 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+

@@ -22,6 +22,7 @@ The repository ships two config examples:
   Smaller starter example with common built-ins and one native `system` group.
 
 Use `config.defaults.toml` when you want the complete reference.
+The generated [Configuration Reference](reference.md) mirrors its defaults and inline comments.
 Use `config.minimal.toml` when you want a shorter starting point.
 
 If you are unsure whether a widget belongs in config or in a Lua file, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
@@ -101,5 +102,7 @@ See [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md) and [Lua Widgets](
 - [Box Model](box-model.md)
 - [Environment](environment.md)
 - [Logging](logging.md)
+
+
 
 
