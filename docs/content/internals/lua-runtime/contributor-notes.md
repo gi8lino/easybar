@@ -10,7 +10,7 @@ Use this page when changing the Lua runtime or public Lua API.
 - `easybar_api.base.lua`
 - `easybar_api.events.lua`
 - `easybar_api.lua`
-- `docs/lua/*`
+- `docs/content/lua/*`
 
 `easybar_api.base.lua` is the hand-edited source stub.
 `easybar_api.events.lua` is generated from the event catalog.
@@ -56,6 +56,5 @@ When changing the Lua API:
 
 1. update runtime code
 2. update stubs
-3. regenerate generated docs with `scripts/generate_docs.py`
+3. regenerate generated docs with `scripts/generate_lua_reference_docs.py`
 4. update hand-written guides and examples
-
