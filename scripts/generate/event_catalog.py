@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = ROOT / "Sources/EasyBarApp/Events/event_catalog.json"
 EVENT_TOKENS_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar/event_tokens.lua"
 LUA_API_BASE_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar_api.base.lua"

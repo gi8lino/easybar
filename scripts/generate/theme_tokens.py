@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = ROOT / "Sources/EasyBarApp/Theme/theme_tokens.json"
 SWIFT_OUTPUT_PATH = ROOT / "Sources/EasyBarApp/Theme/ThemeColorToken.swift"
 LUA_RUNTIME_OUTPUT_PATH = ROOT / "Sources/EasyBarApp/Lua/easybar/theme_tokens.lua"

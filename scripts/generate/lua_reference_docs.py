@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import re
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 STUB = ROOT / "Sources/EasyBarApp/Lua/easybar_api.lua"
 OUT = ROOT / "docs/content/lua/reference"
 
