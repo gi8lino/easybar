@@ -17,7 +17,7 @@ xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libex
 xattr -d com.apple.quarantine "$(command -v easybar)"
 ```
 
-Then restart the services:
+Then start the services again:
 
 ```bash
 brew services start gi8lino/tap/easybar-calendar-agent
@@ -34,3 +34,5 @@ open "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 ```
 
 If manual launch works but the service does not, check the Homebrew service logs.
+
+
