@@ -200,7 +200,7 @@
 -- The standalone generated source lives in `easybar_api.events.lua`.
 -- EasyBar generated event stub. Do not edit by hand.
 -- Source of truth: Sources/EasyBarApp/Events/event_catalog.json
--- Regenerate with: scripts/generate_event_catalog.py
+-- Regenerate with: scripts/generate/event_catalog.py
 ---Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.
 ---In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.
 ---@alias EasyBarEventName
@@ -400,7 +400,7 @@
 -- GENERATED SECTION: easybar.themes
 -- EasyBar generated theme stub. Do not edit by hand.
 -- Source of truth: Sources/EasyBarApp/Theme/theme_tokens.json
--- Regenerate with: scripts/generate_theme_tokens.py
+-- Regenerate with: scripts/generate/theme_tokens.py
 ---Resolved active theme colors.
 ---@class EasyBarThemeColors
 ---@field background string Main bar and popup background color.
@@ -624,3 +624,5 @@ function EasyBar.log(level, ...) end
 easybar = easybar
 
 return easybar
+
+
