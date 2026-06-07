@@ -20,7 +20,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `watch_config` | `true` | Reloads EasyBar automatically when config.toml changes. |
 | `lock_dir` | `"/tmp/EasyBar"` | Directory that contains lock files used by EasyBar. |
 | `widget_editor_stub_path` | `"~/.local/share/easybar/easybar_api.lua"` | LuaLS/editor stub path EasyBar keeps in sync for widget authoring. |
-| `develop` | `false` | Enables developer-only features like the config editor. |
+| `develop` | `false` | Shows the developer menu section without holding Shift when right-clicking the bar. |
 
 ## `app.env`
 
@@ -765,3 +765,5 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key | Default | Description |
 | --- | ------- | ----------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
+
+
