@@ -1,5 +1,7 @@
 import Foundation
 
+private let sliderAutoHideDelayNanoseconds: UInt64 = 800_000_000
+
 extension VolumeSliderNativeWidget {
 
   /// Schedules hiding the slider shortly after interaction.
@@ -8,7 +10,7 @@ extension VolumeSliderNativeWidget {
 
     autoHideTask = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: 800_000_000)
+        try await Task.sleep(nanoseconds: sliderAutoHideDelayNanoseconds)
       } catch {
         return
       }
