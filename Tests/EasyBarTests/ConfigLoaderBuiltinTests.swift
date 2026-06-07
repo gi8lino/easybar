@@ -1,0 +1,433 @@
+import Darwin
+import EasyBarShared
+import Foundation
+import XCTest
+
+@testable import EasyBarApp
+
+final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
+  /// Verifies that reload applies config file overrides and creates required directories.
+  func testReloadAppliesConfigFileOverridesAndCreatesRequiredDirectories() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
+    let widgetsDirectory = tempDirectoryURL.appendingPathComponent("widgets").path
+    let lockDirectory = tempDirectoryURL.appendingPathComponent("locks").path
+    let loggingDirectory = tempDirectoryURL.appendingPathComponent("logs").path
+    let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
+    let luaSocketPath = URL(fileURLWithPath: runtimeDirectory)
+      .appendingPathComponent("lua.sock")
+      .path
+    let widgetEditorStubPath = tempDirectoryURL.appendingPathComponent("generated/api.lua").path
+    let calendarSocketPath = URL(fileURLWithPath: runtimeDirectory)
+      .appendingPathComponent("calendar.sock")
+      .path
+    let networkSocketPath = URL(fileURLWithPath: runtimeDirectory)
+      .appendingPathComponent("network.sock")
+      .path
+
+    try writeConfig(
+      """
+      [app]
+      widgets_dir = "\(widgetsDirectory)"
+      lua_path = "/usr/local/bin/lua"
+      lua_socket_path = "\(luaSocketPath)"
+      watch_config = false
+      lock_dir = "\(lockDirectory)"
+      widget_editor_stub_path = "\(widgetEditorStubPath)"
+      develop = true
+
+      [app.env]
+      PATH = "/custom/bin"
+      FOO = "bar"
+
+      [logging]
+      enabled = true
+      level = "debug"
+      directory = "\(loggingDirectory)"
+
+      [agents.calendar]
+      enabled = false
+      socket_path = "\(calendarSocketPath)"
+
+      [agents.network]
+      enabled = false
+      socket_path = "\(networkSocketPath)"
+      refresh_interval_seconds = 15
+      allow_unauthorized_non_sensitive_fields = true
+
+      [bar]
+      height = 40
+      padding_x = 22
+      extend_behind_notch = false
+
+      [bar.colors]
+      background = "#123456"
+      border = "#abcdef"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.widgetsPath, widgetsDirectory)
+    XCTAssertEqual(config.luaPath, "/usr/local/bin/lua")
+    XCTAssertEqual(config.luaSocketPath, luaSocketPath)
+    XCTAssertFalse(config.watchConfigFile)
+    XCTAssertEqual(config.lockDirectory, lockDirectory)
+    XCTAssertEqual(config.widgetEditorStubPath, widgetEditorStubPath)
+    XCTAssertTrue(config.develop)
+
+    XCTAssertEqual(config.appSection.environment["PATH"], "/custom/bin")
+    XCTAssertEqual(config.appSection.environment["FOO"], "bar")
+
+    XCTAssertTrue(config.loggingEnabled)
+    XCTAssertEqual(config.loggingLevel, .debug)
+    XCTAssertEqual(config.loggingDirectory, loggingDirectory)
+
+    XCTAssertFalse(config.calendarAgentEnabled)
+    XCTAssertEqual(config.calendarAgentSocketPath, calendarSocketPath)
+    XCTAssertFalse(config.networkAgentEnabled)
+    XCTAssertEqual(config.networkAgentSocketPath, networkSocketPath)
+    XCTAssertEqual(config.networkAgentRefreshIntervalSeconds, 15)
+    XCTAssertTrue(config.networkAgentAllowUnauthorizedNonSensitiveFields)
+
+    XCTAssertEqual(config.barHeight, 40)
+    XCTAssertEqual(config.barPaddingX, 22)
+    XCTAssertFalse(config.barExtendBehindNotch)
+    XCTAssertEqual(config.barBackgroundHex, "#123456")
+    XCTAssertEqual(config.barBorderHex, "#abcdef")
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: widgetsDirectory))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: lockDirectory))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: loggingDirectory))
+    XCTAssertTrue(
+      FileManager.default.fileExists(
+        atPath: URL(fileURLWithPath: widgetEditorStubPath).deletingLastPathComponent().path
+      )
+    )
+    XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
+  }
+
+  func testReloadRejectsNegativeNetworkAgentRefreshInterval() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent(
+      "negative-network-refresh-interval.toml"
+    )
+
+    try writeConfig(
+      """
+      [agents.network]
+      refresh_interval_seconds = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "agents.network.refresh_interval_seconds")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
+  /// Verifies that reload applies month popup agenda layout overrides.
+  func testReloadAppliesMonthPopupAgendaLayoutOverride() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("calendar-layout.toml")
+
+    try writeConfig(
+      """
+      [builtins.calendar]
+      enabled = true
+
+      [builtins.calendar.month.popup.agenda]
+      layout = "appointments_calendar_vertical"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(
+      config.builtinCalendar.month.popup.layout,
+      .appointmentsCalendarVertical
+    )
+    XCTAssertEqual(
+      config.builtinCalendar.calendarMonthPopupUIConfig.layout,
+      .appointmentsCalendarVertical
+    )
+  }
+
+  /// Verifies that reload failure keeps previous bar and builtin configuration.
+  func testReloadFailureKeepsPreviousBarAndBuiltinConfiguration() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("reload-config.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = 44
+
+      [bar.colors]
+      background = "#224466"
+
+      [builtins.time]
+      enabled = true
+      position = "left"
+
+      [builtins.time.content]
+      format = "HH:mm:ss"
+
+      [builtins.cpu]
+      enabled = true
+
+      [builtins.cpu.content]
+      history_size = 24
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    XCTAssertNil(config.reload())
+
+    XCTAssertEqual(config.barHeight, 44)
+    XCTAssertEqual(config.barBackgroundHex, "#224466")
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinCPU.enabled)
+    XCTAssertEqual(config.builtinCPU.historySize, 24)
+
+    try writeConfig(
+      """
+      [bar]
+      height = 28
+
+      [builtins.time]
+      position = "sideways"
+      """,
+      to: configFileURL
+    )
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.time.position")
+    XCTAssertEqual(config.barHeight, 44)
+    XCTAssertEqual(config.barBackgroundHex, "#224466")
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinCPU.enabled)
+    XCTAssertEqual(config.builtinCPU.historySize, 24)
+  }
+
+  /// Verifies that reload returns invalid type for bar height string value.
+  func testReloadReturnsInvalidTypeForBarHeightStringValue() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-type.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = "tall"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidType(let path, let expected, let actual)? = error as? ConfigError else {
+      return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.height")
+    XCTAssertEqual(expected, "integer")
+    XCTAssertEqual(actual, "string(tall)")
+  }
+
+  func testReloadRejectsNegativeBarHeight() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-height.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      height = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.height")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
+  func testReloadRejectsNegativeBarPaddingX() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-bar-padding.toml")
+
+    try writeConfig(
+      """
+      [bar]
+      padding_x = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "bar.padding_x")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
+  /// Verifies that reload normalizes enum values with whitespace for builtins.
+  func testReloadNormalizesEnumValuesWithWhitespaceForBuiltins() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("normalized-builtins.toml")
+
+    try writeConfig(
+      """
+      [builtins.time]
+      enabled = true
+      position = " Left "
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertTrue(config.builtinTime.enabled)
+    XCTAssertEqual(config.builtinTime.position, .left)
+  }
+
+  /// Verifies that reload applies Wi-Fi popup style from the canonical table.
+  func testReloadAppliesWiFiPopupStyle() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("wifi-popup-style.toml")
+
+    try writeConfig(
+      """
+      [builtins.wifi.popup]
+      text_color = "#101010"
+      background_color = "#202020"
+      border_color = "#303030"
+      border_width = 2
+      corner_radius = 10
+      padding_x = 12
+      padding_y = 7
+      margin_x = 3
+      margin_y = 9
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.builtinWiFi.popup.textColorHex, "#101010")
+    XCTAssertEqual(config.builtinWiFi.popup.backgroundColorHex, "#202020")
+    XCTAssertEqual(config.builtinWiFi.popup.borderColorHex, "#303030")
+    XCTAssertEqual(config.builtinWiFi.popup.borderWidth, 2)
+    XCTAssertEqual(config.builtinWiFi.popup.cornerRadius, 10)
+    XCTAssertEqual(config.builtinWiFi.popup.paddingX, 12)
+    XCTAssertEqual(config.builtinWiFi.popup.paddingY, 7)
+    XCTAssertEqual(config.builtinWiFi.popup.marginX, 3)
+    XCTAssertEqual(config.builtinWiFi.popup.marginY, 9)
+  }
+
+  /// Verifies that reload returns error for unknown builtin group reference.
+  func testReloadReturnsErrorForUnknownBuiltinGroupReference() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("unknown-group.toml")
+
+    try writeConfig(
+      """
+      [builtins.groups.clock_row]
+      enabled = true
+
+      [builtins.time]
+      enabled = true
+      group = "missing"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.time.group")
+    XCTAssertEqual(
+      configError.detail,
+      "unknown built-in group 'missing'; expected one of clock_row"
+    )
+  }
+
+  /// Verifies that reload returns error for nested builtin group reference.
+  func testReloadReturnsErrorForNestedBuiltinGroupReference() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("nested-group.toml")
+
+    try writeConfig(
+      """
+      [builtins.groups.outer]
+      enabled = true
+
+      [builtins.groups.inner]
+      enabled = true
+      group = "outer"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard let configError = error as? ConfigError else {
+      return XCTFail("Expected ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(configError.configPath, "builtins.groups.inner.group")
+    XCTAssertEqual(configError.detail, "built-in groups cannot be nested")
+  }
+
+}
