@@ -2,6 +2,15 @@ import AppKit
 import EasyBarShared
 import SwiftUI
 
+private enum RuntimeMenuTooltips {
+  static let refresh =
+    "Refreshes visible widgets and runtime data without reloading configuration or restarting Lua."
+  static let reloadConfig =
+    "Reloads config.toml, rebuilds EasyBar state, and reconnects agent-backed subscriptions."
+  static let restartLuaRuntime =
+    "Stops and starts the Lua widget runtime, reloads all Lua widget files, and resets Lua widget state."
+}
+
 /// Hosts the top-level borderless bar window.
 @MainActor
 final class BarWindowController: NSWindowController {
@@ -171,9 +180,21 @@ final class BarWindowController: NSWindowController {
   /// Returns the runtime control menu items.
   private var runtimeMenuItems: [NSMenuItem] {
     [
-      actionItem(title: "Refresh", action: #selector(refresh(_:))),
-      actionItem(title: "Reload Config", action: #selector(reloadConfig(_:))),
-      actionItem(title: "Restart Lua Runtime", action: #selector(restartLuaRuntime(_:))),
+      actionItem(
+        title: "Refresh",
+        action: #selector(refresh(_:)),
+        toolTip: RuntimeMenuTooltips.refresh
+      ),
+      actionItem(
+        title: "Reload Config",
+        action: #selector(reloadConfig(_:)),
+        toolTip: RuntimeMenuTooltips.reloadConfig
+      ),
+      actionItem(
+        title: "Restart Lua Runtime",
+        action: #selector(restartLuaRuntime(_:)),
+        toolTip: RuntimeMenuTooltips.restartLuaRuntime
+      ),
     ]
   }
 
@@ -241,9 +262,14 @@ final class BarWindowController: NSWindowController {
   }
 
   /// Creates one enabled action item.
-  private func actionItem(title: String, action: Selector) -> NSMenuItem {
+  private func actionItem(
+    title: String,
+    action: Selector,
+    toolTip: String? = nil
+  ) -> NSMenuItem {
     let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
     item.target = self
+    item.toolTip = toolTip
     return item
   }
 
