@@ -415,6 +415,7 @@ extension CalendarMonthPopupView {
     }
     .frame(maxWidth: .infinity, minHeight: 30)
     .foregroundStyle(dayForeground(day))
+    .contentShape(Rectangle())
     .background(
       GeometryReader { proxy in
         Color.clear.preference(
