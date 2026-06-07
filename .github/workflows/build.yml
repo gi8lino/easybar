@@ -48,6 +48,13 @@ jobs:
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Invalid release tag: ${TAG}"
+            echo "Release tags must use vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease."
+            exit 1
+          fi
+
           VERSION="${TAG#v}"
 
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
@@ -114,3 +121,5 @@ jobs:
           gh workflow run update-homebrew-formula.yml \
             -f tag="${{ steps.version.outputs.tag }}" \
             -f version="${{ steps.version.outputs.version }}"
+
+
