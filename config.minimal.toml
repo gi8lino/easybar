@@ -2,6 +2,17 @@
 enabled = true
 
 [builtins.groups.system]
+position = "right"
+order = 40
+
+[builtins.groups.system.style]
+background_color = "theme.surface"
+border_color = "theme.border"
+border_width = 1
+corner_radius = 8
+padding_x = 8
+padding_y = 2
+spacing = 6
 
 [builtins.battery]
 enabled = true
@@ -19,4 +30,6 @@ mode = "details"
 
 [builtins.wifi.fields]
 ssid = true
+
+
 
