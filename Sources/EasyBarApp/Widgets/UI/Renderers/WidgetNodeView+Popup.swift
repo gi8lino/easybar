@@ -158,20 +158,16 @@ extension WidgetNodeView {
     return !popupChildren.isEmpty
   }
 
-  var calendarRootPopupMode: Config.CalendarPopupMode {
-    return configStore.snapshot.builtins.calendar.popupMode
-  }
-
-  var calendarRootHasPopup: Bool {
-    return calendarRootPopupMode != .none
+  var popupContentResolver: WidgetPopupContentResolver {
+    return WidgetPopupContentResolver(
+      node: node,
+      hasPopupChildren: hasPopupChildren,
+      configStore: configStore
+    )
   }
 
   var nodeCanPresentPopup: Bool {
-    if node.isCalendarRoot {
-      return calendarRootHasPopup
-    }
-
-    return node.kind == .popup || hasPopupChildren
+    return popupContentResolver.canPresentPopup
   }
 
   var popupHoverBackground: some View {
@@ -179,29 +175,9 @@ extension WidgetNodeView {
   }
 
   var popupPanelContent: AnyView {
-    if node.isCalendarRoot {
-      switch calendarRootPopupMode {
-      case .none:
-        return AnyView(EmptyView())
-      case .upcoming:
-        return AnyView(
-          NativeUpcomingCalendarPopupView()
-            .environmentObject(configStore)
-            .background(popupHoverBackground)
-        )
-      case .month:
-        return AnyView(
-          NativeMonthCalendarPopupView()
-            .environmentObject(configStore)
-            .background(popupHoverBackground)
-        )
-      }
-    }
-
-    return AnyView(
-      popupContent
-        .environmentObject(configStore)
-        .background(popupHoverBackground)
+    return popupContentResolver.makeContent(
+      regularContent: popupContent,
+      hoverBackground: popupHoverBackground
     )
   }
 
