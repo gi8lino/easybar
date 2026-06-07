@@ -89,7 +89,7 @@ extension WidgetNodeView {
   var rowOrGroupView: some View {
     Group {
       if node.isCalendarRoot {
-        if calendarRootHasPopup {
+        if nodeCanPresentPopup {
           nativeCalendarAnchorView {
             childRow
           }
