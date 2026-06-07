@@ -33,81 +33,45 @@ struct AppServices {
   /// Creates the production app dependency graph.
   @MainActor
   static func bootstrap(logger: ProcessLogger) -> AppServices {
-    let config = Config.makeUnloadedConfig()
-    let bootstrapSnapshot = config.snapshot()
-    let configSnapshotStore = ConfigSnapshotStore(snapshot: bootstrapSnapshot)
-    let configManager = ConfigManager(config: config)
+    let configServices = makeConfigServices()
     let metricsCoordinator = MetricsCoordinator()
     let luaRuntime = LuaRuntime(logger: logger.child("lua"))
-
-    let eventsLogger = logger.child("events")
-    let eventHub = EventHub(
-      logger: eventsLogger.child("hub"),
+    let eventServices = makeEventServices(
+      logger: logger.child("events"),
       luaRuntime: luaRuntime
     )
-    let systemEvents = SystemEvents(logger: eventsLogger.child("system"))
-    let powerEvents = PowerEvents(logger: eventsLogger.child("power"))
-    let timerEvents = TimerEvents(logger: eventsLogger.child("timer"))
-    let volumeEvents = VolumeEvents(logger: eventsLogger.child("volume"))
-    let eventManager = EventManager(logger: eventsLogger.child("manager"))
-
-    let widgetStore = WidgetStore()
-    let nativeWidgetRegistry = NativeWidgetRegistry(
-      logger: logger.child("widgets"),
-      snapshot: bootstrapSnapshot
+    let nativeServices = makeNativeServices(
+      logger: logger,
+      snapshot: configServices.bootstrapSnapshot
     )
-    let aeroSpaceService = AeroSpaceService(logger: logger.child("aerospace"))
-    let calendarAgentEventRelay = CalendarAgentEventRelay(logger: logger.child("calendar_relay"))
-    let networkAgentClient = NetworkAgentClient(
-      logger: logger.child("network_agent"),
-      config: bootstrapSnapshot.networkAgent
-    )
-    let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
-    let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
-    let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
-      logger: logger.child("upcoming_store")
-    )
-    let nativeComposerCalendarStore = NativeComposerCalendarStore(
-      logger: logger.child("composer_calendar_store")
-    )
-    let monthCalendarAgentClient = MonthCalendarAgentClient(
-      logger: logger.child("month_agent"),
-      calendarAgentConfig: bootstrapSnapshot.calendarAgent,
-      calendarConfig: bootstrapSnapshot.builtins.calendar
-    )
-    let upcomingCalendarAgentClient = UpcomingCalendarAgentClient(
-      logger: logger.child("upcoming_agent"),
-      calendarAgentConfig: bootstrapSnapshot.calendarAgent,
-      calendarConfig: bootstrapSnapshot.builtins.calendar
-    )
-    let composerCalendarAgentClient = ComposerCalendarAgentClient(
-      logger: logger.child("composer_calendar_agent"),
-      calendarAgentConfig: bootstrapSnapshot.calendarAgent
+    let agentServices = makeAgentServices(
+      logger: logger,
+      snapshot: configServices.bootstrapSnapshot
     )
 
     let services = AppServices(
-      config: config,
-      configManager: configManager,
-      configSnapshotStore: configSnapshotStore,
+      config: configServices.config,
+      configManager: configServices.configManager,
+      configSnapshotStore: configServices.configSnapshotStore,
       luaRuntime: luaRuntime,
-      eventHub: eventHub,
-      eventManager: eventManager,
-      systemEvents: systemEvents,
-      powerEvents: powerEvents,
-      timerEvents: timerEvents,
-      volumeEvents: volumeEvents,
-      widgetStore: widgetStore,
-      nativeWidgetRegistry: nativeWidgetRegistry,
-      aeroSpaceService: aeroSpaceService,
-      calendarAgentEventRelay: calendarAgentEventRelay,
-      networkAgentClient: networkAgentClient,
-      nativeWiFiStore: nativeWiFiStore,
-      nativeMonthCalendarStore: nativeMonthCalendarStore,
-      nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
-      nativeComposerCalendarStore: nativeComposerCalendarStore,
-      monthCalendarAgentClient: monthCalendarAgentClient,
-      upcomingCalendarAgentClient: upcomingCalendarAgentClient,
-      composerCalendarAgentClient: composerCalendarAgentClient,
+      eventHub: eventServices.eventHub,
+      eventManager: eventServices.eventManager,
+      systemEvents: eventServices.systemEvents,
+      powerEvents: eventServices.powerEvents,
+      timerEvents: eventServices.timerEvents,
+      volumeEvents: eventServices.volumeEvents,
+      widgetStore: nativeServices.widgetStore,
+      nativeWidgetRegistry: nativeServices.nativeWidgetRegistry,
+      aeroSpaceService: nativeServices.aeroSpaceService,
+      calendarAgentEventRelay: agentServices.calendarAgentEventRelay,
+      networkAgentClient: agentServices.networkAgentClient,
+      nativeWiFiStore: nativeServices.nativeWiFiStore,
+      nativeMonthCalendarStore: nativeServices.nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: nativeServices.nativeUpcomingCalendarStore,
+      nativeComposerCalendarStore: nativeServices.nativeComposerCalendarStore,
+      monthCalendarAgentClient: agentServices.monthCalendarAgentClient,
+      upcomingCalendarAgentClient: agentServices.upcomingCalendarAgentClient,
+      composerCalendarAgentClient: agentServices.composerCalendarAgentClient,
       metricsCoordinator: metricsCoordinator
     )
 
@@ -156,4 +120,127 @@ struct AppServices {
     UpcomingCalendarAgentClient.shared = upcomingCalendarAgentClient
     ComposerCalendarAgentClient.shared = composerCalendarAgentClient
   }
+
+  /// Creates config-owned startup services.
+  @MainActor
+  private static func makeConfigServices() -> ConfigServices {
+    let config = Config.makeUnloadedConfig()
+    let bootstrapSnapshot = config.snapshot()
+
+    return ConfigServices(
+      config: config,
+      bootstrapSnapshot: bootstrapSnapshot,
+      configSnapshotStore: ConfigSnapshotStore(snapshot: bootstrapSnapshot),
+      configManager: ConfigManager(config: config)
+    )
+  }
+
+  /// Creates runtime event services.
+  @MainActor
+  private static func makeEventServices(logger: ProcessLogger, luaRuntime: LuaRuntime)
+    -> EventServices
+  {
+    let eventHub = EventHub(
+      logger: logger.child("hub"),
+      luaRuntime: luaRuntime
+    )
+
+    return EventServices(
+      eventHub: eventHub,
+      eventManager: EventManager(logger: logger.child("manager")),
+      systemEvents: SystemEvents(logger: logger.child("system")),
+      powerEvents: PowerEvents(logger: logger.child("power")),
+      timerEvents: TimerEvents(logger: logger.child("timer")),
+      volumeEvents: VolumeEvents(logger: logger.child("volume"))
+    )
+  }
+
+  /// Creates UI-facing native widget services and state stores.
+  @MainActor
+  private static func makeNativeServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
+    -> NativeServices
+  {
+    NativeServices(
+      widgetStore: WidgetStore(),
+      nativeWidgetRegistry: NativeWidgetRegistry(
+        logger: logger.child("widgets"),
+        snapshot: snapshot
+      ),
+      aeroSpaceService: AeroSpaceService(logger: logger.child("aerospace")),
+      nativeWiFiStore: NativeWiFiStore(logger: logger.child("wifi_store")),
+      nativeMonthCalendarStore: NativeMonthCalendarStore(logger: logger.child("month_store")),
+      nativeUpcomingCalendarStore: NativeUpcomingCalendarStore(
+        logger: logger.child("upcoming_store")
+      ),
+      nativeComposerCalendarStore: NativeComposerCalendarStore(
+        logger: logger.child("composer_calendar_store")
+      )
+    )
+  }
+
+  /// Creates helper-agent clients and relays.
+  @MainActor
+  private static func makeAgentServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
+    -> AgentServices
+  {
+    AgentServices(
+      calendarAgentEventRelay: CalendarAgentEventRelay(logger: logger.child("calendar_relay")),
+      networkAgentClient: NetworkAgentClient(
+        logger: logger.child("network_agent"),
+        config: snapshot.networkAgent
+      ),
+      monthCalendarAgentClient: MonthCalendarAgentClient(
+        logger: logger.child("month_agent"),
+        calendarAgentConfig: snapshot.calendarAgent,
+        calendarConfig: snapshot.builtins.calendar
+      ),
+      upcomingCalendarAgentClient: UpcomingCalendarAgentClient(
+        logger: logger.child("upcoming_agent"),
+        calendarAgentConfig: snapshot.calendarAgent,
+        calendarConfig: snapshot.builtins.calendar
+      ),
+      composerCalendarAgentClient: ComposerCalendarAgentClient(
+        logger: logger.child("composer_calendar_agent"),
+        calendarAgentConfig: snapshot.calendarAgent
+      )
+    )
+  }
+}
+
+/// Config-related services built before loading the user's config file.
+private struct ConfigServices {
+  let config: Config
+  let bootstrapSnapshot: ConfigSnapshot
+  let configSnapshotStore: ConfigSnapshotStore
+  let configManager: ConfigManager
+}
+
+/// Event services that feed native widgets and Lua widgets.
+private struct EventServices {
+  let eventHub: EventHub
+  let eventManager: EventManager
+  let systemEvents: SystemEvents
+  let powerEvents: PowerEvents
+  let timerEvents: TimerEvents
+  let volumeEvents: VolumeEvents
+}
+
+/// UI-facing services and stores for native widgets.
+private struct NativeServices {
+  let widgetStore: WidgetStore
+  let nativeWidgetRegistry: NativeWidgetRegistry
+  let aeroSpaceService: AeroSpaceService
+  let nativeWiFiStore: NativeWiFiStore
+  let nativeMonthCalendarStore: NativeMonthCalendarStore
+  let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
+  let nativeComposerCalendarStore: NativeComposerCalendarStore
+}
+
+/// Helper-agent clients and relays.
+private struct AgentServices {
+  let calendarAgentEventRelay: CalendarAgentEventRelay
+  let networkAgentClient: NetworkAgentClient
+  let monthCalendarAgentClient: MonthCalendarAgentClient
+  let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
+  let composerCalendarAgentClient: ComposerCalendarAgentClient
 }
