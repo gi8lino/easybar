@@ -12,16 +12,27 @@ calendar_agent_bundle="$3"
 network_agent_bundle="$4"
 cli_bin="$5"
 
+sign_options=()
+
 if [ "$identity" = "-" ]; then
   echo "Signing artifacts with ad-hoc identity"
-  codesign --force --deep --sign - "$app_bundle"
-  codesign --force --deep --sign - "$calendar_agent_bundle"
-  codesign --force --deep --sign - "$network_agent_bundle"
-  codesign --force --sign - "$cli_bin"
+  sign_options=(--sign -)
 else
   echo "Signing artifacts with $identity"
-  codesign --force --deep --options runtime --timestamp --sign "$identity" "$app_bundle"
-  codesign --force --deep --options runtime --timestamp --sign "$identity" "$calendar_agent_bundle"
-  codesign --force --deep --options runtime --timestamp --sign "$identity" "$network_agent_bundle"
-  codesign --force --options runtime --timestamp --sign "$identity" "$cli_bin"
+  sign_options=(--options runtime --timestamp --sign "$identity")
 fi
+
+sign_bundle() {
+  local bundle="$1"
+  codesign --force --deep "${sign_options[@]}" "$bundle"
+}
+
+sign_binary() {
+  local binary="$1"
+  codesign --force "${sign_options[@]}" "$binary"
+}
+
+sign_bundle "$app_bundle"
+sign_bundle "$calendar_agent_bundle"
+sign_bundle "$network_agent_bundle"
+sign_binary "$cli_bin"

@@ -53,9 +53,14 @@ asset_url="https://github.com/${repository}/releases/download/${tag}/EasyBar-${v
 
 mkdir -p "${formula_dir}"
 
-cat > "${easybar_formula_file}" <<EOF_FORMULA
-class Easybar < Formula
-  desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
+write_formula_header() {
+  local file="$1"
+  local class_name="$2"
+  local description="$3"
+
+  cat > "$file" <<EOF_FORMULA
+class ${class_name} < Formula
+  desc "${description}"
   homepage "https://github.com/${repository}"
   url "${asset_url}"
   sha256 "${sha}"
@@ -63,6 +68,44 @@ class Easybar < Formula
   version "${version}"
 
   depends_on macos: :sonoma
+EOF_FORMULA
+}
+
+append_service_block() {
+  local file="$1"
+  local executable="$2"
+  local log_dir="$3"
+  local log_name="$4"
+
+  cat >> "$file" <<EOF_FORMULA
+
+  service do
+    run [opt_libexec/"${executable}"]
+    environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
+    keep_alive true
+    process_type :interactive
+    working_dir HOMEBREW_PREFIX
+    log_path var/"log/${log_dir}/${log_name}.out.log"
+    error_log_path var/"log/${log_dir}/${log_name}.err.log"
+  end
+EOF_FORMULA
+}
+
+append_formula_end() {
+  local file="$1"
+
+  cat >> "$file" <<'EOF_FORMULA'
+end
+EOF_FORMULA
+}
+
+write_easybar_formula() {
+  write_formula_header \
+    "${easybar_formula_file}" \
+    "Easybar" \
+    "Scriptable macOS status bar with SwiftUI and Lua widgets"
+
+  cat >> "${easybar_formula_file}" <<'EOF_FORMULA'
   depends_on "easybar-calendar-agent"
   depends_on "easybar-network-agent"
 
@@ -72,85 +115,71 @@ class Easybar < Formula
 
     (var/"log/easybar").mkpath
   end
+EOF_FORMULA
 
-  service do
-    run [opt_libexec/"EasyBar.app/Contents/MacOS/EasyBar"]
-    environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
-    keep_alive true
-    process_type :interactive
-    working_dir HOMEBREW_PREFIX
-    log_path var/"log/easybar/easybar.out.log"
-    error_log_path var/"log/easybar/easybar.err.log"
-  end
+  append_service_block \
+    "${easybar_formula_file}" \
+    "EasyBar.app/Contents/MacOS/EasyBar" \
+    "easybar" \
+    "easybar"
+
+  cat >> "${easybar_formula_file}" <<'EOF_FORMULA'
 
   test do
     assert_match "easybar", shell_output("#{bin}/easybar --help 2>&1")
   end
-end
 EOF_FORMULA
 
-cat > "${calendar_agent_formula_file}" <<EOF_FORMULA
-class EasybarCalendarAgent < Formula
-  desc "Calendar EventKit helper service for EasyBar"
-  homepage "https://github.com/${repository}"
-  url "${asset_url}"
-  sha256 "${sha}"
-  license "Apache-2.0"
-  version "${version}"
+  append_formula_end "${easybar_formula_file}"
+}
 
-  depends_on macos: :sonoma
+write_agent_formula() {
+  local file="$1"
+  local class_name="$2"
+  local description="$3"
+  local app_name="$4"
+  local log_dir="$5"
+  local log_name="$6"
+
+  write_formula_header "$file" "$class_name" "$description"
+
+  cat >> "$file" <<EOF_FORMULA
 
   def install
-    libexec.install "EasyBarCalendarAgent.app"
+    libexec.install "${app_name}.app"
 
-    (var/"log/easybar-calendar-agent").mkpath
+    (var/"log/${log_dir}").mkpath
   end
-
-  service do
-    run [opt_libexec/"EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"]
-    environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
-    keep_alive true
-    process_type :interactive
-    working_dir HOMEBREW_PREFIX
-    log_path var/"log/easybar-calendar-agent/easybar-calendar-agent.out.log"
-    error_log_path var/"log/easybar-calendar-agent/easybar-calendar-agent.err.log"
-  end
-
-  test do
-    assert_predicate libexec/"EasyBarCalendarAgent.app", :exist?
-  end
-end
 EOF_FORMULA
 
-cat > "${network_agent_formula_file}" <<EOF_FORMULA
-class EasybarNetworkAgent < Formula
-  desc "Wi-Fi and network helper service for EasyBar"
-  homepage "https://github.com/${repository}"
-  url "${asset_url}"
-  sha256 "${sha}"
-  license "Apache-2.0"
-  version "${version}"
+  append_service_block \
+    "$file" \
+    "${app_name}.app/Contents/MacOS/${app_name}" \
+    "$log_dir" \
+    "$log_name"
 
-  depends_on macos: :sonoma
-
-  def install
-    libexec.install "EasyBarNetworkAgent.app"
-
-    (var/"log/easybar-network-agent").mkpath
-  end
-
-  service do
-    run [opt_libexec/"EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"]
-    environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
-    keep_alive true
-    process_type :interactive
-    working_dir HOMEBREW_PREFIX
-    log_path var/"log/easybar-network-agent/easybar-network-agent.out.log"
-    error_log_path var/"log/easybar-network-agent/easybar-network-agent.err.log"
-  end
+  cat >> "$file" <<EOF_FORMULA
 
   test do
-    assert_predicate libexec/"EasyBarNetworkAgent.app", :exist?
+    assert_predicate libexec/"${app_name}.app", :exist?
   end
-end
 EOF_FORMULA
+
+  append_formula_end "$file"
+}
+
+write_easybar_formula
+write_agent_formula \
+  "${calendar_agent_formula_file}" \
+  "EasybarCalendarAgent" \
+  "Calendar EventKit helper service for EasyBar" \
+  "EasyBarCalendarAgent" \
+  "easybar-calendar-agent" \
+  "easybar-calendar-agent"
+write_agent_formula \
+  "${network_agent_formula_file}" \
+  "EasybarNetworkAgent" \
+  "Wi-Fi and network helper service for EasyBar" \
+  "EasyBarNetworkAgent" \
+  "easybar-network-agent" \
+  "easybar-network-agent"
