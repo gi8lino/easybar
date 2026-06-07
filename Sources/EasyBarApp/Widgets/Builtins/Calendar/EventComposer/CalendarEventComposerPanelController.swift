@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import EasyBarCalendarUI
 import EasyBarShared
 import SwiftUI
@@ -23,6 +22,12 @@ final class CalendarEventComposerPanelController: ObservableObject {
   private var panel: NSPanel?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var composer: CalendarEventComposer?
+  private let dependencies: CalendarEventComposerDependencies
+
+  /// Creates one composer panel controller.
+  init(dependencies: CalendarEventComposerDependencies = .live()) {
+    self.dependencies = dependencies
+  }
 
   /// Presents the composer panel for one new appointment.
   func present(
@@ -150,24 +155,12 @@ final class CalendarEventComposerPanelController: ObservableObject {
   private func makeComposer(config: Config.CalendarBuiltinConfig) -> CalendarEventComposer {
     CalendarEventComposer(
       config: config.calendarComposerUIConfig,
-      snapshotPublisher: NativeComposerCalendarStore.shared.$snapshot.eraseToAnyPublisher(),
-      refreshSnapshots: {
-        ComposerCalendarAgentClient.shared.refresh()
-      },
-      createEvent: { event, completion in
-        MonthCalendarAgentClient.shared.createEvent(event, completion: completion)
-      },
-      updateEvent: { event, completion in
-        MonthCalendarAgentClient.shared.updateEvent(event, completion: completion)
-      },
-      deleteEvent: { event, completion in
-        MonthCalendarAgentClient.shared.deleteEvent(event, completion: completion)
-      },
-      openCalendarApp: {
-        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal")
-        else { return }
-        NSWorkspace.shared.open(appURL)
-      }
+      snapshotPublisher: dependencies.snapshotPublisher,
+      refreshSnapshots: dependencies.refreshSnapshots,
+      createEvent: dependencies.createEvent,
+      updateEvent: dependencies.updateEvent,
+      deleteEvent: dependencies.deleteEvent,
+      openCalendarApp: dependencies.openCalendarApp
     )
   }
 }
