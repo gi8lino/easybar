@@ -32,28 +32,7 @@ final class CalendarEventComposerPanelController: ObservableObject {
   ) {
     let composer = makeComposer(config: config)
     composer.prepare(defaultDate: defaultDate)
-    self.composer = composer
-
-    hostingController.rootView = AnyView(
-      CalendarEventComposerView(
-        composer: composer,
-        config: config.calendarComposerUIConfig,
-        appointmentsStyle: config.appointmentsCalendarUIStyle,
-        onCancel: { [weak self] in
-          self?.close()
-        },
-        onSaved: { [weak self] in
-          onChanged()
-          self?.close()
-        },
-        onDeleted: { [weak self] in
-          onChanged()
-          self?.close()
-        }
-      )
-    )
-
-    showIfPossible()
+    present(composer: composer, config: config, onChanged: onChanged)
   }
 
   /// Presents the composer panel for one existing appointment.
@@ -64,8 +43,24 @@ final class CalendarEventComposerPanelController: ObservableObject {
   ) {
     let composer = makeComposer(config: config)
     composer.prepare(event: event)
-    self.composer = composer
+    present(composer: composer, config: config, onChanged: onChanged)
+  }
 
+  /// Closes the composer panel when present.
+  func close() {
+    panel?.close()
+    panel = nil
+    composer = nil
+    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
+  }
+
+  /// Installs one prepared composer into the shared hosting controller and shows the panel.
+  private func present(
+    composer: CalendarEventComposer,
+    config: Config.CalendarBuiltinConfig,
+    onChanged: @escaping () -> Void
+  ) {
+    self.composer = composer
     hostingController.rootView = AnyView(
       CalendarEventComposerView(
         composer: composer,
@@ -86,14 +81,6 @@ final class CalendarEventComposerPanelController: ObservableObject {
     )
 
     showIfPossible()
-  }
-
-  /// Closes the composer panel when present.
-  func close() {
-    panel?.close()
-    panel = nil
-    composer = nil
-    hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   }
 
   /// Shows the panel centered relative to the active window or screen.
