@@ -375,6 +375,17 @@ Both targets should package bundled themes into:
 EasyBar.app/Contents/Resources/Themes/
 ```
 
+Bundled app-owned resources are staged separately under:
+
+```text
+EasyBar.app/Contents/Resources/EasyBar/
+├── Lua/
+├── Events/
+└── ThemeTokens/
+```
+
+Themes intentionally stay at `Contents/Resources/Themes/` because they are selected and overridden through the user-facing `[theme]` configuration.
+
 Plain `swift run EasyBar` is not enough for bundled theme testing unless you have separately staged the root themes directory into the app bundle resource location.
 
 ### Theme changes do not apply
@@ -392,5 +403,7 @@ If `watch_config = false`, EasyBar will not reload automatically.
 Check whether that widget has an explicit color in `config.toml`.
 
 Explicit widget colors override theme defaults.
+
+
 
 

@@ -2,14 +2,23 @@ import Foundation
 
 /// Resolves EasyBar app resources without relying on SwiftPM's generated Bundle.module accessor.
 ///
-/// Release bundles stage SwiftPM resources inside Contents/Resources so the app can be signed
-/// with the standard macOS bundle layout. SwiftPM's generated accessor only checks the app-bundle
-/// root, so packaged builds must use explicit candidate paths instead.
+/// Packaged app bundles stage resources under `Contents/Resources/EasyBar`:
+///
+/// - `Lua/runtime.lua`
+/// - `Lua/easybar_api.lua`
+/// - `Lua/easybar/...`
+/// - `Events/event_catalog.json`
+/// - `ThemeTokens/theme_tokens.json`
+///
+/// Source-tree and SwiftPM resource-bundle fallbacks are kept so tests and local development
+/// continue to work before resources are staged into an app bundle.
 enum AppResourceLocator {
+  /// Name of the app-owned resource directory inside `Contents/Resources`.
+  private static let appResourceDirectoryName = "EasyBar"
   /// Name of the SwiftPM resource bundle produced for the app target.
-  private static let resourceBundleName = "EasyBar_EasyBarApp.bundle"
+  private static let legacyResourceBundleName = "EasyBar_EasyBarApp.bundle"
 
-  /// Returns one bundled resource URL from packaged, build, or source-tree locations.
+  /// Returns one bundled resource URL from packaged, SwiftPM build, or source-tree locations.
   static func url(
     forResource name: String,
     withExtension fileExtension: String,
@@ -36,27 +45,37 @@ enum AppResourceLocator {
     withExtension fileExtension: String,
     subdirectory: String?
   ) -> [URL] {
-    var candidates: [URL] = []
     let fileName = "\(name).\(fileExtension)"
+    var candidates: [URL] = []
 
-    for root in resourceBundleRoots() {
+    for root in packagedResourceRoots() {
+      candidates.append(
+        root
+          .appendingOptionalSubdirectory(
+            packagedSubdirectory(forResource: name, withExtension: fileExtension, subdirectory: subdirectory)
+          )
+          .appendingPathComponent(fileName)
+      )
+    }
+
+    for root in legacyResourceBundleRoots() {
       candidates.append(
         root
           .appendingOptionalSubdirectory(subdirectory)
           .appendingPathComponent(fileName)
       )
+
+      // SwiftPM `.copy` resources are placed at the resource-bundle root. Keep this fallback for
+      // build products and older staged bundles where callers may request a logical subdirectory.
+      candidates.append(root.appendingPathComponent(fileName))
     }
 
-    for sourceRoot in sourceRoots() {
+    for root in sourceRoots() {
       candidates.append(
-        sourceRoot
-          .appendingOptionalSubdirectory(subdirectory)
-          .appendingPathComponent(fileName)
-      )
-
-      candidates.append(
-        sourceRoot
-          .appendingPathComponent("Lua", isDirectory: true)
+        root
+          .appendingOptionalSubdirectory(
+            sourceSubdirectory(forResource: name, withExtension: fileExtension, subdirectory: subdirectory)
+          )
           .appendingPathComponent(fileName)
       )
     }
@@ -64,19 +83,36 @@ enum AppResourceLocator {
     return unique(candidates)
   }
 
-  /// Returns resource-bundle roots for packaged apps, legacy packages, and SwiftPM builds.
-  private static func resourceBundleRoots() -> [URL] {
+  /// Returns packaged app resource roots.
+  private static func packagedResourceRoots() -> [URL] {
     var roots: [URL] = []
 
     if let resourceURL = Bundle.main.resourceURL {
+      roots.append(resourceURL.appendingPathComponent(appResourceDirectoryName, isDirectory: true))
+    }
+
+    if let executableURL = Bundle.main.executableURL {
       roots.append(
-        resourceURL.appendingPathComponent(resourceBundleName, isDirectory: true)
+        executableURL
+          .deletingLastPathComponent()
+          .deletingLastPathComponent()
+          .appendingPathComponent("Resources", isDirectory: true)
+          .appendingPathComponent(appResourceDirectoryName, isDirectory: true)
       )
     }
 
-    roots.append(
-      Bundle.main.bundleURL.appendingPathComponent(resourceBundleName, isDirectory: true)
-    )
+    return unique(roots)
+  }
+
+  /// Returns legacy SwiftPM resource-bundle roots for tests, build outputs, and old packages.
+  private static func legacyResourceBundleRoots() -> [URL] {
+    var roots: [URL] = []
+
+    if let resourceURL = Bundle.main.resourceURL {
+      roots.append(resourceURL.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
+    }
+
+    roots.append(Bundle.main.bundleURL.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
 
     if let executableURL = Bundle.main.executableURL {
       let executableDirectory = executableURL.deletingLastPathComponent()
@@ -85,12 +121,10 @@ enum AppResourceLocator {
         executableDirectory
           .deletingLastPathComponent()
           .appendingPathComponent("Resources", isDirectory: true)
-          .appendingPathComponent(resourceBundleName, isDirectory: true)
+          .appendingPathComponent(legacyResourceBundleName, isDirectory: true)
       )
 
-      roots.append(
-        executableDirectory.appendingPathComponent(resourceBundleName, isDirectory: true)
-      )
+      roots.append(executableDirectory.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
     }
 
     return unique(roots)
@@ -112,6 +146,68 @@ enum AppResourceLocator {
     ])
   }
 
+  /// Maps logical resource requests to the packaged app resource layout.
+  private static func packagedSubdirectory(
+    forResource name: String,
+    withExtension fileExtension: String,
+    subdirectory: String?
+  ) -> String? {
+    if let subdirectory, !subdirectory.isEmpty {
+      switch subdirectory {
+      case "Events":
+        return "Events"
+      case "Theme", "ThemeTokens":
+        return "ThemeTokens"
+      case "Lua":
+        return "Lua"
+      default:
+        return subdirectory.hasPrefix("Lua/") ? subdirectory : "Lua/\(subdirectory)"
+      }
+    }
+
+    if fileExtension == "lua" {
+      return "Lua"
+    }
+
+    switch name {
+    case "event_catalog":
+      return "Events"
+    case "theme_tokens":
+      return "ThemeTokens"
+    default:
+      return nil
+    }
+  }
+
+  /// Maps logical resource requests to the source-tree layout.
+  private static func sourceSubdirectory(
+    forResource name: String,
+    withExtension fileExtension: String,
+    subdirectory: String?
+  ) -> String? {
+    if let subdirectory, !subdirectory.isEmpty {
+      switch subdirectory {
+      case "ThemeTokens":
+        return "Theme"
+      default:
+        return subdirectory
+      }
+    }
+
+    if fileExtension == "lua" {
+      return "Lua"
+    }
+
+    switch name {
+    case "event_catalog":
+      return "Events"
+    case "theme_tokens":
+      return "Theme"
+    default:
+      return nil
+    }
+  }
+
   /// Returns URLs without duplicate standardized paths.
   private static func unique(_ urls: [URL]) -> [URL] {
     var seen: Set<String> = []
@@ -129,10 +225,14 @@ enum AppResourceLocator {
 }
 
 extension URL {
-  /// Appends one optional subdirectory when present.
+  /// Appends one slash-separated optional subdirectory when present.
   fileprivate func appendingOptionalSubdirectory(_ subdirectory: String?) -> URL {
     guard let subdirectory, !subdirectory.isEmpty else { return self }
 
-    return appendingPathComponent(subdirectory, isDirectory: true)
+    var result = self
+    for component in subdirectory.split(separator: "/") {
+      result = result.appendingPathComponent(String(component), isDirectory: true)
+    }
+    return result
   }
 }

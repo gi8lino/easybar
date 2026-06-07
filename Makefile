@@ -13,6 +13,7 @@ NETWORK_AGENT_EXEC := EasyBarNetworkAgent
 CLI_PRODUCT := EasyBarCtl
 CLI_EXEC := easybar
 RESOURCE_BUNDLE_NAME := $(APP_NAME)_$(APP_TARGET).bundle
+APP_RESOURCE_DIR_NAME := $(APP_NAME)
 
 DIST_DIR := dist
 THEMES_DIR := themes
@@ -20,7 +21,7 @@ APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
 APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
-APP_RESOURCE_BUNDLE := $(APP_RESOURCES)/$(RESOURCE_BUNDLE_NAME)
+APP_RESOURCE_DIR := $(APP_RESOURCES)/$(APP_RESOURCE_DIR_NAME)
 APP_THEMES_DIR := $(APP_RESOURCES)/Themes
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
 LUA_RUNTIME_BIN := $(APP_MACOS)/$(LUA_RUNTIME_EXEC)
@@ -229,11 +230,11 @@ build-network-agent: ## Internal target: build the network agent executable for 
 build-cli: ## Internal target: build the CLI executable for ARCH.
 	@scripts/build/build-product.sh release "$(ARCH)" "$(CLI_PRODUCT)" "$(CLI_BIN)"
 
-copy-resources: ## Internal target: copy SwiftPM resource bundles and root assets into the app bundle.
-	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_BUNDLE)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+copy-resources: ## Internal target: copy SwiftPM resources and root assets into the app bundle.
+	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
-copy-debug-resources: ## Internal target: copy debug SwiftPM resource bundles and root assets into the app bundle.
-	@scripts/build/copy-resources.sh debug "$(RUN_ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_BUNDLE)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+copy-debug-resources: ## Internal target: copy debug SwiftPM resources and root assets into the app bundle.
+	@scripts/build/copy-resources.sh debug "$(RUN_ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
 
 prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle metadata.
 	@mkdir -p "$(APP_CONTENTS)"
@@ -299,7 +300,7 @@ verify: ## Show the built bundle structure and validate key packaged files.
 		"$(PLIST)" \
 		"$(CALENDAR_AGENT_PLIST)" \
 		"$(NETWORK_AGENT_PLIST)" \
-		"$(APP_RESOURCE_BUNDLE)" \
+		"$(APP_RESOURCE_DIR)" \
 		"$(APP_THEMES_DIR)" \
 		"$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_ICNS)" \
@@ -320,7 +321,7 @@ verify-release: ## Validate the release package and print release fingerprints.
 		"$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_ICNS)" \
 		"$(NETWORK_AGENT_ICON_ICNS)" \
-		"$(APP_RESOURCE_BUNDLE)" \
+		"$(APP_RESOURCE_DIR)" \
 		"$(APP_THEMES_DIR)" \
 		"$(APP_BUNDLE)"
 
@@ -454,6 +455,8 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+
 
 
 

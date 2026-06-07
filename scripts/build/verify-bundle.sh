@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ "$#" -ne 20 ]; then
-  echo "Usage: $0 <arch> <app-bin> <lua-runtime-bin> <calendar-agent-bin> <network-agent-bin> <cli-bin> <plist> <calendar-plist> <network-plist> <app-resource-bundle> <app-themes-dir> <app-icon-icns> <calendar-icon-icns> <network-icon-icns> <app-icon-file> <calendar-icon-file> <network-icon-file> <app-bundle> <app-contents> <app-resources>" >&2
+  echo "Usage: $0 <arch> <app-bin> <lua-runtime-bin> <calendar-agent-bin> <network-agent-bin> <cli-bin> <plist> <calendar-plist> <network-plist> <app-resource-dir> <app-themes-dir> <app-icon-icns> <calendar-icon-icns> <network-icon-icns> <app-icon-file> <calendar-icon-file> <network-icon-file> <app-bundle> <app-contents> <app-resources>" >&2
   exit 2
 fi
 
@@ -15,7 +15,7 @@ cli_bin="$6"
 plist="$7"
 calendar_plist="$8"
 network_plist="$9"
-app_resource_bundle="${10}"
+app_resource_dir="${10}"
 app_themes_dir="${11}"
 app_icon_icns="${12}"
 calendar_icon_icns="${13}"
@@ -37,7 +37,12 @@ file "$cli_bin"
 test -f "$plist"
 test -f "$calendar_plist"
 test -f "$network_plist"
-test -d "$app_resource_bundle"
+test -d "$app_resource_dir"
+test -f "$app_resource_dir/Lua/runtime.lua"
+test -f "$app_resource_dir/Lua/easybar_api.lua"
+test -d "$app_resource_dir/Lua/easybar"
+test -f "$app_resource_dir/Events/event_catalog.json"
+test -f "$app_resource_dir/ThemeTokens/theme_tokens.json"
 test -d "$app_themes_dir"
 test -s "$app_icon_icns"
 test -s "$calendar_icon_icns"
@@ -59,3 +64,5 @@ echo "Packaged Contents:"
 ls -1 "$app_contents"
 echo "Packaged Resources:"
 ls -1 "$app_resources" 2>/dev/null || true
+
+
