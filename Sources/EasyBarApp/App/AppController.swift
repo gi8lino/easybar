@@ -380,7 +380,7 @@ final class AppController {
 
   /// Installs the bundled Lua editor stub into the configured editor-stub path.
   private func installWidgetEditorStub() {
-    guard let bundledStub = Bundle.module.url(forResource: "easybar_api", withExtension: "lua")
+    guard let bundledStub = AppResourceLocator.url(forResource: "easybar_api", withExtension: "lua")
     else {
       logger.warn("easybar_api.lua not found in bundle resources")
       return

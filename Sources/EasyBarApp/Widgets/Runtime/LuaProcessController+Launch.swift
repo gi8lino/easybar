@@ -23,7 +23,7 @@ extension LuaProcessController {
 
   /// Resolves the bundled Lua runtime script path.
   func resolvedRuntimePath() -> String? {
-    guard let runtime = Bundle.module.url(forResource: "runtime", withExtension: "lua") else {
+    guard let runtime = AppResourceLocator.url(forResource: "runtime", withExtension: "lua") else {
       logger.error("runtime.lua not found")
       return nil
     }
@@ -47,13 +47,14 @@ extension LuaProcessController {
       }
     }
 
-    let moduleParentPath = Bundle.module.bundleURL.deletingLastPathComponent().path
-    let candidate = URL(fileURLWithPath: moduleParentPath)
+    let buildCandidate = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+      .appendingPathComponent(".build", isDirectory: true)
+      .appendingPathComponent("debug", isDirectory: true)
       .appendingPathComponent("EasyBarLuaRuntime")
       .path
 
-    if fileManager.isExecutableFile(atPath: candidate) {
-      return candidate
+    if fileManager.isExecutableFile(atPath: buildCandidate) {
+      return buildCandidate
     }
 
     logger.error("EasyBarLuaRuntime not found")

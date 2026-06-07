@@ -77,7 +77,7 @@ enum EventCatalog {
   /// Loads the bundled generated event catalog manifest.
   private static func loadGeneratedCatalog() -> GeneratedCatalog? {
     let candidateURLs = [
-      Bundle.module.url(
+      AppResourceLocator.url(
         forResource: "event_catalog",
         withExtension: "json",
         subdirectory: "Events"

@@ -390,14 +390,6 @@ extension Config {
   private func bundledThemeCandidateURLs(fileName: String) -> [URL] {
     var candidates: [URL] = []
 
-    if let moduleThemeURL = Bundle.module.url(
-      forResource: fileName,
-      withExtension: "toml",
-      subdirectory: "Themes"
-    ) {
-      candidates.append(moduleThemeURL)
-    }
-
     if let resourceURL = Bundle.main.resourceURL {
       candidates.append(
         resourceURL
@@ -423,6 +415,12 @@ extension Config {
           .appendingPathComponent("\(fileName).toml")
       )
     }
+
+    candidates.append(
+      URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        .appendingPathComponent("themes", isDirectory: true)
+        .appendingPathComponent("\(fileName).toml")
+    )
 
     return uniqueThemeCandidateURLs(candidates)
   }
