@@ -12,20 +12,35 @@ You can override that path with:
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
+For a first setup, start with [Quick Start](../getting-started/quick-start.md) and copy `config.minimal.toml`.
+
 ## Example files
 
 The repository ships two config examples:
 
-- `config.defaults.toml`
-  Full reference file with the current default values and supported sections.
 - `config.minimal.toml`
-  Smaller starter example with common built-ins and one native `system` group.
+  Smaller starter config with common built-ins and one native `system` group.
+- `config.defaults.toml`
+  Full reference file with current defaults, inline comments, and all supported sections.
 
-Use `config.defaults.toml` when you want the complete reference.
-The generated [Configuration Reference](reference.md) mirrors its defaults and inline comments.
-Use `config.minimal.toml` when you want a shorter starting point.
+Use `config.minimal.toml` when you want a clean starting point. Use `config.defaults.toml` when you need to discover every supported key.
 
-If you are unsure whether a widget belongs in config or in a Lua file, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
+The generated [Configuration Reference](reference.md) mirrors `config.defaults.toml`. It is useful for exact defaults, but the hand-written pages are better for concepts and examples.
+
+## What belongs in config
+
+Use `config.toml` for stable user-facing behavior:
+
+- app paths and reload behavior
+- environment variables visible to Lua widgets
+- selected theme and theme overrides
+- logging settings
+- helper-agent sockets and behavior
+- bar height and bar colors
+- native built-in widgets
+- native built-in groups
+
+Use Lua only when you need custom logic that config cannot express. The decision guide is [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
 
 ## Important sections
 
@@ -33,6 +48,8 @@ If you are unsure whether a widget belongs in config or in a Lua file, read [Bui
   App-level paths and runtime behavior.
 - `[app.env]`
   Environment variables visible to Lua widgets and widget shell commands.
+- `[app.lua_commands]`
+  Default command limits for Lua command execution.
 - `[theme]`
   Selected theme name and custom theme directory.
 - `[theme.colors]`
@@ -86,23 +103,18 @@ background = "#090909"
 
 See [Themes](themes.md).
 
-## When configuration is enough
+## Where to go next
 
-Stay in `config.toml` when EasyBar already provides the widget you need as a built-in and you mainly want to control placement, grouping, theming, or styling.
+| Goal | Page |
+| --- | --- |
+| Copy a starter config | [Example Configs](example-configs.md) |
+| Configure app paths | [App Settings](app.md) |
+| Configure shell command environment | [Environment](environment.md) |
+| Choose colors | [Themes](themes.md) |
+| Enable native widgets | [Built-ins](builtins.md) |
+| Group native widgets | [Native Groups](native-groups.md) |
+| Configure helper agents | [Agents](agents.md) |
+| Debug logging | [Logging](logging.md) |
+| Check exact defaults | [Configuration Reference](reference.md) |
 
-Move to Lua when you need custom interaction, shell-command integration, or custom event-driven behavior.
-
-See [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md) and [Lua Widgets](../lua/overview.md).
-
-## Related pages
-
-- [Themes](themes.md)
-- [Built-ins](builtins.md)
-- [Native Groups](native-groups.md)
-- [Box Model](box-model.md)
-- [Environment](environment.md)
-- [Logging](logging.md)
-
-
-
-
+Contributor-focused implementation details are in [Internals](../internals/overview.md).

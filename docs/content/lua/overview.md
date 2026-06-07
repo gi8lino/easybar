@@ -2,21 +2,20 @@
 
 EasyBar Lua widgets are node-based.
 
-You do not return widget trees. You create nodes, keep their handles, and update them with methods such as `node:set(...)` and `node:subscribe(...)`.
+You create nodes, keep their handles, and update them with methods such as `node:set(...)` and `node:subscribe(...)`. You do not return widget trees directly.
 
 Lua widgets are the right tool when you want:
 
-- custom text, icons, or layout that the built-ins do not provide
+- custom text, icons, or layout that built-ins do not provide
 - shell-command integration or lightweight local scripting
 - event-driven behavior tied to app changes, mouse input, timers, or helper-agent updates
 - small personal workflows without touching the native Swift codebase
 
 If you have not decided whether Lua is the right tool yet, read [Built-ins Vs Lua](../getting-started/builtins-vs-lua.md).
 
-Lua widgets should be treated as trusted local scripts.
-EasyBar gives each widget file its own API scope, but it does not sandbox arbitrary widget code.
+Lua widgets are trusted local scripts. EasyBar gives each widget file its own API scope, but it does not sandbox arbitrary widget code.
 
-A minimal widget looks like this:
+## Minimal widget
 
 ```lua
 local clock
@@ -46,18 +45,18 @@ Lua widgets follow this model:
 
 The Lua runtime is for custom widgets and user-specific behavior. Built-in platform-integrated widgets should usually stay native when possible.
 
-## What to read next
+## User-facing guides
 
-- [Conventions](conventions.md) for EasyBar terminology used across the docs
-- [First Widget](guides/first-widget.md) for a step-by-step starting point
-- [Functions](reference/functions.md) for the creation and update API
-- [Events](reference/events.md) for subscriptions and payload shapes
-- [Properties](reference/properties.md) for node styling and layout fields
-- [Examples](guides/examples.md) for realistic widget patterns
+- [First Widget](guides/first-widget.md) for a step-by-step starting point.
+- [Subscribe To Events](guides/subscribe-to-events.md) for event-driven updates.
+- [Commands](guides/commands.md) for shell-command integration.
+- [Grouping](guides/grouping.md) and [Popups](guides/popups.md) for richer layouts.
+- [Editor Support](guides/editor-support.md) for LuaLS setup.
+- [Examples](guides/examples.md) for complete patterns.
 
-## Generated reference
+## Exact API reference
 
-The API reference is generated from the LuaLS stub:
+The generated API reference is useful when you need exact function names, event names, and property fields:
 
 - [Functions](reference/functions.md)
 - [Node kinds](reference/node-kinds.md)
@@ -65,3 +64,7 @@ The API reference is generated from the LuaLS stub:
 - [Properties](reference/properties.md)
 
 Use the guides for concepts and patterns. Use the reference pages for exact API details.
+
+## Contributor internals
+
+Runtime architecture, process boundaries, socket transport, registry internals, rendering internals, and generated-artifact notes live under [Lua Runtime Internals](../internals/lua-runtime/overview.md).
