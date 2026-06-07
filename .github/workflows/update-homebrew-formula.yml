@@ -30,31 +30,10 @@ jobs:
           INPUT_TAG: ${{ inputs.tag }}
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          TAG="${INPUT_TAG}"
-          VERSION="${INPUT_VERSION}"
-
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid release tag: ${TAG}"
-            echo "Release tags must use vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease."
-            exit 1
-          fi
-
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Invalid release version: ${VERSION}"
-            echo "Versions must use MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-prerelease."
-            exit 1
-          fi
-
-          if [[ "$TAG" != "v${VERSION}" ]]; then
-            echo "::error::Release tag must match version: expected v${VERSION}, got ${TAG}"
-            exit 1
-          fi
-
-          ASSET_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/EasyBar-${VERSION}.zip"
-
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "asset_url=${ASSET_URL}" >> "$GITHUB_OUTPUT"
+          scripts/release/derive-release-vars.sh \
+            --tag "${INPUT_TAG}" \
+            --version "${INPUT_VERSION}" \
+            --repository "${GITHUB_REPOSITORY}"
 
       - name: Download release archive
         shell: bash
@@ -93,6 +72,8 @@ jobs:
           scripts/release/commit-homebrew-formulas.sh \
             --tap-dir homebrew-tap \
             --version "${{ steps.vars.outputs.version }}"
+
+
 
 
 
