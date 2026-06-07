@@ -16,12 +16,22 @@ app_resource_dir="$7"
 app_themes_dir="$8"
 app_bundle="$9"
 
-test -f "$package_zip"
-test -f "$app_resource_dir/Lua/easybar_api.lua"
-test -f "$app_resource_dir/Lua/runtime.lua"
-test -f "$app_resource_dir/Events/event_catalog.json"
-test -f "$app_resource_dir/ThemeTokens/theme_tokens.json"
-test -f "$app_themes_dir/default.toml"
+require_file() {
+  local path="$1"
+  local label="$2"
+
+  if [ ! -f "$path" ]; then
+    echo "Missing ${label}: ${path}" >&2
+    exit 1
+  fi
+}
+
+require_file "$package_zip" "release package"
+require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"
+require_file "$app_resource_dir/Lua/runtime.lua" "Lua runtime"
+require_file "$app_resource_dir/Events/event_catalog.json" "event catalog"
+require_file "$app_resource_dir/ThemeTokens/theme_tokens.json" "theme token catalog"
+require_file "$app_themes_dir/default.toml" "default bundled theme"
 
 echo "Release package:"
 ls -lh "$package_zip"
@@ -35,5 +45,3 @@ shasum -a 256 "$app_resource_dir/Lua/easybar_api.lua"
 shasum -a 256 "$app_themes_dir/default.toml"
 shasum -a 256 "$package_zip"
 codesign -dv --verbose=4 "$app_bundle" 2>&1 || true
-
-
