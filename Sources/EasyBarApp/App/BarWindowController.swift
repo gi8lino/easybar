@@ -18,6 +18,8 @@ final class BarWindowController: NSWindowController {
   private let configStore: ConfigSnapshotStore
   /// Hosting view containing the SwiftUI bar content.
   private let hostingView: BarHostingView<AnyView>
+  /// Provider for dynamic context-menu state.
+  private let menuStateProvider: BarContextMenuStateProviding
 
   /// Factory that builds the bar context menu.
   private lazy var contextMenuFactory = BarContextMenuFactory(
@@ -27,16 +29,19 @@ final class BarWindowController: NSWindowController {
       refresh: { [weak self] in self?.onRefresh?() },
       reloadConfig: { [weak self] in self?.onReloadConfig?() },
       restartLuaRuntime: { [weak self] in self?.onRestartLuaRuntime?() }
-    )
+    ),
+    stateProvider: menuStateProvider
   )
 
   /// Creates a borderless bar window pinned to the top of the screen.
   init(
     logger: ProcessLogger,
-    configStore: ConfigSnapshotStore
+    configStore: ConfigSnapshotStore,
+    menuStateProvider: BarContextMenuStateProviding
   ) {
     self.logger = logger
     self.configStore = configStore
+    self.menuStateProvider = menuStateProvider
 
     let screen = NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)

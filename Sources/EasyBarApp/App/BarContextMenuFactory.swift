@@ -30,16 +30,20 @@ final class BarContextMenuFactory: NSObject {
   private let configStore: ConfigSnapshotStore
   /// Runtime actions forwarded to the app controller.
   private let actions: BarContextMenuActions
+  /// State provider for dynamic menu labels.
+  private let stateProvider: BarContextMenuStateProviding
 
   /// Creates a context menu factory for the current app services.
   init(
     logger: ProcessLogger,
     configStore: ConfigSnapshotStore,
-    actions: BarContextMenuActions
+    actions: BarContextMenuActions,
+    stateProvider: BarContextMenuStateProviding
   ) {
     self.logger = logger
     self.configStore = configStore
     self.actions = actions
+    self.stateProvider = stateProvider
     super.init()
   }
 
@@ -114,8 +118,8 @@ final class BarContextMenuFactory: NSObject {
   private var calendarAgentMenuItem: NSMenuItem {
     agentMenuItem(
       title: "Calendar Agent",
-      status: connectionLabel(calendarAgentConnected),
-      permission: calendarPermissionLabel,
+      status: connectionLabel(stateProvider.calendarAgentConnected),
+      permission: stateProvider.calendarPermissionLabel,
       settingsAction: #selector(openCalendarSettings(_:)),
       settingsTitle: "Open Calendar Settings"
     )
@@ -125,17 +129,11 @@ final class BarContextMenuFactory: NSObject {
   private var networkAgentMenuItem: NSMenuItem {
     agentMenuItem(
       title: "Network Agent",
-      status: connectionLabel(NetworkAgentClient.shared.isConnected),
-      permission: wifiPermissionLabel,
+      status: connectionLabel(stateProvider.networkAgentConnected),
+      permission: stateProvider.wifiPermissionLabel,
       settingsAction: #selector(openLocationSettings(_:)),
       settingsTitle: "Open Location/Wi-Fi Settings"
     )
-  }
-
-  /// Returns whether either calendar popup client is currently connected.
-  private var calendarAgentConnected: Bool {
-    return UpcomingCalendarAgentClient.shared.isConnected
-      || MonthCalendarAgentClient.shared.isConnected
   }
 
   /// Appends one section of items and a trailing separator.
@@ -227,27 +225,6 @@ final class BarContextMenuFactory: NSObject {
   /// Returns a human-readable connected/disconnected label.
   private func connectionLabel(_ connected: Bool) -> String {
     return connected ? "Connected" : "Disconnected"
-  }
-
-  /// Returns the current calendar permission label.
-  private var calendarPermissionLabel: String {
-    let upcoming = NativeUpcomingCalendarStore.shared.snapshot?.permissionState
-    let month = NativeMonthCalendarStore.shared.snapshot?.permissionState
-
-    if let upcoming, upcoming != "unknown" {
-      return upcoming
-    }
-
-    if let month, month != "unknown" {
-      return month
-    }
-
-    return upcoming ?? month ?? "unknown"
-  }
-
-  /// Returns the current Wi-Fi/location permission label.
-  private var wifiPermissionLabel: String {
-    return NativeWiFiStore.shared.snapshot?.permissionState ?? "unknown"
   }
 
   /// Refreshes the current runtime through the app layer.

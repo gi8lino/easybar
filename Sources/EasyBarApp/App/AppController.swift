@@ -212,7 +212,15 @@ final class AppController {
   private func setupBarWindowController() {
     let controller = BarWindowController(
       logger: logger.child("window"),
-      configStore: services.configSnapshotStore
+      configStore: services.configSnapshotStore,
+      menuStateProvider: BarContextMenuStateProvider(
+        nativeWiFiStore: services.nativeWiFiStore,
+        nativeMonthCalendarStore: services.nativeMonthCalendarStore,
+        nativeUpcomingCalendarStore: services.nativeUpcomingCalendarStore,
+        monthCalendarAgentClient: services.monthCalendarAgentClient,
+        upcomingCalendarAgentClient: services.upcomingCalendarAgentClient,
+        networkAgentClient: services.networkAgentClient
+      )
     )
     controller.onRefresh = { [weak self] in
       guard let self else { return }
