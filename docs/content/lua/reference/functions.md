@@ -181,5 +181,3 @@ Removes one or more nested properties from this node.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `paths` | `string\|string[]` |  |
-
-

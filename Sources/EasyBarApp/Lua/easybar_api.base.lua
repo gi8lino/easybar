@@ -461,5 +461,3 @@ function EasyBar.log(level, ...) end
 easybar = easybar
 
 return easybar
-
-

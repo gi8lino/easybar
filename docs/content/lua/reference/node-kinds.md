@@ -41,5 +41,3 @@ Namespace object exposed as `easybar.kind`. These fields are the ergonomic way t
 | `progress_slider` | `EasyBarKind` | Use when you want slider interaction with progress-style presentation. |
 | `sparkline` | `EasyBarKind` | Use for compact numeric trend lines. |
 | `spaces` | `EasyBarKind` | Use for workspace or space indicator style nodes. |
-
-

@@ -161,5 +161,3 @@
 ---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
-
-

@@ -217,5 +217,3 @@ Container-level popup properties for visibility, layout, and surface styling.
 | `margin_right` _(optional)_ | `number` | Right popup margin in points. |
 | `margin_top` _(optional)_ | `number` | Top popup margin in points. |
 | `margin_bottom` _(optional)_ | `number` | Bottom popup margin in points. |
-
-

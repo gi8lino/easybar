@@ -185,5 +185,3 @@ Slider-specific interaction tokens nested under `easybar.events.slider`.
 | -------- | ---- | ----------- |
 | `preview` _(optional)_ | `EasyBarEventToken` | Fired while a slider is being previewed or dragged. |
 | `changed` _(optional)_ | `EasyBarEventToken` | Fired when a slider value is committed. |
-
-

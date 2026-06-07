@@ -42,5 +42,3 @@ enum ThemeColorToken: String, CaseIterable {
     self.init(rawValue: normalizedToken.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
   }
 }
-
-

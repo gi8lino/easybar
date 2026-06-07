@@ -112,5 +112,3 @@ function M.normalize(event)
 end
 
 return M
-
-

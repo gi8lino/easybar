@@ -37,5 +37,3 @@ Sources/EasyBarApp/Lua/easybar_api.lua
 ```
 
 If this reference is wrong, update the stub and regenerate the docs.
-
-

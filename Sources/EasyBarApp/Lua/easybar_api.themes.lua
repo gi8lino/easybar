@@ -70,5 +70,3 @@
 ---@field name string Active theme name from `[theme].name`.
 ---@field colors EasyBarThemeColors Resolved theme colors.
 ---@field ref EasyBarThemeRefs Theme reference strings such as `theme.text`.
-
-
