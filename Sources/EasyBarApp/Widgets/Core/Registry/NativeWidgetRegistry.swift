@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class NativeWidgetRegistry {
   private struct Registration {
+    let id: String
     let enabled: Bool
     let makeWidget: () -> NativeWidget
   }
@@ -54,11 +55,13 @@ final class NativeWidgetRegistry {
 
     stopAll()
 
+    let registrations = registrations()
+
     logger.info("registering native widgets")
-    logConfig()
+    logConfig(registrations)
 
     NativeGroupRegistry.shared.reload(groups: snapshot.builtins.groups)
-    widgets = makeEnabledWidgets()
+    widgets = makeEnabledWidgets(from: registrations)
 
     logRegisteredWidgets()
 
@@ -91,8 +94,8 @@ final class NativeWidgetRegistry {
   }
 
   /// Builds the enabled native widget list from the current config snapshot.
-  private func makeEnabledWidgets() -> [NativeWidget] {
-    return registrations().compactMap(makeWidgetIfEnabled)
+  private func makeEnabledWidgets(from registrations: [Registration]) -> [NativeWidget] {
+    return registrations.compactMap(makeWidgetIfEnabled)
   }
 
   /// Returns the native widget registration list for the current config snapshot.
@@ -103,37 +106,37 @@ final class NativeWidgetRegistry {
     let calendarAgent = snapshot.calendarAgent
 
     return [
-      Registration(enabled: builtins.spaces.enabled) {
+      Registration(id: "spaces", enabled: builtins.spaces.enabled) {
         SpacesNativeWidget(config: builtins.spaces)
       },
-      Registration(enabled: builtins.battery.enabled) {
+      Registration(id: "battery", enabled: builtins.battery.enabled) {
         BatteryNativeWidget(config: builtins.battery)
       },
-      Registration(enabled: builtins.frontApp.enabled) {
+      Registration(id: "front_app", enabled: builtins.frontApp.enabled) {
         FrontAppNativeWidget(config: builtins.frontApp)
       },
-      Registration(enabled: builtins.aerospaceMode.enabled) {
+      Registration(id: "aerospace_mode", enabled: builtins.aerospaceMode.enabled) {
         AeroSpaceModeNativeWidget(config: builtins.aerospaceMode)
       },
-      Registration(enabled: builtins.volume.enabled) {
+      Registration(id: "volume", enabled: builtins.volume.enabled) {
         VolumeSliderNativeWidget(config: builtins.volume)
       },
-      Registration(enabled: builtins.wifi.enabled) {
+      Registration(id: "wifi", enabled: builtins.wifi.enabled) {
         WiFiNativeWidget(config: builtins.wifi, networkAgentConfig: networkAgent)
       },
-      Registration(enabled: builtins.date.enabled) {
+      Registration(id: "date", enabled: builtins.date.enabled) {
         DateNativeWidget(config: builtins.date)
       },
-      Registration(enabled: builtins.time.enabled) {
+      Registration(id: "time", enabled: builtins.time.enabled) {
         TimeNativeWidget(config: builtins.time)
       },
-      Registration(enabled: builtins.calendar.enabled) {
+      Registration(id: "calendar", enabled: builtins.calendar.enabled) {
         CalendarNativeWidget(
           config: builtins.calendar,
           calendarAgentConfig: calendarAgent
         )
       },
-      Registration(enabled: builtins.cpu.enabled) {
+      Registration(id: "cpu", enabled: builtins.cpu.enabled) {
         CPUSparklineNativeWidget(config: builtins.cpu)
       },
     ]
@@ -159,23 +162,22 @@ final class NativeWidgetRegistry {
   }
 
   /// Logs the current built-in widget enablement snapshot.
-  private func logConfig() {
-    let builtins = snapshot.builtins
-
+  private func logConfig(_ registrations: [Registration]) {
     logger.info(
       "native widget config",
-      .field("spaces", builtins.spaces.enabled),
-      .field("battery", builtins.battery.enabled),
-      .field("front_app", builtins.frontApp.enabled),
-      .field("aerospace_mode", builtins.aerospaceMode.enabled),
-      .field("volume", builtins.volume.enabled),
-      .field("wifi", builtins.wifi.enabled),
-      .field("date", builtins.date.enabled),
-      .field("time", builtins.time.enabled),
-      .field("calendar", builtins.calendar.enabled),
-      .field("calendar_popup_mode", builtins.calendar.popupMode.rawValue),
-      .field("cpu", builtins.cpu.enabled),
+      .field("widgets", enabledWidgetSummary(registrations)),
+      .field("calendar_popup_mode", snapshot.builtins.calendar.popupMode.rawValue),
     )
+  }
+
+  /// Returns a stable summary of all built-in widget enablement flags.
+  private func enabledWidgetSummary(_ registrations: [Registration]) -> String {
+    return
+      registrations
+      .map { registration in
+        "\(registration.id)=\(registration.enabled)"
+      }
+      .joined(separator: ",")
   }
 
   /// Logs the final registered widget ids.
