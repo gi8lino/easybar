@@ -6,6 +6,12 @@ import Foundation
 /// View model for creating, editing, and deleting calendar events through injected actions.
 @MainActor
 public final class CalendarEventComposer: ObservableObject {
+  /// Static display and timing metadata for one composer preset option.
+  private struct PresetMetadata {
+    let seconds: TimeInterval?
+    let fallbackTitle: String
+  }
+
   /// Stable picker item describing one writable calendar.
   public struct CalendarOption: Identifiable, Equatable {
     /// Stable calendar identifier.
@@ -61,48 +67,33 @@ public final class CalendarEventComposer: ObservableObject {
     public var id: String { rawValue }
 
     var leadTimeSeconds: TimeInterval? {
-      switch self {
-      case .none:
-        return nil
-      case .atTime:
-        return 0
-      case .fiveMinutes:
-        return 5 * 60
-      case .tenMinutes:
-        return 10 * 60
-      case .fifteenMinutes:
-        return 15 * 60
-      case .thirtyMinutes:
-        return 30 * 60
-      case .oneHour:
-        return 60 * 60
-      case .oneDay:
-        return 24 * 60 * 60
-      case .custom:
-        return nil
-      }
+      metadata.seconds
     }
 
     private var fallbackTitle: String {
+      metadata.fallbackTitle
+    }
+
+    private var metadata: PresetMetadata {
       switch self {
       case .none:
-        return "None"
+        return PresetMetadata(seconds: nil, fallbackTitle: "None")
       case .atTime:
-        return "At time of event"
+        return PresetMetadata(seconds: 0, fallbackTitle: "At time of event")
       case .fiveMinutes:
-        return "5 minutes before"
+        return PresetMetadata(seconds: 5 * 60, fallbackTitle: "5 minutes before")
       case .tenMinutes:
-        return "10 minutes before"
+        return PresetMetadata(seconds: 10 * 60, fallbackTitle: "10 minutes before")
       case .fifteenMinutes:
-        return "15 minutes before"
+        return PresetMetadata(seconds: 15 * 60, fallbackTitle: "15 minutes before")
       case .thirtyMinutes:
-        return "30 minutes before"
+        return PresetMetadata(seconds: 30 * 60, fallbackTitle: "30 minutes before")
       case .oneHour:
-        return "1 hour before"
+        return PresetMetadata(seconds: 60 * 60, fallbackTitle: "1 hour before")
       case .oneDay:
-        return "1 day before"
+        return PresetMetadata(seconds: 24 * 60 * 60, fallbackTitle: "1 day before")
       case .custom:
-        return "Custom"
+        return PresetMetadata(seconds: nil, fallbackTitle: "Custom")
       }
     }
 
@@ -111,12 +102,12 @@ public final class CalendarEventComposer: ObservableObject {
     }
 
     func title(config: CalendarComposerConfig) -> String {
-      switch self {
-      case .custom:
-        return fallbackTitle
-      default:
-        return config.alertLabels[rawValue] ?? fallbackTitle
-      }
+      configuredPresetTitle(labels: config.alertLabels)
+    }
+
+    private func configuredPresetTitle(labels: [String: String]) -> String {
+      guard self != .custom else { return fallbackTitle }
+      return labels[rawValue] ?? fallbackTitle
     }
   }
 
@@ -137,56 +128,37 @@ public final class CalendarEventComposer: ObservableObject {
     public var id: String { rawValue }
 
     var seconds: TimeInterval? {
-      switch self {
-      case .none:
-        return nil
-      case .fiveMinutes:
-        return 5 * 60
-      case .tenMinutes:
-        return 10 * 60
-      case .fifteenMinutes:
-        return 15 * 60
-      case .twentyMinutes:
-        return 20 * 60
-      case .thirtyMinutes:
-        return 30 * 60
-      case .fortyFiveMinutes:
-        return 45 * 60
-      case .oneHour:
-        return 60 * 60
-      case .ninetyMinutes:
-        return 90 * 60
-      case .twoHours:
-        return 2 * 60 * 60
-      case .custom:
-        return nil
-      }
+      metadata.seconds
     }
 
     private var fallbackTitle: String {
+      metadata.fallbackTitle
+    }
+
+    private var metadata: PresetMetadata {
       switch self {
       case .none:
-        return "None"
+        return PresetMetadata(seconds: nil, fallbackTitle: "None")
       case .fiveMinutes:
-        return "5 minutes"
+        return PresetMetadata(seconds: 5 * 60, fallbackTitle: "5 minutes")
       case .tenMinutes:
-        return "10 minutes"
+        return PresetMetadata(seconds: 10 * 60, fallbackTitle: "10 minutes")
       case .fifteenMinutes:
-        return "15 minutes"
+        return PresetMetadata(seconds: 15 * 60, fallbackTitle: "15 minutes")
       case .twentyMinutes:
-        return "20 minutes"
+        return PresetMetadata(seconds: 20 * 60, fallbackTitle: "20 minutes")
       case .thirtyMinutes:
-        return "30 minutes"
+        return PresetMetadata(seconds: 30 * 60, fallbackTitle: "30 minutes")
       case .fortyFiveMinutes:
-        return "45 minutes"
+        return PresetMetadata(seconds: 45 * 60, fallbackTitle: "45 minutes")
       case .oneHour:
-        return "1 hour"
+        return PresetMetadata(seconds: 60 * 60, fallbackTitle: "1 hour")
       case .ninetyMinutes:
-        return "1.5 hours"
+        return PresetMetadata(seconds: 90 * 60, fallbackTitle: "1.5 hours")
       case .twoHours:
-        return "2 hours"
+        return PresetMetadata(seconds: 2 * 60 * 60, fallbackTitle: "2 hours")
       case .custom:
-        return "Custom"
+        return PresetMetadata(seconds: nil, fallbackTitle: "Custom")
       }
     }
 
@@ -195,12 +167,12 @@ public final class CalendarEventComposer: ObservableObject {
     }
 
     func title(config: CalendarComposerConfig) -> String {
-      switch self {
-      case .custom:
-        return fallbackTitle
-      default:
-        return config.travelTimeLabels[rawValue] ?? fallbackTitle
-      }
+      configuredPresetTitle(labels: config.travelTimeLabels)
+    }
+
+    private func configuredPresetTitle(labels: [String: String]) -> String {
+      guard self != .custom else { return fallbackTitle }
+      return labels[rawValue] ?? fallbackTitle
     }
   }
 
@@ -218,6 +190,14 @@ public final class CalendarEventComposer: ObservableObject {
   private enum Validation<Value> {
     case success(Value)
     case failure(String)
+  }
+
+  private struct ComposerValidationError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+      message
+    }
   }
 
   @Published public private(set) var mode: Mode = .create
@@ -531,46 +511,40 @@ public final class CalendarEventComposer: ObservableObject {
   }
 
   private func makeDraft() -> Validation<Draft> {
+    do {
+      return .success(try makeValidatedDraft())
+    } catch let error as ComposerValidationError {
+      return .failure(error.message)
+    } catch {
+      return .failure(error.localizedDescription)
+    }
+  }
+
+  private func makeValidatedDraft() throws -> Draft {
     let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
 
     guard !trimmedTitle.isEmpty else {
-      return .failure("Title is required.")
+      throw ComposerValidationError(message: "Title is required.")
     }
 
     guard !selectedCalendarID.isEmpty else {
-      return .failure("No writable calendar is selected.")
+      throw ComposerValidationError(message: "No writable calendar is selected.")
     }
 
-    switch normalizedDateRange() {
-    case .failure(let message):
-      return .failure(message)
+    let range = try normalizedDateRange()
+    let travelTimeSeconds = try normalizedTravelTimeSeconds()
+    let alertOffsetsSeconds = try normalizedAlertOffsets()
 
-    case .success(let range):
-      switch normalizedTravelTimeSeconds() {
-      case .failure(let message):
-        return .failure(message)
-
-      case .success(let travelTimeSeconds):
-        switch normalizedAlertOffsets() {
-        case .failure(let message):
-          return .failure(message)
-
-        case .success(let alertOffsetsSeconds):
-          return .success(
-            Draft(
-              title: trimmedTitle,
-              location: normalizedOptionalText(location),
-              calendarID: selectedCalendarID,
-              startDate: range.start,
-              endDate: range.end,
-              isAllDay: isAllDay,
-              alertOffsetsSeconds: alertOffsetsSeconds,
-              travelTimeSeconds: travelTimeSeconds
-            )
-          )
-        }
-      }
-    }
+    return Draft(
+      title: trimmedTitle,
+      location: normalizedOptionalText(location),
+      calendarID: selectedCalendarID,
+      startDate: range.start,
+      endDate: range.end,
+      isAllDay: isAllDay,
+      alertOffsetsSeconds: alertOffsetsSeconds,
+      travelTimeSeconds: travelTimeSeconds
+    )
   }
 
   private func makeCreateEvent(from draft: Draft) -> CalendarAgentCreateEvent {
@@ -603,7 +577,7 @@ public final class CalendarEventComposer: ObservableObject {
     )
   }
 
-  private func normalizedDateRange() -> Validation<(start: Date, end: Date)> {
+  private func normalizedDateRange() throws -> (start: Date, end: Date) {
     if isAllDay {
       let startOfDay = calendar.startOfDay(for: startDate)
       let endDay = calendar.startOfDay(for: max(startDate, endDate))
@@ -611,35 +585,35 @@ public final class CalendarEventComposer: ObservableObject {
         calendar.date(byAdding: .day, value: 1, to: endDay)
         ?? endDay.addingTimeInterval(86_400)
 
-      return .success((startOfDay, exclusiveEnd))
+      return (startOfDay, exclusiveEnd)
     }
 
     guard endDate > startDate else {
-      return .failure("End time must be after start time.")
+      throw ComposerValidationError(message: "End time must be after start time.")
     }
 
-    return .success((startDate, endDate))
+    return (startDate, endDate)
   }
 
-  private func normalizedTravelTimeSeconds() -> Validation<TimeInterval?> {
+  private func normalizedTravelTimeSeconds() throws -> TimeInterval? {
     guard selectedTravelTime == .custom else {
-      return .success(selectedTravelTime.seconds)
+      return selectedTravelTime.seconds
     }
 
     let trimmed = customTravelMinutesText.trimmingCharacters(in: .whitespacesAndNewlines)
 
     guard !trimmed.isEmpty else {
-      return .success(nil)
+      return nil
     }
 
     guard let minutes = Int(trimmed), minutes >= 0 else {
-      return .failure("Travel time must be a positive number of minutes.")
+      throw ComposerValidationError(message: "Travel time must be a positive number of minutes.")
     }
 
-    return .success(TimeInterval(minutes * 60))
+    return TimeInterval(minutes * 60)
   }
 
-  private func normalizedAlertOffsets() -> Validation<[TimeInterval]> {
+  private func normalizedAlertOffsets() throws -> [TimeInterval] {
     var offsets: [TimeInterval] = []
 
     for row in alertRows {
@@ -651,7 +625,7 @@ public final class CalendarEventComposer: ObservableObject {
         let trimmed = row.customMinutesText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard let minutes = Int(trimmed), minutes >= 0 else {
-          return .failure("Custom alerts must be positive numbers of minutes.")
+          throw ComposerValidationError(message: "Custom alerts must be positive numbers of minutes.")
         }
 
         offsets.append(TimeInterval(minutes * 60))
@@ -663,7 +637,7 @@ public final class CalendarEventComposer: ObservableObject {
       }
     }
 
-    return .success(offsets)
+    return offsets
   }
 
   private func initialAlertRows(
