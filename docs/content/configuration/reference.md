@@ -553,6 +553,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `30_minutes` | `"30 minutes before"` | Label shown for a 30-minute alert. |
 | `1_hour` | `"1 hour before"` | Label shown for a 1-hour alert. |
 | `1_day` | `"1 day before"` | Label shown for a 1-day alert. |
+| `custom` | `"Custom"` | Label shown for a custom alert lead time. |
 
 ## `builtins.calendar.composer.travel_time_labels`
 
@@ -568,6 +569,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `1_hour` | `"1 hour"` | Label shown for 1 hour of travel time. |
 | `90_minutes` | `"1.5 hours"` | Label shown for 90 minutes of travel time. |
 | `2_hours` | `"2 hours"` | Label shown for 2 hours of travel time. |
+| `custom` | `"Custom"` | Label shown for a custom travel time. |
 
 ## `builtins.calendar.upcoming.events`
 
@@ -765,5 +767,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key | Default | Description |
 | --- | ------- | ----------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
+
+
 
 

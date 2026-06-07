@@ -62,8 +62,7 @@ extension CalendarEventComposer {
     }
 
     private func configuredPresetTitle(labels: [String: String]) -> String {
-      guard self != .custom else { return fallbackTitle }
-      return labels[rawValue] ?? fallbackTitle
+      labels[rawValue] ?? fallbackTitle
     }
   }
 
@@ -127,8 +126,7 @@ extension CalendarEventComposer {
     }
 
     private func configuredPresetTitle(labels: [String: String]) -> String {
-      guard self != .custom else { return fallbackTitle }
-      return labels[rawValue] ?? fallbackTitle
+      labels[rawValue] ?? fallbackTitle
     }
   }
 }
