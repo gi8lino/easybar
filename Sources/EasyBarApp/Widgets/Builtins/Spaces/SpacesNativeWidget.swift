@@ -30,7 +30,7 @@ final class SpacesNativeWidget: NativeWidget {
   func stop() {
     aeroSpaceObserver.stop()
     AeroSpaceService.shared.unregisterConsumer(rootID)
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   /// Publishes the current spaces widget nodes.

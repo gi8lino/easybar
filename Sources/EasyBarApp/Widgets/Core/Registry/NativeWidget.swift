@@ -23,4 +23,14 @@ extension NativeWidget {
     stop()
     start()
   }
+
+  /// Clears all rendered nodes owned by this native widget.
+  func clearNodes() {
+    applyNodes([])
+  }
+
+  /// Applies the latest rendered nodes owned by this native widget.
+  func applyNodes(_ nodes: [WidgetNodeState]) {
+    WidgetStore.shared.apply(root: rootID, nodes: nodes)
+  }
 }

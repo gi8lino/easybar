@@ -86,7 +86,7 @@ final class BatteryNativeWidget: NativeWidget {
     timer = nil
     isHovered = false
 
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   // MARK: - Publish

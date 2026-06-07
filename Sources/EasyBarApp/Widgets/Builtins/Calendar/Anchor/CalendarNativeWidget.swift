@@ -95,7 +95,7 @@ final class CalendarNativeWidget: NativeWidget {
     startedCalendarAgent = false
     startedPopupMode = .none
 
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   // MARK: - Publish

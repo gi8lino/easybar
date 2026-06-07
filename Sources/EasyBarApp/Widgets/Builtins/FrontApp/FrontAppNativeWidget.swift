@@ -29,7 +29,7 @@ final class FrontAppNativeWidget: NativeWidget {
   func stop() {
     aeroSpaceObserver.stop()
     AeroSpaceService.shared.unregisterConsumer(rootID)
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   /// Publishes the currently focused app.

@@ -75,7 +75,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     isHovered = false
     isAdjustingSlider = false
 
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   // MARK: - Publish
@@ -83,7 +83,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   /// Publishes the current volume widget state.
   func publish() {
     let snapshot = makeSnapshot()
-    WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
+    applyNodes(renderer.makeNodes(snapshot: snapshot))
   }
 
   /// Returns the current render snapshot.

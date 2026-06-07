@@ -85,7 +85,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
     previousCPUInfo = nil
     lastSampleDate = nil
 
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   /// Reads one CPU sample when the configured interval has elapsed.
@@ -124,7 +124,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
   /// Publishes the current snapshot to the widget store.
   private func publish() {
     let snapshot = makeSnapshot()
-    WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
+    applyNodes(renderer.makeNodes(snapshot: snapshot))
   }
 
   /// Builds one render snapshot from config and current samples.

@@ -29,7 +29,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   func stop() {
     aeroSpaceObserver.stop()
     AeroSpaceService.shared.unregisterConsumer(rootID)
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   /// Publishes the currently focused AeroSpace layout mode.
@@ -48,7 +48,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
     var renderedNode = node
     renderedNode.icon = resolvedIcon(for: mode, config: config)
 
-    WidgetStore.shared.apply(root: rootID, nodes: [renderedNode])
+    applyNodes([renderedNode])
   }
 
   /// Returns the configured icon for the current layout mode.

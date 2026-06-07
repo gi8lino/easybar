@@ -87,7 +87,7 @@ final class WiFiNativeWidget: NativeWidget {
     }
 
     startedNetworkAgent = false
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   // MARK: - Publish
@@ -95,7 +95,7 @@ final class WiFiNativeWidget: NativeWidget {
   /// Publishes the current Wi-Fi nodes.
   private func publish() {
     let snapshot = makeSnapshot()
-    WidgetStore.shared.apply(root: rootID, nodes: renderer.makeNodes(snapshot: snapshot))
+    applyNodes(renderer.makeNodes(snapshot: snapshot))
   }
 
   /// Returns the current render snapshot.

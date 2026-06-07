@@ -72,7 +72,7 @@ final class FormattedClockNativeWidgetController {
   /// Stops observing events and clears the rendered node.
   func stop() {
     eventObserver.stop()
-    WidgetStore.shared.apply(root: rootID, nodes: [])
+    clearNodes()
   }
 
   private var refreshEvent: AppEvent {
@@ -90,7 +90,7 @@ final class FormattedClockNativeWidgetController {
       text: formatterCache.string(from: Date(), format: snapshot.format)
     )
 
-    WidgetStore.shared.apply(root: rootID, nodes: [node])
+    applyNodes([node])
   }
 }
 
