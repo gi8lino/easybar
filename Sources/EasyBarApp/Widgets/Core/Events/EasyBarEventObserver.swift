@@ -2,7 +2,13 @@ import Foundation
 
 /// Small helper for observing typed EasyBar events in native widgets.
 final class EasyBarEventObserver {
+  private let eventHub: EventHub
   private var task: Task<Void, Never>?
+
+  /// Creates one EasyBar event observer.
+  init(eventHub: EventHub = .shared) {
+    self.eventHub = eventHub
+  }
 
   /// Starts observing a filtered subset of EasyBar events.
   ///
@@ -49,7 +55,7 @@ final class EasyBarEventObserver {
     stop()
 
     task = Task {
-      let stream = await EventHub.shared.subscribe(
+      let stream = await eventHub.subscribe(
         eventNames: eventNames,
         widgetTargetIDs: widgetTargetIDs,
         replayLatest: replayLatest,
