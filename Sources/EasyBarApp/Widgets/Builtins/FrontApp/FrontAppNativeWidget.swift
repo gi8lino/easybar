@@ -38,9 +38,8 @@ final class FrontAppNativeWidget: NativeWidget {
     let style = config.style
     let focused = currentFocusedApp()
 
-    WidgetStore.shared.apply(
-      root: rootID,
-      nodes: makeNodes(
+    applyNodes(
+      makeNodes(
         config: config,
         placement: placement,
         style: style,

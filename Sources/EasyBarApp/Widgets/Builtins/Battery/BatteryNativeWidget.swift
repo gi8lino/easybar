@@ -94,10 +94,7 @@ final class BatteryNativeWidget: NativeWidget {
   /// Publishes the current battery snapshot.
   private func publish() {
     let snapshot = readSnapshot()
-    WidgetStore.shared.apply(
-      root: rootID,
-      nodes: renderer.makeNodes(snapshot: snapshot)
-    )
+    applyNodes(renderer.makeNodes(snapshot: snapshot))
   }
 }
 

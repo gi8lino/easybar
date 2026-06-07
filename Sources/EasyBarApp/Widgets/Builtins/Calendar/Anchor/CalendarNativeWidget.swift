@@ -103,10 +103,7 @@ final class CalendarNativeWidget: NativeWidget {
   /// Publishes the current calendar anchor nodes.
   private func publish() {
     let snapshot = currentSnapshot()
-    WidgetStore.shared.apply(
-      root: rootID,
-      nodes: renderer.makeNodes(snapshot: snapshot)
-    )
+    applyNodes(renderer.makeNodes(snapshot: snapshot))
   }
 
   // MARK: - Snapshot

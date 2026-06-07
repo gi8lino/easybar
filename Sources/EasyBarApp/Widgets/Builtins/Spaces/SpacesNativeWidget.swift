@@ -35,9 +35,6 @@ final class SpacesNativeWidget: NativeWidget {
 
   /// Publishes the current spaces widget nodes.
   private func publish() {
-    WidgetStore.shared.apply(
-      root: rootID,
-      nodes: renderer.makeNodes(snapshot: config)
-    )
+    applyNodes(renderer.makeNodes(snapshot: config))
   }
 }
