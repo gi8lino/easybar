@@ -90,140 +90,182 @@ def heading_id(name: str) -> str:
     return f"`{name}`"
 
 
-def parse_docs(text: str) -> tuple[dict[str, AliasDoc], dict[str, ClassDoc], dict[str, FunctionDoc]]:
-    aliases: dict[str, AliasDoc] = {}
-    classes: dict[str, ClassDoc] = {}
-    functions: dict[str, FunctionDoc] = {}
 
-    pending_comments: list[str] = []
-    pending_function_description = ""
-    pending_params: list[ParamDoc] = []
-    pending_returns: list[str] = []
+@dataclass
+class LuaDocParserState:
+    aliases: dict[str, AliasDoc] = field(default_factory=dict)
+    classes: dict[str, ClassDoc] = field(default_factory=dict)
+    functions: dict[str, FunctionDoc] = field(default_factory=dict)
+    pending_comments: list[str] = field(default_factory=list)
+    pending_function_description: str = ""
+    pending_params: list[ParamDoc] = field(default_factory=list)
+    pending_returns: list[str] = field(default_factory=list)
     current_alias: AliasDoc | None = None
     current_class: ClassDoc | None = None
     current_function: FunctionDoc | None = None
 
-    for raw_line in text.splitlines():
+    def consume(self, raw_line: str) -> None:
         line = raw_line.rstrip()
         comment = comment_text(line)
 
         if comment is not None and not comment.startswith("@") and not comment.startswith("|"):
-            pending_comments.append(comment)
-            continue
+            self.pending_comments.append(comment)
+            return
 
+        if self.consume_alias(line):
+            return
+        if self.consume_alias_value(line):
+            return
+        if self.consume_class(line):
+            return
+        if self.consume_field(line):
+            return
+        if self.consume_param(line):
+            return
+        if self.consume_return(line):
+            return
+        if self.consume_function(line):
+            return
+
+        self.clear_pending_function_context()
+
+    def consume_alias(self, line: str) -> bool:
         alias_match = re.match(r"---@alias\s+(\S+)(?:\s+(.+))?", line)
-        if alias_match:
-            current_alias = AliasDoc(
-                name=alias_match.group(1),
-                description=" ".join(pending_comments).strip(),
-                type_expr=(alias_match.group(2) or "").strip(),
-            )
-            aliases[current_alias.name] = current_alias
-            current_class = None
-            current_function = None
-            pending_comments = []
-            pending_function_description = ""
-            pending_params = []
-            pending_returns = []
-            continue
+        if not alias_match:
+            return False
 
+        self.current_alias = AliasDoc(
+            name=alias_match.group(1),
+            description=self.pending_description(),
+            type_expr=(alias_match.group(2) or "").strip(),
+        )
+        self.aliases[self.current_alias.name] = self.current_alias
+        self.current_class = None
+        self.current_function = None
+        self.clear_pending_function_context()
+        return True
+
+    def consume_alias_value(self, line: str) -> bool:
         alias_value_match = re.match(r"---\|\s+(.+)", line)
-        if alias_value_match and current_alias:
-            current_alias.values.append(
-                AliasValue(
-                    value=normalize_lua_literal(alias_value_match.group(1)),
-                    description=" ".join(pending_comments).strip(),
-                )
-            )
-            pending_comments = []
-            continue
+        if not alias_value_match or not self.current_alias:
+            return False
 
+        self.current_alias.values.append(
+            AliasValue(
+                value=normalize_lua_literal(alias_value_match.group(1)),
+                description=self.pending_description(),
+            )
+        )
+        self.pending_comments = []
+        return True
+
+    def consume_class(self, line: str) -> bool:
         class_match = re.match(r"---@class(?:\s+\(([^)]+)\))?\s+(\S+)", line)
-        if class_match:
-            current_class = ClassDoc(
-                name=class_match.group(2),
-                description=" ".join(pending_comments).strip(),
-                modifiers=class_match.group(1) or "",
-            )
-            classes[current_class.name] = current_class
-            current_alias = None
-            current_function = None
-            pending_comments = []
-            pending_function_description = ""
-            pending_params = []
-            pending_returns = []
-            continue
+        if not class_match:
+            return False
 
+        self.current_class = ClassDoc(
+            name=class_match.group(2),
+            description=self.pending_description(),
+            modifiers=class_match.group(1) or "",
+        )
+        self.classes[self.current_class.name] = self.current_class
+        self.current_alias = None
+        self.current_function = None
+        self.clear_pending_function_context()
+        return True
+
+    def consume_field(self, line: str) -> bool:
         field_match = re.match(r"---@field\s+(\S+)\s+([^\s]+)(?:\s+(.*))?", line)
-        if field_match and current_class:
-            name = field_match.group(1)
-            optional = name.endswith("?")
-            if optional:
-                name = name[:-1]
-            current_class.fields.append(
-                FieldDoc(
-                    name=name,
-                    type_expr=field_match.group(2),
-                    description=(field_match.group(3) or "").strip(),
-                    optional=optional,
-                )
-            )
-            pending_comments = []
-            continue
+        if not field_match or not self.current_class:
+            return False
 
-        param_match = re.match(r"---@param\s+(\S+)\s+(.+)", line)
-        if param_match:
-            name = param_match.group(1)
-            optional = name.endswith("?")
-            if optional:
-                name = name[:-1]
-            if pending_comments and not pending_function_description:
-                pending_function_description = " ".join(pending_comments).strip()
-            pending_params.append(
-                ParamDoc(
-                    name=name,
-                    type_expr=param_match.group(2).strip(),
-                    description="",
-                    optional=optional,
-                )
-            )
-            pending_comments = []
-            continue
-
-        return_match = re.match(r"---@return\s+(.+)", line)
-        if return_match:
-            if pending_comments and not pending_function_description:
-                pending_function_description = " ".join(pending_comments).strip()
-            pending_returns.append(return_match.group(1).strip())
-            pending_comments = []
-            continue
-
-        function_match = re.match(r"function\s+([A-Za-z0-9_:.]+)\s*\(", line)
-        if function_match:
-            name = function_match.group(1)
-            current_function = FunctionDoc(
+        name = field_match.group(1)
+        optional = name.endswith("?")
+        if optional:
+            name = name[:-1]
+        self.current_class.fields.append(
+            FieldDoc(
                 name=name,
-                description=pending_function_description or " ".join(pending_comments).strip(),
-                params=pending_params,
-                returns=pending_returns,
+                type_expr=field_match.group(2),
+                description=(field_match.group(3) or "").strip(),
+                optional=optional,
             )
-            functions[name] = current_function
-            current_alias = None
-            current_class = None
-            pending_comments = []
-            pending_function_description = ""
-            pending_params = []
-            pending_returns = []
-            continue
+        )
+        self.pending_comments = []
+        return True
 
-        pending_comments = []
-        pending_function_description = ""
-        pending_params = []
-        pending_returns = []
+    def consume_param(self, line: str) -> bool:
+        param_match = re.match(r"---@param\s+(\S+)\s+(.+)", line)
+        if not param_match:
+            return False
 
-    add_inline_function_fields(classes, functions)
-    return aliases, classes, functions
+        name = param_match.group(1)
+        optional = name.endswith("?")
+        if optional:
+            name = name[:-1]
+        self.capture_function_description()
+        self.pending_params.append(
+            ParamDoc(
+                name=name,
+                type_expr=param_match.group(2).strip(),
+                description="",
+                optional=optional,
+            )
+        )
+        self.pending_comments = []
+        return True
 
+    def consume_return(self, line: str) -> bool:
+        return_match = re.match(r"---@return\s+(.+)", line)
+        if not return_match:
+            return False
+
+        self.capture_function_description()
+        self.pending_returns.append(return_match.group(1).strip())
+        self.pending_comments = []
+        return True
+
+    def consume_function(self, line: str) -> bool:
+        function_match = re.match(r"function\s+([A-Za-z0-9_:.]+)\s*\(", line)
+        if not function_match:
+            return False
+
+        name = function_match.group(1)
+        self.current_function = FunctionDoc(
+            name=name,
+            description=self.pending_function_description or self.pending_description(),
+            params=self.pending_params,
+            returns=self.pending_returns,
+        )
+        self.functions[name] = self.current_function
+        self.current_alias = None
+        self.current_class = None
+        self.clear_pending_function_context()
+        return True
+
+    def capture_function_description(self) -> None:
+        if self.pending_comments and not self.pending_function_description:
+            self.pending_function_description = self.pending_description()
+
+    def pending_description(self) -> str:
+        return " ".join(self.pending_comments).strip()
+
+    def clear_pending_function_context(self) -> None:
+        self.pending_comments = []
+        self.pending_function_description = ""
+        self.pending_params = []
+        self.pending_returns = []
+
+
+def parse_docs(text: str) -> tuple[dict[str, AliasDoc], dict[str, ClassDoc], dict[str, FunctionDoc]]:
+    state = LuaDocParserState()
+
+    for raw_line in text.splitlines():
+        state.consume(raw_line)
+
+    add_inline_function_fields(state.classes, state.functions)
+    return state.aliases, state.classes, state.functions
 
 def add_inline_function_fields(classes: dict[str, ClassDoc], functions: dict[str, FunctionDoc]) -> None:
     """Turn function-valued class fields into reference docs when no body function exists."""
