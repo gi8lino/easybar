@@ -24,8 +24,13 @@ final class CalendarEventComposerPanelController: ObservableObject {
   private var composer: CalendarEventComposer?
   private let dependencies: CalendarEventComposerDependencies
 
-  /// Creates one composer panel controller.
-  init(dependencies: CalendarEventComposerDependencies = .live()) {
+  /// Creates one composer panel controller with the production dependency set.
+  init() {
+    self.dependencies = .live()
+  }
+
+  /// Creates one composer panel controller with explicit dependencies.
+  init(dependencies: CalendarEventComposerDependencies) {
     self.dependencies = dependencies
   }
 
