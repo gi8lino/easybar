@@ -20,6 +20,16 @@ struct WidgetPopupContentResolver {
     return contentKind != .none
   }
 
+  /// Returns whether the resolved popup should use the native popup anchor adapter.
+  var usesNativePopupAnchor: Bool {
+    switch contentKind {
+    case .calendarUpcoming, .calendarMonth:
+      return true
+    case .none, .genericNodePopup:
+      return false
+    }
+  }
+
   /// Builds the popup panel content for the resolved content kind.
   func makeContent<RegularContent: View, HoverBackground: View>(
     regularContent: RegularContent,

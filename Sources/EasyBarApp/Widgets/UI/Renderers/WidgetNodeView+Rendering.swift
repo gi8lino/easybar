@@ -88,13 +88,9 @@ extension WidgetNodeView {
 
   var rowOrGroupView: some View {
     Group {
-      if node.isCalendarRoot {
-        if nodeCanPresentPopup {
-          nativeCalendarAnchorView {
-            childRow
-          }
-        } else {
-          styledContainerSurface(childRow)
+      if popupContentResolver.usesNativePopupAnchor {
+        nativePopupAnchorView {
+          childRow
         }
       } else if hasPopupChildren {
         popupAnchorSurface(childRow)
@@ -112,8 +108,8 @@ extension WidgetNodeView {
     return AnyView(styledNodeSurface(itemContent))
   }
 
-  /// Builds the native calendar anchor with popup tracking.
-  func nativeCalendarAnchorView<Content: View>(
+  /// Builds a native popup anchor with AppKit popup tracking.
+  func nativePopupAnchorView<Content: View>(
     @ViewBuilder content: () -> Content
   ) -> some View {
     content()
