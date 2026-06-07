@@ -12,20 +12,7 @@ func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppCont
     context: context
   )
 
-  switch response {
-  case .accepted:
-    break
-
-  case .rejected:
-    throw rejectedResponseError(response, fallback: "command rejected")
-
-  case .configValidated:
-    throw AppError.message("unexpected config validation response")
-
-  case .metrics:
-    throw AppError.message("unexpected metrics response")
-  }
-
+  try expectAccepted(response, fallback: "command rejected")
   context.debug("command sent")
 }
 
@@ -36,17 +23,7 @@ func fetchMetricsSnapshot(from socketPath: String, context: AppContext) throws
   context.debug("requesting metrics snapshot from \(socketPath)")
 
   let response = try sendIPCRequest(.makeMetrics(), to: socketPath, context: context)
-
-  switch response {
-  case .metrics(let metrics):
-    return metrics
-
-  case .rejected:
-    throw rejectedResponseError(response, fallback: "metrics unavailable")
-
-  case .accepted, .configValidated:
-    throw AppError.message("metrics unavailable")
-  }
+  return try expectMetrics(response, fallback: "metrics unavailable")
 }
 
 /// Streams live metrics.
@@ -58,21 +35,14 @@ func streamMetrics(to socketPath: String, context: AppContext) throws {
   defer { terminal.restore() }
 
   try client.stream(request: .makeMetrics(watch: true)) { message in
-    switch message {
-    case .metrics(let snapshot):
-      history.append(snapshot)
-      fputs(
-        terminal.redrawPrefix + MetricsRenderer.watchText(snapshot, history: history),
-        stdout
-      )
-      fflush(stdout)
+    guard let snapshot = try metricsSnapshot(fromStreamMessage: message) else { return }
 
-    case .rejected:
-      throw rejectedResponseError(message, fallback: "metrics rejected")
-
-    case .accepted, .configValidated:
-      return
-    }
+    history.append(snapshot)
+    fputs(
+      terminal.redrawPrefix + MetricsRenderer.watchText(snapshot, history: history),
+      stdout
+    )
+    fflush(stdout)
   }
 
   context.debug("metrics stream ended")
@@ -94,21 +64,10 @@ func validateConfig(configPath: String?, socketPath: String, context: AppContext
     context: context
   )
 
-  switch response {
-  case .configValidated(let validatedPath, let warnings):
-    fputs("config valid: \(validatedPath)\n", stdout)
-    for warning in warnings {
-      fputs("warning: \(warning)\n", stdout)
-    }
-
-  case .rejected:
-    throw rejectedResponseError(response, fallback: "config validation failed")
-
-  case .accepted:
-    throw AppError.message("config validation did not return a result")
-
-  case .metrics:
-    throw AppError.message("unexpected metrics response")
+  let validation = try expectConfigValidated(response, fallback: "config validation failed")
+  fputs("config valid: \(validation.path)\n", stdout)
+  for warning in validation.warnings {
+    fputs("warning: \(warning)\n", stdout)
   }
 }
 
@@ -140,6 +99,70 @@ private func sendIPCRequest(
   )
 
   return response
+}
+
+/// Verifies that one IPC response accepted a fire-and-forget command.
+private func expectAccepted(_ response: IPC.Message, fallback: String) throws {
+  switch response {
+  case .accepted:
+    return
+
+  case .rejected:
+    throw rejectedResponseError(response, fallback: fallback)
+
+  case .configValidated:
+    throw AppError.message("unexpected config validation response")
+
+  case .metrics:
+    throw AppError.message("unexpected metrics response")
+  }
+}
+
+/// Extracts one metrics snapshot from an IPC response.
+private func expectMetrics(_ response: IPC.Message, fallback: String) throws -> IPC.MetricsSnapshot {
+  switch response {
+  case .metrics(let metrics):
+    return metrics
+
+  case .rejected:
+    throw rejectedResponseError(response, fallback: fallback)
+
+  case .accepted, .configValidated:
+    throw AppError.message(fallback)
+  }
+}
+
+/// Extracts one config validation result from an IPC response.
+private func expectConfigValidated(_ response: IPC.Message, fallback: String) throws
+  -> (path: String, warnings: [String])
+{
+  switch response {
+  case .configValidated(let validatedPath, let warnings):
+    return (validatedPath, warnings)
+
+  case .rejected:
+    throw rejectedResponseError(response, fallback: fallback)
+
+  case .accepted:
+    throw AppError.message("config validation did not return a result")
+
+  case .metrics:
+    throw AppError.message("unexpected metrics response")
+  }
+}
+
+/// Returns a snapshot for metrics stream updates and ignores non-data control messages.
+private func metricsSnapshot(fromStreamMessage message: IPC.Message) throws -> IPC.MetricsSnapshot? {
+  switch message {
+  case .metrics(let snapshot):
+    return snapshot
+
+  case .rejected:
+    throw rejectedResponseError(message, fallback: "metrics rejected")
+
+  case .accepted, .configValidated:
+    return nil
+  }
 }
 
 /// Builds one AppError from a rejected IPC response and a command-specific fallback.
