@@ -55,17 +55,19 @@ jobs:
         run: make check-generated
 
   docs:
-    runs-on: macos-26
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Select pinned Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
-          xcode-version: "26"
+          python-version: "3.x"
 
       - name: Build docs
         run: make build-docs
+
+
 
 
