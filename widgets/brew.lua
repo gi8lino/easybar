@@ -593,7 +593,7 @@ local function upgrade_now()
 	local command = [[
 tmp="${TMPDIR:-/tmp}/easybar-brew-upgrade.$$"
 
-brew upgrade >"$tmp" 2>&1
+HOMEBREW_NO_ASK=1 brew upgrade --yes >"$tmp" 2>&1
 upgrade_rc=$?
 
 if [ "$upgrade_rc" -ne 0 ]; then
