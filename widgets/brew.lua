@@ -15,8 +15,14 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
 local EXEC = {
-	brew = {
+	check = {
 		timeout_seconds = 30,
+	},
+	update = {
+		timeout_seconds = 5 * 60,
+	},
+	upgrade = {
+		timeout_seconds = 30 * 60,
 	},
 }
 
@@ -486,7 +492,7 @@ local function render()
 end
 
 --- Runs a Homebrew command asynchronously and updates widget state.
-local function run_brew_async(status_label, phase, command, on_success)
+local function run_brew_async(status_label, phase, command, options, on_success)
 	if running then
 		log_debug("run_brew_async skipped", "status=" .. tostring(status_label))
 		return
@@ -507,7 +513,7 @@ local function run_brew_async(status_label, phase, command, on_success)
 
 	render()
 
-	local token = easybar.exec_async(command, EXEC.brew, function(output, code)
+	local token = easybar.exec_async(command, options or EXEC.check, function(output, code)
 		running = false
 
 		log_debug(
@@ -554,6 +560,7 @@ local function check_outdated(status_label)
 		status_label or "Checking outdated packages…",
 		"checking",
 		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
+		EXEC.check,
 		apply_outdated_json
 	)
 end
@@ -576,7 +583,7 @@ rm -f "$tmp"
 HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
 ]]
 
-	run_brew_async("Updating Homebrew…", "updating", command, apply_outdated_json)
+	run_brew_async("Updating Homebrew…", "updating", command, EXEC.update, apply_outdated_json)
 end
 
 --- Updates Homebrew only when the widget is due.
@@ -606,7 +613,7 @@ rm -f "$tmp"
 HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
 ]]
 
-	run_brew_async("Upgrading packages…", "upgrading", command, apply_outdated_json)
+	run_brew_async("Upgrading packages…", "upgrading", command, EXEC.upgrade, apply_outdated_json)
 end
 
 --- Returns a fresh button background configuration.
