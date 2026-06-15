@@ -460,12 +460,7 @@ extension AeroSpaceService {
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
-      let spacesChanged = self.spaces != snapshot.spaces
-      let focusedAppChanged = self.focusedApp != snapshot.focusedApp
-      let focusedAppIDChanged = self.focusedAppID != snapshot.focusedApp?.id
-      let layoutChanged = self.focusedLayoutMode != snapshot.focusedLayoutMode
-
-      guard spacesChanged || focusedAppChanged || focusedAppIDChanged || layoutChanged else {
+      guard self.hasStateChanged(for: snapshot) else {
         self.logger.debug("aerospace reloadState end without changes")
         return
       }
@@ -486,6 +481,14 @@ extension AeroSpaceService {
 
       self.logger.debug("aerospace reloadState end with changes")
     }
+  }
+
+  /// Returns whether a freshly loaded snapshot differs from the currently published state.
+  private func hasStateChanged(for snapshot: AeroSpaceSnapshot) -> Bool {
+    return spaces != snapshot.spaces
+      || focusedApp != snapshot.focusedApp
+      || focusedAppID != snapshot.focusedApp?.id
+      || focusedLayoutMode != snapshot.focusedLayoutMode
   }
 }
 
