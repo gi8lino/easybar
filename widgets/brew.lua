@@ -14,6 +14,8 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
+local BREW_LOG_FILE_NAME = "brew-widget.log"
+local BREW_LOG_MAX_RUNS = 8
 local EXEC = {
 	check = {
 		timeout_seconds = 30,
@@ -101,6 +103,11 @@ end
 --- Returns a trimmed string value.
 local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+--- Quotes one value for safe use in a POSIX shell assignment.
+local function shell_quote(value)
+	return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
 end
 
 --- Returns whether the widget should run another Homebrew update now.
@@ -567,23 +574,104 @@ end
 
 --- Updates Homebrew, then checks outdated packages.
 local function update_now()
-	local command = [[
-tmp="${TMPDIR:-/tmp}/easybar-brew-update.$$"
+	local command = string.format(
+		[[
+log_dir=%s
+log_file="$log_dir/%s"
+max_runs=%d
+json_tmp="${TMPDIR:-/tmp}/easybar-brew-outdated.$$"
+prune_tmp="${TMPDIR:-/tmp}/easybar-brew-log.$$"
 
-brew update >"$tmp" 2>&1
+mkdir -p "$log_dir"
+
+prune_brew_log() {
+  [ -f "$log_file" ] || return 0
+  awk -v max="$max_runs" '
+    /^=== .* brew-widget .* start ===$/ { runs = runs + 1 }
+    { lines[NR] = $0 }
+    END {
+      start = 1
+      if (runs > max) {
+        target = runs - max + 1
+        seen = 0
+        for (i = 1; i <= NR; i++) {
+          if (lines[i] ~ /^=== .* brew-widget .* start ===$/) {
+            seen = seen + 1
+            if (seen == target) {
+              start = i
+              break
+            }
+          }
+        }
+      }
+      for (i = start; i <= NR; i++) {
+        print lines[i]
+      }
+    }
+  ' "$log_file" > "$prune_tmp" && mv "$prune_tmp" "$log_file"
+}
+
+{
+  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update start ==="
+  echo "$ brew update"
+} >>"$log_file" 2>&1
+
+brew update >>"$log_file" 2>&1
 update_rc=$?
 
 if [ "$update_rc" -ne 0 ]; then
-  tail -n 40 "$tmp"
-  rm -f "$tmp"
+  {
+    echo "brew update exit $update_rc"
+    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update failed ==="
+  } >>"$log_file" 2>&1
+  tail -n 80 "$log_file"
+  printf '\nLog: %%s\n' "$log_file"
+  prune_brew_log
+  rm -f "$json_tmp" "$prune_tmp"
   exit "$update_rc"
 fi
 
-rm -f "$tmp"
-HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
-]]
+{
+  echo "brew update exit 0"
+  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2"
+} >>"$log_file" 2>&1
 
-	run_brew_async("Updating Homebrew…", "updating", command, EXEC.update, apply_outdated_json)
+HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2 >"$json_tmp" 2>>"$log_file"
+outdated_rc=$?
+
+if [ "$outdated_rc" -ne 0 ]; then
+  {
+    echo "brew outdated exit $outdated_rc"
+    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update failed ==="
+  } >>"$log_file" 2>&1
+  tail -n 80 "$log_file"
+  printf '\nLog: %%s\n' "$log_file"
+  prune_brew_log
+  rm -f "$json_tmp" "$prune_tmp"
+  exit "$outdated_rc"
+fi
+
+{
+  echo "brew outdated exit 0"
+  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update ok ==="
+} >>"$log_file" 2>&1
+
+cat "$json_tmp"
+prune_brew_log
+rm -f "$json_tmp" "$prune_tmp"
+]],
+		shell_quote(easybar.log_dir),
+		BREW_LOG_FILE_NAME,
+		BREW_LOG_MAX_RUNS
+	)
+
+	run_brew_async(
+		"Updating Homebrew… writing " .. BREW_LOG_FILE_NAME,
+		"updating",
+		command,
+		EXEC.update,
+		apply_outdated_json
+	)
 end
 
 --- Updates Homebrew only when the widget is due.
@@ -597,23 +685,124 @@ end
 
 --- Upgrades packages, then checks outdated packages.
 local function upgrade_now()
-	local command = [[
-tmp="${TMPDIR:-/tmp}/easybar-brew-upgrade.$$"
+	local command = string.format(
+		[[
+log_dir=%s
+log_file="$log_dir/%s"
+max_runs=%d
+json_tmp="${TMPDIR:-/tmp}/easybar-brew-outdated.$$"
+prune_tmp="${TMPDIR:-/tmp}/easybar-brew-log.$$"
 
-HOMEBREW_NO_ASK=1 brew upgrade --yes >"$tmp" 2>&1
+mkdir -p "$log_dir"
+
+prune_brew_log() {
+  [ -f "$log_file" ] || return 0
+  awk -v max="$max_runs" '
+    /^=== .* brew-widget .* start ===$/ { runs = runs + 1 }
+    { lines[NR] = $0 }
+    END {
+      start = 1
+      if (runs > max) {
+        target = runs - max + 1
+        seen = 0
+        for (i = 1; i <= NR; i++) {
+          if (lines[i] ~ /^=== .* brew-widget .* start ===$/) {
+            seen = seen + 1
+            if (seen == target) {
+              start = i
+              break
+            }
+          }
+        }
+      }
+      for (i = start; i <= NR; i++) {
+        print lines[i]
+      }
+    }
+  ' "$log_file" > "$prune_tmp" && mv "$prune_tmp" "$log_file"
+}
+
+{
+  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade start ==="
+  echo "$ brew update"
+} >>"$log_file" 2>&1
+
+brew update >>"$log_file" 2>&1
+update_rc=$?
+
+if [ "$update_rc" -ne 0 ]; then
+  {
+    echo "brew update exit $update_rc"
+    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
+  } >>"$log_file" 2>&1
+  tail -n 80 "$log_file"
+  printf '\nLog: %%s\n' "$log_file"
+  prune_brew_log
+  rm -f "$json_tmp" "$prune_tmp"
+  exit "$update_rc"
+fi
+
+{
+  echo "brew update exit 0"
+  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes"
+} >>"$log_file" 2>&1
+
+HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes >>"$log_file" 2>&1
 upgrade_rc=$?
 
 if [ "$upgrade_rc" -ne 0 ]; then
-  tail -n 40 "$tmp"
-  rm -f "$tmp"
+  {
+    echo "brew upgrade exit $upgrade_rc"
+    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
+  } >>"$log_file" 2>&1
+  tail -n 80 "$log_file"
+  printf '\nLog: %%s\n' "$log_file"
+  prune_brew_log
+  rm -f "$json_tmp" "$prune_tmp"
   exit "$upgrade_rc"
 fi
 
-rm -f "$tmp"
-HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2
-]]
+{
+  echo "brew upgrade exit 0"
+  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2"
+} >>"$log_file" 2>&1
 
-	run_brew_async("Upgrading packages…", "upgrading", command, EXEC.upgrade, apply_outdated_json)
+HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2 >"$json_tmp" 2>>"$log_file"
+outdated_rc=$?
+
+if [ "$outdated_rc" -ne 0 ]; then
+  {
+    echo "brew outdated exit $outdated_rc"
+    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
+  } >>"$log_file" 2>&1
+  tail -n 80 "$log_file"
+  printf '\nLog: %%s\n' "$log_file"
+  prune_brew_log
+  rm -f "$json_tmp" "$prune_tmp"
+  exit "$outdated_rc"
+fi
+
+{
+  echo "brew outdated exit 0"
+  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade ok ==="
+} >>"$log_file" 2>&1
+
+cat "$json_tmp"
+prune_brew_log
+rm -f "$json_tmp" "$prune_tmp"
+]],
+		shell_quote(easybar.log_dir),
+		BREW_LOG_FILE_NAME,
+		BREW_LOG_MAX_RUNS
+	)
+
+	run_brew_async(
+		"Updating and upgrading… writing " .. BREW_LOG_FILE_NAME,
+		"upgrading",
+		command,
+		EXEC.upgrade,
+		apply_outdated_json
+	)
 end
 
 --- Returns a fresh button background configuration.
@@ -668,7 +857,7 @@ brew_widget = easybar.add(easybar.kind.item, WIDGET_ID, {
 	},
 	on_interval = function()
 		if not running then
-			update_now()
+			check_outdated("Checking outdated packages…")
 		end
 	end,
 })
@@ -768,4 +957,4 @@ brew_widget:subscribe(easybar.events.forced, function()
 	end
 end)
 
-update_now()
+check_outdated("Checking outdated packages…")

@@ -256,4 +256,53 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
     XCTAssertEqual(rootNode(in: initialUpdate)?.text, "2")
   }
 
+  func testPublicWidgetApiExposesConfiguredLogDirectory() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+
+    try """
+    easybar.add("item", "brew", {
+    	position = "right",
+    	label = easybar.log_dir,
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let logger = ProcessLogger(
+      label: "lua.public-log-dir.test",
+      minimumLevel: .error
+    )
+    let runtimeController = LuaProcessController(logger: logger)
+
+    guard let runtimePath = runtimeController.resolvedRuntimePath() else {
+      XCTFail("Missing bundled runtime.lua")
+      return
+    }
+
+    let recorder = RuntimeUpdateRecorder()
+    var environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
+    environment[ConfigSnapshot.luaLoggingDirectoryEnvironmentKey] = loggingDirectoryURL.path
+
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: environment,
+      autoRespondToCommands: true
+    )
+    defer {
+      runtime.stop()
+    }
+
+    let initialUpdate = try await nextTreeUpdate(
+      from: recorder,
+      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+    )
+    XCTAssertEqual(rootNode(in: initialUpdate)?.text, loggingDirectoryURL.path)
+  }
+
 }

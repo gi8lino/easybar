@@ -53,6 +53,9 @@ local KINDS = {
 	spaces = "spaces",
 }
 
+--- Internal environment variable containing the configured logging directory.
+local LOG_DIR_ENV = "EASYBAR_INTERNAL_LOGGING_DIRECTORY"
+
 --- Joins log arguments into one message string.
 local function join_message(...)
 	local parts = {}
@@ -76,6 +79,16 @@ local function normalize_log_level(level)
 	end
 
 	return string.upper(normalized)
+end
+
+--- Returns the configured log directory exposed to Lua widgets.
+local function configured_log_dir()
+	local configured = os.getenv(LOG_DIR_ENV)
+	if type(configured) == "string" and configured ~= "" then
+		return configured
+	end
+
+	return (os.getenv("HOME") or "/tmp") .. "/.local/state/easybar"
 end
 
 --- Returns one shallow copy of props without `on_interval`.
@@ -172,6 +185,7 @@ function M.new(log, hooks)
 		subscribe = subscriptions.subscribe,
 		handle_event = subscriptions.handle_event,
 		required_events = required_events,
+		log_dir = configured_log_dir(),
 		theme = theme_module.current(),
 	}
 
@@ -300,6 +314,7 @@ function M.new(log, hooks)
 		widget_api.json = json_module
 		widget_api.kind = KINDS
 		widget_api.level = LOG_LEVELS
+		widget_api.log_dir = api.log_dir
 		widget_api.theme = theme_module.current()
 
 		--- Writes one widget log line through the host logger.

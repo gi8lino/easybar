@@ -11,13 +11,21 @@ extension Config {
 }
 
 extension ConfigSnapshot {
+  /// Internal environment key used to expose the resolved logging directory to Lua widgets.
+  static let luaLoggingDirectoryEnvironmentKey = "EASYBAR_INTERNAL_LOGGING_DIRECTORY"
+
   /// Returns environment values required by the Lua runtime.
   func luaThemeEnvironment() -> [String: String] {
+    var environment = [
+      Self.luaLoggingDirectoryEnvironmentKey: logging.directory
+    ]
+
     guard let value = luaThemeJSONString() else {
-      return [:]
+      return environment
     }
 
-    return [Config.luaThemeEnvironmentKey: value]
+    environment[Config.luaThemeEnvironmentKey] = value
+    return environment
   }
 
   /// Encodes the resolved active theme for Lua widgets.

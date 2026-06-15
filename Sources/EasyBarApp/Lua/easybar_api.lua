@@ -494,6 +494,7 @@
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
 ---@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
+---@field log_dir string Configured EasyBar logging directory from `[logging].directory`.
 ---@field remove fun(id: string) Removes one node and all descendants by id.
 ---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
 ---@field unset fun(id: string, paths: string|string[]) Removes one or more nested property paths from one node by id.
@@ -608,6 +609,10 @@ EasyBar.level = {}
 ---All supported EasyBar kind constants.
 ---@type EasyBarKinds
 EasyBar.kind = {}
+
+---Configured EasyBar logging directory from `[logging].directory`.
+---@type string
+EasyBar.log_dir = ""
 
 ---Active resolved EasyBar theme.
 ---@type EasyBarTheme
