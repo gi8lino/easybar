@@ -133,7 +133,13 @@ help: ## Display this help.
 generate: generate-theme-tokens generate-event-catalog generate-docs ## Generate all checked-in generated artifacts.
 
 check-generated: generate ## Verify all checked-in generated artifacts are committed.
-	@git diff --exit-code
+	@if ! git diff --quiet; then \
+		echo "Generated artifacts are out of date:"; \
+		git diff --name-only; \
+		echo; \
+		echo "Run 'make generate' and commit the result."; \
+		git diff --exit-code; \
+	fi
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
 	@python3 scripts/generate/theme_tokens.py
@@ -458,7 +464,6 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
 
 
 
