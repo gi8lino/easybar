@@ -141,12 +141,17 @@ final class AppController {
     terminationRequestTask = Task { [weak self] in
       guard let self else { return }
 
-      await self.stopAndWait()
+      await self.completeTerminationRequest(completion: completion)
+    }
+  }
 
-      await MainActor.run {
-        self.terminationRequestTask = nil
-        completion()
-      }
+  /// Completes graceful shutdown before handing control back to AppKit termination.
+  private func completeTerminationRequest(completion: @escaping @MainActor () -> Void) async {
+    await stopAndWait()
+
+    await MainActor.run {
+      terminationRequestTask = nil
+      completion()
     }
   }
 
@@ -167,9 +172,14 @@ final class AppController {
       queue: .main
     ) { [weak self] _ in
       Task { @MainActor [weak self] in
-        self?.handlePostConfigReloadUI()
+        self?.handleConfigReloadNotification()
       }
     }
+  }
+
+  /// Handles one runtime config reload completion notification.
+  private func handleConfigReloadNotification() {
+    handlePostConfigReloadUI()
   }
 
   /// Keeps the config error window in sync with the current config state.
@@ -222,29 +232,43 @@ final class AppController {
         networkAgentClient: services.networkAgentClient
       )
     )
-    controller.onRefresh = { [weak self] in
-      guard let self else { return }
-
-      Task {
-        await self.runtimeCoordinator.refreshRuntime()
-      }
-    }
-    controller.onReloadConfig = { [weak self] in
-      guard let self else { return }
-
-      Task {
-        await self.runtimeCoordinator.reloadConfig()
-      }
-    }
-    controller.onRestartLuaRuntime = { [weak self] in
-      guard let self else { return }
-
-      Task {
-        await self.runtimeCoordinator.restartLuaRuntime()
-      }
-    }
+    installBarWindowActions(on: controller)
     controller.present()
     barWindowController = controller
+  }
+
+  /// Wires user-facing bar actions to runtime commands.
+  private func installBarWindowActions(on controller: BarWindowController) {
+    controller.onRefresh = { [weak self] in
+      self?.scheduleRuntimeRefresh()
+    }
+    controller.onReloadConfig = { [weak self] in
+      self?.scheduleConfigReload()
+    }
+    controller.onRestartLuaRuntime = { [weak self] in
+      self?.scheduleLuaRuntimeRestart()
+    }
+  }
+
+  /// Schedules a runtime refresh from a synchronous UI callback.
+  private func scheduleRuntimeRefresh() {
+    Task {
+      await runtimeCoordinator.refreshRuntime()
+    }
+  }
+
+  /// Schedules a config reload from a synchronous UI callback.
+  private func scheduleConfigReload() {
+    Task {
+      await runtimeCoordinator.reloadConfig()
+    }
+  }
+
+  /// Schedules a Lua runtime restart from a synchronous UI callback.
+  private func scheduleLuaRuntimeRestart() {
+    Task {
+      await runtimeCoordinator.restartLuaRuntime()
+    }
   }
 
   /// Logs one startup snapshot so service-vs-local differences are visible.
