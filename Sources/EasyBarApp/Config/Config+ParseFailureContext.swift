@@ -155,38 +155,16 @@ extension Config {
 
   /// Finds the first assignment operator outside strings and comments.
   private func assignmentIndex(in line: String) -> String.Index? {
-    var inSingleQuotedString = false
-    var inDoubleQuotedString = false
-    var escaped = false
+    var scanner = TOMLLineScanner()
 
     for index in line.indices {
       let character = line[index]
 
-      if escaped {
-        escaped = false
-        continue
-      }
-
-      if character == "\\" && inDoubleQuotedString {
-        escaped = true
-        continue
-      }
-
-      if character == "\"" && !inSingleQuotedString {
-        inDoubleQuotedString.toggle()
-        continue
-      }
-
-      if character == "'" && !inDoubleQuotedString {
-        inSingleQuotedString.toggle()
-        continue
-      }
-
-      if character == "#" && !inSingleQuotedString && !inDoubleQuotedString {
+      if scanner.consume(character) == .commentStart {
         return nil
       }
 
-      if character == "=" && !inSingleQuotedString && !inDoubleQuotedString {
+      if character == "=" && scanner.isOutsideString {
         return index
       }
     }
@@ -197,36 +175,10 @@ extension Config {
   /// Removes an inline comment while preserving hashes inside strings.
   private func trimInlineComment(from value: String) -> String {
     var result = ""
-    var inSingleQuotedString = false
-    var inDoubleQuotedString = false
-    var escaped = false
+    var scanner = TOMLLineScanner()
 
     for character in value {
-      if escaped {
-        result.append(character)
-        escaped = false
-        continue
-      }
-
-      if character == "\\" && inDoubleQuotedString {
-        result.append(character)
-        escaped = true
-        continue
-      }
-
-      if character == "\"" && !inSingleQuotedString {
-        inDoubleQuotedString.toggle()
-        result.append(character)
-        continue
-      }
-
-      if character == "'" && !inDoubleQuotedString {
-        inSingleQuotedString.toggle()
-        result.append(character)
-        continue
-      }
-
-      if character == "#" && !inSingleQuotedString && !inDoubleQuotedString {
+      if scanner.consume(character) == .commentStart {
         break
       }
 
@@ -234,5 +186,49 @@ extension Config {
     }
 
     return result
+  }
+}
+
+private enum TOMLLineToken {
+  case content
+  case commentStart
+}
+
+/// Tracks the minimal TOML string state needed to ignore comments and assignments inside strings.
+private struct TOMLLineScanner {
+  private var inSingleQuotedString = false
+  private var inDoubleQuotedString = false
+  private var escaped = false
+
+  var isOutsideString: Bool {
+    !inSingleQuotedString && !inDoubleQuotedString
+  }
+
+  mutating func consume(_ character: Character) -> TOMLLineToken {
+    if escaped {
+      escaped = false
+      return .content
+    }
+
+    if character == "\\" && inDoubleQuotedString {
+      escaped = true
+      return .content
+    }
+
+    if character == "\"" && !inSingleQuotedString {
+      inDoubleQuotedString.toggle()
+      return .content
+    }
+
+    if character == "'" && !inDoubleQuotedString {
+      inSingleQuotedString.toggle()
+      return .content
+    }
+
+    if character == "#" && isOutsideString {
+      return .commentStart
+    }
+
+    return .content
   }
 }

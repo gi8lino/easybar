@@ -159,6 +159,50 @@ final class ConfigLoaderPathTests: ConfigLoaderTestCase {
     XCTAssertEqual(loadedState.snapshot.logging.level, .debug)
   }
 
+  /// Verifies that parse errors include the nearest table path and failing key.
+  func testParseFailureContextUsesNearestCommentedTableHeader() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-table-context.toml")
+
+    try writeConfig(
+      """
+      [logging] # logging settings
+      level = "debug" trailing
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard let configError = error as? ConfigError else {
+        return XCTFail("Expected ConfigError, got \(error)")
+      }
+
+      XCTAssertEqual(configError.problemItem, "[logging].level")
+      XCTAssertEqual(configError.problemValue, #""debug" trailing"#)
+    }
+  }
+
+  /// Verifies that parse-error value context preserves hashes inside strings.
+  func testParseFailureContextPreservesQuotedHashInValue() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-value-context.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "de#bug" trailing # outer comment
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard let configError = error as? ConfigError else {
+        return XCTFail("Expected ConfigError, got \(error)")
+      }
+
+      XCTAssertEqual(configError.problemItem, "[logging].level")
+      XCTAssertEqual(configError.problemValue, #""de#bug" trailing"#)
+    }
+  }
+
   /// Verifies that reload expands tilde paths from config file.
   func testReloadExpandsTildePathsFromConfigFile() throws {
     let config = Config.makeUnloadedConfig()
