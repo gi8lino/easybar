@@ -7,30 +7,26 @@ extension CalendarMonthPopupView {
   /// Builds the configured popup layout.
   @ViewBuilder
   var popupLayoutView: some View {
-    switch config.layout {
-    case .calendarAppointmentsHorizontal:
+    if isHorizontalLayout {
       HStack(alignment: .top, spacing: horizontalContentSpacing) {
-        calendarSectionView
-        agendaContainerView
+        orderedPopupSectionViews
       }
-
-    case .appointmentsCalendarHorizontal:
-      HStack(alignment: .top, spacing: horizontalContentSpacing) {
-        agendaContainerView
-        calendarSectionView
-      }
-
-    case .calendarAppointmentsVertical:
+    } else {
       VStack(alignment: .leading, spacing: verticalContentSpacing) {
-        calendarSectionView
-        agendaContainerView
+        orderedPopupSectionViews
       }
+    }
+  }
 
-    case .appointmentsCalendarVertical:
-      VStack(alignment: .leading, spacing: verticalContentSpacing) {
-        agendaContainerView
-        calendarSectionView
-      }
+  /// Builds the popup sections in the configured order.
+  @ViewBuilder
+  var orderedPopupSectionViews: some View {
+    if isCalendarFirstLayout {
+      calendarSectionView
+      agendaContainerView
+    } else {
+      agendaContainerView
+      calendarSectionView
     }
   }
 
@@ -147,6 +143,16 @@ extension CalendarMonthPopupView {
   /// Returns whether the current popup layout is vertical.
   var isVerticalLayout: Bool {
     return !isHorizontalLayout
+  }
+
+  /// Returns whether the calendar section appears before the agenda section.
+  var isCalendarFirstLayout: Bool {
+    switch config.layout {
+    case .calendarAppointmentsHorizontal, .calendarAppointmentsVertical:
+      return true
+    case .appointmentsCalendarHorizontal, .appointmentsCalendarVertical:
+      return false
+    }
   }
 
   /// Returns the minimum height of the appointments area.
