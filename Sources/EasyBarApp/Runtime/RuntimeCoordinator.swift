@@ -137,51 +137,11 @@ actor RuntimeCoordinator {
       return
     }
 
-    guard await runLifecycleStep(generation: generation, operation: operation, configureLogging)
-    else {
-      return
-    }
-
     guard
-      await runLifecycleStep(
-        generation: generation, operation: operation,
-        {
-          await MainActor.run {
-            services.applyRuntimeConfiguration(result.snapshot)
-          }
-        })
-    else {
-      return
-    }
-
-    guard await runLifecycleStep(generation: generation, operation: operation, widgetEngine.reload)
-    else {
-      return
-    }
-
-    guard
-      await runLifecycleStep(
-        generation: generation, operation: operation,
-        {
-          await MainActor.run {
-            services.nativeWidgetRegistry.reload(snapshot: result.snapshot)
-          }
-        })
-    else {
-      return
-    }
-
-    guard
-      await runLifecycleStep(generation: generation, operation: operation, restartConfigWatcher)
-    else {
-      return
-    }
-
-    guard
-      await runLifecycleStep(
+      await runConfigReloadSteps(
+        result: result,
         generation: generation,
-        operation: operation,
-        reloadSocketServerConfiguration
+        operation: operation
       )
     else {
       return
@@ -202,6 +162,59 @@ actor RuntimeCoordinator {
 
     logger.info("\(operation.rawValue) end")
     await finishLifecycleOperation(operation)
+  }
+
+  /// Applies one successfully loaded config snapshot across runtime collaborators.
+  private func runConfigReloadSteps(
+    result: ConfigManager.ReloadResult,
+    generation: UInt64,
+    operation: RuntimeLifecycleOperation
+  ) async -> Bool {
+    guard await runLifecycleStep(generation: generation, operation: operation, configureLogging)
+    else {
+      return false
+    }
+
+    guard
+      await runLifecycleStep(
+        generation: generation, operation: operation,
+        {
+          await MainActor.run {
+            services.applyRuntimeConfiguration(result.snapshot)
+          }
+        })
+    else {
+      return false
+    }
+
+    guard await runLifecycleStep(generation: generation, operation: operation, widgetEngine.reload)
+    else {
+      return false
+    }
+
+    guard
+      await runLifecycleStep(
+        generation: generation, operation: operation,
+        {
+          await MainActor.run {
+            services.nativeWidgetRegistry.reload(snapshot: result.snapshot)
+          }
+        })
+    else {
+      return false
+    }
+
+    guard
+      await runLifecycleStep(generation: generation, operation: operation, restartConfigWatcher)
+    else {
+      return false
+    }
+
+    return await runLifecycleStep(
+      generation: generation,
+      operation: operation,
+      reloadSocketServerConfiguration
+    )
   }
 
   /// Restarts the Lua/widget runtime and reapplies native widgets afterward.
