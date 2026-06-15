@@ -113,7 +113,7 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
-        prepare-version build bundle package release app cli validate-config fmt test \
+        prepare-version build bundle package release app cli validate-config fmt lint test \
         clean clean-dist run run-debug run-trace stop icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -174,6 +174,9 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
+
+lint: ## Lint Swift source formatting without modifying files.
+	@swift format lint --recursive .
 
 test: generate-theme-tokens generate-event-catalog generate-swift-env ## Run the Swift test suite.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
@@ -455,7 +458,6 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
 
 
 
