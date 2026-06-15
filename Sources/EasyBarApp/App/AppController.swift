@@ -172,14 +172,9 @@ final class AppController {
       queue: .main
     ) { [weak self] _ in
       Task { @MainActor [weak self] in
-        self?.handleConfigReloadNotification()
+        self?.handlePostConfigReloadUI()
       }
     }
-  }
-
-  /// Handles one runtime config reload completion notification.
-  private func handleConfigReloadNotification() {
-    handlePostConfigReloadUI()
   }
 
   /// Keeps the config error window in sync with the current config state.
