@@ -60,6 +60,22 @@ actor MetricsCoordinator {
     var lastMessageAt: Date?
     /// Timestamp of the last disconnect.
     var lastDisconnectAt: Date?
+
+    /// Records a new active connection and counts reconnects after the first connection.
+    mutating func recordConnection() {
+      if activeConnections == 0 && everConnected {
+        reconnectsTotal += 1
+      }
+
+      activeConnections += 1
+      everConnected = true
+    }
+
+    /// Records one closed connection without allowing the active count to go negative.
+    mutating func recordDisconnect(at date: Date) {
+      activeConnections = max(0, activeConnections - 1)
+      lastDisconnectAt = date
+    }
   }
 
   /// Counter snapshot used to compute rates.
@@ -129,6 +145,32 @@ actor MetricsCoordinator {
 
     var previousCounters: SampleCounters?
     var lastSampleAt: Date?
+
+    /// Returns whether at least one metrics stream subscriber is active.
+    var hasStreamingSubscribers: Bool {
+      !streamingSubscriberFDs.isEmpty
+    }
+
+    /// Adds one stream subscriber and returns whether sampling should start.
+    mutating func addStreamingSubscriber(fd: Int32) -> Bool {
+      let wasEmpty = streamingSubscriberFDs.isEmpty
+      let inserted = streamingSubscriberFDs.insert(fd).inserted
+      return inserted && wasEmpty
+    }
+
+    /// Removes one stream subscriber and returns whether sampling should stop.
+    mutating func removeStreamingSubscriber(fd: Int32) -> Bool {
+      guard streamingSubscriberFDs.remove(fd) != nil else {
+        return false
+      }
+
+      return streamingSubscriberFDs.isEmpty
+    }
+
+    /// Removes all stream subscribers.
+    mutating func removeAllStreamingSubscribers() {
+      streamingSubscriberFDs.removeAll()
+    }
   }
 
   /// Shared process-wide metrics coordinator.
@@ -152,7 +194,7 @@ actor MetricsCoordinator {
 
   /// Returns whether metrics streaming is currently active.
   var isStreamingActive: Bool {
-    return !state.streamingSubscriberFDs.isEmpty
+    return state.hasStreamingSubscribers
   }
 
   /// Installs the callback invoked for streamed snapshots.
@@ -162,25 +204,21 @@ actor MetricsCoordinator {
 
   /// Starts streaming collection for one subscriber.
   func addStreamingSubscriber(fd: Int32) {
-    let inserted = state.streamingSubscriberFDs.insert(fd).inserted
-
-    if inserted && state.streamingSubscriberFDs.count == 1 {
+    if state.addStreamingSubscriber(fd: fd) {
       startStreamingTask()
     }
   }
 
   /// Stops streaming collection for one subscriber.
   func removeStreamingSubscriber(fd: Int32) {
-    guard state.streamingSubscriberFDs.remove(fd) != nil else { return }
-
-    if state.streamingSubscriberFDs.isEmpty {
+    if state.removeStreamingSubscriber(fd: fd) {
       stopStreamingTask()
     }
   }
 
   /// Stops all streaming subscribers and sampling.
   func resetStreaming() {
-    state.streamingSubscriberFDs.removeAll()
+    state.removeAllStreamingSubscribers()
     stopStreamingTask()
   }
 
@@ -275,21 +313,14 @@ actor MetricsCoordinator {
   /// Records one agent connection.
   func recordAgentConnected(_ agent: AgentKey) {
     var agentState = state.agents[agent] ?? AgentState()
-
-    if shouldCountReconnect(for: agentState) {
-      agentState.reconnectsTotal += 1
-    }
-
-    agentState.activeConnections += 1
-    agentState.everConnected = true
+    agentState.recordConnection()
     state.agents[agent] = agentState
   }
 
   /// Records one agent disconnect.
   func recordAgentDisconnected(_ agent: AgentKey, at date: Date = Date()) {
     var agentState = state.agents[agent] ?? AgentState()
-    agentState.activeConnections = max(0, agentState.activeConnections - 1)
-    agentState.lastDisconnectAt = date
+    agentState.recordDisconnect(at: date)
     state.agents[agent] = agentState
   }
 
@@ -313,11 +344,6 @@ actor MetricsCoordinator {
     var agentState = state.agents[agent] ?? AgentState()
     agentState.decodeErrorsTotal += 1
     state.agents[agent] = agentState
-  }
-
-  /// Returns whether opening the next connection counts as a reconnect.
-  private func shouldCountReconnect(for agentState: AgentState) -> Bool {
-    return agentState.activeConnections == 0 && agentState.everConnected
   }
 
   /// Starts periodic metrics sampling.
@@ -350,7 +376,7 @@ actor MetricsCoordinator {
 
   /// Collects and publishes one streaming snapshot when subscribers are still active.
   private func collectAndPublishStreamingSnapshot() {
-    guard !state.streamingSubscriberFDs.isEmpty else {
+    guard state.hasStreamingSubscribers else {
       stopStreamingTask()
       return
     }
