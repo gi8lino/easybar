@@ -185,7 +185,9 @@ final class LuaProcessController {
 
   /// Resumes all pending shutdown waiters.
   private func resumeShutdownWaiters(_ waiters: [CheckedContinuation<Void, Never>]) {
-    waiters.forEach { $0.resume() }
+    for waiter in waiters {
+      waiter.resume()
+    }
   }
 
   /// Returns the current shutdown-relevant process snapshot.

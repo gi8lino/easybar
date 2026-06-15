@@ -384,7 +384,7 @@ extension LuaProcessController {
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
     var environment = ProcessInfo.processInfo.environment
 
-    overrides.forEach { key, value in
+    for (key, value) in overrides {
       environment[key] = value
     }
 

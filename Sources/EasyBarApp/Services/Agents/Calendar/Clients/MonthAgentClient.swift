@@ -300,7 +300,9 @@ final class MonthCalendarAgentClient {
 
   /// Cancels any pending staged month expansion.
   private func cancelStagedPreload() {
-    preloadTasks.forEach { $0.cancel() }
+    for preloadTask in preloadTasks {
+      preloadTask.cancel()
+    }
     preloadTasks.removeAll()
   }
 
