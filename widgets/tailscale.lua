@@ -1,7 +1,9 @@
+--- Removes leading and trailing whitespace from a string-like value.
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+--- Quotes a value so it can be passed safely as one POSIX shell argument.
 local function shell_quote(s)
 	s = tostring(s or "")
 	return "'" .. s:gsub("'", [['"'"']]) .. "'"
@@ -16,12 +18,14 @@ local COLORS = {
 	border = easybar.theme.ref.border_strong,
 }
 
+--- Returns the directory that contains this Lua script.
 local function script_dir()
 	local source = debug.getinfo(1, "S").source or ""
 	local path = source:gsub("^@", "")
 	return path:match("(.*/)")
 end
 
+--- Returns the path to an asset next to this script.
 local function asset_path(name)
 	local dir = script_dir()
 	if dir == nil then
@@ -31,6 +35,7 @@ local function asset_path(name)
 	return dir .. "assets/" .. name
 end
 
+--- Runs a shell command and returns trimmed output plus execution status.
 local function shell(command)
 	local handle = io.popen(command .. " 2>&1")
 	if not handle then
@@ -49,6 +54,7 @@ local function shell(command)
 	return output, true, why or "exit", code or 0
 end
 
+--- Resolves the Tailscale CLI path from TAILSCALE or falls back to `tailscale`.
 local function resolve_tailscale()
 	local configured = trim(os.getenv("TAILSCALE") or "")
 	if configured ~= "" then
@@ -73,6 +79,7 @@ local state = {
 
 local refresh
 
+--- Returns a short human-readable connection label.
 local function status_label(connected)
 	if connected then
 		return "Active"
@@ -81,14 +88,17 @@ local function status_label(connected)
 	return "Inactive"
 end
 
+--- Extracts BackendState from `tailscale status --json` output.
 local function parse_backend_state(output)
 	return output:match([["BackendState"%s*:%s*"([^"]+)"]])
 end
 
+--- Extracts the first health message from `tailscale status --json` output.
 local function parse_health_message(output)
 	return output:match([["Health"%s*:%s*%[%s*"([^"]+)"]])
 end
 
+--- Returns whether the JSON output reports an active exit node.
 local function parse_exit_node_enabled(output)
 	if output:match([["ExitNodeStatus"%s*:%s*{]]) then
 		return true
@@ -101,6 +111,7 @@ local function parse_exit_node_enabled(output)
 	return false
 end
 
+--- Returns the suggested exit node name, or nil when unavailable.
 local function recommended_exit_node()
 	local output, ok = shell(shell_quote(tailscale) .. " exit-node suggest")
 	if not ok or output == "" then
@@ -120,6 +131,7 @@ local function recommended_exit_node()
 	return suggested
 end
 
+--- Stores a fresh Tailscale snapshot and logs meaningful state changes.
 local function update_state(snapshot)
 	if state.tailscale_connected ~= snapshot.tailscale_connected then
 		easybar.log(
@@ -145,6 +157,7 @@ local function update_state(snapshot)
 	return snapshot
 end
 
+--- Reads Tailscale status from the CLI and returns a normalized snapshot.
 local function cli_status()
 	local output, ok, why, code = shell(shell_quote(tailscale) .. " status --json")
 	if not ok or output == "" then
@@ -200,6 +213,7 @@ local function cli_status()
 	})
 end
 
+--- Returns the icon asset name for the current Tailscale state.
 local function current_icon_name(connected, exit_node_enabled)
 	if not connected then
 		return "tailscale-inactive.png"
@@ -212,6 +226,7 @@ local function current_icon_name(connected, exit_node_enabled)
 	return "tailscale-active.png"
 end
 
+--- Applies a Tailscale snapshot to the bar icon and popup labels.
 local function render(snapshot)
 	local tailscale_logo_path = asset_path(current_icon_name(snapshot.tailscale_connected, snapshot.exit_node_enabled))
 	local status_color = snapshot.tailscale_connected and COLORS.success or COLORS.muted
@@ -246,6 +261,7 @@ local function render(snapshot)
 	})
 end
 
+--- Toggles Tailscale between `up` and `down`, then refreshes the widget.
 local function toggle_tailscale()
 	local snapshot = cli_status()
 	local command
@@ -274,6 +290,7 @@ local function toggle_tailscale()
 	refresh()
 end
 
+--- Toggles the automatic exit node when Tailscale is active.
 local function toggle_exit_node()
 	local snapshot = cli_status()
 	if not snapshot.tailscale_connected then
@@ -307,6 +324,7 @@ local function toggle_exit_node()
 	refresh()
 end
 
+--- Reloads Tailscale state from the CLI and renders the latest snapshot.
 refresh = function()
 	local snapshot = cli_status()
 	render(snapshot)
@@ -354,6 +372,7 @@ popup_exit_node_label = easybar.add(easybar.kind.item, "tailscale_popup_exit_nod
 	},
 })
 
+--- Refreshes the widget after network, wake, or forced update events.
 tailscale_icon:subscribe({
 	easybar.events.network_change,
 	easybar.events.system_woke,
@@ -362,6 +381,7 @@ tailscale_icon:subscribe({
 	refresh()
 end)
 
+--- Handles mouse clicks: left-click toggles Tailscale, right-click toggles exit node.
 tailscale_icon:subscribe(easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_tailscale()
