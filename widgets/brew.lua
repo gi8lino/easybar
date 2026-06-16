@@ -16,6 +16,11 @@ local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
 local BREW_LOG_FILE_NAME = "brew-widget.log"
 local BREW_LOG_MAX_RUNS = 8
+
+local CASK_DENYLIST = {
+	["docker-desktop"] = true,
+}
+
 local EXEC = {
 	check = {
 		timeout_seconds = 30,
@@ -59,9 +64,9 @@ local COLORS = {
 }
 
 local THRESHOLDS = {
-	[3] = COLORS.warn,
-	[5] = COLORS.orange,
-	[10] = COLORS.error,
+	{ count = 10, color = COLORS.error },
+	{ count = 5, color = COLORS.orange },
+	{ count = 3, color = COLORS.warn },
 }
 
 local running = false
@@ -74,6 +79,8 @@ local time_item
 local actions_row
 local upgrade_button
 local update_button
+
+local render
 
 local state = {
 	formulae = {},
@@ -95,37 +102,9 @@ local function now_label()
 	return os.date("%H:%M")
 end
 
---- Returns the current Unix timestamp.
-local function now_timestamp()
-	return os.time()
-end
-
 --- Returns a trimmed string value.
 local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
---- Quotes one value for safe use in a POSIX shell assignment.
-local function shell_quote(value)
-	return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
-end
-
---- Returns whether the widget should run another Homebrew update now.
-local function check_due()
-	if state.last_attempted_at == nil then
-		return true
-	end
-
-	return (now_timestamp() - state.last_attempted_at) >= CHECK_INTERVAL_SECONDS
-end
-
---- Returns the next scheduled check time as HH:MM or `now` when overdue.
-local function next_check_label()
-	if check_due() then
-		return "now"
-	end
-
-	return os.date("%H:%M", state.last_attempted_at + CHECK_INTERVAL_SECONDS)
 end
 
 --- Truncates a value to a maximum visible length.
@@ -143,21 +122,242 @@ local function truncate(value, max)
 	return value:sub(1, max - 1) .. "…"
 end
 
---- Returns the threshold color for the outdated package count.
-local function threshold_color(count)
-	local threshold_keys = {}
+--- Returns a timestamp suitable for log section markers.
+local function log_timestamp()
+	return os.date("%Y-%m-%dT%H:%M:%S%z")
+end
 
-	for key in pairs(THRESHOLDS) do
-		table.insert(threshold_keys, key)
+--- Returns the brew widget log file path.
+local function brew_log_path()
+	return easybar.log_dir .. "/" .. BREW_LOG_FILE_NAME
+end
+
+--- Appends one line to the brew widget log.
+local function append_log_line(line)
+	local file, err = io.open(brew_log_path(), "a")
+	if file == nil then
+		easybar.log(easybar.level.warn, "[brew_outdated]", "failed to open brew log", tostring(err))
+		return
 	end
 
-	table.sort(threshold_keys, function(a, b)
-		return a > b
-	end)
+	file:write(tostring(line or ""), "\n")
+	file:close()
+end
 
-	for _, threshold in ipairs(threshold_keys) do
-		if tonumber(count) >= threshold then
-			return THRESHOLDS[threshold]
+--- Appends a structured operation marker to the brew widget log.
+local function append_log_marker(kind, status)
+	append_log_line("=== " .. log_timestamp() .. " brew-widget " .. kind .. " " .. status .. " ===")
+end
+
+--- Appends command output to the brew widget log.
+local function append_log_output(output)
+	output = tostring(output or "")
+	if output == "" then
+		return
+	end
+
+	local file, err = io.open(brew_log_path(), "a")
+	if file == nil then
+		easybar.log(easybar.level.warn, "[brew_outdated]", "failed to open brew log", tostring(err))
+		return
+	end
+
+	file:write(output)
+	if output:sub(-1) ~= "\n" then
+		file:write("\n")
+	end
+	file:close()
+end
+
+--- Returns the last `limit` log lines.
+local function log_tail(limit)
+	local file = io.open(brew_log_path(), "r")
+	if file == nil then
+		return ""
+	end
+
+	local lines = {}
+	for line in file:lines() do
+		lines[#lines + 1] = line
+	end
+	file:close()
+
+	local start = math.max(1, #lines - limit + 1)
+	local tail = {}
+	for index = start, #lines do
+		tail[#tail + 1] = lines[index]
+	end
+
+	return table.concat(tail, "\n")
+end
+
+--- Keeps only the newest brew widget log runs.
+local function prune_brew_log()
+	local file = io.open(brew_log_path(), "r")
+	if file == nil then
+		return
+	end
+
+	local lines = {}
+	local starts = {}
+	for line in file:lines() do
+		lines[#lines + 1] = line
+		if line:match("^=== .* brew%-widget .* start ===$") then
+			starts[#starts + 1] = #lines
+		end
+	end
+	file:close()
+
+	if #starts <= BREW_LOG_MAX_RUNS then
+		return
+	end
+
+	local keep_from = starts[#starts - BREW_LOG_MAX_RUNS + 1]
+	file = io.open(brew_log_path(), "w")
+	if file == nil then
+		return
+	end
+
+	for index = keep_from, #lines do
+		file:write(lines[index], "\n")
+	end
+	file:close()
+end
+
+--- Quotes one value for safe use in a POSIX shell assignment.
+local function shell_quote(value)
+	return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
+end
+
+--- Returns whether one cask should be upgraded by the widget.
+local function cask_allowed(cask)
+	return CASK_DENYLIST[tostring(cask or "")] ~= true
+end
+
+--- Parses newline-delimited cask names and returns allowed casks.
+local function allowed_casks_from_output(output)
+	local casks = {}
+
+	for line in tostring(output or ""):gmatch("[^\r\n]+") do
+		local cask = trim(line)
+		if cask ~= "" then
+			if cask_allowed(cask) then
+				casks[#casks + 1] = cask
+			else
+				append_log_line("skip denied cask: " .. cask)
+			end
+		end
+	end
+
+	table.sort(casks)
+	return casks
+end
+
+--- Builds one shell-safe brew cask upgrade command for allowed casks.
+local function cask_upgrade_command(casks)
+	local parts = {
+		"HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --cask --yes",
+	}
+
+	for _, cask in ipairs(casks) do
+		parts[#parts + 1] = shell_quote(cask)
+	end
+
+	return table.concat(parts, " ")
+end
+
+--- Fails the current brew operation using the current log tail.
+local function fail_brew_operation(kind, message)
+	state.error = truncate(log_tail(80), 400)
+	if state.error == "" then
+		state.error = message
+	end
+
+	state.phase = "error"
+	running = false
+
+	append_log_marker(kind, "failed")
+	prune_brew_log()
+	render()
+end
+
+--- Runs one command, logs its output and exit code, then invokes the callback.
+local function run_logged_command(command, options, exit_label, callback)
+	append_log_line("$ " .. command)
+
+	easybar.exec_async(command, options, function(output, code)
+		append_log_output(output)
+		append_log_line(exit_label .. " exit " .. tostring(code))
+		callback(output, code)
+	end)
+end
+
+--- Runs `brew update`.
+local function run_brew_update(callback)
+	run_logged_command("brew update", EXEC.update, "brew update", callback)
+end
+
+--- Runs `brew outdated --json=v2`.
+local function run_outdated_json(callback)
+	run_logged_command("HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2", EXEC.check, "brew outdated", callback)
+end
+
+--- Runs formula upgrades.
+local function run_formula_upgrade(callback)
+	run_logged_command(
+		"HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --formula --yes",
+		EXEC.upgrade,
+		"brew upgrade --formula",
+		callback
+	)
+end
+
+--- Runs the cask outdated list command.
+local function run_outdated_casks(callback)
+	run_logged_command(
+		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --cask --quiet",
+		EXEC.check,
+		"brew outdated --cask",
+		callback
+	)
+end
+
+--- Runs cask upgrades for allowed casks, or skips when none remain.
+local function run_allowed_cask_upgrade(casks, callback)
+	if #casks == 0 then
+		append_log_line("no casks to upgrade after denylist")
+		callback("", 0)
+		return
+	end
+
+	run_logged_command(cask_upgrade_command(casks), EXEC.upgrade, "brew upgrade --cask", callback)
+end
+
+--- Returns whether the widget should run another Homebrew update now.
+local function check_due()
+	if state.last_attempted_at == nil then
+		return true
+	end
+
+	return (os.time() - state.last_attempted_at) >= CHECK_INTERVAL_SECONDS
+end
+
+--- Returns the next scheduled check time as HH:MM or `now` when overdue.
+local function next_check_label()
+	if check_due() then
+		return "now"
+	end
+
+	return os.date("%H:%M", state.last_attempted_at + CHECK_INTERVAL_SECONDS)
+end
+
+--- Returns the threshold color for the outdated package count.
+local function threshold_color(count)
+	count = tonumber(count) or 0
+
+	for _, threshold in ipairs(THRESHOLDS) do
+		if count >= threshold.count then
+			return threshold.color
 		end
 	end
 
@@ -201,6 +401,15 @@ local function apply_outdated_json(raw)
 	state.phase = "ready"
 
 	log_debug("apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
+end
+
+--- Applies Homebrew JSON output to state.
+local function apply_outdated_result(output)
+	local ok, err = pcall(apply_outdated_json, output)
+	if not ok then
+		state.error = "Could not parse brew output: " .. tostring(err)
+		state.phase = "error"
+	end
 end
 
 --- Returns the number of outdated packages.
@@ -493,185 +702,91 @@ local function render_bar()
 end
 
 --- Renders both the bar widget and popup.
-local function render()
+render = function()
 	render_bar()
 	render_popup()
 end
 
---- Runs a Homebrew command asynchronously and updates widget state.
-local function run_brew_async(status_label, phase, command, options, on_success)
-	if running then
-		log_debug("run_brew_async skipped", "status=" .. tostring(status_label))
-		return
-	end
-
+--- Starts a brew operation and updates shared widget state.
+local function start_operation(phase, status)
 	running = true
-	state.status = status_label
+	state.status = status
 	state.error = nil
-	state.last_attempted_at = now_timestamp()
-	state.phase = phase or "checking"
-
-	log_debug(
-		"run_brew_async start",
-		"status=" .. tostring(status_label),
-		"phase=" .. tostring(state.phase),
-		"command=" .. tostring(command)
-	)
+	state.last_attempted_at = os.time()
+	state.phase = phase
 
 	render()
-
-	local token = easybar.exec_async(command, options or EXEC.check, function(output, code)
-		running = false
-
-		log_debug(
-			"run_brew_async complete",
-			"status=" .. tostring(status_label),
-			"phase=" .. tostring(state.phase),
-			"code=" .. tostring(code)
-		)
-
-		if code ~= 0 then
-			local message = truncate(trim(output), 400)
-
-			if message == "" then
-				message = "brew command failed with exit code " .. tostring(code)
-			end
-
-			state.error = message
-			state.phase = "error"
-
-			log_debug("run_brew_async error", message)
-			render()
-
-			return
-		end
-
-		local ok, err = pcall(on_success, output)
-
-		if not ok then
-			state.error = "Could not parse brew output: " .. tostring(err)
-			state.phase = "error"
-
-			log_debug("run_brew_async parse_error", tostring(err))
-		end
-
-		render()
-	end)
-
-	log_debug("run_brew_async token", tostring(token))
 end
 
 --- Checks outdated packages without updating Homebrew.
 local function check_outdated(status_label)
-	run_brew_async(
-		status_label or "Checking outdated packages…",
-		"checking",
-		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
-		EXEC.check,
-		apply_outdated_json
-	)
+	if running then
+		log_debug("check_outdated skipped", "status=" .. tostring(status_label))
+		return
+	end
+
+	start_operation("checking", status_label or "Checking outdated packages…")
+
+	run_outdated_json(function(output, code)
+		running = false
+
+		if code ~= 0 then
+			state.error = truncate(trim(output), 400)
+			if state.error == "" then
+				state.error = "brew outdated failed with exit code " .. tostring(code)
+			end
+			state.phase = "error"
+			render()
+			return
+		end
+
+		apply_outdated_result(output)
+		render()
+	end)
+end
+
+--- Completes a successful brew operation.
+local function finish_brew_operation(kind)
+	running = false
+	append_log_marker(kind, "ok")
+	prune_brew_log()
+	render()
+end
+
+--- Handles the final outdated-package check for update or upgrade flows.
+local function finish_with_outdated_result(kind, output, code)
+	if code ~= 0 then
+		fail_brew_operation(kind, "brew outdated failed with exit code " .. tostring(code))
+		return
+	end
+
+	apply_outdated_result(output)
+	finish_brew_operation(kind)
+end
+
+--- Handles the `brew update` result for the update flow.
+local function handle_update_brew_update(_, update_code)
+	if update_code ~= 0 then
+		fail_brew_operation("update", "brew update failed with exit code " .. tostring(update_code))
+		return
+	end
+
+	run_outdated_json(function(output, code)
+		finish_with_outdated_result("update", output, code)
+	end)
 end
 
 --- Updates Homebrew, then checks outdated packages.
 local function update_now()
-	local command = string.format(
-		[[
-log_dir=%s
-log_file="$log_dir/%s"
-max_runs=%d
-json_tmp="${TMPDIR:-/tmp}/easybar-brew-outdated.$$"
-prune_tmp="${TMPDIR:-/tmp}/easybar-brew-log.$$"
+	if running then
+		log_debug("update_now skipped", "running=true")
+		return
+	end
 
-mkdir -p "$log_dir"
+	append_log_marker("update", "start")
+	start_operation("updating", "Updating Homebrew… writing " .. BREW_LOG_FILE_NAME)
 
-prune_brew_log() {
-  [ -f "$log_file" ] || return 0
-  awk -v max="$max_runs" '
-    /^=== .* brew-widget .* start ===$/ { runs = runs + 1 }
-    { lines[NR] = $0 }
-    END {
-      start = 1
-      if (runs > max) {
-        target = runs - max + 1
-        seen = 0
-        for (i = 1; i <= NR; i++) {
-          if (lines[i] ~ /^=== .* brew-widget .* start ===$/) {
-            seen = seen + 1
-            if (seen == target) {
-              start = i
-              break
-            }
-          }
-        }
-      }
-      for (i = start; i <= NR; i++) {
-        print lines[i]
-      }
-    }
-  ' "$log_file" > "$prune_tmp" && mv "$prune_tmp" "$log_file"
-}
-
-{
-  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update start ==="
-  echo "$ brew update"
-} >>"$log_file" 2>&1
-
-brew update >>"$log_file" 2>&1
-update_rc=$?
-
-if [ "$update_rc" -ne 0 ]; then
-  {
-    echo "brew update exit $update_rc"
-    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update failed ==="
-  } >>"$log_file" 2>&1
-  tail -n 80 "$log_file"
-  printf '\nLog: %%s\n' "$log_file"
-  prune_brew_log
-  rm -f "$json_tmp" "$prune_tmp"
-  exit "$update_rc"
-fi
-
-{
-  echo "brew update exit 0"
-  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2"
-} >>"$log_file" 2>&1
-
-HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2 >"$json_tmp" 2>>"$log_file"
-outdated_rc=$?
-
-if [ "$outdated_rc" -ne 0 ]; then
-  {
-    echo "brew outdated exit $outdated_rc"
-    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update failed ==="
-  } >>"$log_file" 2>&1
-  tail -n 80 "$log_file"
-  printf '\nLog: %%s\n' "$log_file"
-  prune_brew_log
-  rm -f "$json_tmp" "$prune_tmp"
-  exit "$outdated_rc"
-fi
-
-{
-  echo "brew outdated exit 0"
-  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget update ok ==="
-} >>"$log_file" 2>&1
-
-cat "$json_tmp"
-prune_brew_log
-rm -f "$json_tmp" "$prune_tmp"
-]],
-		shell_quote(easybar.log_dir),
-		BREW_LOG_FILE_NAME,
-		BREW_LOG_MAX_RUNS
-	)
-
-	run_brew_async(
-		"Updating Homebrew… writing " .. BREW_LOG_FILE_NAME,
-		"updating",
-		command,
-		EXEC.update,
-		apply_outdated_json
-	)
+	run_brew_update(handle_update_brew_update)
 end
 
 --- Updates Homebrew only when the widget is due.
@@ -683,126 +798,63 @@ local function update_if_due()
 	update_now()
 end
 
+local handle_upgrade_formula
+local handle_upgrade_outdated_casks
+local handle_upgrade_casks
+
+--- Handles the `brew update` result for the upgrade flow.
+local function handle_upgrade_brew_update(_, update_code)
+	if update_code ~= 0 then
+		fail_brew_operation("upgrade", "brew update failed with exit code " .. tostring(update_code))
+		return
+	end
+
+	run_formula_upgrade(handle_upgrade_formula)
+end
+
+--- Handles the formula upgrade result for the upgrade flow.
+handle_upgrade_formula = function(_, formula_code)
+	if formula_code ~= 0 then
+		fail_brew_operation("upgrade", "brew upgrade --formula failed with exit code " .. tostring(formula_code))
+		return
+	end
+
+	run_outdated_casks(handle_upgrade_outdated_casks)
+end
+
+--- Handles the outdated-cask list result before cask upgrades.
+handle_upgrade_outdated_casks = function(cask_output, cask_code)
+	if cask_code ~= 0 then
+		fail_brew_operation("upgrade", "brew outdated --cask failed with exit code " .. tostring(cask_code))
+		return
+	end
+
+	run_allowed_cask_upgrade(allowed_casks_from_output(cask_output), handle_upgrade_casks)
+end
+
+--- Handles the cask upgrade result for the upgrade flow.
+handle_upgrade_casks = function(_, cask_upgrade_code)
+	if cask_upgrade_code ~= 0 then
+		fail_brew_operation("upgrade", "brew upgrade --cask failed with exit code " .. tostring(cask_upgrade_code))
+		return
+	end
+
+	run_outdated_json(function(output, code)
+		finish_with_outdated_result("upgrade", output, code)
+	end)
+end
+
 --- Upgrades packages, then checks outdated packages.
 local function upgrade_now()
-	local command = string.format(
-		[[
-log_dir=%s
-log_file="$log_dir/%s"
-max_runs=%d
-json_tmp="${TMPDIR:-/tmp}/easybar-brew-outdated.$$"
-prune_tmp="${TMPDIR:-/tmp}/easybar-brew-log.$$"
+	if running then
+		log_debug("upgrade_now skipped", "running=true")
+		return
+	end
 
-mkdir -p "$log_dir"
+	append_log_marker("upgrade", "start")
+	start_operation("upgrading", "Updating and upgrading… writing " .. BREW_LOG_FILE_NAME)
 
-prune_brew_log() {
-  [ -f "$log_file" ] || return 0
-  awk -v max="$max_runs" '
-    /^=== .* brew-widget .* start ===$/ { runs = runs + 1 }
-    { lines[NR] = $0 }
-    END {
-      start = 1
-      if (runs > max) {
-        target = runs - max + 1
-        seen = 0
-        for (i = 1; i <= NR; i++) {
-          if (lines[i] ~ /^=== .* brew-widget .* start ===$/) {
-            seen = seen + 1
-            if (seen == target) {
-              start = i
-              break
-            }
-          }
-        }
-      }
-      for (i = start; i <= NR; i++) {
-        print lines[i]
-      }
-    }
-  ' "$log_file" > "$prune_tmp" && mv "$prune_tmp" "$log_file"
-}
-
-{
-  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade start ==="
-  echo "$ brew update"
-} >>"$log_file" 2>&1
-
-brew update >>"$log_file" 2>&1
-update_rc=$?
-
-if [ "$update_rc" -ne 0 ]; then
-  {
-    echo "brew update exit $update_rc"
-    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
-  } >>"$log_file" 2>&1
-  tail -n 80 "$log_file"
-  printf '\nLog: %%s\n' "$log_file"
-  prune_brew_log
-  rm -f "$json_tmp" "$prune_tmp"
-  exit "$update_rc"
-fi
-
-{
-  echo "brew update exit 0"
-  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes"
-} >>"$log_file" 2>&1
-
-HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes >>"$log_file" 2>&1
-upgrade_rc=$?
-
-if [ "$upgrade_rc" -ne 0 ]; then
-  {
-    echo "brew upgrade exit $upgrade_rc"
-    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
-  } >>"$log_file" 2>&1
-  tail -n 80 "$log_file"
-  printf '\nLog: %%s\n' "$log_file"
-  prune_brew_log
-  rm -f "$json_tmp" "$prune_tmp"
-  exit "$upgrade_rc"
-fi
-
-{
-  echo "brew upgrade exit 0"
-  echo "$ HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2"
-} >>"$log_file" 2>&1
-
-HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2 >"$json_tmp" 2>>"$log_file"
-outdated_rc=$?
-
-if [ "$outdated_rc" -ne 0 ]; then
-  {
-    echo "brew outdated exit $outdated_rc"
-    echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade failed ==="
-  } >>"$log_file" 2>&1
-  tail -n 80 "$log_file"
-  printf '\nLog: %%s\n' "$log_file"
-  prune_brew_log
-  rm -f "$json_tmp" "$prune_tmp"
-  exit "$outdated_rc"
-fi
-
-{
-  echo "brew outdated exit 0"
-  echo "=== $(date '+%%Y-%%m-%%dT%%H:%%M:%%S%%z') brew-widget upgrade ok ==="
-} >>"$log_file" 2>&1
-
-cat "$json_tmp"
-prune_brew_log
-rm -f "$json_tmp" "$prune_tmp"
-]],
-		shell_quote(easybar.log_dir),
-		BREW_LOG_FILE_NAME,
-		BREW_LOG_MAX_RUNS
-	)
-
-	run_brew_async(
-		"Updating and upgrading… writing " .. BREW_LOG_FILE_NAME,
-		"upgrading",
-		command,
-		EXEC.upgrade,
-		apply_outdated_json
-	)
+	run_brew_update(handle_upgrade_brew_update)
 end
 
 --- Returns a fresh button background configuration.
@@ -921,14 +973,17 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	background = button_background(),
 })
 
+--- Logs mouse-enter events for troubleshooting popup interaction.
 brew_widget:subscribe(easybar.events.mouse.entered, function()
 	log_debug("mouse entered", "running=" .. tostring(running))
 end)
 
+--- Logs mouse-exit events for troubleshooting popup interaction.
 brew_widget:subscribe(easybar.events.mouse.exited, function()
 	log_debug("mouse exited", "running=" .. tostring(running))
 end)
 
+--- Starts the update flow when the update button is left-clicked.
 update_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == "left") and not running then
 		log_debug("update click")
@@ -936,6 +991,7 @@ update_button:subscribe(easybar.events.mouse.clicked, function(event)
 	end
 end)
 
+--- Starts the upgrade flow when the upgrade button is left-clicked.
 upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == "left") and not running then
 		log_debug("upgrade click")
@@ -943,6 +999,7 @@ upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 	end
 end)
 
+--- Runs a due update check after relevant system lifecycle events.
 brew_widget:subscribe({
 	easybar.events.system_woke,
 	easybar.events.session_active,
@@ -951,6 +1008,7 @@ brew_widget:subscribe({
 	update_if_due()
 end)
 
+--- Forces an immediate outdated-package check when EasyBar triggers the widget.
 brew_widget:subscribe(easybar.events.forced, function()
 	if not running then
 		check_outdated("Checking outdated packages…")
