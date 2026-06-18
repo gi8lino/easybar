@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout EasyBar
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Derive asset URL
         id: vars
@@ -50,7 +50,7 @@ jobs:
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Homebrew tap
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: gi8lino/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
