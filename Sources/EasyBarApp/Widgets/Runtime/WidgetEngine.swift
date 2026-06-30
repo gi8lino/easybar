@@ -139,7 +139,10 @@ actor WidgetEngine {
   func handleRuntimeTransportLine(_ line: String) async {
     guard started else { return }
 
-    logger.debug("lua transport: \(line)")
+    logger.trace(
+      "lua transport line received",
+      .field("bytes", line.utf8.count)
+    )
 
     do {
       let message = try protocolDecoder.decodeMessage(from: line)
@@ -153,12 +156,12 @@ actor WidgetEngine {
       )
     } catch DecodingError.dataCorrupted {
       await metricsCoordinator.recordDecodeError()
-      logger.warn("invalid utf8: \(line)")
+      logger.warn("invalid lua transport utf8", .field("bytes", line.utf8.count))
     } catch WidgetRuntimeProtocolError.invalidPayload(let message) {
       logger.warn(message)
     } catch {
       await metricsCoordinator.recordDecodeError()
-      logger.warn("json decode failed: \(line)")
+      logger.warn("lua transport json decode failed", .field("bytes", line.utf8.count))
       logger.debug("decode error: \(error)")
     }
   }
@@ -272,7 +275,7 @@ actor WidgetEngine {
       "lua command requested",
       .field("token", token),
       .field("sync", isSynchronous),
-      .field("command", command),
+      .field("command_bytes", command.utf8.count),
       .field("timeout_seconds", commandLimits.timeoutSeconds),
       .field("max_output_bytes", commandLimits.maxOutputBytes)
     )
@@ -294,7 +297,7 @@ actor WidgetEngine {
         .field("token", token),
         .field("active_async_jobs", activeAsyncCommandCount),
         .field("max_async_jobs", maxAsyncJobs),
-        .field("command", command)
+        .field("command_bytes", command.utf8.count)
       )
       await sendCommandResponse(
         token: token,

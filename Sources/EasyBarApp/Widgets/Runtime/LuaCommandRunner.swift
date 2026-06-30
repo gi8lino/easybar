@@ -122,7 +122,7 @@ private final class CommandExecution: @unchecked Sendable {
 
       logger.warn(
         "failed to launch lua command",
-        .field("command", command),
+        .field("command_bytes", command.utf8.count),
         .field("error", "\(error)")
       )
 
@@ -245,7 +245,7 @@ private final class CommandExecution: @unchecked Sendable {
     if snapshot.timedOut {
       logger.warn(
         "lua command timed out",
-        .field("command", command),
+        .field("command_bytes", command.utf8.count),
         .field("timeout_seconds", limits.timeoutSeconds)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.timedOutStatus)
@@ -254,7 +254,7 @@ private final class CommandExecution: @unchecked Sendable {
     if snapshot.exceededOutputLimit {
       logger.warn(
         "lua command output exceeded limit",
-        .field("command", command),
+        .field("command_bytes", command.utf8.count),
         .field("max_output_bytes", limits.maxOutputBytes)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.outputLimitStatus)
@@ -264,12 +264,12 @@ private final class CommandExecution: @unchecked Sendable {
       if process.terminationStatus == 127 {
         let message =
           output.isEmpty
-          ? "command not found: \(command)"
-          : "command not found: \(command)\n\(output)"
+          ? "command not found"
+          : "command not found\n\(output)"
 
         logger.warn(
           "lua command not found",
-          .field("command", command),
+          .field("command_bytes", command.utf8.count),
           .field("status", process.terminationStatus)
         )
 
@@ -278,7 +278,7 @@ private final class CommandExecution: @unchecked Sendable {
 
       logger.debug(
         "lua command exited non-zero",
-        .field("command", command),
+        .field("command_bytes", command.utf8.count),
         .field("status", process.terminationStatus)
       )
     }
