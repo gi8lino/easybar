@@ -57,8 +57,8 @@ CLI_BIN := $(DIST_DIR)/$(CLI_EXEC)
 PLIST_TEMPLATE := Sources/EasyBarApp/Info.plist
 PLIST := $(APP_CONTENTS)/Info.plist
 
-PACKAGE_NAME := $(APP_NAME)-$(VERSION).zip
-PACKAGE_ZIP := $(DIST_DIR)/$(PACKAGE_NAME)
+PACKAGE_NAME = $(APP_NAME)-$(VERSION).zip
+PACKAGE_ZIP = $(DIST_DIR)/$(PACKAGE_NAME)
 PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUILD_INFO := Sources/EasyBarShared/Build/BuildInfo.swift
@@ -188,37 +188,43 @@ test: generate-theme-tokens generate-event-catalog generate-swift-env ## Run the
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@rm -rf "$(DIST_DIR)" ".build"
-	@mkdir -p "$(APP_MACOS)" "$(APP_RESOURCES)" "$(CALENDAR_AGENT_MACOS)" "$(CALENDAR_AGENT_RESOURCES)" "$(NETWORK_AGENT_MACOS)" "$(NETWORK_AGENT_RESOURCES)" "$(DIST_DIR)"
-	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory build-lua-runtime ARCH=$(ARCH) VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory build-calendar-agent ARCH=$(ARCH) VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory build-network-agent ARCH=$(ARCH) VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory copy-resources ARCH=$(ARCH)
-	@$(MAKE) --no-print-directory icons
-	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
-	@cp "$(CALENDAR_AGENT_PLIST_TEMPLATE)" "$(CALENDAR_AGENT_PLIST)"
-	@cp "$(NETWORK_AGENT_PLIST_TEMPLATE)" "$(NETWORK_AGENT_PLIST)"
-	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
-	@$(MAKE) --no-print-directory stamp-calendar-agent-plist VERSION=$(VERSION)
-	@$(MAKE) --no-print-directory stamp-network-agent-plist VERSION=$(VERSION)
-	@chmod +x "$(APP_BIN)" "$(LUA_RUNTIME_BIN)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(CLI_BIN)"
-	@$(MAKE) --no-print-directory sign CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)'
-	@$(MAKE) --no-print-directory notarize CODESIGN_IDENTITY='$(CODESIGN_IDENTITY)' NOTARYTOOL_PROFILE='$(NOTARYTOOL_PROFILE)' NOTARY_SUBMIT='$(NOTARY_SUBMIT)'
-	@touch "$(APP_BUNDLE)" "$(CALENDAR_AGENT_BUNDLE)" "$(NETWORK_AGENT_BUNDLE)"
-	@$(MAKE) --no-print-directory verify
+	@scripts/build/bundle.sh \
+		"$(DIST_DIR)" \
+		"$(APP_MACOS)" \
+		"$(APP_RESOURCES)" \
+		"$(CALENDAR_AGENT_MACOS)" \
+		"$(CALENDAR_AGENT_RESOURCES)" \
+		"$(NETWORK_AGENT_MACOS)" \
+		"$(NETWORK_AGENT_RESOURCES)" \
+		"$(APP_BIN)" \
+		"$(LUA_RUNTIME_BIN)" \
+		"$(CALENDAR_AGENT_BIN)" \
+		"$(NETWORK_AGENT_BIN)" \
+		"$(CLI_BIN)" \
+		"$(PLIST_TEMPLATE)" \
+		"$(PLIST)" \
+		"$(CALENDAR_AGENT_PLIST_TEMPLATE)" \
+		"$(CALENDAR_AGENT_PLIST)" \
+		"$(NETWORK_AGENT_PLIST_TEMPLATE)" \
+		"$(NETWORK_AGENT_PLIST)" \
+		"$(APP_BUNDLE)" \
+		"$(CALENDAR_AGENT_BUNDLE)" \
+		"$(NETWORK_AGENT_BUNDLE)" \
+		"$(ARCH)" \
+		"$(VERSION)" \
+		"$(BUNDLE_ID)" \
+		"$(CODESIGN_IDENTITY)" \
+		"$(NOTARYTOOL_PROFILE)" \
+		"$(NOTARY_SUBMIT)"
 
 package: bundle ## Create the release ZIP consumed by the Homebrew formula.
-	@rm -rf "$(PACKAGE_STAGE)" "$(PACKAGE_ZIP)"
-	@mkdir -p "$(PACKAGE_STAGE)"
-	@cp -R "$(APP_BUNDLE)" "$(PACKAGE_STAGE)/EasyBar.app"
-	@cp -R "$(CALENDAR_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarCalendarAgent.app"
-	@cp -R "$(NETWORK_AGENT_BUNDLE)" "$(PACKAGE_STAGE)/EasyBarNetworkAgent.app"
-	@cp "$(CLI_BIN)" "$(PACKAGE_STAGE)/easybar"
-	@cd "$(PACKAGE_STAGE)" && zip -qry "../$(PACKAGE_NAME)" "EasyBar.app" "EasyBarCalendarAgent.app" "EasyBarNetworkAgent.app" "easybar"
-	@rm -rf "$(PACKAGE_STAGE)"
-	@echo "Created $(PACKAGE_ZIP)"
+	@scripts/release/package.sh \
+		"$(PACKAGE_STAGE)" \
+		"$(PACKAGE_ZIP)" \
+		"$(APP_BUNDLE)" \
+		"$(CALENDAR_AGENT_BUNDLE)" \
+		"$(NETWORK_AGENT_BUNDLE)" \
+		"$(CLI_BIN)"
 
 release: package ## Build and verify the zipped release artifact.
 	@$(MAKE) --no-print-directory verify-release VERSION=$(VERSION) ARCH=$(ARCH)
@@ -464,7 +470,3 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
-
-
-
