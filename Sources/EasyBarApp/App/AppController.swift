@@ -1,5 +1,4 @@
 import AppKit
-import CryptoKit
 import EasyBarShared
 import Foundation
 
@@ -14,6 +13,10 @@ final class AppController {
   private let runtimeCoordinator: RuntimeCoordinator
   /// Callback used to ask the app delegate to start graceful termination.
   private let requestAppTermination: () -> Void
+  /// Logs one-time startup diagnostics for support and troubleshooting.
+  private let startupDiagnostics: AppStartupDiagnostics
+  /// Installs the generated Lua editor stub for widget authoring.
+  private let widgetEditorStubInstaller: WidgetEditorStubInstaller
   /// Converts process signals into graceful termination requests.
   private lazy var signalHandler = AppSignalHandler(logger: logger.child("signals")) {
     [weak self] in
@@ -48,6 +51,8 @@ final class AppController {
       logger: logger.child("runtime"),
       services: services
     )
+    self.startupDiagnostics = AppStartupDiagnostics(logger: logger.child("diagnostics"))
+    self.widgetEditorStubInstaller = WidgetEditorStubInstaller(logger: logger.child("editor_stub"))
   }
 
   /// Starts the app shell and the actor-owned runtime.
@@ -88,8 +93,8 @@ final class AppController {
     NSApp.setActivationPolicy(.accessory)
     logger.debug("activation policy set to accessory")
 
-    logStartup()
-    validateRequiredFonts()
+    startupDiagnostics.logStartup(services: services)
+    startupDiagnostics.validateRequiredFonts()
     installWidgetEditorStub()
 
     setupBarWindowController()
@@ -266,188 +271,9 @@ final class AppController {
     }
   }
 
-  /// Logs one startup snapshot so service-vs-local differences are visible.
-  private func logStartup() {
-    logProcessStartup(
-      processName: "easybar",
-      configPath: services.config.configPath,
-      socketPath: SharedRuntimeConfig.current.easyBarSocketPath,
-      logger: logger
-    )
-
-    logConfigDetails()
-    logScreenDetails()
-    logEnvironmentDetails()
-    logConfiguredEnvironment()
-  }
-
-  /// Logs config-derived startup details.
-  private func logConfigDetails() {
-    logger.info(
-      "config details",
-      .field("widgets_path", services.config.widgetsPath)
-    )
-    logger.info(
-      "config details",
-      .field("lua_path", services.config.luaPath)
-    )
-    logger.info(
-      "config details",
-      .field("lua_socket_path", services.config.luaSocketPath)
-    )
-    logger.info(
-      "config details",
-      .field("watch_config", services.config.watchConfigFile)
-    )
-    logger.info(
-      "config details",
-      .field("calendar_agent_enabled", services.config.calendarAgentEnabled),
-      .field("socket", services.config.calendarAgentSocketPath)
-    )
-    logger.info(
-      "config details",
-      .field("network_agent_enabled", services.config.networkAgentEnabled),
-      .field("socket", services.config.networkAgentSocketPath),
-      .field("refresh_interval_seconds", services.config.networkAgentRefreshIntervalSeconds)
-    )
-    logger.info(
-      "config details",
-      .field("calendar_builtin_enabled", services.config.builtinCalendar.enabled),
-      .field("popup_mode", services.config.builtinCalendar.popupMode.rawValue),
-      .field("anchor_layout", services.config.builtinCalendar.anchor.layout.rawValue),
-      .field("position", services.config.builtinCalendar.position.rawValue)
-    )
-    logger.info(
-      "config details",
-      .field("wifi_builtin_enabled", services.config.builtinWiFi.enabled),
-      .field("position", services.config.builtinWiFi.position.rawValue)
-    )
-    logger.info(
-      "config details",
-      .field("bar_height", services.config.barHeight),
-      .field("padding_x", services.config.barPaddingX),
-      .field("extend_behind_notch", services.config.barExtendBehindNotch)
-    )
-  }
-
-  /// Logs screen geometry visible at startup.
-  private func logScreenDetails() {
-    if let screen = NSScreen.main ?? NSScreen.screens.first {
-      logger.info(
-        "screen details",
-        .field("screen_frame", NSStringFromRect(screen.frame)),
-        .field("visible", NSStringFromRect(screen.visibleFrame))
-      )
-    } else {
-      logger.warn("no screen available during startup logging")
-    }
-  }
-
-  /// Logs relevant process environment override keys without exposing values.
-  private func logEnvironmentDetails() {
-    let env = ProcessInfo.processInfo.environment
-    let configOverride = env[SharedEnvironmentKeys.configPath] ?? ""
-    let logLevelOverride = env[SharedEnvironmentKeys.loggingLevel] ?? ""
-
-    logger.info(
-      "environment override",
-      .field("key", SharedEnvironmentKeys.configPath),
-      .field("value_set", !configOverride.isEmpty)
-    )
-    logger.info(
-      "environment override",
-      .field("key", SharedEnvironmentKeys.loggingLevel),
-      .field("value_set", !logLevelOverride.isEmpty)
-    )
-  }
-
-  /// Logs the configured environment keys passed to the Lua runtime.
-  private func logConfiguredEnvironment() {
-    let environment = services.config.appSection.environment
-
-    guard !environment.isEmpty else {
-      logger.info(
-        "app env",
-        .field("key", "<empty>"),
-        .field("value_set", false)
-      )
-      return
-    }
-
-    for key in environment.keys.sorted() {
-      let value = environment[key] ?? ""
-      logger.info(
-        "app env",
-        .field("key", key),
-        .field("value_set", !value.isEmpty)
-      )
-    }
-  }
-
-  /// Logs whether required custom fonts are available at runtime.
-  private func validateRequiredFonts() {
-    validateFont(named: "Symbols Nerd Font Mono")
-  }
-
-  /// Logs one warning when a required font is missing.
-  private func validateFont(named fontName: String) {
-    if NSFont(name: fontName, size: 12) != nil {
-      logger.info(
-        "font available",
-        .field("name", fontName)
-      )
-      return
-    }
-
-    logger.warn(
-      "font missing; Nerd Font icons may render incorrectly or be clipped",
-      .field("name", fontName)
-    )
-  }
-
   /// Installs the bundled Lua editor stub into the configured editor-stub path.
   private func installWidgetEditorStub() {
-    guard let bundledStub = AppResourceLocator.url(forResource: "easybar_api", withExtension: "lua")
-    else {
-      logger.warn("easybar_api.lua not found in bundle resources")
-      return
-    }
-
-    let installedStub = URL(fileURLWithPath: services.config.widgetEditorStubPath)
-
-    do {
-      let bundledData = try Data(contentsOf: bundledStub)
-      let existingData = try? Data(contentsOf: installedStub)
-      let bundledHash = sha256Hex(for: bundledData)
-      let existingHash = existingData.map(sha256Hex)
-
-      guard bundledHash != existingHash else {
-        return
-      }
-
-      try FileManager.default.createDirectory(
-        at: installedStub.deletingLastPathComponent(),
-        withIntermediateDirectories: true
-      )
-      try bundledData.write(to: installedStub, options: .atomic)
-
-      logger.info(
-        "installed widget editor stub",
-        .field("bundled_hash", bundledHash),
-        .field("previous_hash", existingHash ?? "<missing>"),
-        .field("path", installedStub.path)
-      )
-    } catch {
-      logger.warn(
-        "failed to install widget editor stub",
-        .field("error", error)
-      )
-    }
-  }
-
-  /// Returns the SHA-256 digest for one Lua editor stub payload.
-  private func sha256Hex(for data: Data) -> String {
-    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    widgetEditorStubInstaller.install(stubPath: services.config.widgetEditorStubPath)
   }
 
   /// Starts one shared shutdown task when the app is still running.
