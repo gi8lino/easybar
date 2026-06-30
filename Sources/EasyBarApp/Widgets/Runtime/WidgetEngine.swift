@@ -5,22 +5,6 @@ import Foundation
 ///
 /// This actor owns the Lua handshake state, subscriptions, and tree updates.
 actor WidgetEngine {
-  private struct LuaCommandResponse: Encodable {
-    let protocolVersion = WidgetTreeUpdate.supportedProtocolVersion
-    let type = "command_response"
-    let token: String
-    let output: String
-    let status: Int32
-
-    enum CodingKeys: String, CodingKey {
-      case protocolVersion = "protocol_version"
-      case type
-      case token
-      case output
-      case status
-    }
-  }
-
   private let logger: ProcessLogger
   private let configManager: ConfigManager
   private let luaRuntime: LuaRuntime
@@ -28,15 +12,13 @@ actor WidgetEngine {
   private let eventManager: EventManager
   private let widgetStore: WidgetStore
   private let metricsCoordinator: MetricsCoordinator
-  private let commandRunner: LuaCommandRunner
+  private let commandService: LuaCommandService
   private let protocolDecoder = WidgetRuntimeProtocolDecoder()
-  private let encoder = JSONEncoder()
 
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
   private var started = false
   private var runtimeSessionID: UInt64 = 0
-  private var activeAsyncCommandCount = 0
 
   /// Creates one widget engine.
   init(
@@ -55,7 +37,11 @@ actor WidgetEngine {
     self.eventManager = eventManager
     self.widgetStore = widgetStore
     self.metricsCoordinator = metricsCoordinator
-    self.commandRunner = LuaCommandRunner(logger: logger.child("commands"))
+    self.commandService = LuaCommandService(
+      logger: logger.child("commands"),
+      luaRuntime: luaRuntime,
+      configManager: configManager
+    )
   }
 
   /// Starts the scripted widget runtime.
@@ -69,7 +55,7 @@ actor WidgetEngine {
     logger.debug("widget engine start begin")
 
     runtimeState.reset()
-    activeAsyncCommandCount = 0
+    await commandService.resetActiveAsyncCommandCount()
 
     await luaRuntime.setLineHandler { [weak self] line in
       Task {
@@ -122,7 +108,7 @@ actor WidgetEngine {
 
     started = false
     runtimeState.reset()
-    activeAsyncCommandCount = 0
+    await commandService.resetActiveAsyncCommandCount()
 
     await eventHub.clearLuaForwardedAppEvents()
 
@@ -139,10 +125,7 @@ actor WidgetEngine {
   func handleRuntimeTransportLine(_ line: String) async {
     guard started else { return }
 
-    logger.trace(
-      "lua transport line received",
-      .field("bytes", line.utf8.count)
-    )
+    logger.trace("lua transport line received", .field("bytes", line.utf8.count))
 
     do {
       let message = try protocolDecoder.decodeMessage(from: line)
@@ -189,14 +172,24 @@ actor WidgetEngine {
     case .clearRoot(let rootID):
       await handleClearRoot(rootID: rootID)
     case .commandRequest(let token, let command, let isSynchronous, let timeoutSeconds, let maxOutputBytes):
-      await handleCommandRequest(
+      await commandService.handleCommandRequest(
         token: token,
         command: command,
         isSynchronous: isSynchronous,
         timeoutSecondsOverride: timeoutSeconds,
-        maxOutputBytesOverride: maxOutputBytes
+        maxOutputBytesOverride: maxOutputBytes,
+        runtimeSessionID: runtimeSessionID,
+        isRuntimeSessionActive: { [weak self] sessionID in
+          guard let self else { return false }
+          return await self.isRuntimeSessionActive(sessionID)
+        }
       )
     }
+  }
+
+  /// Returns whether an async Lua command still belongs to the active runtime session.
+  private func isRuntimeSessionActive(_ sessionID: UInt64) -> Bool {
+    started && runtimeSessionID == sessionID
   }
 
   /// Handles one subscription update from Lua.
@@ -205,10 +198,7 @@ actor WidgetEngine {
     runtimeState.hasSubscriptions = true
 
     await metricsCoordinator.recordLuaSubscriptions(runtimeState.requiredEvents)
-    logger.debug(
-      "required events updated",
-      .field("events", runtimeState.requiredEvents),
-    )
+    logger.debug("required events updated", .field("events", runtimeState.requiredEvents))
 
     let requiredEvents = runtimeState.requiredEvents
     await eventHub.setLuaForwardedAppEvents(requiredEvents)
@@ -254,116 +244,5 @@ actor WidgetEngine {
     await MainActor.run {
       widgetStore.clear(roots: [rootID])
     }
-  }
-
-  /// Handles one Lua command execution request.
-  private func handleCommandRequest(
-    token: String,
-    command: String,
-    isSynchronous: Bool,
-    timeoutSecondsOverride: TimeInterval?,
-    maxOutputBytesOverride: Int?
-  ) async {
-    let commandSettings = await configManager.luaCommandSettings()
-    let commandLimits =
-      LuaCommandRunner.Limits(
-        timeoutSeconds: timeoutSecondsOverride ?? commandSettings.timeoutSeconds,
-        maxOutputBytes: maxOutputBytesOverride ?? commandSettings.maxOutputBytes
-      )
-
-    logger.debug(
-      "lua command requested",
-      .field("token", token),
-      .field("sync", isSynchronous),
-      .field("command_bytes", command.utf8.count),
-      .field("timeout_seconds", commandLimits.timeoutSeconds),
-      .field("max_output_bytes", commandLimits.maxOutputBytes)
-    )
-
-    if isSynchronous {
-      let result = await commandRunner.run(
-        command: command,
-        limits: commandLimits,
-        environment: commandSettings.environment
-      )
-      await sendCommandResponse(token: token, result: result)
-      return
-    }
-
-    let maxAsyncJobs = commandSettings.maxAsyncJobs
-    guard activeAsyncCommandCount < maxAsyncJobs else {
-      logger.warn(
-        "lua async command rejected because limit was reached",
-        .field("token", token),
-        .field("active_async_jobs", activeAsyncCommandCount),
-        .field("max_async_jobs", maxAsyncJobs),
-        .field("command_bytes", command.utf8.count)
-      )
-      await sendCommandResponse(
-        token: token,
-        result: LuaCommandResult(
-          output: "easybar.exec_async rejected: max async job limit reached",
-          status: 69
-        )
-      )
-      return
-    }
-
-    activeAsyncCommandCount += 1
-    let commandRunner = commandRunner
-    let runtimeSessionID = self.runtimeSessionID
-
-    Task { [weak self] in
-      let result = await commandRunner.run(
-        command: command,
-        limits: commandLimits,
-        environment: commandSettings.environment
-      )
-      await self?.sendAsyncCommandResponse(
-        token: token,
-        result: result,
-        runtimeSessionID: runtimeSessionID
-      )
-    }
-  }
-
-  /// Sends one command response back into the Lua runtime.
-  private func sendCommandResponse(token: String, result: LuaCommandResult) async {
-    let response = LuaCommandResponse(
-      token: token,
-      output: result.output,
-      status: result.status
-    )
-
-    guard
-      let data = try? encoder.encode(response),
-      let encoded = String(data: data, encoding: .utf8)
-    else {
-      logger.error("failed to encode lua command response", .field("token", token))
-      return
-    }
-
-    await luaRuntime.send(encoded)
-  }
-
-  /// Sends one async command response only when the originating runtime session is still active.
-  private func sendAsyncCommandResponse(
-    token: String,
-    result: LuaCommandResult,
-    runtimeSessionID: UInt64
-  ) async {
-    activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
-
-    guard started, self.runtimeSessionID == runtimeSessionID else {
-      logger.info(
-        "dropping stale async lua command response",
-        .field("token", token),
-        .field("runtime_session_id", runtimeSessionID),
-        .field("current_runtime_session_id", self.runtimeSessionID)
-      )
-      return
-    }
-
-    await sendCommandResponse(token: token, result: result)
   }
 }
