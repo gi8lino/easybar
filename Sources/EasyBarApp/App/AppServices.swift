@@ -1,10 +1,6 @@
 import EasyBarShared
 
 /// Explicitly owned app services used by the app shell and runtime coordinator.
-///
-/// AppServices is the production dependency graph. The legacy `*.shared` globals
-/// are updated from this graph as a compatibility layer for older UI and widget
-/// code that has not been dependency-injected yet.
 struct AppServices {
   let config: Config
   let configManager: ConfigManager
@@ -95,12 +91,10 @@ struct AppServices {
     composerCalendarAgentClient.updateConfiguration(snapshot.calendarAgent)
   }
 
-  /// Mirrors owned service instances into legacy shared accessors.
+  /// Mirrors only services that still have legacy shared accessors.
   @MainActor
   private func installSharedCompatibilityLayer() {
-    ConfigManager.shared = configManager
     MetricsCoordinator.shared = metricsCoordinator
-    LuaRuntime.shared = luaRuntime
     EventHub.shared = eventHub
     EventManager.shared = eventManager
     SystemEvents.shared = systemEvents

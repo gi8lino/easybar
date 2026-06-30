@@ -19,9 +19,6 @@ actor ConfigManager {
     let environment: [String: String]
   }
 
-  /// Shared actor used for runtime config access.
-  static var shared = ConfigManager()
-
   /// Result of one config load or reload attempt.
   struct ReloadResult: Sendable {
     /// Whether reload completed without validation errors.
