@@ -453,7 +453,8 @@ extension AeroSpaceService {
 
     let snapshot = AeroSpaceSnapshotLoader.load(
       run: runAeroSpace(arguments:),
-      resolveAppID: resolvedAppID(name:bundlePath:)
+      resolveAppID: resolvedAppID(name:bundlePath:),
+      logger: logger
     )
 
     Task { @MainActor [weak self] in
