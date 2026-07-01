@@ -65,6 +65,25 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
   }
 
+  func testLoadHandlesDuplicateJSONFallbackWorkspaceStateLines() {
+    let snapshot = loadSnapshot(
+      jsonWorkspaces:
+        """
+        [
+          {"workspace": "1"},
+          {"workspace": "2"}
+        ]
+        """,
+      jsonWindows: "[]",
+      jsonFocusedWindow: "[]",
+      workspaceState: "1 | false | false\n1 | true | true\n2 | false | false"
+    )
+
+    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
+    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
+    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
+  }
+
   func testLoadFallsBackToTextProviderWhenJSONFails() {
     var requestedArguments: [[String]] = []
 
@@ -162,6 +181,17 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     let snapshot = loadSnapshot(
       workspaceNames: "1\n2",
       workspaceState: "1 | true | true"
+    )
+
+    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
+    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
+    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
+  }
+
+  func testLoadHandlesDuplicateTextWorkspaceStateLines() {
+    let snapshot = loadSnapshot(
+      workspaceNames: "1\n2",
+      workspaceState: "1 | false | false\n1 | true | true\n2 | false | false"
     )
 
     XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])

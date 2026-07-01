@@ -238,8 +238,8 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       return [:]
     }
 
-    return Dictionary(
-      uniqueKeysWithValues:
+    return workspaceStateDictionary(
+      from:
         output
         .split(whereSeparator: \.isNewline)
         .compactMap(parseWorkspaceStateLine)
@@ -334,8 +334,8 @@ private struct TextAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       .split(whereSeparator: \.isNewline)
       .map(String.init)
 
-    let stateByWorkspace = Dictionary(
-      uniqueKeysWithValues:
+    let stateByWorkspace = workspaceStateDictionary(
+      from:
         stateOutput
         .split(whereSeparator: \.isNewline)
         .compactMap(parseWorkspaceStateLine)
@@ -442,6 +442,19 @@ private func requireOutput(_ output: String?, command: String) throws -> String 
   }
 
   return output
+}
+
+/// Builds workspace state lookup without assuming external CLI output is unique.
+private func workspaceStateDictionary(
+  from entries: [(String, WorkspaceState)]
+) -> [String: WorkspaceState] {
+  var states: [String: WorkspaceState] = [:]
+
+  for (name, state) in entries {
+    states[name] = state
+  }
+
+  return states
 }
 
 /// Raw provider-neutral AeroSpace state.
