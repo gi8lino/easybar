@@ -87,7 +87,7 @@ actor RuntimeCoordinator {
 
   func stop() async {
     guard lifecycle.stop() else {
-      logger.info("runtime coordinator stop ignored because it is not started")
+      logger.debug("runtime coordinator stop ignored because it is not started")
       return
     }
 
@@ -112,7 +112,7 @@ actor RuntimeCoordinator {
 
     switch lifecycle.begin(operation) {
     case .queued:
-      logger.info("\(operation.rawValue) busy; queueing another reload")
+      logger.debug("\(operation.rawValue) busy; queueing another reload")
       return
     case .started(let startedGeneration):
       generation = startedGeneration
@@ -210,7 +210,7 @@ actor RuntimeCoordinator {
 
     switch lifecycle.begin(operation) {
     case .queued:
-      logger.info("\(operation.rawValue) busy; queueing another restart")
+      logger.debug("\(operation.rawValue) busy; queueing another restart")
       return
     case .started(let startedGeneration):
       generation = startedGeneration
@@ -231,10 +231,10 @@ actor RuntimeCoordinator {
 
   /// Refreshes the current runtime without reloading config.
   func refreshRuntime() async {
-    logger.info("refreshRuntime begin")
+    logger.debug("refreshRuntime begin")
     aeroSpaceService.triggerRefresh()
     await services.eventHub.emit(.manualRefresh)
-    logger.info("refreshRuntime end")
+    logger.debug("refreshRuntime end")
   }
 
   /// Validates config through the serialized config manager path.
@@ -273,7 +273,7 @@ actor RuntimeCoordinator {
 
   /// Handles one incoming IPC command.
   func handleSocketCommand(_ command: IPC.Command) async {
-    logger.info(
+    logger.debug(
       "handling socket command",
       .field("command", command),
     )
@@ -343,7 +343,7 @@ actor RuntimeCoordinator {
     let currentGeneration = lifecycle.generation
 
     guard lifecycle.canContinueLifecycleWork(generation: generation) else {
-      logger.info(
+      logger.debug(
         "\(operation.rawValue) aborted because runtime stopped or restarted",
         .field("generation", "\(generation)"),
         .field("current_generation", "\(currentGeneration)"),
@@ -379,7 +379,7 @@ actor RuntimeCoordinator {
   /// Returns whether startup work can still continue for the provided generation.
   private func shouldContinueStartup(generation: UInt64) -> Bool {
     guard lifecycle.canContinueStartup(generation: generation) else {
-      logger.info(
+      logger.debug(
         "startup aborted because runtime stopped or restarted",
         .field("generation", "\(generation)"),
         .field("current_generation", "\(lifecycle.generation)"),

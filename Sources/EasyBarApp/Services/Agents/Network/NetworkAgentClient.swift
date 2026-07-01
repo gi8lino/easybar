@@ -82,7 +82,7 @@ final class NetworkAgentClient {
 
     guard started, socketPathChanged || enabledChanged else { return }
 
-    logger.info(
+    logger.debug(
       "network agent config changed; restarting client",
       .field("socket", config.socketPath),
       .field("enabled", config.enabled)
@@ -105,7 +105,7 @@ final class NetworkAgentClient {
     guard !started else { return }
 
     guard config.enabled else {
-      logger.info("network agent client start skipped because agent is disabled")
+      logger.debug("network agent client start skipped because agent is disabled")
       clearPublishedState(notify: false)
       return
     }
@@ -152,7 +152,7 @@ final class NetworkAgentClient {
       break
 
     case .subscribed:
-      logger.info("network agent client subscribed")
+      logger.debug("network agent client subscribed")
 
     case .fields:
       guard let fields = message.fields else {

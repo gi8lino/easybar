@@ -199,7 +199,7 @@ final class LuaTransport: @unchecked Sendable {
       throw TransportError.startupFailed("lua socket listen failed path=\(socketPath) errno=\(errno)")
     }
 
-    logger.info("lua socket listening", .field("socket_path", socketPath))
+    logger.debug("lua socket listening", .field("socket_path", socketPath))
     return fd
   }
 

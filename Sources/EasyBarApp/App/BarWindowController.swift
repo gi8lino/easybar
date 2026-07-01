@@ -51,7 +51,7 @@ final class BarWindowController: NSWindowController {
 
     let screen = NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)
-    logger.info(
+    logger.debug(
       "bar window initial",
       .field("target_frame", NSStringFromRect(frame)),
     )
@@ -119,7 +119,7 @@ final class BarWindowController: NSWindowController {
     let screen = window.screen ?? NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)
 
-    logger.info(
+    logger.debug(
       "bar window reload begin",
       .field("current_frame", NSStringFromRect(window.frame)),
       .field("target_frame", NSStringFromRect(frame))
@@ -137,7 +137,7 @@ final class BarWindowController: NSWindowController {
     window.maxSize = frame.size
     hostingView.frame = NSRect(origin: .zero, size: frame.size)
 
-    logger.info(
+    logger.debug(
       "bar window reload end",
       .field("frame", NSStringFromRect(window.frame)),
     )
@@ -152,7 +152,7 @@ final class BarWindowController: NSWindowController {
 
     window.setFrame(window.frame, display: true)
     window.orderFrontRegardless()
-    logger.info(
+    logger.debug(
       "bar window presented",
       .field("frame", NSStringFromRect(window.frame)),
       .field("level", window.level.rawValue)

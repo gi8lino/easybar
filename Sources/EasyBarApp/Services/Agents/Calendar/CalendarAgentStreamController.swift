@@ -104,7 +104,7 @@ final class CalendarAgentStreamController {
     guard !started else { return }
 
     guard enabled else {
-      logger.info("\(label) start skipped because agent is disabled")
+      logger.debug("\(label) start skipped because agent is disabled")
       return
     }
 
@@ -115,7 +115,7 @@ final class CalendarAgentStreamController {
       self.refresh()
     }
 
-    logger.info(
+    logger.debug(
       "starting \(label)",
       .field("socket", socketPath()),
     )
@@ -126,7 +126,7 @@ final class CalendarAgentStreamController {
   func stop() {
     guard started else { return }
 
-    logger.info("stopping \(label)")
+    logger.debug("stopping \(label)")
 
     started = false
     wakeRefreshController.stop()

@@ -27,7 +27,7 @@ enum AeroSpaceSnapshotLoader {
         resolveAppID: resolveAppID
       )
     } catch {
-      logger?.warn(
+      logger?.debug(
         "aerospace JSON snapshot unavailable; falling back to text output",
         .field("error", error)
       )
@@ -182,12 +182,14 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       from: workspacesOutput,
       decoder: decoder
     )
+    let workspaceNames = loadWorkspaceNamesFallbackIfNeeded(for: jsonWorkspaces)
     let workspaceStateByName = loadWorkspaceStateFallbackIfNeeded(for: jsonWorkspaces)
-    let workspaces = jsonWorkspaces.map { workspace in
-      let fallbackState = workspaceStateByName[workspace.workspace] ?? .default
+    let workspaces = try jsonWorkspaces.enumerated().map { index, workspace in
+      let name = try workspaceName(for: workspace, at: index, fallbackNames: workspaceNames)
+      let fallbackState = workspaceStateByName[name] ?? .default
 
       return WorkspaceDTO(
-        name: workspace.workspace,
+        name: name,
         isFocused: workspace.workspaceIsFocused ?? fallbackState.isFocused,
         isVisible: workspace.workspaceIsVisible ?? fallbackState.isVisible
       )
@@ -220,13 +222,49 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
     )
   }
 
+  /// Reads text workspace names only when JSON workspace payload omits names.
+  private func loadWorkspaceNamesFallbackIfNeeded(
+    for workspaces: [JSONWorkspaceDTO]
+  ) -> [String] {
+    guard
+      workspaces.contains(where: { $0.workspace == nil }),
+      let output = run([
+        "list-workspaces", "--all", "--format", "%{workspace}",
+      ])
+    else {
+      return []
+    }
+
+    return
+      output
+      .split(whereSeparator: \.isNewline)
+      .map(String.init)
+  }
+
+  /// Returns the JSON workspace name or the matching text fallback name.
+  private func workspaceName(
+    for workspace: JSONWorkspaceDTO,
+    at index: Int,
+    fallbackNames: [String]
+  ) throws -> String {
+    if let name = workspace.workspace {
+      return name
+    }
+
+    guard index < fallbackNames.count else {
+      throw AeroSpaceSnapshotProviderError.missingWorkspaceName
+    }
+
+    return fallbackNames[index]
+  }
+
   /// Reads text workspace state only when the JSON workspace payload omits state fields.
   private func loadWorkspaceStateFallbackIfNeeded(
     for workspaces: [JSONWorkspaceDTO]
   ) -> [String: WorkspaceState] {
     guard
       workspaces.contains(where: {
-        $0.workspaceIsFocused == nil || $0.workspaceIsVisible == nil
+        $0.workspace == nil || $0.workspaceIsFocused == nil || $0.workspaceIsVisible == nil
       }),
       let output = run([
         "list-workspaces",
@@ -509,7 +547,7 @@ private struct FocusedWindowDTO {
 
 /// JSON workspace shape returned by `aerospace list-workspaces --json`.
 private struct JSONWorkspaceDTO: Decodable {
-  let workspace: String
+  let workspace: String?
   let workspaceIsFocused: Bool?
   let workspaceIsVisible: Bool?
 
@@ -540,6 +578,7 @@ private enum AeroSpaceSnapshotProviderError: Error, CustomStringConvertible {
   case commandFailed(command: String)
   case invalidUTF8
   case decodeFailed(command: String, error: Error)
+  case missingWorkspaceName
 
   var description: String {
     switch self {
@@ -549,6 +588,8 @@ private enum AeroSpaceSnapshotProviderError: Error, CustomStringConvertible {
       return "invalid UTF-8 output"
     case .decodeFailed(let command, let error):
       return "failed to decode \(command) output: \(error)"
+    case .missingWorkspaceName:
+      return "workspace name missing"
     }
   }
 }

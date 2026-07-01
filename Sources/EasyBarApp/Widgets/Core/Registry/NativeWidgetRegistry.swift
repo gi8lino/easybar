@@ -54,13 +54,13 @@ final class NativeWidgetRegistry {
 
   /// Registers all enabled native widgets.
   private func registerAll() {
-    logger.info("native widget registry registerAll begin")
+    logger.debug("native widget registry registerAll begin")
 
     stopAll()
 
     let registrations = registrations()
 
-    logger.info("registering native widgets")
+    logger.debug("registering native widgets")
     logConfig(registrations)
 
     nativeGroupRegistry.reload(groups: snapshot.builtins.groups)
@@ -71,13 +71,13 @@ final class NativeWidgetRegistry {
     applyNativeEventSubscriptions()
     startWidgets()
 
-    logger.info("native widget registry registerAll end")
+    logger.debug("native widget registry registerAll end")
   }
 
   /// Stops and clears all widgets.
   private func stopAll() {
     if !widgets.isEmpty {
-      logger.info(
+      logger.debug(
         "native widget registry stopping",
         .field("count", widgets.count),
       )
@@ -190,7 +190,7 @@ final class NativeWidgetRegistry {
 
   /// Logs the current built-in widget enablement snapshot.
   private func logConfig(_ registrations: [Registration]) {
-    logger.info(
+    logger.debug(
       "native widget config",
       .field("widgets", enabledWidgetSummary(registrations)),
       .field("calendar_popup_mode", snapshot.builtins.calendar.popupMode.rawValue),
@@ -209,7 +209,7 @@ final class NativeWidgetRegistry {
 
   /// Logs the final registered widget ids.
   private func logRegisteredWidgets() {
-    logger.info(
+    logger.debug(
       "native widgets registered",
       .field("count", widgets.count),
       .field("ids", widgets.map(\.rootID).joined(separator: ",")),

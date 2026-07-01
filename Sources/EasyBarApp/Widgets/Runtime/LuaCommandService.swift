@@ -136,7 +136,7 @@ actor LuaCommandService {
     activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
 
     guard await isRuntimeSessionActive(runtimeSessionID) else {
-      logger.info(
+      logger.debug(
         "dropping stale async lua command response",
         .field("token", token),
         .field("runtime_session_id", runtimeSessionID)

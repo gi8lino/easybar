@@ -36,13 +36,13 @@ local function load_widget_file(widget_dir, file, registry, log)
 		return
 	end
 
-	log.info("loader loaded file=" .. file)
+	log.debug("loader loaded file=" .. file)
 end
 
 --- Loads every widget file from the configured widget directory.
 function M.load_widgets(widget_dir, widget_files, registry, log)
-	log.info("runtime started")
-	log.info("runtime widget_dir=" .. widget_dir)
+	log.debug("runtime started")
+	log.debug("runtime widget_dir=" .. widget_dir)
 
 	for _, file in ipairs(widget_files or {}) do
 		load_widget_file(widget_dir, file, registry, log)
