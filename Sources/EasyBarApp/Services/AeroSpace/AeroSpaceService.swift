@@ -30,10 +30,6 @@ final class AeroSpaceService: ObservableObject {
     var appTerminationObserver: NSObjectProtocol?
     /// Delayed refresh scheduled after app launch.
     var pendingLaunchRefresh: Task<Void, Never>?
-    /// Debounced refresh scheduled after AeroSpace subscription events.
-    var pendingSubscriptionRefresh: Task<Void, Never>?
-    /// Identity for the latest scheduled subscription refresh.
-    var pendingSubscriptionRefreshID: UInt64 = 0
     /// Whether the service is active.
     var running = false
     /// Cached AeroSpace version validation result for this service run.
@@ -53,6 +49,13 @@ final class AeroSpaceService: ObservableObject {
     handleEvent: { [weak self] event in
       self?.handleAeroSpaceSubscriptionEvent(event)
     }
+  )
+  /// Debounces subscription-triggered reloads so event bursts produce one state read.
+  private lazy var subscriptionRefreshScheduler = DebouncedActionScheduler(
+    label: "aerospace subscription refresh",
+    delay: TimeInterval(AeroSpaceSubscriptionEvent.defaultRefreshDelayNanoseconds)
+      / 1_000_000_000,
+    logger: logger
   )
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
@@ -105,6 +108,7 @@ extension AeroSpaceService {
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
     subscriptionController.stop()
+    subscriptionRefreshScheduler.cancel()
 
     let observers = withLock { coordination -> [NSObjectProtocol] in
       guard coordination.running else { return [] }
@@ -115,9 +119,6 @@ extension AeroSpaceService {
       let terminationObserver = coordination.appTerminationObserver
       coordination.pendingLaunchRefresh?.cancel()
       coordination.pendingLaunchRefresh = nil
-      coordination.pendingSubscriptionRefresh?.cancel()
-      coordination.pendingSubscriptionRefresh = nil
-      coordination.pendingSubscriptionRefreshID &+= 1
       coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
@@ -298,41 +299,18 @@ extension AeroSpaceService {
   /// Debounces subscription-triggered reloads so event bursts produce one state read.
   fileprivate func scheduleSubscriptionRefresh(source: String, delayNanoseconds: UInt64) {
     let generation = currentGeneration()
-    let pendingTask = withLock { coordination -> Task<Void, Never>? in
-      let previous = coordination.pendingSubscriptionRefresh
-      coordination.pendingSubscriptionRefreshID &+= 1
-      let refreshID = coordination.pendingSubscriptionRefreshID
-      coordination.pendingSubscriptionRefresh = Task { [weak self] in
-        do {
-          try await Task.sleep(nanoseconds: delayNanoseconds)
-        } catch {
-          return
-        }
-
-        guard let self else { return }
-        guard self.shouldExecute(generation: generation) else { return }
-        guard self.clearPendingSubscriptionRefresh(refreshTaskID: refreshID) else { return }
-        self.triggerRefresh(source: source)
-      }
-      return previous
+    let delaySeconds = TimeInterval(delayNanoseconds) / 1_000_000_000
+    subscriptionRefreshScheduler.schedule(after: delaySeconds) { [weak self] in
+      guard let self else { return }
+      guard self.shouldExecute(generation: generation) else { return }
+      self.triggerRefresh(source: source)
     }
-
-    pendingTask?.cancel()
 
     logger.debug(
       "aerospace subscription refresh scheduled",
       .field("source", source),
       .field("delay_ms", Int(delayNanoseconds / 1_000_000))
     )
-  }
-
-  /// Clears the pending subscription refresh if it still matches the fired work item.
-  fileprivate func clearPendingSubscriptionRefresh(refreshTaskID refreshID: UInt64) -> Bool {
-    withLock { coordination -> Bool in
-      guard coordination.pendingSubscriptionRefreshID == refreshID else { return false }
-      coordination.pendingSubscriptionRefresh = nil
-      return true
-    }
   }
 }
 

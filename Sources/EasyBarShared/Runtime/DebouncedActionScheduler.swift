@@ -31,6 +31,11 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
 
   /// Replaces any pending action with a new delayed action.
   public func schedule(_ action: @escaping @Sendable () -> Void) {
+    schedule(after: delay, action)
+  }
+
+  /// Replaces any pending action with a new delayed action and delay.
+  public func schedule(after delay: TimeInterval, _ action: @escaping @Sendable () -> Void) {
     let scheduledGeneration = state.withLock { state -> UInt64 in
       state.generation &+= 1
       state.pendingTask?.cancel()

@@ -21,6 +21,21 @@ final class SchedulerSleeperTests: XCTestCase {
     wait(for: [expectation], timeout: 1)
   }
 
+  func testDebouncedActionSchedulerCanUsePerCallDelay() {
+    let expectation = expectation(description: "debounced action fired")
+    let scheduler = DebouncedActionScheduler(
+      delay: 60,
+      logger: ProcessLogger(label: "test"),
+      sleeper: ImmediateSleeper()
+    )
+
+    scheduler.schedule(after: 120) {
+      expectation.fulfill()
+    }
+
+    wait(for: [expectation], timeout: 1)
+  }
+
   func testAuthorizationRetryBackoffCanUseInjectedSleeper() {
     let expectation = expectation(description: "retry fired")
     let backoff = AuthorizationRetryBackoff(
