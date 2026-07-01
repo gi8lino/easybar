@@ -121,33 +121,9 @@ struct WiFiPresentation {
 
   /// Returns enabled fields in stable display order.
   private static func enabledFields(config: Config.WiFiBuiltinConfig) -> [NetworkAgentField] {
-    let fields: [(enabled: Bool, field: NetworkAgentField)] = [
-      (config.fields.ssid, .ssid),
-      (config.fields.ipv4Address, .ipv4Address),
-      (config.fields.ipv6Address, .ipv6Address),
-      (config.fields.rssi, .rssi),
-      (config.fields.linkQuality, .linkQuality),
-      (config.fields.txRate, .txRate),
-      (config.fields.channel, .channel),
-      (config.fields.channelBand, .channelBand),
-      (config.fields.channelWidth, .channelWidth),
-      (config.fields.security, .security),
-      (config.fields.phyMode, .phyMode),
-      (config.fields.interfaceName, .interfaceName),
-      (config.fields.interfaceMode, .interfaceMode),
-      (config.fields.bssid, .bssid),
-      (config.fields.hardwareAddress, .hardwareAddress),
-      (config.fields.power, .power),
-      (config.fields.serviceActive, .serviceActive),
-      (config.fields.noise, .noise),
-      (config.fields.snr, .snr),
-      (config.fields.countryCode, .countryCode),
-      (config.fields.roaming, .roaming),
-      (config.fields.ssidChangedAt, .ssidChangedAt),
-      (config.fields.interfaceChangedAt, .interfaceChangedAt),
-    ]
-
-    return fields.compactMap { $0.enabled ? $0.field : nil }
+    Config.builtinWiFiFieldMetadata.compactMap { metadata in
+      config.fields[keyPath: metadata.keyPath] ? metadata.agentField : nil
+    }
   }
 
   /// Resolves one Wi-Fi field into displayable text.
@@ -249,57 +225,15 @@ struct WiFiPresentation {
 
   /// Returns one stable, user-facing label for the provided field.
   private static func fieldLabel(for field: NetworkAgentField) -> String {
+    if let metadata = Config.builtinWiFiFieldMetadata.first(where: { $0.agentField == field }) {
+      return metadata.displayLabel
+    }
+
     switch field {
     case .generatedAt:
       return "Generated"
-    case .ssid:
-      return "SSID"
-    case .ipv4Address:
-      return "IPv4 Address"
-    case .ipv6Address:
-      return "IPv6 Address"
-    case .bssid:
-      return "BSSID"
-    case .interfaceName:
-      return "Interface"
-    case .hardwareAddress:
-      return "MAC"
-    case .power:
-      return "Power"
-    case .serviceActive:
-      return "Service"
     case .primaryInterfaceIsTunnel:
       return "Primary Is Tunnel"
-    case .rssi:
-      return "Signal"
-    case .noise:
-      return "Noise"
-    case .snr:
-      return "SNR"
-    case .linkQuality:
-      return "Link Quality"
-    case .txRate:
-      return "Rate"
-    case .channel:
-      return "Channel"
-    case .channelBand:
-      return "Band"
-    case .channelWidth:
-      return "Width"
-    case .security:
-      return "Security"
-    case .phyMode:
-      return "PHY"
-    case .interfaceMode:
-      return "Mode"
-    case .countryCode:
-      return "Country"
-    case .roaming:
-      return "Roaming"
-    case .ssidChangedAt:
-      return "SSID Changed"
-    case .interfaceChangedAt:
-      return "Interface Changed"
     case .locationAuthorized:
       return "Location Authorized"
     case .locationPermissionState:
