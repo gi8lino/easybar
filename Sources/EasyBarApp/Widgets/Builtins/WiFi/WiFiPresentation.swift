@@ -121,7 +121,7 @@ struct WiFiPresentation {
 
   /// Returns enabled fields in stable display order.
   private static func enabledFields(config: Config.WiFiBuiltinConfig) -> [NetworkAgentField] {
-    Config.builtinWiFiFieldMetadata.compactMap { metadata in
+    BuiltinWiFiFieldCatalog.fields.compactMap { metadata in
       config.fields[keyPath: metadata.keyPath] ? metadata.agentField : nil
     }
   }
@@ -225,8 +225,8 @@ struct WiFiPresentation {
 
   /// Returns one stable, user-facing label for the provided field.
   private static func fieldLabel(for field: NetworkAgentField) -> String {
-    if let metadata = Config.builtinWiFiFieldMetadata.first(where: { $0.agentField == field }) {
-      return metadata.displayLabel
+    if let label = BuiltinWiFiFieldCatalog.displayLabel(for: field) {
+      return label
     }
 
     switch field {
