@@ -11,6 +11,7 @@ import Foundation
 final class CalendarNativeWidget: NativeWidget {
 
   let rootID = "builtin_calendar"
+  let widgetStore: WidgetStore
 
   var appEventSubscriptions: Set<String> {
     let refreshEvent = Self.refreshEvent(for: config)
@@ -23,6 +24,11 @@ final class CalendarNativeWidget: NativeWidget {
 
   private let config: Config.CalendarBuiltinConfig
   private let calendarAgentConfig: ConfigSnapshot.CalendarAgent
+  private let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
+  private let nativeMonthCalendarStore: NativeMonthCalendarStore
+  private let nativeComposerCalendarStore: NativeComposerCalendarStore
+  private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
+  private let monthCalendarAgentClient: MonthCalendarAgentClient
   private let eventObserver = EasyBarEventObserver()
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
@@ -38,10 +44,22 @@ final class CalendarNativeWidget: NativeWidget {
   /// Creates the native calendar widget from immutable config sections.
   init(
     config: Config.CalendarBuiltinConfig,
-    calendarAgentConfig: ConfigSnapshot.CalendarAgent
+    calendarAgentConfig: ConfigSnapshot.CalendarAgent,
+    widgetStore: WidgetStore,
+    nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
+    nativeMonthCalendarStore: NativeMonthCalendarStore,
+    nativeComposerCalendarStore: NativeComposerCalendarStore,
+    upcomingCalendarAgentClient: UpcomingCalendarAgentClient,
+    monthCalendarAgentClient: MonthCalendarAgentClient
   ) {
     self.config = config
     self.calendarAgentConfig = calendarAgentConfig
+    self.widgetStore = widgetStore
+    self.nativeUpcomingCalendarStore = nativeUpcomingCalendarStore
+    self.nativeMonthCalendarStore = nativeMonthCalendarStore
+    self.nativeComposerCalendarStore = nativeComposerCalendarStore
+    self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
+    self.monthCalendarAgentClient = monthCalendarAgentClient
   }
 
   // MARK: - Lifecycle
@@ -87,9 +105,9 @@ final class CalendarNativeWidget: NativeWidget {
 
     if startedCalendarAgent {
       stopCalendarAgent()
-      NativeUpcomingCalendarStore.shared.clear()
-      NativeMonthCalendarStore.shared.clear()
-      NativeComposerCalendarStore.shared.clear()
+      nativeUpcomingCalendarStore.clear()
+      nativeMonthCalendarStore.clear()
+      nativeComposerCalendarStore.clear()
     }
 
     startedCalendarAgent = false
@@ -145,10 +163,10 @@ extension CalendarNativeWidget {
     case .none:
       break
     case .upcoming:
-      UpcomingCalendarAgentClient.shared.start()
+      upcomingCalendarAgentClient.start()
     case .month:
-      MonthCalendarAgentClient.shared.start()
-      MonthCalendarAgentClient.shared.focusVisibleMonth(snapshot.now)
+      monthCalendarAgentClient.start()
+      monthCalendarAgentClient.focusVisibleMonth(snapshot.now)
     }
   }
 
@@ -158,9 +176,9 @@ extension CalendarNativeWidget {
     case .none:
       break
     case .upcoming:
-      UpcomingCalendarAgentClient.shared.stop()
+      upcomingCalendarAgentClient.stop()
     case .month:
-      MonthCalendarAgentClient.shared.stop()
+      monthCalendarAgentClient.stop()
     }
   }
 }

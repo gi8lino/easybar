@@ -6,6 +6,7 @@ import Foundation
 final class VolumeSliderNativeWidget: NativeWidget {
 
   let rootID = "builtin_volume"
+  let widgetStore: WidgetStore
 
   var appEventSubscriptions: Set<String> {
     [
@@ -40,8 +41,9 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Creates the native volume widget from an immutable config section.
-  init(config: Config.VolumeBuiltinConfig) {
+  init(config: Config.VolumeBuiltinConfig, widgetStore: WidgetStore) {
     self.config = config
+    self.widgetStore = widgetStore
   }
 
   // MARK: - Lifecycle

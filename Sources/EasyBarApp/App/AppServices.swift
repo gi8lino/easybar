@@ -37,7 +37,8 @@ struct AppServices {
     )
     let nativeServices = makeNativeServices(
       logger: logger,
-      snapshot: configServices.bootstrapSnapshot
+      snapshot: configServices.bootstrapSnapshot,
+      eventManager: eventServices.eventManager
     )
     let agentServices = makeAgentServices(
       logger: logger,
@@ -98,9 +99,6 @@ struct AppServices {
     PowerEvents.shared = powerEvents
     TimerEvents.shared = timerEvents
     VolumeEvents.shared = volumeEvents
-    WidgetStore.shared = widgetStore
-    NativeWidgetRegistry.shared = nativeWidgetRegistry
-    AeroSpaceService.shared = aeroSpaceService
     CalendarAgentEventRelay.shared = calendarAgentEventRelay
     NetworkAgentClient.shared = networkAgentClient
     NativeWiFiStore.shared = nativeWiFiStore
@@ -145,16 +143,26 @@ struct AppServices {
   }
 
   @MainActor
-  private static func makeNativeServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
+  private static func makeNativeServices(
+    logger: ProcessLogger,
+    snapshot: ConfigSnapshot,
+    eventManager: EventManager
+  )
     -> NativeServices
   {
-    NativeServices(
-      widgetStore: WidgetStore(),
+    let widgetStore = WidgetStore()
+    let aeroSpaceService = AeroSpaceService(logger: logger.child("aerospace"))
+
+    return NativeServices(
+      widgetStore: widgetStore,
       nativeWidgetRegistry: NativeWidgetRegistry(
         logger: logger.child("widgets"),
-        snapshot: snapshot
+        snapshot: snapshot,
+        widgetStore: widgetStore,
+        eventManager: eventManager,
+        aeroSpaceService: aeroSpaceService
       ),
-      aeroSpaceService: AeroSpaceService(logger: logger.child("aerospace")),
+      aeroSpaceService: aeroSpaceService,
       nativeWiFiStore: NativeWiFiStore(logger: logger.child("wifi_store")),
       nativeMonthCalendarStore: NativeMonthCalendarStore(logger: logger.child("month_store")),
       nativeUpcomingCalendarStore: NativeUpcomingCalendarStore(

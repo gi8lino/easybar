@@ -5,18 +5,26 @@ import Foundation
 final class AeroSpaceModeNativeWidget: NativeWidget {
 
   let rootID = "builtin_aerospace_mode"
+  let widgetStore: WidgetStore
 
   private let config: Config.AeroSpaceModeBuiltinConfig
+  private let aeroSpaceService: AeroSpaceService
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
   /// Creates the native AeroSpace mode widget from an immutable config section.
-  init(config: Config.AeroSpaceModeBuiltinConfig) {
+  init(
+    config: Config.AeroSpaceModeBuiltinConfig,
+    widgetStore: WidgetStore,
+    aeroSpaceService: AeroSpaceService
+  ) {
     self.config = config
+    self.widgetStore = widgetStore
+    self.aeroSpaceService = aeroSpaceService
   }
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
-    AeroSpaceService.shared.registerConsumer(rootID)
+    aeroSpaceService.registerConsumer(rootID)
 
     aeroSpaceObserver.start { [weak self] in
       self?.publish()
@@ -28,7 +36,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   /// Stops the widget and removes observers.
   func stop() {
     aeroSpaceObserver.stop()
-    AeroSpaceService.shared.unregisterConsumer(rootID)
+    aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }
 
@@ -36,7 +44,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   private func publish() {
     let placement = config.placement
     let style = config.style
-    let mode = AeroSpaceService.shared.focusedLayoutMode
+    let mode = aeroSpaceService.focusedLayoutMode
 
     let node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,

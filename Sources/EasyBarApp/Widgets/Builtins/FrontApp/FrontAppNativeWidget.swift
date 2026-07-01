@@ -5,18 +5,26 @@ import Foundation
 final class FrontAppNativeWidget: NativeWidget {
 
   let rootID = "builtin_front_app"
+  let widgetStore: WidgetStore
 
   private let config: Config.FrontAppBuiltinConfig
+  private let aeroSpaceService: AeroSpaceService
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
   /// Creates the native front-app widget from an immutable config section.
-  init(config: Config.FrontAppBuiltinConfig) {
+  init(
+    config: Config.FrontAppBuiltinConfig,
+    widgetStore: WidgetStore,
+    aeroSpaceService: AeroSpaceService
+  ) {
     self.config = config
+    self.widgetStore = widgetStore
+    self.aeroSpaceService = aeroSpaceService
   }
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
-    AeroSpaceService.shared.registerConsumer(rootID)
+    aeroSpaceService.registerConsumer(rootID)
 
     aeroSpaceObserver.start { [weak self] in
       self?.publish()
@@ -28,7 +36,7 @@ final class FrontAppNativeWidget: NativeWidget {
   /// Stops the widget and removes observers.
   func stop() {
     aeroSpaceObserver.stop()
-    AeroSpaceService.shared.unregisterConsumer(rootID)
+    aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }
 
@@ -50,7 +58,7 @@ final class FrontAppNativeWidget: NativeWidget {
 
   /// Returns the focused app already resolved by `AeroSpaceService`.
   private func currentFocusedApp() -> (name: String, bundlePath: String?) {
-    guard let app = AeroSpaceService.shared.focusedApp else {
+    guard let app = aeroSpaceService.focusedApp else {
       return ("", nil)
     }
 

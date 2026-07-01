@@ -223,6 +223,8 @@ final class AppController {
     let controller = BarWindowController(
       logger: logger.child("window"),
       configStore: services.configSnapshotStore,
+      widgetStore: services.widgetStore,
+      aeroSpaceService: services.aeroSpaceService,
       menuStateProvider: BarContextMenuStateProvider(
         nativeWiFiStore: services.nativeWiFiStore,
         nativeMonthCalendarStore: services.nativeMonthCalendarStore,

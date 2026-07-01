@@ -6,6 +6,7 @@ import Foundation
 final class CPUSparklineNativeWidget: NativeWidget {
 
   let rootID = "builtin_cpu"
+  let widgetStore: WidgetStore
 
   var appEventSubscriptions: Set<String> {
     [
@@ -24,8 +25,9 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private lazy var renderer = CPURenderer(rootID: rootID)
 
   /// Creates the native CPU widget from an immutable config section.
-  init(config: Config.CPUBuiltinConfig) {
+  init(config: Config.CPUBuiltinConfig, widgetStore: WidgetStore) {
     self.config = config
+    self.widgetStore = widgetStore
   }
 
   /// Immutable render input for the CPU widget.

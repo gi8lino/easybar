@@ -7,16 +7,6 @@ import Foundation
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
 /// runs when at least one native widget depends on that state.
 final class AeroSpaceService: ObservableObject {
-  /// Shared AeroSpace service.
-  static var shared = AeroSpaceService(
-    logger: ProcessLogger(label: "easybar.bootstrap.aerospace")
-  )
-
-  /// Configures the shared AeroSpace service.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = AeroSpaceService(logger: logger)
-  }
-
   /// Published workspace list used by spaces widgets.
   @Published private(set) var spaces: [SpaceItem] = []
   /// Stable id of the focused application.

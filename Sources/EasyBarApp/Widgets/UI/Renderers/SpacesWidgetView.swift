@@ -3,7 +3,7 @@ import SwiftUI
 /// Renders all workspaces with their running applications.
 struct SpacesWidgetView: View {
 
-  @ObservedObject private var aeroSpaceService = AeroSpaceService.shared
+  @EnvironmentObject private var aeroSpaceService: AeroSpaceService
   @EnvironmentObject private var configStore: ConfigSnapshotStore
 
   private var config: Config.SpacesBuiltinConfig {

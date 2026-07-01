@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 protocol NativeWidget: AnyObject {
   var rootID: String { get }
+  var widgetStore: WidgetStore { get }
   var appEventSubscriptions: Set<String> { get }
   /// Starts the widget.
   func start()
@@ -31,6 +32,6 @@ extension NativeWidget {
 
   /// Applies the latest rendered nodes owned by this native widget.
   func applyNodes(_ nodes: [WidgetNodeState]) {
-    WidgetStore.shared.apply(root: rootID, nodes: nodes)
+    widgetStore.apply(root: rootID, nodes: nodes)
   }
 }

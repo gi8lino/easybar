@@ -9,24 +9,27 @@ final class NativeWidgetRegistry {
     let makeWidget: () -> NativeWidget
   }
 
-  /// Shared native widget registry.
-  static var shared = NativeWidgetRegistry(
-    logger: ProcessLogger(label: "easybar.bootstrap.native_widgets"),
-    snapshot: Config.makeUnloadedConfig().snapshot()
-  )
-
-  /// Configures the shared native widget registry.
-  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = NativeWidgetRegistry(logger: logger, snapshot: snapshot)
-  }
-
   private let logger: ProcessLogger
+  private let widgetStore: WidgetStore
+  private let eventManager: EventManager
+  private let aeroSpaceService: AeroSpaceService
+  private let nativeGroupRegistry: NativeGroupRegistry
   private var snapshot: ConfigSnapshot
   private var widgets: [NativeWidget] = []
 
-  init(logger: ProcessLogger, snapshot: ConfigSnapshot) {
+  init(
+    logger: ProcessLogger,
+    snapshot: ConfigSnapshot,
+    widgetStore: WidgetStore,
+    eventManager: EventManager,
+    aeroSpaceService: AeroSpaceService
+  ) {
     self.logger = logger
     self.snapshot = snapshot
+    self.widgetStore = widgetStore
+    self.eventManager = eventManager
+    self.aeroSpaceService = aeroSpaceService
+    self.nativeGroupRegistry = NativeGroupRegistry(widgetStore: widgetStore)
   }
 
   /// Starts all enabled native widgets using the current immutable config snapshot.
@@ -60,7 +63,7 @@ final class NativeWidgetRegistry {
     logger.info("registering native widgets")
     logConfig(registrations)
 
-    NativeGroupRegistry.shared.reload(groups: snapshot.builtins.groups)
+    nativeGroupRegistry.reload(groups: snapshot.builtins.groups)
     widgets = makeEnabledWidgets(from: registrations)
 
     logRegisteredWidgets()
@@ -89,8 +92,8 @@ final class NativeWidgetRegistry {
     }
 
     widgets.removeAll()
-    EventManager.shared.setNativeSubscriptions([])
-    NativeGroupRegistry.shared.clear()
+    eventManager.setNativeSubscriptions([])
+    nativeGroupRegistry.clear()
   }
 
   /// Builds the enabled native widget list from the current config snapshot.
@@ -107,37 +110,61 @@ final class NativeWidgetRegistry {
 
     return [
       Registration(id: "spaces", enabled: builtins.spaces.enabled) {
-        SpacesNativeWidget(config: builtins.spaces)
+        SpacesNativeWidget(
+          config: builtins.spaces,
+          widgetStore: self.widgetStore,
+          aeroSpaceService: self.aeroSpaceService
+        )
       },
       Registration(id: "battery", enabled: builtins.battery.enabled) {
-        BatteryNativeWidget(config: builtins.battery)
+        BatteryNativeWidget(config: builtins.battery, widgetStore: self.widgetStore)
       },
       Registration(id: "front_app", enabled: builtins.frontApp.enabled) {
-        FrontAppNativeWidget(config: builtins.frontApp)
+        FrontAppNativeWidget(
+          config: builtins.frontApp,
+          widgetStore: self.widgetStore,
+          aeroSpaceService: self.aeroSpaceService
+        )
       },
       Registration(id: "aerospace_mode", enabled: builtins.aerospaceMode.enabled) {
-        AeroSpaceModeNativeWidget(config: builtins.aerospaceMode)
+        AeroSpaceModeNativeWidget(
+          config: builtins.aerospaceMode,
+          widgetStore: self.widgetStore,
+          aeroSpaceService: self.aeroSpaceService
+        )
       },
       Registration(id: "volume", enabled: builtins.volume.enabled) {
-        VolumeSliderNativeWidget(config: builtins.volume)
+        VolumeSliderNativeWidget(config: builtins.volume, widgetStore: self.widgetStore)
       },
       Registration(id: "wifi", enabled: builtins.wifi.enabled) {
-        WiFiNativeWidget(config: builtins.wifi, networkAgentConfig: networkAgent)
+        WiFiNativeWidget(
+          config: builtins.wifi,
+          networkAgentConfig: networkAgent,
+          widgetStore: self.widgetStore,
+          networkAgentClient: NetworkAgentClient.shared,
+          nativeWiFiStore: NativeWiFiStore.shared
+        )
       },
       Registration(id: "date", enabled: builtins.date.enabled) {
-        DateNativeWidget(config: builtins.date)
+        DateNativeWidget(config: builtins.date, widgetStore: self.widgetStore)
       },
       Registration(id: "time", enabled: builtins.time.enabled) {
-        TimeNativeWidget(config: builtins.time)
+        TimeNativeWidget(config: builtins.time, widgetStore: self.widgetStore)
       },
       Registration(id: "calendar", enabled: builtins.calendar.enabled) {
         CalendarNativeWidget(
           config: builtins.calendar,
-          calendarAgentConfig: calendarAgent
+          calendarAgentConfig: calendarAgent,
+          widgetStore: self.widgetStore,
+          nativeUpcomingCalendarStore: NativeUpcomingCalendarStore.shared,
+          nativeMonthCalendarStore: NativeMonthCalendarStore.shared,
+          nativeComposerCalendarStore: NativeComposerCalendarStore.shared,
+          upcomingCalendarAgentClient: UpcomingCalendarAgentClient.shared,
+          monthCalendarAgentClient: MonthCalendarAgentClient.shared
         )
       },
       Registration(id: "cpu", enabled: builtins.cpu.enabled) {
-        CPUSparklineNativeWidget(config: builtins.cpu)
+        CPUSparklineNativeWidget(config: builtins.cpu, widgetStore: self.widgetStore)
       },
     ]
   }
@@ -158,7 +185,7 @@ final class NativeWidgetRegistry {
       "native widget event subscriptions",
       .field("subscriptions", subscriptions),
     )
-    EventManager.shared.setNativeSubscriptions(subscriptions)
+    eventManager.setNativeSubscriptions(subscriptions)
   }
 
   /// Logs the current built-in widget enablement snapshot.

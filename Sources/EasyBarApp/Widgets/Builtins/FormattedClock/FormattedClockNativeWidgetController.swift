@@ -37,13 +37,19 @@ final class FormattedClockNativeWidgetController: NativeWidget {
   }
 
   let rootID: String
+  let widgetStore: WidgetStore
 
   private let snapshotProvider: () -> Snapshot
   private let eventObserver = EasyBarEventObserver()
   private let formatterCache = FormattedDateFormatterCache()
 
-  init(rootID: String, snapshotProvider: @escaping () -> Snapshot) {
+  init(
+    rootID: String,
+    widgetStore: WidgetStore,
+    snapshotProvider: @escaping () -> Snapshot
+  ) {
     self.rootID = rootID
+    self.widgetStore = widgetStore
     self.snapshotProvider = snapshotProvider
   }
 

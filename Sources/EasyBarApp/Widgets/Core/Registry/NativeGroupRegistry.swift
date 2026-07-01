@@ -1,21 +1,21 @@
 import Foundation
 
-/// Publishes config-defined native groups into the shared widget store.
+/// Publishes config-defined native groups into a widget store.
 @MainActor
 final class NativeGroupRegistry {
-
-  static let shared = NativeGroupRegistry()
-
   private var publishedRootIDs: [String] = []
+  private let widgetStore: WidgetStore
 
-  private init() {}
+  init(widgetStore: WidgetStore) {
+    self.widgetStore = widgetStore
+  }
 
   /// Rebuilds all native groups from the provided config snapshot.
   func reload(groups: [Config.BuiltinGroupConfig]) {
     clear()
 
     for group in groups {
-      WidgetStore.shared.apply(root: group.id, nodes: [makeNode(group)])
+      widgetStore.apply(root: group.id, nodes: [makeNode(group)])
       publishedRootIDs.append(group.id)
     }
   }
@@ -23,7 +23,7 @@ final class NativeGroupRegistry {
   /// Clears all previously published native groups.
   func clear() {
     for rootID in publishedRootIDs {
-      WidgetStore.shared.apply(root: rootID, nodes: [])
+      widgetStore.apply(root: rootID, nodes: [])
     }
 
     publishedRootIDs.removeAll()

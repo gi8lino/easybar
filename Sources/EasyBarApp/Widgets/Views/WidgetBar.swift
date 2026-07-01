@@ -3,7 +3,7 @@ import SwiftUI
 
 struct WidgetBar: View {
 
-  @ObservedObject private var store = WidgetStore.shared
+  @EnvironmentObject private var store: WidgetStore
   let position: WidgetPosition
   let logger: ProcessLogger
 

@@ -12,6 +12,7 @@ import IOKit.ps
 final class BatteryNativeWidget: NativeWidget {
 
   let rootID = "builtin_battery"
+  let widgetStore: WidgetStore
 
   var appEventSubscriptions: Set<String> {
     [
@@ -45,8 +46,9 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Creates the native battery widget from an immutable config section.
-  init(config: Config.BatteryBuiltinConfig) {
+  init(config: Config.BatteryBuiltinConfig, widgetStore: WidgetStore) {
     self.config = config
+    self.widgetStore = widgetStore
   }
 
   // MARK: - Lifecycle
