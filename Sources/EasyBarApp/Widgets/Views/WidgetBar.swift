@@ -7,7 +7,6 @@ struct WidgetBar: View {
   let position: WidgetPosition
   let logger: ProcessLogger
 
-  /// Renders the widgets for one bar position.
   var body: some View {
     HStack(spacing: 4) {
       ForEach(topLevelNodes) { node in
@@ -16,7 +15,6 @@ struct WidgetBar: View {
     }
   }
 
-  /// Returns the rendered top-level nodes for this bar position.
   private var topLevelNodes: [WidgetNodeState] {
     return store.topLevelNodes(for: position)
   }

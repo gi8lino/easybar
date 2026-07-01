@@ -26,7 +26,6 @@ struct AppServices {
   let composerCalendarAgentClient: ComposerCalendarAgentClient
   let metricsCoordinator: MetricsCoordinator
 
-  /// Creates the production app dependency graph.
   @MainActor
   static func bootstrap(logger: ProcessLogger) -> AppServices {
     let configServices = makeConfigServices()
@@ -75,7 +74,6 @@ struct AppServices {
     return services
   }
 
-  /// Applies one immutable config snapshot to owned runtime services.
   @MainActor
   func applyRuntimeConfiguration(_ snapshot: ConfigSnapshot) {
     configSnapshotStore.apply(snapshot)
@@ -91,7 +89,6 @@ struct AppServices {
     composerCalendarAgentClient.updateConfiguration(snapshot.calendarAgent)
   }
 
-  /// Mirrors only services that still have legacy shared accessors.
   @MainActor
   private func installSharedCompatibilityLayer() {
     MetricsCoordinator.shared = metricsCoordinator
@@ -115,7 +112,6 @@ struct AppServices {
     ComposerCalendarAgentClient.shared = composerCalendarAgentClient
   }
 
-  /// Creates config-owned startup services.
   @MainActor
   private static func makeConfigServices() -> ConfigServices {
     let config = Config.makeUnloadedConfig()
@@ -129,7 +125,6 @@ struct AppServices {
     )
   }
 
-  /// Creates runtime event services.
   @MainActor
   private static func makeEventServices(logger: ProcessLogger, luaRuntime: LuaRuntime)
     -> EventServices
@@ -149,7 +144,6 @@ struct AppServices {
     )
   }
 
-  /// Creates UI-facing native widget services and state stores.
   @MainActor
   private static func makeNativeServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
     -> NativeServices
@@ -172,7 +166,6 @@ struct AppServices {
     )
   }
 
-  /// Creates helper-agent clients and relays.
   @MainActor
   private static func makeAgentServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
     -> AgentServices

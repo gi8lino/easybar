@@ -4,7 +4,6 @@ import TOMLKit
 
 extension Config {
 
-  /// Loads configuration from disk.
   func load(validateOnly: Bool = false) throws {
     resetRegisteredDirectories()
 
@@ -65,12 +64,10 @@ extension Config {
     }
   }
 
-  /// Returns the config path override from the environment when present.
   func environmentConfigPathOverride() -> String? {
     return expandedEnvironmentPath(named: SharedEnvironmentKeys.configPath)
   }
 
-  /// Returns the log-level diagnostic override from the environment when present.
   func environmentLogLevelOverride() throws -> ProcessLogLevel? {
     guard let value = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel) else {
       return nil

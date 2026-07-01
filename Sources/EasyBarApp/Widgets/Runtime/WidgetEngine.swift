@@ -20,7 +20,6 @@ actor WidgetEngine {
   private var started = false
   private var runtimeSessionID: UInt64 = 0
 
-  /// Creates one widget engine.
   init(
     logger: ProcessLogger,
     luaRuntime: LuaRuntime,
@@ -44,7 +43,6 @@ actor WidgetEngine {
     )
   }
 
-  /// Starts the scripted widget runtime.
   @discardableResult
   func start() async -> Bool {
     guard !started else {
@@ -77,7 +75,6 @@ actor WidgetEngine {
     return true
   }
 
-  /// Reloads the scripted widget runtime and clears rendered state.
   func reload() async {
     logger.debug("widget engine reload begin")
 
@@ -97,7 +94,6 @@ actor WidgetEngine {
     logger.debug("widget engine reload end")
   }
 
-  /// Stops the scripted widget runtime and event sources.
   func shutdown() async {
     guard started else {
       logger.debug("widget engine shutdown skipped, not started")
@@ -121,7 +117,6 @@ actor WidgetEngine {
     logger.debug("widget engine shutdown end")
   }
 
-  /// Handles one line of structured socket transport output from the Lua runtime.
   func handleRuntimeTransportLine(_ line: String) async {
     guard started else { return }
 
@@ -149,7 +144,6 @@ actor WidgetEngine {
     }
   }
 
-  /// Emits initial events after both subscriptions and readiness are known.
   private func emitInitialEventsIfPossible() async {
     guard runtimeState.canEmitInitialEvents else { return }
 
@@ -160,7 +154,6 @@ actor WidgetEngine {
     await eventHub.emit(.manualRefresh)
   }
 
-  /// Handles one decoded runtime message.
   private func handleRuntimeMessage(_ message: WidgetRuntimeMessage) async {
     switch message {
     case .subscriptions(let requiredEvents):
@@ -187,12 +180,10 @@ actor WidgetEngine {
     }
   }
 
-  /// Returns whether an async Lua command still belongs to the active runtime session.
   private func isRuntimeSessionActive(_ sessionID: UInt64) -> Bool {
     started && runtimeSessionID == sessionID
   }
 
-  /// Handles one subscription update from Lua.
   private func handleSubscriptions(_ requiredEvents: Set<String>) async {
     runtimeState.requiredEvents = requiredEvents
     runtimeState.hasSubscriptions = true
@@ -210,7 +201,6 @@ actor WidgetEngine {
     await emitInitialEventsIfPossible()
   }
 
-  /// Handles the Lua runtime ready handshake.
   private func handleReady() async {
     logger.debug("lua runtime handshake received")
 

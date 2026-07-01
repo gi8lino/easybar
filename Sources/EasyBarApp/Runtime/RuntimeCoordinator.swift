@@ -7,25 +7,16 @@ import Foundation
 /// runtime refreshes, and IPC commands. Lifecycle queue state, config watching,
 /// and socket callback bridging are delegated to smaller runtime collaborators.
 actor RuntimeCoordinator {
-  /// Logger used for runtime coordination diagnostics.
   private let logger: ProcessLogger
-  /// Explicit runtime dependencies resolved by the app shell.
   private let services: AppServices
-  /// Actor used for config reloads and runtime config reads.
   private let configManager: ConfigManager
-  /// Coordinates config file watching and reload callbacks.
   private let configWatcherCoordinator: ConfigWatcherCoordinator
-  /// Coordinates Lua and native widget rendering.
   private let widgetEngine: WidgetEngine
-  /// Shared AeroSpace integration service.
   private let aeroSpaceService: AeroSpaceService
-  /// Adapts the socket server to async runtime commands.
   private let socketCommandAdapter: RuntimeSocketCommandAdapter
 
-  /// Mutable runtime lifecycle bookkeeping.
   private var lifecycle = RuntimeLifecycleStateMachine()
 
-  /// Creates one runtime coordinator.
   init(logger: ProcessLogger, services: AppServices) {
     self.logger = logger
     self.services = services
@@ -52,7 +43,6 @@ actor RuntimeCoordinator {
     )
   }
 
-  /// Starts the runtime and all related services.
   func start() async {
     let generation: UInt64
 
@@ -95,7 +85,6 @@ actor RuntimeCoordinator {
     logger.info("runtime coordinator start end")
   }
 
-  /// Stops the runtime and all related services.
   func stop() async {
     guard lifecycle.stop() else {
       logger.info("runtime coordinator stop ignored because it is not started")
@@ -117,7 +106,6 @@ actor RuntimeCoordinator {
     logger.info("runtime coordinator stop end")
   }
 
-  /// Reloads config and reapplies all dependent runtime state.
   func reloadConfig() async {
     let operation = RuntimeLifecycleOperation.reloadConfig
     let generation: UInt64
@@ -164,7 +152,6 @@ actor RuntimeCoordinator {
     await finishLifecycleOperation(operation)
   }
 
-  /// Applies one successfully loaded config snapshot across runtime collaborators.
   private func runConfigReloadSteps(
     result: ConfigManager.ReloadResult,
     generation: UInt64,
@@ -217,7 +204,6 @@ actor RuntimeCoordinator {
     )
   }
 
-  /// Restarts the Lua/widget runtime and reapplies native widgets afterward.
   func restartLuaRuntime() async {
     let operation = RuntimeLifecycleOperation.restartLuaRuntime
     let generation: UInt64
