@@ -90,7 +90,11 @@ extension AeroSpaceService {
     guard shouldStart else { return }
 
     logger.debug("aerospace service start begin")
-    subscriptionController.start()
+    if ensureAeroSpaceVersionSupported() {
+      subscriptionController.start()
+    } else {
+      logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
+    }
     subscribeAppSwitches()
     subscribeAppLaunch()
     subscribeAppTermination()
