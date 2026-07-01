@@ -76,7 +76,7 @@ final class AeroSpaceCommandRunner {
         "aerospace command exited",
         .field("status", process.terminationStatus),
         .field("args", arguments.joined(separator: " ")),
-        .field("stderr", stderr ?? "")
+        .field("stderr_bytes", stderr?.utf8.count ?? 0)
       )
     }
 

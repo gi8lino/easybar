@@ -300,6 +300,6 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
     let output = try String(contentsOf: logURL, encoding: .utf8)
     XCTAssertTrue(output.contains("aerospace command exited"))
     XCTAssertTrue(output.contains("status=2"))
-    XCTAssertTrue(output.contains(#"stderr="bad format token""#))
+    XCTAssertTrue(output.contains("stderr_bytes=16"))
   }
 }

@@ -282,7 +282,7 @@ actor EventHub {
     logger.trace(
       "emit event",
       .field("name", payload.eventName),
-      .field("payload", payload.toDictionary())
+      .field("payload_keys", payload.toDictionary().keys.sorted())
     )
   }
 }

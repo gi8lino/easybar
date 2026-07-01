@@ -139,7 +139,7 @@ final class LuaTransport: @unchecked Sendable {
         Task {
           await MetricsCoordinator.shared.recordLuaWrite()
         }
-        logger.trace("sent to lua socket", .field("payload", string))
+        logger.trace("sent to lua socket", .field("bytes", string.utf8.count))
       } else {
         logger.error("failed writing to lua socket")
       }
@@ -245,7 +245,7 @@ final class LuaTransport: @unchecked Sendable {
         Task {
           await MetricsCoordinator.shared.recordLuaTransportLine()
         }
-        self?.logger.debug("lua socket raw: \(line)")
+        self?.logger.debug("lua socket line received", .field("bytes", line.utf8.count))
         lineHandler(line)
       }
 

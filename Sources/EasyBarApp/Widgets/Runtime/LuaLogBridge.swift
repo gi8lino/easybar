@@ -36,7 +36,7 @@ final class LuaLogBridge {
 
   /// Logs one raw stderr line that does not follow the structured format.
   private func logRawStderr(_ line: String) {
-    logger.error("lua stderr: \(line)")
+    logger.error("lua stderr line", .field("bytes", line.utf8.count))
   }
 
   /// Logs one structured Lua message at the requested level.

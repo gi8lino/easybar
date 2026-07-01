@@ -165,7 +165,7 @@ end
 --- Dispatches one JSON-decoded host payload by kind.
 local function handle_host_payload(payload, raw_line)
 	if type(payload) ~= "table" then
-		log.error("runtime ignored non-table host payload=" .. tostring(raw_line))
+		log.error("runtime ignored non-table host payload bytes=" .. tostring(#raw_line))
 		return
 	end
 
@@ -175,7 +175,7 @@ local function handle_host_payload(payload, raw_line)
 	end
 
 	if type(payload.name) ~= "string" or payload.name == "" then
-		log.error("runtime ignored invalid json payload=" .. tostring(raw_line))
+		log.error("runtime ignored invalid json payload bytes=" .. tostring(#raw_line))
 		return
 	end
 
@@ -193,12 +193,12 @@ local function process_next_host_message()
 		return false
 	end
 
-	log.trace("runtime stdin " .. tostring(line))
+	log.trace("runtime stdin bytes=" .. tostring(#line))
 
 	local ok, payload = pcall(json.decode, line)
 
 	if not ok then
-		log.error("runtime ignored invalid json payload=" .. tostring(line))
+		log.error("runtime ignored invalid json bytes=" .. tostring(#line))
 		return true
 	end
 
@@ -234,20 +234,25 @@ registry = api.new(log, {
 	request_sync_command = request_sync_command,
 	request_async_command = request_async_command,
 	on_async_job_started = function(token, command)
-		log.debug("lua async started token=" .. tostring(token) .. " command=" .. tostring(command))
+		log.debug("lua async started token=" .. tostring(token) .. " command_bytes=" .. tostring(#command))
 	end,
 	on_async_job_completed = function(token, code)
 		log.debug("lua async completed token=" .. tostring(token) .. " code=" .. tostring(code))
 	end,
 	on_async_callback_error = function(command, err)
-		log.error("lua async callback failed command=" .. tostring(command) .. " error=" .. tostring(err))
+		log.error(
+			"lua async callback failed command_bytes="
+				.. tostring(#command)
+				.. " error_type="
+				.. type(err)
+		)
 	end,
 	on_invalid_public_api = function(path, value, expected)
 		log.error(
 			"lua rejected invalid public api value path="
 				.. tostring(path)
-				.. " value="
-				.. tostring(value)
+				.. " value_type="
+				.. type(value)
 				.. " expected="
 				.. tostring(expected)
 		)
@@ -272,5 +277,3 @@ flush_pending_outputs(true, false)
 
 while process_next_host_message() do
 end
-
-

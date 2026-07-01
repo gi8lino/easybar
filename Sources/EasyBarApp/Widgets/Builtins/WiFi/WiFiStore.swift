@@ -64,9 +64,9 @@ final class NativeWiFiStore: ObservableObject {
       "wifi widget applied snapshot",
       .field("access_granted", "\(snapshot.accessGranted)"),
       .field("permission_state", "\(snapshot.permissionState)"),
-      .field("ssid", "\(snapshot.ssid ?? "<none>")"),
-      .field("ipv4_address", "\(snapshot.ipv4Address ?? "<none>")"),
-      .field("ipv6_address", "\(snapshot.ipv6Address ?? "<none>")"),
+      .field("ssid_present", "\(snapshot.ssid != nil)"),
+      .field("ipv4_present", "\(snapshot.ipv4Address != nil)"),
+      .field("ipv6_present", "\(snapshot.ipv6Address != nil)"),
       .field("rssi", "\(snapshot.rssi.map(String.init) ?? "<none>")"),
     )
     publish(snapshot: snapshot)

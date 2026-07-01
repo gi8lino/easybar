@@ -35,21 +35,21 @@ struct WidgetRuntimeProtocolDecoder {
     case .tree:
       guard let tree = update.treePayload else {
         throw WidgetRuntimeProtocolError.invalidPayload(
-          "unknown lua message: \(line)"
+          "unknown lua message"
         )
       }
       return .tree(root: tree.root, nodes: tree.nodes)
     case .clearRoot:
       guard let rootID = update.clearRootID else {
         throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua clear-root update: \(line)"
+          "invalid lua clear-root update"
         )
       }
       return .clearRoot(rootID)
     case .commandRequest:
       guard let request = update.commandRequestPayload else {
         throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua command request: \(line)"
+          "invalid lua command request"
         )
       }
 
@@ -57,7 +57,7 @@ struct WidgetRuntimeProtocolDecoder {
         !timeoutSeconds.isFinite || timeoutSeconds <= 0
       {
         throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua command timeout override: \(line)"
+          "invalid lua command timeout override"
         )
       }
 
@@ -65,7 +65,7 @@ struct WidgetRuntimeProtocolDecoder {
         maxOutputBytes <= 0
       {
         throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua command output override: \(line)"
+          "invalid lua command output override"
         )
       }
 
