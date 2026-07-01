@@ -46,6 +46,25 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     XCTAssertEqual(snapshot.focusedLayoutMode, .hTiles)
   }
 
+  func testLoadParsesJSONWorkspacesWithoutFocusedFieldUsingTextState() {
+    let snapshot = loadSnapshot(
+      jsonWorkspaces:
+        """
+        [
+          {"workspace": "1", "workspace-is-visible": true},
+          {"workspace": "2", "workspace-is-visible": false}
+        ]
+        """,
+      jsonWindows: "[]",
+      jsonFocusedWindow: "[]",
+      workspaceState: "1 | true | true\n2 | false | false"
+    )
+
+    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
+    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
+    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
+  }
+
   func testLoadFallsBackToTextProviderWhenJSONFails() {
     var requestedArguments: [[String]] = []
 

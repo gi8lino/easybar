@@ -14,6 +14,7 @@ struct WidgetPopupContentResolver {
   let node: WidgetNodeState
   let hasPopupChildren: Bool
   let configStore: ConfigSnapshotStore
+  let widgetStore: WidgetStore
 
   /// Returns whether the node currently has popup content that can be presented.
   var canPresentPopup: Bool {
@@ -57,6 +58,7 @@ struct WidgetPopupContentResolver {
       return AnyView(
         regularContent
           .environmentObject(configStore)
+          .environmentObject(widgetStore)
           .background(hoverBackground)
       )
     }

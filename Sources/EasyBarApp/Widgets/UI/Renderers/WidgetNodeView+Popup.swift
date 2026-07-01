@@ -162,7 +162,8 @@ extension WidgetNodeView {
     return WidgetPopupContentResolver(
       node: node,
       hasPopupChildren: hasPopupChildren,
-      configStore: configStore
+      configStore: configStore,
+      widgetStore: store
     )
   }
 

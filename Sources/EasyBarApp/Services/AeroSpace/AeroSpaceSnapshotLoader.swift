@@ -177,14 +177,21 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
     let focusedWindowOutput = run(["list-windows", "--focused", "--json"])
 
     let decoder = JSONDecoder()
-    let workspaces = try decode([JSONWorkspaceDTO].self, from: workspacesOutput, decoder: decoder)
-      .map {
-        WorkspaceDTO(
-          name: $0.workspace,
-          isFocused: $0.workspaceIsFocused,
-          isVisible: $0.workspaceIsVisible
-        )
-      }
+    let jsonWorkspaces = try decode(
+      [JSONWorkspaceDTO].self,
+      from: workspacesOutput,
+      decoder: decoder
+    )
+    let workspaceStateByName = loadWorkspaceStateFallbackIfNeeded(for: jsonWorkspaces)
+    let workspaces = jsonWorkspaces.map { workspace in
+      let fallbackState = workspaceStateByName[workspace.workspace] ?? .default
+
+      return WorkspaceDTO(
+        name: workspace.workspace,
+        isFocused: workspace.workspaceIsFocused ?? fallbackState.isFocused,
+        isVisible: workspace.workspaceIsVisible ?? fallbackState.isVisible
+      )
+    }
     let windows = try decode([JSONWindowDTO].self, from: windowsOutput, decoder: decoder)
       .map {
         WindowDTO(
@@ -211,6 +218,53 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       focusedWindow: focusedWindow,
       focusedLayout: focusedLayout
     )
+  }
+
+  /// Reads text workspace state only when the JSON workspace payload omits state fields.
+  private func loadWorkspaceStateFallbackIfNeeded(
+    for workspaces: [JSONWorkspaceDTO]
+  ) -> [String: WorkspaceState] {
+    guard
+      workspaces.contains(where: {
+        $0.workspaceIsFocused == nil || $0.workspaceIsVisible == nil
+      }),
+      let output = run([
+        "list-workspaces",
+        "--all",
+        "--format",
+        "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
+      ])
+    else {
+      return [:]
+    }
+
+    return Dictionary(
+      uniqueKeysWithValues:
+        output
+        .split(whereSeparator: \.isNewline)
+        .compactMap(parseWorkspaceStateLine)
+    )
+  }
+
+  /// Parses one workspace state line from AeroSpace text output.
+  private func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
+    let parts = splitPipedLine(String(line))
+    guard parts.count >= 3 else { return nil }
+
+    return (
+      parts[0],
+      WorkspaceState(
+        isFocused: parts[1] == "true",
+        isVisible: parts[2] == "true"
+      )
+    )
+  }
+
+  /// Splits one `a | b | c` line and trims each part.
+  private func splitPipedLine(_ line: String) -> [String] {
+    line
+      .components(separatedBy: " | ")
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
   }
 
   /// Decodes either the expected array or a single object for defensive compatibility.
@@ -443,8 +497,8 @@ private struct FocusedWindowDTO {
 /// JSON workspace shape returned by `aerospace list-workspaces --json`.
 private struct JSONWorkspaceDTO: Decodable {
   let workspace: String
-  let workspaceIsFocused: Bool
-  let workspaceIsVisible: Bool
+  let workspaceIsFocused: Bool?
+  let workspaceIsVisible: Bool?
 
   enum CodingKeys: String, CodingKey {
     case workspace
