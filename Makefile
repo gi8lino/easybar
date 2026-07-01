@@ -114,7 +114,7 @@ endif
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt lint test \
-        clean clean-dist run run-debug run-trace stop icons \
+        clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
@@ -372,6 +372,11 @@ stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 		"$(APP_BUNDLE)" \
 		"$(CALENDAR_AGENT_BUNDLE)" \
 		"$(NETWORK_AGENT_BUNDLE)"
+
+restart-brew: ## Restart EasyBar Homebrew services.
+	brew services restart gi8lino/tap/easybar-calendar-agent
+	brew services restart gi8lino/tap/easybar-network-agent
+	brew services restart gi8lino/tap/easybar
 
 ##@ Cleanup
 
