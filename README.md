@@ -18,6 +18,18 @@ It combines native built-in widgets with custom Lua widgets and is designed for 
 - Config-driven logging and troubleshooting support
 - Lightweight runtime metrics
 
+## Requirements
+
+EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer for AeroSpace-backed widgets. The integration now reads AeroSpace state only from formatted JSON output.
+
+EasyBar v0.3.0 was the last release with legacy text-output parsing for AeroSpace. If you need text-based AeroSpace output support, stay on v0.3.0. If you use v0.4.0 or newer, update and restart AeroSpace so both the CLI client and the running AeroSpace.app server are at least 0.21.0.
+
+Check your installed AeroSpace versions with:
+
+```bash
+aerospace --version
+```
+
 ## Installation
 
 ```bash
@@ -164,5 +176,3 @@ If you want the architectural map before editing code, start with the docs secti
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
-
-

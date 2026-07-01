@@ -11,7 +11,7 @@ struct AeroSpaceSnapshot {
   let focusedLayoutMode: AeroSpaceLayoutMode
 }
 
-/// Loads and parses AeroSpace CLI output into app-ready state.
+/// Loads and parses AeroSpace CLI JSON output into app-ready state.
 enum AeroSpaceSnapshotLoader {
   /// Reads the current AeroSpace snapshot.
   static func load(
@@ -19,30 +19,14 @@ enum AeroSpaceSnapshotLoader {
     resolveAppID: (String, String?) -> String,
     logger: ProcessLogger? = nil
   ) -> AeroSpaceSnapshot {
-    let jsonProvider = JSONAeroSpaceSnapshotProvider(run: run)
-
     do {
       return try buildSnapshot(
-        state: jsonProvider.loadState(),
+        state: JSONAeroSpaceSnapshotProvider(run: run).loadState(),
         resolveAppID: resolveAppID
       )
     } catch {
-      logger?.debug(
-        "aerospace JSON snapshot unavailable; falling back to text output",
-        .field("error", error)
-      )
-    }
-
-    let textProvider = TextAeroSpaceSnapshotProvider(run: run)
-
-    do {
-      return try buildSnapshot(
-        state: textProvider.loadState(),
-        resolveAppID: resolveAppID
-      )
-    } catch {
-      logger?.warn(
-        "aerospace text snapshot unavailable",
+      logger?.error(
+        "aerospace JSON snapshot unavailable",
         .field("error", error)
       )
       return AeroSpaceSnapshot(spaces: [], focusedApp: nil, focusedLayoutMode: .unknown)
@@ -155,14 +139,8 @@ enum AeroSpaceSnapshotLoader {
   }
 }
 
-/// Source of raw AeroSpace snapshot data.
-private protocol AeroSpaceSnapshotProvider {
-  /// Loads one raw AeroSpace snapshot.
-  func loadState() throws -> AeroSpaceRawSnapshot
-}
-
-/// Loads AeroSpace state from modern JSON CLI output.
-private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
+/// Loads AeroSpace state from formatted JSON CLI output.
+private struct JSONAeroSpaceSnapshotProvider {
   let run: ([String]) -> String?
 
   func loadState() throws -> AeroSpaceRawSnapshot {
@@ -186,48 +164,41 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       ]),
       command: "list-windows --all --json --format"
     )
-    let focusedWindowOutput = run([
-      "list-windows",
-      "--focused",
-      "--json",
-      "--format",
-      "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
-    ])
+    let focusedWindowOutput =
+      run([
+        "list-windows",
+        "--focused",
+        "--json",
+        "--format",
+        "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+      ]) ?? "[]"
 
     let decoder = JSONDecoder()
-    let jsonWorkspaces = try decode(
-      [JSONWorkspaceDTO].self,
-      from: workspacesOutput,
-      decoder: decoder
-    )
-    let workspaceNames = loadWorkspaceNamesFallbackIfNeeded(for: jsonWorkspaces)
-    let workspaceStateByName = loadWorkspaceStateFallbackIfNeeded(for: jsonWorkspaces)
-    let workspaces = try jsonWorkspaces.enumerated().map { index, workspace in
-      let name = try workspaceName(for: workspace, at: index, fallbackNames: workspaceNames)
-      let fallbackState = workspaceStateByName[name] ?? .default
-
-      return WorkspaceDTO(
-        name: name,
-        isFocused: workspace.workspaceIsFocused ?? fallbackState.isFocused,
-        isVisible: workspace.workspaceIsVisible ?? fallbackState.isVisible
-      )
-    }
+    let workspaces = try decode([JSONWorkspaceDTO].self, from: workspacesOutput, decoder: decoder)
+      .map {
+        WorkspaceDTO(
+          name: $0.workspace,
+          isFocused: $0.workspaceIsFocused,
+          isVisible: $0.workspaceIsVisible
+        )
+      }
     let windows = try decode([JSONWindowDTO].self, from: windowsOutput, decoder: decoder)
       .map {
         WindowDTO(
           workspace: $0.workspace,
           name: $0.appName,
-          bundlePath: $0.appBundlePath ?? ""
+          bundlePath: $0.appBundlePath
         )
       }
-    let focusedWindows =
-      try focusedWindowOutput.map {
-        try decodeWindowList(from: $0, decoder: decoder)
-      } ?? []
+    let focusedWindows = try decode(
+      [JSONWindowDTO].self,
+      from: focusedWindowOutput,
+      decoder: decoder
+    )
     let focusedWindow = focusedWindows.first.map {
       FocusedWindowDTO(
         name: $0.appName,
-        bundlePath: $0.appBundlePath ?? ""
+        bundlePath: $0.appBundlePath
       )
     }
     let focusedLayout = focusedWindows.first?.windowLayout ?? ""
@@ -238,101 +209,6 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
       focusedWindow: focusedWindow,
       focusedLayout: focusedLayout
     )
-  }
-
-  /// Reads text workspace names only when JSON workspace payload omits names.
-  private func loadWorkspaceNamesFallbackIfNeeded(
-    for workspaces: [JSONWorkspaceDTO]
-  ) -> [String] {
-    guard
-      workspaces.contains(where: { $0.workspace == nil }),
-      let output = run([
-        "list-workspaces", "--all", "--format", "%{workspace}",
-      ])
-    else {
-      return []
-    }
-
-    return
-      output
-      .split(whereSeparator: \.isNewline)
-      .map(String.init)
-  }
-
-  /// Returns the JSON workspace name or the matching text fallback name.
-  private func workspaceName(
-    for workspace: JSONWorkspaceDTO,
-    at index: Int,
-    fallbackNames: [String]
-  ) throws -> String {
-    if let name = workspace.workspace {
-      return name
-    }
-
-    guard index < fallbackNames.count else {
-      throw AeroSpaceSnapshotProviderError.missingWorkspaceName
-    }
-
-    return fallbackNames[index]
-  }
-
-  /// Reads text workspace state only when the JSON workspace payload omits state fields.
-  private func loadWorkspaceStateFallbackIfNeeded(
-    for workspaces: [JSONWorkspaceDTO]
-  ) -> [String: WorkspaceState] {
-    guard
-      workspaces.contains(where: {
-        $0.workspace == nil || $0.workspaceIsFocused == nil || $0.workspaceIsVisible == nil
-      }),
-      let output = run([
-        "list-workspaces",
-        "--all",
-        "--format",
-        "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
-      ])
-    else {
-      return [:]
-    }
-
-    return workspaceStateDictionary(
-      from:
-        output
-        .split(whereSeparator: \.isNewline)
-        .compactMap(parseWorkspaceStateLine)
-    )
-  }
-
-  /// Parses one workspace state line from AeroSpace text output.
-  private func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
-    let parts = splitPipedLine(String(line))
-    guard parts.count >= 3 else { return nil }
-
-    return (
-      parts[0],
-      WorkspaceState(
-        isFocused: parts[1] == "true",
-        isVisible: parts[2] == "true"
-      )
-    )
-  }
-
-  /// Splits one `a | b | c` line and trims each part.
-  private func splitPipedLine(_ line: String) -> [String] {
-    line
-      .components(separatedBy: " | ")
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-  }
-
-  /// Decodes either the expected array or a single object for defensive compatibility.
-  private func decodeWindowList(
-    from output: String,
-    decoder: JSONDecoder
-  ) throws -> [JSONWindowDTO] {
-    do {
-      return try decode([JSONWindowDTO].self, from: output, decoder: decoder)
-    } catch {
-      return [try decode(JSONWindowDTO.self, from: output, decoder: decoder)]
-    }
   }
 
   /// Decodes one JSON payload.
@@ -348,146 +224,8 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
     do {
       return try decoder.decode(type, from: data)
     } catch {
-      throw AeroSpaceSnapshotProviderError.decodeFailed(command: "json", error: error)
+      throw AeroSpaceSnapshotProviderError.decodeFailed(error: error)
     }
-  }
-}
-
-/// Loads AeroSpace state from legacy custom `--format` text output.
-private struct TextAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
-  let run: ([String]) -> String?
-
-  func loadState() throws -> AeroSpaceRawSnapshot {
-    let workspaces = loadWorkspaces()
-    let windows = loadWindows()
-
-    return AeroSpaceRawSnapshot(
-      workspaces: workspaces,
-      windows: windows,
-      focusedWindow: loadFocusedApp(),
-      focusedLayout: loadFocusedLayoutMode()
-    )
-  }
-
-  /// Reads all known workspaces from AeroSpace.
-  private func loadWorkspaces() -> [WorkspaceDTO] {
-    guard
-      let namesOutput = run([
-        "list-workspaces", "--all", "--format", "%{workspace}",
-      ]),
-      let stateOutput = run([
-        "list-workspaces",
-        "--all",
-        "--format",
-        "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
-      ])
-    else {
-      return []
-    }
-
-    let names =
-      namesOutput
-      .split(whereSeparator: \.isNewline)
-      .map(String.init)
-
-    let stateByWorkspace = workspaceStateDictionary(
-      from:
-        stateOutput
-        .split(whereSeparator: \.isNewline)
-        .compactMap(parseWorkspaceStateLine)
-    )
-
-    return names.map { name in
-      let state = stateByWorkspace[name] ?? .default
-
-      return WorkspaceDTO(
-        name: name,
-        isFocused: state.isFocused,
-        isVisible: state.isVisible
-      )
-    }
-  }
-
-  /// Reads all windows from AeroSpace.
-  private func loadWindows() -> [WindowDTO] {
-    guard
-      let output = run([
-        "list-windows",
-        "--all",
-        "--format",
-        "%{workspace} | %{app-name} | %{app-bundle-path}",
-      ])
-    else {
-      return []
-    }
-
-    return
-      output
-      .split(whereSeparator: \.isNewline)
-      .compactMap(parseWindowLine)
-  }
-
-  /// Reads the currently focused app from AeroSpace.
-  private func loadFocusedApp() -> FocusedWindowDTO? {
-    guard
-      let output = run([
-        "list-windows",
-        "--focused",
-        "--format",
-        "%{app-bundle-path} | %{app-name}",
-      ])
-    else {
-      return nil
-    }
-
-    let parts = splitPipedLine(output)
-    let bundlePath = parts.first ?? ""
-    let name = parts.count > 1 ? parts[1] : ""
-
-    return FocusedWindowDTO(name: name, bundlePath: bundlePath)
-  }
-
-  /// Reads the currently focused AeroSpace layout mode.
-  private func loadFocusedLayoutMode() -> String {
-    return run([
-      "list-windows",
-      "--focused",
-      "--format",
-      "%{window-layout}",
-    ]) ?? ""
-  }
-
-  /// Parses one workspace state line from AeroSpace output.
-  private func parseWorkspaceStateLine(_ line: Substring) -> (String, WorkspaceState)? {
-    let parts = splitPipedLine(String(line))
-    guard parts.count >= 3 else { return nil }
-
-    return (
-      parts[0],
-      WorkspaceState(
-        isFocused: parts[1] == "true",
-        isVisible: parts[2] == "true"
-      )
-    )
-  }
-
-  /// Parses one window line from AeroSpace output.
-  private func parseWindowLine(_ line: Substring) -> WindowDTO? {
-    let parts = splitPipedLine(String(line))
-    guard parts.count >= 3 else { return nil }
-
-    return WindowDTO(
-      workspace: parts[0],
-      name: parts[1],
-      bundlePath: parts[2]
-    )
-  }
-
-  /// Splits one `a | b | c` line and trims each part.
-  private func splitPipedLine(_ line: String) -> [String] {
-    line
-      .components(separatedBy: " | ")
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
   }
 }
 
@@ -500,17 +238,95 @@ private func requireOutput(_ output: String?, command: String) throws -> String 
   return output
 }
 
-/// Builds workspace state lookup without assuming external CLI output is unique.
-private func workspaceStateDictionary(
-  from entries: [(String, WorkspaceState)]
-) -> [String: WorkspaceState] {
-  var states: [String: WorkspaceState] = [:]
+/// Minimum supported AeroSpace version for JSON snapshot loading.
+struct AeroSpaceVersion: Comparable, CustomStringConvertible, Equatable {
+  let major: Int
+  let minor: Int
+  let patch: Int
 
-  for (name, state) in entries {
-    states[name] = state
+  var description: String {
+    "\(major).\(minor).\(patch)"
   }
 
-  return states
+  static func < (lhs: AeroSpaceVersion, rhs: AeroSpaceVersion) -> Bool {
+    if lhs.major != rhs.major { return lhs.major < rhs.major }
+    if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
+    return lhs.patch < rhs.patch
+  }
+
+  init(major: Int, minor: Int, patch: Int) {
+    self.major = major
+    self.minor = minor
+    self.patch = patch
+  }
+
+  init?(_ text: String) {
+    let pattern = #"(\d+)\.(\d+)\.(\d+)"#
+    guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+    guard let match = regex.firstMatch(in: text, range: range), match.numberOfRanges == 4 else {
+      return nil
+    }
+
+    func component(_ index: Int) -> Int? {
+      guard let range = Range(match.range(at: index), in: text) else { return nil }
+      return Int(text[range])
+    }
+
+    guard let major = component(1), let minor = component(2), let patch = component(3) else {
+      return nil
+    }
+
+    self.major = major
+    self.minor = minor
+    self.patch = patch
+  }
+}
+
+/// Validates the AeroSpace version required by EasyBar.
+enum AeroSpaceVersionRequirement {
+  /// First supported AeroSpace version for EasyBar v0.4.0 and newer.
+  static let minimum = AeroSpaceVersion(major: 0, minor: 21, patch: 0)
+
+  /// Validates raw `aerospace --version` output.
+  static func validate(output: String) throws {
+    let client = namedVersion(in: output, label: "aerospace CLI client version")
+    let server = namedVersion(in: output, label: "AeroSpace.app server version")
+
+    guard let client, let server else {
+      throw AeroSpaceVersionRequirementError.unparseable(output: output)
+    }
+
+    guard client >= minimum else {
+      throw AeroSpaceVersionRequirementError.unsupportedClientVersion(
+        current: client,
+        minimum: minimum
+      )
+    }
+
+    guard server >= minimum else {
+      throw AeroSpaceVersionRequirementError.unsupportedServerVersion(
+        current: server,
+        minimum: minimum
+      )
+    }
+  }
+
+  /// Validates the installed AeroSpace CLI using a command runner.
+  static func validate(run: ([String]) -> String?) throws {
+    let output = try requireOutput(run(["--version"]), command: "--version")
+    try validate(output: output)
+  }
+
+  /// Extracts one named version from `aerospace --version` output.
+  private static func namedVersion(in output: String, label: String) -> AeroSpaceVersion? {
+    output
+      .split(whereSeparator: \.isNewline)
+      .lazy
+      .filter { $0.contains(label) }
+      .compactMap { AeroSpaceVersion(String($0)) }
+      .first
+  }
 }
 
 /// Raw provider-neutral AeroSpace state.
@@ -529,20 +345,6 @@ private struct WorkspaceDTO {
   let isFocused: Bool
   /// Whether the workspace is visible.
   let isVisible: Bool
-}
-
-/// Focus and visibility flags for one workspace.
-private struct WorkspaceState {
-  /// Whether the workspace is focused.
-  let isFocused: Bool
-  /// Whether the workspace is visible.
-  let isVisible: Bool
-
-  /// Default workspace state when AeroSpace state output is missing.
-  static let `default` = WorkspaceState(
-    isFocused: false,
-    isVisible: false
-  )
 }
 
 /// Raw window state parsed from AeroSpace output.
@@ -565,9 +367,9 @@ private struct FocusedWindowDTO {
 
 /// JSON workspace shape returned by `aerospace list-workspaces --json --format`.
 private struct JSONWorkspaceDTO: Decodable {
-  let workspace: String?
-  let workspaceIsFocused: Bool?
-  let workspaceIsVisible: Bool?
+  let workspace: String
+  let workspaceIsFocused: Bool
+  let workspaceIsVisible: Bool
 
   enum CodingKeys: String, CodingKey {
     case workspace
@@ -580,7 +382,7 @@ private struct JSONWorkspaceDTO: Decodable {
 private struct JSONWindowDTO: Decodable {
   let workspace: String
   let appName: String
-  let appBundlePath: String?
+  let appBundlePath: String
   let windowLayout: String?
 
   enum CodingKeys: String, CodingKey {
@@ -591,12 +393,11 @@ private struct JSONWindowDTO: Decodable {
   }
 }
 
-/// Snapshot provider failures used for fallback diagnostics.
+/// Snapshot provider failures used for diagnostics.
 private enum AeroSpaceSnapshotProviderError: Error, CustomStringConvertible {
   case commandFailed(command: String)
   case invalidUTF8
-  case decodeFailed(command: String, error: Error)
-  case missingWorkspaceName
+  case decodeFailed(error: Error)
 
   var description: String {
     switch self {
@@ -604,10 +405,26 @@ private enum AeroSpaceSnapshotProviderError: Error, CustomStringConvertible {
       return "command failed: \(command)"
     case .invalidUTF8:
       return "invalid UTF-8 output"
-    case .decodeFailed(let command, let error):
-      return "failed to decode \(command) output: \(error)"
-    case .missingWorkspaceName:
-      return "workspace name missing"
+    case .decodeFailed(let error):
+      return "failed to decode JSON output: \(error)"
+    }
+  }
+}
+
+/// AeroSpace version requirement failures.
+enum AeroSpaceVersionRequirementError: Error, CustomStringConvertible {
+  case unparseable(output: String)
+  case unsupportedClientVersion(current: AeroSpaceVersion, minimum: AeroSpaceVersion)
+  case unsupportedServerVersion(current: AeroSpaceVersion, minimum: AeroSpaceVersion)
+
+  var description: String {
+    switch self {
+    case .unparseable:
+      return "failed to parse AeroSpace client/server versions"
+    case .unsupportedClientVersion(let current, let minimum):
+      return "unsupported AeroSpace CLI client version \(current); require >= \(minimum)"
+    case .unsupportedServerVersion(let current, let minimum):
+      return "unsupported AeroSpace.app server version \(current); require >= \(minimum)"
     }
   }
 }

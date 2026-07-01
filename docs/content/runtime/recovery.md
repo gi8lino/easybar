@@ -36,7 +36,15 @@ For deeper checks, including raw Wi-Fi and network field inspection, use [Debugg
 
 ## AeroSpace widgets do not update
 
-Make sure your AeroSpace config calls EasyBar after relevant state changes.
+First check that AeroSpace is supported by your EasyBar version. EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer and no longer fall back to text-output parsing. EasyBar v0.3.0 was the last release with legacy text-output support.
+
+```bash
+aerospace --version
+```
+
+Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If the versions differ after updating, restart AeroSpace.app.
+
+Then make sure your AeroSpace config calls EasyBar after relevant state changes.
 
 Workspace changes should call:
 
@@ -153,3 +161,5 @@ brew services start gi8lino/tap/easybar
 ```
 
 This clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
+
+

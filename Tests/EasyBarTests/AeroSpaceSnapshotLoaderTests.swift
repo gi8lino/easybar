@@ -4,7 +4,7 @@ import XCTest
 @testable import EasyBarShared
 
 final class AeroSpaceSnapshotLoaderTests: XCTestCase {
-  func testLoadParsesJSONWorkspaceAndWindowOutput() {
+  func testLoadParsesFormattedJSONWorkspaceAndWindowOutput() {
     let snapshot = loadSnapshot(
       jsonWorkspaces:
         """
@@ -46,129 +46,53 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     XCTAssertEqual(snapshot.focusedLayoutMode, .hTiles)
   }
 
-  func testLoadParsesJSONWorkspacesWithoutFocusedFieldUsingTextState() {
+  func testLoadReturnsEmptySnapshotWhenJSONWorkspaceFieldsAreMissing() {
     let snapshot = loadSnapshot(
       jsonWorkspaces:
         """
         [
-          {"workspace": "1", "workspace-is-visible": true},
-          {"workspace": "2", "workspace-is-visible": false}
+          {"workspace": "1"}
         ]
         """,
       jsonWindows: "[]",
-      jsonFocusedWindow: "[]",
-      workspaceState: "1 | true | true\n2 | false | false"
+      jsonFocusedWindow: "[]"
     )
 
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
-    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
-    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
-  }
-
-  func testLoadParsesJSONWorkspacesWithoutWorkspaceFieldUsingTextNames() {
-    let snapshot = loadSnapshot(
-      jsonWorkspaces:
-        """
-        [
-          {"workspace-is-visible": true},
-          {"workspace-is-visible": false}
-        ]
-        """,
-      jsonWindows: "[]",
-      jsonFocusedWindow: "[]",
-      workspaceNames: "1\n2",
-      workspaceState: "1 | true | true\n2 | false | false"
-    )
-
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
-    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
-    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
-  }
-
-  func testLoadHandlesDuplicateJSONFallbackWorkspaceStateLines() {
-    let snapshot = loadSnapshot(
-      jsonWorkspaces:
-        """
-        [
-          {"workspace": "1"},
-          {"workspace": "2"}
-        ]
-        """,
-      jsonWindows: "[]",
-      jsonFocusedWindow: "[]",
-      workspaceState: "1 | false | false\n1 | true | true\n2 | false | false"
-    )
-
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
-    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
-    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
-  }
-
-  func testLoadFallsBackToTextProviderWhenJSONFails() {
-    var requestedArguments: [[String]] = []
-
-    let snapshot = AeroSpaceSnapshotLoader.load(
-      run: { arguments in
-        requestedArguments.append(arguments)
-        switch arguments {
-        case [
-          "list-workspaces", "--all", "--json", "--format",
-          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
-        ]:
-          return nil
-        case [
-          "list-windows", "--all", "--json", "--format",
-          "%{workspace} %{app-name} %{app-bundle-path}",
-        ]:
-          return nil
-        case [
-          "list-windows", "--focused", "--json", "--format",
-          "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
-        ]:
-          return nil
-        case ["list-workspaces", "--all", "--format", "%{workspace}"]:
-          return "1"
-        case [
-          "list-workspaces", "--all", "--format",
-          "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
-        ]:
-          return "1 | true | true"
-        case [
-          "list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}",
-        ]:
-          return "1 | Ghostty | /Applications/Ghostty.app"
-        case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
-          return "/Applications/Ghostty.app | Ghostty"
-        case ["list-windows", "--focused", "--format", "%{window-layout}"]:
-          return "floating"
-        default:
-          return nil
-        }
-      },
-      resolveAppID: { name, bundlePath in bundlePath ?? name }
-    )
-
-    XCTAssertTrue(
-      requestedArguments.contains([
-        "list-workspaces", "--all", "--json", "--format",
-        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
-      ])
-    )
-    XCTAssertTrue(
-      requestedArguments.contains(["list-workspaces", "--all", "--format", "%{workspace}"]))
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1"])
-    XCTAssertEqual(snapshot.spaces[0].apps.map(\.name), ["Ghostty"])
-    XCTAssertEqual(snapshot.focusedApp?.name, "Ghostty")
-    XCTAssertEqual(snapshot.focusedLayoutMode, .floating)
+    XCTAssertEqual(snapshot.spaces, [])
+    XCTAssertNil(snapshot.focusedApp)
+    XCTAssertEqual(snapshot.focusedLayoutMode, .unknown)
   }
 
   func testLoadKeepsEmptyWorkspacesInSnapshot() {
     let snapshot = loadSnapshot(
-      workspaceNames: "1\n2",
-      workspaceState: "1 | true | true\n2 | false | false",
-      windows: "1 | Safari | /Applications/Safari.app",
-      focusedWindow: "/Applications/Safari.app | Safari",
-      focusedLayout: "h_tiles"
+      jsonWorkspaces:
+        """
+        [
+          {"workspace": "1", "workspace-is-focused": true, "workspace-is-visible": true},
+          {"workspace": "2", "workspace-is-focused": false, "workspace-is-visible": false}
+        ]
+        """,
+      jsonWindows:
+        """
+        [
+          {
+            "workspace": "1",
+            "app-name": "Safari",
+            "app-bundle-path": "/Applications/Safari.app"
+          }
+        ]
+        """,
+      jsonFocusedWindow:
+        """
+        [
+          {
+            "workspace": "1",
+            "app-name": "Safari",
+            "app-bundle-path": "/Applications/Safari.app",
+            "window-layout": "h_tiles"
+          }
+        ]
+        """
     )
 
     XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
@@ -202,48 +126,64 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     )
   }
 
-  func testLoadParsesWorkspaceStateForNamesContainingSpaces() {
+  func testLoadParsesWorkspaceNamesContainingSpaces() {
     let snapshot = loadSnapshot(
-      workspaceNames: "Work Inbox\nDeep Focus",
-      workspaceState: "Work Inbox | false | true\nDeep Focus | true | true",
-      focusedLayout: "floating"
+      jsonWorkspaces:
+        """
+        [
+          {"workspace": "Work Inbox", "workspace-is-focused": false, "workspace-is-visible": true},
+          {"workspace": "Deep Focus", "workspace-is-focused": true, "workspace-is-visible": true}
+        ]
+        """,
+      jsonWindows: "[]",
+      jsonFocusedWindow:
+        """
+        [
+          {
+            "workspace": "Deep Focus",
+            "app-name": "Ghostty",
+            "app-bundle-path": "/Applications/Ghostty.app",
+            "window-layout": "floating"
+          }
+        ]
+        """
     )
 
     XCTAssertEqual(snapshot.spaces.map(\.name), ["Work Inbox", "Deep Focus"])
     XCTAssertEqual(snapshot.spaces.map(\.isFocused), [false, true])
     XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, true])
-  }
-
-  func testLoadDefaultsMissingWorkspaceStateToInactive() {
-    let snapshot = loadSnapshot(
-      workspaceNames: "1\n2",
-      workspaceState: "1 | true | true"
-    )
-
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
-    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
-    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
-  }
-
-  func testLoadHandlesDuplicateTextWorkspaceStateLines() {
-    let snapshot = loadSnapshot(
-      workspaceNames: "1\n2",
-      workspaceState: "1 | false | false\n1 | true | true\n2 | false | false"
-    )
-
-    XCTAssertEqual(snapshot.spaces.map(\.name), ["1", "2"])
-    XCTAssertEqual(snapshot.spaces.map(\.isFocused), [true, false])
-    XCTAssertEqual(snapshot.spaces.map(\.isVisible), [true, false])
+    XCTAssertEqual(snapshot.focusedLayoutMode, .floating)
   }
 
   func testLoadDeduplicatesAppsByResolvedIdentity() {
     let snapshot = loadSnapshot(
-      workspaceNames: "1",
-      workspaceState: "1 | true | true",
-      windows:
-        "1 | Safari | /Applications/Safari.app\n"
-        + "1 | Safari | /Applications/Safari.app\n"
-        + "1 | Safari Technology Preview | /Applications/Safari Technology Preview.app"
+      jsonWorkspaces:
+        """
+        [
+          {"workspace": "1", "workspace-is-focused": true, "workspace-is-visible": true}
+        ]
+        """,
+      jsonWindows:
+        """
+        [
+          {
+            "workspace": "1",
+            "app-name": "Safari",
+            "app-bundle-path": "/Applications/Safari.app"
+          },
+          {
+            "workspace": "1",
+            "app-name": "Safari",
+            "app-bundle-path": "/Applications/Safari.app"
+          },
+          {
+            "workspace": "1",
+            "app-name": "Safari Technology Preview",
+            "app-bundle-path": "/Applications/Safari Technology Preview.app"
+          }
+        ]
+        """,
+      jsonFocusedWindow: "[]"
     )
 
     XCTAssertEqual(
@@ -256,15 +196,63 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     )
   }
 
+  func testLoadUsesFormattedJSONCommandsOnly() {
+    var requestedArguments: [[String]] = []
+
+    _ = AeroSpaceSnapshotLoader.load(
+      run: { arguments in
+        requestedArguments.append(arguments)
+        switch arguments {
+        case [
+          "list-workspaces", "--all", "--json", "--format",
+          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+        ]:
+          return
+            """
+            [
+              {"workspace": "1", "workspace-is-focused": true, "workspace-is-visible": true}
+            ]
+            """
+        case [
+          "list-windows", "--all", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path}",
+        ]:
+          return "[]"
+        case [
+          "list-windows", "--focused", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+        ]:
+          return "[]"
+        default:
+          return nil
+        }
+      },
+      resolveAppID: { name, bundlePath in bundlePath ?? name }
+    )
+
+    XCTAssertEqual(
+      requestedArguments,
+      [
+        [
+          "list-workspaces", "--all", "--json", "--format",
+          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+        ],
+        [
+          "list-windows", "--all", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path}",
+        ],
+        [
+          "list-windows", "--focused", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+        ],
+      ]
+    )
+  }
+
   private func loadSnapshot(
-    jsonWorkspaces: String? = nil,
-    jsonWindows: String? = nil,
-    jsonFocusedWindow: String? = nil,
-    workspaceNames: String = "",
-    workspaceState: String = "",
-    windows: String = "",
-    focusedWindow: String = "",
-    focusedLayout: String = "",
+    jsonWorkspaces: String,
+    jsonWindows: String,
+    jsonFocusedWindow: String,
     resolveAppID: (String, String?) -> String = { name, bundlePath in bundlePath ?? name }
   ) -> AeroSpaceSnapshot {
     AeroSpaceSnapshotLoader.load(
@@ -285,21 +273,6 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
           "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
         ]:
           return jsonFocusedWindow
-        case ["list-workspaces", "--all", "--format", "%{workspace}"]:
-          return workspaceNames
-        case [
-          "list-workspaces", "--all", "--format",
-          "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
-        ]:
-          return workspaceState
-        case [
-          "list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}",
-        ]:
-          return windows
-        case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
-          return focusedWindow
-        case ["list-windows", "--focused", "--format", "%{window-layout}"]:
-          return focusedLayout
         default:
           return nil
         }
@@ -309,10 +282,51 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
   }
 }
 
+final class AeroSpaceVersionRequirementTests: XCTestCase {
+  func testValidateAcceptsSupportedClientAndServerVersions() throws {
+    try AeroSpaceVersionRequirement.validate(
+      output:
+        """
+        aerospace CLI client version: 0.21.1-Beta cfd4eab235b254ff5f1a1b9180a3997ae060162a
+        AeroSpace.app server version: 0.21.0-Beta dd6b927a299c3af3e5760c4c3fc6012b984f9e51
+        """
+    )
+  }
+
+  func testValidateRejectsOldClientVersion() {
+    XCTAssertThrowsError(
+      try AeroSpaceVersionRequirement.validate(
+        output:
+          """
+          aerospace CLI client version: 0.20.0-Beta cfd4eab235b254ff5f1a1b9180a3997ae060162a
+          AeroSpace.app server version: 0.21.0-Beta dd6b927a299c3af3e5760c4c3fc6012b984f9e51
+          """
+      )
+    )
+  }
+
+  func testValidateRejectsOldServerVersion() {
+    XCTAssertThrowsError(
+      try AeroSpaceVersionRequirement.validate(
+        output:
+          """
+          aerospace CLI client version: 0.21.0-Beta cfd4eab235b254ff5f1a1b9180a3997ae060162a
+          AeroSpace.app server version: 0.20.0-Beta dd6b927a299c3af3e5760c4c3fc6012b984f9e51
+          """
+      )
+    )
+  }
+
+  func testValidateRejectsUnparseableVersionOutput() {
+    XCTAssertThrowsError(try AeroSpaceVersionRequirement.validate(output: "AeroSpace unknown"))
+  }
+}
+
 final class AeroSpaceCommandRunnerTests: XCTestCase {
   func testRunLogsStderrWhenCommandExitsNonZero() throws {
     let directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("easybar-aerospace-runner-tests-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent(
+        "easybar-aerospace-runner-tests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directoryURL) }
 
@@ -342,7 +356,7 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
       executablePathResolver: { scriptURL.path }
     )
 
-    _ = runner.run(arguments: ["list-workspaces", "--all", "--format", "%{workspace}"])
+    _ = runner.run(arguments: ["list-workspaces", "--all", "--json"])
     logger.configureFileLogging(enabled: false, path: "")
 
     let output = try String(contentsOf: logURL, encoding: .utf8)

@@ -4,6 +4,20 @@ EasyBar relies on AeroSpace callbacks to refresh workspace, focus, and layout-mo
 
 Without these callbacks, EasyBar can still refresh manually, but AeroSpace-derived widgets may look stale until the next refresh.
 
+## Requirements
+
+EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer. The AeroSpace integration uses formatted JSON output from `aerospace list-workspaces` and `aerospace list-windows`; legacy text-output parsing was removed.
+
+EasyBar v0.3.0 was the last release that supported text-based AeroSpace output. Use v0.3.0 only if you must keep an older AeroSpace version.
+
+Check your AeroSpace versions with:
+
+```bash
+aerospace --version
+```
+
+Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If they differ after updating, restart AeroSpace.app.
+
 ## Workspace changes
 
 Add this to your AeroSpace config:
@@ -66,3 +80,5 @@ easybar --refresh
 
 - [Runtime Control](../runtime/control.md)
 - [Troubleshooting](../runtime/troubleshooting.md)
+
+

@@ -32,6 +32,8 @@ final class AeroSpaceService: ObservableObject {
     var pendingLaunchRefresh: Task<Void, Never>?
     /// Whether the service is active.
     var running = false
+    /// Cached AeroSpace version validation result for this service run.
+    var versionRequirementSatisfied: Bool?
     /// Generation used to ignore stale refresh work.
     var generation: UInt64 = 0
   }
@@ -68,6 +70,7 @@ extension AeroSpaceService {
     let shouldStart = withLock { coordination -> Bool in
       guard !coordination.running else { return false }
       coordination.running = true
+      coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
       return true
     }
@@ -93,6 +96,7 @@ extension AeroSpaceService {
       let terminationObserver = coordination.appTerminationObserver
       coordination.pendingLaunchRefresh?.cancel()
       coordination.pendingLaunchRefresh = nil
+      coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
       coordination.appTerminationObserver = nil
@@ -441,6 +445,11 @@ extension AeroSpaceService {
 
     logger.debug("aerospace reloadState begin")
 
+    guard ensureAeroSpaceVersionSupported() else {
+      logger.debug("aerospace reloadState skipped due to unsupported AeroSpace version")
+      return
+    }
+
     let snapshot = AeroSpaceSnapshotLoader.load(
       run: runAeroSpace(arguments:),
       resolveAppID: resolvedAppID(name:bundlePath:),
@@ -497,6 +506,31 @@ extension AeroSpaceService {
     }
 
     return output
+  }
+
+  /// Validates the configured AeroSpace version once per service run.
+  fileprivate func ensureAeroSpaceVersionSupported() -> Bool {
+    if let cached = withLock({ $0.versionRequirementSatisfied }) {
+      return cached
+    }
+
+    do {
+      try AeroSpaceVersionRequirement.validate(run: commandRunner.run(arguments:))
+      withLock { $0.versionRequirementSatisfied = true }
+      logger.debug(
+        "aerospace version requirement satisfied",
+        .field("minimum", AeroSpaceVersionRequirement.minimum.description)
+      )
+      return true
+    } catch {
+      withLock { $0.versionRequirementSatisfied = false }
+      logger.error(
+        "aerospace version requirement failed",
+        .field("minimum", AeroSpaceVersionRequirement.minimum.description),
+        .field("error", error)
+      )
+      return false
+    }
   }
 
   /// Resolves a stable app identity from bundle path or name.
