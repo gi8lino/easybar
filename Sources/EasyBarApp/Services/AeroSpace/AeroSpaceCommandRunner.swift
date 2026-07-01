@@ -17,8 +17,8 @@ final class AeroSpaceCommandRunner {
     self.executablePathResolver = executablePathResolver
   }
 
-  /// Executes one AeroSpace command.
-  func run(arguments: [String]) -> String? {
+  /// Creates one configured AeroSpace process.
+  func makeProcess(arguments: [String]) -> Process? {
     guard let executable = executablePathResolver() else {
       logger.debug("aerospace executable not found")
       return nil
@@ -27,6 +27,14 @@ final class AeroSpaceCommandRunner {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
     process.arguments = arguments
+    return process
+  }
+
+  /// Executes one AeroSpace command.
+  func run(arguments: [String]) -> String? {
+    guard let process = makeProcess(arguments: arguments) else {
+      return nil
+    }
 
     let outputPipe = Pipe()
     let errorPipe = Pipe()

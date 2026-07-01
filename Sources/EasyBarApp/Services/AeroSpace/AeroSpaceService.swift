@@ -30,6 +30,8 @@ final class AeroSpaceService: ObservableObject {
     var appTerminationObserver: NSObjectProtocol?
     /// Delayed refresh scheduled after app launch.
     var pendingLaunchRefresh: Task<Void, Never>?
+    /// Debounced refresh scheduled after AeroSpace subscription events.
+    var pendingSubscriptionRefresh: Task<Void, Never>?
     /// Whether the service is active.
     var running = false
     /// Cached AeroSpace version validation result for this service run.
@@ -42,6 +44,14 @@ final class AeroSpaceService: ObservableObject {
   private let logger: ProcessLogger
   /// Runner for AeroSpace CLI commands.
   private let commandRunner: AeroSpaceCommandRunner
+  /// Long-lived AeroSpace event subscription.
+  private lazy var subscriptionController = AeroSpaceSubscriptionController(
+    commandRunner: commandRunner,
+    logger: logger.child("subscribe"),
+    handleEvent: { [weak self] event in
+      self?.handleAeroSpaceSubscriptionEvent(event)
+    }
+  )
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
 
@@ -78,6 +88,7 @@ extension AeroSpaceService {
     guard shouldStart else { return }
 
     logger.debug("aerospace service start begin")
+    subscriptionController.start()
     subscribeAppSwitches()
     subscribeAppLaunch()
     subscribeAppTermination()
@@ -87,6 +98,8 @@ extension AeroSpaceService {
 
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
+    subscriptionController.stop()
+
     let observers = withLock { coordination -> [NSObjectProtocol] in
       guard coordination.running else { return [] }
       coordination.running = false
@@ -96,6 +109,8 @@ extension AeroSpaceService {
       let terminationObserver = coordination.appTerminationObserver
       coordination.pendingLaunchRefresh?.cancel()
       coordination.pendingLaunchRefresh = nil
+      coordination.pendingSubscriptionRefresh?.cancel()
+      coordination.pendingSubscriptionRefresh = nil
       coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
@@ -142,7 +157,12 @@ extension AeroSpaceService {
 
   /// Called by the socket server when an external AeroSpace event occurs.
   func triggerRefresh() {
-    cancelPendingLaunchRefresh(reason: "external trigger")
+    triggerRefresh(source: "external trigger")
+  }
+
+  /// Queues a state reload for one AeroSpace-triggered update source.
+  private func triggerRefresh(source: String) {
+    cancelPendingLaunchRefresh(reason: source)
 
     guard hasConsumers else {
       logger.debug("aerospace refresh skipped, no registered consumers")
@@ -153,6 +173,7 @@ extension AeroSpaceService {
 
     logger.debug(
       "aerospace triggerRefresh queued",
+      .field("source", source),
       .field("consumers", consumerCount)
     )
 
@@ -245,6 +266,62 @@ extension AeroSpaceService {
     Task.detached(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
+    }
+  }
+}
+
+// MARK: - AeroSpace Event Subscription
+
+extension AeroSpaceService {
+  /// Handles one JSON-line event received from `aerospace subscribe`.
+  fileprivate func handleAeroSpaceSubscriptionEvent(_ event: AeroSpaceSubscriptionEvent) {
+    let source = "aerospace subscribe \(event.name)"
+    scheduleSubscriptionRefresh(
+      source: source,
+      delayNanoseconds: event.refreshDelayNanoseconds
+    )
+
+    guard let appEvent = event.appEvent else { return }
+
+    Task {
+      await EventHub.shared.emit(appEvent)
+    }
+  }
+
+  /// Debounces subscription-triggered reloads so event bursts produce one state read.
+  fileprivate func scheduleSubscriptionRefresh(source: String, delayNanoseconds: UInt64) {
+    let generation = currentGeneration()
+    let pendingTask = withLock { coordination -> Task<Void, Never>? in
+      let previous = coordination.pendingSubscriptionRefresh
+      coordination.pendingSubscriptionRefresh = Task { [weak self] in
+        do {
+          try await Task.sleep(nanoseconds: delayNanoseconds)
+        } catch {
+          return
+        }
+
+        guard let self else { return }
+        guard self.shouldExecute(generation: generation) else { return }
+        self.clearPendingSubscriptionRefresh(refreshTaskID: generation)
+        self.triggerRefresh(source: source)
+      }
+      return previous
+    }
+
+    pendingTask?.cancel()
+
+    logger.debug(
+      "aerospace subscription refresh scheduled",
+      .field("source", source),
+      .field("delay_ms", Int(delayNanoseconds / 1_000_000))
+    )
+  }
+
+  /// Clears the pending subscription refresh if it still matches the fired work item.
+  fileprivate func clearPendingSubscriptionRefresh(refreshTaskID generation: UInt64) {
+    withLock { coordination in
+      guard coordination.generation == generation else { return }
+      coordination.pendingSubscriptionRefresh = nil
     }
   }
 }

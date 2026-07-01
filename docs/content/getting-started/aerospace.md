@@ -1,12 +1,12 @@
 # AeroSpace Integration
 
-EasyBar relies on AeroSpace callbacks to refresh workspace, focus, and layout-mode state immediately.
+EasyBar v0.4.0 and newer keeps AeroSpace-backed widgets current by opening a long-lived `aerospace subscribe` stream from the main app.
 
-Without these callbacks, EasyBar can still refresh manually, but AeroSpace-derived widgets may look stale until the next refresh.
+That means the built-in spaces, front-app, and AeroSpace mode widgets no longer require the old workspace/focus AeroSpace callback wiring for normal updates. EasyBar subscribes to all AeroSpace event types and refreshes its AeroSpace snapshot when those events arrive.
 
 ## Requirements
 
-EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer. The AeroSpace integration uses formatted JSON output from `aerospace list-workspaces` and `aerospace list-windows`; legacy text-output parsing was removed.
+EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer. The AeroSpace integration uses formatted JSON output from `aerospace list-workspaces` and `aerospace list-windows`, plus the JSON-lines event stream from `aerospace subscribe`.
 
 EasyBar v0.3.0 was the last release that supported text-based AeroSpace output. Use v0.3.0 only if you must keep an older AeroSpace version.
 
@@ -18,33 +18,58 @@ aerospace --version
 
 Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If they differ after updating, restart AeroSpace.app.
 
-## Workspace changes
+## Automatic subscription
 
-Add this to your AeroSpace config:
+When EasyBar starts, it runs a subscription equivalent to:
+
+```bash
+aerospace subscribe --all
+```
+
+AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as an immediate sync signal. Event bursts are debounced before EasyBar re-reads AeroSpace state; `binding-triggered` gets a slightly longer debounce because AeroSpace emits it before running the binding's commands.
+
+EasyBar uses the subscription events only as update triggers. The source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`.
+
+The currently supported AeroSpace subscription events are:
+
+- `focus-changed`
+- `focused-monitor-changed`
+- `focused-workspace-changed`
+- `mode-changed`
+- `window-detected`
+- `binding-triggered`
+
+`mode-changed` is AeroSpace binding-mode state, for example `main` or `service`. It is not the focused window's layout mode. EasyBar therefore uses it as a refresh trigger but does not forward it as EasyBar's layout-mode event.
+
+Focus and workspace events are forwarded into the EasyBar event system for Lua widgets that subscribe to those driver events.
+
+EasyBar still observes a few native macOS notifications as a complement:
+
+- app activation updates the focused-app UI optimistically
+- app termination refreshes spaces so closed apps disappear promptly
+- app launch schedules one short delayed refresh for apps that create windows slightly later
+
+## AeroSpace config cleanup
+
+With the automatic subscription enabled, these old AeroSpace callbacks are no longer needed for normal updates and can be removed from your AeroSpace config:
 
 ```toml
 exec-on-workspace-change = [
   'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
 ]
-```
 
-## Focus changes
-
-Add this too:
-
-```toml
 on-focus-changed = [
   'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
 ]
 ```
 
-These callbacks keep built-in AeroSpace widgets in sync when the focused workspace or focused window changes.
+You can keep them temporarily while testing the subscription stream, but they should not be required anymore.
 
-## Layout mode changes
+## Optional layout callback fallback
 
-If you use the built-in AeroSpace mode widget, also trigger EasyBar whenever you change the current layout mode.
+AeroSpace does not currently expose a dedicated `layout-changed` subscription event. EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, which is usually enough for layout hotkeys.
 
-Example:
+If you want the most explicit layout refresh path, keep a callback only on bindings that actually change layout:
 
 ```toml
 alt-e = [
@@ -68,6 +93,8 @@ alt-shift-space = [
 ]
 ```
 
+This fallback is optional. It exists because layout changes are fetchable from AeroSpace snapshots, but they are not directly subscribable as their own event.
+
 ## Manual refresh
 
 You can always trigger one refresh manually:
@@ -76,9 +103,25 @@ You can always trigger one refresh manually:
 easybar --refresh
 ```
 
+## Troubleshooting
+
+Raise EasyBar logging to debug and look for subscription logs:
+
+```toml
+[logging]
+enabled = true
+level = "debug"
+```
+
+Useful log messages include:
+
+- `aerospace subscription started`
+- `aerospace subscription event received`
+- `aerospace subscription exited`
+
+If the subscription cannot start, EasyBar still accepts the CLI callback commands shown above.
+
 ## Related pages
 
 - [Runtime Control](../runtime/control.md)
 - [Troubleshooting](../runtime/troubleshooting.md)
-
-
