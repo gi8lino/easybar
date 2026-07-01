@@ -111,11 +111,20 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
       run: { arguments in
         requestedArguments.append(arguments)
         switch arguments {
-        case ["list-workspaces", "--all", "--json"]:
+        case [
+          "list-workspaces", "--all", "--json", "--format",
+          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+        ]:
           return nil
-        case ["list-windows", "--all", "--json"]:
+        case [
+          "list-windows", "--all", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path}",
+        ]:
           return nil
-        case ["list-windows", "--focused", "--json"]:
+        case [
+          "list-windows", "--focused", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+        ]:
           return nil
         case ["list-workspaces", "--all", "--format", "%{workspace}"]:
           return "1"
@@ -124,7 +133,9 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
           "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
         ]:
           return "1 | true | true"
-        case ["list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}"]:
+        case [
+          "list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}",
+        ]:
           return "1 | Ghostty | /Applications/Ghostty.app"
         case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
           return "/Applications/Ghostty.app | Ghostty"
@@ -137,8 +148,14 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
       resolveAppID: { name, bundlePath in bundlePath ?? name }
     )
 
-    XCTAssertTrue(requestedArguments.contains(["list-workspaces", "--all", "--json"]))
-    XCTAssertTrue(requestedArguments.contains(["list-workspaces", "--all", "--format", "%{workspace}"]))
+    XCTAssertTrue(
+      requestedArguments.contains([
+        "list-workspaces", "--all", "--json", "--format",
+        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+      ])
+    )
+    XCTAssertTrue(
+      requestedArguments.contains(["list-workspaces", "--all", "--format", "%{workspace}"]))
     XCTAssertEqual(snapshot.spaces.map(\.name), ["1"])
     XCTAssertEqual(snapshot.spaces[0].apps.map(\.name), ["Ghostty"])
     XCTAssertEqual(snapshot.focusedApp?.name, "Ghostty")
@@ -253,11 +270,20 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     AeroSpaceSnapshotLoader.load(
       run: { arguments in
         switch arguments {
-        case ["list-workspaces", "--all", "--json"]:
+        case [
+          "list-workspaces", "--all", "--json", "--format",
+          "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+        ]:
           return jsonWorkspaces
-        case ["list-windows", "--all", "--json"]:
+        case [
+          "list-windows", "--all", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path}",
+        ]:
           return jsonWindows
-        case ["list-windows", "--focused", "--json"]:
+        case [
+          "list-windows", "--focused", "--json", "--format",
+          "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+        ]:
           return jsonFocusedWindow
         case ["list-workspaces", "--all", "--format", "%{workspace}"]:
           return workspaceNames
@@ -266,7 +292,9 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
           "%{workspace} | %{workspace-is-focused} | %{workspace-is-visible}",
         ]:
           return workspaceState
-        case ["list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}"]:
+        case [
+          "list-windows", "--all", "--format", "%{workspace} | %{app-name} | %{app-bundle-path}",
+        ]:
           return windows
         case ["list-windows", "--focused", "--format", "%{app-bundle-path} | %{app-name}"]:
           return focusedWindow

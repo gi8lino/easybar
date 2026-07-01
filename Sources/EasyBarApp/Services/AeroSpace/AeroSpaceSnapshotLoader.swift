@@ -167,14 +167,32 @@ private struct JSONAeroSpaceSnapshotProvider: AeroSpaceSnapshotProvider {
 
   func loadState() throws -> AeroSpaceRawSnapshot {
     let workspacesOutput = try requireOutput(
-      run(["list-workspaces", "--all", "--json"]),
-      command: "list-workspaces --all --json"
+      run([
+        "list-workspaces",
+        "--all",
+        "--json",
+        "--format",
+        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+      ]),
+      command: "list-workspaces --all --json --format"
     )
     let windowsOutput = try requireOutput(
-      run(["list-windows", "--all", "--json"]),
-      command: "list-windows --all --json"
+      run([
+        "list-windows",
+        "--all",
+        "--json",
+        "--format",
+        "%{workspace} %{app-name} %{app-bundle-path}",
+      ]),
+      command: "list-windows --all --json --format"
     )
-    let focusedWindowOutput = run(["list-windows", "--focused", "--json"])
+    let focusedWindowOutput = run([
+      "list-windows",
+      "--focused",
+      "--json",
+      "--format",
+      "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+    ])
 
     let decoder = JSONDecoder()
     let jsonWorkspaces = try decode(
@@ -545,7 +563,7 @@ private struct FocusedWindowDTO {
   let bundlePath: String
 }
 
-/// JSON workspace shape returned by `aerospace list-workspaces --json`.
+/// JSON workspace shape returned by `aerospace list-workspaces --json --format`.
 private struct JSONWorkspaceDTO: Decodable {
   let workspace: String?
   let workspaceIsFocused: Bool?
@@ -558,7 +576,7 @@ private struct JSONWorkspaceDTO: Decodable {
   }
 }
 
-/// JSON window shape returned by `aerospace list-windows --json`.
+/// JSON window shape returned by `aerospace list-windows --json --format`.
 private struct JSONWindowDTO: Decodable {
   let workspace: String
   let appName: String
