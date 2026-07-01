@@ -323,6 +323,65 @@ final class AeroSpaceVersionRequirementTests: XCTestCase {
 }
 
 final class AeroSpaceCommandRunnerTests: XCTestCase {
+  func testSubscriptionControllerReconnectsWhenProcessExits() throws {
+    let directoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent(
+        "easybar-aerospace-subscribe-tests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+    let countURL = directoryURL.appendingPathComponent("subscribe-count")
+    let scriptURL = directoryURL.appendingPathComponent("aerospace")
+    try """
+    #!/bin/sh
+    count_file='\(Self.shellQuoted(countURL.path))'
+    count="$(cat "$count_file" 2>/dev/null || echo 0)"
+    count=$((count + 1))
+    echo "$count" > "$count_file"
+    exit 3
+    """.write(to: scriptURL, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes(
+      [.posixPermissions: 0o755],
+      ofItemAtPath: scriptURL.path
+    )
+
+    let logger = ProcessLogger(
+      label: "easybar.app.services.aerospace.subscribe",
+      minimumLevel: .debug,
+      outputStream: nil,
+      errorStream: nil
+    )
+    let runner = AeroSpaceCommandRunner(
+      logger: logger,
+      executablePathResolver: { scriptURL.path }
+    )
+    let controller = AeroSpaceSubscriptionController(
+      commandRunner: runner,
+      logger: logger,
+      reconnectDelays: [0.01, 0.01],
+      handleEvent: { _ in }
+    )
+
+    controller.start()
+    defer { controller.stop() }
+
+    let deadline = Date().addingTimeInterval(1)
+    while Date() < deadline {
+      let count =
+        (try? String(contentsOf: countURL, encoding: .utf8))
+        .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
+      if count >= 2 {
+        return
+      }
+      Thread.sleep(forTimeInterval: 0.01)
+    }
+
+    let count =
+      (try? String(contentsOf: countURL, encoding: .utf8))
+      .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
+    XCTFail("expected subscription process to reconnect, launched \(count) time(s)")
+  }
+
   func testRunLogsStderrWhenCommandExitsNonZero() throws {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
@@ -363,5 +422,9 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
     XCTAssertTrue(output.contains("aerospace command exited"))
     XCTAssertTrue(output.contains("status=2"))
     XCTAssertTrue(output.contains("stderr_bytes=16"))
+  }
+
+  private static func shellQuoted(_ value: String) -> String {
+    value.replacingOccurrences(of: "'", with: "'\\''")
   }
 }

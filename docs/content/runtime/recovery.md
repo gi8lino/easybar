@@ -44,23 +44,19 @@ aerospace --version
 
 Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If the versions differ after updating, restart AeroSpace.app.
 
-Then make sure your AeroSpace config calls EasyBar after relevant state changes.
+EasyBar normally updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream. Workspace and focus callbacks are no longer required for normal updates.
 
-Workspace changes should call:
-
-```toml
-exec-on-workspace-change = [
-  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
-]
-```
-
-Focus changes should call:
+Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
 ```toml
-on-focus-changed = [
-  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
-]
+[logging]
+enabled = true
+level = "debug"
 ```
+
+Useful messages include `aerospace subscription started`, `aerospace subscription event received`, `aerospace subscription exited`, and `aerospace subscription reconnect scheduled`.
+
+If AeroSpace is restarted or updated while EasyBar is running, EasyBar reconnects to the subscription stream with bounded backoff as long as the `aerospace` executable is still available.
 
 If your AeroSpace mode widget does not change after switching layouts, call EasyBar after every relevant `layout ...` command:
 
@@ -71,7 +67,7 @@ alt-e = [
 ]
 ```
 
-Without these callbacks, AeroSpace-derived widgets may look stale until a manual refresh.
+That layout callback is optional. It is useful because AeroSpace does not expose a dedicated layout-changed subscription event.
 
 You can trigger one manually with:
 
@@ -81,14 +77,7 @@ easybar --refresh
 
 ## Spaces widget misses an app launch or quit
 
-The built-in spaces widget refreshes AeroSpace-derived state from a mix of AeroSpace callbacks and macOS app lifecycle notifications.
-
-Workspace and focus changes should be wired from AeroSpace with:
-
-```bash
-easybar --workspace-changed
-easybar --focus-changed
-```
+The built-in spaces widget refreshes AeroSpace-derived state from a mix of `aerospace subscribe --all` events and macOS app lifecycle notifications.
 
 App quits are also refreshed from macOS termination notifications.
 
@@ -161,5 +150,4 @@ brew services start gi8lino/tap/easybar
 ```
 
 This clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
-
 

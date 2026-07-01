@@ -32,6 +32,8 @@ For AeroSpace-backed widgets, the app keeps a long-lived `aerospace subscribe --
 
 The subscription is the primary update trigger. The older control-socket commands remain supported as explicit callback and scripting entry points, but workspace and focus callbacks are no longer required for normal AeroSpace updates.
 
+If the `aerospace subscribe` process exits while the executable is still available, EasyBar schedules reconnect attempts with bounded backoff. If the executable is unavailable, it leaves the subscription stopped and continues to accept explicit control-socket refresh commands.
+
 The app also uses a small amount of native macOS observation to keep UI state current when AeroSpace events are not enough by themselves:
 
 - app activation updates focused-app UI immediately

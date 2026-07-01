@@ -28,6 +28,8 @@ aerospace subscribe --all
 
 AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as an immediate sync signal. Event bursts are debounced before EasyBar re-reads AeroSpace state; `binding-triggered` gets a slightly longer debounce because AeroSpace emits it before running the binding's commands.
 
+If the subscription process exits while AeroSpace is still installed, EasyBar schedules a reconnect with bounded backoff. This covers common cases such as restarting or updating AeroSpace while EasyBar is already running.
+
 EasyBar uses the subscription events only as update triggers. The source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`.
 
 The currently supported AeroSpace subscription events are:
@@ -118,6 +120,7 @@ Useful log messages include:
 - `aerospace subscription started`
 - `aerospace subscription event received`
 - `aerospace subscription exited`
+- `aerospace subscription reconnect scheduled`
 
 If the subscription cannot start, EasyBar still accepts the CLI callback commands shown above.
 

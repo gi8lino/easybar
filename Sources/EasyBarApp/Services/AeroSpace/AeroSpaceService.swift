@@ -32,6 +32,8 @@ final class AeroSpaceService: ObservableObject {
     var pendingLaunchRefresh: Task<Void, Never>?
     /// Debounced refresh scheduled after AeroSpace subscription events.
     var pendingSubscriptionRefresh: Task<Void, Never>?
+    /// Identity for the latest scheduled subscription refresh.
+    var pendingSubscriptionRefreshID: UInt64 = 0
     /// Whether the service is active.
     var running = false
     /// Cached AeroSpace version validation result for this service run.
@@ -111,6 +113,7 @@ extension AeroSpaceService {
       coordination.pendingLaunchRefresh = nil
       coordination.pendingSubscriptionRefresh?.cancel()
       coordination.pendingSubscriptionRefresh = nil
+      coordination.pendingSubscriptionRefreshID &+= 1
       coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
@@ -293,6 +296,8 @@ extension AeroSpaceService {
     let generation = currentGeneration()
     let pendingTask = withLock { coordination -> Task<Void, Never>? in
       let previous = coordination.pendingSubscriptionRefresh
+      coordination.pendingSubscriptionRefreshID &+= 1
+      let refreshID = coordination.pendingSubscriptionRefreshID
       coordination.pendingSubscriptionRefresh = Task { [weak self] in
         do {
           try await Task.sleep(nanoseconds: delayNanoseconds)
@@ -302,7 +307,7 @@ extension AeroSpaceService {
 
         guard let self else { return }
         guard self.shouldExecute(generation: generation) else { return }
-        self.clearPendingSubscriptionRefresh(refreshTaskID: generation)
+        guard self.clearPendingSubscriptionRefresh(refreshTaskID: refreshID) else { return }
         self.triggerRefresh(source: source)
       }
       return previous
@@ -318,10 +323,11 @@ extension AeroSpaceService {
   }
 
   /// Clears the pending subscription refresh if it still matches the fired work item.
-  fileprivate func clearPendingSubscriptionRefresh(refreshTaskID generation: UInt64) {
-    withLock { coordination in
-      guard coordination.generation == generation else { return }
+  fileprivate func clearPendingSubscriptionRefresh(refreshTaskID refreshID: UInt64) -> Bool {
+    withLock { coordination -> Bool in
+      guard coordination.pendingSubscriptionRefreshID == refreshID else { return false }
       coordination.pendingSubscriptionRefresh = nil
+      return true
     }
   }
 }
