@@ -192,7 +192,7 @@ fmt-markdown: ## Format Markdown files with Prettier.
 lint: ## Lint Swift source formatting without modifying files.
 	@swift format lint --recursive .
 
-test: generate-theme-tokens generate-event-catalog generate-swift-env ## Run the Swift test suite.
+test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
@@ -486,5 +486,7 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+
 
 

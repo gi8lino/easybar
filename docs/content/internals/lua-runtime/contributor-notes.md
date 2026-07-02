@@ -58,6 +58,9 @@ Verify that generated artifacts are current before opening a pull request:
 make check-generated
 ```
 
+`make test` intentionally does not regenerate checked-in artifacts. Run `make generate` or
+`make check-generated` explicitly when changing generated Swift, Lua, or documentation outputs.
+
 ## Generated docs
 
 Regenerate only generated documentation through the Makefile:
@@ -98,3 +101,5 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
+
+

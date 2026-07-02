@@ -103,7 +103,7 @@ make run-debug
 
 Useful build and runtime commands:
 
-- `make test` runs the full Swift test suite.
+- `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
@@ -178,3 +178,5 @@ If you want the architectural map before editing code, start with the docs secti
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
+
+
