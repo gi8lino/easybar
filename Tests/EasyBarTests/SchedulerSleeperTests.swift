@@ -106,4 +106,21 @@ final class SchedulerSleeperTests: XCTestCase {
 
     XCTAssertEqual(sleeper.sleeps, [5_000_000, 1_000_000])
   }
+
+  func testBackoffSchedulerRunsImmediateSleeperRetries() {
+    let scheduler = BackoffScheduler(
+      label: "test retry",
+      delays: [0],
+      logger: ProcessLogger(label: "test"),
+      sleeper: ImmediateSleeper()
+    )
+
+    for attempt in 0..<10 {
+      let retry = expectation(description: "immediate retry \(attempt) fired")
+      scheduler.schedule {
+        retry.fulfill()
+      }
+      wait(for: [retry], timeout: 1)
+    }
+  }
 }
