@@ -86,4 +86,24 @@ final class SchedulerSleeperTests: XCTestCase {
 
     XCTAssertEqual(sleeper.sleeps, [1_000_000, 2_000_000, 2_000_000])
   }
+
+  func testBackoffSchedulerDelayOverrideDoesNotAdvanceBackoffSequence() {
+    let sleeper = RecordingSleeper()
+    let scheduler = BackoffScheduler(
+      label: "test retry",
+      delays: [0.001, 0.002],
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let first = expectation(description: "override retry fired")
+    let second = expectation(description: "first backoff retry fired")
+
+    scheduler.schedule(after: 0.005) { first.fulfill() }
+    wait(for: [first], timeout: 1)
+
+    scheduler.schedule { second.fulfill() }
+    wait(for: [second], timeout: 1)
+
+    XCTAssertEqual(sleeper.sleeps, [5_000_000, 1_000_000])
+  }
 }

@@ -10,7 +10,6 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     var socketFD: Int32 = -1
     var running = false
     var connectionTask: Task<Void, Never>?
-    var reconnectTask: Task<Void, Never>?
     var nextReconnectDelayOverride: TimeInterval?
     var activeConnectionID: UInt64 = 0
   }
@@ -25,7 +24,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
   private let onDecodedMessage: (() -> Void)?
   private let onDecodeError: (() -> Void)?
   private let logger: ProcessLogger
-  private let reconnectDelay: TimeInterval = 2
+  private let reconnectScheduler: BackoffScheduler
   private let state = LockedState(State())
 
   /// Creates one shared agent client transport.
@@ -51,6 +50,11 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     self.onDecodedMessage = onDecodedMessage
     self.onDecodeError = onDecodeError
     self.logger = logger
+    self.reconnectScheduler = BackoffScheduler(
+      label: "\(label) reconnect",
+      delays: [2, 5, 10, 30],
+      logger: logger
+    )
   }
 
   /// Returns whether the client currently has an open socket.
@@ -69,29 +73,28 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     }
 
     guard shouldConnect else { return }
+    reconnectScheduler.cancel()
     connect()
   }
 
   /// Stops the client and clears published state.
   public func stop() {
-    let snapshot = state.withLock { state -> (Int32, Task<Void, Never>?, Task<Void, Never>?) in
+    let snapshot = state.withLock { state -> (Int32, Task<Void, Never>?) in
       state.running = false
       state.nextReconnectDelayOverride = nil
 
       let currentFD = state.socketFD
       let connectionTask = state.connectionTask
-      let reconnectTask = state.reconnectTask
 
       state.socketFD = -1
       state.connectionTask = nil
-      state.reconnectTask = nil
       state.activeConnectionID &+= 1
 
-      return (currentFD, connectionTask, reconnectTask)
+      return (currentFD, connectionTask)
     }
 
+    reconnectScheduler.cancel()
     snapshot.1?.cancel()
-    snapshot.2?.cancel()
 
     if snapshot.0 >= 0 {
       shutdown(snapshot.0, SHUT_RDWR)
@@ -167,6 +170,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       return
     }
 
+    reconnectScheduler.resetDelay()
     readLoop(fd: fd, connectionID: connectionID)
   }
 
@@ -242,37 +246,16 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
 
   /// Schedules one reconnect attempt.
   private func scheduleReconnect() {
-    let scheduledDelay = state.withLock { state -> TimeInterval? in
-      state.reconnectTask?.cancel()
-
-      guard state.running else { return nil }
-
-      let delay = state.nextReconnectDelayOverride ?? reconnectDelay
+    let reconnect = state.withLock { state -> (running: Bool, delayOverride: TimeInterval?) in
+      guard state.running else { return (false, nil) }
+      let delay = state.nextReconnectDelayOverride
       state.nextReconnectDelayOverride = nil
-      return delay
+      return (true, delay)
     }
 
-    guard let scheduledDelay else { return }
-
-    let nanoseconds = UInt64(max(scheduledDelay, 0) * 1_000_000_000)
-    let task = Task { [weak self] in
-      do {
-        try await Task.sleep(nanoseconds: nanoseconds)
-      } catch {
-        return
-      }
-
+    guard reconnect.running else { return }
+    reconnectScheduler.schedule(after: reconnect.delayOverride) { [weak self] in
       self?.connect()
-    }
-
-    let shouldCancel = state.withLock { state -> Bool in
-      guard state.running else { return true }
-      state.reconnectTask = task
-      return false
-    }
-
-    if shouldCancel {
-      task.cancel()
     }
   }
 

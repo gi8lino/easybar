@@ -31,9 +31,18 @@ public final class BackoffScheduler: @unchecked Sendable {
 
   /// Schedules the next backoff attempt when none is currently pending.
   public func schedule(_ action: @escaping @Sendable () -> Void) {
+    schedule(after: nil, action)
+  }
+
+  /// Schedules one retry using an explicit delay without advancing the backoff sequence.
+  public func schedule(after delayOverride: TimeInterval?, _ action: @escaping @Sendable () -> Void) {
     let scheduledDelay = state.withLock { state -> TimeInterval? in
       guard state.scheduledTask == nil else {
         return nil
+      }
+
+      if let delayOverride {
+        return delayOverride
       }
 
       let delay = delayForAttempt(state.attemptIndex)
