@@ -192,24 +192,21 @@ extension AeroSpaceService {
   }
 
   /// Focuses the requested workspace.
+  @MainActor
   func focusWorkspace(_ workspace: String) {
     logger.info(
       "aerospace focus workspace requested",
       .field("workspace", workspace)
     )
 
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-
-      self.spaces = self.spaces.map { space in
-        SpaceItem(
-          id: space.id,
-          name: space.name,
-          isFocused: space.name == workspace,
-          isVisible: space.isVisible,
-          apps: space.apps
-        )
-      }
+    spaces = spaces.map { space in
+      SpaceItem(
+        id: space.id,
+        name: space.name,
+        isFocused: space.name == workspace,
+        isVisible: space.isVisible,
+        apps: space.apps
+      )
     }
 
     DetachedTask.run(priority: .userInitiated) { [weak self] in
@@ -224,6 +221,7 @@ extension AeroSpaceService {
   }
 
   /// Activates one application shown inside a workspace.
+  @MainActor
   func focusApp(_ app: SpaceApp) {
     logger.info(
       "aerospace focus app requested",
@@ -238,21 +236,19 @@ extension AeroSpaceService {
       return
     }
 
-    Task { @MainActor [logger] in
-      let configuration = NSWorkspace.OpenConfiguration()
-      configuration.activates = true
+    let configuration = NSWorkspace.OpenConfiguration()
+    configuration.activates = true
 
-      NSWorkspace.shared.openApplication(
-        at: URL(fileURLWithPath: bundlePath),
-        configuration: configuration
-      ) { _, error in
-        if let error {
-          logger.debug(
-            "failed to focus app",
-            .field("app", app.name),
-            .field("error", error)
-          )
-        }
+    NSWorkspace.shared.openApplication(
+      at: URL(fileURLWithPath: bundlePath),
+      configuration: configuration
+    ) { [logger] _, error in
+      if let error {
+        logger.debug(
+          "failed to focus app",
+          .field("app", app.name),
+          .field("error", error)
+        )
       }
     }
   }
@@ -335,7 +331,9 @@ extension AeroSpaceService {
         return
       }
 
-      self.applyOptimisticFocusedApp(from: app)
+      Task { @MainActor [weak self] in
+        self?.applyOptimisticFocusedApp(from: app)
+      }
     }
 
     withLock { coordination in
@@ -470,6 +468,7 @@ extension AeroSpaceService {
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
+  @MainActor
   fileprivate func applyOptimisticFocusedApp(from app: NSRunningApplication) {
     cancelPendingLaunchRefresh(reason: "app activated")
 
@@ -549,6 +548,7 @@ extension AeroSpaceService {
   }
 
   /// Returns whether a freshly loaded snapshot differs from the currently published state.
+  @MainActor
   private func hasStateChanged(for snapshot: AeroSpaceSnapshot) -> Bool {
     return spaces != snapshot.spaces
       || focusedApp != snapshot.focusedApp
