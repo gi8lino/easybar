@@ -48,6 +48,9 @@ jobs:
         shell: bash
         run: scripts/release/derive-release-vars.sh --tag "${GITHUB_REF_NAME}"
 
+      - name: Verify source tree
+        run: make verify-source-tree
+
       - name: Clean build directories
         shell: bash
         run: make clean
@@ -106,6 +109,8 @@ jobs:
           gh workflow run update-homebrew-formula.yml \
             -f tag="${{ steps.version.outputs.tag }}" \
             -f version="${{ steps.version.outputs.version }}"
+
+
 
 
 
