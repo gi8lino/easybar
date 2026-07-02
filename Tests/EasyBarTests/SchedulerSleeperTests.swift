@@ -6,6 +6,18 @@ final class SchedulerSleeperTests: XCTestCase {
     func sleep(nanoseconds: UInt64) async throws {}
   }
 
+  private final class RecordingSleeper: AsyncSleeper, @unchecked Sendable {
+    private let state = LockedState([UInt64]())
+
+    var sleeps: [UInt64] {
+      state.withLock { $0 }
+    }
+
+    func sleep(nanoseconds: UInt64) async throws {
+      state.withLock { $0.append(nanoseconds) }
+    }
+  }
+
   func testDebouncedActionSchedulerCanUseInjectedSleeper() {
     let expectation = expectation(description: "debounced action fired")
     let scheduler = DebouncedActionScheduler(
@@ -49,5 +61,29 @@ final class SchedulerSleeperTests: XCTestCase {
     }
 
     wait(for: [expectation], timeout: 1)
+  }
+
+  func testBackoffSchedulerUsesCappedIncrementalDelays() {
+    let sleeper = RecordingSleeper()
+    let scheduler = BackoffScheduler(
+      label: "test retry",
+      delays: [0.001, 0.002],
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let first = expectation(description: "first retry fired")
+    let second = expectation(description: "second retry fired")
+    let third = expectation(description: "third retry fired")
+
+    scheduler.schedule { first.fulfill() }
+    wait(for: [first], timeout: 1)
+
+    scheduler.schedule { second.fulfill() }
+    wait(for: [second], timeout: 1)
+
+    scheduler.schedule { third.fulfill() }
+    wait(for: [third], timeout: 1)
+
+    XCTAssertEqual(sleeper.sleeps, [1_000_000, 2_000_000, 2_000_000])
   }
 }

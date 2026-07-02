@@ -22,8 +22,6 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     var subscription: RunningSubscription?
     var outputBuffer = Data()
     var errorBuffer = Data()
-    var reconnectTask: Task<Void, Never>?
-    var reconnectAttempt = 0
   }
 
   /// Stream type currently being decoded.
@@ -36,10 +34,8 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private let commandRunner: AeroSpaceCommandRunner
   /// Logger used for subscription diagnostics.
   private let logger: ProcessLogger
-  /// Bounded reconnect delays used when the subscription process exits.
-  private let reconnectDelays: [TimeInterval]
-  /// Sleeper used for reconnect delays.
-  private let sleeper: any AsyncSleeper
+  /// Scheduler used to reconnect after subscription exits.
+  private let reconnectScheduler: BackoffScheduler
   /// Called for every decoded or fallback AeroSpace event line.
   private let handleEvent: (AeroSpaceSubscriptionEvent) -> Void
   /// Current locked controller state.
@@ -55,8 +51,12 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   ) {
     self.commandRunner = commandRunner
     self.logger = logger
-    self.reconnectDelays = reconnectDelays
-    self.sleeper = sleeper
+    self.reconnectScheduler = BackoffScheduler(
+      label: "aerospace subscription reconnect",
+      delays: reconnectDelays,
+      logger: logger,
+      sleeper: sleeper
+    )
     self.handleEvent = handleEvent
   }
 
@@ -68,14 +68,12 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       state.generation &+= 1
       state.outputBuffer.removeAll(keepingCapacity: true)
       state.errorBuffer.removeAll(keepingCapacity: true)
-      state.reconnectTask?.cancel()
-      state.reconnectTask = nil
-      state.reconnectAttempt = 0
       return state.generation
     }
 
     guard let generation else { return }
 
+    reconnectScheduler.cancel()
     startProcess(generation: generation)
   }
 
@@ -87,15 +85,13 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       state.generation &+= 1
       state.outputBuffer.removeAll(keepingCapacity: true)
       state.errorBuffer.removeAll(keepingCapacity: true)
-      state.reconnectTask?.cancel()
-      state.reconnectTask = nil
-      state.reconnectAttempt = 0
 
       let subscription = state.subscription
       state.subscription = nil
       return subscription
     }
 
+    reconnectScheduler.cancel()
     guard let subscription else { return }
 
     subscription.outputHandle.readabilityHandler = nil
@@ -282,75 +278,17 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       return
     }
 
-    let delay = withLock { state -> TimeInterval? in
-      guard state.running, state.generation == generation, state.reconnectTask == nil else {
-        return nil
-      }
-
-      let delay = reconnectDelay(for: state.reconnectAttempt)
-      state.reconnectAttempt += 1
-      return delay
-    }
-
-    guard let delay else { return }
-
-    logger.warn(
-      "aerospace subscription reconnect scheduled",
-      .field("delay", "\(delay)")
-    )
-
-    let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
-    let sleeper = sleeper
-    let task = Task { [weak self] in
-      do {
-        try await sleeper.sleep(nanoseconds: nanoseconds)
-      } catch {
-        return
-      }
-
+    reconnectScheduler.schedule { [weak self] in
       guard let self else { return }
-      guard self.clearReconnectTask(generation: generation) else { return }
+      guard self.isActive(generation: generation) else { return }
       self.startProcess(generation: generation)
-    }
-
-    let shouldCancel = withLock { state -> Bool in
-      guard state.running, state.generation == generation, state.reconnectTask == nil else {
-        return true
-      }
-
-      state.reconnectTask = task
-      return false
-    }
-
-    if shouldCancel {
-      task.cancel()
-    }
-  }
-
-  /// Clears the pending reconnect task if it still belongs to this generation.
-  private func clearReconnectTask(generation: UInt64) -> Bool {
-    withLock { state -> Bool in
-      guard state.running, state.generation == generation, state.reconnectTask != nil else {
-        return false
-      }
-
-      state.reconnectTask = nil
-      return true
     }
   }
 
   /// Resets reconnect backoff after the event stream proves healthy.
   private func resetReconnectBackoff(generation: UInt64) {
-    withLock { state in
-      guard state.running, state.generation == generation else { return }
-      state.reconnectAttempt = 0
-    }
-  }
-
-  /// Returns the capped reconnect delay for one failed subscription generation.
-  private func reconnectDelay(for attempt: Int) -> TimeInterval {
-    guard !reconnectDelays.isEmpty else { return 0 }
-    return reconnectDelays[min(attempt, reconnectDelays.count - 1)]
+    guard isActive(generation: generation) else { return }
+    reconnectScheduler.resetDelay()
   }
 
   /// Appends bytes to a stream buffer and extracts complete lines.
