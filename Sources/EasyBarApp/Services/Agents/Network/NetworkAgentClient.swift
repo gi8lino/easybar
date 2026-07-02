@@ -3,6 +3,16 @@ import Foundation
 
 /// Streams Wi-Fi and network state from the network agent.
 final class NetworkAgentClient {
+  private struct ErrorLogKey: Equatable {
+    let code: String
+    let message: String
+  }
+
+  private struct ErrorLogState {
+    var lastKey: ErrorLogKey?
+    var repeatCount = 0
+  }
+
   /// Shared network-agent client.
   static var shared = NetworkAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
@@ -20,6 +30,8 @@ final class NetworkAgentClient {
   private var config: ConfigSnapshot.NetworkAgent
   /// Whether the client lifecycle is active.
   private var started = false
+  /// Last logged network-agent error, used to suppress identical repeats.
+  private let errorLogState = LockedState(ErrorLogState())
 
   /// Wake-triggered refresh controller.
   private lazy var wakeRefreshController = AgentWakeRefreshController(
@@ -165,6 +177,7 @@ final class NetworkAgentClient {
         return
       }
 
+      resetErrorLogState()
       publish(snapshot: snapshot)
 
     case .pong:
@@ -179,11 +192,7 @@ final class NetworkAgentClient {
   private func handleError(code: NetworkAgentErrorCode?, message: String?) {
     guard started else { return }
 
-    logger.warn(
-      "network agent error",
-      .field("code", code?.rawValue ?? "unknown"),
-      .field("message", message ?? "unknown"),
-    )
+    logAgentErrorIfNeeded(code: code, message: message)
 
     guard code == .permissionDenied else { return }
 
@@ -223,7 +232,49 @@ final class NetworkAgentClient {
   /// Handles a socket disconnect by clearing published state.
   private func handleDisconnectedStateReset() {
     guard started else { return }
+    resetErrorLogState()
     clearPublishedState(notify: true)
+  }
+
+  /// Logs the first instance of an agent error, then suppresses identical repeats.
+  private func logAgentErrorIfNeeded(code: NetworkAgentErrorCode?, message: String?) {
+    let key = ErrorLogKey(code: code?.rawValue ?? "unknown", message: message ?? "unknown")
+    let decision = errorLogState.withLock { state -> (shouldLog: Bool, repeatCount: Int) in
+      guard state.lastKey == key else {
+        state.lastKey = key
+        state.repeatCount = 0
+        return (true, 0)
+      }
+
+      state.repeatCount += 1
+      return (state.repeatCount % 25 == 0, state.repeatCount)
+    }
+
+    guard decision.shouldLog else { return }
+
+    if decision.repeatCount > 0 {
+      logger.warn(
+        "network agent error",
+        .field("code", key.code),
+        .field("message", key.message),
+        .field("repeat_count", decision.repeatCount),
+      )
+      return
+    }
+
+    logger.warn(
+      "network agent error",
+      .field("code", key.code),
+      .field("message", key.message),
+    )
+  }
+
+  /// Allows the next network-agent error after a successful update to be logged.
+  private func resetErrorLogState() {
+    errorLogState.withLock { state in
+      state.lastKey = nil
+      state.repeatCount = 0
+    }
   }
 
   /// Clears the shared Wi-Fi state and optionally emits the corresponding app events.
