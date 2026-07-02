@@ -50,4 +50,3 @@ Example `.luarc.json`:
 ```
 
 If your editor still only knows about the `easybar` global but not nested property tables, restart EasyBar once so it reinstalls the latest `easybar_api.lua` stub.
-

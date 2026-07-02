@@ -229,5 +229,3 @@ Lua event:
 
 Agents return flat data.
 Lua receives structured event data.
-
-

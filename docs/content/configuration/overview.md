@@ -105,16 +105,16 @@ See [Themes](themes.md).
 
 ## Where to go next
 
-| Goal | Page |
-| --- | --- |
-| Copy a starter config | [Example Configs](example-configs.md) |
-| Configure app paths | [App Settings](app.md) |
-| Configure shell command environment | [Environment](environment.md) |
-| Choose colors | [Themes](themes.md) |
-| Enable native widgets | [Built-ins](builtins.md) |
-| Group native widgets | [Native Groups](native-groups.md) |
-| Configure helper agents | [Agents](agents.md) |
-| Debug logging | [Logging](logging.md) |
-| Check exact defaults | [Configuration Reference](reference.md) |
+| Goal                                | Page                                    |
+| ----------------------------------- | --------------------------------------- |
+| Copy a starter config               | [Example Configs](example-configs.md)   |
+| Configure app paths                 | [App Settings](app.md)                  |
+| Configure shell command environment | [Environment](environment.md)           |
+| Choose colors                       | [Themes](themes.md)                     |
+| Enable native widgets               | [Built-ins](builtins.md)                |
+| Group native widgets                | [Native Groups](native-groups.md)       |
+| Configure helper agents             | [Agents](agents.md)                     |
+| Debug logging                       | [Logging](logging.md)                   |
+| Check exact defaults                | [Configuration Reference](reference.md) |
 
 Contributor-focused implementation details are in [Internals](../internals/overview.md).

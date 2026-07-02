@@ -87,5 +87,3 @@ Other kinds:
 The calendar agent collects calendar data and performs calendar mutations.
 
 EasyBar decides how calendar data is rendered.
-
-

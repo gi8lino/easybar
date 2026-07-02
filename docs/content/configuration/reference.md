@@ -12,758 +12,758 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `app`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `widgets_dir` | `"~/.config/easybar/widgets"` | Directory that contains your custom Lua widget files. |
-| `lua_path` | `"/opt/homebrew/bin/lua"` | Path to the Lua executable EasyBar uses for scripted widgets. |
-| `lua_socket_path` | `"/tmp/EasyBar/lua-runtime.sock"` | Unix socket path used by EasyBar and the Lua widget runtime transport. |
-| `watch_config` | `true` | Reloads EasyBar automatically when config.toml changes. |
-| `lock_dir` | `"/tmp/EasyBar"` | Directory that contains lock files used by EasyBar. |
-| `widget_editor_stub_path` | `"~/.local/share/easybar/easybar_api.lua"` | LuaLS/editor stub path EasyBar keeps in sync for widget authoring. |
-| `develop` | `false` | Shows the developer menu section without holding Shift when right-clicking the bar. |
+| Key                       | Default                                    | Description                                                                         |
+| ------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `widgets_dir`             | `"~/.config/easybar/widgets"`              | Directory that contains your custom Lua widget files.                               |
+| `lua_path`                | `"/opt/homebrew/bin/lua"`                  | Path to the Lua executable EasyBar uses for scripted widgets.                       |
+| `lua_socket_path`         | `"/tmp/EasyBar/lua-runtime.sock"`          | Unix socket path used by EasyBar and the Lua widget runtime transport.              |
+| `watch_config`            | `true`                                     | Reloads EasyBar automatically when config.toml changes.                             |
+| `lock_dir`                | `"/tmp/EasyBar"`                           | Directory that contains lock files used by EasyBar.                                 |
+| `widget_editor_stub_path` | `"~/.local/share/easybar/easybar_api.lua"` | LuaLS/editor stub path EasyBar keeps in sync for widget authoring.                  |
+| `develop`                 | `false`                                    | Shows the developer menu section without holding Shift when right-clicking the bar. |
 
 ## `app.env`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
+| Key    | Default                                                            | Description                                                                  |
+| ------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `PATH` | `"/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"` | Environment overrides passed into the Lua runtime and widget shell commands. |
 
 ## `app.lua_commands`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `timeout_seconds` | `5` | Default hard timeout for easybar.exec and easybar.exec_async commands. |
-| `max_output_bytes` | `65536` | Default combined stdout and stderr capture limit for one command. |
-| `max_async_jobs` | `8` | Maximum concurrent easybar.exec_async jobs before new jobs are rejected. |
+| Key                | Default | Description                                                              |
+| ------------------ | ------- | ------------------------------------------------------------------------ |
+| `timeout_seconds`  | `5`     | Default hard timeout for easybar.exec and easybar.exec_async commands.   |
+| `max_output_bytes` | `65536` | Default combined stdout and stderr capture limit for one command.        |
+| `max_async_jobs`   | `8`     | Maximum concurrent easybar.exec_async jobs before new jobs are rejected. |
 
 ## `theme`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `name` | `"default"` | Name of the default theme. Must match a theme file name without the .toml extension. |
-| `themes_dir` | `"~/.config/easybar/themes"` | Directory that contains your custom theme files. |
+| Key          | Default                      | Description                                                                          |
+| ------------ | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `name`       | `"default"`                  | Name of the default theme. Must match a theme file name without the .toml extension. |
+| `themes_dir` | `"~/.config/easybar/themes"` | Directory that contains your custom theme files.                                     |
 
 ## `logging`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Mirrors stdout and stderr into per-process log files when true. |
-| `level` | `"info"` | Minimum log level: trace \| debug \| info \| warn \| error. |
+| Key         | Default                    | Description                                                                            |
+| ----------- | -------------------------- | -------------------------------------------------------------------------------------- |
+| `enabled`   | `false`                    | Mirrors stdout and stderr into per-process log files when true.                        |
+| `level`     | `"info"`                   | Minimum log level: trace \| debug \| info \| warn \| error.                            |
 | `directory` | `"~/.local/state/easybar"` | Directory where EasyBar writes easybar.out, calendar-agent.out, and network-agent.out. |
 
 ## `agents.calendar`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `true` | Starts the calendar socket client in EasyBar and enables the calendar helper contract. |
-| `socket_path` | `"/tmp/EasyBar/calendar-agent.sock"` | Unix socket path used by EasyBar and the calendar agent. |
+| Key           | Default                              | Description                                                                            |
+| ------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `enabled`     | `true`                               | Starts the calendar socket client in EasyBar and enables the calendar helper contract. |
+| `socket_path` | `"/tmp/EasyBar/calendar-agent.sock"` | Unix socket path used by EasyBar and the calendar agent.                               |
 
 ## `agents.network`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `true` | Starts the network socket client in EasyBar and enables the Wi-Fi helper contract. |
-| `socket_path` | `"/tmp/EasyBar/network-agent.sock"` | Unix socket path used by EasyBar and the network agent. |
-| `refresh_interval_seconds` | `60` | Fallback polling interval for Wi-Fi state. Set to 0 to disable polling. |
-| `allow_unauthorized_non_sensitive_fields` | `false` | When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned. |
+| Key                                       | Default                             | Description                                                                                                                                      |
+| ----------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`                                 | `true`                              | Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.                                                               |
+| `socket_path`                             | `"/tmp/EasyBar/network-agent.sock"` | Unix socket path used by EasyBar and the network agent.                                                                                          |
+| `refresh_interval_seconds`                | `60`                                | Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.                                                                          |
+| `allow_unauthorized_non_sensitive_fields` | `false`                             | When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned. |
 
 ## `bar`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `height` | `32` | Total height of the bar. |
-| `padding_x` | `10` | Horizontal left and right padding inside the bar. |
-| `extend_behind_notch` | `true` | Makes the bar span the full top edge, including the area behind the notch. |
+| Key                   | Default | Description                                                                |
+| --------------------- | ------- | -------------------------------------------------------------------------- |
+| `height`              | `32`    | Total height of the bar.                                                   |
+| `padding_x`           | `10`    | Horizontal left and right padding inside the bar.                          |
+| `extend_behind_notch` | `true`  | Makes the bar span the full top edge, including the area behind the notch. |
 
 ## `bar.colors`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `background` | `"theme.background"` | Background color of the bar. |
-| `border` | `"theme.transparent"` | Bottom border color of the bar. Use a visible color to opt in. |
+| Key          | Default               | Description                                                    |
+| ------------ | --------------------- | -------------------------------------------------------------- |
+| `background` | `"theme.background"`  | Background color of the bar.                                   |
+| `border`     | `"theme.transparent"` | Bottom border color of the bar. Use a visible color to opt in. |
 
 ## `builtins.spaces`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the built-in spaces widget. |
-| `position` | `"left"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `10` | Sort order among widgets in the same position. |
-| `icon` | `""` | Unused fallback icon for the spaces root widget. |
-| `text_color` | `"theme.text_secondary"` | Fallback text color for the spaces root widget. |
-| `background_color` | `"theme.transparent"` | Background color behind the whole spaces block. |
-| `border_color` | `"theme.transparent"` | Border color around the whole spaces block. |
-| `border_width` | `0` | Border width around the whole spaces block. |
-| `corner_radius` | `0` | Corner radius around the whole spaces block. |
-| `margin_x` | `0` | Horizontal outer margin around the spaces root container. |
-| `margin_y` | `0` | Vertical outer margin around the spaces root container. |
-| `padding_x` | `0` | Horizontal inner padding of the spaces root container. |
-| `padding_y` | `0` | Vertical inner padding of the spaces root container. |
-| `spacing` | `0` | Root-level spacing of the spaces widget container. |
-| `opacity` | `1` | Overall opacity of the spaces widget container. |
+| Key                | Default                  | Description                                                      |
+| ------------------ | ------------------------ | ---------------------------------------------------------------- |
+| `enabled`          | `false`                  | Shows or hides the built-in spaces widget.                       |
+| `position`         | `"left"`                 | Places the widget on the left, center, or right side of the bar. |
+| `order`            | `10`                     | Sort order among widgets in the same position.                   |
+| `icon`             | `""`                     | Unused fallback icon for the spaces root widget.                 |
+| `text_color`       | `"theme.text_secondary"` | Fallback text color for the spaces root widget.                  |
+| `background_color` | `"theme.transparent"`    | Background color behind the whole spaces block.                  |
+| `border_color`     | `"theme.transparent"`    | Border color around the whole spaces block.                      |
+| `border_width`     | `0`                      | Border width around the whole spaces block.                      |
+| `corner_radius`    | `0`                      | Corner radius around the whole spaces block.                     |
+| `margin_x`         | `0`                      | Horizontal outer margin around the spaces root container.        |
+| `margin_y`         | `0`                      | Vertical outer margin around the spaces root container.          |
+| `padding_x`        | `0`                      | Horizontal inner padding of the spaces root container.           |
+| `padding_y`        | `0`                      | Vertical inner padding of the spaces root container.             |
+| `spacing`          | `0`                      | Root-level spacing of the spaces widget container.               |
+| `opacity`          | `1`                      | Overall opacity of the spaces widget container.                  |
 
 ## `builtins.spaces.layout`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `spacing` | `8` | Gap between space pills. |
-| `hide_empty` | `true` | Hides spaces that have no apps. |
-| `padding_x` | `12` | Horizontal inner padding inside each space pill. |
-| `padding_y` | `2` | Vertical inner padding inside each space pill. |
-| `margin_x` | `4` | Horizontal outer margin around the whole spaces row. |
-| `margin_y` | `4` | Vertical outer margin around the whole spaces row. |
-| `corner_radius` | `8` | Corner radius of inactive space pills. |
-| `focused_corner_radius` | `8` | Corner radius of the focused space pill. |
-| `focused_scale` | `1.0` | Scale multiplier applied to the focused space pill. |
-| `inactive_opacity` | `0.85` | Opacity applied to inactive space pills. |
-| `max_icons` | `4` | Maximum number of app icons shown per space. |
-| `show_label` | `true` | Shows the workspace label. |
-| `show_icons` | `true` | Shows app icons inside each space pill. |
-| `show_only_focused_label` | `false` | Shows the label only on the focused space when true. |
-| `collapse_inactive` | `false` | Makes inactive spaces more compact when true. |
-| `collapsed_padding_x` | `6` | Horizontal inner padding of collapsed inactive space pills. |
-| `collapsed_padding_y` | `4` | Vertical inner padding of collapsed inactive space pills. |
-| `click_to_focus_space` | `true` | Switches to a workspace when its pill is clicked. |
-| `click_to_focus_app` | `true` | Activates an app when its icon is clicked. |
+| Key                       | Default | Description                                                 |
+| ------------------------- | ------- | ----------------------------------------------------------- |
+| `spacing`                 | `8`     | Gap between space pills.                                    |
+| `hide_empty`              | `true`  | Hides spaces that have no apps.                             |
+| `padding_x`               | `12`    | Horizontal inner padding inside each space pill.            |
+| `padding_y`               | `2`     | Vertical inner padding inside each space pill.              |
+| `margin_x`                | `4`     | Horizontal outer margin around the whole spaces row.        |
+| `margin_y`                | `4`     | Vertical outer margin around the whole spaces row.          |
+| `corner_radius`           | `8`     | Corner radius of inactive space pills.                      |
+| `focused_corner_radius`   | `8`     | Corner radius of the focused space pill.                    |
+| `focused_scale`           | `1.0`   | Scale multiplier applied to the focused space pill.         |
+| `inactive_opacity`        | `0.85`  | Opacity applied to inactive space pills.                    |
+| `max_icons`               | `4`     | Maximum number of app icons shown per space.                |
+| `show_label`              | `true`  | Shows the workspace label.                                  |
+| `show_icons`              | `true`  | Shows app icons inside each space pill.                     |
+| `show_only_focused_label` | `false` | Shows the label only on the focused space when true.        |
+| `collapse_inactive`       | `false` | Makes inactive spaces more compact when true.               |
+| `collapsed_padding_x`     | `6`     | Horizontal inner padding of collapsed inactive space pills. |
+| `collapsed_padding_y`     | `4`     | Vertical inner padding of collapsed inactive space pills.   |
+| `click_to_focus_space`    | `true`  | Switches to a workspace when its pill is clicked.           |
+| `click_to_focus_app`      | `true`  | Activates an app when its icon is clicked.                  |
 
 ## `builtins.spaces.text`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `size` | `12` | Font size of the space label. |
-| `weight` | `"semibold"` | Font weight of the space label. |
-| `focused_color` | `"theme.text"` | Text color of the focused space label. |
-| `inactive_color` | `"theme.text_secondary"` | Text color of inactive space labels. |
+| Key              | Default                  | Description                            |
+| ---------------- | ------------------------ | -------------------------------------- |
+| `size`           | `12`                     | Font size of the space label.          |
+| `weight`         | `"semibold"`             | Font weight of the space label.        |
+| `focused_color`  | `"theme.text"`           | Text color of the focused space label. |
+| `inactive_color` | `"theme.text_secondary"` | Text color of inactive space labels.   |
 
 ## `builtins.spaces.icons`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `size` | `20` | Default app icon size in a space. |
-| `spacing` | `4` | Gap between app icons. |
-| `corner_radius` | `3` | Corner radius of app icons. |
-| `focused_app_size` | `28` | Size of the currently focused app icon. |
-| `border_width` | `1` | Border width of normal app icons. |
-| `focused_app_border_width` | `1` | Border width of the focused app icon. |
+| Key                        | Default | Description                             |
+| -------------------------- | ------- | --------------------------------------- |
+| `size`                     | `20`    | Default app icon size in a space.       |
+| `spacing`                  | `4`     | Gap between app icons.                  |
+| `corner_radius`            | `3`     | Corner radius of app icons.             |
+| `focused_app_size`         | `28`    | Size of the currently focused app icon. |
+| `border_width`             | `1`     | Border width of normal app icons.       |
+| `focused_app_border_width` | `1`     | Border width of the focused app icon.   |
 
 ## `builtins.spaces.colors`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `active_background` | `"theme.surface_elevated"` | Background color of the focused space pill. |
-| `inactive_background` | `"theme.surface"` | Background color of inactive space pills. |
-| `active_border` | `"theme.border_strong"` | Border color of the focused space pill. |
-| `inactive_border` | `"theme.transparent"` | Border color of inactive space pills. |
-| `focused_app_border` | `"theme.transparent"` | Border color of the focused app icon. |
+| Key                   | Default                    | Description                                 |
+| --------------------- | -------------------------- | ------------------------------------------- |
+| `active_background`   | `"theme.surface_elevated"` | Background color of the focused space pill. |
+| `inactive_background` | `"theme.surface"`          | Background color of inactive space pills.   |
+| `active_border`       | `"theme.border_strong"`    | Border color of the focused space pill.     |
+| `inactive_border`     | `"theme.transparent"`      | Border color of inactive space pills.       |
+| `focused_app_border`  | `"theme.transparent"`      | Border color of the focused app icon.       |
 
 ## `builtins.front_app`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the front-app widget. |
+| Key        | Default  | Description                                                      |
+| ---------- | -------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`  | Shows or hides the front-app widget.                             |
 | `position` | `"left"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `20` | Sort order among widgets in the same position. |
+| `order`    | `20`     | Sort order among widgets in the same position.                   |
 
 ## `builtins.front_app.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `"􀈔"` | Fallback icon when no app icon is available. |
-| `text_color` | `"theme.text"` | Text color of the widget. |
-| `background_color` | `"theme.surface"` | Background color of the widget. |
-| `border_color` | `"theme.border"` | Border color of the widget. |
-| `border_width` | `1` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `4` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the icon and label. |
-| `opacity` | `1.0` | Overall opacity of the widget. |
+| Key                | Default           | Description                                  |
+| ------------------ | ----------------- | -------------------------------------------- |
+| `icon`             | `"􀈔"`             | Fallback icon when no app icon is available. |
+| `text_color`       | `"theme.text"`    | Text color of the widget.                    |
+| `background_color` | `"theme.surface"` | Background color of the widget.              |
+| `border_color`     | `"theme.border"`  | Border color of the widget.                  |
+| `border_width`     | `1`               | Border width of the widget.                  |
+| `corner_radius`    | `8`               | Corner radius of the widget background.      |
+| `margin_x`         | `0`               | Horizontal outer margin around the widget.   |
+| `margin_y`         | `0`               | Vertical outer margin around the widget.     |
+| `padding_x`        | `8`               | Horizontal inner padding of the widget.      |
+| `padding_y`        | `4`               | Vertical inner padding of the widget.        |
+| `spacing`          | `6`               | Gap between the icon and label.              |
+| `opacity`          | `1.0`             | Overall opacity of the widget.               |
 
 ## `builtins.front_app.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `show_icon` | `true` | Shows the focused app icon. |
-| `show_name` | `true` | Shows the focused app name. |
-| `fallback_text` | `"No App"` | Fallback text shown when no app name is available. |
-| `icon_size` | `14` | Display size of the app icon. |
-| `icon_corner_radius` | `4` | Corner radius of the displayed app icon. |
+| Key                  | Default    | Description                                        |
+| -------------------- | ---------- | -------------------------------------------------- |
+| `show_icon`          | `true`     | Shows the focused app icon.                        |
+| `show_name`          | `true`     | Shows the focused app name.                        |
+| `fallback_text`      | `"No App"` | Fallback text shown when no app name is available. |
+| `icon_size`          | `14`       | Display size of the app icon.                      |
+| `icon_corner_radius` | `4`        | Corner radius of the displayed app icon.           |
 
 ## `builtins.aerospace_mode`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the AeroSpace mode widget. |
+| Key        | Default  | Description                                                      |
+| ---------- | -------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`  | Shows or hides the AeroSpace mode widget.                        |
 | `position` | `"left"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `30` | Sort order among widgets in the same position. |
+| `order`    | `30`     | Sort order among widgets in the same position.                   |
 
 ## `builtins.aerospace_mode.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `""` | Leading icon of the widget. The mode-specific icon comes from content settings. |
-| `text_color` | `"theme.text"` | Text color of the widget. |
-| `background_color` | `"theme.surface"` | Background color of the widget. |
-| `border_color` | `"theme.border"` | Border color of the widget. |
-| `border_width` | `1` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `4` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the icon and text. |
-| `opacity` | `1` | Overall opacity of the widget. |
+| Key                | Default           | Description                                                                     |
+| ------------------ | ----------------- | ------------------------------------------------------------------------------- |
+| `icon`             | `""`              | Leading icon of the widget. The mode-specific icon comes from content settings. |
+| `text_color`       | `"theme.text"`    | Text color of the widget.                                                       |
+| `background_color` | `"theme.surface"` | Background color of the widget.                                                 |
+| `border_color`     | `"theme.border"`  | Border color of the widget.                                                     |
+| `border_width`     | `1`               | Border width of the widget.                                                     |
+| `corner_radius`    | `8`               | Corner radius of the widget background.                                         |
+| `margin_x`         | `0`               | Horizontal outer margin around the widget.                                      |
+| `margin_y`         | `0`               | Vertical outer margin around the widget.                                        |
+| `padding_x`        | `8`               | Horizontal inner padding of the widget.                                         |
+| `padding_y`        | `4`               | Vertical inner padding of the widget.                                           |
+| `spacing`          | `6`               | Gap between the icon and text.                                                  |
+| `opacity`          | `1`               | Overall opacity of the widget.                                                  |
 
 ## `builtins.aerospace_mode.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `show_icon` | `true` | Shows the icon for the current AeroSpace layout mode. |
-| `show_text` | `false` | Shows the text label for the current AeroSpace layout mode. |
-| `h_tiles_icon` | `"󰕴"` | Icon used for horizontal tiling. |
-| `v_tiles_icon` | `"󰕳"` | Icon used for vertical tiling. |
-| `h_accordion_icon` | `"󰖲"` | Icon used for horizontal accordion. |
-| `v_accordion_icon` | `"󰖳"` | Icon used for vertical accordion. |
-| `floating_icon` | `"󰹙"` | Icon used for floating windows or containers. |
-| `unknown_icon` | `"󰘎"` | Fallback icon used when the layout cannot be detected. |
-| `h_tiles_text` | `"h_tiles"` | Text label used for horizontal tiling. |
-| `v_tiles_text` | `"v_tiles"` | Text label used for vertical tiling. |
-| `h_accordion_text` | `"h_accordion"` | Text label used for horizontal accordion. |
-| `v_accordion_text` | `"v_accordion"` | Text label used for vertical accordion. |
-| `floating_text` | `"floating"` | Text label used for floating windows or containers. |
-| `unknown_text` | `"unknown"` | Fallback text label used when the layout cannot be detected. |
+| Key                | Default         | Description                                                  |
+| ------------------ | --------------- | ------------------------------------------------------------ |
+| `show_icon`        | `true`          | Shows the icon for the current AeroSpace layout mode.        |
+| `show_text`        | `false`         | Shows the text label for the current AeroSpace layout mode.  |
+| `h_tiles_icon`     | `"󰕴"`           | Icon used for horizontal tiling.                             |
+| `v_tiles_icon`     | `"󰕳"`           | Icon used for vertical tiling.                               |
+| `h_accordion_icon` | `"󰖲"`           | Icon used for horizontal accordion.                          |
+| `v_accordion_icon` | `"󰖳"`           | Icon used for vertical accordion.                            |
+| `floating_icon`    | `"󰹙"`           | Icon used for floating windows or containers.                |
+| `unknown_icon`     | `"󰘎"`           | Fallback icon used when the layout cannot be detected.       |
+| `h_tiles_text`     | `"h_tiles"`     | Text label used for horizontal tiling.                       |
+| `v_tiles_text`     | `"v_tiles"`     | Text label used for vertical tiling.                         |
+| `h_accordion_text` | `"h_accordion"` | Text label used for horizontal accordion.                    |
+| `v_accordion_text` | `"v_accordion"` | Text label used for vertical accordion.                      |
+| `floating_text`    | `"floating"`    | Text label used for floating windows or containers.          |
+| `unknown_text`     | `"unknown"`     | Fallback text label used when the layout cannot be detected. |
 
 ## `builtins.cpu`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the CPU widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the CPU widget.                                   |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `10` | Sort order among widgets in the same position. |
+| `order`    | `10`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.cpu.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `"󰍛"` | Leading icon of the widget. |
-| `text_color` | `"theme.text"` | Text color of the widget when no content color is set. |
-| `background_color` | `"theme.transparent"` | Background color of the widget. |
-| `border_color` | `"theme.transparent"` | Border color of the widget. |
-| `border_width` | `0` | Border width of the widget. |
-| `corner_radius` | `0` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `4` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the icon, label, and sparkline. |
-| `opacity` | `1` | Overall opacity of the widget. |
+| Key                | Default               | Description                                            |
+| ------------------ | --------------------- | ------------------------------------------------------ |
+| `icon`             | `"󰍛"`                 | Leading icon of the widget.                            |
+| `text_color`       | `"theme.text"`        | Text color of the widget when no content color is set. |
+| `background_color` | `"theme.transparent"` | Background color of the widget.                        |
+| `border_color`     | `"theme.transparent"` | Border color of the widget.                            |
+| `border_width`     | `0`                   | Border width of the widget.                            |
+| `corner_radius`    | `0`                   | Corner radius of the widget background.                |
+| `margin_x`         | `0`                   | Horizontal outer margin around the widget.             |
+| `margin_y`         | `0`                   | Vertical outer margin around the widget.               |
+| `padding_x`        | `8`                   | Horizontal inner padding of the widget.                |
+| `padding_y`        | `4`                   | Vertical inner padding of the widget.                  |
+| `spacing`          | `6`                   | Gap between the icon, label, and sparkline.            |
+| `opacity`          | `1`                   | Overall opacity of the widget.                         |
 
 ## `builtins.cpu.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `label` | `"CPU"` | Text label shown next to the sparkline. |
-| `history_size` | `10` | Number of samples kept in the sparkline history. |
-| `line_width` | `1.8` | Stroke width of the sparkline line. |
-| `color` | `"theme.success_secondary"` | Color of the sparkline and label. |
-| `sample_interval_seconds` | `5` | Polling interval in seconds. |
+| Key                       | Default                     | Description                                      |
+| ------------------------- | --------------------------- | ------------------------------------------------ |
+| `label`                   | `"CPU"`                     | Text label shown next to the sparkline.          |
+| `history_size`            | `10`                        | Number of samples kept in the sparkline history. |
+| `line_width`              | `1.8`                       | Stroke width of the sparkline line.              |
+| `color`                   | `"theme.success_secondary"` | Color of the sparkline and label.                |
+| `sample_interval_seconds` | `5`                         | Polling interval in seconds.                     |
 
 ## `builtins.battery`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the battery widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the battery widget.                               |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `20` | Sort order among widgets in the same position. |
+| `order`    | `20`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.battery.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `"🔋"` | Fallback or default battery icon. |
-| `text_color` | `"theme.text"` | Used when color_mode is fixed or data is unavailable. |
-| `background_color` | `"theme.transparent"` | Background color of the widget. |
-| `border_color` | `"theme.transparent"` | Border color of the widget. |
-| `border_width` | `0` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `4` | Horizontal inner padding of the widget. |
-| `padding_y` | `0` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the battery icon and text. |
-| `opacity` | `1.0` | Overall opacity of the widget. |
+| Key                | Default               | Description                                           |
+| ------------------ | --------------------- | ----------------------------------------------------- |
+| `icon`             | `"🔋"`                | Fallback or default battery icon.                     |
+| `text_color`       | `"theme.text"`        | Used when color_mode is fixed or data is unavailable. |
+| `background_color` | `"theme.transparent"` | Background color of the widget.                       |
+| `border_color`     | `"theme.transparent"` | Border color of the widget.                           |
+| `border_width`     | `0`                   | Border width of the widget.                           |
+| `corner_radius`    | `8`                   | Corner radius of the widget background.               |
+| `margin_x`         | `0`                   | Horizontal outer margin around the widget.            |
+| `margin_y`         | `0`                   | Vertical outer margin around the widget.              |
+| `padding_x`        | `4`                   | Horizontal inner padding of the widget.               |
+| `padding_y`        | `0`                   | Vertical inner padding of the widget.                 |
+| `spacing`          | `6`                   | Gap between the battery icon and text.                |
+| `opacity`          | `1.0`                 | Overall opacity of the widget.                        |
 
 ## `builtins.battery.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `unavailable_text` | `"n/a"` | Fallback text shown when battery data is unavailable. |
-| `icon_size` | `18` | Font size of the battery icon. |
-| `color_mode` | `"fixed"` | Battery color mode: dynamic \| fixed. |
-| `fixed_color` | `"theme.text"` | Color used only when color_mode = "fixed". |
-| `display_mode` | `"expand"` | Display mode: none \| tooltip \| expand \| always. |
+| Key                | Default        | Description                                           |
+| ------------------ | -------------- | ----------------------------------------------------- |
+| `unavailable_text` | `"n/a"`        | Fallback text shown when battery data is unavailable. |
+| `icon_size`        | `18`           | Font size of the battery icon.                        |
+| `color_mode`       | `"fixed"`      | Battery color mode: dynamic \| fixed.                 |
+| `fixed_color`      | `"theme.text"` | Color used only when color_mode = "fixed".            |
+| `display_mode`     | `"expand"`     | Display mode: none \| tooltip \| expand \| always.    |
 
 ## `builtins.battery.colors`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `high` | `"theme.success"` | Color used for 70-100%. |
-| `medium` | `"theme.warning"` | Color used for 50-69%. |
-| `low` | `"theme.orange"` | Color used for 30-49%. |
-| `critical` | `"theme.error"` | Color used for 0-29%. |
-| `frame` | `"theme.muted"` | Secondary palette color for the battery frame. |
-| `overlay_outline` | `"theme.overlay_outline"` | Outline color drawn behind battery overlay symbols. |
-| `charging_overlay` | `"theme.overlay_text"` | Color of the charging bolt overlay. |
-| `external_power_overlay` | `"theme.overlay_text"` | Color of the plugged-in holding overlay. |
-| `on_hold_overlay` | `"theme.overlay_text"` | Color of the on-hold pause overlay. |
-| `unavailable` | `"theme.muted"` | Color used when battery data is unavailable. |
+| Key                      | Default                   | Description                                         |
+| ------------------------ | ------------------------- | --------------------------------------------------- |
+| `high`                   | `"theme.success"`         | Color used for 70-100%.                             |
+| `medium`                 | `"theme.warning"`         | Color used for 50-69%.                              |
+| `low`                    | `"theme.orange"`          | Color used for 30-49%.                              |
+| `critical`               | `"theme.error"`           | Color used for 0-29%.                               |
+| `frame`                  | `"theme.muted"`           | Secondary palette color for the battery frame.      |
+| `overlay_outline`        | `"theme.overlay_outline"` | Outline color drawn behind battery overlay symbols. |
+| `charging_overlay`       | `"theme.overlay_text"`    | Color of the charging bolt overlay.                 |
+| `external_power_overlay` | `"theme.overlay_text"`    | Color of the plugged-in holding overlay.            |
+| `on_hold_overlay`        | `"theme.overlay_text"`    | Color of the on-hold pause overlay.                 |
+| `unavailable`            | `"theme.muted"`           | Color used when battery data is unavailable.        |
 
 ## `builtins.battery.tooltip`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `text_color` | `"theme.text"` | Text color used in the tooltip. |
-| `background_color` | `"theme.background"` | Background color of the tooltip. |
-| `border_color` | `"theme.border_strong"` | Border color of the tooltip. |
-| `border_width` | `1` | Border width of the tooltip. |
-| `corner_radius` | `8` | Corner radius of the tooltip. |
-| `padding_x` | `8` | Horizontal inner padding of the tooltip. |
-| `padding_y` | `6` | Vertical inner padding of the tooltip. |
-| `margin_x` | `0` | Horizontal outer margin around the tooltip. |
-| `margin_y` | `8` | Vertical outer margin around the tooltip. |
+| Key                | Default                 | Description                                 |
+| ------------------ | ----------------------- | ------------------------------------------- |
+| `text_color`       | `"theme.text"`          | Text color used in the tooltip.             |
+| `background_color` | `"theme.background"`    | Background color of the tooltip.            |
+| `border_color`     | `"theme.border_strong"` | Border color of the tooltip.                |
+| `border_width`     | `1`                     | Border width of the tooltip.                |
+| `corner_radius`    | `8`                     | Corner radius of the tooltip.               |
+| `padding_x`        | `8`                     | Horizontal inner padding of the tooltip.    |
+| `padding_y`        | `6`                     | Vertical inner padding of the tooltip.      |
+| `margin_x`         | `0`                     | Horizontal outer margin around the tooltip. |
+| `margin_y`         | `8`                     | Vertical outer margin around the tooltip.   |
 
 ## `builtins.wifi`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the built-in Wi-Fi widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the built-in Wi-Fi widget.                        |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `30` | Sort order among widgets in the same position. |
+| `order`    | `30`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.wifi.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `""` | Unused fallback icon for the Wi-Fi root widget. |
-| `text_color` | `"theme.text"` | Default text color for the Wi-Fi widget root. |
-| `background_color` | `"theme.transparent"` | Background color of the widget. |
-| `border_color` | `"theme.transparent"` | Border color of the widget. |
-| `border_width` | `0` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `0` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the signal bars and optional inline label. |
-| `opacity` | `1` | Overall opacity of the widget. |
+| Key                | Default               | Description                                            |
+| ------------------ | --------------------- | ------------------------------------------------------ |
+| `icon`             | `""`                  | Unused fallback icon for the Wi-Fi root widget.        |
+| `text_color`       | `"theme.text"`        | Default text color for the Wi-Fi widget root.          |
+| `background_color` | `"theme.transparent"` | Background color of the widget.                        |
+| `border_color`     | `"theme.transparent"` | Border color of the widget.                            |
+| `border_width`     | `0`                   | Border width of the widget.                            |
+| `corner_radius`    | `8`                   | Corner radius of the widget.                           |
+| `margin_x`         | `0`                   | Horizontal outer margin around the widget.             |
+| `margin_y`         | `0`                   | Vertical outer margin around the widget.               |
+| `padding_x`        | `8`                   | Horizontal inner padding of the widget.                |
+| `padding_y`        | `0`                   | Vertical inner padding of the widget.                  |
+| `spacing`          | `6`                   | Gap between the signal bars and optional inline label. |
+| `opacity`          | `1`                   | Overall opacity of the widget.                         |
 
 ## `builtins.wifi.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `mode` | `"icon"` | Content mode: icon \| inline \| details. |
-| `surface` | `"hover"` | Visibility timing for inline/details content: always \| hover. |
-| `inline_separator` | `" \| "` | Separator used between enabled field values when mode = "inline". |
-| `disconnected_text` | `"disconnected"` | Text shown for SSID when Wi-Fi is not connected. |
-| `denied_text` | `"denied"` | Text shown for SSID when Wi-Fi permission is unavailable. |
-| `active_color` | `"theme.text"` | Color of active signal bars. |
-| `inactive_color` | `"theme.muted"` | Color of inactive signal bars. |
+| Key                 | Default          | Description                                                       |
+| ------------------- | ---------------- | ----------------------------------------------------------------- |
+| `mode`              | `"icon"`         | Content mode: icon \| inline \| details.                          |
+| `surface`           | `"hover"`        | Visibility timing for inline/details content: always \| hover.    |
+| `inline_separator`  | `" \| "`         | Separator used between enabled field values when mode = "inline". |
+| `disconnected_text` | `"disconnected"` | Text shown for SSID when Wi-Fi is not connected.                  |
+| `denied_text`       | `"denied"`       | Text shown for SSID when Wi-Fi permission is unavailable.         |
+| `active_color`      | `"theme.text"`   | Color of active signal bars.                                      |
+| `inactive_color`    | `"theme.muted"`  | Color of inactive signal bars.                                    |
 
 ## `builtins.wifi.inline`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
+| Key          | Default        | Description                         |
+| ------------ | -------------- | ----------------------------------- |
 | `text_color` | `"theme.text"` | Text color used for inline content. |
 
 ## `builtins.wifi.fields`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `ssid` | `false` | Enables the current Wi-Fi SSID for inline and details modes. |
-| `ipv4_address` | `false` | Enables the primary IPv4 address for inline and details modes. |
-| `ipv6_address` | `false` | Enables the primary IPv6 address for inline and details modes. |
-| `bssid` | `false` | Enables the current Wi-Fi BSSID for inline and details modes. |
-| `interface` | `false` | Enables the current Wi-Fi interface name for inline and details modes. |
-| `hardware_address` | `false` | Enables the current Wi-Fi hardware address for inline and details modes. |
-| `power` | `false` | Enables the current Wi-Fi power state for inline and details modes. |
-| `service_active` | `false` | Enables the CoreWLAN service state for inline and details modes. |
-| `rssi` | `false` | Enables signal strength in dBm for inline and details modes. |
-| `noise` | `false` | Enables the noise floor in dBm for inline and details modes. |
-| `snr` | `false` | Enables the signal-to-noise ratio in dB for inline and details modes. |
-| `link_quality` | `false` | Enables the derived link quality percentage for inline and details modes. |
-| `tx_rate` | `false` | Enables the current transmit rate for inline and details modes. |
-| `channel` | `false` | Enables the current Wi-Fi channel for inline and details modes. |
-| `channel_band` | `false` | Enables the current Wi-Fi band for inline and details modes. |
-| `channel_width` | `false` | Enables the current Wi-Fi channel width for inline and details modes. |
-| `security` | `false` | Enables the current Wi-Fi security mode for inline and details modes. |
-| `phy_mode` | `false` | Enables the current Wi-Fi PHY mode for inline and details modes. |
-| `interface_mode` | `false` | Enables the current Wi-Fi interface mode for inline and details modes. |
-| `country_code` | `false` | Enables the current Wi-Fi country code for inline and details modes. |
-| `roaming` | `false` | Enables whether access-point roaming was detected for inline and details modes. |
-| `ssid_changed_at` | `false` | Enables the last SSID change timestamp for inline and details modes. |
-| `interface_changed_at` | `false` | Enables the last interface change timestamp for inline and details modes. |
+| Key                    | Default | Description                                                                     |
+| ---------------------- | ------- | ------------------------------------------------------------------------------- |
+| `ssid`                 | `false` | Enables the current Wi-Fi SSID for inline and details modes.                    |
+| `ipv4_address`         | `false` | Enables the primary IPv4 address for inline and details modes.                  |
+| `ipv6_address`         | `false` | Enables the primary IPv6 address for inline and details modes.                  |
+| `bssid`                | `false` | Enables the current Wi-Fi BSSID for inline and details modes.                   |
+| `interface`            | `false` | Enables the current Wi-Fi interface name for inline and details modes.          |
+| `hardware_address`     | `false` | Enables the current Wi-Fi hardware address for inline and details modes.        |
+| `power`                | `false` | Enables the current Wi-Fi power state for inline and details modes.             |
+| `service_active`       | `false` | Enables the CoreWLAN service state for inline and details modes.                |
+| `rssi`                 | `false` | Enables signal strength in dBm for inline and details modes.                    |
+| `noise`                | `false` | Enables the noise floor in dBm for inline and details modes.                    |
+| `snr`                  | `false` | Enables the signal-to-noise ratio in dB for inline and details modes.           |
+| `link_quality`         | `false` | Enables the derived link quality percentage for inline and details modes.       |
+| `tx_rate`              | `false` | Enables the current transmit rate for inline and details modes.                 |
+| `channel`              | `false` | Enables the current Wi-Fi channel for inline and details modes.                 |
+| `channel_band`         | `false` | Enables the current Wi-Fi band for inline and details modes.                    |
+| `channel_width`        | `false` | Enables the current Wi-Fi channel width for inline and details modes.           |
+| `security`             | `false` | Enables the current Wi-Fi security mode for inline and details modes.           |
+| `phy_mode`             | `false` | Enables the current Wi-Fi PHY mode for inline and details modes.                |
+| `interface_mode`       | `false` | Enables the current Wi-Fi interface mode for inline and details modes.          |
+| `country_code`         | `false` | Enables the current Wi-Fi country code for inline and details modes.            |
+| `roaming`              | `false` | Enables whether access-point roaming was detected for inline and details modes. |
+| `ssid_changed_at`      | `false` | Enables the last SSID change timestamp for inline and details modes.            |
+| `interface_changed_at` | `false` | Enables the last interface change timestamp for inline and details modes.       |
 
 ## `builtins.wifi.popup`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `text_color` | `"theme.text"` | Text color used in the Wi-Fi popup. |
-| `background_color` | `"theme.background"` | Background color of the Wi-Fi popup. |
-| `border_color` | `"theme.border_strong"` | Border color of the Wi-Fi popup. |
-| `border_width` | `1` | Border width of the Wi-Fi popup. |
-| `corner_radius` | `8` | Corner radius of the Wi-Fi popup. |
-| `padding_x` | `8` | Horizontal inner padding of the Wi-Fi popup. |
-| `padding_y` | `6` | Vertical inner padding of the Wi-Fi popup. |
-| `margin_x` | `0` | Horizontal outer margin around the Wi-Fi popup. |
-| `margin_y` | `8` | Vertical outer margin around the Wi-Fi popup. |
+| Key                | Default                 | Description                                     |
+| ------------------ | ----------------------- | ----------------------------------------------- |
+| `text_color`       | `"theme.text"`          | Text color used in the Wi-Fi popup.             |
+| `background_color` | `"theme.background"`    | Background color of the Wi-Fi popup.            |
+| `border_color`     | `"theme.border_strong"` | Border color of the Wi-Fi popup.                |
+| `border_width`     | `1`                     | Border width of the Wi-Fi popup.                |
+| `corner_radius`    | `8`                     | Corner radius of the Wi-Fi popup.               |
+| `padding_x`        | `8`                     | Horizontal inner padding of the Wi-Fi popup.    |
+| `padding_y`        | `6`                     | Vertical inner padding of the Wi-Fi popup.      |
+| `margin_x`         | `0`                     | Horizontal outer margin around the Wi-Fi popup. |
+| `margin_y`         | `8`                     | Vertical outer margin around the Wi-Fi popup.   |
 
 ## `builtins.volume`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the volume widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the volume widget.                                |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `20` | Sort order among widgets in the same position. |
+| `order`    | `20`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.volume.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `""` | Leading icon of the compact widget. |
-| `text_color` | `"theme.text"` | Text color of the widget. |
-| `background_color` | `"theme.transparent"` | Background color of the widget. |
-| `border_color` | `"theme.transparent"` | Border color of the widget. |
-| `border_width` | `0` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `0` | Vertical inner padding of the widget. |
-| `spacing` | `8` | Gap between the icon, label, and slider. |
-| `opacity` | `1.0` | Overall opacity of the widget. |
+| Key                | Default               | Description                                |
+| ------------------ | --------------------- | ------------------------------------------ |
+| `icon`             | `""`                  | Leading icon of the compact widget.        |
+| `text_color`       | `"theme.text"`        | Text color of the widget.                  |
+| `background_color` | `"theme.transparent"` | Background color of the widget.            |
+| `border_color`     | `"theme.transparent"` | Border color of the widget.                |
+| `border_width`     | `0`                   | Border width of the widget.                |
+| `corner_radius`    | `8`                   | Corner radius of the widget background.    |
+| `margin_x`         | `0`                   | Horizontal outer margin around the widget. |
+| `margin_y`         | `0`                   | Vertical outer margin around the widget.   |
+| `padding_x`        | `8`                   | Horizontal inner padding of the widget.    |
+| `padding_y`        | `0`                   | Vertical inner padding of the widget.      |
+| `spacing`          | `8`                   | Gap between the icon, label, and slider.   |
+| `opacity`          | `1.0`                 | Overall opacity of the widget.             |
 
 ## `builtins.volume.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `muted_icon` | `"🔇"` | Icon shown when audio is muted. |
-| `low_icon` | `"🔉"` | Icon shown for low volume. |
-| `high_icon` | `"🔊"` | Icon shown for high volume. |
-| `show_percentage` | `true` | Shows the volume percentage text. |
-| `min` | `0` | Minimum slider and display value. |
-| `max` | `100` | Maximum slider and display value. |
-| `step` | `1` | Slider step size. |
+| Key               | Default | Description                       |
+| ----------------- | ------- | --------------------------------- |
+| `muted_icon`      | `"🔇"`  | Icon shown when audio is muted.   |
+| `low_icon`        | `"🔉"`  | Icon shown for low volume.        |
+| `high_icon`       | `"🔊"`  | Icon shown for high volume.       |
+| `show_percentage` | `true`  | Shows the volume percentage text. |
+| `min`             | `0`     | Minimum slider and display value. |
+| `max`             | `100`   | Maximum slider and display value. |
+| `step`            | `1`     | Slider step size.                 |
 
 ## `builtins.volume.slider`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `expand_to_slider_on_hover` | `true` | Expands from compact mode to slider mode on hover. |
-| `width` | `80` | Width of the slider when shown. |
+| Key                         | Default | Description                                        |
+| --------------------------- | ------- | -------------------------------------------------- |
+| `expand_to_slider_on_hover` | `true`  | Expands from compact mode to slider mode on hover. |
+| `width`                     | `80`    | Width of the slider when shown.                    |
 
 ## `builtins.calendar`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the unified calendar widget. |
-| `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `60` | Sort order among widgets in the same position. |
-| `popup_mode` | `"month"` | Popup mode: none \| upcoming \| month. |
+| Key          | Default   | Description                                                      |
+| ------------ | --------- | ---------------------------------------------------------------- |
+| `enabled`    | `false`   | Shows or hides the unified calendar widget.                      |
+| `position`   | `"right"` | Places the widget on the left, center, or right side of the bar. |
+| `order`      | `60`      | Sort order among widgets in the same position.                   |
+| `popup_mode` | `"month"` | Popup mode: none \| upcoming \| month.                           |
 
 ## `builtins.calendar.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `""` | Optional leading icon for the calendar anchor. |
-| `text_color` | `"theme.text"` | Default text color of the anchor. |
-| `background_color` | `"theme.surface"` | Background color of the anchor widget. |
-| `border_color` | `"theme.border"` | Border color of the anchor widget. |
-| `border_width` | `1` | Border width of the anchor widget. |
-| `corner_radius` | `8` | Corner radius of the anchor widget. |
-| `margin_x` | `0` | Horizontal outer margin around the anchor widget. |
-| `margin_y` | `0` | Vertical outer margin around the anchor widget. |
-| `padding_x` | `8` | Horizontal inner padding of the anchor widget. |
-| `padding_y` | `4` | Vertical inner padding of the anchor widget. |
-| `spacing` | `6` | Gap between anchor contents. |
-| `opacity` | `1.0` | Overall opacity of the anchor widget. |
+| Key                | Default           | Description                                       |
+| ------------------ | ----------------- | ------------------------------------------------- |
+| `icon`             | `""`              | Optional leading icon for the calendar anchor.    |
+| `text_color`       | `"theme.text"`    | Default text color of the anchor.                 |
+| `background_color` | `"theme.surface"` | Background color of the anchor widget.            |
+| `border_color`     | `"theme.border"`  | Border color of the anchor widget.                |
+| `border_width`     | `1`               | Border width of the anchor widget.                |
+| `corner_radius`    | `8`               | Corner radius of the anchor widget.               |
+| `margin_x`         | `0`               | Horizontal outer margin around the anchor widget. |
+| `margin_y`         | `0`               | Vertical outer margin around the anchor widget.   |
+| `padding_x`        | `8`               | Horizontal inner padding of the anchor widget.    |
+| `padding_y`        | `4`               | Vertical inner padding of the anchor widget.      |
+| `spacing`          | `6`               | Gap between anchor contents.                      |
+| `opacity`          | `1.0`             | Overall opacity of the anchor widget.             |
 
 ## `builtins.calendar.anchor`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `layout` | `"stack"` | Anchor layout: item \| stack \| inline. |
-| `item_format` | `"EEE, MMM d"` | Format used when anchor layout is item. |
-| `top_format` | `"HH:mm"` | Top line format used in stack or inline layouts. |
-| `bottom_format` | `"d. MMM"` | Bottom or second line format used in stack or inline layouts. |
-| `line_spacing` | `0` | Vertical spacing between top and bottom lines in stack layout. |
-| `top_text_color` | `"theme.text"` | Text color of the top line. |
-| `bottom_text_color` | `"theme.text_secondary"` | Text color of the bottom line. |
+| Key                 | Default                  | Description                                                    |
+| ------------------- | ------------------------ | -------------------------------------------------------------- |
+| `layout`            | `"stack"`                | Anchor layout: item \| stack \| inline.                        |
+| `item_format`       | `"EEE, MMM d"`           | Format used when anchor layout is item.                        |
+| `top_format`        | `"HH:mm"`                | Top line format used in stack or inline layouts.               |
+| `bottom_format`     | `"d. MMM"`               | Bottom or second line format used in stack or inline layouts.  |
+| `line_spacing`      | `0`                      | Vertical spacing between top and bottom lines in stack layout. |
+| `top_text_color`    | `"theme.text"`           | Text color of the top line.                                    |
+| `bottom_text_color` | `"theme.text_secondary"` | Text color of the bottom line.                                 |
 
 ## `builtins.calendar.composer`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `create_title` | `"New Appointment"` | Panel title shown when creating an appointment. |
-| `edit_title` | `"Edit Appointment"` | Panel title shown when editing an appointment. |
-| `title_label` | `"Title"` | Label shown above the title field. |
-| `location_label` | `"Location"` | Label shown above the location field. |
-| `calendar_label` | `"Calendar"` | Label shown above the calendar picker. |
-| `start_label` | `"Begin"` | Label shown for the start time. |
-| `end_label` | `"End"` | Label shown for the end time. |
-| `all_day_label` | `"All day"` | Label shown for all-day events. |
-| `travel_time_label` | `"Travel time"` | Label shown for the travel-time picker. |
-| `alert_label` | `"Alert"` | Label shown above the alerts section. |
-| `add_alert_label` | `"Add alert"` | Button label used to add another alert row. |
-| `open_calendar_label` | `"Calendar"` | Footer button label used to open Calendar.app. |
-| `cancel_label` | `"Cancel"` | Footer cancel button label. |
-| `save_label` | `"Save"` | Footer primary button label when creating. |
-| `update_label` | `"Update"` | Footer primary button label when editing. |
-| `remove_label` | `"Remove"` | Footer destructive button label. |
-| `delete_confirmation_title` | `"Remove appointment?"` | Delete confirmation title. |
-| `delete_confirmation_message` | `"This action cannot be undone."` | Delete confirmation message. |
-| `title_placeholder` | `"What are you doing?"` | Placeholder text for the composer title field. |
-| `location_placeholder` | `"Where are you going?"` | Placeholder text for the composer location field. |
-| `default_calendar_name` | `""` | Default calendar name used when creating new appointments. Empty selects the first available writable calendar. |
-| `default_alert` | `"1_hour"` | Default alert lead time: none \| at_time \| 5_minutes \| 10_minutes \| 15_minutes \| 30_minutes \| 1_hour \| 1_day. |
-| `default_travel_time` | `"none"` | Default travel time: none \| 5_minutes \| 10_minutes \| 15_minutes \| 20_minutes \| 30_minutes \| 45_minutes \| 1_hour \| 90_minutes \| 2_hours. |
+| Key                           | Default                           | Description                                                                                                                                      |
+| ----------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `create_title`                | `"New Appointment"`               | Panel title shown when creating an appointment.                                                                                                  |
+| `edit_title`                  | `"Edit Appointment"`              | Panel title shown when editing an appointment.                                                                                                   |
+| `title_label`                 | `"Title"`                         | Label shown above the title field.                                                                                                               |
+| `location_label`              | `"Location"`                      | Label shown above the location field.                                                                                                            |
+| `calendar_label`              | `"Calendar"`                      | Label shown above the calendar picker.                                                                                                           |
+| `start_label`                 | `"Begin"`                         | Label shown for the start time.                                                                                                                  |
+| `end_label`                   | `"End"`                           | Label shown for the end time.                                                                                                                    |
+| `all_day_label`               | `"All day"`                       | Label shown for all-day events.                                                                                                                  |
+| `travel_time_label`           | `"Travel time"`                   | Label shown for the travel-time picker.                                                                                                          |
+| `alert_label`                 | `"Alert"`                         | Label shown above the alerts section.                                                                                                            |
+| `add_alert_label`             | `"Add alert"`                     | Button label used to add another alert row.                                                                                                      |
+| `open_calendar_label`         | `"Calendar"`                      | Footer button label used to open Calendar.app.                                                                                                   |
+| `cancel_label`                | `"Cancel"`                        | Footer cancel button label.                                                                                                                      |
+| `save_label`                  | `"Save"`                          | Footer primary button label when creating.                                                                                                       |
+| `update_label`                | `"Update"`                        | Footer primary button label when editing.                                                                                                        |
+| `remove_label`                | `"Remove"`                        | Footer destructive button label.                                                                                                                 |
+| `delete_confirmation_title`   | `"Remove appointment?"`           | Delete confirmation title.                                                                                                                       |
+| `delete_confirmation_message` | `"This action cannot be undone."` | Delete confirmation message.                                                                                                                     |
+| `title_placeholder`           | `"What are you doing?"`           | Placeholder text for the composer title field.                                                                                                   |
+| `location_placeholder`        | `"Where are you going?"`          | Placeholder text for the composer location field.                                                                                                |
+| `default_calendar_name`       | `""`                              | Default calendar name used when creating new appointments. Empty selects the first available writable calendar.                                  |
+| `default_alert`               | `"1_hour"`                        | Default alert lead time: none \| at_time \| 5_minutes \| 10_minutes \| 15_minutes \| 30_minutes \| 1_hour \| 1_day.                              |
+| `default_travel_time`         | `"none"`                          | Default travel time: none \| 5_minutes \| 10_minutes \| 15_minutes \| 20_minutes \| 30_minutes \| 45_minutes \| 1_hour \| 90_minutes \| 2_hours. |
 
 ## `builtins.calendar.composer.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `background_color` | `"theme.background"` | Background color of the appointment composer panel. |
-| `border_color` | `"theme.border_strong"` | Border and divider color of the appointment composer panel. |
-| `border_width` | `1` | Border width of the appointment composer panel. |
-| `corner_radius` | `10` | Corner radius of the appointment composer panel. |
-| `padding_x` | `14` | Horizontal inner padding of the appointment composer panel. |
-| `padding_y` | `14` | Vertical inner padding of the appointment composer panel. |
-| `header_text_color` | `"theme.text"` | Header title color of the appointment composer panel. |
+| Key                 | Default                 | Description                                                 |
+| ------------------- | ----------------------- | ----------------------------------------------------------- |
+| `background_color`  | `"theme.background"`    | Background color of the appointment composer panel.         |
+| `border_color`      | `"theme.border_strong"` | Border and divider color of the appointment composer panel. |
+| `border_width`      | `1`                     | Border width of the appointment composer panel.             |
+| `corner_radius`     | `10`                    | Corner radius of the appointment composer panel.            |
+| `padding_x`         | `14`                    | Horizontal inner padding of the appointment composer panel. |
+| `padding_y`         | `14`                    | Vertical inner padding of the appointment composer panel.   |
+| `header_text_color` | `"theme.text"`          | Header title color of the appointment composer panel.       |
 
 ## `builtins.calendar.composer.alert_labels`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `none` | `"None"` | Label shown for no alert. |
-| `at_time` | `"At time of event"` | Label shown for alerts at event time. |
-| `5_minutes` | `"5 minutes before"` | Label shown for a 5-minute alert. |
-| `10_minutes` | `"10 minutes before"` | Label shown for a 10-minute alert. |
-| `15_minutes` | `"15 minutes before"` | Label shown for a 15-minute alert. |
-| `30_minutes` | `"30 minutes before"` | Label shown for a 30-minute alert. |
-| `1_hour` | `"1 hour before"` | Label shown for a 1-hour alert. |
-| `1_day` | `"1 day before"` | Label shown for a 1-day alert. |
-| `custom` | `"Custom"` | Label shown for a custom alert lead time. |
+| Key          | Default               | Description                               |
+| ------------ | --------------------- | ----------------------------------------- |
+| `none`       | `"None"`              | Label shown for no alert.                 |
+| `at_time`    | `"At time of event"`  | Label shown for alerts at event time.     |
+| `5_minutes`  | `"5 minutes before"`  | Label shown for a 5-minute alert.         |
+| `10_minutes` | `"10 minutes before"` | Label shown for a 10-minute alert.        |
+| `15_minutes` | `"15 minutes before"` | Label shown for a 15-minute alert.        |
+| `30_minutes` | `"30 minutes before"` | Label shown for a 30-minute alert.        |
+| `1_hour`     | `"1 hour before"`     | Label shown for a 1-hour alert.           |
+| `1_day`      | `"1 day before"`      | Label shown for a 1-day alert.            |
+| `custom`     | `"Custom"`            | Label shown for a custom alert lead time. |
 
 ## `builtins.calendar.composer.travel_time_labels`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `none` | `"None"` | Label shown when no travel time is set. |
-| `5_minutes` | `"5 minutes"` | Label shown for 5 minutes of travel time. |
+| Key          | Default        | Description                                |
+| ------------ | -------------- | ------------------------------------------ |
+| `none`       | `"None"`       | Label shown when no travel time is set.    |
+| `5_minutes`  | `"5 minutes"`  | Label shown for 5 minutes of travel time.  |
 | `10_minutes` | `"10 minutes"` | Label shown for 10 minutes of travel time. |
 | `15_minutes` | `"15 minutes"` | Label shown for 15 minutes of travel time. |
 | `20_minutes` | `"20 minutes"` | Label shown for 20 minutes of travel time. |
 | `30_minutes` | `"30 minutes"` | Label shown for 30 minutes of travel time. |
 | `45_minutes` | `"45 minutes"` | Label shown for 45 minutes of travel time. |
-| `1_hour` | `"1 hour"` | Label shown for 1 hour of travel time. |
-| `90_minutes` | `"1.5 hours"` | Label shown for 90 minutes of travel time. |
-| `2_hours` | `"2 hours"` | Label shown for 2 hours of travel time. |
-| `custom` | `"Custom"` | Label shown for a custom travel time. |
+| `1_hour`     | `"1 hour"`     | Label shown for 1 hour of travel time.     |
+| `90_minutes` | `"1.5 hours"`  | Label shown for 90 minutes of travel time. |
+| `2_hours`    | `"2 hours"`    | Label shown for 2 hours of travel time.    |
+| `custom`     | `"Custom"`     | Label shown for a custom travel time.      |
 
 ## `builtins.calendar.upcoming.events`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `days` | `3` | Number of days of upcoming events shown in the popup. |
+| Key                   | Default | Description                                                                     |
+| --------------------- | ------- | ------------------------------------------------------------------------------- |
+| `days`                | `3`     | Number of days of upcoming events shown in the popup.                           |
 | `exclude_past_events` | `false` | Hides already-finished or already-started items from today's section when true. |
 
 ## `builtins.calendar.upcoming.popup`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `background_color` | `"theme.background"` | Background color of the upcoming popup. |
-| `border_color` | `"theme.border_strong"` | Border color of the upcoming popup. |
-| `border_width` | `1` | Border width of the upcoming popup. |
-| `corner_radius` | `10` | Corner radius of the upcoming popup. |
-| `padding_x` | `10` | Horizontal inner padding of the upcoming popup. |
-| `padding_y` | `8` | Vertical inner padding of the upcoming popup. |
-| `margin_x` | `8` | Horizontal outer margin around the whole popup. |
-| `margin_y` | `8` | Vertical outer margin around the whole popup. |
-| `spacing` | `8` | Vertical spacing between popup sections. |
+| Key                | Default                 | Description                                     |
+| ------------------ | ----------------------- | ----------------------------------------------- |
+| `background_color` | `"theme.background"`    | Background color of the upcoming popup.         |
+| `border_color`     | `"theme.border_strong"` | Border color of the upcoming popup.             |
+| `border_width`     | `1`                     | Border width of the upcoming popup.             |
+| `corner_radius`    | `10`                    | Corner radius of the upcoming popup.            |
+| `padding_x`        | `10`                    | Horizontal inner padding of the upcoming popup. |
+| `padding_y`        | `8`                     | Vertical inner padding of the upcoming popup.   |
+| `margin_x`         | `8`                     | Horizontal outer margin around the whole popup. |
+| `margin_y`         | `8`                     | Vertical outer margin around the whole popup.   |
+| `spacing`          | `8`                     | Vertical spacing between popup sections.        |
 
 ## `builtins.calendar.appointments`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `item_indent` | `8` | Left indent for appointment rows. |
-| `event_text_color` | `"theme.text_secondary"` | Text color of appointment rows. |
-| `empty_text_color` | `"theme.text_tertiary"` | Text color of the appointments empty state. |
-| `secondary_text_color` | `"theme.accent"` | Text color of secondary appointment details and section headings. |
-| `travel_text_color` | `"theme.muted_secondary"` | Muted text color used for travel-time and end-time rows. |
-| `empty_text` | `"No appointments"` | Text shown when an appointment section has no events. |
-| `show_calendar_name` | `false` | Shows the source calendar name for appointments. |
-| `show_all_day_label` | `true` | Shows "All day" for all-day events except birthdays, which omit it. |
-| `show_holiday_all_day_label` | `false` | Shows "All day" for all-day holiday-calendar events. |
-| `all_day_label` | `"All day"` | Text shown for all-day events when show_all_day_label is true. |
-| `show_location` | `true` | Shows the event location line when present. |
-| `location_icon` | `""` | Leading icon shown for location rows. Set to an empty string to hide the icon. |
-| `location_icon_color` | `"theme.accent"` | Color of the location icon. When omitted, secondary_text_color is used. |
-| `show_travel_time` | `true` | Shows the travel-time line when present. |
-| `show_end_time` | `true` | Shows the end-time line for timed appointments. |
-| `travel_icon` | `""` | Leading icon shown for travel-time rows. |
-| `travel_icon_color` | `"theme.muted_secondary"` | Color of the travel-time icon. |
-| `show_alert_icon` | `false` | Shows a small alert icon on timed appointments with at least one non-travel alert. |
-| `alert_icon` | `""` | Optional icon shown when show_alert_icon is true and the event has an alert. |
-| `alert_icon_color` | `"theme.muted_secondary"` | Color of the alert icon. |
+| Key                          | Default                   | Description                                                                        |
+| ---------------------------- | ------------------------- | ---------------------------------------------------------------------------------- |
+| `item_indent`                | `8`                       | Left indent for appointment rows.                                                  |
+| `event_text_color`           | `"theme.text_secondary"`  | Text color of appointment rows.                                                    |
+| `empty_text_color`           | `"theme.text_tertiary"`   | Text color of the appointments empty state.                                        |
+| `secondary_text_color`       | `"theme.accent"`          | Text color of secondary appointment details and section headings.                  |
+| `travel_text_color`          | `"theme.muted_secondary"` | Muted text color used for travel-time and end-time rows.                           |
+| `empty_text`                 | `"No appointments"`       | Text shown when an appointment section has no events.                              |
+| `show_calendar_name`         | `false`                   | Shows the source calendar name for appointments.                                   |
+| `show_all_day_label`         | `true`                    | Shows "All day" for all-day events except birthdays, which omit it.                |
+| `show_holiday_all_day_label` | `false`                   | Shows "All day" for all-day holiday-calendar events.                               |
+| `all_day_label`              | `"All day"`               | Text shown for all-day events when show_all_day_label is true.                     |
+| `show_location`              | `true`                    | Shows the event location line when present.                                        |
+| `location_icon`              | `""`                     | Leading icon shown for location rows. Set to an empty string to hide the icon.     |
+| `location_icon_color`        | `"theme.accent"`          | Color of the location icon. When omitted, secondary_text_color is used.            |
+| `show_travel_time`           | `true`                    | Shows the travel-time line when present.                                           |
+| `show_end_time`              | `true`                    | Shows the end-time line for timed appointments.                                    |
+| `travel_icon`                | `""`                     | Leading icon shown for travel-time rows.                                           |
+| `travel_icon_color`          | `"theme.muted_secondary"` | Color of the travel-time icon.                                                     |
+| `show_alert_icon`            | `false`                   | Shows a small alert icon on timed appointments with at least one non-travel alert. |
+| `alert_icon`                 | `""`                     | Optional icon shown when show_alert_icon is true and the event has an alert.       |
+| `alert_icon_color`           | `"theme.muted_secondary"` | Color of the alert icon.                                                           |
 
 ## `builtins.calendar.birthdays`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `show_birthdays` | `true` | Includes birthday calendars in both month and upcoming appointment lists. |
-| `birthdays_show_age` | `true` | Shows parsed ages for birthday appointments when available. |
-| `birthday_icon` | `""` | Leading icon shown for birthday appointments. |
-| `birthday_icon_color` | `"theme.accent_soft"` | Color of the birthday icon. When omitted, event_text_color is used. |
+| Key                   | Default               | Description                                                               |
+| --------------------- | --------------------- | ------------------------------------------------------------------------- |
+| `show_birthdays`      | `true`                | Includes birthday calendars in both month and upcoming appointment lists. |
+| `birthdays_show_age`  | `true`                | Shows parsed ages for birthday appointments when available.               |
+| `birthday_icon`       | `""`                 | Leading icon shown for birthday appointments.                             |
+| `birthday_icon_color` | `"theme.accent_soft"` | Color of the birthday icon. When omitted, event_text_color is used.       |
 
 ## `builtins.calendar.filters`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `included_calendar_names` | `[]` | Optional allowlist of visible Calendar.app names. Empty means all calendars are eligible. |
-| `excluded_calendar_names` | `[]` | Optional denylist of visible Calendar.app names applied after the allowlist. |
-| `included_calendar_ids` | `[]` | Optional advanced allowlist of exact calendar identifiers. |
-| `excluded_calendar_ids` | `[]` | Optional advanced denylist of exact calendar identifiers. |
-| `included_calendar_source_ids` | `[]` | Optional advanced allowlist of exact calendar source identifiers. |
-| `excluded_calendar_source_ids` | `[]` | Optional advanced denylist of exact calendar source identifiers. |
+| Key                            | Default | Description                                                                               |
+| ------------------------------ | ------- | ----------------------------------------------------------------------------------------- |
+| `included_calendar_names`      | `[]`    | Optional allowlist of visible Calendar.app names. Empty means all calendars are eligible. |
+| `excluded_calendar_names`      | `[]`    | Optional denylist of visible Calendar.app names applied after the allowlist.              |
+| `included_calendar_ids`        | `[]`    | Optional advanced allowlist of exact calendar identifiers.                                |
+| `excluded_calendar_ids`        | `[]`    | Optional advanced denylist of exact calendar identifiers.                                 |
+| `included_calendar_source_ids` | `[]`    | Optional advanced allowlist of exact calendar source identifiers.                         |
+| `excluded_calendar_source_ids` | `[]`    | Optional advanced denylist of exact calendar source identifiers.                          |
 
 ## `builtins.calendar.month.popup.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `background_color` | `"theme.background"` | Background color of the month popup. |
-| `border_color` | `"theme.border_strong"` | Border color of the month popup. |
-| `border_width` | `1` | Border width of the month popup. |
-| `corner_radius` | `14` | Corner radius of the month popup. Set to 0 for square corners. |
-| `padding_x` | `10` | Horizontal inner padding of the month popup. |
-| `padding_y` | `8` | Vertical inner padding of the month popup. |
-| `spacing` | `8` | Gap between calendar and appointments areas and internal popup sections. |
-| `margin_x` | `8` | Horizontal outer margin around the whole month popup. |
-| `margin_y` | `8` | Vertical outer margin around the whole month popup. |
+| Key                | Default                 | Description                                                              |
+| ------------------ | ----------------------- | ------------------------------------------------------------------------ |
+| `background_color` | `"theme.background"`    | Background color of the month popup.                                     |
+| `border_color`     | `"theme.border_strong"` | Border color of the month popup.                                         |
+| `border_width`     | `1`                     | Border width of the month popup.                                         |
+| `corner_radius`    | `14`                    | Corner radius of the month popup. Set to 0 for square corners.           |
+| `padding_x`        | `10`                    | Horizontal inner padding of the month popup.                             |
+| `padding_y`        | `8`                     | Vertical inner padding of the month popup.                               |
+| `spacing`          | `8`                     | Gap between calendar and appointments areas and internal popup sections. |
+| `margin_x`         | `8`                     | Horizontal outer margin around the whole month popup.                    |
+| `margin_y`         | `8`                     | Vertical outer margin around the whole month popup.                      |
 
 ## `builtins.calendar.month.popup.calendar`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `show_week_numbers` | `true` | Shows week numbers in the calendar grid. |
-| `show_event_indicators` | `true` | Shows dots under days that contain events. |
-| `header_text_color` | `"theme.text"` | Text color of the month header and appointments title. |
-| `weekday_text_color` | `"theme.accent"` | Text color of the weekday labels. |
-| `weekday_format` | `"dd"` | Weekday label format: d \| dd \| ddd. dddd is not allowed. |
-| `day_text_color` | `"theme.text_secondary"` | Text color of days in the current month. |
-| `outside_month_text_color` | `"theme.outside_month"` | Text color of leading and trailing days outside the current month. |
-| `today_cell_background_color` | `""` | Background color of today's day cell when it is not selected. |
-| `today_cell_border_color` | `"theme.danger"` | Border color of today's day cell when it is not selected. |
-| `today_cell_border_width` | `1.4` | Border width of today's day cell when it is not selected. |
-| `indicator_color` | `"theme.accent_soft"` | Default color of day event indicators when an event has no calendar color. |
+| Key                           | Default                  | Description                                                                |
+| ----------------------------- | ------------------------ | -------------------------------------------------------------------------- |
+| `show_week_numbers`           | `true`                   | Shows week numbers in the calendar grid.                                   |
+| `show_event_indicators`       | `true`                   | Shows dots under days that contain events.                                 |
+| `header_text_color`           | `"theme.text"`           | Text color of the month header and appointments title.                     |
+| `weekday_text_color`          | `"theme.accent"`         | Text color of the weekday labels.                                          |
+| `weekday_format`              | `"dd"`                   | Weekday label format: d \| dd \| ddd. dddd is not allowed.                 |
+| `day_text_color`              | `"theme.text_secondary"` | Text color of days in the current month.                                   |
+| `outside_month_text_color`    | `"theme.outside_month"`  | Text color of leading and trailing days outside the current month.         |
+| `today_cell_background_color` | `""`                     | Background color of today's day cell when it is not selected.              |
+| `today_cell_border_color`     | `"theme.danger"`         | Border color of today's day cell when it is not selected.                  |
+| `today_cell_border_width`     | `1.4`                    | Border width of today's day cell when it is not selected.                  |
+| `indicator_color`             | `"theme.accent_soft"`    | Default color of day event indicators when an event has no calendar color. |
 
 ## `builtins.calendar.month.popup.selection`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `selected_text_color` | `"theme.selection_text"` | Text color of selected day cells. |
-| `selected_background_color` | `"theme.selection_background"` | Background color of selected day cells. |
-| `selection_date_format` | `"yyyy-MM-dd"` | Date header format used when a multi-day range is selected. |
-| `selection_date_separator` | `" - "` | Separator used between start and end dates when a date range is selected. |
-| `allows_range_selection` | `true` | Allows selecting a date range by dragging across days. |
-| `reset_selection_on_third_tap` | `true` | Reserved selection behavior flag for the month popup. |
+| Key                            | Default                        | Description                                                               |
+| ------------------------------ | ------------------------------ | ------------------------------------------------------------------------- |
+| `selected_text_color`          | `"theme.selection_text"`       | Text color of selected day cells.                                         |
+| `selected_background_color`    | `"theme.selection_background"` | Background color of selected day cells.                                   |
+| `selection_date_format`        | `"yyyy-MM-dd"`                 | Date header format used when a multi-day range is selected.               |
+| `selection_date_separator`     | `" - "`                        | Separator used between start and end dates when a date range is selected. |
+| `allows_range_selection`       | `true`                         | Allows selecting a date range by dragging across days.                    |
+| `reset_selection_on_third_tap` | `true`                         | Reserved selection behavior flag for the month popup.                     |
 
 ## `builtins.calendar.month.popup.agenda`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `layout` | `"calendar_appointments_vertical"` | Popup layout: calendar_appointments_horizontal \| appointments_calendar_horizontal \| calendar_appointments_vertical \| appointments_calendar_vertical. |
-| `appointments_scrollable` | `true` | Makes the appointments area scroll vertically when true. |
-| `appointments_min_height` | `180` | Minimum height of the appointments area. Set equal to appointments_max_height for a fixed height. |
-| `appointments_max_height` | `240` | Maximum height of the appointments area. Set equal to appointments_min_height for a fixed height. |
-| `agenda_title` | `"Appointments"` | Title shown above the appointments list. |
-| `max_visible_appointments` | `8` | Maximum number of visible appointments when scrolling is disabled. |
+| Key                        | Default                            | Description                                                                                                                                             |
+| -------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`                   | `"calendar_appointments_vertical"` | Popup layout: calendar_appointments_horizontal \| appointments_calendar_horizontal \| calendar_appointments_vertical \| appointments_calendar_vertical. |
+| `appointments_scrollable`  | `true`                             | Makes the appointments area scroll vertically when true.                                                                                                |
+| `appointments_min_height`  | `180`                              | Minimum height of the appointments area. Set equal to appointments_max_height for a fixed height.                                                       |
+| `appointments_max_height`  | `240`                              | Maximum height of the appointments area. Set equal to appointments_min_height for a fixed height.                                                       |
+| `agenda_title`             | `"Appointments"`                   | Title shown above the appointments list.                                                                                                                |
+| `max_visible_appointments` | `8`                                | Maximum number of visible appointments when scrolling is disabled.                                                                                      |
 
 ## `builtins.calendar.month.popup.anchor`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `anchor_date_format` | `"EEE d MMM"` | Anchor date format used when popup_mode = "month" and anchor layout = "item". |
-| `anchor_text_color` | `"theme.text"` | Anchor text color used when popup_mode = "month". |
-| `anchor_show_date_text` | `true` | Shows the date text in the anchor when popup_mode = "month". |
+| Key                     | Default        | Description                                                                   |
+| ----------------------- | -------------- | ----------------------------------------------------------------------------- |
+| `anchor_date_format`    | `"EEE d MMM"`  | Anchor date format used when popup_mode = "month" and anchor layout = "item". |
+| `anchor_text_color`     | `"theme.text"` | Anchor text color used when popup_mode = "month".                             |
+| `anchor_show_date_text` | `true`         | Shows the date text in the anchor when popup_mode = "month".                  |
 
 ## `builtins.calendar.month.popup.today_button`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `title` | `"Today"` | Title of the Today button. |
-| `border_color` | `"theme.today_button_border"` | Border color of the Today button. |
-| `border_width` | `1.5` | Border width of the Today button. |
-| `icon` | `""` | Optional leading icon of the Today button, for example 󰃭. |
+| Key            | Default                       | Description                                               |
+| -------------- | ----------------------------- | --------------------------------------------------------- |
+| `title`        | `"Today"`                     | Title of the Today button.                                |
+| `border_color` | `"theme.today_button_border"` | Border color of the Today button.                         |
+| `border_width` | `1.5`                         | Border width of the Today button.                         |
+| `icon`         | `""`                          | Optional leading icon of the Today button, for example 󰃭. |
 
 ## `builtins.time`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the time widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the time widget.                                  |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `40` | Sort order among widgets in the same position. |
+| `order`    | `40`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.time.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `"🕒"` | Leading icon of the widget. |
-| `text_color` | `"theme.text"` | Text color of the widget. |
-| `background_color` | `"theme.surface"` | Background color of the widget. |
-| `border_color` | `"theme.border"` | Border color of the widget. |
-| `border_width` | `1` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `4` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the icon and text. |
-| `opacity` | `1.0` | Overall opacity of the widget. |
+| Key                | Default           | Description                                |
+| ------------------ | ----------------- | ------------------------------------------ |
+| `icon`             | `"🕒"`            | Leading icon of the widget.                |
+| `text_color`       | `"theme.text"`    | Text color of the widget.                  |
+| `background_color` | `"theme.surface"` | Background color of the widget.            |
+| `border_color`     | `"theme.border"`  | Border color of the widget.                |
+| `border_width`     | `1`               | Border width of the widget.                |
+| `corner_radius`    | `8`               | Corner radius of the widget background.    |
+| `margin_x`         | `0`               | Horizontal outer margin around the widget. |
+| `margin_y`         | `0`               | Vertical outer margin around the widget.   |
+| `padding_x`        | `8`               | Horizontal inner padding of the widget.    |
+| `padding_y`        | `4`               | Vertical inner padding of the widget.      |
+| `spacing`          | `6`               | Gap between the icon and text.             |
+| `opacity`          | `1.0`             | Overall opacity of the widget.             |
 
 ## `builtins.time.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
+| Key      | Default   | Description         |
+| -------- | --------- | ------------------- |
 | `format` | `"HH:mm"` | Time format string. |
 
 ## `builtins.date`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `enabled` | `false` | Shows or hides the date widget. |
+| Key        | Default   | Description                                                      |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `enabled`  | `false`   | Shows or hides the date widget.                                  |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order` | `50` | Sort order among widgets in the same position. |
+| `order`    | `50`      | Sort order among widgets in the same position.                   |
 
 ## `builtins.date.style`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
-| `icon` | `"📅"` | Leading icon of the widget. |
-| `text_color` | `"theme.text"` | Text color of the widget. |
-| `background_color` | `"theme.surface"` | Background color of the widget. |
-| `border_color` | `"theme.border"` | Border color of the widget. |
-| `border_width` | `1` | Border width of the widget. |
-| `corner_radius` | `8` | Corner radius of the widget background. |
-| `margin_x` | `0` | Horizontal outer margin around the widget. |
-| `margin_y` | `0` | Vertical outer margin around the widget. |
-| `padding_x` | `8` | Horizontal inner padding of the widget. |
-| `padding_y` | `4` | Vertical inner padding of the widget. |
-| `spacing` | `6` | Gap between the icon and text. |
-| `opacity` | `1.0` | Overall opacity of the widget. |
+| Key                | Default           | Description                                |
+| ------------------ | ----------------- | ------------------------------------------ |
+| `icon`             | `"📅"`            | Leading icon of the widget.                |
+| `text_color`       | `"theme.text"`    | Text color of the widget.                  |
+| `background_color` | `"theme.surface"` | Background color of the widget.            |
+| `border_color`     | `"theme.border"`  | Border color of the widget.                |
+| `border_width`     | `1`               | Border width of the widget.                |
+| `corner_radius`    | `8`               | Corner radius of the widget background.    |
+| `margin_x`         | `0`               | Horizontal outer margin around the widget. |
+| `margin_y`         | `0`               | Vertical outer margin around the widget.   |
+| `padding_x`        | `8`               | Horizontal inner padding of the widget.    |
+| `padding_y`        | `4`               | Vertical inner padding of the widget.      |
+| `spacing`          | `6`               | Gap between the icon and text.             |
+| `opacity`          | `1.0`             | Overall opacity of the widget.             |
 
 ## `builtins.date.content`
 
-| Key | Default | Description |
-| --- | ------- | ----------- |
+| Key      | Default        | Description         |
+| -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |

@@ -403,7 +403,3 @@ If `watch_config = false`, EasyBar will not reload automatically.
 Check whether that widget has an explicit color in `config.toml`.
 
 Explicit widget colors override theme defaults.
-
-
-
-

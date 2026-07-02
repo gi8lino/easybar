@@ -34,5 +34,3 @@ open "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 ```
 
 If manual launch works but the service does not, check the Homebrew service logs.
-
-

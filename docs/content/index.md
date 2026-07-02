@@ -22,16 +22,16 @@ If you are changing EasyBar itself, start with [Internals](internals/overview.md
 
 ## Common tasks
 
-| Goal | Start with |
-| --- | --- |
-| Install and see the bar | [Quick Start](getting-started/quick-start.md) |
-| Find the runtime config path | [Config Path](getting-started/configuration-path.md) |
-| Enable native widgets | [Built-ins](configuration/builtins.md) |
-| Group built-in widgets visually | [Native Groups](configuration/native-groups.md) |
-| Pick or customize colors | [Themes](configuration/themes.md) |
-| Add a custom widget | [First Widget](lua/guides/first-widget.md) |
-| Debug a stuck bar | [Troubleshooting](runtime/troubleshooting.md) |
-| Understand process boundaries | [Internals](internals/overview.md) |
+| Goal                            | Start with                                           |
+| ------------------------------- | ---------------------------------------------------- |
+| Install and see the bar         | [Quick Start](getting-started/quick-start.md)        |
+| Find the runtime config path    | [Config Path](getting-started/configuration-path.md) |
+| Enable native widgets           | [Built-ins](configuration/builtins.md)               |
+| Group built-in widgets visually | [Native Groups](configuration/native-groups.md)      |
+| Pick or customize colors        | [Themes](configuration/themes.md)                    |
+| Add a custom widget             | [First Widget](lua/guides/first-widget.md)           |
+| Debug a stuck bar               | [Troubleshooting](runtime/troubleshooting.md)        |
+| Understand process boundaries   | [Internals](internals/overview.md)                   |
 
 ## Features
 
@@ -77,5 +77,3 @@ For architecture, process boundaries, agent protocols, Lua runtime internals, an
 ### Context menu
 
 [![Context menu screenshot](assets/context.png)](assets/context.png)
-
-

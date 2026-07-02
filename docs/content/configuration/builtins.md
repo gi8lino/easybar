@@ -338,5 +338,3 @@ Switch to Lua when you need:
 - shell-command integration or app-specific logic
 
 See [Lua Widgets](../lua/overview.md).
-
-

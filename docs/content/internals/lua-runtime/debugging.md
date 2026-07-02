@@ -67,4 +67,3 @@ Look for the `subscriptions` message after startup.
 - aggressive `interval`
 - frequent `second_tick` usage
 - expensive shell commands in sync `easybar.exec(...)`
-

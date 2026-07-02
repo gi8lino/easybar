@@ -54,5 +54,3 @@ The CLI remains slightly different on purpose:
 - it can enable extra local debug output with `--debug`
 
 That CLI-specific flag is a developer convenience, not the main logging contract for the app or agents.
-
-
