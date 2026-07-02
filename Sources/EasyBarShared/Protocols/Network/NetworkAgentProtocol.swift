@@ -187,10 +187,25 @@ public enum NetworkAgentFieldSelectorError: LocalizedError, Equatable {
   }
 }
 
+/// Network-agent field metadata keyed by field.
+public let networkAgentFieldSpecsByField = Dictionary(
+  uniqueKeysWithValues: networkAgentFieldRegistry.map { ($0.field, $0) }
+)
+
 private let networkAgentFieldsInRegistryOrder = networkAgentFieldRegistry.map(\.field)
 private let networkAgentFieldsByRawValue = Dictionary(
   uniqueKeysWithValues: networkAgentFieldsInRegistryOrder.map { ($0.rawValue, $0) }
 )
+
+/// Returns the registry descriptor for one network-agent field.
+public func networkAgentFieldSpec(for field: NetworkAgentField) -> NetworkAgentFieldSpec? {
+  networkAgentFieldSpecsByField[field]
+}
+
+/// Returns whether one network-agent field requires location authorization.
+public func networkAgentFieldRequiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
+  networkAgentFieldSpec(for: field)?.requiresLocationAuthorization ?? false
+}
 
 /// Expands field names and shared selectors into concrete fields.
 public func expandNetworkAgentFieldSelectors(_ selectors: [String]) throws -> [NetworkAgentField] {

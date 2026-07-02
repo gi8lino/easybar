@@ -338,7 +338,6 @@ public final class NetworkSnapshotProvider {
 
   /// Returns whether the field should be hidden without location authorization.
   private func fieldRequiresLocationAuthorization(_ field: NetworkAgentField) -> Bool {
-    networkAgentFieldRegistry.first(where: { $0.field == field })?.requiresLocationAuthorization
-      ?? false
+    networkAgentFieldRequiresLocationAuthorization(field)
   }
 }
