@@ -88,6 +88,7 @@ LOCAL_CACHE_DIR := $(CURDIR)/.cache
 LOCAL_CLANG_MODULE_CACHE := $(CURDIR)/.build/clang-module-cache
 LOCAL_SWIFT_ENV := HOME="$(LOCAL_HOME)" XDG_CACHE_HOME="$(LOCAL_CACHE_DIR)" CLANG_MODULE_CACHE_PATH="$(LOCAL_CLANG_MODULE_CACHE)"
 IMAGE_CONVERT ?= magick
+PRETTIER ?= npx prettier
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -113,7 +114,7 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
-        prepare-version build bundle package release app cli validate-config fmt lint test \
+        prepare-version build bundle package release app cli validate-config fmt fmt-swift fmt-markdown lint test \
         clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -178,9 +179,13 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 	fi
 	@"$(CLI_BIN)" --validate-config --config "$(CONFIG)"
 
-fmt: ## Format all Swift source files in the repository.
+fmt: fmt-swift fmt-markdown ## Format Swift and Markdown sources.
+
+fmt-swift: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
-	@npx prettier --write "**/*.md"
+
+fmt-markdown: ## Format Markdown files with Prettier.
+	@$(PRETTIER) --write "**/*.md"
 
 lint: ## Lint Swift source formatting without modifying files.
 	@swift format lint --recursive .
