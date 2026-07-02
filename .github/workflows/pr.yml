@@ -23,7 +23,7 @@ jobs:
           xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Lint Swift formatting
-        run: swift format lint --recursive .
+        run: make lint
 
   test-and-verify-generated:
     runs-on: macos-26
@@ -70,6 +70,8 @@ jobs:
 
       - name: Build docs
         run: make build-docs
+
+
 
 
 
