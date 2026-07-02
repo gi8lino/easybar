@@ -46,6 +46,8 @@ Both the CLI client and the running AeroSpace.app server should be at least 0.21
 
 EasyBar normally updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream. Workspace and focus callbacks are no longer required for normal updates.
 
+The old `easybar --workspace-changed` and `easybar --focus-changed` commands still work as legacy fallback hooks, but you should not need to wire them into AeroSpace for ordinary use.
+
 Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
 ```toml
@@ -150,4 +152,3 @@ brew services start gi8lino/tap/easybar
 ```
 
 This clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
-

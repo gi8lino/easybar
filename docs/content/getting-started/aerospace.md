@@ -67,6 +67,8 @@ on-focus-changed = [
 
 You can keep them temporarily while testing the subscription stream, but they should not be required anymore.
 
+The matching CLI flags still exist as legacy/fallback hooks. They are useful for scripts, troubleshooting, or older configs, but they are no longer the primary AeroSpace update path.
+
 ## Optional layout callback fallback
 
 AeroSpace does not currently expose a dedicated `layout-changed` subscription event. EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, which is usually enough for layout hotkeys.

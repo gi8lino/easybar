@@ -30,7 +30,7 @@ The control socket is a command interface, not a general event stream.
 
 For AeroSpace-backed widgets, the app keeps a long-lived `aerospace subscribe --all` process open and reacts to JSON-line events for focus, focused workspace, focused monitor, binding mode, new-window detection, and triggered bindings.
 
-The subscription is the primary update trigger. The older control-socket commands remain supported as explicit callback and scripting entry points, but workspace and focus callbacks are no longer required for normal AeroSpace updates.
+The subscription is the primary update trigger. The older control-socket commands remain supported as explicit legacy callback and scripting entry points, but workspace and focus callbacks are no longer required for normal AeroSpace updates.
 
 If the `aerospace subscribe` process exits while the executable is still available, EasyBar schedules reconnect attempts with bounded backoff. If the executable is unavailable, it leaves the subscription stopped and continues to accept explicit control-socket refresh commands.
 
@@ -48,4 +48,4 @@ AeroSpace subscription events are update triggers, not a complete state API. Eas
 
 Some changes do not have dedicated AeroSpace subscription events, especially layout changes and window closures. `binding-triggered` is used as a debounced hint for layout-related keybindings, but it is not the same as a real `layout-changed` event.
 
-For the most explicit layout-mode refresh path, users can keep `easybar --space-mode-changed` only on AeroSpace bindings that actually run `layout ...` commands. Workspace and focus callbacks can usually be removed.
+For the most explicit layout-mode refresh path, users can keep `easybar --space-mode-changed` only on AeroSpace bindings that actually run `layout ...` commands. Workspace and focus callbacks can usually be removed, though their socket commands remain available as fallback hooks.
