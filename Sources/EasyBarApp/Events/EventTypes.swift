@@ -79,6 +79,8 @@ struct EasyBarEventPayload: Sendable {
   let button: MouseButton?
   /// Scroll direction associated with the event.
   let direction: ScrollDirection?
+  /// Diagnostic source that caused the event to be emitted.
+  let source: String?
 
   /// Charging state associated with the event.
   let charging: Bool?
@@ -102,6 +104,7 @@ struct EasyBarEventPayload: Sendable {
     widgetID: String? = nil,
     appName: String? = nil,
     interfaceName: String? = nil,
+    source: String? = nil,
     charging: Bool? = nil,
     muted: Bool? = nil,
     primaryInterfaceIsTunnel: Bool? = nil
@@ -111,6 +114,7 @@ struct EasyBarEventPayload: Sendable {
       widgetID: widgetID,
       appName: appName,
       interfaceName: interfaceName,
+      source: source,
       charging: charging,
       muted: muted,
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel
@@ -122,6 +126,7 @@ struct EasyBarEventPayload: Sendable {
     _ event: WidgetEvent,
     widgetID: String,
     targetWidgetID: String? = nil,
+    source: String? = nil,
     button: MouseButton? = nil,
     direction: ScrollDirection? = nil,
     value: Double? = nil,
@@ -132,6 +137,7 @@ struct EasyBarEventPayload: Sendable {
       widgetEvent: event,
       widgetID: widgetID,
       targetWidgetID: targetWidgetID,
+      source: source,
       button: button,
       direction: direction,
       value: value,
@@ -159,6 +165,10 @@ struct EasyBarEventPayload: Sendable {
 
     if let targetWidgetID {
       payload["target_widget_id"] = targetWidgetID
+    }
+
+    if let source {
+      payload["source"] = source
     }
 
     if let button {
@@ -232,6 +242,7 @@ struct EasyBarEventPayload: Sendable {
     targetWidgetID: String? = nil,
     appName: String? = nil,
     interfaceName: String? = nil,
+    source: String? = nil,
     button: MouseButton? = nil,
     direction: ScrollDirection? = nil,
     charging: Bool? = nil,
@@ -250,6 +261,7 @@ struct EasyBarEventPayload: Sendable {
       interfaceName: interfaceName,
       button: button,
       direction: direction,
+      source: source,
       charging: charging,
       muted: muted,
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,

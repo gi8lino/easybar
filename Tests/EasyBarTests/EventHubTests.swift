@@ -40,11 +40,13 @@ final class EventHubTests: XCTestCase {
     let stream = await hub.subscribe()
     let task = Task { await Self.next(from: stream) }
 
-    await hub.emit(.minuteTick)
+    await hub.emit(.minuteTick, source: "test timer")
 
     let payload = await task.value
 
     XCTAssertEqual(payload?.eventName, AppEvent.minuteTick.rawValue)
+    XCTAssertEqual(payload?.source, "test timer")
+    XCTAssertEqual(payload?.toDictionary()["source"] as? String, "test timer")
   }
 
   /// Verifies that empty event filter behaves like unfiltered subscription.

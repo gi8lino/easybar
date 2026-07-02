@@ -292,7 +292,7 @@ extension AeroSpaceService {
     guard let appEvent = event.appEvent else { return }
 
     Task {
-      await EventHub.shared.emit(appEvent)
+      await EventHub.shared.emit(appEvent, source: source)
     }
   }
 

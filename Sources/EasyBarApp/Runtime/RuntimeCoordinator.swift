@@ -233,7 +233,7 @@ actor RuntimeCoordinator {
   func refreshRuntime() async {
     logger.debug("refreshRuntime begin")
     aeroSpaceService.triggerRefresh()
-    await services.eventHub.emit(.manualRefresh)
+    await services.eventHub.emit(.manualRefresh, source: "runtime manual_refresh")
     logger.debug("refreshRuntime end")
   }
 
@@ -281,15 +281,15 @@ actor RuntimeCoordinator {
     switch command {
     case .workspaceChanged:
       aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.workspaceChange)
+      await services.eventHub.emit(.workspaceChange, source: "socket workspace_changed")
 
     case .focusChanged:
       aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.focusChange)
+      await services.eventHub.emit(.focusChange, source: "socket focus_changed")
 
     case .spaceModeChanged:
       aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.spaceModeChange)
+      await services.eventHub.emit(.spaceModeChange, source: "socket space_mode_changed")
 
     case .manualRefresh:
       await refreshRuntime()
