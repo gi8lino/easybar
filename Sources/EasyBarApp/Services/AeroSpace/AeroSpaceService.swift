@@ -283,7 +283,7 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Handles one JSON-line event received from `aerospace subscribe`.
   fileprivate func handleAeroSpaceSubscriptionEvent(_ event: AeroSpaceSubscriptionEvent) {
-    let source = "aerospace subscribe \(event.name)"
+    let source = EventSourceLabel.aerospaceSubscribe(event.name)
     scheduleSubscriptionRefresh(
       source: source,
       delayNanoseconds: event.refreshDelayNanoseconds
