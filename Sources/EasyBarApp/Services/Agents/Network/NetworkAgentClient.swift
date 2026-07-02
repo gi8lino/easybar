@@ -44,7 +44,7 @@ final class NetworkAgentClient {
     label: "network agent client",
     socketPath: { [weak self] in self?.config.socketPath ?? "" },
     subscribeRequest: {
-      NetworkAgentRequest(command: .subscribe, fields: NativeWiFiRequestedFields.snapshot)
+      NetworkAgentRequest(command: .subscribe, fields: NetworkAgentSnapshot.snapshotFieldSet)
     },
     handleMessage: { [weak self] message in
       self?.handle(message)

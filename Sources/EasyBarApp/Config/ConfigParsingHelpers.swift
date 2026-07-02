@@ -158,37 +158,6 @@ extension Config {
     )
   }
 
-  /// Parses one exact network-agent field name.
-  func parseNetworkAgentField(
-    _ value: String?,
-    allowedFields: [NetworkAgentField]? = nil,
-    path: String
-  ) throws -> NetworkAgentField? {
-    guard let value else { return nil }
-
-    let normalized = normalizedEnumValue(value)
-    let allowedFields = allowedFields ?? NetworkAgentField.allCases
-
-    guard let field = NetworkAgentField(rawValue: normalized),
-      allowedFields.contains(field)
-    else {
-      throw ConfigError.invalidValue(
-        path: path,
-        message: "expected one of \(networkAgentFieldDescription(allowedFields))"
-      )
-    }
-
-    return field
-  }
-
-  /// Returns a stable description for network-agent fields.
-  private func networkAgentFieldDescription(_ fields: [NetworkAgentField]) -> String {
-    fields
-      .map(\.rawValue)
-      .sorted()
-      .joined(separator: ", ")
-  }
-
   /// Parses one calendar popup mode.
   func parseCalendarPopupMode(
     _ value: String,
