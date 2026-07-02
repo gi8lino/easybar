@@ -106,6 +106,7 @@ write_easybar_formula() {
     "Scriptable macOS status bar with SwiftUI and Lua widgets"
 
   cat >> "${easybar_formula_file}" <<'EOF_FORMULA'
+  depends_on "lua"
   depends_on "easybar-calendar-agent"
   depends_on "easybar-network-agent"
 
@@ -183,3 +184,5 @@ write_agent_formula \
   "EasyBarNetworkAgent" \
   "easybar-network-agent" \
   "easybar-network-agent"
+
+

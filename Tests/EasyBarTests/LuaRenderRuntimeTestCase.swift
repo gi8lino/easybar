@@ -201,8 +201,10 @@ extension LuaRenderRuntimeTestCase {
         autoRespondToCommands: autoRespondToCommands
       )
 
-      process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-      process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", widgetFile]
+      configureLuaProcess(
+        process,
+        arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", widgetFile]
+      )
       process.standardInput = stdinPipe
       process.standardOutput = stdoutPipe
       process.standardError = stderrPipe
@@ -443,6 +445,19 @@ extension LuaRenderRuntimeTestCase {
     )
 
     return widgetsDirectoryURL
+  }
+
+  func configureLuaProcess(_ process: Process, arguments: [String]) {
+    let luaPath = SharedPathDefaults.defaultLuaPath
+
+    if luaPath.contains("/") {
+      process.executableURL = URL(fileURLWithPath: luaPath)
+      process.arguments = arguments
+      return
+    }
+
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    process.arguments = [luaPath] + arguments
   }
 
   func luaRuntimeEnvironment(

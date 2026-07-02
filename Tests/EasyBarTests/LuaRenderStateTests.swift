@@ -220,8 +220,10 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
       asyncResponseDelayNanoseconds: 0
     )
 
-    process.executableURL = URL(fileURLWithPath: SharedPathDefaults.defaultLuaPath)
-    process.arguments = [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
+    configureLuaProcess(
+      process,
+      arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
+    )
     process.standardInput = stdinPipe
     process.standardOutput = stdoutPipe
     process.standardError = stderrPipe

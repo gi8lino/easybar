@@ -7,7 +7,7 @@ Example:
 ```toml
 [app]
 widgets_dir = "~/.config/easybar/widgets"
-lua_path = "/opt/homebrew/bin/lua"
+lua_path = "lua"
 lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
 watch_config = true
 lock_dir = "/tmp/EasyBar"
@@ -34,10 +34,10 @@ The Lua executable used for the Lua widget runtime.
 
 ```toml
 [app]
-lua_path = "/opt/homebrew/bin/lua"
+lua_path = "lua"
 ```
 
-Use an absolute path when EasyBar is launched as a GUI app or Homebrew service, because those sessions do not always inherit your shell startup files.
+The default value `lua` is resolved through `PATH`. Use an absolute path only when you want to pin a specific Lua installation.
 
 ## `lua_socket_path`
 
@@ -118,3 +118,5 @@ max_async_jobs = 8
 - `timeout_seconds`: default hard timeout for one command before EasyBar terminates it. Widgets can override this per `easybar.exec(...)` or `easybar.exec_async(...)` call.
 - `max_output_bytes`: default maximum combined stdout and stderr captured for one command. Widgets can override this per call.
 - `max_async_jobs`: maximum concurrent `easybar.exec_async(...)` jobs before new jobs are rejected.
+
+

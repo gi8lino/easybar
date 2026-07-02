@@ -3,8 +3,10 @@ set -euo pipefail
 
 brew update
 
-if [ ! -x /opt/homebrew/bin/lua ]; then
+if ! command -v lua >/dev/null 2>&1; then
   brew install lua
 fi
 
-/opt/homebrew/bin/lua -v
+lua -v
+
+

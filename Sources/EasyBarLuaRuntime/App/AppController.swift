@@ -125,7 +125,7 @@ final class AppController {
     }
 
     let execResult = argv.withUnsafeMutableBufferPointer { buffer in
-      execv(arguments.luaPath, buffer.baseAddress)
+      execvp(arguments.luaPath, buffer.baseAddress)
     }
 
     guard execResult == -1 else {
@@ -162,9 +162,9 @@ private enum RuntimeBootstrapError: LocalizedError {
     case .dup2Failed(let stream, let message):
       return "dup2 \(stream) failed error=\(message)"
     case .execUnexpectedlyReturned:
-      return "execv unexpectedly returned"
+      return "exec unexpectedly returned"
     case .execFailed(let luaPath, let message):
-      return "execv failed lua=\(luaPath) error=\(message)"
+      return "exec failed lua=\(luaPath) error=\(message)"
     }
   }
 }

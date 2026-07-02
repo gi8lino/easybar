@@ -7,7 +7,7 @@ Use `[app.env]` for environment variables that should be visible inside the Lua 
 ```toml
 [app]
 widgets_dir = "~/.config/easybar/widgets"
-lua_path = "/opt/homebrew/bin/lua"
+lua_path = "lua"
 lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
 
 [app.env]
@@ -37,3 +37,5 @@ Set `[app.env]` when Lua widgets need tools such as:
 - `kubectl`
 - custom scripts
 - package-manager commands
+
+
