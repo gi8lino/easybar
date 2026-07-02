@@ -180,6 +180,7 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 
 fmt: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
+	@npx prettier --write "**/*.md"
 
 lint: ## Lint Swift source formatting without modifying files.
 	@swift format lint --recursive .
