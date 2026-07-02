@@ -455,8 +455,7 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-docs: generate-lua-docs generate-config-docs ## Generate and format all checked-in docs from source stubs.
-	@$(MAKE) --no-print-directory fmt-generated-docs
+generate-docs: fmt-generated-docs ## Generate and format all checked-in docs from source stubs.
 
 generate-lua-docs: ## Generate Lua reference docs from source stubs.
 	@python3 scripts/generate/lua_reference_docs.py
@@ -464,7 +463,7 @@ generate-lua-docs: ## Generate Lua reference docs from source stubs.
 generate-config-docs: ## Generate the config reference from config.defaults.toml.
 	@python3 scripts/generate/config_reference_docs.py
 
-fmt-generated-docs: ## Format generated Markdown docs with Prettier.
+fmt-generated-docs: generate-lua-docs generate-config-docs ## Format generated Markdown docs with Prettier.
 	@$(PRETTIER) --write "$(DOCS_DIR)/content/configuration/reference.md" "$(DOCS_DIR)/content/lua/reference/**/*.md"
 
 check-docs: generate-docs ## Verify generated docs are formatted and committed.

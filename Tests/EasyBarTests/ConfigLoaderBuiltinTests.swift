@@ -7,7 +7,7 @@ import XCTest
 
 final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
   /// Verifies that a missing config file still loads a useful default bar.
-  func testReloadUsesUsefulBuiltinsWithoutConfigFile() throws {
+  func testReloadUsesUsefulBuiltinsWhenConfigFileIsMissing() throws {
     let config = Config.makeUnloadedConfig()
     let configFileURL = tempDirectoryURL.appendingPathComponent("missing-config.toml")
 
