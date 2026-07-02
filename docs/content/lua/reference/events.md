@@ -89,6 +89,7 @@ The event payload object delivered to event handlers. Different event families p
 | Property | Type | Description |
 | -------- | ---- | ----------- |
 | `name` | `string` | The dispatched event name. |
+| `source` _(optional)_ | `string` | Diagnostic source that caused EasyBar to emit the event. |
 | `widget_id` _(optional)_ | `string` | The subscribed widget id receiving the event. |
 | `target_widget_id` _(optional)_ | `string` | The concrete node id that received the interaction. |
 | `app_name` _(optional)_ | `string` | The focused app name for app-switch style events. |

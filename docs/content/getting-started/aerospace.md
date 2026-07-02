@@ -67,6 +67,10 @@ on-focus-changed = [
 
 You can keep them temporarily while testing the subscription stream, but they should not be required anymore.
 
+If you keep these callbacks while the automatic subscription is active, Lua widgets subscribed to `workspace_change` or `focus_change` may receive two driver events for one AeroSpace action: one from `aerospace subscribe` and one from the legacy socket hook. Built-in widgets still reload from the debounced AeroSpace snapshot, but custom Lua handlers should either be idempotent or remove the old callbacks.
+
+Event payloads include an optional `source` field for diagnostics. In debug logs and Lua handlers, subscription events are labeled like `aerospace subscribe focus-changed`; legacy callbacks are labeled like `socket focus_changed`.
+
 The matching CLI flags still exist as legacy/fallback hooks. They are useful for scripts, troubleshooting, or older configs, but they are no longer the primary AeroSpace update path.
 
 ## Optional layout callback fallback

@@ -48,6 +48,8 @@ EasyBar normally updates AeroSpace widgets from a long-lived `aerospace subscrib
 
 The old `easybar --workspace-changed` and `easybar --focus-changed` commands still work as legacy fallback hooks, but you should not need to wire them into AeroSpace for ordinary use.
 
+If Lua widgets update twice for one workspace or focus change, check your AeroSpace config for leftover `easybar --workspace-changed` or `easybar --focus-changed` callbacks. With `aerospace subscribe --all` active, those callbacks can duplicate the same driver event. Debug handlers can inspect `event.source` to distinguish `aerospace subscribe ...` from `socket ...` fallback events.
+
 Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
 ```toml

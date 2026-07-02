@@ -66,6 +66,8 @@ easybar --space-mode-changed
 
 `--workspace-changed` and `--focus-changed` are legacy AeroSpace callback hooks and are no longer required for normal workspace or focus updates. `--space-mode-changed` remains useful as an optional explicit fallback for layout bindings, because AeroSpace does not expose a dedicated layout-changed subscription event.
 
+Do not keep workspace or focus callbacks enabled just to mirror the subscription stream. When both paths are active, Lua widgets subscribed to `workspace_change` or `focus_change` can receive duplicate driver events for the same AeroSpace action. Event payloads include an optional `source` field so debug handlers can tell `aerospace subscribe ...` events from `socket ...` fallback events.
+
 ## Related pages
 
 - [Metrics](metrics.md)

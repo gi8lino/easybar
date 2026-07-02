@@ -253,6 +253,7 @@ def render_lua_api_block(manifest: dict) -> str:
         f'---{docs["eventExtra"]}',
         "---@class EasyBarEvent",
         "---@field name string The dispatched event name.",
+        "---@field source? string Diagnostic source that caused EasyBar to emit the event.",
         "---@field widget_id? string The subscribed widget id receiving the event.",
         "---@field target_widget_id? string The concrete node id that received the interaction.",
         "---@field app_name? string The focused app name for app-switch style events.",
@@ -377,7 +378,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
 
 
