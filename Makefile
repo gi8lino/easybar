@@ -179,7 +179,9 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 	fi
 	@"$(CLI_BIN)" --validate-config --config "$(CONFIG)"
 
-fmt: fmt-swift fmt-markdown ## Format Swift and Markdown sources.
+fmt: fmt-swift ## Format Swift sources.
+
+fmt-all: fmt-swift fmt-markdown ## Format Swift and Markdown sources.
 
 fmt-swift: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
