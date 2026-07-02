@@ -179,7 +179,7 @@ extension LuaProcessController {
 
     previousTask?.cancel()
 
-    let task = Task.detached(priority: .utility) { [weak self] in
+    let task = DetachedTask.run(priority: .utility) { [weak self] in
       var status: Int32 = 0
       let waitResult = waitpid(pid, &status, 0)
       guard !Task.isCancelled else { return }

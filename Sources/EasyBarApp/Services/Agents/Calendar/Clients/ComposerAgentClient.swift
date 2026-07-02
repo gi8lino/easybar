@@ -67,7 +67,7 @@ final class ComposerCalendarAgentClient {
       .field("socket", socketPath)
     )
 
-    Task.detached(priority: .userInitiated) {
+    DetachedTask.run(priority: .userInitiated) {
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,

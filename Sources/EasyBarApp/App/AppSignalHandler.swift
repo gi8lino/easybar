@@ -35,9 +35,10 @@ final class AppSignalHandler {
     sigaddset(&signalSet, SIGINT)
     sigaddset(&signalSet, SIGTERM)
     pthread_sigmask(SIG_BLOCK, &signalSet, nil)
+    let signalSetSnapshot = signalSet
 
-    signalTask = Task.detached { [weak self] in
-      var waitSet = signalSet
+    signalTask = DetachedTask.run { [weak self] in
+      var waitSet = signalSetSnapshot
 
       while !Task.isCancelled {
         var receivedSignal: Int32 = 0

@@ -27,7 +27,7 @@ extension LuaProcessController {
       kill(processIdentifier, SIGTERM)
     }
 
-    let task = Task.detached(priority: .utility) { [weak self] in
+    let task = DetachedTask.run(priority: .utility) { [weak self] in
       do {
         try await Task.sleep(nanoseconds: easyBarLuaTerminationGracePeriodNanoseconds)
       } catch {

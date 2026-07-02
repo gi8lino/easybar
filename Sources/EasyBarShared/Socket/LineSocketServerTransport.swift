@@ -80,7 +80,7 @@ public final class LineSocketServerTransport<
       .field("socket_path", "\(socketPath)"),
     )
 
-    let task = Task.detached(priority: .utility) { [weak self] in
+    let task = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       await self.acceptLoop(handler: handler)
     }
@@ -296,7 +296,7 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      Task.detached(priority: .utility) { [weak self] in
+      DetachedTask.run(priority: .utility) { [weak self] in
         guard let self else { return }
         await self.handleClient(clientFD, handler: handler)
       }

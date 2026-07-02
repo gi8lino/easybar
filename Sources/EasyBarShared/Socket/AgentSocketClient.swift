@@ -122,7 +122,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
 
   /// Starts one connection attempt on a Swift task.
   private func connect() {
-    let task = Task.detached(priority: .utility) { [weak self] in
+    let task = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       await self.runConnectionAttempt()
     }

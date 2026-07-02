@@ -191,7 +191,7 @@ final class MonthCalendarAgentClient {
   ) {
     let socketPath = calendarAgentConfig.socketPath
 
-    Task.detached(priority: .userInitiated) {
+    DetachedTask.run(priority: .userInitiated) {
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,

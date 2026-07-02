@@ -185,7 +185,7 @@ extension AeroSpaceService {
       .field("consumers", consumerCount)
     )
 
-    Task.detached(priority: .userInitiated) { [weak self] in
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
     }
@@ -212,7 +212,7 @@ extension AeroSpaceService {
       }
     }
 
-    Task.detached(priority: .userInitiated) { [weak self] in
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: self.currentGeneration()) else { return }
 
@@ -271,7 +271,7 @@ extension AeroSpaceService {
       .field("consumers", consumerCount)
     )
 
-    Task.detached(priority: .userInitiated) { [weak self] in
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
     }

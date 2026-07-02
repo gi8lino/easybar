@@ -60,7 +60,7 @@ final class LuaTransport: @unchecked Sendable {
     }
 
     let stderrFD = error.fileHandleForReading.fileDescriptor
-    let stderrTask = Task.detached(priority: .utility) { [weak self] in
+    let stderrTask = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       self.readLinesFromFD(stderrFD, generation: generation) { [weak self] line in
         Task {
@@ -70,7 +70,7 @@ final class LuaTransport: @unchecked Sendable {
       }
     }
 
-    let acceptTask = Task.detached(priority: .utility) { [weak self] in
+    let acceptTask = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       self.acceptConnection(generation: generation)
     }
@@ -134,7 +134,7 @@ final class LuaTransport: @unchecked Sendable {
       return
     }
 
-    Task.detached(priority: .utility) { [logger] in
+    DetachedTask.run(priority: .utility) { [logger] in
       if writeAll(data, to: fd) {
         Task {
           await MetricsCoordinator.shared.recordLuaWrite()
@@ -239,7 +239,7 @@ final class LuaTransport: @unchecked Sendable {
       return
     }
 
-    let readTask = Task.detached(priority: .utility) { [weak self] in
+    let readTask = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
       self.readLinesFromFD(clientFD, generation: generation) { [weak self] line in
         Task {
