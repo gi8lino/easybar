@@ -201,7 +201,7 @@ extension LuaRenderRuntimeTestCase {
         autoRespondToCommands: autoRespondToCommands
       )
 
-      configureLuaProcess(
+      LuaRenderRuntimeTestCase.configureLuaProcess(
         process,
         arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", widgetFile]
       )
@@ -447,7 +447,7 @@ extension LuaRenderRuntimeTestCase {
     return widgetsDirectoryURL
   }
 
-  func configureLuaProcess(_ process: Process, arguments: [String]) {
+  static func configureLuaProcess(_ process: Process, arguments: [String]) {
     let luaPath = SharedPathDefaults.defaultLuaPath
 
     if luaPath.contains("/") {
