@@ -15,7 +15,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key                       | Default                                    | Description                                                                         |
 | ------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
 | `widgets_dir`             | `"~/.config/easybar/widgets"`              | Directory that contains your custom Lua widget files.                               |
-| `lua_path`                | `"lua"`                  | Path to the Lua executable EasyBar uses for scripted widgets.                       |
+| `lua_path`                | `"lua"`                                    | Path to the Lua executable EasyBar uses for scripted widgets.                       |
 | `lua_socket_path`         | `"/tmp/EasyBar/lua-runtime.sock"`          | Unix socket path used by EasyBar and the Lua widget runtime transport.              |
 | `watch_config`            | `true`                                     | Reloads EasyBar automatically when config.toml changes.                             |
 | `lock_dir`                | `"/tmp/EasyBar"`                           | Directory that contains lock files used by EasyBar.                                 |
@@ -767,5 +767,3 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key      | Default        | Description         |
 | -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
-
-

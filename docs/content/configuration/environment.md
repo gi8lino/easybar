@@ -37,5 +37,3 @@ Set `[app.env]` when Lua widgets need tools such as:
 - `kubectl`
 - custom scripts
 - package-manager commands
-
-
