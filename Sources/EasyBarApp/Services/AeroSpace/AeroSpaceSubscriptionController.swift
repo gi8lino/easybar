@@ -38,6 +38,8 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private let logger: ProcessLogger
   /// Bounded reconnect delays used when the subscription process exits.
   private let reconnectDelays: [TimeInterval]
+  /// Sleeper used for reconnect delays.
+  private let sleeper: any AsyncSleeper
   /// Called for every decoded or fallback AeroSpace event line.
   private let handleEvent: (AeroSpaceSubscriptionEvent) -> Void
   /// Current locked controller state.
@@ -48,11 +50,13 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     commandRunner: AeroSpaceCommandRunner,
     logger: ProcessLogger,
     reconnectDelays: [TimeInterval] = AeroSpaceSubscriptionController.defaultReconnectDelays,
+    sleeper: any AsyncSleeper = TaskSleeper(),
     handleEvent: @escaping (AeroSpaceSubscriptionEvent) -> Void
   ) {
     self.commandRunner = commandRunner
     self.logger = logger
     self.reconnectDelays = reconnectDelays
+    self.sleeper = sleeper
     self.handleEvent = handleEvent
   }
 
@@ -296,9 +300,10 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     )
 
     let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
+    let sleeper = sleeper
     let task = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: nanoseconds)
+        try await sleeper.sleep(nanoseconds: nanoseconds)
       } catch {
         return
       }

@@ -4,6 +4,34 @@ import XCTest
 @testable import EasyBarShared
 
 final class AeroSpaceSubscriptionControllerTests: XCTestCase {
+  private struct ImmediateSleeper: AsyncSleeper {
+    func sleep(nanoseconds: UInt64) async throws {}
+  }
+
+  private final class PausedSleeper: AsyncSleeper, @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuations: [CheckedContinuation<Void, Error>] = []
+
+    func sleep(nanoseconds: UInt64) async throws {
+      try await withCheckedThrowingContinuation { continuation in
+        lock.lock()
+        continuations.append(continuation)
+        lock.unlock()
+      }
+    }
+
+    func resumeAll() {
+      lock.lock()
+      let continuations = continuations
+      self.continuations.removeAll()
+      lock.unlock()
+
+      for continuation in continuations {
+        continuation.resume()
+      }
+    }
+  }
+
   func testReconnectsWhenProcessExits() throws {
     let directoryURL = try Self.makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directoryURL) }
@@ -28,6 +56,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       commandRunner: runner,
       logger: logger,
       reconnectDelays: [0.01, 0.01],
+      sleeper: ImmediateSleeper(),
       handleEvent: { _ in }
     )
 
@@ -64,13 +93,14 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       commandRunner: runner,
       logger: logger,
       reconnectDelays: [0.01],
+      sleeper: ImmediateSleeper(),
       handleEvent: { _ in }
     )
 
     controller.start()
     defer { controller.stop() }
     XCTAssertTrue(Self.waitForLaunchCount(at: countURL, minimum: 1))
-    Thread.sleep(forTimeInterval: 0.08)
+    XCTAssertFalse(Self.waitForLaunchCount(at: countURL, minimum: 2, timeout: 0.1))
 
     XCTAssertEqual(Self.launchCount(at: countURL), 1)
   }
@@ -101,6 +131,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       commandRunner: runner,
       logger: logger,
       reconnectDelays: [0.01, 0.05],
+      sleeper: ImmediateSleeper(),
       handleEvent: { _ in }
     )
 
@@ -143,6 +174,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       commandRunner: runner,
       logger: logger,
       reconnectDelays: [0.01, 0.05],
+      sleeper: ImmediateSleeper(),
       handleEvent: { _ in }
     )
 
@@ -175,17 +207,20 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       logger: logger,
       executablePathResolver: { scriptURL.path }
     )
+    let sleeper = PausedSleeper()
     let controller = AeroSpaceSubscriptionController(
       commandRunner: runner,
       logger: logger,
       reconnectDelays: [0.2],
+      sleeper: sleeper,
       handleEvent: { _ in }
     )
 
     controller.start()
     XCTAssertTrue(Self.waitForLaunchCount(at: countURL, minimum: 1))
     controller.stop()
-    Thread.sleep(forTimeInterval: 0.3)
+    sleeper.resumeAll()
+    XCTAssertFalse(Self.waitForLaunchCount(at: countURL, minimum: 2, timeout: 0.1))
 
     XCTAssertEqual(Self.launchCount(at: countURL), 1)
   }
@@ -232,7 +267,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       if launchCount(at: countURL) >= minimum {
         return true
       }
-      Thread.sleep(forTimeInterval: 0.01)
+      RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01))
     }
     return false
   }
