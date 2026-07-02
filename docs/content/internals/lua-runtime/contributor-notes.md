@@ -68,7 +68,7 @@ make generate-docs
 
 The underlying generator scripts are implementation details. Call them directly only when debugging the generation pipeline.
 
-`make fmt` formats Swift by default and leaves Markdown alone so generated docs do not churn during normal source formatting. Run `make fmt-markdown` only when you intentionally want to format Markdown with Prettier.
+`make fmt` formats Swift only. Generated Markdown is formatted automatically as part of `make generate-docs`, so generated-doc comparisons stay stable. Run `make fmt-markdown` only when you intentionally want to format all Markdown with Prettier.
 
 ## Helper scripts
 

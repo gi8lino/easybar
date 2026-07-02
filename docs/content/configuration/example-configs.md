@@ -1,6 +1,8 @@
 # Example Configs
 
-The repository includes two config examples:
+EasyBar does not require a custom config file for first launch. The built-in defaults already enable spaces, battery, Wi-Fi, and calendar.
+
+The repository includes two config examples for customization:
 
 - `config.defaults.toml`
 - `config.minimal.toml`
@@ -27,15 +29,14 @@ themes_dir = "~/.config/easybar/themes"
 
 ## `config.minimal.toml`
 
-Use this when you want a smaller starting point.
+Use this when you want a smaller customization starting point.
 
-It includes a compact setup with common built-ins such as:
+It keeps the default built-ins enabled and adds a compact setup for common tweaks:
 
-- spaces
-- battery
-- Wi-Fi
-- calendar
 - one native `system` group
+- battery inside the `system` group
+- Wi-Fi inside the `system` group
+- Wi-Fi details mode with SSID enabled
 
 It intentionally omits theme settings and uses the app defaults. Add a `[theme]` section only when you want to select a different bundled or custom theme.
 
@@ -49,7 +50,7 @@ themes_dir = "~/.config/easybar/themes"
 
 ## Copy a starter config
 
-Example:
+From a cloned repository:
 
 ```bash
 mkdir -p ~/.config/easybar

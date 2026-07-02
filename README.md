@@ -62,7 +62,9 @@ Start with:
 
 ## Configuration
 
-EasyBar reads its runtime config from:
+EasyBar can start without a custom config file. Create one only when you want to override the built-in defaults.
+
+When present, EasyBar reads its runtime config from:
 
 ```text
 ~/.config/easybar/config.toml
@@ -76,8 +78,8 @@ EASYBAR_CONFIG_PATH=/path/to/config.toml
 
 The repository includes:
 
-- [`config.defaults.toml`](./config.defaults.toml)
-- [`config.minimal.toml`](./config.minimal.toml)
+- [`config.defaults.toml`](./config.defaults.toml) for the complete default reference
+- [`config.minimal.toml`](./config.minimal.toml) for a small optional starter override
 
 Themes are selected in `config.toml`:
 

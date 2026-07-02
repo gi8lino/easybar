@@ -101,7 +101,7 @@ extension Config {
     /// Default battery widget config.
     static let `default` = BatteryBuiltinConfig(
       placement: .init(
-        enabled: false,
+        enabled: true,
         position: .right,
         order: 20,
         group: nil

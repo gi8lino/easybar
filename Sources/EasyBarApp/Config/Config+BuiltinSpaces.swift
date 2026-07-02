@@ -102,7 +102,7 @@ extension Config {
     /// Default spaces widget config.
     static let `default` = SpacesBuiltinConfig(
       placement: .init(
-        enabled: false,
+        enabled: true,
         position: .left,
         order: 10
       ),

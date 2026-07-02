@@ -18,6 +18,8 @@ brew install gi8lino/tap/easybar
 
 This also installs the calendar and network helper agents.
 
+EasyBar can start without a custom config file. Create `~/.config/easybar/config.toml` only when you want to customize the defaults.
+
 ## Start services
 
 Start EasyBar and both helper agents:

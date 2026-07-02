@@ -44,7 +44,7 @@ background = "theme.background" # Background color of the bar.
 border = "theme.transparent" # Bottom border color of the bar. Use a visible color to opt in.
 
 [builtins.spaces]
-enabled = false # Shows or hides the built-in spaces widget.
+enabled = true # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
 icon = "" # Unused fallback icon for the spaces root widget.
@@ -210,7 +210,7 @@ color = "theme.success_secondary" # Color of the sparkline and label.
 sample_interval_seconds = 5 # Polling interval in seconds.
 
 [builtins.battery]
-enabled = false # Shows or hides the battery widget.
+enabled = true # Shows or hides the battery widget.
 position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 20 # Sort order among widgets in the same position.
 # group = "system" # Optional native group id that should contain this widget.
@@ -260,7 +260,7 @@ margin_x = 0 # Horizontal outer margin around the tooltip.
 margin_y = 8 # Vertical outer margin around the tooltip.
 
 [builtins.wifi]
-enabled = false # Shows or hides the built-in Wi-Fi widget.
+enabled = true # Shows or hides the built-in Wi-Fi widget.
 position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 30 # Sort order among widgets in the same position.
 # group = "system" # Optional native group id that should contain this widget.
@@ -360,7 +360,7 @@ expand_to_slider_on_hover = true # Expands from compact mode to slider mode on h
 width = 80 # Width of the slider when shown.
 
 [builtins.calendar]
-enabled = false # Shows or hides the unified calendar widget.
+enabled = true # Shows or hides the unified calendar widget.
 position = "right" # Places the widget on the left, center, or right side of the bar.
 order = 60 # Sort order among widgets in the same position.
 popup_mode = "month" # Popup mode: none | upcoming | month.
@@ -593,6 +593,8 @@ opacity = 1.0 # Overall opacity of the widget.
 
 [builtins.date.content]
 format = "yyyy-MM-dd" # Date format string.
+
+
 
 
 

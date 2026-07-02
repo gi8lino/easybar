@@ -2,7 +2,7 @@
 
 This is the shortest path from a fresh install to a working EasyBar setup.
 
-The goal is to keep first-run setup user-facing: install the app, copy a small config, start the services, verify the bar, then decide whether to configure built-ins or add Lua widgets.
+EasyBar can start without a custom config. The built-in defaults already show a useful bar with spaces, battery, Wi-Fi, and calendar enabled. Create `config.toml` only when you want to customize the bar.
 
 ## 1. Install EasyBar
 
@@ -15,18 +15,7 @@ brew install gi8lino/tap/easybar
 
 This also installs the calendar and network helper agents.
 
-## 2. Copy a minimal config
-
-Create the config directory and copy the starter config:
-
-```bash
-mkdir -p ~/.config/easybar
-cp config.minimal.toml ~/.config/easybar/config.toml
-```
-
-The minimal config enables common built-ins and one native system group. It is a better starting point than the full defaults file when you only want the bar running quickly.
-
-## 3. Start EasyBar and its agents
+## 2. Start EasyBar and its agents
 
 Start the helper agents first, then the main bar service:
 
@@ -38,7 +27,7 @@ brew services start gi8lino/tap/easybar
 
 The agents provide permission-sensitive calendar and network data. EasyBar can still start when an agent has no permission, but the related widget may show empty or denied data until macOS permissions are granted.
 
-## 4. Verify the install
+## 3. Verify the install
 
 Check services:
 
@@ -62,16 +51,39 @@ easybar --refresh
 
 If the bar does not appear, open [Troubleshooting](../runtime/troubleshooting.md). If macOS blocks the app or helper agents, open [macOS Quarantine](macos-quarantine.md).
 
-## 5. Enable built-ins first
+## 4. Optional: create a custom config
 
-For most setups, start by configuring native built-ins in `~/.config/easybar/config.toml`.
+EasyBar reads custom config from:
 
-Good first built-ins are:
+```text
+~/.config/easybar/config.toml
+```
+
+The repository includes `config.minimal.toml` as a small starter override. It keeps the default built-ins enabled, groups battery and Wi-Fi, and opens Wi-Fi in details mode.
+
+From a cloned repository:
+
+```bash
+mkdir -p ~/.config/easybar
+cp config.minimal.toml ~/.config/easybar/config.toml
+easybar --reload-config
+```
+
+Use [Example Configs](../configuration/example-configs.md) for the available starter files.
+
+## 5. Customize built-ins first
+
+For most setups, customize native built-ins in `~/.config/easybar/config.toml` before writing Lua.
+
+The default bar already enables:
 
 - spaces
 - battery
 - Wi-Fi
 - calendar
+
+Good next built-ins to enable are:
+
 - time
 - date
 - volume
@@ -86,7 +98,7 @@ enabled = true
 [builtins.date]
 enabled = true
 
-[builtins.battery]
+[builtins.volume]
 enabled = true
 ```
 

@@ -86,7 +86,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default                  | Description                                                      |
 | ------------------ | ------------------------ | ---------------------------------------------------------------- |
-| `enabled`          | `false`                  | Shows or hides the built-in spaces widget.                       |
+| `enabled`          | `true`                   | Shows or hides the built-in spaces widget.                       |
 | `position`         | `"left"`                 | Places the widget on the left, center, or right side of the bar. |
 | `order`            | `10`                     | Sort order among widgets in the same position.                   |
 | `icon`             | `""`                     | Unused fallback icon for the spaces root widget.                 |
@@ -274,7 +274,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key        | Default   | Description                                                      |
 | ---------- | --------- | ---------------------------------------------------------------- |
-| `enabled`  | `false`   | Shows or hides the battery widget.                               |
+| `enabled`  | `true`    | Shows or hides the battery widget.                               |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
 | `order`    | `20`      | Sort order among widgets in the same position.                   |
 
@@ -338,7 +338,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key        | Default   | Description                                                      |
 | ---------- | --------- | ---------------------------------------------------------------- |
-| `enabled`  | `false`   | Shows or hides the built-in Wi-Fi widget.                        |
+| `enabled`  | `true`    | Shows or hides the built-in Wi-Fi widget.                        |
 | `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
 | `order`    | `30`      | Sort order among widgets in the same position.                   |
 
@@ -467,7 +467,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key          | Default   | Description                                                      |
 | ------------ | --------- | ---------------------------------------------------------------- |
-| `enabled`    | `false`   | Shows or hides the unified calendar widget.                      |
+| `enabled`    | `true`    | Shows or hides the unified calendar widget.                      |
 | `position`   | `"right"` | Places the widget on the left, center, or right side of the bar. |
 | `order`      | `60`      | Sort order among widgets in the same position.                   |
 | `popup_mode` | `"month"` | Popup mode: none \| upcoming \| month.                           |

@@ -114,7 +114,7 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
-        prepare-version build bundle package release app cli validate-config fmt fmt-swift fmt-markdown lint test \
+        prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
         clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -123,7 +123,7 @@ endif
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
         demo \
-        generate-docs generate-lua-docs generate-config-docs check-docs serve-docs build-docs clean-docs \
+        generate-docs generate-lua-docs generate-config-docs fmt-generated-docs check-docs serve-docs build-docs clean-docs \
         favicon
 
 help: ## Display this help.
@@ -455,7 +455,8 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 	@$(DOCS_PYTHON) -m pip install -r $(DOCS_REQUIREMENTS)
 	@touch $(DOCS_STAMP)
 
-generate-docs: generate-lua-docs generate-config-docs ## Generate all checked-in docs from source stubs.
+generate-docs: generate-lua-docs generate-config-docs ## Generate and format all checked-in docs from source stubs.
+	@$(MAKE) --no-print-directory fmt-generated-docs
 
 generate-lua-docs: ## Generate Lua reference docs from source stubs.
 	@python3 scripts/generate/lua_reference_docs.py
@@ -463,7 +464,10 @@ generate-lua-docs: ## Generate Lua reference docs from source stubs.
 generate-config-docs: ## Generate the config reference from config.defaults.toml.
 	@python3 scripts/generate/config_reference_docs.py
 
-check-docs: generate-docs ## Verify generated docs are committed.
+fmt-generated-docs: ## Format generated Markdown docs with Prettier.
+	@$(PRETTIER) --write "$(DOCS_DIR)/content/configuration/reference.md" "$(DOCS_DIR)/content/lua/reference/**/*.md"
+
+check-docs: generate-docs ## Verify generated docs are formatted and committed.
 	@git diff --exit-code -- docs/content/lua/reference docs/content/configuration/reference.md
 
 serve-docs: $(DOCS_STAMP) generate-docs ## Generate and serve the docs locally.
@@ -483,3 +487,5 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+

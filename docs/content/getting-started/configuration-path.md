@@ -1,6 +1,8 @@
 # Config Path
 
-EasyBar reads its runtime config from:
+EasyBar can start without a custom config file. Create one only when you want to override the built-in defaults.
+
+When present, EasyBar reads its runtime config from:
 
 ```text
 ~/.config/easybar/config.toml
@@ -51,10 +53,10 @@ The repository ships two config examples:
 - `config.defaults.toml`
   Full reference file with the current default values and supported sections.
 - `config.minimal.toml`
-  Smaller starter example with common built-ins and one native `system` group.
+  Smaller optional starter override for grouping battery and Wi-Fi and enabling Wi-Fi details.
 
 Use `config.defaults.toml` when you want the complete reference.
-Use `config.minimal.toml` when you want a shorter starting point.
+Use `config.minimal.toml` when you want a shorter customization starting point.
 
 ## Related pages
 

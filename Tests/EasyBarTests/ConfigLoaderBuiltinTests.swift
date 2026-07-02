@@ -6,6 +6,22 @@ import XCTest
 @testable import EasyBarApp
 
 final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
+  /// Verifies that a missing config file still loads a useful default bar.
+  func testReloadUsesUsefulBuiltinsWithoutConfigFile() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("missing-config.toml")
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertTrue(config.builtinSpaces.enabled)
+    XCTAssertTrue(config.builtinBattery.enabled)
+    XCTAssertTrue(config.builtinWiFi.enabled)
+    XCTAssertTrue(config.builtinCalendar.enabled)
+  }
+
   /// Verifies that reload applies config file overrides and creates required directories.
   func testReloadAppliesConfigFileOverridesAndCreatesRequiredDirectories() throws {
     let config = Config.makeUnloadedConfig()

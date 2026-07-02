@@ -137,7 +137,7 @@ extension Config {
     /// Default Wi-Fi widget config.
     static let `default` = WiFiBuiltinConfig(
       placement: .init(
-        enabled: false,
+        enabled: true,
         position: .right,
         order: 30,
         group: nil

@@ -1,6 +1,8 @@
 # Configuration Overview
 
-EasyBar reads its runtime config from:
+EasyBar starts with built-in defaults even when no custom config file exists. The default bar enables spaces, battery, Wi-Fi, and calendar.
+
+When present, EasyBar reads runtime config from:
 
 ```text
 ~/.config/easybar/config.toml
@@ -12,18 +14,18 @@ You can override that path with:
 EASYBAR_CONFIG_PATH=/path/to/config.toml
 ```
 
-For a first setup, start with [Quick Start](../getting-started/quick-start.md) and copy `config.minimal.toml`.
+For a first setup, start with [Quick Start](../getting-started/quick-start.md). Create `config.toml` only when you want to customize the defaults.
 
 ## Example files
 
 The repository ships two config examples:
 
-- `config.minimal.toml`
-  Smaller starter config with common built-ins and one native `system` group.
 - `config.defaults.toml`
   Full reference file with current defaults, inline comments, and all supported sections.
+- `config.minimal.toml`
+  Small optional starter override that groups common built-ins and enables Wi-Fi details.
 
-Use `config.minimal.toml` when you want a clean starting point. Use `config.defaults.toml` when you need to discover every supported key.
+Use `config.minimal.toml` when you want a compact customization starting point. Use `config.defaults.toml` when you need to discover every supported key.
 
 The generated [Configuration Reference](reference.md) mirrors `config.defaults.toml`. It is useful for exact defaults, but the hand-written pages are better for concepts and examples.
 
@@ -111,7 +113,7 @@ See [Themes](themes.md).
 | Configure app paths                 | [App Settings](app.md)                  |
 | Configure shell command environment | [Environment](environment.md)           |
 | Choose colors                       | [Themes](themes.md)                     |
-| Enable native widgets               | [Built-ins](builtins.md)                |
+| Configure native widgets            | [Built-ins](builtins.md)                |
 | Group native widgets                | [Native Groups](native-groups.md)       |
 | Configure helper agents             | [Agents](agents.md)                     |
 | Debug logging                       | [Logging](logging.md)                   |

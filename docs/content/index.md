@@ -12,7 +12,7 @@ EasyBar is designed for a clean macOS workflow and integrates especially well wi
 
 New users should follow the user path first:
 
-1. [Quick Start](getting-started/quick-start.md): install EasyBar, copy the minimal config, start the services, and verify that the bar responds.
+1. [Quick Start](getting-started/quick-start.md): install EasyBar, start the services, verify that the bar responds, and optionally create a custom config.
 2. [Built-ins Vs Lua](getting-started/builtins-vs-lua.md): choose whether a widget belongs in `config.toml` or in a Lua file.
 3. [Configuration Overview](configuration/overview.md): learn where config lives and which pages explain each config area.
 4. [Lua Widgets](lua/overview.md): add custom widgets after the built-ins cover the basics.

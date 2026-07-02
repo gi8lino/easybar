@@ -1,3 +1,7 @@
+# Optional starter overrides for the built-in default bar.
+# EasyBar already starts with spaces, battery, Wi-Fi, and calendar enabled.
+# This file groups battery and Wi-Fi and opens Wi-Fi in details mode.
+
 [builtins.spaces]
 enabled = true
 
@@ -30,6 +34,8 @@ mode = "details"
 
 [builtins.wifi.fields]
 ssid = true
+
+
 
 
 

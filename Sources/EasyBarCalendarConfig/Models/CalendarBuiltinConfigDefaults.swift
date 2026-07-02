@@ -2,7 +2,7 @@ import Foundation
 
 extension CalendarBuiltinConfig {
   public static let `default` = CalendarBuiltinConfig(
-    placement: .init(enabled: false, position: .right, order: 60),
+    placement: .init(enabled: true, position: .right, order: 60),
     style: .init(
       icon: "",
       textColorHex: "#ffffff",
