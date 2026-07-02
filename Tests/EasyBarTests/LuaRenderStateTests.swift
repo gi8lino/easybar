@@ -220,7 +220,7 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
       asyncResponseDelayNanoseconds: 0
     )
 
-    configureLuaProcess(
+    Self.configureLuaProcess(
       process,
       arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     )

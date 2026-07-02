@@ -57,7 +57,7 @@ final class LuaRenderCommandTests: LuaRenderRuntimeTestCase {
       asyncResponseDelayNanoseconds: 0
     )
 
-    configureLuaProcess(
+    Self.configureLuaProcess(
       process,
       arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     )
@@ -163,7 +163,7 @@ final class LuaRenderCommandTests: LuaRenderRuntimeTestCase {
       asyncResponseDelayNanoseconds: 50_000_000
     )
 
-    configureLuaProcess(
+    Self.configureLuaProcess(
       process,
       arguments: [runtimePath, widgetsDirectoryURL.path, "5", "65536", "brew.lua"]
     )
