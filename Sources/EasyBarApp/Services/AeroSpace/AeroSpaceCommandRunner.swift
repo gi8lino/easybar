@@ -128,7 +128,7 @@ final class AeroSpaceCommandRunner {
 private final class PipeReader {
   private let handle: FileHandle
   private let group = DispatchGroup()
-  private var result: Result<Data, Error> = .success(Data())
+  private let result = LockedState<Result<Data, Error>>(.success(Data()))
 
   init(handle: FileHandle) {
     self.handle = handle
@@ -140,15 +140,16 @@ private final class PipeReader {
       defer { self.group.leave() }
 
       do {
-        self.result = .success(try handle.readToEnd() ?? Data())
+        let data = try handle.readToEnd() ?? Data()
+        self.result.withLock { $0 = .success(data) }
       } catch {
-        self.result = .failure(error)
+        self.result.withLock { $0 = .failure(error) }
       }
     }
   }
 
   func finish() -> Result<Data, Error> {
     group.wait()
-    return result
+    return result.withLock { $0 }
   }
 }
