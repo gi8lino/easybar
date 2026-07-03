@@ -285,7 +285,7 @@ actor EventHub {
       "emit event",
       .field("name", payload.eventName),
       .field("source", payload.source ?? "<unknown>"),
-      .field("payload_keys", payload.toDictionary().keys.sorted())
+      .field("payload_keys", payload.luaPayloadKeys)
     )
   }
 }

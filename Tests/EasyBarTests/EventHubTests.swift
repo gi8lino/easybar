@@ -46,7 +46,7 @@ final class EventHubTests: XCTestCase {
 
     XCTAssertEqual(payload?.eventName, AppEvent.minuteTick.rawValue)
     XCTAssertEqual(payload?.source, "test timer")
-    XCTAssertEqual(payload?.toDictionary()["source"] as? String, "test timer")
+    XCTAssertEqual(payload?.luaPayload.source, "test timer")
   }
 
   /// Verifies that empty event filter behaves like unfiltered subscription.
@@ -395,8 +395,8 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(payload?.eventName, AppEvent.systemWoke.rawValue)
   }
 
-  /// Verifies that app payload dictionary includes nested context.
-  func testAppPayloadDictionaryIncludesNestedContext() {
+  /// Verifies that app Lua payload includes nested context.
+  func testAppLuaPayloadIncludesNestedContext() {
     let payload = EasyBarEventPayload.app(
       .networkChange,
       appName: "Finder",
@@ -406,26 +406,23 @@ final class EventHubTests: XCTestCase {
       primaryInterfaceIsTunnel: true
     )
 
-    let dictionary = payload.toDictionary()
-    let network = dictionary["network"] as? [String: Any]
-    let power = dictionary["power"] as? [String: Any]
-    let audio = dictionary["audio"] as? [String: Any]
+    let luaPayload = payload.luaPayload
 
-    XCTAssertEqual(dictionary["name"] as? String, AppEvent.networkChange.rawValue)
-    XCTAssertEqual(dictionary["app_name"] as? String, "Finder")
+    XCTAssertEqual(luaPayload.name, AppEvent.networkChange.rawValue)
+    XCTAssertEqual(luaPayload.appName, "Finder")
 
-    XCTAssertEqual(network?["interface_name"] as? String, "utun4")
-    XCTAssertEqual(network?["primary_interface_is_tunnel"] as? Bool, true)
+    XCTAssertEqual(luaPayload.network?.interfaceName, "utun4")
+    XCTAssertEqual(luaPayload.network?.primaryInterfaceIsTunnel, true)
 
-    XCTAssertEqual(power?["charging"] as? Bool, true)
-    XCTAssertEqual(audio?["muted"] as? Bool, false)
+    XCTAssertEqual(luaPayload.power?.charging, true)
+    XCTAssertEqual(luaPayload.audio?.muted, false)
 
-    XCTAssertNil(dictionary["widget_id"])
-    XCTAssertNil(dictionary["target_widget_id"])
+    XCTAssertNil(luaPayload.widgetID)
+    XCTAssertNil(luaPayload.targetWidgetID)
   }
 
-  /// Verifies that widget payload dictionary includes interaction context.
-  func testWidgetPayloadDictionaryIncludesInteractionContext() {
+  /// Verifies that widget Lua payload includes interaction context.
+  func testWidgetLuaPayloadIncludesInteractionContext() {
     let payload = EasyBarEventPayload.widget(
       .mouseScrolled,
       widgetID: "calendar",
@@ -437,19 +434,18 @@ final class EventHubTests: XCTestCase {
       deltaY: -4.25
     )
 
-    let dictionary = payload.toDictionary()
-    let audio = dictionary["audio"] as? [String: Any]
+    let luaPayload = payload.luaPayload
 
-    XCTAssertEqual(dictionary["name"] as? String, WidgetEvent.mouseScrolled.rawValue)
-    XCTAssertEqual(dictionary["widget_id"] as? String, "calendar")
-    XCTAssertEqual(dictionary["target_widget_id"] as? String, "calendar_popup")
-    XCTAssertEqual(dictionary["button"] as? String, MouseButton.middle.rawValue)
-    XCTAssertEqual(dictionary["direction"] as? String, ScrollDirection.down.rawValue)
-    XCTAssertEqual(dictionary["value"] as? Double, 0.75)
-    XCTAssertEqual(dictionary["delta_x"] as? Double, 1.5)
-    XCTAssertEqual(dictionary["delta_y"] as? Double, -4.25)
+    XCTAssertEqual(luaPayload.name, WidgetEvent.mouseScrolled.rawValue)
+    XCTAssertEqual(luaPayload.widgetID, "calendar")
+    XCTAssertEqual(luaPayload.targetWidgetID, "calendar_popup")
+    XCTAssertEqual(luaPayload.button, MouseButton.middle.rawValue)
+    XCTAssertEqual(luaPayload.direction, ScrollDirection.down.rawValue)
+    XCTAssertEqual(luaPayload.value, 0.75)
+    XCTAssertEqual(luaPayload.deltaX, 1.5)
+    XCTAssertEqual(luaPayload.deltaY, -4.25)
 
-    XCTAssertEqual(audio?["value"] as? Double, 0.75)
+    XCTAssertEqual(luaPayload.audio?.value, 0.75)
   }
 
   /// Verifies that event replay catalog identifies replayable events.

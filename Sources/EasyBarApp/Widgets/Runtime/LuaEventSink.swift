@@ -33,13 +33,13 @@ final class LuaEventSink {
 
   /// Returns the encoded Lua payload string.
   private static func encodedPayload(_ payload: EasyBarEventPayload) -> String? {
-    return encodeJSON(payload.toDictionary())
+    return encodeJSON(payload.luaPayload)
   }
 
   /// Encodes one event payload as JSON for the Lua runtime.
-  private static func encodeJSON(_ payload: [String: Any]) -> String? {
+  private static func encodeJSON(_ payload: LuaEventPayload) -> String? {
     guard
-      let data = try? JSONSerialization.data(withJSONObject: payload),
+      let data = try? JSONEncoder().encode(payload),
       let string = String(data: data, encoding: .utf8)
     else {
       return nil

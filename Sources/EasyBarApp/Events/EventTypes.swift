@@ -153,83 +153,53 @@ struct EasyBarEventPayload: Sendable {
     return appEvent?.rawValue ?? widgetEvent?.rawValue ?? ""
   }
 
-  /// New structured encoding for Lua.
-  func toDictionary() -> [String: Any] {
-    var payload: [String: Any] = [
-      "name": eventName
-    ]
+  /// Structured payload sent to Lua.
+  var luaPayload: LuaEventPayload {
+    LuaEventPayload(
+      name: eventName,
+      widgetID: widgetID,
+      targetWidgetID: targetWidgetID,
+      source: source,
+      button: button?.rawValue,
+      direction: direction?.rawValue,
+      value: value,
+      deltaX: deltaX,
+      deltaY: deltaY,
+      network: hasNetworkPayload
+        ? .init(
+          primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
+          interfaceName: interfaceName
+        )
+        : nil,
+      power: charging.map { .init(charging: $0) },
+      audio: hasAudioPayload
+        ? .init(
+          muted: muted,
+          value: value
+        )
+        : nil,
+      appName: appName
+    )
+  }
 
-    if let widgetID {
-      payload["widget_id"] = widgetID
-    }
+  /// Encoded payload keys used in trace logs.
+  var luaPayloadKeys: [String] {
+    var keys = ["name"]
 
-    if let targetWidgetID {
-      payload["target_widget_id"] = targetWidgetID
-    }
+    if widgetID != nil { keys.append("widget_id") }
+    if targetWidgetID != nil { keys.append("target_widget_id") }
+    if source != nil { keys.append("source") }
+    if button != nil { keys.append("button") }
+    if direction != nil { keys.append("direction") }
+    if value != nil { keys.append("value") }
+    if deltaX != nil { keys.append("delta_x") }
+    if deltaY != nil { keys.append("delta_y") }
+    if hasNetworkPayload { keys.append("network") }
+    if charging != nil { keys.append("power") }
+    if hasAudioPayload { keys.append("audio") }
+    if appName != nil { keys.append("app_name") }
 
-    if let source {
-      payload["source"] = source
-    }
-
-    if let button {
-      payload["button"] = button.rawValue
-    }
-
-    if let direction {
-      payload["direction"] = direction.rawValue
-    }
-
-    if let value {
-      payload["value"] = value
-    }
-
-    if let deltaX {
-      payload["delta_x"] = deltaX
-    }
-
-    if let deltaY {
-      payload["delta_y"] = deltaY
-    }
-
-    if hasNetworkPayload {
-      var network: [String: Any] = [:]
-
-      if let primaryInterfaceIsTunnel {
-        network["primary_interface_is_tunnel"] = primaryInterfaceIsTunnel
-      }
-
-      if let interfaceName {
-        network["interface_name"] = interfaceName
-      }
-
-      payload["network"] = network
-    }
-
-    if let charging {
-      payload["power"] = [
-        "charging": charging
-      ]
-    }
-
-    if hasAudioPayload {
-      var audio: [String: Any] = [:]
-
-      if let muted {
-        audio["muted"] = muted
-      }
-
-      if let value {
-        audio["value"] = value
-      }
-
-      payload["audio"] = audio
-    }
-
-    if let appName {
-      payload["app_name"] = appName
-    }
-
-    return payload
+    return keys.sorted()
   }
 
   // MARK: - Internal
@@ -279,5 +249,57 @@ struct EasyBarEventPayload: Sendable {
   /// Returns whether the payload should include the nested audio block.
   private var hasAudioPayload: Bool {
     return muted != nil || value != nil
+  }
+}
+
+/// Codable event payload shape delivered to Lua.
+struct LuaEventPayload: Encodable, Equatable, Sendable {
+  struct Network: Encodable, Equatable, Sendable {
+    let primaryInterfaceIsTunnel: Bool?
+    let interfaceName: String?
+
+    private enum CodingKeys: String, CodingKey {
+      case primaryInterfaceIsTunnel = "primary_interface_is_tunnel"
+      case interfaceName = "interface_name"
+    }
+  }
+
+  struct Power: Encodable, Equatable, Sendable {
+    let charging: Bool
+  }
+
+  struct Audio: Encodable, Equatable, Sendable {
+    let muted: Bool?
+    let value: Double?
+  }
+
+  let name: String
+  let widgetID: String?
+  let targetWidgetID: String?
+  let source: String?
+  let button: String?
+  let direction: String?
+  let value: Double?
+  let deltaX: Double?
+  let deltaY: Double?
+  let network: Network?
+  let power: Power?
+  let audio: Audio?
+  let appName: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case name
+    case widgetID = "widget_id"
+    case targetWidgetID = "target_widget_id"
+    case source
+    case button
+    case direction
+    case value
+    case deltaX = "delta_x"
+    case deltaY = "delta_y"
+    case network
+    case power
+    case audio
+    case appName = "app_name"
   }
 }
