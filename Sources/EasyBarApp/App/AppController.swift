@@ -242,34 +242,27 @@ final class AppController {
   /// Wires user-facing bar actions to runtime commands.
   private func installBarWindowActions(on controller: BarWindowController) {
     controller.onRefresh = { [weak self] in
-      self?.scheduleRuntimeRefresh()
+      guard let self else { return }
+
+      Task {
+        await self.runtimeCoordinator.refreshRuntime()
+      }
     }
+
     controller.onReloadConfig = { [weak self] in
-      self?.scheduleConfigReload()
+      guard let self else { return }
+
+      Task {
+        await self.runtimeCoordinator.reloadConfig()
+      }
     }
+
     controller.onRestartLuaRuntime = { [weak self] in
-      self?.scheduleLuaRuntimeRestart()
-    }
-  }
+      guard let self else { return }
 
-  /// Schedules a runtime refresh from a synchronous UI callback.
-  private func scheduleRuntimeRefresh() {
-    Task {
-      await runtimeCoordinator.refreshRuntime()
-    }
-  }
-
-  /// Schedules a config reload from a synchronous UI callback.
-  private func scheduleConfigReload() {
-    Task {
-      await runtimeCoordinator.reloadConfig()
-    }
-  }
-
-  /// Schedules a Lua runtime restart from a synchronous UI callback.
-  private func scheduleLuaRuntimeRestart() {
-    Task {
-      await runtimeCoordinator.restartLuaRuntime()
+      Task {
+        await self.runtimeCoordinator.restartLuaRuntime()
+      }
     }
   }
 
