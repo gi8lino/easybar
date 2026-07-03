@@ -6,7 +6,11 @@ import Foundation
 final class EventManager {
   /// Shared event manager instance.
   static var shared = EventManager(
-    logger: ProcessLogger(label: "easybar.bootstrap.event_manager")
+    logger: ProcessLogger(label: "easybar.bootstrap.event_manager"),
+    systemEvents: .shared,
+    powerEvents: .shared,
+    timerEvents: .shared,
+    volumeEvents: .shared
   )
 
   /// Configures the shared event manager and event-source dependencies.
@@ -23,7 +27,13 @@ final class EventManager {
     TimerEvents.bootstrap(logger: logger.child("timer"))
     VolumeEvents.bootstrap(logger: logger.child("volume"))
 
-    shared = EventManager(logger: logger.child("manager"))
+    shared = EventManager(
+      logger: logger.child("manager"),
+      systemEvents: .shared,
+      powerEvents: .shared,
+      timerEvents: .shared,
+      volumeEvents: .shared
+    )
   }
 
   /// Prefix used for Lua interval subscriptions.
@@ -64,6 +74,14 @@ final class EventManager {
 
   /// Logger used for event manager diagnostics.
   private let logger: ProcessLogger
+  /// System-level notification source.
+  private let systemEvents: SystemEvents
+  /// Power notification source.
+  private let powerEvents: PowerEvents
+  /// Timer event source.
+  private let timerEvents: TimerEvents
+  /// Volume notification source.
+  private let volumeEvents: VolumeEvents
 
   /// Event names requested by Lua widgets.
   private var luaRequestedEvents = Set<String>()
@@ -77,8 +95,18 @@ final class EventManager {
   private var activeIntervalSchedules = Set<WidgetIntervalSchedule>()
 
   /// Creates one event manager.
-  init(logger: ProcessLogger) {
+  init(
+    logger: ProcessLogger,
+    systemEvents: SystemEvents,
+    powerEvents: PowerEvents,
+    timerEvents: TimerEvents,
+    volumeEvents: VolumeEvents
+  ) {
     self.logger = logger
+    self.systemEvents = systemEvents
+    self.powerEvents = powerEvents
+    self.timerEvents = timerEvents
+    self.volumeEvents = volumeEvents
   }
 
   /// Replaces the current Lua runtime event subscriptions.
@@ -157,7 +185,7 @@ final class EventManager {
     subscribeSources(sourcesToAdd)
 
     if intervalChanged {
-      TimerEvents.shared.replaceIntervalTimers(schedules: desiredIntervalSchedules)
+      timerEvents.replaceIntervalTimers(schedules: desiredIntervalSchedules)
     }
 
     activeSources = desiredSources
@@ -174,27 +202,27 @@ final class EventManager {
     for source in sources {
       switch source {
       case .systemWake:
-        SystemEvents.shared.subscribeSystemWake()
+        systemEvents.subscribeSystemWake()
       case .sessionActive:
-        SystemEvents.shared.subscribeSessionActive()
+        systemEvents.subscribeSessionActive()
       case .sessionInactive:
-        SystemEvents.shared.subscribeSessionInactive()
+        systemEvents.subscribeSessionInactive()
       case .sleep:
-        SystemEvents.shared.subscribeSleep()
+        systemEvents.subscribeSleep()
       case .spaceChange:
-        SystemEvents.shared.subscribeSpaceChange()
+        systemEvents.subscribeSpaceChange()
       case .appSwitch:
-        SystemEvents.shared.subscribeAppSwitch()
+        systemEvents.subscribeAppSwitch()
       case .displayChange:
-        SystemEvents.shared.subscribeDisplayChange()
+        systemEvents.subscribeDisplayChange()
       case .powerSource:
-        PowerEvents.shared.subscribePowerSource()
+        powerEvents.subscribePowerSource()
       case .volume:
-        VolumeEvents.shared.subscribeVolume()
+        volumeEvents.subscribeVolume()
       case .minuteTick:
-        TimerEvents.shared.startMinuteTimer()
+        timerEvents.startMinuteTimer()
       case .secondTick:
-        TimerEvents.shared.startSecondTimer()
+        timerEvents.startSecondTimer()
       }
     }
   }
@@ -204,37 +232,37 @@ final class EventManager {
     for source in sources {
       switch source {
       case .systemWake:
-        SystemEvents.shared.unsubscribeSystemWake()
+        systemEvents.unsubscribeSystemWake()
       case .sessionActive:
-        SystemEvents.shared.unsubscribeSessionActive()
+        systemEvents.unsubscribeSessionActive()
       case .sessionInactive:
-        SystemEvents.shared.unsubscribeSessionInactive()
+        systemEvents.unsubscribeSessionInactive()
       case .sleep:
-        SystemEvents.shared.unsubscribeSleep()
+        systemEvents.unsubscribeSleep()
       case .spaceChange:
-        SystemEvents.shared.unsubscribeSpaceChange()
+        systemEvents.unsubscribeSpaceChange()
       case .appSwitch:
-        SystemEvents.shared.unsubscribeAppSwitch()
+        systemEvents.unsubscribeAppSwitch()
       case .displayChange:
-        SystemEvents.shared.unsubscribeDisplayChange()
+        systemEvents.unsubscribeDisplayChange()
       case .powerSource:
-        PowerEvents.shared.unsubscribePowerSource()
+        powerEvents.unsubscribePowerSource()
       case .volume:
-        VolumeEvents.shared.unsubscribeVolume()
+        volumeEvents.unsubscribeVolume()
       case .minuteTick:
-        TimerEvents.shared.stopMinuteTimer()
+        timerEvents.stopMinuteTimer()
       case .secondTick:
-        TimerEvents.shared.stopSecondTimer()
+        timerEvents.stopSecondTimer()
       }
     }
   }
 
   /// Stops every currently active native event source.
   private func stopActiveSources() {
-    TimerEvents.shared.stopAll()
-    SystemEvents.shared.stopAll()
-    PowerEvents.shared.stopAll()
-    VolumeEvents.shared.stopAll()
+    timerEvents.stopAll()
+    systemEvents.stopAll()
+    powerEvents.stopAll()
+    volumeEvents.stopAll()
   }
 
   /// Returns the concrete native sources required by the merged subscription set.

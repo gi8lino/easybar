@@ -131,14 +131,24 @@ struct AppServices {
       logger: logger.child("hub"),
       luaRuntime: luaRuntime
     )
+    let systemEvents = SystemEvents(logger: logger.child("system"))
+    let powerEvents = PowerEvents(logger: logger.child("power"))
+    let timerEvents = TimerEvents(logger: logger.child("timer"))
+    let volumeEvents = VolumeEvents(logger: logger.child("volume"))
 
     return EventServices(
       eventHub: eventHub,
-      eventManager: EventManager(logger: logger.child("manager")),
-      systemEvents: SystemEvents(logger: logger.child("system")),
-      powerEvents: PowerEvents(logger: logger.child("power")),
-      timerEvents: TimerEvents(logger: logger.child("timer")),
-      volumeEvents: VolumeEvents(logger: logger.child("volume"))
+      eventManager: EventManager(
+        logger: logger.child("manager"),
+        systemEvents: systemEvents,
+        powerEvents: powerEvents,
+        timerEvents: timerEvents,
+        volumeEvents: volumeEvents
+      ),
+      systemEvents: systemEvents,
+      powerEvents: powerEvents,
+      timerEvents: timerEvents,
+      volumeEvents: volumeEvents
     )
   }
 
