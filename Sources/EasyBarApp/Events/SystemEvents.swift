@@ -21,6 +21,10 @@ final class SystemEvents {
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
   /// Pending coalesced wake emission.
   private var pendingWakeTask: Task<Void, Never>?
+  /// Identifier for the pending coalesced wake emission.
+  private var pendingWakeEmissionID: UInt64?
+  /// Next coalesced wake emission identifier.
+  private var nextWakeEmissionID: UInt64 = 1
 
   /// Notification observer category.
   private enum ObserverKind: Hashable {
@@ -244,6 +248,7 @@ final class SystemEvents {
   func stopAll() {
     pendingWakeTask?.cancel()
     pendingWakeTask = nil
+    pendingWakeEmissionID = nil
     unsubscribeSystemWake()
     unsubscribeSessionActive()
     unsubscribeSessionInactive()
@@ -260,6 +265,10 @@ final class SystemEvents {
 
     pendingWakeTask?.cancel()
 
+    let wakeEmissionID = nextWakeEmissionID
+    nextWakeEmissionID &+= 1
+    pendingWakeEmissionID = wakeEmissionID
+
     pendingWakeTask = Task { [weak self] in
       do {
         try await Task.sleep(nanoseconds: 150_000_000)
@@ -268,12 +277,25 @@ final class SystemEvents {
       }
 
       guard let self else { return }
+      let shouldEmit = await MainActor.run {
+        self.clearPendingWakeEmission(id: wakeEmissionID)
+      }
+      guard shouldEmit else { return }
+
       await MainActor.run {
         self.logger.debug("emitting coalesced system_woke")
       }
 
       await EventHub.shared.emit(.systemWoke)
     }
+  }
+
+  /// Clears the pending wake emission if it still matches the fired task.
+  private func clearPendingWakeEmission(id: UInt64) -> Bool {
+    guard pendingWakeEmissionID == id else { return false }
+    pendingWakeTask = nil
+    pendingWakeEmissionID = nil
+    return true
   }
 
   /// Removes one registered observer when present.
