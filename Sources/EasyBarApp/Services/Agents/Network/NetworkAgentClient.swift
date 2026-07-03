@@ -13,6 +13,11 @@ final class NetworkAgentClient {
     var repeatCount = 0
   }
 
+  private struct LifecycleState {
+    var config: ConfigSnapshot.NetworkAgent
+    var started = false
+  }
+
   /// Shared network-agent client.
   static var shared = NetworkAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
@@ -24,10 +29,8 @@ final class NetworkAgentClient {
   private let logger: ProcessLogger
   /// Metrics recorder for network-agent lifecycle and messages.
   private let metricsCoordinator: MetricsCoordinator
-  /// Active network-agent config snapshot.
-  private var config: ConfigSnapshot.NetworkAgent
-  /// Whether the client lifecycle is active.
-  private var started = false
+  /// Active network-agent lifecycle state.
+  private let lifecycleState: LockedState<LifecycleState>
   /// Last logged network-agent error, used to suppress identical repeats.
   private let errorLogState = LockedState(ErrorLogState())
 
@@ -40,7 +43,7 @@ final class NetworkAgentClient {
   /// Socket client that owns the network-agent stream.
   private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
     label: "network agent client",
-    socketPath: { [weak self] in self?.config.socketPath ?? "" },
+    socketPath: { [weak self] in self?.currentConfig().socketPath ?? "" },
     subscribeRequest: {
       NetworkAgentRequest(command: .subscribe, fields: NetworkAgentSnapshot.snapshotFieldSet)
     },
@@ -84,7 +87,7 @@ final class NetworkAgentClient {
     metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
-    self.config = config
+    self.lifecycleState = LockedState(LifecycleState(config: config))
     self.metricsCoordinator = metricsCoordinator
   }
 
@@ -95,11 +98,14 @@ final class NetworkAgentClient {
 
   /// Replaces the active network-agent config snapshot.
   func updateConfiguration(_ config: ConfigSnapshot.NetworkAgent) {
-    let socketPathChanged = self.config.socketPath != config.socketPath
-    let enabledChanged = self.config.enabled != config.enabled
-    self.config = config
+    let change = lifecycleState.withLock { state -> (shouldRestart: Bool, enabled: Bool) in
+      let socketPathChanged = state.config.socketPath != config.socketPath
+      let enabledChanged = state.config.enabled != config.enabled
+      state.config = config
+      return (state.started && (socketPathChanged || enabledChanged), config.enabled)
+    }
 
-    guard started, socketPathChanged || enabledChanged else { return }
+    guard change.shouldRestart else { return }
 
     logger.debug(
       "network agent config changed; restarting client",
@@ -109,8 +115,8 @@ final class NetworkAgentClient {
 
     client.stop()
 
-    guard config.enabled else {
-      started = false
+    guard change.enabled else {
+      lifecycleState.withLock { $0.started = false }
       wakeRefreshController.stop()
       clearPublishedState(notify: true)
       return
@@ -121,18 +127,22 @@ final class NetworkAgentClient {
 
   /// Starts the network agent client.
   func start() {
-    guard !started else { return }
+    let config = lifecycleState.withLock { state -> ConfigSnapshot.NetworkAgent? in
+      guard !state.started else { return nil }
+      return state.config
+    }
 
+    guard let config else { return }
     guard config.enabled else {
       logger.debug("network agent client start skipped because agent is disabled")
       clearPublishedState(notify: false)
       return
     }
 
-    started = true
+    lifecycleState.withLock { $0.started = true }
 
     wakeRefreshController.start { [weak self] in
-      guard let self, self.started else { return }
+      guard let self, self.isStarted else { return }
       self.refresh()
     }
 
@@ -141,9 +151,13 @@ final class NetworkAgentClient {
 
   /// Stops the network agent client.
   func stop() {
-    guard started else { return }
+    let shouldStop = lifecycleState.withLock { state -> Bool in
+      guard state.started else { return false }
+      state.started = false
+      return true
+    }
 
-    started = false
+    guard shouldStop else { return }
 
     wakeRefreshController.stop()
     client.stop()
@@ -152,7 +166,7 @@ final class NetworkAgentClient {
 
   /// Requests one fresh network-agent update using the current subscription.
   func refresh() {
-    guard started else { return }
+    guard isStarted else { return }
 
     logger.debug("network agent client manual refresh")
 
@@ -164,7 +178,7 @@ final class NetworkAgentClient {
 
   /// Handles one decoded network agent message.
   private func handle(_ message: NetworkAgentMessage) {
-    guard started else { return }
+    guard isStarted else { return }
 
     switch message.kind {
     case .version:
@@ -197,7 +211,7 @@ final class NetworkAgentClient {
 
   /// Handles one network-agent error message.
   private func handleError(code: NetworkAgentErrorCode?, message: String?) {
-    guard started else { return }
+    guard isStarted else { return }
 
     logAgentErrorIfNeeded(code: code, message: message)
 
@@ -238,7 +252,7 @@ final class NetworkAgentClient {
 
   /// Handles a socket disconnect by clearing published state.
   private func handleDisconnectedStateReset() {
-    guard started else { return }
+    guard isStarted else { return }
     resetErrorLogState()
     clearPublishedState(notify: true)
   }
@@ -309,7 +323,7 @@ final class NetworkAgentClient {
   /// Publishes one snapshot to the shared store on the main queue and emits app events.
   private func publish(snapshot: NetworkAgentSnapshot) {
     Task { @MainActor in
-      guard self.started else { return }
+      guard self.isStarted else { return }
 
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
@@ -339,5 +353,15 @@ final class NetworkAgentClient {
   /// Returns whether clearing the published state should also emit a Wi-Fi change event.
   private func shouldEmitWiFiChangeAfterReset(previous: NetworkAgentSnapshot?) -> Bool {
     return previous?.ssid != nil || previous?.interfaceName != nil
+  }
+
+  /// Returns the current network-agent configuration.
+  private func currentConfig() -> ConfigSnapshot.NetworkAgent {
+    lifecycleState.withLock { $0.config }
+  }
+
+  /// Returns whether the network-agent client lifecycle is active.
+  private var isStarted: Bool {
+    lifecycleState.withLock { $0.started }
   }
 }

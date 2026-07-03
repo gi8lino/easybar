@@ -5,6 +5,12 @@ import Foundation
 ///
 /// Concrete wrappers only provide the request builder and snapshot sink.
 final class CalendarAgentStreamController {
+  private struct LifecycleState {
+    var started = false
+    var socketPath: String
+    var request: CalendarAgentRequest
+  }
+
   /// Human-readable stream label used in logs.
   private let label: String
   /// Returns the current socket path.
@@ -24,15 +30,15 @@ final class CalendarAgentStreamController {
   /// Logger used for stream diagnostics.
   private let logger: ProcessLogger
 
-  /// Whether the stream lifecycle is active.
-  private var started = false
+  /// Cached stream state consumed by background socket work.
+  private let lifecycleState: LockedState<LifecycleState>
 
   /// Socket client that owns the calendar-agent stream.
   private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
     label: label,
-    socketPath: socketPath,
+    socketPath: { [weak self] in self?.currentSocketPath() ?? "" },
     subscribeRequest: { [weak self] in
-      self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
+      self?.currentRequest() ?? CalendarAgentRequest(command: .ping)
     },
     handleMessage: { [weak self] message in
       self?.handle(message)
@@ -86,6 +92,9 @@ final class CalendarAgentStreamController {
     self.applySnapshot = applySnapshot
     self.clearState = clearState
     self.logger = logger
+    self.lifecycleState = LockedState(
+      LifecycleState(socketPath: socketPath(), request: CalendarAgentRequest(command: .ping))
+    )
 
     wakeRefreshController = AgentWakeRefreshController(
       label: label,
@@ -95,27 +104,27 @@ final class CalendarAgentStreamController {
 
   /// Returns whether the stream lifecycle is active.
   var isStarted: Bool {
-    return started
+    return lifecycleState.withLock { $0.started }
   }
 
   /// Returns whether the stream currently has an active connection.
   var isConnected: Bool {
-    return started && client.isConnected
+    return isStarted && client.isConnected
   }
 
   /// Starts the stream when the calendar agent is enabled.
   func start(enabled: Bool) {
-    guard !started else { return }
+    guard !isStarted else { return }
 
     guard enabled else {
       logger.debug("\(label) start skipped because agent is disabled")
       return
     }
 
-    started = true
+    updateCachedConnectionInputs(started: true)
 
     wakeRefreshController.start { [weak self] in
-      guard let self, self.started else { return }
+      guard let self, self.isStarted else { return }
       self.refresh()
     }
 
@@ -128,11 +137,16 @@ final class CalendarAgentStreamController {
 
   /// Stops the stream and clears published state.
   func stop() {
-    guard started else { return }
+    let shouldStop = lifecycleState.withLock { state -> Bool in
+      guard state.started else { return false }
+      state.started = false
+      return true
+    }
+
+    guard shouldStop else { return }
 
     logger.debug("stopping \(label)")
 
-    started = false
     wakeRefreshController.stop()
     client.stop()
     clearState()
@@ -146,7 +160,9 @@ final class CalendarAgentStreamController {
 
   /// Sends one fresh request built from current config and state.
   func refresh() {
-    guard started else { return }
+    guard isStarted else { return }
+
+    updateCachedConnectionInputs(started: true)
 
     Task {
       await metricsCoordinator.recordAgentRefresh(metricsAgent)
@@ -156,7 +172,7 @@ final class CalendarAgentStreamController {
 
   /// Handles one decoded calendar-agent response.
   private func handle(_ response: CalendarAgentMessage) {
-    guard started else { return }
+    guard isStarted else { return }
 
     switch response.kind {
     case .snapshot:
@@ -193,7 +209,28 @@ final class CalendarAgentStreamController {
 
   /// Clears published state only for disconnects that occur while the stream is active.
   private func handleDisconnectedStateReset() {
-    guard started else { return }
+    guard isStarted else { return }
     clearState()
+  }
+
+  /// Refreshes the cached request and socket path used by background socket work.
+  private func updateCachedConnectionInputs(started: Bool) {
+    let socketPath = socketPath()
+    let request = makeRequest()
+    lifecycleState.withLock { state in
+      state.started = started
+      state.socketPath = socketPath
+      state.request = request
+    }
+  }
+
+  /// Returns the latest socket path prepared on the stream owner thread.
+  private func currentSocketPath() -> String {
+    lifecycleState.withLock { $0.socketPath }
+  }
+
+  /// Returns the latest request prepared on the stream owner thread.
+  private func currentRequest() -> CalendarAgentRequest {
+    lifecycleState.withLock { $0.request }
   }
 }
