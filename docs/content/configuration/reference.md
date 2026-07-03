@@ -448,9 +448,9 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key               | Default | Description                       |
 | ----------------- | ------- | --------------------------------- |
-| `muted_icon`      | `"🔇"`  | Icon shown when audio is muted.   |
-| `low_icon`        | `"🔉"`  | Icon shown for low volume.        |
-| `high_icon`       | `"🔊"`  | Icon shown for high volume.       |
+| `muted_icon`      | `"􀊢"`   | Icon shown when audio is muted.   |
+| `low_icon`        | `"􀊤"`   | Icon shown for low volume.        |
+| `high_icon`       | `"􀊦"`   | Icon shown for high volume.       |
 | `show_percentage` | `true`  | Shows the volume percentage text. |
 | `min`             | `0`     | Minimum slider and display value. |
 | `max`             | `100`   | Maximum slider and display value. |

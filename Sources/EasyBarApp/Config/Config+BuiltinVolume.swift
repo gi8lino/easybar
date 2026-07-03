@@ -113,9 +113,9 @@ extension Config {
         opacity: 1
       ),
       content: .init(
-        mutedIcon: "🔇",
-        lowIcon: "🔉",
-        highIcon: "🔊",
+        mutedIcon: "􀊢",
+        lowIcon: "􀊤"",
+        highIcon: "􀊦",
         showPercentage: true,
         minValue: 0,
         maxValue: 100,
