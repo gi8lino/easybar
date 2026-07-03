@@ -7,10 +7,14 @@ enum SliderWidthResolver {
     explicitWidth: CGFloat?,
     fallback: CGFloat
   ) -> CGFloat {
-    if let explicitWidth {
+    if let explicitWidth, explicitWidth.isFinite, explicitWidth > 0 {
       return explicitWidth
     }
 
-    return fallback
+    if fallback.isFinite, fallback > 0 {
+      return fallback
+    }
+
+    return 1
   }
 }

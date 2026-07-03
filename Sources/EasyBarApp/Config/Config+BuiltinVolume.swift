@@ -190,11 +190,57 @@ extension Config {
       ) ?? builtinVolume.sliderWidth
     )
 
+    try validateVolumeContent(content)
+    try validateVolumeSlider(slider)
+
     builtinVolume = VolumeBuiltinConfig(
       placement: placement,
       style: style,
       content: content,
       slider: slider
     )
+  }
+
+  /// Validates volume range settings before they reach slider rendering.
+  private func validateVolumeContent(_ content: VolumeBuiltinConfig.Content) throws {
+    try validateFiniteNumber(content.minValue, path: "builtins.volume.content.min")
+    try validateFiniteNumber(content.maxValue, path: "builtins.volume.content.max")
+    try validateFiniteNumber(content.step, path: "builtins.volume.content.step")
+
+    guard content.minValue < content.maxValue else {
+      throw ConfigError.invalidValue(
+        path: "builtins.volume.content.max",
+        message: "expected a value greater than builtins.volume.content.min"
+      )
+    }
+
+    guard content.step > 0 else {
+      throw ConfigError.invalidValue(
+        path: "builtins.volume.content.step",
+        message: "expected a value greater than 0"
+      )
+    }
+  }
+
+  /// Validates volume slider layout settings.
+  private func validateVolumeSlider(_ slider: VolumeBuiltinConfig.Slider) throws {
+    try validateFiniteNumber(slider.width, path: "builtins.volume.slider.width")
+
+    guard slider.width > 0 else {
+      throw ConfigError.invalidValue(
+        path: "builtins.volume.slider.width",
+        message: "expected a value greater than 0"
+      )
+    }
+  }
+
+  /// Validates that one volume number is finite when loaded from config.
+  private func validateFiniteNumber(_ value: Double, path: String) throws {
+    guard value.isFinite else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected a finite number"
+      )
+    }
   }
 }

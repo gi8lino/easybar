@@ -447,3 +447,81 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
   }
 
 }
+
+extension ConfigLoaderBuiltinTests {
+  /// Verifies that the volume slider range must be ordered before reaching SwiftUI.
+  func testReloadRejectsInvalidVolumeSliderRange() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-volume-range.toml")
+
+    try writeConfig(
+      """
+      [builtins.volume.content]
+      min = 100
+      max = 0
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.volume.content.max")
+    XCTAssertEqual(message, "expected a value greater than builtins.volume.content.min")
+  }
+
+  /// Verifies that the volume slider step cannot be zero or negative.
+  func testReloadRejectsInvalidVolumeSliderStep() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-volume-step.toml")
+
+    try writeConfig(
+      """
+      [builtins.volume.content]
+      step = 0
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.volume.content.step")
+    XCTAssertEqual(message, "expected a value greater than 0")
+  }
+
+  /// Verifies that the configured volume slider width must be positive.
+  func testReloadRejectsInvalidVolumeSliderWidth() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-volume-width.toml")
+
+    try writeConfig(
+      """
+      [builtins.volume.slider]
+      width = 0
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.volume.slider.width")
+    XCTAssertEqual(message, "expected a value greater than 0")
+  }
+}
