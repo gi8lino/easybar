@@ -22,9 +22,6 @@ struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
   /// Human-readable subscription scope used in logs.
   static let subscriptionDescription = "all"
 
-  /// Default debounce delay for events that indicate state has already changed.
-  static let defaultRefreshDelayNanoseconds: UInt64 = 50_000_000
-
   /// Longer debounce for key bindings because AeroSpace emits `binding-triggered`
   /// before running the binding's commands.
   static let bindingTriggeredRefreshDelayNanoseconds: UInt64 = 150_000_000
@@ -43,13 +40,13 @@ struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
     name = try container.decode(String.self, forKey: .name)
   }
 
-  /// Debounce delay to use before re-reading AeroSpace state.
+  /// Delay to use before re-reading AeroSpace state.
   var refreshDelayNanoseconds: UInt64 {
     switch name {
     case Name.bindingTriggered:
       return Self.bindingTriggeredRefreshDelayNanoseconds
     default:
-      return Self.defaultRefreshDelayNanoseconds
+      return 0
     }
   }
 

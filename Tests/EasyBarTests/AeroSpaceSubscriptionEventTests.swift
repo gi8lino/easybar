@@ -55,4 +55,27 @@ final class AeroSpaceSubscriptionEventTests: XCTestCase {
         .refreshDelayNanoseconds
     )
   }
+
+  func testStateChangeEventsRefreshImmediately() {
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusChanged)
+        .refreshDelayNanoseconds,
+      0
+    )
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged)
+        .refreshDelayNanoseconds,
+      0
+    )
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.windowDetected)
+        .refreshDelayNanoseconds,
+      0
+    )
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.modeChanged)
+        .refreshDelayNanoseconds,
+      0
+    )
+  }
 }

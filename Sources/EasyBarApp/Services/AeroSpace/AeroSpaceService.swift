@@ -54,10 +54,10 @@ final class AeroSpaceService: ObservableObject {
       self?.handleAeroSpaceSubscriptionEvent(event)
     }
   )
-  /// Debounces subscription-triggered reloads so event bursts produce one state read.
+  /// Debounces delayed subscription reloads so event bursts produce one state read.
   private lazy var subscriptionRefreshScheduler = DebouncedActionScheduler(
     label: "aerospace subscription refresh",
-    delay: TimeInterval(AeroSpaceSubscriptionEvent.defaultRefreshDelayNanoseconds)
+    delay: TimeInterval(AeroSpaceSubscriptionEvent.bindingTriggeredRefreshDelayNanoseconds)
       / 1_000_000_000,
     logger: logger
   )
@@ -297,11 +297,22 @@ extension AeroSpaceService {
     }
   }
 
-  /// Debounces subscription-triggered reloads so event bursts produce one state read.
+  /// Refreshes immediately for state-change events and delays only pre-action events.
   fileprivate func scheduleSubscriptionRefresh(source: String, delayNanoseconds: UInt64) {
     let generation = currentGeneration()
-    let delaySeconds = TimeInterval(delayNanoseconds) / 1_000_000_000
-    subscriptionRefreshScheduler.schedule(after: delaySeconds) { [weak self] in
+
+    guard delayNanoseconds > 0 else {
+      guard shouldExecute(generation: generation) else { return }
+      triggerRefresh(source: source)
+      logger.debug(
+        "aerospace subscription refresh triggered",
+        .field("source", source),
+        .field("delay_ms", 0)
+      )
+      return
+    }
+
+    subscriptionRefreshScheduler.schedule { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
       self.triggerRefresh(source: source)
