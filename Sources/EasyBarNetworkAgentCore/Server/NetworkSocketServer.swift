@@ -44,7 +44,7 @@ final class NetworkSocketServer {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
       guard let self else { return .close }
-      return await self.handleClient(clientFD, request: request)
+      return self.handleClient(clientFD, request: request)
     }
   }
 
