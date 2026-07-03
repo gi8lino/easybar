@@ -7,6 +7,8 @@ import Foundation
 public final class AuthorizationRetryBackoff: @unchecked Sendable {
   private struct State {
     var scheduledTask: Task<Void, Never>?
+    var scheduledID: UInt64?
+    var nextScheduledID: UInt64 = 1
     var attemptIndex = 0
   }
 
@@ -31,6 +33,7 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
     let task = state.withLock { state -> Task<Void, Never>? in
       let task = state.scheduledTask
       state.scheduledTask = nil
+      state.scheduledID = nil
       state.attemptIndex = 0
       return task
     }
@@ -40,25 +43,30 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
 
   /// Schedules the next retry attempt when none is currently pending.
   public func schedule(_ action: @escaping @Sendable () -> Void) {
-    let scheduledDelay = state.withLock { state -> TimeInterval? in
-      guard state.scheduledTask == nil else {
+    let scheduled = state.withLock { state -> (id: UInt64, delay: TimeInterval)? in
+      guard state.scheduledID == nil else {
         return nil
       }
 
+      let scheduledID = state.nextScheduledID
+      state.nextScheduledID += 1
+      state.scheduledID = scheduledID
+
       let delay = delayForAttempt(state.attemptIndex)
       state.attemptIndex += 1
-      return delay
+      return (scheduledID, delay)
     }
 
-    guard let scheduledDelay else { return }
+    guard let scheduled else { return }
 
     logger.debug(
       "authorization retry scheduled",
-      .field("delay", "\(scheduledDelay)"),
+      .field("delay", "\(scheduled.delay)"),
     )
 
-    let nanoseconds = UInt64(max(scheduledDelay, 0) * 1_000_000_000)
+    let nanoseconds = UInt64(max(scheduled.delay, 0) * 1_000_000_000)
     let sleeper = sleeper
+    let scheduledID = scheduled.id
     let task = Task { [weak self] in
       do {
         try await sleeper.sleep(nanoseconds: nanoseconds)
@@ -67,7 +75,7 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
       }
 
       guard let self else { return }
-      guard self.clearScheduledTask() else { return }
+      guard self.clearScheduledTask(id: scheduledID) else { return }
 
       await MainActor.run {
         action()
@@ -75,7 +83,7 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
     }
 
     let shouldCancel = state.withLock { state -> Bool in
-      guard state.scheduledTask == nil else { return true }
+      guard state.scheduledID == scheduledID else { return true }
       state.scheduledTask = task
       return false
     }
@@ -95,13 +103,14 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
   }
 
   /// Clears the current scheduled task after it has fired.
-  private func clearScheduledTask() -> Bool {
+  private func clearScheduledTask(id: UInt64) -> Bool {
     state.withLock { state -> Bool in
-      guard state.scheduledTask != nil else {
+      guard state.scheduledID == id else {
         return false
       }
 
       state.scheduledTask = nil
+      state.scheduledID = nil
       return true
     }
   }

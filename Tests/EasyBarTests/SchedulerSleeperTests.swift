@@ -63,6 +63,22 @@ final class SchedulerSleeperTests: XCTestCase {
     wait(for: [expectation], timeout: 1)
   }
 
+  func testAuthorizationRetryBackoffRunsImmediateSleeperRetries() {
+    let backoff = AuthorizationRetryBackoff(
+      delays: [0],
+      logger: ProcessLogger(label: "test"),
+      sleeper: ImmediateSleeper()
+    )
+
+    for attempt in 0..<10 {
+      let retry = expectation(description: "immediate authorization retry \(attempt) fired")
+      backoff.schedule {
+        retry.fulfill()
+      }
+      wait(for: [retry], timeout: 1)
+    }
+  }
+
   func testBackoffSchedulerUsesCappedIncrementalDelays() {
     let sleeper = RecordingSleeper()
     let scheduler = BackoffScheduler(
