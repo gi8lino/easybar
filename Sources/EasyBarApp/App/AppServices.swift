@@ -42,7 +42,8 @@ struct AppServices {
     )
     let agentServices = makeAgentServices(
       logger: logger,
-      snapshot: configServices.bootstrapSnapshot
+      snapshot: configServices.bootstrapSnapshot,
+      metricsCoordinator: metricsCoordinator
     )
 
     let services = AppServices(
@@ -185,24 +186,31 @@ struct AppServices {
   }
 
   @MainActor
-  private static func makeAgentServices(logger: ProcessLogger, snapshot: ConfigSnapshot)
+  private static func makeAgentServices(
+    logger: ProcessLogger,
+    snapshot: ConfigSnapshot,
+    metricsCoordinator: MetricsCoordinator
+  )
     -> AgentServices
   {
     AgentServices(
       calendarAgentEventRelay: CalendarAgentEventRelay(logger: logger.child("calendar_relay")),
       networkAgentClient: NetworkAgentClient(
         logger: logger.child("network_agent"),
-        config: snapshot.networkAgent
+        config: snapshot.networkAgent,
+        metricsCoordinator: metricsCoordinator
       ),
       monthCalendarAgentClient: MonthCalendarAgentClient(
         logger: logger.child("month_agent"),
         calendarAgentConfig: snapshot.calendarAgent,
-        calendarConfig: snapshot.builtins.calendar
+        calendarConfig: snapshot.builtins.calendar,
+        metricsCoordinator: metricsCoordinator
       ),
       upcomingCalendarAgentClient: UpcomingCalendarAgentClient(
         logger: logger.child("upcoming_agent"),
         calendarAgentConfig: snapshot.calendarAgent,
-        calendarConfig: snapshot.builtins.calendar
+        calendarConfig: snapshot.builtins.calendar,
+        metricsCoordinator: metricsCoordinator
       ),
       composerCalendarAgentClient: ComposerCalendarAgentClient(
         logger: logger.child("composer_calendar_agent"),

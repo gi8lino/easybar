@@ -8,7 +8,8 @@ final class UpcomingCalendarAgentClient {
   static var shared = UpcomingCalendarAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent"),
     calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent,
-    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar
+    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar,
+    metricsCoordinator: .shared
   )
 
   /// Configures the shared upcoming-calendar agent client.
@@ -16,13 +17,15 @@ final class UpcomingCalendarAgentClient {
     shared = UpcomingCalendarAgentClient(
       logger: logger,
       calendarAgentConfig: snapshot.calendarAgent,
-      calendarConfig: snapshot.builtins.calendar
+      calendarConfig: snapshot.builtins.calendar,
+      metricsCoordinator: .shared
     )
   }
 
   private let logger: ProcessLogger
   private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private var calendarConfig: Config.CalendarBuiltinConfig
+  private let metricsCoordinator: MetricsCoordinator
 
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
@@ -36,17 +39,20 @@ final class UpcomingCalendarAgentClient {
     clearState: {
       NativeUpcomingCalendarStore.shared.clear()
     },
+    metricsCoordinator: metricsCoordinator,
     logger: logger.child("stream")
   )
 
   init(
     logger: ProcessLogger,
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
-    calendarConfig: Config.CalendarBuiltinConfig
+    calendarConfig: Config.CalendarBuiltinConfig,
+    metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
+    self.metricsCoordinator = metricsCoordinator
   }
 
   /// Returns whether the upcoming-calendar agent client is currently active.

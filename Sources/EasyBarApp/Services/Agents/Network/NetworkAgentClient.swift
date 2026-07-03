@@ -16,16 +16,23 @@ final class NetworkAgentClient {
   /// Shared network-agent client.
   static var shared = NetworkAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
-    config: Config.makeUnloadedConfig().snapshot().networkAgent
+    config: Config.makeUnloadedConfig().snapshot().networkAgent,
+    metricsCoordinator: .shared
   )
 
   /// Configures the shared network-agent client.
   static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = NetworkAgentClient(logger: logger, config: snapshot.networkAgent)
+    shared = NetworkAgentClient(
+      logger: logger,
+      config: snapshot.networkAgent,
+      metricsCoordinator: .shared
+    )
   }
 
   /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
+  /// Metrics recorder for network-agent lifecycle and messages.
+  private let metricsCoordinator: MetricsCoordinator
   /// Active network-agent config snapshot.
   private var config: ConfigSnapshot.NetworkAgent
   /// Whether the client lifecycle is active.
@@ -52,33 +59,42 @@ final class NetworkAgentClient {
     clearState: { [weak self] in
       self?.handleDisconnectedStateReset()
     },
-    onConnected: {
+    onConnected: { [weak self] in
+      guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentConnected(.network)
+        await self.metricsCoordinator.recordAgentConnected(.network)
       }
     },
-    onDisconnected: {
+    onDisconnected: { [weak self] in
+      guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentDisconnected(.network)
+        await self.metricsCoordinator.recordAgentDisconnected(.network)
       }
     },
-    onDecodedMessage: {
+    onDecodedMessage: { [weak self] in
+      guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentMessage(.network)
+        await self.metricsCoordinator.recordAgentMessage(.network)
       }
     },
-    onDecodeError: {
+    onDecodeError: { [weak self] in
+      guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentDecodeError(.network)
+        await self.metricsCoordinator.recordAgentDecodeError(.network)
       }
     },
     logger: logger.child("socket_client")
   )
 
   /// Creates the shared network-agent client.
-  init(logger: ProcessLogger, config: ConfigSnapshot.NetworkAgent) {
+  init(
+    logger: ProcessLogger,
+    config: ConfigSnapshot.NetworkAgent,
+    metricsCoordinator: MetricsCoordinator = .shared
+  ) {
     self.logger = logger
     self.config = config
+    self.metricsCoordinator = metricsCoordinator
   }
 
   /// Returns whether the client currently has an open socket.
@@ -150,7 +166,7 @@ final class NetworkAgentClient {
     logger.debug("network agent client manual refresh")
 
     Task {
-      await MetricsCoordinator.shared.recordAgentRefresh(.network)
+      await metricsCoordinator.recordAgentRefresh(.network)
     }
     client.refresh()
   }

@@ -17,6 +17,8 @@ final class CalendarAgentStreamController {
   private let clearState: () -> Void
   /// Metrics key used for this stream.
   private let metricsAgent: MetricsCoordinator.AgentKey
+  /// Metrics recorder for agent lifecycle and messages.
+  private let metricsCoordinator: MetricsCoordinator
   /// Wake-triggered refresh controller.
   private let wakeRefreshController: AgentWakeRefreshController
   /// Logger used for stream diagnostics.
@@ -41,25 +43,25 @@ final class CalendarAgentStreamController {
     onConnected: { [weak self] in
       guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentConnected(self.metricsAgent)
+        await self.metricsCoordinator.recordAgentConnected(self.metricsAgent)
       }
     },
     onDisconnected: { [weak self] in
       guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentDisconnected(self.metricsAgent)
+        await self.metricsCoordinator.recordAgentDisconnected(self.metricsAgent)
       }
     },
     onDecodedMessage: { [weak self] in
       guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentMessage(self.metricsAgent)
+        await self.metricsCoordinator.recordAgentMessage(self.metricsAgent)
       }
     },
     onDecodeError: { [weak self] in
       guard let self else { return }
       Task {
-        await MetricsCoordinator.shared.recordAgentDecodeError(self.metricsAgent)
+        await self.metricsCoordinator.recordAgentDecodeError(self.metricsAgent)
       }
     },
     logger: logger.child("socket_client")
@@ -73,10 +75,12 @@ final class CalendarAgentStreamController {
     makeRequest: @escaping () -> CalendarAgentRequest,
     applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void,
     clearState: @escaping () -> Void = {},
+    metricsCoordinator: MetricsCoordinator = .shared,
     logger: ProcessLogger
   ) {
     self.label = label
     self.metricsAgent = metricsAgent
+    self.metricsCoordinator = metricsCoordinator
     self.socketPath = socketPath
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
@@ -145,7 +149,7 @@ final class CalendarAgentStreamController {
     guard started else { return }
 
     Task {
-      await MetricsCoordinator.shared.recordAgentRefresh(metricsAgent)
+      await metricsCoordinator.recordAgentRefresh(metricsAgent)
     }
     client.refresh()
   }

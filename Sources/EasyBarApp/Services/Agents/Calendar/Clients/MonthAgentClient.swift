@@ -9,7 +9,8 @@ final class MonthCalendarAgentClient {
   static var shared = MonthCalendarAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.month_agent"),
     calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent,
-    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar
+    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar,
+    metricsCoordinator: .shared
   )
 
   /// Configures the shared month-calendar agent client.
@@ -17,7 +18,8 @@ final class MonthCalendarAgentClient {
     shared = MonthCalendarAgentClient(
       logger: logger,
       calendarAgentConfig: snapshot.calendarAgent,
-      calendarConfig: snapshot.builtins.calendar
+      calendarConfig: snapshot.builtins.calendar,
+      metricsCoordinator: .shared
     )
   }
 
@@ -27,6 +29,8 @@ final class MonthCalendarAgentClient {
   private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
   /// Active calendar built-in config snapshot.
   private var calendarConfig: Config.CalendarBuiltinConfig
+  /// Metrics recorder for calendar-agent lifecycle and messages.
+  private let metricsCoordinator: MetricsCoordinator
 
   /// Month radii loaded around the currently visible month.
   private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
@@ -50,6 +54,7 @@ final class MonthCalendarAgentClient {
     clearState: {
       NativeMonthCalendarStore.shared.clear()
     },
+    metricsCoordinator: metricsCoordinator,
     logger: logger.child("stream")
   )
 
@@ -57,11 +62,13 @@ final class MonthCalendarAgentClient {
   init(
     logger: ProcessLogger,
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
-    calendarConfig: Config.CalendarBuiltinConfig
+    calendarConfig: Config.CalendarBuiltinConfig,
+    metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
+    self.metricsCoordinator = metricsCoordinator
   }
 
   /// Returns whether the month-calendar agent client is currently active.
