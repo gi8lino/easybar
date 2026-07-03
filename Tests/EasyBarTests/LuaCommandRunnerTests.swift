@@ -92,4 +92,21 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertTrue(result.output.contains("command not found"))
     XCTAssertTrue(result.output.contains("__easybar_missing_command__"))
   }
+
+  func testRunClampsUnsafeTimeouts() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    for timeoutSeconds in [TimeInterval.nan, .infinity, .greatestFiniteMagnitude, -1] {
+      let result = await runner.run(
+        command: "printf 'ok'",
+        limits: .init(timeoutSeconds: timeoutSeconds, maxOutputBytes: 1024)
+      )
+
+      XCTAssertEqual(result.output, "ok")
+      XCTAssertEqual(result.status, 0)
+    }
+  }
+
 }

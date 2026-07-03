@@ -168,9 +168,8 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Schedules the hard timeout for this command.
   private func scheduleTimeout() {
-    guard limits.timeoutSeconds > 0 else { return }
-
-    let timeoutNanoseconds = UInt64(limits.timeoutSeconds * 1_000_000_000)
+    let timeoutNanoseconds = clampedSleepNanoseconds(from: limits.timeoutSeconds)
+    guard timeoutNanoseconds > 0 else { return }
 
     timeoutTask = Task {
       do {

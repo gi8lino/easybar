@@ -6,7 +6,7 @@ import Foundation
 /// should never be allowed to trap during `Double` to `UInt64` conversion. Invalid
 /// or negative delays run immediately, while positive overflow is capped at the
 /// largest representable sleep duration.
-func clampedSleepNanoseconds(from delay: TimeInterval) -> UInt64 {
+public func clampedSleepNanoseconds(from delay: TimeInterval) -> UInt64 {
   guard !delay.isNaN else {
     return 0
   }
