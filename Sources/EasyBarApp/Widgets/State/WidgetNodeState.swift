@@ -17,6 +17,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   var visible: Bool
 
   var role: WidgetNodeRole?
+  var popupPresented: Bool?
   var receivesMouseHover: Bool?
   var receivesMouseDown: Bool?
   var receivesMouseUp: Bool?
@@ -107,6 +108,11 @@ struct WidgetNodeState: Identifiable, Codable, Equatable {
   /// Returns whether this node is popup content.
   var isPopupContent: Bool {
     return role == .popupContent
+  }
+
+  /// Returns whether the node should present its popup even while idle.
+  var presentsPopupAutomatically: Bool {
+    return popupPresented == true
   }
 
   /// Returns whether this node should own hover interactions.

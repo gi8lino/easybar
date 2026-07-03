@@ -23,7 +23,10 @@ struct WidgetNodeView: View {
       }
     }
     .onChange(of: popupPresented, initial: true) { _, presented in
-      updatePopupPanel(isPresented: presented)
+      updatePopupPanel(isPresented: presented || node.presentsPopupAutomatically)
+    }
+    .onChange(of: node, initial: false) { _, _ in
+      updatePopupPanel(isPresented: popupPresented || node.presentsPopupAutomatically)
     }
     .onDisappear {
       popupPanel.close()

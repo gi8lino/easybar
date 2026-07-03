@@ -33,6 +33,7 @@ final class WiFiNativeWidget: NativeWidget {
     let activeColorHex: String
     let inactiveColorHex: String
     let inlineContentVisible: Bool
+    let detailsContentVisible: Bool
   }
 
   /// Creates the native Wi-Fi widget from immutable config sections.
@@ -120,7 +121,8 @@ final class WiFiNativeWidget: NativeWidget {
       visualState: presentation.visualState,
       activeColorHex: presentation.activeColorHex,
       inactiveColorHex: presentation.inactiveColorHex,
-      inlineContentVisible: shouldShowInlineContent(config: config)
+      inlineContentVisible: shouldShowInlineContent(config: config),
+      detailsContentVisible: shouldShowDetailsContent(config: config)
     )
   }
 }
@@ -160,5 +162,11 @@ extension WiFiNativeWidget {
     case .hover:
       return isHovered
     }
+  }
+
+  /// Returns whether details content should be presented while the widget is idle.
+  private func shouldShowDetailsContent(config: Config.WiFiBuiltinConfig) -> Bool {
+    guard config.mode == .details else { return false }
+    return config.surface == .always
   }
 }

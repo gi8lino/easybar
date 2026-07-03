@@ -116,12 +116,15 @@ extension WiFiRenderer {
 extension WiFiRenderer {
   /// Creates the always-visible Wi-Fi anchor nodes.
   private func makeAnchorNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    [
-      BuiltinNativeNodeFactory.makeRowContainerNode(
-        rootID: rootID,
-        placement: snapshot.config.placement,
-        style: snapshot.config.style
-      ),
+    var rootNode = BuiltinNativeNodeFactory.makeRowContainerNode(
+      rootID: rootID,
+      placement: snapshot.config.placement,
+      style: snapshot.config.style
+    )
+    rootNode.popupPresented = snapshot.detailsContentVisible
+
+    return [
+      rootNode,
 
       BuiltinNativeNodeFactory.makeChildWiFiIndicatorNode(
         rootID: rootID,

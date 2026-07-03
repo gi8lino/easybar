@@ -63,6 +63,7 @@ extension WidgetNodeView {
 
   /// Closes the popup when neither anchor nor content is hovered.
   func closePopupIfIdle() {
+    guard !node.presentsPopupAutomatically else { return }
     guard !anchorHovered else { return }
     guard !popupHovered else { return }
     popupPresented = false

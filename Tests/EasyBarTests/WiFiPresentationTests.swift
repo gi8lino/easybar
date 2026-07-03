@@ -50,6 +50,68 @@ final class WiFiPresentationTests: ConfigLoaderTestCase {
     )
   }
 
+  @MainActor
+  func testWiFiDetailsSurfaceAlwaysPresentsPopupWhileIdle() throws {
+    let root = try renderedWiFiRootNode(surface: .always)
+
+    XCTAssertEqual(root.popupPresented, true)
+  }
+
+  @MainActor
+  func testWiFiDetailsSurfaceHoverDoesNotPresentPopupWhileIdle() throws {
+    let root = try renderedWiFiRootNode(surface: .hover)
+
+    XCTAssertEqual(root.popupPresented, false)
+  }
+
+  /// Returns one rendered Wi-Fi root node for a details-mode surface behavior test.
+  @MainActor
+  private func renderedWiFiRootNode(
+    surface: Config.BuiltinWiFiContentSurface
+  ) throws -> WidgetNodeState {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("wifi-details-surface.toml")
+
+    try writeConfig(
+      """
+      [builtins.wifi.content]
+      mode = "details"
+      surface = "\(surface.rawValue)"
+
+      [builtins.wifi.fields]
+      ssid = true
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+    XCTAssertNil(error)
+
+    let network = networkSnapshot()
+    let presentation = WiFiPresentation(snapshot: network, config: config.builtinWiFi)
+    let detailsContentVisible = config.builtinWiFi.surface == .always
+    let snapshot = WiFiNativeWidget.Snapshot(
+      config: config.builtinWiFi,
+      network: network,
+      content: presentation.content,
+      signalLevel: presentation.signalLevel,
+      visualState: presentation.visualState,
+      activeColorHex: presentation.activeColorHex,
+      inactiveColorHex: presentation.inactiveColorHex,
+      inlineContentVisible: false,
+      detailsContentVisible: detailsContentVisible
+    )
+    let nodes = WiFiRenderer(rootID: "builtin_wifi").makeNodes(snapshot: snapshot)
+
+    guard let root = nodes.first(where: { $0.id == "builtin_wifi" }) else {
+      throw NSError(domain: "WiFiPresentationTests", code: 1)
+    }
+
+    return root
+  }
+
   /// Returns one populated network snapshot for Wi-Fi presentation tests.
   private func networkSnapshot() -> NetworkAgentSnapshot {
     NetworkAgentSnapshot(
