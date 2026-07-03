@@ -45,9 +45,9 @@ func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRunti
     fallback: defaultNetworkAgentSocketPath
   )
 
-  let refreshIntervalSeconds =
-    tomlNumber(networkTable?["refresh_interval_seconds"])
-    ?? 60
+  let refreshIntervalSeconds = resolvedNetworkRefreshIntervalSeconds(
+    from: networkTable?["refresh_interval_seconds"]
+  )
 
   let allowUnauthorizedFieldsWithoutLocation =
     networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
@@ -87,6 +87,18 @@ func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-
 
 /// Returns the default Unix socket path used by the network agent.
 func defaultNetworkAgentSocketPath() -> String { return "/tmp/EasyBar/network-agent.sock" }
+
+/// Returns a non-negative network-agent refresh interval.
+private func resolvedNetworkRefreshIntervalSeconds(
+  from value: (any TOMLValueConvertible)?
+) -> Double {
+  let defaultIntervalSeconds = 60.0
+  guard let intervalSeconds = tomlNumber(value), intervalSeconds >= 0 else {
+    return defaultIntervalSeconds
+  }
+
+  return intervalSeconds
+}
 
 /// Returns one TOML number as a Double.
 private func tomlNumber(_ value: (any TOMLValueConvertible)?) -> Double? {

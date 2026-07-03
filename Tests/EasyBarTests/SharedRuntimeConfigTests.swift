@@ -100,6 +100,26 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.logging.level, .trace)
   }
+
+  /// Verifies that shared helper config does not pass invalid network intervals through.
+  func testLoadFallsBackForNegativeNetworkAgentRefreshInterval() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-negative-network.toml")
+
+    try writeConfig(
+      """
+      [agents.network]
+      refresh_interval_seconds = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let runtime = SharedRuntimeConfig.load()
+
+    XCTAssertEqual(runtime.configPath, configFileURL.path)
+    XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 60)
+  }
 }
 
 extension SharedRuntimeConfigTests {
