@@ -8,6 +8,10 @@ extension VolumeSliderNativeWidget {
   func scheduleAutoHide() {
     cancelAutoHide()
 
+    let taskID = nextAutoHideTaskID
+    nextAutoHideTaskID &+= 1
+    autoHideTaskID = taskID
+
     autoHideTask = Task { [weak self] in
       do {
         try await Task.sleep(nanoseconds: sliderAutoHideDelayNanoseconds)
@@ -16,6 +20,9 @@ extension VolumeSliderNativeWidget {
       }
 
       guard let self else { return }
+      guard self.autoHideTaskID == taskID else { return }
+      self.autoHideTask = nil
+      self.autoHideTaskID = nil
       self.isHovered = false
       self.publish()
     }
@@ -25,6 +32,7 @@ extension VolumeSliderNativeWidget {
   func cancelAutoHide() {
     autoHideTask?.cancel()
     autoHideTask = nil
+    autoHideTaskID = nil
   }
 
   /// Resolves the volume icon.

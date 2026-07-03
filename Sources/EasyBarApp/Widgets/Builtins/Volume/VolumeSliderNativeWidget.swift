@@ -21,6 +21,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
   var isHovered = false
   var isAdjustingSlider = false
   var autoHideTask: Task<Void, Never>?
+  var autoHideTaskID: UInt64?
+  var nextAutoHideTaskID: UInt64 = 1
   private lazy var renderer = VolumeRenderer(rootID: rootID)
 
   struct SystemVolumeState {
