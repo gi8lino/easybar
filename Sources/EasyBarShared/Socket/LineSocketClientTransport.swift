@@ -93,7 +93,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
         }
 
         if n == 0 {
-          break
+          throw LineSocketClientTransportError.writeFailed("socket write returned 0 bytes")
         }
 
         sent += n
