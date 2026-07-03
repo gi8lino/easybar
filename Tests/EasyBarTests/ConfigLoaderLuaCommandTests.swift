@@ -48,4 +48,29 @@ final class ConfigLoaderLuaCommandTests: ConfigLoaderTestCase {
     XCTAssertEqual(message, "expected a value greater than 0")
   }
 
+  func testReloadRejectsNonFiniteLuaCommandTimeout() throws {
+    for rawValue in ["nan", "inf", "-inf"] {
+      let config = Config.makeUnloadedConfig()
+      let configFileURL = tempDirectoryURL.appendingPathComponent(
+        "invalid-lua-command-timeout-\(rawValue).toml"
+      )
+
+      try """
+      [app.lua_commands]
+      timeout_seconds = \(rawValue)
+      """.write(to: configFileURL, atomically: true, encoding: .utf8)
+
+      setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+      let error = config.reload()
+
+      guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+        return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+      }
+
+      XCTAssertEqual(path, "app.lua_commands.timeout_seconds")
+      XCTAssertEqual(message, "expected a finite number")
+    }
+  }
+
 }

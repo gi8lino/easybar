@@ -349,21 +349,30 @@ extension Config {
     )
   }
 
-  /// Returns a required TOML number or throws a typed config error.
+  /// Returns a required finite TOML number or throws a typed config error.
   func requiredNumber(_ value: any TOMLValueConvertible, path: String) throws -> Double {
+    let number: Double
+
     if let double = value.double {
-      return double
+      number = double
+    } else if let int = value.int {
+      number = Double(int)
+    } else {
+      throw ConfigError.invalidType(
+        path: path,
+        expected: "number",
+        actual: describe(value)
+      )
     }
 
-    if let int = value.int {
-      return Double(int)
+    guard number.isFinite else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected a finite number"
+      )
     }
 
-    throw ConfigError.invalidType(
-      path: path,
-      expected: "number",
-      actual: describe(value)
-    )
+    return number
   }
 
   /// Returns a required TOML string array or throws a typed config error.
