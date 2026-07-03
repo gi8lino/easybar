@@ -23,6 +23,8 @@ final class SocketServer {
   private var commandHandler: ((IPC.Command) -> Void)?
   /// Handler invoked for config validation requests.
   private var validateConfigHandler: ((String?) async -> IPC.Message)?
+  /// Whether the socket server has already been started.
+  private var started = false
 
   /// Creates a socket server bound to the configured socket path.
   init(
@@ -45,6 +47,9 @@ final class SocketServer {
     handler: @escaping (IPC.Command) -> Void,
     validateConfigHandler: @escaping (String?) async -> IPC.Message
   ) {
+    guard !started else { return }
+
+    started = true
     commandHandler = handler
     self.validateConfigHandler = validateConfigHandler
 
@@ -114,6 +119,7 @@ final class SocketServer {
 
   /// Stops the socket listener.
   func stop() {
+    started = false
     commandHandler = nil
     validateConfigHandler = nil
 

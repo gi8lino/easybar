@@ -61,17 +61,31 @@ public final class LineSocketServerTransport<
 
   /// Starts listening and dispatches decoded requests to the handler.
   public func start(_ handler: @escaping (Int32, Request) async -> ClientDisposition) {
-    guard let fd = makeListeningSocket() else { return }
-
     let shouldStart = state.withLock { state -> Bool in
       guard !state.running else { return false }
-      state.serverFD = fd
       state.running = true
       return true
     }
 
-    guard shouldStart else {
-      close(fd)
+    guard shouldStart else { return }
+
+    guard let fd = makeListeningSocket() else {
+      state.withLock { state in
+        if state.serverFD < 0 {
+          state.running = false
+        }
+      }
+      return
+    }
+
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.running else { return true }
+      state.serverFD = fd
+      return false
+    }
+
+    if shouldCancel {
+      closeListeningSocket(fd)
       return
     }
 
@@ -85,13 +99,13 @@ public final class LineSocketServerTransport<
       await self.acceptLoop(handler: handler)
     }
 
-    let shouldCancel = state.withLock { state -> Bool in
+    let shouldCancelTask = state.withLock { state -> Bool in
       guard state.running, state.serverFD == fd else { return true }
       state.acceptTask = task
       return false
     }
 
-    if shouldCancel {
+    if shouldCancelTask {
       task.cancel()
     }
   }
@@ -262,6 +276,13 @@ public final class LineSocketServerTransport<
     }
 
     return fd
+  }
+
+  /// Closes one listening socket and removes its filesystem path.
+  private func closeListeningSocket(_ fd: Int32) {
+    Darwin.shutdown(fd, SHUT_RDWR)
+    close(fd)
+    unlink(socketPath)
   }
 
   /// Accepts client connections until the server stops.

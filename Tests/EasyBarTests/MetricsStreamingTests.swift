@@ -101,6 +101,36 @@ final class MetricsStreamingTests: XCTestCase {
     XCTAssertEqual(warnings, [])
   }
 
+  func testDuplicateSocketServerStartKeepsExistingListener() throws {
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    server.start(
+      handler: { _ in },
+      validateConfigHandler: { configPath in
+        .configValidated(configPath: configPath ?? "<default>", warnings: [])
+      }
+    )
+    server.start(
+      handler: { _ in },
+      validateConfigHandler: { _ in .rejected(message: "duplicate start should be ignored") }
+    )
+    defer { server.stop() }
+
+    let client = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+    let configPath = socketDirectoryURL.appendingPathComponent("duplicate-start.toml").path
+
+    let response = try client.send(request: .makeValidateConfig(configPath: configPath))
+
+    guard case .configValidated(let validatedPath, let warnings) = response else {
+      return XCTFail("Expected configValidated response, got \(response)")
+    }
+
+    XCTAssertEqual(validatedPath, configPath)
+    XCTAssertEqual(warnings, [])
+  }
+
   private func connectUnixSocket(path: String) throws -> Int32 {
     let clientFD = socket(AF_UNIX, SOCK_STREAM, 0)
     guard clientFD >= 0 else {
