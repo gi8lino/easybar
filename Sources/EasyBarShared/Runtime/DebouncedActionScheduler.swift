@@ -49,7 +49,7 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
       )
     }
 
-    let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
+    let nanoseconds = clampedSleepNanoseconds(from: delay)
     let sleeper = sleeper
     let task = Task { [weak self] in
       do {

@@ -139,4 +139,52 @@ final class SchedulerSleeperTests: XCTestCase {
       wait(for: [retry], timeout: 1)
     }
   }
+
+  func testSchedulersClampUnsafeDelays() {
+    let sleeper = RecordingSleeper()
+
+    let debounced = DebouncedActionScheduler(
+      delay: -1,
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let debouncedFired = expectation(description: "negative debounced delay fired")
+    debounced.schedule {
+      debouncedFired.fulfill()
+    }
+    wait(for: [debouncedFired], timeout: 1)
+
+    let authorizationBackoff = AuthorizationRetryBackoff(
+      delays: [.nan],
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let authorizationRetryFired = expectation(description: "nan authorization retry fired")
+    authorizationBackoff.schedule {
+      authorizationRetryFired.fulfill()
+    }
+    wait(for: [authorizationRetryFired], timeout: 1)
+
+    let backoff = BackoffScheduler(
+      label: "test retry",
+      delays: [.infinity, .greatestFiniteMagnitude],
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let infiniteBackoffFired = expectation(description: "infinite backoff fired")
+    let hugeBackoffFired = expectation(description: "huge backoff fired")
+
+    backoff.schedule {
+      infiniteBackoffFired.fulfill()
+    }
+    wait(for: [infiniteBackoffFired], timeout: 1)
+
+    backoff.schedule {
+      hugeBackoffFired.fulfill()
+    }
+    wait(for: [hugeBackoffFired], timeout: 1)
+
+    XCTAssertEqual(sleeper.sleeps, [0, 0, UInt64.max, UInt64.max])
+  }
+
 }

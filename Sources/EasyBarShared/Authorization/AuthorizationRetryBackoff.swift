@@ -64,7 +64,7 @@ public final class AuthorizationRetryBackoff: @unchecked Sendable {
       .field("delay", "\(scheduled.delay)"),
     )
 
-    let nanoseconds = UInt64(max(scheduled.delay, 0) * 1_000_000_000)
+    let nanoseconds = clampedSleepNanoseconds(from: scheduled.delay)
     let sleeper = sleeper
     let scheduledID = scheduled.id
     let task = Task { [weak self] in
