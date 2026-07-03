@@ -114,7 +114,7 @@ extension Config {
       ),
       content: .init(
         mutedIcon: "􀊢",
-        lowIcon: "􀊤"",
+        lowIcon: "􀊤",
         highIcon: "􀊦",
         showPercentage: true,
         minValue: 0,
