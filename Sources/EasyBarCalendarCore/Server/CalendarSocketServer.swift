@@ -140,7 +140,7 @@ final class CalendarSocketServer {
 
       guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       let snapshot = provider.snapshot(for: query)
@@ -151,7 +151,7 @@ final class CalendarSocketServer {
         )
       else {
         _ = transport.removeSubscriber(fd: clientFD)
-        return .keepOpen
+        return .close
       }
 
       return .keepOpen
