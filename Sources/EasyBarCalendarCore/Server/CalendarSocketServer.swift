@@ -3,6 +3,7 @@ import EasyBarShared
 import Foundation
 
 /// Serves calendar agent requests over a line-delimited socket protocol.
+@MainActor
 final class CalendarSocketServer {
   /// Active subscription state for one connected client.
   private struct Subscriber {
@@ -38,7 +39,8 @@ final class CalendarSocketServer {
   func start(provider: CalendarSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
-      self?.handleClient(clientFD, request: request) ?? .close
+      guard let self else { return .close }
+      return await self.handleClient(clientFD, request: request)
     }
   }
 

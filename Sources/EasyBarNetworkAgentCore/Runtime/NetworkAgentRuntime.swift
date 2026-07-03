@@ -69,7 +69,9 @@ public final class NetworkAgentRuntime {
     )
 
     snapshotProvider.start { [weak self] in
-      self?.socketServer.broadcastSnapshots()
+      Task { @MainActor in
+        self?.socketServer.broadcastSnapshots()
+      }
     }
 
     socketServer.start(provider: snapshotProvider)

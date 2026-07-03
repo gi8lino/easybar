@@ -3,6 +3,7 @@ import EasyBarShared
 import Foundation
 
 /// Serves network-agent socket requests.
+@MainActor
 final class NetworkSocketServer {
   /// One subscribed client field selection.
   private struct Subscriber {
@@ -42,7 +43,8 @@ final class NetworkSocketServer {
   func start(provider: NetworkSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
-      self?.handleClient(clientFD, request: request) ?? .close
+      guard let self else { return .close }
+      return await self.handleClient(clientFD, request: request)
     }
   }
 
