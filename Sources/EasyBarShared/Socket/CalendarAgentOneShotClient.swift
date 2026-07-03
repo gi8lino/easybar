@@ -79,7 +79,9 @@ public enum CalendarAgentOneShotClient {
 
   /// Connects one Unix-domain socket to the given filesystem path.
   private static func connectSocket(fd: Int32, path: String) -> Bool {
-    var address = makeSockAddrUn(path: path)
+    guard var address = try? makeSockAddrUn(path: path) else {
+      return false
+    }
     let length = socklen_t(MemoryLayout<sockaddr_un>.size)
 
     return withUnsafePointer(to: &address) { pointer in

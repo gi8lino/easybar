@@ -327,10 +327,23 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       return nil
     }
 
-    var addr = makeSockAddrUn(path: socketPath)
+    let addr: sockaddr_un
+    do {
+      addr = try makeSockAddrUn(path: socketPath)
+    } catch {
+      logger.warn(
+        "\(label) invalid socket path",
+        .field("socket", socketPath),
+        .field("error", error),
+      )
+      close(fd)
+      return nil
+    }
+
+    var mutableAddr = addr
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
-    let connectResult = withUnsafePointer(to: &addr) {
+    let connectResult = withUnsafePointer(to: &mutableAddr) {
       $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         Darwin.connect(fd, $0, addrLen)
       }

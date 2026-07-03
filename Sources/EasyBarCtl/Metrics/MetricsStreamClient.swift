@@ -23,7 +23,7 @@ struct MetricsStreamClient {
       throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
     }
 
-    var addr = makeSockAddrUn(path: socketPath)
+    var addr = try makeSockAddrUn(path: socketPath)
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
     let connectResult = withUnsafePointer(to: &addr) {

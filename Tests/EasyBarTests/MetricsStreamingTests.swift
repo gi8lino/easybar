@@ -12,7 +12,7 @@ final class MetricsStreamingTests: XCTestCase {
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    socketDirectoryURL = FileManager.default.temporaryDirectory
+    socketDirectoryURL = URL(fileURLWithPath: "/tmp", isDirectory: true)
       .appendingPathComponent("easybar-metrics-tests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(
       at: socketDirectoryURL,
@@ -142,7 +142,7 @@ final class MetricsStreamingTests: XCTestCase {
       throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
     }
 
-    var address = makeSockAddrUn(path: path)
+    var address = try makeSockAddrUn(path: path)
     let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
 
     let didConnect = withUnsafePointer(to: &address) {

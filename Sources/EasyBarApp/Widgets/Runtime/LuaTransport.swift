@@ -171,10 +171,19 @@ final class LuaTransport: @unchecked Sendable {
       throw TransportError.startupFailed("failed to configure lua socket no-sigpipe fd=\(fd)")
     }
 
-    var addr = makeSockAddrUn(path: socketPath)
+    let addr: sockaddr_un
+    do {
+      addr = try makeSockAddrUn(path: socketPath)
+    } catch {
+      close(fd)
+      unlink(socketPath)
+      throw TransportError.startupFailed("invalid lua socket path path=\(socketPath) error=\(error)")
+    }
+
+    var mutableAddr = addr
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
-    let bindResult = withUnsafePointer(to: &addr) {
+    let bindResult = withUnsafePointer(to: &mutableAddr) {
       $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         bind(fd, $0, addrLen)
       }

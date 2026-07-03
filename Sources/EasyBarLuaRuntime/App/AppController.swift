@@ -68,10 +68,18 @@ final class AppController {
       throw RuntimeBootstrapError.noSigPipeFailed
     }
 
-    var address = makeSockAddrUn(path: path)
+    let address: sockaddr_un
+    do {
+      address = try makeSockAddrUn(path: path)
+    } catch {
+      close(fd)
+      throw RuntimeBootstrapError.invalidSocketPath(path: path, message: "\(error)")
+    }
+
+    var mutableAddress = address
     let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
 
-    let connectResult = withUnsafePointer(to: &address) {
+    let connectResult = withUnsafePointer(to: &mutableAddress) {
       $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         connect(fd, $0, addressLength)
       }
@@ -142,6 +150,7 @@ private enum RuntimeBootstrapError: LocalizedError {
   case usage
   case socketFailed(errno: Int32)
   case noSigPipeFailed
+  case invalidSocketPath(path: String, message: String)
   case connectFailed(path: String, message: String)
   case dup2Failed(stream: String, message: String)
   case execUnexpectedlyReturned
@@ -157,6 +166,8 @@ private enum RuntimeBootstrapError: LocalizedError {
       return "socket failed errno=\(errno)"
     case .noSigPipeFailed:
       return "failed to configure socket no-sigpipe"
+    case .invalidSocketPath(let path, let message):
+      return "invalid socket path path=\(path) error=\(message)"
     case .connectFailed(let path, let message):
       return "connect failed path=\(path) error=\(message)"
     case .dup2Failed(let stream, let message):

@@ -237,10 +237,24 @@ public final class LineSocketServerTransport<
       return nil
     }
 
-    var addr = makeSockAddrUn(path: socketPath)
+    let addr: sockaddr_un
+    do {
+      addr = try makeSockAddrUn(path: socketPath)
+    } catch {
+      logger.error(
+        "\(serverLabel) invalid socket path",
+        .field("path", "\(socketPath)"),
+        .field("error", "\(error)"),
+      )
+      close(fd)
+      unlink(socketPath)
+      return nil
+    }
+
+    var mutableAddr = addr
     let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
-    let bindResult = withUnsafePointer(to: &addr) {
+    let bindResult = withUnsafePointer(to: &mutableAddr) {
       $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         bind(fd, $0, addrLen)
       }
