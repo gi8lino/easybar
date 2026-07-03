@@ -30,6 +30,10 @@ final class AeroSpaceService: ObservableObject {
     var appTerminationObserver: NSObjectProtocol?
     /// Delayed refresh scheduled after app launch.
     var pendingLaunchRefresh: Task<Void, Never>?
+    /// Identifier for the current delayed launch refresh task.
+    var pendingLaunchRefreshID: UInt64?
+    /// Next delayed launch refresh identifier.
+    var nextLaunchRefreshID: UInt64 = 1
     /// Whether the service is active.
     var running = false
     /// Cached AeroSpace version validation result for this service run.
@@ -119,6 +123,7 @@ extension AeroSpaceService {
       let terminationObserver = coordination.appTerminationObserver
       coordination.pendingLaunchRefresh?.cancel()
       coordination.pendingLaunchRefresh = nil
+      coordination.pendingLaunchRefreshID = nil
       coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
@@ -419,7 +424,13 @@ extension AeroSpaceService {
       .field("app", app.localizedName ?? "")
     )
 
-    let generation = currentGeneration()
+    let scheduled = withLock { coordination -> (id: UInt64, generation: UInt64) in
+      let id = coordination.nextLaunchRefreshID
+      coordination.nextLaunchRefreshID &+= 1
+      coordination.pendingLaunchRefreshID = id
+      return (id, coordination.generation)
+    }
+
     let refreshTask = Task { [weak self] in
       do {
         try await Task.sleep(nanoseconds: 600_000_000)
@@ -428,8 +439,8 @@ extension AeroSpaceService {
       }
 
       guard let self else { return }
-      guard self.shouldExecute(generation: generation) else { return }
-      self.clearPendingLaunchRefresh(refreshTaskID: generation)
+      guard self.shouldExecute(generation: scheduled.generation) else { return }
+      guard self.clearPendingLaunchRefresh(id: scheduled.id) else { return }
 
       self.logger.debug(
         "aerospace delayed launch refresh firing",
@@ -438,8 +449,14 @@ extension AeroSpaceService {
       self.refresh()
     }
 
-    withLock { coordination in
+    let shouldCancel = withLock { coordination -> Bool in
+      guard coordination.pendingLaunchRefreshID == scheduled.id else { return true }
       coordination.pendingLaunchRefresh = refreshTask
+      return false
+    }
+
+    if shouldCancel {
+      refreshTask.cancel()
     }
   }
 
@@ -448,6 +465,7 @@ extension AeroSpaceService {
     let task = withLock { coordination -> Task<Void, Never>? in
       let task = coordination.pendingLaunchRefresh
       coordination.pendingLaunchRefresh = nil
+      coordination.pendingLaunchRefreshID = nil
       return task
     }
 
@@ -460,10 +478,12 @@ extension AeroSpaceService {
   }
 
   /// Clears the pending launch refresh if it still matches the fired work item.
-  fileprivate func clearPendingLaunchRefresh(refreshTaskID generation: UInt64) {
-    withLock { coordination in
-      guard coordination.generation == generation else { return }
+  fileprivate func clearPendingLaunchRefresh(id: UInt64) -> Bool {
+    withLock { coordination -> Bool in
+      guard coordination.pendingLaunchRefreshID == id else { return false }
       coordination.pendingLaunchRefresh = nil
+      coordination.pendingLaunchRefreshID = nil
+      return true
     }
   }
 
