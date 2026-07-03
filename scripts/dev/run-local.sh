@@ -40,6 +40,22 @@ make --no-print-directory copy-debug-resources RUN_ARCH="$run_arch"
 echo "Preparing debug app bundle"
 make --no-print-directory prepare-debug-app-bundle VERSION="$version" BUNDLE_ID="$bundle_id"
 
+app_exec="$(basename "$app_bin")"
+calendar_agent_exec="$(basename "$calendar_agent_bin")"
+network_agent_exec="$(basename "$network_agent_bin")"
+app_bundle="$(dirname "$(dirname "$app_macos")")"
+calendar_agent_bundle="$(dirname "$(dirname "$calendar_macos")")"
+network_agent_bundle="$(dirname "$(dirname "$network_macos")")"
+
+echo "Stopping existing EasyBar services and local processes"
+scripts/dev/stop-local.sh \
+  "$app_exec" \
+  "$calendar_agent_exec" \
+  "$network_agent_exec" \
+  "$app_bundle" \
+  "$calendar_agent_bundle" \
+  "$network_agent_bundle"
+
 echo "Starting local helper agents"
 nohup env EASYBAR_LOG_LEVEL="$log_level" "$calendar_agent_bin" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
 nohup env EASYBAR_LOG_LEVEL="$log_level" "$network_agent_bin" >/tmp/easybar-network-agent.dev.log 2>&1 &
@@ -47,3 +63,5 @@ nohup env EASYBAR_LOG_LEVEL="$log_level" "$network_agent_bin" >/tmp/easybar-netw
 echo "Launching $app_bin with EASYBAR_LOG_LEVEL=$log_level"
 echo "App logs follow stdout/stderr and configured logging.directory"
 env EASYBAR_LOG_LEVEL="$log_level" "$app_bin"
+
+
