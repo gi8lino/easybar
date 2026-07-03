@@ -13,16 +13,6 @@ final class MonthCalendarAgentClient {
     metricsCoordinator: .shared
   )
 
-  /// Configures the shared month-calendar agent client.
-  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = MonthCalendarAgentClient(
-      logger: logger,
-      calendarAgentConfig: snapshot.calendarAgent,
-      calendarConfig: snapshot.builtins.calendar,
-      metricsCoordinator: .shared
-    )
-  }
-
   /// Logger used for month-calendar agent diagnostics.
   private let logger: ProcessLogger
   /// Active calendar-agent config snapshot.

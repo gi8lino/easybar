@@ -9,11 +9,6 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
     logger: ProcessLogger(label: "easybar.bootstrap.month_store")
   )
 
-  /// Configures the shared month-calendar store.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NativeMonthCalendarStore(logger: logger)
-  }
-
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var sections: [EasyBarShared.CalendarAgentSection] = []
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []

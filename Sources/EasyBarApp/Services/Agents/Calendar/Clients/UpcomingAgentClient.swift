@@ -12,16 +12,6 @@ final class UpcomingCalendarAgentClient {
     metricsCoordinator: .shared
   )
 
-  /// Configures the shared upcoming-calendar agent client.
-  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = UpcomingCalendarAgentClient(
-      logger: logger,
-      calendarAgentConfig: snapshot.calendarAgent,
-      calendarConfig: snapshot.builtins.calendar,
-      metricsCoordinator: .shared
-    )
-  }
-
   private let logger: ProcessLogger
   private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private var calendarConfig: Config.CalendarBuiltinConfig

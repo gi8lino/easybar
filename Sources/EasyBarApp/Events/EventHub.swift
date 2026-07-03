@@ -24,17 +24,6 @@ actor EventHub {
     luaEventSink: NoOpEventPayloadSink()
   )
 
-  /// Configures the shared event hub.
-  static func bootstrap(
-    logger: ProcessLogger,
-    luaRuntime: LuaRuntime
-  ) {
-    shared = EventHub(
-      logger: logger,
-      luaRuntime: luaRuntime
-    )
-  }
-
   /// Logger used for event diagnostics.
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.

@@ -20,15 +20,6 @@ final class NetworkAgentClient {
     metricsCoordinator: .shared
   )
 
-  /// Configures the shared network-agent client.
-  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = NetworkAgentClient(
-      logger: logger,
-      config: snapshot.networkAgent,
-      metricsCoordinator: .shared
-    )
-  }
-
   /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
   /// Metrics recorder for network-agent lifecycle and messages.

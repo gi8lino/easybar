@@ -13,29 +13,6 @@ final class EventManager {
     volumeEvents: .shared
   )
 
-  /// Configures the shared event manager and event-source dependencies.
-  static func bootstrap(
-    logger: ProcessLogger,
-    luaRuntime: LuaRuntime
-  ) {
-    EventHub.bootstrap(
-      logger: logger.child("hub"),
-      luaRuntime: luaRuntime
-    )
-    SystemEvents.bootstrap(logger: logger.child("system"))
-    PowerEvents.bootstrap(logger: logger.child("power"))
-    TimerEvents.bootstrap(logger: logger.child("timer"))
-    VolumeEvents.bootstrap(logger: logger.child("volume"))
-
-    shared = EventManager(
-      logger: logger.child("manager"),
-      systemEvents: .shared,
-      powerEvents: .shared,
-      timerEvents: .shared,
-      volumeEvents: .shared
-    )
-  }
-
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
   /// Native event source managed by subscription demand.

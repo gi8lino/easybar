@@ -11,11 +11,6 @@ final class CalendarAgentEventRelay: @unchecked Sendable {
     logger: ProcessLogger(label: "easybar.bootstrap.calendar_relay")
   )
 
-  /// Configures the shared calendar-agent event relay.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = CalendarAgentEventRelay(logger: logger)
-  }
-
   private struct State {
     var running = false
     var generation: UInt64 = 0

@@ -9,11 +9,6 @@ final class SystemEvents {
     logger: ProcessLogger(label: "easybar.bootstrap.system_events")
   )
 
-  /// Configures the shared system event source.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = SystemEvents(logger: logger)
-  }
-
   /// Logger used for system event diagnostics.
   private let logger: ProcessLogger
 

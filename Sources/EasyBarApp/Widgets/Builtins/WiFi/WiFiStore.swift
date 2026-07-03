@@ -7,11 +7,6 @@ final class NativeWiFiStore: ObservableObject {
     logger: ProcessLogger(label: "easybar.bootstrap.wifi_store")
   )
 
-  /// Handles bootstrap.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NativeWiFiStore(logger: logger)
-  }
-
   static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")
 
   @Published private(set) var snapshot: NetworkAgentSnapshot?

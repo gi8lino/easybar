@@ -9,11 +9,6 @@ final class NativeComposerCalendarStore: ObservableObject {
     logger: ProcessLogger(label: "easybar.bootstrap.composer_calendar_store")
   )
 
-  /// Configures the shared composer-calendar snapshot store.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NativeComposerCalendarStore(logger: logger)
-  }
-
   /// Latest fresh snapshot used for composer calendar choices.
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
 

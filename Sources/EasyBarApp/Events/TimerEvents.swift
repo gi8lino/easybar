@@ -14,11 +14,6 @@ final class TimerEvents {
     logger: ProcessLogger(label: "easybar.bootstrap.timer_events")
   )
 
-  /// Configures the shared timer event source.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = TimerEvents(logger: logger)
-  }
-
   /// Logger used for timer diagnostics.
   private let logger: ProcessLogger
 

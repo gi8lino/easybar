@@ -10,14 +10,6 @@ final class ComposerCalendarAgentClient {
     calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent
   )
 
-  /// Configures the shared composer-calendar agent client.
-  static func bootstrap(logger: ProcessLogger, snapshot: ConfigSnapshot) {
-    shared = ComposerCalendarAgentClient(
-      logger: logger,
-      calendarAgentConfig: snapshot.calendarAgent
-    )
-  }
-
   /// Logger used for composer-calendar agent diagnostics.
   private let logger: ProcessLogger
   /// Active calendar-agent config snapshot.

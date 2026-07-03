@@ -9,11 +9,6 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
     logger: ProcessLogger(label: "easybar.bootstrap.upcoming_store")
   )
 
-  /// Configures the shared upcoming-calendar store.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = NativeUpcomingCalendarStore(logger: logger)
-  }
-
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 

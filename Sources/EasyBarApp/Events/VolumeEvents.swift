@@ -9,11 +9,6 @@ final class VolumeEvents {
     logger: ProcessLogger(label: "easybar.bootstrap.volume_events")
   )
 
-  /// Configures the shared volume event source.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = VolumeEvents(logger: logger)
-  }
-
   /// Logger used for volume diagnostics.
   private let logger: ProcessLogger
 

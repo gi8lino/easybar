@@ -9,11 +9,6 @@ final class PowerEvents {
     logger: ProcessLogger(label: "easybar.bootstrap.power_events")
   )
 
-  /// Configures the shared power event source.
-  static func bootstrap(logger: ProcessLogger) {
-    shared = PowerEvents(logger: logger)
-  }
-
   /// Logger used for power diagnostics.
   private let logger: ProcessLogger
 
