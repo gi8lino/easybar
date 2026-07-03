@@ -92,16 +92,35 @@ final class AeroSpaceCommandRunner {
       .trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
-  /// Resolves the AeroSpace binary path.
-  private static func defaultExecutablePath() -> String? {
-    let candidates = [
+  /// Resolves the AeroSpace binary path from `PATH`, then known install locations.
+  static func defaultExecutablePath() -> String? {
+    defaultExecutablePath(environment: ProcessInfo.processInfo.environment)
+  }
+
+  /// Resolves the AeroSpace binary path from one environment snapshot.
+  static func defaultExecutablePath(environment: [String: String]) -> String? {
+    let pathCandidates =
+      environment["PATH"]?
+      .split(separator: ":")
+      .map(String.init)
+      .filter { !$0.isEmpty }
+      .map { URL(fileURLWithPath: $0).appendingPathComponent("aerospace").path } ?? []
+
+    let fallbackCandidates = [
       "/opt/homebrew/bin/aerospace",
       "/usr/local/bin/aerospace",
       "/Applications/AeroSpace.app/Contents/MacOS/aerospace",
     ]
 
     let fileManager = FileManager.default
-    return candidates.first(where: { fileManager.isExecutableFile(atPath: $0) })
+    return uniqueCandidates(pathCandidates + fallbackCandidates)
+      .first(where: { fileManager.isExecutableFile(atPath: $0) })
+  }
+
+  /// Removes duplicate candidate paths while preserving lookup order.
+  private static func uniqueCandidates(_ candidates: [String]) -> [String] {
+    var seen = Set<String>()
+    return candidates.filter { seen.insert($0).inserted }
   }
 }
 

@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 
 @testable import EasyBarApp
@@ -246,6 +247,32 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
           "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
         ],
       ]
+    )
+  }
+
+  func testCommandRunnerResolvesAeroSpaceFromPathBeforeFallbacks() throws {
+    let directoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-aerospace-path-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(
+      at: directoryURL,
+      withIntermediateDirectories: true
+    )
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+    let executableURL = directoryURL.appendingPathComponent("aerospace")
+    try "#!/usr/bin/env bash\nexit 0\n".write(
+      to: executableURL,
+      atomically: true,
+      encoding: .utf8
+    )
+    try FileManager.default.setAttributes(
+      [.posixPermissions: 0o755],
+      ofItemAtPath: executableURL.path
+    )
+
+    XCTAssertEqual(
+      AeroSpaceCommandRunner.defaultExecutablePath(environment: ["PATH": directoryURL.path]),
+      executableURL.path
     )
   }
 
