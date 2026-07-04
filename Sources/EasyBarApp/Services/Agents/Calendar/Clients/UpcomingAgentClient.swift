@@ -55,9 +55,9 @@ final class UpcomingCalendarAgentClient {
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     calendarConfig: Config.CalendarBuiltinConfig
   ) {
-    let streamConfigChanged = self.calendarAgentConfig.requiresStreamRestart(
-      for: calendarAgentConfig
-    )
+    let streamConfigChanged =
+      self.calendarAgentConfig.enabled != calendarAgentConfig.enabled
+      || self.calendarAgentConfig.socketPath != calendarAgentConfig.socketPath
 
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
