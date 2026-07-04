@@ -15,6 +15,7 @@ public final class BackoffScheduler: @unchecked Sendable {
   private let label: String
   private let delays: [TimeInterval]
   private let logger: ProcessLogger
+  private let logLevel: ProcessLogLevel
   private let sleeper: any AsyncSleeper
   private let state = LockedState(State())
 
@@ -23,11 +24,13 @@ public final class BackoffScheduler: @unchecked Sendable {
     label: String,
     delays: [TimeInterval],
     logger: ProcessLogger,
+    logLevel: ProcessLogLevel = .warn,
     sleeper: any AsyncSleeper = TaskSleeper()
   ) {
     self.label = label
     self.delays = delays
     self.logger = logger
+    self.logLevel = logLevel
     self.sleeper = sleeper
   }
 
@@ -58,10 +61,7 @@ public final class BackoffScheduler: @unchecked Sendable {
 
     guard let scheduled else { return }
 
-    logger.warn(
-      "\(label) scheduled",
-      .field("delay", "\(scheduled.delay)")
-    )
+    logScheduled(delay: scheduled.delay)
 
     let nanoseconds = clampedSleepNanoseconds(from: scheduled.delay)
     let sleeper = sleeper
@@ -115,6 +115,21 @@ public final class BackoffScheduler: @unchecked Sendable {
     }
 
     return delays[min(attemptIndex, delays.count - 1)]
+  }
+
+  private func logScheduled(delay: TimeInterval) {
+    switch logLevel {
+    case .trace:
+      logger.trace("\(label) scheduled", .field("delay", "\(delay)"))
+    case .debug:
+      logger.debug("\(label) scheduled", .field("delay", "\(delay)"))
+    case .info:
+      logger.info("\(label) scheduled", .field("delay", "\(delay)"))
+    case .warn:
+      logger.warn("\(label) scheduled", .field("delay", "\(delay)"))
+    case .error:
+      logger.error("\(label) scheduled", .field("delay", "\(delay)"))
+    }
   }
 
   private func clearScheduledTask(id: UInt64) -> Bool {
