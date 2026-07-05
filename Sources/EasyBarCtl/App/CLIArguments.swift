@@ -98,6 +98,24 @@ private func parseAppArgument(
     return index + 1
   }
 
+  if let parsedEventArgument = try parseValueArgument(
+    option: CLI.eventOption,
+    argument,
+    arguments: arguments,
+    index: index
+  ) {
+    guard selectedAction == nil else {
+      throw AppError.message("only one command flag may be specified")
+    }
+
+    guard let command = CLI.eventCommand(for: parsedEventArgument.value) else {
+      throw AppError.message("unknown event '\(parsedEventArgument.value)'")
+    }
+
+    selectedAction = .command(command)
+    return parsedEventArgument.nextIndex
+  }
+
   if let parsedSocketArgument = try parseSocketArgument(
     argument,
     arguments: arguments,

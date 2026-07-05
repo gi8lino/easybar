@@ -7,6 +7,9 @@ EasyBar exposes a local Unix control socket for commands sent by the CLI or othe
 The control socket is used for commands such as:
 
 - `manual_refresh`
+- `workspace_change`
+- `focus_change`
+- `space_mode_change`
 - `restart_lua_runtime`
 - `reload_config`
 - `metrics`
@@ -18,15 +21,24 @@ Requests and responses are typed JSON.
 The boundary exists so that:
 
 - shell scripts can refresh or reload the app safely
+- local scripts can emit EasyBar driver events
 - external integrations do not need direct access to internal app objects
 
 The control socket is a command interface, not a general event stream.
 
+## Scripting events
+
+EasyBar scripting events are commands that ask the running app to refresh state and emit one of the public Lua driver events:
+
+- `workspace_change`
+- `focus_change`
+- `space_mode_change`
+
+They are intended for local automation that already knows something changed and wants widgets to react through the normal EasyBar event system.
+
 ## AeroSpace updates
 
 For AeroSpace-backed widgets, the app keeps a long-lived `aerospace subscribe --all` process open and reacts to JSON-line events for focus, focused workspace, focused monitor, binding mode, new-window detection, and triggered bindings.
-
-The subscription is the only AeroSpace update trigger exposed by EasyBar.
 
 If the `aerospace subscribe` process exits while the executable is still available, EasyBar schedules reconnect attempts with bounded backoff.
 

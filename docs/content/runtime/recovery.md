@@ -44,7 +44,7 @@ aerospace --version
 
 Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If the versions differ after updating, restart AeroSpace.app.
 
-EasyBar updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream. Workspace, focus, and layout callback commands are no longer supported.
+EasyBar updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream.
 
 Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
@@ -62,6 +62,12 @@ You can trigger one refresh manually with:
 
 ```bash
 easybar --refresh
+```
+
+Local scripts can also emit EasyBar driver events when they need widgets to react to a known external state change:
+
+```bash
+easybar --event workspace_change
 ```
 
 ## Spaces widget misses an app launch or quit

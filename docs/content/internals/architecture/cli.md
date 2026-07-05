@@ -26,6 +26,7 @@ Typical examples:
 easybar --refresh
 easybar --restart-lua-runtime
 easybar --reload-config
+easybar --event workspace_change
 ```
 
 ## Design rule

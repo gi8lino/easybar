@@ -100,6 +100,13 @@ enum CLI {
     description: "Ask the running EasyBar app to validate config"
   )
 
+  /// Option used to emit one EasyBar scripting event.
+  static let eventOption = CLIOption(
+    flag: "--event",
+    description: "Emit an EasyBar scripting event",
+    placeholder: "name"
+  )
+
   /// Command options that map directly to IPC commands.
   static let cmdOptions: [CLIOption] = [
     .init(
@@ -130,6 +137,7 @@ enum CLI {
   static let appOptions: [CLIOption] = [
     socketOption,
     configOption,
+    eventOption,
     watchOption,
     debugOption,
     versionOption,
@@ -171,5 +179,19 @@ enum CLI {
   /// Returns the command for one argument.
   static func command(for argument: String) -> IPC.Command? {
     cmdOptions.first { matches($0, argument: argument) }?.command
+  }
+
+  /// Returns the IPC command for one EasyBar scripting event name.
+  static func eventCommand(for value: String) -> IPC.Command? {
+    switch value.replacingOccurrences(of: "-", with: "_") {
+    case IPC.Command.workspaceChange.rawValue:
+      return .workspaceChange
+    case IPC.Command.focusChange.rawValue:
+      return .focusChange
+    case IPC.Command.spaceModeChange.rawValue:
+      return .spaceModeChange
+    default:
+      return nil
+    }
   }
 }

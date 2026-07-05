@@ -7,6 +7,9 @@ extension IPC {
   /// Commands received through the EasyBar IPC socket.
   public enum Command: String, Codable {
     case manualRefresh = "manual_refresh"
+    case workspaceChange = "workspace_change"
+    case focusChange = "focus_change"
+    case spaceModeChange = "space_mode_change"
     case restartLuaRuntime = "restart_lua_runtime"
     case reloadConfig = "reload_config"
     case validateConfig = "validate_config"

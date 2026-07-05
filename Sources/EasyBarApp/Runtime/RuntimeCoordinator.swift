@@ -282,6 +282,18 @@ actor RuntimeCoordinator {
     case .manualRefresh:
       await refreshRuntime()
 
+    case .workspaceChange:
+      aeroSpaceService.triggerRefresh()
+      await services.eventHub.emit(.workspaceChange, source: EventSourceLabel.script(command))
+
+    case .focusChange:
+      aeroSpaceService.triggerRefresh()
+      await services.eventHub.emit(.focusChange, source: EventSourceLabel.script(command))
+
+    case .spaceModeChange:
+      aeroSpaceService.triggerRefresh()
+      await services.eventHub.emit(.spaceModeChange, source: EventSourceLabel.script(command))
+
     case .reloadConfig:
       await reloadConfig()
 

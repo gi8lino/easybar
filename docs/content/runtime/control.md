@@ -54,6 +54,20 @@ This:
 
 Use this when you changed the config file itself.
 
+## Scripting events
+
+Use:
+
+```bash
+easybar --event workspace_change
+easybar --event focus_change
+easybar --event space_mode_change
+```
+
+This emits an EasyBar driver event for Lua widgets and refreshes the current bar state.
+
+Use this from local scripts when an external action should notify widgets that workspace, focus, or layout-related state may have changed.
+
 ## Related pages
 
 - [Metrics](metrics.md)

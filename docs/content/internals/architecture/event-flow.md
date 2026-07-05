@@ -13,7 +13,7 @@ EasyBar reacts to several kinds of events:
 
 ```mermaid
 flowchart TB
-    Trigger["system event / app trigger / AeroSpace callback"] --> EventLayer["EasyBar event layer"]
+    Trigger["system event / app trigger / AeroSpace subscription"] --> EventLayer["EasyBar event layer"]
 
     EventLayer --> Native["native widget updates"]
     EventLayer --> Lua["Lua runtime updates"]

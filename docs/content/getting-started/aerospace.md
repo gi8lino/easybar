@@ -2,7 +2,7 @@
 
 EasyBar v0.4.0 and newer keeps AeroSpace-backed widgets current by opening a long-lived `aerospace subscribe` stream from the main app.
 
-That means the built-in spaces, front-app, and AeroSpace mode widgets no longer require the old workspace/focus AeroSpace callback wiring for normal updates. EasyBar subscribes to all AeroSpace event types and refreshes its AeroSpace snapshot when those events arrive.
+That means the built-in spaces, front-app, and AeroSpace mode widgets update without extra workspace or focus commands in your AeroSpace config. EasyBar subscribes to all AeroSpace event types and refreshes its AeroSpace snapshot when those events arrive.
 
 ## Requirements
 
@@ -51,11 +51,11 @@ EasyBar still observes a few native macOS notifications as a complement:
 - app termination refreshes spaces so closed apps disappear promptly
 - app launch schedules one short delayed refresh for apps that create windows slightly later
 
-## AeroSpace config cleanup
+## AeroSpace config
 
-EasyBar updates AeroSpace-backed widgets from its automatic subscription stream. Remove old EasyBar callback commands from your AeroSpace config if they are still present.
+EasyBar updates AeroSpace-backed widgets from its automatic subscription stream, so no EasyBar commands are required in your AeroSpace config for normal updates.
 
-EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, so separate layout callback commands are not needed either.
+EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, so separate layout commands are not needed either.
 
 ## Manual refresh
 
@@ -82,7 +82,7 @@ Useful log messages include:
 - `aerospace subscription exited`
 - `aerospace subscription reconnect scheduled`
 
-If the subscription cannot start, EasyBar still accepts the CLI callback commands shown above.
+If a local script needs to notify widgets about a known state change, use EasyBar scripting events from [Runtime Control](../runtime/control.md).
 
 ## Related pages
 
