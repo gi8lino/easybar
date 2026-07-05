@@ -54,20 +54,6 @@ This:
 
 Use this when you changed the config file itself.
 
-## AeroSpace fallback hooks
-
-EasyBar v0.4.0 and newer normally updates AeroSpace-backed widgets through the app's long-lived `aerospace subscribe --all` stream. The older CLI callback hooks are still supported as manual, scripting, and fallback triggers:
-
-```bash
-easybar --workspace-changed
-easybar --focus-changed
-easybar --space-mode-changed
-```
-
-`--workspace-changed` and `--focus-changed` are legacy AeroSpace callback hooks and are no longer required for normal workspace or focus updates. `--space-mode-changed` remains useful as an optional explicit fallback for layout bindings, because AeroSpace does not expose a dedicated layout-changed subscription event.
-
-Do not keep workspace or focus callbacks enabled just to mirror the subscription stream. When both paths are active, Lua widgets subscribed to `workspace_change` or `focus_change` can receive duplicate driver events for the same AeroSpace action. Event payloads include an optional `source` field so debug handlers can tell `aerospace subscribe ...` events from `socket ...` fallback events.
-
 ## Related pages
 
 - [Metrics](metrics.md)

@@ -6,9 +6,6 @@ public enum IPC {}
 extension IPC {
   /// Commands received through the EasyBar IPC socket.
   public enum Command: String, Codable {
-    case workspaceChanged = "workspace_changed"
-    case focusChanged = "focus_changed"
-    case spaceModeChanged = "space_mode_changed"
     case manualRefresh = "manual_refresh"
     case restartLuaRuntime = "restart_lua_runtime"
     case reloadConfig = "reload_config"
@@ -142,7 +139,7 @@ extension IPC {
       case warnings
     }
 
-    /// Returns the message kind for logging and compatibility helpers.
+    /// Returns the message kind for logging and response handling.
     public var kind: Kind {
       switch self {
       case .accepted:

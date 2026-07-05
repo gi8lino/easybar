@@ -53,55 +53,9 @@ EasyBar still observes a few native macOS notifications as a complement:
 
 ## AeroSpace config cleanup
 
-With the automatic subscription enabled, these old AeroSpace callbacks are no longer needed for normal updates and can be removed from your AeroSpace config:
+EasyBar updates AeroSpace-backed widgets from its automatic subscription stream. Remove old EasyBar callback commands from your AeroSpace config if they are still present.
 
-```toml
-exec-on-workspace-change = [
-  'exec-and-forget /opt/homebrew/bin/easybar --workspace-changed'
-]
-
-on-focus-changed = [
-  'exec-and-forget /opt/homebrew/bin/easybar --focus-changed'
-]
-```
-
-You can keep them temporarily while testing the subscription stream, but they should not be required anymore.
-
-If you keep these callbacks while the automatic subscription is active, Lua widgets subscribed to `workspace_change` or `focus_change` may receive two driver events for one AeroSpace action: one from `aerospace subscribe` and one from the legacy socket hook. Built-in widgets still reload from the debounced AeroSpace snapshot, but custom Lua handlers should either be idempotent or remove the old callbacks.
-
-Event payloads include an optional `source` field for diagnostics. In debug logs and Lua handlers, subscription events are labeled like `aerospace subscribe focus-changed`; legacy callbacks are labeled like `socket focus_changed`.
-
-The matching CLI flags still exist as legacy/fallback hooks. They are useful for scripts, troubleshooting, or older configs, but they are no longer the primary AeroSpace update path.
-
-## Optional layout callback fallback
-
-AeroSpace does not currently expose a dedicated `layout-changed` subscription event. EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, which is usually enough for layout hotkeys.
-
-If you want the most explicit layout refresh path, keep a callback only on bindings that actually change layout:
-
-```toml
-alt-e = [
-  'layout tiles horizontal',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-
-alt-v = [
-  'layout tiles vertical',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-
-alt-s = [
-  'layout v_accordion',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-
-alt-shift-space = [
-  'layout floating tiling',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-```
-
-This fallback is optional. It exists because layout changes are fetchable from AeroSpace snapshots, but they are not directly subscribable as their own event.
+EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, so separate layout callback commands are not needed either.
 
 ## Manual refresh
 

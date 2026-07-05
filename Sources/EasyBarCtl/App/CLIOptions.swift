@@ -103,24 +103,6 @@ enum CLI {
   /// Command options that map directly to IPC commands.
   static let cmdOptions: [CLIOption] = [
     .init(
-      flag: "--workspace-changed",
-      command: .workspaceChanged,
-      description:
-        "Legacy/fallback AeroSpace hook: notify EasyBar that the focused workspace changed"
-    ),
-    .init(
-      flag: "--focus-changed",
-      command: .focusChanged,
-      description:
-        "Legacy/fallback AeroSpace hook: notify EasyBar that the focused app or window changed"
-    ),
-    .init(
-      flag: "--space-mode-changed",
-      command: .spaceModeChanged,
-      description:
-        "Optional AeroSpace layout fallback: notify EasyBar that the layout mode changed"
-    ),
-    .init(
       flag: "--refresh",
       command: .manualRefresh,
       description:

@@ -36,7 +36,7 @@ For deeper checks, including raw Wi-Fi and network field inspection, use [Debugg
 
 ## AeroSpace widgets do not update
 
-First check that AeroSpace is supported by your EasyBar version. EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer and no longer fall back to text-output parsing. EasyBar v0.3.0 was the last release with legacy text-output support.
+First check that AeroSpace is supported by your EasyBar version. EasyBar requires AeroSpace 0.21.0 or newer.
 
 ```bash
 aerospace --version
@@ -44,11 +44,7 @@ aerospace --version
 
 Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If the versions differ after updating, restart AeroSpace.app.
 
-EasyBar normally updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream. Workspace and focus callbacks are no longer required for normal updates.
-
-The old `easybar --workspace-changed` and `easybar --focus-changed` commands still work as legacy fallback hooks, but you should not need to wire them into AeroSpace for ordinary use.
-
-If Lua widgets update twice for one workspace or focus change, check your AeroSpace config for leftover `easybar --workspace-changed` or `easybar --focus-changed` callbacks. With `aerospace subscribe --all` active, those callbacks can duplicate the same driver event. Debug handlers can inspect `event.source` to distinguish `aerospace subscribe ...` from `socket ...` fallback events.
+EasyBar updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream. Workspace, focus, and layout callback commands are no longer supported.
 
 Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
@@ -62,18 +58,7 @@ Useful messages include `aerospace subscription started`, `aerospace subscriptio
 
 If AeroSpace is restarted or updated while EasyBar is running, EasyBar reconnects to the subscription stream with bounded backoff as long as the `aerospace` executable is still available.
 
-If your AeroSpace mode widget does not change after switching layouts, call EasyBar after every relevant `layout ...` command:
-
-```toml
-alt-e = [
-  'layout tiles horizontal',
-  'exec-and-forget /opt/homebrew/bin/easybar --space-mode-changed'
-]
-```
-
-That layout callback is optional. It is useful because AeroSpace does not expose a dedicated layout-changed subscription event.
-
-You can trigger one manually with:
+You can trigger one refresh manually with:
 
 ```bash
 easybar --refresh

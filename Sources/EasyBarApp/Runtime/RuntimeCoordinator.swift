@@ -279,18 +279,6 @@ actor RuntimeCoordinator {
     )
 
     switch command {
-    case .workspaceChanged:
-      aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.workspaceChange, source: EventSourceLabel.socket(command))
-
-    case .focusChanged:
-      aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.focusChange, source: EventSourceLabel.socket(command))
-
-    case .spaceModeChanged:
-      aeroSpaceService.triggerRefresh()
-      await services.eventHub.emit(.spaceModeChange, source: EventSourceLabel.socket(command))
-
     case .manualRefresh:
       await refreshRuntime()
 

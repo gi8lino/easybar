@@ -9,7 +9,6 @@ extension SharedRuntimeConfig {
 
     let level = resolvedLoggingLevel(
       tomlValue: loggingTable?["level"]?.string,
-      legacyDebugValue: loggingTable?["debug"]?.bool,
       fallback: .info
     )
 
@@ -30,7 +29,6 @@ extension SharedRuntimeConfig {
       enabled: false,
       level: resolvedLoggingLevel(
         tomlValue: nil,
-        legacyDebugValue: nil,
         fallback: .info
       ),
       directory: SharedPathDefaults.defaultLoggingDirectory().path
@@ -40,7 +38,6 @@ extension SharedRuntimeConfig {
   /// Resolves the configured minimum logging level from the diagnostic override or TOML.
   private static func resolvedLoggingLevel(
     tomlValue: String?,
-    legacyDebugValue: Bool?,
     fallback: ProcessLogLevel
   ) -> ProcessLogLevel {
     if let raw = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel),
@@ -53,10 +50,6 @@ extension SharedRuntimeConfig {
       let level = ProcessLogLevel.normalized(tomlValue)
     {
       return level
-    }
-
-    if let legacyDebugValue {
-      return legacyDebugValue ? .debug : .info
     }
 
     return fallback

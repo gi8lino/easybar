@@ -1,4 +1,3 @@
-import EasyBarShared
 import Foundation
 
 /// Labels used to describe where app events originated before they reach EventHub.
@@ -7,9 +6,5 @@ enum EventSourceLabel {
 
   static func aerospaceSubscribe(_ eventName: String) -> String {
     "aerospace subscribe \(eventName)"
-  }
-
-  static func socket(_ command: IPC.Command) -> String {
-    "socket \(command.rawValue)"
   }
 }

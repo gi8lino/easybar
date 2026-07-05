@@ -33,7 +33,7 @@ final class Config: ObservableObject {
   var themeSection: ThemeSection
   var barSection: BarSection
 
-  // MARK: - App compatibility accessors
+  // MARK: - App accessors
 
   var widgetsPath: String {
     get { appSection.widgetsPath }
@@ -186,7 +186,7 @@ final class Config: ObservableObject {
   var themeOverlayTextColorHex: String { themeSection.colors.overlayText }
   var themeTodayButtonBorderColorHex: String { themeSection.colors.todayButtonBorder }
 
-  // MARK: - Bar compatibility accessors
+  // MARK: - Bar accessors
 
   var barHeight: CGFloat {
     get { barSection.height }

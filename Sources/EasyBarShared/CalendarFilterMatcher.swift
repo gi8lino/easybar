@@ -75,26 +75,6 @@ public enum CalendarFilterMatcher {
     return true
   }
 
-  /// Returns whether one target passes the configured include/exclude filters.
-  public static func matches(
-    _ target: CalendarFilterTarget,
-    includeTokens: [String],
-    excludeTokens: [String]
-  ) -> Bool {
-    let included = Set(includeTokens.compactMap(normalizedToken))
-    let excluded = Set(excludeTokens.compactMap(normalizedToken))
-
-    if shouldRejectMissingLegacyIncludedMatch(target, included: included) {
-      return false
-    }
-
-    if matchesAnyFilter(target, filters: excluded) {
-      return false
-    }
-
-    return true
-  }
-
   /// Normalizes one filter token for stable matching.
   public static func normalizedToken(_ value: String) -> String? {
     let normalized =
@@ -138,13 +118,5 @@ public enum CalendarFilterMatcher {
     matchesIncluded: Bool
   ) -> Bool {
     return hasIncludedFilters && !matchesIncluded
-  }
-
-  /// Returns whether legacy include filters reject the provided target.
-  private static func shouldRejectMissingLegacyIncludedMatch(
-    _ target: CalendarFilterTarget,
-    included: Set<String>
-  ) -> Bool {
-    return !included.isEmpty && !matchesAnyFilter(target, filters: included)
   }
 }

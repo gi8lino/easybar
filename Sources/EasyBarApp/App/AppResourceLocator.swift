@@ -10,13 +10,11 @@ import Foundation
 /// - `Events/event_catalog.json`
 /// - `ThemeTokens/theme_tokens.json`
 ///
-/// Source-tree and SwiftPM resource-bundle fallbacks are kept so tests and local development
-/// continue to work before resources are staged into an app bundle.
+/// Source-tree fallbacks are kept so tests and local development continue to work before
+/// resources are staged into an app bundle.
 enum AppResourceLocator {
   /// Name of the app-owned resource directory inside `Contents/Resources`.
   private static let appResourceDirectoryName = "EasyBar"
-  /// Name of the SwiftPM resource bundle produced for the app target.
-  private static let legacyResourceBundleName = "EasyBar_EasyBarApp.bundle"
   /// Resource names that live outside the Lua tree in packaged app resources.
   private static let packagedResourceSubdirectories = [
     "event_catalog": "Events",
@@ -34,7 +32,7 @@ enum AppResourceLocator {
     case source
   }
 
-  /// Returns one bundled resource URL from packaged, SwiftPM build, or source-tree locations.
+  /// Returns one bundled resource URL from packaged or source-tree locations.
   static func url(
     forResource name: String,
     withExtension fileExtension: String,
@@ -79,18 +77,6 @@ enum AppResourceLocator {
       )
     }
 
-    for root in legacyResourceBundleRoots() {
-      candidates.append(
-        root
-          .appendingOptionalSubdirectory(subdirectory)
-          .appendingPathComponent(fileName)
-      )
-
-      // SwiftPM `.copy` resources are placed at the resource-bundle root. Keep this fallback for
-      // build products and older staged bundles where callers may request a logical subdirectory.
-      candidates.append(root.appendingPathComponent(fileName))
-    }
-
     for root in sourceRoots() {
       candidates.append(
         root
@@ -125,34 +111,6 @@ enum AppResourceLocator {
           .appendingPathComponent("Resources", isDirectory: true)
           .appendingPathComponent(appResourceDirectoryName, isDirectory: true)
       )
-    }
-
-    return unique(roots)
-  }
-
-  /// Returns legacy SwiftPM resource-bundle roots for tests, build outputs, and old packages.
-  private static func legacyResourceBundleRoots() -> [URL] {
-    var roots: [URL] = []
-
-    if let resourceURL = Bundle.main.resourceURL {
-      roots.append(resourceURL.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
-    }
-
-    roots.append(
-      Bundle.main.bundleURL.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
-
-    if let executableURL = Bundle.main.executableURL {
-      let executableDirectory = executableURL.deletingLastPathComponent()
-
-      roots.append(
-        executableDirectory
-          .deletingLastPathComponent()
-          .appendingPathComponent("Resources", isDirectory: true)
-          .appendingPathComponent(legacyResourceBundleName, isDirectory: true)
-      )
-
-      roots.append(
-        executableDirectory.appendingPathComponent(legacyResourceBundleName, isDirectory: true))
     }
 
     return unique(roots)

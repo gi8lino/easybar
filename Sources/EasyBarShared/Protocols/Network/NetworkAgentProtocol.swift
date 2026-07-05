@@ -518,21 +518,17 @@ public struct NetworkAgentMessage: Codable {
   public var fields: [String: NetworkAgentFieldValue]?
   /// Optional stable wire-level error code.
   public var errorCode: NetworkAgentErrorCode?
-  /// Optional legacy error message.
-  public var message: String?
 
   /// Creates one network agent message.
   public init(
     kind: NetworkAgentMessageKind,
     version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
-    errorCode: NetworkAgentErrorCode? = nil,
-    message: String? = nil
+    errorCode: NetworkAgentErrorCode? = nil
   ) {
     self.kind = kind
     self.version = version
     self.fields = fields
     self.errorCode = errorCode
-    self.message = message
   }
 }

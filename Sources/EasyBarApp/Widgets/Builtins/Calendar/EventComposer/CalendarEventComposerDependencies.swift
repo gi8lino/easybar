@@ -17,7 +17,7 @@ struct CalendarEventComposerDependencies {
   /// Opens the system Calendar app.
   let openCalendarApp: () -> Void
 
-  /// Builds the production composer dependency set from the shared compatibility layer.
+  /// Builds the production composer dependency set from shared stores and clients.
   @MainActor
   static func live() -> CalendarEventComposerDependencies {
     CalendarEventComposerDependencies(

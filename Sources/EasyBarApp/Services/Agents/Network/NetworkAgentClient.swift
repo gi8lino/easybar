@@ -5,7 +5,6 @@ import Foundation
 final class NetworkAgentClient {
   private struct ErrorLogKey: Equatable {
     let code: String
-    let message: String
   }
 
   private struct ErrorLogState {
@@ -205,15 +204,15 @@ final class NetworkAgentClient {
       break
 
     case .error:
-      handleError(code: message.errorCode, message: message.message)
+      handleError(code: message.errorCode)
     }
   }
 
   /// Handles one network-agent error message.
-  private func handleError(code: NetworkAgentErrorCode?, message: String?) {
+  private func handleError(code: NetworkAgentErrorCode?) {
     guard isStarted else { return }
 
-    logAgentErrorIfNeeded(code: code, message: message)
+    logAgentErrorIfNeeded(code: code)
 
     guard code == .permissionDenied else { return }
 
@@ -258,8 +257,8 @@ final class NetworkAgentClient {
   }
 
   /// Logs the first instance of an agent error, then suppresses identical repeats.
-  private func logAgentErrorIfNeeded(code: NetworkAgentErrorCode?, message: String?) {
-    let key = ErrorLogKey(code: code?.rawValue ?? "unknown", message: message ?? "unknown")
+  private func logAgentErrorIfNeeded(code: NetworkAgentErrorCode?) {
+    let key = ErrorLogKey(code: code?.rawValue ?? "unknown")
     let decision = errorLogState.withLock { state -> (shouldLog: Bool, repeatCount: Int) in
       guard state.lastKey == key else {
         state.lastKey = key
@@ -277,7 +276,6 @@ final class NetworkAgentClient {
       logger.warn(
         "network agent error",
         .field("code", key.code),
-        .field("message", key.message),
         .field("repeat_count", decision.repeatCount),
       )
       return
@@ -286,7 +284,6 @@ final class NetworkAgentClient {
     logger.warn(
       "network agent error",
       .field("code", key.code),
-      .field("message", key.message),
     )
   }
 

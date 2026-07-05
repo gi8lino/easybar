@@ -6,7 +6,7 @@ EasyBar is a lightweight, scriptable macOS status bar built with SwiftUI and Lua
 
 Use native built-ins for common system data such as spaces, battery, Wi-Fi, calendar, time, date, and volume. Add Lua widgets only when you need custom display logic, shell-command integration, or personal workflow behavior.
 
-EasyBar is designed for a clean macOS workflow and integrates especially well with AeroSpace. EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer for AeroSpace-backed widgets; v0.3.0 was the last release with legacy text-output support.
+EasyBar is designed for a clean macOS workflow and integrates especially well with AeroSpace. EasyBar requires AeroSpace 0.21.0 or newer for AeroSpace-backed widgets.
 
 ## Start here
 

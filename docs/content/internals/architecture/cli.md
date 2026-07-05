@@ -26,16 +26,7 @@ Typical examples:
 easybar --refresh
 easybar --restart-lua-runtime
 easybar --reload-config
-easybar --space-mode-changed
 ```
-
-The AeroSpace callback flags are retained as fallback hooks:
-
-- `easybar --workspace-changed`
-- `easybar --focus-changed`
-- `easybar --space-mode-changed`
-
-Workspace and focus callbacks are legacy helpers now that AeroSpace updates normally arrive through `aerospace subscribe --all`. The layout callback remains useful as an optional explicit fallback for layout-changing bindings.
 
 ## Design rule
 
