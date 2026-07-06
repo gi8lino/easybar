@@ -79,7 +79,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
 
   /// Stops the client and clears published state.
   public func stop() {
-    let snapshot = state.withLock { state -> (Int32, Task<Void, Never>?) in
+    let snapshot = state.withLock { state -> (fd: Int32, task: Task<Void, Never>?) in
       state.running = false
       state.nextReconnectDelayOverride = nil
 
@@ -94,14 +94,18 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     }
 
     reconnectScheduler.cancel()
-    snapshot.1?.cancel()
+    snapshot.task?.cancel()
 
-    if snapshot.0 >= 0 {
-      shutdown(snapshot.0, SHUT_RDWR)
-      close(snapshot.0)
+    if snapshot.fd >= 0 {
+      shutdown(snapshot.fd, SHUT_RDWR)
+      close(snapshot.fd)
     }
 
     clearState()
+
+    if snapshot.fd >= 0 {
+      onDisconnected?()
+    }
   }
 
   /// Overrides the delay used for the next reconnect attempt.
