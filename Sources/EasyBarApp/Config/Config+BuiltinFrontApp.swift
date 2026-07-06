@@ -126,10 +126,15 @@ extension Config {
       showIcon: try reader.bool("show_icon", fallback: fallback.showIcon),
       showName: try reader.bool("show_name", fallback: fallback.showName),
       fallbackText: try reader.string("fallback_text", fallback: fallback.fallbackText),
-      iconSize: try reader.double("icon_size", fallback: fallback.iconSize),
+      iconSize: try reader.double(
+        "icon_size",
+        fallback: fallback.iconSize,
+        minimum: 0
+      ),
       iconCornerRadius: try reader.double(
         "icon_corner_radius",
-        fallback: fallback.iconCornerRadius
+        fallback: fallback.iconCornerRadius,
+        minimum: 0
       )
     )
   }

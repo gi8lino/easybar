@@ -34,12 +34,18 @@ extension Config {
     develop = try app.bool("develop", fallback: develop)
 
     let luaCommands = try app.section("lua_commands")
-    luaCommandTimeoutSeconds = try luaCommands.double(
+    let resolvedLuaCommandTimeoutSeconds = try luaCommands.double(
       "timeout_seconds",
       fallback: luaCommandTimeoutSeconds,
-      minimum: 0,
-      includesMinimum: false
+      minimum: 0
     )
+    guard resolvedLuaCommandTimeoutSeconds > 0 else {
+      throw ConfigError.invalidValue(
+        path: luaCommands.path(for: "timeout_seconds"),
+        message: "expected a value greater than 0"
+      )
+    }
+    luaCommandTimeoutSeconds = resolvedLuaCommandTimeoutSeconds
     luaCommandMaxOutputBytes = try luaCommands.int(
       "max_output_bytes",
       fallback: luaCommandMaxOutputBytes,

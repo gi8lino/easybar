@@ -84,14 +84,14 @@ extension CalendarBuiltinConfig {
         fallback: fallback.backgroundColorHex
       ),
       borderColorHex: try reader.optionalString("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
-      opacity: try reader.double("opacity", fallback: fallback.opacity)
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
+      opacity: try reader.double("opacity", fallback: fallback.opacity, minimum: 0, maximum: 1)
     )
   }
 
@@ -104,7 +104,7 @@ extension CalendarBuiltinConfig {
       layout: try reader.enum("layout", fallback: fallback.layout),
       topFormat: try reader.string("top_format", fallback: fallback.topFormat),
       bottomFormat: try reader.string("bottom_format", fallback: fallback.bottomFormat),
-      lineSpacing: try reader.double("line_spacing", fallback: fallback.lineSpacing),
+      lineSpacing: try reader.double("line_spacing", fallback: fallback.lineSpacing, minimum: 0),
       topTextColorHex: try reader.optionalString(
         "top_text_color", fallback: fallback.topTextColorHex),
       bottomTextColorHex: try reader.optionalString(
@@ -151,7 +151,7 @@ extension CalendarBuiltinConfig {
     fallback: CalendarBuiltinConfig.Appointments
   ) throws -> CalendarBuiltinConfig.Appointments {
     CalendarBuiltinConfig.Appointments(
-      itemIndent: try reader.double("item_indent", fallback: fallback.itemIndent),
+      itemIndent: try reader.double("item_indent", fallback: fallback.itemIndent, minimum: 0),
       eventTextColorHex: try reader.string(
         "event_text_color", fallback: fallback.eventTextColorHex),
       emptyTextColorHex: try reader.string(

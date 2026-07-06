@@ -50,11 +50,11 @@ extension CalendarBuiltinConfig {
       backgroundColorHex: try reader.string(
         "background_color", fallback: fallback.backgroundColorHex),
       borderColorHex: try reader.string("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY)
     )
@@ -74,13 +74,12 @@ extension CalendarBuiltinConfig {
       path: reader.path(for: "weekday_symbols")
     )
 
-    let firstWeekday = try reader.optionalInt("first_weekday", fallback: fallback.firstWeekday)
-    if let firstWeekday, !(1...7).contains(firstWeekday) {
-      throw CalendarConfigError.invalidValue(
-        path: reader.path(for: "first_weekday"),
-        message: "expected integer from 1 to 7"
-      )
-    }
+    let firstWeekday = try reader.optionalInt(
+      "first_weekday",
+      fallback: fallback.firstWeekday,
+      minimum: 1,
+      maximum: 7
+    )
 
     let resolvedWeekdaySymbols = CalendarBuiltinConfig.resolveMonthWeekdaySymbols(
       format: weekdayFormat,
@@ -118,7 +117,8 @@ extension CalendarBuiltinConfig {
       ),
       todayCellBorderWidth: try reader.double(
         "today_cell_border_width",
-        fallback: fallback.todayCellBorderWidth
+        fallback: fallback.todayCellBorderWidth,
+        minimum: 0
       ),
       indicatorColorHex: try reader.string("indicator_color", fallback: fallback.indicatorColorHex)
     )
@@ -214,7 +214,7 @@ extension CalendarBuiltinConfig {
       title: try reader.string("title", fallback: fallback.title),
       icon: try reader.string("icon", fallback: fallback.icon),
       borderColorHex: try reader.string("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth)
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0)
     )
   }
 

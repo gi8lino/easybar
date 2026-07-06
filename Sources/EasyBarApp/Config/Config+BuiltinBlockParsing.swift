@@ -34,14 +34,14 @@ extension Config {
         fallback: fallback.backgroundColorHex
       ),
       borderColorHex: try reader.optionalColor("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
-      opacity: try reader.double("opacity", fallback: fallback.opacity)
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
+      opacity: try reader.double("opacity", fallback: fallback.opacity, minimum: 0, maximum: 1)
     )
   }
 
@@ -55,10 +55,10 @@ extension Config {
       backgroundColorHex: try reader.color(
         "background_color", fallback: fallback.backgroundColorHex),
       borderColorHex: try reader.color("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY)
     )

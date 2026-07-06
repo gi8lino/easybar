@@ -597,3 +597,103 @@ extension ConfigLoaderBuiltinTests {
       config.builtinCalendar.composer.travelTimeLabels, ["90_minutes": "Ninety travel"])
   }
 }
+
+extension ConfigLoaderBuiltinTests {
+  /// Verifies that shared built-in style opacity is constrained to the valid 0...1 range.
+  func testReloadRejectsOutOfRangeBuiltinStyleOpacity() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-style-opacity.toml")
+
+    try writeConfig(
+      """
+      [builtins.time.style]
+      opacity = 1.1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.time.style.opacity")
+    XCTAssertEqual(message, "expected a value from 0 to 1")
+  }
+
+  /// Verifies that shared popup metrics reject negative visual sizes.
+  func testReloadRejectsNegativeBuiltinPopupBorderWidth() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-popup-border.toml")
+
+    try writeConfig(
+      """
+      [builtins.wifi.popup]
+      border_width = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.wifi.popup.border_width")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+
+  /// Verifies that margins remain flexible and may intentionally be negative.
+  func testReloadAllowsNegativeBuiltinPopupMargins() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("negative-popup-margins.toml")
+
+    try writeConfig(
+      """
+      [builtins.wifi.popup]
+      margin_x = -4
+      margin_y = -8
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.builtinWiFi.popup.marginX, -4)
+    XCTAssertEqual(config.builtinWiFi.popup.marginY, -8)
+  }
+
+  /// Verifies that calendar popup metrics reject negative visual sizes.
+  func testReloadRejectsNegativeCalendarPopupSpacing() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-calendar-spacing.toml")
+
+    try writeConfig(
+      """
+      [builtins.calendar.month.popup.style]
+      spacing = -1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.calendar.month.popup.style.spacing")
+    XCTAssertEqual(message, "expected a value greater than or equal to 0")
+  }
+}

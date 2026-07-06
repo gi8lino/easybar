@@ -211,20 +211,30 @@ extension Config {
     fallback: SpacesBuiltinConfig.Layout
   ) throws -> SpacesBuiltinConfig.Layout {
     SpacesBuiltinConfig.Layout(
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
       hideEmpty: try reader.bool("hide_empty", fallback: fallback.hideEmpty),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
       focusedCornerRadius: try reader.double(
         "focused_corner_radius",
-        fallback: fallback.focusedCornerRadius
+        fallback: fallback.focusedCornerRadius,
+        minimum: 0
       ),
-      focusedScale: try reader.double("focused_scale", fallback: fallback.focusedScale),
-      inactiveOpacity: try reader.double("inactive_opacity", fallback: fallback.inactiveOpacity),
-      maxIcons: try reader.int("max_icons", fallback: fallback.maxIcons),
+      focusedScale: try reader.double(
+        "focused_scale",
+        fallback: fallback.focusedScale,
+        minimum: 0
+      ),
+      inactiveOpacity: try reader.double(
+        "inactive_opacity",
+        fallback: fallback.inactiveOpacity,
+        minimum: 0,
+        maximum: 1
+      ),
+      maxIcons: try reader.int("max_icons", fallback: fallback.maxIcons, minimum: 0),
       showLabel: try reader.bool("show_label", fallback: fallback.showLabel),
       showIcons: try reader.bool("show_icons", fallback: fallback.showIcons),
       showOnlyFocusedLabel: try reader.bool(
@@ -234,11 +244,13 @@ extension Config {
       collapseInactive: try reader.bool("collapse_inactive", fallback: fallback.collapseInactive),
       collapsedPaddingX: try reader.double(
         "collapsed_padding_x",
-        fallback: fallback.collapsedPaddingX
+        fallback: fallback.collapsedPaddingX,
+        minimum: 0
       ),
       collapsedPaddingY: try reader.double(
         "collapsed_padding_y",
-        fallback: fallback.collapsedPaddingY
+        fallback: fallback.collapsedPaddingY,
+        minimum: 0
       ),
       clickToFocusSpace: try reader.bool(
         "click_to_focus_space",
@@ -254,7 +266,7 @@ extension Config {
     fallback: SpacesBuiltinConfig.Text
   ) throws -> SpacesBuiltinConfig.Text {
     SpacesBuiltinConfig.Text(
-      size: try reader.double("size", fallback: fallback.size),
+      size: try reader.double("size", fallback: fallback.size, minimum: 0),
       weight: try validatedSpacesTextWeight(
         try reader.string("weight", fallback: fallback.weight),
         path: reader.path(for: "weight")
@@ -270,14 +282,19 @@ extension Config {
     fallback: SpacesBuiltinConfig.Icons
   ) throws -> SpacesBuiltinConfig.Icons {
     SpacesBuiltinConfig.Icons(
-      size: try reader.double("size", fallback: fallback.size),
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
-      focusedAppSize: try reader.double("focused_app_size", fallback: fallback.focusedAppSize),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
+      size: try reader.double("size", fallback: fallback.size, minimum: 0),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
+      focusedAppSize: try reader.double(
+        "focused_app_size",
+        fallback: fallback.focusedAppSize,
+        minimum: 0
+      ),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
       focusedAppBorderWidth: try reader.double(
         "focused_app_border_width",
-        fallback: fallback.focusedAppBorderWidth
+        fallback: fallback.focusedAppBorderWidth,
+        minimum: 0
       )
     )
   }

@@ -193,7 +193,11 @@ extension Config {
   ) throws -> BatteryBuiltinConfig.Content {
     BatteryBuiltinConfig.Content(
       unavailableText: try reader.string("unavailable_text", fallback: fallback.unavailableText),
-      iconSize: try reader.double("icon_size", fallback: fallback.iconSize),
+      iconSize: try reader.double(
+        "icon_size",
+        fallback: fallback.iconSize,
+        minimum: 0
+      ),
       colorMode: try reader.enum("color_mode", fallback: fallback.colorMode),
       fixedColorHex: try reader.optionalColor("fixed_color", fallback: fallback.fixedColorHex),
       displayMode: try reader.enum("display_mode", fallback: fallback.displayMode),

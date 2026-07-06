@@ -93,33 +93,50 @@ public struct TOMLConfigReader<Failure: Error> {
     return try requiredBool(value, path: path(for: key))
   }
 
-  /// Returns an integer value or the fallback when absent, optionally constrained to bounds.
+  /// Returns an integer value for one key, or the fallback when the key is absent.
+  ///
+  /// Bounds are inclusive. `minimum` accepts values greater than or equal to the bound,
+  /// and `maximum` accepts values less than or equal to the bound. Bounds are checked
+  /// after resolving the fallback.
+  ///
+  /// - Parameters:
+  ///   - key: Key in this reader's TOML table.
+  ///   - fallback: Value used when `key` is absent.
+  ///   - minimum: Optional inclusive lower bound for the resolved value.
+  ///   - maximum: Optional inclusive upper bound for the resolved value.
+  /// - Returns: The configured integer, or `fallback` when absent.
   public func int(
     _ key: String,
     fallback: Int,
     minimum: Int? = nil,
-    maximum: Int? = nil,
-    includesMinimum: Bool = true,
-    includesMaximum: Bool = true
+    maximum: Int? = nil
   ) throws -> Int {
     try optionalInt(
       key,
       fallback: fallback,
       minimum: minimum,
-      maximum: maximum,
-      includesMinimum: includesMinimum,
-      includesMaximum: includesMaximum
+      maximum: maximum
     ) ?? fallback
   }
 
-  /// Returns an optional integer value or the optional fallback when absent, optionally constrained to bounds.
+  /// Returns an optional integer value for one key, or the optional fallback when absent.
+  ///
+  /// Bounds are inclusive. `minimum` accepts values greater than or equal to the bound,
+  /// and `maximum` accepts values less than or equal to the bound. Bounds are checked
+  /// after resolving the fallback. When both the TOML key and fallback are absent, this
+  /// returns `nil` without applying bounds.
+  ///
+  /// - Parameters:
+  ///   - key: Key in this reader's TOML table.
+  ///   - fallback: Optional value used when `key` is absent.
+  ///   - minimum: Optional inclusive lower bound for the resolved value.
+  ///   - maximum: Optional inclusive upper bound for the resolved value.
+  /// - Returns: The configured integer, `fallback`, or `nil` when both are absent.
   public func optionalInt(
     _ key: String,
     fallback: Int? = nil,
     minimum: Int? = nil,
-    maximum: Int? = nil,
-    includesMinimum: Bool = true,
-    includesMaximum: Bool = true
+    maximum: Int? = nil
   ) throws -> Int? {
     let value: Int
 
@@ -136,39 +153,54 @@ public struct TOMLConfigReader<Failure: Error> {
       path: path(for: key),
       minimum: minimum,
       maximum: maximum,
-      includesMinimum: includesMinimum,
-      includesMaximum: includesMaximum,
       describe: { String($0) }
     )
   }
 
-  /// Returns a finite number value or the fallback when absent, optionally constrained to bounds.
+  /// Returns a finite number value for one key, or the fallback when the key is absent.
+  ///
+  /// Integer TOML values are accepted and converted to `Double`. The resolved value
+  /// must be finite before inclusive bounds are checked. `minimum` accepts values
+  /// greater than or equal to the bound, and `maximum` accepts values less than or
+  /// equal to the bound.
+  ///
+  /// - Parameters:
+  ///   - key: Key in this reader's TOML table.
+  ///   - fallback: Value used when `key` is absent.
+  ///   - minimum: Optional inclusive lower bound for the resolved value.
+  ///   - maximum: Optional inclusive upper bound for the resolved value.
+  /// - Returns: The configured number, or `fallback` when absent.
   public func double(
     _ key: String,
     fallback: Double,
     minimum: Double? = nil,
-    maximum: Double? = nil,
-    includesMinimum: Bool = true,
-    includesMaximum: Bool = true
+    maximum: Double? = nil
   ) throws -> Double {
     try optionalDouble(
       key,
       fallback: fallback,
       minimum: minimum,
-      maximum: maximum,
-      includesMinimum: includesMinimum,
-      includesMaximum: includesMaximum
+      maximum: maximum
     ) ?? fallback
   }
 
-  /// Returns an optional finite number value or the optional fallback when absent, optionally constrained to bounds.
+  /// Returns an optional finite number value for one key, or the optional fallback when absent.
+  ///
+  /// Integer TOML values are accepted and converted to `Double`. The resolved value
+  /// must be finite before inclusive bounds are checked. When both the TOML key and
+  /// fallback are absent, this returns `nil` without applying bounds.
+  ///
+  /// - Parameters:
+  ///   - key: Key in this reader's TOML table.
+  ///   - fallback: Optional value used when `key` is absent.
+  ///   - minimum: Optional inclusive lower bound for the resolved value.
+  ///   - maximum: Optional inclusive upper bound for the resolved value.
+  /// - Returns: The configured number, `fallback`, or `nil` when both are absent.
   public func optionalDouble(
     _ key: String,
     fallback: Double? = nil,
     minimum: Double? = nil,
-    maximum: Double? = nil,
-    includesMinimum: Bool = true,
-    includesMaximum: Bool = true
+    maximum: Double? = nil
   ) throws -> Double? {
     let value: Double
 
@@ -185,8 +217,6 @@ public struct TOMLConfigReader<Failure: Error> {
       path: path(for: key),
       minimum: minimum,
       maximum: maximum,
-      includesMinimum: includesMinimum,
-      includesMaximum: includesMaximum,
       describe: describeNumberBound
     )
   }
@@ -290,40 +320,20 @@ public struct TOMLConfigReader<Failure: Error> {
     path: String,
     minimum: Value?,
     maximum: Value?,
-    includesMinimum: Bool,
-    includesMaximum: Bool,
     describe: (Value) -> String
   ) throws -> Value {
-    if let minimum {
-      let isBelowMinimum = includesMinimum ? value < minimum : value <= minimum
-      if isBelowMinimum {
-        throw makeInvalidValueError(
-          path,
-          boundsMessage(
-            minimum: minimum,
-            maximum: maximum,
-            includesMinimum: includesMinimum,
-            includesMaximum: includesMaximum,
-            describe: describe
-          )
-        )
-      }
+    if let minimum, value < minimum {
+      throw makeInvalidValueError(
+        path,
+        boundsMessage(minimum: minimum, maximum: maximum, describe: describe)
+      )
     }
 
-    if let maximum {
-      let isAboveMaximum = includesMaximum ? value > maximum : value >= maximum
-      if isAboveMaximum {
-        throw makeInvalidValueError(
-          path,
-          boundsMessage(
-            minimum: minimum,
-            maximum: maximum,
-            includesMinimum: includesMinimum,
-            includesMaximum: includesMaximum,
-            describe: describe
-          )
-        )
-      }
+    if let maximum, value > maximum {
+      throw makeInvalidValueError(
+        path,
+        boundsMessage(minimum: minimum, maximum: maximum, describe: describe)
+      )
     }
 
     return value
@@ -332,28 +342,17 @@ public struct TOMLConfigReader<Failure: Error> {
   private func boundsMessage<Value>(
     minimum: Value?,
     maximum: Value?,
-    includesMinimum: Bool,
-    includesMaximum: Bool,
     describe: (Value) -> String
   ) -> String {
     switch (minimum, maximum) {
     case (.some(let minimum), .some(let maximum)):
-      if includesMinimum && includesMaximum {
-        return "expected a value from \(describe(minimum)) to \(describe(maximum))"
-      }
-
-      let lowerComparator = includesMinimum ? "greater than or equal to" : "greater than"
-      let upperComparator = includesMaximum ? "less than or equal to" : "less than"
-      return
-        "expected a value \(lowerComparator) \(describe(minimum)) and \(upperComparator) \(describe(maximum))"
+      return "expected a value from \(describe(minimum)) to \(describe(maximum))"
 
     case (.some(let minimum), nil):
-      let comparator = includesMinimum ? "greater than or equal to" : "greater than"
-      return "expected a value \(comparator) \(describe(minimum))"
+      return "expected a value greater than or equal to \(describe(minimum))"
 
     case (nil, .some(let maximum)):
-      let comparator = includesMaximum ? "less than or equal to" : "less than"
-      return "expected a value \(comparator) \(describe(maximum))"
+      return "expected a value less than or equal to \(describe(maximum))"
 
     case (nil, nil):
       return "expected a valid value"

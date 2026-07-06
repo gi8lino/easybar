@@ -167,7 +167,20 @@ extension Config {
     reader: ConfigReader,
     fallback: VolumeBuiltinConfig.Content
   ) throws -> VolumeBuiltinConfig.Content {
-    VolumeBuiltinConfig.Content(
+    let step = try reader.double(
+      "step",
+      fallback: fallback.step,
+      minimum: 0,
+      maximum: 100
+    )
+    guard step > 0 else {
+      throw ConfigError.invalidValue(
+        path: reader.path(for: "step"),
+        message: "expected a value greater than 0 and less than or equal to 100"
+      )
+    }
+
+    return VolumeBuiltinConfig.Content(
       mutedIcon: try reader.string("muted_icon", fallback: fallback.mutedIcon),
       lowIcon: try reader.string("low_icon", fallback: fallback.lowIcon),
       highIcon: try reader.string("high_icon", fallback: fallback.highIcon),
@@ -184,13 +197,7 @@ extension Config {
         minimum: 0,
         maximum: 100
       ),
-      step: try reader.double(
-        "step",
-        fallback: fallback.step,
-        minimum: 0,
-        maximum: 100,
-        includesMinimum: false
-      )
+      step: step
     )
   }
 
@@ -199,17 +206,20 @@ extension Config {
     reader: ConfigReader,
     fallback: VolumeBuiltinConfig.Slider
   ) throws -> VolumeBuiltinConfig.Slider {
-    VolumeBuiltinConfig.Slider(
+    let width = try reader.double("width", fallback: fallback.width, minimum: 0)
+    guard width > 0 else {
+      throw ConfigError.invalidValue(
+        path: reader.path(for: "width"),
+        message: "expected a value greater than 0"
+      )
+    }
+
+    return VolumeBuiltinConfig.Slider(
       expandToSliderOnHover: try reader.bool(
         "expand_to_slider_on_hover",
         fallback: fallback.expandToSliderOnHover
       ),
-      width: try reader.double(
-        "width",
-        fallback: fallback.width,
-        minimum: 0,
-        includesMinimum: false
-      )
+      width: width
     )
   }
 

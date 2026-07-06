@@ -38,11 +38,11 @@ extension CalendarBuiltinConfig {
       backgroundColorHex: try reader.string(
         "background_color", fallback: fallback.backgroundColorHex),
       borderColorHex: try reader.string("border_color", fallback: fallback.borderColorHex),
-      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
-      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
-      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
-      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
-      spacing: try reader.double("spacing", fallback: fallback.spacing),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth, minimum: 0),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius, minimum: 0),
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX, minimum: 0),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
       marginY: try reader.double("margin_y", fallback: fallback.marginY)
     )
