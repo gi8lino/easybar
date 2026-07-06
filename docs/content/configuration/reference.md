@@ -737,5 +737,3 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key      | Default        | Description         |
 | -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
-
-
