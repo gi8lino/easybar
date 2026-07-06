@@ -22,7 +22,7 @@ public enum ConfigValidator {
 
     return Result(
       configPath: resolvedPath,
-      warnings: ConfigWarningBuilder.warnings(for: loadedState.snapshot)
+      warnings: loadedState.warnings + ConfigWarningBuilder.warnings(for: loadedState.snapshot)
     )
   }
 }

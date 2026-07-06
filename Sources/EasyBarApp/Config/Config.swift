@@ -237,6 +237,8 @@ final class Config: ObservableObject {
   var loadFailureState: LoadFailureState?
   /// Runtime directories required by parsed config.
   var registeredDirectories: [String: RequiredDirectory] = [:]
+  /// Non-fatal warnings produced while parsing the current config.
+  var configWarnings: [String] = []
 
   private init(configPathOverride: String? = nil) {
     self.configPathOverride = expandedPath(configPathOverride)

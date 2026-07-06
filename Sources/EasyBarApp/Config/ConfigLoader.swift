@@ -6,12 +6,14 @@ extension Config {
 
   func load(validateOnly: Bool = false) throws {
     resetRegisteredDirectories()
+    configWarnings = []
 
     let resolvedConfigPath = configPath
     let fileURL = URL(fileURLWithPath: resolvedConfigPath)
 
     let loadedConfig = try loadConfigFile(from: fileURL, resolvedPath: resolvedConfigPath)
     try parseConfig(from: loadedConfig.table)
+    configWarnings = ConfigUnknownKeyWarningBuilder.warnings(for: loadedConfig.table)
 
     if !validateOnly {
       try ensureRequiredDirectoriesExist()

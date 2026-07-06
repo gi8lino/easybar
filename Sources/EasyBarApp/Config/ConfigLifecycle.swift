@@ -6,6 +6,7 @@ extension Config {
   struct LoadedState {
     let snapshot: ConfigSnapshot
     let registeredDirectories: [String: RequiredDirectory]
+    let warnings: [String]
   }
 
   /// Loads config from disk during app startup.
@@ -28,6 +29,7 @@ extension Config {
   func reload() -> (any Error)? {
     let fallbackSnapshot = snapshot()
     let fallbackDirectories = registeredDirectories
+    let fallbackWarnings = configWarnings
 
     do {
       applyLoadedState(try Self.makeLoadedState())
@@ -37,6 +39,7 @@ extension Config {
     } catch {
       apply(fallbackSnapshot)
       registeredDirectories = fallbackDirectories
+      configWarnings = fallbackWarnings
       loadFailureState = LoadFailureState(error: error, context: .reloadKeptPreviousConfig)
       objectWillChange.send()
       return error
@@ -47,6 +50,7 @@ extension Config {
   private func applyLoadedState(_ state: LoadedState) {
     apply(state.snapshot)
     registeredDirectories = state.registeredDirectories
+    configWarnings = state.warnings
   }
 
   /// Builds one staged config state without mutating the live singleton.
@@ -60,7 +64,8 @@ extension Config {
 
     return LoadedState(
       snapshot: staged.snapshot(),
-      registeredDirectories: staged.registeredDirectories
+      registeredDirectories: staged.registeredDirectories,
+      warnings: staged.configWarnings
     )
   }
 
