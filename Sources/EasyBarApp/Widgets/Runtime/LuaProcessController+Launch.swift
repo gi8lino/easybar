@@ -104,14 +104,14 @@ extension LuaProcessController {
     var fileActions: posix_spawn_file_actions_t?
     var attributes: posix_spawnattr_t?
 
-    try initializeFileActions(&fileActions)
+    try PosixSpawnSupport.initializeFileActions(&fileActions)
     defer {
       if fileActions != nil {
         posix_spawn_file_actions_destroy(&fileActions)
       }
     }
 
-    try initializeSpawnAttributes(&attributes)
+    try PosixSpawnSupport.initializeSpawnAttributes(&attributes)
     defer {
       if attributes != nil {
         posix_spawnattr_destroy(&attributes)
@@ -123,7 +123,7 @@ extension LuaProcessController {
       resources: resources
     )
 
-    try configureDedicatedProcessGroup(attributes: &attributes)
+    try PosixSpawnSupport.configureDedicatedProcessGroup(attributes: &attributes)
 
     let argv = try makeArgumentVector(
       executablePath: context.runtimeAgentPath,
@@ -135,10 +135,10 @@ extension LuaProcessController {
       defaultCommandMaxOutputBytes: context.defaultCommandMaxOutputBytes,
       widgetFiles: context.widgetFiles
     )
-    defer { freeCStringVector(argv) }
+    defer { PosixSpawnSupport.freeCStringVector(argv) }
 
     let envp = try makeEnvironmentVector(overrides: context.environment)
-    defer { freeCStringVector(envp) }
+    defer { PosixSpawnSupport.freeCStringVector(envp) }
 
     var pid: pid_t = 0
 
@@ -276,82 +276,21 @@ extension LuaProcessController {
     return waitStatusCode(status)
   }
 
-  /// Initializes one `posix_spawn_file_actions_t`.
-  private func initializeFileActions(_ fileActions: inout posix_spawn_file_actions_t?) throws {
-    fileActions = nil
-
-    let result = posix_spawn_file_actions_init(&fileActions)
-    guard result == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(result),
-        userInfo: [
-          NSLocalizedDescriptionKey: "posix_spawn_file_actions_init failed errno=\(result)"
-        ]
-      )
-    }
-  }
-
-  /// Initializes one `posix_spawnattr_t`.
-  private func initializeSpawnAttributes(_ attributes: inout posix_spawnattr_t?) throws {
-    attributes = nil
-
-    let result = posix_spawnattr_init(&attributes)
-    guard result == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(result),
-        userInfo: [
-          NSLocalizedDescriptionKey: "posix_spawnattr_init failed errno=\(result)"
-        ]
-      )
-    }
-  }
-
   /// Configures stderr redirection for the Lua child launcher.
   private func configureChildStandardStreams(
     fileActions: inout posix_spawn_file_actions_t?,
     resources: LaunchResources
   ) throws {
-    try addDup2Action(
+    try PosixSpawnSupport.addDup2Action(
       fileActions: &fileActions,
       sourceFileDescriptor: resources.error.fileHandleForWriting.fileDescriptor,
       destinationFileDescriptor: STDERR_FILENO
     )
 
-    try addCloseAction(
+    try PosixSpawnSupport.addCloseAction(
       fileActions: &fileActions,
       fileDescriptor: resources.error.fileHandleForReading.fileDescriptor
     )
-  }
-
-  /// Configures the child to become leader of a dedicated process group.
-  private func configureDedicatedProcessGroup(
-    attributes: inout posix_spawnattr_t?
-  ) throws {
-    let flags = Int16(POSIX_SPAWN_SETPGROUP)
-
-    let flagsResult = posix_spawnattr_setflags(&attributes, flags)
-    guard flagsResult == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(flagsResult),
-        userInfo: [
-          NSLocalizedDescriptionKey: "posix_spawnattr_setflags failed errno=\(flagsResult)"
-        ]
-      )
-    }
-
-    let pgroupResult = posix_spawnattr_setpgroup(&attributes, 0)
-    guard pgroupResult == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(pgroupResult),
-        userInfo: [
-          NSLocalizedDescriptionKey: "posix_spawnattr_setpgroup failed errno=\(pgroupResult)"
-        ]
-      )
-    }
   }
 
   /// Builds the argv vector for the spawned Lua runtime.
@@ -365,7 +304,7 @@ extension LuaProcessController {
     defaultCommandMaxOutputBytes: Int,
     widgetFiles: [String]
   ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
-    try makeCStringVector(
+    try PosixSpawnSupport.makeCStringVector(
       [
         executablePath,
         socketPath,
@@ -393,96 +332,7 @@ extension LuaProcessController {
       .map { "\($0.key)=\($0.value)" }
       .sorted()
 
-    return try makeCStringVector(flattenedEnvironment)
-  }
-
-  /// Creates one null-terminated C string vector suitable for `posix_spawn`.
-  private func makeCStringVector(
-    _ values: [String]
-  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
-    let buffer = UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>.allocate(
-      capacity: values.count + 1
-    )
-
-    for (index, value) in values.enumerated() {
-      guard let duplicated = strdup(value) else {
-        for previousIndex in 0..<index {
-          free(buffer[previousIndex])
-        }
-
-        buffer.deallocate()
-
-        throw NSError(
-          domain: NSPOSIXErrorDomain,
-          code: Int(ENOMEM),
-          userInfo: [
-            NSLocalizedDescriptionKey: "strdup failed while building spawn arguments"
-          ]
-        )
-      }
-
-      buffer[index] = duplicated
-    }
-
-    buffer[values.count] = nil
-    return buffer
-  }
-
-  /// Frees one previously allocated C string vector.
-  private func freeCStringVector(
-    _ vector: UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
-  ) {
-    var index = 0
-
-    while let value = vector[index] {
-      free(value)
-      index += 1
-    }
-
-    vector.deallocate()
-  }
-
-  /// Adds one `dup2` file action.
-  private func addDup2Action(
-    fileActions: inout posix_spawn_file_actions_t?,
-    sourceFileDescriptor: Int32,
-    destinationFileDescriptor: Int32
-  ) throws {
-    let result = posix_spawn_file_actions_adddup2(
-      &fileActions,
-      sourceFileDescriptor,
-      destinationFileDescriptor
-    )
-
-    guard result == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(result),
-        userInfo: [
-          NSLocalizedDescriptionKey:
-            "posix_spawn_file_actions_adddup2 failed src=\(sourceFileDescriptor) dst=\(destinationFileDescriptor) errno=\(result)"
-        ]
-      )
-    }
-  }
-
-  /// Adds one close file action.
-  private func addCloseAction(
-    fileActions: inout posix_spawn_file_actions_t?,
-    fileDescriptor: Int32
-  ) throws {
-    let result = posix_spawn_file_actions_addclose(&fileActions, fileDescriptor)
-
-    guard result == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(result),
-        userInfo: [
-          NSLocalizedDescriptionKey:
-            "posix_spawn_file_actions_addclose failed fd=\(fileDescriptor) errno=\(result)"
-        ]
-      )
-    }
+    return try PosixSpawnSupport.makeCStringVector(flattenedEnvironment)
   }
 
   /// Closes the child-side pipe ends in the parent after a successful spawn.
