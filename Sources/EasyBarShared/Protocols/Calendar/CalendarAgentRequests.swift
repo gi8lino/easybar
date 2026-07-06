@@ -13,6 +13,12 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
   public var showBirthdays: Bool
   /// Text shown when no events are available.
   public var emptyText: String
+  /// Title used for today sections.
+  public var todayTitle: String
+  /// Title used for tomorrow sections.
+  public var tomorrowTitle: String
+  /// Label used for all-day event times.
+  public var allDayLabel: String
   /// Title used for the birthdays section.
   public var birthdaysTitle: String
   /// Date format used for birthday rows.
@@ -40,6 +46,9 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     sectionDayCount: Int? = nil,
     showBirthdays: Bool,
     emptyText: String,
+    todayTitle: String = "Today",
+    tomorrowTitle: String = "Tomorrow",
+    allDayLabel: String = "All day",
     birthdaysTitle: String,
     birthdaysDateFormat: String,
     birthdaysShowAge: Bool,
@@ -56,6 +65,9 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     self.sectionDayCount = sectionDayCount
     self.showBirthdays = showBirthdays
     self.emptyText = emptyText
+    self.todayTitle = todayTitle
+    self.tomorrowTitle = tomorrowTitle
+    self.allDayLabel = allDayLabel
     self.birthdaysTitle = birthdaysTitle
     self.birthdaysDateFormat = birthdaysDateFormat
     self.birthdaysShowAge = birthdaysShowAge
@@ -65,6 +77,51 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     self.excludedCalendarIDs = excludedCalendarIDs
     self.includedCalendarSourceIDs = includedCalendarSourceIDs
     self.excludedCalendarSourceIDs = excludedCalendarSourceIDs
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case startDate
+    case endDate
+    case sectionStartDate
+    case sectionDayCount
+    case showBirthdays
+    case emptyText
+    case todayTitle
+    case tomorrowTitle
+    case allDayLabel
+    case birthdaysTitle
+    case birthdaysDateFormat
+    case birthdaysShowAge
+    case includedCalendarNames
+    case excludedCalendarNames
+    case includedCalendarIDs
+    case excludedCalendarIDs
+    case includedCalendarSourceIDs
+    case excludedCalendarSourceIDs
+  }
+
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    startDate = try container.decode(Date.self, forKey: .startDate)
+    endDate = try container.decode(Date.self, forKey: .endDate)
+    sectionStartDate = try container.decodeIfPresent(Date.self, forKey: .sectionStartDate)
+    sectionDayCount = try container.decodeIfPresent(Int.self, forKey: .sectionDayCount)
+    showBirthdays = try container.decode(Bool.self, forKey: .showBirthdays)
+    emptyText = try container.decode(String.self, forKey: .emptyText)
+    todayTitle = try container.decodeIfPresent(String.self, forKey: .todayTitle) ?? "Today"
+    tomorrowTitle = try container.decodeIfPresent(String.self, forKey: .tomorrowTitle) ?? "Tomorrow"
+    allDayLabel = try container.decodeIfPresent(String.self, forKey: .allDayLabel) ?? "All day"
+    birthdaysTitle = try container.decode(String.self, forKey: .birthdaysTitle)
+    birthdaysDateFormat = try container.decode(String.self, forKey: .birthdaysDateFormat)
+    birthdaysShowAge = try container.decode(Bool.self, forKey: .birthdaysShowAge)
+    includedCalendarNames = try container.decodeIfPresent([String].self, forKey: .includedCalendarNames) ?? []
+    excludedCalendarNames = try container.decodeIfPresent([String].self, forKey: .excludedCalendarNames) ?? []
+    includedCalendarIDs = try container.decodeIfPresent([String].self, forKey: .includedCalendarIDs) ?? []
+    excludedCalendarIDs = try container.decodeIfPresent([String].self, forKey: .excludedCalendarIDs) ?? []
+    includedCalendarSourceIDs =
+      try container.decodeIfPresent([String].self, forKey: .includedCalendarSourceIDs) ?? []
+    excludedCalendarSourceIDs =
+      try container.decodeIfPresent([String].self, forKey: .excludedCalendarSourceIDs) ?? []
   }
 }
 

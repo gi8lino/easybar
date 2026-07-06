@@ -48,6 +48,7 @@ public struct CalendarBirthdayRequestOptions: Equatable, Sendable {
 public struct CalendarUpcomingRequestOptions: Equatable, Sendable {
   public let dayCount: Int
   public let emptyText: String
+  public let allDayLabel: String
   public let birthdaysDateFormat: String
   public let birthdaysTitle: String
   public let birthdays: CalendarBirthdayRequestOptions
@@ -56,6 +57,7 @@ public struct CalendarUpcomingRequestOptions: Equatable, Sendable {
   public init(
     dayCount: Int,
     emptyText: String,
+    allDayLabel: String = "All day",
     birthdaysDateFormat: String = "dd.MM.yyyy",
     birthdaysTitle: String = "",
     birthdays: CalendarBirthdayRequestOptions,
@@ -63,6 +65,7 @@ public struct CalendarUpcomingRequestOptions: Equatable, Sendable {
   ) {
     self.dayCount = dayCount
     self.emptyText = emptyText
+    self.allDayLabel = allDayLabel
     self.birthdaysDateFormat = birthdaysDateFormat
     self.birthdaysTitle = birthdaysTitle
     self.birthdays = birthdays
@@ -73,6 +76,7 @@ public struct CalendarUpcomingRequestOptions: Equatable, Sendable {
 /// Options used to build one month-calendar request.
 public struct CalendarMonthRequestOptions: Equatable, Sendable {
   public let emptyText: String
+  public let allDayLabel: String
   public let birthdaysDateFormat: String
   public let birthdaysTitle: String
   public let birthdays: CalendarBirthdayRequestOptions
@@ -80,12 +84,14 @@ public struct CalendarMonthRequestOptions: Equatable, Sendable {
 
   public init(
     emptyText: String,
+    allDayLabel: String = "All day",
     birthdaysDateFormat: String = "dd.MM.yyyy",
     birthdaysTitle: String = "",
     birthdays: CalendarBirthdayRequestOptions,
     filters: CalendarRequestFilters
   ) {
     self.emptyText = emptyText
+    self.allDayLabel = allDayLabel
     self.birthdaysDateFormat = birthdaysDateFormat
     self.birthdaysTitle = birthdaysTitle
     self.birthdays = birthdays
@@ -131,6 +137,7 @@ public enum CalendarRequestFactory {
         sectionDayCount: nil,
         showBirthdays: options.birthdays.showBirthdays,
         emptyText: options.emptyText,
+        allDayLabel: options.allDayLabel,
         birthdaysTitle: options.birthdaysTitle,
         birthdaysDateFormat: options.birthdaysDateFormat,
         birthdaysShowAge: options.birthdays.showAge,
@@ -158,6 +165,7 @@ public enum CalendarRequestFactory {
         sectionDayCount: nil,
         showBirthdays: options.birthdays.showBirthdays,
         emptyText: options.emptyText,
+        allDayLabel: options.allDayLabel,
         birthdaysTitle: options.birthdaysTitle,
         birthdaysDateFormat: options.birthdaysDateFormat,
         birthdaysShowAge: options.birthdays.showAge,

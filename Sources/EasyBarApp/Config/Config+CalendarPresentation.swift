@@ -25,6 +25,7 @@ extension CalendarBuiltinConfig {
     CalendarUpcomingRequestOptions(
       dayCount: upcoming.events.days,
       emptyText: appointments.emptyText,
+      allDayLabel: appointments.allDayLabel,
       birthdays: presentationBirthdays,
       filters: presentationFilters
     )
@@ -33,6 +34,7 @@ extension CalendarBuiltinConfig {
   var presentationMonthRequestOptions: CalendarMonthRequestOptions {
     CalendarMonthRequestOptions(
       emptyText: appointments.emptyText,
+      allDayLabel: appointments.allDayLabel,
       birthdays: presentationBirthdays,
       filters: presentationFilters
     )

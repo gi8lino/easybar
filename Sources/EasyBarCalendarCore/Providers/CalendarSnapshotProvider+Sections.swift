@@ -78,10 +78,10 @@ extension CalendarSnapshotProvider {
       let kind: CalendarAgentSectionKind
 
       if calendar.isDateInToday(day) {
-        title = "Today"
+        title = query.todayTitle
         kind = .today
       } else if calendar.isDateInTomorrow(day) {
-        title = "Tomorrow"
+        title = query.tomorrowTitle
         kind = .tomorrow
       } else {
         title = formatDayTitle(day)
@@ -108,7 +108,7 @@ extension CalendarSnapshotProvider {
           items: dayEvents.map { event in
             CalendarAgentItem(
               id: event.id,
-              time: event.isAllDay ? "All day" : formatEventTime(event.startDate),
+              time: event.isAllDay ? query.allDayLabel : formatEventTime(event.startDate),
               startDate: event.startDate,
               endDate: event.endDate,
               isAllDay: event.isAllDay,
