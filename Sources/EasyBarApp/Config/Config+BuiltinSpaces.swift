@@ -209,64 +209,76 @@ extension Config {
     fallback: SpacesBuiltinConfig.Layout
   ) throws -> SpacesBuiltinConfig.Layout {
     SpacesBuiltinConfig.Layout(
-      spacing: try optionalNumber(table["spacing"], path: "builtins.spaces.layout.spacing")
-        ?? fallback.spacing,
-      hideEmpty: try optionalBool(table["hide_empty"], path: "builtins.spaces.layout.hide_empty")
-        ?? fallback.hideEmpty,
-      paddingX: try optionalNumber(table["padding_x"], path: "builtins.spaces.layout.padding_x")
-        ?? fallback.paddingX,
-      paddingY: try optionalNumber(table["padding_y"], path: "builtins.spaces.layout.padding_y")
-        ?? fallback.paddingY,
-      marginX: try optionalNumber(table["margin_x"], path: "builtins.spaces.layout.margin_x")
-        ?? fallback.marginX,
-      marginY: try optionalNumber(table["margin_y"], path: "builtins.spaces.layout.margin_y")
-        ?? fallback.marginY,
-      cornerRadius: try optionalNumber(
-        table["corner_radius"],
-        path: "builtins.spaces.layout.corner_radius"
-      ) ?? fallback.cornerRadius,
-      focusedCornerRadius: try optionalNumber(
-        table["focused_corner_radius"],
-        path: "builtins.spaces.layout.focused_corner_radius"
-      ) ?? fallback.focusedCornerRadius,
-      focusedScale: try optionalNumber(
-        table["focused_scale"],
-        path: "builtins.spaces.layout.focused_scale"
-      ) ?? fallback.focusedScale,
-      inactiveOpacity: try optionalNumber(
-        table["inactive_opacity"],
-        path: "builtins.spaces.layout.inactive_opacity"
-      ) ?? fallback.inactiveOpacity,
-      maxIcons: try optionalInt(table["max_icons"], path: "builtins.spaces.layout.max_icons")
-        ?? fallback.maxIcons,
-      showLabel: try optionalBool(table["show_label"], path: "builtins.spaces.layout.show_label")
-        ?? fallback.showLabel,
-      showIcons: try optionalBool(table["show_icons"], path: "builtins.spaces.layout.show_icons")
-        ?? fallback.showIcons,
-      showOnlyFocusedLabel: try optionalBool(
-        table["show_only_focused_label"],
-        path: "builtins.spaces.layout.show_only_focused_label"
-      ) ?? fallback.showOnlyFocusedLabel,
-      collapseInactive: try optionalBool(
-        table["collapse_inactive"],
-        path: "builtins.spaces.layout.collapse_inactive"
-      ) ?? fallback.collapseInactive,
-      collapsedPaddingX: try optionalNumber(
-        table["collapsed_padding_x"],
-        path: "builtins.spaces.layout.collapsed_padding_x"
-      ) ?? fallback.collapsedPaddingX,
-      collapsedPaddingY: try optionalNumber(
-        table["collapsed_padding_y"],
-        path: "builtins.spaces.layout.collapsed_padding_y"
-      ) ?? fallback.collapsedPaddingY,
-      clickToFocusSpace: try optionalBool(
-        table["click_to_focus_space"],
-        path: "builtins.spaces.layout.click_to_focus_space"
-      ) ?? fallback.clickToFocusSpace,
-      clickToFocusApp: try optionalBool(
-        table["click_to_focus_app"],
-        path: "builtins.spaces.layout.click_to_focus_app"
-      ) ?? fallback.clickToFocusApp
+      spacing: try optionalField(
+        .number("spacing"), from: table, path: "builtins.spaces.layout", fallback: fallback.spacing),
+      hideEmpty: try optionalField(
+        .bool("hide_empty"), from: table, path: "builtins.spaces.layout", fallback: fallback.hideEmpty),
+      paddingX: try optionalField(
+        .number("padding_x"), from: table, path: "builtins.spaces.layout", fallback: fallback.paddingX),
+      paddingY: try optionalField(
+        .number("padding_y"), from: table, path: "builtins.spaces.layout", fallback: fallback.paddingY),
+      marginX: try optionalField(
+        .number("margin_x"), from: table, path: "builtins.spaces.layout", fallback: fallback.marginX),
+      marginY: try optionalField(
+        .number("margin_y"), from: table, path: "builtins.spaces.layout", fallback: fallback.marginY),
+      cornerRadius: try optionalField(
+        .number("corner_radius"), from: table, path: "builtins.spaces.layout", fallback: fallback.cornerRadius),
+      focusedCornerRadius: try optionalField(
+        .number("focused_corner_radius"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.focusedCornerRadius
+      ),
+      focusedScale: try optionalField(
+        .number("focused_scale"), from: table, path: "builtins.spaces.layout", fallback: fallback.focusedScale),
+      inactiveOpacity: try optionalField(
+        .number("inactive_opacity"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.inactiveOpacity
+      ),
+      maxIcons: try optionalField(
+        .int("max_icons"), from: table, path: "builtins.spaces.layout", fallback: fallback.maxIcons),
+      showLabel: try optionalField(
+        .bool("show_label"), from: table, path: "builtins.spaces.layout", fallback: fallback.showLabel),
+      showIcons: try optionalField(
+        .bool("show_icons"), from: table, path: "builtins.spaces.layout", fallback: fallback.showIcons),
+      showOnlyFocusedLabel: try optionalField(
+        .bool("show_only_focused_label"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.showOnlyFocusedLabel
+      ),
+      collapseInactive: try optionalField(
+        .bool("collapse_inactive"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.collapseInactive
+      ),
+      collapsedPaddingX: try optionalField(
+        .number("collapsed_padding_x"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.collapsedPaddingX
+      ),
+      collapsedPaddingY: try optionalField(
+        .number("collapsed_padding_y"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.collapsedPaddingY
+      ),
+      clickToFocusSpace: try optionalField(
+        .bool("click_to_focus_space"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.clickToFocusSpace
+      ),
+      clickToFocusApp: try optionalField(
+        .bool("click_to_focus_app"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.clickToFocusApp
+      )
     )
   }
 
@@ -276,21 +288,23 @@ extension Config {
     fallback: SpacesBuiltinConfig.Text
   ) throws -> SpacesBuiltinConfig.Text {
     SpacesBuiltinConfig.Text(
-      size: try optionalNumber(table["size"], path: "builtins.spaces.text.size")
-        ?? fallback.size,
+      size: try optionalField(.number("size"), from: table, path: "builtins.spaces.text", fallback: fallback.size),
       weight: try validatedSpacesTextWeight(
-        try optionalString(table["weight"], path: "builtins.spaces.text.weight")
-          ?? fallback.weight,
+        try optionalField(.string("weight"), from: table, path: "builtins.spaces.text", fallback: fallback.weight),
         path: "builtins.spaces.text.weight"
       ),
-      focusedColorHex: try optionalString(
-        table["focused_color"],
-        path: "builtins.spaces.text.focused_color"
-      ) ?? fallback.focusedColorHex,
-      inactiveColorHex: try optionalString(
-        table["inactive_color"],
-        path: "builtins.spaces.text.inactive_color"
-      ) ?? fallback.inactiveColorHex
+      focusedColorHex: try optionalField(
+        .string("focused_color"),
+        from: table,
+        path: "builtins.spaces.text",
+        fallback: fallback.focusedColorHex
+      ),
+      inactiveColorHex: try optionalField(
+        .string("inactive_color"),
+        from: table,
+        path: "builtins.spaces.text",
+        fallback: fallback.inactiveColorHex
+      )
     )
   }
 
@@ -300,26 +314,33 @@ extension Config {
     fallback: SpacesBuiltinConfig.Icons
   ) throws -> SpacesBuiltinConfig.Icons {
     SpacesBuiltinConfig.Icons(
-      size: try optionalNumber(table["size"], path: "builtins.spaces.icons.size")
-        ?? fallback.size,
-      spacing: try optionalNumber(table["spacing"], path: "builtins.spaces.icons.spacing")
-        ?? fallback.spacing,
-      cornerRadius: try optionalNumber(
-        table["corner_radius"],
-        path: "builtins.spaces.icons.corner_radius"
-      ) ?? fallback.cornerRadius,
-      focusedAppSize: try optionalNumber(
-        table["focused_app_size"],
-        path: "builtins.spaces.icons.focused_app_size"
-      ) ?? fallback.focusedAppSize,
-      borderWidth: try optionalNumber(
-        table["border_width"],
-        path: "builtins.spaces.icons.border_width"
-      ) ?? fallback.borderWidth,
-      focusedAppBorderWidth: try optionalNumber(
-        table["focused_app_border_width"],
-        path: "builtins.spaces.icons.focused_app_border_width"
-      ) ?? fallback.focusedAppBorderWidth
+      size: try optionalField(.number("size"), from: table, path: "builtins.spaces.icons", fallback: fallback.size),
+      spacing: try optionalField(
+        .number("spacing"), from: table, path: "builtins.spaces.icons", fallback: fallback.spacing),
+      cornerRadius: try optionalField(
+        .number("corner_radius"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.cornerRadius
+      ),
+      focusedAppSize: try optionalField(
+        .number("focused_app_size"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.focusedAppSize
+      ),
+      borderWidth: try optionalField(
+        .number("border_width"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.borderWidth
+      ),
+      focusedAppBorderWidth: try optionalField(
+        .number("focused_app_border_width"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.focusedAppBorderWidth
+      )
     )
   }
 
@@ -329,26 +350,36 @@ extension Config {
     fallback: SpacesBuiltinConfig.Colors
   ) throws -> SpacesBuiltinConfig.Colors {
     SpacesBuiltinConfig.Colors(
-      activeBackgroundHex: try optionalString(
-        table["active_background"],
-        path: "builtins.spaces.colors.active_background"
-      ) ?? fallback.activeBackgroundHex,
-      inactiveBackgroundHex: try optionalString(
-        table["inactive_background"],
-        path: "builtins.spaces.colors.inactive_background"
-      ) ?? fallback.inactiveBackgroundHex,
-      activeBorderHex: try optionalString(
-        table["active_border"],
-        path: "builtins.spaces.colors.active_border"
-      ) ?? fallback.activeBorderHex,
-      inactiveBorderHex: try optionalString(
-        table["inactive_border"],
-        path: "builtins.spaces.colors.inactive_border"
-      ) ?? fallback.inactiveBorderHex,
-      focusedAppBorderHex: try optionalString(
-        table["focused_app_border"],
-        path: "builtins.spaces.colors.focused_app_border"
-      ) ?? fallback.focusedAppBorderHex
+      activeBackgroundHex: try optionalField(
+        .string("active_background"),
+        from: table,
+        path: "builtins.spaces.colors",
+        fallback: fallback.activeBackgroundHex
+      ),
+      inactiveBackgroundHex: try optionalField(
+        .string("inactive_background"),
+        from: table,
+        path: "builtins.spaces.colors",
+        fallback: fallback.inactiveBackgroundHex
+      ),
+      activeBorderHex: try optionalField(
+        .string("active_border"),
+        from: table,
+        path: "builtins.spaces.colors",
+        fallback: fallback.activeBorderHex
+      ),
+      inactiveBorderHex: try optionalField(
+        .string("inactive_border"),
+        from: table,
+        path: "builtins.spaces.colors",
+        fallback: fallback.inactiveBorderHex
+      ),
+      focusedAppBorderHex: try optionalField(
+        .string("focused_app_border"),
+        from: table,
+        path: "builtins.spaces.colors",
+        fallback: fallback.focusedAppBorderHex
+      )
     )
   }
 }

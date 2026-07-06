@@ -2,6 +2,57 @@ import EasyBarShared
 import Foundation
 import TOMLKit
 
+/// Describes one typed TOML field inside a calendar config table.
+struct CalendarTOMLConfigField<Value> {
+  let key: String
+  let read: (CalendarBuiltinConfigParser, (any TOMLValueConvertible)?, String) throws -> Value?
+}
+
+extension CalendarTOMLConfigField where Value == String {
+  /// Creates one optional string field descriptor.
+  static func string(_ key: String) -> CalendarTOMLConfigField<String> {
+    CalendarTOMLConfigField<String>(key: key) { parser, value, path in
+      try parser.optionalString(value, path: path)
+    }
+  }
+}
+
+extension CalendarTOMLConfigField where Value == Bool {
+  /// Creates one optional bool field descriptor.
+  static func bool(_ key: String) -> CalendarTOMLConfigField<Bool> {
+    CalendarTOMLConfigField<Bool>(key: key) { parser, value, path in
+      try parser.optionalBool(value, path: path)
+    }
+  }
+}
+
+extension CalendarTOMLConfigField where Value == Int {
+  /// Creates one optional integer field descriptor.
+  static func int(_ key: String) -> CalendarTOMLConfigField<Int> {
+    CalendarTOMLConfigField<Int>(key: key) { parser, value, path in
+      try parser.optionalInt(value, path: path)
+    }
+  }
+}
+
+extension CalendarTOMLConfigField where Value == Double {
+  /// Creates one optional number field descriptor.
+  static func number(_ key: String) -> CalendarTOMLConfigField<Double> {
+    CalendarTOMLConfigField<Double>(key: key) { parser, value, path in
+      try parser.optionalNumber(value, path: path)
+    }
+  }
+}
+
+extension CalendarTOMLConfigField where Value == [String] {
+  /// Creates one optional string-array field descriptor.
+  static func stringArray(_ key: String) -> CalendarTOMLConfigField<[String]> {
+    CalendarTOMLConfigField<[String]>(key: key) { parser, value, path in
+      try parser.optionalStringArray(value, path: path)
+    }
+  }
+}
+
 extension CalendarBuiltinConfigParser {
   // MARK: - Enum parsing
 
@@ -47,6 +98,26 @@ extension CalendarBuiltinConfigParser {
   }
 
   // MARK: - TOML helpers
+
+  /// Parses one typed optional field from a table, falling back when the key is absent.
+  func optionalField<Value>(
+    _ field: CalendarTOMLConfigField<Value>,
+    from table: TOMLTable,
+    path: String,
+    fallback: Value
+  ) throws -> Value {
+    try field.read(self, table[field.key], "\(path).\(field.key)") ?? fallback
+  }
+
+  /// Parses one typed optional field from a table, preserving an optional fallback when absent.
+  func optionalField<Value>(
+    _ field: CalendarTOMLConfigField<Value>,
+    from table: TOMLTable,
+    path: String,
+    fallback: Value?
+  ) throws -> Value? {
+    try field.read(self, table[field.key], "\(path).\(field.key)") ?? fallback
+  }
 
   /// Reads an optional TOML string.
   func optionalString(_ value: (any TOMLValueConvertible)?, path: String) throws -> String? {

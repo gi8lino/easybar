@@ -37,8 +37,7 @@ extension CalendarBuiltinConfig {
         fallback: fallback.style
       ),
       popupMode: try parser.parseCalendarPopupMode(
-        try parser.optionalString(table["popup_mode"], path: "\(path).popup_mode")
-          ?? fallback.popupMode.rawValue,
+        try parser.optionalField(.string("popup_mode"), from: table, path: path, fallback: fallback.popupMode.rawValue),
         path: "\(path).popup_mode"
       ),
       anchor: try parser.parseAnchor(
@@ -87,14 +86,13 @@ struct CalendarBuiltinConfigParser {
     fallback: CalendarWidgetPlacement
   ) throws -> CalendarWidgetPlacement {
     CalendarWidgetPlacement(
-      enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
+      enabled: try optionalField(.bool("enabled"), from: table, path: path, fallback: fallback.enabled),
       position: try parseWidgetPosition(
-        try optionalString(table["position"], path: "\(path).position")
-          ?? fallback.position.rawValue,
+        try optionalField(.string("position"), from: table, path: path, fallback: fallback.position.rawValue),
         path: "\(path).position"
       ),
-      order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
-      group: try optionalString(table["group"], path: "\(path).group") ?? fallback.group
+      order: try optionalField(.int("order"), from: table, path: path, fallback: fallback.order),
+      group: try optionalField(.string("group"), from: table, path: path, fallback: fallback.group)
     )
   }
 
@@ -105,31 +103,25 @@ struct CalendarBuiltinConfigParser {
     fallback: CalendarWidgetStyle
   ) throws -> CalendarWidgetStyle {
     CalendarWidgetStyle(
-      icon: try optionalString(table["icon"], path: "\(path).icon") ?? fallback.icon,
-      textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
-        ?? fallback.textColorHex,
-      backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "\(path).background_color"
-      ) ?? fallback.backgroundColorHex,
-      borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
-        ?? fallback.borderColorHex,
-      borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
-        ?? fallback.borderWidth,
-      cornerRadius: try optionalNumber(table["corner_radius"], path: "\(path).corner_radius")
-        ?? fallback.cornerRadius,
-      marginX: try optionalNumber(table["margin_x"], path: "\(path).margin_x")
-        ?? fallback.marginX,
-      marginY: try optionalNumber(table["margin_y"], path: "\(path).margin_y")
-        ?? fallback.marginY,
-      paddingX: try optionalNumber(table["padding_x"], path: "\(path).padding_x")
-        ?? fallback.paddingX,
-      paddingY: try optionalNumber(table["padding_y"], path: "\(path).padding_y")
-        ?? fallback.paddingY,
-      spacing: try optionalNumber(table["spacing"], path: "\(path).spacing")
-        ?? fallback.spacing,
-      opacity: try optionalNumber(table["opacity"], path: "\(path).opacity")
-        ?? fallback.opacity
+      icon: try optionalField(.string("icon"), from: table, path: path, fallback: fallback.icon),
+      textColorHex: try optionalField(.string("text_color"), from: table, path: path, fallback: fallback.textColorHex),
+      backgroundColorHex: try optionalField(
+        .string("background_color"),
+        from: table,
+        path: path,
+        fallback: fallback.backgroundColorHex
+      ),
+      borderColorHex: try optionalField(
+        .string("border_color"), from: table, path: path, fallback: fallback.borderColorHex),
+      borderWidth: try optionalField(.number("border_width"), from: table, path: path, fallback: fallback.borderWidth),
+      cornerRadius: try optionalField(
+        .number("corner_radius"), from: table, path: path, fallback: fallback.cornerRadius),
+      marginX: try optionalField(.number("margin_x"), from: table, path: path, fallback: fallback.marginX),
+      marginY: try optionalField(.number("margin_y"), from: table, path: path, fallback: fallback.marginY),
+      paddingX: try optionalField(.number("padding_x"), from: table, path: path, fallback: fallback.paddingX),
+      paddingY: try optionalField(.number("padding_y"), from: table, path: path, fallback: fallback.paddingY),
+      spacing: try optionalField(.number("spacing"), from: table, path: path, fallback: fallback.spacing),
+      opacity: try optionalField(.number("opacity"), from: table, path: path, fallback: fallback.opacity)
     )
   }
 
@@ -139,35 +131,31 @@ struct CalendarBuiltinConfigParser {
     fallback: CalendarBuiltinConfig.Anchor
   ) throws -> CalendarBuiltinConfig.Anchor {
     CalendarBuiltinConfig.Anchor(
-      itemFormat: try optionalString(
-        table["item_format"],
-        path: "\(rootPath).anchor.item_format"
-      ) ?? fallback.itemFormat,
+      itemFormat: try optionalField(
+        .string("item_format"), from: table, path: "\(rootPath).anchor", fallback: fallback.itemFormat),
       layout: try parseCalendarLayout(
-        try optionalString(table["layout"], path: "\(rootPath).anchor.layout")
-          ?? fallback.layout.rawValue,
+        try optionalField(
+          .string("layout"), from: table, path: "\(rootPath).anchor", fallback: fallback.layout.rawValue),
         path: "\(rootPath).anchor.layout"
       ),
-      topFormat: try optionalString(
-        table["top_format"],
-        path: "\(rootPath).anchor.top_format"
-      ) ?? fallback.topFormat,
-      bottomFormat: try optionalString(
-        table["bottom_format"],
-        path: "\(rootPath).anchor.bottom_format"
-      ) ?? fallback.bottomFormat,
-      lineSpacing: try optionalNumber(
-        table["line_spacing"],
-        path: "\(rootPath).anchor.line_spacing"
-      ) ?? fallback.lineSpacing,
-      topTextColorHex: try optionalString(
-        table["top_text_color"],
-        path: "\(rootPath).anchor.top_text_color"
-      ) ?? fallback.topTextColorHex,
-      bottomTextColorHex: try optionalString(
-        table["bottom_text_color"],
-        path: "\(rootPath).anchor.bottom_text_color"
-      ) ?? fallback.bottomTextColorHex
+      topFormat: try optionalField(
+        .string("top_format"), from: table, path: "\(rootPath).anchor", fallback: fallback.topFormat),
+      bottomFormat: try optionalField(
+        .string("bottom_format"), from: table, path: "\(rootPath).anchor", fallback: fallback.bottomFormat),
+      lineSpacing: try optionalField(
+        .number("line_spacing"), from: table, path: "\(rootPath).anchor", fallback: fallback.lineSpacing),
+      topTextColorHex: try optionalField(
+        .string("top_text_color"),
+        from: table,
+        path: "\(rootPath).anchor",
+        fallback: fallback.topTextColorHex
+      ),
+      bottomTextColorHex: try optionalField(
+        .string("bottom_text_color"),
+        from: table,
+        path: "\(rootPath).anchor",
+        fallback: fallback.bottomTextColorHex
+      )
     )
   }
 

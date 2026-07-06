@@ -15,6 +15,31 @@ extension TOMLConfigField where Value == String {
       try config.optionalString(value, path: path)
     }
   }
+
+  /// Creates one optional path field descriptor that expands `~`.
+  static func expandedPath(_ key: String) -> TOMLConfigField<String> {
+    TOMLConfigField<String>(key: key) { config, value, path in
+      try config.optionalExpandedPath(value, path: path)
+    }
+  }
+}
+
+extension TOMLConfigField where Value == Bool {
+  /// Creates one optional bool field descriptor.
+  static func bool(_ key: String) -> TOMLConfigField<Bool> {
+    TOMLConfigField<Bool>(key: key) { config, value, path in
+      try config.optionalBool(value, path: path)
+    }
+  }
+}
+
+extension TOMLConfigField where Value == Int {
+  /// Creates one optional integer field descriptor.
+  static func int(_ key: String) -> TOMLConfigField<Int> {
+    TOMLConfigField<Int>(key: key) { config, value, path in
+      try config.optionalInt(value, path: path)
+    }
+  }
 }
 
 extension TOMLConfigField where Value == Double {
@@ -22,6 +47,24 @@ extension TOMLConfigField where Value == Double {
   static func number(_ key: String) -> TOMLConfigField<Double> {
     TOMLConfigField<Double>(key: key) { config, value, path in
       try config.optionalNumber(value, path: path)
+    }
+  }
+}
+
+extension TOMLConfigField where Value == [String] {
+  /// Creates one optional string-array field descriptor.
+  static func stringArray(_ key: String) -> TOMLConfigField<[String]> {
+    TOMLConfigField<[String]>(key: key) { config, value, path in
+      try config.optionalStringArray(value, path: path)
+    }
+  }
+}
+
+extension TOMLConfigField where Value == [String: String] {
+  /// Creates one optional string-table field descriptor.
+  static func stringTable(_ key: String) -> TOMLConfigField<[String: String]> {
+    TOMLConfigField<[String: String]>(key: key) { config, value, path in
+      try config.optionalStringTable(value, path: path)
     }
   }
 }
@@ -56,17 +99,15 @@ extension Config {
     allowGroupReference: Bool = true
   ) throws -> BuiltinWidgetPlacement {
     let rawGroup =
-      try optionalString(table["group"], path: "\(path).group")
-      ?? fallback.group
+      try optionalField(.string("group"), from: table, path: path, fallback: fallback.group)
 
     return BuiltinWidgetPlacement(
-      enabled: try optionalBool(table["enabled"], path: "\(path).enabled") ?? fallback.enabled,
+      enabled: try optionalField(.bool("enabled"), from: table, path: path, fallback: fallback.enabled),
       position: try parsePosition(
-        try optionalString(table["position"], path: "\(path).position")
-          ?? fallback.position.rawValue,
+        try optionalField(.string("position"), from: table, path: path, fallback: fallback.position.rawValue),
         path: "\(path).position"
       ),
-      order: try optionalInt(table["order"], path: "\(path).order") ?? fallback.order,
+      order: try optionalField(.int("order"), from: table, path: path, fallback: fallback.order),
       group: try validatedBuiltinGroupReference(
         rawGroup,
         path: "\(path).group",

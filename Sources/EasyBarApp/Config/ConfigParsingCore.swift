@@ -8,53 +8,66 @@ extension Config {
     let app = toml["app"]?.table ?? TOMLTable()
 
     let resolvedWidgetsPath =
-      try optionalExpandedPath(app["widgets_dir"], path: "app.widgets_dir")
-      ?? widgetsPath
+      try optionalField(.expandedPath("widgets_dir"), from: app, path: "app", fallback: widgetsPath)
     widgetsPath = resolvedWidgetsPath
 
     luaPath =
-      try optionalString(app["lua_path"], path: "app.lua_path")
-      ?? luaPath
+      try optionalField(.string("lua_path"), from: app, path: "app", fallback: luaPath)
 
     let resolvedLuaSocketPath =
-      try optionalExpandedPath(app["lua_socket_path"], path: "app.lua_socket_path")
-      ?? luaSocketPath
+      try optionalField(.expandedPath("lua_socket_path"), from: app, path: "app", fallback: luaSocketPath)
     luaSocketPath = resolvedLuaSocketPath
 
-    if let configuredEnvironment = try optionalStringTable(app["env"], path: "app.env") {
+    if let configuredEnvironment = try optionalField(
+      .stringTable("env"),
+      from: app,
+      path: "app",
+      fallback: nil
+    ) {
       appSection.environment = Self.mergedAppEnvironment(with: configuredEnvironment)
     }
 
     watchConfigFile =
-      try optionalBool(app["watch_config"], path: "app.watch_config")
-      ?? watchConfigFile
+      try optionalField(.bool("watch_config"), from: app, path: "app", fallback: watchConfigFile)
 
     let resolvedLockDirectory =
-      try optionalExpandedPath(app["lock_dir"], path: "app.lock_dir")
-      ?? lockDirectory
+      try optionalField(.expandedPath("lock_dir"), from: app, path: "app", fallback: lockDirectory)
     lockDirectory = resolvedLockDirectory
 
     let resolvedWidgetEditorStubPath =
-      try optionalExpandedPath(
-        app["widget_editor_stub_path"],
-        path: "app.widget_editor_stub_path"
-      ) ?? widgetEditorStubPath
+      try optionalField(
+        .expandedPath("widget_editor_stub_path"),
+        from: app,
+        path: "app",
+        fallback: widgetEditorStubPath
+      )
     widgetEditorStubPath = resolvedWidgetEditorStubPath
 
     develop =
-      try optionalBool(app["develop"], path: "app.develop")
-      ?? develop
+      try optionalField(.bool("develop"), from: app, path: "app", fallback: develop)
 
     let luaCommands = app["lua_commands"]?.table ?? TOMLTable()
     luaCommandTimeoutSeconds =
-      try optionalNumber(luaCommands["timeout_seconds"], path: "app.lua_commands.timeout_seconds")
-      ?? luaCommandTimeoutSeconds
+      try optionalField(
+        .number("timeout_seconds"),
+        from: luaCommands,
+        path: "app.lua_commands",
+        fallback: luaCommandTimeoutSeconds
+      )
     luaCommandMaxOutputBytes =
-      try optionalInt(luaCommands["max_output_bytes"], path: "app.lua_commands.max_output_bytes")
-      ?? luaCommandMaxOutputBytes
+      try optionalField(
+        .int("max_output_bytes"),
+        from: luaCommands,
+        path: "app.lua_commands",
+        fallback: luaCommandMaxOutputBytes
+      )
     luaCommandMaxAsyncJobs =
-      try optionalInt(luaCommands["max_async_jobs"], path: "app.lua_commands.max_async_jobs")
-      ?? luaCommandMaxAsyncJobs
+      try optionalField(
+        .int("max_async_jobs"),
+        from: luaCommands,
+        path: "app.lua_commands",
+        fallback: luaCommandMaxAsyncJobs
+      )
 
     if luaCommandTimeoutSeconds <= 0 {
       throw ConfigError.invalidValue(
@@ -107,10 +120,14 @@ extension Config {
     let logging = toml["logging"]?.table ?? TOMLTable()
 
     loggingEnabled =
-      try optionalBool(logging["enabled"], path: "logging.enabled")
-      ?? loggingEnabled
+      try optionalField(.bool("enabled"), from: logging, path: "logging", fallback: loggingEnabled)
 
-    if let configuredLevel = try optionalString(logging["level"], path: "logging.level") {
+    if let configuredLevel = try optionalField(
+      .string("level"),
+      from: logging,
+      path: "logging",
+      fallback: nil
+    ) {
       loggingLevel = try parseLogLevel(
         configuredLevel,
         path: "logging.level"
@@ -122,8 +139,12 @@ extension Config {
     }
 
     let resolvedLoggingDirectory =
-      try optionalExpandedPath(logging["directory"], path: "logging.directory")
-      ?? loggingDirectory
+      try optionalField(
+        .expandedPath("directory"),
+        from: logging,
+        path: "logging",
+        fallback: loggingDirectory
+      )
     loggingDirectory = resolvedLoggingDirectory
 
     registerDirectoryRequirement(
@@ -139,12 +160,20 @@ extension Config {
 
     let calendar = agents["calendar"]?.table ?? TOMLTable()
     calendarAgentEnabled =
-      try optionalBool(calendar["enabled"], path: "agents.calendar.enabled")
-      ?? calendarAgentEnabled
+      try optionalField(
+        .bool("enabled"),
+        from: calendar,
+        path: "agents.calendar",
+        fallback: calendarAgentEnabled
+      )
 
     let resolvedCalendarSocketPath =
-      try optionalExpandedPath(calendar["socket_path"], path: "agents.calendar.socket_path")
-      ?? calendarAgentSocketPath
+      try optionalField(
+        .expandedPath("socket_path"),
+        from: calendar,
+        path: "agents.calendar",
+        fallback: calendarAgentSocketPath
+      )
     calendarAgentSocketPath = resolvedCalendarSocketPath
 
     registerDirectoryRequirement(
@@ -155,19 +184,29 @@ extension Config {
 
     let network = agents["network"]?.table ?? TOMLTable()
     networkAgentEnabled =
-      try optionalBool(network["enabled"], path: "agents.network.enabled")
-      ?? networkAgentEnabled
+      try optionalField(
+        .bool("enabled"),
+        from: network,
+        path: "agents.network",
+        fallback: networkAgentEnabled
+      )
 
     let resolvedNetworkSocketPath =
-      try optionalExpandedPath(network["socket_path"], path: "agents.network.socket_path")
-      ?? networkAgentSocketPath
+      try optionalField(
+        .expandedPath("socket_path"),
+        from: network,
+        path: "agents.network",
+        fallback: networkAgentSocketPath
+      )
     networkAgentSocketPath = resolvedNetworkSocketPath
 
     networkAgentRefreshIntervalSeconds =
-      try optionalNumber(
-        network["refresh_interval_seconds"],
-        path: "agents.network.refresh_interval_seconds"
-      ) ?? networkAgentRefreshIntervalSeconds
+      try optionalField(
+        .number("refresh_interval_seconds"),
+        from: network,
+        path: "agents.network",
+        fallback: networkAgentRefreshIntervalSeconds
+      )
 
     if networkAgentRefreshIntervalSeconds < 0 {
       throw ConfigError.invalidValue(
@@ -177,10 +216,12 @@ extension Config {
     }
 
     networkAgentAllowUnauthorizedNonSensitiveFields =
-      try optionalBool(
-        network["allow_unauthorized_non_sensitive_fields"],
-        path: "agents.network.allow_unauthorized_non_sensitive_fields"
-      ) ?? networkAgentAllowUnauthorizedNonSensitiveFields
+      try optionalField(
+        .bool("allow_unauthorized_non_sensitive_fields"),
+        from: network,
+        path: "agents.network",
+        fallback: networkAgentAllowUnauthorizedNonSensitiveFields
+      )
 
     registerDirectoryRequirement(
       for: "agents.network.socket_path",
@@ -193,7 +234,7 @@ extension Config {
   func parseBar(from toml: TOMLTable) throws {
     guard let bar = toml["bar"]?.table else { return }
 
-    if let height = try optionalInt(bar["height"], path: "bar.height") {
+    if let height = try optionalField(.int("height"), from: bar, path: "bar", fallback: nil) {
       guard height >= 0 else {
         throw ConfigError.invalidValue(
           path: "bar.height",
@@ -204,7 +245,7 @@ extension Config {
       barHeight = CGFloat(height)
     }
 
-    if let paddingX = try optionalInt(bar["padding_x"], path: "bar.padding_x") {
+    if let paddingX = try optionalField(.int("padding_x"), from: bar, path: "bar", fallback: nil) {
       guard paddingX >= 0 else {
         throw ConfigError.invalidValue(
           path: "bar.padding_x",
@@ -216,19 +257,19 @@ extension Config {
     }
 
     barExtendBehindNotch =
-      try optionalBool(
-        bar["extend_behind_notch"],
-        path: "bar.extend_behind_notch"
-      ) ?? barExtendBehindNotch
+      try optionalField(
+        .bool("extend_behind_notch"),
+        from: bar,
+        path: "bar",
+        fallback: barExtendBehindNotch
+      )
 
     guard let colors = bar["colors"]?.table else { return }
 
     barBackgroundHex =
-      try optionalString(colors["background"], path: "bar.colors.background")
-      ?? barBackgroundHex
+      try optionalField(.string("background"), from: colors, path: "bar.colors", fallback: barBackgroundHex)
 
     barBorderHex =
-      try optionalString(colors["border"], path: "bar.colors.border")
-      ?? barBorderHex
+      try optionalField(.string("border"), from: colors, path: "bar.colors", fallback: barBorderHex)
   }
 }

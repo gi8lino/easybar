@@ -238,38 +238,58 @@ extension Config {
     fallback: BuiltinBatteryColors
   ) throws -> BuiltinBatteryColors {
     BuiltinBatteryColors(
-      highColorHex: try optionalString(table["high"], path: "builtins.battery.colors.high")
-        ?? fallback.highColorHex,
-      mediumColorHex: try optionalString(table["medium"], path: "builtins.battery.colors.medium")
-        ?? fallback.mediumColorHex,
-      lowColorHex: try optionalString(table["low"], path: "builtins.battery.colors.low")
-        ?? fallback.lowColorHex,
-      criticalColorHex: try optionalString(
-        table["critical"],
-        path: "builtins.battery.colors.critical"
-      ) ?? fallback.criticalColorHex,
-      frameColorHex: try optionalString(table["frame"], path: "builtins.battery.colors.frame")
-        ?? fallback.frameColorHex,
-      overlayOutlineColorHex: try optionalString(
-        table["overlay_outline"],
-        path: "builtins.battery.colors.overlay_outline"
-      ) ?? fallback.overlayOutlineColorHex,
-      chargingOverlayColorHex: try optionalString(
-        table["charging_overlay"],
-        path: "builtins.battery.colors.charging_overlay"
-      ) ?? fallback.chargingOverlayColorHex,
-      externalPowerOverlayColorHex: try optionalString(
-        table["external_power_overlay"],
-        path: "builtins.battery.colors.external_power_overlay"
-      ) ?? fallback.externalPowerOverlayColorHex,
-      onHoldOverlayColorHex: try optionalString(
-        table["on_hold_overlay"],
-        path: "builtins.battery.colors.on_hold_overlay"
-      ) ?? fallback.onHoldOverlayColorHex,
-      unavailableColorHex: try optionalString(
-        table["unavailable"],
-        path: "builtins.battery.colors.unavailable"
-      ) ?? fallback.unavailableColorHex
+      highColorHex: try optionalField(
+        .string("high"), from: table, path: "builtins.battery.colors", fallback: fallback.highColorHex),
+      mediumColorHex: try optionalField(
+        .string("medium"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.mediumColorHex
+      ),
+      lowColorHex: try optionalField(
+        .string("low"), from: table, path: "builtins.battery.colors", fallback: fallback.lowColorHex),
+      criticalColorHex: try optionalField(
+        .string("critical"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.criticalColorHex
+      ),
+      frameColorHex: try optionalField(
+        .string("frame"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.frameColorHex
+      ),
+      overlayOutlineColorHex: try optionalField(
+        .string("overlay_outline"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.overlayOutlineColorHex
+      ),
+      chargingOverlayColorHex: try optionalField(
+        .string("charging_overlay"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.chargingOverlayColorHex
+      ),
+      externalPowerOverlayColorHex: try optionalField(
+        .string("external_power_overlay"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.externalPowerOverlayColorHex
+      ),
+      onHoldOverlayColorHex: try optionalField(
+        .string("on_hold_overlay"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.onHoldOverlayColorHex
+      ),
+      unavailableColorHex: try optionalField(
+        .string("unavailable"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.unavailableColorHex
+      )
     )
   }
 }
