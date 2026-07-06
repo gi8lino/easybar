@@ -101,7 +101,6 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.logging.level, .trace)
   }
 
-
   /// Verifies that invalid shared TOML fails instead of silently falling back to defaults.
   func testLoadThrowsForInvalidToml() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-invalid.toml")

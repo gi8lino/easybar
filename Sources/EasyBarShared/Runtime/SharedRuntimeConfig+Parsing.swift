@@ -54,4 +54,3 @@ func sharedRuntimeConfigReader(for table: TOMLTable) -> SharedRuntimeConfigReade
     makeInvalidValueError: SharedRuntimeConfigError.invalidValue
   )
 }
-

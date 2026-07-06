@@ -307,5 +307,3 @@ extension Config {
     token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   }
 }
-
-
