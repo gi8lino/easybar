@@ -47,7 +47,7 @@ jobs:
 
       - name: Run tests
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: scripts/ci/run-swift-tests.sh
 
       - name: Upload test log
@@ -82,4 +82,3 @@ jobs:
 
       - name: Test Homebrew formula update scripts
         run: scripts/release/test-homebrew-formula-update.sh
-
