@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -129,65 +128,27 @@ extension Config {
   }
 
   /// Parses the built-in volume widget.
-  func parseVolumeBuiltin(from builtins: TOMLTable) throws {
-    guard let volume = builtins["volume"]?.table else { return }
+  func parseVolumeBuiltin(from builtins: ConfigReader) throws {
+    guard let volume = try builtins.optionalSection("volume") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: volume,
-      path: "builtins.volume",
+      reader: volume,
       fallback: builtinVolume.placement
     )
 
-    let styleTable = volume["style"]?.table ?? TOMLTable()
-    let contentTable = volume["content"]?.table ?? TOMLTable()
-    let sliderTable = volume["slider"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.volume.style",
+      reader: try volume.section("style"),
       fallback: builtinVolume.style
     )
 
-    let content = VolumeBuiltinConfig.Content(
-      mutedIcon: try optionalString(
-        contentTable["muted_icon"],
-        path: "builtins.volume.content.muted_icon"
-      ) ?? builtinVolume.mutedIcon,
-      lowIcon: try optionalString(
-        contentTable["low_icon"],
-        path: "builtins.volume.content.low_icon"
-      ) ?? builtinVolume.lowIcon,
-      highIcon: try optionalString(
-        contentTable["high_icon"],
-        path: "builtins.volume.content.high_icon"
-      ) ?? builtinVolume.highIcon,
-      showPercentage: try optionalBool(
-        contentTable["show_percentage"],
-        path: "builtins.volume.content.show_percentage"
-      ) ?? builtinVolume.showPercentage,
-      minValue: try optionalNumber(
-        contentTable["min"],
-        path: "builtins.volume.content.min"
-      ) ?? builtinVolume.minValue,
-      maxValue: try optionalNumber(
-        contentTable["max"],
-        path: "builtins.volume.content.max"
-      ) ?? builtinVolume.maxValue,
-      step: try optionalNumber(
-        contentTable["step"],
-        path: "builtins.volume.content.step"
-      ) ?? builtinVolume.step
+    let content = try parseVolumeContent(
+      reader: try volume.section("content"),
+      fallback: builtinVolume.content
     )
 
-    let slider = VolumeBuiltinConfig.Slider(
-      expandToSliderOnHover: try optionalBool(
-        sliderTable["expand_to_slider_on_hover"],
-        path: "builtins.volume.slider.expand_to_slider_on_hover"
-      ) ?? builtinVolume.expandToSliderOnHover,
-      width: try optionalNumber(
-        sliderTable["width"],
-        path: "builtins.volume.slider.width"
-      ) ?? builtinVolume.sliderWidth
+    let slider = try parseVolumeSlider(
+      reader: try volume.section("slider"),
+      fallback: builtinVolume.slider
     )
 
     try validateVolumeContent(content)
@@ -198,6 +159,36 @@ extension Config {
       style: style,
       content: content,
       slider: slider
+    )
+  }
+
+  /// Parses the volume content block.
+  private func parseVolumeContent(
+    reader: ConfigReader,
+    fallback: VolumeBuiltinConfig.Content
+  ) throws -> VolumeBuiltinConfig.Content {
+    VolumeBuiltinConfig.Content(
+      mutedIcon: try reader.string("muted_icon", fallback: fallback.mutedIcon),
+      lowIcon: try reader.string("low_icon", fallback: fallback.lowIcon),
+      highIcon: try reader.string("high_icon", fallback: fallback.highIcon),
+      showPercentage: try reader.bool("show_percentage", fallback: fallback.showPercentage),
+      minValue: try reader.double("min", fallback: fallback.minValue),
+      maxValue: try reader.double("max", fallback: fallback.maxValue),
+      step: try reader.double("step", fallback: fallback.step)
+    )
+  }
+
+  /// Parses the volume slider block.
+  private func parseVolumeSlider(
+    reader: ConfigReader,
+    fallback: VolumeBuiltinConfig.Slider
+  ) throws -> VolumeBuiltinConfig.Slider {
+    VolumeBuiltinConfig.Slider(
+      expandToSliderOnHover: try reader.bool(
+        "expand_to_slider_on_hover",
+        fallback: fallback.expandToSliderOnHover
+      ),
+      width: try reader.double("width", fallback: fallback.width)
     )
   }
 

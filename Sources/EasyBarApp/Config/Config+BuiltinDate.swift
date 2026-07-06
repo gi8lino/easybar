@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -65,34 +64,27 @@ extension Config {
   }
 
   /// Parses the built-in date widget.
-  func parseDateBuiltin(from builtins: TOMLTable) throws {
-    guard let date = builtins["date"]?.table else { return }
+  func parseDateBuiltin(from builtins: ConfigReader) throws {
+    guard let date = try builtins.optionalSection("date") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: date,
-      path: "builtins.date",
+      reader: date,
       fallback: builtinDate.placement
     )
 
-    let styleTable = date["style"]?.table ?? TOMLTable()
-    let contentTable = date["content"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.date.style",
+      reader: try date.section("style"),
       fallback: builtinDate.style
     )
 
-    let format =
-      try optionalString(
-        contentTable["format"],
-        path: "builtins.date.content.format"
-      ) ?? builtinDate.format
+    let content = DateBuiltinConfig.Content(
+      format: try date.section("content").string("format", fallback: builtinDate.format)
+    )
 
     builtinDate = DateBuiltinConfig(
       placement: placement,
       style: style,
-      content: .init(format: format)
+      content: content
     )
   }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -158,87 +157,51 @@ extension Config {
   }
 
   /// Parses the built-in AeroSpace mode widget.
-  func parseAeroSpaceModeBuiltin(from builtins: TOMLTable) throws {
-    guard let aerospaceMode = builtins["aerospace_mode"]?.table else { return }
+  func parseAeroSpaceModeBuiltin(from builtins: ConfigReader) throws {
+    guard let aerospaceMode = try builtins.optionalSection("aerospace_mode") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: aerospaceMode,
-      path: "builtins.aerospace_mode",
+      reader: aerospaceMode,
       fallback: builtinAeroSpaceMode.placement
     )
 
-    let styleTable = aerospaceMode["style"]?.table ?? TOMLTable()
-    let contentTable = aerospaceMode["content"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.aerospace_mode.style",
+      reader: try aerospaceMode.section("style"),
       fallback: builtinAeroSpaceMode.style
     )
 
-    let content = AeroSpaceModeBuiltinConfig.Content(
-      showIcon: try optionalBool(
-        contentTable["show_icon"],
-        path: "builtins.aerospace_mode.content.show_icon"
-      ) ?? builtinAeroSpaceMode.showIcon,
-      showText: try optionalBool(
-        contentTable["show_text"],
-        path: "builtins.aerospace_mode.content.show_text"
-      ) ?? builtinAeroSpaceMode.showText,
-      hTilesIcon: try optionalString(
-        contentTable["h_tiles_icon"],
-        path: "builtins.aerospace_mode.content.h_tiles_icon"
-      ) ?? builtinAeroSpaceMode.hTilesIcon,
-      vTilesIcon: try optionalString(
-        contentTable["v_tiles_icon"],
-        path: "builtins.aerospace_mode.content.v_tiles_icon"
-      ) ?? builtinAeroSpaceMode.vTilesIcon,
-      hAccordionIcon: try optionalString(
-        contentTable["h_accordion_icon"],
-        path: "builtins.aerospace_mode.content.h_accordion_icon"
-      ) ?? builtinAeroSpaceMode.hAccordionIcon,
-      vAccordionIcon: try optionalString(
-        contentTable["v_accordion_icon"],
-        path: "builtins.aerospace_mode.content.v_accordion_icon"
-      ) ?? builtinAeroSpaceMode.vAccordionIcon,
-      floatingIcon: try optionalString(
-        contentTable["floating_icon"],
-        path: "builtins.aerospace_mode.content.floating_icon"
-      ) ?? builtinAeroSpaceMode.floatingIcon,
-      unknownIcon: try optionalString(
-        contentTable["unknown_icon"],
-        path: "builtins.aerospace_mode.content.unknown_icon"
-      ) ?? builtinAeroSpaceMode.unknownIcon,
-      hTilesText: try optionalString(
-        contentTable["h_tiles_text"],
-        path: "builtins.aerospace_mode.content.h_tiles_text"
-      ) ?? builtinAeroSpaceMode.hTilesText,
-      vTilesText: try optionalString(
-        contentTable["v_tiles_text"],
-        path: "builtins.aerospace_mode.content.v_tiles_text"
-      ) ?? builtinAeroSpaceMode.vTilesText,
-      hAccordionText: try optionalString(
-        contentTable["h_accordion_text"],
-        path: "builtins.aerospace_mode.content.h_accordion_text"
-      ) ?? builtinAeroSpaceMode.hAccordionText,
-      vAccordionText: try optionalString(
-        contentTable["v_accordion_text"],
-        path: "builtins.aerospace_mode.content.v_accordion_text"
-      ) ?? builtinAeroSpaceMode.vAccordionText,
-      floatingText: try optionalString(
-        contentTable["floating_text"],
-        path: "builtins.aerospace_mode.content.floating_text"
-      ) ?? builtinAeroSpaceMode.floatingText,
-      unknownText: try optionalString(
-        contentTable["unknown_text"],
-        path: "builtins.aerospace_mode.content.unknown_text"
-      ) ?? builtinAeroSpaceMode.unknownText
+    let content = try parseAeroSpaceModeContent(
+      reader: try aerospaceMode.section("content"),
+      fallback: builtinAeroSpaceMode.content
     )
 
     builtinAeroSpaceMode = AeroSpaceModeBuiltinConfig(
       placement: placement,
       style: style,
       content: content
+    )
+  }
+
+  /// Parses the AeroSpace mode content block.
+  private func parseAeroSpaceModeContent(
+    reader: ConfigReader,
+    fallback: AeroSpaceModeBuiltinConfig.Content
+  ) throws -> AeroSpaceModeBuiltinConfig.Content {
+    AeroSpaceModeBuiltinConfig.Content(
+      showIcon: try reader.bool("show_icon", fallback: fallback.showIcon),
+      showText: try reader.bool("show_text", fallback: fallback.showText),
+      hTilesIcon: try reader.string("h_tiles_icon", fallback: fallback.hTilesIcon),
+      vTilesIcon: try reader.string("v_tiles_icon", fallback: fallback.vTilesIcon),
+      hAccordionIcon: try reader.string("h_accordion_icon", fallback: fallback.hAccordionIcon),
+      vAccordionIcon: try reader.string("v_accordion_icon", fallback: fallback.vAccordionIcon),
+      floatingIcon: try reader.string("floating_icon", fallback: fallback.floatingIcon),
+      unknownIcon: try reader.string("unknown_icon", fallback: fallback.unknownIcon),
+      hTilesText: try reader.string("h_tiles_text", fallback: fallback.hTilesText),
+      vTilesText: try reader.string("v_tiles_text", fallback: fallback.vTilesText),
+      hAccordionText: try reader.string("h_accordion_text", fallback: fallback.hAccordionText),
+      vAccordionText: try reader.string("v_accordion_text", fallback: fallback.vAccordionText),
+      floatingText: try reader.string("floating_text", fallback: fallback.floatingText),
+      unknownText: try reader.string("unknown_text", fallback: fallback.unknownText)
     )
   }
 }

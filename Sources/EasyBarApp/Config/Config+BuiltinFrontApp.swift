@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -93,51 +92,45 @@ extension Config {
   }
 
   /// Parses the built-in front app widget.
-  func parseFrontAppBuiltin(from builtins: TOMLTable) throws {
-    guard let frontApp = builtins["front_app"]?.table else { return }
+  func parseFrontAppBuiltin(from builtins: ConfigReader) throws {
+    guard let frontApp = try builtins.optionalSection("front_app") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: frontApp,
-      path: "builtins.front_app",
+      reader: frontApp,
       fallback: builtinFrontApp.placement
     )
 
-    let styleTable = frontApp["style"]?.table ?? TOMLTable()
-    let contentTable = frontApp["content"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.front_app.style",
+      reader: try frontApp.section("style"),
       fallback: builtinFrontApp.style
     )
 
-    let content = FrontAppBuiltinConfig.Content(
-      showIcon: try optionalBool(
-        contentTable["show_icon"],
-        path: "builtins.front_app.content.show_icon"
-      ) ?? builtinFrontApp.showIcon,
-      showName: try optionalBool(
-        contentTable["show_name"],
-        path: "builtins.front_app.content.show_name"
-      ) ?? builtinFrontApp.showName,
-      fallbackText: try optionalString(
-        contentTable["fallback_text"],
-        path: "builtins.front_app.content.fallback_text"
-      ) ?? builtinFrontApp.fallbackText,
-      iconSize: try optionalNumber(
-        contentTable["icon_size"],
-        path: "builtins.front_app.content.icon_size"
-      ) ?? builtinFrontApp.iconSize,
-      iconCornerRadius: try optionalNumber(
-        contentTable["icon_corner_radius"],
-        path: "builtins.front_app.content.icon_corner_radius"
-      ) ?? builtinFrontApp.iconCornerRadius
+    let content = try parseFrontAppContent(
+      reader: try frontApp.section("content"),
+      fallback: builtinFrontApp.content
     )
 
     builtinFrontApp = FrontAppBuiltinConfig(
       placement: placement,
       style: style,
       content: content
+    )
+  }
+
+  /// Parses the front-app content block.
+  private func parseFrontAppContent(
+    reader: ConfigReader,
+    fallback: FrontAppBuiltinConfig.Content
+  ) throws -> FrontAppBuiltinConfig.Content {
+    FrontAppBuiltinConfig.Content(
+      showIcon: try reader.bool("show_icon", fallback: fallback.showIcon),
+      showName: try reader.bool("show_name", fallback: fallback.showName),
+      fallbackText: try reader.string("fallback_text", fallback: fallback.fallbackText),
+      iconSize: try reader.double("icon_size", fallback: fallback.iconSize),
+      iconCornerRadius: try reader.double(
+        "icon_corner_radius",
+        fallback: fallback.iconCornerRadius
+      )
     )
   }
 }

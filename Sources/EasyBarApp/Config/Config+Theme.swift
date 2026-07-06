@@ -7,29 +7,11 @@ extension Config {
   /// Parses the selected theme, loads its TOML file, and applies inline color overrides.
   func parseTheme(from toml: TOMLTable) throws {
     let currentTheme = themeSection
-    let themeTable = toml["theme"]?.table
+    let theme = try configReader(table: toml, path: "").section("theme")
+    let colorsReader = try theme.section("colors")
 
-    let selectedName: String
-    let configuredThemesDir: String?
-    let overridesTable: TOMLTable
-
-    if let themeTable {
-      selectedName =
-        try optionalString(themeTable["name"], path: "theme.name")
-        ?? currentTheme.name
-
-      configuredThemesDir = try optionalExpandedPath(
-        themeTable["themes_dir"],
-        path: "theme.themes_dir"
-      )
-
-      overridesTable = themeTable["colors"]?.table ?? TOMLTable()
-    } else {
-      selectedName = currentTheme.name
-      configuredThemesDir = nil
-      overridesTable = TOMLTable()
-    }
-
+    let selectedName = try theme.string("name", fallback: currentTheme.name)
+    let configuredThemesDir = try theme.optionalExpandedPath("themes_dir")
     let resolvedThemesDir = configuredThemesDir ?? currentTheme.themesDir
     let fileColors = try loadThemeColors(
       named: selectedName,
@@ -37,8 +19,7 @@ extension Config {
     )
 
     let colors = try parseThemeColorOverrides(
-      from: overridesTable,
-      path: "theme.colors",
+      reader: colorsReader,
       fallback: fileColors
     )
 
@@ -247,16 +228,13 @@ extension Config {
 
   /// Parses optional inline theme color overrides from `config.toml`.
   private func parseThemeColorOverrides(
-    from table: TOMLTable,
-    path: String,
+    reader: ConfigReader,
     fallback: ThemeColors
   ) throws -> ThemeColors {
     ThemeColors(
       valuesByToken: try Dictionary(
         uniqueKeysWithValues: ThemeColorToken.allCases.map { token in
-          let value =
-            try optionalString(table[token.rawValue], path: "\(path).\(token.rawValue)")
-            ?? fallback[token]
+          let value = try reader.string(token.rawValue, fallback: fallback[token])
           return (token, value)
         }
       )
@@ -269,9 +247,11 @@ extension Config {
     _ key: String,
     path: String
   ) throws -> String {
-    guard let value = try optionalString(table[key], path: "\(path).\(key)") else {
+    let reader = configReader(table: table, path: path)
+
+    guard let value = try reader.optionalString(key) else {
       throw ConfigError.invalidValue(
-        path: "\(path).\(key)",
+        path: reader.path(for: key),
         message: "missing required theme color '\(key)'"
       )
     }

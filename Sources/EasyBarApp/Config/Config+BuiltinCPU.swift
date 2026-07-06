@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -93,57 +92,45 @@ extension Config {
   }
 
   /// Parses the built-in CPU widget.
-  func parseCPUBuiltin(from builtins: TOMLTable) throws {
-    guard let cpu = builtins["cpu"]?.table else { return }
+  func parseCPUBuiltin(from builtins: ConfigReader) throws {
+    guard let cpu = try builtins.optionalSection("cpu") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: cpu,
-      path: "builtins.cpu",
+      reader: cpu,
       fallback: builtinCPU.placement
     )
 
-    let styleTable = cpu["style"]?.table ?? TOMLTable()
-    let contentTable = cpu["content"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.cpu.style",
+      reader: try cpu.section("style"),
       fallback: builtinCPU.style
     )
 
-    let content = CPUBuiltinConfig.Content(
-      label: try optionalString(
-        contentTable["label"],
-        path: "builtins.cpu.content.label"
-      ) ?? builtinCPU.label,
-      historySize: max(
-        2,
-        try optionalInt(
-          contentTable["history_size"],
-          path: "builtins.cpu.content.history_size"
-        ) ?? builtinCPU.historySize
-      ),
-      lineWidth: try optionalNumber(
-        contentTable["line_width"],
-        path: "builtins.cpu.content.line_width"
-      ) ?? builtinCPU.lineWidth,
-      colorHex: try optionalString(
-        contentTable["color"],
-        path: "builtins.cpu.content.color"
-      ) ?? builtinCPU.colorHex,
-      sampleIntervalSeconds: max(
-        1,
-        try optionalNumber(
-          contentTable["sample_interval_seconds"],
-          path: "builtins.cpu.content.sample_interval_seconds"
-        ) ?? builtinCPU.sampleIntervalSeconds
-      )
+    let content = try parseCPUContent(
+      reader: try cpu.section("content"),
+      fallback: builtinCPU.content
     )
 
     builtinCPU = CPUBuiltinConfig(
       placement: placement,
       style: style,
       content: content
+    )
+  }
+
+  /// Parses the CPU content block.
+  private func parseCPUContent(
+    reader: ConfigReader,
+    fallback: CPUBuiltinConfig.Content
+  ) throws -> CPUBuiltinConfig.Content {
+    CPUBuiltinConfig.Content(
+      label: try reader.string("label", fallback: fallback.label),
+      historySize: max(2, try reader.int("history_size", fallback: fallback.historySize)),
+      lineWidth: try reader.double("line_width", fallback: fallback.lineWidth),
+      colorHex: try reader.optionalString("color", fallback: fallback.colorHex),
+      sampleIntervalSeconds: max(
+        1,
+        try reader.double("sample_interval_seconds", fallback: fallback.sampleIntervalSeconds)
+      )
     )
   }
 }

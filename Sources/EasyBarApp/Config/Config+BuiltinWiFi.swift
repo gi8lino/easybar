@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -208,37 +207,34 @@ extension Config {
   }
 
   /// Parses the built-in Wi-Fi widget.
-  func parseWiFiBuiltin(from builtins: TOMLTable) throws {
-    guard let wifi = builtins["wifi"]?.table else { return }
+  func parseWiFiBuiltin(from builtins: ConfigReader) throws {
+    guard let wifi = try builtins.optionalSection("wifi") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: wifi,
-      path: "builtins.wifi",
+      reader: wifi,
       fallback: builtinWiFi.placement
     )
 
-    let styleTable = wifi["style"]?.table ?? TOMLTable()
-    let contentTable = wifi["content"]?.table ?? TOMLTable()
-    let inlineTable = wifi["inline"]?.table ?? TOMLTable()
-    let fieldsTable = wifi["fields"]?.table ?? TOMLTable()
-    let popupTable = wifi["popup"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.wifi.style",
+      reader: try wifi.section("style"),
       fallback: builtinWiFi.style
     )
 
     let content = try parseWiFiContent(
-      from: contentTable,
+      reader: try wifi.section("content"),
       fallback: builtinWiFi.content
     )
 
-    let inline = try parseWiFiInline(from: inlineTable, fallback: builtinWiFi.inline)
-    let fields = try parseWiFiFields(from: fieldsTable, fallback: builtinWiFi.fields)
+    let inline = try parseWiFiInline(
+      reader: try wifi.section("inline"),
+      fallback: builtinWiFi.inline
+    )
+    let fields = try parseWiFiFields(
+      reader: try wifi.section("fields"),
+      fallback: builtinWiFi.fields
+    )
     let popup = try parseBuiltinPopupStyle(
-      from: popupTable,
-      path: "builtins.wifi.popup",
+      reader: try wifi.section("popup"),
       fallback: builtinWiFi.popup
     )
 
@@ -251,78 +247,45 @@ extension Config {
       popup: popup
     )
   }
-}
 
-extension Config {
   /// Parses Wi-Fi content settings.
-  fileprivate func parseWiFiContent(
-    from table: TOMLTable,
+  private func parseWiFiContent(
+    reader: ConfigReader,
     fallback: WiFiBuiltinConfig.Content
   ) throws -> WiFiBuiltinConfig.Content {
     WiFiBuiltinConfig.Content(
-      mode: try parseWiFiContentMode(
-        try optionalString(
-          table["mode"],
-          path: "builtins.wifi.content.mode"
-        ) ?? fallback.mode.rawValue,
-        path: "builtins.wifi.content.mode"
-      ),
-      surface: try parseWiFiContentSurface(
-        try optionalString(
-          table["surface"],
-          path: "builtins.wifi.content.surface"
-        ) ?? fallback.surface.rawValue,
-        path: "builtins.wifi.content.surface"
-      ),
-      inlineSeparator: try optionalString(
-        table["inline_separator"],
-        path: "builtins.wifi.content.inline_separator"
-      ) ?? fallback.inlineSeparator,
-      disconnectedText: try optionalString(
-        table["disconnected_text"],
-        path: "builtins.wifi.content.disconnected_text"
-      ) ?? fallback.disconnectedText,
-      deniedText: try optionalString(
-        table["denied_text"],
-        path: "builtins.wifi.content.denied_text"
-      ) ?? fallback.deniedText,
-      activeColorHex: try optionalString(
-        table["active_color"],
-        path: "builtins.wifi.content.active_color"
-      ) ?? fallback.activeColorHex,
-      inactiveColorHex: try optionalString(
-        table["inactive_color"],
-        path: "builtins.wifi.content.inactive_color"
-      ) ?? fallback.inactiveColorHex
+      mode: try reader.enum("mode", fallback: fallback.mode),
+      surface: try reader.enum("surface", fallback: fallback.surface),
+      inlineSeparator: try reader.string("inline_separator", fallback: fallback.inlineSeparator),
+      disconnectedText: try reader.string("disconnected_text", fallback: fallback.disconnectedText),
+      deniedText: try reader.string("denied_text", fallback: fallback.deniedText),
+      activeColorHex: try reader.string("active_color", fallback: fallback.activeColorHex),
+      inactiveColorHex: try reader.string("inactive_color", fallback: fallback.inactiveColorHex)
     )
   }
 
   /// Parses Wi-Fi inline text settings.
-  fileprivate func parseWiFiInline(
-    from table: TOMLTable,
+  private func parseWiFiInline(
+    reader: ConfigReader,
     fallback: BuiltinWiFiInline
   ) throws -> BuiltinWiFiInline {
     BuiltinWiFiInline(
-      textColorHex: try optionalString(
-        table["text_color"],
-        path: "builtins.wifi.inline.text_color"
-      ) ?? fallback.textColorHex
+      textColorHex: try reader.string("text_color", fallback: fallback.textColorHex)
     )
   }
 
   /// Parses Wi-Fi field toggles.
-  fileprivate func parseWiFiFields(
-    from table: TOMLTable,
+  private func parseWiFiFields(
+    reader: ConfigReader,
     fallback: BuiltinWiFiFields
   ) throws -> BuiltinWiFiFields {
     var fields = fallback
 
     for metadata in BuiltinWiFiFieldCatalog.fields {
-      fields[keyPath: metadata.keyPath] =
-        try optionalBool(
-          table[metadata.configKey],
-          path: "builtins.wifi.fields.\(metadata.configKey)"
-        ) ?? fields[keyPath: metadata.keyPath]
+      fields[keyPath: metadata.keyPath] = try reader.bool(
+        metadata.configKey,
+        fallback: fields[keyPath: metadata.keyPath]
+      )
     }
 
     return fields

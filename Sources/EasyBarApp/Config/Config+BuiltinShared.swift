@@ -70,7 +70,9 @@ extension Config {
 
   /// Parses all built-in widget sections.
   func parseBuiltins(from toml: TOMLTable) throws {
-    guard let builtins = toml["builtins"]?.table else { return }
+    guard let builtins = try configReader(table: toml, path: "").optionalSection("builtins") else {
+      return
+    }
 
     try parseBuiltinGroups(from: builtins)
     try parseCPUBuiltin(from: builtins)

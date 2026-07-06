@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -11,17 +10,16 @@ extension Config {
   }
 
   /// Parses the built-in native groups.
-  func parseBuiltinGroups(from builtins: TOMLTable) throws {
-    guard let groups = builtins["groups"]?.table else { return }
+  func parseBuiltinGroups(from builtins: ConfigReader) throws {
+    guard let groups = try builtins.optionalSection("groups") else { return }
 
     var parsed: [BuiltinGroupConfig] = []
 
-    for key in groups.keys.sorted() {
-      guard let groupTable = groups[key]?.table else { continue }
+    for key in groups.keys {
+      guard let group = try groups.optionalSection(key) else { continue }
 
       let placement = try parseBuiltinPlacement(
-        from: groupTable,
-        path: "builtins.groups.\(key)",
+        reader: group,
         fallback: .init(
           enabled: true,
           position: .right,
@@ -31,10 +29,9 @@ extension Config {
         allowGroupReference: false
       )
 
-      let styleTable = groupTable["style"]?.table ?? groupTable
+      let styleReader = try group.optionalSection("style") ?? group
       let style = try parseBuiltinStyle(
-        from: styleTable,
-        path: "builtins.groups.\(key).style",
+        reader: styleReader,
         fallback: defaultBuiltinGroupStyle()
       )
 

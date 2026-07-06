@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -65,34 +64,27 @@ extension Config {
   }
 
   /// Parses the built-in time widget.
-  func parseTimeBuiltin(from builtins: TOMLTable) throws {
-    guard let time = builtins["time"]?.table else { return }
+  func parseTimeBuiltin(from builtins: ConfigReader) throws {
+    guard let time = try builtins.optionalSection("time") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: time,
-      path: "builtins.time",
+      reader: time,
       fallback: builtinTime.placement
     )
 
-    let styleTable = time["style"]?.table ?? TOMLTable()
-    let contentTable = time["content"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.time.style",
+      reader: try time.section("style"),
       fallback: builtinTime.style
     )
 
-    let format =
-      try optionalString(
-        contentTable["format"],
-        path: "builtins.time.content.format"
-      ) ?? builtinTime.format
+    let content = TimeBuiltinConfig.Content(
+      format: try time.section("content").string("format", fallback: builtinTime.format)
+    )
 
     builtinTime = TimeBuiltinConfig(
       placement: placement,
       style: style,
-      content: .init(format: format)
+      content: content
     )
   }
 }

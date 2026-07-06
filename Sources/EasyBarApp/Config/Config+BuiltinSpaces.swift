@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import TOMLKit
 
 extension Config {
 
@@ -166,30 +165,35 @@ extension Config {
   }
 
   /// Parses the built-in spaces widget.
-  func parseSpacesBuiltin(from builtins: TOMLTable) throws {
-    guard let spaces = builtins["spaces"]?.table else { return }
+  func parseSpacesBuiltin(from builtins: ConfigReader) throws {
+    guard let spaces = try builtins.optionalSection("spaces") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: spaces,
-      path: "builtins.spaces",
+      reader: spaces,
       fallback: builtinSpaces.placement
     )
 
-    let layoutTable = spaces["layout"]?.table ?? TOMLTable()
-    let textTable = spaces["text"]?.table ?? TOMLTable()
-    let iconsTable = spaces["icons"]?.table ?? TOMLTable()
-    let colorsTable = spaces["colors"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: spaces,
-      path: "builtins.spaces",
+      reader: spaces,
       fallback: builtinSpaces.style
     )
 
-    let layout = try parseSpacesLayout(from: layoutTable, fallback: builtinSpaces.layout)
-    let text = try parseSpacesText(from: textTable, fallback: builtinSpaces.text)
-    let icons = try parseSpacesIcons(from: iconsTable, fallback: builtinSpaces.icons)
-    let colors = try parseSpacesColors(from: colorsTable, fallback: builtinSpaces.colors)
+    let layout = try parseSpacesLayout(
+      reader: try spaces.section("layout"),
+      fallback: builtinSpaces.layout
+    )
+    let text = try parseSpacesText(
+      reader: try spaces.section("text"),
+      fallback: builtinSpaces.text
+    )
+    let icons = try parseSpacesIcons(
+      reader: try spaces.section("icons"),
+      fallback: builtinSpaces.icons
+    )
+    let colors = try parseSpacesColors(
+      reader: try spaces.section("colors"),
+      fallback: builtinSpaces.colors
+    )
 
     builtinSpaces = SpacesBuiltinConfig(
       placement: placement,
@@ -200,247 +204,102 @@ extension Config {
       colors: colors
     )
   }
-}
 
-extension Config {
   /// Parses the spaces layout block.
-  fileprivate func parseSpacesLayout(
-    from table: TOMLTable,
+  private func parseSpacesLayout(
+    reader: ConfigReader,
     fallback: SpacesBuiltinConfig.Layout
   ) throws -> SpacesBuiltinConfig.Layout {
     SpacesBuiltinConfig.Layout(
-      spacing: try optionalField(
-        .number("spacing"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.spacing
-      ),
-      hideEmpty: try optionalField(
-        .bool("hide_empty"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.hideEmpty
-      ),
-      paddingX: try optionalField(
-        .number("padding_x"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.paddingX
-      ),
-      paddingY: try optionalField(
-        .number("padding_y"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.paddingY
-      ),
-      marginX: try optionalField(
-        .number("margin_x"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.marginX
-      ),
-      marginY: try optionalField(
-        .number("margin_y"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.marginY
-      ),
-      cornerRadius: try optionalField(
-        .number("corner_radius"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.cornerRadius
-      ),
-      focusedCornerRadius: try optionalField(
-        .number("focused_corner_radius"),
-        from: table,
-        path: "builtins.spaces.layout",
+      spacing: try reader.double("spacing", fallback: fallback.spacing),
+      hideEmpty: try reader.bool("hide_empty", fallback: fallback.hideEmpty),
+      paddingX: try reader.double("padding_x", fallback: fallback.paddingX),
+      paddingY: try reader.double("padding_y", fallback: fallback.paddingY),
+      marginX: try reader.double("margin_x", fallback: fallback.marginX),
+      marginY: try reader.double("margin_y", fallback: fallback.marginY),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
+      focusedCornerRadius: try reader.double(
+        "focused_corner_radius",
         fallback: fallback.focusedCornerRadius
       ),
-      focusedScale: try optionalField(
-        .number("focused_scale"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.focusedScale
-      ),
-      inactiveOpacity: try optionalField(
-        .number("inactive_opacity"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.inactiveOpacity
-      ),
-      maxIcons: try optionalField(
-        .int("max_icons"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.maxIcons
-      ),
-      showLabel: try optionalField(
-        .bool("show_label"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.showLabel
-      ),
-      showIcons: try optionalField(
-        .bool("show_icons"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.showIcons
-      ),
-      showOnlyFocusedLabel: try optionalField(
-        .bool("show_only_focused_label"),
-        from: table,
-        path: "builtins.spaces.layout",
+      focusedScale: try reader.double("focused_scale", fallback: fallback.focusedScale),
+      inactiveOpacity: try reader.double("inactive_opacity", fallback: fallback.inactiveOpacity),
+      maxIcons: try reader.int("max_icons", fallback: fallback.maxIcons),
+      showLabel: try reader.bool("show_label", fallback: fallback.showLabel),
+      showIcons: try reader.bool("show_icons", fallback: fallback.showIcons),
+      showOnlyFocusedLabel: try reader.bool(
+        "show_only_focused_label",
         fallback: fallback.showOnlyFocusedLabel
       ),
-      collapseInactive: try optionalField(
-        .bool("collapse_inactive"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.collapseInactive
-      ),
-      collapsedPaddingX: try optionalField(
-        .number("collapsed_padding_x"),
-        from: table,
-        path: "builtins.spaces.layout",
+      collapseInactive: try reader.bool("collapse_inactive", fallback: fallback.collapseInactive),
+      collapsedPaddingX: try reader.double(
+        "collapsed_padding_x",
         fallback: fallback.collapsedPaddingX
       ),
-      collapsedPaddingY: try optionalField(
-        .number("collapsed_padding_y"),
-        from: table,
-        path: "builtins.spaces.layout",
+      collapsedPaddingY: try reader.double(
+        "collapsed_padding_y",
         fallback: fallback.collapsedPaddingY
       ),
-      clickToFocusSpace: try optionalField(
-        .bool("click_to_focus_space"),
-        from: table,
-        path: "builtins.spaces.layout",
+      clickToFocusSpace: try reader.bool(
+        "click_to_focus_space",
         fallback: fallback.clickToFocusSpace
       ),
-      clickToFocusApp: try optionalField(
-        .bool("click_to_focus_app"),
-        from: table,
-        path: "builtins.spaces.layout",
-        fallback: fallback.clickToFocusApp
-      )
+      clickToFocusApp: try reader.bool("click_to_focus_app", fallback: fallback.clickToFocusApp)
     )
   }
 
   /// Parses the spaces text block.
-  fileprivate func parseSpacesText(
-    from table: TOMLTable,
+  private func parseSpacesText(
+    reader: ConfigReader,
     fallback: SpacesBuiltinConfig.Text
   ) throws -> SpacesBuiltinConfig.Text {
     SpacesBuiltinConfig.Text(
-      size: try optionalField(
-        .number("size"),
-        from: table,
-        path: "builtins.spaces.text",
-        fallback: fallback.size
-      ),
+      size: try reader.double("size", fallback: fallback.size),
       weight: try validatedSpacesTextWeight(
-        try optionalField(
-          .string("weight"),
-          from: table,
-          path: "builtins.spaces.text",
-          fallback: fallback.weight
-        ),
-        path: "builtins.spaces.text.weight"
+        try reader.string("weight", fallback: fallback.weight),
+        path: reader.path(for: "weight")
       ),
-      focusedColorHex: try optionalField(
-        .string("focused_color"),
-        from: table,
-        path: "builtins.spaces.text",
-        fallback: fallback.focusedColorHex
-      ),
-      inactiveColorHex: try optionalField(
-        .string("inactive_color"),
-        from: table,
-        path: "builtins.spaces.text",
-        fallback: fallback.inactiveColorHex
-      )
+      focusedColorHex: try reader.string("focused_color", fallback: fallback.focusedColorHex),
+      inactiveColorHex: try reader.string("inactive_color", fallback: fallback.inactiveColorHex)
     )
   }
 
   /// Parses the spaces icons block.
-  fileprivate func parseSpacesIcons(
-    from table: TOMLTable,
+  private func parseSpacesIcons(
+    reader: ConfigReader,
     fallback: SpacesBuiltinConfig.Icons
   ) throws -> SpacesBuiltinConfig.Icons {
     SpacesBuiltinConfig.Icons(
-      size: try optionalField(
-        .number("size"),
-        from: table,
-        path: "builtins.spaces.icons",
-        fallback: fallback.size
-      ),
-      spacing: try optionalField(
-        .number("spacing"),
-        from: table,
-        path: "builtins.spaces.icons",
-        fallback: fallback.spacing
-      ),
-      cornerRadius: try optionalField(
-        .number("corner_radius"),
-        from: table,
-        path: "builtins.spaces.icons",
-        fallback: fallback.cornerRadius
-      ),
-      focusedAppSize: try optionalField(
-        .number("focused_app_size"),
-        from: table,
-        path: "builtins.spaces.icons",
-        fallback: fallback.focusedAppSize
-      ),
-      borderWidth: try optionalField(
-        .number("border_width"),
-        from: table,
-        path: "builtins.spaces.icons",
-        fallback: fallback.borderWidth
-      ),
-      focusedAppBorderWidth: try optionalField(
-        .number("focused_app_border_width"),
-        from: table,
-        path: "builtins.spaces.icons",
+      size: try reader.double("size", fallback: fallback.size),
+      spacing: try reader.double("spacing", fallback: fallback.spacing),
+      cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
+      focusedAppSize: try reader.double("focused_app_size", fallback: fallback.focusedAppSize),
+      borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
+      focusedAppBorderWidth: try reader.double(
+        "focused_app_border_width",
         fallback: fallback.focusedAppBorderWidth
       )
     )
   }
 
   /// Parses the spaces colors block.
-  fileprivate func parseSpacesColors(
-    from table: TOMLTable,
+  private func parseSpacesColors(
+    reader: ConfigReader,
     fallback: SpacesBuiltinConfig.Colors
   ) throws -> SpacesBuiltinConfig.Colors {
     SpacesBuiltinConfig.Colors(
-      activeBackgroundHex: try optionalField(
-        .string("active_background"),
-        from: table,
-        path: "builtins.spaces.colors",
+      activeBackgroundHex: try reader.string(
+        "active_background",
         fallback: fallback.activeBackgroundHex
       ),
-      inactiveBackgroundHex: try optionalField(
-        .string("inactive_background"),
-        from: table,
-        path: "builtins.spaces.colors",
+      inactiveBackgroundHex: try reader.string(
+        "inactive_background",
         fallback: fallback.inactiveBackgroundHex
       ),
-      activeBorderHex: try optionalField(
-        .string("active_border"),
-        from: table,
-        path: "builtins.spaces.colors",
-        fallback: fallback.activeBorderHex
-      ),
-      inactiveBorderHex: try optionalField(
-        .string("inactive_border"),
-        from: table,
-        path: "builtins.spaces.colors",
-        fallback: fallback.inactiveBorderHex
-      ),
-      focusedAppBorderHex: try optionalField(
-        .string("focused_app_border"),
-        from: table,
-        path: "builtins.spaces.colors",
+      activeBorderHex: try reader.string("active_border", fallback: fallback.activeBorderHex),
+      inactiveBorderHex: try reader.string("inactive_border", fallback: fallback.inactiveBorderHex),
+      focusedAppBorderHex: try reader.string(
+        "focused_app_border",
         fallback: fallback.focusedAppBorderHex
       )
     )

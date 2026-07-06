@@ -9,6 +9,7 @@ let package = Package(
   ],
   products: [
     .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
+    .library(name: "EasyBarConfigParsing", targets: ["EasyBarConfigParsing"]),
     .library(name: "EasyBarCalendarConfig", targets: ["EasyBarCalendarConfig"]),
     .library(name: "EasyBarCalendarCore", targets: ["EasyBarCalendarCore"]),
     .library(name: "EasyBarCalendarPresentation", targets: ["EasyBarCalendarPresentation"]),
@@ -30,6 +31,13 @@ let package = Package(
         .product(name: "TOMLKit", package: "TOMLKit")
       ],
       path: "Sources/EasyBarShared"
+    ),
+    .target(
+      name: "EasyBarConfigParsing",
+      dependencies: [
+        .product(name: "TOMLKit", package: "TOMLKit")
+      ],
+      path: "Sources/EasyBarConfigParsing"
     ),
     .target(
       name: "EasyBarCalendarCore",
@@ -59,7 +67,9 @@ let package = Package(
     .target(
       name: "EasyBarCalendarConfig",
       dependencies: [
-        "EasyBarShared"
+        "EasyBarShared",
+        "EasyBarConfigParsing",
+        .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarCalendarConfig"
     ),
@@ -74,6 +84,7 @@ let package = Package(
       name: "EasyBarApp",
       dependencies: [
         "EasyBarShared",
+        "EasyBarConfigParsing",
         "EasyBarCalendarConfig",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
@@ -136,6 +147,7 @@ let package = Package(
         "EasyBarApp",
         "EasyBarLuaRuntime",
         "EasyBarShared",
+        "EasyBarConfigParsing",
         "EasyBarCalendarConfig",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",

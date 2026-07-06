@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -154,34 +153,27 @@ extension Config {
   }
 
   /// Parses the built-in battery widget.
-  func parseBatteryBuiltin(from builtins: TOMLTable) throws {
-    guard let battery = builtins["battery"]?.table else { return }
+  func parseBatteryBuiltin(from builtins: ConfigReader) throws {
+    guard let battery = try builtins.optionalSection("battery") else { return }
 
     let placement = try parseBuiltinPlacement(
-      from: battery,
-      path: "builtins.battery",
+      reader: battery,
       fallback: builtinBattery.placement
     )
 
-    let styleTable = battery["style"]?.table ?? TOMLTable()
-    let contentTable = battery["content"]?.table ?? TOMLTable()
-    let colorsTable = battery["colors"]?.table ?? TOMLTable()
-    let tooltipTable = battery["tooltip"]?.table ?? TOMLTable()
-
     let style = try parseBuiltinStyle(
-      from: styleTable,
-      path: "builtins.battery.style",
+      reader: try battery.section("style"),
       fallback: builtinBattery.style
     )
 
     let content = try parseBatteryContent(
-      from: contentTable,
-      colorsTable: colorsTable,
+      reader: try battery.section("content"),
+      colors: try battery.section("colors"),
       fallback: builtinBattery.content
     )
+
     let popup = try parseBuiltinPopupStyle(
-      from: tooltipTable,
-      path: "builtins.battery.tooltip",
+      reader: try battery.section("tooltip"),
       fallback: builtinBattery.popup
     )
 
@@ -192,117 +184,51 @@ extension Config {
       popup: popup
     )
   }
-}
 
-extension Config {
   /// Parses the battery content and severity color settings.
-  fileprivate func parseBatteryContent(
-    from table: TOMLTable,
-    colorsTable: TOMLTable,
+  private func parseBatteryContent(
+    reader: ConfigReader,
+    colors: ConfigReader,
     fallback: BatteryBuiltinConfig.Content
   ) throws -> BatteryBuiltinConfig.Content {
     BatteryBuiltinConfig.Content(
-      unavailableText: try optionalString(
-        table["unavailable_text"],
-        path: "builtins.battery.content.unavailable_text",
-        fallback: fallback.unavailableText
-      ),
-      iconSize: try optionalNumber(
-        table["icon_size"],
-        path: "builtins.battery.content.icon_size",
-        fallback: fallback.iconSize
-      ),
-      colorMode: try parseBatteryColorMode(
-        try optionalString(
-          table["color_mode"],
-          path: "builtins.battery.content.color_mode",
-          fallback: fallback.colorMode.rawValue
-        ),
-        path: "builtins.battery.content.color_mode"
-      ),
-      fixedColorHex: try optionalString(
-        table["fixed_color"],
-        path: "builtins.battery.content.fixed_color",
-        fallback: fallback.fixedColorHex
-      ),
-      displayMode: try parseBatteryDisplayMode(
-        try optionalString(
-          table["display_mode"],
-          path: "builtins.battery.content.display_mode",
-          fallback: fallback.displayMode.rawValue
-        ),
-        path: "builtins.battery.content.display_mode"
-      ),
-      colors: try parseBatteryColors(from: colorsTable, fallback: fallback.colors)
+      unavailableText: try reader.string("unavailable_text", fallback: fallback.unavailableText),
+      iconSize: try reader.double("icon_size", fallback: fallback.iconSize),
+      colorMode: try reader.enum("color_mode", fallback: fallback.colorMode),
+      fixedColorHex: try reader.optionalString("fixed_color", fallback: fallback.fixedColorHex),
+      displayMode: try reader.enum("display_mode", fallback: fallback.displayMode),
+      colors: try parseBatteryColors(reader: colors, fallback: fallback.colors)
     )
   }
 
   /// Parses the battery severity color settings.
-  fileprivate func parseBatteryColors(
-    from table: TOMLTable,
+  private func parseBatteryColors(
+    reader: ConfigReader,
     fallback: BuiltinBatteryColors
   ) throws -> BuiltinBatteryColors {
     BuiltinBatteryColors(
-      highColorHex: try optionalField(
-        .string("high"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.highColorHex
-      ),
-      mediumColorHex: try optionalField(
-        .string("medium"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.mediumColorHex
-      ),
-      lowColorHex: try optionalField(
-        .string("low"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.lowColorHex
-      ),
-      criticalColorHex: try optionalField(
-        .string("critical"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.criticalColorHex
-      ),
-      frameColorHex: try optionalField(
-        .string("frame"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.frameColorHex
-      ),
-      overlayOutlineColorHex: try optionalField(
-        .string("overlay_outline"),
-        from: table,
-        path: "builtins.battery.colors",
+      highColorHex: try reader.string("high", fallback: fallback.highColorHex),
+      mediumColorHex: try reader.string("medium", fallback: fallback.mediumColorHex),
+      lowColorHex: try reader.string("low", fallback: fallback.lowColorHex),
+      criticalColorHex: try reader.string("critical", fallback: fallback.criticalColorHex),
+      frameColorHex: try reader.string("frame", fallback: fallback.frameColorHex),
+      overlayOutlineColorHex: try reader.string(
+        "overlay_outline",
         fallback: fallback.overlayOutlineColorHex
       ),
-      chargingOverlayColorHex: try optionalField(
-        .string("charging_overlay"),
-        from: table,
-        path: "builtins.battery.colors",
+      chargingOverlayColorHex: try reader.string(
+        "charging_overlay",
         fallback: fallback.chargingOverlayColorHex
       ),
-      externalPowerOverlayColorHex: try optionalField(
-        .string("external_power_overlay"),
-        from: table,
-        path: "builtins.battery.colors",
+      externalPowerOverlayColorHex: try reader.string(
+        "external_power_overlay",
         fallback: fallback.externalPowerOverlayColorHex
       ),
-      onHoldOverlayColorHex: try optionalField(
-        .string("on_hold_overlay"),
-        from: table,
-        path: "builtins.battery.colors",
+      onHoldOverlayColorHex: try reader.string(
+        "on_hold_overlay",
         fallback: fallback.onHoldOverlayColorHex
       ),
-      unavailableColorHex: try optionalField(
-        .string("unavailable"),
-        from: table,
-        path: "builtins.battery.colors",
-        fallback: fallback.unavailableColorHex
-      )
+      unavailableColorHex: try reader.string("unavailable", fallback: fallback.unavailableColorHex)
     )
   }
 }
