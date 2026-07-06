@@ -40,44 +40,31 @@ final class NetworkAgentClient {
   )
 
   /// Socket client that owns the network-agent stream.
-  private lazy var client = AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage>(
-    label: "network agent client",
-    socketPath: { [weak self] in self?.currentConfig().socketPath ?? "" },
-    subscribeRequest: {
-      NetworkAgentRequest(command: .subscribe, fields: NetworkAgentSnapshot.snapshotFieldSet)
-    },
-    handleMessage: { [weak self] message in
-      self?.handle(message)
-    },
-    clearState: { [weak self] in
-      self?.handleDisconnectedStateReset()
-    },
-    onConnected: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentConnected(.network)
-      }
-    },
-    onDisconnected: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentDisconnected(.network)
-      }
-    },
-    onDecodedMessage: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentMessage(.network)
-      }
-    },
-    onDecodeError: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentDecodeError(.network)
-      }
-    },
-    logger: logger.child("socket_client")
-  )
+  private lazy var client: AgentSocketClient<NetworkAgentRequest, NetworkAgentMessage> = {
+    let metricCallbacks = AgentSocketMetricCallbacks.recording(
+      .network,
+      coordinator: metricsCoordinator
+    )
+
+    return AgentSocketClient(
+      label: "network agent client",
+      socketPath: { [weak self] in self?.currentConfig().socketPath ?? "" },
+      subscribeRequest: {
+        NetworkAgentRequest(command: .subscribe, fields: NetworkAgentSnapshot.snapshotFieldSet)
+      },
+      handleMessage: { [weak self] message in
+        self?.handle(message)
+      },
+      clearState: { [weak self] in
+        self?.handleDisconnectedStateReset()
+      },
+      onConnected: metricCallbacks.onConnected,
+      onDisconnected: metricCallbacks.onDisconnected,
+      onDecodedMessage: metricCallbacks.onDecodedMessage,
+      onDecodeError: metricCallbacks.onDecodeError,
+      logger: logger.child("socket_client")
+    )
+  }()
 
   /// Creates the shared network-agent client.
   init(

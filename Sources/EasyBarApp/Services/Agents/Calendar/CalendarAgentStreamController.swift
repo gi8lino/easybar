@@ -34,44 +34,31 @@ final class CalendarAgentStreamController {
   private let lifecycleState: LockedState<LifecycleState>
 
   /// Socket client that owns the calendar-agent stream.
-  private lazy var client = AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage>(
-    label: label,
-    socketPath: { [weak self] in self?.currentSocketPath() ?? "" },
-    subscribeRequest: { [weak self] in
-      self?.currentRequest() ?? CalendarAgentRequest(command: .ping)
-    },
-    handleMessage: { [weak self] message in
-      self?.handle(message)
-    },
-    clearState: { [weak self] in
-      self?.handleDisconnectedStateReset()
-    },
-    onConnected: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentConnected(self.metricsAgent)
-      }
-    },
-    onDisconnected: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentDisconnected(self.metricsAgent)
-      }
-    },
-    onDecodedMessage: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentMessage(self.metricsAgent)
-      }
-    },
-    onDecodeError: { [weak self] in
-      guard let self else { return }
-      Task {
-        await self.metricsCoordinator.recordAgentDecodeError(self.metricsAgent)
-      }
-    },
-    logger: logger.child("socket_client")
-  )
+  private lazy var client: AgentSocketClient<CalendarAgentRequest, CalendarAgentMessage> = {
+    let metricCallbacks = AgentSocketMetricCallbacks.recording(
+      metricsAgent,
+      coordinator: metricsCoordinator
+    )
+
+    return AgentSocketClient(
+      label: label,
+      socketPath: { [weak self] in self?.currentSocketPath() ?? "" },
+      subscribeRequest: { [weak self] in
+        self?.currentRequest() ?? CalendarAgentRequest(command: .ping)
+      },
+      handleMessage: { [weak self] message in
+        self?.handle(message)
+      },
+      clearState: { [weak self] in
+        self?.handleDisconnectedStateReset()
+      },
+      onConnected: metricCallbacks.onConnected,
+      onDisconnected: metricCallbacks.onDisconnected,
+      onDecodedMessage: metricCallbacks.onDecodedMessage,
+      onDecodeError: metricCallbacks.onDecodeError,
+      logger: logger.child("socket_client")
+    )
+  }()
 
   /// Creates one shared calendar-agent stream controller.
   init(
