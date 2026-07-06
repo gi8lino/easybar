@@ -96,14 +96,15 @@ public final class ProcessLogger: @unchecked Sendable {
   }
 
   /// Formats log timestamps.
-  private static let formatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .iso8601)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone.current
-    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
-    return formatter
-  }()
+  private static let formatter = LockedState<DateFormatter>(
+    {
+      let formatter = DateFormatter()
+      formatter.calendar = Calendar(identifier: .iso8601)
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.timeZone = TimeZone.current
+      formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
+      return formatter
+    }())
 
   private let label: String
   private let sharedState: SharedState
@@ -336,7 +337,14 @@ public final class ProcessLogger: @unchecked Sendable {
       fields: fields,
       minimumLevel: minimumLevel
     )
-    return "[\(Self.formatter.string(from: Date()))] [\(renderedLevel)] \(renderedMessage)"
+    return "[\(Self.formatTimestamp(Date()))] [\(renderedLevel)] \(renderedMessage)"
+  }
+
+  /// Formats one timestamp through the locked shared formatter.
+  private static func formatTimestamp(_ date: Date) -> String {
+    formatter.withLock { formatter in
+      formatter.string(from: date)
+    }
   }
 
   /// Adds subsystem context only when the active runtime mode or severity requires it.
