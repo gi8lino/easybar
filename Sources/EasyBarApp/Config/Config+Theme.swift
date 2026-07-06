@@ -213,13 +213,27 @@ extension Config {
 
   /// Parses a complete theme color table.
   private func parseCompleteThemeColors(reader: ConfigReader) throws -> ThemeColors {
-    ThemeColors(
+    try validateKnownThemeColorKeys(reader)
+
+    return ThemeColors(
       valuesByToken: try Dictionary(
         uniqueKeysWithValues: ThemeColorToken.allCases.map { token in
           (token, try requiredThemeColor(reader, token.rawValue))
         }
       )
     )
+  }
+
+  /// Rejects unknown color keys in standalone theme files.
+  private func validateKnownThemeColorKeys(_ reader: ConfigReader) throws {
+    let knownKeys = Set(ThemeColorToken.allCases.map(\.rawValue))
+
+    for key in reader.keys where !knownKeys.contains(key) {
+      throw ConfigError.invalidValue(
+        path: reader.path(for: key),
+        message: "unknown theme color token '\(key)'"
+      )
+    }
   }
 
   /// Parses optional inline theme color overrides from `config.toml`.

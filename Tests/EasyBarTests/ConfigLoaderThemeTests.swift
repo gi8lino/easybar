@@ -198,4 +198,42 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
+  /// Verifies that standalone theme files reject unknown color token typos.
+  func testValidateRejectsUnknownThemeColorTokenInThemeFile() throws {
+    let themesDirectoryURL = tempDirectoryURL.appendingPathComponent("themes")
+    try FileManager.default.createDirectory(
+      at: themesDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    let sourceThemeURL = repoRootURL()
+      .appendingPathComponent("themes/default.toml")
+    let themeText =
+      try String(contentsOf: sourceThemeURL, encoding: .utf8)
+      + "\nunknwon_token = \"#ffffff\"\n"
+    try writeConfig(
+      themeText,
+      to: themesDirectoryURL.appendingPathComponent("typo.toml")
+    )
+
+    let configFileURL = tempDirectoryURL.appendingPathComponent("theme-unknown-token.toml")
+    try writeConfig(
+      """
+      [theme]
+      name = "typo"
+      themes_dir = "\(themesDirectoryURL.path)"
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard case .invalidValue(let path, let message) = error as? ConfigError else {
+        return XCTFail("Expected invalidValue ConfigError, got \(error)")
+      }
+
+      XCTAssertEqual(path, "theme.themes_dir.typo.toml.colors.unknwon_token")
+      XCTAssertEqual(message, "unknown theme color token 'unknwon_token'")
+    }
+  }
+
 }
