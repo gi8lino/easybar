@@ -9,10 +9,53 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private static let defaultReconnectDelays: [TimeInterval] = [0.25, 0.5, 1, 2, 5]
 
   /// One running subscription process and its read handles.
-  private struct RunningSubscription {
+  private final class RunningSubscription: @unchecked Sendable {
     let process: Process
     let outputHandle: FileHandle
     let errorHandle: FileHandle
+    private let releaseLock = NSLock()
+    private var released = false
+
+    init(process: Process, outputHandle: FileHandle, errorHandle: FileHandle) {
+      self.process = process
+      self.outputHandle = outputHandle
+      self.errorHandle = errorHandle
+    }
+
+    func release() {
+      guard markReleased() else { return }
+
+      process.terminationHandler = nil
+      outputHandle.readabilityHandler = nil
+      errorHandle.readabilityHandler = nil
+
+      try? outputHandle.close()
+      try? errorHandle.close()
+    }
+
+    func terminateAndReleaseOnExit() {
+      outputHandle.readabilityHandler = nil
+      errorHandle.readabilityHandler = nil
+      process.terminationHandler = { [self] _ in
+        release()
+      }
+
+      guard process.isRunning else {
+        release()
+        return
+      }
+
+      process.terminate()
+    }
+
+    private func markReleased() -> Bool {
+      releaseLock.lock()
+      defer { releaseLock.unlock() }
+
+      guard !released else { return false }
+      released = true
+      return true
+    }
   }
 
   /// Locked lifecycle state for the subscription process.
@@ -22,6 +65,52 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     var subscription: RunningSubscription?
     var outputBuffer = Data()
     var errorBuffer = Data()
+
+    mutating func start() -> UInt64? {
+      guard !running else { return nil }
+      running = true
+      generation &+= 1
+      clearBuffers()
+      return generation
+    }
+
+    mutating func stop() -> RunningSubscription? {
+      guard running else { return nil }
+      running = false
+      generation &+= 1
+      clearBuffers()
+
+      let stoppedSubscription = subscription
+      subscription = nil
+      return stoppedSubscription
+    }
+
+    mutating func attach(_ newSubscription: RunningSubscription, generation: UInt64) -> Bool {
+      guard running, self.generation == generation, newSubscription.process.isRunning else {
+        return false
+      }
+
+      subscription = newSubscription
+      return true
+    }
+
+    mutating func detach(
+      process: Process,
+      generation: UInt64
+    ) -> (wasActive: Bool, subscription: RunningSubscription?) {
+      let matchedSubscription = subscription?.process === process ? subscription : nil
+      if matchedSubscription != nil {
+        subscription = nil
+        clearBuffers()
+      }
+
+      return (running && self.generation == generation, matchedSubscription)
+    }
+
+    private mutating func clearBuffers() {
+      outputBuffer.removeAll(keepingCapacity: true)
+      errorBuffer.removeAll(keepingCapacity: true)
+    }
   }
 
   /// Stream type currently being decoded.
@@ -62,14 +151,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
 
   /// Starts the long-lived AeroSpace subscription if possible.
   func start() {
-    let generation = withLock { state -> UInt64? in
-      guard !state.running else { return nil }
-      state.running = true
-      state.generation &+= 1
-      state.outputBuffer.removeAll(keepingCapacity: true)
-      state.errorBuffer.removeAll(keepingCapacity: true)
-      return state.generation
-    }
+    let generation = withLock { state in state.start() }
 
     guard let generation else { return }
 
@@ -79,27 +161,12 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
 
   /// Stops the subscription process.
   func stop() {
-    let subscription = withLock { state -> RunningSubscription? in
-      guard state.running else { return nil }
-      state.running = false
-      state.generation &+= 1
-      state.outputBuffer.removeAll(keepingCapacity: true)
-      state.errorBuffer.removeAll(keepingCapacity: true)
-
-      let subscription = state.subscription
-      state.subscription = nil
-      return subscription
-    }
+    let subscription = withLock { state in state.stop() }
 
     reconnectScheduler.cancel()
     guard let subscription else { return }
 
-    subscription.outputHandle.readabilityHandler = nil
-    subscription.errorHandle.readabilityHandler = nil
-
-    if subscription.process.isRunning {
-      subscription.process.terminate()
-    }
+    subscription.terminateAndReleaseOnExit()
 
     logger.debug("aerospace subscription stopped")
   }
@@ -136,8 +203,11 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     do {
       try process.run()
     } catch {
-      outputHandle.readabilityHandler = nil
-      errorHandle.readabilityHandler = nil
+      RunningSubscription(
+        process: process,
+        outputHandle: outputHandle,
+        errorHandle: errorHandle
+      ).release()
       logger.debug(
         "failed to start aerospace subscription",
         .field("args", AeroSpaceSubscriptionEvent.subscribeArguments.joined(separator: " ")),
@@ -153,21 +223,12 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       errorHandle: errorHandle
     )
 
-    let shouldKeep = withLock { state -> Bool in
-      guard state.running, state.generation == generation, process.isRunning else {
-        return false
-      }
-
-      state.subscription = subscription
-      return true
+    let shouldKeep = withLock { state in
+      state.attach(subscription, generation: generation)
     }
 
     guard shouldKeep else {
-      outputHandle.readabilityHandler = nil
-      errorHandle.readabilityHandler = nil
-      if process.isRunning {
-        process.terminate()
-      }
+      subscription.terminateAndReleaseOnExit()
       return
     }
 
@@ -244,19 +305,13 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   /// Handles process termination.
   private func handleTermination(process: Process, generation: UInt64) {
     let status = process.terminationStatus
-    let wasActive = withLock { state -> Bool in
-      if state.subscription?.process === process {
-        state.subscription?.outputHandle.readabilityHandler = nil
-        state.subscription?.errorHandle.readabilityHandler = nil
-        state.subscription = nil
-        state.outputBuffer.removeAll(keepingCapacity: true)
-        state.errorBuffer.removeAll(keepingCapacity: true)
-      }
-
-      return state.running && state.generation == generation
+    let result = withLock { state in
+      state.detach(process: process, generation: generation)
     }
 
-    guard wasActive else { return }
+    result.subscription?.release()
+
+    guard result.wasActive else { return }
 
     if status == 0 {
       logger.debug("aerospace subscription ended")

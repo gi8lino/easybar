@@ -113,7 +113,8 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
       let entries = mirror.children.map { child -> (String, DefaultSnapshotValue) in
         let pair = Mirror(reflecting: child.value).children.map(\.value)
         let key = pair.first.map { String(describing: $0) } ?? ""
-        let value = pair.dropFirst().first.map { normalizedDefaultValue($0, theme: theme) }
+        let value =
+          pair.dropFirst().first.map { normalizedDefaultValue($0, theme: theme) }
           ?? .scalar("nil")
         return (key, value)
       }
@@ -187,5 +188,3 @@ private enum DefaultSnapshotValue: Equatable, CustomStringConvertible {
     }
   }
 }
-
-

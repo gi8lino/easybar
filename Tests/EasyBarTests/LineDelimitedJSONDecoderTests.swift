@@ -74,5 +74,3 @@ final class LineDelimitedJSONDecoderTests: XCTestCase {
     return try results.map { try $0.get() }
   }
 }
-
-
