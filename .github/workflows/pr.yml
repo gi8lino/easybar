@@ -74,7 +74,12 @@ jobs:
       - name: Build docs
         run: make build-docs
 
+  release-scripts:
+    runs-on: ubuntu-latest
 
+    steps:
+      - uses: actions/checkout@v7
 
-
+      - name: Test Homebrew formula update scripts
+        run: scripts/release/test-homebrew-formula-update.sh
 

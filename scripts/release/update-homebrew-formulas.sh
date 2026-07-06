@@ -9,30 +9,30 @@ sha=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --tap-dir)
-      tap_dir="${2:?missing value for --tap-dir}"
-      shift 2
-      ;;
-    --repository)
-      repository="${2:?missing value for --repository}"
-      shift 2
-      ;;
-    --tag)
-      tag="${2:?missing value for --tag}"
-      shift 2
-      ;;
-    --version)
-      version="${2:?missing value for --version}"
-      shift 2
-      ;;
-    --sha)
-      sha="${2:?missing value for --sha}"
-      shift 2
-      ;;
-    *)
-      echo "Unknown argument: $1" >&2
-      exit 2
-      ;;
+  --tap-dir)
+    tap_dir="${2:?missing value for --tap-dir}"
+    shift 2
+    ;;
+  --repository)
+    repository="${2:?missing value for --repository}"
+    shift 2
+    ;;
+  --tag)
+    tag="${2:?missing value for --tag}"
+    shift 2
+    ;;
+  --version)
+    version="${2:?missing value for --version}"
+    shift 2
+    ;;
+  --sha)
+    sha="${2:?missing value for --sha}"
+    shift 2
+    ;;
+  *)
+    echo "Unknown argument: $1" >&2
+    exit 2
+    ;;
   esac
 done
 
@@ -58,7 +58,7 @@ write_formula_header() {
   local class_name="$2"
   local description="$3"
 
-  cat > "$file" <<EOF_FORMULA
+  cat >"$file" <<EOF_FORMULA
 class ${class_name} < Formula
   desc "${description}"
   homepage "https://github.com/${repository}"
@@ -77,7 +77,7 @@ append_service_block() {
   local log_dir="$3"
   local log_name="$4"
 
-  cat >> "$file" <<EOF_FORMULA
+  cat >>"$file" <<EOF_FORMULA
 
   service do
     run [opt_libexec/"${executable}"]
@@ -94,7 +94,7 @@ EOF_FORMULA
 append_formula_end() {
   local file="$1"
 
-  cat >> "$file" <<'EOF_FORMULA'
+  cat >>"$file" <<'EOF_FORMULA'
 end
 EOF_FORMULA
 }
@@ -105,7 +105,7 @@ write_easybar_formula() {
     "Easybar" \
     "Scriptable macOS status bar with SwiftUI and Lua widgets"
 
-  cat >> "${easybar_formula_file}" <<'EOF_FORMULA'
+  cat >>"${easybar_formula_file}" <<'EOF_FORMULA'
   depends_on "lua"
   depends_on "easybar-calendar-agent"
   depends_on "easybar-network-agent"
@@ -124,7 +124,7 @@ EOF_FORMULA
     "easybar" \
     "easybar"
 
-  cat >> "${easybar_formula_file}" <<'EOF_FORMULA'
+  cat >>"${easybar_formula_file}" <<'EOF_FORMULA'
 
   test do
     assert_match "easybar", shell_output("#{bin}/easybar --help 2>&1")
@@ -144,7 +144,7 @@ write_agent_formula() {
 
   write_formula_header "$file" "$class_name" "$description"
 
-  cat >> "$file" <<EOF_FORMULA
+  cat >>"$file" <<EOF_FORMULA
 
   def install
     libexec.install "${app_name}.app"
@@ -159,7 +159,7 @@ EOF_FORMULA
     "$log_dir" \
     "$log_name"
 
-  cat >> "$file" <<EOF_FORMULA
+  cat >>"$file" <<EOF_FORMULA
 
   test do
     assert_predicate libexec/"${app_name}.app", :exist?
@@ -184,5 +184,3 @@ write_agent_formula \
   "EasyBarNetworkAgent" \
   "easybar-network-agent" \
   "easybar-network-agent"
-
-
