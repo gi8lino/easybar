@@ -3,6 +3,15 @@ import Foundation
 
 /// Provides authorization-aware network snapshots.
 public final class NetworkSnapshotProvider {
+  /// Immutable values used while resolving requested field values.
+  private struct FieldResolutionContext {
+    let now: Date
+    let permissionState: String
+    let locationAuthorized: Bool
+    let wifi: NetworkWiFiSnapshot
+    let network: NetworkSystemSnapshot
+  }
+
   private let componentName: String
   private let authorizer: NetworkLocationAuthorizationController
   private let wifiMonitor: NetworkWiFiMonitor
@@ -146,171 +155,147 @@ public final class NetworkSnapshotProvider {
   private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String:
     NetworkAgentFieldValue]
   {
-    let now = Date()
-    let permissionState = authorizer.permissionState()
-    let locationAuthorized = authorizer.isAuthorized()
-    let wifi = wifiMonitor.currentState(now: now)
-    let network = systemMonitor.currentState()
-
+    let context = fieldResolutionContext()
     var values: [String: NetworkAgentFieldValue] = [:]
 
     for field in fields {
-      switch field {
-      case .generatedAt:
-        values[field.rawValue] = .string(NetworkAgentSnapshot.dateFormatter.string(from: now))
-
-      case .ssid:
-        if let ssid = wifi.ssid {
-          values[field.rawValue] = .string(ssid)
-        }
-
-      case .bssid:
-        if let bssid = wifi.bssid {
-          values[field.rawValue] = .string(bssid)
-        }
-
-      case .interfaceName:
-        if let interfaceName = wifi.interfaceName {
-          values[field.rawValue] = .string(interfaceName)
-        }
-
-      case .hardwareAddress:
-        if let hardwareAddress = wifi.hardwareAddress {
-          values[field.rawValue] = .string(hardwareAddress)
-        }
-
-      case .power:
-        if let power = wifi.power {
-          values[field.rawValue] = .bool(power)
-        }
-
-      case .serviceActive:
-        if let serviceActive = wifi.serviceActive {
-          values[field.rawValue] = .bool(serviceActive)
-        }
-
-      case .primaryInterfaceIsTunnel:
-        values[field.rawValue] = .bool(network.primaryInterfaceIsTunnel)
-
-      case .rssi:
-        if let rssi = wifi.rssi {
-          values[field.rawValue] = .int(rssi)
-        }
-
-      case .noise:
-        if let noise = wifi.noise {
-          values[field.rawValue] = .int(noise)
-        }
-
-      case .snr:
-        if let snr = wifi.snr {
-          values[field.rawValue] = .int(snr)
-        }
-
-      case .linkQuality:
-        if let linkQuality = wifi.linkQuality {
-          values[field.rawValue] = .int(linkQuality)
-        }
-
-      case .txRate:
-        if let txRate = wifi.txRate {
-          values[field.rawValue] = .int(txRate)
-        }
-
-      case .channel:
-        if let channel = wifi.channel {
-          values[field.rawValue] = .int(channel)
-        }
-
-      case .channelBand:
-        if let channelBand = wifi.channelBand {
-          values[field.rawValue] = .string(channelBand)
-        }
-
-      case .channelWidth:
-        if let channelWidth = wifi.channelWidth {
-          values[field.rawValue] = .string(channelWidth)
-        }
-
-      case .security:
-        if let security = wifi.security {
-          values[field.rawValue] = .string(security)
-        }
-
-      case .phyMode:
-        if let phyMode = wifi.phyMode {
-          values[field.rawValue] = .string(phyMode)
-        }
-
-      case .interfaceMode:
-        if let interfaceMode = wifi.interfaceMode {
-          values[field.rawValue] = .string(interfaceMode)
-        }
-
-      case .countryCode:
-        if let countryCode = wifi.countryCode {
-          values[field.rawValue] = .string(countryCode)
-        }
-
-      case .roaming:
-        values[field.rawValue] = .bool(wifi.roaming)
-
-      case .ssidChangedAt:
-        if let ssidChangedAt = wifi.ssidChangedAt {
-          values[field.rawValue] = .string(ssidChangedAt)
-        }
-
-      case .interfaceChangedAt:
-        if let interfaceChangedAt = wifi.interfaceChangedAt {
-          values[field.rawValue] = .string(interfaceChangedAt)
-        }
-
-      case .primaryInterface:
-        if let primaryInterface = network.primaryInterface {
-          values[field.rawValue] = .string(primaryInterface)
-        }
-
-      case .activeTunnelInterface:
-        if let activeTunnelInterface = network.activeTunnelInterface {
-          values[field.rawValue] = .string(activeTunnelInterface)
-        }
-
-      case .activeTunnelInterfaces:
-        values[field.rawValue] = .stringList(network.activeTunnelInterfaces)
-
-      case .ipv4Address:
-        if let ipv4Address = network.ipv4Address {
-          values[field.rawValue] = .string(ipv4Address)
-        }
-
-      case .ipv6Address:
-        if let ipv6Address = network.ipv6Address {
-          values[field.rawValue] = .string(ipv6Address)
-        }
-
-      case .defaultGateway:
-        if let defaultGateway = network.defaultGateway {
-          values[field.rawValue] = .string(defaultGateway)
-        }
-
-      case .dnsServers:
-        values[field.rawValue] = .stringList(network.dnsServers)
-
-      case .internetReachable:
-        values[field.rawValue] = .bool(network.internetReachable)
-
-      case .captivePortal:
-        values[field.rawValue] = .bool(network.captivePortal)
-
-      case .locationAuthorized:
-        values[field.rawValue] = .bool(locationAuthorized)
-
-      case .locationPermissionState:
-        values[field.rawValue] = .string(permissionState)
-      }
+      guard let value = fieldValue(for: field, context: context) else { continue }
+      values[field.rawValue] = value
     }
 
     return values
+  }
+
+  /// Captures a consistent set of values for one field-response build.
+  private func fieldResolutionContext() -> FieldResolutionContext {
+    let now = Date()
+    return FieldResolutionContext(
+      now: now,
+      permissionState: authorizer.permissionState(),
+      locationAuthorized: authorizer.isAuthorized(),
+      wifi: wifiMonitor.currentState(now: now),
+      network: systemMonitor.currentState()
+    )
+  }
+
+  /// Resolves one requested field from the current context.
+  private func fieldValue(
+    for field: NetworkAgentField,
+    context: FieldResolutionContext
+  ) -> NetworkAgentFieldValue? {
+    switch field {
+    case .generatedAt:
+      return .string(NetworkAgentSnapshot.dateFormatter.string(from: context.now))
+    case .ssid, .bssid, .interfaceName, .hardwareAddress, .power, .serviceActive, .rssi,
+      .noise, .snr, .linkQuality, .txRate, .channel, .channelBand, .channelWidth, .security,
+      .phyMode, .interfaceMode, .countryCode, .roaming, .ssidChangedAt, .interfaceChangedAt:
+      return wifiFieldValue(for: field, wifi: context.wifi)
+    case .primaryInterfaceIsTunnel, .primaryInterface, .activeTunnelInterface,
+      .activeTunnelInterfaces, .ipv4Address, .ipv6Address, .defaultGateway, .dnsServers,
+      .internetReachable, .captivePortal:
+      return networkFieldValue(for: field, network: context.network)
+    case .locationAuthorized, .locationPermissionState:
+      return authorizationFieldValue(for: field, context: context)
+    }
+  }
+
+  /// Resolves one Wi-Fi field value.
+  private func wifiFieldValue(
+    for field: NetworkAgentField,
+    wifi: NetworkWiFiSnapshot
+  ) -> NetworkAgentFieldValue? {
+    switch field {
+    case .ssid:
+      return wifi.ssid.map(NetworkAgentFieldValue.string)
+    case .bssid:
+      return wifi.bssid.map(NetworkAgentFieldValue.string)
+    case .interfaceName:
+      return wifi.interfaceName.map(NetworkAgentFieldValue.string)
+    case .hardwareAddress:
+      return wifi.hardwareAddress.map(NetworkAgentFieldValue.string)
+    case .power:
+      return wifi.power.map(NetworkAgentFieldValue.bool)
+    case .serviceActive:
+      return wifi.serviceActive.map(NetworkAgentFieldValue.bool)
+    case .rssi:
+      return wifi.rssi.map(NetworkAgentFieldValue.int)
+    case .noise:
+      return wifi.noise.map(NetworkAgentFieldValue.int)
+    case .snr:
+      return wifi.snr.map(NetworkAgentFieldValue.int)
+    case .linkQuality:
+      return wifi.linkQuality.map(NetworkAgentFieldValue.int)
+    case .txRate:
+      return wifi.txRate.map(NetworkAgentFieldValue.int)
+    case .channel:
+      return wifi.channel.map(NetworkAgentFieldValue.int)
+    case .channelBand:
+      return wifi.channelBand.map(NetworkAgentFieldValue.string)
+    case .channelWidth:
+      return wifi.channelWidth.map(NetworkAgentFieldValue.string)
+    case .security:
+      return wifi.security.map(NetworkAgentFieldValue.string)
+    case .phyMode:
+      return wifi.phyMode.map(NetworkAgentFieldValue.string)
+    case .interfaceMode:
+      return wifi.interfaceMode.map(NetworkAgentFieldValue.string)
+    case .countryCode:
+      return wifi.countryCode.map(NetworkAgentFieldValue.string)
+    case .roaming:
+      return .bool(wifi.roaming)
+    case .ssidChangedAt:
+      return wifi.ssidChangedAt.map(NetworkAgentFieldValue.string)
+    case .interfaceChangedAt:
+      return wifi.interfaceChangedAt.map(NetworkAgentFieldValue.string)
+    default:
+      return nil
+    }
+  }
+
+  /// Resolves one generic network field value.
+  private func networkFieldValue(
+    for field: NetworkAgentField,
+    network: NetworkSystemSnapshot
+  ) -> NetworkAgentFieldValue? {
+    switch field {
+    case .primaryInterfaceIsTunnel:
+      return .bool(network.primaryInterfaceIsTunnel)
+    case .primaryInterface:
+      return network.primaryInterface.map(NetworkAgentFieldValue.string)
+    case .activeTunnelInterface:
+      return network.activeTunnelInterface.map(NetworkAgentFieldValue.string)
+    case .activeTunnelInterfaces:
+      return .stringList(network.activeTunnelInterfaces)
+    case .ipv4Address:
+      return network.ipv4Address.map(NetworkAgentFieldValue.string)
+    case .ipv6Address:
+      return network.ipv6Address.map(NetworkAgentFieldValue.string)
+    case .defaultGateway:
+      return network.defaultGateway.map(NetworkAgentFieldValue.string)
+    case .dnsServers:
+      return .stringList(network.dnsServers)
+    case .internetReachable:
+      return .bool(network.internetReachable)
+    case .captivePortal:
+      return .bool(network.captivePortal)
+    default:
+      return nil
+    }
+  }
+
+  /// Resolves one authorization field value.
+  private func authorizationFieldValue(
+    for field: NetworkAgentField,
+    context: FieldResolutionContext
+  ) -> NetworkAgentFieldValue? {
+    switch field {
+    case .locationAuthorized:
+      return .bool(context.locationAuthorized)
+    case .locationPermissionState:
+      return .string(context.permissionState)
+    default:
+      return nil
+    }
   }
 
   /// Returns the unauthorized response for one requested field list.
