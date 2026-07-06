@@ -7,14 +7,37 @@ func resolvedConfigPath() -> String {
     ?? SharedPathDefaults.defaultConfigPath().path
 }
 
-/// Returns one parsed TOML table or an empty table when loading fails.
-func parsedConfig(at path: String) -> TOMLTable {
-  guard
-    let text = try? String(contentsOfFile: path, encoding: .utf8),
-    let table = try? TOMLTable(string: text)
-  else {
+/// Returns one parsed TOML table. Missing config files resolve to an empty table.
+func parsedConfig(at path: String) throws -> TOMLTable {
+  let url = URL(fileURLWithPath: path)
+
+  guard FileManager.default.fileExists(atPath: url.path) else {
     return TOMLTable()
   }
 
-  return table
+  let data: Data
+  do {
+    data = try Data(contentsOf: url)
+  } catch {
+    throw SharedRuntimeConfigError.readFailure(
+      path: path,
+      message: error.localizedDescription
+    )
+  }
+
+  guard let text = String(data: data, encoding: .utf8) else {
+    throw SharedRuntimeConfigError.invalidValue(
+      path: "config file",
+      message: "file is not valid UTF-8"
+    )
+  }
+
+  do {
+    return try TOMLTable(string: text)
+  } catch {
+    throw SharedRuntimeConfigError.parseFailure(
+      path: path,
+      message: error.localizedDescription
+    )
+  }
 }

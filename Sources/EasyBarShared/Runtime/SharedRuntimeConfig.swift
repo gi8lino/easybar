@@ -9,12 +9,18 @@ public struct SharedRuntimeConfig {
   public let calendarAgent: SharedCalendarAgentRuntimeConfig
   public let networkAgent: SharedNetworkAgentRuntimeConfig
 
-  public static let current = load()
+  public static let current: SharedRuntimeConfig = {
+    do {
+      return try load()
+    } catch {
+      fatalError("failed to load shared runtime config: \(error.localizedDescription)")
+    }
+  }()
 
   /// Loads the shared runtime config once from env, defaults, and config.toml.
-  public static func load() -> SharedRuntimeConfig {
+  public static func load() throws -> SharedRuntimeConfig {
     let configPath = resolvedConfigPath()
-    let toml = parsedConfig(at: configPath)
+    let toml = try parsedConfig(at: configPath)
 
     let app = resolvedAppConfig(from: toml)
     let logging = resolvedLoggingConfig(from: toml)

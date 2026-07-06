@@ -69,7 +69,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
-    let runtime = SharedRuntimeConfig.load()
+    let runtime = try SharedRuntimeConfig.load()
 
     XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.logging.level, .trace)
@@ -95,10 +95,34 @@ final class SharedRuntimeConfigTests: XCTestCase {
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
     setEnvironmentValue("trace", for: SharedEnvironmentKeys.loggingLevel)
 
-    let runtime = SharedRuntimeConfig.load()
+    let runtime = try SharedRuntimeConfig.load()
 
     XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.logging.level, .trace)
+  }
+
+
+  /// Verifies that invalid shared TOML fails instead of silently falling back to defaults.
+  func testLoadThrowsForInvalidToml() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-invalid.toml")
+
+    try writeConfig(
+      """
+      [logging
+      level = "info"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    XCTAssertThrowsError(try SharedRuntimeConfig.load()) { error in
+      guard case SharedRuntimeConfigError.parseFailure(let path, _) = error else {
+        return XCTFail("Expected parseFailure, got \(error)")
+      }
+
+      XCTAssertEqual(path, configFileURL.path)
+    }
   }
 
   /// Verifies that shared helper config does not pass invalid network intervals through.
@@ -115,7 +139,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
-    let runtime = SharedRuntimeConfig.load()
+    let runtime = try SharedRuntimeConfig.load()
 
     XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 60)
