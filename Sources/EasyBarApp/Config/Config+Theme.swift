@@ -185,18 +185,16 @@ extension Config {
 
     do {
       let table = try TOMLTable(string: text)
+      let reader = configReader(table: table, path: path)
 
-      guard let colors = table["colors"]?.table else {
+      guard let colorsReader = try reader.optionalSection("colors") else {
         throw ConfigError.invalidValue(
           path: "\(path).colors",
           message: "theme file must contain a [colors] table"
         )
       }
 
-      return try parseCompleteThemeColors(
-        from: colors,
-        path: "\(path).colors"
-      )
+      return try parseCompleteThemeColors(reader: colorsReader)
     } catch let error as TOMLParseError {
       throw makeParseFailure(
         from: error,
@@ -214,14 +212,11 @@ extension Config {
   }
 
   /// Parses a complete theme color table.
-  private func parseCompleteThemeColors(
-    from table: TOMLTable,
-    path: String
-  ) throws -> ThemeColors {
+  private func parseCompleteThemeColors(reader: ConfigReader) throws -> ThemeColors {
     ThemeColors(
       valuesByToken: try Dictionary(
         uniqueKeysWithValues: ThemeColorToken.allCases.map { token in
-          (token, try requiredThemeColor(table, token.rawValue, path: path))
+          (token, try requiredThemeColor(reader, token.rawValue))
         }
       )
     )
@@ -250,12 +245,9 @@ extension Config {
 
   /// Returns one required color value from a complete theme file.
   private func requiredThemeColor(
-    _ table: TOMLTable,
-    _ key: String,
-    path: String
+    _ reader: ConfigReader,
+    _ key: String
   ) throws -> String {
-    let reader = configReader(table: table, path: path)
-
     guard let value = try reader.optionalString(key) else {
       throw ConfigError.invalidValue(
         path: reader.path(for: key),
@@ -315,3 +307,5 @@ extension Config {
     token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
   }
 }
+
+
