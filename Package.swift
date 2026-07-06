@@ -43,7 +43,10 @@ let package = Package(
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/EasyBarCalendarPresentation"
+      path: "Sources/EasyBarCalendarPresentation",
+      swiftSettings: [
+        .enableUpcomingFeature("StrictConcurrency")
+      ]
     ),
     .target(
       name: "EasyBarCalendarUI",
