@@ -12,39 +12,6 @@ public enum CalendarAgentErrorCode: String, Codable, Equatable, Sendable {
   case unknown = "unknown"
 }
 
-/// Calendar-agent protocol capabilities advertised by the server.
-public struct CalendarAgentCapabilities: Codable, Equatable, Sendable {
-  /// Whether live subscriptions are supported.
-  public var supportsSubscriptions: Bool
-  /// Whether create/update/delete event mutations are supported.
-  public var supportsEventMutation: Bool
-  /// Whether writable calendars are returned in snapshots.
-  public var supportsWritableCalendars: Bool
-  /// Whether typed wire-level error codes are supported.
-  public var supportsStructuredErrors: Bool
-
-  /// Creates one calendar-agent capabilities payload.
-  public init(
-    supportsSubscriptions: Bool,
-    supportsEventMutation: Bool,
-    supportsWritableCalendars: Bool,
-    supportsStructuredErrors: Bool
-  ) {
-    self.supportsSubscriptions = supportsSubscriptions
-    self.supportsEventMutation = supportsEventMutation
-    self.supportsWritableCalendars = supportsWritableCalendars
-    self.supportsStructuredErrors = supportsStructuredErrors
-  }
-
-  /// Default capabilities for the current calendar agent.
-  public static let `default` = CalendarAgentCapabilities(
-    supportsSubscriptions: true,
-    supportsEventMutation: true,
-    supportsWritableCalendars: true,
-    supportsStructuredErrors: true
-  )
-}
-
 /// Commands supported by the calendar agent socket.
 public enum CalendarAgentCommand: String, Codable, Sendable {
   case ping

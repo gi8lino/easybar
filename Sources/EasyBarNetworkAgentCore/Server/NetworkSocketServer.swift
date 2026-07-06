@@ -87,7 +87,7 @@ final class NetworkSocketServer {
           kind: .version,
           version: NetworkAgentVersion(
             appVersion: appVersion,
-            protocolVersion: networkAgentProtocolVersion
+            protocolVersion: easyBarIPCProtocolVersion
           )
         ),
         to: clientFD

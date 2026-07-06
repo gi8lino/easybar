@@ -104,8 +104,7 @@ final class CalendarSocketServer {
         kind: .version,
         version: CalendarAgentVersion(
           appVersion: appVersion,
-          protocolVersion: calendarAgentProtocolVersion,
-          capabilities: .default
+          protocolVersion: easyBarIPCProtocolVersion
         )
       ),
       to: clientFD

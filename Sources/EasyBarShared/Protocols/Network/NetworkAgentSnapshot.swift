@@ -3,7 +3,7 @@ import Foundation
 public struct NetworkAgentVersion: Codable, Equatable {
   /// The application version embedded in the network-agent build.
   public var appVersion: String
-  /// Stable socket protocol version.
+  /// Shared EasyBar IPC protocol version.
   public var protocolVersion: String
 
   /// Creates one network-agent version payload.

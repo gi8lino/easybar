@@ -4,20 +4,16 @@ import Foundation
 public struct CalendarAgentVersion: Codable, Equatable, Sendable {
   /// The application version embedded in the calendar-agent build.
   public var appVersion: String
-  /// Stable socket protocol version.
+  /// Shared EasyBar IPC protocol version.
   public var protocolVersion: String
-  /// Advertised calendar-agent capabilities.
-  public var capabilities: CalendarAgentCapabilities
 
   /// Creates one calendar-agent version payload.
   public init(
     appVersion: String,
-    protocolVersion: String,
-    capabilities: CalendarAgentCapabilities = .default
+    protocolVersion: String
   ) {
     self.appVersion = appVersion
     self.protocolVersion = protocolVersion
-    self.capabilities = capabilities
   }
 }
 
