@@ -35,8 +35,21 @@ notarytool_profile=${26}
 notary_submit=${27}
 
 make_cmd=${MAKE:-make}
+clean_build=${CLEAN_BUILD:-0}
 
-rm -rf "$dist_dir" ".build"
+case "$clean_build" in
+  0|false|no)
+    rm -rf "$dist_dir"
+    ;;
+  1|true|yes)
+    rm -rf "$dist_dir" ".build"
+    ;;
+  *)
+    echo "Unsupported CLEAN_BUILD '$clean_build'. Use 0 or 1." >&2
+    exit 2
+    ;;
+esac
+
 mkdir -p \
   "$app_macos" \
   "$app_resources" \
@@ -46,11 +59,12 @@ mkdir -p \
   "$network_agent_resources" \
   "$dist_dir"
 
-"$make_cmd" --no-print-directory build-app ARCH="$arch" VERSION="$version"
-"$make_cmd" --no-print-directory build-lua-runtime ARCH="$arch" VERSION="$version"
-"$make_cmd" --no-print-directory build-calendar-agent ARCH="$arch" VERSION="$version"
-"$make_cmd" --no-print-directory build-network-agent ARCH="$arch" VERSION="$version"
-"$make_cmd" --no-print-directory build-cli ARCH="$arch" VERSION="$version"
+scripts/build/build-products.sh release "$arch" \
+  "EasyBar=$app_bin" \
+  "EasyBarLuaRuntime=$lua_runtime_bin" \
+  "EasyBarCalendarAgent=$calendar_agent_bin" \
+  "EasyBarNetworkAgent=$network_agent_bin" \
+  "EasyBarCtl=$cli_bin"
 "$make_cmd" --no-print-directory copy-resources ARCH="$arch"
 "$make_cmd" --no-print-directory icons
 
@@ -77,3 +91,5 @@ chmod +x \
 
 touch "$app_bundle" "$calendar_agent_bundle" "$network_agent_bundle"
 "$make_cmd" --no-print-directory verify ARCH="$arch"
+
+

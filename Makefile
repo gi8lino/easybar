@@ -71,6 +71,7 @@ RUN_ARCH ?= arm64
 CODESIGN_IDENTITY ?= -
 NOTARYTOOL_PROFILE ?=
 NOTARY_SUBMIT ?= 0
+CLEAN_BUILD ?= 0
 NOTARY_ZIP := $(DIST_DIR)/$(APP_NAME)-notarize.zip
 
 VERSION_PREFIX ?= v
@@ -194,7 +195,7 @@ test: generate-swift-env ## Run the Swift test suite without regenerating checke
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@scripts/build/bundle.sh \
+	@CLEAN_BUILD="$(CLEAN_BUILD)" scripts/build/bundle.sh \
 		"$(DIST_DIR)" \
 		"$(APP_MACOS)" \
 		"$(APP_RESOURCES)" \
@@ -494,3 +495,5 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+
