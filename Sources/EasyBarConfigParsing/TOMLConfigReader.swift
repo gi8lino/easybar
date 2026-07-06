@@ -98,6 +98,26 @@ public struct TOMLConfigReader<Failure: Error> {
     try optionalInt(key, fallback: fallback) ?? fallback
   }
 
+  /// Returns an integer value constrained to a minimum.
+  public func int(_ key: String, fallback: Int, minimum: Int) throws -> Int {
+    try validated(
+      int(key, fallback: fallback),
+      path: path(for: key),
+      isValid: { $0 >= minimum },
+      message: "expected an integer greater than or equal to \(minimum)"
+    )
+  }
+
+  /// Returns an integer value constrained to a closed range.
+  public func int(_ key: String, fallback: Int, range: ClosedRange<Int>) throws -> Int {
+    try validated(
+      int(key, fallback: fallback),
+      path: path(for: key),
+      isValid: { range.contains($0) },
+      message: "expected an integer from \(range.lowerBound) to \(range.upperBound)"
+    )
+  }
+
   /// Returns an optional integer value or the optional fallback when absent.
   public func optionalInt(_ key: String, fallback: Int? = nil) throws -> Int? {
     guard let value = table[key] else { return fallback }
@@ -107,6 +127,26 @@ public struct TOMLConfigReader<Failure: Error> {
   /// Returns a finite number value or the fallback when absent.
   public func double(_ key: String, fallback: Double) throws -> Double {
     try optionalDouble(key, fallback: fallback) ?? fallback
+  }
+
+  /// Returns a finite number value constrained to a minimum.
+  public func double(_ key: String, fallback: Double, minimum: Double) throws -> Double {
+    try validated(
+      double(key, fallback: fallback),
+      path: path(for: key),
+      isValid: { $0 >= minimum },
+      message: "expected a number greater than or equal to \(minimum)"
+    )
+  }
+
+  /// Returns a finite number value constrained to a closed range.
+  public func double(_ key: String, fallback: Double, range: ClosedRange<Double>) throws -> Double {
+    try validated(
+      double(key, fallback: fallback),
+      path: path(for: key),
+      isValid: { range.contains($0) },
+      message: "expected a number from \(range.lowerBound) to \(range.upperBound)"
+    )
   }
 
   /// Returns an optional finite number value or the optional fallback when absent.
@@ -207,6 +247,19 @@ public struct TOMLConfigReader<Failure: Error> {
 
   private func splitKeyPath(_ keyPath: String) -> [String] {
     keyPath.split(separator: ".").map(String.init)
+  }
+
+  private func validated<Value>(
+    _ value: Value,
+    path: String,
+    isValid: (Value) -> Bool,
+    message: String
+  ) throws -> Value {
+    guard isValid(value) else {
+      throw makeInvalidValueError(path, message)
+    }
+
+    return value
   }
 
   private func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {

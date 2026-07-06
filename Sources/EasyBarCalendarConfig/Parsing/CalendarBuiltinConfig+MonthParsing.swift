@@ -160,16 +160,23 @@ extension CalendarBuiltinConfig {
     reader: Reader,
     fallback: CalendarBuiltinConfig.Month.Popup.AgendaStyle
   ) throws -> CalendarBuiltinConfig.Month.Popup.AgendaStyle {
-    let parsedMinHeight = try reader.double(
+    let minHeight = try reader.double(
       "appointments_min_height",
-      fallback: fallback.appointmentsMinHeight
+      fallback: fallback.appointmentsMinHeight,
+      minimum: 0
     )
-    let parsedMaxHeight = try reader.double(
+    let maxHeight = try reader.double(
       "appointments_max_height",
-      fallback: fallback.appointmentsMaxHeight
+      fallback: fallback.appointmentsMaxHeight,
+      minimum: 0
     )
-    let minHeight = max(0, min(parsedMinHeight, parsedMaxHeight))
-    let maxHeight = max(parsedMinHeight, parsedMaxHeight)
+
+    guard minHeight <= maxHeight else {
+      throw CalendarConfigError.invalidValue(
+        path: reader.path(for: "appointments_min_height"),
+        message: "must be less than or equal to appointments_max_height"
+      )
+    }
 
     return CalendarBuiltinConfig.Month.Popup.AgendaStyle(
       layout: try reader.enum("layout", fallback: fallback.layout),
@@ -180,9 +187,10 @@ extension CalendarBuiltinConfig {
       appointmentsMinHeight: minHeight,
       appointmentsMaxHeight: maxHeight,
       agendaTitle: try reader.string("agenda_title", fallback: fallback.agendaTitle),
-      maxVisibleAppointments: max(
-        1,
-        try reader.int("max_visible_appointments", fallback: fallback.maxVisibleAppointments)
+      maxVisibleAppointments: try reader.int(
+        "max_visible_appointments",
+        fallback: fallback.maxVisibleAppointments,
+        minimum: 1
       )
     )
   }

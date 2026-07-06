@@ -22,7 +22,7 @@ extension CalendarBuiltinConfig {
     fallback: CalendarBuiltinConfig.Upcoming.Events
   ) throws -> CalendarBuiltinConfig.Upcoming.Events {
     CalendarBuiltinConfig.Upcoming.Events(
-      days: max(1, try reader.int("days", fallback: fallback.days)),
+      days: try reader.int("days", fallback: fallback.days, minimum: 1),
       excludePastEvents: try reader.bool(
         "exclude_past_events",
         fallback: fallback.excludePastEvents

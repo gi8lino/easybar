@@ -124,12 +124,13 @@ extension Config {
   ) throws -> CPUBuiltinConfig.Content {
     CPUBuiltinConfig.Content(
       label: try reader.string("label", fallback: fallback.label),
-      historySize: max(2, try reader.int("history_size", fallback: fallback.historySize)),
+      historySize: try reader.int("history_size", fallback: fallback.historySize, minimum: 2),
       lineWidth: try reader.double("line_width", fallback: fallback.lineWidth),
       colorHex: try reader.optionalString("color", fallback: fallback.colorHex),
-      sampleIntervalSeconds: max(
-        1,
-        try reader.double("sample_interval_seconds", fallback: fallback.sampleIntervalSeconds)
+      sampleIntervalSeconds: try reader.double(
+        "sample_interval_seconds",
+        fallback: fallback.sampleIntervalSeconds,
+        minimum: 1
       )
     )
   }
