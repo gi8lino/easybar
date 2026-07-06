@@ -28,12 +28,6 @@ final class AeroSpaceService: ObservableObject {
     var appLaunchObserver: NSObjectProtocol?
     /// Observer for app terminations.
     var appTerminationObserver: NSObjectProtocol?
-    /// Delayed refresh scheduled after app launch.
-    var pendingLaunchRefresh: Task<Void, Never>?
-    /// Identifier for the current delayed launch refresh task.
-    var pendingLaunchRefreshID: UInt64?
-    /// Next delayed launch refresh identifier.
-    var nextLaunchRefreshID: UInt64 = 1
     /// Whether the service is active.
     var running = false
     /// Cached AeroSpace version validation result for this service run.
@@ -61,6 +55,8 @@ final class AeroSpaceService: ObservableObject {
       / 1_000_000_000,
     logger: logger
   )
+  /// Delayed refresh scheduler used after macOS reports a newly launched app.
+  private lazy var launchRefreshScheduler = AeroSpaceLaunchRefreshScheduler(logger: logger)
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
 
@@ -121,9 +117,6 @@ extension AeroSpaceService {
       let observer = coordination.appSwitchObserver
       let launchObserver = coordination.appLaunchObserver
       let terminationObserver = coordination.appTerminationObserver
-      coordination.pendingLaunchRefresh?.cancel()
-      coordination.pendingLaunchRefresh = nil
-      coordination.pendingLaunchRefreshID = nil
       coordination.versionRequirementSatisfied = nil
       coordination.appSwitchObserver = nil
       coordination.appLaunchObserver = nil
@@ -135,6 +128,7 @@ extension AeroSpaceService {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
     }
 
+    launchRefreshScheduler.cancel(reason: "service stopped")
     logger.debug("aerospace service stop end")
   }
 
@@ -428,74 +422,26 @@ extension AeroSpaceService {
 
   /// Schedules one delayed refresh for freshly launched apps that may create windows later.
   fileprivate func scheduleLaunchRefresh(for app: NSRunningApplication) {
-    cancelPendingLaunchRefresh(reason: "new app launch")
-
     logger.debug(
       "aerospace observed app launch",
       .field("app", app.localizedName ?? "")
     )
 
-    let scheduled = withLock { coordination -> (id: UInt64, generation: UInt64) in
-      let id = coordination.nextLaunchRefreshID
-      coordination.nextLaunchRefreshID &+= 1
-      coordination.pendingLaunchRefreshID = id
-      return (id, coordination.generation)
-    }
-
-    let refreshTask = Task { [weak self] in
-      do {
-        try await Task.sleep(nanoseconds: 600_000_000)
-      } catch {
-        return
+    launchRefreshScheduler.schedule(
+      appName: app.localizedName ?? "",
+      generation: currentGeneration(),
+      shouldExecute: { [weak self] generation in
+        self?.shouldExecute(generation: generation) == true
+      },
+      refresh: { [weak self] in
+        self?.refresh()
       }
-
-      guard let self else { return }
-      guard self.shouldExecute(generation: scheduled.generation) else { return }
-      guard self.clearPendingLaunchRefresh(id: scheduled.id) else { return }
-
-      self.logger.debug(
-        "aerospace delayed launch refresh firing",
-        .field("app", app.localizedName ?? "")
-      )
-      self.refresh()
-    }
-
-    let shouldCancel = withLock { coordination -> Bool in
-      guard coordination.pendingLaunchRefreshID == scheduled.id else { return true }
-      coordination.pendingLaunchRefresh = refreshTask
-      return false
-    }
-
-    if shouldCancel {
-      refreshTask.cancel()
-    }
+    )
   }
 
   /// Cancels any delayed launch refresh once a stronger signal arrives first.
   fileprivate func cancelPendingLaunchRefresh(reason: String) {
-    let task = withLock { coordination -> Task<Void, Never>? in
-      let task = coordination.pendingLaunchRefresh
-      coordination.pendingLaunchRefresh = nil
-      coordination.pendingLaunchRefreshID = nil
-      return task
-    }
-
-    guard let task else { return }
-    task.cancel()
-    logger.debug(
-      "aerospace delayed launch refresh canceled",
-      .field("reason", reason)
-    )
-  }
-
-  /// Clears the pending launch refresh if it still matches the fired work item.
-  fileprivate func clearPendingLaunchRefresh(id: UInt64) -> Bool {
-    withLock { coordination -> Bool in
-      guard coordination.pendingLaunchRefreshID == id else { return false }
-      coordination.pendingLaunchRefresh = nil
-      coordination.pendingLaunchRefreshID = nil
-      return true
-    }
+    launchRefreshScheduler.cancel(reason: reason)
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
