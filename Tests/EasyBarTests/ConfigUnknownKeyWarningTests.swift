@@ -95,4 +95,89 @@ final class ConfigUnknownKeyWarningTests: ConfigLoaderTestCase {
 
     XCTAssertEqual(result.warnings, [])
   }
+
+  /// Verifies that active and commented keys documented in config.defaults.toml stay covered.
+  func testDocumentedDefaultConfigKeysAreCoveredByKnownKeySchema() throws {
+    let defaultConfigURL = repoRootURL().appendingPathComponent("config.defaults.toml")
+    let text = try String(contentsOf: defaultConfigURL, encoding: .utf8)
+    let documentedKeys = documentedConfigKeys(from: text)
+
+    XCTAssertFalse(documentedKeys.isEmpty)
+
+    for documentedKey in documentedKeys {
+      XCTAssertTrue(
+        ConfigKnownKeySchema.isKnownSection(documentedKey.section),
+        "Unknown documented config section \(documentedKey.section)"
+      )
+
+      guard !ConfigKnownKeySchema.isFreeFormSection(documentedKey.section) else {
+        continue
+      }
+
+      XCTAssertTrue(
+        ConfigKnownKeySchema.knownKeys(for: documentedKey.section).contains(documentedKey.key),
+        "Unknown documented config key \(documentedKey.section).\(documentedKey.key)"
+      )
+    }
+  }
+}
+
+private struct DocumentedConfigKey {
+  let section: String
+  let key: String
+}
+
+private func documentedConfigKeys(from text: String) -> [DocumentedConfigKey] {
+  var section = ""
+  var keys: [DocumentedConfigKey] = []
+
+  for rawLine in text.components(separatedBy: .newlines) {
+    guard let line = normalizedConfigLine(rawLine) else { continue }
+
+    if line.hasPrefix("[") && line.hasSuffix("]") {
+      section = String(line.dropFirst().dropLast())
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      continue
+    }
+
+    guard let equalsIndex = line.firstIndex(of: "=") else { continue }
+
+    let key = line[..<equalsIndex]
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard !key.isEmpty else { continue }
+    keys.append(DocumentedConfigKey(section: section, key: key))
+  }
+
+  return keys
+}
+
+private func normalizedConfigLine(_ rawLine: String) -> String? {
+  let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+  guard !trimmed.isEmpty else { return nil }
+
+  if trimmed.hasPrefix("#") {
+    let uncommented = trimmed.dropFirst()
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if uncommented.hasPrefix("[") {
+      return uncommented
+    }
+
+    guard let equalsIndex = uncommented.firstIndex(of: "=") else {
+      return nil
+    }
+
+    let key = uncommented[..<equalsIndex]
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard isBareConfigKey(key) else { return nil }
+
+    return uncommented
+  }
+
+  return trimmed
+}
+
+private func isBareConfigKey(_ key: String) -> Bool {
+  key.range(of: #"^[A-Za-z0-9_]+$"#, options: .regularExpression) != nil
 }
