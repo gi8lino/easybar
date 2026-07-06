@@ -28,9 +28,11 @@ final class AeroSpaceService: ObservableObject {
     var appLaunchObserver: NSObjectProtocol?
     /// Observer for app terminations.
     var appTerminationObserver: NSObjectProtocol?
-    /// Whether the service is active.
+    /// Whether the service lifecycle is running.
     var running = false
-    /// Cached AeroSpace version validation result for this service run.
+    /// Whether AeroSpace observation is active for at least one consumer.
+    var active = false
+    /// Cached AeroSpace version validation result for the current active run.
     var versionRequirementSatisfied: Bool?
     /// Generation used to ignore stale refresh work.
     var generation: UInt64 = 0
@@ -75,12 +77,17 @@ extension AeroSpaceService {
     withLock { !$0.consumers.isEmpty }
   }
 
+  /// Returns whether AeroSpace observation is currently active.
+  private var isActive: Bool {
+    withLock { $0.running && $0.active && !$0.consumers.isEmpty }
+  }
+
   /// Returns the current registered consumer count.
   private var consumerCount: Int {
     withLock { $0.consumers.count }
   }
 
-  /// Starts the service.
+  /// Starts the service lifecycle. Expensive observation starts when consumers register.
   func start() {
     let shouldStart = withLock { coordination -> Bool in
       guard !coordination.running else { return false }
@@ -93,42 +100,25 @@ extension AeroSpaceService {
     guard shouldStart else { return }
 
     logger.debug("aerospace service start begin")
-    if ensureAeroSpaceVersionSupported() {
-      subscriptionController.start()
-    } else {
-      logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
+    if hasConsumers {
+      _ = activateIfNeeded(source: "service started")
     }
-    subscribeAppSwitches()
-    subscribeAppLaunch()
-    subscribeAppTermination()
-    refresh()
     logger.debug("aerospace service start end")
   }
 
   /// Stops the service and prevents queued refresh work from publishing.
   func stop() {
-    subscriptionController.stop()
-    subscriptionRefreshScheduler.cancel()
+    guard withLock({ $0.running }) else { return }
 
-    let observers = withLock { coordination -> [NSObjectProtocol] in
-      guard coordination.running else { return [] }
+    deactivateIfNeeded(reason: "service stopped")
+
+    withLock { coordination in
       coordination.running = false
-      coordination.generation &+= 1
-      let observer = coordination.appSwitchObserver
-      let launchObserver = coordination.appLaunchObserver
-      let terminationObserver = coordination.appTerminationObserver
+      coordination.consumers.removeAll()
       coordination.versionRequirementSatisfied = nil
-      coordination.appSwitchObserver = nil
-      coordination.appLaunchObserver = nil
-      coordination.appTerminationObserver = nil
-      return [observer, launchObserver, terminationObserver].compactMap { $0 }
+      coordination.generation &+= 1
     }
 
-    for observer in observers {
-      NSWorkspace.shared.notificationCenter.removeObserver(observer)
-    }
-
-    launchRefreshScheduler.cancel(reason: "service stopped")
     logger.debug("aerospace service stop end")
   }
 
@@ -145,7 +135,9 @@ extension AeroSpaceService {
       .field("count", count)
     )
 
-    refresh()
+    if !activateIfNeeded(source: "consumer registered") {
+      refresh()
+    }
   }
 
   /// Unregisters one widget that no longer depends on AeroSpace state.
@@ -160,6 +152,10 @@ extension AeroSpaceService {
       .field("id", id),
       .field("count", count)
     )
+
+    if count == 0 {
+      deactivateIfNeeded(reason: "last consumer unregistered")
+    }
   }
 
   /// Called by the socket server when an external AeroSpace event occurs.
@@ -171,8 +167,8 @@ extension AeroSpaceService {
   private func triggerRefresh(source: String) {
     cancelPendingLaunchRefresh(reason: source)
 
-    guard hasConsumers else {
-      logger.debug("aerospace refresh skipped, no registered consumers")
+    guard isActive else {
+      logger.debug("aerospace refresh skipped, service inactive or no registered consumers")
       return
     }
 
@@ -254,8 +250,8 @@ extension AeroSpaceService {
 
   /// Public refresh entry.
   func refresh() {
-    guard hasConsumers else {
-      logger.debug("aerospace refresh skipped, no registered consumers")
+    guard isActive else {
+      logger.debug("aerospace refresh skipped, service inactive or no registered consumers")
       return
     }
 
@@ -270,6 +266,82 @@ extension AeroSpaceService {
       guard let self, self.shouldExecute(generation: generation) else { return }
       self.reloadState()
     }
+  }
+}
+
+// MARK: - Service Activation
+
+extension AeroSpaceService {
+  /// Starts expensive AeroSpace observation once the first consumer is present.
+  @discardableResult
+  fileprivate func activateIfNeeded(source: String) -> Bool {
+    let shouldActivate = withLock { coordination -> Bool in
+      guard coordination.running, !coordination.active, !coordination.consumers.isEmpty else {
+        return false
+      }
+
+      coordination.active = true
+      coordination.versionRequirementSatisfied = nil
+      coordination.generation &+= 1
+      return true
+    }
+
+    guard shouldActivate else { return false }
+
+    logger.debug(
+      "aerospace service activate begin",
+      .field("source", source),
+      .field("consumers", consumerCount)
+    )
+
+    if ensureAeroSpaceVersionSupported() {
+      subscriptionController.start()
+    } else {
+      logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
+    }
+
+    subscribeAppSwitches()
+    subscribeAppLaunch()
+    subscribeAppTermination()
+    refresh()
+
+    logger.debug("aerospace service activate end")
+    return true
+  }
+
+  /// Stops AeroSpace observation once the last consumer disappears.
+  fileprivate func deactivateIfNeeded(reason: String) {
+    let result = withLock { coordination -> (didDeactivate: Bool, observers: [NSObjectProtocol]) in
+      guard coordination.active else { return (false, []) }
+
+      coordination.active = false
+      coordination.versionRequirementSatisfied = nil
+      coordination.generation &+= 1
+
+      let observer = coordination.appSwitchObserver
+      let launchObserver = coordination.appLaunchObserver
+      let terminationObserver = coordination.appTerminationObserver
+      coordination.appSwitchObserver = nil
+      coordination.appLaunchObserver = nil
+      coordination.appTerminationObserver = nil
+
+      return (true, [observer, launchObserver, terminationObserver].compactMap { $0 })
+    }
+
+    guard result.didDeactivate else { return }
+
+    subscriptionController.stop()
+    subscriptionRefreshScheduler.cancel()
+    launchRefreshScheduler.cancel(reason: reason)
+
+    for observer in result.observers {
+      NSWorkspace.shared.notificationCenter.removeObserver(observer)
+    }
+
+    logger.debug(
+      "aerospace service deactivate end",
+      .field("reason", reason)
+    )
   }
 }
 
@@ -539,18 +611,18 @@ extension AeroSpaceService {
 extension AeroSpaceService {
   /// Runs the AeroSpace CLI.
   fileprivate func runAeroSpace(arguments: [String]) -> String? {
-    guard isRunning else { return nil }
+    guard isActive else { return nil }
 
     let output = commandRunner.run(arguments: arguments)
 
-    guard isRunning else {
+    guard isActive else {
       return nil
     }
 
     return output
   }
 
-  /// Validates the configured AeroSpace version once per service run.
+  /// Validates the configured AeroSpace version once per active service run.
   fileprivate func ensureAeroSpaceVersionSupported() -> Bool {
     if let cached = withLock({ $0.versionRequirementSatisfied }) {
       return cached
@@ -587,18 +659,13 @@ extension AeroSpaceService {
   /// Returns whether the service is still allowed to execute the queued refresh work.
   fileprivate func shouldExecute(generation: UInt64) -> Bool {
     withLock { state in
-      state.running && state.generation == generation
+      state.running && state.active && !state.consumers.isEmpty && state.generation == generation
     }
   }
 
   /// Returns the current refresh generation.
   fileprivate func currentGeneration() -> UInt64 {
     withLock { $0.generation }
-  }
-
-  /// Returns whether the service is currently running.
-  fileprivate var isRunning: Bool {
-    withLock { $0.running }
   }
 
   /// Runs one closure while holding the service state lock.
