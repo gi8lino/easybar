@@ -1,0 +1,222 @@
+import Foundation
+
+public struct CalendarAgentQuery: Codable, Equatable, Sendable {
+  /// Inclusive fetch start date.
+  public var startDate: Date
+  /// Exclusive fetch end date.
+  public var endDate: Date
+  /// Optional section start date used for the regular calendar popup.
+  public var sectionStartDate: Date?
+  /// Optional number of section days used for the regular calendar popup.
+  public var sectionDayCount: Int?
+  /// Whether birthdays should be included.
+  public var showBirthdays: Bool
+  /// Text shown when no events are available.
+  public var emptyText: String
+  /// Title used for the birthdays section.
+  public var birthdaysTitle: String
+  /// Date format used for birthday rows.
+  public var birthdaysDateFormat: String
+  /// Whether birthday ages should be shown.
+  public var birthdaysShowAge: Bool
+  /// Optional allowlist of visible calendar names. Empty means all calendars.
+  public var includedCalendarNames: [String]
+  /// Optional denylist of visible calendar names.
+  public var excludedCalendarNames: [String]
+  /// Optional allowlist of calendar identifiers.
+  public var includedCalendarIDs: [String]
+  /// Optional denylist of calendar identifiers.
+  public var excludedCalendarIDs: [String]
+  /// Optional allowlist of calendar source identifiers.
+  public var includedCalendarSourceIDs: [String]
+  /// Optional denylist of calendar source identifiers.
+  public var excludedCalendarSourceIDs: [String]
+
+  /// Creates one calendar agent query.
+  public init(
+    startDate: Date,
+    endDate: Date,
+    sectionStartDate: Date? = nil,
+    sectionDayCount: Int? = nil,
+    showBirthdays: Bool,
+    emptyText: String,
+    birthdaysTitle: String,
+    birthdaysDateFormat: String,
+    birthdaysShowAge: Bool,
+    includedCalendarNames: [String] = [],
+    excludedCalendarNames: [String] = [],
+    includedCalendarIDs: [String] = [],
+    excludedCalendarIDs: [String] = [],
+    includedCalendarSourceIDs: [String] = [],
+    excludedCalendarSourceIDs: [String] = []
+  ) {
+    self.startDate = startDate
+    self.endDate = endDate
+    self.sectionStartDate = sectionStartDate
+    self.sectionDayCount = sectionDayCount
+    self.showBirthdays = showBirthdays
+    self.emptyText = emptyText
+    self.birthdaysTitle = birthdaysTitle
+    self.birthdaysDateFormat = birthdaysDateFormat
+    self.birthdaysShowAge = birthdaysShowAge
+    self.includedCalendarNames = includedCalendarNames
+    self.excludedCalendarNames = excludedCalendarNames
+    self.includedCalendarIDs = includedCalendarIDs
+    self.excludedCalendarIDs = excludedCalendarIDs
+    self.includedCalendarSourceIDs = includedCalendarSourceIDs
+    self.excludedCalendarSourceIDs = excludedCalendarSourceIDs
+  }
+}
+
+/// One create-event payload sent to the calendar agent.
+public struct CalendarAgentCreateEvent: Codable, Equatable, Sendable {
+  /// Event title.
+  public var title: String
+  /// Event start date.
+  public var startDate: Date
+  /// Event end date.
+  public var endDate: Date
+  /// Whether the event is all day.
+  public var isAllDay: Bool
+  /// Optional calendar identifier to create the event in.
+  public var calendarID: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional alert lead times in seconds before the event.
+  public var alertOffsetsSeconds: [TimeInterval]
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
+
+  /// Creates one calendar agent create-event payload.
+  public init(
+    title: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    calendarID: String? = nil,
+    location: String? = nil,
+    alertOffsetsSeconds: [TimeInterval] = [],
+    travelTimeSeconds: TimeInterval? = nil
+  ) {
+    self.title = title
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
+    self.calendarID = calendarID
+    self.location = location
+    self.alertOffsetsSeconds = alertOffsetsSeconds
+    self.travelTimeSeconds = travelTimeSeconds
+  }
+}
+
+/// One update-event payload sent to the calendar agent.
+public struct CalendarAgentUpdateEvent: Codable, Equatable, Sendable {
+  /// Stable EventKit event identifier.
+  public var eventIdentifier: String
+  /// Updated event title.
+  public var title: String
+  /// Updated event start date.
+  public var startDate: Date
+  /// Updated event end date.
+  public var endDate: Date
+  /// Whether the event is all day.
+  public var isAllDay: Bool
+  /// Optional calendar identifier to move the event to.
+  public var calendarID: String?
+  /// Optional event location.
+  public var location: String?
+  /// Optional alert lead times in seconds before the event.
+  public var alertOffsetsSeconds: [TimeInterval]
+  /// Optional travel time in seconds.
+  public var travelTimeSeconds: TimeInterval?
+
+  /// Creates one calendar agent update-event payload.
+  public init(
+    eventIdentifier: String,
+    title: String,
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool,
+    calendarID: String? = nil,
+    location: String? = nil,
+    alertOffsetsSeconds: [TimeInterval] = [],
+    travelTimeSeconds: TimeInterval? = nil
+  ) {
+    self.eventIdentifier = eventIdentifier
+    self.title = title
+    self.startDate = startDate
+    self.endDate = endDate
+    self.isAllDay = isAllDay
+    self.calendarID = calendarID
+    self.location = location
+    self.alertOffsetsSeconds = alertOffsetsSeconds
+    self.travelTimeSeconds = travelTimeSeconds
+  }
+}
+
+/// One delete-event payload sent to the calendar agent.
+public struct CalendarAgentDeleteEvent: Codable, Equatable, Sendable {
+  /// Stable EventKit event identifier.
+  public var eventIdentifier: String
+
+  /// Creates one calendar agent delete-event payload.
+  public init(eventIdentifier: String) {
+    self.eventIdentifier = eventIdentifier
+  }
+}
+
+/// One request sent to the calendar agent.
+public struct CalendarAgentRequest: Codable, Sendable {
+  /// Command to execute on the agent.
+  public var command: CalendarAgentCommand
+  /// Optional query used for fetch and subscribe requests.
+  public var query: CalendarAgentQuery?
+  /// Optional create-event payload used for event creation.
+  public var createEvent: CalendarAgentCreateEvent?
+  /// Optional update-event payload used for event updates.
+  public var updateEvent: CalendarAgentUpdateEvent?
+  /// Optional delete-event payload used for event deletion.
+  public var deleteEvent: CalendarAgentDeleteEvent?
+
+  /// Creates one calendar agent request.
+  public init(
+    command: CalendarAgentCommand,
+    query: CalendarAgentQuery? = nil,
+    createEvent: CalendarAgentCreateEvent? = nil,
+    updateEvent: CalendarAgentUpdateEvent? = nil,
+    deleteEvent: CalendarAgentDeleteEvent? = nil
+  ) {
+    self.command = command
+    self.query = query
+    self.createEvent = createEvent
+    self.updateEvent = updateEvent
+    self.deleteEvent = deleteEvent
+  }
+
+  /// Builds one fetch request.
+  public static func fetch(_ query: CalendarAgentQuery) -> Self {
+    return Self(command: .fetch, query: query)
+  }
+
+  /// Builds one subscribe request.
+  public static func subscribe(_ query: CalendarAgentQuery) -> Self {
+    return Self(command: .subscribe, query: query)
+  }
+
+  /// Builds one create-event request.
+  public static func createEvent(_ payload: CalendarAgentCreateEvent) -> Self {
+    return Self(command: .createEvent, createEvent: payload)
+  }
+
+  /// Builds one update-event request.
+  public static func updateEvent(_ payload: CalendarAgentUpdateEvent) -> Self {
+    return Self(command: .updateEvent, updateEvent: payload)
+  }
+
+  /// Builds one delete-event request.
+  public static func deleteEvent(_ payload: CalendarAgentDeleteEvent) -> Self {
+    return Self(command: .deleteEvent, deleteEvent: payload)
+  }
+}
+
+/// One version payload returned by the calendar agent.
