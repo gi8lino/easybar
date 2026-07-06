@@ -21,12 +21,13 @@ public struct SharedRuntimeConfig {
   public static func load() throws -> SharedRuntimeConfig {
     let configPath = resolvedConfigPath()
     let toml = try parsedConfig(at: configPath)
+    let reader = sharedRuntimeConfigReader(for: toml)
 
-    let app = resolvedAppConfig(from: toml)
-    let logging = resolvedLoggingConfig(from: toml)
-    let easyBar = resolvedEasyBarConfig(from: toml)
-    let calendarAgent = resolvedCalendarAgentConfig(from: toml)
-    let networkAgent = resolvedNetworkAgentConfig(from: toml)
+    let app = try resolvedAppConfig(from: reader)
+    let logging = try resolvedLoggingConfig(from: reader)
+    let easyBar = try resolvedEasyBarConfig(from: reader)
+    let calendarAgent = try resolvedCalendarAgentConfig(from: reader)
+    let networkAgent = try resolvedNetworkAgentConfig(from: reader)
 
     return SharedRuntimeConfig(
       configPath: configPath,

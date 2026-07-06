@@ -1,30 +1,26 @@
-import TOMLKit
+import Foundation
 
 /// Returns the resolved app config from TOML and defaults.
-func resolvedAppConfig(from toml: TOMLTable) -> SharedAppRuntimeConfig {
-  let appTable = toml["app"]?.table
-
-  let widgetsPath =
-    expandedPath(appTable?["widgets_dir"]?.string)
-    ?? SharedPathDefaults.defaultWidgetsPath().path
-
-  let lockDirectory =
-    expandedPath(appTable?["lock_dir"]?.string)
-    ?? defaultSingleInstanceLockDirectoryPath()
-
-  let luaSocketPath =
-    expandedPath(appTable?["lua_socket_path"]?.string)
-    ?? defaultLuaSocketPath()
-
-  let widgetEditorStubPath =
-    expandedPath(appTable?["widget_editor_stub_path"]?.string)
-    ?? SharedPathDefaults.defaultWidgetEditorStubPath().path
+func resolvedAppConfig(from reader: SharedRuntimeConfigReader) throws -> SharedAppRuntimeConfig {
+  let app = try reader.section("app")
 
   return SharedAppRuntimeConfig(
-    widgetsPath: widgetsPath,
-    lockDirectory: lockDirectory,
-    luaSocketPath: luaSocketPath,
-    widgetEditorStubPath: widgetEditorStubPath
+    widgetsPath: try app.expandedPath(
+      "widgets_dir",
+      fallback: SharedPathDefaults.defaultWidgetsPath().path
+    ),
+    lockDirectory: try app.expandedPath(
+      "lock_dir",
+      fallback: defaultSingleInstanceLockDirectoryPath()
+    ),
+    luaSocketPath: try app.expandedPath(
+      "lua_socket_path",
+      fallback: defaultLuaSocketPath()
+    ),
+    widgetEditorStubPath: try app.expandedPath(
+      "widget_editor_stub_path",
+      fallback: SharedPathDefaults.defaultWidgetEditorStubPath().path
+    )
   )
 }
 

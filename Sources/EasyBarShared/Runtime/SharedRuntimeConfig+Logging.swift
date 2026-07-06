@@ -1,25 +1,23 @@
-import TOMLKit
+import Foundation
 
 extension SharedRuntimeConfig {
   /// Resolves the shared logging config from TOML, defaults, and the log-level override.
-  static func resolvedLoggingConfig(from toml: TOMLTable) -> SharedLoggingRuntimeConfig {
-    let loggingTable = toml["logging"]?.table
-
-    let enabled = loggingTable?["enabled"]?.bool ?? false
-
-    let level = resolvedLoggingLevel(
-      tomlValue: loggingTable?["level"]?.string,
-      fallback: .info
-    )
-
-    let directory =
-      expandedPath(loggingTable?["directory"]?.string)
-      ?? SharedPathDefaults.defaultLoggingDirectory().path
+  static func resolvedLoggingConfig(
+    from reader: SharedRuntimeConfigReader
+  ) throws -> SharedLoggingRuntimeConfig {
+    let logging = try reader.section("logging")
 
     return SharedLoggingRuntimeConfig(
-      enabled: enabled,
-      level: level,
-      directory: directory
+      enabled: try logging.bool("enabled", fallback: false),
+      level: try resolvedLoggingLevel(
+        tomlValue: try logging.optionalString("level"),
+        tomlPath: logging.path(for: "level"),
+        fallback: .info
+      ),
+      directory: try logging.expandedPath(
+        "directory",
+        fallback: SharedPathDefaults.defaultLoggingDirectory().path
+      )
     )
   }
 
@@ -27,10 +25,7 @@ extension SharedRuntimeConfig {
   static func resolvedLoggingEnvironmentDefaults() -> SharedLoggingRuntimeConfig {
     SharedLoggingRuntimeConfig(
       enabled: false,
-      level: resolvedLoggingLevel(
-        tomlValue: nil,
-        fallback: .info
-      ),
+      level: resolvedEnvironmentLoggingLevel(fallback: .info),
       directory: SharedPathDefaults.defaultLoggingDirectory().path
     )
   }
@@ -38,20 +33,35 @@ extension SharedRuntimeConfig {
   /// Resolves the configured minimum logging level from the diagnostic override or TOML.
   private static func resolvedLoggingLevel(
     tomlValue: String?,
+    tomlPath: String,
+    fallback: ProcessLogLevel
+  ) throws -> ProcessLogLevel {
+    let configuredLevel: ProcessLogLevel
+
+    if let tomlValue {
+      guard let level = ProcessLogLevel.normalized(tomlValue) else {
+        throw SharedRuntimeConfigError.invalidValue(
+          path: tomlPath,
+          message: "expected one of trace, debug, info, warn, error"
+        )
+      }
+
+      configuredLevel = level
+    } else {
+      configuredLevel = fallback
+    }
+
+    return resolvedEnvironmentLoggingLevel(fallback: configuredLevel)
+  }
+
+  /// Resolves the diagnostic environment override or returns the fallback.
+  private static func resolvedEnvironmentLoggingLevel(
     fallback: ProcessLogLevel
   ) -> ProcessLogLevel {
-    if let raw = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel),
-      let level = ProcessLogLevel.normalized(raw)
-    {
-      return level
+    guard let raw = stringEnvironmentValue(named: SharedEnvironmentKeys.loggingLevel) else {
+      return fallback
     }
 
-    if let tomlValue,
-      let level = ProcessLogLevel.normalized(tomlValue)
-    {
-      return level
-    }
-
-    return fallback
+    return ProcessLogLevel.normalized(raw) ?? fallback
   }
 }

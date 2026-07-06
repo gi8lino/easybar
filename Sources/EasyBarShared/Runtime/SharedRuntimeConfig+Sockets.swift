@@ -1,8 +1,7 @@
 import Foundation
-import TOMLKit
 
 /// Returns the resolved EasyBar socket config from defaults.
-func resolvedEasyBarConfig(from toml: TOMLTable) -> SharedEasyBarRuntimeConfig {
+func resolvedEasyBarConfig(from _: SharedRuntimeConfigReader) throws -> SharedEasyBarRuntimeConfig {
   SharedEasyBarRuntimeConfig(socketPath: defaultEasyBarSocketPath())
 }
 
@@ -12,18 +11,17 @@ func resolvedEasyBarEnvironmentDefaults() -> SharedEasyBarRuntimeConfig {
 }
 
 /// Returns the resolved calendar-agent config from TOML and defaults.
-func resolvedCalendarAgentConfig(from toml: TOMLTable) -> SharedCalendarAgentRuntimeConfig {
-  let calendarTable = toml["agents"]?["calendar"]?.table
-
-  let enabled = calendarTable?["enabled"]?.bool ?? true
-  let socketPath = resolvedSocketPath(
-    tomlValue: calendarTable?["socket_path"]?.string,
-    fallback: defaultCalendarAgentSocketPath
-  )
+func resolvedCalendarAgentConfig(
+  from reader: SharedRuntimeConfigReader
+) throws -> SharedCalendarAgentRuntimeConfig {
+  let calendar = try reader.section("agents.calendar")
 
   return SharedCalendarAgentRuntimeConfig(
-    enabled: enabled,
-    socketPath: socketPath
+    enabled: try calendar.bool("enabled", fallback: true),
+    socketPath: try calendar.expandedPath(
+      "socket_path",
+      fallback: defaultCalendarAgentSocketPath()
+    )
   )
 }
 
@@ -36,28 +34,26 @@ func resolvedCalendarAgentEnvironmentDefaults() -> SharedCalendarAgentRuntimeCon
 }
 
 /// Returns the resolved network-agent config from TOML and defaults.
-func resolvedNetworkAgentConfig(from toml: TOMLTable) -> SharedNetworkAgentRuntimeConfig {
-  let networkTable = toml["agents"]?["network"]?.table
-
-  let enabled = networkTable?["enabled"]?.bool ?? true
-  let socketPath = resolvedSocketPath(
-    tomlValue: networkTable?["socket_path"]?.string,
-    fallback: defaultNetworkAgentSocketPath
-  )
-
-  let refreshIntervalSeconds = resolvedNetworkRefreshIntervalSeconds(
-    from: networkTable?["refresh_interval_seconds"]
-  )
-
-  let allowUnauthorizedFieldsWithoutLocation =
-    networkTable?["allow_unauthorized_non_sensitive_fields"]?.bool
-    ?? false
+func resolvedNetworkAgentConfig(
+  from reader: SharedRuntimeConfigReader
+) throws -> SharedNetworkAgentRuntimeConfig {
+  let network = try reader.section("agents.network")
 
   return SharedNetworkAgentRuntimeConfig(
-    enabled: enabled,
-    socketPath: socketPath,
-    refreshIntervalSeconds: refreshIntervalSeconds,
-    allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
+    enabled: try network.bool("enabled", fallback: true),
+    socketPath: try network.expandedPath(
+      "socket_path",
+      fallback: defaultNetworkAgentSocketPath()
+    ),
+    refreshIntervalSeconds: try network.double(
+      "refresh_interval_seconds",
+      fallback: 60,
+      minimum: 0
+    ),
+    allowUnauthorizedFieldsWithoutLocation: try network.bool(
+      "allow_unauthorized_non_sensitive_fields",
+      fallback: false
+    )
   )
 }
 
@@ -71,14 +67,6 @@ func resolvedNetworkAgentEnvironmentDefaults() -> SharedNetworkAgentRuntimeConfi
   )
 }
 
-/// Returns one resolved socket path from TOML and fallback defaults.
-func resolvedSocketPath(
-  tomlValue: String?,
-  fallback: () -> String
-) -> String {
-  expandedPath(tomlValue) ?? fallback()
-}
-
 /// Returns the default Unix socket path used by EasyBar.
 func defaultEasyBarSocketPath() -> String { return "/tmp/EasyBar/easybar.sock" }
 
@@ -87,28 +75,3 @@ func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-
 
 /// Returns the default Unix socket path used by the network agent.
 func defaultNetworkAgentSocketPath() -> String { return "/tmp/EasyBar/network-agent.sock" }
-
-/// Returns a non-negative network-agent refresh interval.
-private func resolvedNetworkRefreshIntervalSeconds(
-  from value: (any TOMLValueConvertible)?
-) -> Double {
-  let defaultIntervalSeconds = 60.0
-  guard let intervalSeconds = tomlNumber(value), intervalSeconds >= 0 else {
-    return defaultIntervalSeconds
-  }
-
-  return intervalSeconds
-}
-
-/// Returns one TOML number as a Double.
-private func tomlNumber(_ value: (any TOMLValueConvertible)?) -> Double? {
-  if let double = value?.double {
-    return double
-  }
-
-  if let int = value?.int {
-    return Double(int)
-  }
-
-  return nil
-}

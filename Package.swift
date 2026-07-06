@@ -28,7 +28,8 @@ let package = Package(
     .target(
       name: "EasyBarShared",
       dependencies: [
-        .product(name: "TOMLKit", package: "TOMLKit")
+        "EasyBarConfigParsing",
+        .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarShared"
     ),

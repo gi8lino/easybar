@@ -125,8 +125,8 @@ final class SharedRuntimeConfigTests: XCTestCase {
     }
   }
 
-  /// Verifies that shared helper config does not pass invalid network intervals through.
-  func testLoadFallsBackForNegativeNetworkAgentRefreshInterval() throws {
+  /// Verifies that shared helper config rejects invalid network intervals.
+  func testLoadThrowsForNegativeNetworkAgentRefreshInterval() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-negative-network.toml")
 
     try writeConfig(
@@ -139,11 +139,62 @@ final class SharedRuntimeConfigTests: XCTestCase {
 
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
-    let runtime = try SharedRuntimeConfig.load()
+    XCTAssertThrowsError(try SharedRuntimeConfig.load()) { error in
+      guard case SharedRuntimeConfigError.invalidValue(let path, _) = error else {
+        return XCTFail("Expected invalidValue, got \(error)")
+      }
 
-    XCTAssertEqual(runtime.configPath, configFileURL.path)
-    XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 60)
+      XCTAssertEqual(path, "agents.network.refresh_interval_seconds")
+    }
   }
+
+  /// Verifies that shared runtime config rejects wrong TOML value types.
+  func testLoadThrowsForInvalidSharedRuntimeValueType() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-invalid-type.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      enabled = "yes"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    XCTAssertThrowsError(try SharedRuntimeConfig.load()) { error in
+      guard case SharedRuntimeConfigError.invalidType(let path, let expected, _) = error else {
+        return XCTFail("Expected invalidType, got \(error)")
+      }
+
+      XCTAssertEqual(path, "logging.enabled")
+      XCTAssertEqual(expected, "bool")
+    }
+  }
+
+  /// Verifies that invalid TOML logging levels are rejected instead of ignored.
+  func testLoadThrowsForInvalidTomlLoggingLevel() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-invalid-log-level.toml")
+
+    try writeConfig(
+      """
+      [logging]
+      level = "verbose"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    XCTAssertThrowsError(try SharedRuntimeConfig.load()) { error in
+      guard case SharedRuntimeConfigError.invalidValue(let path, _) = error else {
+        return XCTFail("Expected invalidValue, got \(error)")
+      }
+
+      XCTAssertEqual(path, "logging.level")
+    }
+  }
+
 }
 
 extension SharedRuntimeConfigTests {

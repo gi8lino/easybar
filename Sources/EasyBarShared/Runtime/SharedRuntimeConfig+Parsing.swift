@@ -1,3 +1,4 @@
+import EasyBarConfigParsing
 import Foundation
 import TOMLKit
 
@@ -39,5 +40,29 @@ func parsedConfig(at path: String) throws -> TOMLTable {
       path: path,
       message: error.localizedDescription
     )
+  }
+}
+
+typealias SharedRuntimeConfigReader = TOMLConfigReader<SharedRuntimeConfigError>
+
+/// Returns a typed reader for the shared runtime config table.
+func sharedRuntimeConfigReader(for table: TOMLTable) -> SharedRuntimeConfigReader {
+  SharedRuntimeConfigReader(
+    table: table,
+    path: "",
+    makeInvalidTypeError: SharedRuntimeConfigError.invalidType,
+    makeInvalidValueError: SharedRuntimeConfigError.invalidValue
+  )
+}
+
+extension TOMLConfigReader where Failure == SharedRuntimeConfigError {
+  /// Returns an expanded path value or the fallback when absent.
+  func expandedPath(_ key: String, fallback: String) throws -> String {
+    EasyBarShared.expandedPath(try string(key, fallback: fallback)) ?? fallback
+  }
+
+  /// Returns an expanded optional path value or the fallback when absent.
+  func optionalExpandedPath(_ key: String, fallback: String? = nil) throws -> String? {
+    EasyBarShared.expandedPath(try optionalString(key, fallback: fallback))
   }
 }
