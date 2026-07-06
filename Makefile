@@ -123,7 +123,7 @@ endif
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
         demo \
-        generate-docs generate-lua-docs generate-config-docs fmt-generated-docs check-docs serve-docs build-docs clean-docs \
+        generate-docs generate-lua-docs generate-config-docs fmt-generated-docs normalize-generated-docs check-docs serve-docs build-docs clean-docs \
         favicon
 
 help: ## Display this help.
@@ -134,13 +134,8 @@ help: ## Display this help.
 generate: generate-theme-tokens generate-event-catalog generate-docs ## Generate all checked-in generated artifacts.
 
 check-generated: generate ## Verify all checked-in generated artifacts are committed.
-	@if ! git diff --quiet; then \
-		echo "Generated artifacts are out of date:"; \
-		git diff --name-only; \
-		echo; \
-		echo "Run 'make generate' and commit the result."; \
-		git diff --exit-code; \
-	fi
+	@python3 scripts/generate/generated_artifacts.py check-diff \
+		--normalized-markdown $(GENERATED_MARKDOWN_DOCS)
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
 	@python3 scripts/generate/theme_tokens.py
@@ -449,6 +444,9 @@ DOCS_REQUIREMENTS := $(DOCS_DIR)/requirements.txt
 DOCS_VENV := $(DOCS_DIR)/.venv
 DOCS_PYTHON := $(DOCS_VENV)/bin/python
 DOCS_STAMP := $(DOCS_VENV)/.requirements-installed
+GENERATED_MARKDOWN_DOCS := \
+	$(DOCS_DIR)/content/configuration/reference.md \
+	$(DOCS_DIR)/content/lua/reference
 
 $(DOCS_PYTHON):
 	@python3 -m venv $(DOCS_VENV)
@@ -468,9 +466,16 @@ generate-config-docs: ## Generate the config reference from config.defaults.toml
 
 fmt-generated-docs: generate-lua-docs generate-config-docs ## Format generated Markdown docs with Prettier.
 	@$(PRETTIER) --write "$(DOCS_DIR)/content/configuration/reference.md" "$(DOCS_DIR)/content/lua/reference/**/*.md"
+	@$(MAKE) --no-print-directory normalize-generated-docs
+
+normalize-generated-docs: ## Normalize generated Markdown docs for stable diffs.
+	@python3 scripts/generate/generated_artifacts.py normalize-markdown $(GENERATED_MARKDOWN_DOCS)
 
 check-docs: generate-docs ## Verify generated docs are formatted and committed.
-	@git diff --exit-code -- docs/content/lua/reference docs/content/configuration/reference.md
+	@python3 scripts/generate/generated_artifacts.py check-diff \
+		--normalized-markdown $(GENERATED_MARKDOWN_DOCS) \
+		--scope docs/content/lua/reference \
+		--scope docs/content/configuration/reference.md
 
 serve-docs: $(DOCS_STAMP) generate-docs ## Generate and serve the docs locally.
 	@$(DOCS_PYTHON) -m mkdocs serve -f $(DOCS_CONFIG)
@@ -489,7 +494,3 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
-
-
-
