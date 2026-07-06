@@ -365,21 +365,6 @@ extension CalendarBuiltinConfig {
         set { agenda.maxVisibleAppointments = newValue }
       }
 
-      public var anchorDateFormat: String {
-        get { anchor.dateFormat }
-        set { anchor.dateFormat = newValue }
-      }
-
-      public var anchorTextColorHex: String? {
-        get { anchor.textColorHex }
-        set { anchor.textColorHex = newValue }
-      }
-
-      public var anchorShowDateText: Bool {
-        get { anchor.showDateText }
-        set { anchor.showDateText = newValue }
-      }
-
       public var todayButtonTitle: String {
         get { todayButton.title }
         set { todayButton.title = newValue }

@@ -693,9 +693,9 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                     | Default        | Description                                                                   |
 | ----------------------- | -------------- | ----------------------------------------------------------------------------- |
-| `anchor_date_format`    | `"EEE d MMM"`  | Anchor date format used when popup_mode = "month" and anchor layout = "item". |
-| `anchor_text_color`     | `"theme.text"` | Anchor text color used when popup_mode = "month".                             |
-| `anchor_show_date_text` | `true`         | Shows the date text in the anchor when popup_mode = "month".                  |
+| `date_format`    | `"EEE d MMM"`  | Date format used when popup_mode = "month" and anchor layout = "item". |
+| `text_color`     | `"theme.text"` | Text color used when popup_mode = "month".                             |
+| `show_date_text` | `true`         | Shows the date text when popup_mode = "month".                         |
 
 ## `builtins.calendar.month.popup.today_button`
 
@@ -767,3 +767,5 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key      | Default        | Description         |
 | -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
+
+
