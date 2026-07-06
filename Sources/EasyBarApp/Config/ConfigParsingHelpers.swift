@@ -2,7 +2,51 @@ import EasyBarShared
 import Foundation
 import TOMLKit
 
+/// Describes one typed TOML field inside a config table.
+struct TOMLConfigField<Value> {
+  let key: String
+  let read: (Config, (any TOMLValueConvertible)?, String) throws -> Value?
+}
+
+extension TOMLConfigField where Value == String {
+  /// Creates one optional string field descriptor.
+  static func string(_ key: String) -> TOMLConfigField<String> {
+    TOMLConfigField<String>(key: key) { config, value, path in
+      try config.optionalString(value, path: path)
+    }
+  }
+}
+
+extension TOMLConfigField where Value == Double {
+  /// Creates one optional number field descriptor.
+  static func number(_ key: String) -> TOMLConfigField<Double> {
+    TOMLConfigField<Double>(key: key) { config, value, path in
+      try config.optionalNumber(value, path: path)
+    }
+  }
+}
+
 extension Config {
+
+  /// Parses one typed optional field from a table, falling back when the key is absent.
+  func optionalField<Value>(
+    _ field: TOMLConfigField<Value>,
+    from table: TOMLTable,
+    path: String,
+    fallback: Value
+  ) throws -> Value {
+    try field.read(self, table[field.key], "\(path).\(field.key)") ?? fallback
+  }
+
+  /// Parses one typed optional field from a table, preserving an optional fallback when absent.
+  func optionalField<Value>(
+    _ field: TOMLConfigField<Value>,
+    from table: TOMLTable,
+    path: String,
+    fallback: Value?
+  ) throws -> Value? {
+    try field.read(self, table[field.key], "\(path).\(field.key)") ?? fallback
+  }
 
   /// Parses one placement block.
   func parseBuiltinPlacement(
@@ -38,27 +82,53 @@ extension Config {
     fallback: BuiltinWidgetStyle
   ) throws -> BuiltinWidgetStyle {
     BuiltinWidgetStyle(
-      icon: try optionalString(table["icon"], path: "\(path).icon") ?? fallback.icon,
-      textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
-        ?? fallback.textColorHex,
-      backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "\(path).background_color"
-      ) ?? fallback.backgroundColorHex,
-      borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
-        ?? fallback.borderColorHex,
-      borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
-        ?? fallback.borderWidth,
-      cornerRadius: try optionalNumber(table["corner_radius"], path: "\(path).corner_radius")
-        ?? fallback.cornerRadius,
-      marginX: try optionalNumber(table["margin_x"], path: "\(path).margin_x") ?? fallback.marginX,
-      marginY: try optionalNumber(table["margin_y"], path: "\(path).margin_y") ?? fallback.marginY,
-      paddingX: try optionalNumber(table["padding_x"], path: "\(path).padding_x")
-        ?? fallback.paddingX,
-      paddingY: try optionalNumber(table["padding_y"], path: "\(path).padding_y")
-        ?? fallback.paddingY,
-      spacing: try optionalNumber(table["spacing"], path: "\(path).spacing") ?? fallback.spacing,
-      opacity: try optionalNumber(table["opacity"], path: "\(path).opacity") ?? fallback.opacity
+      icon: try optionalField(.string("icon"), from: table, path: path, fallback: fallback.icon),
+      textColorHex: try optionalField(
+        .string("text_color"),
+        from: table,
+        path: path,
+        fallback: fallback.textColorHex
+      ),
+      backgroundColorHex: try optionalField(
+        .string("background_color"),
+        from: table,
+        path: path,
+        fallback: fallback.backgroundColorHex
+      ),
+      borderColorHex: try optionalField(
+        .string("border_color"),
+        from: table,
+        path: path,
+        fallback: fallback.borderColorHex
+      ),
+      borderWidth: try optionalField(
+        .number("border_width"),
+        from: table,
+        path: path,
+        fallback: fallback.borderWidth
+      ),
+      cornerRadius: try optionalField(
+        .number("corner_radius"),
+        from: table,
+        path: path,
+        fallback: fallback.cornerRadius
+      ),
+      marginX: try optionalField(.number("margin_x"), from: table, path: path, fallback: fallback.marginX),
+      marginY: try optionalField(.number("margin_y"), from: table, path: path, fallback: fallback.marginY),
+      paddingX: try optionalField(
+        .number("padding_x"),
+        from: table,
+        path: path,
+        fallback: fallback.paddingX
+      ),
+      paddingY: try optionalField(
+        .number("padding_y"),
+        from: table,
+        path: path,
+        fallback: fallback.paddingY
+      ),
+      spacing: try optionalField(.number("spacing"), from: table, path: path, fallback: fallback.spacing),
+      opacity: try optionalField(.number("opacity"), from: table, path: path, fallback: fallback.opacity)
     )
   }
 
@@ -69,24 +139,50 @@ extension Config {
     fallback: BuiltinPopupStyle
   ) throws -> BuiltinPopupStyle {
     BuiltinPopupStyle(
-      textColorHex: try optionalString(table["text_color"], path: "\(path).text_color")
-        ?? fallback.textColorHex,
-      backgroundColorHex: try optionalString(
-        table["background_color"],
-        path: "\(path).background_color"
-      ) ?? fallback.backgroundColorHex,
-      borderColorHex: try optionalString(table["border_color"], path: "\(path).border_color")
-        ?? fallback.borderColorHex,
-      borderWidth: try optionalNumber(table["border_width"], path: "\(path).border_width")
-        ?? fallback.borderWidth,
-      cornerRadius: try optionalNumber(table["corner_radius"], path: "\(path).corner_radius")
-        ?? fallback.cornerRadius,
-      paddingX: try optionalNumber(table["padding_x"], path: "\(path).padding_x")
-        ?? fallback.paddingX,
-      paddingY: try optionalNumber(table["padding_y"], path: "\(path).padding_y")
-        ?? fallback.paddingY,
-      marginX: try optionalNumber(table["margin_x"], path: "\(path).margin_x") ?? fallback.marginX,
-      marginY: try optionalNumber(table["margin_y"], path: "\(path).margin_y") ?? fallback.marginY
+      textColorHex: try optionalField(
+        .string("text_color"),
+        from: table,
+        path: path,
+        fallback: fallback.textColorHex
+      ),
+      backgroundColorHex: try optionalField(
+        .string("background_color"),
+        from: table,
+        path: path,
+        fallback: fallback.backgroundColorHex
+      ),
+      borderColorHex: try optionalField(
+        .string("border_color"),
+        from: table,
+        path: path,
+        fallback: fallback.borderColorHex
+      ),
+      borderWidth: try optionalField(
+        .number("border_width"),
+        from: table,
+        path: path,
+        fallback: fallback.borderWidth
+      ),
+      cornerRadius: try optionalField(
+        .number("corner_radius"),
+        from: table,
+        path: path,
+        fallback: fallback.cornerRadius
+      ),
+      paddingX: try optionalField(
+        .number("padding_x"),
+        from: table,
+        path: path,
+        fallback: fallback.paddingX
+      ),
+      paddingY: try optionalField(
+        .number("padding_y"),
+        from: table,
+        path: path,
+        fallback: fallback.paddingY
+      ),
+      marginX: try optionalField(.number("margin_x"), from: table, path: path, fallback: fallback.marginX),
+      marginY: try optionalField(.number("margin_y"), from: table, path: path, fallback: fallback.marginY)
     )
   }
 
