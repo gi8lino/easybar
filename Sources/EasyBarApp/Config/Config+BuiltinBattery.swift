@@ -204,28 +204,33 @@ extension Config {
     BatteryBuiltinConfig.Content(
       unavailableText: try optionalString(
         table["unavailable_text"],
-        path: "builtins.battery.content.unavailable_text"
-      ) ?? fallback.unavailableText,
+        path: "builtins.battery.content.unavailable_text",
+        fallback: fallback.unavailableText
+      ),
       iconSize: try optionalNumber(
         table["icon_size"],
-        path: "builtins.battery.content.icon_size"
-      ) ?? fallback.iconSize,
+        path: "builtins.battery.content.icon_size",
+        fallback: fallback.iconSize
+      ),
       colorMode: try parseBatteryColorMode(
         try optionalString(
           table["color_mode"],
-          path: "builtins.battery.content.color_mode"
-        ) ?? fallback.colorMode.rawValue,
+          path: "builtins.battery.content.color_mode",
+          fallback: fallback.colorMode.rawValue
+        ),
         path: "builtins.battery.content.color_mode"
       ),
       fixedColorHex: try optionalString(
         table["fixed_color"],
-        path: "builtins.battery.content.fixed_color"
-      ) ?? fallback.fixedColorHex,
+        path: "builtins.battery.content.fixed_color",
+        fallback: fallback.fixedColorHex
+      ),
       displayMode: try parseBatteryDisplayMode(
         try optionalString(
           table["display_mode"],
-          path: "builtins.battery.content.display_mode"
-        ) ?? fallback.displayMode.rawValue,
+          path: "builtins.battery.content.display_mode",
+          fallback: fallback.displayMode.rawValue
+        ),
         path: "builtins.battery.content.display_mode"
       ),
       colors: try parseBatteryColors(from: colorsTable, fallback: fallback.colors)
@@ -239,7 +244,11 @@ extension Config {
   ) throws -> BuiltinBatteryColors {
     BuiltinBatteryColors(
       highColorHex: try optionalField(
-        .string("high"), from: table, path: "builtins.battery.colors", fallback: fallback.highColorHex),
+        .string("high"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.highColorHex
+      ),
       mediumColorHex: try optionalField(
         .string("medium"),
         from: table,
@@ -247,7 +256,11 @@ extension Config {
         fallback: fallback.mediumColorHex
       ),
       lowColorHex: try optionalField(
-        .string("low"), from: table, path: "builtins.battery.colors", fallback: fallback.lowColorHex),
+        .string("low"),
+        from: table,
+        path: "builtins.battery.colors",
+        fallback: fallback.lowColorHex
+      ),
       criticalColorHex: try optionalField(
         .string("critical"),
         from: table,

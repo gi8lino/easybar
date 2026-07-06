@@ -34,32 +34,39 @@ extension Config {
     CalendarBuiltinConfig.Composer.Style(
       backgroundColorHex: try optionalString(
         table["background_color"],
-        path: "builtins.calendar.composer.style.background_color"
-      ) ?? fallback.backgroundColorHex,
+        path: "builtins.calendar.composer.style.background_color",
+        fallback: fallback.backgroundColorHex
+      ),
       borderColorHex: try optionalString(
         table["border_color"],
-        path: "builtins.calendar.composer.style.border_color"
-      ) ?? fallback.borderColorHex,
+        path: "builtins.calendar.composer.style.border_color",
+        fallback: fallback.borderColorHex
+      ),
       borderWidth: try optionalNumber(
         table["border_width"],
-        path: "builtins.calendar.composer.style.border_width"
-      ) ?? fallback.borderWidth,
+        path: "builtins.calendar.composer.style.border_width",
+        fallback: fallback.borderWidth
+      ),
       cornerRadius: try optionalNumber(
         table["corner_radius"],
-        path: "builtins.calendar.composer.style.corner_radius"
-      ) ?? fallback.cornerRadius,
+        path: "builtins.calendar.composer.style.corner_radius",
+        fallback: fallback.cornerRadius
+      ),
       paddingX: try optionalNumber(
         table["padding_x"],
-        path: "builtins.calendar.composer.style.padding_x"
-      ) ?? fallback.paddingX,
+        path: "builtins.calendar.composer.style.padding_x",
+        fallback: fallback.paddingX
+      ),
       paddingY: try optionalNumber(
         table["padding_y"],
-        path: "builtins.calendar.composer.style.padding_y"
-      ) ?? fallback.paddingY,
+        path: "builtins.calendar.composer.style.padding_y",
+        fallback: fallback.paddingY
+      ),
       headerTextColorHex: try optionalString(
         table["header_text_color"],
-        path: "builtins.calendar.composer.style.header_text_color"
-      ) ?? fallback.headerTextColorHex
+        path: "builtins.calendar.composer.style.header_text_color",
+        fallback: fallback.headerTextColorHex
+      )
     )
   }
 
@@ -73,44 +80,54 @@ extension Config {
     CalendarBuiltinConfig.Composer.Content(
       createTitle: try optionalString(
         table["create_title"],
-        path: "builtins.calendar.composer.create_title"
-      ) ?? fallback.createTitle,
+        path: "builtins.calendar.composer.create_title",
+        fallback: fallback.createTitle
+      ),
       editTitle: try optionalString(
         table["edit_title"],
-        path: "builtins.calendar.composer.edit_title"
-      ) ?? fallback.editTitle,
+        path: "builtins.calendar.composer.edit_title",
+        fallback: fallback.editTitle
+      ),
       titleLabel: try optionalString(
         table["title_label"],
-        path: "builtins.calendar.composer.title_label"
-      ) ?? fallback.titleLabel,
+        path: "builtins.calendar.composer.title_label",
+        fallback: fallback.titleLabel
+      ),
       locationLabel: try optionalString(
         table["location_label"],
-        path: "builtins.calendar.composer.location_label"
-      ) ?? fallback.locationLabel,
+        path: "builtins.calendar.composer.location_label",
+        fallback: fallback.locationLabel
+      ),
       calendarLabel: try optionalString(
         table["calendar_label"],
-        path: "builtins.calendar.composer.calendar_label"
-      ) ?? fallback.calendarLabel,
+        path: "builtins.calendar.composer.calendar_label",
+        fallback: fallback.calendarLabel
+      ),
       titlePlaceholder: try optionalString(
         table["title_placeholder"],
-        path: "builtins.calendar.composer.title_placeholder"
-      ) ?? fallback.titlePlaceholder,
+        path: "builtins.calendar.composer.title_placeholder",
+        fallback: fallback.titlePlaceholder
+      ),
       locationPlaceholder: try optionalString(
         table["location_placeholder"],
-        path: "builtins.calendar.composer.location_placeholder"
-      ) ?? fallback.locationPlaceholder,
+        path: "builtins.calendar.composer.location_placeholder",
+        fallback: fallback.locationPlaceholder
+      ),
       defaultCalendarName: try optionalString(
         table["default_calendar_name"],
-        path: "builtins.calendar.composer.default_calendar_name"
-      ) ?? fallback.defaultCalendarName,
+        path: "builtins.calendar.composer.default_calendar_name",
+        fallback: fallback.defaultCalendarName
+      ),
       defaultAlert: try optionalString(
         table["default_alert"],
-        path: "builtins.calendar.composer.default_alert"
-      ) ?? fallback.defaultAlert,
+        path: "builtins.calendar.composer.default_alert",
+        fallback: fallback.defaultAlert
+      ),
       defaultTravelTime: try optionalString(
         table["default_travel_time"],
-        path: "builtins.calendar.composer.default_travel_time"
-      ) ?? fallback.defaultTravelTime,
+        path: "builtins.calendar.composer.default_travel_time",
+        fallback: fallback.defaultTravelTime
+      ),
       alertLabels: try parseCalendarComposerOptionLabels(
         from: alertLabelsTable,
         path: "builtins.calendar.composer.alert_labels",
@@ -123,56 +140,69 @@ extension Config {
       ),
       startLabel: try optionalString(
         table["start_label"],
-        path: "builtins.calendar.composer.start_label"
-      ) ?? fallback.startLabel,
+        path: "builtins.calendar.composer.start_label",
+        fallback: fallback.startLabel
+      ),
       endLabel: try optionalString(
         table["end_label"],
-        path: "builtins.calendar.composer.end_label"
-      ) ?? fallback.endLabel,
+        path: "builtins.calendar.composer.end_label",
+        fallback: fallback.endLabel
+      ),
       allDayLabel: try optionalString(
         table["all_day_label"],
-        path: "builtins.calendar.composer.all_day_label"
-      ) ?? fallback.allDayLabel,
+        path: "builtins.calendar.composer.all_day_label",
+        fallback: fallback.allDayLabel
+      ),
       travelTimeLabel: try optionalString(
         table["travel_time_label"],
-        path: "builtins.calendar.composer.travel_time_label"
-      ) ?? fallback.travelTimeLabel,
+        path: "builtins.calendar.composer.travel_time_label",
+        fallback: fallback.travelTimeLabel
+      ),
       alertLabel: try optionalString(
         table["alert_label"],
-        path: "builtins.calendar.composer.alert_label"
-      ) ?? fallback.alertLabel,
+        path: "builtins.calendar.composer.alert_label",
+        fallback: fallback.alertLabel
+      ),
       addAlertLabel: try optionalString(
         table["add_alert_label"],
-        path: "builtins.calendar.composer.add_alert_label"
-      ) ?? fallback.addAlertLabel,
+        path: "builtins.calendar.composer.add_alert_label",
+        fallback: fallback.addAlertLabel
+      ),
       openCalendarLabel: try optionalString(
         table["open_calendar_label"],
-        path: "builtins.calendar.composer.open_calendar_label"
-      ) ?? fallback.openCalendarLabel,
+        path: "builtins.calendar.composer.open_calendar_label",
+        fallback: fallback.openCalendarLabel
+      ),
       cancelLabel: try optionalString(
         table["cancel_label"],
-        path: "builtins.calendar.composer.cancel_label"
-      ) ?? fallback.cancelLabel,
+        path: "builtins.calendar.composer.cancel_label",
+        fallback: fallback.cancelLabel
+      ),
       saveLabel: try optionalString(
         table["save_label"],
-        path: "builtins.calendar.composer.save_label"
-      ) ?? fallback.saveLabel,
+        path: "builtins.calendar.composer.save_label",
+        fallback: fallback.saveLabel
+      ),
       updateLabel: try optionalString(
         table["update_label"],
-        path: "builtins.calendar.composer.update_label"
-      ) ?? fallback.updateLabel,
+        path: "builtins.calendar.composer.update_label",
+        fallback: fallback.updateLabel
+      ),
       removeLabel: try optionalString(
         table["remove_label"],
-        path: "builtins.calendar.composer.remove_label"
-      ) ?? fallback.removeLabel,
+        path: "builtins.calendar.composer.remove_label",
+        fallback: fallback.removeLabel
+      ),
       deleteConfirmationTitle: try optionalString(
         table["delete_confirmation_title"],
-        path: "builtins.calendar.composer.delete_confirmation_title"
-      ) ?? fallback.deleteConfirmationTitle,
+        path: "builtins.calendar.composer.delete_confirmation_title",
+        fallback: fallback.deleteConfirmationTitle
+      ),
       deleteConfirmationMessage: try optionalString(
         table["delete_confirmation_message"],
-        path: "builtins.calendar.composer.delete_confirmation_message"
-      ) ?? fallback.deleteConfirmationMessage
+        path: "builtins.calendar.composer.delete_confirmation_message",
+        fallback: fallback.deleteConfirmationMessage
+      )
     )
   }
 

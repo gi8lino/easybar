@@ -210,19 +210,47 @@ extension Config {
   ) throws -> SpacesBuiltinConfig.Layout {
     SpacesBuiltinConfig.Layout(
       spacing: try optionalField(
-        .number("spacing"), from: table, path: "builtins.spaces.layout", fallback: fallback.spacing),
+        .number("spacing"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.spacing
+      ),
       hideEmpty: try optionalField(
-        .bool("hide_empty"), from: table, path: "builtins.spaces.layout", fallback: fallback.hideEmpty),
+        .bool("hide_empty"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.hideEmpty
+      ),
       paddingX: try optionalField(
-        .number("padding_x"), from: table, path: "builtins.spaces.layout", fallback: fallback.paddingX),
+        .number("padding_x"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.paddingX
+      ),
       paddingY: try optionalField(
-        .number("padding_y"), from: table, path: "builtins.spaces.layout", fallback: fallback.paddingY),
+        .number("padding_y"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.paddingY
+      ),
       marginX: try optionalField(
-        .number("margin_x"), from: table, path: "builtins.spaces.layout", fallback: fallback.marginX),
+        .number("margin_x"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.marginX
+      ),
       marginY: try optionalField(
-        .number("margin_y"), from: table, path: "builtins.spaces.layout", fallback: fallback.marginY),
+        .number("margin_y"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.marginY
+      ),
       cornerRadius: try optionalField(
-        .number("corner_radius"), from: table, path: "builtins.spaces.layout", fallback: fallback.cornerRadius),
+        .number("corner_radius"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.cornerRadius
+      ),
       focusedCornerRadius: try optionalField(
         .number("focused_corner_radius"),
         from: table,
@@ -230,7 +258,11 @@ extension Config {
         fallback: fallback.focusedCornerRadius
       ),
       focusedScale: try optionalField(
-        .number("focused_scale"), from: table, path: "builtins.spaces.layout", fallback: fallback.focusedScale),
+        .number("focused_scale"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.focusedScale
+      ),
       inactiveOpacity: try optionalField(
         .number("inactive_opacity"),
         from: table,
@@ -238,11 +270,23 @@ extension Config {
         fallback: fallback.inactiveOpacity
       ),
       maxIcons: try optionalField(
-        .int("max_icons"), from: table, path: "builtins.spaces.layout", fallback: fallback.maxIcons),
+        .int("max_icons"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.maxIcons
+      ),
       showLabel: try optionalField(
-        .bool("show_label"), from: table, path: "builtins.spaces.layout", fallback: fallback.showLabel),
+        .bool("show_label"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.showLabel
+      ),
       showIcons: try optionalField(
-        .bool("show_icons"), from: table, path: "builtins.spaces.layout", fallback: fallback.showIcons),
+        .bool("show_icons"),
+        from: table,
+        path: "builtins.spaces.layout",
+        fallback: fallback.showIcons
+      ),
       showOnlyFocusedLabel: try optionalField(
         .bool("show_only_focused_label"),
         from: table,
@@ -288,9 +332,19 @@ extension Config {
     fallback: SpacesBuiltinConfig.Text
   ) throws -> SpacesBuiltinConfig.Text {
     SpacesBuiltinConfig.Text(
-      size: try optionalField(.number("size"), from: table, path: "builtins.spaces.text", fallback: fallback.size),
+      size: try optionalField(
+        .number("size"),
+        from: table,
+        path: "builtins.spaces.text",
+        fallback: fallback.size
+      ),
       weight: try validatedSpacesTextWeight(
-        try optionalField(.string("weight"), from: table, path: "builtins.spaces.text", fallback: fallback.weight),
+        try optionalField(
+          .string("weight"),
+          from: table,
+          path: "builtins.spaces.text",
+          fallback: fallback.weight
+        ),
         path: "builtins.spaces.text.weight"
       ),
       focusedColorHex: try optionalField(
@@ -314,9 +368,18 @@ extension Config {
     fallback: SpacesBuiltinConfig.Icons
   ) throws -> SpacesBuiltinConfig.Icons {
     SpacesBuiltinConfig.Icons(
-      size: try optionalField(.number("size"), from: table, path: "builtins.spaces.icons", fallback: fallback.size),
+      size: try optionalField(
+        .number("size"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.size
+      ),
       spacing: try optionalField(
-        .number("spacing"), from: table, path: "builtins.spaces.icons", fallback: fallback.spacing),
+        .number("spacing"),
+        from: table,
+        path: "builtins.spaces.icons",
+        fallback: fallback.spacing
+      ),
       cornerRadius: try optionalField(
         .number("corner_radius"),
         from: table,

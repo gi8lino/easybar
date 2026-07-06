@@ -31,13 +31,15 @@ extension Config {
         1,
         try optionalInt(
           table["days"],
-          path: "builtins.calendar.upcoming.events.days"
-        ) ?? fallback.days
+          path: "builtins.calendar.upcoming.events.days",
+          fallback: fallback.days
+        )
       ),
       excludePastEvents: try optionalBool(
         table["exclude_past_events"],
-        path: "builtins.calendar.upcoming.events.exclude_past_events"
-      ) ?? fallback.excludePastEvents
+        path: "builtins.calendar.upcoming.events.exclude_past_events",
+        fallback: fallback.excludePastEvents
+      )
     )
   }
 
@@ -49,40 +51,49 @@ extension Config {
     CalendarBuiltinConfig.Upcoming.Popup(
       backgroundColorHex: try optionalString(
         table["background_color"],
-        path: "builtins.calendar.upcoming.popup.background_color"
-      ) ?? fallback.backgroundColorHex,
+        path: "builtins.calendar.upcoming.popup.background_color",
+        fallback: fallback.backgroundColorHex
+      ),
       borderColorHex: try optionalString(
         table["border_color"],
-        path: "builtins.calendar.upcoming.popup.border_color"
-      ) ?? fallback.borderColorHex,
+        path: "builtins.calendar.upcoming.popup.border_color",
+        fallback: fallback.borderColorHex
+      ),
       borderWidth: try optionalNumber(
         table["border_width"],
-        path: "builtins.calendar.upcoming.popup.border_width"
-      ) ?? fallback.borderWidth,
+        path: "builtins.calendar.upcoming.popup.border_width",
+        fallback: fallback.borderWidth
+      ),
       cornerRadius: try optionalNumber(
         table["corner_radius"],
-        path: "builtins.calendar.upcoming.popup.corner_radius"
-      ) ?? fallback.cornerRadius,
+        path: "builtins.calendar.upcoming.popup.corner_radius",
+        fallback: fallback.cornerRadius
+      ),
       paddingX: try optionalNumber(
         table["padding_x"],
-        path: "builtins.calendar.upcoming.popup.padding_x"
-      ) ?? fallback.paddingX,
+        path: "builtins.calendar.upcoming.popup.padding_x",
+        fallback: fallback.paddingX
+      ),
       paddingY: try optionalNumber(
         table["padding_y"],
-        path: "builtins.calendar.upcoming.popup.padding_y"
-      ) ?? fallback.paddingY,
+        path: "builtins.calendar.upcoming.popup.padding_y",
+        fallback: fallback.paddingY
+      ),
       spacing: try optionalNumber(
         table["spacing"],
-        path: "builtins.calendar.upcoming.popup.spacing"
-      ) ?? fallback.spacing,
+        path: "builtins.calendar.upcoming.popup.spacing",
+        fallback: fallback.spacing
+      ),
       marginX: try optionalNumber(
         table["margin_x"],
-        path: "builtins.calendar.upcoming.popup.margin_x"
-      ) ?? fallback.marginX,
+        path: "builtins.calendar.upcoming.popup.margin_x",
+        fallback: fallback.marginX
+      ),
       marginY: try optionalNumber(
         table["margin_y"],
-        path: "builtins.calendar.upcoming.popup.margin_y"
-      ) ?? fallback.marginY
+        path: "builtins.calendar.upcoming.popup.margin_y",
+        fallback: fallback.marginY
+      )
     )
   }
 }

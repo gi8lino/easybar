@@ -8,14 +8,29 @@ extension Config {
     let app = toml["app"]?.table ?? TOMLTable()
 
     let resolvedWidgetsPath =
-      try optionalField(.expandedPath("widgets_dir"), from: app, path: "app", fallback: widgetsPath)
+      try optionalField(
+        .expandedPath("widgets_dir"),
+        from: app,
+        path: "app",
+        fallback: widgetsPath
+      )
     widgetsPath = resolvedWidgetsPath
 
     luaPath =
-      try optionalField(.string("lua_path"), from: app, path: "app", fallback: luaPath)
+      try optionalField(
+        .string("lua_path"),
+        from: app,
+        path: "app",
+        fallback: luaPath
+      )
 
     let resolvedLuaSocketPath =
-      try optionalField(.expandedPath("lua_socket_path"), from: app, path: "app", fallback: luaSocketPath)
+      try optionalField(
+        .expandedPath("lua_socket_path"),
+        from: app,
+        path: "app",
+        fallback: luaSocketPath
+      )
     luaSocketPath = resolvedLuaSocketPath
 
     if let configuredEnvironment = try optionalField(
@@ -28,10 +43,20 @@ extension Config {
     }
 
     watchConfigFile =
-      try optionalField(.bool("watch_config"), from: app, path: "app", fallback: watchConfigFile)
+      try optionalField(
+        .bool("watch_config"),
+        from: app,
+        path: "app",
+        fallback: watchConfigFile
+      )
 
     let resolvedLockDirectory =
-      try optionalField(.expandedPath("lock_dir"), from: app, path: "app", fallback: lockDirectory)
+      try optionalField(
+        .expandedPath("lock_dir"),
+        from: app,
+        path: "app",
+        fallback: lockDirectory
+      )
     lockDirectory = resolvedLockDirectory
 
     let resolvedWidgetEditorStubPath =
@@ -44,7 +69,12 @@ extension Config {
     widgetEditorStubPath = resolvedWidgetEditorStubPath
 
     develop =
-      try optionalField(.bool("develop"), from: app, path: "app", fallback: develop)
+      try optionalField(
+        .bool("develop"),
+        from: app,
+        path: "app",
+        fallback: develop
+      )
 
     let luaCommands = app["lua_commands"]?.table ?? TOMLTable()
     luaCommandTimeoutSeconds =
@@ -120,7 +150,12 @@ extension Config {
     let logging = toml["logging"]?.table ?? TOMLTable()
 
     loggingEnabled =
-      try optionalField(.bool("enabled"), from: logging, path: "logging", fallback: loggingEnabled)
+      try optionalField(
+        .bool("enabled"),
+        from: logging,
+        path: "logging",
+        fallback: loggingEnabled
+      )
 
     if let configuredLevel = try optionalField(
       .string("level"),
@@ -234,7 +269,12 @@ extension Config {
   func parseBar(from toml: TOMLTable) throws {
     guard let bar = toml["bar"]?.table else { return }
 
-    if let height = try optionalField(.int("height"), from: bar, path: "bar", fallback: nil) {
+    if let height = try optionalField(
+      .int("height"),
+      from: bar,
+      path: "bar",
+      fallback: nil
+    ) {
       guard height >= 0 else {
         throw ConfigError.invalidValue(
           path: "bar.height",
@@ -245,7 +285,12 @@ extension Config {
       barHeight = CGFloat(height)
     }
 
-    if let paddingX = try optionalField(.int("padding_x"), from: bar, path: "bar", fallback: nil) {
+    if let paddingX = try optionalField(
+      .int("padding_x"),
+      from: bar,
+      path: "bar",
+      fallback: nil
+    ) {
       guard paddingX >= 0 else {
         throw ConfigError.invalidValue(
           path: "bar.padding_x",
@@ -267,9 +312,19 @@ extension Config {
     guard let colors = bar["colors"]?.table else { return }
 
     barBackgroundHex =
-      try optionalField(.string("background"), from: colors, path: "bar.colors", fallback: barBackgroundHex)
+      try optionalField(
+        .string("background"),
+        from: colors,
+        path: "bar.colors",
+        fallback: barBackgroundHex
+      )
 
     barBorderHex =
-      try optionalField(.string("border"), from: colors, path: "bar.colors", fallback: barBorderHex)
+      try optionalField(
+        .string("border"),
+        from: colors,
+        path: "bar.colors",
+        fallback: barBorderHex
+      )
   }
 }

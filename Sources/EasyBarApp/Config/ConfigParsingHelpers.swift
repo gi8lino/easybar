@@ -99,15 +99,35 @@ extension Config {
     allowGroupReference: Bool = true
   ) throws -> BuiltinWidgetPlacement {
     let rawGroup =
-      try optionalField(.string("group"), from: table, path: path, fallback: fallback.group)
+      try optionalField(
+        .string("group"),
+        from: table,
+        path: path,
+        fallback: fallback.group
+      )
 
     return BuiltinWidgetPlacement(
-      enabled: try optionalField(.bool("enabled"), from: table, path: path, fallback: fallback.enabled),
+      enabled: try optionalField(
+        .bool("enabled"),
+        from: table,
+        path: path,
+        fallback: fallback.enabled
+      ),
       position: try parsePosition(
-        try optionalField(.string("position"), from: table, path: path, fallback: fallback.position.rawValue),
+        try optionalField(
+          .string("position"),
+          from: table,
+          path: path,
+          fallback: fallback.position.rawValue
+        ),
         path: "\(path).position"
       ),
-      order: try optionalField(.int("order"), from: table, path: path, fallback: fallback.order),
+      order: try optionalField(
+        .int("order"),
+        from: table,
+        path: path,
+        fallback: fallback.order
+      ),
       group: try validatedBuiltinGroupReference(
         rawGroup,
         path: "\(path).group",
@@ -123,7 +143,12 @@ extension Config {
     fallback: BuiltinWidgetStyle
   ) throws -> BuiltinWidgetStyle {
     BuiltinWidgetStyle(
-      icon: try optionalField(.string("icon"), from: table, path: path, fallback: fallback.icon),
+      icon: try optionalField(
+        .string("icon"),
+        from: table,
+        path: path,
+        fallback: fallback.icon
+      ),
       textColorHex: try optionalField(
         .string("text_color"),
         from: table,
@@ -154,8 +179,18 @@ extension Config {
         path: path,
         fallback: fallback.cornerRadius
       ),
-      marginX: try optionalField(.number("margin_x"), from: table, path: path, fallback: fallback.marginX),
-      marginY: try optionalField(.number("margin_y"), from: table, path: path, fallback: fallback.marginY),
+      marginX: try optionalField(
+        .number("margin_x"),
+        from: table,
+        path: path,
+        fallback: fallback.marginX
+      ),
+      marginY: try optionalField(
+        .number("margin_y"),
+        from: table,
+        path: path,
+        fallback: fallback.marginY
+      ),
       paddingX: try optionalField(
         .number("padding_x"),
         from: table,
@@ -168,8 +203,18 @@ extension Config {
         path: path,
         fallback: fallback.paddingY
       ),
-      spacing: try optionalField(.number("spacing"), from: table, path: path, fallback: fallback.spacing),
-      opacity: try optionalField(.number("opacity"), from: table, path: path, fallback: fallback.opacity)
+      spacing: try optionalField(
+        .number("spacing"),
+        from: table,
+        path: path,
+        fallback: fallback.spacing
+      ),
+      opacity: try optionalField(
+        .number("opacity"),
+        from: table,
+        path: path,
+        fallback: fallback.opacity
+      )
     )
   }
 
@@ -222,8 +267,18 @@ extension Config {
         path: path,
         fallback: fallback.paddingY
       ),
-      marginX: try optionalField(.number("margin_x"), from: table, path: path, fallback: fallback.marginX),
-      marginY: try optionalField(.number("margin_y"), from: table, path: path, fallback: fallback.marginY)
+      marginX: try optionalField(
+        .number("margin_x"),
+        from: table,
+        path: path,
+        fallback: fallback.marginX
+      ),
+      marginY: try optionalField(
+        .number("margin_y"),
+        from: table,
+        path: path,
+        fallback: fallback.marginY
+      )
     )
   }
 
@@ -612,6 +667,114 @@ extension Config {
   ) throws -> [String: String]? {
     guard let value else { return nil }
     return try requiredStringTable(value, path: path)
+  }
+
+  /// Returns an optional TOML string when present, otherwise the provided fallback.
+  func optionalString(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: String
+  ) throws -> String {
+    try optionalString(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML string when present, otherwise the provided optional fallback.
+  func optionalString(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: String?
+  ) throws -> String? {
+    try optionalString(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML bool when present, otherwise the provided fallback.
+  func optionalBool(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Bool
+  ) throws -> Bool {
+    try optionalBool(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML bool when present, otherwise the provided optional fallback.
+  func optionalBool(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Bool?
+  ) throws -> Bool? {
+    try optionalBool(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML integer when present, otherwise the provided fallback.
+  func optionalInt(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Int
+  ) throws -> Int {
+    try optionalInt(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML integer when present, otherwise the provided optional fallback.
+  func optionalInt(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Int?
+  ) throws -> Int? {
+    try optionalInt(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML number when present, otherwise the provided fallback.
+  func optionalNumber(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Double
+  ) throws -> Double {
+    try optionalNumber(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML number when present, otherwise the provided optional fallback.
+  func optionalNumber(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: Double?
+  ) throws -> Double? {
+    try optionalNumber(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML string array when present, otherwise the provided fallback.
+  func optionalStringArray(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: [String]
+  ) throws -> [String] {
+    try optionalStringArray(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML string array when present, otherwise the provided optional fallback.
+  func optionalStringArray(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: [String]?
+  ) throws -> [String]? {
+    try optionalStringArray(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML string table when present, otherwise the provided fallback.
+  func optionalStringTable(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: [String: String]
+  ) throws -> [String: String] {
+    try optionalStringTable(value, path: path) ?? fallback
+  }
+
+  /// Returns an optional TOML string table when present, otherwise the provided optional fallback.
+  func optionalStringTable(
+    _ value: (any TOMLValueConvertible)?,
+    path: String,
+    fallback: [String: String]?
+  ) throws -> [String: String]? {
+    try optionalStringTable(value, path: path) ?? fallback
   }
 
   /// Parses one optional path string and expands `~` when present.

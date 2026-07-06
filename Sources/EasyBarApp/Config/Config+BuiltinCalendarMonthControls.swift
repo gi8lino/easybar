@@ -14,20 +14,23 @@ extension Config {
         anchorTable["date_format"]
           ?? anchorTable["anchor_date_format"]
           ?? rootTable["anchor_date_format"],
-        path: "builtins.calendar.month.popup.anchor.date_format"
-      ) ?? fallback.dateFormat,
+        path: "builtins.calendar.month.popup.anchor.date_format",
+        fallback: fallback.dateFormat
+      ),
       textColorHex: try optionalString(
         anchorTable["text_color"]
           ?? anchorTable["anchor_text_color"]
           ?? rootTable["anchor_text_color"],
-        path: "builtins.calendar.month.popup.anchor.text_color"
-      ) ?? fallback.textColorHex,
+        path: "builtins.calendar.month.popup.anchor.text_color",
+        fallback: fallback.textColorHex
+      ),
       showDateText: try optionalBool(
         anchorTable["show_date_text"]
           ?? anchorTable["anchor_show_date_text"]
           ?? rootTable["anchor_show_date_text"],
-        path: "builtins.calendar.month.popup.anchor.show_date_text"
-      ) ?? fallback.showDateText
+        path: "builtins.calendar.month.popup.anchor.show_date_text",
+        fallback: fallback.showDateText
+      )
     )
   }
 
@@ -40,20 +43,24 @@ extension Config {
     CalendarBuiltinConfig.Month.Popup.TodayButtonStyle(
       title: try optionalString(
         todayButtonTable["title"] ?? rootTable["today_button_title"],
-        path: "builtins.calendar.month.popup.today_button.title"
-      ) ?? fallback.title,
+        path: "builtins.calendar.month.popup.today_button.title",
+        fallback: fallback.title
+      ),
       icon: try optionalString(
         todayButtonTable["icon"] ?? rootTable["today_button_icon"],
-        path: "builtins.calendar.month.popup.today_button.icon"
-      ) ?? fallback.icon,
+        path: "builtins.calendar.month.popup.today_button.icon",
+        fallback: fallback.icon
+      ),
       borderColorHex: try optionalString(
         todayButtonTable["border_color"] ?? rootTable["today_border_color"],
-        path: "builtins.calendar.month.popup.today_button.border_color"
-      ) ?? fallback.borderColorHex,
+        path: "builtins.calendar.month.popup.today_button.border_color",
+        fallback: fallback.borderColorHex
+      ),
       borderWidth: try optionalNumber(
         todayButtonTable["border_width"] ?? rootTable["today_border_width"],
-        path: "builtins.calendar.month.popup.today_button.border_width"
-      ) ?? fallback.borderWidth
+        path: "builtins.calendar.month.popup.today_button.border_width",
+        fallback: fallback.borderWidth
+      )
     )
   }
 }
