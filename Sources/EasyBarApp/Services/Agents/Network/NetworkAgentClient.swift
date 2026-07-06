@@ -32,6 +32,10 @@ final class NetworkAgentClient {
   private let lifecycleState: LockedState<LifecycleState>
   /// Last logged network-agent error, used to suppress identical repeats.
   private let errorLogState = LockedState(ErrorLogState())
+  /// Publishes network-agent snapshots to app stores and events.
+  private lazy var snapshotPublisher = NetworkAgentSnapshotPublisher { [weak self] in
+    self?.isStarted ?? false
+  }
 
   /// Wake-triggered refresh controller.
   private lazy var wakeRefreshController = AgentWakeRefreshController(
@@ -104,7 +108,7 @@ final class NetworkAgentClient {
     guard change.enabled else {
       lifecycleState.withLock { $0.started = false }
       wakeRefreshController.stop()
-      clearPublishedState(notify: true)
+      snapshotPublisher.clear(notify: true)
       return
     }
 
@@ -121,7 +125,7 @@ final class NetworkAgentClient {
     guard let config else { return }
     guard config.enabled else {
       logger.debug("network agent client start skipped because agent is disabled")
-      clearPublishedState(notify: false)
+      snapshotPublisher.clear(notify: false)
       return
     }
 
@@ -147,7 +151,7 @@ final class NetworkAgentClient {
 
     wakeRefreshController.stop()
     client.stop()
-    clearPublishedState(notify: false)
+    snapshotPublisher.clear(notify: false)
   }
 
   /// Requests one fresh network-agent update using the current subscription.
@@ -185,7 +189,7 @@ final class NetworkAgentClient {
       }
 
       resetErrorLogState()
-      publish(snapshot: snapshot)
+      snapshotPublisher.publish(snapshot: snapshot)
 
     case .pong:
       break
@@ -203,7 +207,7 @@ final class NetworkAgentClient {
 
     guard code == .permissionDenied else { return }
 
-    publish(
+    snapshotPublisher.publish(
       snapshot: NetworkAgentSnapshot(
         accessGranted: false,
         permissionState: "denied",
@@ -240,7 +244,7 @@ final class NetworkAgentClient {
   private func handleDisconnectedStateReset() {
     guard isStarted else { return }
     resetErrorLogState()
-    clearPublishedState(notify: true)
+    snapshotPublisher.clear(notify: true)
   }
 
   /// Logs the first instance of an agent error, then suppresses identical repeats.
@@ -280,63 +284,6 @@ final class NetworkAgentClient {
       state.lastKey = nil
       state.repeatCount = 0
     }
-  }
-
-  /// Clears the shared Wi-Fi state and optionally emits the corresponding app events.
-  private func clearPublishedState(notify: Bool) {
-    Task { @MainActor in
-      let previous = NativeWiFiStore.shared.snapshot
-      let changed = NativeWiFiStore.shared.clear()
-
-      guard changed else { return }
-      guard notify else { return }
-
-      Task {
-        await EventHub.shared.emit(
-          .networkChange,
-          primaryInterfaceIsTunnel: false
-        )
-
-        if self.shouldEmitWiFiChangeAfterReset(previous: previous) {
-          await EventHub.shared.emit(.wifiChange)
-        }
-      }
-    }
-  }
-
-  /// Publishes one snapshot to the shared store on the main queue and emits app events.
-  private func publish(snapshot: NetworkAgentSnapshot) {
-    Task { @MainActor in
-      guard self.isStarted else { return }
-
-      let previous = NativeWiFiStore.shared.snapshot
-      let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
-
-      guard changed else { return }
-
-      Task {
-        await EventHub.shared.emit(
-          .networkChange,
-          primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
-        )
-
-        let ssidChanged = previous?.ssid != snapshot.ssid
-        let interfaceChanged = previous?.interfaceName != snapshot.interfaceName
-
-        guard ssidChanged || interfaceChanged else { return }
-
-        if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
-          await EventHub.shared.emit(.wifiChange, interfaceName: interfaceName)
-        } else {
-          await EventHub.shared.emit(.wifiChange)
-        }
-      }
-    }
-  }
-
-  /// Returns whether clearing the published state should also emit a Wi-Fi change event.
-  private func shouldEmitWiFiChangeAfterReset(previous: NetworkAgentSnapshot?) -> Bool {
-    return previous?.ssid != nil || previous?.interfaceName != nil
   }
 
   /// Returns the current network-agent configuration.
