@@ -55,7 +55,11 @@ final class NetworkSystemMonitor {
       return
     }
 
-    SCDynamicStoreSetNotificationKeys(store, nil, Self.watchedNetworkPatterns as CFArray)
+    guard SCDynamicStoreSetNotificationKeys(store, nil, Self.watchedNetworkPatterns as CFArray)
+    else {
+      logger.warn("failed to register \(componentName) dynamic store notification keys")
+      return
+    }
 
     guard let source = SCDynamicStoreCreateRunLoopSource(nil, store, 0) else {
       logger.warn("failed to create \(componentName) dynamic store source")
@@ -83,39 +87,23 @@ final class NetworkSystemMonitor {
   /// Returns the current normalized network state.
   func currentState() -> NetworkSystemSnapshot {
     guard let store else {
-      return NetworkSystemSnapshot(
-        primaryInterface: nil,
-        activeTunnelInterface: nil,
-        activeTunnelInterfaces: [],
-        primaryInterfaceIsTunnel: false,
-        ipv4Address: nil,
-        ipv6Address: nil,
-        defaultGateway: nil,
-        dnsServers: [],
-        internetReachable: false,
-        captivePortal: false
-      )
+      return .empty
     }
 
     guard
       let raw = SCDynamicStoreCopyMultiple(store, nil, Self.watchedNetworkPatterns as CFArray)
         as? [String: Any]
     else {
-      return NetworkSystemSnapshot(
-        primaryInterface: nil,
-        activeTunnelInterface: nil,
-        activeTunnelInterfaces: [],
-        primaryInterfaceIsTunnel: false,
-        ipv4Address: nil,
-        ipv6Address: nil,
-        defaultGateway: nil,
-        dnsServers: [],
-        internetReachable: false,
-        captivePortal: false
-      )
+      return .empty
     }
 
     var allInterfaces: [String] = []
+    var seenInterfaces = Set<String>()
+
+    func appendInterface(_ name: String) {
+      guard seenInterfaces.insert(name).inserted else { return }
+      allInterfaces.append(name)
+    }
     let globalIPv4 = raw["State:/Network/Global/IPv4"] as? [String: Any]
     let globalIPv6 = raw["State:/Network/Global/IPv6"] as? [String: Any]
     let globalDNS = raw["State:/Network/Global/DNS"] as? [String: Any]
@@ -129,7 +117,7 @@ final class NetworkSystemMonitor {
       ?? normalized(globalIPv6?["PrimaryService"] as? String)
 
     if let primaryInterface {
-      allInterfaces.append(primaryInterface)
+      appendInterface(primaryInterface)
     }
 
     for (key, value) in raw {
@@ -142,9 +130,7 @@ final class NetworkSystemMonitor {
         continue
       }
 
-      if !allInterfaces.contains(interfaceName) {
-        allInterfaces.append(interfaceName)
-      }
+      appendInterface(interfaceName)
     }
 
     let tunnelInterfaces = allInterfaces.filter(isTunnelInterface)

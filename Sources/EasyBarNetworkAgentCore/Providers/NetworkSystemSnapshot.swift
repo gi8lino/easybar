@@ -2,6 +2,20 @@ import Foundation
 
 /// Normalized SystemConfiguration network state.
 struct NetworkSystemSnapshot {
+  /// Empty fallback snapshot used when system state cannot be read.
+  static let empty = NetworkSystemSnapshot(
+    primaryInterface: nil,
+    activeTunnelInterface: nil,
+    activeTunnelInterfaces: [],
+    primaryInterfaceIsTunnel: false,
+    ipv4Address: nil,
+    ipv6Address: nil,
+    defaultGateway: nil,
+    dnsServers: [],
+    internetReachable: false,
+    captivePortal: false
+  )
+
   /// Primary network interface name.
   let primaryInterface: String?
   /// First active tunnel interface.
