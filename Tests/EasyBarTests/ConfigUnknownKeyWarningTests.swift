@@ -86,4 +86,13 @@ final class ConfigUnknownKeyWarningTests: ConfigLoaderTestCase {
 
     XCTAssertEqual(result.warnings, [])
   }
+
+  /// Verifies that the checked-in default config stays covered by the known-key schema.
+  func testDefaultConfigContainsOnlyKnownKeys() throws {
+    let defaultConfigURL = repoRootURL().appendingPathComponent("config.defaults.toml")
+
+    let result = try ConfigValidator.validate(configPathOverride: defaultConfigURL.path)
+
+    XCTAssertEqual(result.warnings, [])
+  }
 }
