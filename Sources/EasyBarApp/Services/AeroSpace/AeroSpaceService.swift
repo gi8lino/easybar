@@ -198,7 +198,7 @@ extension AeroSpaceService {
 
     DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
-      self.reloadState()
+      self.reloadState(generation: generation)
     }
   }
 
@@ -220,14 +220,16 @@ extension AeroSpaceService {
       )
     }
 
+    let generation = currentGeneration()
+
     DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self else { return }
-      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
+      guard self.shouldExecute(generation: generation) else { return }
 
       _ = self.runAeroSpace(arguments: ["workspace", workspace])
 
-      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
-      self.reloadState()
+      guard self.shouldExecute(generation: generation) else { return }
+      self.reloadState(generation: generation)
     }
   }
 
@@ -280,7 +282,7 @@ extension AeroSpaceService {
 
     DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self, self.shouldExecute(generation: generation) else { return }
-      self.reloadState()
+      self.reloadState(generation: generation)
     }
   }
 }
@@ -460,8 +462,8 @@ extension AeroSpaceService {
 
 extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
-  fileprivate func reloadState() {
-    guard shouldExecute(generation: currentGeneration()) else { return }
+  fileprivate func reloadState(generation: UInt64) {
+    guard shouldExecute(generation: generation) else { return }
 
     logger.debug("aerospace reloadState begin")
 
@@ -469,6 +471,8 @@ extension AeroSpaceService {
       logger.debug("aerospace reloadState skipped due to unsupported AeroSpace version")
       return
     }
+
+    guard shouldExecute(generation: generation) else { return }
 
     let snapshot = AeroSpaceSnapshotLoader.load(
       run: runAeroSpace(arguments:),
@@ -478,7 +482,7 @@ extension AeroSpaceService {
 
     Task { @MainActor [weak self] in
       guard let self else { return }
-      guard self.shouldExecute(generation: self.currentGeneration()) else { return }
+      guard self.shouldExecute(generation: generation) else { return }
 
       guard self.hasStateChanged(for: snapshot) else {
         self.logger.debug("aerospace reloadState end without changes")
