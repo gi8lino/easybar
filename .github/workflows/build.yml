@@ -55,17 +55,25 @@ jobs:
         shell: bash
         run: make clean
 
-      - name: Run tests
+      - name: Build tests
         shell: bash
         timeout-minutes: 15
-        run: scripts/ci/run-swift-tests.sh
+        run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
 
-      - name: Upload test log
+      - name: Run tests
+        shell: bash
+        timeout-minutes: 10
+        run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build
+
+      - name: Upload Swift test logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: swift-test-log
-          path: test.log
+          name: swift-test-logs
+          path: |
+            build-tests.log
+            test.log
+          if-no-files-found: ignore
 
       - name: Verify generated artifacts are current
         run: make check-generated
