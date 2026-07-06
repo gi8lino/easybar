@@ -13,6 +13,13 @@ final class NativeWidgetRegistry {
   private let widgetStore: WidgetStore
   private let eventManager: EventManager
   private let aeroSpaceService: AeroSpaceService
+  private let networkAgentClient: NetworkAgentClient
+  private let nativeWiFiStore: NativeWiFiStore
+  private let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
+  private let nativeMonthCalendarStore: NativeMonthCalendarStore
+  private let nativeComposerCalendarStore: NativeComposerCalendarStore
+  private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
+  private let monthCalendarAgentClient: MonthCalendarAgentClient
   private let nativeGroupRegistry: NativeGroupRegistry
   private var snapshot: ConfigSnapshot
   private var widgets: [NativeWidget] = []
@@ -22,13 +29,27 @@ final class NativeWidgetRegistry {
     snapshot: ConfigSnapshot,
     widgetStore: WidgetStore,
     eventManager: EventManager,
-    aeroSpaceService: AeroSpaceService
+    aeroSpaceService: AeroSpaceService,
+    networkAgentClient: NetworkAgentClient,
+    nativeWiFiStore: NativeWiFiStore,
+    nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
+    nativeMonthCalendarStore: NativeMonthCalendarStore,
+    nativeComposerCalendarStore: NativeComposerCalendarStore,
+    upcomingCalendarAgentClient: UpcomingCalendarAgentClient,
+    monthCalendarAgentClient: MonthCalendarAgentClient
   ) {
     self.logger = logger
     self.snapshot = snapshot
     self.widgetStore = widgetStore
     self.eventManager = eventManager
     self.aeroSpaceService = aeroSpaceService
+    self.networkAgentClient = networkAgentClient
+    self.nativeWiFiStore = nativeWiFiStore
+    self.nativeUpcomingCalendarStore = nativeUpcomingCalendarStore
+    self.nativeMonthCalendarStore = nativeMonthCalendarStore
+    self.nativeComposerCalendarStore = nativeComposerCalendarStore
+    self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
+    self.monthCalendarAgentClient = monthCalendarAgentClient
     self.nativeGroupRegistry = NativeGroupRegistry(widgetStore: widgetStore)
   }
 
@@ -141,8 +162,8 @@ final class NativeWidgetRegistry {
           config: builtins.wifi,
           networkAgentConfig: networkAgent,
           widgetStore: self.widgetStore,
-          networkAgentClient: NetworkAgentClient.shared,
-          nativeWiFiStore: NativeWiFiStore.shared
+          networkAgentClient: self.networkAgentClient,
+          nativeWiFiStore: self.nativeWiFiStore
         )
       },
       Registration(id: "date", enabled: builtins.date.enabled) {
@@ -156,11 +177,11 @@ final class NativeWidgetRegistry {
           config: builtins.calendar,
           calendarAgentConfig: calendarAgent,
           widgetStore: self.widgetStore,
-          nativeUpcomingCalendarStore: NativeUpcomingCalendarStore.shared,
-          nativeMonthCalendarStore: NativeMonthCalendarStore.shared,
-          nativeComposerCalendarStore: NativeComposerCalendarStore.shared,
-          upcomingCalendarAgentClient: UpcomingCalendarAgentClient.shared,
-          monthCalendarAgentClient: MonthCalendarAgentClient.shared
+          nativeUpcomingCalendarStore: self.nativeUpcomingCalendarStore,
+          nativeMonthCalendarStore: self.nativeMonthCalendarStore,
+          nativeComposerCalendarStore: self.nativeComposerCalendarStore,
+          upcomingCalendarAgentClient: self.upcomingCalendarAgentClient,
+          monthCalendarAgentClient: self.monthCalendarAgentClient
         )
       },
       Registration(id: "cpu", enabled: builtins.cpu.enabled) {

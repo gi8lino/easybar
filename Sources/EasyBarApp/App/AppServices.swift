@@ -35,15 +35,16 @@ struct AppServices {
       logger: logger.child("events"),
       luaRuntime: luaRuntime
     )
-    let nativeServices = makeNativeServices(
-      logger: logger,
-      snapshot: configServices.bootstrapSnapshot,
-      eventManager: eventServices.eventManager
-    )
     let agentServices = makeAgentServices(
       logger: logger,
       snapshot: configServices.bootstrapSnapshot,
       metricsCoordinator: metricsCoordinator
+    )
+    let nativeServices = makeNativeServices(
+      logger: logger,
+      snapshot: configServices.bootstrapSnapshot,
+      eventManager: eventServices.eventManager,
+      agentServices: agentServices
     )
 
     let services = AppServices(
@@ -157,12 +158,21 @@ struct AppServices {
   private static func makeNativeServices(
     logger: ProcessLogger,
     snapshot: ConfigSnapshot,
-    eventManager: EventManager
+    eventManager: EventManager,
+    agentServices: AgentServices
   )
     -> NativeServices
   {
     let widgetStore = WidgetStore()
     let aeroSpaceService = AeroSpaceService(logger: logger.child("aerospace"))
+    let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
+    let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
+    let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
+      logger: logger.child("upcoming_store")
+    )
+    let nativeComposerCalendarStore = NativeComposerCalendarStore(
+      logger: logger.child("composer_calendar_store")
+    )
 
     return NativeServices(
       widgetStore: widgetStore,
@@ -171,17 +181,20 @@ struct AppServices {
         snapshot: snapshot,
         widgetStore: widgetStore,
         eventManager: eventManager,
-        aeroSpaceService: aeroSpaceService
+        aeroSpaceService: aeroSpaceService,
+        networkAgentClient: agentServices.networkAgentClient,
+        nativeWiFiStore: nativeWiFiStore,
+        nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+        nativeMonthCalendarStore: nativeMonthCalendarStore,
+        nativeComposerCalendarStore: nativeComposerCalendarStore,
+        upcomingCalendarAgentClient: agentServices.upcomingCalendarAgentClient,
+        monthCalendarAgentClient: agentServices.monthCalendarAgentClient
       ),
       aeroSpaceService: aeroSpaceService,
-      nativeWiFiStore: NativeWiFiStore(logger: logger.child("wifi_store")),
-      nativeMonthCalendarStore: NativeMonthCalendarStore(logger: logger.child("month_store")),
-      nativeUpcomingCalendarStore: NativeUpcomingCalendarStore(
-        logger: logger.child("upcoming_store")
-      ),
-      nativeComposerCalendarStore: NativeComposerCalendarStore(
-        logger: logger.child("composer_calendar_store")
-      )
+      nativeWiFiStore: nativeWiFiStore,
+      nativeMonthCalendarStore: nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+      nativeComposerCalendarStore: nativeComposerCalendarStore
     )
   }
 
