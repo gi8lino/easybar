@@ -2,10 +2,9 @@ import EasyBarCalendarPresentation
 import Foundation
 
 extension CalendarEventComposer {
-  /// Static display and timing metadata for one composer preset option.
+  /// Static timing metadata for one composer preset option.
   struct PresetMetadata {
     let seconds: TimeInterval?
-    let fallbackTitle: String
   }
 
   /// Alert presets supported by the composer.
@@ -26,30 +25,39 @@ extension CalendarEventComposer {
       metadata.seconds
     }
 
-    private var fallbackTitle: String {
-      metadata.fallbackTitle
+    private var systemTitle: String {
+      switch self {
+      case .none:
+        return CalendarComposerLocalizedText.none
+      case .atTime:
+        return CalendarComposerLocalizedText.atTimeOfEvent
+      case .fiveMinutes, .tenMinutes, .fifteenMinutes, .thirtyMinutes, .oneHour, .oneDay:
+        return CalendarComposerLocalizedText.alertBefore(seconds: metadata.seconds ?? 0)
+      case .custom:
+        return CalendarComposerLocalizedText.custom
+      }
     }
 
     private var metadata: PresetMetadata {
       switch self {
       case .none:
-        return PresetMetadata(seconds: nil, fallbackTitle: "None")
+        return PresetMetadata(seconds: nil)
       case .atTime:
-        return PresetMetadata(seconds: 0, fallbackTitle: "At time of event")
+        return PresetMetadata(seconds: 0)
       case .fiveMinutes:
-        return PresetMetadata(seconds: 5 * 60, fallbackTitle: "5 minutes before")
+        return PresetMetadata(seconds: 5 * 60)
       case .tenMinutes:
-        return PresetMetadata(seconds: 10 * 60, fallbackTitle: "10 minutes before")
+        return PresetMetadata(seconds: 10 * 60)
       case .fifteenMinutes:
-        return PresetMetadata(seconds: 15 * 60, fallbackTitle: "15 minutes before")
+        return PresetMetadata(seconds: 15 * 60)
       case .thirtyMinutes:
-        return PresetMetadata(seconds: 30 * 60, fallbackTitle: "30 minutes before")
+        return PresetMetadata(seconds: 30 * 60)
       case .oneHour:
-        return PresetMetadata(seconds: 60 * 60, fallbackTitle: "1 hour before")
+        return PresetMetadata(seconds: 60 * 60)
       case .oneDay:
-        return PresetMetadata(seconds: 24 * 60 * 60, fallbackTitle: "1 day before")
+        return PresetMetadata(seconds: 24 * 60 * 60)
       case .custom:
-        return PresetMetadata(seconds: nil, fallbackTitle: "Custom")
+        return PresetMetadata(seconds: nil)
       }
     }
 
@@ -62,7 +70,7 @@ extension CalendarEventComposer {
     }
 
     private func configuredPresetTitle(labels: [String: String]) -> String {
-      labels[rawValue] ?? fallbackTitle
+      labels[rawValue] ?? systemTitle
     }
   }
 
@@ -86,34 +94,42 @@ extension CalendarEventComposer {
       metadata.seconds
     }
 
-    private var fallbackTitle: String {
-      metadata.fallbackTitle
+    private var systemTitle: String {
+      switch self {
+      case .none:
+        return CalendarComposerLocalizedText.none
+      case .fiveMinutes, .tenMinutes, .fifteenMinutes, .twentyMinutes, .thirtyMinutes,
+        .fortyFiveMinutes, .oneHour, .ninetyMinutes, .twoHours:
+        return CalendarComposerLocalizedText.duration(seconds: metadata.seconds ?? 0)
+      case .custom:
+        return CalendarComposerLocalizedText.custom
+      }
     }
 
     private var metadata: PresetMetadata {
       switch self {
       case .none:
-        return PresetMetadata(seconds: nil, fallbackTitle: "None")
+        return PresetMetadata(seconds: nil)
       case .fiveMinutes:
-        return PresetMetadata(seconds: 5 * 60, fallbackTitle: "5 minutes")
+        return PresetMetadata(seconds: 5 * 60)
       case .tenMinutes:
-        return PresetMetadata(seconds: 10 * 60, fallbackTitle: "10 minutes")
+        return PresetMetadata(seconds: 10 * 60)
       case .fifteenMinutes:
-        return PresetMetadata(seconds: 15 * 60, fallbackTitle: "15 minutes")
+        return PresetMetadata(seconds: 15 * 60)
       case .twentyMinutes:
-        return PresetMetadata(seconds: 20 * 60, fallbackTitle: "20 minutes")
+        return PresetMetadata(seconds: 20 * 60)
       case .thirtyMinutes:
-        return PresetMetadata(seconds: 30 * 60, fallbackTitle: "30 minutes")
+        return PresetMetadata(seconds: 30 * 60)
       case .fortyFiveMinutes:
-        return PresetMetadata(seconds: 45 * 60, fallbackTitle: "45 minutes")
+        return PresetMetadata(seconds: 45 * 60)
       case .oneHour:
-        return PresetMetadata(seconds: 60 * 60, fallbackTitle: "1 hour")
+        return PresetMetadata(seconds: 60 * 60)
       case .ninetyMinutes:
-        return PresetMetadata(seconds: 90 * 60, fallbackTitle: "1.5 hours")
+        return PresetMetadata(seconds: 90 * 60)
       case .twoHours:
-        return PresetMetadata(seconds: 2 * 60 * 60, fallbackTitle: "2 hours")
+        return PresetMetadata(seconds: 2 * 60 * 60)
       case .custom:
-        return PresetMetadata(seconds: nil, fallbackTitle: "Custom")
+        return PresetMetadata(seconds: nil)
       }
     }
 
@@ -126,7 +142,7 @@ extension CalendarEventComposer {
     }
 
     private func configuredPresetTitle(labels: [String: String]) -> String {
-      labels[rawValue] ?? fallbackTitle
+      labels[rawValue] ?? systemTitle
     }
   }
 }

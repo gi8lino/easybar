@@ -541,36 +541,6 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `padding_y`         | `14`                    | Vertical inner padding of the appointment composer panel.   |
 | `header_text_color` | `"theme.text"`          | Header title color of the appointment composer panel.       |
 
-## `builtins.calendar.composer.alert_labels`
-
-| Key          | Default               | Description                               |
-| ------------ | --------------------- | ----------------------------------------- |
-| `none`       | `"None"`              | Label shown for no alert.                 |
-| `at_time`    | `"At time of event"`  | Label shown for alerts at event time.     |
-| `5_minutes`  | `"5 minutes before"`  | Label shown for a 5-minute alert.         |
-| `10_minutes` | `"10 minutes before"` | Label shown for a 10-minute alert.        |
-| `15_minutes` | `"15 minutes before"` | Label shown for a 15-minute alert.        |
-| `30_minutes` | `"30 minutes before"` | Label shown for a 30-minute alert.        |
-| `1_hour`     | `"1 hour before"`     | Label shown for a 1-hour alert.           |
-| `1_day`      | `"1 day before"`      | Label shown for a 1-day alert.            |
-| `custom`     | `"Custom"`            | Label shown for a custom alert lead time. |
-
-## `builtins.calendar.composer.travel_time_labels`
-
-| Key          | Default        | Description                                |
-| ------------ | -------------- | ------------------------------------------ |
-| `none`       | `"None"`       | Label shown when no travel time is set.    |
-| `5_minutes`  | `"5 minutes"`  | Label shown for 5 minutes of travel time.  |
-| `10_minutes` | `"10 minutes"` | Label shown for 10 minutes of travel time. |
-| `15_minutes` | `"15 minutes"` | Label shown for 15 minutes of travel time. |
-| `20_minutes` | `"20 minutes"` | Label shown for 20 minutes of travel time. |
-| `30_minutes` | `"30 minutes"` | Label shown for 30 minutes of travel time. |
-| `45_minutes` | `"45 minutes"` | Label shown for 45 minutes of travel time. |
-| `1_hour`     | `"1 hour"`     | Label shown for 1 hour of travel time.     |
-| `90_minutes` | `"1.5 hours"`  | Label shown for 90 minutes of travel time. |
-| `2_hours`    | `"2 hours"`    | Label shown for 2 hours of travel time.    |
-| `custom`     | `"Custom"`     | Label shown for a custom travel time.      |
-
 ## `builtins.calendar.upcoming.events`
 
 | Key                   | Default | Description                                                                     |
@@ -767,3 +737,5 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key      | Default        | Description         |
 | -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
+
+

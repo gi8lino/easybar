@@ -84,30 +84,8 @@ extension CalendarBuiltinConfig {
         defaultCalendarName: nil,
         defaultAlert: "1_hour",
         defaultTravelTime: "none",
-        alertLabels: [
-          "none": "None",
-          "at_time": "At time of event",
-          "5_minutes": "5 minutes before",
-          "10_minutes": "10 minutes before",
-          "15_minutes": "15 minutes before",
-          "30_minutes": "30 minutes before",
-          "1_hour": "1 hour before",
-          "1_day": "1 day before",
-          "custom": "Custom",
-        ],
-        travelTimeLabels: [
-          "none": "None",
-          "5_minutes": "5 minutes",
-          "10_minutes": "10 minutes",
-          "15_minutes": "15 minutes",
-          "20_minutes": "20 minutes",
-          "30_minutes": "30 minutes",
-          "45_minutes": "45 minutes",
-          "1_hour": "1 hour",
-          "90_minutes": "1.5 hours",
-          "2_hours": "2 hours",
-          "custom": "Custom",
-        ],
+        alertLabels: [:],
+        travelTimeLabels: [:],
         startLabel: "Begin",
         endLabel: "End",
         allDayLabel: "All day",
@@ -201,37 +179,45 @@ extension CalendarBuiltinConfig {
       return manualSymbols
     }
 
-    let formatter = DateFormatter()
-    let sundayFirstSymbols: [String]
+    return systemMonthWeekdaySymbols(format: format)
+  }
 
-    switch format {
-    case "d":
-      sundayFirstSymbols =
-        formatter.veryShortStandaloneWeekdaySymbols
-        ?? formatter.veryShortWeekdaySymbols
-        ?? ["S", "M", "T", "W", "T", "F", "S"]
-    case "dd":
-      let baseSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-      sundayFirstSymbols = baseSymbols.map { String($0.prefix(2)) }
-    case "ddd":
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    default:
-      sundayFirstSymbols =
-        formatter.shortStandaloneWeekdaySymbols
-        ?? formatter.shortWeekdaySymbols
-        ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    }
+  private static func systemMonthWeekdaySymbols(format: String) -> [String] {
+    let sundayFirstSymbols = systemSundayFirstWeekdaySymbols(format: format)
 
     guard sundayFirstSymbols.count == 7 else {
-      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      return sundayFirstSymbols
     }
 
     return Array(sundayFirstSymbols[1...6]) + [sundayFirstSymbols[0]]
+  }
+
+  private static func systemSundayFirstWeekdaySymbols(format: String) -> [String] {
+    let formatter = DateFormatter()
+    formatter.locale = .autoupdatingCurrent
+    formatter.calendar = .autoupdatingCurrent
+
+    switch format {
+    case "d":
+      return systemVeryShortWeekdaySymbols(from: formatter)
+    case "dd":
+      return systemShortWeekdaySymbols(from: formatter).map { String($0.prefix(2)) }
+    case "ddd":
+      return systemShortWeekdaySymbols(from: formatter)
+    default:
+      return systemShortWeekdaySymbols(from: formatter)
+    }
+  }
+
+  private static func systemVeryShortWeekdaySymbols(from formatter: DateFormatter) -> [String] {
+    return formatter.veryShortStandaloneWeekdaySymbols
+      ?? formatter.veryShortWeekdaySymbols
+      ?? systemShortWeekdaySymbols(from: formatter).map { String($0.prefix(1)) }
+  }
+
+  private static func systemShortWeekdaySymbols(from formatter: DateFormatter) -> [String] {
+    return formatter.shortStandaloneWeekdaySymbols
+      ?? formatter.shortWeekdaySymbols
+      ?? []
   }
 }

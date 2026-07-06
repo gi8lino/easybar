@@ -51,11 +51,11 @@ extension CalendarBuiltinConfig {
       defaultTravelTime: try reader.string(
         "default_travel_time", fallback: fallback.defaultTravelTime),
       alertLabels: try parseOptionLabels(
-        reader: try reader.section("alert_labels"),
+        reader: try reader.optionalSection("alert_labels"),
         fallback: fallback.alertLabels
       ),
       travelTimeLabels: try parseOptionLabels(
-        reader: try reader.section("travel_time_labels"),
+        reader: try reader.optionalSection("travel_time_labels"),
         fallback: fallback.travelTimeLabels
       ),
       startLabel: try reader.string("start_label", fallback: fallback.startLabel),
@@ -82,9 +82,10 @@ extension CalendarBuiltinConfig {
   }
 
   private static func parseOptionLabels(
-    reader: Reader,
+    reader: Reader?,
     fallback: [String: String]
   ) throws -> [String: String] {
-    try reader.stringTable(fallback: fallback)
+    guard let reader else { return fallback }
+    return try reader.stringTable(fallback: fallback)
   }
 }
