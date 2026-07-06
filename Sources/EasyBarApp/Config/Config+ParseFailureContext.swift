@@ -4,7 +4,11 @@ import TOMLKit
 extension Config {
 
   /// Converts a TOMLKit parse error into a user-facing config error.
-  func makeParseFailure(from error: TOMLParseError, text: String) -> ConfigError {
+  func makeParseFailure(
+    from error: TOMLParseError,
+    text: String,
+    sourceDescription: String? = nil
+  ) -> ConfigError {
     let line = positive(Int(error.source.begin.line))
     let column = positive(Int(error.source.begin.column))
     let lines = text.components(separatedBy: .newlines)
@@ -17,6 +21,7 @@ extension Config {
 
     return ConfigError.parseFailure(
       message: error.description,
+      sourceDescription: sourceDescription,
       line: line,
       column: column,
       item: item,

@@ -160,4 +160,42 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
+  /// Verifies that theme TOML syntax errors use the same item and value context as config.toml.
+  func testThemeParseFailureIncludesItemAndValueContext() throws {
+    let themesDirectoryURL = tempDirectoryURL.appendingPathComponent("themes")
+    try FileManager.default.createDirectory(
+      at: themesDirectoryURL,
+      withIntermediateDirectories: true
+    )
+
+    let themeFileURL = themesDirectoryURL.appendingPathComponent("broken.toml")
+    try writeConfig(
+      """
+      [colors]
+      background = "#111111" trailing
+      """,
+      to: themeFileURL
+    )
+
+    let configFileURL = tempDirectoryURL.appendingPathComponent("broken-theme-config.toml")
+    try writeConfig(
+      """
+      [theme]
+      name = "broken"
+      themes_dir = "\(themesDirectoryURL.path)"
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard let configError = error as? ConfigError else {
+        return XCTFail("Expected ConfigError, got \(error)")
+      }
+
+      XCTAssertTrue(configError.configPath.hasPrefix("theme.themes_dir.broken.toml, line "))
+      XCTAssertEqual(configError.problemItem, "[colors].background")
+      XCTAssertEqual(configError.problemValue, "\"#111111\" trailing")
+    }
+  }
+
 }

@@ -198,9 +198,10 @@ extension Config {
         path: "\(path).colors"
       )
     } catch let error as TOMLParseError {
-      throw ConfigError.invalidValue(
-        path: path,
-        message: "failed to parse theme TOML at \(url.path): \(error)"
+      throw makeParseFailure(
+        from: error,
+        text: text,
+        sourceDescription: path
       )
     } catch let error as ConfigError {
       throw error
