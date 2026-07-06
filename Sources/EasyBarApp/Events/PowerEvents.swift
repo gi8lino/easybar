@@ -13,7 +13,7 @@ final class PowerEvents {
   private let logger: ProcessLogger
 
   /// IOKit run-loop source for power notifications.
-  private var runLoopSource: Unmanaged<CFRunLoopSource>?
+  private var runLoopSource: CFRunLoopSource?
   /// Last emitted charging state.
   private var lastChargingState: Bool?
 
@@ -26,15 +26,19 @@ final class PowerEvents {
   func subscribePowerSource() {
     guard runLoopSource == nil else { return }
 
-    let callback: IOPowerSourceCallbackType = { _ in
+    let callback: IOPowerSourceCallbackType = { context in
       Task {
         await EventHub.shared.emit(.powerSourceChange)
       }
 
-      PowerEvents.shared.handlePowerSourceCallback()
+      guard let context else { return }
+      let owner = Unmanaged<PowerEvents>.fromOpaque(context).takeUnretainedValue()
+      owner.handlePowerSourceCallback()
     }
 
-    guard let source = IOPSNotificationCreateRunLoopSource(callback, nil) else {
+    let context = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+    guard let source = IOPSNotificationCreateRunLoopSource(callback, context)?.takeRetainedValue()
+    else {
       logger.debug("failed to create power source run loop source")
       return
     }
@@ -44,7 +48,7 @@ final class PowerEvents {
 
     CFRunLoopAddSource(
       CFRunLoopGetCurrent(),
-      source.takeUnretainedValue(),
+      source,
       .defaultMode
     )
 
@@ -63,7 +67,7 @@ final class PowerEvents {
 
     CFRunLoopRemoveSource(
       CFRunLoopGetCurrent(),
-      runLoopSource.takeUnretainedValue(),
+      runLoopSource,
       .defaultMode
     )
 
