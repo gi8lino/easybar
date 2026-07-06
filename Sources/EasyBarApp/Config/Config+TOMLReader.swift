@@ -1,5 +1,4 @@
 import EasyBarConfigParsing
-import EasyBarShared
 import Foundation
 import TOMLKit
 
@@ -24,18 +23,4 @@ extension Config {
     )
   }
 }
-
-extension TOMLConfigReader where Failure == ConfigError {
-  /// Returns an expanded path value or the fallback when absent.
-  func expandedPath(_ key: String, fallback: String) throws -> String {
-    EasyBarShared.expandedPath(try string(key, fallback: fallback)) ?? fallback
-  }
-
-
-  /// Returns an expanded optional path value or the fallback when absent.
-  func optionalExpandedPath(_ key: String, fallback: String? = nil) throws -> String? {
-    EasyBarShared.expandedPath(try optionalString(key, fallback: fallback))
-  }
-}
-
 
