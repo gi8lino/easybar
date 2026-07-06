@@ -77,7 +77,7 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     assertDefaultValue(actual.date, matches: expected.date, theme: theme)
   }
 
-  /// Compares reflected values after resolving user-facing theme references to concrete colors.
+  /// Compares values after converting them into stable structural snapshots.
   private func assertDefaultValue(
     _ actual: Any,
     matches expected: Any,
@@ -86,27 +86,105 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     line: UInt = #line
   ) {
     XCTAssertEqual(
-      normalizedDefaultDescription(String(reflecting: actual), theme: theme),
-      normalizedDefaultDescription(String(reflecting: expected), theme: theme),
+      normalizedDefaultValue(actual, theme: theme),
+      normalizedDefaultValue(expected, theme: theme),
       file: file,
       line: line
     )
   }
 
   /// Normalizes semantically equivalent values used by the defaults reference file.
-  private func normalizedDefaultDescription(
-    _ value: String,
-    theme: Config.ThemeColors
-  ) -> String {
-    var normalized = value
-
-    for token in ThemeColorToken.allCases {
-      normalized = normalized.replacingOccurrences(
-        of: "\"\(token.reference)\"",
-        with: "\"\(theme[token])\""
-      )
+  private func normalizedDefaultValue(_ value: Any, theme: Config.ThemeColors) -> DefaultSnapshotValue {
+    if let string = value as? String {
+      return .scalar(resolveThemeReference(string, theme: theme))
     }
 
-    return normalized
+    let mirror = Mirror(reflecting: value)
+
+    switch mirror.displayStyle {
+    case .optional:
+      guard let child = mirror.children.first else { return .scalar("nil") }
+      return normalizedDefaultValue(child.value, theme: theme)
+
+    case .collection, .set:
+      return .array(mirror.children.map { normalizedDefaultValue($0.value, theme: theme) })
+
+    case .dictionary:
+      let entries = mirror.children.map { child -> (String, DefaultSnapshotValue) in
+        let pair = Mirror(reflecting: child.value).children.map(\.value)
+        let key = pair.first.map { String(describing: $0) } ?? ""
+        let value =
+          pair.dropFirst().first.map { normalizedDefaultValue($0, theme: theme) }
+          ?? .scalar("nil")
+        return (key, value)
+      }
+      return .object(entries.sorted { $0.0 < $1.0 })
+
+    case .struct, .class, .tuple:
+      let fields = mirror.children.compactMap { child -> (String, DefaultSnapshotValue)? in
+        guard let label = child.label else { return nil }
+        return (label, normalizedDefaultValue(child.value, theme: theme))
+      }
+      guard !fields.isEmpty else { return .scalar(String(describing: value)) }
+      return .object(fields)
+
+    case .enum:
+      guard !mirror.children.isEmpty else { return .scalar(String(describing: value)) }
+      let fields = mirror.children.compactMap { child -> (String, DefaultSnapshotValue)? in
+        guard let label = child.label else { return nil }
+        return (label, normalizedDefaultValue(child.value, theme: theme))
+      }
+      return .object(fields)
+
+    case .none:
+      return .scalar(String(describing: value))
+
+    @unknown default:
+      return .scalar(String(describing: value))
+    }
+  }
+
+  /// Resolves theme token references to their concrete default color values.
+  private func resolveThemeReference(_ value: String, theme: Config.ThemeColors) -> String {
+    guard let token = ThemeColorToken(normalizedToken: value.replacingOccurrences(of: "theme.", with: "")),
+      value == token.reference
+    else {
+      return value
+    }
+
+    return theme[token]
+  }
+}
+
+private enum DefaultSnapshotValue: Equatable, CustomStringConvertible {
+  case scalar(String)
+  case array([DefaultSnapshotValue])
+  case object([(String, DefaultSnapshotValue)])
+
+  static func == (lhs: DefaultSnapshotValue, rhs: DefaultSnapshotValue) -> Bool {
+    switch (lhs, rhs) {
+    case (.scalar(let left), .scalar(let right)):
+      return left == right
+    case (.array(let left), .array(let right)):
+      return left == right
+    case (.object(let left), .object(let right)):
+      guard left.count == right.count else { return false }
+      return zip(left, right).allSatisfy { leftField, rightField in
+        leftField.0 == rightField.0 && leftField.1 == rightField.1
+      }
+    default:
+      return false
+    }
+  }
+
+  var description: String {
+    switch self {
+    case .scalar(let value):
+      return value
+    case .array(let values):
+      return "[" + values.map(\.description).joined(separator: ", ") + "]"
+    case .object(let fields):
+      return "{" + fields.map { "\($0.0): \($0.1.description)" }.joined(separator: ", ") + "}"
+    }
   }
 }
