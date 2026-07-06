@@ -12,6 +12,11 @@ final class VolumeEvents {
   /// Logger used for volume diagnostics.
   private let logger: ProcessLogger
 
+  /// Serializes CoreAudio callbacks and mutable listener state.
+  private let stateQueue = DispatchQueue(label: "io.github.gi8lino.easybar.volume-events")
+  /// Marks execution that is already isolated on `stateQueue`.
+  private let stateQueueKey = DispatchSpecificKey<Void>()
+
   /// Current default output device id.
   private var currentDeviceID: AudioDeviceID?
   /// Whether volume observation is active.
@@ -30,18 +35,21 @@ final class VolumeEvents {
   /// Creates one volume event source.
   init(logger: ProcessLogger) {
     self.logger = logger
+    stateQueue.setSpecific(key: stateQueueKey, value: ())
   }
 
   /// Starts observation for output-device, volume, and mute changes.
   func subscribeVolume() {
-    guard !isSubscribed else { return }
+    performStateMutation {
+      guard !isSubscribed else { return }
 
-    isSubscribed = true
-    installDefaultOutputDeviceListener()
-    refreshDeviceSubscription()
+      isSubscribed = true
+      installDefaultOutputDeviceListener()
+      refreshDeviceSubscription()
 
-    logger.debug("subscribed volume_change")
-    logger.debug("subscribed mute_change")
+      logger.debug("subscribed volume_change")
+      logger.debug("subscribed mute_change")
+    }
   }
 
   /// Stops observation for output-device, volume, and mute changes.
@@ -51,12 +59,24 @@ final class VolumeEvents {
 
   /// Stops all active audio listeners and clears cached device state.
   func stopAll() {
-    uninstallDeviceListeners()
-    uninstallDefaultOutputDeviceListener()
+    performStateMutation {
+      uninstallDeviceListeners()
+      uninstallDefaultOutputDeviceListener()
 
-    currentDeviceID = nil
-    isSubscribed = false
-    lastMutedState = nil
+      currentDeviceID = nil
+      isSubscribed = false
+      lastMutedState = nil
+    }
+  }
+
+  /// Runs one mutable-state operation on the dedicated CoreAudio state queue.
+  private func performStateMutation(_ body: () -> Void) {
+    if DispatchQueue.getSpecific(key: stateQueueKey) != nil {
+      body()
+      return
+    }
+
+    stateQueue.sync(execute: body)
   }
 
   /// Starts listening for default output device changes.
@@ -322,7 +342,7 @@ final class VolumeEvents {
     return AudioObjectAddPropertyListenerBlock(
       objectID,
       &address,
-      nil,
+      stateQueue,
       block
     )
   }
@@ -338,7 +358,7 @@ final class VolumeEvents {
     return AudioObjectRemovePropertyListenerBlock(
       objectID,
       &address,
-      nil,
+      stateQueue,
       block
     )
   }
