@@ -30,156 +30,227 @@ extension CalendarConfigError {
   }
 }
 
+/// Resolves one calendar color reference and writes the validated concrete value back.
+private struct CalendarColorReferenceResolver {
+  let resolve: (String, String) throws -> String
+
+  /// Resolves a required color value in place.
+  func required(_ value: inout String, path: String) throws {
+    value = try resolve(value, path)
+  }
+
+  /// Resolves an optional color value in place.
+  func optional(_ value: inout String?, path: String) throws {
+    guard let current = value else { return }
+    value = try resolve(current, path)
+  }
+}
+
 extension CalendarBuiltinConfig {
   /// Returns a copy with all calendar color references validated and resolved to concrete hex values.
   fileprivate func resolvingThemeColorReferences(
-    using resolve: (String, String) throws -> String
+    using resolve: @escaping (String, String) throws -> String
   ) throws -> CalendarBuiltinConfig {
     var config = self
+    let resolver = CalendarColorReferenceResolver(resolve: resolve)
 
-    func resolved(_ value: String, _ path: String) throws -> String {
-      try resolve(value, path)
-    }
-
-    func resolved(_ value: String?, _ path: String) throws -> String? {
-      guard let value else { return nil }
-      return try resolve(value, path)
-    }
-
-    config.style.textColorHex = try resolved(
-      config.style.textColorHex,
-      "builtins.calendar.style.text_color"
-    )
-    config.style.backgroundColorHex = try resolved(
-      config.style.backgroundColorHex,
-      "builtins.calendar.style.background_color"
-    )
-    config.style.borderColorHex = try resolved(
-      config.style.borderColorHex,
-      "builtins.calendar.style.border_color"
-    )
-
-    config.anchor.topTextColorHex = try resolved(
-      config.anchor.topTextColorHex,
-      "builtins.calendar.anchor.top_text_color"
-    )
-    config.anchor.bottomTextColorHex = try resolved(
-      config.anchor.bottomTextColorHex,
-      "builtins.calendar.anchor.bottom_text_color"
-    )
-
-    config.appointments.eventTextColorHex = try resolved(
-      config.appointments.eventTextColorHex,
-      "builtins.calendar.appointments.event_text_color"
-    )
-    config.appointments.emptyTextColorHex = try resolved(
-      config.appointments.emptyTextColorHex,
-      "builtins.calendar.appointments.empty_text_color"
-    )
-    config.appointments.secondaryTextColorHex = try resolved(
-      config.appointments.secondaryTextColorHex,
-      "builtins.calendar.appointments.secondary_text_color"
-    )
-    config.appointments.travelTextColorHex = try resolved(
-      config.appointments.travelTextColorHex,
-      "builtins.calendar.appointments.travel_text_color"
-    )
-    config.appointments.locationIconColorHex = try resolved(
-      config.appointments.locationIconColorHex,
-      "builtins.calendar.appointments.location_icon_color"
-    )
-    config.appointments.travelIconColorHex = try resolved(
-      config.appointments.travelIconColorHex,
-      "builtins.calendar.appointments.travel_icon_color"
-    )
-    config.appointments.alertIconColorHex = try resolved(
-      config.appointments.alertIconColorHex,
-      "builtins.calendar.appointments.alert_icon_color"
-    )
-
-    config.birthdays.birthdayIconColorHex = try resolved(
-      config.birthdays.birthdayIconColorHex,
-      "builtins.calendar.birthdays.birthday_icon_color"
-    )
-
-    config.composer.style.backgroundColorHex = try resolved(
-      config.composer.style.backgroundColorHex,
-      "builtins.calendar.composer.style.background_color"
-    )
-    config.composer.style.borderColorHex = try resolved(
-      config.composer.style.borderColorHex,
-      "builtins.calendar.composer.style.border_color"
-    )
-    config.composer.style.headerTextColorHex = try resolved(
-      config.composer.style.headerTextColorHex,
-      "builtins.calendar.composer.style.header_text_color"
-    )
-
-    config.upcoming.popup.backgroundColorHex = try resolved(
-      config.upcoming.popup.backgroundColorHex,
-      "builtins.calendar.upcoming.popup.background_color"
-    )
-    config.upcoming.popup.borderColorHex = try resolved(
-      config.upcoming.popup.borderColorHex,
-      "builtins.calendar.upcoming.popup.border_color"
-    )
-
-    config.month.popup.style.backgroundColorHex = try resolved(
-      config.month.popup.style.backgroundColorHex,
-      "builtins.calendar.month.popup.style.background_color"
-    )
-    config.month.popup.style.borderColorHex = try resolved(
-      config.month.popup.style.borderColorHex,
-      "builtins.calendar.month.popup.style.border_color"
-    )
-
-    config.month.popup.calendar.headerTextColorHex = try resolved(
-      config.month.popup.calendar.headerTextColorHex,
-      "builtins.calendar.month.popup.calendar.header_text_color"
-    )
-    config.month.popup.calendar.weekdayTextColorHex = try resolved(
-      config.month.popup.calendar.weekdayTextColorHex,
-      "builtins.calendar.month.popup.calendar.weekday_text_color"
-    )
-    config.month.popup.calendar.dayTextColorHex = try resolved(
-      config.month.popup.calendar.dayTextColorHex,
-      "builtins.calendar.month.popup.calendar.day_text_color"
-    )
-    config.month.popup.calendar.outsideMonthTextColorHex = try resolved(
-      config.month.popup.calendar.outsideMonthTextColorHex,
-      "builtins.calendar.month.popup.calendar.outside_month_text_color"
-    )
-    config.month.popup.calendar.todayCellBackgroundColorHex = try resolved(
-      config.month.popup.calendar.todayCellBackgroundColorHex,
-      "builtins.calendar.month.popup.calendar.today_cell_background_color"
-    )
-    config.month.popup.calendar.todayCellBorderColorHex = try resolved(
-      config.month.popup.calendar.todayCellBorderColorHex,
-      "builtins.calendar.month.popup.calendar.today_cell_border_color"
-    )
-    config.month.popup.calendar.indicatorColorHex = try resolved(
-      config.month.popup.calendar.indicatorColorHex,
-      "builtins.calendar.month.popup.calendar.indicator_color"
-    )
-
-    config.month.popup.selection.selectedTextColorHex = try resolved(
-      config.month.popup.selection.selectedTextColorHex,
-      "builtins.calendar.month.popup.selection.selected_text_color"
-    )
-    config.month.popup.selection.selectedBackgroundColorHex = try resolved(
-      config.month.popup.selection.selectedBackgroundColorHex,
-      "builtins.calendar.month.popup.selection.selected_background_color"
-    )
-
-    config.month.popup.anchor.textColorHex = try resolved(
-      config.month.popup.anchor.textColorHex,
-      "builtins.calendar.month.popup.anchor.text_color"
-    )
-    config.month.popup.todayButton.borderColorHex = try resolved(
-      config.month.popup.todayButton.borderColorHex,
-      "builtins.calendar.month.popup.today_button.border_color"
-    )
+    try config.resolveRootColors(using: resolver)
+    try config.resolveAnchorColors(using: resolver)
+    try config.resolveAppointmentColors(using: resolver)
+    try config.resolveBirthdayColors(using: resolver)
+    try config.resolveComposerColors(using: resolver)
+    try config.resolveUpcomingColors(using: resolver)
+    try config.resolveMonthColors(using: resolver)
 
     return config
+  }
+
+  /// Resolves top-level calendar widget colors.
+  private mutating func resolveRootColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolver.optional(
+      &style.textColorHex,
+      path: "builtins.calendar.style.text_color"
+    )
+    try resolver.optional(
+      &style.backgroundColorHex,
+      path: "builtins.calendar.style.background_color"
+    )
+    try resolver.optional(
+      &style.borderColorHex,
+      path: "builtins.calendar.style.border_color"
+    )
+  }
+
+  /// Resolves calendar anchor colors.
+  private mutating func resolveAnchorColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolver.optional(
+      &anchor.topTextColorHex,
+      path: "builtins.calendar.anchor.top_text_color"
+    )
+    try resolver.optional(
+      &anchor.bottomTextColorHex,
+      path: "builtins.calendar.anchor.bottom_text_color"
+    )
+  }
+
+  /// Resolves appointment row colors.
+  private mutating func resolveAppointmentColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.required(
+      &appointments.eventTextColorHex,
+      path: "builtins.calendar.appointments.event_text_color"
+    )
+    try resolver.required(
+      &appointments.emptyTextColorHex,
+      path: "builtins.calendar.appointments.empty_text_color"
+    )
+    try resolver.required(
+      &appointments.secondaryTextColorHex,
+      path: "builtins.calendar.appointments.secondary_text_color"
+    )
+    try resolver.required(
+      &appointments.travelTextColorHex,
+      path: "builtins.calendar.appointments.travel_text_color"
+    )
+    try resolver.optional(
+      &appointments.locationIconColorHex,
+      path: "builtins.calendar.appointments.location_icon_color"
+    )
+    try resolver.optional(
+      &appointments.travelIconColorHex,
+      path: "builtins.calendar.appointments.travel_icon_color"
+    )
+    try resolver.optional(
+      &appointments.alertIconColorHex,
+      path: "builtins.calendar.appointments.alert_icon_color"
+    )
+  }
+
+  /// Resolves birthday row colors.
+  private mutating func resolveBirthdayColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolver.optional(
+      &birthdays.birthdayIconColorHex,
+      path: "builtins.calendar.birthdays.birthday_icon_color"
+    )
+  }
+
+  /// Resolves composer panel colors.
+  private mutating func resolveComposerColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolver.required(
+      &composer.style.backgroundColorHex,
+      path: "builtins.calendar.composer.style.background_color"
+    )
+    try resolver.required(
+      &composer.style.borderColorHex,
+      path: "builtins.calendar.composer.style.border_color"
+    )
+    try resolver.required(
+      &composer.style.headerTextColorHex,
+      path: "builtins.calendar.composer.style.header_text_color"
+    )
+  }
+
+  /// Resolves upcoming popup colors.
+  private mutating func resolveUpcomingColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolver.required(
+      &upcoming.popup.backgroundColorHex,
+      path: "builtins.calendar.upcoming.popup.background_color"
+    )
+    try resolver.required(
+      &upcoming.popup.borderColorHex,
+      path: "builtins.calendar.upcoming.popup.border_color"
+    )
+  }
+
+  /// Resolves month popup colors.
+  private mutating func resolveMonthColors(using resolver: CalendarColorReferenceResolver) throws {
+    try resolveMonthPopupFrameColors(using: resolver)
+    try resolveMonthCalendarGridColors(using: resolver)
+    try resolveMonthSelectionColors(using: resolver)
+    try resolveMonthAnchorColors(using: resolver)
+    try resolveMonthTodayButtonColors(using: resolver)
+  }
+
+  /// Resolves month popup frame colors.
+  private mutating func resolveMonthPopupFrameColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.required(
+      &month.popup.style.backgroundColorHex,
+      path: "builtins.calendar.month.popup.style.background_color"
+    )
+    try resolver.required(
+      &month.popup.style.borderColorHex,
+      path: "builtins.calendar.month.popup.style.border_color"
+    )
+  }
+
+  /// Resolves month calendar grid colors.
+  private mutating func resolveMonthCalendarGridColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.required(
+      &month.popup.calendar.headerTextColorHex,
+      path: "builtins.calendar.month.popup.calendar.header_text_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.weekdayTextColorHex,
+      path: "builtins.calendar.month.popup.calendar.weekday_text_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.dayTextColorHex,
+      path: "builtins.calendar.month.popup.calendar.day_text_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.outsideMonthTextColorHex,
+      path: "builtins.calendar.month.popup.calendar.outside_month_text_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.todayCellBackgroundColorHex,
+      path: "builtins.calendar.month.popup.calendar.today_cell_background_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.todayCellBorderColorHex,
+      path: "builtins.calendar.month.popup.calendar.today_cell_border_color"
+    )
+    try resolver.required(
+      &month.popup.calendar.indicatorColorHex,
+      path: "builtins.calendar.month.popup.calendar.indicator_color"
+    )
+  }
+
+  /// Resolves month popup selection colors.
+  private mutating func resolveMonthSelectionColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.required(
+      &month.popup.selection.selectedTextColorHex,
+      path: "builtins.calendar.month.popup.selection.selected_text_color"
+    )
+    try resolver.required(
+      &month.popup.selection.selectedBackgroundColorHex,
+      path: "builtins.calendar.month.popup.selection.selected_background_color"
+    )
+  }
+
+  /// Resolves month popup anchor colors.
+  private mutating func resolveMonthAnchorColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.optional(
+      &month.popup.anchor.textColorHex,
+      path: "builtins.calendar.month.popup.anchor.text_color"
+    )
+  }
+
+  /// Resolves month popup today-button colors.
+  private mutating func resolveMonthTodayButtonColors(
+    using resolver: CalendarColorReferenceResolver
+  ) throws {
+    try resolver.required(
+      &month.popup.todayButton.borderColorHex,
+      path: "builtins.calendar.month.popup.today_button.border_color"
+    )
   }
 }
