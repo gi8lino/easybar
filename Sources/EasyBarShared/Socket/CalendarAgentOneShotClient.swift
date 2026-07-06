@@ -1,93 +1,28 @@
-import Darwin
 import Foundation
 
 /// Sends one newline-delimited request to the calendar agent and reads one response.
 public enum CalendarAgentOneShotClient {
-  private static let encoder: JSONEncoder = {
+  private static let makeEncoder: @Sendable () -> JSONEncoder = {
     let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
     encoder.dateEncodingStrategy = .iso8601
     return encoder
-  }()
+  }
 
   /// Sends one request and returns the first decoded response.
   public static func send(
     request: CalendarAgentRequest,
     socketPath: String
   ) throws -> CalendarAgentMessage {
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      throw CalendarAgentOneShotError.socketCreationFailed
-    }
+    let transport = LineSocketClientTransport<CalendarAgentRequest, CalendarAgentMessage>(
+      socketPath: socketPath,
+      makeEncoder: makeEncoder
+    )
 
-    defer {
-      shutdown(fd, SHUT_RDWR)
-      close(fd)
-    }
-
-    guard configureNoSigPipe(fd: fd) else {
-      throw CalendarAgentOneShotError.connectionFailed
-    }
-
-    guard connectSocket(fd: fd, path: socketPath) else {
-      throw CalendarAgentOneShotError.connectionFailed
-    }
-
-    let encoded = try encoder.encode(request) + Data("\n".utf8)
-    guard writeAll(encoded, to: fd) else {
-      throw CalendarAgentOneShotError.writeFailed
-    }
-
-    var lineDecoder = LineDelimitedJSONDecoder<CalendarAgentMessage>()
-    var chunk = [UInt8](repeating: 0, count: 4096)
-
-    while true {
-      let count = read(fd, &chunk, chunk.count)
-
-      if count > 0 {
-        let results = lineDecoder.append(chunk.prefix(count))
-        if let message = try firstMessage(from: results) {
-          return message
-        }
-
-        continue
-      }
-
-      if count == 0 {
-        if let message = try firstMessage(from: lineDecoder.flush()) {
-          return message
-        }
-        throw CalendarAgentOneShotError.emptyResponse
-      }
-
-      if errno == EINTR {
-        continue
-      }
-
-      throw CalendarAgentOneShotError.readFailed
-    }
-
-    throw CalendarAgentOneShotError.emptyResponse
-  }
-
-  /// Returns the first decoded message in a decoder result list.
-  private static func firstMessage(
-    from results: [Result<CalendarAgentMessage, Error>]
-  ) throws -> CalendarAgentMessage? {
-    guard let result = results.first else { return nil }
-    return try result.get()
-  }
-
-  /// Connects one Unix-domain socket to the given filesystem path.
-  private static func connectSocket(fd: Int32, path: String) -> Bool {
-    guard var address = try? makeSockAddrUn(path: path) else {
-      return false
-    }
-    let length = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    return withUnsafePointer(to: &address) { pointer in
-      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
-        Darwin.connect(fd, sockaddrPointer, length) == 0
-      }
+    do {
+      return try transport.send(request: request)
+    } catch let error as LineSocketClientTransportError {
+      throw CalendarAgentOneShotError(transportError: error)
     }
   }
 }
@@ -99,6 +34,21 @@ public enum CalendarAgentOneShotError: LocalizedError {
   case writeFailed
   case readFailed
   case emptyResponse
+
+  init(transportError: LineSocketClientTransportError) {
+    switch transportError {
+    case .socketFailed:
+      self = .socketCreationFailed
+    case .connectFailed:
+      self = .connectionFailed
+    case .encodeFailed, .writeFailed:
+      self = .writeFailed
+    case .decodeFailed:
+      self = .readFailed
+    case .noReply:
+      self = .emptyResponse
+    }
+  }
 
   /// Returns the localized client error message.
   public var errorDescription: String? {

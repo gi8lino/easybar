@@ -33,9 +33,26 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
 public struct LineSocketClientTransport<Request: Encodable, Response: Decodable> {
   public let socketPath: String
 
+  private let makeEncoder: @Sendable () -> JSONEncoder
+  private let makeDecoder: @Sendable () -> JSONDecoder
+
   /// Creates a new client transport for the given socket path.
-  public init(socketPath: String) {
+  public init(
+    socketPath: String,
+    makeEncoder: @escaping @Sendable () -> JSONEncoder = {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.sortedKeys]
+      return encoder
+    },
+    makeDecoder: @escaping @Sendable () -> JSONDecoder = {
+      let decoder = JSONDecoder()
+      decoder.dateDecodingStrategy = .iso8601
+      return decoder
+    }
+  ) {
     self.socketPath = socketPath
+    self.makeEncoder = makeEncoder
+    self.makeDecoder = makeDecoder
   }
 
   /// Sends one request and returns one decoded response.
@@ -64,8 +81,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
     }
 
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
+    let encoder = makeEncoder()
 
     guard let payload = try? encoder.encode(request) else {
       throw LineSocketClientTransportError.encodeFailed
@@ -103,7 +119,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   /// Reads bytes until one response line decodes or EOF is reached.
   private func readOneResponse(from fd: Int32) throws -> Response {
-    var lineDecoder = LineDelimitedJSONDecoder<Response>()
+    var lineDecoder = LineDelimitedJSONDecoder<Response>(decoder: makeDecoder())
     var buffer = [UInt8](repeating: 0, count: 1024)
 
     while true {
@@ -138,4 +154,5 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }
   }
+
 }
