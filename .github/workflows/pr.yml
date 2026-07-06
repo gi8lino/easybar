@@ -45,9 +45,21 @@ jobs:
       - name: Verify source tree
         run: make verify-source-tree
 
+      - name: Cache SwiftPM
+        uses: actions/cache@v6
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_VERSION }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_VERSION }}-
+
       - name: Build tests
         shell: bash
-        timeout-minutes: 15
+        timeout-minutes: 30
         run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
 
       - name: Run tests
