@@ -54,7 +54,7 @@ enum AppResourceLocator {
   }
 
   /// Returns candidate URLs for one resource in the order they should be preferred.
-  private static func resourceCandidates(
+  static func resourceCandidates(
     forResource name: String,
     withExtension fileExtension: String,
     subdirectory: String?
@@ -184,10 +184,14 @@ enum AppResourceLocator {
   /// Maps one caller-provided subdirectory to the source-tree resource layout.
   private static func sourceRequestedSubdirectory(_ subdirectory: String) -> String {
     switch subdirectory {
-    case "ThemeTokens":
+    case "Events":
+      return "Events"
+    case "Theme", "ThemeTokens":
       return "Theme"
+    case "Lua":
+      return "Lua"
     default:
-      return subdirectory
+      return subdirectory.hasPrefix("Lua/") ? subdirectory : "Lua/\(subdirectory)"
     }
   }
 
