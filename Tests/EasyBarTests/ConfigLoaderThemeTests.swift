@@ -113,4 +113,51 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
+  /// Verifies that invalid config color values fail during validation instead of rendering later.
+  func testValidateRejectsUnknownThemeColorReference() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-color-reference.toml")
+
+    try writeConfig(
+      """
+      [bar.colors]
+      background = "theme.not_a_token"
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard case .invalidValue(let path, let message) = error as? ConfigError else {
+        return XCTFail("Expected invalidValue ConfigError, got \(error)")
+      }
+
+      XCTAssertEqual(path, "bar.colors.background")
+      XCTAssertEqual(
+        message,
+        "expected #RRGGBB, #RRGGBBAA, RRGGBB, RRGGBBAA, or theme.<known_token>"
+      )
+    }
+  }
+
+  /// Verifies that theme color overrides must be concrete hex values.
+  func testValidateRejectsInvalidThemeColorOverride() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-theme-color.toml")
+
+    try writeConfig(
+      """
+      [theme.colors]
+      accent = "blue"
+      """,
+      to: configFileURL
+    )
+
+    XCTAssertThrowsError(try Config.validate(configPathOverride: configFileURL.path)) { error in
+      guard case .invalidValue(let path, let message) = error as? ConfigError else {
+        return XCTFail("Expected invalidValue ConfigError, got \(error)")
+      }
+
+      XCTAssertEqual(path, "theme.colors.accent")
+      XCTAssertEqual(message, "expected #RRGGBB, #RRGGBBAA, RRGGBB, or RRGGBBAA")
+    }
+  }
+
 }

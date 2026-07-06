@@ -126,7 +126,7 @@ extension Config {
       label: try reader.string("label", fallback: fallback.label),
       historySize: try reader.int("history_size", fallback: fallback.historySize, minimum: 2),
       lineWidth: try reader.double("line_width", fallback: fallback.lineWidth),
-      colorHex: try reader.optionalString("color", fallback: fallback.colorHex),
+      colorHex: try reader.optionalColor("color", fallback: fallback.colorHex),
       sampleIntervalSeconds: try reader.double(
         "sample_interval_seconds",
         fallback: fallback.sampleIntervalSeconds,

@@ -28,12 +28,12 @@ extension Config {
   ) throws -> BuiltinWidgetStyle {
     BuiltinWidgetStyle(
       icon: try reader.string("icon", fallback: fallback.icon),
-      textColorHex: try reader.optionalString("text_color", fallback: fallback.textColorHex),
-      backgroundColorHex: try reader.optionalString(
+      textColorHex: try reader.optionalColor("text_color", fallback: fallback.textColorHex),
+      backgroundColorHex: try reader.optionalColor(
         "background_color",
         fallback: fallback.backgroundColorHex
       ),
-      borderColorHex: try reader.optionalString("border_color", fallback: fallback.borderColorHex),
+      borderColorHex: try reader.optionalColor("border_color", fallback: fallback.borderColorHex),
       borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
       cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
       marginX: try reader.double("margin_x", fallback: fallback.marginX),
@@ -51,10 +51,10 @@ extension Config {
     fallback: BuiltinPopupStyle
   ) throws -> BuiltinPopupStyle {
     BuiltinPopupStyle(
-      textColorHex: try reader.optionalString("text_color", fallback: fallback.textColorHex),
-      backgroundColorHex: try reader.string(
+      textColorHex: try reader.optionalColor("text_color", fallback: fallback.textColorHex),
+      backgroundColorHex: try reader.color(
         "background_color", fallback: fallback.backgroundColorHex),
-      borderColorHex: try reader.string("border_color", fallback: fallback.borderColorHex),
+      borderColorHex: try reader.color("border_color", fallback: fallback.borderColorHex),
       borderWidth: try reader.double("border_width", fallback: fallback.borderWidth),
       cornerRadius: try reader.double("corner_radius", fallback: fallback.cornerRadius),
       paddingX: try reader.double("padding_x", fallback: fallback.paddingX),

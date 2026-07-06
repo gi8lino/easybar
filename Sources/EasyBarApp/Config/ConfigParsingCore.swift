@@ -167,7 +167,7 @@ extension Config {
 
     guard let colors = try bar.optionalSection("colors") else { return }
 
-    barBackgroundHex = try colors.string("background", fallback: barBackgroundHex)
-    barBorderHex = try colors.string("border", fallback: barBorderHex)
+    barBackgroundHex = try colors.color("background", fallback: barBackgroundHex)
+    barBorderHex = try colors.color("border", fallback: barBorderHex)
   }
 }

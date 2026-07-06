@@ -259,8 +259,8 @@ extension Config {
       inlineSeparator: try reader.string("inline_separator", fallback: fallback.inlineSeparator),
       disconnectedText: try reader.string("disconnected_text", fallback: fallback.disconnectedText),
       deniedText: try reader.string("denied_text", fallback: fallback.deniedText),
-      activeColorHex: try reader.string("active_color", fallback: fallback.activeColorHex),
-      inactiveColorHex: try reader.string("inactive_color", fallback: fallback.inactiveColorHex)
+      activeColorHex: try reader.color("active_color", fallback: fallback.activeColorHex),
+      inactiveColorHex: try reader.color("inactive_color", fallback: fallback.inactiveColorHex)
     )
   }
 
@@ -270,7 +270,7 @@ extension Config {
     fallback: BuiltinWiFiInline
   ) throws -> BuiltinWiFiInline {
     BuiltinWiFiInline(
-      textColorHex: try reader.string("text_color", fallback: fallback.textColorHex)
+      textColorHex: try reader.color("text_color", fallback: fallback.textColorHex)
     )
   }
 

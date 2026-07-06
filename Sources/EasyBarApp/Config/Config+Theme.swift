@@ -235,7 +235,13 @@ extension Config {
       valuesByToken: try Dictionary(
         uniqueKeysWithValues: ThemeColorToken.allCases.map { token in
           let value = try reader.string(token.rawValue, fallback: fallback[token])
-          return (token, value)
+          return (
+            token,
+            try Config.validatedThemeColorLiteral(
+              value,
+              path: reader.path(for: token.rawValue)
+            )
+          )
         }
       )
     )
@@ -256,7 +262,10 @@ extension Config {
       )
     }
 
-    return value
+    return try Config.validatedThemeColorLiteral(
+      value,
+      path: reader.path(for: key)
+    )
   }
 
   /// Returns the user theme file URL for one theme name.

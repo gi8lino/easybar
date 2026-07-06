@@ -96,3 +96,78 @@ extension Config {
     return trimmed
   }
 }
+extension Config {
+  /// Returns a validated config color reference without resolving theme tokens.
+  static func validatedConfigColor(_ value: String, path: String) throws -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if trimmed.isEmpty || trimmed.isValidHexColorLiteral {
+      return trimmed
+    }
+
+    if let token = Self.themeColorTokenReference(from: trimmed) {
+      return token.reference
+    }
+
+    throw ConfigError.invalidValue(
+      path: path,
+      message: "expected #RRGGBB, #RRGGBBAA, RRGGBB, RRGGBBAA, or theme.<known_token>"
+    )
+  }
+
+  /// Returns a validated concrete theme color literal.
+  static func validatedThemeColorLiteral(_ value: String, path: String) throws -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard trimmed.isValidHexColorLiteral else {
+      throw ConfigError.invalidValue(
+        path: path,
+        message: "expected #RRGGBB, #RRGGBBAA, RRGGBB, or RRGGBBAA"
+      )
+    }
+
+    return trimmed
+  }
+
+  /// Validates and resolves one config color to a concrete hex literal.
+  func resolvedConfigColor(_ value: String, path: String) throws -> String {
+    let validated = try Self.validatedConfigColor(value, path: path)
+
+    guard let resolved = resolveThemeColorHex(validated) else {
+      return validated
+    }
+
+    return resolved
+  }
+
+  private static func themeColorTokenReference(from value: String) -> ThemeColorToken? {
+    let prefix = "theme."
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard normalized.lowercased().hasPrefix(prefix) else {
+      return nil
+    }
+
+    let token = String(normalized.dropFirst(prefix.count))
+    return ThemeColorToken(normalizedToken: token)
+  }
+}
+
+extension TOMLConfigReader where Failure == ConfigError {
+  /// Returns a validated color value or the fallback when absent.
+  func color(_ key: String, fallback: String) throws -> String {
+    try Config.validatedConfigColor(
+      string(key, fallback: fallback),
+      path: path(for: key)
+    )
+  }
+
+  /// Returns a validated optional color value or the optional fallback when absent.
+  func optionalColor(_ key: String, fallback: String? = nil) throws -> String? {
+    guard let value = try optionalString(key, fallback: fallback) else { return nil }
+    return try Config.validatedConfigColor(
+      value,
+      path: path(for: key)
+    )
+  }
+}

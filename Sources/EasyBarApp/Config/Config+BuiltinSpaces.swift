@@ -259,8 +259,8 @@ extension Config {
         try reader.string("weight", fallback: fallback.weight),
         path: reader.path(for: "weight")
       ),
-      focusedColorHex: try reader.string("focused_color", fallback: fallback.focusedColorHex),
-      inactiveColorHex: try reader.string("inactive_color", fallback: fallback.inactiveColorHex)
+      focusedColorHex: try reader.color("focused_color", fallback: fallback.focusedColorHex),
+      inactiveColorHex: try reader.color("inactive_color", fallback: fallback.inactiveColorHex)
     )
   }
 
@@ -288,17 +288,17 @@ extension Config {
     fallback: SpacesBuiltinConfig.Colors
   ) throws -> SpacesBuiltinConfig.Colors {
     SpacesBuiltinConfig.Colors(
-      activeBackgroundHex: try reader.string(
+      activeBackgroundHex: try reader.color(
         "active_background",
         fallback: fallback.activeBackgroundHex
       ),
-      inactiveBackgroundHex: try reader.string(
+      inactiveBackgroundHex: try reader.color(
         "inactive_background",
         fallback: fallback.inactiveBackgroundHex
       ),
-      activeBorderHex: try reader.string("active_border", fallback: fallback.activeBorderHex),
-      inactiveBorderHex: try reader.string("inactive_border", fallback: fallback.inactiveBorderHex),
-      focusedAppBorderHex: try reader.string(
+      activeBorderHex: try reader.color("active_border", fallback: fallback.activeBorderHex),
+      inactiveBorderHex: try reader.color("inactive_border", fallback: fallback.inactiveBorderHex),
+      focusedAppBorderHex: try reader.color(
         "focused_app_border",
         fallback: fallback.focusedAppBorderHex
       )

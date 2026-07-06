@@ -195,7 +195,7 @@ extension Config {
       unavailableText: try reader.string("unavailable_text", fallback: fallback.unavailableText),
       iconSize: try reader.double("icon_size", fallback: fallback.iconSize),
       colorMode: try reader.enum("color_mode", fallback: fallback.colorMode),
-      fixedColorHex: try reader.optionalString("fixed_color", fallback: fallback.fixedColorHex),
+      fixedColorHex: try reader.optionalColor("fixed_color", fallback: fallback.fixedColorHex),
       displayMode: try reader.enum("display_mode", fallback: fallback.displayMode),
       colors: try parseBatteryColors(reader: colors, fallback: fallback.colors)
     )
@@ -207,28 +207,28 @@ extension Config {
     fallback: BuiltinBatteryColors
   ) throws -> BuiltinBatteryColors {
     BuiltinBatteryColors(
-      highColorHex: try reader.string("high", fallback: fallback.highColorHex),
-      mediumColorHex: try reader.string("medium", fallback: fallback.mediumColorHex),
-      lowColorHex: try reader.string("low", fallback: fallback.lowColorHex),
-      criticalColorHex: try reader.string("critical", fallback: fallback.criticalColorHex),
-      frameColorHex: try reader.string("frame", fallback: fallback.frameColorHex),
-      overlayOutlineColorHex: try reader.string(
+      highColorHex: try reader.color("high", fallback: fallback.highColorHex),
+      mediumColorHex: try reader.color("medium", fallback: fallback.mediumColorHex),
+      lowColorHex: try reader.color("low", fallback: fallback.lowColorHex),
+      criticalColorHex: try reader.color("critical", fallback: fallback.criticalColorHex),
+      frameColorHex: try reader.color("frame", fallback: fallback.frameColorHex),
+      overlayOutlineColorHex: try reader.color(
         "overlay_outline",
         fallback: fallback.overlayOutlineColorHex
       ),
-      chargingOverlayColorHex: try reader.string(
+      chargingOverlayColorHex: try reader.color(
         "charging_overlay",
         fallback: fallback.chargingOverlayColorHex
       ),
-      externalPowerOverlayColorHex: try reader.string(
+      externalPowerOverlayColorHex: try reader.color(
         "external_power_overlay",
         fallback: fallback.externalPowerOverlayColorHex
       ),
-      onHoldOverlayColorHex: try reader.string(
+      onHoldOverlayColorHex: try reader.color(
         "on_hold_overlay",
         fallback: fallback.onHoldOverlayColorHex
       ),
-      unavailableColorHex: try reader.string("unavailable", fallback: fallback.unavailableColorHex)
+      unavailableColorHex: try reader.color("unavailable", fallback: fallback.unavailableColorHex)
     )
   }
 }
