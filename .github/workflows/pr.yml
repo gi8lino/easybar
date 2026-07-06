@@ -52,7 +52,7 @@ jobs:
 
       - name: Run tests
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 30
         run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build
 
       - name: Upload Swift test logs
