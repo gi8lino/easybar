@@ -58,13 +58,66 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     }
   }
 
+  /// Partial stdout/stderr line buffers for one subscription process.
+  private struct StreamBuffers {
+    var output = Data()
+    var error = Data()
+
+    mutating func clear() {
+      output.removeAll(keepingCapacity: true)
+      error.removeAll(keepingCapacity: true)
+    }
+
+    mutating func append(
+      data: Data,
+      stream: StreamKind
+    ) -> (lines: [String], droppedBuffer: Bool) {
+      switch stream {
+      case .output:
+        return Self.extractLines(appending: data, to: &output)
+      case .error:
+        return Self.extractLines(appending: data, to: &error)
+      }
+    }
+
+    private static func extractLines(
+      appending data: Data,
+      to buffer: inout Data
+    ) -> (lines: [String], droppedBuffer: Bool) {
+      buffer.append(data)
+
+      var lines: [String] = []
+      while let newlineIndex = buffer.firstIndex(of: 0x0A) {
+        let lineData = buffer[..<newlineIndex]
+        let nextIndex = buffer.index(after: newlineIndex)
+        buffer.removeSubrange(buffer.startIndex..<nextIndex)
+
+        var lineBytes = Array(lineData)
+        if lineBytes.last == 0x0D {
+          lineBytes.removeLast()
+        }
+
+        let line = String(decoding: lineBytes, as: UTF8.self)
+          .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { continue }
+        lines.append(line)
+      }
+
+      guard buffer.count <= maxBufferedBytes else {
+        buffer.removeAll(keepingCapacity: true)
+        return (lines, true)
+      }
+
+      return (lines, false)
+    }
+  }
+
   /// Locked lifecycle state for the subscription process.
   private struct State {
     var running = false
     var generation: UInt64 = 0
     var subscription: RunningSubscription?
-    var outputBuffer = Data()
-    var errorBuffer = Data()
+    var streamBuffers = StreamBuffers()
 
     mutating func start() -> UInt64? {
       guard !running else { return nil }
@@ -107,9 +160,15 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       return (running && self.generation == generation, matchedSubscription)
     }
 
+    mutating func append(
+      data: Data,
+      stream: StreamKind
+    ) -> (lines: [String], droppedBuffer: Bool) {
+      streamBuffers.append(data: data, stream: stream)
+    }
+
     private mutating func clearBuffers() {
-      outputBuffer.removeAll(keepingCapacity: true)
-      errorBuffer.removeAll(keepingCapacity: true)
+      streamBuffers.clear()
     }
   }
 
@@ -252,13 +311,8 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       return
     }
 
-    let result = withLock { state -> (lines: [String], droppedBuffer: Bool) in
-      switch stream {
-      case .output:
-        return Self.append(data: data, to: &state.outputBuffer)
-      case .error:
-        return Self.append(data: data, to: &state.errorBuffer)
-      }
+    let result = withLock { state in
+      state.append(data: data, stream: stream)
     }
 
     if result.droppedBuffer {
@@ -344,38 +398,6 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private func resetReconnectBackoff(generation: UInt64) {
     guard isActive(generation: generation) else { return }
     reconnectScheduler.resetDelay()
-  }
-
-  /// Appends bytes to a stream buffer and extracts complete lines.
-  private static func append(
-    data: Data,
-    to buffer: inout Data
-  ) -> (lines: [String], droppedBuffer: Bool) {
-    buffer.append(data)
-
-    var lines: [String] = []
-    while let newlineIndex = buffer.firstIndex(of: 0x0A) {
-      let lineData = buffer[..<newlineIndex]
-      let nextIndex = buffer.index(after: newlineIndex)
-      buffer.removeSubrange(buffer.startIndex..<nextIndex)
-
-      var lineBytes = Array(lineData)
-      if lineBytes.last == 0x0D {
-        lineBytes.removeLast()
-      }
-
-      let line = String(decoding: lineBytes, as: UTF8.self)
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !line.isEmpty else { continue }
-      lines.append(line)
-    }
-
-    guard buffer.count <= maxBufferedBytes else {
-      buffer.removeAll(keepingCapacity: true)
-      return (lines, true)
-    }
-
-    return (lines, false)
   }
 
   /// Returns whether callbacks for the given generation are still valid.
