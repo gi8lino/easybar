@@ -525,3 +525,135 @@ extension ConfigLoaderBuiltinTests {
     XCTAssertEqual(message, "expected a value greater than 0")
   }
 }
+
+extension ConfigLoaderBuiltinTests {
+  /// Verifies that CPU history keeps enough samples for the sparkline.
+  func testReloadRejectsCPUHistorySizeBelowMinimum() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-cpu-history.toml")
+
+    try writeConfig(
+      """
+      [builtins.cpu.content]
+      history_size = 1
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.cpu.content.history_size")
+    XCTAssertEqual(message, "expected an integer greater than or equal to 2")
+  }
+
+  /// Verifies that CPU polling interval rejects non-positive values.
+  func testReloadRejectsCPUSampleIntervalBelowMinimum() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-cpu-interval.toml")
+
+    try writeConfig(
+      """
+      [builtins.cpu.content]
+      sample_interval_seconds = 0
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.cpu.content.sample_interval_seconds")
+    XCTAssertEqual(message, "expected a number greater than or equal to 1.0")
+  }
+
+  /// Verifies that wrong TOML types are reported at the nested CPU key.
+  func testReloadRejectsInvalidCPUHistorySizeType() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-cpu-history-type.toml")
+
+    try writeConfig(
+      """
+      [builtins.cpu.content]
+      history_size = "many"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidType(let path, let expected, let actual)? = error as? ConfigError else {
+      return XCTFail("Expected invalidType ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.cpu.content.history_size")
+    XCTAssertEqual(expected, "integer")
+    XCTAssertEqual(actual, "string(many)")
+  }
+
+  /// Verifies that month agenda heights must be ordered explicitly.
+  func testReloadRejectsMonthAgendaMinimumHeightAboveMaximumHeight() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-agenda-heights.toml")
+
+    try writeConfig(
+      """
+      [builtins.calendar.month.popup.agenda]
+      appointments_min_height = 300
+      appointments_max_height = 200
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.calendar.month.popup.agenda.appointments_min_height")
+    XCTAssertEqual(message, "must be less than or equal to appointments_max_height")
+  }
+
+  /// Verifies that the clean nested month anchor keys are parsed and adapted to UI config.
+  func testReloadAppliesCleanMonthPopupAnchorKeys() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("month-anchor.toml")
+
+    try writeConfig(
+      """
+      [builtins.calendar.month.popup.anchor]
+      date_format = "yyyy/MM/dd"
+      text_color = "#abcdef"
+      show_date_text = false
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    XCTAssertNil(error)
+    XCTAssertEqual(config.builtinCalendar.month.popup.anchor.dateFormat, "yyyy/MM/dd")
+    XCTAssertEqual(config.builtinCalendar.month.popup.anchor.textColorHex, "#abcdef")
+    XCTAssertFalse(config.builtinCalendar.month.popup.anchor.showDateText)
+    XCTAssertEqual(config.builtinCalendar.calendarMonthPopupUIConfig.anchorDateFormat, "yyyy/MM/dd")
+    XCTAssertEqual(config.builtinCalendar.calendarMonthPopupUIConfig.anchorTextColorHex, "#abcdef")
+    XCTAssertFalse(config.builtinCalendar.calendarMonthPopupUIConfig.anchorShowDateText)
+  }
+}
