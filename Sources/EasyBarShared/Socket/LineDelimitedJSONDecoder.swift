@@ -14,7 +14,7 @@ public enum LineDelimitedJSONDecoderError: Error, CustomStringConvertible, Equat
 
 /// Incrementally decodes newline-delimited JSON messages from arbitrary byte chunks.
 public struct LineDelimitedJSONDecoder<Message: Decodable> {
-  public static let defaultMaxLineBytes = 1_048_576
+  public static var defaultMaxLineBytes: Int { 1_048_576 }
 
   private var pending = Data()
   private var discardingOversizedLine = false

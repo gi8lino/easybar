@@ -211,4 +211,70 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
   }
 }
 
+/// Render-relevant signature used to suppress duplicate Wi-Fi UI updates.
+public struct NetworkAgentSnapshotRenderSignature: Equatable {
+  public let accessGranted: Bool
+  public let permissionState: String
+  public let ssid: String?
+  public let ipv4Address: String?
+  public let ipv6Address: String?
+  public let bssid: String?
+  public let interfaceName: String?
+  public let hardwareAddress: String?
+  public let power: Bool?
+  public let serviceActive: Bool?
+  public let primaryInterfaceIsTunnel: Bool
+  public let rssi: Int?
+  public let noise: Int?
+  public let snr: Int?
+  public let linkQuality: Int?
+  public let txRate: Int?
+  public let channel: Int?
+  public let channelBand: String?
+  public let channelWidth: String?
+  public let security: String?
+  public let phyMode: String?
+  public let interfaceMode: String?
+  public let countryCode: String?
+  public let roaming: Bool?
+  public let ssidChangedAt: String?
+  public let interfaceChangedAt: String?
+
+  public init(snapshot: NetworkAgentSnapshot) {
+    self.accessGranted = snapshot.accessGranted
+    self.permissionState = snapshot.permissionState
+    self.ssid = snapshot.ssid
+    self.ipv4Address = snapshot.ipv4Address
+    self.ipv6Address = snapshot.ipv6Address
+    self.bssid = snapshot.bssid
+    self.interfaceName = snapshot.interfaceName
+    self.hardwareAddress = snapshot.hardwareAddress
+    self.power = snapshot.power
+    self.serviceActive = snapshot.serviceActive
+    self.primaryInterfaceIsTunnel = snapshot.primaryInterfaceIsTunnel
+    self.rssi = snapshot.rssi
+    self.noise = snapshot.noise
+    self.snr = snapshot.snr
+    self.linkQuality = snapshot.linkQuality
+    self.txRate = snapshot.txRate
+    self.channel = snapshot.channel
+    self.channelBand = snapshot.channelBand
+    self.channelWidth = snapshot.channelWidth
+    self.security = snapshot.security
+    self.phyMode = snapshot.phyMode
+    self.interfaceMode = snapshot.interfaceMode
+    self.countryCode = snapshot.countryCode
+    self.roaming = snapshot.roaming
+    self.ssidChangedAt = snapshot.ssidChangedAt
+    self.interfaceChangedAt = snapshot.interfaceChangedAt
+  }
+}
+
+extension NetworkAgentSnapshot {
+  /// Render-relevant identity used by native Wi-Fi consumers.
+  public var renderSignature: NetworkAgentSnapshotRenderSignature {
+    NetworkAgentSnapshotRenderSignature(snapshot: self)
+  }
+}
+
 /// Message kinds sent by the network agent.
