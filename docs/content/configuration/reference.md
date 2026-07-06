@@ -691,8 +691,8 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.calendar.month.popup.anchor`
 
-| Key                     | Default        | Description                                                                   |
-| ----------------------- | -------------- | ----------------------------------------------------------------------------- |
+| Key              | Default        | Description                                                            |
+| ---------------- | -------------- | ---------------------------------------------------------------------- |
 | `date_format`    | `"EEE d MMM"`  | Date format used when popup_mode = "month" and anchor layout = "item". |
 | `text_color`     | `"theme.text"` | Text color used when popup_mode = "month".                             |
 | `show_date_text` | `true`         | Shows the date text when popup_mode = "month".                         |
@@ -767,5 +767,3 @@ For concepts and usage examples, use the hand-written configuration guides.
 | Key      | Default        | Description         |
 | -------- | -------------- | ------------------- |
 | `format` | `"yyyy-MM-dd"` | Date format string. |
-
-
