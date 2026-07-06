@@ -22,12 +22,6 @@ final class AeroSpaceService: ObservableObject {
   private struct CoordinationState {
     /// Registered widget consumers.
     var consumers = Set<String>()
-    /// Observer for frontmost app changes.
-    var appSwitchObserver: NSObjectProtocol?
-    /// Observer for app launches.
-    var appLaunchObserver: NSObjectProtocol?
-    /// Observer for app terminations.
-    var appTerminationObserver: NSObjectProtocol?
     /// Whether the service lifecycle is running.
     var running = false
     /// Whether AeroSpace observation is active for at least one consumer.
@@ -59,6 +53,28 @@ final class AeroSpaceService: ObservableObject {
   )
   /// Delayed refresh scheduler used after macOS reports a newly launched app.
   private lazy var launchRefreshScheduler = AeroSpaceLaunchRefreshScheduler(logger: logger)
+  /// macOS app lifecycle observer used to complement AeroSpace subscription events.
+  private lazy var appObserver = AeroSpaceAppObserver(
+    logger: logger.child("app-observer"),
+    appActivated: { [weak self] app in
+      Task { @MainActor [weak self] in
+        self?.applyOptimisticFocusedApp(from: app)
+      }
+    },
+    appLaunched: { [weak self] app in
+      self?.scheduleLaunchRefresh(for: app)
+    },
+    appTerminated: { [weak self] app in
+      guard let self else { return }
+
+      self.logger.debug(
+        "aerospace observed app termination",
+        .field("app", app.localizedName ?? "")
+      )
+      self.cancelPendingLaunchRefresh(reason: "app terminated")
+      self.refresh()
+    }
+  )
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
 
@@ -300,9 +316,7 @@ extension AeroSpaceService {
       logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
     }
 
-    subscribeAppSwitches()
-    subscribeAppLaunch()
-    subscribeAppTermination()
+    appObserver.start()
     refresh()
 
     logger.debug("aerospace service activate end")
@@ -311,32 +325,22 @@ extension AeroSpaceService {
 
   /// Stops AeroSpace observation once the last consumer disappears.
   fileprivate func deactivateIfNeeded(reason: String) {
-    let result = withLock { coordination -> (didDeactivate: Bool, observers: [NSObjectProtocol]) in
-      guard coordination.active else { return (false, []) }
+    let didDeactivate = withLock { coordination -> Bool in
+      guard coordination.active else { return false }
 
       coordination.active = false
       coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
 
-      let observer = coordination.appSwitchObserver
-      let launchObserver = coordination.appLaunchObserver
-      let terminationObserver = coordination.appTerminationObserver
-      coordination.appSwitchObserver = nil
-      coordination.appLaunchObserver = nil
-      coordination.appTerminationObserver = nil
-
-      return (true, [observer, launchObserver, terminationObserver].compactMap { $0 })
+      return true
     }
 
-    guard result.didDeactivate else { return }
+    guard didDeactivate else { return }
 
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
     launchRefreshScheduler.cancel(reason: reason)
-
-    for observer in result.observers {
-      NSWorkspace.shared.notificationCenter.removeObserver(observer)
-    }
+    appObserver.stop()
 
     logger.debug(
       "aerospace service deactivate end",
@@ -392,106 +396,9 @@ extension AeroSpaceService {
   }
 }
 
-// MARK: - App Switch Observation
+// MARK: - App Observation Handlers
 
 extension AeroSpaceService {
-  /// Listens for app activation so focused-app UI can update immediately.
-  fileprivate func subscribeAppSwitches() {
-    let shouldInstall = withLock { $0.appSwitchObserver == nil }
-    guard shouldInstall else { return }
-
-    let observer = NSWorkspace.shared.notificationCenter.addObserver(
-      forName: NSWorkspace.didActivateApplicationNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] notification in
-      guard
-        let self,
-        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
-          as? NSRunningApplication
-      else {
-        return
-      }
-
-      Task { @MainActor [weak self] in
-        self?.applyOptimisticFocusedApp(from: app)
-      }
-    }
-
-    withLock { coordination in
-      if coordination.appSwitchObserver == nil {
-        coordination.appSwitchObserver = observer
-      }
-    }
-
-    logger.debug("aerospace app switch observer installed")
-  }
-
-  /// Listens for app launches and schedules one delayed refresh.
-  fileprivate func subscribeAppLaunch() {
-    let shouldInstall = withLock { $0.appLaunchObserver == nil }
-    guard shouldInstall else { return }
-
-    let observer = NSWorkspace.shared.notificationCenter.addObserver(
-      forName: NSWorkspace.didLaunchApplicationNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] notification in
-      guard
-        let self,
-        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
-          as? NSRunningApplication
-      else {
-        return
-      }
-
-      self.scheduleLaunchRefresh(for: app)
-    }
-
-    withLock { coordination in
-      if coordination.appLaunchObserver == nil {
-        coordination.appLaunchObserver = observer
-      }
-    }
-
-    logger.debug("aerospace app launch observer installed")
-  }
-
-  /// Listens for app termination so workspace icons refresh after apps quit.
-  fileprivate func subscribeAppTermination() {
-    let shouldInstall = withLock { $0.appTerminationObserver == nil }
-    guard shouldInstall else { return }
-
-    let observer = NSWorkspace.shared.notificationCenter.addObserver(
-      forName: NSWorkspace.didTerminateApplicationNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] notification in
-      guard
-        let self,
-        let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
-          as? NSRunningApplication
-      else {
-        return
-      }
-
-      self.logger.debug(
-        "aerospace observed app termination",
-        .field("app", app.localizedName ?? "")
-      )
-      self.cancelPendingLaunchRefresh(reason: "app terminated")
-      self.refresh()
-    }
-
-    withLock { coordination in
-      if coordination.appTerminationObserver == nil {
-        coordination.appTerminationObserver = observer
-      }
-    }
-
-    logger.debug("aerospace app termination observer installed")
-  }
-
   /// Schedules one delayed refresh for freshly launched apps that may create windows later.
   fileprivate func scheduleLaunchRefresh(for app: NSRunningApplication) {
     logger.debug(
