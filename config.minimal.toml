@@ -34,8 +34,3 @@ mode = "details"
 
 [builtins.wifi.fields]
 ssid = true
-
-
-
-
-
