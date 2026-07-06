@@ -302,7 +302,7 @@ private final class HoverState: @unchecked Sendable {
   func exit(widgetID: String, handler: @escaping @MainActor @Sendable () -> Void) {
     let task = Task { [weak self] in
       do {
-        try await Task.sleep(nanoseconds: 80_000_000)
+        try await WidgetHoverDelay.sleep()
       } catch {
         return
       }

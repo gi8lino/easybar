@@ -32,7 +32,7 @@ extension WidgetNodeView {
   func schedulePopupCloseCheck() {
     Task { @MainActor in
       do {
-        try await Task.sleep(nanoseconds: 80_000_000)
+        try await WidgetHoverDelay.sleep()
       } catch {
         return
       }
