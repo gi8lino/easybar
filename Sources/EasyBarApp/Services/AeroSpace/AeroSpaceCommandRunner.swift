@@ -86,6 +86,7 @@ final class AeroSpaceCommandRunner {
         .field("args", arguments.joined(separator: " ")),
         .field("stderr_bytes", stderr?.utf8.count ?? 0)
       )
+      return nil
     }
 
     return String(data: outputData, encoding: .utf8)?

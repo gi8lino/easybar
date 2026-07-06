@@ -383,8 +383,10 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
       executablePathResolver: { scriptURL.path }
     )
 
-    _ = runner.run(arguments: ["list-workspaces", "--all", "--json"])
+    let outputValue = runner.run(arguments: ["list-workspaces", "--all", "--json"])
     logger.configureFileLogging(enabled: false, path: "")
+
+    XCTAssertNil(outputValue)
 
     let output = try String(contentsOf: logURL, encoding: .utf8)
     XCTAssertTrue(output.contains("aerospace command exited"))
