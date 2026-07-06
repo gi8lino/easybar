@@ -11,7 +11,7 @@ extension Config {
 
     return BuiltinWidgetPlacement(
       enabled: try reader.bool("enabled", fallback: fallback.enabled),
-      position: try reader.widgetPosition("position", fallback: fallback.position),
+      position: try reader.enum("position", fallback: fallback.position),
       order: try reader.int("order", fallback: fallback.order),
       group: try validatedBuiltinGroupReference(
         rawGroup,
@@ -64,3 +64,5 @@ extension Config {
     )
   }
 }
+
+

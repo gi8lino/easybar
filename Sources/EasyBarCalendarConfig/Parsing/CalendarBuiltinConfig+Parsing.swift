@@ -63,10 +63,7 @@ extension CalendarBuiltinConfig {
   ) throws -> CalendarWidgetPlacement {
     CalendarWidgetPlacement(
       enabled: try reader.bool("enabled", fallback: fallback.enabled),
-      position: try parsePosition(
-        try reader.string("position", fallback: fallback.position.rawValue),
-        path: reader.path(for: "position")
-      ),
+      position: try reader.enum("position", fallback: fallback.position),
       order: try reader.int("order", fallback: fallback.order),
       group: try reader.optionalString("group", fallback: fallback.group)
     )
@@ -207,12 +204,6 @@ extension CalendarBuiltinConfig {
     )
   }
 
-  private static func parsePosition(_ rawValue: String, path: String) throws -> WidgetPosition {
-    if let position = WidgetPosition(rawValue: rawValue) {
-      return position
-    }
-
-    throw CalendarConfigError.invalidValue(
-      path: path, message: "expected one of left, center, right")
-  }
 }
+
+

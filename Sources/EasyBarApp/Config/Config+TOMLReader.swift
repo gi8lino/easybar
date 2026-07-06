@@ -31,23 +31,11 @@ extension TOMLConfigReader where Failure == ConfigError {
     EasyBarShared.expandedPath(try string(key, fallback: fallback)) ?? fallback
   }
 
-  /// Returns a widget position value or the fallback when absent.
-  func widgetPosition(_ key: String, fallback: WidgetPosition) throws -> WidgetPosition {
-    let rawValue = try string(key, fallback: fallback.rawValue)
-    let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-    guard let position = WidgetPosition(rawValue: normalized) else {
-      throw ConfigError.invalidValue(
-        path: path(for: key),
-        message: "expected one of left, center, right"
-      )
-    }
-
-    return position
-  }
 
   /// Returns an expanded optional path value or the fallback when absent.
   func optionalExpandedPath(_ key: String, fallback: String? = nil) throws -> String? {
     EasyBarShared.expandedPath(try optionalString(key, fallback: fallback))
   }
 }
+
+
