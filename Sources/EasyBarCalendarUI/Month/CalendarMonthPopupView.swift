@@ -37,6 +37,7 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
   let onCreateEvent: (Date, @escaping () -> Void) -> Void
   let onEditEvent: (CalendarAgentEvent, @escaping () -> Void) -> Void
   let onRefreshRequested: () -> Void
+  let nowProvider: () -> Date
   let calendar = Calendar.current
 
   public init(
@@ -50,7 +51,8 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
     onVisibleMonthChanged: @escaping (Date) -> Void,
     onCreateEvent: @escaping (Date, @escaping () -> Void) -> Void,
     onEditEvent: @escaping (CalendarAgentEvent, @escaping () -> Void) -> Void,
-    onRefreshRequested: @escaping () -> Void
+    onRefreshRequested: @escaping () -> Void,
+    nowProvider: @escaping () -> Date = Date.init
   ) {
     self.store = store
     self.logger = logger
@@ -63,11 +65,17 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
     self.onCreateEvent = onCreateEvent
     self.onEditEvent = onEditEvent
     self.onRefreshRequested = onRefreshRequested
+    self.nowProvider = nowProvider
+
+    let initialDate = nowProvider()
+    _visibleMonth = State(initialValue: Self.startOfMonth(initialDate))
+    _selectedStartDate = State(initialValue: initialDate)
+    _selectedEndDate = State(initialValue: initialDate)
   }
 
-  @State var visibleMonth = Self.startOfMonth(Date())
-  @State var selectedStartDate = Date()
-  @State var selectedEndDate = Date()
+  @State var visibleMonth: Date
+  @State var selectedStartDate: Date
+  @State var selectedEndDate: Date
 
   @State var isDragSelecting = false
   @State var dragAnchorDate: Date?

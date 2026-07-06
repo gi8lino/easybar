@@ -20,6 +20,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
   private let birthdays: CalendarBirthdayStyle
   private let emptyText: String
   private let eventActions: CalendarEventActions?
+  private let nowProvider: () -> Date
   private let onEventTap: (CalendarAgentEvent) -> Void
 
   public init(
@@ -29,6 +30,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     birthdays: CalendarBirthdayStyle,
     emptyText: String,
     eventActions: CalendarEventActions? = nil,
+    nowProvider: @escaping () -> Date = Date.init,
     onEventTap: @escaping (CalendarAgentEvent) -> Void
   ) {
     self.store = store
@@ -37,6 +39,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
     self.birthdays = birthdays
     self.emptyText = emptyText
     self.eventActions = eventActions
+    self.nowProvider = nowProvider
     self.onEventTap = onEventTap
   }
 
@@ -82,7 +85,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
 
   /// Returns the dates rendered by the upcoming popup.
   private var upcomingDates: [Date] {
-    let start = resolvedCalendar.startOfDay(for: Date())
+    let start = resolvedCalendar.startOfDay(for: nowProvider())
 
     return (0..<max(1, config.days)).compactMap { offset in
       resolvedCalendar.date(byAdding: .day, value: offset, to: start)
@@ -122,7 +125,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
       return []
     }
 
-    let now = Date()
+    let now = nowProvider()
     let effectiveStart =
       config.excludePastEvents && resolvedCalendar.isDateInToday(date)
       ? max(startOfDay, now)

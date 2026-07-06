@@ -17,7 +17,7 @@ extension CalendarMonthPopupView {
 
   /// Shows the current month and selects today.
   func showToday() {
-    let today = resolvedCalendar.startOfDay(for: Date())
+    let today = resolvedCalendar.startOfDay(for: nowProvider())
     let targetMonth = Self.startOfMonth(today, calendar: resolvedCalendar)
     visibleMonth = targetMonth
     selectedStartDate = today
