@@ -34,6 +34,20 @@ Common commands include:
 - `fetch`
 - `subscribe`
 
+`version` returns the running binary version and the shared EasyBar IPC protocol version:
+
+```json
+{
+  "kind": "version",
+  "version": {
+    "appVersion": "0.4.0",
+    "protocolVersion": "1"
+  }
+}
+```
+
+`appVersion` identifies the installed EasyBar build. `protocolVersion` identifies the internal JSON socket contract shared by the app and helper agents.
+
 The calendar agent additionally supports:
 
 - `create_event`
@@ -92,3 +106,5 @@ easybar --reload-config
 - reloads `config.toml`
 - rebuilds runtime state
 - recreates agent-backed subscriptions
+
+
