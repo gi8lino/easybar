@@ -65,6 +65,39 @@ private final class CommandExecution: @unchecked Sendable {
     var timedOut = false
     var completed = false
     var continuation: CheckedContinuation<LuaCommandResult, Never>?
+
+    mutating func appendOutput(_ data: Data, maxOutputBytes: Int) -> Bool {
+      guard !completed, !data.isEmpty else { return false }
+
+      let remainingBytes = max(0, maxOutputBytes - outputData.count)
+      if remainingBytes > 0 {
+        outputData.append(data.prefix(remainingBytes))
+      }
+
+      guard outputData.count >= maxOutputBytes else {
+        return false
+      }
+
+      exceededOutputLimit = true
+      return true
+    }
+
+    mutating func markTimedOut() -> Bool {
+      guard !completed else { return false }
+      timedOut = true
+      return true
+    }
+
+    mutating func takeContinuationForCompletion()
+      -> CheckedContinuation<LuaCommandResult, Never>?
+    {
+      guard !completed else { return nil }
+
+      completed = true
+      let continuation = continuation
+      self.continuation = nil
+      return continuation
+    }
   }
 
   private let command: String
@@ -137,27 +170,9 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Reads currently available command output without blocking.
   private func readAvailableOutput(from handle: FileHandle) {
-    let isCompleted = state.withLock { $0.completed }
-    guard !isCompleted else { return }
-
     let chunk = handle.availableData
-
-    guard !chunk.isEmpty else { return }
-
-    let shouldTerminate = state.withLock { state -> Bool in
-      guard !state.completed else { return false }
-
-      let remainingBytes = max(0, limits.maxOutputBytes - state.outputData.count)
-      if remainingBytes > 0 {
-        state.outputData.append(chunk.prefix(remainingBytes))
-      }
-
-      if state.outputData.count >= limits.maxOutputBytes {
-        state.exceededOutputLimit = true
-        return true
-      }
-
-      return false
+    let shouldTerminate = state.withLock { state in
+      state.appendOutput(chunk, maxOutputBytes: limits.maxOutputBytes)
     }
 
     if shouldTerminate, process.isRunning {
@@ -186,10 +201,8 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Handles one timeout event.
   private func handleTimeout() {
-    let shouldTerminate = state.withLock { state -> Bool in
-      guard !state.completed else { return false }
-      state.timedOut = true
-      return true
+    let shouldTerminate = state.withLock { state in
+      state.markTimedOut()
     }
 
     if shouldTerminate, process.isRunning {
@@ -211,19 +224,8 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Appends final output read after process termination.
   private func appendRemainingOutput(_ data: Data) {
-    guard !data.isEmpty else { return }
-
     state.withLock { state in
-      guard !state.completed else { return }
-
-      let remainingBytes = max(0, limits.maxOutputBytes - state.outputData.count)
-      if remainingBytes > 0 {
-        state.outputData.append(data.prefix(remainingBytes))
-      }
-
-      if state.outputData.count >= limits.maxOutputBytes {
-        state.exceededOutputLimit = true
-      }
+      _ = state.appendOutput(data, maxOutputBytes: limits.maxOutputBytes)
     }
   }
 
@@ -287,13 +289,8 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Resumes the continuation exactly once.
   private func complete(_ result: LuaCommandResult) {
-    let continuation = state.withLock { state -> CheckedContinuation<LuaCommandResult, Never>? in
-      guard !state.completed else { return nil }
-
-      state.completed = true
-      let continuation = state.continuation
-      state.continuation = nil
-      return continuation
+    let continuation = state.withLock { state in
+      state.takeContinuationForCompletion()
     }
 
     timeoutTask?.cancel()
