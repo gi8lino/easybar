@@ -16,7 +16,7 @@ struct AppStartupDiagnostics {
     logProcessStartup(
       processName: "easybar",
       configPath: services.config.configPath,
-      socketPath: SharedRuntimeConfig.current.easyBarSocketPath,
+      socketPath: SharedPathDefaults.defaultEasyBarSocketPath,
       logger: logger
     )
 

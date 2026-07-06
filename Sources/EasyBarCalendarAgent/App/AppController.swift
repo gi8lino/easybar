@@ -17,7 +17,17 @@ final class AppController {
   /// Starts the calendar agent app shell and runtime.
   @discardableResult
   func start() -> Bool {
-    let sharedConfig = SharedRuntimeConfig.current
+    let sharedConfig: SharedRuntimeConfig
+
+    do {
+      sharedConfig = try SharedRuntimeConfig.load()
+    } catch {
+      logger.error(
+        "failed to load shared runtime config",
+        .field("error", error.localizedDescription)
+      )
+      return false
+    }
 
     configureLogging(sharedConfig: sharedConfig)
 

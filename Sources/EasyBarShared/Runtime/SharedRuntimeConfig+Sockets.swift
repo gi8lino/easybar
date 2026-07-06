@@ -2,12 +2,12 @@ import Foundation
 
 /// Returns the resolved EasyBar socket config from defaults.
 func resolvedEasyBarConfig(from _: SharedRuntimeConfigReader) throws -> SharedEasyBarRuntimeConfig {
-  SharedEasyBarRuntimeConfig(socketPath: defaultEasyBarSocketPath())
+  SharedEasyBarRuntimeConfig(socketPath: SharedPathDefaults.defaultEasyBarSocketPath)
 }
 
 /// Returns the resolved EasyBar socket defaults.
 func resolvedEasyBarEnvironmentDefaults() -> SharedEasyBarRuntimeConfig {
-  SharedEasyBarRuntimeConfig(socketPath: defaultEasyBarSocketPath())
+  SharedEasyBarRuntimeConfig(socketPath: SharedPathDefaults.defaultEasyBarSocketPath)
 }
 
 /// Returns the resolved calendar-agent config from TOML and defaults.
@@ -66,9 +66,6 @@ func resolvedNetworkAgentEnvironmentDefaults() -> SharedNetworkAgentRuntimeConfi
     allowUnauthorizedFieldsWithoutLocation: false
   )
 }
-
-/// Returns the default Unix socket path used by EasyBar.
-func defaultEasyBarSocketPath() -> String { return "/tmp/EasyBar/easybar.sock" }
 
 /// Returns the default Unix socket path used by the calendar agent.
 func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-agent.sock" }

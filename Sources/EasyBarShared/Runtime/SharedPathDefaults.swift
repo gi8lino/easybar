@@ -8,6 +8,7 @@ public enum SharedPathDefaults {
   static let defaultWidgetEditorStubRelativePath = ".local/share/easybar/easybar_api.lua"
 
   public static let defaultLuaPath = "lua"
+  public static let defaultEasyBarSocketPath = "/tmp/EasyBar/easybar.sock"
   public static let defaultLuaEnvironment: [String: String] = [
     "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   ]

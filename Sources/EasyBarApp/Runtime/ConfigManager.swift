@@ -97,7 +97,7 @@ actor ConfigManager {
 
   /// Returns the active EasyBar socket path.
   func easyBarSocketPath() async -> String {
-    return SharedRuntimeConfig.environmentDefaults().easyBarSocketPath
+    return SharedPathDefaults.defaultEasyBarSocketPath
   }
 
   /// Returns the current minimum log level.

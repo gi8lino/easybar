@@ -19,7 +19,7 @@ private struct AppController {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
-      let socketPath = parsed.socketPath ?? SharedRuntimeConfig.current.easyBarSocketPath
+      let socketPath = parsed.socketPath ?? SharedPathDefaults.defaultEasyBarSocketPath
 
       switch parsed.action {
       case .validateConfig:
