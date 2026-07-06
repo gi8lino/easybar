@@ -81,7 +81,7 @@ extension CalendarBuiltinConfig {
         calendarLabel: "Calendar",
         titlePlaceholder: "What are you doing?",
         locationPlaceholder: "Where are you going?",
-        defaultCalendarName: nil,
+        defaultCalendarName: "",
         defaultAlert: "1_hour",
         defaultTravelTime: "none",
         alertLabels: [:],
@@ -139,7 +139,7 @@ extension CalendarBuiltinConfig {
           resolvedWeekdaySymbols: resolveMonthWeekdaySymbols(format: "dd", manualSymbols: nil),
           dayTextColorHex: "#d0d0d0",
           outsideMonthTextColorHex: "#6e738d",
-          todayCellBackgroundColorHex: "#00000000",
+          todayCellBackgroundColorHex: "",
           todayCellBorderColorHex: "#FF0000",
           todayCellBorderWidth: 1.4,
           indicatorColorHex: "#8bd5ca"

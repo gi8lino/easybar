@@ -107,7 +107,7 @@ extension Config {
     applyTransparentBuiltinStyle(&builtinSpaces.style)
 
     applyThemeColorDefaults([
-      (\.builtinSpaces.text.focusedColorHex, \.themeTextSecondaryColorHex),
+      (\.builtinSpaces.text.focusedColorHex, \.themeTextColorHex),
       (\.builtinSpaces.text.inactiveColorHex, \.themeTextSecondaryColorHex),
       (\.builtinSpaces.colors.activeBackgroundHex, \.themeSurfaceElevatedHex),
       (\.builtinSpaces.colors.inactiveBackgroundHex, \.themeSurfaceHex),
@@ -162,23 +162,23 @@ extension Config {
 
     applyOptionalThemeColorDefaults([
       (\.builtinCalendar.anchor.topTextColorHex, \.themeTextColorHex),
-      (\.builtinCalendar.anchor.bottomTextColorHex, \.themeMutedColorHex),
+      (\.builtinCalendar.anchor.bottomTextColorHex, \.themeTextSecondaryColorHex),
     ])
   }
 
   /// Applies theme defaults to calendar appointment rows.
   private func applyThemeCalendarAppointmentDefaults() {
     applyThemeColorDefaults([
-      (\.builtinCalendar.appointments.eventTextColorHex, \.themeTextColorHex),
-      (\.builtinCalendar.appointments.emptyTextColorHex, \.themeMutedColorHex),
-      (\.builtinCalendar.appointments.secondaryTextColorHex, \.themeAccentSecondaryColorHex),
+      (\.builtinCalendar.appointments.eventTextColorHex, \.themeTextSecondaryColorHex),
+      (\.builtinCalendar.appointments.emptyTextColorHex, \.themeTextTertiaryColorHex),
+      (\.builtinCalendar.appointments.secondaryTextColorHex, \.themeAccentColorHex),
       (\.builtinCalendar.appointments.travelTextColorHex, \.themeMutedSecondaryColorHex),
     ])
 
     applyOptionalThemeColorDefaults([
-      (\.builtinCalendar.appointments.locationIconColorHex, \.themeAccentSecondaryColorHex),
+      (\.builtinCalendar.appointments.locationIconColorHex, \.themeAccentColorHex),
       (\.builtinCalendar.appointments.travelIconColorHex, \.themeMutedSecondaryColorHex),
-      (\.builtinCalendar.appointments.alertIconColorHex, \.themeWarningColorHex),
+      (\.builtinCalendar.appointments.alertIconColorHex, \.themeMutedSecondaryColorHex),
     ])
   }
 
@@ -193,7 +193,7 @@ extension Config {
   private func applyThemeCalendarComposerDefaults() {
     applyThemeColorDefaults([
       (\.builtinCalendar.composer.style.backgroundColorHex, \.themeBackgroundHex),
-      (\.builtinCalendar.composer.style.borderColorHex, \.themeBorderColorHex),
+      (\.builtinCalendar.composer.style.borderColorHex, \.themeBorderStrongColorHex),
       (\.builtinCalendar.composer.style.headerTextColorHex, \.themeTextColorHex),
     ])
   }
@@ -202,7 +202,7 @@ extension Config {
   private func applyThemeCalendarUpcomingDefaults() {
     applyThemeColorDefaults([
       (\.builtinCalendar.upcoming.popup.backgroundColorHex, \.themeBackgroundHex),
-      (\.builtinCalendar.upcoming.popup.borderColorHex, \.themeBorderColorHex),
+      (\.builtinCalendar.upcoming.popup.borderColorHex, \.themeBorderStrongColorHex),
     ])
   }
 
@@ -213,15 +213,16 @@ extension Config {
       (\.builtinCalendar.month.popup.style.borderColorHex, \.themeBorderStrongColorHex),
       (\.builtinCalendar.month.popup.calendar.headerTextColorHex, \.themeTextColorHex),
       (\.builtinCalendar.month.popup.calendar.weekdayTextColorHex, \.themeAccentColorHex),
-      (\.builtinCalendar.month.popup.calendar.dayTextColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.month.popup.calendar.dayTextColorHex, \.themeTextSecondaryColorHex),
       (\.builtinCalendar.month.popup.calendar.outsideMonthTextColorHex, \.themeOutsideMonthColorHex),
-      (\.builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex, \.themeTransparentColorHex),
       (\.builtinCalendar.month.popup.calendar.todayCellBorderColorHex, \.themeDangerColorHex),
-      (\.builtinCalendar.month.popup.calendar.indicatorColorHex, \.themeSuccessSecondaryColorHex),
+      (\.builtinCalendar.month.popup.calendar.indicatorColorHex, \.themeAccentSoftColorHex),
       (\.builtinCalendar.month.popup.selection.selectedTextColorHex, \.themeSelectionTextColorHex),
       (\.builtinCalendar.month.popup.selection.selectedBackgroundColorHex, \.themeSelectionBackgroundColorHex),
       (\.builtinCalendar.month.popup.todayButton.borderColorHex, \.themeTodayButtonBorderColorHex),
     ])
+
+    builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex = ""
 
     applyOptionalThemeColorDefaults([
       (\.builtinCalendar.month.popup.anchor.textColorHex, \.themeTextColorHex)
@@ -241,7 +242,7 @@ extension Config {
   /// Returns the default tooltip popup style derived from the active theme.
   private func defaultBuiltinPopupStyle() -> BuiltinPopupStyle {
     BuiltinPopupStyle(
-      textColorHex: themeTextSecondaryColorHex,
+      textColorHex: themeTextColorHex,
       backgroundColorHex: themeBackgroundHex,
       borderColorHex: themeBorderStrongColorHex,
       borderWidth: Self.builtinPopupDefaultBorderWidth,

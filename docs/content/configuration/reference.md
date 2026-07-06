@@ -84,23 +84,23 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.spaces`
 
-| Key                | Default                  | Description                                                      |
-| ------------------ | ------------------------ | ---------------------------------------------------------------- |
-| `enabled`          | `true`                   | Shows or hides the built-in spaces widget.                       |
-| `position`         | `"left"`                 | Places the widget on the left, center, or right side of the bar. |
-| `order`            | `10`                     | Sort order among widgets in the same position.                   |
-| `icon`             | `""`                     | Unused fallback icon for the spaces root widget.                 |
-| `text_color`       | `"theme.text_secondary"` | Fallback text color for the spaces root widget.                  |
-| `background_color` | `"theme.transparent"`    | Background color behind the whole spaces block.                  |
-| `border_color`     | `"theme.transparent"`    | Border color around the whole spaces block.                      |
-| `border_width`     | `0`                      | Border width around the whole spaces block.                      |
-| `corner_radius`    | `0`                      | Corner radius around the whole spaces block.                     |
-| `margin_x`         | `0`                      | Horizontal outer margin around the spaces root container.        |
-| `margin_y`         | `0`                      | Vertical outer margin around the spaces root container.          |
-| `padding_x`        | `0`                      | Horizontal inner padding of the spaces root container.           |
-| `padding_y`        | `0`                      | Vertical inner padding of the spaces root container.             |
-| `spacing`          | `0`                      | Root-level spacing of the spaces widget container.               |
-| `opacity`          | `1`                      | Overall opacity of the spaces widget container.                  |
+| Key                | Default               | Description                                                      |
+| ------------------ | --------------------- | ---------------------------------------------------------------- |
+| `enabled`          | `true`                | Shows or hides the built-in spaces widget.                       |
+| `position`         | `"left"`              | Places the widget on the left, center, or right side of the bar. |
+| `order`            | `10`                  | Sort order among widgets in the same position.                   |
+| `icon`             | `""`                  | Unused fallback icon for the spaces root widget.                 |
+| `text_color`       | `"theme.text"`        | Fallback text color for the spaces root widget.                  |
+| `background_color` | `"theme.transparent"` | Background color behind the whole spaces block.                  |
+| `border_color`     | `"theme.transparent"` | Border color around the whole spaces block.                      |
+| `border_width`     | `0`                   | Border width around the whole spaces block.                      |
+| `corner_radius`    | `0`                   | Corner radius around the whole spaces block.                     |
+| `margin_x`         | `0`                   | Horizontal outer margin around the spaces root container.        |
+| `margin_y`         | `0`                   | Vertical outer margin around the spaces root container.          |
+| `padding_x`        | `0`                   | Horizontal inner padding of the spaces root container.           |
+| `padding_y`        | `0`                   | Vertical inner padding of the spaces root container.             |
+| `spacing`          | `0`                   | Root-level spacing of the spaces widget container.               |
+| `opacity`          | `1`                   | Overall opacity of the spaces widget container.                  |
 
 ## `builtins.spaces.layout`
 
@@ -268,7 +268,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `history_size`            | `10`                        | Number of samples kept in the sparkline history. |
 | `line_width`              | `1.8`                       | Stroke width of the sparkline line.              |
 | `color`                   | `"theme.success_secondary"` | Color of the sparkline and label.                |
-| `sample_interval_seconds` | `5`                         | Polling interval in seconds.                     |
+| `sample_interval_seconds` | `1`                         | Polling interval in seconds.                     |
 
 ## `builtins.battery`
 
@@ -312,7 +312,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `high`                   | `"theme.success"`         | Color used for 70-100%.                             |
 | `medium`                 | `"theme.warning"`         | Color used for 50-69%.                              |
 | `low`                    | `"theme.orange"`          | Color used for 30-49%.                              |
-| `critical`               | `"theme.error"`           | Color used for 0-29%.                               |
+| `critical`               | `"theme.danger"`          | Color used for 0-29%.                               |
 | `frame`                  | `"theme.muted"`           | Secondary palette color for the battery frame.      |
 | `overlay_outline`        | `"theme.overlay_outline"` | Outline color drawn behind battery overlay symbols. |
 | `charging_overlay`       | `"theme.overlay_text"`    | Color of the charging bolt overlay.                 |
