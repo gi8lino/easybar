@@ -49,6 +49,23 @@ final class LineDelimitedJSONDecoderTests: XCTestCase {
     XCTAssertEqual(message, Message(value: "ok"))
   }
 
+  func testRejectsOversizedUnterminatedLineAndDiscardsUntilNextNewline() throws {
+    var decoder = LineDelimitedJSONDecoder<Message>(maxLineBytes: 8)
+
+    let oversizedResults = decoder.append(bytes("123456789"))
+    XCTAssertEqual(oversizedResults.count, 1)
+    guard case .failure(let error) = oversizedResults[0] else {
+      return XCTFail("Expected an oversized-line failure")
+    }
+    XCTAssertEqual(
+      error as? LineDelimitedJSONDecoderError,
+      .lineTooLong(maxLineBytes: 8)
+    )
+
+    let recoveryResults = decoder.append(bytes("discarded\n" + #"{"value":"ok"}"# + "\n"))
+    XCTAssertEqual(try decodedMessages(from: recoveryResults), [Message(value: "ok")])
+  }
+
   private func bytes(_ string: String) -> ArraySlice<UInt8> {
     return Array(string.utf8)[...]
   }

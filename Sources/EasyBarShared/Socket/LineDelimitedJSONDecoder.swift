@@ -1,13 +1,33 @@
 import Foundation
 
+/// Errors produced while framing newline-delimited JSON messages.
+public enum LineDelimitedJSONDecoderError: Error, CustomStringConvertible, Equatable {
+  case lineTooLong(maxLineBytes: Int)
+
+  public var description: String {
+    switch self {
+    case .lineTooLong(let maxLineBytes):
+      return "line exceeded maximum size of \(maxLineBytes) bytes"
+    }
+  }
+}
+
 /// Incrementally decodes newline-delimited JSON messages from arbitrary byte chunks.
 public struct LineDelimitedJSONDecoder<Message: Decodable> {
+  public static let defaultMaxLineBytes = 1_048_576
+
   private var pending = Data()
+  private var discardingOversizedLine = false
   private let decoder: JSONDecoder
+  private let maxLineBytes: Int
 
   /// Creates a new line-delimited decoder.
-  public init(decoder: JSONDecoder? = nil) {
+  public init(
+    decoder: JSONDecoder? = nil,
+    maxLineBytes: Int = LineDelimitedJSONDecoder.defaultMaxLineBytes
+  ) {
     self.decoder = decoder ?? Self.makeDefaultDecoder()
+    self.maxLineBytes = max(1, maxLineBytes)
   }
 
   /// Appends bytes and returns one result for each complete non-empty line.
@@ -18,10 +38,21 @@ public struct LineDelimitedJSONDecoder<Message: Decodable> {
 
   /// Decodes a final unterminated non-empty line, when one is pending.
   public mutating func flush() -> [Result<Message, Error>] {
+    if discardingOversizedLine {
+      pending.removeAll(keepingCapacity: false)
+      discardingOversizedLine = false
+      return []
+    }
+
     guard !pending.isEmpty else { return [] }
 
     let line = pending
-    pending.removeAll()
+    pending.removeAll(keepingCapacity: false)
+
+    guard line.count <= maxLineBytes else {
+      return [.failure(LineDelimitedJSONDecoderError.lineTooLong(maxLineBytes: maxLineBytes))]
+    }
+
     return [decode(line)]
   }
 
@@ -32,8 +63,24 @@ public struct LineDelimitedJSONDecoder<Message: Decodable> {
       let line = pending.prefix(upTo: newlineIndex)
       pending.removeSubrange(...newlineIndex)
 
+      if discardingOversizedLine {
+        discardingOversizedLine = false
+        continue
+      }
+
       guard !line.isEmpty else { continue }
+      guard line.count <= maxLineBytes else {
+        results.append(.failure(LineDelimitedJSONDecoderError.lineTooLong(maxLineBytes: maxLineBytes)))
+        continue
+      }
+
       results.append(decode(line))
+    }
+
+    if pending.count > maxLineBytes {
+      pending.removeAll(keepingCapacity: false)
+      discardingOversizedLine = true
+      results.append(.failure(LineDelimitedJSONDecoderError.lineTooLong(maxLineBytes: maxLineBytes)))
     }
 
     return results
