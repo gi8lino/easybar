@@ -1,8 +1,10 @@
 import Foundation
 
+/// Protocol version expected between EasyBar and the Lua widget runtime.
+let easyBarLuaRuntimeProtocolVersion = 1
+
 /// Decoded message emitted by the Lua widget runtime.
 struct WidgetTreeUpdate: Codable {
-  static let supportedProtocolVersion = 1
 
   let protocolVersion: Int?
   let type: Kind
@@ -43,7 +45,7 @@ struct WidgetTreeUpdate: Codable {
 
   /// Returns whether this update uses the expected host/runtime protocol version.
   var isSupportedProtocolVersion: Bool {
-    return protocolVersion == Self.supportedProtocolVersion
+    return protocolVersion == easyBarLuaRuntimeProtocolVersion
   }
 
   /// Returns whether this update is the runtime ready signal.

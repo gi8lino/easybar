@@ -4,7 +4,7 @@ import Foundation
 /// Handles Lua command requests, async command limits, and command responses.
 actor LuaCommandService {
   private struct LuaCommandResponse: Encodable {
-    let protocolVersion = WidgetTreeUpdate.supportedProtocolVersion
+    let protocolVersion = easyBarLuaRuntimeProtocolVersion
     let type = "command_response"
     let token: String
     let output: String

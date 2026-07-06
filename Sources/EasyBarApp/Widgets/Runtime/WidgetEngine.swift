@@ -129,7 +129,7 @@ actor WidgetEngine {
       await metricsCoordinator.recordDecodeError()
       logger.warn(
         "unsupported lua protocol version",
-        .field("expected", WidgetTreeUpdate.supportedProtocolVersion),
+        .field("expected", easyBarLuaRuntimeProtocolVersion),
         .field("received", version.map(String.init(describing:)) ?? "nil")
       )
     } catch DecodingError.dataCorrupted {
