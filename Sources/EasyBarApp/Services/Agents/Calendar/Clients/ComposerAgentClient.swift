@@ -59,23 +59,23 @@ final class ComposerCalendarAgentClient {
       .field("socket", socketPath)
     )
 
-    DetachedTask.run(priority: .userInitiated) {
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,
           socketPath: socketPath
         )
 
-        await MainActor.run {
-          ComposerCalendarAgentClient.shared.handleRefreshResponse(
+        await MainActor.run { [weak self] in
+          self?.handleRefreshResponse(
             response,
             generation: generation,
             socketPath: socketPath
           )
         }
       } catch {
-        await MainActor.run {
-          ComposerCalendarAgentClient.shared.handleRefreshError(
+        await MainActor.run { [weak self] in
+          self?.handleRefreshError(
             error,
             generation: generation,
             socketPath: socketPath

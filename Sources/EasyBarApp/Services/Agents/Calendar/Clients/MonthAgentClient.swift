@@ -106,14 +106,14 @@ final class MonthCalendarAgentClient {
     for (index, radius) in preloadRadii.enumerated() {
       let delay = preloadDelays[min(index, preloadDelays.count - 1)]
       let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
-      let task = Task { @MainActor in
+      let task = Task { @MainActor [weak self] in
         do {
           try await Task.sleep(nanoseconds: nanoseconds)
         } catch {
           return
         }
 
-        MonthCalendarAgentClient.shared.refreshMonthSubscriptionIfNeeded(
+        self?.refreshMonthSubscriptionIfNeeded(
           for: visibleMonth,
           radius: radius
         )
@@ -188,23 +188,23 @@ final class MonthCalendarAgentClient {
   ) {
     let socketPath = calendarAgentConfig.socketPath
 
-    DetachedTask.run(priority: .userInitiated) {
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
       do {
         let response = try CalendarAgentOneShotClient.send(
           request: request,
           socketPath: socketPath
         )
 
-        await MainActor.run {
-          MonthCalendarAgentClient.shared.handleMutationResponse(
+        await MainActor.run { [weak self] in
+          self?.handleMutationResponse(
             response,
             successKind: successKind,
             completion: completion
           )
         }
       } catch {
-        await MainActor.run {
-          MonthCalendarAgentClient.shared.handleMutationError(
+        await MainActor.run { [weak self] in
+          self?.handleMutationError(
             error,
             completion: completion
           )
