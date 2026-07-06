@@ -57,13 +57,8 @@ final class NetworkSocketServer {
   func broadcastSnapshots() {
     guard let provider else { return }
 
-    for subscriber in transport.subscribersSnapshot() {
-      let response = responseFields(for: subscriber.subscriber.fields, provider: provider)
-      let message = makeResponseMessage(from: response)
-
-      if !transport.send(message, to: subscriber.fd) {
-        _ = transport.removeSubscriber(fd: subscriber.fd)
-      }
+    transport.broadcast { subscriber in
+      makeResponseMessage(from: responseFields(for: subscriber.fields, provider: provider))
     }
   }
 

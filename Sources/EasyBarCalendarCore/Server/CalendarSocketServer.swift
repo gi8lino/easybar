@@ -53,13 +53,11 @@ final class CalendarSocketServer {
   func broadcastSnapshots() {
     guard let provider else { return }
 
-    for subscriber in transport.subscribersSnapshot() {
-      let snapshot = provider.snapshot(for: subscriber.subscriber.query)
-      let message = CalendarAgentMessage(kind: .snapshot, snapshot: snapshot)
-
-      if !transport.send(message, to: subscriber.fd) {
-        _ = transport.removeSubscriber(fd: subscriber.fd)
-      }
+    transport.broadcast { subscriber in
+      CalendarAgentMessage(
+        kind: .snapshot,
+        snapshot: provider.snapshot(for: subscriber.query)
+      )
     }
   }
 

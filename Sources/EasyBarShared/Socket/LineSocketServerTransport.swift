@@ -198,6 +198,16 @@ public final class LineSocketServerTransport<
     }
   }
 
+  /// Sends one derived response to every subscriber and drops sockets that can no longer receive.
+  public func broadcast(_ response: (Subscriber) -> Response) {
+    for entry in subscribersSnapshot() {
+      guard send(response(entry.subscriber), to: entry.fd) else {
+        _ = removeSubscriber(fd: entry.fd)
+        continue
+      }
+    }
+  }
+
   /// Creates and starts the listening socket.
   private func makeListeningSocket() -> Int32? {
     let socketURL = URL(fileURLWithPath: socketPath)
