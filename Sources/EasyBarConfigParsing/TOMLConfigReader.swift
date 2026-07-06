@@ -93,66 +93,102 @@ public struct TOMLConfigReader<Failure: Error> {
     return try requiredBool(value, path: path(for: key))
   }
 
-  /// Returns an integer value or the fallback when absent.
-  public func int(_ key: String, fallback: Int) throws -> Int {
-    try optionalInt(key, fallback: fallback) ?? fallback
+  /// Returns an integer value or the fallback when absent, optionally constrained to bounds.
+  public func int(
+    _ key: String,
+    fallback: Int,
+    minimum: Int? = nil,
+    maximum: Int? = nil,
+    includesMinimum: Bool = true,
+    includesMaximum: Bool = true
+  ) throws -> Int {
+    try optionalInt(
+      key,
+      fallback: fallback,
+      minimum: minimum,
+      maximum: maximum,
+      includesMinimum: includesMinimum,
+      includesMaximum: includesMaximum
+    ) ?? fallback
   }
 
-  /// Returns an integer value constrained to a minimum.
-  public func int(_ key: String, fallback: Int, minimum: Int) throws -> Int {
-    try validated(
-      int(key, fallback: fallback),
+  /// Returns an optional integer value or the optional fallback when absent, optionally constrained to bounds.
+  public func optionalInt(
+    _ key: String,
+    fallback: Int? = nil,
+    minimum: Int? = nil,
+    maximum: Int? = nil,
+    includesMinimum: Bool = true,
+    includesMaximum: Bool = true
+  ) throws -> Int? {
+    let value: Int
+
+    if let configuredValue = table[key] {
+      value = try requiredInt(configuredValue, path: path(for: key))
+    } else if let fallback {
+      value = fallback
+    } else {
+      return nil
+    }
+
+    return try validateBounds(
+      value,
       path: path(for: key),
-      isValid: { $0 >= minimum },
-      message: "expected an integer greater than or equal to \(minimum)"
+      minimum: minimum,
+      maximum: maximum,
+      includesMinimum: includesMinimum,
+      includesMaximum: includesMaximum,
+      describe: { String($0) }
     )
   }
 
-  /// Returns an integer value constrained to a closed range.
-  public func int(_ key: String, fallback: Int, range: ClosedRange<Int>) throws -> Int {
-    try validated(
-      int(key, fallback: fallback),
+  /// Returns a finite number value or the fallback when absent, optionally constrained to bounds.
+  public func double(
+    _ key: String,
+    fallback: Double,
+    minimum: Double? = nil,
+    maximum: Double? = nil,
+    includesMinimum: Bool = true,
+    includesMaximum: Bool = true
+  ) throws -> Double {
+    try optionalDouble(
+      key,
+      fallback: fallback,
+      minimum: minimum,
+      maximum: maximum,
+      includesMinimum: includesMinimum,
+      includesMaximum: includesMaximum
+    ) ?? fallback
+  }
+
+  /// Returns an optional finite number value or the optional fallback when absent, optionally constrained to bounds.
+  public func optionalDouble(
+    _ key: String,
+    fallback: Double? = nil,
+    minimum: Double? = nil,
+    maximum: Double? = nil,
+    includesMinimum: Bool = true,
+    includesMaximum: Bool = true
+  ) throws -> Double? {
+    let value: Double
+
+    if let configuredValue = table[key] {
+      value = try requiredDouble(configuredValue, path: path(for: key))
+    } else if let fallback {
+      value = fallback
+    } else {
+      return nil
+    }
+
+    return try validateBounds(
+      value,
       path: path(for: key),
-      isValid: { range.contains($0) },
-      message: "expected an integer from \(range.lowerBound) to \(range.upperBound)"
+      minimum: minimum,
+      maximum: maximum,
+      includesMinimum: includesMinimum,
+      includesMaximum: includesMaximum,
+      describe: describeNumberBound
     )
-  }
-
-  /// Returns an optional integer value or the optional fallback when absent.
-  public func optionalInt(_ key: String, fallback: Int? = nil) throws -> Int? {
-    guard let value = table[key] else { return fallback }
-    return try requiredInt(value, path: path(for: key))
-  }
-
-  /// Returns a finite number value or the fallback when absent.
-  public func double(_ key: String, fallback: Double) throws -> Double {
-    try optionalDouble(key, fallback: fallback) ?? fallback
-  }
-
-  /// Returns a finite number value constrained to a minimum.
-  public func double(_ key: String, fallback: Double, minimum: Double) throws -> Double {
-    try validated(
-      double(key, fallback: fallback),
-      path: path(for: key),
-      isValid: { $0 >= minimum },
-      message: "expected a number greater than or equal to \(minimum)"
-    )
-  }
-
-  /// Returns a finite number value constrained to a closed range.
-  public func double(_ key: String, fallback: Double, range: ClosedRange<Double>) throws -> Double {
-    try validated(
-      double(key, fallback: fallback),
-      path: path(for: key),
-      isValid: { range.contains($0) },
-      message: "expected a number from \(range.lowerBound) to \(range.upperBound)"
-    )
-  }
-
-  /// Returns an optional finite number value or the optional fallback when absent.
-  public func optionalDouble(_ key: String, fallback: Double? = nil) throws -> Double? {
-    guard let value = table[key] else { return fallback }
-    return try requiredDouble(value, path: path(for: key))
   }
 
   /// Returns a string array value or the fallback when absent.
@@ -249,17 +285,87 @@ public struct TOMLConfigReader<Failure: Error> {
     keyPath.split(separator: ".").map(String.init)
   }
 
-  private func validated<Value>(
+  private func validateBounds<Value: Comparable>(
     _ value: Value,
     path: String,
-    isValid: (Value) -> Bool,
-    message: String
+    minimum: Value?,
+    maximum: Value?,
+    includesMinimum: Bool,
+    includesMaximum: Bool,
+    describe: (Value) -> String
   ) throws -> Value {
-    guard isValid(value) else {
-      throw makeInvalidValueError(path, message)
+    if let minimum {
+      let isBelowMinimum = includesMinimum ? value < minimum : value <= minimum
+      if isBelowMinimum {
+        throw makeInvalidValueError(
+          path,
+          boundsMessage(
+            minimum: minimum,
+            maximum: maximum,
+            includesMinimum: includesMinimum,
+            includesMaximum: includesMaximum,
+            describe: describe
+          )
+        )
+      }
+    }
+
+    if let maximum {
+      let isAboveMaximum = includesMaximum ? value > maximum : value >= maximum
+      if isAboveMaximum {
+        throw makeInvalidValueError(
+          path,
+          boundsMessage(
+            minimum: minimum,
+            maximum: maximum,
+            includesMinimum: includesMinimum,
+            includesMaximum: includesMaximum,
+            describe: describe
+          )
+        )
+      }
     }
 
     return value
+  }
+
+  private func boundsMessage<Value>(
+    minimum: Value?,
+    maximum: Value?,
+    includesMinimum: Bool,
+    includesMaximum: Bool,
+    describe: (Value) -> String
+  ) -> String {
+    switch (minimum, maximum) {
+    case (.some(let minimum), .some(let maximum)):
+      if includesMinimum && includesMaximum {
+        return "expected a value from \(describe(minimum)) to \(describe(maximum))"
+      }
+
+      let lowerComparator = includesMinimum ? "greater than or equal to" : "greater than"
+      let upperComparator = includesMaximum ? "less than or equal to" : "less than"
+      return
+        "expected a value \(lowerComparator) \(describe(minimum)) and \(upperComparator) \(describe(maximum))"
+
+    case (.some(let minimum), nil):
+      let comparator = includesMinimum ? "greater than or equal to" : "greater than"
+      return "expected a value \(comparator) \(describe(minimum))"
+
+    case (nil, .some(let maximum)):
+      let comparator = includesMaximum ? "less than or equal to" : "less than"
+      return "expected a value \(comparator) \(describe(maximum))"
+
+    case (nil, nil):
+      return "expected a valid value"
+    }
+  }
+
+  private func describeNumberBound(_ value: Double) -> String {
+    if value.rounded(.towardZero) == value {
+      return String(Int(value))
+    }
+
+    return String(value)
   }
 
   private func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {

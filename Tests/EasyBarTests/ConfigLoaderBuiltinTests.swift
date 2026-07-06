@@ -475,6 +475,31 @@ extension ConfigLoaderBuiltinTests {
     XCTAssertEqual(message, "expected a value greater than builtins.volume.content.min")
   }
 
+  /// Verifies that the volume slider maximum stays inside the supported display range.
+  func testReloadRejectsOutOfRangeVolumeSliderMaximum() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-volume-maximum.toml")
+
+    try writeConfig(
+      """
+      [builtins.volume.content]
+      max = 101
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let error = config.reload()
+
+    guard case .invalidValue(let path, let message)? = error as? ConfigError else {
+      return XCTFail("Expected invalidValue ConfigError, got \(String(describing: error))")
+    }
+
+    XCTAssertEqual(path, "builtins.volume.content.max")
+    XCTAssertEqual(message, "expected a value from 0 to 100")
+  }
+
   /// Verifies that the volume slider step cannot be zero or negative.
   func testReloadRejectsInvalidVolumeSliderStep() throws {
     let config = Config.makeUnloadedConfig()
@@ -497,7 +522,7 @@ extension ConfigLoaderBuiltinTests {
     }
 
     XCTAssertEqual(path, "builtins.volume.content.step")
-    XCTAssertEqual(message, "expected a value greater than 0")
+    XCTAssertEqual(message, "expected a value greater than 0 and less than or equal to 100")
   }
 
   /// Verifies that the configured volume slider width must be positive.

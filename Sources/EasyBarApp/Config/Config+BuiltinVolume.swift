@@ -172,9 +172,25 @@ extension Config {
       lowIcon: try reader.string("low_icon", fallback: fallback.lowIcon),
       highIcon: try reader.string("high_icon", fallback: fallback.highIcon),
       showPercentage: try reader.bool("show_percentage", fallback: fallback.showPercentage),
-      minValue: try reader.double("min", fallback: fallback.minValue),
-      maxValue: try reader.double("max", fallback: fallback.maxValue),
-      step: try reader.double("step", fallback: fallback.step)
+      minValue: try reader.double(
+        "min",
+        fallback: fallback.minValue,
+        minimum: 0,
+        maximum: 100
+      ),
+      maxValue: try reader.double(
+        "max",
+        fallback: fallback.maxValue,
+        minimum: 0,
+        maximum: 100
+      ),
+      step: try reader.double(
+        "step",
+        fallback: fallback.step,
+        minimum: 0,
+        maximum: 100,
+        includesMinimum: false
+      )
     )
   }
 
@@ -188,7 +204,12 @@ extension Config {
         "expand_to_slider_on_hover",
         fallback: fallback.expandToSliderOnHover
       ),
-      width: try reader.double("width", fallback: fallback.width)
+      width: try reader.double(
+        "width",
+        fallback: fallback.width,
+        minimum: 0,
+        includesMinimum: false
+      )
     )
   }
 
@@ -205,24 +226,12 @@ extension Config {
       )
     }
 
-    guard content.step > 0 else {
-      throw ConfigError.invalidValue(
-        path: "builtins.volume.content.step",
-        message: "expected a value greater than 0"
-      )
-    }
   }
 
   /// Validates volume slider layout settings.
   private func validateVolumeSlider(_ slider: VolumeBuiltinConfig.Slider) throws {
     try validateFiniteNumber(slider.width, path: "builtins.volume.slider.width")
 
-    guard slider.width > 0 else {
-      throw ConfigError.invalidValue(
-        path: "builtins.volume.slider.width",
-        message: "expected a value greater than 0"
-      )
-    }
   }
 
   /// Validates that one volume number is finite when loaded from config.

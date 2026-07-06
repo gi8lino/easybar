@@ -36,37 +36,20 @@ extension Config {
     let luaCommands = try app.section("lua_commands")
     luaCommandTimeoutSeconds = try luaCommands.double(
       "timeout_seconds",
-      fallback: luaCommandTimeoutSeconds
+      fallback: luaCommandTimeoutSeconds,
+      minimum: 0,
+      includesMinimum: false
     )
     luaCommandMaxOutputBytes = try luaCommands.int(
       "max_output_bytes",
-      fallback: luaCommandMaxOutputBytes
+      fallback: luaCommandMaxOutputBytes,
+      minimum: 1
     )
     luaCommandMaxAsyncJobs = try luaCommands.int(
       "max_async_jobs",
-      fallback: luaCommandMaxAsyncJobs
+      fallback: luaCommandMaxAsyncJobs,
+      minimum: 1
     )
-
-    if luaCommandTimeoutSeconds <= 0 {
-      throw ConfigError.invalidValue(
-        path: luaCommands.path(for: "timeout_seconds"),
-        message: "expected a value greater than 0"
-      )
-    }
-
-    if luaCommandMaxOutputBytes <= 0 {
-      throw ConfigError.invalidValue(
-        path: luaCommands.path(for: "max_output_bytes"),
-        message: "expected a value greater than 0"
-      )
-    }
-
-    if luaCommandMaxAsyncJobs <= 0 {
-      throw ConfigError.invalidValue(
-        path: luaCommands.path(for: "max_async_jobs"),
-        message: "expected a value greater than 0"
-      )
-    }
 
     registerDirectoryRequirement(
       for: "app.widgets_dir",
@@ -152,15 +135,9 @@ extension Config {
 
     networkAgentRefreshIntervalSeconds = try network.double(
       "refresh_interval_seconds",
-      fallback: networkAgentRefreshIntervalSeconds
+      fallback: networkAgentRefreshIntervalSeconds,
+      minimum: 0
     )
-
-    if networkAgentRefreshIntervalSeconds < 0 {
-      throw ConfigError.invalidValue(
-        path: network.path(for: "refresh_interval_seconds"),
-        message: "expected a value greater than or equal to 0"
-      )
-    }
 
     networkAgentAllowUnauthorizedNonSensitiveFields = try network.bool(
       "allow_unauthorized_non_sensitive_fields",
@@ -178,25 +155,11 @@ extension Config {
   func parseBar(from toml: TOMLTable) throws {
     guard let bar = try configReader(table: toml, path: "").optionalSection("bar") else { return }
 
-    if let height = try bar.optionalInt("height") {
-      guard height >= 0 else {
-        throw ConfigError.invalidValue(
-          path: bar.path(for: "height"),
-          message: "expected a value greater than or equal to 0"
-        )
-      }
-
+    if let height = try bar.optionalInt("height", minimum: 0) {
       barHeight = CGFloat(height)
     }
 
-    if let paddingX = try bar.optionalInt("padding_x") {
-      guard paddingX >= 0 else {
-        throw ConfigError.invalidValue(
-          path: bar.path(for: "padding_x"),
-          message: "expected a value greater than or equal to 0"
-        )
-      }
-
+    if let paddingX = try bar.optionalInt("padding_x", minimum: 0) {
       barPaddingX = CGFloat(paddingX)
     }
 
