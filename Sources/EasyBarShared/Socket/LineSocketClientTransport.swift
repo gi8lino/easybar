@@ -8,6 +8,7 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
   case encodeFailed
   case decodeFailed(String)
   case writeFailed(String)
+  case responseTimedOut(TimeInterval)
   case noReply
 
   /// Returns a printable transport error.
@@ -23,6 +24,8 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
       return "decode failed: \(message)"
     case .writeFailed(let message):
       return "write failed: \(message)"
+    case .responseTimedOut(let timeout):
+      return "response timed out after \(timeout) seconds"
     case .noReply:
       return "no reply"
     }
@@ -32,27 +35,12 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
 /// Sends one line-delimited JSON request and decodes one JSON response.
 public struct LineSocketClientTransport<Request: Encodable, Response: Decodable> {
   public let socketPath: String
-
-  private let makeEncoder: @Sendable () -> JSONEncoder
-  private let makeDecoder: @Sendable () -> JSONDecoder
+  public let responseTimeout: TimeInterval
 
   /// Creates a new client transport for the given socket path.
-  public init(
-    socketPath: String,
-    makeEncoder: @escaping @Sendable () -> JSONEncoder = {
-      let encoder = JSONEncoder()
-      encoder.outputFormatting = [.sortedKeys]
-      return encoder
-    },
-    makeDecoder: @escaping @Sendable () -> JSONDecoder = {
-      let decoder = JSONDecoder()
-      decoder.dateDecodingStrategy = .iso8601
-      return decoder
-    }
-  ) {
+  public init(socketPath: String, responseTimeout: TimeInterval = 5) {
     self.socketPath = socketPath
-    self.makeEncoder = makeEncoder
-    self.makeDecoder = makeDecoder
+    self.responseTimeout = max(0.001, responseTimeout)
   }
 
   /// Sends one request and returns one decoded response.
@@ -81,7 +69,8 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
     }
 
-    let encoder = makeEncoder()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
 
     guard let payload = try? encoder.encode(request) else {
       throw LineSocketClientTransportError.encodeFailed
@@ -119,10 +108,14 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   /// Reads bytes until one response line decodes or EOF is reached.
   private func readOneResponse(from fd: Int32) throws -> Response {
-    var lineDecoder = LineDelimitedJSONDecoder<Response>(decoder: makeDecoder())
+    var lineDecoder = LineDelimitedJSONDecoder<Response>()
     var buffer = [UInt8](repeating: 0, count: 1024)
 
+    let deadline = Date().addingTimeInterval(responseTimeout)
+
     while true {
+      try waitForReadable(fd: fd, deadline: deadline)
+
       let n = read(fd, &buffer, buffer.count)
       if n < 0 {
         if errno == EINTR {
@@ -142,6 +135,34 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
   }
 
+  /// Waits until the socket has data to read or the response deadline expires.
+  private func waitForReadable(fd: Int32, deadline: Date) throws {
+    while true {
+      let remaining = deadline.timeIntervalSinceNow
+      guard remaining > 0 else {
+        throw LineSocketClientTransportError.responseTimedOut(responseTimeout)
+      }
+
+      var pollFD = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+      let timeoutMilliseconds = Int32(min(Double(Int32.max), ceil(remaining * 1000)))
+      let result = poll(&pollFD, 1, timeoutMilliseconds)
+
+      if result > 0 {
+        return
+      }
+
+      if result == 0 {
+        throw LineSocketClientTransportError.responseTimedOut(responseTimeout)
+      }
+
+      if errno == EINTR {
+        continue
+      }
+
+      throw LineSocketClientTransportError.noReply
+    }
+  }
+
   /// Returns the first decoded response from a line decoder result list.
   private func decodeOneResult(_ results: [Result<Response, Error>]) throws -> Response {
     guard let result = results.first else {
@@ -154,5 +175,4 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }
   }
-
 }
