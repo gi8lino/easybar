@@ -6,20 +6,20 @@ extension Config {
   func resetDerivedDefaults() {
     let runtime = SharedRuntimeConfig.environmentDefaults()
 
-    appSection.widgetsPath = runtime.widgetsPath
-    appSection.lockDirectory = runtime.lockDirectory
-    appSection.luaSocketPath = runtime.luaSocketPath
-    appSection.widgetEditorStubPath = runtime.widgetEditorStubPath
+    appSection.widgetsPath = runtime.app.widgetsPath
+    appSection.lockDirectory = runtime.app.lockDirectory
+    appSection.luaSocketPath = runtime.app.luaSocketPath
+    appSection.widgetEditorStubPath = runtime.app.widgetEditorStubPath
 
-    loggingSection.directory = runtime.loggingDirectory
-    loggingSection.level = runtime.loggingLevel
+    loggingSection.directory = runtime.logging.directory
+    loggingSection.level = runtime.logging.level
 
-    calendarAgentSection.socketPath = runtime.calendarAgentSocketPath
+    calendarAgentSection.socketPath = runtime.calendarAgent.socketPath
 
-    networkAgentSection.socketPath = runtime.networkAgentSocketPath
-    networkAgentSection.refreshIntervalSeconds = runtime.networkAgentRefreshIntervalSeconds
+    networkAgentSection.socketPath = runtime.networkAgent.socketPath
+    networkAgentSection.refreshIntervalSeconds = runtime.networkAgent.refreshIntervalSeconds
     networkAgentSection.allowUnauthorizedNonSensitiveFields =
-      runtime.networkAgentAllowUnauthorizedNonSensitiveFields
+      runtime.networkAgent.allowUnauthorizedFieldsWithoutLocation
 
     themeSection.themesDir = defaultThemesDir()
   }

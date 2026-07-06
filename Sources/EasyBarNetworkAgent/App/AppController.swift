@@ -91,9 +91,9 @@ final class AppController: NetworkAuthorizationPromptPresenter {
   private func configureLogging(sharedConfig: SharedRuntimeConfig) {
     AppShellSupport.configureLogging(
       logger: logger,
-      minimumLevel: sharedConfig.loggingLevel,
-      fileLoggingEnabled: sharedConfig.loggingEnabled,
-      loggingDirectory: sharedConfig.loggingDirectory,
+      minimumLevel: sharedConfig.logging.level,
+      fileLoggingEnabled: sharedConfig.logging.enabled,
+      loggingDirectory: sharedConfig.logging.directory,
       logFileName: "network-agent.out"
     )
   }
@@ -103,7 +103,7 @@ final class AppController: NetworkAuthorizationPromptPresenter {
     AppShellSupport.acquireInstanceLock(
       instanceGuard: instanceGuard,
       processName: "easybar-network-agent",
-      directory: sharedConfig.lockDirectory,
+      directory: sharedConfig.app.lockDirectory,
       logger: logger,
       acquireMessage: "easybar-network-agent acquired instance lock",
       alreadyRunningMessage: "easybar-network-agent already running",

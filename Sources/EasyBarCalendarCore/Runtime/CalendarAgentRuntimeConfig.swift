@@ -39,12 +39,12 @@ public struct CalendarAgentRuntimeConfig {
     appVersion: String
   ) -> CalendarAgentRuntimeConfig {
     CalendarAgentRuntimeConfig(
-      isEnabled: runtimeConfig.calendarAgentEnabled,
+      isEnabled: runtimeConfig.calendarAgent.enabled,
       processName: "calendar agent",
       componentName: "calendar agent",
       appVersion: appVersion,
       configPath: runtimeConfig.configPath,
-      socketPath: runtimeConfig.calendarAgentSocketPath
+      socketPath: runtimeConfig.calendarAgent.socketPath
     )
   }
 }

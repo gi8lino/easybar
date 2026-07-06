@@ -47,15 +47,15 @@ public struct NetworkAgentRuntimeConfig {
     appVersion: String
   ) -> NetworkAgentRuntimeConfig {
     NetworkAgentRuntimeConfig(
-      isEnabled: runtimeConfig.networkAgentEnabled,
+      isEnabled: runtimeConfig.networkAgent.enabled,
       processName: "network agent",
       componentName: "network agent",
       appVersion: appVersion,
       configPath: runtimeConfig.configPath,
-      socketPath: runtimeConfig.networkAgentSocketPath,
-      refreshIntervalSeconds: runtimeConfig.networkAgentRefreshIntervalSeconds,
+      socketPath: runtimeConfig.networkAgent.socketPath,
+      refreshIntervalSeconds: runtimeConfig.networkAgent.refreshIntervalSeconds,
       allowUnauthorizedFieldsWithoutLocation: runtimeConfig
-        .networkAgentAllowUnauthorizedFieldsWithoutLocation
+        .networkAgent.allowUnauthorizedFieldsWithoutLocation
     )
   }
 }

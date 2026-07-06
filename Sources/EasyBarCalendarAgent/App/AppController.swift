@@ -64,9 +64,9 @@ final class AppController {
   private func configureLogging(sharedConfig: SharedRuntimeConfig) {
     AppShellSupport.configureLogging(
       logger: logger,
-      minimumLevel: sharedConfig.loggingLevel,
-      fileLoggingEnabled: sharedConfig.loggingEnabled,
-      loggingDirectory: sharedConfig.loggingDirectory,
+      minimumLevel: sharedConfig.logging.level,
+      fileLoggingEnabled: sharedConfig.logging.enabled,
+      loggingDirectory: sharedConfig.logging.directory,
       logFileName: "calendar-agent.out"
     )
   }
@@ -76,7 +76,7 @@ final class AppController {
     AppShellSupport.acquireInstanceLock(
       instanceGuard: instanceGuard,
       processName: "easybar-calendar-agent",
-      directory: sharedConfig.lockDirectory,
+      directory: sharedConfig.app.lockDirectory,
       logger: logger,
       acquireMessage: "easybar-calendar-agent acquired instance lock",
       alreadyRunningMessage: "easybar-calendar-agent already running",
