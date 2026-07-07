@@ -24,12 +24,15 @@ local CASK_DENYLIST = {
 local EXEC = {
 	check = {
 		timeout_seconds = 30,
+		max_output_bytes = 1024 * 1024,
 	},
 	update = {
 		timeout_seconds = 5 * 60,
+		max_output_bytes = 2 * 1024 * 1024,
 	},
 	upgrade = {
 		timeout_seconds = 30 * 60,
+		max_output_bytes = 4 * 1024 * 1024,
 	},
 }
 
@@ -224,7 +227,7 @@ local function prune_brew_log()
 	file:close()
 end
 
---- Quotes one value for safe use in a POSIX shell assignment.
+--- Quotes one value for safe use as a POSIX shell argument.
 local function shell_quote(value)
 	return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
 end
@@ -286,8 +289,12 @@ local function run_logged_command(command, options, exit_label, callback)
 	append_log_line("$ " .. command)
 
 	easybar.exec_async(command, options, function(output, code)
+		output = tostring(output or "")
+		code = code or 0
+
 		append_log_output(output)
 		append_log_line(exit_label .. " exit " .. tostring(code))
+
 		callback(output, code)
 	end)
 end
@@ -393,6 +400,9 @@ end
 --- Stores parsed Homebrew outdated JSON in widget state.
 local function apply_outdated_json(raw)
 	local parsed = easybar.json.decode(raw)
+	if type(parsed) ~= "table" then
+		error("decoded brew output is not a table")
+	end
 
 	state.formulae = parse_package_list(parsed.formulae, "formula")
 	state.casks = parse_package_list(parsed.casks, "cask")
@@ -403,13 +413,16 @@ local function apply_outdated_json(raw)
 	log_debug("apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
 end
 
---- Applies Homebrew JSON output to state.
+--- Applies Homebrew JSON output to state and returns whether parsing succeeded.
 local function apply_outdated_result(output)
 	local ok, err = pcall(apply_outdated_json, output)
 	if not ok then
 		state.error = "Could not parse brew output: " .. tostring(err)
 		state.phase = "error"
+		return false
 	end
+
+	return true
 end
 
 --- Returns the number of outdated packages.
@@ -682,14 +695,6 @@ end
 local function render_bar()
 	local icon, color = current_bar_visual()
 
-	log_debug(
-		"render_bar",
-		"running=" .. tostring(running),
-		"phase=" .. tostring(state.phase),
-		"error=" .. tostring(state.error ~= nil),
-		"total=" .. tostring(count_packages())
-	)
-
 	brew_widget:set({
 		icon = {
 			string = icon,
@@ -760,7 +765,11 @@ local function finish_with_outdated_result(kind, output, code)
 		return
 	end
 
-	apply_outdated_result(output)
+	if not apply_outdated_result(output) then
+		fail_brew_operation(kind, state.error or "brew outdated returned invalid JSON")
+		return
+	end
+
 	finish_brew_operation(kind)
 end
 
@@ -973,19 +982,9 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 	background = button_background(),
 })
 
---- Logs mouse-enter events for troubleshooting popup interaction.
-brew_widget:subscribe(easybar.events.mouse.entered, function()
-	log_debug("mouse entered", "running=" .. tostring(running))
-end)
-
---- Logs mouse-exit events for troubleshooting popup interaction.
-brew_widget:subscribe(easybar.events.mouse.exited, function()
-	log_debug("mouse exited", "running=" .. tostring(running))
-end)
-
 --- Starts the update flow when the update button is left-clicked.
 update_button:subscribe(easybar.events.mouse.clicked, function(event)
-	if (event.button == nil or event.button == "left") and not running then
+	if (event.button == nil or event.button == easybar.events.mouse.left_button) and not running then
 		log_debug("update click")
 		update_now()
 	end
@@ -993,7 +992,7 @@ end)
 
 --- Starts the upgrade flow when the upgrade button is left-clicked.
 upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
-	if (event.button == nil or event.button == "left") and not running then
+	if (event.button == nil or event.button == easybar.events.mouse.left_button) and not running then
 		log_debug("upgrade click")
 		upgrade_now()
 	end
