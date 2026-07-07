@@ -192,8 +192,40 @@ private final class CommandExecution: @unchecked Sendable {
       return nil
     }
 
+    guard setNonblocking(fileDescriptors[0]) else {
+      close(fileDescriptors[0])
+      close(fileDescriptors[1])
+
+      complete(
+        LuaCommandResult(output: "failed to configure command output pipe", status: 1)
+      )
+      return nil
+    }
+
     let readHandle = FileHandle(fileDescriptor: fileDescriptors[0], closeOnDealloc: true)
     return (readHandle, fileDescriptors[0], fileDescriptors[1])
+  }
+
+  /// Configures one file descriptor for nonblocking reads.
+  private func setNonblocking(_ fileDescriptor: Int32) -> Bool {
+    let flags = fcntl(fileDescriptor, F_GETFL)
+    guard flags >= 0 else {
+      logger.warn(
+        "failed to inspect lua command output pipe flags",
+        .field("errno", errno)
+      )
+      return false
+    }
+
+    guard fcntl(fileDescriptor, F_SETFL, flags | O_NONBLOCK) >= 0 else {
+      logger.warn(
+        "failed to configure lua command output pipe as nonblocking",
+        .field("errno", errno)
+      )
+      return false
+    }
+
+    return true
   }
 
   /// Spawns `/bin/sh -lc <command>` in a dedicated process group.
@@ -305,7 +337,7 @@ private final class CommandExecution: @unchecked Sendable {
     }
     guard !isAlreadyCompleted else { return }
 
-    let chunk = handle.availableData
+    let chunk = readCurrentlyAvailableOutput(from: handle)
     let shouldTerminate = state.withLock { state in
       state.appendOutput(chunk, maxOutputBytes: limits.maxOutputBytes)
     }
@@ -360,11 +392,48 @@ private final class CommandExecution: @unchecked Sendable {
       )
     }
 
-    if let remainingData = try? outputReadHandle?.readToEnd() {
-      appendRemainingOutput(remainingData)
+    if let outputReadHandle {
+      appendRemainingOutput(readCurrentlyAvailableOutput(from: outputReadHandle))
     }
 
     complete(result(waitResult: waitResult, status: status))
+  }
+
+  /// Reads all bytes currently available from a nonblocking output pipe.
+  private func readCurrentlyAvailableOutput(from handle: FileHandle) -> Data {
+    var output = Data()
+    var buffer = [UInt8](repeating: 0, count: 4096)
+
+    while true {
+      let bytesRead = buffer.withUnsafeMutableBytes { rawBuffer in
+        guard let baseAddress = rawBuffer.baseAddress else { return 0 }
+        return read(handle.fileDescriptor, baseAddress, rawBuffer.count)
+      }
+      if bytesRead > 0 {
+        output.append(contentsOf: buffer.prefix(bytesRead))
+        continue
+      }
+
+      if bytesRead == 0 {
+        return output
+      }
+
+      let errnoValue = errno
+      if errnoValue == EINTR {
+        continue
+      }
+
+      if errnoValue == EAGAIN || errnoValue == EWOULDBLOCK {
+        return output
+      }
+
+      logger.warn(
+        "failed to read lua command output",
+        .field("command_bytes", command.utf8.count),
+        .field("errno", errnoValue)
+      )
+      return output
+    }
   }
 
   /// Appends final output read after process termination.
