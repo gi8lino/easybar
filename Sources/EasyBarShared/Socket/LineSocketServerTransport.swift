@@ -4,7 +4,7 @@ import Foundation
 /// Serves line-delimited JSON requests over a Unix domain socket and optionally tracks subscribers.
 ///
 /// Sendability is guarded by `LockedState`; server file descriptors, accept
-/// tasks, client tasks, and subscribers are only mutated while holding that lock.
+/// tasks, connected clients, and subscribers are only mutated while holding that lock.
 public final class LineSocketServerTransport<
   Subscriber,
   Request: Decodable,
@@ -33,22 +33,15 @@ public final class LineSocketServerTransport<
     var running = false
     var acceptTask: Task<Void, Never>?
     var clientFDs: Set<Int32> = []
-    var clientTasks: [Int32: Task<Void, Never>] = [:]
     var subscribers: [Int32: Subscriber] = [:]
   }
 
   private struct StopSnapshot {
+    let wasRunning: Bool
     let serverFD: Int32
+    let clientFDs: [Int32]
+    let subscriberFDs: [Int32]
     let acceptTask: Task<Void, Never>?
-    let clientFDs: Set<Int32>
-    let clientTasks: [Int32: Task<Void, Never>]
-    let subscriberFDs: Set<Int32>
-  }
-
-  private struct CloseClientSnapshot {
-    let shouldClose: Bool
-    let task: Task<Void, Never>?
-    let shouldNotify: Bool
   }
 
   private let socketPath: String
@@ -94,20 +87,20 @@ public final class LineSocketServerTransport<
       return
     }
 
-    let shouldClose = state.withLock { state -> Bool in
+    let shouldCancel = state.withLock { state -> Bool in
       guard state.running else { return true }
       state.serverFD = fd
       return false
     }
 
-    if shouldClose {
-      closeSocket(fd)
+    if shouldCancel {
+      closeListeningSocket(fd)
       return
     }
 
     logger.info(
       "\(serverLabel) listening",
-      .field("socket_path", "\(socketPath)")
+      .field("socket_path", "\(socketPath)"),
     )
 
     let task = DetachedTask.run(priority: .utility) { [weak self] in
@@ -126,444 +119,396 @@ public final class LineSocketServerTransport<
     }
   }
 
-  /// Stops accepting clients and closes every active client and subscriber fd.
+  /// Stops the server, closes connected clients, and removes the socket file.
   public func stop() {
     let snapshot = state.withLock { state -> StopSnapshot in
       let snapshot = StopSnapshot(
+        wasRunning: state.running,
         serverFD: state.serverFD,
-        acceptTask: state.acceptTask,
-        clientFDs: state.clientFDs,
-        clientTasks: state.clientTasks,
-        subscriberFDs: Set(state.subscribers.keys)
+        clientFDs: Array(state.clientFDs.union(state.subscribers.keys)),
+        subscriberFDs: Array(state.subscribers.keys),
+        acceptTask: state.acceptTask
       )
 
-      state = State()
+      state.running = false
+      state.serverFD = -1
+      state.acceptTask = nil
+      state.clientFDs.removeAll()
+      state.subscribers.removeAll()
       return snapshot
     }
 
-    snapshot.acceptTask?.cancel()
-    snapshot.clientTasks.values.forEach { $0.cancel() }
+    guard snapshot.wasRunning else { return }
 
-    var fdsToClose = snapshot.clientFDs
-    fdsToClose.formUnion(snapshot.subscriberFDs)
-    if snapshot.serverFD >= 0 {
-      fdsToClose.insert(snapshot.serverFD)
+    snapshot.acceptTask?.cancel()
+
+    for clientFD in snapshot.clientFDs {
+      closeClientSocket(clientFD)
     }
 
-    for fd in fdsToClose {
-      closeSocket(fd)
+    for subscriberFD in snapshot.subscriberFDs {
+      onSubscriberRemoved?(subscriberFD)
+    }
+
+    if snapshot.serverFD >= 0 {
+      Darwin.shutdown(snapshot.serverFD, SHUT_RDWR)
+      close(snapshot.serverFD)
     }
 
     unlink(socketPath)
+    logger.info(
+      "\(serverLabel) stopped",
+      .field("socket_path", "\(socketPath)"),
+    )
+  }
 
-    for fd in snapshot.subscriberFDs {
-      onSubscriberRemoved?(fd)
+  /// Sends one encoded response to the given client file descriptor.
+  @discardableResult
+  public func send(_ response: Response, to clientFD: Int32) -> Bool {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    encoder.dateEncodingStrategy = .iso8601
+
+    do {
+      let data = try encoder.encode(response) + Data([0x0A])
+      return writeAll(data, to: clientFD)
+    } catch {
+      logger.error(
+        "\(serverLabel) response encode failed",
+        .field("error", "\(error)"),
+      )
+      return false
     }
   }
 
-  /// Tracks one subscriber on an already accepted client fd.
+  /// Adds one subscriber for future broadcasts.
   public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) {
-    let didAdd = state.withLock { state -> Bool in
-      guard state.running else { return false }
+    let added = state.withLock { state -> Bool in
+      guard state.running, state.clientFDs.contains(fd) else { return false }
       state.subscribers[fd] = subscriber
       return true
     }
 
-    if !didAdd {
-      logger.debug(
-        "\(serverLabel) ignored subscriber for stopped transport",
-        .field("fd", fd)
-      )
-    }
+    guard added else { return }
+
+    logger.debug(
+      "\(serverLabel) subscriber added",
+      .field("fd", "\(fd)"),
+    )
   }
 
-  /// Returns a snapshot of currently tracked subscribers.
-  public func subscribersSnapshot() -> [SubscriberEntry] {
-    state.withLock { state in
-      state.subscribers.map { SubscriberEntry(fd: $0.key, subscriber: $0.value) }
-    }
-  }
-
-  /// Removes and closes one subscriber fd.
+  /// Removes one subscriber and closes its socket.
   @discardableResult
   public func removeSubscriber(fd: Int32) -> Bool {
-    let shouldNotify = state.withLock { state -> Bool in
-      state.subscribers.removeValue(forKey: fd) != nil
+    let removed = removeClientConnectionRecords(fd: fd)
+
+    if removed.shouldClose {
+      closeClientSocket(fd)
     }
 
-    closeClient(fd)
-
-    if shouldNotify {
+    if removed.subscriber {
+      logger.debug(
+        "\(serverLabel) subscriber removed",
+        .field("fd", "\(fd)"),
+      )
       onSubscriberRemoved?(fd)
     }
 
-    return shouldNotify
+    return removed.subscriber
   }
 
-  /// Sends one response message to the given client fd.
-  @discardableResult
-  public func send(_ response: Response, to fd: Int32) -> Bool {
-    do {
-      let encoder = JSONEncoder()
-      encoder.outputFormatting = [.sortedKeys]
-      encoder.dateEncodingStrategy = .iso8601
-
-      let payload = try encoder.encode(response) + Data([0x0A])
-      try writeAll(payload, to: fd)
-      return true
-    } catch {
-      logger.warn(
-        "\(serverLabel) send failed",
-        .field("fd", fd),
-        .field("error", error)
-      )
-      return false
+  /// Returns a stable snapshot of current subscribers.
+  public func subscribersSnapshot() -> [SubscriberEntry] {
+    state.withLock { state in
+      state.subscribers.map {
+        SubscriberEntry(fd: $0.key, subscriber: $0.value)
+      }
     }
   }
 
-  /// Broadcasts one message to every current subscriber and removes failed subscribers.
-  public func broadcast(_ makeMessage: (Subscriber) -> Response) {
+  /// Sends one derived response to every subscriber and drops sockets that can no longer receive.
+  public func broadcast(_ response: (Subscriber) -> Response) {
     for entry in subscribersSnapshot() {
-      guard send(makeMessage(entry.subscriber), to: entry.fd) else {
-        removeSubscriber(fd: entry.fd)
+      guard send(response(entry.subscriber), to: entry.fd) else {
+        _ = removeSubscriber(fd: entry.fd)
         continue
       }
     }
   }
 
-  /// Accepts client sockets until the listening fd is closed.
-  private func acceptLoop(handler: @escaping (Int32, Request) async -> ClientDisposition) async {
-    while !Task.isCancelled {
-      guard let serverFD = currentServerFD() else { return }
-
-      let clientFD = Darwin.accept(serverFD, nil, nil)
-
-      if clientFD >= 0 {
-        startClientTask(clientFD, handler: handler)
-        continue
-      }
-
-      if errno == EINTR {
-        continue
-      }
-
-      if isRunning, shouldLogAcceptFailure(errnoValue: errno) {
-        logger.warn("\(serverLabel) accept failed", .field("errno", errno))
-      }
-
-      return
-    }
-  }
-
-  /// Starts a read task for one accepted client fd.
-  private func startClientTask(
-    _ clientFD: Int32,
-    handler: @escaping (Int32, Request) async -> ClientDisposition
-  ) {
-    guard configureNoSigPipe(fd: clientFD) else {
-      closeSocket(clientFD)
-      return
-    }
-
-    let shouldClose = state.withLock { state -> Bool in
-      guard state.running else { return true }
-      state.clientFDs.insert(clientFD)
-      return false
-    }
-
-    if shouldClose {
-      closeSocket(clientFD)
-      return
-    }
-
-    let task = DetachedTask.run(priority: .utility) { [weak self] in
-      guard let self else { return }
-      await self.handleClient(clientFD, handler: handler)
-    }
-
-    let shouldCancelTask = state.withLock { state -> Bool in
-      guard state.running, state.clientFDs.contains(clientFD) else { return true }
-      state.clientTasks[clientFD] = task
-      return false
-    }
-
-    if shouldCancelTask {
-      task.cancel()
-      closeClient(clientFD)
-    }
-  }
-
-  /// Reads one request from a client and applies the requested close/keep-open disposition.
-  private func handleClient(
-    _ clientFD: Int32,
-    handler: @escaping (Int32, Request) async -> ClientDisposition
-  ) async {
-    guard let request = readRequest(from: clientFD) else {
-      closeClient(clientFD)
-      return
-    }
-
-    let disposition = await handler(clientFD, request)
-
-    switch disposition {
-    case .close:
-      closeClient(clientFD)
-
-    case .keepOpen:
-      guard isSubscriberOpen(clientFD) else {
-        closeClient(clientFD)
-        return
-      }
-
-      monitorSubscriberDisconnect(clientFD)
-      closeClient(clientFD)
-    }
-  }
-
-  /// Reads and decodes one newline-delimited request.
-  private func readRequest(from fd: Int32) -> Request? {
-    var decoder = makeDecoder()
-    var buffer = [UInt8](repeating: 0, count: 4096)
-
-    while !Task.isCancelled, isClientOpen(fd) {
-      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
-        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
-        return Darwin.read(fd, baseAddress, rawBuffer.count)
-      }
-
-      if count > 0 {
-        if let request = firstDecodedRequest(from: decoder.append(buffer.prefix(count))) {
-          return request
-        }
-        continue
-      }
-
-      if count == 0 {
-        return firstDecodedRequest(from: decoder.flush())
-      }
-
-      if errno == EINTR {
-        continue
-      }
-
-      return nil
-    }
-
-    return nil
-  }
-
-  /// Returns the first successfully decoded request, logging decode failures.
-  private func firstDecodedRequest(from results: [Result<Request, Error>]) -> Request? {
-    for result in results {
-      switch result {
-      case .success(let request):
-        return request
-
-      case .failure(let error):
-        logger.warn("\(serverLabel) request decode failed", .field("error", error))
-      }
-    }
-
-    return nil
-  }
-
-  /// Removes a client and subscriber entry and closes the fd.
-  private func closeClient(_ fd: Int32) {
-    let snapshot = state.withLock { state -> CloseClientSnapshot in
-      let task = state.clientTasks.removeValue(forKey: fd)
-      let hadClient = state.clientFDs.remove(fd) != nil
-      let hadSubscriber = state.subscribers.removeValue(forKey: fd) != nil
-
-      return CloseClientSnapshot(
-        shouldClose: hadClient || hadSubscriber,
-        task: task,
-        shouldNotify: hadSubscriber
-      )
-    }
-
-    snapshot.task?.cancel()
-
-    if snapshot.shouldClose {
-      closeSocket(fd)
-    }
-
-    if snapshot.shouldNotify {
-      onSubscriberRemoved?(fd)
-    }
-  }
-
-  /// Returns the active listening fd, or nil when stopped.
-  private func currentServerFD() -> Int32? {
-    state.withLock { state in
-      guard state.running, state.serverFD >= 0 else { return nil }
-      return state.serverFD
-    }
-  }
-
-  /// Returns whether the server is currently running.
-  private var isRunning: Bool {
-    state.withLock { $0.running }
-  }
-
-  /// Returns whether one accepted client fd is still tracked.
-  private func isClientOpen(_ fd: Int32) -> Bool {
-    state.withLock { state in
-      state.running && (state.clientFDs.contains(fd) || state.subscribers[fd] != nil)
-    }
-  }
-
-  /// Returns whether one fd is still tracked as a server-push subscriber.
-  private func isSubscriberOpen(_ fd: Int32) -> Bool {
-    state.withLock { state in
-      state.running && state.clientFDs.contains(fd) && state.subscribers[fd] != nil
-    }
-  }
-
-  /// Blocks until a keep-open subscriber disconnects or the server closes the fd.
-  private func monitorSubscriberDisconnect(_ fd: Int32) {
-    var byte = UInt8(0)
-
-    while !Task.isCancelled, isSubscriberOpen(fd) {
-      var pollFD = pollfd(fd: fd, events: Int16(POLLIN | POLLHUP | POLLERR), revents: 0)
-      let pollResult = Darwin.poll(&pollFD, 1, 250)
-
-      if pollResult == 0 {
-        continue
-      }
-
-      if pollResult < 0 {
-        if errno == EINTR {
-          continue
-        }
-        return
-      }
-
-      if (pollFD.revents & Int16(POLLNVAL | POLLHUP | POLLERR)) != 0 {
-        return
-      }
-
-      if (pollFD.revents & Int16(POLLIN)) != 0 {
-        let count = Darwin.recv(fd, &byte, 1, MSG_PEEK)
-        if count <= 0 {
-          return
-        }
-
-        logger.warn(
-          "\(serverLabel) subscriber sent unexpected data",
-          .field("fd", fd)
-        )
-        return
-      }
-    }
-  }
-
-  /// Creates and starts listening on the Unix domain socket.
+  /// Creates and starts the listening socket.
   private func makeListeningSocket() -> Int32? {
     let socketURL = URL(fileURLWithPath: socketPath)
-    let socketDirectory = socketURL.deletingLastPathComponent()
+    let socketDir = socketURL.deletingLastPathComponent()
 
     do {
       try FileManager.default.createDirectory(
-        at: socketDirectory,
+        at: socketDir,
         withIntermediateDirectories: true
       )
     } catch {
       logger.error(
-        "failed to create \(serverLabel) socket directory",
-        .field("path", socketDirectory.path),
-        .field("error", error)
+        "\(serverLabel) failed to create socket directory",
+        .field("path", "\(socketDir.path)"),
+        .field("error", "\(error)"),
       )
       return nil
     }
 
     unlink(socketPath)
 
-    let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else {
-      logger.error("failed to create \(serverLabel) socket", .field("errno", errno))
+      logger.error(
+        "\(serverLabel) failed to create socket",
+        .field("errno", "\(errno)"),
+      )
       return nil
     }
 
     guard configureNoSigPipe(fd: fd) else {
-      logger.error("failed to configure \(serverLabel) socket no-sigpipe")
-      closeSocket(fd)
+      logger.error(
+        "\(serverLabel) failed to configure server socket no-sigpipe",
+        .field("fd", "\(fd)"),
+      )
+      close(fd)
       return nil
     }
 
+    let addr: sockaddr_un
     do {
-      var address = try makeSockAddrUn(path: socketPath)
-      let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-      let bindResult = withUnsafePointer(to: &address) {
-        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-          Darwin.bind(fd, $0, addressLength)
-        }
-      }
-
-      guard bindResult == 0 else {
-        logger.error("failed to bind \(serverLabel) socket", .field("errno", errno))
-        closeSocket(fd)
-        return nil
-      }
-
-      guard Darwin.listen(fd, SOMAXCONN) == 0 else {
-        logger.error("failed to listen on \(serverLabel) socket", .field("errno", errno))
-        closeSocket(fd)
-        unlink(socketPath)
-        return nil
-      }
-
-      return fd
+      addr = try makeSockAddrUn(path: socketPath)
     } catch {
-      logger.error("invalid \(serverLabel) socket path", .field("error", error))
-      closeSocket(fd)
+      logger.error(
+        "\(serverLabel) invalid socket path",
+        .field("path", "\(socketPath)"),
+        .field("error", "\(error)"),
+      )
+      close(fd)
+      unlink(socketPath)
       return nil
     }
+
+    var mutableAddr = addr
+    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    let bindResult = withUnsafePointer(to: &mutableAddr) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        bind(fd, $0, addrLen)
+      }
+    }
+
+    guard bindResult == 0 else {
+      logger.error(
+        "\(serverLabel) bind failed",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
+      )
+      close(fd)
+      return nil
+    }
+
+    if chmod(socketPath, mode_t(0o600)) != 0 {
+      logger.warn(
+        "\(serverLabel) chmod failed",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
+      )
+    }
+
+    guard listen(fd, 8) == 0 else {
+      logger.error(
+        "\(serverLabel) listen failed",
+        .field("path", "\(socketPath)"),
+        .field("errno", "\(errno)"),
+      )
+      close(fd)
+      unlink(socketPath)
+      return nil
+    }
+
+    return fd
   }
 
-  /// Builds a fresh request decoder.
-  private func makeDecoder() -> LineDelimitedJSONDecoder<Request> {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    return LineDelimitedJSONDecoder(decoder: decoder)
+  /// Closes one listening socket and removes its filesystem path.
+  private func closeListeningSocket(_ fd: Int32) {
+    Darwin.shutdown(fd, SHUT_RDWR)
+    close(fd)
+    unlink(socketPath)
   }
 
-  /// Writes all bytes to the client fd.
-  private func writeAll(_ data: Data, to fd: Int32) throws {
-    try data.withUnsafeBytes { rawBuffer in
-      guard let baseAddress = rawBuffer.baseAddress else { return }
+  /// Accepts client connections until the server stops.
+  private func acceptLoop(handler: @escaping (Int32, Request) async -> ClientDisposition) async {
+    while isRunning(), !Task.isCancelled {
+      let fd = currentServerFD()
+      if fd < 0 { break }
 
-      var sent = 0
-      while sent < data.count {
-        let count = Darwin.write(fd, baseAddress.advanced(by: sent), data.count - sent)
-
-        if count > 0 {
-          sent += count
+      let clientFD = accept(fd, nil, nil)
+      if clientFD < 0 {
+        if errno == EINTR {
           continue
         }
 
-        if count < 0, errno == EINTR {
-          continue
+        if !isRunning() || Task.isCancelled {
+          break
         }
 
-        throw NSError(
-          domain: NSPOSIXErrorDomain,
-          code: Int(errno),
-          userInfo: [NSLocalizedDescriptionKey: String(cString: strerror(errno))]
+        logger.debug(
+          "\(serverLabel) accept failed",
+          .field("errno", "\(errno)"),
         )
+        continue
+      }
+
+      guard configureNoSigPipe(fd: clientFD) else {
+        logger.error(
+          "\(serverLabel) failed to configure client socket no-sigpipe",
+          .field("fd", "\(clientFD)"),
+        )
+        close(clientFD)
+        continue
+      }
+
+      guard registerClientFD(clientFD) else {
+        closeClientSocket(clientFD)
+        continue
+      }
+
+      DetachedTask.run(priority: .utility) { [weak self] in
+        guard let self else { return }
+        await self.handleClient(clientFD, handler: handler)
       }
     }
   }
 
-  /// Shuts down and closes a fd, waking blocking accept/read calls in other tasks.
-  private func closeSocket(_ fd: Int32) {
-    guard fd >= 0 else { return }
-    Darwin.shutdown(fd, SHUT_RDWR)
-    Darwin.close(fd)
+  /// Reads requests until the client disconnects and invokes the handler for each line.
+  private func handleClient(
+    _ clientFD: Int32,
+    handler: @escaping (Int32, Request) async -> ClientDisposition
+  ) async {
+    var lineDecoder = LineDelimitedJSONDecoder<Request>()
+    var buffer = [UInt8](repeating: 0, count: 4096)
+
+    while !Task.isCancelled {
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return Darwin.read(clientFD, baseAddress, rawBuffer.count)
+      }
+
+      if count > 0 {
+        let disposition = await handleDecodedRequests(
+          lineDecoder.append(buffer.prefix(count)),
+          clientFD: clientFD,
+          handler: handler
+        )
+
+        switch disposition {
+        case .close:
+          closeClientConnection(clientFD)
+          return
+
+        case .keepOpen:
+          continue
+        }
+      }
+
+      if count == 0 {
+        closeClientConnection(clientFD)
+        return
+      }
+
+      if errno == EINTR {
+        continue
+      }
+
+      logger.debug(
+        "\(serverLabel) client read failed",
+        .field("fd", "\(clientFD)"),
+        .field("errno", "\(errno)"),
+      )
+      closeClientConnection(clientFD)
+      return
+    }
+
+    closeClientConnection(clientFD)
   }
 
-  /// Returns whether an `accept` failure is expected during shutdown.
-  private func shouldLogAcceptFailure(errnoValue: Int32) -> Bool {
-    errnoValue != EINVAL && errnoValue != EBADF
+  /// Dispatches decoded requests and returns the resulting socket disposition.
+  private func handleDecodedRequests(
+    _ results: [Result<Request, Error>],
+    clientFD: Int32,
+    handler: @escaping (Int32, Request) async -> ClientDisposition
+  ) async -> ClientDisposition {
+    for result in results {
+      switch result {
+      case .success(let request):
+        let disposition = await handler(clientFD, request)
+        if disposition == .close {
+          return .close
+        }
+
+      case .failure(let error):
+        logger.warn(
+          "\(serverLabel) request decode failed",
+          .field("error", "\(error)"),
+        )
+        return .close
+      }
+    }
+
+    return .keepOpen
+  }
+
+  /// Tracks one accepted client when the server is still running.
+  private func registerClientFD(_ fd: Int32) -> Bool {
+    state.withLock { state -> Bool in
+      guard state.running else { return false }
+      state.clientFDs.insert(fd)
+      return true
+    }
+  }
+
+  /// Removes one connected client and any active subscriber entry.
+  private func removeClientConnectionRecords(
+    fd: Int32
+  ) -> (shouldClose: Bool, subscriber: Bool) {
+    state.withLock { state in
+      let clientRemoved = state.clientFDs.remove(fd) != nil
+      let subscriberRemoved = state.subscribers.removeValue(forKey: fd) != nil
+      return (clientRemoved || subscriberRemoved, subscriberRemoved)
+    }
+  }
+
+  /// Closes one client socket.
+  private func closeClientSocket(_ clientFD: Int32) {
+    Darwin.shutdown(clientFD, SHUT_RDWR)
+    close(clientFD)
+  }
+
+  /// Closes one client socket and removes any active subscriber entry.
+  private func closeClientConnection(_ clientFD: Int32) {
+    let removed = removeClientConnectionRecords(fd: clientFD)
+
+    if removed.shouldClose {
+      closeClientSocket(clientFD)
+    }
+
+    if removed.subscriber {
+      logger.debug(
+        "\(serverLabel) subscriber removed",
+        .field("fd", "\(clientFD)"),
+      )
+      onSubscriberRemoved?(clientFD)
+    }
+  }
+
+  /// Returns whether the server is running.
+  private func isRunning() -> Bool {
+    state.withLock { $0.running }
+  }
+
+  /// Returns the current server socket file descriptor.
+  private func currentServerFD() -> Int32 {
+    state.withLock { $0.serverFD }
   }
 }
