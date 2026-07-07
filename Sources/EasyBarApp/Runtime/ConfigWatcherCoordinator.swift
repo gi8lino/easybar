@@ -20,11 +20,13 @@ actor ConfigWatcherCoordinator {
 
   /// Starts watching the active config file and calls the handler after changes.
   func start(onChange: @escaping () async -> Void) async {
+    watcherTask?.cancel()
+    watcherTask = nil
+
     let path = await configManager.configPath()
     let enabled = await configManager.watchConfigFileEnabled()
     let stream = await fileWatcher.start(configPath: path, enabled: enabled)
 
-    watcherTask?.cancel()
     watcherTask = Task {
       for await event in stream {
         switch event {
