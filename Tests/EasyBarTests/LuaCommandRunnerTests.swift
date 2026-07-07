@@ -1,4 +1,5 @@
 import EasyBarShared
+import Foundation
 import XCTest
 
 @testable import EasyBarApp
@@ -44,6 +45,57 @@ final class LuaCommandRunnerTests: XCTestCase {
     )
 
     XCTAssertEqual(result.status, LuaCommandRunner.Limits.timedOutStatus)
+  }
+
+  func testRunDoesNotWaitForBackgroundChildHoldingOutputPipe() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let startedAt = Date()
+    let result = await runner.run(
+      command: "sleep 3 & printf done",
+      limits: .init(timeoutSeconds: 1, maxOutputBytes: 1024)
+    )
+    let elapsedSeconds = Date().timeIntervalSince(startedAt)
+
+    XCTAssertEqual(result.output, "done")
+    XCTAssertEqual(result.status, 0)
+    XCTAssertLessThan(elapsedSeconds, 1.5)
+  }
+
+  func testRunTerminatesChildProcessGroupOnTimeout() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+    let markerPath = "/tmp/easybar-lua-command-runner-\(UUID().uuidString)"
+    defer { try? FileManager.default.removeItem(atPath: markerPath) }
+
+    let result = await runner.run(
+      command: "sh -c 'sleep 0.5; touch \"\(markerPath)\"' & wait",
+      limits: .init(timeoutSeconds: 0.1, maxOutputBytes: 1024)
+    )
+
+    try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+    XCTAssertEqual(result.status, LuaCommandRunner.Limits.timedOutStatus)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: markerPath))
+  }
+
+  func testRunForceKillsCommandThatIgnoresTermination() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let startedAt = Date()
+    let result = await runner.run(
+      command: "trap '' TERM; while :; do sleep 1; done",
+      limits: .init(timeoutSeconds: 0.1, maxOutputBytes: 1024)
+    )
+    let elapsedSeconds = Date().timeIntervalSince(startedAt)
+
+    XCTAssertEqual(result.status, LuaCommandRunner.Limits.timedOutStatus)
+    XCTAssertLessThan(elapsedSeconds, 2.0)
   }
 
   func testRunTerminatesCommandThatExceedsOutputLimit() async {

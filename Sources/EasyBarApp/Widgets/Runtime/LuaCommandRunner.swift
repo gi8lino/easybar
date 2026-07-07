@@ -630,5 +630,3 @@ private final class CommandExecution: @unchecked Sendable {
     return waitStatusCode(status)
   }
 }
-
-
