@@ -43,17 +43,94 @@ if [ "${timeout_minutes}" -gt 0 ]; then
   timeout_seconds=$((timeout_minutes * 60))
 fi
 
-: >"${log_file}"
+kill_process_tree() {
+  local pid="$1"
+  local child_pid
 
-echo "Running: ${test_command[*]}" | tee -a "${log_file}"
-if [ "${timeout_seconds}" -gt 0 ]; then
-  echo "Command timeout: ${timeout_minutes} minute(s)" | tee -a "${log_file}"
-else
-  echo "Command timeout: disabled" | tee -a "${log_file}"
-fi
+  for child_pid in $(pgrep -P "${pid}" 2>/dev/null || true); do
+    kill_process_tree "${child_pid}"
+  done
+
+  kill "${pid}" 2>/dev/null || true
+}
+
+force_kill_process_tree() {
+  local pid="$1"
+  local child_pid
+
+  for child_pid in $(pgrep -P "${pid}" 2>/dev/null || true); do
+    force_kill_process_tree "${child_pid}"
+  done
+
+  kill -9 "${pid}" 2>/dev/null || true
+}
+
+dump_process_diagnostics() {
+  local reason="$1"
+  local timestamp
+  local child_pid
+
+  timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+  {
+    echo
+    echo "==== CI diagnostics: ${reason} at ${timestamp} ===="
+    echo "Command: ${test_command[*]}"
+    echo "Command PID: ${test_pid}"
+    echo
+    echo "---- matching processes ----"
+    ps -axo pid,ppid,pgid,stat,etime,command |
+      grep -E "(${test_pid}|swift|xctest|EasyBarPackageTests|EasyBar|aerospace|mock-aerospace)" |
+      grep -v grep ||
+      true
+    echo
+    echo "---- direct children of ${test_pid} ----"
+    pgrep -P "${test_pid}" 2>/dev/null || true
+    echo
+    echo "---- open files for command pid ${test_pid} ----"
+    lsof -p "${test_pid}" 2>/dev/null || true
+    echo
+  } | tee -a "${log_file}"
+
+  if command -v sample >/dev/null 2>&1 && kill -0 "${test_pid}" 2>/dev/null; then
+    {
+      echo
+      echo "---- sample command pid ${test_pid} ----"
+    } | tee -a "${log_file}"
+
+    sample "${test_pid}" 5 1 2>&1 | tee -a "${log_file}" || true
+  fi
+
+  for child_pid in $(pgrep -P "${test_pid}" 2>/dev/null || true); do
+    {
+      echo
+      echo "---- child pid ${child_pid} ----"
+      ps -p "${child_pid}" -o pid,ppid,pgid,stat,etime,command || true
+      echo
+      echo "---- open files for child pid ${child_pid} ----"
+      lsof -p "${child_pid}" 2>/dev/null || true
+    } | tee -a "${log_file}"
+
+    if command -v sample >/dev/null 2>&1 && kill -0 "${child_pid}" 2>/dev/null; then
+      {
+        echo
+        echo "---- sample child pid ${child_pid} ----"
+      } | tee -a "${log_file}"
+
+      sample "${child_pid}" 5 1 2>&1 | tee -a "${log_file}" || true
+    fi
+  done
+
+  {
+    echo
+    echo "==== end CI diagnostics ===="
+    echo
+  } | tee -a "${log_file}"
+}
 
 cleanup() {
   local status=$?
+
   trap - INT TERM HUP EXIT
 
   if [ -n "${heartbeat_pid}" ]; then
@@ -63,14 +140,23 @@ cleanup() {
 
   if [ -n "${test_pid}" ] && kill -0 "${test_pid}" 2>/dev/null; then
     echo "Stopping test command..." | tee -a "${log_file}"
-    kill "${test_pid}" 2>/dev/null || true
+    kill_process_tree "${test_pid}"
     sleep 2
-    kill -9 "${test_pid}" 2>/dev/null || true
+    force_kill_process_tree "${test_pid}"
     wait "${test_pid}" 2>/dev/null || true
   fi
 
   exit "${status}"
 }
+
+: >"${log_file}"
+
+echo "Running: ${test_command[*]}" | tee -a "${log_file}"
+if [ "${timeout_seconds}" -gt 0 ]; then
+  echo "Command timeout: ${timeout_minutes} minute(s)" | tee -a "${log_file}"
+else
+  echo "Command timeout: disabled" | tee -a "${log_file}"
+fi
 
 trap cleanup INT TERM HUP EXIT
 
@@ -106,15 +192,18 @@ test_pid=$!
     } >>"${log_file}"
 
     if [ "${timeout_seconds}" -gt 0 ] && [ "${elapsed_seconds}" -ge "${timeout_seconds}" ]; then
+      dump_process_diagnostics "timeout"
+
       {
         echo
         echo "Command timed out after ${timeout_minutes} minute(s): ${test_command[*]}"
         echo
       } | tee -a "${log_file}"
 
-      kill "${test_pid}" 2>/dev/null || true
+      kill_process_tree "${test_pid}"
       sleep 2
-      kill -9 "${test_pid}" 2>/dev/null || true
+      force_kill_process_tree "${test_pid}"
+
       exit 0
     fi
   done
@@ -133,7 +222,7 @@ trap - INT TERM HUP EXIT
 
 if [ "${status}" -ne 0 ]; then
   echo "---- extracted failures ----"
-  grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed|Command timed out)" "${log_file}" || true
+  grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed|Command timed out|CI diagnostics)" "${log_file}" || true
 
   echo "---- full test log ----"
   cat "${log_file}"
