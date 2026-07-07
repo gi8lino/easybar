@@ -45,6 +45,12 @@ public final class LineSocketServerTransport<
     let subscriberFDs: Set<Int32>
   }
 
+  private struct CloseClientSnapshot {
+    let shouldClose: Bool
+    let task: Task<Void, Never>?
+    let shouldNotify: Bool
+  }
+
   private let socketPath: String
   private let serverLabel: String
   private let logger: ProcessLogger
@@ -157,19 +163,30 @@ public final class LineSocketServerTransport<
 
   /// Tracks one subscriber on an already accepted client fd.
   public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) {
-    let shouldClose = state.withLock { state -> Bool in
-      guard state.running else { return true }
+    let didAdd = state.withLock { state -> Bool in
+      guard state.running else { return false }
       state.subscribers[fd] = subscriber
-      return false
+      return true
     }
 
-    if shouldClose {
-      closeSocket(fd)
+    if !didAdd {
+      logger.debug(
+        "\(serverLabel) ignored subscriber for stopped transport",
+        .field("fd", fd)
+      )
+    }
+  }
+
+  /// Returns a snapshot of currently tracked subscribers.
+  public func subscribersSnapshot() -> [SubscriberEntry] {
+    state.withLock { state in
+      state.subscribers.map { SubscriberEntry(fd: $0.key, subscriber: $0.value) }
     }
   }
 
   /// Removes and closes one subscriber fd.
-  public func removeSubscriber(for fd: Int32) {
+  @discardableResult
+  public func removeSubscriber(fd: Int32) -> Bool {
     let shouldNotify = state.withLock { state -> Bool in
       state.subscribers.removeValue(forKey: fd) != nil
     }
@@ -179,6 +196,8 @@ public final class LineSocketServerTransport<
     if shouldNotify {
       onSubscriberRemoved?(fd)
     }
+
+    return shouldNotify
   }
 
   /// Sends one response message to the given client fd.
@@ -204,13 +223,9 @@ public final class LineSocketServerTransport<
 
   /// Broadcasts one message to every current subscriber and removes failed subscribers.
   public func broadcast(_ makeMessage: (Subscriber) -> Response) {
-    let entries = state.withLock { state in
-      state.subscribers.map { SubscriberEntry(fd: $0.key, subscriber: $0.value) }
-    }
-
-    for entry in entries {
+    for entry in subscribersSnapshot() {
       guard send(makeMessage(entry.subscriber), to: entry.fd) else {
-        removeSubscriber(for: entry.fd)
+        removeSubscriber(fd: entry.fd)
         continue
       }
     }
@@ -295,7 +310,13 @@ public final class LineSocketServerTransport<
       closeClient(clientFD)
 
     case .keepOpen:
-      finishClientTask(clientFD)
+      guard isSubscriberOpen(clientFD) else {
+        closeClient(clientFD)
+        return
+      }
+
+      monitorSubscriberDisconnect(clientFD)
+      closeClient(clientFD)
     }
   }
 
@@ -346,30 +367,27 @@ public final class LineSocketServerTransport<
     return nil
   }
 
-  /// Removes the per-client read task after a handler keeps the fd open as a subscriber.
-  private func finishClientTask(_ fd: Int32) {
-    let shouldClose = state.withLock { state -> Bool in
-      state.clientTasks.removeValue(forKey: fd)
-      state.clientFDs.remove(fd)
-      return state.running && state.subscribers[fd] == nil
-    }
-
-    if shouldClose {
-      closeSocket(fd)
-    }
-  }
-
   /// Removes a client and subscriber entry and closes the fd.
   private func closeClient(_ fd: Int32) {
-    let shouldNotify = state.withLock { state -> Bool in
-      state.clientTasks.removeValue(forKey: fd)?.cancel()
-      state.clientFDs.remove(fd)
-      return state.subscribers.removeValue(forKey: fd) != nil
+    let snapshot = state.withLock { state -> CloseClientSnapshot in
+      let task = state.clientTasks.removeValue(forKey: fd)
+      let hadClient = state.clientFDs.remove(fd) != nil
+      let hadSubscriber = state.subscribers.removeValue(forKey: fd) != nil
+
+      return CloseClientSnapshot(
+        shouldClose: hadClient || hadSubscriber,
+        task: task,
+        shouldNotify: hadSubscriber
+      )
     }
 
-    closeSocket(fd)
+    snapshot.task?.cancel()
 
-    if shouldNotify {
+    if snapshot.shouldClose {
+      closeSocket(fd)
+    }
+
+    if snapshot.shouldNotify {
       onSubscriberRemoved?(fd)
     }
   }
@@ -391,6 +409,51 @@ public final class LineSocketServerTransport<
   private func isClientOpen(_ fd: Int32) -> Bool {
     state.withLock { state in
       state.running && (state.clientFDs.contains(fd) || state.subscribers[fd] != nil)
+    }
+  }
+
+  /// Returns whether one fd is still tracked as a server-push subscriber.
+  private func isSubscriberOpen(_ fd: Int32) -> Bool {
+    state.withLock { state in
+      state.running && state.clientFDs.contains(fd) && state.subscribers[fd] != nil
+    }
+  }
+
+  /// Blocks until a keep-open subscriber disconnects or the server closes the fd.
+  private func monitorSubscriberDisconnect(_ fd: Int32) {
+    var byte = UInt8(0)
+
+    while !Task.isCancelled, isSubscriberOpen(fd) {
+      var pollFD = pollfd(fd: fd, events: Int16(POLLIN | POLLHUP | POLLERR), revents: 0)
+      let pollResult = Darwin.poll(&pollFD, 1, 250)
+
+      if pollResult == 0 {
+        continue
+      }
+
+      if pollResult < 0 {
+        if errno == EINTR {
+          continue
+        }
+        return
+      }
+
+      if (pollFD.revents & Int16(POLLNVAL | POLLHUP | POLLERR)) != 0 {
+        return
+      }
+
+      if (pollFD.revents & Int16(POLLIN)) != 0 {
+        let count = Darwin.recv(fd, &byte, 1, MSG_PEEK)
+        if count <= 0 {
+          return
+        }
+
+        logger.warn(
+          "\(serverLabel) subscriber sent unexpected data",
+          .field("fd", fd)
+        )
+        return
+      }
     }
   }
 

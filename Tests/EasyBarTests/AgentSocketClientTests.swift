@@ -25,9 +25,8 @@ final class AgentSocketClientTests: XCTestCase {
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    temporaryDirectory = FileManager.default.temporaryDirectory
-      .appendingPathComponent("easybar-agent-client-tests-")
-      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    temporaryDirectory = URL(fileURLWithPath: "/tmp", isDirectory: true)
+      .appendingPathComponent("eb-agent-\(UUID().uuidString)", isDirectory: true)
 
     try FileManager.default.createDirectory(
       at: temporaryDirectory,
@@ -137,6 +136,65 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testClientDisconnectRemovesKeptOpenSubscriberSocket() async throws {
+    let logger = Self.makeLogger()
+    let removedSubscribers = LockedState(0)
+
+    let notifyingServer = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      onSubscriberRemoved: { _ in
+        removedSubscribers.withLock { $0 += 1 }
+      }
+    )
+
+    notifyingServer.start { fd, _ in
+      notifyingServer.addSubscriber((), for: fd)
+      _ = notifyingServer.send(TestMessage(kind: "subscribed"), to: fd)
+      return .keepOpen
+    }
+    defer { notifyingServer.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath
+    ).send(request: TestRequest(command: "subscribe"))
+
+    XCTAssertEqual(response, TestMessage(kind: "subscribed"))
+
+    try await waitUntil("subscriber removal callback") {
+      removedSubscribers.withLock { $0 == 1 }
+    }
+  }
+
+  func testServerStopWakesIdleClientReadTask() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+
+    server.start { _, _ in
+      XCTFail("idle client should not dispatch a request")
+      return .close
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+
+    server.stop()
+
+    try await waitUntil("idle client socket to be closed") {
+      self.socketIsClosed(clientFD)
+    }
+  }
+
   private func makeServer(logger: ProcessLogger)
     -> LineSocketServerTransport<Void, TestRequest, TestMessage>
   {
@@ -163,6 +221,46 @@ final class AgentSocketClientTests: XCTestCase {
     }
 
     XCTFail("Timed out waiting for \(description)")
+  }
+
+  private func connectUnixSocket() throws -> Int32 {
+    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+    XCTAssertGreaterThanOrEqual(fd, 0)
+
+    guard fd >= 0 else {
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
+
+    var address = try makeSockAddrUn(path: socketPath)
+    let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
+    let result = withUnsafePointer(to: &address) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        connect(fd, $0, addressLength)
+      }
+    }
+
+    guard result == 0 else {
+      let error = NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+      close(fd)
+      throw error
+    }
+
+    return fd
+  }
+
+  private func socketIsClosed(_ fd: Int32) -> Bool {
+    var buffer = [UInt8](repeating: 0, count: 1)
+    let result = recv(fd, &buffer, buffer.count, MSG_DONTWAIT)
+
+    if result == 0 {
+      return true
+    }
+
+    if result < 0 {
+      return errno != EAGAIN && errno != EWOULDBLOCK
+    }
+
+    return false
   }
 
   private static func makeLogger() -> ProcessLogger {
