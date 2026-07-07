@@ -148,7 +148,10 @@ private final class CommandExecution: @unchecked Sendable {
     guard let pipeResult else { return }
 
     do {
-      let pid = try spawnShell(outputWriteFD: pipeResult.writeFD)
+      let pid = try spawnShell(
+        outputReadFD: pipeResult.readFD,
+        outputWriteFD: pipeResult.writeFD
+      )
       close(pipeResult.writeFD)
 
       processIdentifier = pid
@@ -175,7 +178,7 @@ private final class CommandExecution: @unchecked Sendable {
   }
 
   /// Creates a pipe used to collect combined stdout and stderr.
-  private func makeOutputPipe() -> (readHandle: FileHandle, writeFD: Int32)? {
+  private func makeOutputPipe() -> (readHandle: FileHandle, readFD: Int32, writeFD: Int32)? {
     var fileDescriptors = [Int32](repeating: -1, count: 2)
     guard pipe(&fileDescriptors) == 0 else {
       logger.warn(
@@ -190,11 +193,11 @@ private final class CommandExecution: @unchecked Sendable {
     }
 
     let readHandle = FileHandle(fileDescriptor: fileDescriptors[0], closeOnDealloc: true)
-    return (readHandle, fileDescriptors[1])
+    return (readHandle, fileDescriptors[0], fileDescriptors[1])
   }
 
   /// Spawns `/bin/sh -lc <command>` in a dedicated process group.
-  private func spawnShell(outputWriteFD: Int32) throws -> Int32 {
+  private func spawnShell(outputReadFD: Int32, outputWriteFD: Int32) throws -> Int32 {
     var fileActions: posix_spawn_file_actions_t?
     var attributes: posix_spawnattr_t?
 
@@ -221,6 +224,10 @@ private final class CommandExecution: @unchecked Sendable {
       fileActions: &fileActions,
       sourceFileDescriptor: outputWriteFD,
       destinationFileDescriptor: STDERR_FILENO
+    )
+    try PosixSpawnSupport.addCloseAction(
+      fileActions: &fileActions,
+      fileDescriptor: outputReadFD
     )
     try PosixSpawnSupport.addCloseAction(
       fileActions: &fileActions,
