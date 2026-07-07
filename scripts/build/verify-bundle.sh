@@ -1,31 +1,108 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 20 ]; then
-  echo "Usage: $0 <arch> <app-bin> <lua-runtime-bin> <calendar-agent-bin> <network-agent-bin> <cli-bin> <plist> <calendar-plist> <network-plist> <app-resource-dir> <app-themes-dir> <app-icon-icns> <calendar-icon-icns> <network-icon-icns> <app-icon-file> <calendar-icon-file> <network-icon-file> <app-bundle> <app-contents> <app-resources>" >&2
-  exit 2
+usage() {
+  echo "Usage: scripts/build/verify-bundle.sh [--arch <arm64|x86_64|universal>] [--dist-dir <dir>]" >&2
+}
+
+arch=""
+dist_dir="${DIST_DIR:-dist}"
+
+if [ "$#" -eq 1 ]; then
+  arch="$1"
+  shift
 fi
 
-arch="$1"
-app_bin="$2"
-lua_runtime_bin="$3"
-calendar_agent_bin="$4"
-network_agent_bin="$5"
-cli_bin="$6"
-plist="$7"
-calendar_plist="$8"
-network_plist="$9"
-app_resource_dir="${10}"
-app_themes_dir="${11}"
-app_icon_icns="${12}"
-calendar_icon_icns="${13}"
-network_icon_icns="${14}"
-app_icon_file="${15}"
-calendar_icon_file="${16}"
-network_icon_file="${17}"
-app_bundle="${18}"
-app_contents="${19}"
-app_resources="${20}"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --arch)
+    arch="${2:?missing value for --arch}"
+    shift 2
+    ;;
+  --dist-dir)
+    dist_dir="${2:?missing value for --dist-dir}"
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown argument: $1" >&2
+    usage
+    exit 2
+    ;;
+  esac
+done
+
+if [ -z "$arch" ]; then
+  arch="${ARCH:-universal}"
+fi
+
+case "$arch" in
+arm64 | x86_64 | universal) ;;
+*)
+  echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
+  exit 2
+  ;;
+esac
+
+app_name="EasyBar"
+calendar_agent_name="EasyBarCalendarAgent"
+network_agent_name="EasyBarNetworkAgent"
+cli_exec="easybar"
+
+app_bundle="$dist_dir/${app_name}.app"
+app_contents="$app_bundle/Contents"
+app_macos="$app_contents/MacOS"
+app_resources="$app_contents/Resources"
+app_resource_dir="$app_resources/$app_name"
+app_themes_dir="$app_resources/Themes"
+app_bin="$app_macos/$app_name"
+lua_runtime_bin="$app_macos/EasyBarLuaRuntime"
+plist="$app_contents/Info.plist"
+app_icon_file="$app_name"
+app_icon_icns="$app_resources/${app_icon_file}.icns"
+
+calendar_agent_bundle="$dist_dir/${calendar_agent_name}.app"
+calendar_agent_contents="$calendar_agent_bundle/Contents"
+calendar_agent_macos="$calendar_agent_contents/MacOS"
+calendar_agent_resources="$calendar_agent_contents/Resources"
+calendar_agent_bin="$calendar_agent_macos/$calendar_agent_name"
+calendar_plist="$calendar_agent_contents/Info.plist"
+calendar_icon_file="$calendar_agent_name"
+calendar_icon_icns="$calendar_agent_resources/${calendar_icon_file}.icns"
+
+network_agent_bundle="$dist_dir/${network_agent_name}.app"
+network_agent_contents="$network_agent_bundle/Contents"
+network_agent_macos="$network_agent_contents/MacOS"
+network_agent_resources="$network_agent_contents/Resources"
+network_agent_bin="$network_agent_macos/$network_agent_name"
+network_plist="$network_agent_contents/Info.plist"
+network_icon_file="$network_agent_name"
+network_icon_icns="$network_agent_resources/${network_icon_file}.icns"
+
+cli_bin="$dist_dir/$cli_exec"
+
+require_file() {
+  local path="$1"
+  local label="$2"
+
+  if [ ! -f "$path" ]; then
+    echo "Missing ${label}: ${path}" >&2
+    exit 1
+  fi
+}
+
+require_dir() {
+  local path="$1"
+  local label="$2"
+
+  if [ ! -d "$path" ]; then
+    echo "Missing ${label}: ${path}" >&2
+    exit 1
+  fi
+}
 
 echo "Built $arch artifacts:"
 file "$app_bin"
@@ -34,23 +111,23 @@ file "$calendar_agent_bin"
 file "$network_agent_bin"
 file "$cli_bin"
 
-test -f "$plist"
-test -f "$calendar_plist"
-test -f "$network_plist"
-test -d "$app_resource_dir"
-test -f "$app_resource_dir/Lua/runtime.lua"
-test -f "$app_resource_dir/Lua/easybar_api.lua"
-test -d "$app_resource_dir/Lua/easybar"
-test -f "$app_resource_dir/Events/event_catalog.json"
-test -f "$app_resource_dir/ThemeTokens/theme_tokens.json"
-test -d "$app_themes_dir"
-test -s "$app_icon_icns"
-test -s "$calendar_icon_icns"
-test -s "$network_icon_icns"
+require_file "$plist" "app Info.plist"
+require_file "$calendar_plist" "calendar agent Info.plist"
+require_file "$network_plist" "network agent Info.plist"
+require_dir "$app_resource_dir" "app resource directory"
+require_file "$app_resource_dir/Lua/runtime.lua" "Lua runtime resource"
+require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"
+require_dir "$app_resource_dir/Lua/easybar" "Lua easybar module"
+require_file "$app_resource_dir/Events/event_catalog.json" "event catalog"
+require_file "$app_resource_dir/ThemeTokens/theme_tokens.json" "theme token catalog"
+require_dir "$app_themes_dir" "themes directory"
+require_file "$app_icon_icns" "app icon"
+require_file "$calendar_icon_icns" "calendar agent icon"
+require_file "$network_icon_icns" "network agent icon"
 
-test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$plist")" = "$app_icon_file"
-test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$calendar_plist")" = "$calendar_icon_file"
-test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$network_plist")" = "$network_icon_file"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$plist")" = "$app_icon_file"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$calendar_plist")" = "$calendar_icon_file"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$network_plist")" = "$network_icon_file"
 
 echo "Info.plist:"
 plutil -p "$plist"
@@ -64,5 +141,3 @@ echo "Packaged Contents:"
 ls -1 "$app_contents"
 echo "Packaged Resources:"
 ls -1 "$app_resources" 2>/dev/null || true
-
-

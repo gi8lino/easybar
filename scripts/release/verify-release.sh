@@ -1,20 +1,62 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "release verification failed at line $LINENO: $BASH_COMMAND" >&2' ERR
 
-if [ "$#" -ne 9 ]; then
-  echo "Usage: $0 <package-zip> <app-bin> <plist> <app-icon-icns> <calendar-icon-icns> <network-icon-icns> <app-resource-dir> <app-themes-dir> <app-bundle>" >&2
+usage() {
+  cat >&2 <<'EOF_USAGE'
+Usage: scripts/release/verify-release.sh [--version <version>] [--arch <arm64|x86_64|universal>] [--dist-dir <dir>]
+EOF_USAGE
+}
+
+version="${VERSION:-dev}"
+arch="${ARCH:-universal}"
+dist_dir="${DIST_DIR:-dist}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --version)
+    version="${2:?missing value for --version}"
+    shift 2
+    ;;
+  --arch)
+    arch="${2:?missing value for --arch}"
+    shift 2
+    ;;
+  --dist-dir)
+    dist_dir="${2:?missing value for --dist-dir}"
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown argument: $1" >&2
+    usage
+    exit 2
+    ;;
+  esac
+done
+
+case "$arch" in
+arm64 | x86_64 | universal) ;;
+*)
+  echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
   exit 2
-fi
+  ;;
+esac
 
-package_zip="$1"
-app_bin="$2"
-plist="$3"
-app_icon_icns="$4"
-calendar_icon_icns="$5"
-network_icon_icns="$6"
-app_resource_dir="$7"
-app_themes_dir="$8"
-app_bundle="$9"
+app_bundle="$dist_dir/EasyBar.app"
+app_contents="$app_bundle/Contents"
+app_resources="$app_contents/Resources"
+app_resource_dir="$app_resources/EasyBar"
+app_themes_dir="$app_resources/Themes"
+app_bin="$app_contents/MacOS/EasyBar"
+plist="$app_contents/Info.plist"
+app_icon_icns="$app_resources/EasyBar.icns"
+calendar_icon_icns="$dist_dir/EasyBarCalendarAgent.app/Contents/Resources/EasyBarCalendarAgent.icns"
+network_icon_icns="$dist_dir/EasyBarNetworkAgent.app/Contents/Resources/EasyBarNetworkAgent.icns"
+package_zip="$dist_dir/EasyBar-$version.zip"
 
 require_file() {
   local path="$1"
@@ -25,6 +67,8 @@ require_file() {
     exit 1
   fi
 }
+
+scripts/build/verify-bundle.sh --arch "$arch" --dist-dir "$dist_dir"
 
 require_file "$package_zip" "release package"
 require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"

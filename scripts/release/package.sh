@@ -1,17 +1,48 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "package failed at line $LINENO: $BASH_COMMAND" >&2' ERR
 
-if [ "$#" -ne 6 ]; then
-  echo "Usage: $0 <package-stage> <package-zip> <app-bundle> <calendar-agent-bundle> <network-agent-bundle> <cli-bin>" >&2
-  exit 2
-fi
+usage() {
+  cat >&2 <<'EOF_USAGE'
+Usage: scripts/release/package.sh [--version <version>] [--dist-dir <dir>]
 
-package_stage=$1
-package_zip=$2
-app_bundle=$3
-calendar_agent_bundle=$4
-network_agent_bundle=$5
-cli_bin=$6
+Options:
+  --version <version>  Package version. Default: VERSION or dev
+  --dist-dir <dir>    Distribution directory. Default: DIST_DIR or dist
+EOF_USAGE
+}
+
+version="${VERSION:-dev}"
+dist_dir="${DIST_DIR:-dist}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  --version)
+    version="${2:?missing value for --version}"
+    shift 2
+    ;;
+  --dist-dir)
+    dist_dir="${2:?missing value for --dist-dir}"
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown argument: $1" >&2
+    usage
+    exit 2
+    ;;
+  esac
+done
+
+package_stage="$dist_dir/package"
+package_zip="$dist_dir/EasyBar-$version.zip"
+app_bundle="$dist_dir/EasyBar.app"
+calendar_agent_bundle="$dist_dir/EasyBarCalendarAgent.app"
+network_agent_bundle="$dist_dir/EasyBarNetworkAgent.app"
+cli_bin="$dist_dir/easybar"
 
 require_path() {
   local path="$1"

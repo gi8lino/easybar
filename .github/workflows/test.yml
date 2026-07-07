@@ -8,10 +8,10 @@ on:
         required: false
         default: "26"
         type: string
-      dependency_script:
-        description: Dependency install script
+      dependency_mode:
+        description: Dependency mode for scripts/ci/install-dependencies.sh
         required: false
-        default: "scripts/ci/install-lua.sh"
+        default: "test"
         type: string
       clean_before_cache:
         description: Run make clean before restoring SwiftPM dependency cache
@@ -35,9 +35,9 @@ on:
         required: false
         default: "26"
         type: string
-      dependency_script:
+      dependency_mode:
         required: false
-        default: "scripts/ci/install-lua.sh"
+        default: "test"
         type: string
       clean_before_cache:
         required: false
@@ -71,7 +71,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: ${{ inputs.dependency_script }}
+        run: scripts/ci/install-dependencies.sh "${{ inputs.dependency_mode }}"
 
       - name: Clean stale build directories
         if: ${{ inputs.clean_before_cache }}
@@ -107,3 +107,5 @@ jobs:
       - name: Verify generated artifacts are current
         if: ${{ inputs.check_generated }}
         run: make check-generated
+
+

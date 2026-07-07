@@ -49,7 +49,7 @@ Regenerate every checked-in generated artifact through the Makefile:
 make generate
 ```
 
-This runs the theme-token generator, event-catalog generator, and generated docs pipeline.
+This runs `scripts/generate/artifacts.py`, which owns theme tokens, event catalog artifacts, and generated docs.
 Use this before committing changes that affect generated Swift, Lua, or documentation artifacts.
 
 Verify that generated artifacts are current before opening a pull request:
@@ -69,7 +69,7 @@ Regenerate only generated documentation through the Makefile:
 make generate-docs
 ```
 
-The underlying generator scripts are implementation details. Call them directly only when debugging the generation pipeline.
+The generator entrypoint is `scripts/generate/artifacts.py`. Call its subcommands directly only when debugging the generation pipeline.
 
 `make fmt` formats Swift only. Generated Markdown is formatted automatically as part of `make generate-docs`, so generated-doc comparisons stay stable. Run `make fmt-markdown` only when you intentionally want to format all Markdown with Prettier.
 
@@ -101,3 +101,4 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
+

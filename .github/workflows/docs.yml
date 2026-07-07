@@ -15,11 +15,7 @@ on:
       - "Sources/EasyBarApp/Lua/easybar_api.lua"
       - "Sources/EasyBarApp/Lua/easybar/event_tokens.lua"
       - "Sources/EasyBarApp/Lua/easybar/theme_tokens.lua"
-      - "scripts/generate/config_reference_docs.py"
-      - "scripts/generate/event_catalog.py"
-      - "scripts/generate/generated_artifacts.py"
-      - "scripts/generate/lua_reference_docs.py"
-      - "scripts/generate/theme_tokens.py"
+      - "scripts/generate/artifacts.py"
       - "Makefile"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
@@ -69,3 +65,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+

@@ -11,7 +11,7 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       xcode_version: "26"
-      dependency_script: scripts/ci/install-release-dependencies.sh
+      dependency_mode: release
       clean_before_cache: true
       check_generated: true
       test_timeout_minutes: 12
@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: scripts/ci/install-release-dependencies.sh
+        run: scripts/ci/install-dependencies.sh release
 
       - name: Derive version from tag
         id: version
@@ -70,20 +70,13 @@ jobs:
           restore-keys: |
             swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_VERSION }}-
 
-      - name: Build release package
+      - name: Build and verify release package
         shell: bash
         run: |
-          make package \
+          make release \
             ARCH=universal \
             VERSION="${{ steps.version.outputs.version }}" \
             BUNDLE_ID="${BUNDLE_ID}"
-
-      - name: Verify release package
-        shell: bash
-        run: |
-          make verify-release \
-            ARCH=universal \
-            VERSION="${{ steps.version.outputs.version }}"
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
@@ -109,3 +102,6 @@ jobs:
           gh workflow run update-homebrew-formula.yml \
             -f tag="${{ steps.version.outputs.tag }}" \
             -f version="${{ steps.version.outputs.version }}"
+
+
+

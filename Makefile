@@ -119,7 +119,7 @@ endif
         clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
-        stamp-plist stamp-calendar-agent-plist stamp-network-agent-plist sign notarize \
+        sign notarize \
         print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
@@ -135,14 +135,14 @@ help: ## Display this help.
 generate: generate-theme-tokens generate-event-catalog generate-docs ## Generate all checked-in generated artifacts.
 
 check-generated: generate ## Verify all checked-in generated artifacts are committed.
-	@python3 scripts/generate/generated_artifacts.py check-diff \
+	@python3 scripts/generate/artifacts.py check-diff \
 		--normalized-markdown $(GENERATED_MARKDOWN_DOCS)
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
-	@python3 scripts/generate/theme_tokens.py
+	@python3 scripts/generate/artifacts.py theme-tokens
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate/event_catalog.py --version "$(VERSION)"
+	@python3 scripts/generate/artifacts.py event-catalog --version "$(VERSION)"
 
 ##@ Build
 
@@ -151,7 +151,7 @@ all: build ## Build the default artifacts.
 prepare-version: ## Update generated build metadata and source-derived artifacts for VERSION.
 	@$(MAKE) --no-print-directory generate-theme-tokens
 	@$(MAKE) --no-print-directory generate-event-catalog
-	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version "$(VERSION)"
+	@python3 scripts/build/stamp.py build-info --file "$(BUILD_INFO)" --version "$(VERSION)"
 
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
@@ -192,47 +192,21 @@ lint: ## Lint Swift source formatting without modifying files.
 test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
-bundle: prepare-version clean-dist ## Build the .app bundle and CLI into dist/.
-	@CLEAN_BUILD="$(CLEAN_BUILD)" scripts/build/bundle.sh \
-		"$(DIST_DIR)" \
-		"$(APP_MACOS)" \
-		"$(APP_RESOURCES)" \
-		"$(CALENDAR_AGENT_MACOS)" \
-		"$(CALENDAR_AGENT_RESOURCES)" \
-		"$(NETWORK_AGENT_MACOS)" \
-		"$(NETWORK_AGENT_RESOURCES)" \
-		"$(APP_BIN)" \
-		"$(LUA_RUNTIME_BIN)" \
-		"$(CALENDAR_AGENT_BIN)" \
-		"$(NETWORK_AGENT_BIN)" \
-		"$(CLI_BIN)" \
-		"$(PLIST_TEMPLATE)" \
-		"$(PLIST)" \
-		"$(CALENDAR_AGENT_PLIST_TEMPLATE)" \
-		"$(CALENDAR_AGENT_PLIST)" \
-		"$(NETWORK_AGENT_PLIST_TEMPLATE)" \
-		"$(NETWORK_AGENT_PLIST)" \
-		"$(APP_BUNDLE)" \
-		"$(CALENDAR_AGENT_BUNDLE)" \
-		"$(NETWORK_AGENT_BUNDLE)" \
-		"$(ARCH)" \
-		"$(VERSION)" \
-		"$(BUNDLE_ID)" \
-		"$(CODESIGN_IDENTITY)" \
-		"$(NOTARYTOOL_PROFILE)" \
-		"$(NOTARY_SUBMIT)"
+bundle: prepare-version ## Build the .app bundle and CLI into dist/.
+	@scripts/build/bundle.sh \
+		--arch "$(ARCH)" \
+		--version "$(VERSION)" \
+		--bundle-id "$(BUNDLE_ID)" \
+		--codesign-identity "$(CODESIGN_IDENTITY)" \
+		--notarytool-profile "$(NOTARYTOOL_PROFILE)" \
+		--notary-submit "$(NOTARY_SUBMIT)" \
+		--clean-build "$(CLEAN_BUILD)" \
+		--dist-dir "$(DIST_DIR)"
 
 package: bundle ## Create the release ZIP consumed by the Homebrew formula.
-	@scripts/release/package.sh \
-		"$(PACKAGE_STAGE)" \
-		"$(PACKAGE_ZIP)" \
-		"$(APP_BUNDLE)" \
-		"$(CALENDAR_AGENT_BUNDLE)" \
-		"$(NETWORK_AGENT_BUNDLE)" \
-		"$(CLI_BIN)"
+	@scripts/release/package.sh --version "$(VERSION)" --dist-dir "$(DIST_DIR)"
 
-release: package ## Build and verify the zipped release artifact.
-	@$(MAKE) --no-print-directory verify-release VERSION=$(VERSION) ARCH=$(ARCH)
+release: verify-release ## Build and verify the zipped release artifact.
 	@echo "Release artifact ready: $(PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
@@ -259,7 +233,13 @@ copy-debug-resources: ## Internal target: copy debug SwiftPM resources and root 
 prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle metadata.
 	@mkdir -p "$(APP_CONTENTS)"
 	@cp "$(PLIST_TEMPLATE)" "$(PLIST)"
-	@$(MAKE) --no-print-directory stamp-plist VERSION=$(VERSION) BUNDLE_ID=$(BUNDLE_ID)
+	@python3 scripts/build/stamp.py plist \
+		--plist "$(PLIST)" \
+		--bundle-id "$(BUNDLE_ID)" \
+		--version "$(VERSION)" \
+		--executable "$(APP_EXEC)" \
+		--name "$(APP_NAME)" \
+		--icon-file "$(APP_ICON_FILE)"
 	@touch "$(APP_BUNDLE)"
 
 icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconutil.
@@ -267,31 +247,6 @@ icons: ## Generate .icns files from SVG icons using ImageMagick, sips, and iconu
 		"$(APP_ICON_SVG):$(APP_ICON_ICNS)" \
 		"$(CALENDAR_AGENT_ICON_SVG):$(CALENDAR_AGENT_ICON_ICNS)" \
 		"$(NETWORK_AGENT_ICON_SVG):$(NETWORK_AGENT_ICON_ICNS)"
-
-stamp-plist: ## Internal target: stamp version and bundle ID into Info.plist.
-	@scripts/build/stamp-plist.sh \
-		--plist "$(PLIST)" \
-		--bundle-id "$(BUNDLE_ID)" \
-		--version "$(VERSION)" \
-		--executable "$(APP_EXEC)" \
-		--name "$(APP_NAME)" \
-		--icon-file "$(APP_ICON_FILE)"
-
-stamp-calendar-agent-plist: ## Internal target: stamp version into the calendar agent Info.plist.
-	@scripts/build/stamp-plist.sh \
-		--plist "$(CALENDAR_AGENT_PLIST)" \
-		--version "$(VERSION)" \
-		--executable "$(CALENDAR_AGENT_EXEC)" \
-		--name "$(CALENDAR_AGENT_NAME)" \
-		--icon-file "$(CALENDAR_AGENT_ICON_FILE)"
-
-stamp-network-agent-plist: ## Internal target: stamp version into the network agent Info.plist.
-	@scripts/build/stamp-plist.sh \
-		--plist "$(NETWORK_AGENT_PLIST)" \
-		--version "$(VERSION)" \
-		--executable "$(NETWORK_AGENT_EXEC)" \
-		--name "$(NETWORK_AGENT_NAME)" \
-		--icon-file "$(NETWORK_AGENT_ICON_FILE)"
 
 sign: ## Sign the app bundle, calendar agent, network agent, and CLI. Set CODESIGN_IDENTITY for Developer ID builds.
 	@scripts/release/sign-artifacts.sh \
@@ -310,49 +265,19 @@ notarize: ## Notarize the app bundle when NOTARY_SUBMIT=1 and a keychain profile
 		"$(NOTARY_ZIP)"
 
 verify: ## Show the built bundle structure and validate key packaged files.
-	@scripts/build/verify-bundle.sh \
-		"$(ARCH)" \
-		"$(APP_BIN)" \
-		"$(LUA_RUNTIME_BIN)" \
-		"$(CALENDAR_AGENT_BIN)" \
-		"$(NETWORK_AGENT_BIN)" \
-		"$(CLI_BIN)" \
-		"$(PLIST)" \
-		"$(CALENDAR_AGENT_PLIST)" \
-		"$(NETWORK_AGENT_PLIST)" \
-		"$(APP_RESOURCE_DIR)" \
-		"$(APP_THEMES_DIR)" \
-		"$(APP_ICON_ICNS)" \
-		"$(CALENDAR_AGENT_ICON_ICNS)" \
-		"$(NETWORK_AGENT_ICON_ICNS)" \
-		"$(APP_ICON_FILE)" \
-		"$(CALENDAR_AGENT_ICON_FILE)" \
-		"$(NETWORK_AGENT_ICON_FILE)" \
-		"$(APP_BUNDLE)" \
-		"$(APP_CONTENTS)" \
-		"$(APP_RESOURCES)"
+	@scripts/build/verify-bundle.sh --arch "$(ARCH)" --dist-dir "$(DIST_DIR)"
 
-verify-release: ## Validate the release package and print release fingerprints.
-	@$(MAKE) --no-print-directory verify
-	@scripts/release/verify-release.sh \
-		"$(PACKAGE_ZIP)" \
-		"$(APP_BIN)" \
-		"$(PLIST)" \
-		"$(APP_ICON_ICNS)" \
-		"$(CALENDAR_AGENT_ICON_ICNS)" \
-		"$(NETWORK_AGENT_ICON_ICNS)" \
-		"$(APP_RESOURCE_DIR)" \
-		"$(APP_THEMES_DIR)" \
-		"$(APP_BUNDLE)"
+verify-release: package ## Build and validate the release package and print fingerprints.
+	@scripts/release/verify-release.sh --version "$(VERSION)" --arch "$(ARCH)" --dist-dir "$(DIST_DIR)"
 
 run: prepare-version ## Fast local run with debug builds and local agents.
-	@scripts/dev/run-local.sh info "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
+	@scripts/dev/run-local.sh info --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
 run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
-	@scripts/dev/run-local.sh debug "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
+	@scripts/dev/run-local.sh debug --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
-	@scripts/dev/run-local.sh trace "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
+	@scripts/dev/run-local.sh trace --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
@@ -370,13 +295,7 @@ run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
-	@scripts/dev/stop-local.sh \
-		"$(APP_EXEC)" \
-		"$(CALENDAR_AGENT_EXEC)" \
-		"$(NETWORK_AGENT_EXEC)" \
-		"$(APP_BUNDLE)" \
-		"$(CALENDAR_AGENT_BUNDLE)" \
-		"$(NETWORK_AGENT_BUNDLE)"
+	@scripts/dev/stop-local.sh --dist-dir "$(DIST_DIR)"
 
 restart-brew: ## Restart EasyBar Homebrew services.
 	brew services restart gi8lino/tap/easybar-calendar-agent
@@ -390,8 +309,8 @@ clean-dist: ## Remove dist/.
 
 clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@python3 scripts/build/stamp_build_info.py --file "$(BUILD_INFO)" --version dev
-	@python3 scripts/generate/event_catalog.py --version dev
+	@python3 scripts/build/stamp.py build-info --file "$(BUILD_INFO)" --version dev
+	@python3 scripts/generate/artifacts.py event-catalog --version dev
 
 ##@ Info
 
@@ -458,20 +377,20 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 generate-docs: fmt-generated-docs ## Generate and format all checked-in docs from source stubs.
 
 generate-lua-docs: ## Generate Lua reference docs from source stubs.
-	@python3 scripts/generate/lua_reference_docs.py
+	@python3 scripts/generate/artifacts.py lua-docs
 
 generate-config-docs: ## Generate the config reference from config.defaults.toml.
-	@python3 scripts/generate/config_reference_docs.py
+	@python3 scripts/generate/artifacts.py config-docs
 
 fmt-generated-docs: generate-lua-docs generate-config-docs ## Format generated Markdown docs with Prettier.
 	@$(PRETTIER) --write "$(DOCS_DIR)/content/configuration/reference.md" "$(DOCS_DIR)/content/lua/reference/**/*.md"
 	@$(MAKE) --no-print-directory normalize-generated-docs
 
 normalize-generated-docs: ## Normalize generated Markdown docs for stable diffs.
-	@python3 scripts/generate/generated_artifacts.py normalize-markdown $(GENERATED_MARKDOWN_DOCS)
+	@python3 scripts/generate/artifacts.py normalize-markdown $(GENERATED_MARKDOWN_DOCS)
 
 check-docs: generate-docs ## Verify generated docs are formatted and committed.
-	@python3 scripts/generate/generated_artifacts.py check-diff \
+	@python3 scripts/generate/artifacts.py check-diff \
 		--normalized-markdown $(GENERATED_MARKDOWN_DOCS) \
 		--scope docs/content/lua/reference \
 		--scope docs/content/configuration/reference.md
@@ -493,6 +412,7 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
 
 
 

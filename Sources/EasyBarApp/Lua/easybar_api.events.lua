@@ -1,6 +1,6 @@
 -- EasyBar generated event stub. Do not edit by hand.
 -- Source of truth: Sources/EasyBarApp/Events/event_catalog.json
--- Regenerate with: scripts/generate/event_catalog.py
+-- Regenerate with: scripts/generate/artifacts.py event-catalog
 ---Canonical runtime event-name strings carried inside `EasyBarEventToken.name`.
 ---In normal widget code, prefer `easybar.events.*` tokens over comparing raw strings.
 ---@alias EasyBarEventName

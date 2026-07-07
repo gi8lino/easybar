@@ -1,22 +1,59 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 11 ]; then
-  echo "Usage: $0 <info|debug|trace> <run-arch> <version> <bundle-id> <app-macos-dir> <calendar-macos-dir> <network-macos-dir> <dist-dir> <calendar-agent-bin> <network-agent-bin> <app-bin>" >&2
+usage() {
+  cat >&2 <<'EOF_USAGE'
+Usage: scripts/dev/run-local.sh <info|debug|trace> [options]
+
+Options:
+  --run-arch <arm64|x86_64|universal>   Build/run architecture. Default: arm64
+  --version <version>                   Version stamped into the debug app. Default: dev
+  --bundle-id <id>                      App bundle identifier. Default: com.gi8lino.EasyBar
+  --dist-dir <dir>                      Distribution directory. Default: dist
+EOF_USAGE
+}
+
+if [ "$#" -lt 1 ]; then
+  usage
   exit 2
 fi
 
 log_level="$1"
-run_arch="$2"
-version="$3"
-bundle_id="$4"
-app_macos="$5"
-calendar_macos="$6"
-network_macos="$7"
-dist_dir="$8"
-calendar_agent_bin="$9"
-network_agent_bin="${10}"
-app_bin="${11}"
+shift
+run_arch="${RUN_ARCH:-arm64}"
+version="${VERSION:-dev}"
+bundle_id="${BUNDLE_ID:-com.gi8lino.EasyBar}"
+dist_dir="${DIST_DIR:-dist}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --run-arch)
+      run_arch="${2:?missing value for --run-arch}"
+      shift 2
+      ;;
+    --version)
+      version="${2:?missing value for --version}"
+      shift 2
+      ;;
+    --bundle-id)
+      bundle_id="${2:?missing value for --bundle-id}"
+      shift 2
+      ;;
+    --dist-dir)
+      dist_dir="${2:?missing value for --dist-dir}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
 
 case "$log_level" in
   info|debug|trace) ;;
@@ -26,35 +63,76 @@ case "$log_level" in
     ;;
 esac
 
-mkdir -p "$app_macos" "$calendar_macos" "$network_macos" "$dist_dir"
+case "$run_arch" in
+  arm64|x86_64|universal) ;;
+  *)
+    echo "Unsupported run architecture '$run_arch'. Use arm64, x86_64, or universal." >&2
+    exit 2
+    ;;
+esac
 
-make --no-print-directory run-build-app RUN_ARCH="$run_arch"
-make --no-print-directory run-build-lua-runtime RUN_ARCH="$run_arch"
-make --no-print-directory run-build-calendar-agent RUN_ARCH="$run_arch"
-make --no-print-directory run-build-network-agent RUN_ARCH="$run_arch"
-make --no-print-directory run-build-cli RUN_ARCH="$run_arch"
+app_name="EasyBar"
+lua_runtime_product="EasyBarLuaRuntime"
+calendar_agent_name="EasyBarCalendarAgent"
+network_agent_name="EasyBarNetworkAgent"
+cli_product="EasyBarCtl"
+cli_exec="easybar"
+resource_bundle_name="EasyBar_EasyBarApp.bundle"
+themes_dir="themes"
+
+app_bundle="$dist_dir/${app_name}.app"
+app_contents="$app_bundle/Contents"
+app_macos="$app_contents/MacOS"
+app_resources="$app_contents/Resources"
+app_resource_dir="$app_resources/$app_name"
+app_themes_dir="$app_resources/Themes"
+app_bin="$app_macos/$app_name"
+lua_runtime_bin="$app_macos/$lua_runtime_product"
+app_plist="$app_contents/Info.plist"
+
+calendar_agent_bundle="$dist_dir/${calendar_agent_name}.app"
+calendar_agent_macos="$calendar_agent_bundle/Contents/MacOS"
+calendar_agent_bin="$calendar_agent_macos/$calendar_agent_name"
+
+network_agent_bundle="$dist_dir/${network_agent_name}.app"
+network_agent_macos="$network_agent_bundle/Contents/MacOS"
+network_agent_bin="$network_agent_macos/$network_agent_name"
+
+cli_bin="$dist_dir/$cli_exec"
+
+mkdir -p "$app_macos" "$app_resources" "$calendar_agent_macos" "$network_agent_macos" "$dist_dir"
+
+scripts/build/build-products.sh debug "$run_arch" \
+  "$app_name=$app_bin" \
+  "$lua_runtime_product=$lua_runtime_bin" \
+  "$calendar_agent_name=$calendar_agent_bin" \
+  "$network_agent_name=$network_agent_bin" \
+  "$cli_product=$cli_bin"
 
 echo "Copying debug resources"
-make --no-print-directory copy-debug-resources RUN_ARCH="$run_arch"
+scripts/build/copy-resources.sh \
+  debug \
+  "$run_arch" \
+  "$resource_bundle_name" \
+  "$app_bundle" \
+  "$app_resource_dir" \
+  "$themes_dir" \
+  "$app_themes_dir"
 
 echo "Preparing debug app bundle"
-make --no-print-directory prepare-debug-app-bundle VERSION="$version" BUNDLE_ID="$bundle_id"
-
-app_exec="$(basename "$app_bin")"
-calendar_agent_exec="$(basename "$calendar_agent_bin")"
-network_agent_exec="$(basename "$network_agent_bin")"
-app_bundle="$(dirname "$(dirname "$app_macos")")"
-calendar_agent_bundle="$(dirname "$(dirname "$calendar_macos")")"
-network_agent_bundle="$(dirname "$(dirname "$network_macos")")"
+mkdir -p "$app_contents"
+cp Sources/EasyBarApp/Info.plist "$app_plist"
+scripts/build/stamp.py plist \
+  --plist "$app_plist" \
+  --bundle-id "$bundle_id" \
+  --version "$version" \
+  --executable "$app_name" \
+  --name "$app_name" \
+  --icon-file "$app_name"
+touch "$app_bundle"
 
 echo "Stopping existing EasyBar services and local processes"
-scripts/dev/stop-local.sh \
-  "$app_exec" \
-  "$calendar_agent_exec" \
-  "$network_agent_exec" \
-  "$app_bundle" \
-  "$calendar_agent_bundle" \
-  "$network_agent_bundle"
+scripts/dev/stop-local.sh --dist-dir "$dist_dir"
 
 echo "Starting local helper agents"
 nohup env EASYBAR_LOG_LEVEL="$log_level" "$calendar_agent_bin" >/tmp/easybar-calendar-agent.dev.log 2>&1 &
@@ -63,5 +141,3 @@ nohup env EASYBAR_LOG_LEVEL="$log_level" "$network_agent_bin" >/tmp/easybar-netw
 echo "Launching $app_bin with EASYBAR_LOG_LEVEL=$log_level"
 echo "App logs follow stdout/stderr and configured logging.directory"
 env EASYBAR_LOG_LEVEL="$log_level" "$app_bin"
-
-

@@ -15,20 +15,20 @@ themes_dir="$6"
 app_themes_dir="$7"
 
 case "$configuration" in
-  debug|release) ;;
-  *)
-    echo "Unsupported configuration '$configuration'. Use debug or release." >&2
-    exit 2
-    ;;
+debug | release) ;;
+*)
+  echo "Unsupported configuration '$configuration'. Use debug or release." >&2
+  exit 2
+  ;;
 esac
 
 case "$arch" in
-  arm64|x86_64) source_arch="$arch" ;;
-  universal) source_arch="arm64" ;;
-  *)
-    echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
-    exit 2
-    ;;
+arm64 | x86_64) source_arch="$arch" ;;
+universal) source_arch="arm64" ;;
+*)
+  echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
+  exit 2
+  ;;
 esac
 
 build_dir=".build/$source_arch-apple-macosx/$configuration"

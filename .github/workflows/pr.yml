@@ -29,7 +29,7 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       xcode_version: "26"
-      dependency_script: scripts/ci/install-lua.sh
+      dependency_mode: test
       clean_before_cache: false
       check_generated: true
       test_timeout_minutes: 12
@@ -56,3 +56,5 @@ jobs:
 
       - name: Test Homebrew formula update scripts
         run: scripts/release/test-homebrew-formula-update.sh
+
+

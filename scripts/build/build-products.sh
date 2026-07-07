@@ -15,30 +15,30 @@ arch=$2
 shift 2
 
 case "$configuration" in
-  debug|release) ;;
-  *)
-    echo "Unsupported configuration '$configuration'. Use debug or release." >&2
-    exit 2
-    ;;
+debug | release) ;;
+*)
+  echo "Unsupported configuration '$configuration'. Use debug or release." >&2
+  exit 2
+  ;;
 esac
 
 case "$arch" in
-  arm64|x86_64|universal) ;;
-  *)
-    echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
-    exit 2
-    ;;
+arm64 | x86_64 | universal) ;;
+*)
+  echo "Unsupported architecture '$arch'. Use arm64, x86_64, or universal." >&2
+  exit 2
+  ;;
 esac
 
 products=()
 outputs=()
 for pair in "$@"; do
   case "$pair" in
-    *=*) ;;
-    *)
-      echo "Invalid product mapping '$pair'. Expected <product=output>." >&2
-      exit 2
-      ;;
+  *=*) ;;
+  *)
+    echo "Invalid product mapping '$pair'. Expected <product=output>." >&2
+    exit 2
+    ;;
   esac
 
   product=${pair%%=*}
@@ -132,5 +132,3 @@ else
   build_arch "$arch"
   copy_arch_outputs "$arch"
 fi
-
-

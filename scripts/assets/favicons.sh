@@ -1,8 +1,26 @@
 #!/bin/sh
 set -eu
 
-if [ "$#" -lt 5 ]; then
+usage() {
   echo "Usage: $0 IMAGE_CONVERT ICON_FONT SVG ICON_DIR SIZE [SIZE ...]" >&2
+}
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing $1. Install ImageMagick or set IMAGE_CONVERT=/path/to/convert." >&2
+    exit 1
+  fi
+}
+
+require_file() {
+  if [ ! -f "$1" ]; then
+    echo "Missing $2: $1" >&2
+    exit 1
+  fi
+}
+
+if [ "$#" -lt 5 ]; then
+  usage
   exit 2
 fi
 
@@ -12,38 +30,27 @@ svg=$3
 icon_dir=$4
 shift 4
 
-if ! command -v "$image_convert" >/dev/null 2>&1; then
-  echo "Missing $image_convert. Install ImageMagick or set IMAGE_CONVERT=/path/to/convert." >&2
-  exit 1
-fi
-
-if [ ! -f "$icon_font" ]; then
-  echo "Missing icon font: $icon_font" >&2
-  exit 1
-fi
-
-if [ ! -f "$svg" ]; then
-  echo "Missing icon SVG: $svg" >&2
-  exit 1
-fi
-
+require_command "$image_convert"
+require_file "$icon_font" "icon font"
+require_file "$svg" "icon SVG"
 mkdir -p "$icon_dir"
 
 create_icon() {
   size=$1
   outfile=$2
+  path="$icon_dir/$outfile"
 
-  echo "create $outfile"
+  echo "create $path"
   "$image_convert" \
     -background none \
     -font "$icon_font" \
     "$svg" \
     -fuzz 5% -transparent white \
     -resize "$size" \
-    "$icon_dir/$outfile"
+    "$path"
 
-  if [ ! -s "$icon_dir/$outfile" ]; then
-    echo "Could not create icon: $icon_dir/$outfile" >&2
+  if [ ! -s "$path" ]; then
+    echo "Could not create icon: $path" >&2
     exit 1
   fi
 }
