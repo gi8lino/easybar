@@ -690,5 +690,3 @@ function EasyBarFileLogger.trim(limit) end
 easybar = easybar
 
 return easybar
-
-
