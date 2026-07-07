@@ -26,6 +26,7 @@ actor LuaCommandService {
   private let encoder = JSONEncoder()
 
   private var activeAsyncCommandCount = 0
+  private var activeAsyncCommandSessionID: UInt64?
 
   init(logger: ProcessLogger, luaRuntime: LuaRuntime, configManager: ConfigManager) {
     self.logger = logger
@@ -37,6 +38,7 @@ actor LuaCommandService {
   /// Resets async command accounting during runtime start or shutdown.
   func resetActiveAsyncCommandCount() {
     activeAsyncCommandCount = 0
+    activeAsyncCommandSessionID = nil
   }
 
   /// Handles one Lua command execution request.
@@ -72,6 +74,11 @@ actor LuaCommandService {
       )
       await sendCommandResponse(token: token, result: result)
       return
+    }
+
+    if activeAsyncCommandSessionID != runtimeSessionID {
+      activeAsyncCommandCount = 0
+      activeAsyncCommandSessionID = runtimeSessionID
     }
 
     let maxAsyncJobs = commandSettings.maxAsyncJobs
@@ -133,8 +140,6 @@ actor LuaCommandService {
     runtimeSessionID: UInt64,
     isRuntimeSessionActive: @escaping @Sendable (UInt64) async -> Bool
   ) async {
-    activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
-
     guard await isRuntimeSessionActive(runtimeSessionID) else {
       logger.debug(
         "dropping stale async lua command response",
@@ -144,6 +149,16 @@ actor LuaCommandService {
       return
     }
 
+    guard activeAsyncCommandSessionID == runtimeSessionID else {
+      logger.debug(
+        "dropping async lua command response from reset session accounting",
+        .field("token", token),
+        .field("runtime_session_id", runtimeSessionID)
+      )
+      return
+    }
+
+    activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
     await sendCommandResponse(token: token, result: result)
   }
 }
