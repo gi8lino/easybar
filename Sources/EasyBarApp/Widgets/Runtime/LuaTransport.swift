@@ -2,6 +2,11 @@ import Darwin
 import EasyBarShared
 import Foundation
 
+private enum LuaTransportLimits {
+  /// Maximum bytes buffered for one newline-delimited JSON message from Lua.
+  static let maxLineBytes = 1024 * 1024
+}
+
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
 ///
 /// Sendability is guarded by `LockedState`; file descriptors, task handles, and
@@ -297,6 +302,7 @@ final class LuaTransport: @unchecked Sendable {
     handleLine: @escaping @Sendable (String) -> Void
   ) {
     var pending = Data()
+    var isDroppingOversizedLine = false
     var buffer = [UInt8](repeating: 0, count: 4096)
 
     while !Task.isCancelled, isCurrent(generation: generation) {
@@ -306,18 +312,56 @@ final class LuaTransport: @unchecked Sendable {
       }
 
       if count > 0 {
-        pending.append(contentsOf: buffer.prefix(count))
+        let bytes = buffer.prefix(count)
+
+        if isDroppingOversizedLine {
+          guard let newlineIndex = bytes.firstIndex(of: 0x0A) else {
+            continue
+          }
+
+          pending.removeAll(keepingCapacity: true)
+          let afterNewline = bytes.index(after: newlineIndex)
+          if afterNewline < bytes.endIndex {
+            pending.append(contentsOf: bytes[afterNewline...])
+          }
+          isDroppingOversizedLine = false
+        } else {
+          pending.append(contentsOf: bytes)
+        }
+
         while let newlineIndex = pending.firstIndex(of: 0x0A) {
           let lineData = pending.prefix(upTo: newlineIndex)
           pending.removeSubrange(...newlineIndex)
+
+          guard lineData.count <= LuaTransportLimits.maxLineBytes else {
+            logger.warn(
+              "dropping oversized lua transport line",
+              .field("bytes", lineData.count),
+              .field("max_bytes", LuaTransportLimits.maxLineBytes),
+              .field("fd", fd)
+            )
+            continue
+          }
+
           guard let line = decodeLine(from: lineData) else { continue }
           handleLine(line)
+        }
+
+        if pending.count > LuaTransportLimits.maxLineBytes {
+          logger.warn(
+            "dropping oversized lua transport line",
+            .field("bytes", pending.count),
+            .field("max_bytes", LuaTransportLimits.maxLineBytes),
+            .field("fd", fd)
+          )
+          pending.removeAll(keepingCapacity: true)
+          isDroppingOversizedLine = true
         }
         continue
       }
 
       if count == 0 {
-        if let line = decodeLine(from: pending[...]) {
+        if !isDroppingOversizedLine, let line = decodeLine(from: pending[...]) {
           handleLine(line)
         }
         return

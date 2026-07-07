@@ -360,7 +360,10 @@ private final class CommandExecution: @unchecked Sendable {
     }
     guard !isAlreadyCompleted else { return }
 
-    let chunk = readCurrentlyAvailableOutput(from: handle)
+    let chunk = readCurrentlyAvailableOutput(
+      from: handle,
+      maxBytes: remainingOutputCapacity()
+    )
     let shouldTerminate = state.withLock { state in
       state.appendOutput(chunk, maxOutputBytes: limits.maxOutputBytes)
     }
@@ -416,24 +419,35 @@ private final class CommandExecution: @unchecked Sendable {
     }
 
     if let outputReadHandle {
-      appendRemainingOutput(readCurrentlyAvailableOutput(from: outputReadHandle))
+      appendRemainingOutput(
+        readCurrentlyAvailableOutput(
+          from: outputReadHandle,
+          maxBytes: remainingOutputCapacity()
+        )
+      )
     }
 
     complete(result(waitResult: waitResult, status: status))
   }
 
-  /// Reads all bytes currently available from a nonblocking output pipe.
-  private func readCurrentlyAvailableOutput(from handle: FileHandle) -> Data {
+  /// Reads currently available bytes from a nonblocking output pipe up to the given cap.
+  private func readCurrentlyAvailableOutput(
+    from handle: FileHandle,
+    maxBytes: Int
+  ) -> Data {
+    guard maxBytes > 0 else { return Data() }
+
     var output = Data()
     var buffer = [UInt8](repeating: 0, count: 4096)
 
-    while true {
+    while output.count < maxBytes {
       let bytesRead = buffer.withUnsafeMutableBytes { rawBuffer in
         guard let baseAddress = rawBuffer.baseAddress else { return 0 }
         return read(handle.fileDescriptor, baseAddress, rawBuffer.count)
       }
       if bytesRead > 0 {
-        output.append(contentsOf: buffer.prefix(bytesRead))
+        let bytesToAppend = min(bytesRead, maxBytes - output.count)
+        output.append(contentsOf: buffer.prefix(bytesToAppend))
         continue
       }
 
@@ -456,6 +470,15 @@ private final class CommandExecution: @unchecked Sendable {
         .field("errno", errnoValue)
       )
       return output
+    }
+
+    return output
+  }
+
+  /// Returns how many more command-output bytes can be kept.
+  private func remainingOutputCapacity() -> Int {
+    state.withLock { state in
+      max(0, limits.maxOutputBytes - state.outputData.count)
     }
   }
 
