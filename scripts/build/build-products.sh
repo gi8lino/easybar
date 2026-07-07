@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 3 ]; then
+usage() {
   echo "Usage: $0 <debug|release> <arm64|x86_64|universal> <product=output> [...]" >&2
+}
+
+if [ "$#" -lt 3 ]; then
+  usage
   exit 2
 fi
 
@@ -49,6 +53,23 @@ for pair in "$@"; do
   mkdir -p "$(dirname "$output")"
 done
 
+build_product_path() {
+  local built_arch=$1
+  local product=$2
+
+  printf '.build/%s-apple-macosx/%s/%s\n' "$built_arch" "$configuration" "$product"
+}
+
+require_built_product() {
+  local path=$1
+  local product=$2
+
+  if [ ! -f "$path" ]; then
+    echo "SwiftPM did not produce product '$product' at: $path" >&2
+    exit 1
+  fi
+}
+
 build_arch() {
   local build_arch=$1
   local args=(swift build -c "$configuration" --arch "$build_arch")
@@ -63,10 +84,13 @@ build_arch() {
 copy_arch_outputs() {
   local built_arch=$1
   local index=0
-  local build_dir=".build/${built_arch}-apple-macosx/${configuration}"
 
   while [ "$index" -lt "${#products[@]}" ]; do
-    cp "${build_dir}/${products[$index]}" "${outputs[$index]}"
+    local product=${products[$index]}
+    local source_path
+    source_path=$(build_product_path "$built_arch" "$product")
+    require_built_product "$source_path" "$product"
+    cp "$source_path" "${outputs[$index]}"
     index=$((index + 1))
   done
 }
@@ -74,11 +98,23 @@ copy_arch_outputs() {
 lipo_universal_outputs() {
   local index=0
 
+  if ! command -v lipo >/dev/null 2>&1; then
+    echo "Missing lipo. Universal builds must run with Xcode command line tools available." >&2
+    exit 1
+  fi
+
   while [ "$index" -lt "${#products[@]}" ]; do
-    lipo -create \
-      ".build/arm64-apple-macosx/${configuration}/${products[$index]}" \
-      ".build/x86_64-apple-macosx/${configuration}/${products[$index]}" \
-      -output "${outputs[$index]}"
+    local product=${products[$index]}
+    local arm64_path
+    local x86_64_path
+    arm64_path=$(build_product_path arm64 "$product")
+    x86_64_path=$(build_product_path x86_64 "$product")
+
+    require_built_product "$arm64_path" "$product"
+    require_built_product "$x86_64_path" "$product"
+
+    lipo -create "$arm64_path" "$x86_64_path" -output "${outputs[$index]}"
+    require_built_product "${outputs[$index]}" "$product"
     index=$((index + 1))
   done
 }

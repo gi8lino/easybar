@@ -29,8 +29,10 @@ fi
 
 mkdir -p "$icon_dir"
 
-for size in "$@"; do
-  outfile="favicon-$size.png"
+create_icon() {
+  size=$1
+  outfile=$2
+
   echo "create $outfile"
   "$image_convert" \
     -background none \
@@ -38,16 +40,16 @@ for size in "$@"; do
     "$svg" \
     -fuzz 5% -transparent white \
     -resize "$size" \
-    "$icon_dir/$outfile" \
-    >/dev/null 2>&1
+    "$icon_dir/$outfile"
+
+  if [ ! -s "$icon_dir/$outfile" ]; then
+    echo "Could not create icon: $icon_dir/$outfile" >&2
+    exit 1
+  fi
+}
+
+for size in "$@"; do
+  create_icon "$size" "favicon-$size.png"
 done
 
-echo "create apple-touch-icon.png"
-"$image_convert" \
-  -background none \
-  -font "$icon_font" \
-  "$svg" \
-  -fuzz 5% -transparent white \
-  -resize 180x180 \
-  "$icon_dir/apple-touch-icon.png" \
-  >/dev/null 2>&1
+create_icon 180x180 apple-touch-icon.png

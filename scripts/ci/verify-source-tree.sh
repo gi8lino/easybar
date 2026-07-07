@@ -20,7 +20,19 @@ required_files=(
   "Sources/EasyBarApp/Lua/easybar_api.lua"
   "Sources/EasyBarApp/Lua/easybar/event_tokens.lua"
   "Sources/EasyBarApp/Lua/easybar/theme_tokens.lua"
+  "scripts/assets/app_icons.sh"
+  "scripts/assets/favicons.sh"
+  "scripts/build/build-products.sh"
+  "scripts/build/bundle.sh"
+  "scripts/build/copy-resources.sh"
+  "scripts/build/stamp-plist.sh"
   "scripts/build/stamp_build_info.py"
+  "scripts/build/verify-bundle.sh"
+  "scripts/ci/install-lua.sh"
+  "scripts/ci/install-release-dependencies.sh"
+  "scripts/ci/run-swift-tests.sh"
+  "scripts/dev/run-local.sh"
+  "scripts/dev/stop-local.sh"
   "scripts/generate/theme_tokens.py"
   "scripts/generate/event_catalog.py"
   "scripts/generate/lua_reference_docs.py"
@@ -67,5 +79,7 @@ grep -q 'libexec.install "EasyBarCalendarAgent.app"' "${calendar_formula}"
 grep -q 'libexec.install "EasyBarNetworkAgent.app"' "${network_formula}"
 
 echo "Source tree and generated formula smoke checks passed."
+
+
 
 

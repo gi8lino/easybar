@@ -13,6 +13,26 @@ calendar_agent_bundle=$4
 network_agent_bundle=$5
 cli_bin=$6
 
+require_path() {
+  local path="$1"
+  local label="$2"
+
+  if [ ! -e "$path" ]; then
+    echo "Missing ${label}: ${path}" >&2
+    exit 1
+  fi
+}
+
+require_path "$app_bundle" "app bundle"
+require_path "$calendar_agent_bundle" "calendar agent bundle"
+require_path "$network_agent_bundle" "network agent bundle"
+require_path "$cli_bin" "CLI binary"
+
+package_dir=$(dirname "$package_zip")
+package_name=$(basename "$package_zip")
+mkdir -p "$package_dir"
+package_zip="$(cd "$package_dir" && pwd)/${package_name}"
+
 rm -rf "$package_stage" "$package_zip"
 mkdir -p "$package_stage"
 
@@ -23,7 +43,7 @@ cp "$cli_bin" "$package_stage/easybar"
 
 (
   cd "$package_stage"
-  zip -qry "../$(basename "$package_zip")" \
+  zip -qry "$package_zip" \
     "EasyBar.app" \
     "EasyBarCalendarAgent.app" \
     "EasyBarNetworkAgent.app" \

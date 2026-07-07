@@ -15,6 +15,13 @@ else
 fi
 
 heartbeat_interval="${CI_HEARTBEAT_INTERVAL_SECONDS:-30}"
+case "$heartbeat_interval" in
+  ''|*[!0-9]*|0)
+    echo "CI_HEARTBEAT_INTERVAL_SECONDS must be a positive integer, got: $heartbeat_interval" >&2
+    exit 2
+    ;;
+esac
+
 test_pid=""
 heartbeat_pid=""
 
@@ -22,24 +29,52 @@ heartbeat_pid=""
 
 echo "Running: ${test_command[*]}" | tee -a "${log_file}"
 
+process_running() {
+  local pid="$1"
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+terminate_process_tree() {
+  local pid="$1"
+  local signal="$2"
+  local children=""
+  local child=""
+
+  children=$(pgrep -P "$pid" 2>/dev/null || true)
+  for child in $children; do
+    terminate_process_tree "$child" "$signal"
+  done
+
+  kill "-${signal}" "$pid" 2>/dev/null || true
+}
+
+stop_heartbeat() {
+  if process_running "$heartbeat_pid"; then
+    kill "$heartbeat_pid" 2>/dev/null || true
+    wait "$heartbeat_pid" 2>/dev/null || true
+  fi
+}
+
 cleanup() {
   local status=$?
   trap - INT TERM HUP EXIT
 
-  if [ -n "${heartbeat_pid}" ]; then
-    kill "${heartbeat_pid}" 2>/dev/null || true
-    wait "${heartbeat_pid}" 2>/dev/null || true
-  fi
+  stop_heartbeat
 
-  if [ -n "${test_pid}" ] && kill -0 "${test_pid}" 2>/dev/null; then
+  if process_running "$test_pid"; then
     echo "Stopping test command..." | tee -a "${log_file}"
-    kill "${test_pid}" 2>/dev/null || true
+    terminate_process_tree "$test_pid" TERM
     sleep 2
-    kill -9 "${test_pid}" 2>/dev/null || true
-    wait "${test_pid}" 2>/dev/null || true
+
+    if process_running "$test_pid"; then
+      echo "Force-stopping test command..." | tee -a "${log_file}"
+      terminate_process_tree "$test_pid" KILL
+    fi
+
+    wait "$test_pid" 2>/dev/null || true
   fi
 
-  exit "${status}"
+  exit "$status"
 }
 
 trap cleanup INT TERM HUP EXIT
@@ -49,9 +84,9 @@ test_pid=$!
 
 (
   while true; do
-    sleep "${heartbeat_interval}"
+    sleep "$heartbeat_interval"
 
-    if ! kill -0 "${test_pid}" 2>/dev/null; then
+    if ! process_running "$test_pid"; then
       exit 0
     fi
 
@@ -75,23 +110,21 @@ test_pid=$!
 heartbeat_pid=$!
 
 set +e
-wait "${test_pid}"
+wait "$test_pid"
 status=$?
 set -e
 
-kill "${heartbeat_pid}" 2>/dev/null || true
-wait "${heartbeat_pid}" 2>/dev/null || true
-
+stop_heartbeat
 trap - INT TERM HUP EXIT
 
-if [ "${status}" -ne 0 ]; then
+if [ "$status" -ne 0 ]; then
   echo "---- extracted failures ----"
   grep -nE "(: error:|XCTAssert|failed -|Test Case '.*failed|Test Suite '.*failed)" "${log_file}" || true
 
   echo "---- full test log ----"
   cat "${log_file}"
 
-  exit "${status}"
+  exit "$status"
 fi
 
 echo "Command finished successfully: ${test_command[*]}" | tee -a "${log_file}"

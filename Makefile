@@ -238,19 +238,19 @@ release: package ## Build and verify the zipped release artifact.
 	@echo "Release artifact ready: $(PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
-	@scripts/build/build-product.sh release "$(ARCH)" "$(APP_PRODUCT)" "$(APP_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
 
 build-lua-runtime: ## Internal target: build the Lua runtime executable for ARCH.
-	@scripts/build/build-product.sh release "$(ARCH)" "$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
 
 build-calendar-agent: ## Internal target: build the calendar agent executable for ARCH.
-	@scripts/build/build-product.sh release "$(ARCH)" "$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
 
 build-network-agent: ## Internal target: build the network agent executable for ARCH.
-	@scripts/build/build-product.sh release "$(ARCH)" "$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
 
 build-cli: ## Internal target: build the CLI executable for ARCH.
-	@scripts/build/build-product.sh release "$(ARCH)" "$(CLI_PRODUCT)" "$(CLI_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
 copy-resources: ## Internal target: copy SwiftPM resources and root assets into the app bundle.
 	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
@@ -357,19 +357,19 @@ run-trace: prepare-version ## Fast local run with debug builds and trace logging
 	@scripts/dev/run-local.sh trace "$(RUN_ARCH)" "$(VERSION)" "$(BUNDLE_ID)" "$(APP_MACOS)" "$(CALENDAR_AGENT_MACOS)" "$(NETWORK_AGENT_MACOS)" "$(DIST_DIR)" "$(CALENDAR_AGENT_BIN)" "$(NETWORK_AGENT_BIN)" "$(APP_BIN)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
-	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)" "$(APP_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
 
 run-build-lua-runtime: ## Internal target: fast local Lua runtime build for RUN_ARCH.
-	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(LUA_RUNTIME_PRODUCT)" "$(LUA_RUNTIME_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
 
 run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
-	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(CALENDAR_AGENT_PRODUCT)" "$(CALENDAR_AGENT_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
 
 run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
-	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(NETWORK_AGENT_PRODUCT)" "$(NETWORK_AGENT_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
 
 run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
-	@scripts/build/build-product.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)" "$(CLI_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
 stop: ## Stop EasyBar and its agents from brew services and local dist runs.
 	@scripts/dev/stop-local.sh \
@@ -495,5 +495,7 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+
 
 
