@@ -5,7 +5,9 @@ import Foundation
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
 ///
 /// Sendability is guarded by `LockedState`; file descriptors, task handles, and
-/// the current line handler are all read or changed through that lock.
+/// the current line handler are all read or changed through that lock. Outbound
+/// socket writes are additionally serialized by `writerQueue` so JSON lines keep
+/// their ordering and cannot interleave on the stream socket.
 final class LuaTransport: @unchecked Sendable {
   /// Startup errors surfaced while preparing the transport.
   enum TransportError: LocalizedError {
@@ -34,6 +36,7 @@ final class LuaTransport: @unchecked Sendable {
   private let logger: ProcessLogger
   private let logBridge: LuaLogBridge
   private let state = LockedState(State())
+  private let writerQueue = DispatchQueue(label: "easybar.lua-transport.writer")
 
   /// Creates one Lua transport.
   init(logger: ProcessLogger) {
@@ -106,6 +109,11 @@ final class LuaTransport: @unchecked Sendable {
     snapshot.readTask?.cancel()
     snapshot.stderrTask?.cancel()
 
+    // Drain queued writes after the generation was invalidated but before the
+    // file descriptors are closed. This prevents a stale queued send from
+    // writing to a descriptor after the OS has reused it for another resource.
+    writerQueue.sync {}
+
     if snapshot.clientFD >= 0 {
       Darwin.shutdown(snapshot.clientFD, SHUT_RDWR)
       close(snapshot.clientFD)
@@ -128,20 +136,30 @@ final class LuaTransport: @unchecked Sendable {
   func send(_ string: String) {
     guard let data = (string + "\n").data(using: .utf8) else { return }
 
-    let fd = state.withLock { $0.clientFD }
-    guard fd >= 0 else {
+    let snapshot = state.withLock { state in
+      (generation: state.generation, clientFD: state.clientFD)
+    }
+
+    guard snapshot.clientFD >= 0 else {
       logger.debug("cannot send event, lua socket not connected")
       return
     }
 
-    DetachedTask.run(priority: .utility) { [logger] in
-      if writeAll(data, to: fd) {
+    let byteCount = string.utf8.count
+    writerQueue.async { [weak self, data, snapshot, byteCount] in
+      guard let self else { return }
+      guard self.isCurrentClientFD(snapshot.clientFD, generation: snapshot.generation) else {
+        self.logger.debug("dropping stale lua socket write")
+        return
+      }
+
+      if writeAll(data, to: snapshot.clientFD) {
         Task {
           await MetricsCoordinator.shared.recordLuaWrite()
         }
-        logger.trace("sent to lua socket", .field("bytes", string.utf8.count))
+        self.logger.trace("sent to lua socket", .field("bytes", byteCount))
       } else {
-        logger.error("failed writing to lua socket")
+        self.logger.error("failed writing to lua socket")
       }
     }
   }
@@ -330,6 +348,13 @@ final class LuaTransport: @unchecked Sendable {
   /// Returns whether the generation is still active.
   private func isCurrent(generation: UInt64) -> Bool {
     state.withLock { $0.generation == generation }
+  }
+
+  /// Returns whether one client fd still belongs to the current Lua generation.
+  private func isCurrentClientFD(_ fd: Int32, generation: UInt64) -> Bool {
+    state.withLock { state in
+      state.generation == generation && state.clientFD == fd
+    }
   }
 
   /// Decodes one non-empty UTF-8 line.
