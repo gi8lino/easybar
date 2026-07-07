@@ -8,6 +8,7 @@ final class AeroSpaceSubscriptionProcessLauncherTests: XCTestCase {
   func testProcessLauncherReadsSubscriptionOutputAndTermination() throws {
     let logger = Self.makeLogger()
     let fixtureURL = Self.fixtureURL()
+
     XCTAssertTrue(
       FileManager.default.isExecutableFile(atPath: fixtureURL.path),
       "Expected executable fixture at \(fixtureURL.path)"
@@ -73,8 +74,10 @@ final class AeroSpaceSubscriptionProcessLauncherTests: XCTestCase {
 
   private static func fixtureURL() -> URL {
     URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent()
-      .appendingPathComponent("Fixtures/aerospace-subscribe-mock.sh")
+      .deletingLastPathComponent()  // Tests/EasyBarTests
+      .deletingLastPathComponent()  // Tests
+      .deletingLastPathComponent()  // repository root
+      .appendingPathComponent("scripts/test/mock-aerospace-subscribe.sh")
   }
 
   private static func makeLogger() -> ProcessLogger {
