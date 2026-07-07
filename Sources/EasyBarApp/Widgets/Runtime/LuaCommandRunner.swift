@@ -62,6 +62,7 @@ final class LuaCommandRunner: @unchecked Sendable {
 /// identifiers are touched only on the serial command queue.
 private final class CommandExecution: @unchecked Sendable {
   private static let shellPath = "/bin/sh"
+  private static let forcedTerminationGraceNanoseconds: UInt64 = 300_000_000
 
   private struct State {
     var outputData = Data()
@@ -118,6 +119,7 @@ private final class CommandExecution: @unchecked Sendable {
   private var outputReadHandle: FileHandle?
   private var timeoutTask: Task<Void, Never>?
   private var waitTask: Task<Void, Never>?
+  private var forceKillTask: Task<Void, Never>?
 
   init(
     command: String,
@@ -304,6 +306,7 @@ private final class CommandExecution: @unchecked Sendable {
     if shouldTerminate {
       outputReadHandle?.readabilityHandler = nil
       terminateProcessTree(signal: SIGTERM)
+      scheduleForcedTermination()
     }
   }
 
@@ -334,6 +337,7 @@ private final class CommandExecution: @unchecked Sendable {
     if shouldTerminate {
       outputReadHandle?.readabilityHandler = nil
       terminateProcessTree(signal: SIGTERM)
+      scheduleForcedTermination()
     }
   }
 
@@ -422,6 +426,37 @@ private final class CommandExecution: @unchecked Sendable {
     return LuaCommandResult(output: output, status: exitStatus)
   }
 
+  /// Schedules a `SIGKILL` fallback when graceful termination is ignored.
+  private func scheduleForcedTermination() {
+    guard forceKillTask == nil else { return }
+
+    forceKillTask = Task {
+      do {
+        try await Task.sleep(nanoseconds: Self.forcedTerminationGraceNanoseconds)
+      } catch {
+        return
+      }
+
+      self.queue.async {
+        self.forceTerminateIfStillRunning()
+      }
+    }
+  }
+
+  /// Force-kills the command process tree if `waitpid` has not completed yet.
+  private func forceTerminateIfStillRunning() {
+    let isCompleted = state.withLock { state in
+      state.completed
+    }
+    guard !isCompleted else { return }
+
+    logger.warn(
+      "lua command ignored graceful termination",
+      .field("command_bytes", command.utf8.count)
+    )
+    terminateProcessTree(signal: SIGKILL)
+  }
+
   /// Sends one signal to the command process group, falling back to the shell process.
   private func terminateProcessTree(signal: Int32) {
     if let processGroupIdentifier, processGroupIdentifier > 0 {
@@ -444,6 +479,8 @@ private final class CommandExecution: @unchecked Sendable {
     timeoutTask = nil
     waitTask?.cancel()
     waitTask = nil
+    forceKillTask?.cancel()
+    forceKillTask = nil
 
     outputReadHandle?.readabilityHandler = nil
     outputReadHandle = nil
