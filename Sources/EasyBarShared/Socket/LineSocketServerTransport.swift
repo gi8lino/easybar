@@ -1,10 +1,11 @@
 import Darwin
+import Dispatch
 import Foundation
 
 /// Serves line-delimited JSON requests over a Unix domain socket and optionally tracks subscribers.
 ///
 /// Sendability is guarded by `LockedState`; server file descriptors, accept
-/// tasks, connected clients, and subscribers are only mutated while holding that lock.
+/// threads, connected clients, and subscribers are only mutated while holding that lock.
 public final class LineSocketServerTransport<
   Subscriber,
   Request: Decodable,
@@ -31,7 +32,7 @@ public final class LineSocketServerTransport<
   private struct State {
     var serverFD: Int32 = -1
     var running = false
-    var acceptTask: Task<Void, Never>?
+    var acceptThread: Thread?
     var clientFDs: Set<Int32> = []
     var subscribers: [Int32: Subscriber] = [:]
   }
@@ -41,7 +42,6 @@ public final class LineSocketServerTransport<
     let serverFD: Int32
     let clientFDs: [Int32]
     let subscriberFDs: [Int32]
-    let acceptTask: Task<Void, Never>?
   }
 
   private let socketPath: String
@@ -103,19 +103,20 @@ public final class LineSocketServerTransport<
       .field("socket_path", "\(socketPath)"),
     )
 
-    let task = DetachedTask.run(priority: .utility) { [weak self] in
-      guard let self else { return }
-      await self.acceptLoop(handler: handler)
+    let thread = Thread { [weak self] in
+      self?.acceptLoop(handler: handler)
+    }
+    thread.name = "\(serverLabel) socket accept"
+    thread.qualityOfService = .utility
+
+    let shouldStartThread = state.withLock { state -> Bool in
+      guard state.running, state.serverFD == fd else { return false }
+      state.acceptThread = thread
+      return true
     }
 
-    let shouldCancelTask = state.withLock { state -> Bool in
-      guard state.running, state.serverFD == fd else { return true }
-      state.acceptTask = task
-      return false
-    }
-
-    if shouldCancelTask {
-      task.cancel()
+    if shouldStartThread {
+      thread.start()
     }
   }
 
@@ -126,21 +127,18 @@ public final class LineSocketServerTransport<
         wasRunning: state.running,
         serverFD: state.serverFD,
         clientFDs: Array(state.clientFDs.union(state.subscribers.keys)),
-        subscriberFDs: Array(state.subscribers.keys),
-        acceptTask: state.acceptTask
+        subscriberFDs: Array(state.subscribers.keys)
       )
 
       state.running = false
       state.serverFD = -1
-      state.acceptTask = nil
+      state.acceptThread = nil
       state.clientFDs.removeAll()
       state.subscribers.removeAll()
       return snapshot
     }
 
     guard snapshot.wasRunning else { return }
-
-    snapshot.acceptTask?.cancel()
 
     for clientFD in snapshot.clientFDs {
       closeClientSocket(clientFD)
@@ -338,8 +336,8 @@ public final class LineSocketServerTransport<
   }
 
   /// Accepts client connections until the server stops.
-  private func acceptLoop(handler: @escaping (Int32, Request) async -> ClientDisposition) async {
-    while isRunning(), !Task.isCancelled {
+  private func acceptLoop(handler: @escaping (Int32, Request) async -> ClientDisposition) {
+    while isRunning() {
       let fd = currentServerFD()
       if fd < 0 { break }
 
@@ -349,7 +347,7 @@ public final class LineSocketServerTransport<
           continue
         }
 
-        if !isRunning() || Task.isCancelled {
+        if !isRunning() {
           break
         }
 
@@ -374,10 +372,12 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      DetachedTask.run(priority: .utility) { [weak self] in
-        guard let self else { return }
-        await self.handleClient(clientFD, handler: handler)
+      let clientThread = Thread { [weak self] in
+        self?.handleClient(clientFD, handler: handler)
       }
+      clientThread.name = "\(serverLabel) socket client"
+      clientThread.qualityOfService = .utility
+      clientThread.start()
     }
   }
 
@@ -385,18 +385,18 @@ public final class LineSocketServerTransport<
   private func handleClient(
     _ clientFD: Int32,
     handler: @escaping (Int32, Request) async -> ClientDisposition
-  ) async {
+  ) {
     var lineDecoder = LineDelimitedJSONDecoder<Request>()
     var buffer = [UInt8](repeating: 0, count: 4096)
 
-    while !Task.isCancelled {
+    while true {
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(clientFD, baseAddress, rawBuffer.count)
       }
 
       if count > 0 {
-        let disposition = await handleDecodedRequests(
+        let disposition = handleDecodedRequests(
           lineDecoder.append(buffer.prefix(count)),
           clientFD: clientFD,
           handler: handler
@@ -429,8 +429,6 @@ public final class LineSocketServerTransport<
       closeClientConnection(clientFD)
       return
     }
-
-    closeClientConnection(clientFD)
   }
 
   /// Dispatches decoded requests and returns the resulting socket disposition.
@@ -438,11 +436,11 @@ public final class LineSocketServerTransport<
     _ results: [Result<Request, Error>],
     clientFD: Int32,
     handler: @escaping (Int32, Request) async -> ClientDisposition
-  ) async -> ClientDisposition {
+  ) -> ClientDisposition {
     for result in results {
       switch result {
       case .success(let request):
-        let disposition = await handler(clientFD, request)
+        let disposition = runHandler(request, clientFD: clientFD, handler: handler)
         if disposition == .close {
           return .close
         }
@@ -457,6 +455,30 @@ public final class LineSocketServerTransport<
     }
 
     return .keepOpen
+  }
+
+  /// Runs the async request handler outside the blocking socket thread and waits for its result.
+  private func runHandler(
+    _ request: Request,
+    clientFD: Int32,
+    handler: @escaping (Int32, Request) async -> ClientDisposition
+  ) -> ClientDisposition {
+    let result = LockedState<ClientDisposition?>(nil)
+    let semaphore = DispatchSemaphore(value: 0)
+
+    Task {
+      let disposition = await handler(clientFD, request)
+      result.withLock { state in
+        state = disposition
+      }
+      semaphore.signal()
+    }
+
+    semaphore.wait()
+
+    return result.withLock { state in
+      state ?? .close
+    }
   }
 
   /// Tracks one accepted client when the server is still running.

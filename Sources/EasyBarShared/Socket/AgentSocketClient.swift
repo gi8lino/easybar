@@ -9,14 +9,13 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
   private struct State {
     var socketFD: Int32 = -1
     var running = false
-    var connectionTask: Task<Void, Never>?
+    var connectionThread: Thread?
     var nextReconnectDelayOverride: TimeInterval?
     var activeConnectionID: UInt64 = 0
   }
 
   private struct StopSnapshot {
     let fd: Int32
-    let task: Task<Void, Never>?
     let shouldNotifyDisconnect: Bool
   }
 
@@ -90,22 +89,17 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       state.nextReconnectDelayOverride = nil
 
       let currentFD = state.socketFD
-      let connectionTask = state.connectionTask
-
       state.socketFD = -1
-      state.connectionTask = nil
+      state.connectionThread = nil
       state.activeConnectionID &+= 1
 
       return StopSnapshot(
         fd: currentFD,
-        task: connectionTask,
         shouldNotifyDisconnect: currentFD >= 0
       )
     }
 
     reconnectScheduler.cancel()
-    snapshot.task?.cancel()
-
     if snapshot.fd >= 0 {
       shutdown(snapshot.fd, SHUT_RDWR)
       close(snapshot.fd)
@@ -137,27 +131,27 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     }
   }
 
-  /// Starts one connection attempt on a Swift task.
+  /// Starts one connection attempt on a dedicated blocking socket thread.
   private func connect() {
-    let task = DetachedTask.run(priority: .utility) { [weak self] in
-      guard let self else { return }
-      await self.runConnectionAttempt()
+    let thread = Thread { [weak self] in
+      self?.runConnectionAttempt()
+    }
+    thread.name = "\(label) socket client"
+    thread.qualityOfService = .utility
+
+    let shouldStart = state.withLock { state -> Bool in
+      guard state.running else { return false }
+      state.connectionThread = thread
+      return true
     }
 
-    let shouldCancel = state.withLock { state -> Bool in
-      guard state.running else { return true }
-      state.connectionTask?.cancel()
-      state.connectionTask = task
-      return false
-    }
-
-    if shouldCancel {
-      task.cancel()
+    if shouldStart {
+      thread.start()
     }
   }
 
   /// Performs one connection attempt and read loop.
-  private func runConnectionAttempt() async {
+  private func runConnectionAttempt() {
     guard isRunning() else { return }
 
     let resolvedSocketPath = socketPath()
@@ -193,7 +187,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     var buffer = [UInt8](repeating: 0, count: 4096)
     var lineDecoder = LineDelimitedJSONDecoder<Message>()
 
-    while isActiveConnection(fd: fd, connectionID: connectionID), !Task.isCancelled {
+    while isActiveConnection(fd: fd, connectionID: connectionID) {
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(fd, baseAddress, rawBuffer.count)
@@ -309,7 +303,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       }
 
       state.socketFD = -1
-      state.connectionTask = nil
+      state.connectionThread = nil
       return true
     }
   }
