@@ -1,50 +1,56 @@
-import EasyBarShared
+import Darwin
+import Foundation
 import XCTest
+
+@testable import EasyBarShared
 
 final class AgentSocketClientTests: XCTestCase {
   private struct TestRequest: Codable {
     let command: String
   }
 
-  private struct TestMessage: Codable {
+  private struct TestMessage: Codable, Equatable {
     let kind: String
   }
 
   private struct CallbackCounts {
     var connected = 0
     var disconnected = 0
+    var decoded = 0
   }
 
-  private var socketDirectoryURL: URL!
+  private var temporaryDirectory: URL!
   private var socketPath: String!
 
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    socketDirectoryURL = URL(fileURLWithPath: "/tmp", isDirectory: true)
-      .appendingPathComponent("easybar-agent-client-tests-\(UUID().uuidString)", isDirectory: true)
+    temporaryDirectory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-agent-client-tests-")
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+
     try FileManager.default.createDirectory(
-      at: socketDirectoryURL,
+      at: temporaryDirectory,
       withIntermediateDirectories: true
     )
 
-    socketPath = socketDirectoryURL.appendingPathComponent("agent.sock").path
+    socketPath = temporaryDirectory.appendingPathComponent("agent.sock").path
   }
 
   override func tearDownWithError() throws {
-    if let socketDirectoryURL {
-      try? FileManager.default.removeItem(at: socketDirectoryURL)
+    if let temporaryDirectory {
+      try? FileManager.default.removeItem(at: temporaryDirectory)
     }
+
+    socketPath = nil
+    temporaryDirectory = nil
+
     try super.tearDownWithError()
   }
 
   func testStopRunsDisconnectCallbackForActiveConnection() async throws {
-    let logger = ProcessLogger(label: "agent.socket.client.tests", minimumLevel: .error)
-    let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
-      socketPath: socketPath,
-      serverLabel: "agent socket client tests",
-      logger: logger
-    )
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
 
     server.start { fd, _ in
       server.addSubscriber((), for: fd)
@@ -62,7 +68,9 @@ final class AgentSocketClientTests: XCTestCase {
       label: "test agent",
       socketPath: { self.socketPath },
       subscribeRequest: { TestRequest(command: "subscribe") },
-      handleMessage: { _ in },
+      handleMessage: { _ in
+        callbacks.withLock { $0.decoded += 1 }
+      },
       clearState: {},
       onConnected: {
         callbacks.withLock { $0.connected += 1 }
@@ -79,6 +87,9 @@ final class AgentSocketClientTests: XCTestCase {
     try await waitUntil("client to connect") {
       callbacks.withLock { $0.connected == 1 }
     }
+    try await waitUntil("client to decode subscribed message") {
+      callbacks.withLock { $0.decoded == 1 }
+    }
 
     client.stop()
 
@@ -87,6 +98,53 @@ final class AgentSocketClientTests: XCTestCase {
     }
 
     XCTAssertFalse(client.isConnected)
+  }
+
+  func testServerStopClosesKeptOpenSubscriberSocket() async throws {
+    let logger = Self.makeLogger()
+    let removedSubscribers = LockedState(0)
+
+    let notifyingServer = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      onSubscriberRemoved: { _ in
+        removedSubscribers.withLock { $0 += 1 }
+      }
+    )
+
+    notifyingServer.start { fd, _ in
+      notifyingServer.addSubscriber((), for: fd)
+      _ = notifyingServer.send(TestMessage(kind: "subscribed"), to: fd)
+      return .keepOpen
+    }
+    defer { notifyingServer.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath
+    ).send(request: TestRequest(command: "subscribe"))
+
+    XCTAssertEqual(response, TestMessage(kind: "subscribed"))
+
+    notifyingServer.stop()
+
+    try await waitUntil("subscriber removal callback") {
+      removedSubscribers.withLock { $0 == 1 }
+    }
+  }
+
+  private func makeServer(logger: ProcessLogger)
+    -> LineSocketServerTransport<Void, TestRequest, TestMessage>
+  {
+    LineSocketServerTransport(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger
+    )
   }
 
   private func waitUntil(
@@ -105,5 +163,14 @@ final class AgentSocketClientTests: XCTestCase {
     }
 
     XCTFail("Timed out waiting for \(description)")
+  }
+
+  private static func makeLogger() -> ProcessLogger {
+    ProcessLogger(
+      label: "easybar.shared.agent-socket-client.tests",
+      minimumLevel: .error,
+      outputStream: nil,
+      errorStream: nil
+    )
   }
 }
