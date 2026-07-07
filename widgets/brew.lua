@@ -15,7 +15,7 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
 local BREW_LOG_FILE_NAME = "brew-widget.log"
-local BREW_LOG_MAX_RUNS = 8
+local BREW_LOG_MAX_LINES = 4000
 
 local CASK_DENYLIST = {
 	["docker-desktop"] = true,
@@ -95,10 +95,9 @@ local state = {
 	phase = "checking",
 }
 
---- Logs a debug message with a widget-specific prefix.
-local function log_debug(...)
-	easybar.log(easybar.level.debug, "[brew_outdated]", ...)
-end
+local log = easybar.log.with_file(BREW_LOG_FILE_NAME, {
+	prefix = "[brew_outdated]",
+})
 
 --- Returns the current time as HH:MM.
 local function now_label()
@@ -130,101 +129,25 @@ local function log_timestamp()
 	return os.date("%Y-%m-%dT%H:%M:%S%z")
 end
 
---- Returns the brew widget log file path.
-local function brew_log_path()
-	return easybar.log_dir .. "/" .. BREW_LOG_FILE_NAME
-end
-
---- Appends one line to the brew widget log.
-local function append_log_line(line)
-	local file, err = io.open(brew_log_path(), "a")
-	if file == nil then
-		easybar.log(easybar.level.warn, "[brew_outdated]", "failed to open brew log", tostring(err))
-		return
-	end
-
-	file:write(tostring(line or ""), "\n")
-	file:close()
-end
-
 --- Appends a structured operation marker to the brew widget log.
 local function append_log_marker(kind, status)
-	append_log_line("=== " .. log_timestamp() .. " brew-widget " .. kind .. " " .. status .. " ===")
+	log.append("=== " .. log_timestamp() .. " brew-widget " .. kind .. " " .. status .. " ===")
 end
 
---- Appends command output to the brew widget log.
+--- Appends command output to the brew widget log when there is output.
 local function append_log_output(output)
 	output = tostring(output or "")
-	if output == "" then
-		return
+	if output ~= "" then
+		log.append(output)
 	end
-
-	local file, err = io.open(brew_log_path(), "a")
-	if file == nil then
-		easybar.log(easybar.level.warn, "[brew_outdated]", "failed to open brew log", tostring(err))
-		return
-	end
-
-	file:write(output)
-	if output:sub(-1) ~= "\n" then
-		file:write("\n")
-	end
-	file:close()
 end
 
---- Returns the last `limit` log lines.
-local function log_tail(limit)
-	local file = io.open(brew_log_path(), "r")
-	if file == nil then
-		return ""
-	end
-
-	local lines = {}
-	for line in file:lines() do
-		lines[#lines + 1] = line
-	end
-	file:close()
-
-	local start = math.max(1, #lines - limit + 1)
-	local tail = {}
-	for index = start, #lines do
-		tail[#tail + 1] = lines[index]
-	end
-
-	return table.concat(tail, "\n")
-end
-
---- Keeps only the newest brew widget log runs.
+--- Keeps the brew widget log bounded to the newest lines.
 local function prune_brew_log()
-	local file = io.open(brew_log_path(), "r")
-	if file == nil then
-		return
+	local ok, err = log.trim(BREW_LOG_MAX_LINES)
+	if not ok then
+		log(easybar.level.warn, "failed to trim brew log", tostring(err))
 	end
-
-	local lines = {}
-	local starts = {}
-	for line in file:lines() do
-		lines[#lines + 1] = line
-		if line:match("^=== .* brew%-widget .* start ===$") then
-			starts[#starts + 1] = #lines
-		end
-	end
-	file:close()
-
-	if #starts <= BREW_LOG_MAX_RUNS then
-		return
-	end
-
-	local keep_from = starts[#starts - BREW_LOG_MAX_RUNS + 1]
-	file = io.open(brew_log_path(), "w")
-	if file == nil then
-		return
-	end
-
-	for index = keep_from, #lines do
-		file:write(lines[index], "\n")
-	end
-	file:close()
 end
 
 --- Quotes one value for safe use as a POSIX shell argument.
@@ -247,7 +170,7 @@ local function allowed_casks_from_output(output)
 			if cask_allowed(cask) then
 				casks[#casks + 1] = cask
 			else
-				append_log_line("skip denied cask: " .. cask)
+				log.append("skip denied cask: " .. cask)
 			end
 		end
 	end
@@ -271,7 +194,7 @@ end
 
 --- Fails the current brew operation using the current log tail.
 local function fail_brew_operation(kind, message)
-	state.error = truncate(log_tail(80), 400)
+	state.error = truncate(log.tail(80), 400)
 	if state.error == "" then
 		state.error = message
 	end
@@ -286,14 +209,14 @@ end
 
 --- Runs one command, logs its output and exit code, then invokes the callback.
 local function run_logged_command(command, options, exit_label, callback)
-	append_log_line("$ " .. command)
+	log.append("$ " .. command)
 
 	easybar.exec_async(command, options, function(output, code)
 		output = tostring(output or "")
 		code = code or 0
 
 		append_log_output(output)
-		append_log_line(exit_label .. " exit " .. tostring(code))
+		log.append(exit_label .. " exit " .. tostring(code))
 
 		callback(output, code)
 	end)
@@ -332,7 +255,7 @@ end
 --- Runs cask upgrades for allowed casks, or skips when none remain.
 local function run_allowed_cask_upgrade(casks, callback)
 	if #casks == 0 then
-		append_log_line("no casks to upgrade after denylist")
+		log.append("no casks to upgrade after denylist")
 		callback("", 0)
 		return
 	end
@@ -410,7 +333,7 @@ local function apply_outdated_json(raw)
 	state.last_checked = now_label()
 	state.phase = "ready"
 
-	log_debug("apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
+	log(easybar.level.debug, "apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
 end
 
 --- Applies Homebrew JSON output to state and returns whether parsing succeeded.
@@ -726,7 +649,7 @@ end
 --- Checks outdated packages without updating Homebrew.
 local function check_outdated(status_label)
 	if running then
-		log_debug("check_outdated skipped", "status=" .. tostring(status_label))
+		log(easybar.level.debug, "check_outdated skipped", "status=" .. tostring(status_label))
 		return
 	end
 
@@ -788,7 +711,7 @@ end
 --- Updates Homebrew, then checks outdated packages.
 local function update_now()
 	if running then
-		log_debug("update_now skipped", "running=true")
+		log(easybar.level.debug, "update_now skipped", "running=true")
 		return
 	end
 
@@ -856,7 +779,7 @@ end
 --- Upgrades packages, then checks outdated packages.
 local function upgrade_now()
 	if running then
-		log_debug("upgrade_now skipped", "running=true")
+		log(easybar.level.debug, "upgrade_now skipped", "running=true")
 		return
 	end
 
@@ -985,7 +908,7 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 --- Starts the update flow when the update button is left-clicked.
 update_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == easybar.events.mouse.left_button) and not running then
-		log_debug("update click")
+		log(easybar.level.debug, "update click")
 		update_now()
 	end
 end)
@@ -993,7 +916,7 @@ end)
 --- Starts the upgrade flow when the upgrade button is left-clicked.
 upgrade_button:subscribe(easybar.events.mouse.clicked, function(event)
 	if (event.button == nil or event.button == easybar.events.mouse.left_button) and not running then
-		log_debug("upgrade click")
+		log(easybar.level.debug, "upgrade click")
 		upgrade_now()
 	end
 end)
@@ -1003,7 +926,7 @@ brew_widget:subscribe({
 	easybar.events.system_woke,
 	easybar.events.session_active,
 }, function(event)
-	log_debug("lifecycle event", tostring(event and event.name), "due=" .. tostring(check_due()))
+	log(easybar.level.debug, "lifecycle event", tostring(event and event.name), "due=" .. tostring(check_due()))
 	update_if_due()
 end)
 
@@ -1015,3 +938,5 @@ brew_widget:subscribe(easybar.events.forced, function()
 end)
 
 check_outdated("Checking outdated packages…")
+
+

@@ -30,6 +30,25 @@ easybar.log(easybar.level.debug, "current value", 42)
 easybar.log(easybar.level.trace, "raw payload", payload)
 ```
 
+
+## File-backed widget logs
+
+`easybar.log.with_file(file_name, options?)` returns a widget-local logger that remains callable like `easybar.log(...)` and can also append raw text to a widget log file.
+
+Widget log files are constrained to the configured EasyBar log directory and accept only plain file names. This keeps the Lua API useful for long-running command widgets without exposing arbitrary file-writing paths.
+
+Example:
+
+```lua
+local log = easybar.log.with_file("brew-widget.log", {
+    prefix = "[brew_outdated]",
+})
+
+log(easybar.level.debug, "update started")
+log.append(output)
+local tail = log.tail(80)
+```
+
 `LuaLogBridge.swift` is the translation boundary that maps Lua log levels into the Swift host logger.
 
 That means:

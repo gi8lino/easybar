@@ -18,6 +18,36 @@ easybar.log(easybar.level.debug, "current value", 42)
 easybar.log(easybar.level.trace, "raw payload", payload)
 ```
 
+
+## File-backed widget logs
+
+For widgets that need a separate operation log, create a file-backed logger once:
+
+```lua
+local log = easybar.log.with_file("brew-widget.log", {
+    prefix = "[brew_outdated]",
+})
+```
+
+The returned logger is callable, so it keeps the same style as `easybar.log(...)`:
+
+```lua
+log(easybar.level.debug, "checking outdated packages")
+```
+
+It writes to the normal EasyBar host log and appends a line to the widget log file. The file is always created inside `easybar.log_dir`; pass only a plain file name, not a path.
+
+Use `append`, `tail`, and `trim` for command output logs:
+
+```lua
+log.append("$ brew update")
+log.append(output)
+local recent = log.tail(80)
+log.trim(4000)
+```
+
+`append` is useful for raw command output. `tail` is useful for showing recent failure context in a popup. `trim` keeps long-running widget logs bounded.
+
 ## Host filtering
 
 The Swift host decides which logs are emitted based on the configured host log level.

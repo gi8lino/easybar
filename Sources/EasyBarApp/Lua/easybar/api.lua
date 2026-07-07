@@ -91,6 +91,144 @@ local function configured_log_dir()
 	return (os.getenv("HOME") or "/tmp") .. "/.local/state/easybar"
 end
 
+
+--- Returns a safe widget log file name, or nil plus an error message.
+local function validate_log_file_name(file_name)
+	file_name = tostring(file_name or "")
+
+	if file_name == "" then
+		return nil, "log file name is required"
+	end
+
+	if file_name == "." or file_name == ".." then
+		return nil, "log file name must be a plain file name"
+	end
+
+	if file_name:find("/", 1, true) or file_name:find("\\", 1, true) then
+		return nil, "log file name must not contain path separators"
+	end
+
+	if file_name:find("%z") or file_name:find("[\r\n]") then
+		return nil, "log file name must not contain control characters"
+	end
+
+	return file_name, nil
+end
+
+--- Returns the absolute path for one widget log file inside the configured log directory.
+local function widget_log_path(log_dir, file_name)
+	return tostring(log_dir or configured_log_dir()) .. "/" .. file_name
+end
+
+--- Appends text to one widget log file and ensures the file ends with a newline.
+local function append_widget_log(log_dir, file_name, text)
+	local validated, validation_error = validate_log_file_name(file_name)
+	if validated == nil then
+		return false, validation_error
+	end
+
+	local file, err = io.open(widget_log_path(log_dir, validated), "a")
+	if file == nil then
+		return false, tostring(err)
+	end
+
+	text = tostring(text or "")
+	file:write(text)
+	if text == "" or text:sub(-1) ~= "\n" then
+		file:write("\n")
+	end
+	file:close()
+
+	return true, nil
+end
+
+--- Reads all lines from one widget log file.
+local function read_widget_log_lines(log_dir, file_name)
+	local validated, validation_error = validate_log_file_name(file_name)
+	if validated == nil then
+		return nil, validation_error
+	end
+
+	local file = io.open(widget_log_path(log_dir, validated), "r")
+	if file == nil then
+		return {}, nil
+	end
+
+	local lines = {}
+	for line in file:lines() do
+		lines[#lines + 1] = line
+	end
+	file:close()
+
+	return lines, nil
+end
+
+--- Rewrites one widget log file with the provided lines.
+local function write_widget_log_lines(log_dir, file_name, lines)
+	local validated, validation_error = validate_log_file_name(file_name)
+	if validated == nil then
+		return false, validation_error
+	end
+
+	local file, err = io.open(widget_log_path(log_dir, validated), "w")
+	if file == nil then
+		return false, tostring(err)
+	end
+
+	for _, line in ipairs(lines or {}) do
+		file:write(tostring(line or ""), "\n")
+	end
+	file:close()
+
+	return true, nil
+end
+
+--- Returns the newest log lines as one newline-delimited string.
+local function tail_widget_log(log_dir, file_name, limit)
+	local lines, err = read_widget_log_lines(log_dir, file_name)
+	if lines == nil then
+		return "", err
+	end
+
+	limit = tonumber(limit) or 0
+	if limit <= 0 or #lines == 0 then
+		return "", nil
+	end
+
+	local start = math.max(1, #lines - limit + 1)
+	local tail = {}
+	for index = start, #lines do
+		tail[#tail + 1] = lines[index]
+	end
+
+	return table.concat(tail, "\n"), nil
+end
+
+--- Keeps only the newest lines in one widget log file.
+local function trim_widget_log(log_dir, file_name, limit)
+	local lines, err = read_widget_log_lines(log_dir, file_name)
+	if lines == nil then
+		return false, err
+	end
+
+	limit = tonumber(limit) or 0
+	if limit <= 0 then
+		return write_widget_log_lines(log_dir, file_name, {})
+	end
+
+	if #lines <= limit then
+		return true, nil
+	end
+
+	local start = #lines - limit + 1
+	local kept = {}
+	for index = start, #lines do
+		kept[#kept + 1] = lines[index]
+	end
+
+	return write_widget_log_lines(log_dir, file_name, kept)
+end
+
 --- Returns one shallow copy of props without `on_interval`.
 local function strip_interval_handler(props)
 	if type(props) ~= "table" then
@@ -119,6 +257,7 @@ function M.new(log, hooks)
 	local registry = registry_module.new(hooks)
 	local subscriptions = subscriptions_module.new(registry._state, registry.ensure_item_exists, log, event_tokens)
 	local default_exec_options = type(hooks.default_exec_options) == "table" and hooks.default_exec_options or {}
+	local log_dir = configured_log_dir()
 
 	local function readonly_copy(values, name)
 		local copy = {}
@@ -147,6 +286,84 @@ function M.new(log, hooks)
 		end
 
 		log.widget(source or "widget", normalize_log_level(level), join_message(...))
+	end
+
+	local function log_file_warning(source, message, err)
+		log_widget(source, "warn", "widget log file", message, tostring(err or "unknown error"))
+	end
+
+	local function file_log_line(level, prefix, ...)
+		local normalized_level = string.lower(normalize_log_level(level))
+		local message
+		if type(prefix) == "string" and prefix ~= "" then
+			message = join_message(prefix, ...)
+		else
+			message = join_message(...)
+		end
+
+		return os.date("%Y-%m-%dT%H:%M:%S%z") .. " [" .. normalized_level .. "] " .. message
+	end
+
+	local function make_file_logger(source, file_name, options)
+		local validated, validation_error = validate_log_file_name(file_name)
+		if validated == nil then
+			error(validation_error)
+		end
+
+		options = type(options) == "table" and options or {}
+		local prefix = type(options.prefix) == "string" and options.prefix or nil
+		local logger = {}
+
+		function logger.append(text)
+			return append_widget_log(log_dir, validated, text)
+		end
+
+		function logger.line(text)
+			return append_widget_log(log_dir, validated, tostring(text or ""))
+		end
+
+		function logger.tail(limit)
+			local tail, err = tail_widget_log(log_dir, validated, limit)
+			if err ~= nil then
+				log_file_warning(source, "tail failed", err)
+			end
+			return tail
+		end
+
+		function logger.trim(limit)
+			return trim_widget_log(log_dir, validated, limit)
+		end
+
+		return setmetatable(logger, {
+			__call = function(_, level, ...)
+				if prefix ~= nil and prefix ~= "" then
+					log_widget(source, level, prefix, ...)
+				else
+					log_widget(source, level, ...)
+				end
+
+				local ok, err = append_widget_log(log_dir, validated, file_log_line(level, prefix, ...))
+				if not ok then
+					log_file_warning(source, "append failed", err)
+				end
+
+				return ok, err
+			end,
+		})
+	end
+
+	local function make_log_api(source)
+		local logger = {}
+
+		function logger.with_file(file_name, options)
+			return make_file_logger(source, file_name, options)
+		end
+
+		return setmetatable(logger, {
+			__call = function(_, level, ...)
+				log_widget(source, level, ...)
+			end,
+		})
 	end
 
 	local function required_events()
@@ -185,7 +402,7 @@ function M.new(log, hooks)
 		subscribe = subscriptions.subscribe,
 		handle_event = subscriptions.handle_event,
 		required_events = required_events,
-		log_dir = configured_log_dir(),
+		log_dir = log_dir,
 		theme = theme_module.current(),
 	}
 
@@ -317,10 +534,7 @@ function M.new(log, hooks)
 		widget_api.log_dir = api.log_dir
 		widget_api.theme = theme_module.current()
 
-		--- Writes one widget log line through the host logger.
-		function widget_api.log(level, ...)
-			log_widget(source, level, ...)
-		end
+		widget_api.log = make_log_api(source)
 
 		return widget_api
 	end
@@ -329,3 +543,5 @@ function M.new(log, hooks)
 end
 
 return M
+
+

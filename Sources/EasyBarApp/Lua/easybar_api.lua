@@ -479,6 +479,23 @@
 ---@field timeout_seconds? number Optional per-command timeout override in seconds.
 ---@field max_output_bytes? integer Optional per-command combined stdout+stderr capture limit.
 
+---Options for `easybar.log.with_file(...)`.
+---@class EasyBarLogFileOptions
+---@field prefix? string Optional prefix added to host log lines and file-backed logger lines.
+
+---File-backed widget logger returned by `easybar.log.with_file(...)`.
+---@class EasyBarFileLogger
+---@operator call(EasyBarLevel|string, ...: any): boolean, string?
+---@field append fun(text: any): boolean, string? Appends raw text to the widget log file and adds a trailing newline when missing.
+---@field line fun(text: any): boolean, string? Appends one line to the widget log file.
+---@field tail fun(limit: integer): string Returns the newest log lines as one newline-delimited string.
+---@field trim fun(limit: integer): boolean, string? Keeps only the newest log lines in the widget log file.
+
+---Callable widget logger exposed as `easybar.log`.
+---@class EasyBarLogFunction
+---@operator call(EasyBarLevel|string, ...: any)
+---@field with_file fun(file_name: string, options?: EasyBarLogFileOptions): EasyBarFileLogger Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`.
+
 ---Widget-scoped EasyBar API injected into every widget file.
 ---Use it to create nodes, run commands, and write widget logs.
 ---@class EasyBar
@@ -494,7 +511,7 @@
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
----@field log fun(level: EasyBarLevel|string, ...: any) Writes one widget-scoped log line to the EasyBar host logger.
+---@field log EasyBarLogFunction Callable widget logger. Use `easybar.log(level, ...)` for host logs or `easybar.log.with_file(...)` for file-backed widget logs.
 ---@field log_dir string Configured EasyBar logging directory from `[logging].directory`.
 ---@field remove fun(id: string) Removes one node and all descendants by id.
 ---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
@@ -502,6 +519,9 @@
 ---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
 ---@field theme EasyBarTheme Active resolved theme.
 local EasyBar = {}
+
+---@class EasyBarFileLogger
+local EasyBarFileLogger = {}
 
 ---@class EasyBarNodeHandle
 local EasyBarNodeHandle = {}
@@ -626,7 +646,39 @@ EasyBar.theme = {}
 ---@param ... any
 function EasyBar.log(level, ...) end
 
+---Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`.
+---The file name must be a plain file name, not a path.
+---@param file_name string
+---@param options? EasyBarLogFileOptions
+---@return EasyBarFileLogger
+function EasyBar.log.with_file(file_name, options) end
+
+---Appends raw text to the widget log file and adds a trailing newline when missing.
+---@param text any
+---@return boolean
+---@return string?
+function EasyBarFileLogger.append(text) end
+
+---Appends one line to the widget log file.
+---@param text any
+---@return boolean
+---@return string?
+function EasyBarFileLogger.line(text) end
+
+---Returns the newest log lines as one newline-delimited string.
+---@param limit integer
+---@return string
+function EasyBarFileLogger.tail(limit) end
+
+---Keeps only the newest log lines in the widget log file.
+---@param limit integer
+---@return boolean
+---@return string?
+function EasyBarFileLogger.trim(limit) end
+
 ---@type EasyBar
 easybar = easybar
 
 return easybar
+
+

@@ -22,6 +22,8 @@ Use the full reference when you need exact property tables or event payload type
   Run shell commands from a widget, with optional per-call command limits.
 - `easybar.log(level, ...)`
   Write widget-scoped log output.
+- `easybar.log.with_file(file, options?)`
+  Create a file-backed widget logger for command/output logs.
 
 See [Functions](reference/functions.md).
 
