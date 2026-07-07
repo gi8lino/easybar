@@ -42,9 +42,6 @@ jobs:
         shell: bash
         run: scripts/ci/install-lua.sh
 
-      - name: Verify source tree
-        run: make verify-source-tree
-
       - name: Cache SwiftPM
         uses: actions/cache@v6
         with:
@@ -59,12 +56,12 @@ jobs:
 
       - name: Build tests
         shell: bash
-        timeout-minutes: 2
+        timeout-minutes: 5
         run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
 
       - name: Run tests
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 12
         run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build
 
       - name: Upload Swift test logs

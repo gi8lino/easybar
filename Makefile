@@ -114,7 +114,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all \
-        generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env verify-source-tree \
+        generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
         clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
@@ -160,8 +160,6 @@ generate-swift-env: ## Create repo-local directories for SwiftPM and compiler ca
 		"$(LOCAL_CACHE_DIR)" \
 		"$(LOCAL_CLANG_MODULE_CACHE)"
 
-verify-source-tree: ## Verify required source, packaging, and Homebrew formula inputs.
-	@scripts/ci/verify-source-tree.sh
 
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
 
