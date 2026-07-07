@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Default subscription launcher backed by Foundation `Process`.
@@ -32,6 +33,9 @@ final class ProcessAeroSpaceSubscriptionLauncher: AeroSpaceSubscriptionLaunching
 /// one-shot, and the remaining mutable process state belongs to Foundation's
 /// `Process` and `FileHandle` callback machinery.
 private final class ProcessAeroSpaceSubscriptionSession: AeroSpaceSubscriptionSession, @unchecked Sendable {
+  /// Grace period before force-killing an ignored subscription termination.
+  private static let forcedTerminationGrace: DispatchTimeInterval = .milliseconds(300)
+
   /// Process running `aerospace subscribe`.
   private let process: Process
   /// Lock guarding one-time resource release.
@@ -99,10 +103,22 @@ private final class ProcessAeroSpaceSubscriptionSession: AeroSpaceSubscriptionSe
     process.terminationHandler = nil
 
     if process.isRunning {
+      let processIdentifier = process.processIdentifier
       process.terminate()
+      scheduleForcedTerminationIfNeeded(processIdentifier: processIdentifier)
     }
 
     invalidate()
+  }
+
+  /// Force-kills the subscription process if graceful termination was ignored.
+  private func scheduleForcedTerminationIfNeeded(processIdentifier: Int32) {
+    DispatchQueue.global(qos: .utility).asyncAfter(
+      deadline: .now() + Self.forcedTerminationGrace
+    ) { [process] in
+      guard process.isRunning else { return }
+      _ = kill(processIdentifier, SIGKILL)
+    }
   }
 
   /// Releases callbacks and file handles.
