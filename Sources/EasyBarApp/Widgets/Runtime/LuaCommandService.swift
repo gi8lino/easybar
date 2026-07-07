@@ -72,6 +72,16 @@ actor LuaCommandService {
         limits: commandLimits,
         environment: commandSettings.environment
       )
+
+      guard await isRuntimeSessionActive(runtimeSessionID) else {
+        logger.debug(
+          "dropping stale sync lua command response",
+          .field("token", token),
+          .field("runtime_session_id", runtimeSessionID)
+        )
+        return
+      }
+
       await sendCommandResponse(token: token, result: result)
       return
     }
