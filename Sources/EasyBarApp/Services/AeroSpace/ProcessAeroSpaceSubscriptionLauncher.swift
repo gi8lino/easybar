@@ -1,6 +1,10 @@
 import Foundation
 
 /// Default subscription launcher backed by Foundation `Process`.
+///
+/// Sendability is safe because the launcher is immutable after initialization;
+/// each launched subscription owns its mutable process resources in a separate
+/// session object.
 final class ProcessAeroSpaceSubscriptionLauncher: AeroSpaceSubscriptionLaunching, @unchecked Sendable {
   /// Runner used to locate and configure the AeroSpace process.
   private let commandRunner: AeroSpaceCommandRunner
@@ -23,6 +27,10 @@ final class ProcessAeroSpaceSubscriptionLauncher: AeroSpaceSubscriptionLaunching
 }
 
 /// Process-backed AeroSpace subscription session.
+///
+/// Sendability is guarded by `releaseLock`; callback and file-handle release is
+/// one-shot, and the remaining mutable process state belongs to Foundation's
+/// `Process` and `FileHandle` callback machinery.
 private final class ProcessAeroSpaceSubscriptionSession: AeroSpaceSubscriptionSession, @unchecked Sendable {
   /// Process running `aerospace subscribe`.
   private let process: Process

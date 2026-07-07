@@ -2,6 +2,10 @@ import EasyBarShared
 import Foundation
 
 /// Owns the long-lived `aerospace subscribe` process.
+///
+/// Sendability is guarded by `LockedState`; process session ownership,
+/// generation checks, reconnect queue state, and stream buffering are serialized
+/// before callbacks can observe or mutate them.
 final class AeroSpaceSubscriptionController: @unchecked Sendable {
   /// Default reconnect delays used after an existing AeroSpace subscription exits.
   private static let defaultReconnectDelays: [TimeInterval] = [0.25, 0.5, 1, 2, 5]

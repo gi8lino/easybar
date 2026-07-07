@@ -3,6 +3,10 @@ import EasyBarShared
 import Foundation
 
 /// Installs macOS app lifecycle observers used to keep AeroSpace-backed UI responsive.
+///
+/// Sendability is guarded by `LockedState`; observer tokens and running state
+/// are serialized through the lock, and callbacks are delivered by
+/// `NotificationCenter` on the main queue.
 final class AeroSpaceAppObserver: @unchecked Sendable {
   private struct State {
     var running = false

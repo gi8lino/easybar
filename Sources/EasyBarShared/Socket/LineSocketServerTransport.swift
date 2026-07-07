@@ -5,7 +5,9 @@ import Foundation
 /// Serves line-delimited JSON requests over a Unix domain socket and optionally tracks subscribers.
 ///
 /// Sendability is guarded by `LockedState`; server file descriptors, accept
-/// threads, connected clients, and subscribers are only mutated while holding that lock.
+/// threads, connected clients, and subscribers are only mutated while holding
+/// that lock. Request handlers are invoked outside the lock so user code cannot
+/// block state cleanup or socket shutdown.
 public final class LineSocketServerTransport<
   Subscriber,
   Request: Decodable,

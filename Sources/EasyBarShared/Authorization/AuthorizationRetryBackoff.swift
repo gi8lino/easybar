@@ -1,6 +1,9 @@
 import Foundation
 
 /// Schedules incremental authorization retries using Swift tasks.
+///
+/// Sendability is delegated to `BackoffScheduler`, which guards pending task
+/// ownership and retry counters behind its own locked state.
 public final class AuthorizationRetryBackoff: @unchecked Sendable {
   private let scheduler: BackoffScheduler
 
