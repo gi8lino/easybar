@@ -18,6 +18,18 @@ easybar.log(easybar.level.debug, "current value", 42)
 easybar.log(easybar.level.trace, "raw payload", payload)
 ```
 
+## Prefixed widget logs
+
+For widgets that repeatedly use the same grep-friendly prefix, create a prefixed logger once:
+
+```lua
+local log = easybar.log.with_prefix("[brew_outdated]")
+
+log(easybar.level.debug, "checking outdated packages")
+log(easybar.level.warn, "brew update failed", "code=" .. tostring(code))
+```
+
+This is equivalent to calling `easybar.log(...)` with the prefix as the first message part, but avoids repeating it at every call site.
 
 ## File-backed widget logs
 

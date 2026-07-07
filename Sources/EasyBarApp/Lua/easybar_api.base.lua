@@ -319,6 +319,10 @@
 ---@class EasyBarLogFileOptions
 ---@field prefix? string Optional prefix added to host log lines and file-backed logger lines.
 
+---Callable widget logger returned by `easybar.log.with_prefix(...)`.
+---@class EasyBarPrefixedLogger
+---@operator call(EasyBarLevel|string, ...: any)
+
 ---File-backed widget logger returned by `easybar.log.with_file(...)`.
 ---@class EasyBarFileLogger
 ---@operator call(EasyBarLevel|string, ...: any): boolean, string?
@@ -330,6 +334,7 @@
 ---Callable widget logger exposed as `easybar.log`.
 ---@class EasyBarLogFunction
 ---@operator call(EasyBarLevel|string, ...: any)
+---@field with_prefix fun(prefix: string): EasyBarPrefixedLogger Creates a widget logger that prepends a stable prefix to normal EasyBar host logs.
 ---@field with_file fun(file_name: string, options?: EasyBarLogFileOptions): EasyBarFileLogger Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`.
 
 ---Widget-scoped EasyBar API injected into every widget file.
@@ -347,7 +352,7 @@
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
 ---@field level EasyBarLevels Log level namespace used by `easybar.log(...)`.
----@field log EasyBarLogFunction Callable widget logger. Use `easybar.log(level, ...)` for host logs or `easybar.log.with_file(...)` for file-backed widget logs.
+---@field log EasyBarLogFunction Callable widget logger. Use `easybar.log(level, ...)` for host logs, `easybar.log.with_prefix(...)` for prefixed host logs, or `easybar.log.with_file(...)` for file-backed widget logs.
 ---@field log_dir string Configured EasyBar logging directory from `[logging].directory`.
 ---@field remove fun(id: string) Removes one node and all descendants by id.
 ---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
@@ -481,6 +486,11 @@ EasyBar.theme = {}
 ---@param level EasyBarLevel|string
 ---@param ... any
 function EasyBar.log(level, ...) end
+
+---Creates a widget logger that prepends a stable prefix to normal EasyBar host logs.
+---@param prefix string
+---@return EasyBarPrefixedLogger
+function EasyBar.log.with_prefix(prefix) end
 
 ---Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`.
 ---The file name must be a plain file name, not a path.

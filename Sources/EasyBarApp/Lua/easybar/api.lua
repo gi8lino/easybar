@@ -304,6 +304,26 @@ function M.new(log, hooks)
 		return os.date("%Y-%m-%dT%H:%M:%S%z") .. " [" .. normalized_level .. "] " .. message
 	end
 
+	local function log_widget_with_prefix(source, level, prefix, ...)
+		if type(prefix) == "string" and prefix ~= "" then
+			log_widget(source, level, prefix, ...)
+		else
+			log_widget(source, level, ...)
+		end
+	end
+
+	local function make_prefixed_logger(source, prefix)
+		if type(prefix) ~= "string" then
+			error("log prefix must be a string")
+		end
+
+		return setmetatable({}, {
+			__call = function(_, level, ...)
+				log_widget_with_prefix(source, level, prefix, ...)
+			end,
+		})
+	end
+
 	local function make_file_logger(source, file_name, options)
 		local validated, validation_error = validate_log_file_name(file_name)
 		if validated == nil then
@@ -336,11 +356,7 @@ function M.new(log, hooks)
 
 		return setmetatable(logger, {
 			__call = function(_, level, ...)
-				if prefix ~= nil and prefix ~= "" then
-					log_widget(source, level, prefix, ...)
-				else
-					log_widget(source, level, ...)
-				end
+				log_widget_with_prefix(source, level, prefix, ...)
 
 				local ok, err = append_widget_log(log_dir, validated, file_log_line(level, prefix, ...))
 				if not ok then
@@ -354,6 +370,10 @@ function M.new(log, hooks)
 
 	local function make_log_api(source)
 		local logger = {}
+
+		function logger.with_prefix(prefix)
+			return make_prefixed_logger(source, prefix)
+		end
 
 		function logger.with_file(file_name, options)
 			return make_file_logger(source, file_name, options)

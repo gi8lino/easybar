@@ -182,6 +182,31 @@ Removes one or more nested properties from this node.
 | ---- | ---- | ----------- |
 | `paths` | `string\|string[]` |  |
 
+## `EasyBar.log.with_prefix`
+
+Creates a widget logger that prepends a stable prefix to normal EasyBar host logs.
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `prefix` | `string` | Prefix added before each logged message. |
+
+### Returns
+
+- `EasyBarPrefixedLogger`
+
+## `EasyBarPrefixedLogger.__call`
+
+Writes one prefixed widget-scoped log line to the EasyBar host logger.
+
+### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `level` | `EasyBarLevel\|string` | Log level. |
+| `...` | `any` | Message parts. |
+
 ## `EasyBar.log.with_file`
 
 Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`. The file name must be a plain file name, not a path.

@@ -30,6 +30,14 @@ easybar.log(easybar.level.debug, "current value", 42)
 easybar.log(easybar.level.trace, "raw payload", payload)
 ```
 
+## Prefixed widget logs
+
+`easybar.log.with_prefix(prefix)` returns a widget-local callable logger that prepends the prefix before forwarding to the normal host logger. It does not mutate global logging state for the widget file.
+
+```lua
+local log = easybar.log.with_prefix("[brew_outdated]")
+log(easybar.level.debug, "checking outdated packages")
+```
 
 ## File-backed widget logs
 

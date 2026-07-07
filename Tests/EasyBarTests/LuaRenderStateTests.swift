@@ -311,19 +311,41 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 
     try """
-    local log = easybar.log.with_file("widget.log", {
-    	prefix = "[test]",
-    })
-
-    log(easybar.level.info, "host", "line")
-    log.append("raw")
-    log.append("last")
-    log.trim(2)
-
-    easybar.add("item", "brew", {
+    local status = easybar.add(easybar.kind.item, "brew", {
     	position = "right",
-    	label = log.tail(10):gsub("\n", "|"),
+    	label = "starting",
     })
+
+    local ok, result = pcall(function()
+    	local hostLog = easybar.log.with_prefix("[host]")
+    	hostLog(easybar.level.info, "prefixed", "line")
+
+    	local log = easybar.log.with_file("widget.log", {
+    		prefix = "[test]",
+    	})
+
+    	log(easybar.level.info, "host", "line")
+    	log.append("raw")
+    	log.append("last")
+    	log.trim(2)
+
+    	local tail = log.tail(10):gsub(string.char(10), "|")
+    	if tail == "" then
+    		return "<empty>"
+    	end
+
+    	return tail
+    end)
+
+    if ok then
+    	status:set({
+    		label = result,
+    	})
+    else
+    	status:set({
+    		label = "error: " .. tostring(result),
+    	})
+    end
     """.write(
       to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
       atomically: true,
@@ -360,7 +382,9 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
 
     let initialUpdate = try await nextTreeUpdate(
       from: recorder,
-      matching: { [self] in rootNode(in: $0)?.id == "brew" }
+      matching: { [self] in
+        rootNode(in: $0)?.id == "brew" && rootNode(in: $0)?.text != "starting"
+      }
     )
     XCTAssertEqual(rootNode(in: initialUpdate)?.text, "raw|last")
 
