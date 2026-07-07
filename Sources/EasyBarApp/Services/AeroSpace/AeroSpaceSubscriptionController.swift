@@ -1,6 +1,18 @@
 import EasyBarShared
 import Foundation
 
+/// Schedules AeroSpace subscription reconnect attempts.
+protocol AeroSpaceReconnectScheduling: Sendable {
+  /// Schedules one reconnect action.
+  func schedule(_ action: @escaping @Sendable () -> Void)
+  /// Cancels any pending reconnect action.
+  func cancel()
+  /// Resets the reconnect delay sequence.
+  func resetDelay()
+}
+
+extension BackoffScheduler: AeroSpaceReconnectScheduling {}
+
 /// Creates AeroSpace subscription sessions.
 protocol AeroSpaceSubscriptionLaunching: Sendable {
   /// Returns whether a subscription can currently be launched.
@@ -287,7 +299,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   /// Creates concrete subscription sessions.
   private let subscriptionLauncher: any AeroSpaceSubscriptionLaunching
   /// Scheduler used to reconnect after subscription exits.
-  private let reconnectScheduler: BackoffScheduler
+  private let reconnectScheduler: any AeroSpaceReconnectScheduling
   /// Called for every decoded or fallback AeroSpace event line.
   private let handleEvent: (AeroSpaceSubscriptionEvent) -> Void
   /// Current locked controller state.
@@ -298,6 +310,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     commandRunner: AeroSpaceCommandRunner,
     logger: ProcessLogger,
     subscriptionLauncher: (any AeroSpaceSubscriptionLaunching)? = nil,
+    reconnectScheduler: (any AeroSpaceReconnectScheduling)? = nil,
     reconnectDelays: [TimeInterval] = AeroSpaceSubscriptionController.defaultReconnectDelays,
     sleeper: any AsyncSleeper = TaskSleeper(),
     handleEvent: @escaping (AeroSpaceSubscriptionEvent) -> Void
@@ -307,12 +320,14 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     self.subscriptionLauncher =
       subscriptionLauncher
       ?? ProcessAeroSpaceSubscriptionLauncher(commandRunner: commandRunner)
-    self.reconnectScheduler = BackoffScheduler(
-      label: "aerospace subscription reconnect",
-      delays: reconnectDelays,
-      logger: logger,
-      sleeper: sleeper
-    )
+    self.reconnectScheduler =
+      reconnectScheduler
+      ?? BackoffScheduler(
+        label: "aerospace subscription reconnect",
+        delays: reconnectDelays,
+        logger: logger,
+        sleeper: sleeper
+      )
     self.handleEvent = handleEvent
   }
 

@@ -5,41 +5,6 @@ import XCTest
 @testable import EasyBarShared
 
 final class AeroSpaceSubscriptionControllerTests: XCTestCase {
-  private struct ImmediateSleeper: AsyncSleeper {
-    func sleep(nanoseconds: UInt64) async throws {}
-  }
-
-  private final class PausedSleeper: AsyncSleeper, @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuations: [CheckedContinuation<Void, Error>] = []
-
-    func sleep(nanoseconds: UInt64) async throws {
-      try await withCheckedThrowingContinuation { continuation in
-        lock.lock()
-        continuations.append(continuation)
-        lock.unlock()
-      }
-    }
-
-    func resumeAll() {
-      let continuations = lock.withLock { () -> [CheckedContinuation<Void, Error>] in
-        let continuations = self.continuations
-        self.continuations.removeAll()
-        return continuations
-      }
-
-      for continuation in continuations {
-        continuation.resume()
-      }
-    }
-
-    func waitForPendingSleep(timeout: TimeInterval = 1.0) -> Bool {
-      AeroSpaceSubscriptionControllerTests.waitUntil(timeout: timeout) {
-        self.lock.withLock { !self.continuations.isEmpty }
-      }
-    }
-  }
-
   private final class FakeSubscriptionLauncher: AeroSpaceSubscriptionLaunching, @unchecked Sendable {
     private let lock = NSLock()
     private var subscriptions: [FakeSubscriptionSession] = []
@@ -72,12 +37,6 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       lock.withLock {
         guard subscriptions.indices.contains(index) else { return nil }
         return subscriptions[index]
-      }
-    }
-
-    func waitForLaunchCount(_ minimum: Int, timeout: TimeInterval = 1.0) -> Bool {
-      AeroSpaceSubscriptionControllerTests.waitUntil(timeout: timeout) {
-        self.launchCount >= minimum
       }
     }
   }
@@ -137,6 +96,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       let handler = lock.withLock { () -> (@Sendable (AeroSpaceSubscriptionSession) -> Void)? in
         terminationStatusValue = status
         let handler = terminationHandler
+        terminationHandler = nil
         return handler
       }
       handler?(self)
@@ -149,144 +109,171 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     }
   }
 
-  func testReconnectsWhenProcessExits() throws {
+  private final class RecordingReconnectScheduler: AeroSpaceReconnectScheduling, @unchecked Sendable {
+    private let lock = NSLock()
+    private var actions: [@Sendable () -> Void] = []
+    private(set) var cancelCount = 0
+    private(set) var resetDelayCount = 0
+
+    var scheduledCount: Int {
+      lock.withLock { actions.count }
+    }
+
+    func schedule(_ action: @escaping @Sendable () -> Void) {
+      lock.withLock {
+        actions.append(action)
+      }
+    }
+
+    func cancel() {
+      lock.withLock {
+        cancelCount += 1
+        actions.removeAll()
+      }
+    }
+
+    func resetDelay() {
+      lock.withLock {
+        resetDelayCount += 1
+      }
+    }
+
+    func runNextScheduledAction() -> Bool {
+      let action = lock.withLock { () -> (@Sendable () -> Void)? in
+        guard !actions.isEmpty else { return nil }
+        return actions.removeFirst()
+      }
+
+      guard let action else { return false }
+      action()
+      return true
+    }
+  }
+
+  func testReconnectsWhenSubscriptionExits() throws {
     let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
+    let scheduler = RecordingReconnectScheduler()
     let controller = Self.makeController(
       logger: logger,
       launcher: launcher,
-      reconnectDelays: [0.01, 0.01],
-      sleeper: ImmediateSleeper()
+      scheduler: scheduler
     )
 
     controller.start()
     defer { controller.stop() }
 
-    XCTAssertTrue(launcher.waitForLaunchCount(1))
+    XCTAssertEqual(launcher.launchCount, 1)
     launcher.subscription(at: 0)?.terminate(status: 3)
 
-    XCTAssertTrue(launcher.waitForLaunchCount(2))
+    XCTAssertEqual(scheduler.scheduledCount, 1)
+    XCTAssertTrue(scheduler.runNextScheduledAction())
+    XCTAssertEqual(launcher.launchCount, 2)
   }
 
   func testDoesNotReconnectWhenExecutableDisappears() throws {
     let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
+    let scheduler = RecordingReconnectScheduler()
     let controller = Self.makeController(
       logger: logger,
       launcher: launcher,
-      reconnectDelays: [0.01],
-      sleeper: ImmediateSleeper()
+      scheduler: scheduler
     )
 
     controller.start()
     defer { controller.stop() }
 
-    XCTAssertTrue(launcher.waitForLaunchCount(1))
+    XCTAssertEqual(launcher.launchCount, 1)
     launcher.setAvailable(false)
     launcher.subscription(at: 0)?.terminate(status: 3)
 
-    XCTAssertFalse(launcher.waitForLaunchCount(2, timeout: 0.1))
+    XCTAssertEqual(scheduler.scheduledCount, 0)
     XCTAssertEqual(launcher.launchCount, 1)
   }
 
-  func testAdvancesReconnectBackoffAcrossCrashes() throws {
-    let directoryURL = try Self.makeTemporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directoryURL) }
-
-    let logURL = directoryURL.appendingPathComponent("process.log")
-    let logger = Self.makeFileLogger(logURL: logURL)
-    defer { logger.configureFileLogging(enabled: false, path: "") }
-
+  func testSchedulesReconnectForEachCrash() throws {
+    let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
+    let scheduler = RecordingReconnectScheduler()
     let controller = Self.makeController(
       logger: logger,
       launcher: launcher,
-      reconnectDelays: [0.01, 0.05],
-      sleeper: ImmediateSleeper()
+      scheduler: scheduler
     )
 
     controller.start()
     defer { controller.stop() }
 
-    XCTAssertTrue(launcher.waitForLaunchCount(1))
+    XCTAssertEqual(launcher.launchCount, 1)
     launcher.subscription(at: 0)?.terminate(status: 3)
-    XCTAssertTrue(launcher.waitForLaunchCount(2))
-    launcher.subscription(at: 1)?.terminate(status: 3)
-    XCTAssertTrue(launcher.waitForLaunchCount(3))
+    XCTAssertEqual(scheduler.scheduledCount, 1)
 
-    logger.configureFileLogging(enabled: false, path: "")
-    let output = try String(contentsOf: logURL, encoding: .utf8)
-    XCTAssertTrue(output.contains("delay=0.01"))
-    XCTAssertTrue(output.contains("delay=0.05"))
+    XCTAssertTrue(scheduler.runNextScheduledAction())
+    XCTAssertEqual(launcher.launchCount, 2)
+    launcher.subscription(at: 1)?.terminate(status: 3)
+    XCTAssertEqual(scheduler.scheduledCount, 1)
+
+    XCTAssertTrue(scheduler.runNextScheduledAction())
+    XCTAssertEqual(launcher.launchCount, 3)
   }
 
   func testResetsReconnectBackoffAfterEventLine() throws {
-    let directoryURL = try Self.makeTemporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directoryURL) }
-
-    let logURL = directoryURL.appendingPathComponent("process.log")
-    let logger = Self.makeFileLogger(logURL: logURL)
-    defer { logger.configureFileLogging(enabled: false, path: "") }
-
+    let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
+    let scheduler = RecordingReconnectScheduler()
     let controller = Self.makeController(
       logger: logger,
       launcher: launcher,
-      reconnectDelays: [0.01, 0.05],
-      sleeper: ImmediateSleeper()
+      scheduler: scheduler
     )
 
     controller.start()
     defer { controller.stop() }
 
-    XCTAssertTrue(launcher.waitForLaunchCount(1))
+    XCTAssertEqual(launcher.launchCount, 1)
+    launcher.subscription(at: 0)?.emitOutputLine(#"{"_event":"focused-workspace-changed"}"#)
+
+    XCTAssertEqual(scheduler.resetDelayCount, 1)
     launcher.subscription(at: 0)?.terminate(status: 3)
-    XCTAssertTrue(launcher.waitForLaunchCount(2))
+    XCTAssertEqual(scheduler.scheduledCount, 1)
 
-    launcher.subscription(at: 1)?.emitOutputLine(#"{"_event":"focused-workspace-changed"}"#)
-    launcher.subscription(at: 1)?.terminate(status: 3)
-    XCTAssertTrue(launcher.waitForLaunchCount(3))
-
-    logger.configureFileLogging(enabled: false, path: "")
-    let output = try String(contentsOf: logURL, encoding: .utf8)
-    XCTAssertGreaterThanOrEqual(output.components(separatedBy: "delay=0.01").count - 1, 2)
+    XCTAssertTrue(scheduler.runNextScheduledAction())
+    XCTAssertEqual(launcher.launchCount, 2)
   }
 
   func testStopCancelsPendingReconnect() throws {
     let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
-    let sleeper = PausedSleeper()
+    let scheduler = RecordingReconnectScheduler()
     let controller = Self.makeController(
       logger: logger,
       launcher: launcher,
-      reconnectDelays: [0.2],
-      sleeper: sleeper
+      scheduler: scheduler
     )
 
     controller.start()
-    XCTAssertTrue(launcher.waitForLaunchCount(1))
+    XCTAssertEqual(launcher.launchCount, 1)
     launcher.subscription(at: 0)?.terminate(status: 3)
-    XCTAssertTrue(sleeper.waitForPendingSleep())
+    XCTAssertEqual(scheduler.scheduledCount, 1)
 
     controller.stop()
-    sleeper.resumeAll()
 
-    XCTAssertFalse(launcher.waitForLaunchCount(2, timeout: 0.1))
+    XCTAssertEqual(scheduler.cancelCount, 2)
+    XCTAssertFalse(scheduler.runNextScheduledAction())
     XCTAssertEqual(launcher.launchCount, 1)
   }
 
   private static func makeController(
     logger: ProcessLogger,
     launcher: FakeSubscriptionLauncher,
-    reconnectDelays: [TimeInterval],
-    sleeper: any AsyncSleeper
+    scheduler: RecordingReconnectScheduler
   ) -> AeroSpaceSubscriptionController {
     AeroSpaceSubscriptionController(
       commandRunner: makeCommandRunner(logger: logger),
       logger: logger,
       subscriptionLauncher: launcher,
-      reconnectDelays: reconnectDelays,
-      sleeper: sleeper,
+      reconnectScheduler: scheduler,
       handleEvent: { _ in }
     )
   }
@@ -298,16 +285,6 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     )
   }
 
-  private static func makeTemporaryDirectory() throws -> URL {
-    let directoryURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent(
-        "easybar-aerospace-subscription-tests-\(UUID().uuidString)",
-        isDirectory: true
-      )
-    try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-    return directoryURL
-  }
-
   private static func makeLogger() -> ProcessLogger {
     ProcessLogger(
       label: "easybar.app.services.aerospace.subscription.tests",
@@ -315,33 +292,5 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       outputStream: nil,
       errorStream: nil
     )
-  }
-
-  private static func makeFileLogger(logURL: URL) -> ProcessLogger {
-    let logger = ProcessLogger(
-      label: "easybar.app.services.aerospace.subscription.tests",
-      minimumLevel: .debug,
-      outputStream: nil,
-      errorStream: nil
-    )
-    logger.configureFileLogging(enabled: true, path: logURL.path)
-    return logger
-  }
-
-  private static func waitUntil(
-    timeout: TimeInterval,
-    interval: TimeInterval = 0.005,
-    _ condition: () -> Bool
-  ) -> Bool {
-    let deadline = Date().addingTimeInterval(timeout)
-
-    while Date() < deadline {
-      if condition() {
-        return true
-      }
-      Thread.sleep(forTimeInterval: interval)
-    }
-
-    return condition()
   }
 }
