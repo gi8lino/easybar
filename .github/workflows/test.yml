@@ -14,7 +14,7 @@ on:
         default: "scripts/ci/install-lua.sh"
         type: string
       clean_before_cache:
-        description: Run make clean before restoring the SwiftPM cache
+        description: Run make clean before restoring SwiftPM dependency cache
         required: false
         default: false
         type: boolean
@@ -26,13 +26,13 @@ on:
       build_timeout_minutes:
         description: Timeout for swift build --build-tests
         required: false
-        default: "5"
-        type: string
+        default: 5
+        type: number
       test_timeout_minutes:
         description: Timeout for swift test --skip-build
         required: false
-        default: "12"
-        type: string
+        default: 12
+        type: number
 
   workflow_call:
     inputs:
@@ -54,12 +54,12 @@ on:
         type: boolean
       build_timeout_minutes:
         required: false
-        default: "5"
-        type: string
+        default: 5
+        type: number
       test_timeout_minutes:
         required: false
-        default: "12"
-        type: string
+        default: 12
+        type: number
 
 permissions:
   contents: read
@@ -87,26 +87,26 @@ jobs:
         shell: bash
         run: make clean
 
-      - name: Cache SwiftPM
+      - name: Cache SwiftPM dependencies
         uses: actions/cache@v6
         with:
           path: |
-            .build
+            .build/repositories
+            .build/checkouts
             ~/Library/Caches/org.swift.swiftpm
             ~/Library/org.swift.swiftpm
-            ~/Library/Developer/Xcode/DerivedData
-          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          key: swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: |
-            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-
+            swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-
 
       - name: Build tests
         shell: bash
-        timeout-minutes: ${{ fromJSON(inputs.build_timeout_minutes) }}
+        timeout-minutes: ${{ inputs.build_timeout_minutes }}
         run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
 
       - name: Run tests
         shell: bash
-        timeout-minutes: ${{ fromJSON(inputs.test_timeout_minutes) }}
+        timeout-minutes: ${{ inputs.test_timeout_minutes }}
         run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build
 
       - name: Upload Swift test logs

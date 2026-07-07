@@ -32,8 +32,8 @@ jobs:
       dependency_script: scripts/ci/install-lua.sh
       clean_before_cache: false
       check_generated: true
-      build_timeout_minutes: "5"
-      test_timeout_minutes: "12"
+      build_timeout_minutes: 5
+      test_timeout_minutes: 12
 
   docs:
     runs-on: ubuntu-latest

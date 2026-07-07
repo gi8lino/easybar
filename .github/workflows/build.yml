@@ -14,8 +14,8 @@ jobs:
       dependency_script: scripts/ci/install-release-dependencies.sh
       clean_before_cache: true
       check_generated: true
-      build_timeout_minutes: "5"
-      test_timeout_minutes: "12"
+      build_timeout_minutes: 5
+      test_timeout_minutes: 12
 
   release:
     needs: tests
@@ -58,6 +58,18 @@ jobs:
         id: version
         shell: bash
         run: scripts/release/derive-release-vars.sh --tag "${GITHUB_REF_NAME}"
+
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            .build/repositories
+            .build/checkouts
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/org.swift.swiftpm
+          key: swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_VERSION }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ env.XCODE_VERSION }}-
 
       - name: Build release package
         shell: bash
