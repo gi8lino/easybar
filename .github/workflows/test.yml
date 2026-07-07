@@ -1,0 +1,124 @@
+name: Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      xcode_version:
+        description: Xcode version to select
+        required: false
+        default: "26"
+        type: string
+      dependency_script:
+        description: Dependency install script
+        required: false
+        default: "scripts/ci/install-lua.sh"
+        type: string
+      clean_before_cache:
+        description: Run make clean before restoring the SwiftPM cache
+        required: false
+        default: false
+        type: boolean
+      check_generated:
+        description: Run make check-generated after tests
+        required: false
+        default: true
+        type: boolean
+      build_timeout_minutes:
+        description: Timeout for swift build --build-tests
+        required: false
+        default: "5"
+        type: string
+      test_timeout_minutes:
+        description: Timeout for swift test --skip-build
+        required: false
+        default: "12"
+        type: string
+
+  workflow_call:
+    inputs:
+      xcode_version:
+        required: false
+        default: "26"
+        type: string
+      dependency_script:
+        required: false
+        default: "scripts/ci/install-lua.sh"
+        type: string
+      clean_before_cache:
+        required: false
+        default: false
+        type: boolean
+      check_generated:
+        required: false
+        default: true
+        type: boolean
+      build_timeout_minutes:
+        required: false
+        default: "5"
+        type: string
+      test_timeout_minutes:
+        required: false
+        default: "12"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Select pinned Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ inputs.xcode_version }}
+
+      - name: Install dependencies
+        shell: bash
+        run: ${{ inputs.dependency_script }}
+
+      - name: Clean stale build directories
+        if: ${{ inputs.clean_before_cache }}
+        shell: bash
+        run: make clean
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v6
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-
+
+      - name: Build tests
+        shell: bash
+        timeout-minutes: ${{ fromJSON(inputs.build_timeout_minutes) }}
+        run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
+
+      - name: Run tests
+        shell: bash
+        timeout-minutes: ${{ fromJSON(inputs.test_timeout_minutes) }}
+        run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build
+
+      - name: Upload Swift test logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: swift-test-logs
+          path: |
+            build-tests.log
+            test.log
+          if-no-files-found: ignore
+
+      - name: Verify generated artifacts are current
+        if: ${{ inputs.check_generated }}
+        run: make check-generated
