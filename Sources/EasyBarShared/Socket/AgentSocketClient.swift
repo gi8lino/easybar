@@ -30,6 +30,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
   private let onDecodeError: (() -> Void)?
   private let logger: ProcessLogger
   private let reconnectScheduler: BackoffScheduler
+  private let writerQueue: DispatchQueue
   private let state = LockedState(State())
 
   /// Creates one shared agent client transport.
@@ -55,6 +56,7 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     self.onDecodedMessage = onDecodedMessage
     self.onDecodeError = onDecodeError
     self.logger = logger
+    self.writerQueue = DispatchQueue(label: "easybar.\(label).socket-writer")
     self.reconnectScheduler = BackoffScheduler(
       label: "\(label) reconnect",
       delays: [2, 5, 10, 30],
@@ -367,19 +369,21 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
 
   /// Encodes and sends one request line.
   private func send(_ request: Request, to fd: Int32) -> Bool {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-    encoder.dateEncodingStrategy = .iso8601
+    return writerQueue.sync {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.sortedKeys]
+      encoder.dateEncodingStrategy = .iso8601
 
-    do {
-      let data = try encoder.encode(request) + Data([0x0A])
-      return writeAll(data, to: fd)
-    } catch {
-      logger.warn(
-        "\(label) failed to encode request",
-        .field("error", error),
-      )
-      return false
+      do {
+        let data = try encoder.encode(request) + Data([0x0A])
+        return writeAll(data, to: fd)
+      } catch {
+        logger.warn(
+          "\(label) failed to encode request",
+          .field("error", error),
+        )
+        return false
+      }
     }
   }
 }
