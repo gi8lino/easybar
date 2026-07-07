@@ -108,48 +108,41 @@ actor RuntimeCoordinator {
 
   func reloadConfig() async {
     let operation = RuntimeLifecycleOperation.reloadConfig
-    let generation: UInt64
 
-    switch lifecycle.begin(operation) {
-    case .queued:
-      logger.debug("\(operation.rawValue) busy; queueing another reload")
-      return
-    case .started(let startedGeneration):
-      generation = startedGeneration
+    await withLifecycleOperation(
+      operation,
+      queuedMessage: "\(operation.rawValue) busy; queueing another reload"
+    ) { generation in
+      let result = await configManager.reload()
+      guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+        return
+      }
+
+      guard
+        await runConfigReloadSteps(
+          result: result,
+          generation: generation,
+          operation: operation
+        )
+      else {
+        return
+      }
+
+      aeroSpaceService.triggerRefresh()
+
+      if let errorMessage = result.errorMessage {
+        logger.warn(
+          "config reload completed with error",
+          .field("error", errorMessage),
+        )
+      }
+
+      await MainActor.run {
+        NotificationCenter.default.post(name: .easyBarConfigReloadDidFinish, object: nil)
+      }
+
+      logger.info("\(operation.rawValue) end")
     }
-
-    logger.info("\(operation.rawValue) begin")
-
-    let result = await configManager.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
-      return
-    }
-
-    guard
-      await runConfigReloadSteps(
-        result: result,
-        generation: generation,
-        operation: operation
-      )
-    else {
-      return
-    }
-
-    aeroSpaceService.triggerRefresh()
-
-    if let errorMessage = result.errorMessage {
-      logger.warn(
-        "config reload completed with error",
-        .field("error", errorMessage),
-      )
-    }
-
-    await MainActor.run {
-      NotificationCenter.default.post(name: .easyBarConfigReloadDidFinish, object: nil)
-    }
-
-    logger.info("\(operation.rawValue) end")
-    await finishLifecycleOperation(operation)
   }
 
   private func runConfigReloadSteps(
@@ -206,27 +199,20 @@ actor RuntimeCoordinator {
 
   func restartLuaRuntime() async {
     let operation = RuntimeLifecycleOperation.restartLuaRuntime
-    let generation: UInt64
 
-    switch lifecycle.begin(operation) {
-    case .queued:
-      logger.debug("\(operation.rawValue) busy; queueing another restart")
-      return
-    case .started(let startedGeneration):
-      generation = startedGeneration
+    await withLifecycleOperation(
+      operation,
+      queuedMessage: "\(operation.rawValue) busy; queueing another restart"
+    ) { generation in
+      await widgetEngine.reload()
+      guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
+        return
+      }
+
+      aeroSpaceService.triggerRefresh()
+
+      logger.info("\(operation.rawValue) end")
     }
-
-    logger.info("\(operation.rawValue) begin")
-
-    await widgetEngine.reload()
-    guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
-      return
-    }
-
-    aeroSpaceService.triggerRefresh()
-
-    logger.info("\(operation.rawValue) end")
-    await finishLifecycleOperation(operation)
   }
 
   /// Refreshes the current runtime without reloading config.
@@ -362,6 +348,28 @@ actor RuntimeCoordinator {
   ) async -> Bool {
     await work()
     return shouldContinueLifecycleWork(generation: generation, operation: operation)
+  }
+
+  /// Runs one serialized lifecycle operation and always releases lifecycle ownership.
+  private func withLifecycleOperation(
+    _ operation: RuntimeLifecycleOperation,
+    queuedMessage: String,
+    _ work: (UInt64) async -> Void
+  ) async {
+    let generation: UInt64
+
+    switch lifecycle.begin(operation) {
+    case .queued:
+      logger.debug(queuedMessage)
+      return
+    case .started(let startedGeneration):
+      generation = startedGeneration
+    }
+
+    logger.info("\(operation.rawValue) begin")
+
+    await work(generation)
+    await finishLifecycleOperation(operation)
   }
 
   /// Marks one lifecycle operation finished and runs the next queued operation when present.
