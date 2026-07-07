@@ -1,3 +1,4 @@
+import Darwin
 @preconcurrency import EasyBarShared
 import Foundation
 
@@ -50,15 +51,18 @@ final class LuaCommandRunner: @unchecked Sendable {
 ///
 /// The process handlers intentionally capture this object strongly. That keeps
 /// the checked continuation alive until one terminal path resumes it. `complete`
-/// clears the handlers and cancels the timeout task, which breaks the temporary
-/// retain cycle.
+/// clears the handlers and cancels the timeout/wait tasks, which breaks the
+/// temporary retain cycle.
 ///
 /// Output reads and process completion are serialized on `queue`. This avoids a
 /// race where a readability handler could consume a tiny output chunk while the
 /// termination handler completed the command before that chunk was appended.
 /// Sendability is guarded by `LockedState`; output buffers, completion flags,
-/// and continuation ownership are only mutated while holding that lock.
+/// and continuation ownership are only mutated while holding that lock. Process
+/// identifiers are touched only on the serial command queue.
 private final class CommandExecution: @unchecked Sendable {
+  private static let shellPath = "/bin/sh"
+
   private struct State {
     var outputData = Data()
     var exceededOutputLimit = false
@@ -104,13 +108,16 @@ private final class CommandExecution: @unchecked Sendable {
   private let limits: LuaCommandRunner.Limits
   private let environment: [String: String]
   private let logger: ProcessLogger
-  private let process = Process()
-  private let pipe = Pipe()
   private let state: LockedState<State>
   private let queue = DispatchQueue(
     label: "easybar.lua-command-runner.command-execution.\(UUID().uuidString)"
   )
+
+  private var processIdentifier: Int32?
+  private var processGroupIdentifier: Int32?
+  private var outputReadHandle: FileHandle?
   private var timeoutTask: Task<Void, Never>?
+  private var waitTask: Task<Void, Never>?
 
   init(
     command: String,
@@ -128,30 +135,30 @@ private final class CommandExecution: @unchecked Sendable {
 
   /// Starts the process and installs async completion handlers.
   func start() {
-    process.executableURL = URL(fileURLWithPath: "/bin/sh")
-    process.arguments = ["-lc", command]
-    process.environment = environment
-    process.standardOutput = pipe
-    process.standardError = pipe
-
-    let handle = pipe.fileHandleForReading
-
-    handle.readabilityHandler = { readableHandle in
-      self.queue.async {
-        self.readAvailableOutput(from: readableHandle)
-      }
+    queue.async {
+      self.startOnQueue()
     }
+  }
 
-    process.terminationHandler = { process in
-      self.queue.async {
-        self.finish(process: process)
-      }
-    }
+  /// Starts the process on the serial command queue.
+  private func startOnQueue() {
+    let pipeResult = makeOutputPipe()
+    guard let pipeResult else { return }
 
     do {
-      try process.run()
+      let pid = try spawnShell(outputWriteFD: pipeResult.writeFD)
+      close(pipeResult.writeFD)
+
+      processIdentifier = pid
+      processGroupIdentifier = pid
+      outputReadHandle = pipeResult.readHandle
+
+      installOutputReader(pipeResult.readHandle)
+      installWaitTask(pid: pid)
+      scheduleTimeout()
     } catch {
-      handle.readabilityHandler = nil
+      close(pipeResult.writeFD)
+      try? pipeResult.readHandle.close()
 
       logger.warn(
         "failed to launch lua command",
@@ -162,22 +169,141 @@ private final class CommandExecution: @unchecked Sendable {
       complete(
         LuaCommandResult(output: "failed to launch command: \(error)", status: 1)
       )
-      return
+    }
+  }
+
+  /// Creates a pipe used to collect combined stdout and stderr.
+  private func makeOutputPipe() -> (readHandle: FileHandle, writeFD: Int32)? {
+    var fileDescriptors = [Int32](repeating: -1, count: 2)
+    guard pipe(&fileDescriptors) == 0 else {
+      logger.warn(
+        "failed to create lua command output pipe",
+        .field("errno", errno)
+      )
+
+      complete(
+        LuaCommandResult(output: "failed to create command output pipe", status: 1)
+      )
+      return nil
     }
 
-    scheduleTimeout()
+    let readHandle = FileHandle(fileDescriptor: fileDescriptors[0], closeOnDealloc: true)
+    return (readHandle, fileDescriptors[1])
+  }
+
+  /// Spawns `/bin/sh -lc <command>` in a dedicated process group.
+  private func spawnShell(outputWriteFD: Int32) throws -> Int32 {
+    var fileActions: posix_spawn_file_actions_t?
+    var attributes: posix_spawnattr_t?
+
+    try PosixSpawnSupport.initializeFileActions(&fileActions)
+    defer {
+      if fileActions != nil {
+        posix_spawn_file_actions_destroy(&fileActions)
+      }
+    }
+
+    try PosixSpawnSupport.initializeSpawnAttributes(&attributes)
+    defer {
+      if attributes != nil {
+        posix_spawnattr_destroy(&attributes)
+      }
+    }
+
+    try PosixSpawnSupport.addDup2Action(
+      fileActions: &fileActions,
+      sourceFileDescriptor: outputWriteFD,
+      destinationFileDescriptor: STDOUT_FILENO
+    )
+    try PosixSpawnSupport.addDup2Action(
+      fileActions: &fileActions,
+      sourceFileDescriptor: outputWriteFD,
+      destinationFileDescriptor: STDERR_FILENO
+    )
+    try PosixSpawnSupport.addCloseAction(
+      fileActions: &fileActions,
+      fileDescriptor: outputWriteFD
+    )
+    try PosixSpawnSupport.configureDedicatedProcessGroup(attributes: &attributes)
+
+    let argv = try PosixSpawnSupport.makeCStringVector([Self.shellPath, "-lc", command])
+    defer { PosixSpawnSupport.freeCStringVector(argv) }
+
+    let envp = try makeEnvironmentVector(environment)
+    defer { PosixSpawnSupport.freeCStringVector(envp) }
+
+    var pid: pid_t = 0
+    let spawnResult = Self.shellPath.withCString { executablePath in
+      posix_spawn(
+        &pid,
+        executablePath,
+        &fileActions,
+        &attributes,
+        argv,
+        envp
+      )
+    }
+
+    guard spawnResult == 0 else {
+      throw NSError(
+        domain: NSPOSIXErrorDomain,
+        code: Int(spawnResult),
+        userInfo: [
+          NSLocalizedDescriptionKey:
+            "posix_spawn failed for lua command shell errno=\(spawnResult)"
+        ]
+      )
+    }
+
+    return pid
+  }
+
+  /// Builds a process environment vector for `posix_spawn`.
+  private func makeEnvironmentVector(
+    _ environment: [String: String]
+  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
+    let flattenedEnvironment = environment.map { "\($0.key)=\($0.value)" }.sorted()
+    return try PosixSpawnSupport.makeCStringVector(flattenedEnvironment)
+  }
+
+  /// Installs the nonblocking output reader.
+  private func installOutputReader(_ handle: FileHandle) {
+    handle.readabilityHandler = { readableHandle in
+      self.queue.async {
+        self.readAvailableOutput(from: readableHandle)
+      }
+    }
+  }
+
+  /// Installs a wait task for process termination.
+  private func installWaitTask(pid: Int32) {
+    waitTask = DetachedTask.run(priority: .utility) { [self] in
+      var status: Int32 = 0
+      let waitResult = waitpid(pid, &status, 0)
+      let errnoValue = errno
+
+      guard !Task.isCancelled else { return }
+      queue.async {
+        self.finish(waitResult: waitResult, status: status, errnoValue: errnoValue)
+      }
+    }
   }
 
   /// Reads currently available command output without blocking.
   private func readAvailableOutput(from handle: FileHandle) {
+    let isAlreadyCompleted = state.withLock { state in
+      state.completed
+    }
+    guard !isAlreadyCompleted else { return }
+
     let chunk = handle.availableData
     let shouldTerminate = state.withLock { state in
       state.appendOutput(chunk, maxOutputBytes: limits.maxOutputBytes)
     }
 
-    if shouldTerminate, process.isRunning {
-      pipe.fileHandleForReading.readabilityHandler = nil
-      process.terminate()
+    if shouldTerminate {
+      outputReadHandle?.readabilityHandler = nil
+      terminateProcessTree(signal: SIGTERM)
     }
   }
 
@@ -205,21 +331,29 @@ private final class CommandExecution: @unchecked Sendable {
       state.markTimedOut()
     }
 
-    if shouldTerminate, process.isRunning {
-      pipe.fileHandleForReading.readabilityHandler = nil
-      process.terminate()
+    if shouldTerminate {
+      outputReadHandle?.readabilityHandler = nil
+      terminateProcessTree(signal: SIGTERM)
     }
   }
 
   /// Finishes after the process has terminated.
-  private func finish(process: Process) {
-    pipe.fileHandleForReading.readabilityHandler = nil
+  private func finish(waitResult: Int32, status: Int32, errnoValue: Int32) {
+    outputReadHandle?.readabilityHandler = nil
 
-    if let remainingData = try? pipe.fileHandleForReading.readToEnd() {
+    if waitResult < 0, errnoValue != ECHILD {
+      logger.warn(
+        "failed to reap lua command",
+        .field("command_bytes", command.utf8.count),
+        .field("errno", errnoValue)
+      )
+    }
+
+    if let remainingData = try? outputReadHandle?.readToEnd() {
       appendRemainingOutput(remainingData)
     }
 
-    complete(result(for: process))
+    complete(result(waitResult: waitResult, status: status))
   }
 
   /// Appends final output read after process termination.
@@ -230,7 +364,7 @@ private final class CommandExecution: @unchecked Sendable {
   }
 
   /// Builds the final command result from captured state.
-  private func result(for process: Process) -> LuaCommandResult {
+  private func result(waitResult: Int32, status: Int32) -> LuaCommandResult {
     let snapshot = state.withLock { state in
       (
         outputData: state.outputData,
@@ -261,8 +395,9 @@ private final class CommandExecution: @unchecked Sendable {
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.outputLimitStatus)
     }
 
-    if process.terminationStatus != 0 {
-      if process.terminationStatus == 127 {
+    let exitStatus = commandExitStatus(waitResult: waitResult, status: status)
+    if exitStatus != 0 {
+      if exitStatus == 127 {
         let message =
           output.isEmpty
           ? "command not found"
@@ -271,20 +406,32 @@ private final class CommandExecution: @unchecked Sendable {
         logger.warn(
           "lua command not found",
           .field("command_bytes", command.utf8.count),
-          .field("status", process.terminationStatus)
+          .field("status", exitStatus)
         )
 
-        return LuaCommandResult(output: message, status: process.terminationStatus)
+        return LuaCommandResult(output: message, status: exitStatus)
       }
 
       logger.debug(
         "lua command exited non-zero",
         .field("command_bytes", command.utf8.count),
-        .field("status", process.terminationStatus)
+        .field("status", exitStatus)
       )
     }
 
-    return LuaCommandResult(output: output, status: process.terminationStatus)
+    return LuaCommandResult(output: output, status: exitStatus)
+  }
+
+  /// Sends one signal to the command process group, falling back to the shell process.
+  private func terminateProcessTree(signal: Int32) {
+    if let processGroupIdentifier, processGroupIdentifier > 0 {
+      kill(-processGroupIdentifier, signal)
+      return
+    }
+
+    if let processIdentifier {
+      kill(processIdentifier, signal)
+    }
   }
 
   /// Resumes the continuation exactly once.
@@ -295,10 +442,55 @@ private final class CommandExecution: @unchecked Sendable {
 
     timeoutTask?.cancel()
     timeoutTask = nil
+    waitTask?.cancel()
+    waitTask = nil
 
-    process.terminationHandler = nil
-    pipe.fileHandleForReading.readabilityHandler = nil
+    outputReadHandle?.readabilityHandler = nil
+    outputReadHandle = nil
+    processIdentifier = nil
+    processGroupIdentifier = nil
 
     continuation?.resume(returning: result)
+  }
+
+  /// Returns a shell-compatible exit status from one `waitpid` status value.
+  private func commandExitStatus(waitResult: Int32, status: Int32) -> Int32 {
+    guard waitResult >= 0 else { return 1 }
+
+    if waitStatusExited(status) {
+      return waitStatusExitCode(status)
+    }
+
+    if waitStatusSignaled(status) {
+      return 128 + waitStatusTerminationSignal(status)
+    }
+
+    return 1
+  }
+
+  /// Returns the low wait-status byte used by Darwin wait macros.
+  private func waitStatusCode(_ status: Int32) -> Int32 {
+    return status & 0x7f
+  }
+
+  /// Returns whether one wait status represents normal process exit.
+  private func waitStatusExited(_ status: Int32) -> Bool {
+    return waitStatusCode(status) == 0
+  }
+
+  /// Returns the process exit code from one wait status.
+  private func waitStatusExitCode(_ status: Int32) -> Int32 {
+    return (status >> 8) & 0xff
+  }
+
+  /// Returns whether one wait status represents signal termination.
+  private func waitStatusSignaled(_ status: Int32) -> Bool {
+    let code = waitStatusCode(status)
+    return code != 0x7f && code != 0
+  }
+
+  /// Returns the terminating signal from one wait status.
+  private func waitStatusTerminationSignal(_ status: Int32) -> Int32 {
+    return waitStatusCode(status)
   }
 }
