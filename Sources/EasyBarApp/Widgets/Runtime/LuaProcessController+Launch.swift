@@ -180,15 +180,40 @@ extension LuaProcessController {
     previousTask?.cancel()
 
     let task = DetachedTask.run(priority: .utility) { [weak self] in
-      var status: Int32 = 0
-      let waitResult = waitpid(pid, &status, 0)
-      guard !Task.isCancelled else { return }
       guard let self else { return }
-      self.handleTermination(pid: pid, waitResult: waitResult, status: status, errnoValue: errno)
+      let waitResult = self.waitForRuntimeProcessExit(pid: pid)
+      guard !Task.isCancelled else { return }
+      self.handleTermination(
+        pid: pid,
+        waitResult: waitResult.result,
+        status: waitResult.status,
+        errnoValue: waitResult.errnoValue
+      )
     }
 
     withLock {
       terminationTask = task
+    }
+  }
+
+  /// Waits for the Lua runtime process to exit and retries interrupted waits.
+  private func waitForRuntimeProcessExit(pid: Int32) -> (
+    result: Int32,
+    status: Int32,
+    errnoValue: Int32
+  ) {
+    var status: Int32 = 0
+
+    while true {
+      errno = 0
+      let waitResult = waitpid(pid, &status, 0)
+      let errnoValue = errno
+
+      if waitResult < 0, errnoValue == EINTR {
+        continue
+      }
+
+      return (waitResult, status, errnoValue)
     }
   }
 
