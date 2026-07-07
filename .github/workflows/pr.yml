@@ -32,8 +32,6 @@ jobs:
       dependency_script: scripts/ci/install-lua.sh
       clean_before_cache: false
       check_generated: true
-      build_timeout_minutes: 5
-      aerospace_timeout_minutes: 2
       test_timeout_minutes: 12
 
   docs:

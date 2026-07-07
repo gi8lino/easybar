@@ -23,18 +23,8 @@ on:
         required: false
         default: true
         type: boolean
-      build_timeout_minutes:
-        description: Timeout for swift build --build-tests
-        required: false
-        default: 5
-        type: number
-      aerospace_timeout_minutes:
-        description: Timeout for AeroSpace subscription controller tests
-        required: false
-        default: 2
-        type: number
       test_timeout_minutes:
-        description: Timeout for remaining swift tests
+        description: Timeout for swift test
         required: false
         default: 12
         type: number
@@ -57,14 +47,6 @@ on:
         required: false
         default: true
         type: boolean
-      build_timeout_minutes:
-        required: false
-        default: 5
-        type: number
-      aerospace_timeout_minutes:
-        required: false
-        default: 2
-        type: number
       test_timeout_minutes:
         required: false
         default: 12
@@ -108,33 +90,18 @@ jobs:
           restore-keys: |
             swiftpm-deps-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.xcode_version }}-
 
-      - name: Build tests
-        shell: bash
-        env:
-          CI_COMMAND_TIMEOUT_MINUTES: ${{ inputs.build_timeout_minutes }}
-        run: scripts/ci/run-swift-tests.sh build-tests.log swift build --build-tests
-
-      - name: Run AeroSpace subscription controller tests
-        shell: bash
-        env:
-          CI_COMMAND_TIMEOUT_MINUTES: ${{ inputs.aerospace_timeout_minutes }}
-        run: scripts/ci/run-swift-tests.sh aerospace-subscription-tests.log swift test --skip-build --filter AeroSpaceSubscriptionControllerTests
-
-      - name: Run remaining tests
+      - name: Run tests
         shell: bash
         env:
           CI_COMMAND_TIMEOUT_MINUTES: ${{ inputs.test_timeout_minutes }}
-        run: scripts/ci/run-swift-tests.sh test.log swift test --skip-build --skip AeroSpaceSubscriptionControllerTests
+        run: scripts/ci/run-swift-tests.sh test.log swift test
 
       - name: Upload Swift test logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: swift-test-logs
-          path: |
-            build-tests.log
-            aerospace-subscription-tests.log
-            test.log
+          path: test.log
           if-no-files-found: ignore
 
       - name: Verify generated artifacts are current
