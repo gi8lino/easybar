@@ -69,7 +69,7 @@ public final class LineSocketServerTransport<
   }
 
   /// Starts listening and dispatches decoded requests to the handler.
-  public func start(_ handler: @escaping (Int32, Request) async -> ClientDisposition) {
+  public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) {
     let shouldStart = state.withLock { state -> Bool in
       guard !state.running else { return false }
       state.running = true
@@ -336,7 +336,7 @@ public final class LineSocketServerTransport<
   }
 
   /// Accepts client connections until the server stops.
-  private func acceptLoop(handler: @escaping (Int32, Request) async -> ClientDisposition) {
+  private func acceptLoop(handler: @escaping (Int32, Request) -> ClientDisposition) {
     while isRunning() {
       let fd = currentServerFD()
       if fd < 0 { break }
@@ -384,7 +384,7 @@ public final class LineSocketServerTransport<
   /// Reads requests until the client disconnects and invokes the handler for each line.
   private func handleClient(
     _ clientFD: Int32,
-    handler: @escaping (Int32, Request) async -> ClientDisposition
+    handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
     var lineDecoder = LineDelimitedJSONDecoder<Request>()
     var buffer = [UInt8](repeating: 0, count: 4096)
@@ -435,12 +435,12 @@ public final class LineSocketServerTransport<
   private func handleDecodedRequests(
     _ results: [Result<Request, Error>],
     clientFD: Int32,
-    handler: @escaping (Int32, Request) async -> ClientDisposition
+    handler: @escaping (Int32, Request) -> ClientDisposition
   ) -> ClientDisposition {
     for result in results {
       switch result {
       case .success(let request):
-        let disposition = runHandler(request, clientFD: clientFD, handler: handler)
+        let disposition = handler(clientFD, request)
         if disposition == .close {
           return .close
         }
@@ -455,30 +455,6 @@ public final class LineSocketServerTransport<
     }
 
     return .keepOpen
-  }
-
-  /// Runs the async request handler outside the blocking socket thread and waits for its result.
-  private func runHandler(
-    _ request: Request,
-    clientFD: Int32,
-    handler: @escaping (Int32, Request) async -> ClientDisposition
-  ) -> ClientDisposition {
-    let result = LockedState<ClientDisposition?>(nil)
-    let semaphore = DispatchSemaphore(value: 0)
-
-    Task {
-      let disposition = await handler(clientFD, request)
-      result.withLock { state in
-        state = disposition
-      }
-      semaphore.signal()
-    }
-
-    semaphore.wait()
-
-    return result.withLock { state in
-      state ?? .close
-    }
   }
 
   /// Tracks one accepted client when the server is still running.

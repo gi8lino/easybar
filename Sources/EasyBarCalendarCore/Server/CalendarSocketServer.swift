@@ -46,8 +46,10 @@ final class CalendarSocketServer {
   func start(provider: CalendarSnapshotProvider) {
     self.provider = provider
     transport.start { [weak self] clientFD, request in
-      guard let self else { return .close }
-      return self.handleClient(clientFD, request: request)
+      SynchronousTask.runOnMainActor { [weak self] in
+        guard let self else { return .close }
+        return self.handleClient(clientFD, request: request)
+      }
     }
   }
 

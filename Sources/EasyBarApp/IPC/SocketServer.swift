@@ -60,10 +60,11 @@ final class SocketServer {
         return .close
       }
 
-      return await self.handle(
+      return self.handle(
         clientFD: clientFD,
         request: request,
         handler: handler,
+        validateConfigHandler: validateConfigHandler,
         transport: activeTransport
       )
     }
@@ -103,15 +104,21 @@ final class SocketServer {
 
     let activeTransport = transport
 
+    let activeValidateConfigHandler: (String?) async -> IPC.Message =
+      validateConfigHandler ?? { _ in
+        .rejected(message: "config validation unavailable")
+      }
+
     activeTransport.start { [weak self, weak activeTransport] clientFD, request in
       guard let self, let activeTransport else {
         return .close
       }
 
-      return await self.handle(
+      return self.handle(
         clientFD: clientFD,
         request: request,
         handler: commandHandler,
+        validateConfigHandler: activeValidateConfigHandler,
         transport: activeTransport
       )
     }
@@ -145,13 +152,14 @@ final class SocketServer {
     clientFD: Int32,
     request: IPC.Request,
     handler: @escaping (IPC.Command) -> Void,
+    validateConfigHandler: @escaping (String?) async -> IPC.Message,
     transport: Transport
-  ) async -> Transport.ClientDisposition {
+  ) -> Transport.ClientDisposition {
     logger.debug("socket dispatching command '\(request.command.rawValue)'")
 
     switch request {
     case .metrics(let watch):
-      return await handleMetricsRequest(
+      return handleMetricsRequest(
         clientFD: clientFD,
         watch: watch,
         request: request,
@@ -159,9 +167,10 @@ final class SocketServer {
       )
 
     case .validateConfig(let configPath):
-      return await handleValidateConfigRequest(
+      return handleValidateConfigRequest(
         clientFD: clientFD,
         configPath: configPath,
+        validateConfigHandler: validateConfigHandler,
         transport: transport
       )
 
@@ -178,8 +187,10 @@ final class SocketServer {
     watch: Bool,
     request: IPC.Request,
     transport: Transport
-  ) async -> Transport.ClientDisposition {
-    let snapshot = await metricsCoordinator.snapshot()
+  ) -> Transport.ClientDisposition {
+    let snapshot = SynchronousTask.run {
+      await self.metricsCoordinator.snapshot()
+    }
     let sent = transport.send(.metrics(snapshot), to: clientFD)
 
     guard sent else {
@@ -191,7 +202,9 @@ final class SocketServer {
     }
 
     transport.addSubscriber(request, for: clientFD)
-    await metricsCoordinator.addStreamingSubscriber(fd: clientFD)
+    SynchronousTask.run {
+      await self.metricsCoordinator.addStreamingSubscriber(fd: clientFD)
+    }
 
     return .keepOpen
   }
@@ -200,14 +213,12 @@ final class SocketServer {
   private func handleValidateConfigRequest(
     clientFD: Int32,
     configPath: String?,
+    validateConfigHandler: @escaping (String?) async -> IPC.Message,
     transport: Transport
-  ) async -> Transport.ClientDisposition {
-    guard let validateConfigHandler else {
-      _ = transport.send(.rejected(message: "config validation unavailable"), to: clientFD)
-      return .close
+  ) -> Transport.ClientDisposition {
+    let response = SynchronousTask.run {
+      await validateConfigHandler(configPath)
     }
-
-    let response = await validateConfigHandler(configPath)
     _ = transport.send(response, to: clientFD)
     return .close
   }

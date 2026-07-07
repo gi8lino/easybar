@@ -204,6 +204,43 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testServerCanRestartOnSameSocketPathAfterStopWithoutClients() async throws {
+    let logger = Self.makeLogger()
+    let firstServer = makeServer(logger: logger)
+
+    firstServer.start { _, _ in
+      XCTFail("server without clients should not dispatch a request")
+      return .close
+    }
+
+    try await waitUntil("first server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    firstServer.stop()
+
+    try await waitUntil("first server socket to be removed") {
+      !FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let secondServer = makeServer(logger: logger)
+    secondServer.start { fd, _ in
+      _ = secondServer.send(TestMessage(kind: "pong"), to: fd)
+      return .close
+    }
+    defer { secondServer.stop() }
+
+    try await waitUntil("restarted server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath
+    ).send(request: TestRequest(command: "ping"))
+
+    XCTAssertEqual(response, TestMessage(kind: "pong"))
+  }
+
   private func makeServer(logger: ProcessLogger)
     -> LineSocketServerTransport<Void, TestRequest, TestMessage>
   {
