@@ -319,14 +319,37 @@ private final class CommandExecution: @unchecked Sendable {
   /// Installs a wait task for process termination.
   private func installWaitTask(pid: Int32) {
     waitTask = DetachedTask.run(priority: .utility) { [self] in
-      var status: Int32 = 0
-      let waitResult = waitpid(pid, &status, 0)
-      let errnoValue = errno
+      let waitResult = waitForProcessExit(pid: pid)
 
       guard !Task.isCancelled else { return }
       queue.async {
-        self.finish(waitResult: waitResult, status: status, errnoValue: errnoValue)
+        self.finish(
+          waitResult: waitResult.result,
+          status: waitResult.status,
+          errnoValue: waitResult.errnoValue
+        )
       }
+    }
+  }
+
+  /// Waits for process termination and retries when `waitpid` is interrupted.
+  private func waitForProcessExit(pid: Int32) -> (
+    result: Int32,
+    status: Int32,
+    errnoValue: Int32
+  ) {
+    var status: Int32 = 0
+
+    while true {
+      errno = 0
+      let waitResult = waitpid(pid, &status, 0)
+      let errnoValue = errno
+
+      if waitResult < 0, errnoValue == EINTR {
+        continue
+      }
+
+      return (waitResult, status, errnoValue)
     }
   }
 
@@ -607,3 +630,5 @@ private final class CommandExecution: @unchecked Sendable {
     return waitStatusCode(status)
   }
 }
+
+
