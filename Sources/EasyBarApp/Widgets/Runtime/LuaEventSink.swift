@@ -29,6 +29,7 @@ final class LuaEventSink: @unchecked Sendable {
 
   private let runtime: LuaRuntime
   private let logger: ProcessLogger
+  private let encoder = JSONEncoder()
   private let state = LockedState(State())
 
   /// Creates one Lua event sink.
@@ -171,7 +172,7 @@ final class LuaEventSink: @unchecked Sendable {
 
   /// Encodes and sends one payload to the Lua runtime.
   private func send(_ payload: EasyBarEventPayload) async {
-    guard let encoded = Self.encodedPayload(payload) else {
+    guard let encoded = encodeJSON(payload.luaPayload) else {
       logger.error(
         "failed to encode lua event payload",
         .field("name", payload.eventName)
@@ -183,15 +184,10 @@ final class LuaEventSink: @unchecked Sendable {
     await runtime.send(encoded)
   }
 
-  /// Returns the encoded Lua payload string.
-  private static func encodedPayload(_ payload: EasyBarEventPayload) -> String? {
-    return encodeJSON(payload.luaPayload)
-  }
-
   /// Encodes one event payload as JSON for the Lua runtime.
-  private static func encodeJSON(_ payload: LuaEventPayload) -> String? {
+  private func encodeJSON(_ payload: LuaEventPayload) -> String? {
     guard
-      let data = try? JSONEncoder().encode(payload),
+      let data = try? encoder.encode(payload),
       let string = String(data: data, encoding: .utf8)
     else {
       return nil
