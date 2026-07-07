@@ -70,15 +70,20 @@ require_built_product() {
   fi
 }
 
+build_product() {
+  local build_arch=$1
+  local product=$2
+
+  swift build -c "$configuration" --arch "$build_arch" --product "$product"
+}
+
 build_arch() {
   local build_arch=$1
-  local args=(swift build -c "$configuration" --arch "$build_arch")
+  local product
 
   for product in "${products[@]}"; do
-    args+=(--product "$product")
+    build_product "$build_arch" "$product"
   done
-
-  "${args[@]}"
 }
 
 copy_arch_outputs() {
@@ -127,3 +132,5 @@ else
   build_arch "$arch"
   copy_arch_outputs "$arch"
 fi
+
+
