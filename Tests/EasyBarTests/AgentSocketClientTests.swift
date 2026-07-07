@@ -123,14 +123,23 @@ final class AgentSocketClientTests: XCTestCase {
       FileManager.default.fileExists(atPath: self.socketPath)
     }
 
-    let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
-      socketPath: socketPath
-    ).send(request: TestRequest(command: "subscribe"))
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
 
+    try writeLine(#"{"command":"subscribe"}"#, to: clientFD)
+
+    let response = try readMessage(from: clientFD)
     XCTAssertEqual(response, TestMessage(kind: "subscribed"))
+
+    try await waitUntil("subscriber to stay registered") {
+      notifyingServer.subscribersSnapshot().count == 1
+    }
 
     notifyingServer.stop()
 
+    try await waitUntil("server stop to close subscriber socket") {
+      self.socketIsClosed(clientFD)
+    }
     try await waitUntil("subscriber removal callback") {
       removedSubscribers.withLock { $0 == 1 }
     }
@@ -246,6 +255,94 @@ final class AgentSocketClientTests: XCTestCase {
     }
 
     return fd
+  }
+
+  private func writeLine(_ line: String, to fd: Int32) throws {
+    let payload = Data((line + "\n").utf8)
+
+    try payload.withUnsafeBytes { rawBuffer in
+      guard let baseAddress = rawBuffer.baseAddress else { return }
+
+      var sent = 0
+      while sent < payload.count {
+        let count = write(fd, baseAddress.advanced(by: sent), payload.count - sent)
+
+        if count > 0 {
+          sent += count
+          continue
+        }
+
+        if count < 0, errno == EINTR {
+          continue
+        }
+
+        throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+      }
+    }
+  }
+
+  private func readMessage(from fd: Int32) throws -> TestMessage {
+    let line = try readLine(from: fd)
+    return try JSONDecoder().decode(TestMessage.self, from: Data(line.utf8))
+  }
+
+  private func readLine(from fd: Int32) throws -> String {
+    var bytes: [UInt8] = []
+    var byte = UInt8(0)
+
+    while true {
+      var pollFD = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+      let pollResult = poll(&pollFD, 1, 1_000)
+
+      if pollResult == 0 {
+        throw NSError(
+          domain: NSPOSIXErrorDomain,
+          code: Int(ETIMEDOUT),
+          userInfo: [NSLocalizedDescriptionKey: "timed out waiting for socket line"]
+        )
+      }
+
+      if pollResult < 0 {
+        if errno == EINTR {
+          continue
+        }
+
+        throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+      }
+
+      if (pollFD.revents & Int16(POLLIN)) == 0 {
+        throw NSError(
+          domain: NSPOSIXErrorDomain,
+          code: 0,
+          userInfo: [NSLocalizedDescriptionKey: "socket closed before newline"]
+        )
+      }
+
+      let count = read(fd, &byte, 1)
+
+      if count > 0 {
+        if byte == 0x0A {
+          return String(decoding: bytes, as: UTF8.self)
+        }
+
+        bytes.append(byte)
+        continue
+      }
+
+      if count == 0 {
+        throw NSError(
+          domain: NSPOSIXErrorDomain,
+          code: 0,
+          userInfo: [NSLocalizedDescriptionKey: "socket closed before newline"]
+        )
+      }
+
+      if errno == EINTR {
+        continue
+      }
+
+      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
   }
 
   private func socketIsClosed(_ fd: Int32) -> Bool {

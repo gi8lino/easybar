@@ -239,7 +239,6 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
     }
 
     guard isCurrentConnection(fd: fd, connectionID: connectionID) else {
-      closeSocket(fd)
       return
     }
 
@@ -356,9 +355,9 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
       )
     }
 
-    closeSocket(fd)
-
     guard let snapshot else { return }
+
+    closeSocket(fd)
 
     if snapshot.shouldNotifyDisconnect {
       logger.debug("\(label) disconnected")
