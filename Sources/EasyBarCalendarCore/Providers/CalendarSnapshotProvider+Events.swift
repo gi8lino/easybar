@@ -417,8 +417,9 @@ extension CalendarSnapshotProvider {
   private func colorHex(for cgColor: CGColor?) -> String? {
     guard let cgColor else { return nil }
     guard
+      let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
       let color = cgColor.converted(
-        to: CGColorSpace(name: CGColorSpace.sRGB)!,
+        to: colorSpace,
         intent: .defaultIntent,
         options: nil
       )
