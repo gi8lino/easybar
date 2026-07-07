@@ -43,7 +43,9 @@ struct MetricsStreamClient {
       throw LineSocketClientTransportError.encodeFailed
     }
 
-    try sendAll(fd: fd, data: payload + Data([0x0A]))
+    guard writeAll(payload + Data([0x0A]), to: fd) else {
+      throw LineSocketClientTransportError.writeFailed("socket write failed")
+    }
 
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
@@ -74,28 +76,6 @@ struct MetricsStreamClient {
       }
 
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
-    }
-  }
-
-  /// Writes the full encoded request payload to the socket.
-  private func sendAll(fd: Int32, data: Data) throws {
-    try data.withUnsafeBytes { rawBuffer in
-      guard let base = rawBuffer.baseAddress else { return }
-
-      var sent = 0
-      while sent < data.count {
-        let written = write(fd, base.advanced(by: sent), data.count - sent)
-
-        if written <= 0 {
-          if errno == EINTR {
-            continue
-          }
-
-          throw LineSocketClientTransportError.writeFailed(String(cString: strerror(errno)))
-        }
-
-        sent += written
-      }
     }
   }
 

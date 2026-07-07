@@ -93,34 +93,11 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw LineSocketClientTransportError.encodeFailed
     }
 
-    try sendAll(fd, payload + Data([0x0A]))
+    guard writeAll(payload + Data([0x0A]), to: fd) else {
+      throw LineSocketClientTransportError.writeFailed("socket write failed")
+    }
 
     return try readOneResponse(from: fd)
-  }
-
-  /// Writes all bytes to the socket.
-  private func sendAll(_ fd: Int32, _ data: Data) throws {
-    try data.withUnsafeBytes { rawBuffer in
-      guard let base = rawBuffer.baseAddress else { return }
-
-      var sent = 0
-      while sent < data.count {
-        let n = write(fd, base.advanced(by: sent), data.count - sent)
-        if n < 0 {
-          if errno == EINTR {
-            continue
-          }
-
-          throw LineSocketClientTransportError.writeFailed(String(cString: strerror(errno)))
-        }
-
-        if n == 0 {
-          throw LineSocketClientTransportError.writeFailed("socket write returned 0 bytes")
-        }
-
-        sent += n
-      }
-    }
   }
 
   /// Reads bytes until one response line decodes or EOF is reached.
