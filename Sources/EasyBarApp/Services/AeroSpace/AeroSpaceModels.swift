@@ -13,12 +13,11 @@ enum AeroSpaceLayoutMode: String, Codable {
 
 /// A single running application shown inside a workspace.
 struct SpaceApp: Identifiable, Hashable {
-  /// Stable application identity.
+  /// Stable application identifier used by the bar diffing model.
   let id: String
   /// Application bundle identifier.
   let bundleID: String
   /// Display name shown in the bar.
-  /// Workspace display name.
   let name: String
   /// Bundle path used for icons and activation.
   let bundlePath: String?
@@ -32,9 +31,8 @@ struct SpaceApp: Identifiable, Hashable {
 
 /// A workspace shown in the bar.
 struct SpaceItem: Identifiable, Hashable {
-  /// Stable application identity.
+  /// Stable workspace identifier.
   let id: String
-  /// Display name shown in the bar.
   /// Workspace display name.
   let name: String
   /// Whether this workspace is focused.
