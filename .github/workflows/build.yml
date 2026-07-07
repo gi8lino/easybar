@@ -15,6 +15,7 @@ jobs:
       clean_before_cache: true
       check_generated: true
       build_timeout_minutes: 5
+      aerospace_timeout_minutes: 2
       test_timeout_minutes: 12
 
   release:
