@@ -26,7 +26,7 @@ on:
       test_timeout_minutes:
         description: Timeout for swift test
         required: false
-        default: 12
+        default: 5
         type: number
 
   workflow_call:
@@ -49,7 +49,7 @@ on:
         type: boolean
       test_timeout_minutes:
         required: false
-        default: 12
+        default: 5
         type: number
 
 permissions:
