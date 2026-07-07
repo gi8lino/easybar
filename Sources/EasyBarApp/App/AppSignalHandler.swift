@@ -1,5 +1,6 @@
 import AppKit
 import Darwin
+import Dispatch
 import EasyBarShared
 import Foundation
 
@@ -11,8 +12,8 @@ final class AppSignalHandler {
   /// Callback invoked when a termination signal is received.
   private let requestTermination: () -> Void
 
-  /// Task waiting for SIGINT/SIGTERM via `sigwait`.
-  private var signalTask: Task<Void, Never>?
+  /// Dispatch sources used to receive SIGINT/SIGTERM without a blocking wait thread.
+  private var signalSources: [DispatchSourceSignal] = []
   /// Whether signal handling is currently active.
   private var started = false
 
@@ -30,37 +31,17 @@ final class AppSignalHandler {
     guard !started else { return }
     started = true
 
-    var signalSet = sigset_t()
-    sigemptyset(&signalSet)
-    sigaddset(&signalSet, SIGINT)
-    sigaddset(&signalSet, SIGTERM)
-    pthread_sigmask(SIG_BLOCK, &signalSet, nil)
-    let signalSetSnapshot = signalSet
+    signalSources = [SIGINT, SIGTERM].map { signalNumber in
+      Darwin.signal(signalNumber, SIG_IGN)
 
-    signalTask = DetachedTask.run { [weak self] in
-      var waitSet = signalSetSnapshot
-
-      while !Task.isCancelled {
-        var receivedSignal: Int32 = 0
-        let result = sigwait(&waitSet, &receivedSignal)
-        guard result == 0, !Task.isCancelled else { continue }
-        let signal = receivedSignal
-
-        await MainActor.run { [weak self] in
-          guard let self, self.started else { return }
-
-          switch signal {
-          case SIGINT:
-            self.logger.info("received SIGINT")
-          case SIGTERM:
-            self.logger.info("received SIGTERM")
-          default:
-            self.logger.info("received termination signal", .field("signal", signal))
-          }
-
-          self.requestTermination()
+      let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .main)
+      source.setEventHandler { [weak self] in
+        Task { @MainActor [weak self] in
+          self?.handle(signalNumber)
         }
       }
+      source.resume()
+      return source
     }
   }
 
@@ -69,7 +50,29 @@ final class AppSignalHandler {
     guard started else { return }
     started = false
 
-    signalTask?.cancel()
-    signalTask = nil
+    for source in signalSources {
+      source.setEventHandler {}
+      source.cancel()
+    }
+    signalSources.removeAll()
+
+    Darwin.signal(SIGINT, SIG_DFL)
+    Darwin.signal(SIGTERM, SIG_DFL)
+  }
+
+  /// Handles one signal source callback on the main actor.
+  private func handle(_ signalNumber: Int32) {
+    guard started else { return }
+
+    switch signalNumber {
+    case SIGINT:
+      logger.info("received SIGINT")
+    case SIGTERM:
+      logger.info("received SIGTERM")
+    default:
+      logger.info("received termination signal", .field("signal", signalNumber))
+    }
+
+    requestTermination()
   }
 }
