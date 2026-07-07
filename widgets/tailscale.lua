@@ -7,6 +7,8 @@
 --- TAILSCALE may point to a command/path such as `tailscale` or `/opt/homebrew/bin/tailscale`.
 --- Paths with spaces are not supported.
 
+local CHECK_INTERVAL_SECONDS = 60
+
 local function trim(value)
 	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
@@ -386,7 +388,7 @@ end
 tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 	position = "right",
 	order = 2,
-	interval = 10,
+	interval = CHECK_INTERVAL_SECONDS,
 	icon = {
 		image = asset_path("tailscale-inactive.png"),
 		image_size = 16,
