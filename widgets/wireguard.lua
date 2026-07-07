@@ -1,5 +1,7 @@
-local home = os.getenv("HOME")
-package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/?.lua"
+local home = os.getenv("HOME") or ""
+if home ~= "" then
+	package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/?.lua"
+end
 
 local secrets = require("secrets")
 
@@ -11,12 +13,23 @@ local COLORS = {
 	border = easybar.theme.ref.border_strong,
 }
 
+local COMMAND_OPTIONS = {
+	timeout_seconds = 10,
+	max_output_bytes = 65536,
+}
+
+local ACTION_COMMAND_OPTIONS = {
+	timeout_seconds = 30,
+	max_output_bytes = 65536,
+}
+
 local function trim(s)
 	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function quote(s)
-	return string.format("%q", s or "")
+local function shell_quote(s)
+	s = tostring(s or "")
+	return "'" .. s:gsub("'", [['"'"']]) .. "'"
 end
 
 local wireguard
@@ -27,6 +40,8 @@ local state = {
 	wireguard_connected = false,
 }
 
+local toggle_running = false
+
 local function status_label(connected)
 	if connected then
 		return "Active"
@@ -35,47 +50,47 @@ local function status_label(connected)
 	return "Inactive"
 end
 
-local function run_shell(command)
-	local pipe = io.popen(command .. " 2>&1")
-	if not pipe then
-		easybar.log(easybar.level.error, "shell popen failed", command)
-		return nil, "popen failed"
-	end
-
-	local output = pipe:read("*a") or ""
-	local ok, _, code = pipe:close()
-
-	local trimmed = trim(output)
+local function log_command_result(action, command, output, ok, code)
+	output = trim(output or "")
 
 	if ok then
-		if trimmed ~= "" then
-			easybar.log(easybar.level.trace, "shell ok", command, trimmed)
+		if output ~= "" then
+			easybar.log(easybar.level.debug, action .. " ok", command, output)
 		else
-			easybar.log(easybar.level.trace, "shell ok", command, "<empty>")
+			easybar.log(easybar.level.debug, action .. " ok", command)
 		end
-		return trimmed, nil
+		return
 	end
 
 	easybar.log(
 		easybar.level.warn,
-		"shell command failed",
+		action .. " failed",
 		command,
-		"code",
-		tostring(code),
-		"output",
-		trimmed ~= "" and trimmed or "<empty>"
+		"code=" .. tostring(code),
+		output ~= "" and output or "<empty>"
 	)
-	return trimmed, code or "command failed"
 end
 
-local function current_status(vpn_name)
-	local name = quote(vpn_name)
-	local output, err = run_shell("scutil --nc status " .. name)
-	if err ~= nil then
-		return nil, err
-	end
+local function run_shell_async(command, options, callback)
+	easybar.exec_async(command, options or COMMAND_OPTIONS, function(output, code)
+		output = trim(output or "")
+		code = code or 0
+		callback(output, code == 0, code)
+	end)
+end
 
-	return (output or ""):lower(), nil
+local function current_status_async(vpn_name, callback)
+	local command = "scutil --nc status " .. shell_quote(vpn_name)
+
+	run_shell_async(command, COMMAND_OPTIONS, function(output, ok, code)
+		if not ok then
+			log_command_result("wireguard status", command, output, false, code)
+			callback(nil, code)
+			return
+		end
+
+		callback((output or ""):lower(), nil)
+	end)
 end
 
 local function apply_network_event(event)
@@ -92,32 +107,6 @@ local function apply_network_event(event)
 		else
 			state.wireguard_connected = connected
 		end
-	end
-end
-
-local function toggle_wireguard()
-	local vpn_name = secrets.vpn_name or ""
-	if vpn_name == "" then
-		easybar.log(easybar.level.warn, "wireguard toggle skipped because secrets.vpn_name is empty")
-		return
-	end
-
-	local status, err = current_status(vpn_name)
-	if err ~= nil or status == nil then
-		easybar.log(easybar.level.warn, "failed to read wireguard status", vpn_name)
-		return
-	end
-
-	easybar.log(easybar.level.debug, "wireguard status", vpn_name, status)
-
-	local name = quote(vpn_name)
-
-	if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
-		easybar.log(easybar.level.info, "stopping wireguard", vpn_name)
-		run_shell("scutil --nc stop " .. name)
-	else
-		easybar.log(easybar.level.info, "starting wireguard", vpn_name)
-		run_shell("scutil --nc start " .. name)
 	end
 end
 
@@ -141,10 +130,60 @@ local function refresh()
 
 	wireguard_popup_label:set({
 		label = {
-			string = status_label(wireguard_connected),
+			string = toggle_running and "Working…" or status_label(wireguard_connected),
 			color = wireguard_connected and COLORS.success or COLORS.muted,
 		},
 	})
+end
+
+local function finish_toggle()
+	toggle_running = false
+	refresh()
+end
+
+local function toggle_wireguard()
+	if toggle_running then
+		easybar.log(easybar.level.debug, "wireguard toggle skipped", "already running")
+		return
+	end
+
+	local vpn_name = secrets.vpn_name or ""
+	if vpn_name == "" then
+		easybar.log(easybar.level.warn, "wireguard toggle skipped because secrets.vpn_name is empty")
+		return
+	end
+
+	toggle_running = true
+	refresh()
+
+	current_status_async(vpn_name, function(status, err)
+		if err ~= nil or status == nil then
+			easybar.log(easybar.level.warn, "failed to read wireguard status", vpn_name)
+			finish_toggle()
+			return
+		end
+
+		easybar.log(easybar.level.debug, "wireguard status", vpn_name, status)
+
+		local command
+		local action
+		local name = shell_quote(vpn_name)
+
+		if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
+			command = "scutil --nc stop " .. name
+			action = "wireguard stop"
+		else
+			command = "scutil --nc start " .. name
+			action = "wireguard start"
+		end
+
+		easybar.log(easybar.level.info, action, vpn_name)
+
+		run_shell_async(command, ACTION_COMMAND_OPTIONS, function(output, ok, code)
+			log_command_result(action, command, output, ok, code)
+			finish_toggle()
+		end)
+	end)
 end
 
 wireguard = easybar.add(easybar.kind.group, "wireguard", {
