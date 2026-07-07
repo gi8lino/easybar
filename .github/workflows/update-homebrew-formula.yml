@@ -72,9 +72,3 @@ jobs:
           scripts/release/commit-homebrew-formulas.sh \
             --tap-dir homebrew-tap \
             --version "${{ steps.vars.outputs.version }}"
-
-
-
-
-
-
