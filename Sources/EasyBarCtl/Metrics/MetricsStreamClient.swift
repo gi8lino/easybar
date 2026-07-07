@@ -49,25 +49,26 @@ struct MetricsStreamClient {
 
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
-    var pending = Data()
+    var lineDecoder = LineDelimitedJSONDecoder<IPC.Message>(decoder: decoder)
     var buffer = [UInt8](repeating: 0, count: 4096)
 
     while true {
-      // Consume complete lines first so partial reads can accumulate in `pending`.
-      if let line = nextLine(from: &pending) {
-        let message = try decoder.decode(IPC.Message.self, from: line)
-        try handleMessage(message)
-        continue
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return read(fd, baseAddress, rawBuffer.count)
       }
 
-      let count = read(fd, &buffer, buffer.count)
-
       if count > 0 {
-        pending.append(contentsOf: buffer.prefix(count))
+        for result in lineDecoder.append(buffer.prefix(count)) {
+          try handleMessage(try result.get())
+        }
         continue
       }
 
       if count == 0 {
+        for result in lineDecoder.flush() {
+          try handleMessage(try result.get())
+        }
         return
       }
 
@@ -77,16 +78,5 @@ struct MetricsStreamClient {
 
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
     }
-  }
-
-  /// Removes and returns the next newline-delimited payload from pending data.
-  private func nextLine(from pending: inout Data) -> Data? {
-    guard let newlineIndex = pending.firstIndex(of: 0x0A) else {
-      return nil
-    }
-
-    let line = Data(pending.prefix(upTo: newlineIndex))
-    pending.removeSubrange(...newlineIndex)
-    return line.isEmpty ? nil : line
   }
 }
