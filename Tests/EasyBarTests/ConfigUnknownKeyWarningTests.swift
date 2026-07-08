@@ -1,3 +1,4 @@
+import EasyBarConfigSchema
 import EasyBarShared
 import Foundation
 import XCTest
@@ -106,16 +107,16 @@ final class ConfigUnknownKeyWarningTests: ConfigLoaderTestCase {
 
     for documentedKey in documentedKeys {
       XCTAssertTrue(
-        ConfigKnownKeySchema.isKnownSection(documentedKey.section),
+        ConfigSchemaRegistry.isKnownSection(documentedKey.section),
         "Unknown documented config section \(documentedKey.section)"
       )
 
-      guard !ConfigKnownKeySchema.isFreeFormSection(documentedKey.section) else {
+      guard !ConfigSchemaRegistry.isFreeFormSection(documentedKey.section) else {
         continue
       }
 
       XCTAssertTrue(
-        ConfigKnownKeySchema.knownKeys(for: documentedKey.section).contains(documentedKey.key),
+        ConfigSchemaRegistry.knownKeys(for: documentedKey.section).contains(documentedKey.key),
         "Unknown documented config key \(documentedKey.section).\(documentedKey.key)"
       )
     }

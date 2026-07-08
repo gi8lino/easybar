@@ -10,6 +10,7 @@ let package = Package(
   products: [
     .library(name: "EasyBarShared", targets: ["EasyBarShared"]),
     .library(name: "EasyBarConfigParsing", targets: ["EasyBarConfigParsing"]),
+    .library(name: "EasyBarConfigSchema", targets: ["EasyBarConfigSchema"]),
     .library(name: "EasyBarCalendarConfig", targets: ["EasyBarCalendarConfig"]),
     .library(name: "EasyBarCalendarCore", targets: ["EasyBarCalendarCore"]),
     .library(name: "EasyBarCalendarPresentation", targets: ["EasyBarCalendarPresentation"]),
@@ -29,9 +30,13 @@ let package = Package(
     .executableTarget(
       name: "EasyBarGenerateConfig",
       dependencies: [
-        "EasyBarApp"
+        "EasyBarConfigSchema"
       ],
       path: "Sources/EasyBarGenerateConfig"
+    ),
+    .target(
+      name: "EasyBarConfigSchema",
+      path: "Sources/EasyBarConfigSchema"
     ),
     .target(
       name: "EasyBarShared",
@@ -94,6 +99,7 @@ let package = Package(
       dependencies: [
         "EasyBarShared",
         "EasyBarConfigParsing",
+        "EasyBarConfigSchema",
         "EasyBarCalendarConfig",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
@@ -157,6 +163,7 @@ let package = Package(
         "EasyBarLuaRuntime",
         "EasyBarShared",
         "EasyBarConfigParsing",
+        "EasyBarConfigSchema",
         "EasyBarCalendarConfig",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",

@@ -3682,8 +3682,6 @@ public enum ConfigSchemaRegistry {
     "opacity",
   ]
 
-  private static let themeColorKeys = Set(ThemeColorToken.allCases.map(\.rawValue))
-
   private static let knownKeysBySection: [String: Set<String>] = {
     var sections: [String: [String]] = [:]
 
@@ -3738,12 +3736,12 @@ public enum ConfigSchemaRegistry {
   }()
 
   /// Returns true when a section accepts arbitrary keys.
-  static func isFreeFormSection(_ path: String) -> Bool {
+  public static func isFreeFormSection(_ path: String) -> Bool {
     freeFormSections.contains(path)
   }
 
   /// Returns known keys for one TOML section path.
-  static func knownKeys(for path: String) -> Set<String> {
+  public static func knownKeys(for path: String) -> Set<String> {
     if isBuiltinGroup(path) {
       return placementKeys.union(["style"])
     }
@@ -3752,15 +3750,11 @@ public enum ConfigSchemaRegistry {
       return widgetStyleKeys
     }
 
-    if path == "theme.colors" {
-      return themeColorKeys
-    }
-
     return knownKeysBySection[path] ?? []
   }
 
   /// Returns true when a TOML section path is known.
-  static func isKnownSection(_ path: String) -> Bool {
+  public static func isKnownSection(_ path: String) -> Bool {
     knownKeysBySection[path] != nil
       || freeFormSections.contains(path)
       || isBuiltinGroup(path)

@@ -1,3 +1,4 @@
+import EasyBarConfigSchema
 import Foundation
 import TOMLKit
 
@@ -17,7 +18,7 @@ enum ConfigUnknownKeyWarningBuilder {
   ) {
     guard !ConfigSchemaRegistry.isFreeFormSection(path) else { return }
 
-    let knownKeys = ConfigSchemaRegistry.knownKeys(for: path)
+    let knownKeys = knownKeys(for: path)
 
     for key in table.keys.sorted() {
       guard let value = table[key] else { continue }
@@ -38,6 +39,14 @@ enum ConfigUnknownKeyWarningBuilder {
         continue
       }
     }
+  }
+
+  private static func knownKeys(for path: String) -> Set<String> {
+    if path == "theme.colors" {
+      return Set(ThemeColorToken.allCases.map(\.rawValue))
+    }
+
+    return ConfigSchemaRegistry.knownKeys(for: path)
   }
 
   private static func joined(_ path: String, _ key: String) -> String {
