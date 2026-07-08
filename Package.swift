@@ -20,11 +20,19 @@ let package = Package(
     .executable(name: "EasyBarCtl", targets: ["EasyBarCtl"]),
     .executable(name: "EasyBarCalendarAgent", targets: ["EasyBarCalendarAgent"]),
     .executable(name: "EasyBarNetworkAgent", targets: ["EasyBarNetworkAgent"]),
+    .executable(name: "EasyBarGenerateConfig", targets: ["EasyBarGenerateConfig"]),
   ],
   dependencies: [
     .package(url: "https://github.com/LebJe/TOMLKit", from: "0.6.0")
   ],
   targets: [
+    .executableTarget(
+      name: "EasyBarGenerateConfig",
+      dependencies: [
+        "EasyBarApp"
+      ],
+      path: "Sources/EasyBarGenerateConfig"
+    ),
     .target(
       name: "EasyBarShared",
       dependencies: [

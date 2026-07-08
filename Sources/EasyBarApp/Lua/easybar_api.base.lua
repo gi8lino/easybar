@@ -237,7 +237,7 @@
 -- GENERATED SECTION: easybar.themes
 -- EasyBar generated theme stub. Do not edit by hand.
 -- Source of truth: Sources/EasyBarApp/Theme/theme_tokens.json
--- Regenerate with: scripts/generate/artifacts.py theme-tokens
+-- Regenerate with: scripts/generate/theme_tokens.py
 ---Resolved active theme colors.
 ---@class EasyBarThemeColors
 ---@field background string Main bar and popup background color.

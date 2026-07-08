@@ -49,8 +49,14 @@ Regenerate every checked-in generated artifact through the Makefile:
 make generate
 ```
 
-This runs `scripts/generate/artifacts.py`, which owns theme tokens, event catalog artifacts, and generated docs.
-Use this before committing changes that affect generated Swift, Lua, or documentation artifacts.
+This runs the focused generators wired through the Makefile:
+
+- `scripts/generate/theme_tokens.py` for theme-token Swift and Lua artifacts
+- `scripts/generate/event_catalog.py` for event-token Lua artifacts and the combined LuaLS stub
+- `EasyBarGenerateConfig` for `config.defaults.toml` and the config reference
+- `scripts/generate/lua_docs.py` for Lua reference docs
+
+Use this before committing changes that affect generated Swift, Lua, TOML, or documentation artifacts.
 
 Verify that generated artifacts are current before opening a pull request:
 
@@ -69,7 +75,7 @@ Regenerate only generated documentation through the Makefile:
 make generate-docs
 ```
 
-The generator entrypoint is `scripts/generate/artifacts.py`. Call its subcommands directly only when debugging the generation pipeline.
+Generated docs are produced by `scripts/generate/lua_docs.py` and `EasyBarGenerateConfig config-docs`. Call those directly only when debugging the generation pipeline.
 
 `make fmt` formats Swift only. Generated Markdown is formatted automatically as part of `make generate-docs`, so generated-doc comparisons stay stable. Run `make fmt-markdown` only when you intentionally want to format all Markdown with Prettier.
 
@@ -101,4 +107,8 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
+
+
+
+
 

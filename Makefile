@@ -114,7 +114,7 @@ endif
 .DEFAULT_GOAL := help
 
 .PHONY: help all \
-        generate check-generated generate-event-catalog generate-theme-tokens generate-swift-env \
+        generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
         clean clean-dist run run-debug run-trace stop restart-brew icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
@@ -132,17 +132,23 @@ help: ## Display this help.
 
 ##@ Generated
 
-generate: generate-theme-tokens generate-event-catalog generate-docs ## Generate all checked-in generated artifacts.
+generate: generate-theme-tokens generate-event-catalog generate-config generate-docs ## Generate all checked-in generated artifacts.
 
 check-generated: generate ## Verify all checked-in generated artifacts are committed.
-	@python3 scripts/generate/artifacts.py check-diff \
+	@python3 scripts/generate/check.py check-diff \
 		--normalized-markdown $(GENERATED_MARKDOWN_DOCS)
 
 generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and Lua.
-	@python3 scripts/generate/artifacts.py theme-tokens
+	@python3 scripts/generate/theme_tokens.py
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate/artifacts.py event-catalog --version "$(VERSION)"
+	@python3 scripts/generate/event_catalog.py --version "$(VERSION)"
+
+generate-config: ## Regenerate default config and config docs from the app config schema.
+	@swift run EasyBarGenerateConfig all
+
+generate-default-config: ## Regenerate the visible default config reference from the app config schema.
+	@swift run EasyBarGenerateConfig defaults
 
 ##@ Build
 
@@ -310,7 +316,7 @@ clean-dist: ## Remove dist/.
 clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
 	@rm -rf "$(DIST_DIR)" ".build"
 	@python3 scripts/build/stamp.py build-info --file "$(BUILD_INFO)" --version dev
-	@python3 scripts/generate/artifacts.py event-catalog --version dev
+	@python3 scripts/generate/event_catalog.py --version dev
 
 ##@ Info
 
@@ -377,20 +383,20 @@ $(DOCS_STAMP): $(DOCS_REQUIREMENTS) | $(DOCS_PYTHON)
 generate-docs: fmt-generated-docs ## Generate and format all checked-in docs from source stubs.
 
 generate-lua-docs: ## Generate Lua reference docs from source stubs.
-	@python3 scripts/generate/artifacts.py lua-docs
+	@python3 scripts/generate/lua_docs.py
 
-generate-config-docs: ## Generate the config reference from config.defaults.toml.
-	@python3 scripts/generate/artifacts.py config-docs
+generate-config-docs: ## Generate the config reference from the app config schema.
+	@swift run EasyBarGenerateConfig config-docs
 
 fmt-generated-docs: generate-lua-docs generate-config-docs ## Format generated Markdown docs with Prettier.
 	@$(PRETTIER) --write "$(DOCS_DIR)/content/configuration/reference.md" "$(DOCS_DIR)/content/lua/reference/**/*.md"
 	@$(MAKE) --no-print-directory normalize-generated-docs
 
 normalize-generated-docs: ## Normalize generated Markdown docs for stable diffs.
-	@python3 scripts/generate/artifacts.py normalize-markdown $(GENERATED_MARKDOWN_DOCS)
+	@python3 scripts/generate/check.py normalize-markdown $(GENERATED_MARKDOWN_DOCS)
 
 check-docs: generate-docs ## Verify generated docs are formatted and committed.
-	@python3 scripts/generate/artifacts.py check-diff \
+	@python3 scripts/generate/check.py check-diff \
 		--normalized-markdown $(GENERATED_MARKDOWN_DOCS) \
 		--scope docs/content/lua/reference \
 		--scope docs/content/configuration/reference.md
@@ -412,6 +418,10 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+
+
+
 
 
 

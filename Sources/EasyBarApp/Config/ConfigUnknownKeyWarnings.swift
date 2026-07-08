@@ -15,16 +15,16 @@ enum ConfigUnknownKeyWarningBuilder {
     path: String,
     to warnings: inout [String]
   ) {
-    guard !ConfigKnownKeySchema.isFreeFormSection(path) else { return }
+    guard !ConfigSchemaRegistry.isFreeFormSection(path) else { return }
 
-    let knownKeys = ConfigKnownKeySchema.knownKeys(for: path)
+    let knownKeys = ConfigSchemaRegistry.knownKeys(for: path)
 
     for key in table.keys.sorted() {
       guard let value = table[key] else { continue }
       let currentPath = joined(path, key)
 
       if let nestedTable = value.table {
-        guard ConfigKnownKeySchema.isKnownSection(currentPath) else {
+        guard ConfigSchemaRegistry.isKnownSection(currentPath) else {
           warnings.append("unknown config section \(currentPath)")
           continue
         }
