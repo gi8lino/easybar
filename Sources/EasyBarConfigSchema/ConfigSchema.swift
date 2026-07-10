@@ -36,8 +36,9 @@ public enum ConfigSchemaRegistry {
     ),
     .entry(
       key: #"lua_socket_path"#,
-      value: #""/tmp/EasyBar/lua-runtime.sock""#,
-      description: #"Unix socket path used by EasyBar and the Lua widget runtime transport."#,
+      value: #""$EASYBAR_RUNTIME_DIR/lua-runtime.sock""#,
+      description:
+        #"Unix socket path used by EasyBar and the Lua widget runtime transport. $EASYBAR_RUNTIME_DIR expands to EasyBar's user-scoped temporary runtime directory."#,
       commented: false,
       prefix: #""#,
     ),
@@ -50,7 +51,7 @@ public enum ConfigSchemaRegistry {
     ),
     .entry(
       key: #"lock_dir"#,
-      value: #""/tmp/EasyBar""#,
+      value: #""$EASYBAR_RUNTIME_DIR""#,
       description: #"Directory that contains lock files used by EasyBar."#,
       commented: false,
       prefix: #""#,
@@ -171,7 +172,7 @@ public enum ConfigSchemaRegistry {
     ),
     .entry(
       key: #"socket_path"#,
-      value: #""/tmp/EasyBar/calendar-agent.sock""#,
+      value: #""$EASYBAR_RUNTIME_DIR/calendar-agent.sock""#,
       description: #"Unix socket path used by EasyBar and the calendar agent."#,
       commented: false,
       prefix: #""#,
@@ -191,7 +192,7 @@ public enum ConfigSchemaRegistry {
     ),
     .entry(
       key: #"socket_path"#,
-      value: #""/tmp/EasyBar/network-agent.sock""#,
+      value: #""$EASYBAR_RUNTIME_DIR/network-agent.sock""#,
       description: #"Unix socket path used by EasyBar and the network agent."#,
       commented: false,
       prefix: #""#,

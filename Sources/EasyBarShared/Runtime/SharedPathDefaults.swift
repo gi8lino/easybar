@@ -2,16 +2,25 @@ import Foundation
 
 /// Shared filesystem and runtime defaults used across EasyBar targets.
 public enum SharedPathDefaults {
+  public static let runtimeDirectoryToken = "$EASYBAR_RUNTIME_DIR"
+
   static let defaultConfigRelativePath = ".config/easybar/config.toml"
   static let defaultWidgetsRelativePath = ".config/easybar/widgets"
   static let defaultLoggingDirectoryRelativePath = ".local/state/easybar"
   static let defaultWidgetEditorStubRelativePath = ".local/share/easybar/easybar_api.lua"
 
   public static let defaultLuaPath = "lua"
-  public static let defaultEasyBarSocketPath = "/tmp/EasyBar/easybar.sock"
+  public static let defaultEasyBarSocketPath =
+    defaultRuntimeDirectory().appendingPathComponent("easybar.sock").path
   public static let defaultLuaEnvironment: [String: String] = [
     "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   ]
+
+  /// Returns the user-scoped runtime directory for sockets and locks.
+  public static func defaultRuntimeDirectory() -> URL {
+    FileManager.default.temporaryDirectory
+      .appendingPathComponent("EasyBar", isDirectory: true)
+  }
 
   /// Returns an absolute path by resolving one home-relative path.
   public static func homeRelativePath(_ relativePath: String) -> URL {

@@ -33,10 +33,14 @@ public func timeIntervalEnvironmentValue(named name: String) -> TimeInterval? {
   return TimeInterval(value)
 }
 
-/// Expands `~` when present and returns one non-empty path string.
+/// Expands supported EasyBar path tokens and `~`, then returns one non-empty path string.
 public func expandedPath(_ value: String?) -> String? {
   guard let value, !value.isEmpty else { return nil }
-  return NSString(string: value).expandingTildeInPath
+  let tokenExpanded = value.replacingOccurrences(
+    of: SharedPathDefaults.runtimeDirectoryToken,
+    with: SharedPathDefaults.defaultRuntimeDirectory().path
+  )
+  return NSString(string: tokenExpanded).expandingTildeInPath
 }
 
 /// Returns one expanded path environment value when present.

@@ -68,7 +68,15 @@ func resolvedNetworkAgentEnvironmentDefaults() -> SharedNetworkAgentRuntimeConfi
 }
 
 /// Returns the default Unix socket path used by the calendar agent.
-func defaultCalendarAgentSocketPath() -> String { return "/tmp/EasyBar/calendar-agent.sock" }
+func defaultCalendarAgentSocketPath() -> String {
+  return SharedPathDefaults.defaultRuntimeDirectory()
+    .appendingPathComponent("calendar-agent.sock")
+    .path
+}
 
 /// Returns the default Unix socket path used by the network agent.
-func defaultNetworkAgentSocketPath() -> String { return "/tmp/EasyBar/network-agent.sock" }
+func defaultNetworkAgentSocketPath() -> String {
+  return SharedPathDefaults.defaultRuntimeDirectory()
+    .appendingPathComponent("network-agent.sock")
+    .path
+}

@@ -35,7 +35,13 @@ func resolvedAppEnvironmentDefaults() -> SharedAppRuntimeConfig {
 }
 
 /// Returns the default directory used for single-instance lock files.
-func defaultSingleInstanceLockDirectoryPath() -> String { return "/tmp/EasyBar" }
+func defaultSingleInstanceLockDirectoryPath() -> String {
+  return SharedPathDefaults.defaultRuntimeDirectory().path
+}
 
 /// Returns the default Unix socket path used by the Lua runtime transport.
-func defaultLuaSocketPath() -> String { return "/tmp/EasyBar/lua-runtime.sock" }
+func defaultLuaSocketPath() -> String {
+  return SharedPathDefaults.defaultRuntimeDirectory()
+    .appendingPathComponent("lua-runtime.sock")
+    .path
+}

@@ -80,6 +80,45 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)
   }
 
+  /// Verifies that the portable runtime directory token resolves to the user-scoped temp dir.
+  func testLoadExpandsRuntimeDirectoryToken() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-token.toml")
+
+    try writeConfig(
+      """
+      [app]
+      lock_dir = "$EASYBAR_RUNTIME_DIR"
+      lua_socket_path = "$EASYBAR_RUNTIME_DIR/lua.sock"
+
+      [agents.calendar]
+      socket_path = "$EASYBAR_RUNTIME_DIR/calendar.sock"
+
+      [agents.network]
+      socket_path = "$EASYBAR_RUNTIME_DIR/network.sock"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let runtime = try SharedRuntimeConfig.load()
+    let runtimeDirectory = SharedPathDefaults.defaultRuntimeDirectory()
+
+    XCTAssertEqual(runtime.app.lockDirectory, runtimeDirectory.path)
+    XCTAssertEqual(
+      runtime.app.luaSocketPath,
+      runtimeDirectory.appendingPathComponent("lua.sock").path
+    )
+    XCTAssertEqual(
+      runtime.calendarAgent.socketPath,
+      runtimeDirectory.appendingPathComponent("calendar.sock").path
+    )
+    XCTAssertEqual(
+      runtime.networkAgent.socketPath,
+      runtimeDirectory.appendingPathComponent("network.sock").path
+    )
+  }
+
   /// Verifies that load lets the diagnostic log-level environment override TOML.
   func testLoadPrefersEnvironmentLoggingLevelOverTomlValue() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-logging-env.toml")
