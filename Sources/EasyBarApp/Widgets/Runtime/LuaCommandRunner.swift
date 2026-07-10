@@ -18,6 +18,7 @@ final class LuaCommandRunner: @unchecked Sendable {
     let maxOutputBytes: Int
 
     static let timedOutStatus: Int32 = 124
+    static let cancelledStatus: Int32 = 130
     static let outputLimitStatus: Int32 = 65
   }
 
@@ -34,15 +35,29 @@ final class LuaCommandRunner: @unchecked Sendable {
     limits: Limits,
     environment: [String: String] = ProcessInfo.processInfo.environment
   ) async -> LuaCommandResult {
-    await withCheckedContinuation { continuation in
-      let execution = CommandExecution(
-        command: command,
-        limits: limits,
-        environment: environment,
-        logger: logger,
-        continuation: continuation
-      )
-      execution.start()
+    let executionState = LockedState<CommandExecution?>(nil)
+
+    return await withTaskCancellationHandler {
+      await withCheckedContinuation { continuation in
+        let execution = CommandExecution(
+          command: command,
+          limits: limits,
+          environment: environment,
+          logger: logger,
+          continuation: continuation
+        )
+
+        executionState.withLock { state in
+          state = execution
+        }
+
+        execution.start()
+        if Task.isCancelled {
+          execution.cancel()
+        }
+      }
+    } onCancel: {
+      executionState.withLock { $0 }?.cancel()
     }
   }
 }
@@ -68,6 +83,7 @@ private final class CommandExecution: @unchecked Sendable {
     var outputData = Data()
     var exceededOutputLimit = false
     var timedOut = false
+    var cancelled = false
     var completed = false
     var continuation: CheckedContinuation<LuaCommandResult, Never>?
 
@@ -90,6 +106,12 @@ private final class CommandExecution: @unchecked Sendable {
     mutating func markTimedOut() -> Bool {
       guard !completed else { return false }
       timedOut = true
+      return true
+    }
+
+    mutating func markCancelled() -> Bool {
+      guard !completed else { return false }
+      cancelled = true
       return true
     }
 
@@ -139,6 +161,13 @@ private final class CommandExecution: @unchecked Sendable {
   func start() {
     queue.async {
       self.startOnQueue()
+    }
+  }
+
+  /// Cancels the process execution and asks the command process group to terminate.
+  func cancel() {
+    queue.async {
+      self.handleCancellation()
     }
   }
 
@@ -406,6 +435,19 @@ private final class CommandExecution: @unchecked Sendable {
     }
   }
 
+  /// Handles one cancellation event from the awaiting task.
+  private func handleCancellation() {
+    let shouldTerminate = state.withLock { state in
+      state.markCancelled()
+    }
+
+    if shouldTerminate {
+      outputReadHandle?.readabilityHandler = nil
+      terminateProcessTree(signal: SIGTERM)
+      scheduleForcedTermination()
+    }
+  }
+
   /// Finishes after the process has terminated.
   private func finish(waitResult: Int32, status: Int32, errnoValue: Int32) {
     outputReadHandle?.readabilityHandler = nil
@@ -495,7 +537,8 @@ private final class CommandExecution: @unchecked Sendable {
       (
         outputData: state.outputData,
         exceededOutputLimit: state.exceededOutputLimit,
-        timedOut: state.timedOut
+        timedOut: state.timedOut,
+        cancelled: state.cancelled
       )
     }
 
@@ -510,6 +553,14 @@ private final class CommandExecution: @unchecked Sendable {
         .field("timeout_seconds", limits.timeoutSeconds)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.timedOutStatus)
+    }
+
+    if snapshot.cancelled {
+      logger.debug(
+        "lua command cancelled",
+        .field("command_bytes", command.utf8.count)
+      )
+      return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.cancelledStatus)
     }
 
     if snapshot.exceededOutputLimit {

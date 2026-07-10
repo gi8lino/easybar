@@ -82,6 +82,30 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: markerPath))
   }
 
+  func testRunTerminatesChildProcessGroupOnCancellation() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+    let markerPath = "/tmp/easybar-lua-command-runner-\(UUID().uuidString)"
+    defer { try? FileManager.default.removeItem(atPath: markerPath) }
+
+    let task = Task {
+      await runner.run(
+        command: "sh -c 'sleep 0.5; touch \"\(markerPath)\"' & wait",
+        limits: .init(timeoutSeconds: 5, maxOutputBytes: 1024)
+      )
+    }
+
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    task.cancel()
+    let result = await task.value
+
+    try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+    XCTAssertEqual(result.status, LuaCommandRunner.Limits.cancelledStatus)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: markerPath))
+  }
+
   func testRunForceKillsCommandThatIgnoresTermination() async {
     let runner = LuaCommandRunner(
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)

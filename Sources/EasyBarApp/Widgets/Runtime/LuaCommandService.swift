@@ -25,8 +25,8 @@ actor LuaCommandService {
   private let commandRunner: LuaCommandRunner
   private let encoder = JSONEncoder()
 
-  private var activeAsyncCommandCount = 0
   private var activeAsyncCommandSessionID: UInt64?
+  private var activeAsyncCommands: [UUID: Task<Void, Never>] = [:]
 
   init(logger: ProcessLogger, luaRuntime: LuaRuntime, configManager: ConfigManager) {
     self.logger = logger
@@ -37,7 +37,7 @@ actor LuaCommandService {
 
   /// Resets async command accounting during runtime start or shutdown.
   func resetActiveAsyncCommandCount() {
-    activeAsyncCommandCount = 0
+    cancelActiveAsyncCommands()
     activeAsyncCommandSessionID = nil
   }
 
@@ -87,16 +87,16 @@ actor LuaCommandService {
     }
 
     if activeAsyncCommandSessionID != runtimeSessionID {
-      activeAsyncCommandCount = 0
+      cancelActiveAsyncCommands()
       activeAsyncCommandSessionID = runtimeSessionID
     }
 
     let maxAsyncJobs = commandSettings.maxAsyncJobs
-    guard activeAsyncCommandCount < maxAsyncJobs else {
+    guard activeAsyncCommands.count < maxAsyncJobs else {
       logger.warn(
         "lua async command rejected because limit was reached",
         .field("token", token),
-        .field("active_async_jobs", activeAsyncCommandCount),
+        .field("active_async_jobs", activeAsyncCommands.count),
         .field("max_async_jobs", maxAsyncJobs),
         .field("command_bytes", command.utf8.count)
       )
@@ -110,22 +110,25 @@ actor LuaCommandService {
       return
     }
 
-    activeAsyncCommandCount += 1
+    let commandID = UUID()
     let commandRunner = commandRunner
 
-    Task { [weak self] in
+    let task = Task { [weak self] in
       let result = await commandRunner.run(
         command: command,
         limits: commandLimits,
         environment: commandSettings.environment
       )
       await self?.sendAsyncCommandResponse(
+        commandID: commandID,
         token: token,
         result: result,
         runtimeSessionID: runtimeSessionID,
         isRuntimeSessionActive: isRuntimeSessionActive
       )
     }
+
+    activeAsyncCommands[commandID] = task
   }
 
   /// Sends one command response back into the Lua runtime.
@@ -145,11 +148,14 @@ actor LuaCommandService {
 
   /// Sends one async command response only when the originating runtime session is still active.
   private func sendAsyncCommandResponse(
+    commandID: UUID,
     token: String,
     result: LuaCommandResult,
     runtimeSessionID: UInt64,
     isRuntimeSessionActive: @escaping @Sendable (UInt64) async -> Bool
   ) async {
+    activeAsyncCommands.removeValue(forKey: commandID)
+
     guard await isRuntimeSessionActive(runtimeSessionID) else {
       logger.debug(
         "dropping stale async lua command response",
@@ -168,7 +174,16 @@ actor LuaCommandService {
       return
     }
 
-    activeAsyncCommandCount = max(0, activeAsyncCommandCount - 1)
     await sendCommandResponse(token: token, result: result)
+  }
+
+  /// Cancels and forgets all async command tasks owned by the current session.
+  private func cancelActiveAsyncCommands() {
+    let tasks = activeAsyncCommands.values
+    activeAsyncCommands.removeAll()
+
+    for task in tasks {
+      task.cancel()
+    }
   }
 }
