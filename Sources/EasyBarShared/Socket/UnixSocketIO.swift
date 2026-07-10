@@ -9,6 +9,7 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
   case createSocket(errnoValue: Int32)
   case configureNoSigPipe(fd: Int32)
   case invalidAddress(path: String, message: String)
+  case existingPathIsNotSocket(path: String)
   case bind(path: String, errnoValue: Int32)
   case listen(path: String, errnoValue: Int32)
 
@@ -23,6 +24,8 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
       return "failed to configure server socket no-sigpipe fd=\(fd)"
     case .invalidAddress(let path, let message):
       return "invalid socket path path=\(path) error=\(message)"
+    case .existingPathIsNotSocket(let path):
+      return "socket path already exists and is not a socket path=\(path)"
     case .bind(let path, let errnoValue):
       return "socket bind failed path=\(path) errno=\(errnoValue)"
     case .listen(let path, let errnoValue):
@@ -101,13 +104,24 @@ public func makeListeningUnixSocket(
     )
   }
 
-  unlink(socketPath)
+  var existingInfo = stat()
+  if lstat(socketPath, &existingInfo) == 0 {
+    guard existingInfo.st_mode & S_IFMT == S_IFSOCK else {
+      throw UnixSocketListenError.existingPathIsNotSocket(path: socketPath)
+    }
+    guard unlink(socketPath) == 0 else {
+      throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
+    }
+  } else if errno != ENOENT {
+    throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
+  }
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
     throw UnixSocketListenError.createSocket(errnoValue: errno)
   }
 
+  var didBind = false
   do {
     guard configureNoSigPipe(fd: fd) else {
       throw UnixSocketListenError.configureNoSigPipe(fd: fd)
@@ -132,6 +146,7 @@ public func makeListeningUnixSocket(
     guard bindResult == 0 else {
       throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
     }
+    didBind = true
 
     if chmod(socketPath, mode) != 0 {
       onChmodFailure?(errno)
@@ -144,7 +159,9 @@ public func makeListeningUnixSocket(
     return fd
   } catch {
     close(fd)
-    unlink(socketPath)
+    if didBind {
+      unlink(socketPath)
+    }
     throw error
   }
 }

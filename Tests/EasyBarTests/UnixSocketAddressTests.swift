@@ -41,7 +41,19 @@ final class UnixSocketAddressTests: XCTestCase {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
     let socketPath = directory.appendingPathComponent("server.sock").path
-    try "stale".write(toFile: socketPath, atomically: true, encoding: .utf8)
+    let staleFD = socket(AF_UNIX, SOCK_STREAM, 0)
+    XCTAssertGreaterThanOrEqual(staleFD, 0)
+    var staleAddress = try makeSockAddrUn(path: socketPath)
+    let staleAddressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
+    XCTAssertEqual(
+      withUnsafePointer(to: &staleAddress) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+          Darwin.bind(staleFD, $0, staleAddressLength)
+        }
+      },
+      0
+    )
+    close(staleFD)
 
     let fd = try makeListeningUnixSocket(at: socketPath, backlog: 1)
     defer {
@@ -52,5 +64,23 @@ final class UnixSocketAddressTests: XCTestCase {
     XCTAssertEqual(lstat(socketPath, &info), 0)
     XCTAssertEqual(info.st_mode & S_IFMT, S_IFSOCK)
     XCTAssertEqual(info.st_mode & 0o777, 0o600)
+  }
+
+  func testMakeListeningUnixSocketPreservesExistingRegularFile() throws {
+    let directory = URL(fileURLWithPath: "/tmp", isDirectory: true)
+      .appendingPathComponent("eb-\(UUID().uuidString.prefix(8))", isDirectory: true)
+    temporaryDirectory = directory
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let socketPath = directory.appendingPathComponent("server.sock").path
+    try "important data".write(toFile: socketPath, atomically: true, encoding: .utf8)
+
+    XCTAssertThrowsError(try makeListeningUnixSocket(at: socketPath, backlog: 1)) { error in
+      guard case UnixSocketListenError.existingPathIsNotSocket(let path) = error else {
+        return XCTFail("Expected existingPathIsNotSocket, got \(error)")
+      }
+      XCTAssertEqual(path, socketPath)
+    }
+    XCTAssertEqual(try String(contentsOfFile: socketPath, encoding: .utf8), "important data")
   }
 }
