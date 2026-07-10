@@ -51,6 +51,7 @@ public final class LineSocketServerTransport<
   private let serverLabel: String
   private let logger: ProcessLogger
   private let onSubscriberRemoved: ((Int32) -> Void)?
+  private let initialRequestTimeout: TimeInterval
   private let writerQueue: DispatchQueue
   private let state = LockedState(State())
 
@@ -59,11 +60,13 @@ public final class LineSocketServerTransport<
     socketPath: String,
     serverLabel: String,
     logger: ProcessLogger,
+    initialRequestTimeout: TimeInterval = 5,
     onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
     self.serverLabel = serverLabel
     self.logger = logger
+    self.initialRequestTimeout = max(0.001, initialRequestTimeout)
     self.onSubscriberRemoved = onSubscriberRemoved
     self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
@@ -328,21 +331,31 @@ public final class LineSocketServerTransport<
   ) {
     var lineDecoder = LineDelimitedJSONDecoder<Request>()
     var buffer = [UInt8](repeating: 0, count: 4096)
+    var isWaitingForInitialRequest = true
 
     while true {
+      if isWaitingForInitialRequest && !waitForInitialRequest(on: clientFD) {
+        closeClientConnection(clientFD)
+        return
+      }
+
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(clientFD, baseAddress, rawBuffer.count)
       }
 
       if count > 0 {
-        let disposition = handleDecodedRequests(
+        let result = handleDecodedRequests(
           lineDecoder.append(buffer.prefix(count)),
           clientFD: clientFD,
           handler: handler
         )
 
-        switch disposition {
+        if result.handledRequest {
+          isWaitingForInitialRequest = false
+        }
+
+        switch result.disposition {
         case .close:
           closeClientConnection(clientFD)
           return
@@ -376,13 +389,13 @@ public final class LineSocketServerTransport<
     _ results: [Result<Request, Error>],
     clientFD: Int32,
     handler: @escaping (Int32, Request) -> ClientDisposition
-  ) -> ClientDisposition {
+  ) -> (disposition: ClientDisposition, handledRequest: Bool) {
     for result in results {
       switch result {
       case .success(let request):
         let disposition = handler(clientFD, request)
         if disposition == .close {
-          return .close
+          return (.close, true)
         }
 
       case .failure(let error):
@@ -390,11 +403,36 @@ public final class LineSocketServerTransport<
           "\(serverLabel) request decode failed",
           .field("error", "\(error)"),
         )
-        return .close
+        return (.close, false)
       }
     }
 
-    return .keepOpen
+    return (.keepOpen, !results.isEmpty)
+  }
+
+  /// Waits for an initial request without allowing idle clients to retain a thread forever.
+  private func waitForInitialRequest(on clientFD: Int32) -> Bool {
+    var descriptor = pollfd(fd: clientFD, events: Int16(POLLIN), revents: 0)
+    let timeoutMilliseconds = Int32(min(initialRequestTimeout * 1_000, Double(Int32.max)))
+
+    while true {
+      let result = poll(&descriptor, 1, timeoutMilliseconds)
+      if result > 0 {
+        return (descriptor.revents & Int16(POLLIN)) != 0
+      }
+
+      if result < 0 && errno == EINTR {
+        continue
+      }
+
+      if result == 0 {
+        logger.debug(
+          "\(serverLabel) initial request timed out",
+          .field("fd", "\(clientFD)")
+        )
+      }
+      return false
+    }
   }
 
   /// Tracks one accepted client when the server is still running.

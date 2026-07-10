@@ -204,6 +204,65 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testServerClosesClientThatDoesNotSendInitialRequest() async throws {
+    let logger = Self.makeLogger()
+    let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      initialRequestTimeout: 0.05
+    )
+
+    server.start { _, _ in
+      XCTFail("idle client should not dispatch a request")
+      return .close
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+
+    try await waitUntil("idle client socket to time out") {
+      self.socketIsClosed(clientFD)
+    }
+  }
+
+  func testInitialRequestTimeoutDoesNotCloseSubscriber() async throws {
+    let logger = Self.makeLogger()
+    let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      initialRequestTimeout: 0.05
+    )
+
+    server.start { fd, _ in
+      server.addSubscriber((), for: fd)
+      return .keepOpen
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+    try writeLine(#"{"command":"subscribe"}"#, to: clientFD)
+
+    try await waitUntil("subscriber to stay registered") {
+      server.subscribersSnapshot().count == 1
+    }
+    try await Task.sleep(nanoseconds: 100_000_000)
+
+    XCTAssertEqual(server.subscribersSnapshot().count, 1)
+    XCTAssertFalse(socketIsClosed(clientFD))
+  }
+
   func testServerCanRestartOnSameSocketPathAfterStopWithoutClients() async throws {
     let logger = Self.makeLogger()
     let firstServer = makeServer(logger: logger)
