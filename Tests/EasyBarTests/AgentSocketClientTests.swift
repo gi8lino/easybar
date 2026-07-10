@@ -241,6 +241,50 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertEqual(response, TestMessage(kind: "pong"))
   }
 
+  func testConcurrentServerSendsPreserveMessageFraming() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+    let acceptedFD = LockedState<Int32?>(nil)
+
+    server.start { fd, _ in
+      acceptedFD.withLock { $0 = fd }
+      return .keepOpen
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+    try writeLine(#"{"command":"subscribe"}"#, to: clientFD)
+    try await waitUntil("server to accept client request") {
+      acceptedFD.withLock { $0 != nil }
+    }
+    let serverFD = try XCTUnwrap(acceptedFD.withLock { $0 })
+
+    let messages = (0..<16).map { index in
+      TestMessage(kind: "\(index):" + String(repeating: "payload\(index)", count: 8_000))
+    }
+    let sendResults = LockedState<[Bool]>([])
+
+    for message in messages {
+      DispatchQueue.global().async {
+        let sent = server.send(message, to: serverFD)
+        sendResults.withLock { $0.append(sent) }
+      }
+    }
+
+    var received: [TestMessage] = []
+    for _ in messages.indices {
+      received.append(try readMessage(from: clientFD))
+    }
+
+    XCTAssertEqual(sendResults.withLock { $0 }, Array(repeating: true, count: messages.count))
+    XCTAssertEqual(Set(received.map(\.kind)), Set(messages.map(\.kind)))
+  }
+
   private func makeServer(logger: ProcessLogger)
     -> LineSocketServerTransport<Void, TestRequest, TestMessage>
   {

@@ -50,6 +50,7 @@ public final class LineSocketServerTransport<
   private let serverLabel: String
   private let logger: ProcessLogger
   private let onSubscriberRemoved: ((Int32) -> Void)?
+  private let writerQueue: DispatchQueue
   private let state = LockedState(State())
 
   /// Creates a new Unix socket server transport.
@@ -63,6 +64,7 @@ public final class LineSocketServerTransport<
     self.serverLabel = serverLabel
     self.logger = logger
     self.onSubscriberRemoved = onSubscriberRemoved
+    self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
 
   /// Stops the server before deallocation.
@@ -165,19 +167,21 @@ public final class LineSocketServerTransport<
   /// Sends one encoded response to the given client file descriptor.
   @discardableResult
   public func send(_ response: Response, to clientFD: Int32) -> Bool {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-    encoder.dateEncodingStrategy = .iso8601
+    writerQueue.sync {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.sortedKeys]
+      encoder.dateEncodingStrategy = .iso8601
 
-    do {
-      let data = try encoder.encode(response) + Data([0x0A])
-      return writeAll(data, to: clientFD)
-    } catch {
-      logger.error(
-        "\(serverLabel) response encode failed",
-        .field("error", "\(error)"),
-      )
-      return false
+      do {
+        let data = try encoder.encode(response) + Data([0x0A])
+        return writeAll(data, to: clientFD)
+      } catch {
+        logger.error(
+          "\(serverLabel) response encode failed",
+          .field("error", "\(error)"),
+        )
+        return false
+      }
     }
   }
 
