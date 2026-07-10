@@ -4,12 +4,77 @@ import XCTest
 @testable import EasyBarApp
 
 final class AppResourceLocatorTests: XCTestCase {
+  private struct SourceResourceFixture {
+    let sourcePath: String
+    let resource: String
+    let fileExtension: String
+    let subdirectory: String?
+  }
+
   func testFindsLuaRuntimeFromSourceTree() throws {
     let url = try XCTUnwrap(
       AppResourceLocator.url(forResource: "runtime", withExtension: "lua")
     )
 
     XCTAssertTrue(url.path.hasSuffix("Sources/EasyBarApp/Lua/runtime.lua"))
+  }
+
+  func testPackagedSourceResourceFixturesExistAndResolve() throws {
+    let fixtures = [
+      SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Lua/runtime.lua",
+        resource: "runtime",
+        fileExtension: "lua",
+        subdirectory: nil
+      ),
+      SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Lua/easybar_api.lua",
+        resource: "easybar_api",
+        fileExtension: "lua",
+        subdirectory: nil
+      ),
+      SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Lua/easybar/json.lua",
+        resource: "json",
+        fileExtension: "lua",
+        subdirectory: "easybar"
+      ),
+      SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Events/event_catalog.json",
+        resource: "event_catalog",
+        fileExtension: "json",
+        subdirectory: nil
+      ),
+      SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Theme/theme_tokens.json",
+        resource: "theme_tokens",
+        fileExtension: "json",
+        subdirectory: "ThemeTokens"
+      ),
+    ]
+
+    let repositoryRootURL = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+
+    for fixture in fixtures {
+      let sourceURL = repositoryRootURL.appendingPathComponent(fixture.sourcePath)
+      XCTAssertTrue(
+        FileManager.default.fileExists(atPath: sourceURL.path),
+        "Expected source fixture at \(sourceURL.path)"
+      )
+
+      let resolvedURL = try XCTUnwrap(
+        AppResourceLocator.url(
+          forResource: fixture.resource,
+          withExtension: fixture.fileExtension,
+          subdirectory: fixture.subdirectory
+        ),
+        "Expected \(fixture.resource).\(fixture.fileExtension) to resolve"
+      )
+      XCTAssertEqual(resolvedURL.standardizedFileURL, sourceURL.standardizedFileURL)
+    }
   }
 
   func testEventCatalogCandidatesIncludePackagedAndSourceLayouts() {

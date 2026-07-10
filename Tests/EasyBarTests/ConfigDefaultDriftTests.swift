@@ -3,6 +3,15 @@ import XCTest
 @testable import EasyBarApp
 
 final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
+  func testCheckedInExampleConfigsValidateWithoutWarnings() throws {
+    for fileName in ["config.defaults.toml", "config.minimal.toml"] {
+      let configURL = repoRootURL().appendingPathComponent(fileName)
+      let loadedState = try Config.validate(configPathOverride: configURL.path)
+
+      XCTAssertEqual(loadedState.warnings, [], fileName)
+    }
+  }
+
   /// Verifies that the checked-in full defaults file matches the built-in Swift defaults.
   func testConfigDefaultsTomlMatchesBuiltInDefaults() throws {
     let missingConfigURL =

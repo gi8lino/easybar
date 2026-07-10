@@ -113,6 +113,34 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
+  func testCheckedInThemesValidateAsSelectedTheme() throws {
+    let themesDirectoryURL = repoRootURL().appendingPathComponent("themes")
+    let themeURLs = try FileManager.default
+      .contentsOfDirectory(
+        at: themesDirectoryURL,
+        includingPropertiesForKeys: nil
+      )
+      .filter { $0.pathExtension == "toml" }
+
+    XCTAssertFalse(themeURLs.isEmpty)
+
+    for themeURL in themeURLs {
+      let themeName = themeURL.deletingPathExtension().lastPathComponent
+      let configFileURL = tempDirectoryURL.appendingPathComponent("\(themeName)-theme.toml")
+      try writeConfig(
+        """
+        [theme]
+        name = "\(themeName)"
+        themes_dir = "\(themesDirectoryURL.path)"
+        """,
+        to: configFileURL
+      )
+
+      let loadedState = try Config.validate(configPathOverride: configFileURL.path)
+      XCTAssertEqual(loadedState.warnings, [], themeName)
+    }
+  }
+
   /// Verifies that invalid config color values fail during validation instead of rendering later.
   func testValidateRejectsUnknownThemeColorReference() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-color-reference.toml")
