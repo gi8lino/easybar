@@ -74,7 +74,8 @@ public final class LineSocketServerTransport<
   }
 
   /// Starts listening and dispatches decoded requests to the handler.
-  public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) {
+  @discardableResult
+  public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) -> Bool {
     let generation = state.withLock { state -> UInt64? in
       guard !state.running else { return nil }
       state.running = true
@@ -82,7 +83,7 @@ public final class LineSocketServerTransport<
       return state.generation
     }
 
-    guard let generation else { return }
+    guard let generation else { return false }
 
     guard let fd = makeListeningSocket() else {
       state.withLock { state in
@@ -90,7 +91,7 @@ public final class LineSocketServerTransport<
           state.running = false
         }
       }
-      return
+      return false
     }
 
     let shouldCancel = state.withLock { state -> Bool in
@@ -101,7 +102,7 @@ public final class LineSocketServerTransport<
 
     if shouldCancel {
       closeListeningUnixSocket(fd, at: socketPath)
-      return
+      return false
     }
 
     logger.info(
@@ -128,6 +129,8 @@ public final class LineSocketServerTransport<
     if shouldStartThread {
       thread.start()
     }
+
+    return shouldStartThread
   }
 
   /// Stops the server, closes connected clients, and removes the socket file.

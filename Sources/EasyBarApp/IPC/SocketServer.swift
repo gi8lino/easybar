@@ -51,13 +51,9 @@ final class SocketServer {
   ) {
     guard !started else { return }
 
-    started = true
-    commandHandler = handler
-    self.validateConfigHandler = validateConfigHandler
-
     let activeTransport = transport
 
-    activeTransport.start { [weak self, weak activeTransport] clientFD, request in
+    let didStart = activeTransport.start { [weak self, weak activeTransport] clientFD, request in
       guard let self, let activeTransport else {
         return .close
       }
@@ -70,6 +66,12 @@ final class SocketServer {
         transport: activeTransport
       )
     }
+
+    guard didStart else { return }
+
+    started = true
+    commandHandler = handler
+    self.validateConfigHandler = validateConfigHandler
   }
 
   /// Reloads the socket server when the configured socket path changed.
