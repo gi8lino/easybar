@@ -96,7 +96,7 @@ public final class LineSocketServerTransport<
     }
 
     if shouldCancel {
-      closeListeningSocket(fd)
+      closeListeningUnixSocket(fd, at: socketPath)
       return
     }
 
@@ -238,103 +238,26 @@ public final class LineSocketServerTransport<
 
   /// Creates and starts the listening socket.
   private func makeListeningSocket() -> Int32? {
-    let socketURL = URL(fileURLWithPath: socketPath)
-    let socketDir = socketURL.deletingLastPathComponent()
-
     do {
-      try FileManager.default.createDirectory(
-        at: socketDir,
-        withIntermediateDirectories: true
+      return try makeListeningUnixSocket(
+        at: socketPath,
+        backlog: 8,
+        onChmodFailure: { [logger, serverLabel, socketPath] errnoValue in
+          logger.warn(
+            "\(serverLabel) chmod failed",
+            .field("path", "\(socketPath)"),
+            .field("errno", "\(errnoValue)"),
+          )
+        }
       )
     } catch {
       logger.error(
-        "\(serverLabel) failed to create socket directory",
-        .field("path", "\(socketDir.path)"),
+        "\(serverLabel) listen socket setup failed",
+        .field("path", "\(socketPath)"),
         .field("error", "\(error)"),
       )
       return nil
     }
-
-    unlink(socketPath)
-
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      logger.error(
-        "\(serverLabel) failed to create socket",
-        .field("errno", "\(errno)"),
-      )
-      return nil
-    }
-
-    guard configureNoSigPipe(fd: fd) else {
-      logger.error(
-        "\(serverLabel) failed to configure server socket no-sigpipe",
-        .field("fd", "\(fd)"),
-      )
-      close(fd)
-      return nil
-    }
-
-    let addr: sockaddr_un
-    do {
-      addr = try makeSockAddrUn(path: socketPath)
-    } catch {
-      logger.error(
-        "\(serverLabel) invalid socket path",
-        .field("path", "\(socketPath)"),
-        .field("error", "\(error)"),
-      )
-      close(fd)
-      unlink(socketPath)
-      return nil
-    }
-
-    var mutableAddr = addr
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let bindResult = withUnsafePointer(to: &mutableAddr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        bind(fd, $0, addrLen)
-      }
-    }
-
-    guard bindResult == 0 else {
-      logger.error(
-        "\(serverLabel) bind failed",
-        .field("path", "\(socketPath)"),
-        .field("errno", "\(errno)"),
-      )
-      close(fd)
-      return nil
-    }
-
-    if chmod(socketPath, mode_t(0o600)) != 0 {
-      logger.warn(
-        "\(serverLabel) chmod failed",
-        .field("path", "\(socketPath)"),
-        .field("errno", "\(errno)"),
-      )
-    }
-
-    guard listen(fd, 8) == 0 else {
-      logger.error(
-        "\(serverLabel) listen failed",
-        .field("path", "\(socketPath)"),
-        .field("errno", "\(errno)"),
-      )
-      close(fd)
-      unlink(socketPath)
-      return nil
-    }
-
-    return fd
-  }
-
-  /// Closes one listening socket and removes its filesystem path.
-  private func closeListeningSocket(_ fd: Int32) {
-    Darwin.shutdown(fd, SHUT_RDWR)
-    close(fd)
-    unlink(socketPath)
   }
 
   /// Accepts client connections until the server stops.

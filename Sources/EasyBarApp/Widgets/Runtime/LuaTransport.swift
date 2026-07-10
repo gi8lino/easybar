@@ -171,68 +171,25 @@ final class LuaTransport: @unchecked Sendable {
 
   /// Creates and binds the listening Unix socket.
   private func makeListeningSocket(at socketPath: String) throws -> Int32 {
-    let socketURL = URL(fileURLWithPath: socketPath)
-    let socketDir = socketURL.deletingLastPathComponent()
-
     do {
-      try FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true)
+      let fd = try makeListeningUnixSocket(
+        at: socketPath,
+        backlog: 1,
+        onChmodFailure: { [logger, socketPath] errnoValue in
+          logger.warn(
+            "lua socket chmod failed",
+            .field("path", socketPath),
+            .field("errno", errnoValue)
+          )
+        }
+      )
+      logger.debug("lua socket listening", .field("socket_path", socketPath))
+      return fd
     } catch {
       throw TransportError.startupFailed(
-        "failed to create lua socket directory path=\(socketDir.path) error=\(error)"
+        "lua socket setup failed path=\(socketPath) error=\(error)"
       )
     }
-
-    unlink(socketPath)
-
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      throw TransportError.startupFailed("failed to create lua socket errno=\(errno)")
-    }
-
-    guard configureNoSigPipe(fd: fd) else {
-      close(fd)
-      throw TransportError.startupFailed("failed to configure lua socket no-sigpipe fd=\(fd)")
-    }
-
-    let addr: sockaddr_un
-    do {
-      addr = try makeSockAddrUn(path: socketPath)
-    } catch {
-      close(fd)
-      unlink(socketPath)
-      throw TransportError.startupFailed("invalid lua socket path path=\(socketPath) error=\(error)")
-    }
-
-    var mutableAddr = addr
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let bindResult = withUnsafePointer(to: &mutableAddr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        bind(fd, $0, addrLen)
-      }
-    }
-
-    guard bindResult == 0 else {
-      close(fd)
-      throw TransportError.startupFailed("lua socket bind failed path=\(socketPath) errno=\(errno)")
-    }
-
-    if chmod(socketPath, mode_t(0o600)) != 0 {
-      logger.warn(
-        "lua socket chmod failed",
-        .field("path", socketPath),
-        .field("errno", errno)
-      )
-    }
-
-    guard listen(fd, 1) == 0 else {
-      close(fd)
-      unlink(socketPath)
-      throw TransportError.startupFailed("lua socket listen failed path=\(socketPath) errno=\(errno)")
-    }
-
-    logger.debug("lua socket listening", .field("socket_path", socketPath))
-    return fd
   }
 
   /// Accepts one runtime connection when still current.

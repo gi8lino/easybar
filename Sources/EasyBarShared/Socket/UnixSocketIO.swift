@@ -3,6 +3,39 @@ import Foundation
 
 private let socketWriteRetryTimeoutMilliseconds: Int32 = 1_000
 
+/// Errors produced while preparing Unix-domain server sockets.
+public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedError {
+  case createDirectory(path: String, message: String)
+  case createSocket(errnoValue: Int32)
+  case configureNoSigPipe(fd: Int32)
+  case invalidAddress(path: String, message: String)
+  case bind(path: String, errnoValue: Int32)
+  case listen(path: String, errnoValue: Int32)
+
+  /// Printable socket setup error.
+  public var description: String {
+    switch self {
+    case .createDirectory(let path, let message):
+      return "failed to create socket directory path=\(path) error=\(message)"
+    case .createSocket(let errnoValue):
+      return "failed to create socket errno=\(errnoValue)"
+    case .configureNoSigPipe(let fd):
+      return "failed to configure server socket no-sigpipe fd=\(fd)"
+    case .invalidAddress(let path, let message):
+      return "invalid socket path path=\(path) error=\(message)"
+    case .bind(let path, let errnoValue):
+      return "socket bind failed path=\(path) errno=\(errnoValue)"
+    case .listen(let path, let errnoValue):
+      return "socket listen failed path=\(path) errno=\(errnoValue)"
+    }
+  }
+
+  /// User-facing socket setup error.
+  public var errorDescription: String? {
+    description
+  }
+}
+
 /// Configures one Unix socket file descriptor to suppress SIGPIPE on write.
 @discardableResult
 public func configureNoSigPipe(fd: Int32) -> Bool {
@@ -44,6 +77,83 @@ public func writeAll(_ data: Data, to fd: Int32) -> Bool {
 
     return true
   }
+}
+
+/// Creates, binds, chmods, and starts one Unix-domain listening socket.
+public func makeListeningUnixSocket(
+  at socketPath: String,
+  backlog: Int32,
+  mode: mode_t = 0o600,
+  onChmodFailure: ((Int32) -> Void)? = nil
+) throws -> Int32 {
+  let socketURL = URL(fileURLWithPath: socketPath)
+  let socketDir = socketURL.deletingLastPathComponent()
+
+  do {
+    try FileManager.default.createDirectory(
+      at: socketDir,
+      withIntermediateDirectories: true
+    )
+  } catch {
+    throw UnixSocketListenError.createDirectory(
+      path: socketDir.path,
+      message: error.localizedDescription
+    )
+  }
+
+  unlink(socketPath)
+
+  let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+  guard fd >= 0 else {
+    throw UnixSocketListenError.createSocket(errnoValue: errno)
+  }
+
+  do {
+    guard configureNoSigPipe(fd: fd) else {
+      throw UnixSocketListenError.configureNoSigPipe(fd: fd)
+    }
+
+    let addr: sockaddr_un
+    do {
+      addr = try makeSockAddrUn(path: socketPath)
+    } catch {
+      throw UnixSocketListenError.invalidAddress(path: socketPath, message: "\(error)")
+    }
+
+    var mutableAddr = addr
+    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
+
+    let bindResult = withUnsafePointer(to: &mutableAddr) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        bind(fd, $0, addrLen)
+      }
+    }
+
+    guard bindResult == 0 else {
+      throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
+    }
+
+    if chmod(socketPath, mode) != 0 {
+      onChmodFailure?(errno)
+    }
+
+    guard listen(fd, backlog) == 0 else {
+      throw UnixSocketListenError.listen(path: socketPath, errnoValue: errno)
+    }
+
+    return fd
+  } catch {
+    close(fd)
+    unlink(socketPath)
+    throw error
+  }
+}
+
+/// Closes one Unix-domain listening socket and removes its filesystem path.
+public func closeListeningUnixSocket(_ fd: Int32, at socketPath: String) {
+  Darwin.shutdown(fd, SHUT_RDWR)
+  close(fd)
+  unlink(socketPath)
 }
 
 /// Returns whether one socket write failed because the descriptor would block.
