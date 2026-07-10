@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import TOMLKit
 
@@ -8,12 +9,24 @@ extension Config {
     let reader = configReader(table: toml, path: "")
     let app = try reader.section("app")
 
+    let configuredRuntimeDirectory = try app.expandedPath(
+      "runtime_dir",
+      fallback: runtimeDirectory
+    )
+    let resolvedRuntimeDirectoryPath = resolvedRuntimeDirectory(
+      configuredPath: configuredRuntimeDirectory
+    )
+    runtimeDirectory = resolvedRuntimeDirectoryPath
+
     let resolvedWidgetsPath = try app.expandedPath("widgets_dir", fallback: widgetsPath)
     widgetsPath = resolvedWidgetsPath
 
     luaPath = try app.string("lua_path", fallback: luaPath)
 
-    let resolvedLuaSocketPath = try app.expandedPath("lua_socket_path", fallback: luaSocketPath)
+    let resolvedLuaSocketPath = try app.expandedPath(
+      "lua_socket_path",
+      fallback: SharedPathDefaults.luaSocketPath(in: resolvedRuntimeDirectoryPath)
+    )
     luaSocketPath = resolvedLuaSocketPath
 
     if let configuredEnvironment = try app.optionalStringTable("env") {
@@ -22,7 +35,10 @@ extension Config {
 
     watchConfigFile = try app.bool("watch_config", fallback: watchConfigFile)
 
-    let resolvedLockDirectory = try app.expandedPath("lock_dir", fallback: lockDirectory)
+    let resolvedLockDirectory = try app.expandedPath(
+      "lock_dir",
+      fallback: resolvedRuntimeDirectoryPath
+    )
     lockDirectory = resolvedLockDirectory
 
     let resolvedWidgetEditorStubPath = try app.expandedPath(
@@ -55,6 +71,12 @@ extension Config {
       "max_async_jobs",
       fallback: luaCommandMaxAsyncJobs,
       minimum: 1
+    )
+
+    registerDirectoryRequirement(
+      for: "app.runtime_dir",
+      path: resolvedRuntimeDirectoryPath,
+      kind: .directory
     )
 
     registerDirectoryRequirement(
@@ -120,7 +142,7 @@ extension Config {
 
     let resolvedCalendarSocketPath = try calendar.expandedPath(
       "socket_path",
-      fallback: calendarAgentSocketPath
+      fallback: SharedPathDefaults.calendarAgentSocketPath(in: runtimeDirectory)
     )
     calendarAgentSocketPath = resolvedCalendarSocketPath
 
@@ -135,7 +157,7 @@ extension Config {
 
     let resolvedNetworkSocketPath = try network.expandedPath(
       "socket_path",
-      fallback: networkAgentSocketPath
+      fallback: SharedPathDefaults.networkAgentSocketPath(in: runtimeDirectory)
     )
     networkAgentSocketPath = resolvedNetworkSocketPath
 

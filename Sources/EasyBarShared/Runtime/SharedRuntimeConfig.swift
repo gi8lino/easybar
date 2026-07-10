@@ -17,9 +17,15 @@ public struct SharedRuntimeConfig {
 
     let app = try resolvedAppConfig(from: reader)
     let logging = try resolvedLoggingConfig(from: reader)
-    let easyBar = try resolvedEasyBarConfig(from: reader)
-    let calendarAgent = try resolvedCalendarAgentConfig(from: reader)
-    let networkAgent = try resolvedNetworkAgentConfig(from: reader)
+    let easyBar = resolvedEasyBarConfig(runtimeDirectory: app.runtimeDirectory)
+    let calendarAgent = try resolvedCalendarAgentConfig(
+      from: reader,
+      runtimeDirectory: app.runtimeDirectory
+    )
+    let networkAgent = try resolvedNetworkAgentConfig(
+      from: reader,
+      runtimeDirectory: app.runtimeDirectory
+    )
 
     return SharedRuntimeConfig(
       configPath: configPath,
@@ -33,19 +39,26 @@ public struct SharedRuntimeConfig {
 
   /// Resolves runtime defaults from environment overrides and built-in fallbacks only.
   public static func environmentDefaults() -> SharedRuntimeConfig {
-    SharedRuntimeConfig(
+    let app = resolvedAppEnvironmentDefaults()
+
+    return SharedRuntimeConfig(
       configPath: resolvedConfigPath(),
-      app: resolvedAppEnvironmentDefaults(),
+      app: app,
       logging: resolvedLoggingEnvironmentDefaults(),
-      easyBar: resolvedEasyBarEnvironmentDefaults(),
-      calendarAgent: resolvedCalendarAgentEnvironmentDefaults(),
-      networkAgent: resolvedNetworkAgentEnvironmentDefaults()
+      easyBar: resolvedEasyBarConfig(runtimeDirectory: app.runtimeDirectory),
+      calendarAgent: resolvedCalendarAgentEnvironmentDefaults(
+        runtimeDirectory: app.runtimeDirectory
+      ),
+      networkAgent: resolvedNetworkAgentEnvironmentDefaults(
+        runtimeDirectory: app.runtimeDirectory
+      )
     )
   }
 }
 
 /// Resolved app-level values shared by helper processes.
 public struct SharedAppRuntimeConfig {
+  public let runtimeDirectory: String
   public let widgetsPath: String
   public let lockDirectory: String
   public let luaSocketPath: String
@@ -53,11 +66,13 @@ public struct SharedAppRuntimeConfig {
 
   /// Creates one app runtime config.
   public init(
+    runtimeDirectory: String,
     widgetsPath: String,
     lockDirectory: String,
     luaSocketPath: String,
     widgetEditorStubPath: String
   ) {
+    self.runtimeDirectory = runtimeDirectory
     self.widgetsPath = widgetsPath
     self.lockDirectory = lockDirectory
     self.luaSocketPath = luaSocketPath

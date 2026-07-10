@@ -7,12 +7,22 @@ EasyBar uses two helper agents:
 
 Both helper agents are enabled by default.
 
+Agent sockets are derived from `[app].runtime_dir` unless explicitly overridden.
+
 ## Calendar agent
 
 ```toml
 [agents.calendar]
 enabled = true
-socket_path = "/tmp/EasyBar/calendar-agent.sock"
+```
+
+The default socket is `calendar-agent.sock` inside `app.runtime_dir`.
+
+Use `socket_path` only when the calendar agent needs a separate location:
+
+```toml
+[agents.calendar]
+socket_path = "/custom/runtime/calendar-agent.sock"
 ```
 
 The calendar agent owns EventKit access, calendar permission handling, event snapshots, and event mutations.
@@ -22,9 +32,17 @@ The calendar agent owns EventKit access, calendar permission handling, event sna
 ```toml
 [agents.network]
 enabled = true
-socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
 allow_unauthorized_non_sensitive_fields = false
+```
+
+The default socket is `network-agent.sock` inside `app.runtime_dir`.
+
+Use `socket_path` only when the network agent needs a separate location:
+
+```toml
+[agents.network]
+socket_path = "/custom/runtime/network-agent.sock"
 ```
 
 The network agent owns Wi-Fi and network observation.

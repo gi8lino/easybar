@@ -285,7 +285,7 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
 
     let recorder = RuntimeUpdateRecorder()
     var environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
-    environment[ConfigSnapshot.luaLoggingDirectoryEnvironmentKey] = loggingDirectoryURL.path
+    environment[SharedEnvironmentKeys.luaLoggingDirectory] = loggingDirectoryURL.path
 
     let runtime = try RuntimeProcess(
       runtimePath: runtimePath,
@@ -365,7 +365,7 @@ final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
 
     let recorder = RuntimeUpdateRecorder()
     var environment = try luaRuntimeEnvironment(for: widgetsDirectoryURL)
-    environment[ConfigSnapshot.luaLoggingDirectoryEnvironmentKey] = loggingDirectoryURL.path
+    environment[SharedEnvironmentKeys.luaLoggingDirectory] = loggingDirectoryURL.path
 
     let runtime = try RuntimeProcess(
       runtimePath: runtimePath,

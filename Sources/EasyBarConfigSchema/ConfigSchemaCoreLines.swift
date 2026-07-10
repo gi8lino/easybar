@@ -12,20 +12,25 @@ extension ConfigSchemaRegistry {
       description: "Path to the Lua executable EasyBar uses for scripted widgets.",
     ),
     entry(
+      key: "runtime_dir",
+      value: "\"~/.local/state/easybar/runtime\"",
+      description: "Base directory used for EasyBar sockets and lock files.",
+    ),
+    optionalEntry(
       key: "lua_socket_path",
-      value: "\"$EASYBAR_RUNTIME_DIR/lua-runtime.sock\"",
+      value: "\"~/.local/state/easybar/runtime/lua-runtime.sock\"",
       description:
-        "Unix socket path used by EasyBar and the Lua widget runtime transport. $EASYBAR_RUNTIME_DIR expands to EasyBar's user-scoped temporary runtime directory.",
+        "Optional Lua transport socket override. Defaults to lua-runtime.sock inside runtime_dir.",
     ),
     entry(
       key: "watch_config",
       value: "true",
       description: "Reloads EasyBar automatically when config.toml changes.",
     ),
-    entry(
+    optionalEntry(
       key: "lock_dir",
-      value: "\"$EASYBAR_RUNTIME_DIR\"",
-      description: "Directory that contains lock files used by EasyBar.",
+      value: "\"~/.local/state/easybar/runtime\"",
+      description: "Optional lock-directory override. Defaults to runtime_dir.",
     ),
     entry(
       key: "widget_editor_stub_path",
@@ -101,10 +106,11 @@ extension ConfigSchemaRegistry {
       description:
         "Starts the calendar socket client in EasyBar and enables the calendar helper contract.",
     ),
-    entry(
+    optionalEntry(
       key: "socket_path",
-      value: "\"$EASYBAR_RUNTIME_DIR/calendar-agent.sock\"",
-      description: "Unix socket path used by EasyBar and the calendar agent.",
+      value: "\"~/.local/state/easybar/runtime/calendar-agent.sock\"",
+      description:
+        "Optional calendar-agent socket override. Defaults to calendar-agent.sock inside app.runtime_dir.",
     ),
     .blank,
     section(name: "agents.network"),
@@ -114,10 +120,11 @@ extension ConfigSchemaRegistry {
       description:
         "Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.",
     ),
-    entry(
+    optionalEntry(
       key: "socket_path",
-      value: "\"$EASYBAR_RUNTIME_DIR/network-agent.sock\"",
-      description: "Unix socket path used by EasyBar and the network agent.",
+      value: "\"~/.local/state/easybar/runtime/network-agent.sock\"",
+      description:
+        "Optional network-agent socket override. Defaults to network-agent.sock inside app.runtime_dir.",
     ),
     entry(
       key: "refresh_interval_seconds",

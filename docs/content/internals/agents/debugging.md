@@ -54,7 +54,7 @@ You can talk to agents directly.
 Ping the network agent:
 
 ```bash
-echo '{"command":"ping"}' | nc -U /tmp/EasyBar/network-agent.sock
+echo '{"command":"ping"}' | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 Expected response:
@@ -66,26 +66,26 @@ Expected response:
 Fetch one Wi-Fi field:
 
 ```bash
-echo '{"command":"fetch","fields":["wifi.ssid"]}' | nc -U /tmp/EasyBar/network-agent.sock
+echo '{"command":"fetch","fields":["wifi.ssid"]}' | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 Fetch Wi-Fi details and primary IP addresses:
 
 ```bash
 echo '{"command":"fetch","fields":["wifi.ssid","network.ipv4_address","network.ipv6_address","wifi.rssi","wifi.link_quality"]}' \
-  | nc -U /tmp/EasyBar/network-agent.sock
+  | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 Fetch all Wi-Fi fields:
 
 ```bash
-echo '{"command":"fetch","fields":["wifi.*"]}' | nc -U /tmp/EasyBar/network-agent.sock
+echo '{"command":"fetch","fields":["wifi.*"]}' | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 Fetch all network fields:
 
 ```bash
-echo '{"command":"fetch","fields":["network.*"]}' | nc -U /tmp/EasyBar/network-agent.sock
+echo '{"command":"fetch","fields":["network.*"]}' | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 ## 4. Common problems
@@ -105,7 +105,7 @@ Check config:
 ```toml
 [agents.network]
 enabled = true
-socket_path = "/tmp/EasyBar/network-agent.sock"
+socket_path = "~/.local/state/easybar/runtime/network-agent.sock"
 ```
 
 Restart the agent:
@@ -147,7 +147,7 @@ Check the raw agent output first:
 
 ```bash
 echo '{"command":"fetch","fields":["network.ipv4_address","network.ipv6_address"]}' \
-  | nc -U /tmp/EasyBar/network-agent.sock
+  | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 If the raw fields are missing, the issue is in the network agent or system network state.
@@ -235,7 +235,7 @@ Useful for debugging mapping issues:
 
 ```bash
 echo '{"command":"fetch","fields":["wifi.ssid","network.primary_interface_is_tunnel","network.ipv4_address","network.ipv6_address"]}' \
-  | nc -U /tmp/EasyBar/network-agent.sock
+  | nc -U ~/.local/state/easybar/runtime/network-agent.sock
 ```
 
 Compare:

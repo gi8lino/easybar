@@ -6,6 +6,7 @@ import XCTest
 final class SharedRuntimeConfigTests: XCTestCase {
   private let environmentKeys = [
     SharedEnvironmentKeys.configPath,
+    SharedEnvironmentKeys.runtimeDirectory,
     SharedEnvironmentKeys.loggingLevel,
   ]
 
@@ -18,6 +19,9 @@ final class SharedRuntimeConfigTests: XCTestCase {
 
     originalEnvironment = environmentKeys.reduce(into: [:]) { result, key in
       result[key] = ProcessInfo.processInfo.environment[key]
+    }
+    for key in environmentKeys {
+      setEnvironmentValue(nil, for: key)
     }
     tempDirectoryURL = try makeTemporaryDirectory()
   }
@@ -55,6 +59,7 @@ final class SharedRuntimeConfigTests: XCTestCase {
       directory = "\(loggingDirectory)"
 
       [app]
+      runtime_dir = "\(runtimeDirectory)"
       lua_socket_path = "\(luaSocketPath)"
 
       [agents.calendar]
@@ -74,27 +79,24 @@ final class SharedRuntimeConfigTests: XCTestCase {
     XCTAssertEqual(runtime.configPath, configFileURL.path)
     XCTAssertEqual(runtime.logging.level, .trace)
     XCTAssertEqual(runtime.logging.directory, loggingDirectory)
+    XCTAssertEqual(runtime.app.runtimeDirectory, runtimeDirectory)
+    XCTAssertEqual(
+      runtime.easyBar.socketPath, SharedPathDefaults.easyBarSocketPath(in: runtimeDirectory))
     XCTAssertEqual(runtime.app.luaSocketPath, luaSocketPath)
     XCTAssertEqual(runtime.calendarAgent.socketPath, calendarSocketPath)
     XCTAssertEqual(runtime.networkAgent.socketPath, networkSocketPath)
     XCTAssertEqual(runtime.networkAgent.refreshIntervalSeconds, 90)
   }
 
-  /// Verifies that the portable runtime directory token resolves to the user-scoped temp dir.
-  func testLoadExpandsRuntimeDirectoryToken() throws {
-    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-token.toml")
+  /// Verifies that one configured runtime directory drives every derived runtime path.
+  func testLoadDerivesRuntimePathsFromConfiguredRuntimeDirectory() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-directory.toml")
+    let runtimeDirectory = tempDirectoryURL.appendingPathComponent("runtime").path
 
     try writeConfig(
       """
       [app]
-      lock_dir = "$EASYBAR_RUNTIME_DIR"
-      lua_socket_path = "$EASYBAR_RUNTIME_DIR/lua.sock"
-
-      [agents.calendar]
-      socket_path = "$EASYBAR_RUNTIME_DIR/calendar.sock"
-
-      [agents.network]
-      socket_path = "$EASYBAR_RUNTIME_DIR/network.sock"
+      runtime_dir = "\(runtimeDirectory)"
       """,
       to: configFileURL
     )
@@ -102,20 +104,63 @@ final class SharedRuntimeConfigTests: XCTestCase {
     setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
 
     let runtime = try SharedRuntimeConfig.load()
-    let runtimeDirectory = SharedPathDefaults.defaultRuntimeDirectory()
 
-    XCTAssertEqual(runtime.app.lockDirectory, runtimeDirectory.path)
+    XCTAssertEqual(runtime.app.runtimeDirectory, runtimeDirectory)
+    XCTAssertEqual(runtime.app.lockDirectory, runtimeDirectory)
     XCTAssertEqual(
       runtime.app.luaSocketPath,
-      runtimeDirectory.appendingPathComponent("lua.sock").path
+      SharedPathDefaults.luaSocketPath(in: runtimeDirectory)
+    )
+    XCTAssertEqual(
+      runtime.easyBar.socketPath,
+      SharedPathDefaults.easyBarSocketPath(in: runtimeDirectory)
     )
     XCTAssertEqual(
       runtime.calendarAgent.socketPath,
-      runtimeDirectory.appendingPathComponent("calendar.sock").path
+      SharedPathDefaults.calendarAgentSocketPath(in: runtimeDirectory)
     )
     XCTAssertEqual(
       runtime.networkAgent.socketPath,
-      runtimeDirectory.appendingPathComponent("network.sock").path
+      SharedPathDefaults.networkAgentSocketPath(in: runtimeDirectory)
+    )
+  }
+
+  /// Verifies that EASYBAR_RUNTIME_DIR overrides app.runtime_dir and all derived paths.
+  func testLoadPrefersRuntimeDirectoryEnvironmentOverride() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-directory-env.toml")
+    let configuredDirectory = tempDirectoryURL.appendingPathComponent("configured").path
+    let environmentDirectory = tempDirectoryURL.appendingPathComponent("environment").path
+
+    try writeConfig(
+      """
+      [app]
+      runtime_dir = "\(configuredDirectory)"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue(environmentDirectory, for: SharedEnvironmentKeys.runtimeDirectory)
+
+    let runtime = try SharedRuntimeConfig.load()
+
+    XCTAssertEqual(runtime.app.runtimeDirectory, environmentDirectory)
+    XCTAssertEqual(runtime.app.lockDirectory, environmentDirectory)
+    XCTAssertEqual(
+      runtime.app.luaSocketPath,
+      SharedPathDefaults.luaSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      runtime.easyBar.socketPath,
+      SharedPathDefaults.easyBarSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      runtime.calendarAgent.socketPath,
+      SharedPathDefaults.calendarAgentSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      runtime.networkAgent.socketPath,
+      SharedPathDefaults.networkAgentSocketPath(in: environmentDirectory)
     )
   }
 

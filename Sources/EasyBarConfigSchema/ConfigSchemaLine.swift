@@ -11,6 +11,7 @@ extension ConfigSchemaRegistry {
     case comment(String)
     case section(name: String, commented: Bool, prefix: String)
     case entry(key: String, value: String, description: String, commented: Bool, prefix: String)
+    case optionalEntry(key: String, value: String, description: String)
   }
 
   static func section(
@@ -34,6 +35,18 @@ extension ConfigSchemaRegistry {
       description: description,
       commented: commented,
       prefix: prefix
+    )
+  }
+
+  static func optionalEntry(
+    key: String,
+    value: String,
+    description: String
+  ) -> Line {
+    .optionalEntry(
+      key: key,
+      value: value,
+      description: description
     )
   }
 }

@@ -16,7 +16,7 @@ struct AppStartupDiagnostics {
     logProcessStartup(
       processName: "easybar",
       configPath: services.config.configPath,
-      socketPath: SharedPathDefaults.defaultEasyBarSocketPath,
+      socketPath: services.config.easyBarSocketPath,
       logger: logger
     )
 
@@ -33,6 +33,7 @@ struct AppStartupDiagnostics {
 
   /// Logs config-derived startup details.
   private func logConfigDetails(services: AppServices) {
+    logger.debug("config details", .field("runtime_dir", services.config.runtimeDirectory))
     logger.debug("config details", .field("widgets_path", services.config.widgetsPath))
     logger.debug("config details", .field("lua_path", services.config.luaPath))
     logger.debug("config details", .field("lua_socket_path", services.config.luaSocketPath))
@@ -85,12 +86,18 @@ struct AppStartupDiagnostics {
   private func logEnvironmentDetails() {
     let env = ProcessInfo.processInfo.environment
     let configOverride = env[SharedEnvironmentKeys.configPath] ?? ""
+    let runtimeDirectoryOverride = env[SharedEnvironmentKeys.runtimeDirectory] ?? ""
     let logLevelOverride = env[SharedEnvironmentKeys.loggingLevel] ?? ""
 
     logger.debug(
       "environment override",
       .field("key", SharedEnvironmentKeys.configPath),
       .field("value_set", !configOverride.isEmpty)
+    )
+    logger.debug(
+      "environment override",
+      .field("key", SharedEnvironmentKeys.runtimeDirectory),
+      .field("value_set", !runtimeDirectoryOverride.isEmpty)
     )
     logger.debug(
       "environment override",

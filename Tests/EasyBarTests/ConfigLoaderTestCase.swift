@@ -8,6 +8,7 @@ import XCTest
 class ConfigLoaderTestCase: XCTestCase {
   let environmentKeys = [
     SharedEnvironmentKeys.configPath,
+    SharedEnvironmentKeys.runtimeDirectory,
     SharedEnvironmentKeys.loggingLevel,
   ]
 
@@ -19,13 +20,22 @@ class ConfigLoaderTestCase: XCTestCase {
   override func setUpWithError() throws {
     try super.setUpWithError()
 
-    let config = Config.makeUnloadedConfig()
-    originalSnapshot = config.snapshot()
     originalEnvironment = environmentKeys.reduce(into: [:]) { result, key in
       result[key] = ProcessInfo.processInfo.environment[key]
     }
+    for key in environmentKeys {
+      setEnvironmentValue(nil, for: key)
+    }
 
     tempDirectoryURL = try makeTemporaryDirectory()
+    setEnvironmentValue(
+      tempDirectoryURL.appendingPathComponent("runtime", isDirectory: true).path,
+      for: SharedEnvironmentKeys.runtimeDirectory
+    )
+
+    let config = Config.makeUnloadedConfig()
+    originalSnapshot = config.snapshot()
+
     try copyThemeFixtures(
       to: tempDirectoryURL.appendingPathComponent("themes", isDirectory: true)
     )

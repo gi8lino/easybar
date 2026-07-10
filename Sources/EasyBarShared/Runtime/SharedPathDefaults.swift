@@ -2,24 +2,40 @@ import Foundation
 
 /// Shared filesystem and runtime defaults used across EasyBar targets.
 public enum SharedPathDefaults {
-  public static let runtimeDirectoryToken = "$EASYBAR_RUNTIME_DIR"
-
   static let defaultConfigRelativePath = ".config/easybar/config.toml"
   static let defaultWidgetsRelativePath = ".config/easybar/widgets"
+  static let defaultRuntimeDirectoryRelativePath = ".local/state/easybar/runtime"
   static let defaultLoggingDirectoryRelativePath = ".local/state/easybar"
   static let defaultWidgetEditorStubRelativePath = ".local/share/easybar/easybar_api.lua"
 
   public static let defaultLuaPath = "lua"
-  public static let defaultEasyBarSocketPath =
-    defaultRuntimeDirectory().appendingPathComponent("easybar.sock").path
   public static let defaultLuaEnvironment: [String: String] = [
-    "PATH": "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    SharedEnvironmentKeys.path: "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   ]
 
-  /// Returns the user-scoped runtime directory for sockets and locks.
+  /// Returns the user-scoped default runtime directory for sockets and locks.
   public static func defaultRuntimeDirectory() -> URL {
-    FileManager.default.temporaryDirectory
-      .appendingPathComponent("EasyBar", isDirectory: true)
+    homeRelativePath(defaultRuntimeDirectoryRelativePath)
+  }
+
+  /// Returns the EasyBar control socket path derived from one runtime directory.
+  public static func easyBarSocketPath(in runtimeDirectory: String) -> String {
+    runtimePath("easybar.sock", in: runtimeDirectory)
+  }
+
+  /// Returns the Lua transport socket path derived from one runtime directory.
+  public static func luaSocketPath(in runtimeDirectory: String) -> String {
+    runtimePath("lua-runtime.sock", in: runtimeDirectory)
+  }
+
+  /// Returns the calendar-agent socket path derived from one runtime directory.
+  public static func calendarAgentSocketPath(in runtimeDirectory: String) -> String {
+    runtimePath("calendar-agent.sock", in: runtimeDirectory)
+  }
+
+  /// Returns the network-agent socket path derived from one runtime directory.
+  public static func networkAgentSocketPath(in runtimeDirectory: String) -> String {
+    runtimePath("network-agent.sock", in: runtimeDirectory)
   }
 
   /// Returns an absolute path by resolving one home-relative path.
@@ -30,21 +46,28 @@ public enum SharedPathDefaults {
 
   /// Returns the default config path in the current user's home directory.
   public static func defaultConfigPath() -> URL {
-    return homeRelativePath(defaultConfigRelativePath)
+    homeRelativePath(defaultConfigRelativePath)
   }
 
   /// Returns the default widgets path in the current user's home directory.
   public static func defaultWidgetsPath() -> URL {
-    return homeRelativePath(defaultWidgetsRelativePath)
+    homeRelativePath(defaultWidgetsRelativePath)
   }
 
   /// Returns the default logging directory in the current user's home directory.
   public static func defaultLoggingDirectory() -> URL {
-    return homeRelativePath(defaultLoggingDirectoryRelativePath)
+    homeRelativePath(defaultLoggingDirectoryRelativePath)
   }
 
   /// Returns the default widget editor stub path in the current user's home directory.
   public static func defaultWidgetEditorStubPath() -> URL {
-    return homeRelativePath(defaultWidgetEditorStubRelativePath)
+    homeRelativePath(defaultWidgetEditorStubRelativePath)
+  }
+
+  /// Returns one child path within the provided runtime directory.
+  private static func runtimePath(_ component: String, in runtimeDirectory: String) -> String {
+    URL(fileURLWithPath: runtimeDirectory, isDirectory: true)
+      .appendingPathComponent(component)
+      .path
   }
 }

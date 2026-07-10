@@ -35,6 +35,15 @@ final class Config: ObservableObject {
 
   // MARK: - App accessors
 
+  var runtimeDirectory: String {
+    get { appSection.runtimeDirectory }
+    set { appSection.runtimeDirectory = newValue }
+  }
+
+  var easyBarSocketPath: String {
+    SharedPathDefaults.easyBarSocketPath(in: runtimeDirectory)
+  }
+
   var widgetsPath: String {
     get { appSection.widgetsPath }
     set { appSection.widgetsPath = newValue }
@@ -244,6 +253,7 @@ final class Config: ObservableObject {
     self.configPathOverride = expandedPath(configPathOverride)
 
     appSection = .init(
+      runtimeDirectory: "",
       widgetsPath: "",
       luaPath: SharedPathDefaults.defaultLuaPath,
       luaSocketPath: "",

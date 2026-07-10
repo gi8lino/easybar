@@ -33,17 +33,23 @@ public func timeIntervalEnvironmentValue(named name: String) -> TimeInterval? {
   return TimeInterval(value)
 }
 
-/// Expands supported EasyBar path tokens and `~`, then returns one non-empty path string.
+/// Expands `~`, then returns one non-empty path string.
 public func expandedPath(_ value: String?) -> String? {
   guard let value, !value.isEmpty else { return nil }
-  let tokenExpanded = value.replacingOccurrences(
-    of: SharedPathDefaults.runtimeDirectoryToken,
-    with: SharedPathDefaults.defaultRuntimeDirectory().path
-  )
-  return NSString(string: tokenExpanded).expandingTildeInPath
+  return NSString(string: value).expandingTildeInPath
 }
 
 /// Returns one expanded path environment value when present.
 public func expandedEnvironmentPath(named name: String) -> String? {
-  return expandedPath(stringEnvironmentValue(named: name))
+  expandedPath(stringEnvironmentValue(named: name))
+}
+
+/// Resolves the canonical runtime directory.
+///
+/// `EASYBAR_RUNTIME_DIR` takes precedence over `app.runtime_dir`; the built-in
+/// path is used only when neither is set.
+public func resolvedRuntimeDirectory(configuredPath: String? = nil) -> String {
+  expandedEnvironmentPath(named: SharedEnvironmentKeys.runtimeDirectory)
+    ?? expandedPath(configuredPath)
+    ?? SharedPathDefaults.defaultRuntimeDirectory().path
 }

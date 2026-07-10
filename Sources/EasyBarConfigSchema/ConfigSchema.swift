@@ -64,7 +64,7 @@ extension ConfigSchemaRegistry {
       case .section(let name, _, _):
         currentSection = name
         addSection(name)
-      case .entry(let key, _, _, _, _):
+      case .entry(let key, _, _, _, _), .optionalEntry(let key, _, _):
         addKey(section: currentSection, key: key)
       case .blank, .comment:
         continue

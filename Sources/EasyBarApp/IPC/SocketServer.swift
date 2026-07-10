@@ -29,7 +29,9 @@ final class SocketServer {
   /// Creates a socket server bound to the configured socket path.
   init(
     logger: ProcessLogger,
-    socketPath: String = SharedPathDefaults.defaultEasyBarSocketPath,
+    socketPath: String = SharedPathDefaults.easyBarSocketPath(
+      in: resolvedRuntimeDirectory()
+    ),
     metricsCoordinator: MetricsCoordinator = MetricsCoordinator.shared
   ) {
     self.logger = logger

@@ -400,6 +400,9 @@ actor RuntimeCoordinator {
 
   /// Starts the IPC socket server.
   private func startSocketServer() async {
+    let socketPath = await configManager.easyBarSocketPath()
+    await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
+
     await socketCommandAdapter.start { [weak self] command in
       await self?.handleSocketCommand(command)
     } validateConfigHandler: { [weak self] configPathOverride in

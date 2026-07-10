@@ -12,15 +12,16 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `app`
 
-| Key                       | Default                                    | Description                                                                                                                                               |
-| ------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `widgets_dir`             | `"~/.config/easybar/widgets"`              | Directory that contains your custom Lua widget files.                                                                                                     |
-| `lua_path`                | `"lua"`                                    | Path to the Lua executable EasyBar uses for scripted widgets.                                                                                             |
-| `lua_socket_path`         | `"$EASYBAR_RUNTIME_DIR/lua-runtime.sock"`  | Unix socket path used by EasyBar and the Lua widget runtime transport. $EASYBAR_RUNTIME_DIR expands to EasyBar's user-scoped temporary runtime directory. |
-| `watch_config`            | `true`                                     | Reloads EasyBar automatically when config.toml changes.                                                                                                   |
-| `lock_dir`                | `"$EASYBAR_RUNTIME_DIR"`                   | Directory that contains lock files used by EasyBar.                                                                                                       |
-| `widget_editor_stub_path` | `"~/.local/share/easybar/easybar_api.lua"` | LuaLS/editor stub path EasyBar keeps in sync for widget authoring.                                                                                        |
-| `develop`                 | `false`                                    | Shows the developer menu section without holding Shift when right-clicking the bar.                                                                       |
+| Key                       | Default                                             | Description                                                                              |
+| ------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `widgets_dir`             | `"~/.config/easybar/widgets"`                       | Directory that contains your custom Lua widget files.                                    |
+| `lua_path`                | `"lua"`                                             | Path to the Lua executable EasyBar uses for scripted widgets.                            |
+| `runtime_dir`             | `"~/.local/state/easybar/runtime"`                  | Base directory used for EasyBar sockets and lock files.                                  |
+| `lua_socket_path`         | `"~/.local/state/easybar/runtime/lua-runtime.sock"` | Optional Lua transport socket override. Defaults to lua-runtime.sock inside runtime_dir. |
+| `watch_config`            | `true`                                              | Reloads EasyBar automatically when config.toml changes.                                  |
+| `lock_dir`                | `"~/.local/state/easybar/runtime"`                  | Optional lock-directory override. Defaults to runtime_dir.                               |
+| `widget_editor_stub_path` | `"~/.local/share/easybar/easybar_api.lua"`          | LuaLS/editor stub path EasyBar keeps in sync for widget authoring.                       |
+| `develop`                 | `false`                                             | Shows the developer menu section without holding Shift when right-clicking the bar.      |
 
 ## `app.env`
 
@@ -53,19 +54,19 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `agents.calendar`
 
-| Key           | Default                                      | Description                                                                            |
-| ------------- | -------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `enabled`     | `true`                                       | Starts the calendar socket client in EasyBar and enables the calendar helper contract. |
-| `socket_path` | `"$EASYBAR_RUNTIME_DIR/calendar-agent.sock"` | Unix socket path used by EasyBar and the calendar agent.                               |
+| Key           | Default                                                | Description                                                                                      |
+| ------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `enabled`     | `true`                                                 | Starts the calendar socket client in EasyBar and enables the calendar helper contract.           |
+| `socket_path` | `"~/.local/state/easybar/runtime/calendar-agent.sock"` | Optional calendar-agent socket override. Defaults to calendar-agent.sock inside app.runtime_dir. |
 
 ## `agents.network`
 
-| Key                                       | Default                                     | Description                                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `enabled`                                 | `true`                                      | Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.                                                               |
-| `socket_path`                             | `"$EASYBAR_RUNTIME_DIR/network-agent.sock"` | Unix socket path used by EasyBar and the network agent.                                                                                          |
-| `refresh_interval_seconds`                | `60`                                        | Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.                                                                          |
-| `allow_unauthorized_non_sensitive_fields` | `false`                                     | When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned. |
+| Key                                       | Default                                               | Description                                                                                                                                      |
+| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`                                 | `true`                                                | Starts the network socket client in EasyBar and enables the Wi-Fi helper contract.                                                               |
+| `socket_path`                             | `"~/.local/state/easybar/runtime/network-agent.sock"` | Optional network-agent socket override. Defaults to network-agent.sock inside app.runtime_dir.                                                   |
+| `refresh_interval_seconds`                | `60`                                                  | Fallback polling interval for Wi-Fi state. Set to 0 to disable polling.                                                                          |
+| `allow_unauthorized_non_sensitive_fields` | `false`                                               | When false, Wi-Fi field requests fail while location permission is denied. When true, only non-sensitive non-Wi-Fi fields may still be returned. |
 
 ## `bar`
 

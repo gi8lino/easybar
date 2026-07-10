@@ -10,6 +10,7 @@ struct ConfigSnapshot: @unchecked Sendable {
   /// App-level config snapshot.
   struct App {
     let configPath: String
+    let runtimeDirectory: String
     let widgetsPath: String
     let luaPath: String
     let luaSocketPath: String

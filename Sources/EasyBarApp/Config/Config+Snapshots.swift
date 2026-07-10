@@ -6,6 +6,7 @@ extension Config {
     ConfigSnapshot(
       app: .init(
         configPath: configPath,
+        runtimeDirectory: appSection.runtimeDirectory,
         widgetsPath: appSection.widgetsPath,
         luaPath: appSection.luaPath,
         luaSocketPath: appSection.luaSocketPath,
@@ -65,6 +66,7 @@ extension Config {
   /// Restores the app-level config snapshot.
   func applyAppSnapshot(_ snapshot: ConfigSnapshot) {
     appSection = .init(
+      runtimeDirectory: snapshot.app.runtimeDirectory,
       widgetsPath: snapshot.app.widgetsPath,
       luaPath: snapshot.app.luaPath,
       luaSocketPath: snapshot.app.luaSocketPath,

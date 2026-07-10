@@ -1,14 +1,27 @@
 import Foundation
 
-/// Central registry of user-facing environment variable names used by EasyBar.
+/// Central registry of environment variable names used by EasyBar's Swift targets.
 ///
-/// Normal runtime behavior should be configured in `config.toml`. The config
-/// path is the public bootstrap override because it is needed before the config
-/// file can be read. The log level is intentionally kept as a narrow diagnostic
-/// override for local debugging and service troubleshooting.
+/// Normal runtime behavior should be configured in `config.toml`. Public
+/// overrides are limited to values needed before or around config loading.
+/// Internal keys are reserved for passing resolved runtime state to child
+/// processes owned by EasyBar.
 public enum SharedEnvironmentKeys {
+  /// Standard executable search path inherited by launched processes.
+  public static let path = "PATH"
+
+  /// Public bootstrap override for the runtime config path.
   public static let configPath = "EASYBAR_CONFIG_PATH"
+
+  /// Public override for the directory containing runtime sockets and lock files.
+  public static let runtimeDirectory = "EASYBAR_RUNTIME_DIR"
 
   /// Optional diagnostic override for the configured logging level.
   public static let loggingLevel = "EASYBAR_LOG_LEVEL"
+
+  /// Internal key used to pass the resolved active theme to the Lua runtime.
+  public static let luaThemeJSON = "EASYBAR_INTERNAL_THEME_JSON"
+
+  /// Internal key used to expose the resolved logging directory to Lua widgets.
+  public static let luaLoggingDirectory = "EASYBAR_INTERNAL_LOGGING_DIRECTORY"
 }

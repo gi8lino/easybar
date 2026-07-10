@@ -189,7 +189,7 @@ final class AeroSpaceCommandRunner {
   /// Resolves the AeroSpace binary path from one environment snapshot.
   static func defaultExecutablePath(environment: [String: String]) -> String? {
     let pathCandidates =
-      environment["PATH"]?
+      environment[SharedEnvironmentKeys.path]?
       .split(separator: ":")
       .map(String.init)
       .filter { !$0.isEmpty }

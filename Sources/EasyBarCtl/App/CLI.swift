@@ -19,7 +19,7 @@ private struct AppController {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
-      let socketPath = parsed.socketPath ?? SharedPathDefaults.defaultEasyBarSocketPath
+      let socketPath = parsed.socketPath ?? defaultEasyBarSocketPath()
 
       switch parsed.action {
       case .validateConfig:
@@ -54,4 +54,13 @@ private struct AppController {
     CLIOutput.printUsage()
     return 1
   }
+}
+
+/// Resolves the control socket from the active shared runtime configuration.
+private func defaultEasyBarSocketPath() -> String {
+  if let runtime = try? SharedRuntimeConfig.load() {
+    return runtime.easyBar.socketPath
+  }
+
+  return SharedRuntimeConfig.environmentDefaults().easyBar.socketPath
 }

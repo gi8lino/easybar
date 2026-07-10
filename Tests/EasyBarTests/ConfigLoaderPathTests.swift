@@ -26,6 +26,7 @@ final class ConfigLoaderPathTests: ConfigLoaderTestCase {
     try writeConfig(
       """
       [app]
+      runtime_dir = "\(tomlEscaped(runtimeDirectory))"
       widgets_dir = "\(tomlEscaped(widgetsDirectory))"
       lock_dir = "\(tomlEscaped(lockDirectory))"
       lua_socket_path = "\(tomlEscaped(luaSocketPath))"
@@ -50,6 +51,11 @@ final class ConfigLoaderPathTests: ConfigLoaderTestCase {
 
     XCTAssertNil(error)
     XCTAssertEqual(config.configPath, configFileURL.path)
+    XCTAssertEqual(config.runtimeDirectory, runtimeDirectory)
+    XCTAssertEqual(
+      config.easyBarSocketPath,
+      SharedPathDefaults.easyBarSocketPath(in: runtimeDirectory)
+    )
     XCTAssertEqual(config.widgetsPath, widgetsDirectory)
     XCTAssertEqual(config.lockDirectory, lockDirectory)
     XCTAssertEqual(config.loggingDirectory, loggingDirectory)
@@ -63,6 +69,78 @@ final class ConfigLoaderPathTests: ConfigLoaderTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: lockDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: loggingDirectory))
     XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
+  }
+
+  func testReloadDerivesRuntimePathsFromRuntimeDirectory() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("derived-runtime-paths.toml")
+    let runtimeDirectory = tempDirectoryURL.appendingPathComponent("derived-runtime").path
+
+    try writeConfig(
+      """
+      [app]
+      runtime_dir = "\(tomlEscaped(runtimeDirectory))"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue(nil, for: SharedEnvironmentKeys.runtimeDirectory)
+
+    XCTAssertNil(config.reload())
+    XCTAssertEqual(config.runtimeDirectory, runtimeDirectory)
+    XCTAssertEqual(config.lockDirectory, runtimeDirectory)
+    XCTAssertEqual(
+      config.luaSocketPath,
+      SharedPathDefaults.luaSocketPath(in: runtimeDirectory)
+    )
+    XCTAssertEqual(
+      config.calendarAgentSocketPath,
+      SharedPathDefaults.calendarAgentSocketPath(in: runtimeDirectory)
+    )
+    XCTAssertEqual(
+      config.networkAgentSocketPath,
+      SharedPathDefaults.networkAgentSocketPath(in: runtimeDirectory)
+    )
+    XCTAssertTrue(FileManager.default.fileExists(atPath: runtimeDirectory))
+  }
+
+  func testReloadPrefersRuntimeDirectoryEnvironmentOverride() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("runtime-directory-env.toml")
+    let configuredDirectory = tempDirectoryURL.appendingPathComponent("configured-runtime").path
+    let environmentDirectory = tempDirectoryURL.appendingPathComponent("environment-runtime").path
+
+    try writeConfig(
+      """
+      [app]
+      runtime_dir = "\(tomlEscaped(configuredDirectory))"
+      """,
+      to: configFileURL
+    )
+
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    setEnvironmentValue(environmentDirectory, for: SharedEnvironmentKeys.runtimeDirectory)
+
+    XCTAssertNil(config.reload())
+    XCTAssertEqual(config.runtimeDirectory, environmentDirectory)
+    XCTAssertEqual(config.lockDirectory, environmentDirectory)
+    XCTAssertEqual(
+      config.luaSocketPath,
+      SharedPathDefaults.luaSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      config.easyBarSocketPath,
+      SharedPathDefaults.easyBarSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      config.calendarAgentSocketPath,
+      SharedPathDefaults.calendarAgentSocketPath(in: environmentDirectory)
+    )
+    XCTAssertEqual(
+      config.networkAgentSocketPath,
+      SharedPathDefaults.networkAgentSocketPath(in: environmentDirectory)
+    )
   }
 
   func testInitialLoadAppliesConfigFileOverridesExplicitly() throws {
@@ -134,7 +212,8 @@ final class ConfigLoaderPathTests: ConfigLoaderTestCase {
   /// Verifies that validate prefers explicit config path over environment override.
   func testValidatePrefersExplicitConfigPathOverEnvironmentOverride() throws {
     let explicitConfigFileURL = tempDirectoryURL.appendingPathComponent("explicit-validate.toml")
-    let environmentConfigFileURL = tempDirectoryURL.appendingPathComponent("environment-validate.toml")
+    let environmentConfigFileURL = tempDirectoryURL.appendingPathComponent(
+      "environment-validate.toml")
 
     try writeConfig(
       """

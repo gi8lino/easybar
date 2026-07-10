@@ -44,6 +44,7 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     try writeConfig(
       """
       [app]
+      runtime_dir = "\(runtimeDirectory)"
       widgets_dir = "\(widgetsDirectory)"
       lua_path = "/usr/local/bin/lua"
       lua_socket_path = "\(luaSocketPath)"
@@ -88,6 +89,7 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     let error = config.reload()
 
     XCTAssertNil(error)
+    XCTAssertEqual(config.runtimeDirectory, runtimeDirectory)
     XCTAssertEqual(config.widgetsPath, widgetsDirectory)
     XCTAssertEqual(config.luaPath, "/usr/local/bin/lua")
     XCTAssertEqual(config.luaSocketPath, luaSocketPath)
@@ -96,7 +98,7 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertEqual(config.widgetEditorStubPath, widgetEditorStubPath)
     XCTAssertTrue(config.develop)
 
-    XCTAssertEqual(config.appSection.environment["PATH"], "/custom/bin")
+    XCTAssertEqual(config.appSection.environment[SharedEnvironmentKeys.path], "/custom/bin")
     XCTAssertEqual(config.appSection.environment["FOO"], "bar")
 
     XCTAssertTrue(config.loggingEnabled)

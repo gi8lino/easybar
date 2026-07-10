@@ -43,6 +43,9 @@ Both agents load the shared runtime config from:
 Relevant config:
 
 ```toml
+[app]
+runtime_dir = "~/.local/state/easybar/runtime"
+
 [logging]
 enabled = false
 level = "info"
@@ -50,14 +53,14 @@ directory = "~/.local/state/easybar"
 
 [agents.calendar]
 enabled = true
-socket_path = "/tmp/EasyBar/calendar-agent.sock"
 
 [agents.network]
 enabled = true
-socket_path = "/tmp/EasyBar/network-agent.sock"
 refresh_interval_seconds = 60
 allow_unauthorized_non_sensitive_fields = false
 ```
+
+The agent socket paths are derived from `app.runtime_dir` unless their individual `socket_path` settings are overridden. `EASYBAR_RUNTIME_DIR` overrides `app.runtime_dir` for the app, CLI, and both agents.
 
 If an agent is disabled in config, the helper app exits immediately without opening its socket.
 

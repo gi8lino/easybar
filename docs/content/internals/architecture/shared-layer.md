@@ -9,7 +9,7 @@ Typical responsibilities include:
 - shared config models and config loading
 - shared IPC request and response models
 - shared socket path helpers
-- shared environment-key definitions
+- shared environment-key definitions and runtime-directory resolution
 - common logging utilities and log-level definitions
 - value types used by both the app and helper processes
 

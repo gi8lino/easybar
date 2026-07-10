@@ -29,7 +29,8 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     XCTAssertEqual(loadedSnapshot.logging.level, defaultSnapshot.logging.level)
     XCTAssertEqual(loadedSnapshot.logging.enabled, defaultSnapshot.logging.enabled)
     XCTAssertEqual(loadedSnapshot.logging.directory, defaultSnapshot.logging.directory)
-    XCTAssertEqual(loadedSnapshot.calendarAgent.socketPath, defaultSnapshot.calendarAgent.socketPath)
+    XCTAssertEqual(
+      loadedSnapshot.calendarAgent.socketPath, defaultSnapshot.calendarAgent.socketPath)
     XCTAssertEqual(loadedSnapshot.calendarAgent.enabled, defaultSnapshot.calendarAgent.enabled)
     XCTAssertEqual(loadedSnapshot.networkAgent.socketPath, defaultSnapshot.networkAgent.socketPath)
     XCTAssertEqual(loadedSnapshot.networkAgent.enabled, defaultSnapshot.networkAgent.enabled)
@@ -43,7 +44,8 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     )
     XCTAssertEqual(loadedSnapshot.theme.name, defaultSnapshot.theme.name)
     XCTAssertEqual(loadedSnapshot.theme.colors, defaultSnapshot.theme.colors)
-    assertDefaultValue(loadedSnapshot.bar, matches: defaultSnapshot.bar, theme: loadedSnapshot.theme.colors)
+    assertDefaultValue(
+      loadedSnapshot.bar, matches: defaultSnapshot.bar, theme: loadedSnapshot.theme.colors)
     assertBuiltinDefaults(
       loadedSnapshot.builtins,
       match: defaultSnapshot.builtins,
@@ -56,6 +58,7 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
     _ actual: ConfigSnapshot.App,
     match expected: ConfigSnapshot.App
   ) {
+    XCTAssertEqual(actual.runtimeDirectory, expected.runtimeDirectory)
     XCTAssertEqual(actual.widgetsPath, expected.widgetsPath)
     XCTAssertEqual(actual.luaPath, expected.luaPath)
     XCTAssertEqual(actual.luaSocketPath, expected.luaSocketPath)
@@ -103,7 +106,9 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
   }
 
   /// Normalizes semantically equivalent values used by the defaults reference file.
-  private func normalizedDefaultValue(_ value: Any, theme: Config.ThemeColors) -> DefaultSnapshotValue {
+  private func normalizedDefaultValue(_ value: Any, theme: Config.ThemeColors)
+    -> DefaultSnapshotValue
+  {
     if let string = value as? String {
       return .scalar(resolveThemeReference(string, theme: theme))
     }
@@ -155,7 +160,9 @@ final class ConfigDefaultDriftTests: ConfigLoaderTestCase {
 
   /// Resolves theme token references to their concrete default color values.
   private func resolveThemeReference(_ value: String, theme: Config.ThemeColors) -> String {
-    guard let token = ThemeColorToken(normalizedToken: value.replacingOccurrences(of: "theme.", with: "")),
+    guard
+      let token = ThemeColorToken(
+        normalizedToken: value.replacingOccurrences(of: "theme.", with: "")),
       value == token.reference
     else {
       return value

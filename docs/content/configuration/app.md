@@ -8,9 +8,8 @@ Example:
 [app]
 widgets_dir = "~/.config/easybar/widgets"
 lua_path = "lua"
-lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
+runtime_dir = "~/.local/state/easybar/runtime"
 watch_config = true
-lock_dir = "/tmp/EasyBar"
 widget_editor_stub_path = "~/.local/share/easybar/easybar_api.lua"
 develop = false
 ```
@@ -39,14 +38,38 @@ lua_path = "lua"
 
 The default value `lua` is resolved through `PATH`. Use an absolute path only when you want to pin a specific Lua installation.
 
-## `lua_socket_path`
+## `runtime_dir`
 
-The dedicated Unix socket used between the main app and the Lua widget runtime.
+The base directory for EasyBar's runtime sockets and lock files.
 
 ```toml
 [app]
-lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
+runtime_dir = "~/.local/state/easybar/runtime"
 ```
+
+By default, EasyBar derives these paths from `runtime_dir`:
+
+```text
+easybar.sock
+lua-runtime.sock
+calendar-agent.sock
+network-agent.sock
+```
+
+The main-app lock directory also defaults to `runtime_dir`.
+
+`EASYBAR_RUNTIME_DIR` is a real environment override for this setting. It takes precedence over `app.runtime_dir`.
+
+## `lua_socket_path`
+
+Optional dedicated Unix socket override for communication between the main app and the Lua widget runtime.
+
+```toml
+[app]
+lua_socket_path = "/custom/runtime/lua-runtime.sock"
+```
+
+When omitted, EasyBar uses `lua-runtime.sock` inside `runtime_dir`.
 
 This socket is separate from stderr logs. Runtime protocol messages use JSON over the Lua socket.
 
@@ -69,14 +92,14 @@ easybar --reload-config
 
 ## `lock_dir`
 
-Directory used for EasyBar runtime lock files.
+Optional override for the directory used by EasyBar runtime lock files.
 
 ```toml
 [app]
-lock_dir = "/tmp/EasyBar"
+lock_dir = "/custom/runtime/locks"
 ```
 
-The lock directory is part of the single-instance guard that prevents multiple EasyBar app processes from drawing duplicate bars.
+When omitted, the lock directory is `runtime_dir`. The lock is part of the single-instance guard that prevents multiple EasyBar app processes from drawing duplicate bars.
 
 ## `widget_editor_stub_path`
 

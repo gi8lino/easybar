@@ -33,7 +33,7 @@ The generated [Configuration Reference](reference.md) mirrors `config.defaults.t
 
 Use `config.toml` for stable user-facing behavior:
 
-- app paths and reload behavior
+- app paths, runtime directory, and reload behavior
 - environment variables visible to Lua widgets
 - selected theme and theme overrides
 - logging settings
@@ -47,7 +47,7 @@ Use Lua only when you need custom logic that config cannot express. The decision
 ## Important sections
 
 - `[app]`
-  App-level paths and runtime behavior.
+  App-level paths, the shared runtime directory, and runtime behavior.
 - `[app.env]`
   Environment variables visible to Lua widgets and widget shell commands.
 - `[app.lua_commands]`

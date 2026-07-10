@@ -21,6 +21,7 @@ final class ConfigSnapshotTests: XCTestCase {
   func testApplyRestoresAppBarAndBuiltinStateFromSnapshot() {
     let config = Config.makeUnloadedConfig()
 
+    config.runtimeDirectory = "/tmp/runtime-before"
     config.widgetsPath = "/tmp/widgets-before"
     config.loggingLevel = .debug
     config.barHeight = 41
@@ -33,6 +34,7 @@ final class ConfigSnapshotTests: XCTestCase {
 
     let snapshot = config.snapshot()
 
+    config.runtimeDirectory = "/tmp/runtime-after"
     config.widgetsPath = "/tmp/widgets-after"
     config.loggingLevel = .error
     config.barHeight = 22
@@ -45,6 +47,7 @@ final class ConfigSnapshotTests: XCTestCase {
 
     config.apply(snapshot)
 
+    XCTAssertEqual(config.runtimeDirectory, "/tmp/runtime-before")
     XCTAssertEqual(config.widgetsPath, "/tmp/widgets-before")
     XCTAssertEqual(config.loggingLevel, .debug)
     XCTAssertEqual(config.barHeight, 41)

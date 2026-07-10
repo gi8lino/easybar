@@ -271,7 +271,9 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     )
 
     XCTAssertEqual(
-      AeroSpaceCommandRunner.defaultExecutablePath(environment: ["PATH": directoryURL.path]),
+      AeroSpaceCommandRunner.defaultExecutablePath(environment: [
+        SharedEnvironmentKeys.path: directoryURL.path
+      ]),
       executableURL.path
     )
   }

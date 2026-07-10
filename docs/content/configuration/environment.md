@@ -8,7 +8,7 @@ Use `[app.env]` for environment variables that should be visible inside the Lua 
 [app]
 widgets_dir = "~/.config/easybar/widgets"
 lua_path = "lua"
-lua_socket_path = "/tmp/EasyBar/lua-runtime.sock"
+runtime_dir = "~/.local/state/easybar/runtime"
 
 [app.env]
 PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -25,6 +25,30 @@ EasyBar resolves `PATH` in this order:
 ```text
 /usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
 ```
+
+## EasyBar environment overrides
+
+EasyBar supports a small, explicit set of process-level overrides:
+
+| Variable              | Purpose                                      |
+| --------------------- | -------------------------------------------- |
+| `EASYBAR_CONFIG_PATH` | Selects the runtime config file.             |
+| `EASYBAR_RUNTIME_DIR` | Overrides `[app].runtime_dir`.               |
+| `EASYBAR_LOG_LEVEL`   | Temporarily overrides `[logging].level`.     |
+
+`EASYBAR_RUNTIME_DIR` is read by the app, CLI, and helper agents. Derived socket and lock defaults therefore remain consistent across processes.
+
+For the runtime directory, precedence is:
+
+```text
+EASYBAR_RUNTIME_DIR
+→ app.runtime_dir
+→ built-in default
+```
+
+Explicit `lua_socket_path`, `lock_dir`, or agent `socket_path` values still override their derived defaults.
+
+EasyBar does not perform generic shell-style `$VARIABLE` expansion inside config values. Paths support `~` expansion only.
 
 ## Why this matters
 

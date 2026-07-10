@@ -6,6 +6,7 @@ extension Config {
   func resetDerivedDefaults() {
     let runtime = SharedRuntimeConfig.environmentDefaults()
 
+    appSection.runtimeDirectory = runtime.app.runtimeDirectory
     appSection.widgetsPath = runtime.app.widgetsPath
     appSection.lockDirectory = runtime.app.lockDirectory
     appSection.luaSocketPath = runtime.app.luaSocketPath

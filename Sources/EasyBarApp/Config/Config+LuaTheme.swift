@@ -1,9 +1,7 @@
+import EasyBarShared
 import Foundation
 
 extension Config {
-  /// Environment key used to pass the resolved active theme to the Lua runtime.
-  static let luaThemeEnvironmentKey = "EASYBAR_INTERNAL_THEME_JSON"
-
   /// Returns environment values required by the Lua runtime.
   func luaThemeEnvironment() -> [String: String] {
     return snapshot().luaThemeEnvironment()
@@ -11,20 +9,17 @@ extension Config {
 }
 
 extension ConfigSnapshot {
-  /// Internal environment key used to expose the resolved logging directory to Lua widgets.
-  static let luaLoggingDirectoryEnvironmentKey = "EASYBAR_INTERNAL_LOGGING_DIRECTORY"
-
   /// Returns environment values required by the Lua runtime.
   func luaThemeEnvironment() -> [String: String] {
     var environment = [
-      Self.luaLoggingDirectoryEnvironmentKey: logging.directory
+      SharedEnvironmentKeys.luaLoggingDirectory: logging.directory
     ]
 
     guard let value = luaThemeJSONString() else {
       return environment
     }
 
-    environment[Config.luaThemeEnvironmentKey] = value
+    environment[SharedEnvironmentKeys.luaThemeJSON] = value
     return environment
   }
 

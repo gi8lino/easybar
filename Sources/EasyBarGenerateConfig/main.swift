@@ -47,6 +47,9 @@ private func renderDefaults() -> String {
     case .entry(let key, let value, let description, let commented, let prefix):
       let suffix = description.isEmpty ? "" : " # \(description)"
       return "\(commented ? prefix : "")\(key) = \(value)\(suffix)"
+    case .optionalEntry(let key, let value, let description):
+      let suffix = description.isEmpty ? "" : " # \(description)"
+      return "# \(key) = \(value)\(suffix)"
     }
   }
 
@@ -72,6 +75,18 @@ private func catalogEntries(includeCommented: Bool) -> [(section: String, entry:
             value: value,
             description: description,
             commented: commented
+          )
+        ))
+    case .optionalEntry(let key, let value, let description):
+      entries.append(
+        (
+          currentSection,
+          CatalogEntry(
+            section: currentSection,
+            key: key,
+            value: value,
+            description: description,
+            commented: true
           )
         ))
     case .blank, .comment:
@@ -107,6 +122,16 @@ private func activeSections() -> [(name: String, entries: [CatalogEntry])] {
           value: value,
           description: description,
           commented: false
+        ))
+    case .optionalEntry(let key, let value, let description):
+      guard let section = currentName else { continue }
+      currentEntries.append(
+        CatalogEntry(
+          section: section,
+          key: key,
+          value: value,
+          description: description,
+          commented: true
         ))
     case .blank, .comment:
       continue

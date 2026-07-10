@@ -4,10 +4,12 @@ Both agents share the same transport and baseline command flow.
 
 ## Socket paths
 
-Default sockets:
+By default, agent sockets are derived from `[app].runtime_dir`:
 
-- calendar agent: `/tmp/EasyBar/calendar-agent.sock`
-- network agent: `/tmp/EasyBar/network-agent.sock`
+- calendar agent: `<runtime_dir>/calendar-agent.sock`
+- network agent: `<runtime_dir>/network-agent.sock`
+
+The default runtime directory is `~/.local/state/easybar/runtime`. `EASYBAR_RUNTIME_DIR` can override it for all EasyBar processes.
 
 EasyBar connects to those sockets directly.
 

@@ -77,7 +77,7 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     config.resetToDefaults()
 
     let environment = config.luaThemeEnvironment()
-    let payloadJSON = try XCTUnwrap(environment[Config.luaThemeEnvironmentKey])
+    let payloadJSON = try XCTUnwrap(environment[SharedEnvironmentKeys.luaThemeJSON])
     let data = try XCTUnwrap(payloadJSON.data(using: .utf8))
     let payload = try XCTUnwrap(
       JSONSerialization.jsonObject(with: data) as? [String: Any]

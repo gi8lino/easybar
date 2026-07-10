@@ -11,6 +11,7 @@ extension Config {
       var maxAsyncJobs: Int
     }
 
+    var runtimeDirectory: String
     var widgetsPath: String
     var luaPath: String
     var luaSocketPath: String
