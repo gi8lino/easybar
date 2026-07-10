@@ -1,0 +1,517 @@
+extension ConfigSchemaRegistry {
+  static let workspaceLines: [Line] = [
+    section(name: "builtins.spaces"),
+    entry(
+      key: "enabled",
+      value: "true",
+      description: "Shows or hides the built-in spaces widget.",
+    ),
+    entry(
+      key: "position",
+      value: "\"left\"",
+      description: "Places the widget on the left, center, or right side of the bar.",
+    ),
+    entry(
+      key: "order",
+      value: "10",
+      description: "Sort order among widgets in the same position.",
+    ),
+    entry(
+      key: "icon",
+      value: "\"\"",
+      description: "Unused fallback icon for the spaces root widget.",
+    ),
+    entry(
+      key: "text_color",
+      value: "\"theme.text\"",
+      description: "Fallback text color for the spaces root widget.",
+    ),
+    entry(
+      key: "background_color",
+      value: "\"theme.transparent\"",
+      description: "Background color behind the whole spaces block.",
+    ),
+    entry(
+      key: "border_color",
+      value: "\"theme.transparent\"",
+      description: "Border color around the whole spaces block.",
+    ),
+    entry(
+      key: "border_width",
+      value: "0",
+      description: "Border width around the whole spaces block.",
+    ),
+    entry(
+      key: "corner_radius",
+      value: "0",
+      description: "Corner radius around the whole spaces block.",
+    ),
+    entry(
+      key: "margin_x",
+      value: "0",
+      description: "Horizontal outer margin around the spaces root container.",
+    ),
+    entry(
+      key: "margin_y",
+      value: "0",
+      description: "Vertical outer margin around the spaces root container.",
+    ),
+    entry(
+      key: "padding_x",
+      value: "0",
+      description: "Horizontal inner padding of the spaces root container.",
+    ),
+    entry(
+      key: "padding_y",
+      value: "0",
+      description: "Vertical inner padding of the spaces root container.",
+    ),
+    entry(
+      key: "spacing",
+      value: "0",
+      description: "Root-level spacing of the spaces widget container.",
+    ),
+    entry(
+      key: "opacity",
+      value: "1",
+      description: "Overall opacity of the spaces widget container.",
+    ),
+    .blank,
+    section(name: "builtins.spaces.layout"),
+    entry(
+      key: "spacing",
+      value: "8",
+      description: "Gap between space pills.",
+    ),
+    entry(
+      key: "hide_empty",
+      value: "true",
+      description: "Hides spaces that have no apps.",
+    ),
+    entry(
+      key: "padding_x",
+      value: "12",
+      description: "Horizontal inner padding inside each space pill.",
+    ),
+    entry(
+      key: "padding_y",
+      value: "2",
+      description: "Vertical inner padding inside each space pill.",
+    ),
+    entry(
+      key: "margin_x",
+      value: "4",
+      description: "Horizontal outer margin around the whole spaces row.",
+    ),
+    entry(
+      key: "margin_y",
+      value: "4",
+      description: "Vertical outer margin around the whole spaces row.",
+    ),
+    entry(
+      key: "corner_radius",
+      value: "8",
+      description: "Corner radius of inactive space pills.",
+    ),
+    entry(
+      key: "focused_corner_radius",
+      value: "8",
+      description: "Corner radius of the focused space pill.",
+    ),
+    entry(
+      key: "focused_scale",
+      value: "1.0",
+      description: "Scale multiplier applied to the focused space pill.",
+    ),
+    entry(
+      key: "inactive_opacity",
+      value: "0.85",
+      description: "Opacity applied to inactive space pills.",
+    ),
+    entry(
+      key: "max_icons",
+      value: "4",
+      description: "Maximum number of app icons shown per space.",
+    ),
+    entry(
+      key: "show_label",
+      value: "true",
+      description: "Shows the workspace label.",
+    ),
+    entry(
+      key: "show_icons",
+      value: "true",
+      description: "Shows app icons inside each space pill.",
+    ),
+    entry(
+      key: "show_only_focused_label",
+      value: "false",
+      description: "Shows the label only on the focused space when true.",
+    ),
+    entry(
+      key: "collapse_inactive",
+      value: "false",
+      description: "Makes inactive spaces more compact when true.",
+    ),
+    entry(
+      key: "collapsed_padding_x",
+      value: "6",
+      description: "Horizontal inner padding of collapsed inactive space pills.",
+    ),
+    entry(
+      key: "collapsed_padding_y",
+      value: "4",
+      description: "Vertical inner padding of collapsed inactive space pills.",
+    ),
+    entry(
+      key: "click_to_focus_space",
+      value: "true",
+      description: "Switches to a workspace when its pill is clicked.",
+    ),
+    entry(
+      key: "click_to_focus_app",
+      value: "true",
+      description: "Activates an app when its icon is clicked.",
+    ),
+    .blank,
+    section(name: "builtins.spaces.text"),
+    entry(
+      key: "size",
+      value: "12",
+      description: "Font size of the space label.",
+    ),
+    entry(
+      key: "weight",
+      value: "\"semibold\"",
+      description: "Font weight of the space label.",
+    ),
+    entry(
+      key: "focused_color",
+      value: "\"theme.text\"",
+      description: "Text color of the focused space label.",
+    ),
+    entry(
+      key: "inactive_color",
+      value: "\"theme.text_secondary\"",
+      description: "Text color of inactive space labels.",
+    ),
+    .blank,
+    section(name: "builtins.spaces.icons"),
+    entry(
+      key: "size",
+      value: "20",
+      description: "Default app icon size in a space.",
+    ),
+    entry(
+      key: "spacing",
+      value: "4",
+      description: "Gap between app icons.",
+    ),
+    entry(
+      key: "corner_radius",
+      value: "3",
+      description: "Corner radius of app icons.",
+    ),
+    entry(
+      key: "focused_app_size",
+      value: "28",
+      description: "Size of the currently focused app icon.",
+    ),
+    entry(
+      key: "border_width",
+      value: "1",
+      description: "Border width of normal app icons.",
+    ),
+    entry(
+      key: "focused_app_border_width",
+      value: "1",
+      description: "Border width of the focused app icon.",
+    ),
+    .blank,
+    section(name: "builtins.spaces.colors"),
+    entry(
+      key: "active_background",
+      value: "\"theme.surface_elevated\"",
+      description: "Background color of the focused space pill.",
+    ),
+    entry(
+      key: "inactive_background",
+      value: "\"theme.surface\"",
+      description: "Background color of inactive space pills.",
+    ),
+    entry(
+      key: "active_border",
+      value: "\"theme.border_strong\"",
+      description: "Border color of the focused space pill.",
+    ),
+    entry(
+      key: "inactive_border",
+      value: "\"theme.transparent\"",
+      description: "Border color of inactive space pills.",
+    ),
+    entry(
+      key: "focused_app_border",
+      value: "\"theme.transparent\"",
+      description: "Border color of the focused app icon.",
+    ),
+    .blank,
+    section(name: "builtins.front_app"),
+    entry(
+      key: "enabled",
+      value: "false",
+      description: "Shows or hides the front-app widget.",
+    ),
+    entry(
+      key: "position",
+      value: "\"left\"",
+      description: "Places the widget on the left, center, or right side of the bar.",
+    ),
+    entry(
+      key: "order",
+      value: "20",
+      description: "Sort order among widgets in the same position.",
+    ),
+    .blank,
+    section(name: "builtins.front_app.style"),
+    entry(
+      key: "icon",
+      value: "\"􀈔\"",
+      description: "Fallback icon when no app icon is available.",
+    ),
+    entry(
+      key: "text_color",
+      value: "\"theme.text\"",
+      description: "Text color of the widget.",
+    ),
+    entry(
+      key: "background_color",
+      value: "\"theme.surface\"",
+      description: "Background color of the widget.",
+    ),
+    entry(
+      key: "border_color",
+      value: "\"theme.border\"",
+      description: "Border color of the widget.",
+    ),
+    entry(
+      key: "border_width",
+      value: "1",
+      description: "Border width of the widget.",
+    ),
+    entry(
+      key: "corner_radius",
+      value: "8",
+      description: "Corner radius of the widget background.",
+    ),
+    entry(
+      key: "margin_x",
+      value: "0",
+      description: "Horizontal outer margin around the widget.",
+    ),
+    entry(
+      key: "margin_y",
+      value: "0",
+      description: "Vertical outer margin around the widget.",
+    ),
+    entry(
+      key: "padding_x",
+      value: "8",
+      description: "Horizontal inner padding of the widget.",
+    ),
+    entry(
+      key: "padding_y",
+      value: "4",
+      description: "Vertical inner padding of the widget.",
+    ),
+    entry(
+      key: "spacing",
+      value: "6",
+      description: "Gap between the icon and label.",
+    ),
+    entry(
+      key: "opacity",
+      value: "1.0",
+      description: "Overall opacity of the widget.",
+    ),
+    .blank,
+    section(name: "builtins.front_app.content"),
+    entry(
+      key: "show_icon",
+      value: "true",
+      description: "Shows the focused app icon.",
+    ),
+    entry(
+      key: "show_name",
+      value: "true",
+      description: "Shows the focused app name.",
+    ),
+    entry(
+      key: "fallback_text",
+      value: "\"No App\"",
+      description: "Fallback text shown when no app name is available.",
+    ),
+    entry(
+      key: "icon_size",
+      value: "14",
+      description: "Display size of the app icon.",
+    ),
+    entry(
+      key: "icon_corner_radius",
+      value: "4",
+      description: "Corner radius of the displayed app icon.",
+    ),
+    .blank,
+    section(name: "builtins.aerospace_mode"),
+    entry(
+      key: "enabled",
+      value: "false",
+      description: "Shows or hides the AeroSpace mode widget.",
+    ),
+    entry(
+      key: "position",
+      value: "\"left\"",
+      description: "Places the widget on the left, center, or right side of the bar.",
+    ),
+    entry(
+      key: "order",
+      value: "30",
+      description: "Sort order among widgets in the same position.",
+    ),
+    .blank,
+    section(name: "builtins.aerospace_mode.style"),
+    entry(
+      key: "icon",
+      value: "\"\"",
+      description:
+        "Leading icon of the widget. The mode-specific icon comes from content settings.",
+    ),
+    entry(
+      key: "text_color",
+      value: "\"theme.text\"",
+      description: "Text color of the widget.",
+    ),
+    entry(
+      key: "background_color",
+      value: "\"theme.surface\"",
+      description: "Background color of the widget.",
+    ),
+    entry(
+      key: "border_color",
+      value: "\"theme.border\"",
+      description: "Border color of the widget.",
+    ),
+    entry(
+      key: "border_width",
+      value: "1",
+      description: "Border width of the widget.",
+    ),
+    entry(
+      key: "corner_radius",
+      value: "8",
+      description: "Corner radius of the widget background.",
+    ),
+    entry(
+      key: "margin_x",
+      value: "0",
+      description: "Horizontal outer margin around the widget.",
+    ),
+    entry(
+      key: "margin_y",
+      value: "0",
+      description: "Vertical outer margin around the widget.",
+    ),
+    entry(
+      key: "padding_x",
+      value: "8",
+      description: "Horizontal inner padding of the widget.",
+    ),
+    entry(
+      key: "padding_y",
+      value: "4",
+      description: "Vertical inner padding of the widget.",
+    ),
+    entry(
+      key: "spacing",
+      value: "6",
+      description: "Gap between the icon and text.",
+    ),
+    entry(
+      key: "opacity",
+      value: "1",
+      description: "Overall opacity of the widget.",
+    ),
+    .blank,
+    section(name: "builtins.aerospace_mode.content"),
+    entry(
+      key: "show_icon",
+      value: "true",
+      description: "Shows the icon for the current AeroSpace layout mode.",
+    ),
+    entry(
+      key: "show_text",
+      value: "false",
+      description: "Shows the text label for the current AeroSpace layout mode.",
+    ),
+    entry(
+      key: "h_tiles_icon",
+      value: "\"󰕴\"",
+      description: "Icon used for horizontal tiling.",
+    ),
+    entry(
+      key: "v_tiles_icon",
+      value: "\"󰕳\"",
+      description: "Icon used for vertical tiling.",
+    ),
+    entry(
+      key: "h_accordion_icon",
+      value: "\"󰖲\"",
+      description: "Icon used for horizontal accordion.",
+    ),
+    entry(
+      key: "v_accordion_icon",
+      value: "\"󰖳\"",
+      description: "Icon used for vertical accordion.",
+    ),
+    entry(
+      key: "floating_icon",
+      value: "\"󰹙\"",
+      description: "Icon used for floating windows or containers.",
+    ),
+    entry(
+      key: "unknown_icon",
+      value: "\"󰘎\"",
+      description: "Fallback icon used when the layout cannot be detected.",
+    ),
+    entry(
+      key: "h_tiles_text",
+      value: "\"h_tiles\"",
+      description: "Text label used for horizontal tiling.",
+    ),
+    entry(
+      key: "v_tiles_text",
+      value: "\"v_tiles\"",
+      description: "Text label used for vertical tiling.",
+    ),
+    entry(
+      key: "h_accordion_text",
+      value: "\"h_accordion\"",
+      description: "Text label used for horizontal accordion.",
+    ),
+    entry(
+      key: "v_accordion_text",
+      value: "\"v_accordion\"",
+      description: "Text label used for vertical accordion.",
+    ),
+    entry(
+      key: "floating_text",
+      value: "\"floating\"",
+      description: "Text label used for floating windows or containers.",
+    ),
+    entry(
+      key: "unknown_text",
+      value: "\"unknown\"",
+      description: "Fallback text label used when the layout cannot be detected.",
+    ),
+    .blank,
+  ]
+}
