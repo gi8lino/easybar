@@ -6,7 +6,7 @@ import Foundation
 /// configuration reference docs, and unknown-key warnings share one source.
 public enum ConfigSchemaRegistry {
   /// One line in the generated default config file.
-  public enum Line {
+  public enum Line: Sendable {
     case blank
     case comment(String)
     case section(name: String, commented: Bool, prefix: String)

@@ -2,6 +2,10 @@
 
 import PackageDescription
 
+let strictConcurrencySettings: [SwiftSetting] = [
+  .enableUpcomingFeature("StrictConcurrency")
+]
+
 let package = Package(
   name: "EasyBar",
   platforms: [
@@ -36,7 +40,8 @@ let package = Package(
     ),
     .target(
       name: "EasyBarConfigSchema",
-      path: "Sources/EasyBarConfigSchema"
+      path: "Sources/EasyBarConfigSchema",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarShared",
@@ -44,14 +49,16 @@ let package = Package(
         "EasyBarConfigParsing",
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
-      path: "Sources/EasyBarShared"
+      path: "Sources/EasyBarShared",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarConfigParsing",
       dependencies: [
         .product(name: "TOMLKit", package: "TOMLKit")
       ],
-      path: "Sources/EasyBarConfigParsing"
+      path: "Sources/EasyBarConfigParsing",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarCalendarCore",
@@ -66,9 +73,7 @@ let package = Package(
         "EasyBarShared"
       ],
       path: "Sources/EasyBarCalendarPresentation",
-      swiftSettings: [
-        .enableUpcomingFeature("StrictConcurrency")
-      ]
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarCalendarUI",

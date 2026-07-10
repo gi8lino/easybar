@@ -1,6 +1,6 @@
 import Foundation
 
-public struct NetworkAgentVersion: Codable, Equatable {
+public struct NetworkAgentVersion: Codable, Equatable, Sendable {
   /// The application version embedded in the network-agent build.
   public var appVersion: String
   /// Shared EasyBar IPC protocol version.
@@ -14,12 +14,22 @@ public struct NetworkAgentVersion: Codable, Equatable {
 }
 
 /// Full network snapshot returned by the agent.
-public struct NetworkAgentSnapshot: Codable, Equatable {
-  public static let dateFormatter: ISO8601DateFormatter = {
+public struct NetworkAgentSnapshot: Codable, Equatable, Sendable {
+  /// Formats one network-agent timestamp for wire or display use.
+  public static func dateString(from date: Date) -> String {
+    makeDateFormatter().string(from: date)
+  }
+
+  /// Parses one network-agent timestamp from the wire format.
+  public static func date(from string: String) -> Date? {
+    makeDateFormatter().date(from: string)
+  }
+
+  private static func makeDateFormatter() -> ISO8601DateFormatter {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return formatter
-  }()
+  }
 
   /// Standard field set required to build a snapshot from field values.
   public static let snapshotFieldSet: [NetworkAgentField] = [
@@ -172,7 +182,7 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
       let accessGranted = fields[NetworkAgentField.locationAuthorized.rawValue]?.boolValue,
       let permissionState = fields[NetworkAgentField.locationPermissionState.rawValue]?.stringValue,
       let generatedAtRaw = fields[NetworkAgentField.generatedAt.rawValue]?.stringValue,
-      let generatedAt = Self.dateFormatter.date(from: generatedAtRaw),
+      let generatedAt = Self.date(from: generatedAtRaw),
       let primaryInterfaceIsTunnel = fields[NetworkAgentField.primaryInterfaceIsTunnel.rawValue]?
         .boolValue
     else {
@@ -212,7 +222,7 @@ public struct NetworkAgentSnapshot: Codable, Equatable {
 }
 
 /// Render-relevant signature used to suppress duplicate Wi-Fi UI updates.
-public struct NetworkAgentSnapshotRenderSignature: Equatable {
+public struct NetworkAgentSnapshotRenderSignature: Equatable, Sendable {
   public let accessGranted: Bool
   public let permissionState: String
   public let ssid: String?

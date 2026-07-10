@@ -138,7 +138,7 @@ struct WiFiPresentation {
 
     switch field {
     case .generatedAt:
-      return NetworkAgentSnapshot.dateFormatter.string(from: snapshot.generatedAt)
+      return NetworkAgentSnapshot.dateString(from: snapshot.generatedAt)
     case .locationAuthorized:
       return boolText(snapshot.accessGranted)
     case .locationPermissionState:

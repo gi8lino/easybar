@@ -185,7 +185,7 @@ public final class NetworkSnapshotProvider {
   ) -> NetworkAgentFieldValue? {
     switch field {
     case .generatedAt:
-      return .string(NetworkAgentSnapshot.dateFormatter.string(from: context.now))
+      return .string(NetworkAgentSnapshot.dateString(from: context.now))
     case .ssid, .bssid, .interfaceName, .hardwareAddress, .power, .serviceActive, .rssi,
       .noise, .snr, .linkQuality, .txRate, .channel, .channelBand, .channelWidth, .security,
       .phyMode, .interfaceMode, .countryCode, .roaming, .ssidChangedAt, .interfaceChangedAt:

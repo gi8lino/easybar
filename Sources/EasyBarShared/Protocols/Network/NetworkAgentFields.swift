@@ -1,6 +1,6 @@
 import Foundation
 
-public enum NetworkAgentField: String, Codable, CaseIterable {
+public enum NetworkAgentField: String, Codable, CaseIterable, Sendable {
   case generatedAt = "network.generated_at"
   case ssid = "wifi.ssid"
   case bssid = "wifi.bssid"
@@ -38,7 +38,7 @@ public enum NetworkAgentField: String, Codable, CaseIterable {
 }
 
 /// Stable field namespaces supported by the network agent.
-public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable {
+public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable, Sendable {
   case wifi
   case network
   case auth
@@ -56,7 +56,7 @@ public enum NetworkAgentFieldNamespace: String, Codable, CaseIterable {
 
 /// One stable wire-level error code returned by the network agent.
 
-public struct NetworkAgentFieldSpec {
+public struct NetworkAgentFieldSpec: Sendable {
   /// Field key used on the wire.
   public let field: NetworkAgentField
   /// Short help text for humans.
@@ -77,7 +77,7 @@ public struct NetworkAgentFieldSpec {
 }
 
 /// Describes one shared network-agent namespace selector.
-public struct NetworkAgentFieldNamespaceSpec {
+public struct NetworkAgentFieldNamespaceSpec: Sendable {
   /// Namespace key accepted by clients.
   public let namespace: NetworkAgentFieldNamespace
   /// Short help text for humans.
@@ -156,7 +156,7 @@ public let networkAgentFieldNamespaceRegistry: [NetworkAgentFieldNamespaceSpec] 
 ]
 
 /// One selector-expansion error shared by clients.
-public enum NetworkAgentFieldSelectorError: LocalizedError, Equatable {
+public enum NetworkAgentFieldSelectorError: LocalizedError, Equatable, Sendable {
   case unknownFieldOrSelector(String)
 
   /// Returns the localized selector error message.
