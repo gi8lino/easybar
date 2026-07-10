@@ -285,6 +285,30 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertEqual(Set(received.map(\.kind)), Set(messages.map(\.kind)))
   }
 
+  func testRapidServerRestartsKeepAcceptLoopBoundToCurrentRun() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+    defer { server.stop() }
+
+    for iteration in 0..<25 {
+      server.start { fd, request in
+        _ = server.send(TestMessage(kind: "\(iteration):\(request.command)"), to: fd)
+        return .close
+      }
+
+      try await waitUntil("server socket for iteration \(iteration)") {
+        FileManager.default.fileExists(atPath: self.socketPath)
+      }
+
+      let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
+        socketPath: socketPath
+      ).send(request: TestRequest(command: "ping"))
+      XCTAssertEqual(response, TestMessage(kind: "\(iteration):ping"))
+
+      server.stop()
+    }
+  }
+
   private func makeServer(logger: ProcessLogger)
     -> LineSocketServerTransport<Void, TestRequest, TestMessage>
   {

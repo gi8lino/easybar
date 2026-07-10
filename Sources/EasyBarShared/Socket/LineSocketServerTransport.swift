@@ -34,6 +34,7 @@ public final class LineSocketServerTransport<
   private struct State {
     var serverFD: Int32 = -1
     var running = false
+    var generation: UInt64 = 0
     var acceptThread: Thread?
     var clientFDs: Set<Int32> = []
     var subscribers: [Int32: Subscriber] = [:]
@@ -74,13 +75,14 @@ public final class LineSocketServerTransport<
 
   /// Starts listening and dispatches decoded requests to the handler.
   public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) {
-    let shouldStart = state.withLock { state -> Bool in
-      guard !state.running else { return false }
+    let generation = state.withLock { state -> UInt64? in
+      guard !state.running else { return nil }
       state.running = true
-      return true
+      state.generation &+= 1
+      return state.generation
     }
 
-    guard shouldStart else { return }
+    guard let generation else { return }
 
     guard let fd = makeListeningSocket() else {
       state.withLock { state in
@@ -92,7 +94,7 @@ public final class LineSocketServerTransport<
     }
 
     let shouldCancel = state.withLock { state -> Bool in
-      guard state.running else { return true }
+      guard state.running, state.generation == generation else { return true }
       state.serverFD = fd
       return false
     }
@@ -108,13 +110,17 @@ public final class LineSocketServerTransport<
     )
 
     let thread = Thread { [weak self] in
-      self?.acceptLoop(handler: handler)
+      self?.acceptLoop(serverFD: fd, generation: generation, handler: handler)
     }
     thread.name = "\(serverLabel) socket accept"
     thread.qualityOfService = .utility
 
     let shouldStartThread = state.withLock { state -> Bool in
-      guard state.running, state.serverFD == fd else { return false }
+      guard
+        state.running,
+        state.generation == generation,
+        state.serverFD == fd
+      else { return false }
       state.acceptThread = thread
       return true
     }
@@ -135,6 +141,7 @@ public final class LineSocketServerTransport<
       )
 
       state.running = false
+      state.generation &+= 1
       state.serverFD = -1
       state.acceptThread = nil
       state.clientFDs.removeAll()
@@ -265,18 +272,19 @@ public final class LineSocketServerTransport<
   }
 
   /// Accepts client connections until the server stops.
-  private func acceptLoop(handler: @escaping (Int32, Request) -> ClientDisposition) {
-    while isRunning() {
-      let fd = currentServerFD()
-      if fd < 0 { break }
-
-      let clientFD = accept(fd, nil, nil)
+  private func acceptLoop(
+    serverFD: Int32,
+    generation: UInt64,
+    handler: @escaping (Int32, Request) -> ClientDisposition
+  ) {
+    while isActiveServer(fd: serverFD, generation: generation) {
+      let clientFD = accept(serverFD, nil, nil)
       if clientFD < 0 {
         if errno == EINTR {
           continue
         }
 
-        if !isRunning() {
+        if !isActiveServer(fd: serverFD, generation: generation) {
           break
         }
 
@@ -296,7 +304,7 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      guard registerClientFD(clientFD) else {
+      guard registerClientFD(clientFD, generation: generation) else {
         closeClientSocket(clientFD)
         continue
       }
@@ -387,9 +395,9 @@ public final class LineSocketServerTransport<
   }
 
   /// Tracks one accepted client when the server is still running.
-  private func registerClientFD(_ fd: Int32) -> Bool {
+  private func registerClientFD(_ fd: Int32, generation: UInt64) -> Bool {
     state.withLock { state -> Bool in
-      guard state.running else { return false }
+      guard state.running, state.generation == generation else { return false }
       state.clientFDs.insert(fd)
       return true
     }
@@ -429,13 +437,10 @@ public final class LineSocketServerTransport<
     }
   }
 
-  /// Returns whether the server is running.
-  private func isRunning() -> Bool {
-    state.withLock { $0.running }
-  }
-
-  /// Returns the current server socket file descriptor.
-  private func currentServerFD() -> Int32 {
-    state.withLock { $0.serverFD }
+  /// Returns whether one accept loop still owns the active server run.
+  private func isActiveServer(fd: Int32, generation: UInt64) -> Bool {
+    state.withLock {
+      $0.running && $0.generation == generation && $0.serverFD == fd
+    }
   }
 }
