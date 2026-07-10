@@ -131,6 +131,39 @@ final class MetricsStreamingTests: XCTestCase {
     XCTAssertEqual(warnings, [])
   }
 
+  func testReloadKeepsNewMetricsSubscriberActive() async throws {
+    await MetricsCoordinator.shared.resetStreaming()
+
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    server.start(handler: { _ in }, validateConfigHandler: { _ in .rejected(message: "unused") })
+    defer { server.stop() }
+
+    let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
+    server.reloadConfiguration(socketPath: reloadedSocketPath)
+
+    var clientFD = try connectUnixSocket(path: reloadedSocketPath)
+    defer {
+      if clientFD >= 0 {
+        shutdown(clientFD, SHUT_RDWR)
+        close(clientFD)
+      }
+    }
+
+    try sendMetricsWatchRequest(to: clientFD)
+    _ = try readLine(from: clientFD)
+
+    try await waitUntil("metrics streaming after socket reload") {
+      await MetricsCoordinator.shared.isStreamingActive
+    }
+
+    shutdown(clientFD, SHUT_RDWR)
+    close(clientFD)
+    clientFD = -1
+  }
+
   private func connectUnixSocket(path: String) throws -> Int32 {
     let clientFD = socket(AF_UNIX, SOCK_STREAM, 0)
     guard clientFD >= 0 else {

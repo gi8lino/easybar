@@ -92,10 +92,10 @@ final class SocketServer {
       .field("new_path", "\(updatedSocketPath)")
     )
 
-    Task {
-      await metricsCoordinator.resetStreaming()
-    }
     transport.stop()
+    SynchronousTask.run {
+      await self.metricsCoordinator.resetStreaming()
+    }
 
     socketPath = updatedSocketPath
     transport = Self.makeTransport(
@@ -132,10 +132,10 @@ final class SocketServer {
     commandHandler = nil
     validateConfigHandler = nil
 
-    Task {
-      await metricsCoordinator.resetStreaming()
-    }
     transport.stop()
+    SynchronousTask.run {
+      await self.metricsCoordinator.resetStreaming()
+    }
   }
 
   /// Broadcasts one metrics payload to all active stream subscribers.
@@ -236,7 +236,7 @@ final class SocketServer {
       serverLabel: "easybar",
       logger: logger,
       onSubscriberRemoved: { fd in
-        Task {
+        SynchronousTask.run {
           await metricsCoordinator.removeStreamingSubscriber(fd: fd)
         }
       }
