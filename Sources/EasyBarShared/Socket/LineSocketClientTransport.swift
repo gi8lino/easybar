@@ -63,29 +63,9 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   /// Sends one request and returns one decoded response.
   public func send(request: Request) throws -> Response {
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      throw LineSocketClientTransportError.socketFailed
-    }
+    let fd = try connectSocket()
 
     defer { close(fd) }
-
-    guard configureNoSigPipe(fd: fd) else {
-      throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
-    }
-
-    var addr = try makeSockAddrUn(path: socketPath)
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let connectResult = withUnsafePointer(to: &addr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        connect(fd, $0, addrLen)
-      }
-    }
-
-    guard connectResult == 0 else {
-      throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
-    }
 
     let encoder = makeEncoder()
 
@@ -98,6 +78,20 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
 
     return try readOneResponse(from: fd)
+  }
+
+  private func connectSocket() throws -> Int32 {
+    do {
+      return try openConnectedUnixSocket(at: socketPath)
+    } catch UnixSocketConnectError.createSocket {
+      throw LineSocketClientTransportError.socketFailed
+    } catch UnixSocketConnectError.configureNoSigPipe {
+      throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
+    } catch UnixSocketConnectError.invalidAddress(let error) {
+      throw error
+    } catch UnixSocketConnectError.connect(let errnoValue) {
+      throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
+    }
   }
 
   /// Reads bytes until one response line decodes or EOF is reached.

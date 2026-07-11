@@ -3,6 +3,49 @@ import Foundation
 
 private let socketWriteRetryTimeoutMilliseconds: Int32 = 1_000
 
+/// Errors produced while opening a Unix-domain client socket.
+public enum UnixSocketConnectError: Error {
+  case createSocket(errnoValue: Int32)
+  case configureNoSigPipe
+  case invalidAddress(any Error)
+  case connect(errnoValue: Int32)
+}
+
+/// Creates and connects one Unix-domain client socket.
+public func openConnectedUnixSocket(at socketPath: String) throws -> Int32 {
+  let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+  guard fd >= 0 else {
+    throw UnixSocketConnectError.createSocket(errnoValue: errno)
+  }
+
+  do {
+    guard configureNoSigPipe(fd: fd) else {
+      throw UnixSocketConnectError.configureNoSigPipe
+    }
+
+    var address: sockaddr_un
+    do {
+      address = try makeSockAddrUn(path: socketPath)
+    } catch {
+      throw UnixSocketConnectError.invalidAddress(error)
+    }
+
+    let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
+    let result = withUnsafePointer(to: &address) {
+      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        Darwin.connect(fd, $0, addressLength)
+      }
+    }
+    guard result == 0 else {
+      throw UnixSocketConnectError.connect(errnoValue: errno)
+    }
+    return fd
+  } catch {
+    close(fd)
+    throw error
+  }
+}
+
 /// Errors produced while preparing Unix-domain server sockets.
 public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedError {
   case createDirectory(path: String, message: String)

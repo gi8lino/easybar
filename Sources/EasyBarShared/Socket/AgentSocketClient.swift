@@ -319,52 +319,16 @@ public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @u
 
   /// Opens one connected Unix socket.
   private func openConnectedSocket(socketPath: String) -> Int32? {
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      logger.warn(
-        "\(label) socket creation failed",
-        .field("errno", errno),
-      )
-      return nil
-    }
-
-    guard configureNoSigPipe(fd: fd) else {
-      logger.warn(
-        "\(label) failed to configure no-sigpipe",
-        .field("fd", fd),
-      )
-      close(fd)
-      return nil
-    }
-
-    let addr: sockaddr_un
     do {
-      addr = try makeSockAddrUn(path: socketPath)
+      return try openConnectedUnixSocket(at: socketPath)
     } catch {
       logger.warn(
-        "\(label) invalid socket path",
+        "\(label) socket connection failed",
         .field("socket", socketPath),
         .field("error", error),
       )
-      close(fd)
       return nil
     }
-
-    var mutableAddr = addr
-    let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let connectResult = withUnsafePointer(to: &mutableAddr) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        Darwin.connect(fd, $0, addrLen)
-      }
-    }
-
-    guard connectResult == 0 else {
-      close(fd)
-      return nil
-    }
-
-    return fd
   }
 
   /// Encodes and sends one request line.
