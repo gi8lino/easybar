@@ -58,6 +58,7 @@ public final class LineSocketServerTransport<
   private let maxRequestBytes: Int
   private let maxConcurrentClients: Int
   private let writerQueue: DispatchQueue
+  private let workerGroup = DispatchGroup()
   private let state = LockedState(State())
 
   /// Creates a new Unix socket server transport.
@@ -124,7 +125,9 @@ public final class LineSocketServerTransport<
       .field("socket_path", "\(socketPath)"),
     )
 
-    let thread = Thread { [weak self] in
+    workerGroup.enter()
+    let thread = Thread { [weak self, workerGroup] in
+      defer { workerGroup.leave() }
       self?.acceptLoop(serverFD: fd, generation: generation, handler: handler)
     }
     thread.name = "\(serverLabel) socket accept"
@@ -142,6 +145,8 @@ public final class LineSocketServerTransport<
 
     if shouldStartThread {
       thread.start()
+    } else {
+      workerGroup.leave()
     }
 
     return shouldStartThread
@@ -183,6 +188,9 @@ public final class LineSocketServerTransport<
     }
 
     unlink(socketPath)
+    if workerGroup.wait(timeout: .now() + 2) == .timedOut {
+      logger.warn("\(serverLabel) socket workers did not drain before shutdown timeout")
+    }
     logger.info(
       "\(serverLabel) stopped",
       .field("socket_path", "\(socketPath)"),
@@ -342,7 +350,9 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      let clientThread = Thread { [weak self] in
+      workerGroup.enter()
+      let clientThread = Thread { [weak self, workerGroup] in
+        defer { workerGroup.leave() }
         self?.handleClient(clientFD, handler: handler)
       }
       clientThread.name = "\(serverLabel) socket client"
