@@ -184,15 +184,12 @@ final class AgentSocketClientTests: XCTestCase {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)
 
-    server.start { _, _ in
-      XCTFail("idle client should not dispatch a request")
-      return .close
-    }
+    XCTAssertTrue(
+      server.start { _, _ in
+        XCTFail("idle client should not dispatch a request")
+        return .close
+      })
     defer { server.stop() }
-
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
 
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
