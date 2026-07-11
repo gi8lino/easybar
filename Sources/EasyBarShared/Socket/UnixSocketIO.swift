@@ -9,6 +9,7 @@ public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedErr
   case configureNoSigPipe
   case invalidAddress(any Error)
   case connect(errnoValue: Int32)
+  case timedOut(TimeInterval)
 
   public var description: String {
     switch self {
@@ -20,6 +21,8 @@ public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedErr
       return "invalid Unix socket address: \(error)"
     case .connect(let errnoValue):
       return "socket connection failed: \(Self.errnoDescription(errnoValue))"
+    case .timedOut(let timeout):
+      return "socket connection timed out after \(timeout) seconds"
     }
   }
 
@@ -31,7 +34,10 @@ public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedErr
 }
 
 /// Creates and connects one Unix-domain client socket.
-public func openConnectedUnixSocket(at socketPath: String) throws -> Int32 {
+public func openConnectedUnixSocket(
+  at socketPath: String,
+  timeout: TimeInterval = 5
+) throws -> Int32 {
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
     throw UnixSocketConnectError.createSocket(errnoValue: errno)
@@ -50,12 +56,39 @@ public func openConnectedUnixSocket(at socketPath: String) throws -> Int32 {
     }
 
     let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
+    let originalFlags = fcntl(fd, F_GETFL)
+    guard originalFlags >= 0, fcntl(fd, F_SETFL, originalFlags | O_NONBLOCK) == 0 else {
+      throw UnixSocketConnectError.connect(errnoValue: errno)
+    }
+
     let result = withUnsafePointer(to: &address) {
       $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
         Darwin.connect(fd, $0, addressLength)
       }
     }
-    guard result == 0 else {
+    if result != 0 {
+      guard errno == EINPROGRESS else {
+        throw UnixSocketConnectError.connect(errnoValue: errno)
+      }
+
+      var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
+      let milliseconds = Int32(min(max(0.001, timeout) * 1_000, Double(Int32.max)))
+      let pollResult = poll(&descriptor, 1, milliseconds)
+      guard pollResult > 0 else {
+        if pollResult == 0 { throw UnixSocketConnectError.timedOut(max(0.001, timeout)) }
+        throw UnixSocketConnectError.connect(errnoValue: errno)
+      }
+
+      var socketError: Int32 = 0
+      var errorLength = socklen_t(MemoryLayout<Int32>.size)
+      guard getsockopt(fd, SOL_SOCKET, SO_ERROR, &socketError, &errorLength) == 0 else {
+        throw UnixSocketConnectError.connect(errnoValue: errno)
+      }
+      guard socketError == 0 else {
+        throw UnixSocketConnectError.connect(errnoValue: socketError)
+      }
+    }
+    guard fcntl(fd, F_SETFL, originalFlags) == 0 else {
       throw UnixSocketConnectError.connect(errnoValue: errno)
     }
     return fd

@@ -18,6 +18,8 @@ struct MetricsStreamClient {
       throw error
     } catch UnixSocketConnectError.connect(let errnoValue) {
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
+    } catch UnixSocketConnectError.timedOut(let timeout) {
+      throw LineSocketClientTransportError.responseTimedOut(timeout)
     }
   }
 

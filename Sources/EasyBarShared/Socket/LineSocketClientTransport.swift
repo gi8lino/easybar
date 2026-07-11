@@ -82,7 +82,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   private func connectSocket() throws -> Int32 {
     do {
-      return try openConnectedUnixSocket(at: socketPath)
+      return try openConnectedUnixSocket(at: socketPath, timeout: responseTimeout)
     } catch UnixSocketConnectError.createSocket {
       throw LineSocketClientTransportError.socketFailed
     } catch UnixSocketConnectError.configureNoSigPipe {
@@ -91,6 +91,8 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
       throw error
     } catch UnixSocketConnectError.connect(let errnoValue) {
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
+    } catch UnixSocketConnectError.timedOut(let timeout) {
+      throw LineSocketClientTransportError.responseTimedOut(timeout)
     }
   }
 
