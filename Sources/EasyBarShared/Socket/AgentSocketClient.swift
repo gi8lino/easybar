@@ -5,7 +5,10 @@ import Foundation
 ///
 /// Sendability is guarded by `LockedState`; all mutable socket/task state is
 /// accessed through that lock, and callbacks are invoked outside the lock.
-public final class AgentSocketClient<Request: Encodable, Message: Decodable>: @unchecked Sendable {
+public final class AgentSocketClient<
+  Request: Encodable & Sendable,
+  Message: Decodable & Sendable
+>: @unchecked Sendable {
   private struct State {
     var socketFD: Int32 = -1
     var running = false

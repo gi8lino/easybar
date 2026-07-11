@@ -9,9 +9,9 @@ import Foundation
 /// that lock. Request handlers are invoked outside the lock so user code cannot
 /// block state cleanup or socket shutdown.
 public final class LineSocketServerTransport<
-  Subscriber,
-  Request: Decodable,
-  Response: Encodable
+  Subscriber: Sendable,
+  Request: Decodable & Sendable,
+  Response: Encodable & Sendable
 >: @unchecked Sendable {
   /// One currently connected subscriber entry.
   public struct SubscriberEntry {
@@ -86,7 +86,9 @@ public final class LineSocketServerTransport<
 
   /// Starts listening and dispatches decoded requests to the handler.
   @discardableResult
-  public func start(_ handler: @escaping (Int32, Request) -> ClientDisposition) -> Bool {
+  public func start(
+    _ handler: @escaping @Sendable (Int32, Request) -> ClientDisposition
+  ) -> Bool {
     let generation = state.withLock { state -> UInt64? in
       guard !state.running else { return nil }
       state.running = true
@@ -298,7 +300,7 @@ public final class LineSocketServerTransport<
   private func acceptLoop(
     serverFD: Int32,
     generation: UInt64,
-    handler: @escaping (Int32, Request) -> ClientDisposition
+    handler: @escaping @Sendable (Int32, Request) -> ClientDisposition
   ) {
     while isActiveServer(fd: serverFD, generation: generation) {
       let clientFD = accept(serverFD, nil, nil)
@@ -344,7 +346,7 @@ public final class LineSocketServerTransport<
   /// Reads requests until the client disconnects and invokes the handler for each line.
   private func handleClient(
     _ clientFD: Int32,
-    handler: @escaping (Int32, Request) -> ClientDisposition
+    handler: @escaping @Sendable (Int32, Request) -> ClientDisposition
   ) {
     var lineDecoder = LineDelimitedJSONDecoder<Request>(maxLineBytes: maxRequestBytes)
     var buffer = [UInt8](repeating: 0, count: 4096)
@@ -405,7 +407,7 @@ public final class LineSocketServerTransport<
   private func handleDecodedRequests(
     _ results: [Result<Request, Error>],
     clientFD: Int32,
-    handler: @escaping (Int32, Request) -> ClientDisposition
+    handler: @escaping @Sendable (Int32, Request) -> ClientDisposition
   ) -> (disposition: ClientDisposition, handledRequest: Bool) {
     for result in results {
       switch result {
