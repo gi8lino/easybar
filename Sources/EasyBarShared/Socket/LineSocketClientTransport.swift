@@ -36,6 +36,7 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
 public struct LineSocketClientTransport<Request: Encodable, Response: Decodable> {
   public let socketPath: String
   public let responseTimeout: TimeInterval
+  public let maxResponseBytes: Int
 
   private let makeEncoder: @Sendable () -> JSONEncoder
   private let makeDecoder: @Sendable () -> JSONDecoder
@@ -44,6 +45,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
   public init(
     socketPath: String,
     responseTimeout: TimeInterval = 5,
+    maxResponseBytes: Int = LineDelimitedJSONDecoder<Response>.defaultMaxLineBytes,
     makeEncoder: @escaping @Sendable () -> JSONEncoder = {
       let encoder = JSONEncoder()
       encoder.outputFormatting = [.sortedKeys]
@@ -57,6 +59,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
   ) {
     self.socketPath = socketPath
     self.responseTimeout = max(0.001, responseTimeout)
+    self.maxResponseBytes = max(1, maxResponseBytes)
     self.makeEncoder = makeEncoder
     self.makeDecoder = makeDecoder
   }
@@ -98,7 +101,10 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   /// Reads bytes until one response line decodes or EOF is reached.
   private func readOneResponse(from fd: Int32) throws -> Response {
-    var lineDecoder = LineDelimitedJSONDecoder<Response>(decoder: makeDecoder())
+    var lineDecoder = LineDelimitedJSONDecoder<Response>(
+      decoder: makeDecoder(),
+      maxLineBytes: maxResponseBytes
+    )
     var buffer = [UInt8](repeating: 0, count: 1024)
 
     let deadline = Date().addingTimeInterval(responseTimeout)

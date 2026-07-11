@@ -399,6 +399,26 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertEqual(Set(received.map(\.kind)), Set(messages.map(\.kind)))
   }
 
+  func testOneShotClientRejectsOversizedResponse() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+    server.start { fd, _ in
+      _ = server.send(TestMessage(kind: String(repeating: "x", count: 64)), to: fd)
+      return .close
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let client = LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath,
+      maxResponseBytes: 16
+    )
+    XCTAssertThrowsError(try client.send(request: TestRequest(command: "ping")))
+  }
+
   func testRapidServerRestartsKeepAcceptLoopBoundToCurrentRun() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)
