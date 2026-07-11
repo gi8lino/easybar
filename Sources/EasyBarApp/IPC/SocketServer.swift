@@ -94,27 +94,20 @@ final class SocketServer {
       .field("new_path", "\(updatedSocketPath)")
     )
 
-    transport.stop()
-    SynchronousTask.run {
-      await self.metricsCoordinator.resetStreaming()
-    }
-
-    socketPath = updatedSocketPath
-    transport = Self.makeTransport(
+    let replacementTransport = Self.makeTransport(
       socketPath: updatedSocketPath,
       metricsCoordinator: metricsCoordinator,
       logger: logger.child("transport")
     )
-
-    let activeTransport = transport
 
     let activeValidateConfigHandler: (String?) async -> IPC.Message =
       validateConfigHandler ?? { _ in
         .rejected(message: "config validation unavailable")
       }
 
-    let didStart = activeTransport.start { [weak self, weak activeTransport] clientFD, request in
-      guard let self, let activeTransport else {
+    let didStart = replacementTransport.start {
+      [weak self, weak replacementTransport] clientFD, request in
+      guard let self, let replacementTransport else {
         return .close
       }
 
@@ -123,14 +116,19 @@ final class SocketServer {
         request: request,
         handler: commandHandler,
         validateConfigHandler: activeValidateConfigHandler,
-        transport: activeTransport
+        transport: replacementTransport
       )
     }
 
-    if !didStart {
-      started = false
-      self.commandHandler = nil
-      validateConfigHandler = nil
+    guard didStart else { return }
+
+    let previousTransport = transport
+    transport = replacementTransport
+    socketPath = updatedSocketPath
+
+    previousTransport.stop()
+    SynchronousTask.run {
+      await self.metricsCoordinator.resetStreaming()
     }
   }
 

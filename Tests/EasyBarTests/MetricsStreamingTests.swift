@@ -192,25 +192,34 @@ final class MetricsStreamingTests: XCTestCase {
     clientFD = -1
   }
 
-  func testSocketServerCanRetryAfterReloadListenerSetupFailure() throws {
+  func testFailedReloadKeepsExistingListenerAndCanRetry() throws {
     let server = SocketServer(
       logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
       socketPath: socketPath
     )
-    server.start(handler: { _ in }, validateConfigHandler: { _ in .rejected(message: "unused") })
-    defer { server.stop() }
-
-    let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
-    FileManager.default.createFile(atPath: reloadedSocketPath, contents: Data())
-    server.reloadConfiguration(socketPath: reloadedSocketPath)
-
-    try FileManager.default.removeItem(atPath: reloadedSocketPath)
     server.start(
       handler: { _ in },
       validateConfigHandler: { configPath in
         .configValidated(configPath: configPath ?? "<default>", warnings: [])
       }
     )
+    defer { server.stop() }
+
+    let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
+    FileManager.default.createFile(atPath: reloadedSocketPath, contents: Data())
+    server.reloadConfiguration(socketPath: reloadedSocketPath)
+
+    let existingClient = LineSocketClientTransport<IPC.Request, IPC.Message>(
+      socketPath: socketPath
+    )
+    let existingResponse = try existingClient.send(request: .makeValidateConfig(configPath: nil))
+    guard case .configValidated(let existingPath, _) = existingResponse else {
+      return XCTFail("Expected configValidated response, got \(existingResponse)")
+    }
+    XCTAssertEqual(existingPath, "<default>")
+
+    try FileManager.default.removeItem(atPath: reloadedSocketPath)
+    server.reloadConfiguration(socketPath: reloadedSocketPath)
 
     let client = LineSocketClientTransport<IPC.Request, IPC.Message>(
       socketPath: reloadedSocketPath
