@@ -150,6 +150,18 @@ actor RuntimeCoordinator {
     generation: UInt64,
     operation: RuntimeLifecycleOperation
   ) async -> Bool {
+    let socketPath = SharedPathDefaults.easyBarSocketPath(
+      in: result.snapshot.app.runtimeDirectory
+    )
+    guard await socketCommandAdapter.reloadConfiguration(socketPath: socketPath) else {
+      await configManager.restore(result.previousSnapshot)
+      logger.error(
+        "config reload rolled back after socket listener failure",
+        .field("socket_path", "\(socketPath)")
+      )
+      return false
+    }
+
     guard await runLifecycleStep(generation: generation, operation: operation, configureLogging)
     else {
       return false
@@ -190,11 +202,7 @@ actor RuntimeCoordinator {
       return false
     }
 
-    return await runLifecycleStep(
-      generation: generation,
-      operation: operation,
-      reloadSocketServerConfiguration
-    )
+    return shouldContinueLifecycleWork(generation: generation, operation: operation)
   }
 
   func restartLuaRuntime() async {

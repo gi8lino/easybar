@@ -27,6 +27,8 @@ actor ConfigManager {
     let errorMessage: String?
     /// Active immutable config snapshot after the load attempt.
     let snapshot: ConfigSnapshot
+    /// Immutable config snapshot active before the load attempt.
+    let previousSnapshot: ConfigSnapshot
   }
 
   /// Live config store that remains the only mutation boundary.
@@ -39,18 +41,35 @@ actor ConfigManager {
   /// Loads the active config during app startup and returns a stable result.
   func loadInitialConfig() async -> ReloadResult {
     await MainActor.run {
+      let previousSnapshot = config.snapshot()
       let error = config.loadInitialState()
       let snapshot = config.snapshot()
-      return Self.makeReloadResult(error: error, snapshot: snapshot)
+      return Self.makeReloadResult(
+        error: error,
+        snapshot: snapshot,
+        previousSnapshot: previousSnapshot
+      )
     }
   }
 
   /// Reloads the active config and returns a stable result.
   func reload() async -> ReloadResult {
     await MainActor.run {
+      let previousSnapshot = config.snapshot()
       let error = config.reload()
       let snapshot = config.snapshot()
-      return Self.makeReloadResult(error: error, snapshot: snapshot)
+      return Self.makeReloadResult(
+        error: error,
+        snapshot: snapshot,
+        previousSnapshot: previousSnapshot
+      )
+    }
+  }
+
+  /// Restores a previously captured live config snapshot.
+  func restore(_ snapshot: ConfigSnapshot) async {
+    await MainActor.run {
+      config.apply(snapshot)
     }
   }
 
@@ -133,12 +152,14 @@ actor ConfigManager {
   /// Builds one reload result from a stable snapshot.
   private static func makeReloadResult(
     error: (any Error)?,
-    snapshot: ConfigSnapshot
+    snapshot: ConfigSnapshot,
+    previousSnapshot: ConfigSnapshot
   ) -> ReloadResult {
     ReloadResult(
       succeeded: error == nil,
       errorMessage: error.map { String(describing: $0) },
-      snapshot: snapshot
+      snapshot: snapshot,
+      previousSnapshot: previousSnapshot
     )
   }
 
