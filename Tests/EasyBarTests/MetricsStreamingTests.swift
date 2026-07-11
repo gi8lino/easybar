@@ -192,6 +192,38 @@ final class MetricsStreamingTests: XCTestCase {
     clientFD = -1
   }
 
+  func testSocketServerCanRetryAfterReloadListenerSetupFailure() throws {
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    server.start(handler: { _ in }, validateConfigHandler: { _ in .rejected(message: "unused") })
+    defer { server.stop() }
+
+    let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
+    FileManager.default.createFile(atPath: reloadedSocketPath, contents: Data())
+    server.reloadConfiguration(socketPath: reloadedSocketPath)
+
+    try FileManager.default.removeItem(atPath: reloadedSocketPath)
+    server.start(
+      handler: { _ in },
+      validateConfigHandler: { configPath in
+        .configValidated(configPath: configPath ?? "<default>", warnings: [])
+      }
+    )
+
+    let client = LineSocketClientTransport<IPC.Request, IPC.Message>(
+      socketPath: reloadedSocketPath
+    )
+    let response = try client.send(request: .makeValidateConfig(configPath: nil))
+
+    guard case .configValidated(let validatedPath, _) = response else {
+      return XCTFail("Expected configValidated response, got \(response)")
+    }
+
+    XCTAssertEqual(validatedPath, "<default>")
+  }
+
   private func connectUnixSocket(path: String) throws -> Int32 {
     let clientFD = socket(AF_UNIX, SOCK_STREAM, 0)
     guard clientFD >= 0 else {

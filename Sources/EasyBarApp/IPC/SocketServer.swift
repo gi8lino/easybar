@@ -113,7 +113,7 @@ final class SocketServer {
         .rejected(message: "config validation unavailable")
       }
 
-    activeTransport.start { [weak self, weak activeTransport] clientFD, request in
+    let didStart = activeTransport.start { [weak self, weak activeTransport] clientFD, request in
       guard let self, let activeTransport else {
         return .close
       }
@@ -125,6 +125,12 @@ final class SocketServer {
         validateConfigHandler: activeValidateConfigHandler,
         transport: activeTransport
       )
+    }
+
+    if !didStart {
+      started = false
+      self.commandHandler = nil
+      validateConfigHandler = nil
     }
   }
 
