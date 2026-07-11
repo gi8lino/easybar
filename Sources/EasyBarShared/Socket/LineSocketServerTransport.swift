@@ -54,6 +54,7 @@ public final class LineSocketServerTransport<
   private let logger: ProcessLogger
   private let onSubscriberRemoved: ((Int32) -> Void)?
   private let initialRequestTimeout: TimeInterval
+  private let maxRequestBytes: Int
   private let writerQueue: DispatchQueue
   private let state = LockedState(State())
 
@@ -63,12 +64,14 @@ public final class LineSocketServerTransport<
     serverLabel: String,
     logger: ProcessLogger,
     initialRequestTimeout: TimeInterval = 5,
+    maxRequestBytes: Int = LineDelimitedJSONDecoder<Request>.defaultMaxLineBytes,
     onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
     self.serverLabel = serverLabel
     self.logger = logger
     self.initialRequestTimeout = max(0.001, initialRequestTimeout)
+    self.maxRequestBytes = max(1, maxRequestBytes)
     self.onSubscriberRemoved = onSubscriberRemoved
     self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
@@ -340,7 +343,7 @@ public final class LineSocketServerTransport<
     _ clientFD: Int32,
     handler: @escaping (Int32, Request) -> ClientDisposition
   ) {
-    var lineDecoder = LineDelimitedJSONDecoder<Request>()
+    var lineDecoder = LineDelimitedJSONDecoder<Request>(maxLineBytes: maxRequestBytes)
     var buffer = [UInt8](repeating: 0, count: 4096)
     var isWaitingForInitialRequest = true
 

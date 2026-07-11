@@ -231,6 +231,34 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testServerClosesClientThatExceedsRequestLimit() async throws {
+    let logger = Self.makeLogger()
+    let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      maxRequestBytes: 16
+    )
+
+    server.start { _, _ in
+      XCTFail("oversized request should not be dispatched")
+      return .close
+    }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+    try writeLine(#"{"command":"request-that-is-too-large"}"#, to: clientFD)
+
+    try await waitUntil("oversized request socket to close") {
+      self.socketIsClosed(clientFD)
+    }
+  }
+
   func testInitialRequestTimeoutDoesNotCloseSubscriber() async throws {
     let logger = Self.makeLogger()
     let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
