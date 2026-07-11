@@ -2,6 +2,12 @@ import EasyBarShared
 import Foundation
 
 /// Unix socket server used to receive external triggers.
+///
+/// Lifecycle methods (`start`, `reloadConfiguration`, and `stop`) and
+/// `broadcastMetrics` must be called from one serialized execution context.
+/// Production code enforces this by owning the server inside
+/// `RuntimeSocketCommandAdapter`, an actor. Transport callbacks may arrive on
+/// background threads, but they do not mutate the server's lifecycle state.
 final class SocketServer {
   /// Concrete line-delimited socket transport used by the server.
   private typealias Transport = LineSocketServerTransport<
