@@ -39,6 +39,7 @@ public final class LineSocketServerTransport<
     var clientFDs: Set<Int32> = []
     var nextClientGeneration: UInt64 = 0
     var clientGenerations: [Int32: UInt64] = [:]
+    var lastOverloadLogTime: TimeInterval = 0
     var subscribers: [Int32: Subscriber] = [:]
   }
 
@@ -329,7 +330,14 @@ public final class LineSocketServerTransport<
         continue
       }
 
-      guard registerClientFD(clientFD, generation: generation) else {
+      let registration = registerClientFD(clientFD, generation: generation)
+      guard registration.accepted else {
+        if registration.shouldLogOverload {
+          logger.warn(
+            "\(serverLabel) concurrent client limit reached",
+            .field("limit", "\(maxConcurrentClients)")
+          )
+        }
         closeClientSocket(clientFD)
         continue
       }
@@ -455,14 +463,22 @@ public final class LineSocketServerTransport<
   }
 
   /// Tracks one accepted client when the server is still running.
-  private func registerClientFD(_ fd: Int32, generation: UInt64) -> Bool {
-    state.withLock { state -> Bool in
-      guard state.running, state.generation == generation else { return false }
-      guard state.clientFDs.count < maxConcurrentClients else { return false }
+  private func registerClientFD(
+    _ fd: Int32,
+    generation: UInt64
+  ) -> (accepted: Bool, shouldLogOverload: Bool) {
+    state.withLock { state in
+      guard state.running, state.generation == generation else { return (false, false) }
+      guard state.clientFDs.count < maxConcurrentClients else {
+        let now = ProcessInfo.processInfo.systemUptime
+        let shouldLog = now - state.lastOverloadLogTime >= 5
+        if shouldLog { state.lastOverloadLogTime = now }
+        return (false, shouldLog)
+      }
       state.nextClientGeneration &+= 1
       state.clientFDs.insert(fd)
       state.clientGenerations[fd] = state.nextClientGeneration
-      return true
+      return (true, false)
     }
   }
 
