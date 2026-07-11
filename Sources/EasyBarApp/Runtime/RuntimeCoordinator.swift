@@ -154,7 +154,7 @@ actor RuntimeCoordinator {
       in: result.snapshot.app.runtimeDirectory
     )
     guard await socketCommandAdapter.reloadConfiguration(socketPath: socketPath) else {
-      await configManager.restore(result.previousSnapshot)
+      await configManager.restorePreviousState()
       logger.error(
         "config reload rolled back after socket listener failure",
         .field("socket_path", "\(socketPath)")

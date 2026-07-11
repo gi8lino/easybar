@@ -33,6 +33,7 @@ actor ConfigManager {
 
   /// Live config store that remains the only mutation boundary.
   private let config: Config
+  private var previousLoadedState: Config.LoadedState?
   /// Creates one config manager for a live config store.
   init(config: Config = Config.makeUnloadedConfig()) {
     self.config = config
@@ -54,7 +55,10 @@ actor ConfigManager {
 
   /// Reloads the active config and returns a stable result.
   func reload() async -> ReloadResult {
-    await MainActor.run {
+    let loadedState = await MainActor.run { config.loadedStateSnapshot() }
+    previousLoadedState = loadedState
+
+    return await MainActor.run {
       let previousSnapshot = config.snapshot()
       let error = config.reload()
       let snapshot = config.snapshot()
@@ -67,10 +71,12 @@ actor ConfigManager {
   }
 
   /// Restores a previously captured live config snapshot.
-  func restore(_ snapshot: ConfigSnapshot) async {
+  func restorePreviousState() async {
+    guard let previousLoadedState else { return }
     await MainActor.run {
-      config.apply(snapshot)
+      config.applyLoadedState(previousLoadedState)
     }
+    self.previousLoadedState = nil
   }
 
   /// Returns the current active immutable config snapshot.

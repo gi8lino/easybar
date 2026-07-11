@@ -3,10 +3,19 @@ import Foundation
 
 extension Config {
   /// One fully loaded config state produced off to the side before swapping live values.
-  struct LoadedState {
+  struct LoadedState: Sendable {
     let snapshot: ConfigSnapshot
     let registeredDirectories: [String: RequiredDirectory]
     let warnings: [String]
+  }
+
+  /// Captures all live configuration state needed for an exact rollback.
+  func loadedStateSnapshot() -> LoadedState {
+    LoadedState(
+      snapshot: snapshot(),
+      registeredDirectories: registeredDirectories,
+      warnings: configWarnings
+    )
   }
 
   /// Loads config from disk during app startup.
@@ -47,7 +56,7 @@ extension Config {
   }
 
   /// Swaps one fully loaded config state into the live store.
-  private func applyLoadedState(_ state: LoadedState) {
+  func applyLoadedState(_ state: LoadedState) {
     apply(state.snapshot)
     registeredDirectories = state.registeredDirectories
     configWarnings = state.warnings

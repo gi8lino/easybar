@@ -3,9 +3,9 @@ import Foundation
 extension Config {
 
   /// One resolved filesystem requirement for the runtime.
-  struct RequiredDirectory {
+  struct RequiredDirectory: Sendable {
     /// Filesystem requirement kind.
-    enum Kind {
+    enum Kind: Sendable {
       /// The configured path must be a directory.
       case directory
       /// The configured path is a file and its parent must exist.
