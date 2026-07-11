@@ -75,8 +75,9 @@ final class SocketServer {
   }
 
   /// Reloads the socket server when the configured socket path changed.
-  func reloadConfiguration(socketPath updatedSocketPath: String) {
-    guard updatedSocketPath != socketPath else { return }
+  @discardableResult
+  func reloadConfiguration(socketPath updatedSocketPath: String) -> Bool {
+    guard updatedSocketPath != socketPath else { return true }
 
     guard let commandHandler else {
       socketPath = updatedSocketPath
@@ -85,7 +86,7 @@ final class SocketServer {
         metricsCoordinator: metricsCoordinator,
         logger: logger.child("transport")
       )
-      return
+      return true
     }
 
     logger.info(
@@ -120,7 +121,7 @@ final class SocketServer {
       )
     }
 
-    guard didStart else { return }
+    guard didStart else { return false }
 
     let previousTransport = transport
     transport = replacementTransport
@@ -130,6 +131,7 @@ final class SocketServer {
     SynchronousTask.run {
       await self.metricsCoordinator.resetStreaming()
     }
+    return true
   }
 
   /// Stops the socket listener.

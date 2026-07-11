@@ -170,7 +170,7 @@ final class MetricsStreamingTests: XCTestCase {
     defer { server.stop() }
 
     let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
-    server.reloadConfiguration(socketPath: reloadedSocketPath)
+    XCTAssertTrue(server.reloadConfiguration(socketPath: reloadedSocketPath))
 
     var clientFD = try connectUnixSocket(path: reloadedSocketPath)
     defer {
@@ -207,7 +207,7 @@ final class MetricsStreamingTests: XCTestCase {
 
     let reloadedSocketPath = socketDirectoryURL.appendingPathComponent("reloaded.sock").path
     FileManager.default.createFile(atPath: reloadedSocketPath, contents: Data())
-    server.reloadConfiguration(socketPath: reloadedSocketPath)
+    XCTAssertFalse(server.reloadConfiguration(socketPath: reloadedSocketPath))
 
     let existingClient = LineSocketClientTransport<IPC.Request, IPC.Message>(
       socketPath: socketPath
