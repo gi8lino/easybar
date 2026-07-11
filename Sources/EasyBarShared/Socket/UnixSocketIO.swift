@@ -4,11 +4,30 @@ import Foundation
 private let socketWriteRetryTimeoutMilliseconds: Int32 = 1_000
 
 /// Errors produced while opening a Unix-domain client socket.
-public enum UnixSocketConnectError: Error {
+public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedError {
   case createSocket(errnoValue: Int32)
   case configureNoSigPipe
   case invalidAddress(any Error)
   case connect(errnoValue: Int32)
+
+  public var description: String {
+    switch self {
+    case .createSocket(let errnoValue):
+      return "socket creation failed: \(Self.errnoDescription(errnoValue))"
+    case .configureNoSigPipe:
+      return "failed to configure socket no-sigpipe"
+    case .invalidAddress(let error):
+      return "invalid Unix socket address: \(error)"
+    case .connect(let errnoValue):
+      return "socket connection failed: \(Self.errnoDescription(errnoValue))"
+    }
+  }
+
+  public var errorDescription: String? { description }
+
+  private static func errnoDescription(_ value: Int32) -> String {
+    "\(String(cString: strerror(value))) (errno \(value))"
+  }
 }
 
 /// Creates and connects one Unix-domain client socket.

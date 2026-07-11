@@ -3,6 +3,18 @@ import EasyBarShared
 import XCTest
 
 final class UnixSocketAddressTests: XCTestCase {
+  func testConnectErrorsProvideActionableDescriptions() {
+    XCTAssertEqual(
+      UnixSocketConnectError.configureNoSigPipe.description,
+      "failed to configure socket no-sigpipe"
+    )
+    XCTAssertTrue(
+      UnixSocketConnectError.connect(errnoValue: ECONNREFUSED).description.contains(
+        "errno \(ECONNREFUSED)"
+      )
+    )
+  }
+
   private var temporaryDirectory: URL?
 
   override func tearDownWithError() throws {
