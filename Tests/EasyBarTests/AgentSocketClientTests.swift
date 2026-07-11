@@ -259,6 +259,33 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testServerRejectsClientsAboveConcurrencyLimit() async throws {
+    let logger = Self.makeLogger()
+    let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger,
+      initialRequestTimeout: 1,
+      maxConcurrentClients: 1
+    )
+    server.start { _, _ in .close }
+    defer { server.stop() }
+
+    try await waitUntil("server socket to exist") {
+      FileManager.default.fileExists(atPath: self.socketPath)
+    }
+
+    let firstClientFD = try connectUnixSocket()
+    defer { close(firstClientFD) }
+    let secondClientFD = try connectUnixSocket()
+    defer { close(secondClientFD) }
+
+    try await waitUntil("excess client socket to close") {
+      self.socketIsClosed(secondClientFD)
+    }
+    XCTAssertFalse(socketIsClosed(firstClientFD))
+  }
+
   func testInitialRequestTimeoutDoesNotCloseSubscriber() async throws {
     let logger = Self.makeLogger()
     let server = LineSocketServerTransport<Void, TestRequest, TestMessage>(

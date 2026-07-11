@@ -55,6 +55,7 @@ public final class LineSocketServerTransport<
   private let onSubscriberRemoved: ((Int32) -> Void)?
   private let initialRequestTimeout: TimeInterval
   private let maxRequestBytes: Int
+  private let maxConcurrentClients: Int
   private let writerQueue: DispatchQueue
   private let state = LockedState(State())
 
@@ -65,6 +66,7 @@ public final class LineSocketServerTransport<
     logger: ProcessLogger,
     initialRequestTimeout: TimeInterval = 5,
     maxRequestBytes: Int = LineDelimitedJSONDecoder<Request>.defaultMaxLineBytes,
+    maxConcurrentClients: Int = 32,
     onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
@@ -72,6 +74,7 @@ public final class LineSocketServerTransport<
     self.logger = logger
     self.initialRequestTimeout = max(0.001, initialRequestTimeout)
     self.maxRequestBytes = max(1, maxRequestBytes)
+    self.maxConcurrentClients = max(1, maxConcurrentClients)
     self.onSubscriberRemoved = onSubscriberRemoved
     self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
@@ -453,6 +456,7 @@ public final class LineSocketServerTransport<
   private func registerClientFD(_ fd: Int32, generation: UInt64) -> Bool {
     state.withLock { state -> Bool in
       guard state.running, state.generation == generation else { return false }
+      guard state.clientFDs.count < maxConcurrentClients else { return false }
       state.nextClientGeneration &+= 1
       state.clientFDs.insert(fd)
       state.clientGenerations[fd] = state.nextClientGeneration
