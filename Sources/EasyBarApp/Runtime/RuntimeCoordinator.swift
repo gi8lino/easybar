@@ -153,7 +153,8 @@ actor RuntimeCoordinator {
     let socketPath = SharedPathDefaults.easyBarSocketPath(
       in: result.snapshot.app.runtimeDirectory
     )
-    guard await socketCommandAdapter.reloadConfiguration(socketPath: socketPath) else {
+    let socketOutcome = await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
+    guard socketOutcome.succeeded else {
       await configManager.restorePreviousState()
       logger.error(
         "config reload rolled back after socket listener failure",

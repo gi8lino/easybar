@@ -9,6 +9,16 @@ import Foundation
 /// `RuntimeSocketCommandAdapter`, an actor. Transport callbacks may arrive on
 /// background threads, but they do not mutate the server's lifecycle state.
 final class SocketServer {
+  enum ReloadOutcome: Equatable, Sendable {
+    case unchanged
+    case rebound
+    case failed(requestedPath: String)
+
+    var succeeded: Bool {
+      if case .failed = self { return false }
+      return true
+    }
+  }
   /// Concrete line-delimited socket transport used by the server.
   private typealias Transport = LineSocketServerTransport<
     IPC.Request,
@@ -82,8 +92,8 @@ final class SocketServer {
 
   /// Reloads the socket server when the configured socket path changed.
   @discardableResult
-  func reloadConfiguration(socketPath updatedSocketPath: String) -> Bool {
-    guard updatedSocketPath != socketPath else { return true }
+  func reloadConfiguration(socketPath updatedSocketPath: String) -> ReloadOutcome {
+    guard updatedSocketPath != socketPath else { return .unchanged }
 
     guard let commandHandler else {
       socketPath = updatedSocketPath
@@ -92,7 +102,7 @@ final class SocketServer {
         metricsCoordinator: metricsCoordinator,
         logger: logger.child("transport")
       )
-      return true
+      return .rebound
     }
 
     logger.info(
@@ -133,7 +143,7 @@ final class SocketServer {
         .field("active_path", "\(socketPath)"),
         .field("requested_path", "\(updatedSocketPath)")
       )
-      return false
+      return .failed(requestedPath: updatedSocketPath)
     }
 
     let previousTransport = transport
@@ -144,7 +154,7 @@ final class SocketServer {
     SynchronousTask.run {
       await self.metricsCoordinator.resetStreaming()
     }
-    return true
+    return .rebound
   }
 
   /// Stops the socket listener.

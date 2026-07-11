@@ -51,7 +51,7 @@ actor RuntimeSocketCommandAdapter {
 
   /// Rebinds the IPC socket server when the configured socket path changed.
   @discardableResult
-  func reloadConfiguration(socketPath: String) -> Bool {
+  func reloadConfiguration(socketPath: String) -> SocketServer.ReloadOutcome {
     socketServer.reloadConfiguration(socketPath: socketPath)
   }
 
