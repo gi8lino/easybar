@@ -121,7 +121,14 @@ final class SocketServer {
       )
     }
 
-    guard didStart else { return false }
+    guard didStart else {
+      logger.error(
+        "socket server reload failed; keeping existing listener",
+        .field("active_path", "\(socketPath)"),
+        .field("requested_path", "\(updatedSocketPath)")
+      )
+      return false
+    }
 
     let previousTransport = transport
     transport = replacementTransport
