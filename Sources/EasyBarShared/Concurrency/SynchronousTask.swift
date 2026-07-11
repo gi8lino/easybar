@@ -32,7 +32,11 @@ public enum SynchronousTask {
 
   /// Runs one MainActor-isolated operation and blocks the current thread until it returns.
   public static func runOnMainActor<T>(_ operation: @escaping @MainActor () -> T) -> T {
-    run {
+    precondition(
+      !Thread.isMainThread,
+      "SynchronousTask.runOnMainActor cannot block the main thread"
+    )
+    return run {
       await MainActor.run {
         operation()
       }
