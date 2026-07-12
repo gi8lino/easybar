@@ -73,7 +73,10 @@ public func openConnectedUnixSocket(
 
       var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
       let milliseconds = Int32(min(max(0.001, timeout) * 1_000, Double(Int32.max)))
-      let pollResult = poll(&descriptor, 1, milliseconds)
+      var pollResult: Int32
+      repeat {
+        pollResult = poll(&descriptor, 1, milliseconds)
+      } while pollResult < 0 && errno == EINTR
       guard pollResult > 0 else {
         if pollResult == 0 { throw UnixSocketConnectError.timedOut(max(0.001, timeout)) }
         throw UnixSocketConnectError.connect(errnoValue: errno)
