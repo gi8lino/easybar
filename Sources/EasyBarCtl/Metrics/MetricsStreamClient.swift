@@ -10,16 +10,16 @@ struct MetricsStreamClient {
   private func openConnectedSocket() throws -> Int32 {
     do {
       return try openConnectedUnixSocket(at: socketPath)
-    } catch UnixSocketConnectError.createSocket {
-      throw LineSocketClientTransportError.socketFailed
-    } catch UnixSocketConnectError.configureNoSigPipe {
-      throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
-    } catch UnixSocketConnectError.invalidAddress(let error) {
+    } catch let error as UnixSocketConnectError {
+      if case .timedOut(let timeout) = error {
+        throw LineSocketClientTransportError.connectionTimedOut(timeout)
+      }
+      if case .createSocket = error {
+        throw LineSocketClientTransportError.socketFailed
+      }
+      throw LineSocketClientTransportError.connectFailed(error)
+    } catch {
       throw error
-    } catch UnixSocketConnectError.connect(let errnoValue) {
-      throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
-    } catch UnixSocketConnectError.timedOut(let timeout) {
-      throw LineSocketClientTransportError.connectionTimedOut(timeout)
     }
   }
 
@@ -72,7 +72,7 @@ struct MetricsStreamClient {
         continue
       }
 
-      throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errno)))
+      throw LineSocketClientTransportError.readFailed(String(cString: strerror(errno)))
     }
   }
 }

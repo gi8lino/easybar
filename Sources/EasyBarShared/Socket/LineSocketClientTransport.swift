@@ -4,10 +4,11 @@ import Foundation
 /// Errors produced by the line socket client transport.
 public enum LineSocketClientTransportError: Error, CustomStringConvertible {
   case socketFailed
-  case connectFailed(String)
+  case connectFailed(UnixSocketConnectError)
   case encodeFailed
   case decodeFailed(String)
   case writeFailed(String)
+  case readFailed(String)
   case connectionTimedOut(TimeInterval)
   case responseTimedOut(TimeInterval)
   case noReply
@@ -17,14 +18,16 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
     switch self {
     case .socketFailed:
       return "socket failed"
-    case .connectFailed(let message):
-      return "connect failed: \(message)"
+    case .connectFailed(let error):
+      return "connect failed: \(error.description)"
     case .encodeFailed:
       return "encode failed"
     case .decodeFailed(let message):
       return "decode failed: \(message)"
     case .writeFailed(let message):
       return "write failed: \(message)"
+    case .readFailed(let message):
+      return "read failed: \(message)"
     case .connectionTimedOut(let timeout):
       return "connection timed out after \(timeout) seconds"
     case .responseTimedOut(let timeout):
@@ -89,16 +92,16 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
   private func connectSocket() throws -> Int32 {
     do {
       return try openConnectedUnixSocket(at: socketPath, timeout: responseTimeout)
-    } catch UnixSocketConnectError.createSocket {
-      throw LineSocketClientTransportError.socketFailed
-    } catch UnixSocketConnectError.configureNoSigPipe {
-      throw LineSocketClientTransportError.connectFailed("failed to configure socket no-sigpipe")
-    } catch UnixSocketConnectError.invalidAddress(let error) {
+    } catch let error as UnixSocketConnectError {
+      if case .timedOut(let timeout) = error {
+        throw LineSocketClientTransportError.connectionTimedOut(timeout)
+      }
+      if case .createSocket = error {
+        throw LineSocketClientTransportError.socketFailed
+      }
+      throw LineSocketClientTransportError.connectFailed(error)
+    } catch {
       throw error
-    } catch UnixSocketConnectError.connect(let errnoValue) {
-      throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
-    } catch UnixSocketConnectError.timedOut(let timeout) {
-      throw LineSocketClientTransportError.connectionTimedOut(timeout)
     }
   }
 

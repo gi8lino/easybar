@@ -43,7 +43,7 @@ public enum CalendarAgentOneShotError: LocalizedError {
       self = .connectionFailed
     case .encodeFailed, .writeFailed:
       self = .writeFailed
-    case .decodeFailed, .responseTimedOut:
+    case .decodeFailed, .readFailed, .responseTimedOut:
       self = .readFailed
     case .noReply:
       self = .emptyResponse
