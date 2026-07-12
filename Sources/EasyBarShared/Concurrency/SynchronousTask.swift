@@ -8,7 +8,9 @@ import Foundation
 /// cooperative Swift task that could be needed to run the awaited operation.
 public enum SynchronousTask {
   /// Runs one async operation and blocks the current thread until it returns.
-  public static func run<T>(_ operation: @escaping () async -> T) -> T {
+  public static func run<T: Sendable>(
+    _ operation: @escaping @Sendable () async -> T
+  ) -> T {
     let result = LockedState<T?>(nil)
     let semaphore = DispatchSemaphore(value: 0)
 
@@ -31,7 +33,9 @@ public enum SynchronousTask {
   }
 
   /// Runs one MainActor-isolated operation and blocks the current thread until it returns.
-  public static func runOnMainActor<T>(_ operation: @escaping @MainActor () -> T) -> T {
+  public static func runOnMainActor<T: Sendable>(
+    _ operation: @escaping @MainActor @Sendable () -> T
+  ) -> T {
     precondition(
       !Thread.isMainThread,
       "SynchronousTask.runOnMainActor cannot block the main thread"

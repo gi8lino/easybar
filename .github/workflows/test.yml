@@ -96,6 +96,12 @@ jobs:
           CI_COMMAND_TIMEOUT_MINUTES: ${{ inputs.test_timeout_minutes }}
         run: scripts/ci/run-swift-tests.sh test.log swift test
 
+      - name: Check shared layer strict concurrency
+        run: >-
+          swift build --target EasyBarShared
+          -Xswiftc -strict-concurrency=complete
+          -Xswiftc -warnings-as-errors
+
       - name: Upload Swift test logs
         if: failure()
         uses: actions/upload-artifact@v7
@@ -107,5 +113,4 @@ jobs:
       - name: Verify generated artifacts are current
         if: ${{ inputs.check_generated }}
         run: make check-generated
-
 
