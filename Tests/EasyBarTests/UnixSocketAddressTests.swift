@@ -15,6 +15,36 @@ final class UnixSocketAddressTests: XCTestCase {
     )
   }
 
+  func testOpenConnectedUnixSocketConnectsToListener() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let path = directory.appendingPathComponent("listener.sock").path
+    let listener = try makeListeningUnixSocket(at: path, backlog: 1)
+    defer { closeListeningUnixSocket(listener, at: path) }
+
+    let client = try openConnectedUnixSocket(at: path, timeout: 0.1)
+    close(client)
+  }
+
+  func testOpenConnectedUnixSocketReportsRefusedConnection() {
+    let path = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString)
+      .appendingPathComponent("missing.sock").path
+
+    XCTAssertThrowsError(try openConnectedUnixSocket(at: path, timeout: 0.1)) { error in
+      guard case UnixSocketConnectError.connect = error else {
+        return XCTFail("Expected connect error, got \(error)")
+      }
+    }
+  }
+
+  func testConnectTimeoutDescriptionIdentifiesConnectionPhase() {
+    XCTAssertEqual(
+      UnixSocketConnectError.timedOut(0.25).description,
+      "socket connection timed out after 0.25 seconds"
+    )
+  }
+
   private var temporaryDirectory: URL?
 
   override func tearDownWithError() throws {
