@@ -203,7 +203,11 @@ actor RuntimeCoordinator {
       return false
     }
 
-    return shouldContinueLifecycleWork(generation: generation, operation: operation)
+    let completed = shouldContinueLifecycleWork(generation: generation, operation: operation)
+    if completed {
+      await configManager.discardPreviousState()
+    }
+    return completed
   }
 
   func restartLuaRuntime() async {

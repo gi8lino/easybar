@@ -79,6 +79,11 @@ actor ConfigManager {
     self.previousLoadedState = nil
   }
 
+  /// Discards rollback state after the runtime successfully activates a reload.
+  func discardPreviousState() {
+    previousLoadedState = nil
+  }
+
   /// Returns the current active immutable config snapshot.
   func snapshot() async -> ConfigSnapshot {
     await MainActor.run {
