@@ -58,10 +58,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { server.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let callbacks = LockedState(CallbackCounts())
     let client = AgentSocketClient<TestRequest, TestMessage>(
       label: "test agent",
@@ -119,10 +115,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { notifyingServer.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
 
@@ -164,10 +156,6 @@ final class AgentSocketClientTests: XCTestCase {
       return .keepOpen
     }
     defer { notifyingServer.stop() }
-
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
 
     let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
       socketPath: socketPath
@@ -216,10 +204,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { server.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
 
@@ -243,10 +227,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { server.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
     try writeLine(#"{"command":"request-that-is-too-large"}"#, to: clientFD)
@@ -267,10 +247,6 @@ final class AgentSocketClientTests: XCTestCase {
     )
     server.start { _, _ in .close }
     defer { server.stop() }
-
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
 
     let firstClientFD = try connectUnixSocket()
     defer { close(firstClientFD) }
@@ -298,10 +274,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { server.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
     try writeLine(#"{"command":"subscribe"}"#, to: clientFD)
@@ -324,10 +296,6 @@ final class AgentSocketClientTests: XCTestCase {
       return .close
     }
 
-    try await waitUntil("first server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     firstServer.stop()
 
     try await waitUntil("first server socket to be removed") {
@@ -340,10 +308,6 @@ final class AgentSocketClientTests: XCTestCase {
       return .close
     }
     defer { secondServer.stop() }
-
-    try await waitUntil("restarted server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
 
     let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
       socketPath: socketPath
@@ -362,10 +326,6 @@ final class AgentSocketClientTests: XCTestCase {
       return .keepOpen
     }
     defer { server.stop() }
-
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
 
     let clientFD = try connectUnixSocket()
     defer { close(clientFD) }
@@ -405,10 +365,6 @@ final class AgentSocketClientTests: XCTestCase {
     }
     defer { server.stop() }
 
-    try await waitUntil("server socket to exist") {
-      FileManager.default.fileExists(atPath: self.socketPath)
-    }
-
     let client = LineSocketClientTransport<TestRequest, TestMessage>(
       socketPath: socketPath,
       maxResponseBytes: 16
@@ -425,10 +381,6 @@ final class AgentSocketClientTests: XCTestCase {
       server.start { fd, request in
         _ = server.send(TestMessage(kind: "\(iteration):\(request.command)"), to: fd)
         return .close
-      }
-
-      try await waitUntil("server socket for iteration \(iteration)") {
-        FileManager.default.fileExists(atPath: self.socketPath)
       }
 
       let response: TestMessage = try LineSocketClientTransport<TestRequest, TestMessage>(
