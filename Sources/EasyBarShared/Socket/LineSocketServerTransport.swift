@@ -57,6 +57,7 @@ public final class LineSocketServerTransport<
   private let initialRequestTimeout: TimeInterval
   private let maxRequestBytes: Int
   private let maxConcurrentClients: Int
+  private let workerDrainTimeout: TimeInterval
   private let writerQueue: DispatchQueue
   private let workerGroup = DispatchGroup()
   private let state = LockedState(State())
@@ -69,6 +70,7 @@ public final class LineSocketServerTransport<
     initialRequestTimeout: TimeInterval = 5,
     maxRequestBytes: Int = LineDelimitedJSONDecoder<Request>.defaultMaxLineBytes,
     maxConcurrentClients: Int = 32,
+    workerDrainTimeout: TimeInterval = 2,
     onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
@@ -77,6 +79,7 @@ public final class LineSocketServerTransport<
     self.initialRequestTimeout = max(0.001, initialRequestTimeout)
     self.maxRequestBytes = max(1, maxRequestBytes)
     self.maxConcurrentClients = max(1, maxConcurrentClients)
+    self.workerDrainTimeout = max(0, workerDrainTimeout)
     self.onSubscriberRemoved = onSubscriberRemoved
     self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
@@ -188,7 +191,7 @@ public final class LineSocketServerTransport<
     }
 
     unlink(socketPath)
-    if workerGroup.wait(timeout: .now() + 2) == .timedOut {
+    if workerGroup.wait(timeout: .now() + workerDrainTimeout) == .timedOut {
       logger.warn("\(serverLabel) socket workers did not drain before shutdown timeout")
     }
     logger.info(
