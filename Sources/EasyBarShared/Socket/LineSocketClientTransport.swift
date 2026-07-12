@@ -8,6 +8,7 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
   case encodeFailed
   case decodeFailed(String)
   case writeFailed(String)
+  case connectionTimedOut(TimeInterval)
   case responseTimedOut(TimeInterval)
   case noReply
 
@@ -24,6 +25,8 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
       return "decode failed: \(message)"
     case .writeFailed(let message):
       return "write failed: \(message)"
+    case .connectionTimedOut(let timeout):
+      return "connection timed out after \(timeout) seconds"
     case .responseTimedOut(let timeout):
       return "response timed out after \(timeout) seconds"
     case .noReply:
@@ -95,7 +98,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     } catch UnixSocketConnectError.connect(let errnoValue) {
       throw LineSocketClientTransportError.connectFailed(String(cString: strerror(errnoValue)))
     } catch UnixSocketConnectError.timedOut(let timeout) {
-      throw LineSocketClientTransportError.responseTimedOut(timeout)
+      throw LineSocketClientTransportError.connectionTimedOut(timeout)
     }
   }
 

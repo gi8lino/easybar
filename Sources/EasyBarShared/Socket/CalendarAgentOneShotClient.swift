@@ -39,7 +39,7 @@ public enum CalendarAgentOneShotError: LocalizedError {
     switch transportError {
     case .socketFailed:
       self = .socketCreationFailed
-    case .connectFailed:
+    case .connectFailed, .connectionTimedOut:
       self = .connectionFailed
     case .encodeFailed, .writeFailed:
       self = .writeFailed
