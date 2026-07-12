@@ -266,6 +266,9 @@ final class SocketServer {
       socketPath: socketPath,
       serverLabel: "easybar",
       logger: logger,
+      onClientRejected: {
+        Task { await metricsCoordinator.recordSocketClientRejection() }
+      },
       onSubscriberRemoved: { fd in
         SynchronousTask.run {
           await metricsCoordinator.removeStreamingSubscriber(fd: fd)

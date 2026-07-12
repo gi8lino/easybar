@@ -54,6 +54,7 @@ public final class LineSocketServerTransport<
   private let serverLabel: String
   private let logger: ProcessLogger
   private let onSubscriberRemoved: ((Int32) -> Void)?
+  private let onClientRejected: (() -> Void)?
   private let initialRequestTimeout: TimeInterval
   private let maxRequestBytes: Int
   private let maxConcurrentClients: Int
@@ -71,6 +72,7 @@ public final class LineSocketServerTransport<
     maxRequestBytes: Int = LineDelimitedJSONDecoder<Request>.defaultMaxLineBytes,
     maxConcurrentClients: Int = 32,
     workerDrainTimeout: TimeInterval = 2,
+    onClientRejected: (() -> Void)? = nil,
     onSubscriberRemoved: ((Int32) -> Void)? = nil
   ) {
     self.socketPath = socketPath
@@ -81,6 +83,7 @@ public final class LineSocketServerTransport<
     self.maxConcurrentClients = max(1, maxConcurrentClients)
     self.workerDrainTimeout = max(0, workerDrainTimeout)
     self.onSubscriberRemoved = onSubscriberRemoved
+    self.onClientRejected = onClientRejected
     self.writerQueue = DispatchQueue(label: "easybar.\(serverLabel).socket-writer")
   }
 
@@ -343,6 +346,7 @@ public final class LineSocketServerTransport<
 
       let registration = registerClientFD(clientFD, generation: generation)
       guard registration.accepted else {
+        onClientRejected?()
         if registration.shouldLogOverload {
           logger.warn(
             "\(serverLabel) concurrent client limit reached",

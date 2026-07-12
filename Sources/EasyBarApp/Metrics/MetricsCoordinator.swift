@@ -238,6 +238,11 @@ actor MetricsCoordinator {
     state.eventCounts[name, default: 0] += 1
   }
 
+  /// Records one socket client rejected because the server was at capacity.
+  func recordSocketClientRejection() {
+    state.eventCounts["socket_client_rejected", default: 0] += 1
+  }
+
   /// Records one event dropped or coalesced because a subscriber buffer was full.
   func recordEventBackpressure(name: String, coalesced: Bool) {
     if coalesced {
