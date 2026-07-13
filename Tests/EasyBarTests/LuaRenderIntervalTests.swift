@@ -5,7 +5,7 @@ import XCTest
 
 @testable import EasyBarApp
 
-final class LuaRenderIntervalTests: LuaRenderRuntimeTestCase {
+final class LuaRenderIntervalTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
   func testIntervalSubscriptionChangesAreReemittedAfterWidgetMutation() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 

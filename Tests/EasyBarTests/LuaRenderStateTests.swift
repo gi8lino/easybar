@@ -5,7 +5,7 @@ import XCTest
 
 @testable import EasyBarApp
 
-final class LuaRenderStateTests: LuaRenderRuntimeTestCase {
+final class LuaRenderStateTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
   func testRemovingRootEmitsExplicitClearRootUpdate() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 

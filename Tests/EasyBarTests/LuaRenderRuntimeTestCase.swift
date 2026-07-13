@@ -5,7 +5,7 @@ import XCTest
 
 @testable import EasyBarApp
 
-class LuaRenderRuntimeTestCase: XCTestCase {
+class LuaRenderRuntimeTestCase: XCTestCase, @unchecked Sendable {
   let decoder = JSONDecoder()
 
   var originalConfigSnapshot: ConfigSnapshot!

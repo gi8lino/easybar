@@ -5,7 +5,7 @@ import XCTest
 
 @testable import EasyBarApp
 
-final class LuaRenderCommandTests: LuaRenderRuntimeTestCase {
+final class LuaRenderCommandTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
   func testExecCallbackFlushesIntermediateRenderBeforeFinalMutation() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 
