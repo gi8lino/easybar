@@ -14,6 +14,7 @@ struct WidgetNodeView: View {
   @State var popupPresented = false
   @State var anchorHovered = false
   @State var popupHovered = false
+  @State var popupCloseTask: Task<Void, Never>?
 
   var body: some View {
     Group {
@@ -27,9 +28,11 @@ struct WidgetNodeView: View {
       updatePopupPanel(isPresented: presented || node.presentsPopupAutomatically)
     }
     .onChange(of: node, initial: false) { _, _ in
+      cancelPopupCloseCheck()
       updatePopupPanel(isPresented: popupPresented || node.presentsPopupAutomatically)
     }
     .onDisappear {
+      cancelPopupCloseCheck()
       popupPanel.close()
     }
   }

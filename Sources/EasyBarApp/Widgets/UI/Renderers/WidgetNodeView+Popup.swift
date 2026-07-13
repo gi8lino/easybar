@@ -30,14 +30,22 @@ extension WidgetNodeView {
 
   /// Schedules a delayed popup close check.
   func schedulePopupCloseCheck() {
-    Task { @MainActor in
+    cancelPopupCloseCheck()
+    popupCloseTask = Task { @MainActor in
       do {
         try await WidgetHoverDelay.sleep()
       } catch {
         return
       }
+      popupCloseTask = nil
       closePopupIfIdle()
     }
+  }
+
+  /// Cancels the pending popup close check, if any.
+  func cancelPopupCloseCheck() {
+    popupCloseTask?.cancel()
+    popupCloseTask = nil
   }
 
   /// Updates popup presentation from anchor hover state.
@@ -45,6 +53,7 @@ extension WidgetNodeView {
     anchorHovered = hovering
 
     if hovering {
+      cancelPopupCloseCheck()
       guard nodeCanPresentPopup else { return }
       popupPresented = true
       return
@@ -57,7 +66,10 @@ extension WidgetNodeView {
   func handlePopupHover(_ hovering: Bool) {
     popupHovered = hovering
 
-    guard !hovering else { return }
+    guard !hovering else {
+      cancelPopupCloseCheck()
+      return
+    }
     schedulePopupCloseCheck()
   }
 
