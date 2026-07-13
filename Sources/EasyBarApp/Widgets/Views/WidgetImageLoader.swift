@@ -5,13 +5,16 @@ import Foundation
 final class LoadedWidgetImage: @unchecked Sendable {
   let path: String
   let image: NSImage
-  let isCustomImage: Bool
 
-  init(path: String, image: NSImage, isCustomImage: Bool) {
+  init(path: String, image: NSImage) {
     self.path = path
     self.image = image
-    self.isCustomImage = isCustomImage
   }
+}
+
+enum WidgetImageLoadResult: @unchecked Sendable {
+  case loaded(LoadedWidgetImage)
+  case failed(path: String)
 }
 
 /// Decodes and caches path-based widget images away from the main actor.
@@ -20,7 +23,7 @@ actor WidgetImageCache {
 
   private struct Entry {
     let modificationDate: Date?
-    let image: LoadedWidgetImage
+    let result: WidgetImageLoadResult
     var lastAccess: UInt64
   }
 
@@ -32,30 +35,27 @@ actor WidgetImageCache {
     self.capacity = max(1, capacity)
   }
 
-  func image(for path: String) -> LoadedWidgetImage {
+  func image(for path: String) -> WidgetImageLoadResult {
     let modificationDate = Self.modificationDate(for: path)
     accessCounter &+= 1
 
     if var entry = entries[path], entry.modificationDate == modificationDate {
       entry.lastAccess = accessCounter
       entries[path] = entry
-      return entry.image
+      return entry.result
     }
 
-    let customImage = NSImage(contentsOfFile: path)
-    let image = customImage ?? NSWorkspace.shared.icon(forFile: path)
-    let loaded = LoadedWidgetImage(
-      path: path,
-      image: image,
-      isCustomImage: customImage != nil
-    )
+    let result =
+      NSImage(contentsOfFile: path).map {
+        WidgetImageLoadResult.loaded(LoadedWidgetImage(path: path, image: $0))
+      } ?? .failed(path: path)
     entries[path] = Entry(
       modificationDate: modificationDate,
-      image: loaded,
+      result: result,
       lastAccess: accessCounter
     )
     evictLeastRecentlyUsedEntryIfNeeded()
-    return loaded
+    return result
   }
 
   private func evictLeastRecentlyUsedEntryIfNeeded() {
@@ -76,15 +76,27 @@ actor WidgetImageCache {
 @MainActor
 final class WidgetImageLoader: ObservableObject {
   @Published private(set) var loadedImage: LoadedWidgetImage?
+  private var loggedFailurePaths = Set<String>()
 
   func image(for path: String) -> LoadedWidgetImage? {
     guard loadedImage?.path == path else { return nil }
     return loadedImage
   }
 
-  func load(path: String) async {
-    let image = await WidgetImageCache.shared.image(for: path)
-    guard !Task.isCancelled else { return }
-    loadedImage = image
+  func load(path: String) async -> Bool {
+    let result = await WidgetImageCache.shared.image(for: path)
+    guard !Task.isCancelled else { return false }
+
+    switch result {
+    case .loaded(let image):
+      loadedImage = image
+      loggedFailurePaths.remove(path)
+      return false
+    case .failed:
+      if loadedImage?.path == path {
+        loadedImage = nil
+      }
+      return loggedFailurePaths.insert(path).inserted
+    }
   }
 }

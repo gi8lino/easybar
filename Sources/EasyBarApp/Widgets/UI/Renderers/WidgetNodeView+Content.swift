@@ -397,7 +397,7 @@ extension WidgetNodeView {
         if let loadedImage = imageLoader.image(for: imagePath) {
           if let tintedImage = tintedImage(
             from: loadedImage.image,
-            isCustomImage: loadedImage.isCustomImage
+            isCustomImage: true
           ) {
             imageBaseView(image: tintedImage, renderingMode: .template)
               .foregroundStyle(iconResolvedColor)
@@ -414,7 +414,13 @@ extension WidgetNodeView {
         }
       }
       .task(id: node) {
-        await imageLoader.load(path: imagePath)
+        if await imageLoader.load(path: imagePath) {
+          logger.warn(
+            "widget image could not be decoded",
+            .field("widget", node.id),
+            .field("path", imagePath)
+          )
+        }
       }
     }
   }

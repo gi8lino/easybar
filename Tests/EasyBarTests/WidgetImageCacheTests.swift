@@ -4,6 +4,18 @@ import XCTest
 @testable import EasyBarApp
 
 final class WidgetImageCacheTests: XCTestCase {
+  private static let pixelPNG = Data(
+    base64Encoded:
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+  )!
+
+  private func loadedImage(from result: WidgetImageLoadResult) throws -> LoadedWidgetImage {
+    guard case .loaded(let image) = result else {
+      throw XCTSkip("Expected a decoded test image")
+    }
+    return image
+  }
+
   @MainActor
   func testLoaderPublishesDecodedCustomImage() async throws {
     let directory = FileManager.default.temporaryDirectory
@@ -12,22 +24,31 @@ final class WidgetImageCacheTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directory) }
 
     let url = directory.appendingPathComponent("pixel.png")
-    let png = try XCTUnwrap(
-      Data(
-        base64Encoded:
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-      )
-    )
-    try png.write(to: url)
+    try Self.pixelPNG.write(to: url)
 
     let loader = WidgetImageLoader()
     XCTAssertNil(loader.image(for: url.path))
 
-    await loader.load(path: url.path)
+    let shouldLogFailure = await loader.load(path: url.path)
 
     let loaded = try XCTUnwrap(loader.image(for: url.path))
-    XCTAssertTrue(loaded.isCustomImage)
+    XCTAssertFalse(shouldLogFailure)
     XCTAssertEqual(loaded.image.size, CGSize(width: 1, height: 1))
+  }
+
+  @MainActor
+  func testLoaderReportsDecodeFailureOnlyOncePerPath() async throws {
+    let path = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString)
+      .appendingPathExtension("png").path
+    let loader = WidgetImageLoader()
+
+    let firstShouldLog = await loader.load(path: path)
+    let secondShouldLog = await loader.load(path: path)
+
+    XCTAssertTrue(firstShouldLog)
+    XCTAssertFalse(secondShouldLog)
+    XCTAssertNil(loader.image(for: path))
   }
 
   func testUnchangedPathReusesDecodedImage() async throws {
@@ -36,10 +57,11 @@ final class WidgetImageCacheTests: XCTestCase {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: directory) }
 
-    let path = directory.appendingPathComponent("missing-image.png").path
+    let path = directory.appendingPathComponent("image.png").path
+    try Self.pixelPNG.write(to: URL(fileURLWithPath: path))
     let cache = WidgetImageCache()
-    let first = await cache.image(for: path)
-    let second = await cache.image(for: path)
+    let first = try loadedImage(from: await cache.image(for: path))
+    let second = try loadedImage(from: await cache.image(for: path))
 
     XCTAssertTrue(first === second)
   }
@@ -53,14 +75,17 @@ final class WidgetImageCacheTests: XCTestCase {
     let firstPath = directory.appendingPathComponent("first.png").path
     let secondPath = directory.appendingPathComponent("second.png").path
     let thirdPath = directory.appendingPathComponent("third.png").path
+    try Self.pixelPNG.write(to: URL(fileURLWithPath: firstPath))
+    try Self.pixelPNG.write(to: URL(fileURLWithPath: secondPath))
+    try Self.pixelPNG.write(to: URL(fileURLWithPath: thirdPath))
     let cache = WidgetImageCache(capacity: 2)
 
-    let first = await cache.image(for: firstPath)
-    let second = await cache.image(for: secondPath)
+    let first = try loadedImage(from: await cache.image(for: firstPath))
+    let second = try loadedImage(from: await cache.image(for: secondPath))
     _ = await cache.image(for: firstPath)
     _ = await cache.image(for: thirdPath)
-    let reloadedFirst = await cache.image(for: firstPath)
-    let reloadedSecond = await cache.image(for: secondPath)
+    let reloadedFirst = try loadedImage(from: await cache.image(for: firstPath))
+    let reloadedSecond = try loadedImage(from: await cache.image(for: secondPath))
 
     XCTAssertTrue(first === reloadedFirst)
     XCTAssertFalse(second === reloadedSecond)
@@ -73,15 +98,15 @@ final class WidgetImageCacheTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directory) }
 
     let url = directory.appendingPathComponent("changing.png")
-    try Data("first".utf8).write(to: url)
+    try Self.pixelPNG.write(to: url)
     let cache = WidgetImageCache()
-    let first = await cache.image(for: url.path)
+    let first = try loadedImage(from: await cache.image(for: url.path))
 
     try FileManager.default.setAttributes(
       [.modificationDate: Date(timeIntervalSinceNow: 10)],
       ofItemAtPath: url.path
     )
-    let second = await cache.image(for: url.path)
+    let second = try loadedImage(from: await cache.image(for: url.path))
 
     XCTAssertFalse(first === second)
   }
