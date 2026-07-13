@@ -4,7 +4,7 @@ import Foundation
 /// Shared lifecycle and message handling for calendar-agent stream clients.
 ///
 /// Concrete wrappers only provide the request builder and snapshot sink.
-final class CalendarAgentStreamController {
+final class CalendarAgentStreamController: @unchecked Sendable {
   private struct LifecycleState {
     var started = false
     var socketPath: String

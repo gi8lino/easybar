@@ -214,7 +214,7 @@ final class AeroSpaceCommandRunner {
 }
 
 /// Reads one process pipe while the subprocess is still running.
-private final class PipeReader {
+private final class PipeReader: @unchecked Sendable {
   struct ReadResult {
     let data: Data
     let exceededLimit: Bool

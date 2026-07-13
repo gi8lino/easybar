@@ -3,7 +3,7 @@ import EventKit
 import Foundation
 
 /// Builds calendar snapshots and applies calendar event mutations.
-final class CalendarSnapshotProvider {
+final class CalendarSnapshotProvider: @unchecked Sendable {
   /// Bridges EventKit travel-time storage that is not exposed as public Swift API.
   enum EventTravelTimeBridge {
     /// Key-value coding key used by EventKit for travel time.

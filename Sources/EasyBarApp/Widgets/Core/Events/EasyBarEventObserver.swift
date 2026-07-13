@@ -1,7 +1,7 @@
 import Foundation
 
 /// Small helper for observing typed EasyBar events in native widgets.
-final class EasyBarEventObserver {
+final class EasyBarEventObserver: @unchecked Sendable {
   private let eventHub: EventHub
   private var task: Task<Void, Never>?
 

@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Provides authorization-aware network snapshots.
-public final class NetworkSnapshotProvider {
+public final class NetworkSnapshotProvider: @unchecked Sendable {
   /// Immutable values used while resolving requested field values.
   private struct FieldResolutionContext {
     let now: Date

@@ -3,7 +3,7 @@ import EasyBarShared
 import Foundation
 
 /// Owns Lua process lifecycle.
-final class LuaProcessController {
+final class LuaProcessController: @unchecked Sendable {
   /// Captures the inputs needed to launch the Lua runtime agent.
   struct LaunchContext {
     let runtimeAgentPath: String

@@ -3,7 +3,7 @@ import EventKit
 import Foundation
 
 /// Coordinates EventKit authorization state, prompts, and retries.
-final class CalendarAuthorizationController {
+final class CalendarAuthorizationController: @unchecked Sendable {
   /// EventKit store used to inspect and request calendar access.
   private let eventStore: EKEventStore
   /// Thread-safe authorization state cache.

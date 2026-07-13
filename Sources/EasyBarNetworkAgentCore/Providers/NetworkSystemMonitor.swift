@@ -3,7 +3,7 @@ import Foundation
 import SystemConfiguration
 
 /// Watches SystemConfiguration network state.
-final class NetworkSystemMonitor {
+final class NetworkSystemMonitor: @unchecked Sendable {
   /// Dynamic store keys that should trigger refreshes.
   private static let watchedNetworkPatterns: [CFString] = [
     "State:/Network/Global/IPv4" as CFString,

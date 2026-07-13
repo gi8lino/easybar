@@ -1,7 +1,7 @@
 import EasyBarShared
 
 /// Explicitly owned app services used by the app shell and runtime coordinator.
-struct AppServices {
+struct AppServices: @unchecked Sendable {
   let config: Config
   let configManager: ConfigManager
   let configSnapshotStore: ConfigSnapshotStore

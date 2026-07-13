@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
 /// runs when at least one native widget depends on that state.
-final class AeroSpaceService: ObservableObject {
+final class AeroSpaceService: ObservableObject, @unchecked Sendable {
   /// Published workspace list used by spaces widgets.
   @Published private(set) var spaces: [SpaceItem] = []
   /// Stable id of the focused application.

@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Shares the wake-triggered refresh observation used by app-side agent services.
-final class AgentWakeRefreshController {
+final class AgentWakeRefreshController: @unchecked Sendable {
   /// Human-readable service label used in logs and queue names.
   private let label: String
   /// Debounce delay before running a wake refresh.

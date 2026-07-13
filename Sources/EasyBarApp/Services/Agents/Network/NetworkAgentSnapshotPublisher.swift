@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Publishes network-agent snapshots into app state and emits matching runtime events.
-final class NetworkAgentSnapshotPublisher {
+final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
   /// Returns whether asynchronous publish work should still apply.
   private let isActive: () -> Bool
 

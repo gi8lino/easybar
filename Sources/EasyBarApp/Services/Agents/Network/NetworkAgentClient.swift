@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Streams Wi-Fi and network state from the network agent.
-final class NetworkAgentClient {
+final class NetworkAgentClient: @unchecked Sendable {
   private struct ErrorLogKey: Equatable {
     let code: String
   }

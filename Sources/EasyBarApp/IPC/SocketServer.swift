@@ -8,7 +8,7 @@ import Foundation
 /// Production code enforces this by owning the server inside
 /// `RuntimeSocketCommandAdapter`, an actor. Transport callbacks may arrive on
 /// background threads, but they do not mutate the server's lifecycle state.
-final class SocketServer {
+final class SocketServer: @unchecked Sendable {
   enum ReloadOutcome: Equatable, Sendable {
     case unchanged
     case rebound
@@ -36,9 +36,9 @@ final class SocketServer {
   /// Current Unix-domain socket path.
   private var socketPath: String
   /// Handler invoked for accepted non-metrics commands.
-  private var commandHandler: ((IPC.Command) -> Void)?
+  private var commandHandler: (@Sendable (IPC.Command) -> Void)?
   /// Handler invoked for config validation requests.
-  private var validateConfigHandler: ((String?) async -> IPC.Message)?
+  private var validateConfigHandler: (@Sendable (String?) async -> IPC.Message)?
   /// Whether the socket server has already been started.
   private var started = false
 
@@ -62,8 +62,8 @@ final class SocketServer {
 
   /// Starts the socket listener.
   func start(
-    handler: @escaping (IPC.Command) -> Void,
-    validateConfigHandler: @escaping (String?) async -> IPC.Message
+    handler: @escaping @Sendable (IPC.Command) -> Void,
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
   ) {
     guard !started else { return }
 
@@ -184,8 +184,8 @@ final class SocketServer {
   private func handle(
     clientFD: Int32,
     request: IPC.Request,
-    handler: @escaping (IPC.Command) -> Void,
-    validateConfigHandler: @escaping (String?) async -> IPC.Message,
+    handler: @escaping @Sendable (IPC.Command) -> Void,
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message,
     transport: Transport
   ) -> Transport.ClientDisposition {
     logger.debug("socket dispatching command '\(request.command.rawValue)'")
@@ -246,7 +246,7 @@ final class SocketServer {
   private func handleValidateConfigRequest(
     clientFD: Int32,
     configPath: String?,
-    validateConfigHandler: @escaping (String?) async -> IPC.Message,
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message,
     transport: Transport
   ) -> Transport.ClientDisposition {
     let response = SynchronousTask.run {
