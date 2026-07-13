@@ -4,6 +4,32 @@ import XCTest
 @testable import EasyBarApp
 
 final class WidgetImageCacheTests: XCTestCase {
+  @MainActor
+  func testLoaderPublishesDecodedCustomImage() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let url = directory.appendingPathComponent("pixel.png")
+    let png = try XCTUnwrap(
+      Data(
+        base64Encoded:
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+      )
+    )
+    try png.write(to: url)
+
+    let loader = WidgetImageLoader()
+    XCTAssertNil(loader.image(for: url.path))
+
+    await loader.load(path: url.path)
+
+    let loaded = try XCTUnwrap(loader.image(for: url.path))
+    XCTAssertTrue(loaded.isCustomImage)
+    XCTAssertEqual(loaded.image.size, CGSize(width: 1, height: 1))
+  }
+
   func testUnchangedPathReusesDecodedImage() async throws {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent(UUID().uuidString, isDirectory: true)
