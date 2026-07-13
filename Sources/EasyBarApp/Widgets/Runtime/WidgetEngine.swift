@@ -221,8 +221,18 @@ actor WidgetEngine {
     )
     await metricsCoordinator.recordTreeUpdate(root: root, nodeCount: nodes.count)
 
-    await MainActor.run {
+    let applyResult = await MainActor.run {
       widgetStore.apply(root: root, nodes: nodes)
+    }
+
+    if !applyResult.rejectedNodeIDs.isEmpty {
+      logger.warn(
+        "rejected invalid widget tree nodes",
+        .field("root", root),
+        .field("duplicate_ids", applyResult.duplicateNodeIDs.sorted()),
+        .field("mismatched_root_ids", applyResult.mismatchedRootNodeIDs.sorted()),
+        .field("conflicting_ids", applyResult.conflictingNodeIDs.sorted())
+      )
     }
   }
 
