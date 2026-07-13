@@ -21,13 +21,24 @@ actor WidgetImageCache {
   private struct Entry {
     let modificationDate: Date?
     let image: LoadedWidgetImage
+    var lastAccess: UInt64
   }
 
+  private let capacity: Int
   private var entries: [String: Entry] = [:]
+  private var accessCounter: UInt64 = 0
+
+  init(capacity: Int = 128) {
+    self.capacity = max(1, capacity)
+  }
 
   func image(for path: String) -> LoadedWidgetImage {
     let modificationDate = Self.modificationDate(for: path)
-    if let entry = entries[path], entry.modificationDate == modificationDate {
+    accessCounter &+= 1
+
+    if var entry = entries[path], entry.modificationDate == modificationDate {
+      entry.lastAccess = accessCounter
+      entries[path] = entry
       return entry.image
     }
 
@@ -38,8 +49,21 @@ actor WidgetImageCache {
       image: image,
       isCustomImage: customImage != nil
     )
-    entries[path] = Entry(modificationDate: modificationDate, image: loaded)
+    entries[path] = Entry(
+      modificationDate: modificationDate,
+      image: loaded,
+      lastAccess: accessCounter
+    )
+    evictLeastRecentlyUsedEntryIfNeeded()
     return loaded
+  }
+
+  private func evictLeastRecentlyUsedEntryIfNeeded() {
+    guard entries.count > capacity else { return }
+    guard let oldestPath = entries.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key else {
+      return
+    }
+    entries.removeValue(forKey: oldestPath)
   }
 
   private static func modificationDate(for path: String) -> Date? {
