@@ -180,7 +180,12 @@ actor RuntimeCoordinator {
       return false
     }
 
-    guard await runLifecycleStep(generation: generation, operation: operation, widgetEngine.reload)
+    guard
+      await runLifecycleStep(
+        generation: generation,
+        operation: operation,
+        { await widgetEngine.reload() }
+      )
     else {
       return false
     }
