@@ -146,10 +146,11 @@ final class VolumeEvents {
     currentDeviceID = newDeviceID
     lastMutedState = readMutedState(for: newDeviceID)
     installDeviceListeners()
+    let muted = lastMutedState ?? false
 
     Task {
       await EventHub.shared.emit(.volumeChange)
-      await EventHub.shared.emit(.muteChange, muted: lastMutedState ?? false)
+      await EventHub.shared.emit(.muteChange, muted: muted)
     }
   }
 

@@ -130,7 +130,7 @@ final class TimerEvents {
   private func makeRepeatingTimer(
     interval: TimeInterval,
     tolerance: TimeInterval,
-    onFire: @escaping () -> Void
+    onFire: @escaping @Sendable () -> Void
   ) -> Timer {
     let timer = Timer(
       fire: Date().addingTimeInterval(interval),

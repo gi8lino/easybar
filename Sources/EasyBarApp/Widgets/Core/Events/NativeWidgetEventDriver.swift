@@ -8,8 +8,8 @@ enum NativeWidgetEventDriver {
     observer: EasyBarEventObserver,
     eventNames: Set<String>,
     widgetTargetIDs: Set<String> = [],
-    appHandler: @escaping (EasyBarEventPayload) -> Bool,
-    widgetHandler: @escaping (EasyBarEventPayload) -> Void
+    appHandler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Bool,
+    widgetHandler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
     observer.start(eventNames: eventNames, widgetTargetIDs: widgetTargetIDs) { payload in
       if appHandler(payload) {
@@ -24,7 +24,7 @@ enum NativeWidgetEventDriver {
   static func start(
     observer: EasyBarEventObserver,
     eventNames: Set<String>,
-    handler: @escaping (EasyBarEventPayload) -> Void
+    handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
     observer.start(eventNames: eventNames, handler: handler)
   }

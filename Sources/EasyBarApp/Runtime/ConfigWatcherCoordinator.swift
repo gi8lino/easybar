@@ -19,7 +19,7 @@ actor ConfigWatcherCoordinator {
   }
 
   /// Starts watching the active config file and calls the handler after changes.
-  func start(onChange: @escaping () async -> Void) async {
+  func start(onChange: @escaping @Sendable () async -> Void) async {
     watcherTask?.cancel()
     watcherTask = nil
 
@@ -38,7 +38,7 @@ actor ConfigWatcherCoordinator {
   }
 
   /// Restarts the watcher after config reload may have changed path or watch settings.
-  func restart(onChange: @escaping () async -> Void) async {
+  func restart(onChange: @escaping @Sendable () async -> Void) async {
     await stop()
     await start(onChange: onChange)
   }

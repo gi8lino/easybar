@@ -117,7 +117,7 @@ final class SocketServer: @unchecked Sendable {
       logger: logger.child("transport")
     )
 
-    let activeValidateConfigHandler: (String?) async -> IPC.Message =
+    let activeValidateConfigHandler: @Sendable (String?) async -> IPC.Message =
       validateConfigHandler ?? { _ in
         .rejected(message: "config validation unavailable")
       }

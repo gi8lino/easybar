@@ -6,7 +6,7 @@ final class AeroSpaceUpdateObserver {
   private var token: NSObjectProtocol?
 
   /// Starts observing AeroSpace updates.
-  func start(handler: @escaping () -> Void) {
+  func start(handler: @escaping @MainActor @Sendable () -> Void) {
     stop()
 
     token = NotificationCenter.default.addObserver(
@@ -14,7 +14,7 @@ final class AeroSpaceUpdateObserver {
       object: nil,
       queue: .main
     ) { _ in
-      handler()
+      Task { @MainActor in handler() }
     }
   }
 

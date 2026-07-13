@@ -65,9 +65,9 @@ public final class CalendarEventComposer: ObservableObject {
   let calendar = Calendar.current
   let config: CalendarComposerConfig
   let refreshSnapshots: () -> Void
-  let createEventAction: (CalendarAgentCreateEvent, @escaping (Bool, String?) -> Void) -> Void
-  let updateEventAction: (CalendarAgentUpdateEvent, @escaping (Bool, String?) -> Void) -> Void
-  let deleteEventAction: (CalendarAgentDeleteEvent, @escaping (Bool, String?) -> Void) -> Void
+  let createEventAction: (CalendarAgentCreateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
+  let updateEventAction: (CalendarAgentUpdateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
+  let deleteEventAction: (CalendarAgentDeleteEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
   let openCalendarAppAction: () -> Void
   private var cancellables: Set<AnyCancellable> = []
   var preferredCalendarID: String?
@@ -77,9 +77,18 @@ public final class CalendarEventComposer: ObservableObject {
     config: CalendarComposerConfig,
     snapshotPublisher: AnyPublisher<CalendarAgentSnapshot?, Never>,
     refreshSnapshots: @escaping () -> Void,
-    createEvent: @escaping (CalendarAgentCreateEvent, @escaping (Bool, String?) -> Void) -> Void,
-    updateEvent: @escaping (CalendarAgentUpdateEvent, @escaping (Bool, String?) -> Void) -> Void,
-    deleteEvent: @escaping (CalendarAgentDeleteEvent, @escaping (Bool, String?) -> Void) -> Void,
+    createEvent:
+      @escaping (
+        CalendarAgentCreateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void
+      ) -> Void,
+    updateEvent:
+      @escaping (
+        CalendarAgentUpdateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void
+      ) -> Void,
+    deleteEvent:
+      @escaping (
+        CalendarAgentDeleteEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void
+      ) -> Void,
     openCalendarApp: @escaping () -> Void
   ) {
     self.config = config

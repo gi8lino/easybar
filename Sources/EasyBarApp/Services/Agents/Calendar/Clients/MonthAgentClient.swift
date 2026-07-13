@@ -144,7 +144,7 @@ final class MonthCalendarAgentClient {
   /// Sends one create-event request through the calendar agent.
   func createEvent(
     _ event: CalendarAgentCreateEvent,
-    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+    completion: @escaping @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     let request = CalendarAgentRequest(
       command: .createEvent,
@@ -157,7 +157,7 @@ final class MonthCalendarAgentClient {
   /// Sends one update-event request through the calendar agent.
   func updateEvent(
     _ event: CalendarAgentUpdateEvent,
-    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+    completion: @escaping @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     let request = CalendarAgentRequest(
       command: .updateEvent,
@@ -170,7 +170,7 @@ final class MonthCalendarAgentClient {
   /// Sends one delete-event request through the calendar agent.
   func deleteEvent(
     _ event: CalendarAgentDeleteEvent,
-    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+    completion: @escaping @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     let request = CalendarAgentRequest(
       command: .deleteEvent,
@@ -184,7 +184,7 @@ final class MonthCalendarAgentClient {
   private func sendOneShot(
     request: CalendarAgentRequest,
     successKind: CalendarAgentMessageKind,
-    completion: @escaping (_ success: Bool, _ message: String?) -> Void
+    completion: @escaping @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     let socketPath = calendarAgentConfig.socketPath
 
@@ -217,7 +217,7 @@ final class MonthCalendarAgentClient {
   private func handleMutationResponse(
     _ response: CalendarAgentMessage,
     successKind: CalendarAgentMessageKind,
-    completion: (_ success: Bool, _ message: String?) -> Void
+    completion: @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     switch response.kind {
     case successKind:
@@ -246,7 +246,7 @@ final class MonthCalendarAgentClient {
   /// Handles one calendar-agent mutation failure on the main actor.
   private func handleMutationError(
     _ error: Error,
-    completion: (_ success: Bool, _ message: String?) -> Void
+    completion: @MainActor @Sendable (_ success: Bool, _ message: String?) -> Void
   ) {
     logger.error(
       "month calendar mutation failed",

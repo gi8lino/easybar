@@ -18,7 +18,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
     widgetTargetIDs: Set<String>? = nil,
     replayLatest: Bool = false,
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy? = nil,
-    handler: @escaping (EasyBarEventPayload) -> Void
+    handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
     start(
       eventNames: Optional(eventNames),
@@ -32,7 +32,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
   /// Starts observing EasyBar events.
   ///
   /// The handler receives the already typed payload on the main actor.
-  func start(handler: @escaping (EasyBarEventPayload) -> Void) {
+  func start(handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void) {
     start(
       eventNames: nil,
       widgetTargetIDs: nil,
@@ -50,7 +50,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
     widgetTargetIDs: Set<String>?,
     replayLatest: Bool,
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy?,
-    handler: @escaping (EasyBarEventPayload) -> Void
+    handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
     stop()
 
@@ -65,9 +65,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
       for await payload in stream {
         guard !Task.isCancelled else { break }
 
-        await MainActor.run {
-          handler(payload)
-        }
+        await handler(payload)
       }
     }
   }

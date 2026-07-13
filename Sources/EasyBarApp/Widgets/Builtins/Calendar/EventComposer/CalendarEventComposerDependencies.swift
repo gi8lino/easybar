@@ -9,11 +9,11 @@ struct CalendarEventComposerDependencies {
   /// Refreshes the composer-only calendar metadata snapshot.
   let refreshSnapshots: () -> Void
   /// Creates one calendar event through the calendar agent.
-  let createEvent: (CalendarAgentCreateEvent, @escaping (Bool, String?) -> Void) -> Void
+  let createEvent: (CalendarAgentCreateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
   /// Updates one calendar event through the calendar agent.
-  let updateEvent: (CalendarAgentUpdateEvent, @escaping (Bool, String?) -> Void) -> Void
+  let updateEvent: (CalendarAgentUpdateEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
   /// Deletes one calendar event through the calendar agent.
-  let deleteEvent: (CalendarAgentDeleteEvent, @escaping (Bool, String?) -> Void) -> Void
+  let deleteEvent: (CalendarAgentDeleteEvent, @escaping @MainActor @Sendable (Bool, String?) -> Void) -> Void
   /// Opens the system Calendar app.
   let openCalendarApp: () -> Void
 

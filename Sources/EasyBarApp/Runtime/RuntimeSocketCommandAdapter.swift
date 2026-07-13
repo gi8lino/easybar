@@ -25,8 +25,8 @@ actor RuntimeSocketCommandAdapter {
 
   /// Starts accepting socket commands and config validation requests.
   func start(
-    commandHandler: @escaping (IPC.Command) async -> Void,
-    validateConfigHandler: @escaping (String?) async -> IPC.Message
+    commandHandler: @escaping @Sendable (IPC.Command) async -> Void,
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
   ) async {
     await metricsCoordinator.setSnapshotHandler { [weak self] snapshot in
       Task {
