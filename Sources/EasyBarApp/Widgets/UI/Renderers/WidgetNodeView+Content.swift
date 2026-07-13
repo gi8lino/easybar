@@ -393,6 +393,7 @@ extension WidgetNodeView {
   @ViewBuilder
   func renderedImageView() -> some View {
     if hasImage, let imagePath = node.imagePath {
+      let imageRevision = WidgetImageRevision(path: imagePath)
       Group {
         if let loadedImage = imageLoader.image(for: imagePath) {
           if let tintedImage = tintedImage(
@@ -413,8 +414,8 @@ extension WidgetNodeView {
             .frame(width: imageSize, height: imageSize)
         }
       }
-      .task(id: node) {
-        if await imageLoader.load(path: imagePath) {
+      .task(id: imageRevision) {
+        if await imageLoader.load(revision: imageRevision) {
           logger.warn(
             "widget image could not be decoded",
             .field("widget", node.id),

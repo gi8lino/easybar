@@ -110,4 +110,22 @@ final class WidgetImageCacheTests: XCTestCase {
 
     XCTAssertFalse(first === second)
   }
+
+  func testImageRevisionChangesWhenFileSizeChanges() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let url = directory.appendingPathComponent("changing.png")
+    try Self.pixelPNG.write(to: url)
+    let first = WidgetImageRevision(path: url.path)
+
+    var enlarged = Self.pixelPNG
+    enlarged.append(0)
+    try enlarged.write(to: url)
+    let second = WidgetImageRevision(path: url.path)
+
+    XCTAssertNotEqual(first, second)
+  }
 }
