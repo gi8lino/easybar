@@ -3,6 +3,7 @@ import XCTest
 
 @testable import EasyBarApp
 
+@MainActor
 final class EventHubTests: XCTestCase {
   /// Builds an event hub with logging muted and Lua delivery replaced by a no-op sink.
   private static func makeHub() -> EventHub {
