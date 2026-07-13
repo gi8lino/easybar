@@ -410,7 +410,7 @@ extension WidgetNodeView {
           }
         }
       }
-      .task(id: imagePath) {
+      .task(id: node) {
         await imageLoader.load(path: imagePath)
       }
     }

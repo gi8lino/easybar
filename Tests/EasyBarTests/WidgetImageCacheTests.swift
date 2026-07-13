@@ -39,4 +39,24 @@ final class WidgetImageCacheTests: XCTestCase {
     XCTAssertTrue(first === reloadedFirst)
     XCTAssertFalse(second === reloadedSecond)
   }
+
+  func testChangedModificationDateReloadsSamePath() async throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let url = directory.appendingPathComponent("changing.png")
+    try Data("first".utf8).write(to: url)
+    let cache = WidgetImageCache()
+    let first = await cache.image(for: url.path)
+
+    try FileManager.default.setAttributes(
+      [.modificationDate: Date(timeIntervalSinceNow: 10)],
+      ofItemAtPath: url.path
+    )
+    let second = await cache.image(for: url.path)
+
+    XCTAssertFalse(first === second)
+  }
 }
