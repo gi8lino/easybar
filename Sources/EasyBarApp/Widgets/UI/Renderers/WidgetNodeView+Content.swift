@@ -408,6 +408,9 @@ extension WidgetNodeView {
               .frame(width: imageSize, height: imageSize)
               .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
           }
+        } else {
+          Color.clear
+            .frame(width: imageSize, height: imageSize)
         }
       }
       .task(id: node) {
