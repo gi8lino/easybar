@@ -45,6 +45,13 @@ final class UnixSocketAddressTests: XCTestCase {
     )
   }
 
+  func testListenChmodErrorsProvideActionableDescriptions() {
+    XCTAssertEqual(
+      UnixSocketListenError.chmod(path: "/tmp/easybar.sock", errnoValue: EACCES).description,
+      "socket chmod failed path=/tmp/easybar.sock errno=\(EACCES)"
+    )
+  }
+
   private var temporaryDirectory: URL?
 
   override func tearDownWithError() throws {

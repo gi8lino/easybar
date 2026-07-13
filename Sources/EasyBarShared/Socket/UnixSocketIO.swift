@@ -109,6 +109,7 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
   case invalidAddress(path: String, message: String)
   case existingPathIsNotSocket(path: String)
   case bind(path: String, errnoValue: Int32)
+  case chmod(path: String, errnoValue: Int32)
   case listen(path: String, errnoValue: Int32)
 
   /// Printable socket setup error.
@@ -126,6 +127,8 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
       return "socket path already exists and is not a socket path=\(path)"
     case .bind(let path, let errnoValue):
       return "socket bind failed path=\(path) errno=\(errnoValue)"
+    case .chmod(let path, let errnoValue):
+      return "socket chmod failed path=\(path) errno=\(errnoValue)"
     case .listen(let path, let errnoValue):
       return "socket listen failed path=\(path) errno=\(errnoValue)"
     }
@@ -247,7 +250,9 @@ public func makeListeningUnixSocket(
     didBind = true
 
     if chmod(socketPath, mode) != 0 {
-      onChmodFailure?(errno)
+      let errnoValue = errno
+      onChmodFailure?(errnoValue)
+      throw UnixSocketListenError.chmod(path: socketPath, errnoValue: errnoValue)
     }
 
     guard listen(fd, backlog) == 0 else {
