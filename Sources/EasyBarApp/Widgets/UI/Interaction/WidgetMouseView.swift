@@ -2,6 +2,15 @@ import AppKit
 import EasyBarShared
 import SwiftUI
 
+enum WidgetScrollDirectionResolver {
+  static func resolve(deltaY: Double) -> ScrollDirection? {
+    guard deltaY.isFinite else { return nil }
+    if deltaY > 0 { return .up }
+    if deltaY < 0 { return .down }
+    return nil
+  }
+}
+
 /// AppKit-backed event surface for widget mouse input.
 struct WidgetMouseView: NSViewRepresentable {
   let widgetID: String
@@ -263,7 +272,7 @@ final class MouseTrackingNSView: NSView {
     let eventTargetWidgetID = targetWidgetID
     let deltaX = Double(event.scrollingDeltaX)
     let deltaY = Double(event.scrollingDeltaY)
-    let direction: ScrollDirection = deltaY > 0 ? .up : .down
+    guard let direction = WidgetScrollDirectionResolver.resolve(deltaY: deltaY) else { return }
 
     logger.debug(
       "mouse scrolled",
