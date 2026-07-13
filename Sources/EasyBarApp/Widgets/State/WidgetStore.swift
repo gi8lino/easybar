@@ -41,14 +41,22 @@ final class WidgetStore: ObservableObject {
   /// Replaces all nodes for one widget root.
   @discardableResult
   func apply(owner: Owner, nodes updates: [WidgetNodeState]) -> ApplyResult {
+    let result = validateNodes(updates, owner: owner)
+    guard result.rejectedNodeIDs.isEmpty else { return result }
+
     for id in existingIDs(for: owner) {
       removeNode(id, ownedBy: owner)
     }
 
-    let stored = storeNodes(updates, owner: owner)
-    rootIndex[owner] = stored.ids
+    let ids = Set(updates.map(\.id))
+    for node in updates {
+      nodeMap[node.id] = node
+      nodeOwners[node.id] = owner
+    }
+
+    rootIndex[owner] = ids
     rebuildPublishedState()
-    return stored.result
+    return result
   }
 
   /// Clears all rendered widget nodes.
@@ -112,11 +120,11 @@ final class WidgetStore: ObservableObject {
     return rootIndex[owner] ?? []
   }
 
-  /// Stores updated nodes and returns their ids.
-  private func storeNodes(
+  /// Validates a complete replacement without mutating the current store.
+  private func validateNodes(
     _ updates: [WidgetNodeState],
     owner: Owner
-  ) -> (ids: Set<String>, result: ApplyResult) {
+  ) -> ApplyResult {
     var ids = Set<String>()
     var result = ApplyResult()
     let updateIDs = Set(updates.lazy.filter { $0.root == owner.root }.map(\.id))
@@ -137,22 +145,16 @@ final class WidgetStore: ObservableObject {
         !parentID.isEmpty,
         !updateIDs.contains(parentID)
       {
-        ids.remove(node.id)
         result.invalidParentNodeIDs.insert(node.id)
         continue
       }
 
       if let existingOwner = nodeOwners[node.id], existingOwner != owner {
-        ids.remove(node.id)
         result.conflictingNodeIDs.insert(node.id)
-        continue
       }
-
-      nodeMap[node.id] = node
-      nodeOwners[node.id] = owner
     }
 
-    return (ids, result)
+    return result
   }
 
   /// Removes a node only when the requesting root still owns it.

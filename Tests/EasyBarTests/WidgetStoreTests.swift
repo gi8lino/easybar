@@ -30,7 +30,23 @@ final class WidgetStoreTests: XCTestCase {
 
     XCTAssertEqual(result.duplicateNodeIDs, ["duplicate"])
     XCTAssertEqual(result.mismatchedRootNodeIDs, ["mismatch"])
-    XCTAssertEqual(store.topLevelNodes(for: .right), [first])
+    XCTAssertTrue(store.topLevelNodes(for: .right).isEmpty)
+  }
+
+  func testRejectedReplacementPreservesPreviousTree() throws {
+    let store = WidgetStore()
+    let original = try makeNode(id: "original", root: "root", text: "original")
+    let validReplacement = try makeNode(id: "replacement", root: "root", text: "replacement")
+    let invalidReplacement = try makeNode(id: "invalid", root: "other", text: "invalid")
+
+    store.apply(owner: .scripted(root: "root"), nodes: [original])
+    let result = store.apply(
+      owner: .scripted(root: "root"),
+      nodes: [validReplacement, invalidReplacement]
+    )
+
+    XCTAssertEqual(result.mismatchedRootNodeIDs, [invalidReplacement.id])
+    XCTAssertEqual(store.topLevelNodes(for: .right), [original])
   }
 
   func testRelationshipIndexesTrackReplacementAndClear() throws {
