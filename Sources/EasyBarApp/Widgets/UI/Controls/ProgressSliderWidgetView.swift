@@ -15,6 +15,10 @@ struct ProgressSliderWidgetView: View {
   @State private var value: Double
   @State private var isDragging = false
 
+  private var range: SliderValueRange {
+    SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
+  }
+
   init(
     rootWidgetID: String,
     targetWidgetID: String,
@@ -33,7 +37,8 @@ struct ProgressSliderWidgetView: View {
     self.externalValue = value
     self.tint = tint
     self.width = width
-    _value = State(initialValue: value)
+    let range = SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
+    _value = State(initialValue: range.clamped(value))
   }
 
   /// Renders the draggable progress slider.
@@ -91,7 +96,7 @@ struct ProgressSliderWidgetView: View {
     .frame(width: resolvedWidth, height: 14)
     .onChange(of: externalValue) { _, newValue in
       if !isDragging {
-        value = newValue
+        value = range.clamped(newValue)
       }
     }
   }
@@ -106,9 +111,8 @@ struct ProgressSliderWidgetView: View {
 
   /// Returns the current value normalized into the 0...1 range.
   private var normalizedValue: CGFloat {
-    let span = max(maxValue - minValue, 0.0001)
-    let clamped = min(max(value, minValue), maxValue)
-    return CGFloat((clamped - minValue) / span)
+    let span = range.upperBound - range.lowerBound
+    return CGFloat((range.clamped(value) - range.lowerBound) / span)
   }
 
   /// Returns the knob offset inside the current width.
@@ -120,11 +124,10 @@ struct ProgressSliderWidgetView: View {
   private func value(for x: CGFloat, width: CGFloat) -> Double {
     let clampedX = min(max(0, x), width)
     let ratio = Double(clampedX / max(width, 1))
-    let rawValue = minValue + ratio * (maxValue - minValue)
+    let rawValue = range.lowerBound + ratio * (range.upperBound - range.lowerBound)
 
-    let safeStep = max(step, 0.0001)
-    let stepped = (rawValue / safeStep).rounded() * safeStep
-    return min(max(stepped, minValue), maxValue)
+    let stepped = (rawValue / range.step).rounded() * range.step
+    return range.clamped(stepped)
   }
 }
 

@@ -13,6 +13,10 @@ struct SliderWidgetView: View {
   @State private var value: Double
   @State private var isEditing = false
 
+  private var range: SliderValueRange {
+    SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
+  }
+
   init(
     rootWidgetID: String,
     targetWidgetID: String,
@@ -31,7 +35,8 @@ struct SliderWidgetView: View {
     self.externalValue = value
     self.tint = tint
     self.width = width
-    _value = State(initialValue: value)
+    let range = SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
+    _value = State(initialValue: range.clamped(value))
   }
 
   /// Renders the native slider control.
@@ -44,20 +49,21 @@ struct SliderWidgetView: View {
             isEditing = true
           }
 
-          value = newValue
+          let clampedValue = range.clamped(newValue)
+          value = clampedValue
 
           Task {
             await EventHub.shared.emitWidgetEvent(
               .sliderPreview,
               widgetID: rootWidgetID,
               targetWidgetID: targetWidgetID,
-              value: newValue
+              value: clampedValue
             )
           }
         }
       ),
-      in: minValue...maxValue,
-      step: max(step, 0.0001),
+      in: range.lowerBound...range.upperBound,
+      step: range.step,
       onEditingChanged: { editing in
         isEditing = editing
 
@@ -79,7 +85,7 @@ struct SliderWidgetView: View {
     .frame(width: resolvedWidth)
     .onChange(of: externalValue) { _, newValue in
       if !isEditing {
-        value = newValue
+        value = range.clamped(newValue)
       }
     }
   }
