@@ -40,7 +40,7 @@ class LuaRenderRuntimeTestCase: XCTestCase {
 }
 
 extension LuaRenderRuntimeTestCase {
-  struct RuntimeCommandRequest: Equatable {
+  struct RuntimeCommandRequest: Equatable, Sendable {
     let token: String
     let command: String
     let isSynchronous: Bool
@@ -148,7 +148,7 @@ extension LuaRenderRuntimeTestCase {
     }
 
     func takeFirst(
-      matching predicate: @escaping (WidgetTreeUpdate) -> Bool
+      matching predicate: @escaping @Sendable (WidgetTreeUpdate) -> Bool
     ) -> WidgetTreeUpdate? {
       guard let index = updates.firstIndex(where: predicate) else {
         return nil
@@ -164,7 +164,7 @@ extension LuaRenderRuntimeTestCase {
     }
 
     func takeFirstCommandRequest(
-      matching predicate: @escaping (RuntimeCommandRequest) -> Bool
+      matching predicate: @escaping @Sendable (RuntimeCommandRequest) -> Bool
     ) -> RuntimeCommandRequest? {
       guard let index = commandRequests.firstIndex(where: predicate) else {
         return nil
@@ -247,7 +247,7 @@ extension LuaRenderRuntimeTestCase {
     }
   }
 
-  final class RuntimeLineObserver {
+  final class RuntimeLineObserver: @unchecked Sendable {
     private let handleLine: @Sendable (String) async -> Void
     private var buffer = Data()
     private var pendingLineTask: Task<Void, Never>?
@@ -324,7 +324,7 @@ extension LuaRenderRuntimeTestCase {
 
   func nextTreeUpdate(
     from recorder: RuntimeUpdateRecorder,
-    matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
+    matching predicate: @escaping @Sendable (WidgetTreeUpdate) -> Bool,
     timeoutNanoseconds: UInt64 = 2_000_000_000
   ) async throws -> WidgetTreeUpdate {
     return try await nextUpdate(
@@ -336,7 +336,7 @@ extension LuaRenderRuntimeTestCase {
 
   func nextUpdate(
     from recorder: RuntimeUpdateRecorder,
-    matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
+    matching predicate: @escaping @Sendable (WidgetTreeUpdate) -> Bool,
     timeoutNanoseconds: UInt64 = 2_000_000_000
   ) async throws -> WidgetTreeUpdate {
     let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
@@ -363,7 +363,7 @@ extension LuaRenderRuntimeTestCase {
 
   func nextCommandRequest(
     from recorder: RuntimeUpdateRecorder,
-    matching predicate: @escaping (RuntimeCommandRequest) -> Bool,
+    matching predicate: @escaping @Sendable (RuntimeCommandRequest) -> Bool,
     timeoutNanoseconds: UInt64 = 2_000_000_000
   ) async throws -> RuntimeCommandRequest {
     let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
@@ -390,7 +390,7 @@ extension LuaRenderRuntimeTestCase {
 
   func expectNoUpdate(
     from recorder: RuntimeUpdateRecorder,
-    matching predicate: @escaping (WidgetTreeUpdate) -> Bool,
+    matching predicate: @escaping @Sendable (WidgetTreeUpdate) -> Bool,
     timeoutNanoseconds: UInt64 = 300_000_000
   ) async throws {
     let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
