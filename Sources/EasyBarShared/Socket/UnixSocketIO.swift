@@ -1,4 +1,5 @@
 import Darwin
+import Dispatch
 import Foundation
 
 private let socketWriteRetryTimeoutMilliseconds: Int32 = 1_000
@@ -72,10 +73,10 @@ public func openConnectedUnixSocket(
       }
 
       var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
-      let milliseconds = Int32(min(max(0.001, timeout) * 1_000, Double(Int32.max)))
+      let deadline = monotonicPollDeadline(after: timeout)
       var pollResult: Int32
       repeat {
-        pollResult = poll(&descriptor, 1, milliseconds)
+        pollResult = poll(&descriptor, 1, remainingPollMilliseconds(until: deadline))
       } while pollResult < 0 && errno == EINTR
       guard pollResult > 0 else {
         if pollResult == 0 { throw UnixSocketConnectError.timedOut(max(0.001, timeout)) }
@@ -99,6 +100,25 @@ public func openConnectedUnixSocket(
     close(fd)
     throw error
   }
+}
+
+/// Returns a monotonic deadline suitable for retrying interrupted `poll` calls.
+func monotonicPollDeadline(after timeout: TimeInterval) -> UInt64 {
+  let milliseconds = UInt64(min(max(0.001, timeout) * 1_000, Double(Int32.max)))
+  let now = DispatchTime.now().uptimeNanoseconds
+  let (deadline, overflow) = now.addingReportingOverflow(milliseconds * 1_000_000)
+  return overflow ? UInt64.max : deadline
+}
+
+/// Returns the remaining whole-millisecond timeout for a monotonic deadline.
+func remainingPollMilliseconds(until deadline: UInt64) -> Int32 {
+  let now = DispatchTime.now().uptimeNanoseconds
+  guard deadline > now else { return 0 }
+
+  let remainingNanoseconds = deadline - now
+  let wholeMilliseconds = remainingNanoseconds / 1_000_000
+  let roundedUpMilliseconds = wholeMilliseconds + (remainingNanoseconds % 1_000_000 == 0 ? 0 : 1)
+  return Int32(min(roundedUpMilliseconds, UInt64(Int32.max)))
 }
 
 /// Errors produced while preparing Unix-domain server sockets.

@@ -457,10 +457,10 @@ public final class LineSocketServerTransport<
   /// Waits for an initial request without allowing idle clients to retain a thread forever.
   private func waitForInitialRequest(on clientFD: Int32) -> Bool {
     var descriptor = pollfd(fd: clientFD, events: Int16(POLLIN), revents: 0)
-    let timeoutMilliseconds = Int32(min(initialRequestTimeout * 1_000, Double(Int32.max)))
+    let deadline = monotonicPollDeadline(after: initialRequestTimeout)
 
     while true {
-      let result = poll(&descriptor, 1, timeoutMilliseconds)
+      let result = poll(&descriptor, 1, remainingPollMilliseconds(until: deadline))
       if result > 0 {
         return (descriptor.revents & Int16(POLLIN)) != 0
       }
