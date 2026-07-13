@@ -31,7 +31,7 @@ extension WidgetNodeView {
 
     case .wifiIndicator:
       WiFiSignalCanvas(
-        signalLevel: Int(node.value ?? 0),
+        signalLevel: WiFiSignalCanvas.normalizedSignalLevel(node.value),
         state: node.icon,
         activeColor: nodeColor,
         inactiveColor: color(node.iconColor),

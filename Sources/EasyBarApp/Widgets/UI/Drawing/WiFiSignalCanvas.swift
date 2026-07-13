@@ -9,6 +9,12 @@ struct WiFiSignalCanvas: View {
   let inactiveColor: Color
   let slashColor: Color
 
+  /// Converts an untrusted widget value into the indicator's supported range.
+  static func normalizedSignalLevel(_ value: Double?) -> Int {
+    guard let value, value.isFinite else { return 0 }
+    return Int(min(max(value, 0), 3))
+  }
+
   /// Draws the Wi-Fi indicator for the current state.
   var body: some View {
     Canvas { context, size in
