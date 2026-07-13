@@ -37,7 +37,10 @@ extension WidgetNodeView {
         inactiveColor: color(node.iconColor),
         slashColor: color(node.iconColor)
       )
-      .frame(width: cgFloat(node.width) ?? 16, height: cgFloat(node.height) ?? 12)
+      .frame(
+        width: WidgetRenderMetrics.dimension(node.width) ?? 16,
+        height: WidgetRenderMetrics.dimension(node.height) ?? 12
+      )
       .modifier(nodeStyle)
 
     default:

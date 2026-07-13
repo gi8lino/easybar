@@ -134,22 +134,25 @@ extension WidgetNodeView {
   }
 
   var symbolResolvedFont: Font {
-    return .system(size: CGFloat(node.iconFontSize ?? node.fontSize ?? 18), weight: .regular)
+    return .system(size: symbolResolvedFontSize, weight: .regular)
   }
 
   var symbolResolvedFontSize: CGFloat {
-    return CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
+    return WidgetRenderMetrics.positive(node.iconFontSize ?? node.fontSize, fallback: 18)
   }
 
   var symbolOverlayResolvedFont: Font {
-    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
-    let scale = CGFloat(node.symbolOverlayScale ?? 0.58)
+    let baseSize = symbolResolvedFontSize
+    let scale = WidgetRenderMetrics.positive(node.symbolOverlayScale, fallback: 0.58)
     return .system(size: baseSize * scale, weight: .semibold)
   }
 
   var symbolOverlayBackdropResolvedFont: Font {
-    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
-    let scale = CGFloat(node.symbolOverlayBackdropScale ?? node.symbolOverlayScale ?? 0.58)
+    let baseSize = symbolResolvedFontSize
+    let scale = WidgetRenderMetrics.positive(
+      node.symbolOverlayBackdropScale ?? node.symbolOverlayScale,
+      fallback: 0.58
+    )
     return .system(size: baseSize * scale, weight: .semibold)
   }
 
@@ -161,14 +164,17 @@ extension WidgetNodeView {
   }
 
   var symbolOverlayResolvedFontSize: CGFloat {
-    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
-    let scale = CGFloat(node.symbolOverlayScale ?? 0.58)
+    let baseSize = symbolResolvedFontSize
+    let scale = WidgetRenderMetrics.positive(node.symbolOverlayScale, fallback: 0.58)
     return baseSize * scale
   }
 
   var symbolOverlayBackdropResolvedFontSize: CGFloat {
-    let baseSize = CGFloat(node.iconFontSize ?? node.fontSize ?? 18)
-    let scale = CGFloat(node.symbolOverlayBackdropScale ?? node.symbolOverlayScale ?? 0.58)
+    let baseSize = symbolResolvedFontSize
+    let scale = WidgetRenderMetrics.positive(
+      node.symbolOverlayBackdropScale ?? node.symbolOverlayScale,
+      fallback: 0.58
+    )
     return baseSize * scale
   }
 
@@ -181,8 +187,8 @@ extension WidgetNodeView {
 
   var symbolCanvasSize: CGSize {
     let base = symbolResolvedFontSize
-    let widthFactor = CGFloat(node.symbolCanvasWidthFactor ?? 1.0)
-    let heightFactor = CGFloat(node.symbolCanvasHeightFactor ?? 1.0)
+    let widthFactor = WidgetRenderMetrics.nonnegative(node.symbolCanvasWidthFactor, fallback: 1)
+    let heightFactor = WidgetRenderMetrics.nonnegative(node.symbolCanvasHeightFactor, fallback: 1)
     return CGSize(width: base * widthFactor, height: base * heightFactor)
   }
 
@@ -371,11 +377,11 @@ extension WidgetNodeView {
   }
 
   var imageSize: CGFloat {
-    return CGFloat(node.imageSize ?? 14)
+    return WidgetRenderMetrics.nonnegative(node.imageSize, fallback: 14)
   }
 
   var imageCornerRadius: CGFloat {
-    return CGFloat(node.imageCornerRadius ?? 4)
+    return WidgetRenderMetrics.nonnegative(node.imageCornerRadius, fallback: 4)
   }
 
   /// Returns the custom image or system file icon for one image path.

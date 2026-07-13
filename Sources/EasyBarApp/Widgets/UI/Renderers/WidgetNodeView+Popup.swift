@@ -19,7 +19,7 @@ extension WidgetNodeView {
   /// Returns a system font for an optional point size.
   func fontValue(size: Double?) -> Font? {
     guard let size else { return nil }
-    return .system(size: CGFloat(size))
+    return .system(size: WidgetRenderMetrics.positive(size, fallback: 12))
   }
 
   /// Converts an optional `Double` into an optional `CGFloat`.
@@ -116,27 +116,27 @@ extension WidgetNodeView {
   }
 
   var progressWidth: CGFloat {
-    return CGFloat(node.width ?? 64)
+    return WidgetRenderMetrics.nonnegative(node.width, fallback: 64)
   }
 
   var progressHeight: CGFloat {
-    return CGFloat(node.height ?? 8)
+    return WidgetRenderMetrics.nonnegative(node.height, fallback: 8)
   }
 
   var sparklineWidth: CGFloat {
-    return CGFloat(node.width ?? 64)
+    return WidgetRenderMetrics.nonnegative(node.width, fallback: 64)
   }
 
   var sparklineHeight: CGFloat {
-    return CGFloat(node.height ?? 18)
+    return WidgetRenderMetrics.nonnegative(node.height, fallback: 18)
   }
 
   var sparklineLineWidth: CGFloat {
-    return CGFloat(node.lineWidth ?? 1.5)
+    return WidgetRenderMetrics.nonnegative(node.lineWidth, fallback: 1.5)
   }
 
   var nodeWidth: CGFloat? {
-    return cgFloat(node.width)
+    return WidgetRenderMetrics.dimension(node.width)
   }
 
   var children: [WidgetNodeState] {

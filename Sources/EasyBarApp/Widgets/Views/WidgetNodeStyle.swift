@@ -28,7 +28,7 @@ struct WidgetNodeStyle: ViewModifier {
       .clipShape(
         RoundedRectangle(cornerRadius: cornerRadius)
       )
-      .opacity(node.opacity ?? 1.0)
+      .opacity(WidgetRenderMetrics.opacity(node.opacity))
       .padding(.leading, leadingMargin)
       .padding(.trailing, trailingMargin)
       .padding(.top, topMargin)
@@ -78,22 +78,22 @@ struct WidgetNodeStyle: ViewModifier {
 
   /// Returns the resolved frame width.
   private var frameWidth: CGFloat? {
-    node.width.map { CGFloat($0) }
+    WidgetRenderMetrics.dimension(node.width)
   }
 
   /// Returns the resolved frame height.
   private var frameHeight: CGFloat? {
-    node.height.map { CGFloat($0) }
+    WidgetRenderMetrics.dimension(node.height)
   }
 
   /// Returns the resolved node corner radius.
   private var cornerRadius: CGFloat {
-    return CGFloat(node.cornerRadius ?? 0)
+    return WidgetRenderMetrics.nonnegative(node.cornerRadius, fallback: 0)
   }
 
   /// Returns the resolved node border width.
   private var borderWidth: CGFloat {
-    return CGFloat(node.borderWidth ?? 0)
+    return WidgetRenderMetrics.nonnegative(node.borderWidth, fallback: 0)
   }
 
   /// Returns the resolved vertical offset.
