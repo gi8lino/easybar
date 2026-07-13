@@ -3,7 +3,7 @@ import Foundation
 /// Normalized CoreWLAN Wi-Fi state.
 struct NetworkWiFiSnapshot {
   /// Formats field timestamps for wire values.
-  static let fieldDateFormatter = ISO8601DateFormatter()
+  nonisolated(unsafe) static let fieldDateFormatter = ISO8601DateFormatter()
 
   /// Current Wi-Fi network name.
   let ssid: String?

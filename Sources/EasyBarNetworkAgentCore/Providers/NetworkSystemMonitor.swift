@@ -1,3 +1,4 @@
+@preconcurrency import CoreFoundation
 import EasyBarShared
 import Foundation
 import SystemConfiguration
@@ -5,7 +6,7 @@ import SystemConfiguration
 /// Watches SystemConfiguration network state.
 final class NetworkSystemMonitor: @unchecked Sendable {
   /// Dynamic store keys that should trigger refreshes.
-  private static let watchedNetworkPatterns: [CFString] = [
+  nonisolated(unsafe) private static let watchedNetworkPatterns: [CFString] = [
     "State:/Network/Global/IPv4" as CFString,
     "State:/Network/Global/IPv6" as CFString,
     "State:/Network/Global/DNS" as CFString,

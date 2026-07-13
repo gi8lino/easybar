@@ -26,7 +26,7 @@ public final class LineSocketServerTransport<
   }
 
   /// Describes what should happen to a client socket after one request was handled.
-  public enum ClientDisposition {
+  public enum ClientDisposition: Sendable {
     case close
     case keepOpen
   }

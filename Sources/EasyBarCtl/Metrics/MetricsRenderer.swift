@@ -12,7 +12,7 @@ enum MetricsRenderer {
     return formatter
   }()
   /// Formatter used for memory values.
-  private static let byteFormatter: ByteCountFormatter = {
+  nonisolated(unsafe) private static let byteFormatter: ByteCountFormatter = {
     let formatter = ByteCountFormatter()
     formatter.allowedUnits = [.useKB, .useMB, .useGB]
     formatter.countStyle = .memory
