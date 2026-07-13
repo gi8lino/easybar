@@ -218,7 +218,7 @@ final class MouseTrackingNSView: NSView {
     return {
       onHoverChanged?(false)
       guard emitsMouseHover else { return }
-      Task {
+      WidgetEventDispatcher.shared.enqueue {
         await EventHub.shared.emitWidgetEvent(
           .mouseExited,
           widgetID: widgetID,
@@ -280,7 +280,7 @@ final class MouseTrackingNSView: NSView {
       .field("direction", "\(direction.rawValue)"),
     )
 
-    Task {
+    WidgetEventDispatcher.shared.enqueue {
       await EventHub.shared.emitWidgetEvent(
         .mouseScrolled,
         widgetID: eventWidgetID,
@@ -352,7 +352,7 @@ final class MouseTrackingNSView: NSView {
       .field("target", "\(eventTargetWidgetID)\(buttonSuffix)"),
     )
 
-    Task {
+    WidgetEventDispatcher.shared.enqueue {
       await EventHub.shared.emitWidgetEvent(
         event,
         widgetID: eventWidgetID,

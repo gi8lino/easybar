@@ -67,7 +67,7 @@ struct ProgressSliderWidgetView: View {
             let newValue = value(for: x, width: geometry.size.width)
             value = newValue
 
-            Task {
+            WidgetEventDispatcher.shared.enqueue {
               await EventHub.shared.emitWidgetEvent(
                 .sliderPreview,
                 widgetID: rootWidgetID,
@@ -81,7 +81,7 @@ struct ProgressSliderWidgetView: View {
             value = newValue
             isDragging = false
 
-            Task {
+            WidgetEventDispatcher.shared.enqueue {
               await EventHub.shared.emitWidgetEvent(
                 .sliderChanged,
                 widgetID: rootWidgetID,

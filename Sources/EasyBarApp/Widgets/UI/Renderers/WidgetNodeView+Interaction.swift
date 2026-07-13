@@ -168,7 +168,7 @@ extension WidgetNodeView {
   func emitNodeHoverEvent(_ hovering: Bool) {
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
 
-    Task {
+    WidgetEventDispatcher.shared.enqueue {
       await EventHub.shared.emitWidgetEvent(
         event,
         widgetID: node.root,
@@ -179,7 +179,7 @@ extension WidgetNodeView {
 
   /// Emits a left-click event for this node.
   func emitNodeClickEvent() {
-    Task {
+    WidgetEventDispatcher.shared.enqueue {
       await EventHub.shared.emitWidgetEvent(
         .mouseClicked,
         widgetID: node.root,

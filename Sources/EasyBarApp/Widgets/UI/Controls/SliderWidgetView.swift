@@ -52,7 +52,7 @@ struct SliderWidgetView: View {
           let clampedValue = range.clamped(newValue)
           value = clampedValue
 
-          Task {
+          WidgetEventDispatcher.shared.enqueue {
             await EventHub.shared.emitWidgetEvent(
               .sliderPreview,
               widgetID: rootWidgetID,
@@ -70,7 +70,7 @@ struct SliderWidgetView: View {
         if !editing {
           let committedValue = value
 
-          Task {
+          WidgetEventDispatcher.shared.enqueue {
             await EventHub.shared.emitWidgetEvent(
               .sliderChanged,
               widgetID: rootWidgetID,
