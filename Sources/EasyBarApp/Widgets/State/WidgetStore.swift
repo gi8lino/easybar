@@ -50,6 +50,7 @@ final class WidgetStore: ObservableObject {
   func apply(owner: Owner, nodes updates: [WidgetNodeState]) -> ApplyResult {
     let result = validateNodes(updates, owner: owner)
     guard result.rejectedNodeIDs.isEmpty else { return result }
+    guard !containsSameNodes(updates, for: owner) else { return result }
 
     for id in existingIDs(for: owner) {
       removeNode(id, ownedBy: owner)
@@ -125,6 +126,16 @@ final class WidgetStore: ObservableObject {
   /// Returns all stored node ids for one widget root.
   private func existingIDs(for owner: Owner) -> Set<String> {
     return rootIndex[owner] ?? []
+  }
+
+  /// Returns whether one owner already stores the complete proposed node set.
+  private func containsSameNodes(_ updates: [WidgetNodeState], for owner: Owner) -> Bool {
+    let existing = existingIDs(for: owner)
+    guard existing.count == updates.count else { return false }
+
+    return updates.allSatisfy { node in
+      existing.contains(node.id) && nodeMap[node.id] == node
+    }
   }
 
   /// Validates a complete replacement without mutating the current store.

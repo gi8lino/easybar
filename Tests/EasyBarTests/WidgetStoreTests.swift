@@ -1,9 +1,27 @@
+import Combine
 import XCTest
 
 @testable import EasyBarApp
 
 @MainActor
 final class WidgetStoreTests: XCTestCase {
+  func testIdenticalReplacementDoesNotRepublishStore() throws {
+    let store = WidgetStore()
+    let node = try makeNode(id: "stable", root: "root", text: "unchanged")
+    store.apply(owner: .scripted(root: "root"), nodes: [node])
+
+    var publicationCount = 0
+    let cancellable = store.objectWillChange.sink {
+      publicationCount += 1
+    }
+
+    let result = store.apply(owner: .scripted(root: "root"), nodes: [node])
+
+    XCTAssertTrue(result.rejectedNodeIDs.isEmpty)
+    XCTAssertEqual(publicationCount, 0)
+    withExtendedLifetime(cancellable) {}
+  }
+
   func testCrossRootNodeCollisionDoesNotOverwriteOrDeleteOwner() throws {
     let store = WidgetStore()
     let original = try makeNode(id: "shared", root: "first", text: "original")
