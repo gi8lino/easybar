@@ -363,8 +363,8 @@ extension WidgetNodeView {
   }
 
   /// Returns a templated image when custom image tinting is enabled.
-  func tintedImage(from image: NSImage, customImage: NSImage?) -> NSImage? {
-    guard customImage != nil,
+  func tintedImage(from image: NSImage, isCustomImage: Bool) -> NSImage? {
+    guard isCustomImage,
       let tint = node.iconColor ?? node.color,
       !tint.isEmpty
     else {
@@ -384,27 +384,29 @@ extension WidgetNodeView {
     return WidgetRenderMetrics.nonnegative(node.imageCornerRadius, fallback: 4)
   }
 
-  /// Returns the custom image or system file icon for one image path.
-  func resolvedImage(imagePath: String, customImage: NSImage?) -> NSImage {
-    return customImage ?? NSWorkspace.shared.icon(forFile: imagePath)
-  }
-
   /// Builds the rendered image view for one node.
   @ViewBuilder
   func renderedImageView() -> some View {
     if hasImage, let imagePath = node.imagePath {
-      let customImage = NSImage(contentsOfFile: imagePath)
-      let image = resolvedImage(imagePath: imagePath, customImage: customImage)
-
-      if let tintedImage = tintedImage(from: image, customImage: customImage) {
-        imageBaseView(image: tintedImage, renderingMode: .template)
-          .foregroundStyle(iconResolvedColor)
-          .frame(width: imageSize, height: imageSize)
-          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
-      } else {
-        imageBaseView(image: image, renderingMode: .original)
-          .frame(width: imageSize, height: imageSize)
-          .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
+      Group {
+        if let loadedImage = imageLoader.image(for: imagePath) {
+          if let tintedImage = tintedImage(
+            from: loadedImage.image,
+            isCustomImage: loadedImage.isCustomImage
+          ) {
+            imageBaseView(image: tintedImage, renderingMode: .template)
+              .foregroundStyle(iconResolvedColor)
+              .frame(width: imageSize, height: imageSize)
+              .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
+          } else {
+            imageBaseView(image: loadedImage.image, renderingMode: .original)
+              .frame(width: imageSize, height: imageSize)
+              .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
+          }
+        }
+      }
+      .task(id: imagePath) {
+        await imageLoader.load(path: imagePath)
       }
     }
   }

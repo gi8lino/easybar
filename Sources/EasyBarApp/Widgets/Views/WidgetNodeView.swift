@@ -10,6 +10,7 @@ struct WidgetNodeView: View {
   @EnvironmentObject var configStore: ConfigSnapshotStore
 
   @StateObject var popupPanel = WidgetPopupPanelController()
+  @StateObject var imageLoader = WidgetImageLoader()
   @State var popupPresented = false
   @State var anchorHovered = false
   @State var popupHovered = false
