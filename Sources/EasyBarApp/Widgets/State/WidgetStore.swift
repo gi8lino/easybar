@@ -4,6 +4,9 @@ import SwiftUI
 /// Main-actor store containing all currently rendered widget nodes.
 @MainActor
 final class WidgetStore: ObservableObject {
+  static let maximumScriptedNodeCount = 2_048
+  static let maximumScriptedDepth = 64
+
   enum Owner: Hashable {
     case native(root: String)
     case scripted(root: String)
@@ -22,10 +25,13 @@ final class WidgetStore: ObservableObject {
     var conflictingNodeIDs = Set<String>()
     var invalidParentNodeIDs = Set<String>()
     var cyclicNodeIDs = Set<String>()
+    var oversizedTreeNodeIDs = Set<String>()
+    var overdepthNodeIDs = Set<String>()
 
     var rejectedNodeIDs: Set<String> {
       duplicateNodeIDs.union(mismatchedRootNodeIDs).union(conflictingNodeIDs)
         .union(invalidParentNodeIDs).union(cyclicNodeIDs)
+        .union(oversizedTreeNodeIDs).union(overdepthNodeIDs)
     }
   }
 
@@ -157,6 +163,12 @@ final class WidgetStore: ObservableObject {
 
     if case .scripted = owner {
       result.cyclicNodeIDs = cyclicNodeIDs(in: updates, root: owner.root)
+      result.oversizedTreeNodeIDs = Set(
+        updates.dropFirst(Self.maximumScriptedNodeCount).map(\.id)
+      )
+      if result.cyclicNodeIDs.isEmpty {
+        result.overdepthNodeIDs = overdepthNodeIDs(in: updates, root: owner.root)
+      }
     }
 
     return result
@@ -196,6 +208,36 @@ final class WidgetStore: ObservableObject {
     }
 
     return cyclicIDs
+  }
+
+  /// Returns scripted node ids deeper than the supported recursive render depth.
+  private func overdepthNodeIDs(in nodes: [WidgetNodeState], root: String) -> Set<String> {
+    let rootNodes = nodes.filter { $0.root == root }
+    var parents: [String: String] = [:]
+    var seenIDs = Set<String>()
+    for node in rootNodes where seenIDs.insert(node.id).inserted {
+      parents[node.id] = node.parent ?? ""
+    }
+    var depths: [String: Int] = [:]
+
+    for startID in parents.keys where depths[startID] == nil {
+      var path: [String] = []
+      var currentID = startID
+
+      while depths[currentID] == nil {
+        path.append(currentID)
+        guard let parentID = parents[currentID], !parentID.isEmpty else { break }
+        currentID = parentID
+      }
+
+      var depth = depths[currentID] ?? -1
+      for id in path.reversed() {
+        depth += 1
+        depths[id] = depth
+      }
+    }
+
+    return Set(depths.lazy.filter { $0.value > Self.maximumScriptedDepth }.map(\.key))
   }
 
   /// Removes a node only when the requesting root still owns it.

@@ -70,7 +70,7 @@ final class WidgetStoreTests: XCTestCase {
         id: "node-\(index)",
         root: "root",
         text: "node",
-        parent: index == 0 ? nil : "node-\(index - 1)"
+        parent: index == 0 ? nil : "node-0"
       )
     }
 
@@ -78,6 +78,35 @@ final class WidgetStoreTests: XCTestCase {
 
     XCTAssertTrue(result.rejectedNodeIDs.isEmpty)
     XCTAssertEqual(store.topLevelNodes(for: .right), [nodes[0]])
+  }
+
+  func testOversizedScriptedTreeIsRejected() throws {
+    let store = WidgetStore()
+    let nodes = try (0...WidgetStore.maximumScriptedNodeCount).map { index in
+      try makeNode(id: "node-\(index)", root: "root", text: "node")
+    }
+
+    let result = store.apply(owner: .scripted(root: "root"), nodes: nodes)
+
+    XCTAssertEqual(result.oversizedTreeNodeIDs, [nodes.last!.id])
+    XCTAssertTrue(store.topLevelNodes(for: .right).isEmpty)
+  }
+
+  func testOverdepthScriptedTreeIsRejected() throws {
+    let store = WidgetStore()
+    let nodes = try (0...(WidgetStore.maximumScriptedDepth + 1)).map { index in
+      try makeNode(
+        id: "node-\(index)",
+        root: "root",
+        text: "node",
+        parent: index == 0 ? nil : "node-\(index - 1)"
+      )
+    }
+
+    let result = store.apply(owner: .scripted(root: "root"), nodes: nodes)
+
+    XCTAssertEqual(result.overdepthNodeIDs, [nodes.last!.id])
+    XCTAssertTrue(store.topLevelNodes(for: .right).isEmpty)
   }
 
   func testRelationshipIndexesTrackReplacementAndClear() throws {
