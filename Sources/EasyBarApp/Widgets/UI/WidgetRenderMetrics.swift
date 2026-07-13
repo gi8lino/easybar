@@ -22,4 +22,13 @@ enum WidgetRenderMetrics {
     guard let value, value.isFinite else { return 1 }
     return min(max(value, 0), 1)
   }
+
+  static func finite(_ value: Double?, fallback: Double = 0) -> CGFloat {
+    guard let value, value.isFinite else { return CGFloat(fallback) }
+    return CGFloat(value)
+  }
+
+  static func unitInterval(_ value: Double?, fallback: Double = 0) -> CGFloat {
+    return min(max(finite(value, fallback: fallback), 0), 1)
+  }
 }

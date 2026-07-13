@@ -193,12 +193,12 @@ extension WidgetNodeView {
   }
 
   var symbolFillFractionClamped: CGFloat {
-    guard let fraction = node.symbolFillFraction else { return 0 }
-    return CGFloat(Swift.max(0, Swift.min(fraction, 1)))
+    return WidgetRenderMetrics.unitInterval(node.symbolFillFraction)
   }
 
   var symbolFillWidth: CGFloat {
-    let maxWidth = symbolCanvasSize.width * CGFloat(node.symbolFillWidthFactor ?? 0)
+    let widthFactor = WidgetRenderMetrics.nonnegative(node.symbolFillWidthFactor, fallback: 0)
+    let maxWidth = symbolCanvasSize.width * widthFactor
     guard maxWidth > 0 else { return 0 }
 
     let fraction = symbolFillFractionClamped
@@ -207,23 +207,28 @@ extension WidgetNodeView {
     }
 
     let rawWidth = maxWidth * fraction
-    let minimumVisibleWidth = maxWidth * CGFloat(node.symbolFillMinimumVisibleWidthFactor ?? 0)
+    let minimumFactor = WidgetRenderMetrics.unitInterval(
+      node.symbolFillMinimumVisibleWidthFactor
+    )
+    let minimumVisibleWidth = maxWidth * minimumFactor
     return Swift.min(maxWidth, Swift.max(rawWidth, minimumVisibleWidth))
   }
 
   var symbolFillHeight: CGFloat {
-    return symbolCanvasSize.height * CGFloat(node.symbolFillHeightFactor ?? 0)
+    let factor = WidgetRenderMetrics.nonnegative(node.symbolFillHeightFactor, fallback: 0)
+    return symbolCanvasSize.height * factor
   }
 
   var symbolFillOffset: CGSize {
     CGSize(
-      width: symbolCanvasSize.width * CGFloat(node.symbolFillOffsetXFactor ?? 0),
-      height: symbolCanvasSize.height * CGFloat(node.symbolFillOffsetYFactor ?? 0)
+      width: symbolCanvasSize.width * WidgetRenderMetrics.finite(node.symbolFillOffsetXFactor),
+      height: symbolCanvasSize.height * WidgetRenderMetrics.finite(node.symbolFillOffsetYFactor)
     )
   }
 
   var symbolFillCornerRadius: CGFloat {
-    return symbolResolvedFontSize * CGFloat(node.symbolFillCornerRadiusFactor ?? 0)
+    let factor = WidgetRenderMetrics.nonnegative(node.symbolFillCornerRadiusFactor, fallback: 0)
+    return symbolResolvedFontSize * factor
   }
 
   var imageView: some View {

@@ -25,4 +25,17 @@ final class WidgetRenderMetricsTests: XCTestCase {
     XCTAssertEqual(WidgetRenderMetrics.opacity(0.4), 0.4)
     XCTAssertEqual(WidgetRenderMetrics.opacity(2), 1)
   }
+
+  func testFinitePreservesSignedValuesAndRejectsNonFiniteValues() {
+    XCTAssertEqual(WidgetRenderMetrics.finite(-2), -2)
+    XCTAssertEqual(WidgetRenderMetrics.finite(.nan), 0)
+    XCTAssertEqual(WidgetRenderMetrics.finite(.infinity, fallback: 3), 3)
+  }
+
+  func testUnitIntervalRejectsNonFiniteAndClampsValues() {
+    XCTAssertEqual(WidgetRenderMetrics.unitInterval(.nan), 0)
+    XCTAssertEqual(WidgetRenderMetrics.unitInterval(-1), 0)
+    XCTAssertEqual(WidgetRenderMetrics.unitInterval(0.4), 0.4)
+    XCTAssertEqual(WidgetRenderMetrics.unitInterval(2), 1)
+  }
 }
