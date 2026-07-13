@@ -36,7 +36,8 @@ let package = Package(
       dependencies: [
         "EasyBarConfigSchema"
       ],
-      path: "Sources/EasyBarGenerateConfig"
+      path: "Sources/EasyBarGenerateConfig",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarConfigSchema",
@@ -65,7 +66,8 @@ let package = Package(
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/EasyBarCalendarCore"
+      path: "Sources/EasyBarCalendarCore",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarCalendarPresentation",
@@ -81,7 +83,8 @@ let package = Package(
         "EasyBarShared",
         "EasyBarCalendarPresentation",
       ],
-      path: "Sources/EasyBarCalendarUI"
+      path: "Sources/EasyBarCalendarUI",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarCalendarConfig",
@@ -90,14 +93,16 @@ let package = Package(
         "EasyBarConfigParsing",
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
-      path: "Sources/EasyBarCalendarConfig"
+      path: "Sources/EasyBarCalendarConfig",
+      swiftSettings: strictConcurrencySettings
     ),
     .target(
       name: "EasyBarNetworkAgentCore",
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/EasyBarNetworkAgentCore"
+      path: "Sources/EasyBarNetworkAgentCore",
+      swiftSettings: strictConcurrencySettings
     ),
     .executableTarget(
       name: "EasyBarApp",
@@ -123,21 +128,24 @@ let package = Package(
         .copy("Lua/runtime.lua"),
         .copy("Lua/easybar_api.lua"),
         .copy("Lua/easybar"),
-      ]
+      ],
+      swiftSettings: strictConcurrencySettings
     ),
     .executableTarget(
       name: "EasyBarLuaRuntime",
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/EasyBarLuaRuntime"
+      path: "Sources/EasyBarLuaRuntime",
+      swiftSettings: strictConcurrencySettings
     ),
     .executableTarget(
       name: "EasyBarCtl",
       dependencies: [
         "EasyBarShared"
       ],
-      path: "Sources/EasyBarCtl"
+      path: "Sources/EasyBarCtl",
+      swiftSettings: strictConcurrencySettings
     ),
     .executableTarget(
       name: "EasyBarCalendarAgent",
@@ -148,7 +156,8 @@ let package = Package(
       path: "Sources/EasyBarCalendarAgent",
       exclude: [
         "Info.plist"
-      ]
+      ],
+      swiftSettings: strictConcurrencySettings
     ),
     .executableTarget(
       name: "EasyBarNetworkAgent",
@@ -159,7 +168,8 @@ let package = Package(
       path: "Sources/EasyBarNetworkAgent",
       exclude: [
         "Info.plist"
-      ]
+      ],
+      swiftSettings: strictConcurrencySettings
     ),
     .testTarget(
       name: "EasyBarTests",
@@ -173,7 +183,8 @@ let package = Package(
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
       ],
-      path: "Tests/EasyBarTests"
+      path: "Tests/EasyBarTests",
+      swiftSettings: strictConcurrencySettings
     ),
   ]
 )
