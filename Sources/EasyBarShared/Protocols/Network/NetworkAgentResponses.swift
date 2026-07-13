@@ -1,6 +1,6 @@
 import Foundation
 
-public enum NetworkAgentMessageKind: String, Codable {
+public enum NetworkAgentMessageKind: String, Codable, Sendable {
   case pong
   case version
   case subscribed
@@ -9,7 +9,7 @@ public enum NetworkAgentMessageKind: String, Codable {
 }
 
 /// One message sent over the network agent socket.
-public struct NetworkAgentMessage: Codable {
+public struct NetworkAgentMessage: Codable, Sendable {
   /// Message kind discriminator.
   public var kind: NetworkAgentMessageKind
   /// Optional version payload.

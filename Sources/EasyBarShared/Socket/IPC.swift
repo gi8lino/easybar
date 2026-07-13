@@ -5,7 +5,7 @@ public enum IPC {}
 
 extension IPC {
   /// Commands received through the EasyBar IPC socket.
-  public enum Command: String, Codable {
+  public enum Command: String, Codable, Sendable {
     case manualRefresh = "manual_refresh"
     case workspaceChange = "workspace_change"
     case focusChange = "focus_change"
@@ -17,7 +17,7 @@ extension IPC {
   }
 
   /// One IPC request sent to the EasyBar socket.
-  public enum Request: Codable {
+  public enum Request: Codable, Sendable {
     case command(Command)
     case validateConfig(configPath: String?)
     case metrics(watch: Bool)
@@ -121,8 +121,8 @@ extension IPC {
   }
 
   /// One IPC message returned by the EasyBar socket.
-  public enum Message: Codable {
-    public enum Kind: String, Codable {
+  public enum Message: Codable, Sendable {
+    public enum Kind: String, Codable, Sendable {
       case accepted
       case rejected
       case configValidated = "config_validated"

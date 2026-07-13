@@ -2,7 +2,7 @@ import Foundation
 
 extension IPC {
   /// One point-in-time metrics payload streamed by EasyBar.
-  public struct MetricsSnapshot: Codable {
+  public struct MetricsSnapshot: Codable, Sendable {
     public let timestamp: Date
     public let collectionEnabled: Bool
     public let sampleIntervalSeconds: Double
@@ -38,7 +38,7 @@ extension IPC {
   }
 
   /// One sampled process state.
-  public struct ProcessMetrics: Codable {
+  public struct ProcessMetrics: Codable, Sendable {
     public let name: String
     public let running: Bool
     public let pid: Int32?
@@ -65,7 +65,7 @@ extension IPC {
   }
 
   /// One aggregated runtime metrics payload.
-  public struct RuntimeMetrics: Codable {
+  public struct RuntimeMetrics: Codable, Sendable {
     public let subscriberCount: Int
     public let luaRestartCount: Int
     public let luaReady: Bool
@@ -137,7 +137,7 @@ extension IPC {
   }
 
   /// One aggregated helper-agent metrics payload.
-  public struct AgentMetrics: Codable {
+  public struct AgentMetrics: Codable, Sendable {
     public let name: String
     public let connected: Bool
     public let process: ProcessMetrics
@@ -176,7 +176,7 @@ extension IPC {
   }
 
   /// One widget update counter in the metrics payload.
-  public struct WidgetMetrics: Codable {
+  public struct WidgetMetrics: Codable, Sendable {
     public let id: String
     public let updatesTotal: Int
     public let updatesPerSecond: Double
@@ -200,7 +200,7 @@ extension IPC {
   }
 
   /// One named counter with total and current per-second rate.
-  public struct CounterMetrics: Codable {
+  public struct CounterMetrics: Codable, Sendable {
     public let name: String
     public let total: Int
     public let perSecond: Double

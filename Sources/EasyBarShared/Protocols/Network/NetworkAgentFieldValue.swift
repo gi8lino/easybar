@@ -1,7 +1,7 @@
 import Foundation
 
 /// One typed network-agent field value sent over the wire.
-public enum NetworkAgentFieldValue: Codable, Equatable {
+public enum NetworkAgentFieldValue: Codable, Equatable, Sendable {
   case string(String)
   case bool(Bool)
   case int(Int)

@@ -1,7 +1,7 @@
 import Foundation
 
 /// One request sent to the network agent.
-public struct NetworkAgentRequest: Codable {
+public struct NetworkAgentRequest: Codable, Sendable {
   /// Command to execute on the agent.
   public var command: NetworkAgentCommand
   /// Requested field keys for fetch and subscribe.
