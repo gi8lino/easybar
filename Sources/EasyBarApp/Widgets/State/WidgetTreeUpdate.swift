@@ -4,7 +4,7 @@ import Foundation
 let easyBarLuaRuntimeProtocolVersion = 1
 
 /// Decoded message emitted by the Lua widget runtime.
-struct WidgetTreeUpdate: Codable {
+struct WidgetTreeUpdate: Codable, Sendable {
 
   let protocolVersion: Int?
   let type: Kind
@@ -30,7 +30,7 @@ struct WidgetTreeUpdate: Codable {
     case maxOutputBytes = "max_output_bytes"
   }
 
-  enum Kind: String, Codable {
+  enum Kind: String, Codable, Sendable {
     case subscriptions
     case ready
     case tree

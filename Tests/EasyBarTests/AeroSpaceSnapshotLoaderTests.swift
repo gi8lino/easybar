@@ -4,6 +4,7 @@ import XCTest
 @testable import EasyBarApp
 @testable import EasyBarShared
 
+@MainActor
 final class AeroSpaceSnapshotLoaderTests: XCTestCase {
   func testLoadParsesFormattedJSONWorkspaceAndWindowOutput() {
     let snapshot = loadSnapshot(

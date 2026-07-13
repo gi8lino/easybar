@@ -2,16 +2,18 @@ import AppKit
 import SwiftUI
 
 /// Manages one AppKit popup panel anchored to a widget view.
+@MainActor
 final class WidgetPopupPanelController: ObservableObject {
   private weak var anchorView: NSView?
   private weak var parentWindow: NSWindow?
   private var panel: NSPanel?
   private var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
   private var isPresented = false
-  private var parentWindowObservers: [NSObjectProtocol] = []
+  nonisolated(unsafe) private var parentWindowObservers: [NSObjectProtocol] = []
 
   deinit {
-    removeParentWindowObservers()
+    let center = NotificationCenter.default
+    parentWindowObservers.forEach(center.removeObserver)
   }
 
   /// Stores the current anchor view.
@@ -148,7 +150,9 @@ final class WidgetPopupPanelController: ObservableObject {
 
     parentWindowObservers = names.map { name in
       center.addObserver(forName: name, object: parentWindow, queue: .main) { [weak self] _ in
-        self?.handleParentWindowUpdate(notification: name)
+        Task { @MainActor [weak self] in
+          self?.handleParentWindowUpdate(notification: name)
+        }
       }
     }
   }

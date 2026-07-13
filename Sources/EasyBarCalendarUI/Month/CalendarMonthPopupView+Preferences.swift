@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MonthCalendarGridFramePreferenceKey: PreferenceKey {
-  static var defaultValue: CGRect = .zero
+  static var defaultValue: CGRect { .zero }
 
   /// Handles reduce.
   static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -11,7 +11,7 @@ struct MonthCalendarGridFramePreferenceKey: PreferenceKey {
 }
 
 struct MonthCalendarDayFramePreferenceKey: PreferenceKey {
-  static var defaultValue: [Date: CGRect] = [:]
+  static var defaultValue: [Date: CGRect] { [:] }
 
   /// Handles reduce.
   static func reduce(value: inout [Date: CGRect], nextValue: () -> [Date: CGRect]) {

@@ -15,7 +15,7 @@ struct WiFiFieldDescriptor {
 /// Stable field catalog shared by Wi-Fi config parsing and presentation.
 enum BuiltinWiFiFieldCatalog {
   /// Fields in the order they should be requested and displayed by the widget.
-  static let fields: [WiFiFieldDescriptor] = [
+  nonisolated(unsafe) static let fields: [WiFiFieldDescriptor] = [
     .init(
       configKey: "ssid",
       keyPath: \.ssid,

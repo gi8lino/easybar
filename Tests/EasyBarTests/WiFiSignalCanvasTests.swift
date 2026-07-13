@@ -2,6 +2,7 @@ import XCTest
 
 @testable import EasyBarApp
 
+@MainActor
 final class WiFiSignalCanvasTests: XCTestCase {
   func testNormalizedSignalLevelRejectsNonFiniteValues() {
     XCTAssertEqual(WiFiSignalCanvas.normalizedSignalLevel(nil), 0)
