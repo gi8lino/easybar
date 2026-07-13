@@ -21,10 +21,11 @@ final class WidgetStore: ObservableObject {
     var mismatchedRootNodeIDs = Set<String>()
     var conflictingNodeIDs = Set<String>()
     var invalidParentNodeIDs = Set<String>()
+    var cyclicNodeIDs = Set<String>()
 
     var rejectedNodeIDs: Set<String> {
       duplicateNodeIDs.union(mismatchedRootNodeIDs).union(conflictingNodeIDs)
-        .union(invalidParentNodeIDs)
+        .union(invalidParentNodeIDs).union(cyclicNodeIDs)
     }
   }
 
@@ -154,7 +155,41 @@ final class WidgetStore: ObservableObject {
       }
     }
 
+    if case .scripted = owner {
+      result.cyclicNodeIDs = cyclicNodeIDs(in: updates, root: owner.root)
+    }
+
     return result
+  }
+
+  /// Returns all scripted node ids participating in parent cycles.
+  private func cyclicNodeIDs(in nodes: [WidgetNodeState], root: String) -> Set<String> {
+    var parents: [String: String] = [:]
+    var seenIDs = Set<String>()
+    for node in nodes where node.root == root && seenIDs.insert(node.id).inserted {
+      if let parent = node.parent, !parent.isEmpty {
+        parents[node.id] = parent
+      }
+    }
+    var cyclicIDs = Set<String>()
+
+    for startID in parents.keys {
+      var path: [String] = []
+      var pathIndices: [String: Int] = [:]
+      var currentID: String? = startID
+
+      while let id = currentID, let parentID = parents[id] {
+        if let cycleStart = pathIndices[id] {
+          cyclicIDs.formUnion(path[cycleStart...])
+          break
+        }
+        pathIndices[id] = path.count
+        path.append(id)
+        currentID = parentID
+      }
+    }
+
+    return cyclicIDs
   }
 
   /// Removes a node only when the requesting root still owns it.

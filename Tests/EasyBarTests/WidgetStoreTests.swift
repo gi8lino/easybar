@@ -49,6 +49,19 @@ final class WidgetStoreTests: XCTestCase {
     XCTAssertEqual(store.topLevelNodes(for: .right), [original])
   }
 
+  func testParentCycleRejectsReplacementAndPreservesPreviousTree() throws {
+    let store = WidgetStore()
+    let original = try makeNode(id: "original", root: "root", text: "original")
+    let first = try makeNode(id: "first", root: "root", text: "first", parent: "second")
+    let second = try makeNode(id: "second", root: "root", text: "second", parent: "first")
+
+    store.apply(owner: .scripted(root: "root"), nodes: [original])
+    let result = store.apply(owner: .scripted(root: "root"), nodes: [first, second])
+
+    XCTAssertEqual(result.cyclicNodeIDs, [first.id, second.id])
+    XCTAssertEqual(store.topLevelNodes(for: .right), [original])
+  }
+
   func testRelationshipIndexesTrackReplacementAndClear() throws {
     let store = WidgetStore()
     let root = try makeNode(id: "root", root: "root", text: "root")
