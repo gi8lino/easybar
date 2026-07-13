@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// Owns delayed AeroSpace refresh work scheduled after app launches.
-final class AeroSpaceLaunchRefreshScheduler {
+final class AeroSpaceLaunchRefreshScheduler: @unchecked Sendable {
   private struct State {
     var pendingTask: Task<Void, Never>?
     var pendingTaskID: UInt64?
