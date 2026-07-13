@@ -62,6 +62,24 @@ final class WidgetStoreTests: XCTestCase {
     XCTAssertEqual(store.topLevelNodes(for: .right), [original])
   }
 
+  func testLongAcyclicParentChainIsAccepted() throws {
+    let store = WidgetStore()
+    let count = 1_000
+    let nodes = try (0..<count).map { index in
+      try makeNode(
+        id: "node-\(index)",
+        root: "root",
+        text: "node",
+        parent: index == 0 ? nil : "node-\(index - 1)"
+      )
+    }
+
+    let result = store.apply(owner: .scripted(root: "root"), nodes: nodes)
+
+    XCTAssertTrue(result.rejectedNodeIDs.isEmpty)
+    XCTAssertEqual(store.topLevelNodes(for: .right), [nodes[0]])
+  }
+
   func testRelationshipIndexesTrackReplacementAndClear() throws {
     let store = WidgetStore()
     let root = try makeNode(id: "root", root: "root", text: "root")

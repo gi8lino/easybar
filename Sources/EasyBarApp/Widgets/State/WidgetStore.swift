@@ -172,13 +172,17 @@ final class WidgetStore: ObservableObject {
       }
     }
     var cyclicIDs = Set<String>()
+    var processedIDs = Set<String>()
 
-    for startID in parents.keys {
+    for startID in parents.keys where !processedIDs.contains(startID) {
       var path: [String] = []
       var pathIndices: [String: Int] = [:]
       var currentID: String? = startID
 
       while let id = currentID, let parentID = parents[id] {
+        if processedIDs.contains(id) {
+          break
+        }
         if let cycleStart = pathIndices[id] {
           cyclicIDs.formUnion(path[cycleStart...])
           break
@@ -187,6 +191,8 @@ final class WidgetStore: ObservableObject {
         path.append(id)
         currentID = parentID
       }
+
+      processedIDs.formUnion(path)
     }
 
     return cyclicIDs
