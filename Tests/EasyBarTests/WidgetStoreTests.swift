@@ -9,9 +9,9 @@ final class WidgetStoreTests: XCTestCase {
     let original = try makeNode(id: "shared", root: "first", text: "original")
     let collision = try makeNode(id: "shared", root: "second", text: "replacement")
 
-    store.apply(root: "first", nodes: [original])
-    let result = store.apply(root: "second", nodes: [collision])
-    store.clear(roots: ["second"])
+    store.apply(owner: .scripted(root: "first"), nodes: [original])
+    let result = store.apply(owner: .scripted(root: "second"), nodes: [collision])
+    store.clear(owners: [.scripted(root: "second")])
 
     XCTAssertEqual(result.conflictingNodeIDs, ["shared"])
     XCTAssertEqual(store.topLevelNodes(for: .right), [original])
@@ -23,7 +23,10 @@ final class WidgetStoreTests: XCTestCase {
     let duplicate = try makeNode(id: "duplicate", root: "expected", text: "second")
     let mismatch = try makeNode(id: "mismatch", root: "other", text: "mismatch")
 
-    let result = store.apply(root: "expected", nodes: [first, duplicate, mismatch])
+    let result = store.apply(
+      owner: .scripted(root: "expected"),
+      nodes: [first, duplicate, mismatch]
+    )
 
     XCTAssertEqual(result.duplicateNodeIDs, ["duplicate"])
     XCTAssertEqual(result.mismatchedRootNodeIDs, ["mismatch"])
@@ -49,18 +52,31 @@ final class WidgetStoreTests: XCTestCase {
       role: "popup-content"
     )
 
-    store.apply(root: "root", nodes: [popup, child, root, anchor])
+    store.apply(owner: .scripted(root: "root"), nodes: [popup, child, root, anchor])
 
     XCTAssertEqual(store.topLevelNodes(for: .right), [root])
     XCTAssertEqual(store.children(of: "root"), [child])
     XCTAssertEqual(store.anchorChildren(of: "root"), [anchor])
     XCTAssertEqual(store.popupChildren(of: "root"), [popup])
 
-    store.apply(root: "root", nodes: [root])
+    store.apply(owner: .scripted(root: "root"), nodes: [root])
 
     XCTAssertTrue(store.children(of: "root").isEmpty)
     XCTAssertTrue(store.anchorChildren(of: "root").isEmpty)
     XCTAssertTrue(store.popupChildren(of: "root").isEmpty)
+  }
+
+  func testScriptedRootCannotReplaceNativeRootWithSameName() throws {
+    let store = WidgetStore()
+    let native = try makeNode(id: "shared", root: "shared", text: "native")
+    let scripted = try makeNode(id: "shared", root: "shared", text: "scripted")
+
+    store.apply(owner: .native(root: "shared"), nodes: [native])
+    let result = store.apply(owner: .scripted(root: "shared"), nodes: [scripted])
+    store.clear(owners: [.scripted(root: "shared")])
+
+    XCTAssertEqual(result.conflictingNodeIDs, ["shared"])
+    XCTAssertEqual(store.topLevelNodes(for: .right), [native])
   }
 
   private func makeNode(

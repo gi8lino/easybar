@@ -15,7 +15,7 @@ final class NativeGroupRegistry {
     clear()
 
     for group in groups {
-      widgetStore.apply(root: group.id, nodes: [makeNode(group)])
+      widgetStore.apply(owner: .native(root: group.id), nodes: [makeNode(group)])
       publishedRootIDs.append(group.id)
     }
   }
@@ -23,7 +23,7 @@ final class NativeGroupRegistry {
   /// Clears all previously published native groups.
   func clear() {
     for rootID in publishedRootIDs {
-      widgetStore.apply(root: rootID, nodes: [])
+      widgetStore.apply(owner: .native(root: rootID), nodes: [])
     }
 
     publishedRootIDs.removeAll()

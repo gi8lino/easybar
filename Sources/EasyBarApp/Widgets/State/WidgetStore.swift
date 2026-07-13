@@ -4,6 +4,18 @@ import SwiftUI
 /// Main-actor store containing all currently rendered widget nodes.
 @MainActor
 final class WidgetStore: ObservableObject {
+  enum Owner: Hashable {
+    case native(root: String)
+    case scripted(root: String)
+
+    var root: String {
+      switch self {
+      case .native(let root), .scripted(let root):
+        return root
+      }
+    }
+  }
+
   struct ApplyResult: Equatable {
     var duplicateNodeIDs = Set<String>()
     var mismatchedRootNodeIDs = Set<String>()
@@ -17,8 +29,8 @@ final class WidgetStore: ObservableObject {
   @Published private(set) var nodes: [WidgetNodeState] = []
 
   private var nodeMap: [String: WidgetNodeState] = [:]
-  private var rootIndex: [String: Set<String>] = [:]
-  private var nodeOwners: [String: String] = [:]
+  private var rootIndex: [Owner: Set<String>] = [:]
+  private var nodeOwners: [String: Owner] = [:]
   private var topLevelNodesByPosition: [WidgetPosition: [WidgetNodeState]] = [:]
   private var childNodesByParentID: [String: [WidgetNodeState]] = [:]
   private var anchorNodesByParentID: [String: [WidgetNodeState]] = [:]
@@ -26,13 +38,13 @@ final class WidgetStore: ObservableObject {
 
   /// Replaces all nodes for one widget root.
   @discardableResult
-  func apply(root: String, nodes updates: [WidgetNodeState]) -> ApplyResult {
-    for id in existingIDs(for: root) {
-      removeNode(id, ownedBy: root)
+  func apply(owner: Owner, nodes updates: [WidgetNodeState]) -> ApplyResult {
+    for id in existingIDs(for: owner) {
+      removeNode(id, ownedBy: owner)
     }
 
-    let stored = storeNodes(updates, root: root)
-    rootIndex[root] = stored.ids
+    let stored = storeNodes(updates, owner: owner)
+    rootIndex[owner] = stored.ids
     rebuildPublishedState()
     return stored.result
   }
@@ -46,15 +58,15 @@ final class WidgetStore: ObservableObject {
   }
 
   /// Handles clear.
-  func clear(roots: Set<String>) {
-    guard !roots.isEmpty else { return }
+  func clear(owners: Set<Owner>) {
+    guard !owners.isEmpty else { return }
 
-    for root in roots {
-      for id in existingIDs(for: root) {
-        removeNode(id, ownedBy: root)
+    for owner in owners {
+      for id in existingIDs(for: owner) {
+        removeNode(id, ownedBy: owner)
       }
 
-      rootIndex.removeValue(forKey: root)
+      rootIndex.removeValue(forKey: owner)
     }
 
     rebuildPublishedState()
@@ -94,20 +106,20 @@ final class WidgetStore: ObservableObject {
   }
 
   /// Returns all stored node ids for one widget root.
-  private func existingIDs(for root: String) -> Set<String> {
-    return rootIndex[root] ?? []
+  private func existingIDs(for owner: Owner) -> Set<String> {
+    return rootIndex[owner] ?? []
   }
 
   /// Stores updated nodes and returns their ids.
   private func storeNodes(
     _ updates: [WidgetNodeState],
-    root: String
+    owner: Owner
   ) -> (ids: Set<String>, result: ApplyResult) {
     var ids = Set<String>()
     var result = ApplyResult()
 
     for node in updates {
-      guard node.root == root else {
+      guard node.root == owner.root else {
         result.mismatchedRootNodeIDs.insert(node.id)
         continue
       }
@@ -117,22 +129,22 @@ final class WidgetStore: ObservableObject {
         continue
       }
 
-      if let owner = nodeOwners[node.id], owner != root {
+      if let existingOwner = nodeOwners[node.id], existingOwner != owner {
         ids.remove(node.id)
         result.conflictingNodeIDs.insert(node.id)
         continue
       }
 
       nodeMap[node.id] = node
-      nodeOwners[node.id] = root
+      nodeOwners[node.id] = owner
     }
 
     return (ids, result)
   }
 
   /// Removes a node only when the requesting root still owns it.
-  private func removeNode(_ id: String, ownedBy root: String) {
-    guard nodeOwners[id] == root else { return }
+  private func removeNode(_ id: String, ownedBy owner: Owner) {
+    guard nodeOwners[id] == owner else { return }
     nodeMap.removeValue(forKey: id)
     nodeOwners.removeValue(forKey: id)
   }

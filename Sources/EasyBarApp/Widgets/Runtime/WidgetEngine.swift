@@ -82,7 +82,7 @@ actor WidgetEngine {
     await shutdown()
 
     await MainActor.run {
-      widgetStore.clear(roots: rootsToClear)
+      widgetStore.clear(owners: Set(rootsToClear.map { .scripted(root: $0) }))
     }
 
     scriptedRoots.removeAll()
@@ -222,7 +222,7 @@ actor WidgetEngine {
     await metricsCoordinator.recordTreeUpdate(root: root, nodeCount: nodes.count)
 
     let applyResult = await MainActor.run {
-      widgetStore.apply(root: root, nodes: nodes)
+      widgetStore.apply(owner: .scripted(root: root), nodes: nodes)
     }
 
     if !applyResult.rejectedNodeIDs.isEmpty {
@@ -238,11 +238,14 @@ actor WidgetEngine {
 
   /// Handles one explicit root-clear update from Lua.
   private func handleClearRoot(rootID: String) async {
-    scriptedRoots.remove(rootID)
+    guard scriptedRoots.remove(rootID) != nil else {
+      logger.warn("ignored clear for unknown scripted widget root", .field("root", rootID))
+      return
+    }
     logger.debug("decoded widget root clear", .field("root", rootID))
 
     await MainActor.run {
-      widgetStore.clear(roots: [rootID])
+      widgetStore.clear(owners: [.scripted(root: rootID)])
     }
   }
 }

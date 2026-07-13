@@ -32,6 +32,6 @@ extension NativeWidget {
 
   /// Applies the latest rendered nodes owned by this native widget.
   func applyNodes(_ nodes: [WidgetNodeState]) {
-    widgetStore.apply(root: rootID, nodes: nodes)
+    widgetStore.apply(owner: .native(root: rootID), nodes: nodes)
   }
 }
