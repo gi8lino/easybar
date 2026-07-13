@@ -18,7 +18,7 @@ final class NetworkAgentClient {
   }
 
   /// Shared network-agent client.
-  static var shared = NetworkAgentClient(
+  nonisolated(unsafe) static var shared = NetworkAgentClient(
     logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
     config: Config.makeUnloadedConfig().snapshot().networkAgent,
     metricsCoordinator: .shared

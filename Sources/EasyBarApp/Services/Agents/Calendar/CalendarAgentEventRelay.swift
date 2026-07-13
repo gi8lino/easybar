@@ -7,7 +7,7 @@ import Foundation
 /// are serialized, and the debounced scheduler owns its own locked state.
 final class CalendarAgentEventRelay: @unchecked Sendable {
   /// Shared calendar-agent event relay.
-  static var shared = CalendarAgentEventRelay(
+  nonisolated(unsafe) static var shared = CalendarAgentEventRelay(
     logger: ProcessLogger(label: "easybar.bootstrap.calendar_relay")
   )
 

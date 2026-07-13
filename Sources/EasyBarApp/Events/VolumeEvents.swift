@@ -5,7 +5,7 @@ import Foundation
 /// Observes CoreAudio output volume and mute changes.
 final class VolumeEvents {
   /// Shared volume event source.
-  static var shared = VolumeEvents(
+  nonisolated(unsafe) static var shared = VolumeEvents(
     logger: ProcessLogger(label: "easybar.bootstrap.volume_events")
   )
 

@@ -5,7 +5,7 @@ import IOKit.ps
 /// Observes macOS power source changes.
 final class PowerEvents {
   /// Shared power event source.
-  static var shared = PowerEvents(
+  nonisolated(unsafe) static var shared = PowerEvents(
     logger: ProcessLogger(label: "easybar.bootstrap.power_events")
   )
 

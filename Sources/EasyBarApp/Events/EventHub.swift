@@ -19,7 +19,7 @@ actor EventHub {
   private static let intervalTickPrefix = "interval_tick:"
 
   /// Shared event hub instance, initialized with a no-op sink until bootstrap.
-  static var shared = EventHub(
+  nonisolated(unsafe) static var shared = EventHub(
     logger: ProcessLogger(label: "easybar.bootstrap.event_hub"),
     luaEventSink: NoOpEventPayloadSink()
   )

@@ -5,7 +5,7 @@ import Foundation
 /// Observes AppKit and workspace system events.
 final class SystemEvents {
   /// Shared system event source.
-  static var shared = SystemEvents(
+  nonisolated(unsafe) static var shared = SystemEvents(
     logger: ProcessLogger(label: "easybar.bootstrap.system_events")
   )
 

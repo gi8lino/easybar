@@ -10,7 +10,7 @@ struct WidgetIntervalSchedule: Hashable, Sendable {
 /// Owns app event timers.
 final class TimerEvents {
   /// Shared timer event source.
-  static var shared = TimerEvents(
+  nonisolated(unsafe) static var shared = TimerEvents(
     logger: ProcessLogger(label: "easybar.bootstrap.timer_events")
   )
 
