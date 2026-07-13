@@ -19,6 +19,10 @@ final class WidgetStore: ObservableObject {
   private var nodeMap: [String: WidgetNodeState] = [:]
   private var rootIndex: [String: Set<String>] = [:]
   private var nodeOwners: [String: String] = [:]
+  private var topLevelNodesByPosition: [WidgetPosition: [WidgetNodeState]] = [:]
+  private var childNodesByParentID: [String: [WidgetNodeState]] = [:]
+  private var anchorNodesByParentID: [String: [WidgetNodeState]] = [:]
+  private var popupNodesByParentID: [String: [WidgetNodeState]] = [:]
 
   /// Replaces all nodes for one widget root.
   @discardableResult
@@ -29,7 +33,7 @@ final class WidgetStore: ObservableObject {
 
     let stored = storeNodes(updates, root: root)
     rootIndex[root] = stored.ids
-    nodes = nodeMap.values.sorted(by: sortNodes)
+    rebuildPublishedState()
     return stored.result
   }
 
@@ -38,7 +42,7 @@ final class WidgetStore: ObservableObject {
     nodeMap.removeAll()
     rootIndex.removeAll()
     nodeOwners.removeAll()
-    nodes = []
+    rebuildPublishedState()
   }
 
   /// Handles clear.
@@ -53,35 +57,27 @@ final class WidgetStore: ObservableObject {
       rootIndex.removeValue(forKey: root)
     }
 
-    nodes = nodeMap.values.sorted(by: sortNodes)
+    rebuildPublishedState()
   }
 
   /// Returns top-level nodes for one bar position.
   func topLevelNodes(for position: WidgetPosition) -> [WidgetNodeState] {
-    sortedPublishedNodes {
-      $0.isTopLevel && $0.position == position
-    }
+    topLevelNodesByPosition[position] ?? []
   }
 
   /// Returns non-popup children for one parent node.
   func children(of parentID: String) -> [WidgetNodeState] {
-    sortedPublishedNodes {
-      $0.parent == parentID && !$0.isPopupAnchor && !$0.isPopupContent
-    }
+    childNodesByParentID[parentID] ?? []
   }
 
   /// Returns popup anchor children for one parent node.
   func anchorChildren(of parentID: String) -> [WidgetNodeState] {
-    sortedPublishedNodes {
-      $0.parent == parentID && $0.isPopupAnchor
-    }
+    anchorNodesByParentID[parentID] ?? []
   }
 
   /// Returns popup content children for one parent node.
   func popupChildren(of parentID: String) -> [WidgetNodeState] {
-    sortedPublishedNodes {
-      $0.parent == parentID && $0.isPopupContent
-    }
+    popupNodesByParentID[parentID] ?? []
   }
 
   /// Sorts nodes by position, order, and id.
@@ -141,12 +137,27 @@ final class WidgetStore: ObservableObject {
     nodeOwners.removeValue(forKey: id)
   }
 
-  /// Returns sorted published nodes matching the given predicate.
-  private func sortedPublishedNodes(
-    matching predicate: (WidgetNodeState) -> Bool
-  ) -> [WidgetNodeState] {
-    nodes
-      .filter(predicate)
-      .sorted(by: sortNodes)
+  /// Rebuilds ordered lookup indexes after one atomic store mutation.
+  private func rebuildPublishedState() {
+    nodes = nodeMap.values.sorted(by: sortNodes)
+    topLevelNodesByPosition.removeAll(keepingCapacity: true)
+    childNodesByParentID.removeAll(keepingCapacity: true)
+    anchorNodesByParentID.removeAll(keepingCapacity: true)
+    popupNodesByParentID.removeAll(keepingCapacity: true)
+
+    for node in nodes {
+      guard let parentID = node.parent, !parentID.isEmpty else {
+        topLevelNodesByPosition[node.position, default: []].append(node)
+        continue
+      }
+
+      if node.isPopupAnchor {
+        anchorNodesByParentID[parentID, default: []].append(node)
+      } else if node.isPopupContent {
+        popupNodesByParentID[parentID, default: []].append(node)
+      } else {
+        childNodesByParentID[parentID, default: []].append(node)
+      }
+    }
   }
 }

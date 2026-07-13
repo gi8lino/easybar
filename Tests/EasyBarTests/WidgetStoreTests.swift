@@ -30,11 +30,54 @@ final class WidgetStoreTests: XCTestCase {
     XCTAssertEqual(store.topLevelNodes(for: .right), [first])
   }
 
-  private func makeNode(id: String, root: String, text: String) throws -> WidgetNodeState {
+  func testRelationshipIndexesTrackReplacementAndClear() throws {
+    let store = WidgetStore()
+    let root = try makeNode(id: "root", root: "root", text: "root")
+    let child = try makeNode(id: "child", root: "root", text: "child", parent: "root")
+    let anchor = try makeNode(
+      id: "anchor",
+      root: "root",
+      text: "anchor",
+      parent: "root",
+      role: "popup-anchor"
+    )
+    let popup = try makeNode(
+      id: "popup",
+      root: "root",
+      text: "popup",
+      parent: "root",
+      role: "popup-content"
+    )
+
+    store.apply(root: "root", nodes: [popup, child, root, anchor])
+
+    XCTAssertEqual(store.topLevelNodes(for: .right), [root])
+    XCTAssertEqual(store.children(of: "root"), [child])
+    XCTAssertEqual(store.anchorChildren(of: "root"), [anchor])
+    XCTAssertEqual(store.popupChildren(of: "root"), [popup])
+
+    store.apply(root: "root", nodes: [root])
+
+    XCTAssertTrue(store.children(of: "root").isEmpty)
+    XCTAssertTrue(store.anchorChildren(of: "root").isEmpty)
+    XCTAssertTrue(store.popupChildren(of: "root").isEmpty)
+  }
+
+  private func makeNode(
+    id: String,
+    root: String,
+    text: String,
+    parent: String? = nil,
+    role: String? = nil
+  ) throws -> WidgetNodeState {
+    let parentField = parent.map { "\"parent\": \"\($0)\"," } ?? ""
+    let roleField = role.map { "\"role\": \"\($0)\"," } ?? ""
     let payload = """
       {
         "id": "\(id)",
         "root": "\(root)",
+        \(parentField)
+        \(roleField)
         "kind": "item",
         "position": "right",
         "order": 0,
