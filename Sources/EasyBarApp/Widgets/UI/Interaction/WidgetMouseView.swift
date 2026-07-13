@@ -56,15 +56,22 @@ struct WidgetMouseView: NSViewRepresentable {
 
   /// Updates the AppKit surface ids and interaction flags.
   func updateNSView(_ nsView: MouseTrackingNSView, context: Context) {
-    nsView.widgetID = widgetID
-    nsView.targetWidgetID = targetWidgetID
-    nsView.tracksHover = tracksHover
+    nsView.updateHoverIdentity(
+      widgetID: widgetID,
+      targetWidgetID: targetWidgetID,
+      tracksHover: tracksHover
+    )
     nsView.emitsMouseHover = emitsMouseHover
     nsView.emitsMouseDown = emitsMouseDown
     nsView.emitsMouseUp = emitsMouseUp
     nsView.emitsMouseClick = emitsMouseClick
     nsView.emitsMouseScroll = emitsMouseScroll
     nsView.onHoverChanged = onHoverChanged
+  }
+
+  /// Releases hover ownership when SwiftUI removes the backing AppKit view.
+  static func dismantleNSView(_ nsView: MouseTrackingNSView, coordinator: Void) {
+    nsView.prepareForRemoval()
   }
 }
 
@@ -82,7 +89,8 @@ final class MouseTrackingNSView: NSView {
 
   private var trackingArea: NSTrackingArea?
   private var isMouseInside = false
-  private static let hoverState = HoverState()
+  private let hoverSurfaceID = UUID()
+  private static let hoverState = WidgetHoverState()
 
   init(logger: ProcessLogger) {
     self.logger = logger
@@ -125,10 +133,39 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits hover-entered when tracking is enabled.
   override func mouseEntered(with event: NSEvent) {
+    beginHoverIfNeeded()
+  }
+
+  /// Updates hover identity without leaving registrations under an old node ID.
+  func updateHoverIdentity(widgetID: String, targetWidgetID: String, tracksHover: Bool) {
+    let identityChanged = self.targetWidgetID != targetWidgetID
+    let shouldRestartHover = isMouseInside && (identityChanged || !tracksHover)
+
+    if shouldRestartHover {
+      endHover(immediately: true)
+    }
+
+    self.widgetID = widgetID
+    self.targetWidgetID = targetWidgetID
+    self.tracksHover = tracksHover
+
+    if identityChanged, tracksHover, isMouseCurrentlyInside {
+      beginHoverIfNeeded()
+    }
+  }
+
+  /// Releases any active hover registration before this view is dismantled.
+  func prepareForRemoval() {
+    endHover(immediately: true)
+    onHoverChanged = nil
+  }
+
+  /// Begins hover tracking for this concrete AppKit surface.
+  private func beginHoverIfNeeded() {
     guard tracksHover else { return }
     guard !isMouseInside else { return }
     isMouseInside = true
-    guard Self.hoverState.enter(widgetID: targetWidgetID) else { return }
+    guard Self.hoverState.enter(widgetID: targetWidgetID, surfaceID: hoverSurfaceID) else { return }
 
     onHoverChanged?(true)
 
@@ -139,19 +176,53 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits hover-exited when tracking is enabled.
   override func mouseExited(with event: NSEvent) {
-    guard tracksHover else { return }
+    endHover(immediately: false)
+  }
+
+  /// Ends hover tracking and emits an aggregate exit when this was the last surface.
+  private func endHover(immediately: Bool) {
     guard isMouseInside else { return }
     isMouseInside = false
 
-    Self.hoverState.exit(widgetID: self.targetWidgetID) { [weak self] in
-      guard let self else { return }
+    let handler = hoverExitHandler()
+    if immediately {
+      if Self.hoverState.remove(widgetID: targetWidgetID, surfaceID: hoverSurfaceID) {
+        handler()
+      }
+      return
+    }
 
-      self.onHoverChanged?(false)
+    Self.hoverState.exit(
+      widgetID: targetWidgetID,
+      surfaceID: hoverSurfaceID,
+      handler: handler
+    )
+  }
 
-      if self.emitsMouseHover {
-        self.emitMouseEvent(.mouseExited)
+  /// Captures the current callbacks and identifiers for a delayed hover exit.
+  private func hoverExitHandler() -> @MainActor @Sendable () -> Void {
+    let onHoverChanged = onHoverChanged
+    let emitsMouseHover = emitsMouseHover
+    let widgetID = widgetID
+    let targetWidgetID = targetWidgetID
+
+    return {
+      onHoverChanged?(false)
+      guard emitsMouseHover else { return }
+      Task {
+        await EventHub.shared.emitWidgetEvent(
+          .mouseExited,
+          widgetID: widgetID,
+          targetWidgetID: targetWidgetID
+        )
       }
     }
+  }
+
+  /// Returns whether the window cursor is currently inside this view.
+  private var isMouseCurrentlyInside: Bool {
+    guard window != nil else { return false }
+    return bounds.contains(convert(window?.mouseLocationOutsideOfEventStream ?? .zero, from: nil))
   }
 
   /// Emits a left-button mouse-down event.
@@ -281,25 +352,51 @@ final class MouseTrackingNSView: NSView {
 ///
 /// Sendability is guarded by `LockedState`; hovered IDs and pending exit tasks
 /// are only accessed while holding that lock.
-private final class HoverState: @unchecked Sendable {
+final class WidgetHoverState: @unchecked Sendable {
   private struct State {
-    var hoveredWidgetIDs = Set<String>()
+    var surfaceIDsByWidgetID: [String: Set<UUID>] = [:]
     var pendingExitTasks: [String: Task<Void, Never>] = [:]
   }
 
   private let state = LockedState(State())
 
   /// Marks one widget as hovered and returns whether it was newly entered.
-  func enter(widgetID: String) -> Bool {
+  func enter(widgetID: String, surfaceID: UUID) -> Bool {
     state.withLock { state in
       state.pendingExitTasks[widgetID]?.cancel()
       state.pendingExitTasks[widgetID] = nil
-      return state.hoveredWidgetIDs.insert(widgetID).inserted
+      let wasEmpty = state.surfaceIDsByWidgetID[widgetID]?.isEmpty != false
+      state.surfaceIDsByWidgetID[widgetID, default: []].insert(surfaceID)
+      return wasEmpty
+    }
+  }
+
+  /// Removes one concrete surface and returns whether aggregate hover ended.
+  func remove(widgetID: String, surfaceID: UUID) -> Bool {
+    state.withLock { state in
+      guard state.surfaceIDsByWidgetID[widgetID]?.remove(surfaceID) != nil else { return false }
+      guard state.surfaceIDsByWidgetID[widgetID]?.isEmpty == true else { return false }
+      state.surfaceIDsByWidgetID.removeValue(forKey: widgetID)
+      state.pendingExitTasks[widgetID]?.cancel()
+      state.pendingExitTasks[widgetID] = nil
+      return true
     }
   }
 
   /// Delays the hover-exit slightly so overlapping surfaces do not flicker.
-  func exit(widgetID: String, handler: @escaping @MainActor @Sendable () -> Void) {
+  func exit(
+    widgetID: String,
+    surfaceID: UUID,
+    handler: @escaping @MainActor @Sendable () -> Void
+  ) {
+    let shouldSchedule = state.withLock { state -> Bool in
+      guard state.surfaceIDsByWidgetID[widgetID]?.remove(surfaceID) != nil else { return false }
+      guard state.surfaceIDsByWidgetID[widgetID]?.isEmpty == true else { return false }
+      state.surfaceIDsByWidgetID.removeValue(forKey: widgetID)
+      return true
+    }
+    guard shouldSchedule else { return }
+
     let task = Task { [weak self] in
       do {
         try await WidgetHoverDelay.sleep()
@@ -308,13 +405,13 @@ private final class HoverState: @unchecked Sendable {
       }
 
       guard let self else { return }
-      let removed = self.state.withLock { state -> Bool in
-        let removed = state.hoveredWidgetIDs.remove(widgetID) != nil
+      let shouldEmit = self.state.withLock { state -> Bool in
+        let shouldEmit = state.surfaceIDsByWidgetID[widgetID]?.isEmpty != false
         state.pendingExitTasks[widgetID] = nil
-        return removed
+        return shouldEmit
       }
 
-      guard removed else { return }
+      guard shouldEmit else { return }
       await MainActor.run {
         handler()
       }
