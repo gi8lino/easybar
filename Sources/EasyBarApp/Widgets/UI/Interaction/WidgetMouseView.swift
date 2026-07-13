@@ -259,22 +259,26 @@ final class MouseTrackingNSView: NSView {
   override func scrollWheel(with event: NSEvent) {
     guard emitsMouseScroll else { return }
 
-    let direction: ScrollDirection = event.scrollingDeltaY > 0 ? .up : .down
+    let eventWidgetID = widgetID
+    let eventTargetWidgetID = targetWidgetID
+    let deltaX = Double(event.scrollingDeltaX)
+    let deltaY = Double(event.scrollingDeltaY)
+    let direction: ScrollDirection = deltaY > 0 ? .up : .down
 
     logger.debug(
       "mouse scrolled",
-      .field("widget", "\(widgetID)"),
+      .field("widget", "\(eventWidgetID)"),
       .field("direction", "\(direction.rawValue)"),
     )
 
     Task {
       await EventHub.shared.emitWidgetEvent(
         .mouseScrolled,
-        widgetID: widgetID,
-        targetWidgetID: targetWidgetID,
+        widgetID: eventWidgetID,
+        targetWidgetID: eventTargetWidgetID,
         direction: direction,
-        deltaX: Double(event.scrollingDeltaX),
-        deltaY: Double(event.scrollingDeltaY)
+        deltaX: deltaX,
+        deltaY: deltaY
       )
     }
   }
@@ -329,19 +333,21 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits one widget mouse event with shared logging.
   private func emitMouseEvent(_ event: WidgetEvent, button: MouseButton? = nil) {
+    let eventWidgetID = widgetID
+    let eventTargetWidgetID = targetWidgetID
     let buttonSuffix = button.map { " button=\($0.rawValue)" } ?? ""
     logger.debug(
       "emit mouse event",
       .field("event", "\(event.rawValue)"),
-      .field("widget", "\(widgetID)"),
-      .field("target", "\(targetWidgetID)\(buttonSuffix)"),
+      .field("widget", "\(eventWidgetID)"),
+      .field("target", "\(eventTargetWidgetID)\(buttonSuffix)"),
     )
 
     Task {
       await EventHub.shared.emitWidgetEvent(
         event,
-        widgetID: widgetID,
-        targetWidgetID: targetWidgetID,
+        widgetID: eventWidgetID,
+        targetWidgetID: eventTargetWidgetID,
         button: button
       )
     }
