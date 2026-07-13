@@ -79,6 +79,24 @@ final class WidgetStoreTests: XCTestCase {
     XCTAssertEqual(store.topLevelNodes(for: .right), [native])
   }
 
+  func testScriptedNodeCannotAttachToNativeParent() throws {
+    let store = WidgetStore()
+    let native = try makeNode(id: "native-parent", root: "native", text: "native")
+    let scripted = try makeNode(
+      id: "scripted-child",
+      root: "scripted",
+      text: "scripted",
+      parent: native.id
+    )
+
+    store.apply(owner: .native(root: "native"), nodes: [native])
+    let result = store.apply(owner: .scripted(root: "scripted"), nodes: [scripted])
+
+    XCTAssertEqual(result.invalidParentNodeIDs, [scripted.id])
+    XCTAssertTrue(store.children(of: native.id).isEmpty)
+    XCTAssertEqual(store.topLevelNodes(for: .right), [native])
+  }
+
   private func makeNode(
     id: String,
     root: String,

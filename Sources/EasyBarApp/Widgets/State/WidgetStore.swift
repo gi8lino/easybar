@@ -20,9 +20,11 @@ final class WidgetStore: ObservableObject {
     var duplicateNodeIDs = Set<String>()
     var mismatchedRootNodeIDs = Set<String>()
     var conflictingNodeIDs = Set<String>()
+    var invalidParentNodeIDs = Set<String>()
 
     var rejectedNodeIDs: Set<String> {
       duplicateNodeIDs.union(mismatchedRootNodeIDs).union(conflictingNodeIDs)
+        .union(invalidParentNodeIDs)
     }
   }
 
@@ -117,6 +119,7 @@ final class WidgetStore: ObservableObject {
   ) -> (ids: Set<String>, result: ApplyResult) {
     var ids = Set<String>()
     var result = ApplyResult()
+    let updateIDs = Set(updates.lazy.filter { $0.root == owner.root }.map(\.id))
 
     for node in updates {
       guard node.root == owner.root else {
@@ -126,6 +129,16 @@ final class WidgetStore: ObservableObject {
 
       guard ids.insert(node.id).inserted else {
         result.duplicateNodeIDs.insert(node.id)
+        continue
+      }
+
+      if case .scripted = owner,
+        let parentID = node.parent,
+        !parentID.isEmpty,
+        !updateIDs.contains(parentID)
+      {
+        ids.remove(node.id)
+        result.invalidParentNodeIDs.insert(node.id)
         continue
       }
 
