@@ -31,7 +31,7 @@ extension Config {
   }
 
   /// Built-in battery widget config.
-  struct BatteryBuiltinConfig {
+  struct BatteryBuiltinConfig: @unchecked Sendable {
 
     /// Battery content and display settings.
     struct Content {

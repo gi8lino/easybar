@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in time widget config.
-  struct TimeBuiltinConfig {
+  struct TimeBuiltinConfig: @unchecked Sendable {
     /// Time format settings.
     struct Content {
       var format: String

@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in volume widget config.
-  struct VolumeBuiltinConfig {
+  struct VolumeBuiltinConfig: @unchecked Sendable {
     /// Volume display content settings.
     struct Content {
       var mutedIcon: String

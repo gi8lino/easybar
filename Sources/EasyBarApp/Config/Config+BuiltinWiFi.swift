@@ -53,7 +53,7 @@ extension Config {
   }
 
   /// Built-in Wi-Fi widget config.
-  struct WiFiBuiltinConfig {
+  struct WiFiBuiltinConfig: @unchecked Sendable {
     /// Wi-Fi content and color settings.
     struct Content {
       var mode: BuiltinWiFiContentMode

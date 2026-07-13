@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 /// EasyBar configuration store owned by the app service graph.
-final class Config: ObservableObject {
+final class Config: ObservableObject, @unchecked Sendable {
 
   /// Explicit config path override used by staged validation loads.
   private let configPathOverride: String?

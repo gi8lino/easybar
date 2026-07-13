@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in CPU widget config.
-  struct CPUBuiltinConfig {
+  struct CPUBuiltinConfig: @unchecked Sendable {
     /// CPU graph content settings.
     struct Content {
       var label: String

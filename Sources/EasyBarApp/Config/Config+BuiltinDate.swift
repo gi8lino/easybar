@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in date widget config.
-  struct DateBuiltinConfig {
+  struct DateBuiltinConfig: @unchecked Sendable {
     /// Date format settings.
     struct Content {
       var format: String

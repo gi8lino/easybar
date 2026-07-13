@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in front app widget config.
-  struct FrontAppBuiltinConfig {
+  struct FrontAppBuiltinConfig: @unchecked Sendable {
     /// Front-app content settings.
     struct Content {
       var showIcon: Bool

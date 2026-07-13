@@ -1,7 +1,7 @@
 import EasyBarShared
 import Foundation
 
-public struct CalendarBuiltinConfig {
+public struct CalendarBuiltinConfig: @unchecked Sendable {
   public struct Filters {
     public var includedCalendarNames: [String]
     public var excludedCalendarNames: [String]

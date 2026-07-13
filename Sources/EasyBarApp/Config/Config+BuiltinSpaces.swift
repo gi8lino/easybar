@@ -4,7 +4,7 @@ import SwiftUI
 extension Config {
 
   /// Built-in spaces widget config.
-  struct SpacesBuiltinConfig {
+  struct SpacesBuiltinConfig: @unchecked Sendable {
     /// Spaces layout behavior settings.
     struct Layout {
       var spacing: Double

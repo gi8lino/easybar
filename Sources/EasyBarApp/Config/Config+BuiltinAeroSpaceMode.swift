@@ -3,7 +3,7 @@ import Foundation
 extension Config {
 
   /// Built-in AeroSpace mode widget config.
-  struct AeroSpaceModeBuiltinConfig {
+  struct AeroSpaceModeBuiltinConfig: @unchecked Sendable {
     /// Text and icon settings for the mode widget.
     struct Content {
       var showIcon: Bool
