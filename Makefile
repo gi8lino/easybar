@@ -411,7 +411,7 @@ clean-docs: ## Remove generated docs output and docs virtualenv.
 ##@ Icons
 
 SVG := packaging/easybar-icon.svg
-ICON_DIR := docs/assets/icons
+ICON_DIR := docs/content/assets/icons
 ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
