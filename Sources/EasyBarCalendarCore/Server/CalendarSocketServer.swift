@@ -24,6 +24,8 @@ final class CalendarSocketServer {
   private let appVersion: String
   /// Logger used for socket-server diagnostics.
   private let logger: ProcessLogger
+  /// Host callback invoked after a restart acknowledgement has been sent.
+  private let onRestartRequested: @MainActor () -> Void
   /// Line-delimited socket transport backing the server.
   private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
@@ -31,10 +33,12 @@ final class CalendarSocketServer {
   init(
     socketPath: String,
     appVersion: String,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    onRestartRequested: @escaping @MainActor () -> Void
   ) {
     self.appVersion = appVersion
     self.logger = logger
+    self.onRestartRequested = onRestartRequested
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: "calendar agent",
@@ -90,6 +94,8 @@ final class CalendarSocketServer {
       return handleFetch(to: clientFD, request: request)
     case .subscribe:
       return handleSubscribe(to: clientFD, request: request)
+    case .restart:
+      return handleRestart(to: clientFD)
     case .createEvent:
       return handleCreateEvent(to: clientFD, request: request)
     case .updateEvent:
@@ -97,6 +103,17 @@ final class CalendarSocketServer {
     case .deleteEvent:
       return handleDeleteEvent(to: clientFD, request: request)
     }
+  }
+
+  /// Acknowledges the request before allowing the host app to terminate.
+  private func handleRestart(to clientFD: Int32) -> ClientDisposition {
+    guard transport.send(CalendarAgentMessage(kind: .restarting), to: clientFD) else {
+      return .close
+    }
+    DispatchQueue.main.async { [onRestartRequested] in
+      onRestartRequested()
+    }
+    return .close
   }
 
   /// Sends the calendar-agent version response.

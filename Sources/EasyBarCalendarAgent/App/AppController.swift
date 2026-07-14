@@ -42,7 +42,10 @@ final class AppController {
 
     runtime = CalendarAgentRuntime(
       config: runtimeConfig,
-      logger: logger.child("runtime")
+      logger: logger.child("runtime"),
+      onRestartRequested: {
+        NSApp.terminate(nil)
+      }
     )
 
     NSApp.setActivationPolicy(.accessory)

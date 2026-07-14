@@ -16,7 +16,8 @@ public final class NetworkAgentRuntime {
   public init(
     config: NetworkAgentRuntimeConfig,
     logger: ProcessLogger,
-    promptPresenter: NetworkAuthorizationPromptPresenter? = nil
+    promptPresenter: NetworkAuthorizationPromptPresenter? = nil,
+    onRestartRequested: @escaping @MainActor () -> Void = {}
   ) {
     self.config = config
     self.logger = logger
@@ -31,7 +32,8 @@ public final class NetworkAgentRuntime {
       socketPath: config.socketPath,
       appVersion: config.appVersion,
       allowUnauthorizedNonSensitiveFields: config.allowUnauthorizedFieldsWithoutLocation,
-      logger: logger.child("socket_server")
+      logger: logger.child("socket_server"),
+      onRestartRequested: onRestartRequested
     )
   }
 

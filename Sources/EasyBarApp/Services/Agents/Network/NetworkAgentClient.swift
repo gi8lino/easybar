@@ -191,7 +191,7 @@ final class NetworkAgentClient: @unchecked Sendable {
       resetErrorLogState()
       snapshotPublisher.publish(snapshot: snapshot)
 
-    case .pong:
+    case .pong, .restarting:
       break
 
     case .error:

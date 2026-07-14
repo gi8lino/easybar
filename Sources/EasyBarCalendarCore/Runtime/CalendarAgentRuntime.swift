@@ -15,7 +15,8 @@ public final class CalendarAgentRuntime {
   /// Builds the calendar agent runtime from one host-provided config.
   public init(
     config: CalendarAgentRuntimeConfig,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    onRestartRequested: @escaping @MainActor () -> Void = {}
   ) {
     self.config = config
     self.logger = logger
@@ -23,7 +24,8 @@ public final class CalendarAgentRuntime {
     socketServer = CalendarSocketServer(
       socketPath: config.socketPath,
       appVersion: config.appVersion,
-      logger: logger.child("socket_server")
+      logger: logger.child("socket_server"),
+      onRestartRequested: onRestartRequested
     )
   }
 

@@ -4,6 +4,7 @@ public enum NetworkAgentMessageKind: String, Codable, Sendable {
   case pong
   case version
   case subscribed
+  case restarting
   case fields
   case error
 }

@@ -44,7 +44,10 @@ final class AppController: NetworkAuthorizationPromptPresenter {
     runtime = NetworkAgentRuntime(
       config: runtimeConfig,
       logger: logger.child("runtime"),
-      promptPresenter: self
+      promptPresenter: self,
+      onRestartRequested: {
+        NSApp.terminate(nil)
+      }
     )
 
     NSApp.setActivationPolicy(.accessory)

@@ -5,6 +5,7 @@ public enum NetworkAgentCommand: String, Codable, Sendable {
   case version
   case fetch
   case subscribe
+  case restart
 }
 
 /// Field keys supported by the network agent.

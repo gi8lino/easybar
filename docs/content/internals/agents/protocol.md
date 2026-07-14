@@ -35,6 +35,7 @@ Common commands include:
 - `version`
 - `fetch`
 - `subscribe`
+- `restart`
 
 `version` returns the running binary version and the shared EasyBar IPC protocol version:
 
@@ -63,6 +64,7 @@ Common kinds include:
 - `pong`
 - `version`
 - `subscribed`
+- `restarting`
 - `error`
 
 ## Typical behavior
@@ -75,6 +77,34 @@ Common kinds include:
   returns one data payload, then closes
 - `subscribe`
   returns one `subscribed`, returns one immediate data payload, then keeps the socket open for later pushes
+- `restart`
+  returns one `restarting` acknowledgement, closes the request socket, then exits the agent process cleanly
+
+## Agent restart flow
+
+Both the calendar and network agents accept the following one-shot request:
+
+```json
+{ "command": "restart" }
+```
+
+The agent confirms that it accepted the request before terminating:
+
+```json
+{ "kind": "restarting" }
+```
+
+The full restart sequence is:
+
+1. The client sends `restart` over the agent's Unix socket.
+2. The agent sends `restarting` so the client knows the request was accepted.
+3. The agent exits through its normal AppKit shutdown path.
+4. The service supervisor starts a fresh agent process.
+5. EasyBar reconnects when the agent socket becomes available again.
+
+Homebrew services configure the agents with `keep_alive`, so `launchd` relaunches them after the acknowledged exit. A manually launched development agent has no supervisor and therefore stays stopped after it exits.
+
+Restart is available only while the agent socket is responsive. If the agent has already crashed or cannot answer requests, its service supervisor remains responsible for recovery.
 
 ## EasyBar command behavior
 
@@ -108,5 +138,4 @@ easybar --reload-config
 - reloads `config.toml`
 - rebuilds runtime state
 - recreates agent-backed subscriptions
-
 

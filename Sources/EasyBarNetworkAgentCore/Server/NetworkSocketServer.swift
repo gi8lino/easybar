@@ -24,6 +24,8 @@ final class NetworkSocketServer {
   private let appVersion: String
   private let allowUnauthorizedNonSensitiveFields: Bool
   private let logger: ProcessLogger
+  /// Host callback invoked after a restart acknowledgement has been sent.
+  private let onRestartRequested: @MainActor () -> Void
   private let transport: LineSocketServerTransport<Subscriber, NetworkAgentRequest, NetworkAgentMessage>
 
   /// Builds the network socket server for one socket path.
@@ -32,13 +34,15 @@ final class NetworkSocketServer {
     socketPath: String,
     appVersion: String,
     allowUnauthorizedNonSensitiveFields: Bool,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    onRestartRequested: @escaping @MainActor () -> Void
   ) {
     self.componentName = componentName
     self.socketPath = socketPath
     self.appVersion = appVersion
     self.allowUnauthorizedNonSensitiveFields = allowUnauthorizedNonSensitiveFields
     self.logger = logger
+    self.onRestartRequested = onRestartRequested
     transport = LineSocketServerTransport(
       socketPath: socketPath,
       serverLabel: componentName,
@@ -91,7 +95,20 @@ final class NetworkSocketServer {
       return handleFetch(to: clientFD, request: request)
     case .subscribe:
       return handleSubscribe(to: clientFD, request: request)
+    case .restart:
+      return handleRestart(to: clientFD)
     }
+  }
+
+  /// Acknowledges the request before allowing the host app to terminate.
+  private func handleRestart(to clientFD: Int32) -> ClientDisposition {
+    guard transport.send(NetworkAgentMessage(kind: .restarting), to: clientFD) else {
+      return .close
+    }
+    DispatchQueue.main.async { [onRestartRequested] in
+      onRestartRequested()
+    }
+    return .close
   }
 
   /// Sends a pong response.

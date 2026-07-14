@@ -189,7 +189,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     case .version:
       break
 
-    case .pong, .subscribed, .created, .updated, .deleted:
+    case .pong, .subscribed, .restarting, .created, .updated, .deleted:
       break
     }
   }

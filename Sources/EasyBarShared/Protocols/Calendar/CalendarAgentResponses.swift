@@ -21,6 +21,7 @@ public enum CalendarAgentMessageKind: String, Codable, Sendable {
   case pong
   case version
   case subscribed
+  case restarting
   case snapshot
   case created
   case updated
