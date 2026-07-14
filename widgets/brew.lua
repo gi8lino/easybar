@@ -14,6 +14,7 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
+local MAX_WARNING_LINES = 4
 local BREW_LOG_FILE_NAME = "brew-widget.log"
 local BREW_LOG_MAX_LINES = 4000
 
@@ -84,11 +85,13 @@ local upgrade_button
 local update_button
 
 local render
+local add_popup_row
 
 local state = {
 	formulae = {},
 	casks = {},
 	error = nil,
+	warning = nil,
 	status = "Checking outdated packages…",
 	last_attempted_at = nil,
 	last_checked = nil,
@@ -320,9 +323,77 @@ local function parse_package_list(entries, kind)
 	return packages
 end
 
+--- Separates Homebrew's JSON payload from warnings written around it.
+local function split_outdated_output(raw)
+	raw = tostring(raw or "")
+
+	local json_start = raw:find("{", 1, true)
+	local json_end = nil
+
+	if json_start ~= nil then
+		for index = json_start, #raw do
+			if raw:sub(index, index) == "}" then
+				json_end = index
+			end
+		end
+	end
+
+	if json_start == nil or json_end == nil then
+		error("brew output did not contain a JSON object")
+	end
+
+	local json = raw:sub(json_start, json_end)
+	local warning = trim(raw:sub(1, json_start - 1) .. "\n" .. raw:sub(json_end + 1))
+
+	return json, warning
+end
+
+--- Returns a readable package and tap label from a Homebrew warning source path.
+local function warning_source(raw)
+	local owner, tap, token = tostring(raw or ""):match("/Taps/([^/]+)/homebrew%-([^/]+)/Casks/([^/]+)%.rb:%d+")
+
+	if owner == nil then
+		owner, tap, token = tostring(raw or ""):match("/Taps/([^/]+)/homebrew%-([^/]+)/Formula/([^/]+)%.rb:%d+")
+	end
+
+	if token == nil then
+		return "Homebrew"
+	end
+
+	local package_name = token == "easybar" and "EasyBar" or token
+	return package_name .. " · " .. owner .. "/" .. tap
+end
+
+--- Builds warning details while retaining both readable and complete forms.
+local function parse_warning(raw)
+	local lines = {}
+	raw = trim(raw)
+
+	for line in raw:gmatch("[^\r\n]+") do
+		local value = trim(line)
+		local is_report_instruction = value:match("^Please report this issue") ~= nil
+		local is_source_path = value:match("^/.+/Casks/.+:%d+$") ~= nil
+
+		if value ~= "" and not is_report_instruction and not is_source_path then
+			lines[#lines + 1] = value
+		end
+	end
+
+	if #lines == 0 then
+		return nil
+	end
+
+	return {
+		source = warning_source(raw),
+		summary = table.concat(lines, "\n"),
+		raw = raw,
+	}
+end
+
 --- Stores parsed Homebrew outdated JSON in widget state.
 local function apply_outdated_json(raw)
-	local parsed = easybar.json.decode(raw)
+	local json, warning = split_outdated_output(raw)
+	local parsed = easybar.json.decode(json)
 	if type(parsed) ~= "table" then
 		error("decoded brew output is not a table")
 	end
@@ -330,10 +401,88 @@ local function apply_outdated_json(raw)
 	state.formulae = parse_package_list(parsed.formulae, "formula")
 	state.casks = parse_package_list(parsed.casks, "cask")
 	state.error = nil
+	state.warning = parse_warning(warning)
 	state.last_checked = now_label()
 	state.phase = "ready"
 
 	log(easybar.level.debug, "apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
+end
+
+--- Renders a compact warning section and returns the next popup order.
+local function render_warning(order)
+	if state.warning == nil then
+		return order
+	end
+
+	local warning_row = add_popup_row(WIDGET_ID .. "_warning", "⚠ " .. state.warning.source, {
+		order = order,
+		color = COLORS.warn,
+		popup = {
+			drawing = false,
+			background = {
+				color = COLORS.popup_bg,
+				border_color = COLORS.button_border,
+				border_width = 1,
+				corner_radius = 8,
+			},
+			padding_x = 10,
+			padding_y = 8,
+			spacing = 4,
+		},
+	})
+	order = order + 1
+	local warning_triggers = { warning_row }
+
+	local rendered = 0
+	for line in state.warning.summary:gmatch("[^\r\n]+") do
+		if rendered >= MAX_WARNING_LINES then
+			local more_row = add_popup_row(WIDGET_ID .. "_warning_more", "  … See " .. BREW_LOG_FILE_NAME .. " for details", {
+				order = order,
+				color = COLORS.muted,
+			})
+			warning_triggers[#warning_triggers + 1] = more_row
+			order = order + 1
+			break
+		end
+
+		local summary_row = add_popup_row(WIDGET_ID .. "_warning_summary_" .. tostring(rendered), "  " .. truncate(line, 110), {
+			order = order,
+			color = COLORS.warn,
+			size = 11,
+		})
+		warning_triggers[#warning_triggers + 1] = summary_row
+		order = order + 1
+		rendered = rendered + 1
+	end
+
+	local detail_index = 0
+	for line in state.warning.raw:gmatch("[^\r\n]+") do
+		local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_warning_detail_" .. tostring(detail_index), {
+			position = "popup." .. warning_row.name,
+			order = detail_index,
+			label = {
+				string = line,
+				color = COLORS.text,
+				font = {
+					size = 11,
+				},
+			},
+		})
+		dynamic_rows[#dynamic_rows + 1] = detail
+		detail_index = detail_index + 1
+	end
+
+	for _, trigger in ipairs(warning_triggers) do
+		trigger:subscribe(easybar.events.mouse.entered, function()
+			warning_row:set({ popup = { drawing = true } })
+		end)
+
+		trigger:subscribe(easybar.events.mouse.exited, function()
+			warning_row:set({ popup = { drawing = false } })
+		end)
+	end
+
+	return order
 end
 
 --- Applies Homebrew JSON output to state and returns whether parsing succeeded.
@@ -365,7 +514,7 @@ local function remove_dynamic_rows()
 end
 
 --- Adds a popup text row and tracks it for later cleanup.
-local function add_popup_row(id, text, opts)
+add_popup_row = function(id, text, opts)
 	opts = opts or {}
 
 	local props = {
@@ -379,6 +528,10 @@ local function add_popup_row(id, text, opts)
 			},
 		},
 	}
+
+	if opts.popup ~= nil then
+		props.popup = opts.popup
+	end
 
 	local row = easybar.add(easybar.kind.item, id, props)
 	dynamic_rows[#dynamic_rows + 1] = row
@@ -508,7 +661,7 @@ local function render_popup()
 		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
-				string = "Everything is up to date",
+				string = "Everything is up to date" .. (state.warning ~= nil and "  ⚠" or ""),
 				color = COLORS.ok,
 			},
 		})
@@ -516,7 +669,7 @@ local function render_popup()
 		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
-				string = "1 outdated package",
+				string = "1 outdated package" .. (state.warning ~= nil and "  ⚠" or ""),
 				color = count_color,
 			},
 		})
@@ -524,7 +677,7 @@ local function render_popup()
 		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
-				string = tostring(total) .. " outdated packages",
+				string = tostring(total) .. " outdated packages" .. (state.warning ~= nil and "  ⚠" or ""),
 				color = count_color,
 			},
 		})
@@ -586,6 +739,7 @@ local function render_popup()
 	end
 
 	if total == 0 then
+		render_warning(POPUP_ORDER.dynamic_start)
 		return
 	end
 
@@ -611,7 +765,10 @@ local function render_popup()
 			order = order,
 			color = COLORS.muted,
 		})
+		order = order + 1
 	end
+
+	render_warning(order)
 end
 
 --- Renders the bar widget as a compact icon-only item.
@@ -938,5 +1095,3 @@ brew_widget:subscribe(easybar.events.forced, function()
 end)
 
 check_outdated("Checking outdated packages…")
-
-
