@@ -188,6 +188,10 @@ If you want the architectural map before editing code, start with the docs secti
 
 <img src="./docs/content/assets/context.png" alt="Context menu screenshot" width="500">
 
+### Topbar
+
+<img src="./docs/content/assets/topbar.png" alt="Topbar screenshot" width="500">
+
 ## License
 
 This project is licensed under the Apache 2.0 License. See [LICENSE](./LICENSE) for details.
