@@ -191,7 +191,7 @@ If you want the architectural map before editing code, start with the docs secti
 
 ### Topbar
 
-<img src="./docs/content/assets/topbar.png" alt="Topbar screenshot" width="500">
+<img src="./docs/content/assets/topbar.png" alt="Topbar screenshot" width="200">
 
 ## License
 
