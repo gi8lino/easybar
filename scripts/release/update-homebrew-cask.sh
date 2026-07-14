@@ -45,6 +45,11 @@ cask "easybar" do
 
   depends_on macos: ">= :sonoma"
 
+  postflight do
+    system "xattr -d com.apple.quarantine #{staged_path}/easybar"
+    system "xattr -dr com.apple.quarantine #{appdir}/EasyBar.app"
+  end
+
   app "EasyBar.app"
   binary "easybar"
 

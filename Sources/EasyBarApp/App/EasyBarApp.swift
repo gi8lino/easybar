@@ -9,6 +9,11 @@ enum EasyBarAppMain {
   /// Starts the AppKit application loop and exits with the delegate's final code.
   @MainActor
   static func main() {
+    if CommandLine.arguments.dropFirst() == ["--version"] {
+      print("EasyBar \(BuildInfo.appVersion)")
+      return
+    }
+
     let logger = ProcessLogger(label: "easybar")
 
     logger.debug("main entered", .field("pid", getpid()))

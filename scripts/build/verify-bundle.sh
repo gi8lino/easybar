@@ -2,10 +2,11 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: scripts/build/verify-bundle.sh [--arch <arm64|x86_64|universal>] [--dist-dir <dir>]" >&2
+  echo "Usage: scripts/build/verify-bundle.sh [--arch <arm64|x86_64|universal>] [--version <version>] [--dist-dir <dir>]" >&2
 }
 
 arch=""
+version="${VERSION:-dev}"
 dist_dir="${DIST_DIR:-dist}"
 
 if [ "$#" -eq 1 ]; then
@@ -17,6 +18,10 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
   --arch)
     arch="${2:?missing value for --arch}"
+    shift 2
+    ;;
+  --version)
+    version="${2:?missing value for --version}"
     shift 2
     ;;
   --dist-dir)
@@ -116,6 +121,7 @@ require_file "$plist" "app Info.plist"
 require_file "$calendar_plist" "calendar agent Info.plist"
 require_file "$network_plist" "network agent Info.plist"
 require_dir "$app_resource_dir" "app resource directory"
+require_file "$app_resource_dir/Assets/easybar-menubar.svg" "menu bar icon resource"
 require_file "$app_resource_dir/Lua/runtime.lua" "Lua runtime resource"
 require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"
 require_dir "$app_resource_dir/Lua/easybar" "Lua easybar module"
@@ -130,6 +136,18 @@ require_dir "$login_items" "nested helper app directory"
 test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$plist")" = "$app_icon_file"
 test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$calendar_plist")" = "$calendar_icon_file"
 test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$network_plist")" = "$network_icon_file"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleShortVersionString' "$plist")" = "$version"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleVersion' "$plist")" = "$version"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleShortVersionString' "$calendar_plist")" = "$version"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleVersion' "$calendar_plist")" = "$version"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleShortVersionString' "$network_plist")" = "$version"
+test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleVersion' "$network_plist")" = "$version"
+
+app_version_output="$("$app_bin" --version)"
+cli_version_output="$("$cli_bin" --version)"
+test "$app_version_output" = "EasyBar $version"
+test "$cli_version_output" = "easybar $version"
+echo "Verified binary versions: $app_version_output; $cli_version_output"
 
 echo "Info.plist:"
 plutil -p "$plist"

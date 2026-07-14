@@ -40,6 +40,12 @@ final class AppResourceLocatorTests: XCTestCase {
         subdirectory: "easybar"
       ),
       SourceResourceFixture(
+        sourcePath: "Sources/EasyBarApp/Assets/easybar-menubar.svg",
+        resource: "easybar-menubar",
+        fileExtension: "svg",
+        subdirectory: "Assets"
+      ),
+      SourceResourceFixture(
         sourcePath: "Sources/EasyBarApp/Events/event_catalog.json",
         resource: "event_catalog",
         fileExtension: "json",
@@ -108,6 +114,23 @@ final class AppResourceLocatorTests: XCTestCase {
     XCTAssertTrue(
       paths.contains { $0.hasSuffix("Sources/EasyBarApp/Theme/theme_tokens.json") },
       "Expected source theme-token candidate in \(paths)"
+    )
+  }
+
+  func testAssetCandidatesUseAssetsDirectory() {
+    let paths = AppResourceLocator.resourceCandidates(
+      forResource: "easybar-menubar",
+      withExtension: "svg",
+      subdirectory: "Assets"
+    ).map(\.path)
+
+    XCTAssertTrue(
+      paths.contains { $0.hasSuffix("Resources/EasyBar/Assets/easybar-menubar.svg") },
+      "Expected packaged asset candidate in \(paths)"
+    )
+    XCTAssertTrue(
+      paths.contains { $0.hasSuffix("Sources/EasyBarApp/Assets/easybar-menubar.svg") },
+      "Expected source asset candidate in \(paths)"
     )
   }
 

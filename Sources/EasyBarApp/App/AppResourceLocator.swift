@@ -170,6 +170,8 @@ enum AppResourceLocator {
   /// Maps one caller-provided subdirectory to the packaged app resource layout.
   private static func packagedRequestedSubdirectory(_ subdirectory: String) -> String {
     switch subdirectory {
+    case "Assets":
+      return "Assets"
     case "Events":
       return "Events"
     case "Theme", "ThemeTokens":
@@ -184,6 +186,8 @@ enum AppResourceLocator {
   /// Maps one caller-provided subdirectory to the source-tree resource layout.
   private static func sourceRequestedSubdirectory(_ subdirectory: String) -> String {
     switch subdirectory {
+    case "Assets":
+      return "Assets"
     case "Events":
       return "Events"
     case "Theme", "ThemeTokens":

@@ -4,7 +4,7 @@ EasyBar is not notarized.
 
 Notarization is one of Apple's distribution checks. In practice, it means sending binaries to Apple and dealing with their packaging and approval flow.
 
-The Homebrew install is meant to work out of the box in the common case. If macOS blocks EasyBar or one of its helper agents with a Gatekeeper or malware verification warning, remove the quarantine attribute and launch the app again.
+The Homebrew cask removes the quarantine attribute from the installed app and CLI automatically, so Homebrew installations work without a Gatekeeper warning. The manual steps below are only needed when installing the release archive yourself or recovering an older installation.
 
 ## Remove quarantine
 

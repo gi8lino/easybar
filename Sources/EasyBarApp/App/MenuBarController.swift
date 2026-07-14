@@ -44,7 +44,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   /// Loads the monochrome EasyBar logo and marks it for native menu-bar tinting.
   private static func menuBarImage() -> NSImage? {
     let image =
-      Bundle.module.url(forResource: "easybar-menubar", withExtension: "svg")
+      AppResourceLocator.url(
+        forResource: "easybar-menubar", withExtension: "svg", subdirectory: "Assets"
+      )
       .flatMap(NSImage.init(contentsOf:))
       ?? NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "EasyBar")
 

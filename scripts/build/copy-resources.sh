@@ -37,13 +37,13 @@ app_resources_dir="$(dirname "$app_resource_dir")"
 legacy_app_root_bundle="$app_bundle/$resource_bundle_name"
 legacy_app_resources_bundle="$app_resources_dir/$resource_bundle_name"
 
-mkdir -p "$app_resource_dir/Lua" "$app_resource_dir/Events" "$app_resource_dir/ThemeTokens" "$(dirname "$app_themes_dir")"
+mkdir -p "$app_resource_dir/Lua" "$app_resource_dir/Events" "$app_resource_dir/ThemeTokens" "$app_resource_dir/Assets" "$(dirname "$app_themes_dir")"
 rm -rf \
   "$app_resource_dir" \
   "$app_themes_dir" \
   "$legacy_app_root_bundle" \
   "$legacy_app_resources_bundle"
-mkdir -p "$app_resource_dir/Lua" "$app_resource_dir/Events" "$app_resource_dir/ThemeTokens"
+mkdir -p "$app_resource_dir/Lua" "$app_resource_dir/Events" "$app_resource_dir/ThemeTokens" "$app_resource_dir/Assets"
 
 if [ ! -d "$resource_source" ]; then
   echo "Missing resource bundle: $resource_source" >&2
@@ -82,6 +82,7 @@ copy_required_file "$resource_source/easybar_api.lua" "$app_resource_dir/Lua/eas
 copy_required_dir "$resource_source/easybar" "$app_resource_dir/Lua/easybar"
 copy_required_file "$resource_source/event_catalog.json" "$app_resource_dir/Events/event_catalog.json"
 copy_required_file "$resource_source/theme_tokens.json" "$app_resource_dir/ThemeTokens/theme_tokens.json"
+copy_required_file "$resource_source/easybar-menubar.svg" "$app_resource_dir/Assets/easybar-menubar.svg"
 
 if [ ! -d "$themes_dir" ]; then
   echo "Missing themes directory: $themes_dir" >&2

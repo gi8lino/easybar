@@ -68,7 +68,7 @@ require_file() {
   fi
 }
 
-scripts/build/verify-bundle.sh --arch "$arch" --dist-dir "$dist_dir"
+scripts/build/verify-bundle.sh --arch "$arch" --version "$version" --dist-dir "$dist_dir"
 
 require_file "$package_zip" "release package"
 require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"

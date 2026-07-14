@@ -230,4 +230,4 @@ scripts/release/notarize-app.sh \
 
 echo "Verifying bundle"
 touch "$calendar_agent_bundle" "$network_agent_bundle" "$app_bundle"
-scripts/build/verify-bundle.sh --arch "$arch" --dist-dir "$dist_dir"
+scripts/build/verify-bundle.sh --arch "$arch" --version "$version" --dist-dir "$dist_dir"
