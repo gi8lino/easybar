@@ -18,6 +18,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   var onRestartLuaRuntime: (() -> Void)?
   var onRestartCalendarAgent: (() -> Void)?
   var onRestartNetworkAgent: (() -> Void)?
+  var onSelectTheme: ((String?) -> Void)?
   var onQuit: (() -> Void)?
   var runtimeState: () -> RuntimeState = { .stopped }
 
@@ -94,6 +95,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
       )
     )
     menu.addItem(.separator())
+    menu.addItem(themeMenuItem(enabled: runtimeEnabled))
+    menu.addItem(.separator())
     menu.addItem(
       agentItem(
         "Calendar Agent",
@@ -146,6 +149,31 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     return item
   }
 
+  private func themeMenuItem(enabled: Bool) -> NSMenuItem {
+    let snapshot = configStore.snapshot
+    let item = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
+    item.isEnabled = enabled
+    let submenu = NSMenu(title: "Theme")
+
+    let configured = actionItem(
+      "Use Configured Theme (\(snapshot.theme.configuredName))",
+      #selector(selectConfiguredTheme(_:))
+    )
+    configured.state = snapshot.theme.sessionOverrideName == nil ? .on : .off
+    submenu.addItem(configured)
+    submenu.addItem(.separator())
+
+    for name in ThemeCatalog.availableThemeNames(for: snapshot) {
+      let theme = actionItem(name, #selector(selectTheme(_:)))
+      theme.representedObject = name
+      theme.state = snapshot.theme.name == name ? .on : .off
+      submenu.addItem(theme)
+    }
+
+    item.submenu = submenu
+    return item
+  }
+
   @objc private func startEasyBar(_ sender: Any?) { onStart?() }
   @objc private func stopEasyBar(_ sender: Any?) { onStop?() }
   @objc private func restartEasyBar(_ sender: Any?) { onRestart?() }
@@ -154,6 +182,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   @objc private func restartLuaRuntime(_ sender: Any?) { onRestartLuaRuntime?() }
   @objc private func restartCalendarAgent(_ sender: Any?) { onRestartCalendarAgent?() }
   @objc private func restartNetworkAgent(_ sender: Any?) { onRestartNetworkAgent?() }
+  @objc private func selectConfiguredTheme(_ sender: Any?) { onSelectTheme?(nil) }
+  @objc private func selectTheme(_ sender: NSMenuItem) {
+    guard let name = sender.representedObject as? String else { return }
+    onSelectTheme?(name)
+  }
   @objc private func quitCompletely(_ sender: Any?) { onQuit?() }
 
   @objc private func openConfig(_ sender: Any?) {

@@ -271,6 +271,7 @@ final class AppController {
     controller.onRestartLuaRuntime = { [weak self] in self?.restartLuaRuntime() }
     controller.onRestartCalendarAgent = { [weak self] in self?.restartCalendarAgent() }
     controller.onRestartNetworkAgent = { [weak self] in self?.restartNetworkAgent() }
+    controller.onSelectTheme = { [weak self] name in self?.selectTheme(name) }
     controller.onQuit = { [weak self] in self?.requestAppTermination() }
     controller.setVisible(services.configSnapshotStore.snapshot.app.showMenuBarIcon)
     menuBarController = controller
@@ -327,6 +328,10 @@ final class AppController {
     Task { await runtimeCoordinator.restartLuaRuntime() }
   }
 
+  private func selectTheme(_ name: String?) {
+    Task { await runtimeCoordinator.applyThemeOverride(name) }
+  }
+
   private func restartCalendarAgent() {
     let socketPath = services.configSnapshotStore.snapshot.calendarAgent.socketPath
     Task.detached { [logger] in
@@ -375,6 +380,10 @@ final class AppController {
       Task {
         await self.runtimeCoordinator.restartLuaRuntime()
       }
+    }
+
+    controller.onSelectTheme = { [weak self] name in
+      self?.selectTheme(name)
     }
   }
 

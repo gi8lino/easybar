@@ -11,6 +11,8 @@ final class BarWindowController: NSWindowController {
   var onReloadConfig: (() -> Void)?
   /// Callback for Lua runtime restart menu actions.
   var onRestartLuaRuntime: (() -> Void)?
+  /// Callback for session-only theme selection.
+  var onSelectTheme: ((String?) -> Void)?
 
   /// Logger used for window diagnostics.
   private let logger: ProcessLogger
@@ -30,7 +32,8 @@ final class BarWindowController: NSWindowController {
     actions: BarContextMenuActions(
       refresh: { [weak self] in self?.onRefresh?() },
       reloadConfig: { [weak self] in self?.onReloadConfig?() },
-      restartLuaRuntime: { [weak self] in self?.onRestartLuaRuntime?() }
+      restartLuaRuntime: { [weak self] in self?.onRestartLuaRuntime?() },
+      selectTheme: { [weak self] name in self?.onSelectTheme?(name) }
     ),
     stateProvider: menuStateProvider
   )

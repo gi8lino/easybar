@@ -54,13 +54,21 @@ actor ConfigManager {
   }
 
   /// Reloads the active config and returns a stable result.
-  func reload() async -> ReloadResult {
+  func reload(themeOverrideName: String? = nil, updateThemeOverride: Bool = false) async
+    -> ReloadResult
+  {
     let loadedState = await MainActor.run { config.loadedStateSnapshot() }
     previousLoadedState = loadedState
 
     return await MainActor.run {
       let previousSnapshot = config.snapshot()
+      if updateThemeOverride {
+        config.sessionThemeOverrideName = themeOverrideName
+      }
       let error = config.reload()
+      if error != nil, updateThemeOverride {
+        config.applyLoadedState(loadedState)
+      }
       let snapshot = config.snapshot()
       return Self.makeReloadResult(
         error: error,

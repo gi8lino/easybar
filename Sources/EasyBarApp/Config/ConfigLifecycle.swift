@@ -22,7 +22,7 @@ extension Config {
   @discardableResult
   func loadInitialState() -> (any Error)? {
     do {
-      applyLoadedState(try Self.makeLoadedState())
+      applyLoadedState(try Self.makeLoadedState(themeOverrideName: sessionThemeOverrideName))
       loadFailureState = nil
       objectWillChange.send()
       return nil
@@ -41,7 +41,7 @@ extension Config {
     let fallbackWarnings = configWarnings
 
     do {
-      applyLoadedState(try Self.makeLoadedState())
+      applyLoadedState(try Self.makeLoadedState(themeOverrideName: sessionThemeOverrideName))
       loadFailureState = nil
       objectWillChange.send()
       return nil
@@ -65,9 +65,11 @@ extension Config {
   /// Builds one staged config state without mutating the live singleton.
   private static func makeLoadedState(
     configPathOverride: String? = nil,
-    validateOnly: Bool = false
+    validateOnly: Bool = false,
+    themeOverrideName: String? = nil
   ) throws -> LoadedState {
     let staged = Self.makeUnloadedConfig(configPathOverride: configPathOverride)
+    staged.sessionThemeOverrideName = themeOverrideName
     staged.resetToDefaults()
     try staged.load(validateOnly: validateOnly)
 
@@ -82,7 +84,8 @@ extension Config {
   static func validate(configPathOverride: String? = nil) throws -> LoadedState {
     return try makeLoadedState(
       configPathOverride: configPathOverride,
-      validateOnly: true
+      validateOnly: true,
+      themeOverrideName: nil
     )
   }
 }

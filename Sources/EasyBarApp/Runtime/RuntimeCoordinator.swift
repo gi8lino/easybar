@@ -107,13 +107,25 @@ actor RuntimeCoordinator {
   }
 
   func reloadConfig() async {
+    await reloadConfig(themeOverrideName: nil, updateThemeOverride: false)
+  }
+
+  /// Applies or clears a session-only theme override through the normal reload pipeline.
+  func applyThemeOverride(_ themeName: String?) async {
+    await reloadConfig(themeOverrideName: themeName, updateThemeOverride: true)
+  }
+
+  private func reloadConfig(themeOverrideName: String?, updateThemeOverride: Bool) async {
     let operation = RuntimeLifecycleOperation.reloadConfig
 
     await withLifecycleOperation(
       operation,
       queuedMessage: "\(operation.rawValue) busy; queueing another reload"
     ) { generation in
-      let result = await configManager.reload()
+      let result = await configManager.reload(
+        themeOverrideName: themeOverrideName,
+        updateThemeOverride: updateThemeOverride
+      )
       guard shouldContinueLifecycleWork(generation: generation, operation: operation) else {
         return
       }

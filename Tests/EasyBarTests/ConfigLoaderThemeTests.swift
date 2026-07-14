@@ -141,6 +141,46 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
+  /// Verifies that menu-selected themes remain session-only and survive config reloads.
+  func testSessionThemeOverridePersistsUntilCleared() async throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
+    let themesDirectoryURL = tempDirectoryURL.appendingPathComponent("themes")
+    try writeConfig(
+      """
+      [theme]
+      name = "default"
+      themes_dir = "\(themesDirectoryURL.path)"
+      """,
+      to: configFileURL
+    )
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    let manager = ConfigManager(config: Config.makeUnloadedConfig())
+    let initial = await manager.loadInitialConfig()
+    XCTAssertTrue(initial.succeeded)
+    XCTAssertEqual(initial.snapshot.theme.name, "default")
+    XCTAssertNil(initial.snapshot.theme.sessionOverrideName)
+
+    let overridden = await manager.reload(
+      themeOverrideName: "nord",
+      updateThemeOverride: true
+    )
+    XCTAssertTrue(overridden.succeeded)
+    XCTAssertEqual(overridden.snapshot.theme.name, "nord")
+    XCTAssertEqual(overridden.snapshot.theme.configuredName, "default")
+    XCTAssertEqual(overridden.snapshot.theme.sessionOverrideName, "nord")
+
+    let reloaded = await manager.reload()
+    XCTAssertTrue(reloaded.succeeded)
+    XCTAssertEqual(reloaded.snapshot.theme.name, "nord")
+    XCTAssertEqual(reloaded.snapshot.theme.sessionOverrideName, "nord")
+
+    let cleared = await manager.reload(themeOverrideName: nil, updateThemeOverride: true)
+    XCTAssertTrue(cleared.succeeded)
+    XCTAssertEqual(cleared.snapshot.theme.name, "default")
+    XCTAssertNil(cleared.snapshot.theme.sessionOverrideName)
+  }
+
   /// Verifies that invalid config color values fail during validation instead of rendering later.
   func testValidateRejectsUnknownThemeColorReference() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("invalid-color-reference.toml")

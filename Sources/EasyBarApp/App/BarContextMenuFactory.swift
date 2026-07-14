@@ -19,6 +19,8 @@ struct BarContextMenuActions {
   let reloadConfig: () -> Void
   /// Restarts only the Lua widget runtime.
   let restartLuaRuntime: () -> Void
+  /// Applies or clears a session-only theme override.
+  let selectTheme: (String?) -> Void
 }
 
 /// Builds the right-click context menu shown by the bar panel.
@@ -53,6 +55,7 @@ final class BarContextMenuFactory: NSObject {
 
     appendItems([versionItem("EasyBar \(BuildInfo.appVersion)")], to: menu)
     appendSection(runtimeMenuItems, to: menu)
+    appendSection([themeMenuItem()], to: menu)
     appendSection(openMenuItems, to: menu)
     appendItems(agentMenuItems, to: menu)
 
@@ -96,6 +99,31 @@ final class BarContextMenuFactory: NSObject {
       actionItem(title: "Open Config", action: #selector(openConfig(_:))),
       actionItem(title: "Open Widgets Folder", action: #selector(openWidgetsFolder(_:))),
     ]
+  }
+
+  /// Creates the live theme-preview submenu.
+  private func themeMenuItem() -> NSMenuItem {
+    let snapshot = configStore.snapshot
+    let item = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
+    let submenu = NSMenu(title: "Theme")
+
+    let configured = actionItem(
+      title: "Use Configured Theme (\(snapshot.theme.configuredName))",
+      action: #selector(selectConfiguredTheme(_:))
+    )
+    configured.state = snapshot.theme.sessionOverrideName == nil ? .on : .off
+    submenu.addItem(configured)
+    submenu.addItem(.separator())
+
+    for name in ThemeCatalog.availableThemeNames(for: snapshot) {
+      let theme = actionItem(title: name, action: #selector(selectTheme(_:)))
+      theme.representedObject = name
+      theme.state = snapshot.theme.name == name ? .on : .off
+      submenu.addItem(theme)
+    }
+
+    item.submenu = submenu
+    return item
   }
 
   /// Returns the developer-only menu items.
@@ -240,6 +268,15 @@ final class BarContextMenuFactory: NSObject {
   /// Restarts only the Lua runtime through the app layer.
   @objc private func restartLuaRuntime(_ sender: Any?) {
     actions.restartLuaRuntime()
+  }
+
+  @objc private func selectConfiguredTheme(_ sender: Any?) {
+    actions.selectTheme(nil)
+  }
+
+  @objc private func selectTheme(_ sender: NSMenuItem) {
+    guard let name = sender.representedObject as? String else { return }
+    actions.selectTheme(name)
   }
 
   /// Updates the runtime log level immediately.
