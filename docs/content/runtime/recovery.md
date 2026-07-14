@@ -121,7 +121,8 @@ Restart Lua Runtime
 If that is still not enough, restart the whole app:
 
 ```bash
-brew services restart gi8lino/tap/easybar
+pkill -x EasyBar
+open -a EasyBar
 ```
 
 If a widget still fails, check your configured `widgets_dir`, Lua path, `[app.env]`, and any widget-specific logs or output.
@@ -131,13 +132,11 @@ If a widget still fails, check your configured `widgets_dir`, Lua path, `[app.en
 A good recovery sequence is:
 
 ```bash
-brew services stop gi8lino/tap/easybar
-
 pkill -x EasyBar || true
-pkill -x easybar-calendar-agent || true
-pkill -x easybar-network-agent || true
+pkill -x EasyBarCalendarAgent || true
+pkill -x EasyBarNetworkAgent || true
 
-brew services start gi8lino/tap/easybar
+open -a EasyBar
 ```
 
-This clears the usual problems caused by duplicate instances, stale agent state, or mixed manual and service launches.
+This clears the usual problems caused by duplicate instances or stale agent state.

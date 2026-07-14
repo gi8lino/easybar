@@ -66,10 +66,10 @@ If an agent is disabled in config, the helper app exits immediately without open
 
 ## Supervision
 
-The self-contained `EasyBar.app` launches enabled nested agents and restarts them when they exit unexpectedly. Homebrew therefore needs only the main EasyBar service:
+The self-contained `EasyBar.app` launches enabled nested agents and restarts them when they exit unexpectedly. Launching the app also starts its configured helpers:
 
 ```bash
-brew services start gi8lino/tap/easybar
+open -a EasyBar
 ```
 
 EasyBar connects to its supervised helpers over Unix sockets.

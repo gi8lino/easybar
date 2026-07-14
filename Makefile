@@ -117,7 +117,7 @@ endif
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
-        clean clean-dist run run-debug run-trace stop restart-brew icons \
+        clean clean-dist run run-debug run-trace stop restart-app icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
@@ -210,7 +210,7 @@ bundle: prepare-version ## Build the .app bundle and CLI into dist/.
 		--clean-build "$(CLEAN_BUILD)" \
 		--dist-dir "$(DIST_DIR)"
 
-package: bundle ## Create the release ZIP consumed by the Homebrew formula.
+package: bundle ## Create the release ZIP consumed by the Homebrew cask.
 	@scripts/release/package.sh --version "$(VERSION)" --dist-dir "$(DIST_DIR)"
 
 release: verify-release ## Build and verify the zipped release artifact.
@@ -301,13 +301,11 @@ run-build-network-agent: ## Internal target: fast local network agent build for 
 run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
-stop: ## Stop EasyBar and its agents from brew services and local dist runs.
+stop: ## Stop EasyBar and its agents from installed and local app runs.
 	@scripts/dev/stop-local.sh --dist-dir "$(DIST_DIR)"
 
-restart-brew: ## Restart EasyBar Homebrew services.
-	brew services restart gi8lino/tap/easybar-calendar-agent
-	brew services restart gi8lino/tap/easybar-network-agent
-	brew services restart gi8lino/tap/easybar
+restart-app: stop ## Restart the installed EasyBar application.
+	open -a EasyBar
 
 ##@ Cleanup
 
@@ -419,7 +417,6 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
 
 
 

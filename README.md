@@ -14,7 +14,7 @@ It combines native built-in widgets with custom Lua widgets and is designed for 
 - AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
 - Calendar and network helper agents
-- Homebrew install and service workflow
+- Homebrew cask installation into `/Applications`
 - Config-driven logging and troubleshooting support
 - Lightweight runtime metrics
 
@@ -34,13 +34,13 @@ aerospace --version
 
 ```bash
 brew tap gi8lino/tap
-brew install gi8lino/tap/easybar
+brew install --cask gi8lino/tap/easybar
 ```
 
-Start EasyBar and its helper agents:
+Launch EasyBar from Finder, Spotlight, or the command line:
 
 ```bash
-brew services start gi8lino/tap/easybar
+open -a EasyBar
 ```
 
 ## Documentation
@@ -115,7 +115,7 @@ make run-debug
 
 Useful build and runtime commands:
 
-- `make verify-source-tree` checks required source, packaging, and Homebrew formula inputs.
+- `make verify-source-tree` checks required source, packaging, and Homebrew cask inputs.
 - `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
@@ -147,7 +147,7 @@ make check-generated
 Reusable automation lives under `scripts/` and is grouped by purpose:
 
 - `scripts/ci/` contains CI-only wrappers such as dependency setup and long-running Swift test logging.
-- `scripts/release/` contains release automation such as Homebrew formula rendering and tap commits.
+- `scripts/release/` contains release automation such as Homebrew cask rendering and tap commits.
 - Existing generator scripts remain the source of truth for generated Swift, Lua, and documentation artifacts and are still orchestrated through the Makefile.
 
 Keep local developer entrypoints in the Makefile where possible, and move only reusable implementation details into scripts. That keeps commands like `make generate`, `make build-docs`, and `make package` stable while avoiding large shell blocks in workflows.

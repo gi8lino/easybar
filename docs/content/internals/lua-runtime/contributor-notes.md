@@ -86,7 +86,7 @@ Reusable automation scripts live under `scripts/` and are grouped by purpose:
 - `scripts/build/` contains build helpers used by the Makefile, such as universal product builds, resource copying, plist stamping, and bundle verification.
 - `scripts/ci/` contains CI helpers such as dependency setup and long-running Swift test logging.
 - `scripts/dev/` contains local-development wrappers such as the shared run and stop flows.
-- `scripts/release/` contains release helpers such as signing, notarization, Homebrew formula rendering, release verification, and tap commits.
+- `scripts/release/` contains release helpers such as signing, notarization, Homebrew cask rendering, release verification, and tap commits.
 
 Keep stable developer commands in the Makefile and delegate large reusable shell blocks into these scripts. This keeps commands like `make run-debug`, `make generate`, `make build-docs`, and `make package` stable while avoiding duplicated or hard-to-review shell logic.
 
@@ -107,7 +107,6 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
-
 
 
 

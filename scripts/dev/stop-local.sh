@@ -36,12 +36,6 @@ app_bundle="$dist_dir/EasyBar.app"
 calendar_agent_bundle="$app_bundle/Contents/Library/LoginItems/EasyBarCalendarAgent.app"
 network_agent_bundle="$app_bundle/Contents/Library/LoginItems/EasyBarNetworkAgent.app"
 
-if command -v brew >/dev/null 2>&1; then
-  brew services stop gi8lino/tap/easybar >/dev/null 2>&1 || true
-  brew services stop gi8lino/tap/easybar-calendar-agent >/dev/null 2>&1 || true
-  brew services stop gi8lino/tap/easybar-network-agent >/dev/null 2>&1 || true
-fi
-
 pkill -x "$app_exec" >/dev/null 2>&1 || true
 pkill -x "$calendar_agent_exec" >/dev/null 2>&1 || true
 pkill -x "$network_agent_exec" >/dev/null 2>&1 || true

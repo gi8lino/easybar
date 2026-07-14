@@ -1,18 +1,18 @@
 # Debugging Agents
 
-When something does not work, debugging agents is usually the fastest way to find the issue. This is the canonical page for helper-agent process checks, socket probes, raw field inspection, and Homebrew agent logs.
+When something does not work, debugging agents is usually the fastest way to find the issue. This is the canonical page for helper-agent process checks, socket probes, raw field inspection, and agent logs.
 
 ## 1. Check processes
 
 ```bash
-pgrep -fl easybar-calendar-agent
-pgrep -fl easybar-network-agent
+pgrep -fl EasyBarCalendarAgent
+pgrep -fl EasyBarNetworkAgent
 ```
 
 If nothing shows up:
 
 ```bash
-brew services start gi8lino/tap/easybar
+open -a EasyBar
 ```
 
 ## 2. Check logs
@@ -29,13 +29,6 @@ Logs are written to:
 
 ```text
 ~/.local/state/easybar/
-```
-
-Or via Homebrew:
-
-```bash
-tail -n 200 ~/Library/Logs/Homebrew/easybar-calendar-agent/*.log
-tail -n 200 ~/Library/Logs/Homebrew/easybar-network-agent/*.log
 ```
 
 For extremely verbose socket and update tracing, temporarily use:

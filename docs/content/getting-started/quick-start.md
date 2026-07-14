@@ -10,27 +10,27 @@ Add the Homebrew tap and install EasyBar:
 
 ```bash
 brew tap gi8lino/tap
-brew install gi8lino/tap/easybar
+brew install --cask gi8lino/tap/easybar
 ```
 
 The self-contained app includes both helper agents and supervises them itself.
 
 ## 2. Start EasyBar
 
-Start the main service:
+Open the app from Finder, Spotlight, or the command line:
 
 ```bash
-brew services start gi8lino/tap/easybar
+open -a EasyBar
 ```
 
 The agents provide permission-sensitive calendar and network data. EasyBar can still start when an agent has no permission, but the related widget may show empty or denied data until macOS permissions are granted.
 
 ## 3. Verify the install
 
-Check services:
+Check the installed application:
 
 ```bash
-brew services list | grep easybar
+test -d /Applications/EasyBar.app && echo "EasyBar is installed"
 ```
 
 Check running processes:

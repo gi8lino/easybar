@@ -2,22 +2,22 @@
 
 When something is wrong, first check whether EasyBar and its helper agents are running, whether duplicate processes exist, and whether the logs show a startup warning.
 
-For agent-specific socket checks, permission issues, raw Wi-Fi or calendar data checks, and Homebrew agent logs, use [Debugging Agents](../internals/agents/debugging.md).
+For agent-specific socket checks, permission issues, raw Wi-Fi or calendar data checks, and agent logs, use [Debugging Agents](../internals/agents/debugging.md).
 
 ## Quick checks
 
-Check Homebrew services:
+Check that EasyBar is running:
 
 ```bash
-brew services list | grep easybar
+pgrep -fl EasyBar
 ```
 
 Check running processes:
 
 ```bash
 pgrep -fl EasyBar
-pgrep -fl easybar-calendar-agent
-pgrep -fl easybar-network-agent
+pgrep -fl EasyBarCalendarAgent
+pgrep -fl EasyBarNetworkAgent
 ```
 
 Check that only one main EasyBar process is running.
@@ -54,7 +54,7 @@ level = "debug"
 
 Then inspect the log output in your configured logging directory.
 
-For Homebrew service log locations and agent-specific log commands, see [Debugging Agents](../internals/agents/debugging.md).
+For agent-specific log commands, see [Debugging Agents](../internals/agents/debugging.md).
 
 For very verbose app and agent troubleshooting, temporarily raise the level to `trace`:
 
@@ -66,19 +66,19 @@ level = "trace"
 
 ## EasyBar does not appear
 
-Check whether the service is running:
+Check whether the app is running:
 
 ```bash
-brew services list | grep easybar
+pgrep -fl EasyBar
 ```
 
 Try launching the app directly:
 
 ```bash
-open "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
+open -a EasyBar
 ```
 
-If that works but the service does not, restart the services:
+If EasyBar appears but a helper is unavailable, restart the helpers:
 
 ```bash
 easybar --restart-agents
@@ -96,14 +96,14 @@ Detect duplicates with:
 pgrep -fl EasyBar
 ```
 
-If you accidentally launched both a Homebrew service and a manual app instance, stop the extra one:
+If you accidentally launched more than one app instance, stop and reopen EasyBar:
 
 ```bash
 pkill -x EasyBar
-brew services restart gi8lino/tap/easybar
+open -a EasyBar
 ```
 
-If you are testing local builds from `dist/`, stop all services first so you do not mix service and manual runs.
+If you are testing local builds from `dist/`, quit the installed app first so you do not mix installed and development runs.
 
 ## Related pages
 

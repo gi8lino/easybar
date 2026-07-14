@@ -1,4 +1,4 @@
-name: update-homebrew-formula
+name: update-homebrew-cask
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  update-formula:
+  update-cask:
     runs-on: ubuntu-latest
 
     steps:
@@ -56,19 +56,19 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
 
-      - name: Update self-contained EasyBar formula
+      - name: Update self-contained EasyBar cask
         shell: bash
         run: |
-          scripts/release/update-homebrew-formulas.sh \
+          scripts/release/update-homebrew-cask.sh \
             --tap-dir homebrew-tap \
             --repository "${GITHUB_REPOSITORY}" \
             --tag "${{ steps.vars.outputs.tag }}" \
             --version "${{ steps.vars.outputs.version }}" \
             --sha "${{ steps.sha.outputs.sha }}"
 
-      - name: Commit and push formula change
+      - name: Commit and push cask change
         shell: bash
         run: |
-          scripts/release/commit-homebrew-formulas.sh \
+          scripts/release/commit-homebrew-cask.sh \
             --tap-dir homebrew-tap \
             --version "${{ steps.vars.outputs.version }}"
