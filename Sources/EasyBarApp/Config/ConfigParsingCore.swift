@@ -48,6 +48,7 @@ extension Config {
     widgetEditorStubPath = resolvedWidgetEditorStubPath
 
     develop = try app.bool("develop", fallback: develop)
+    showMenuBarIcon = try app.bool("show_menu_bar_icon", fallback: showMenuBarIcon)
 
     let luaCommands = try app.section("lua_commands")
     let resolvedLuaCommandTimeoutSeconds = try luaCommands.double(

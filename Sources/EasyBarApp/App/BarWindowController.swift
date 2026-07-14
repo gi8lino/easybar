@@ -159,6 +159,12 @@ final class BarWindowController: NSWindowController {
     )
   }
 
+  /// Hides the bar while keeping its window and the app's menu-bar controller alive.
+  func hide() {
+    window?.orderOut(nil)
+    logger.debug("bar window hidden")
+  }
+
   /// Calculates the frame of the bar based on config.
   private static func makeFrame(for screen: NSScreen, snapshot: ConfigSnapshot) -> NSRect {
     let height = snapshot.bar.height

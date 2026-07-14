@@ -20,6 +20,7 @@ extension Config {
     var lockDirectory: String
     var widgetEditorStubPath: String
     var develop: Bool
+    var showMenuBarIcon: Bool
     var luaCommandLimits: LuaCommandLimits
   }
 

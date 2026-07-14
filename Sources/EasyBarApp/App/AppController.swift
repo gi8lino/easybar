@@ -31,6 +31,12 @@ final class AppController {
   private var terminationRequestTask: Task<Void, Never>?
   /// Controller for the main EasyBar panel.
   private var barWindowController: BarWindowController?
+  /// Persistent controller shown in the macOS menu bar.
+  private var menuBarController: MenuBarController?
+  /// Whether the bar runtime is currently available to user actions.
+  private var barRuntimeState = MenuBarController.RuntimeState.stopped
+  /// Serializes user-requested start, stop, and restart transitions.
+  private var barLifecycleTask: Task<Void, Never>?
   /// Observer token for runtime config reload completion notifications.
   private var configReloadObserver: NSObjectProtocol?
 
@@ -97,7 +103,9 @@ final class AppController {
     startupDiagnostics.validateRequiredFonts()
     installWidgetEditorStub()
 
-    setupBarWindowController()
+    let menuStateProvider = makeMenuStateProvider()
+    setupBarWindowController(menuStateProvider: menuStateProvider)
+    setupMenuBarController(stateProvider: menuStateProvider)
     logger.debug("bar window presented")
 
     installConfigReloadObserver()
@@ -105,8 +113,12 @@ final class AppController {
     signalHandler.start()
     logger.debug("signal handler started")
 
+    barRuntimeState = .transitioning
     Task {
       await runtimeCoordinator.start()
+      await MainActor.run { [weak self] in
+        self?.barRuntimeState = .running
+      }
     }
     logger.debug("runtime coordinator start scheduled")
 
@@ -164,6 +176,7 @@ final class AppController {
   func handlePostConfigReloadUI() {
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
+    menuBarController?.setVisible(services.configSnapshotStore.snapshot.app.showMenuBarIcon)
     updateConfigErrorWindow()
   }
 
@@ -219,24 +232,123 @@ final class AppController {
   }
 
   /// Creates and presents the main bar window controller.
-  private func setupBarWindowController() {
+  private func setupBarWindowController(menuStateProvider: BarContextMenuStateProviding) {
     let controller = BarWindowController(
       logger: logger.child("window"),
       configStore: services.configSnapshotStore,
       widgetStore: services.widgetStore,
       aeroSpaceService: services.aeroSpaceService,
-      menuStateProvider: BarContextMenuStateProvider(
-        nativeWiFiStore: services.nativeWiFiStore,
-        nativeMonthCalendarStore: services.nativeMonthCalendarStore,
-        nativeUpcomingCalendarStore: services.nativeUpcomingCalendarStore,
-        monthCalendarAgentClient: services.monthCalendarAgentClient,
-        upcomingCalendarAgentClient: services.upcomingCalendarAgentClient,
-        networkAgentClient: services.networkAgentClient
-      )
+      menuStateProvider: menuStateProvider
     )
     installBarWindowActions(on: controller)
     controller.present()
     barWindowController = controller
+  }
+
+  private func makeMenuStateProvider() -> BarContextMenuStateProvider {
+    BarContextMenuStateProvider(
+      nativeWiFiStore: services.nativeWiFiStore,
+      nativeMonthCalendarStore: services.nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: services.nativeUpcomingCalendarStore,
+      monthCalendarAgentClient: services.monthCalendarAgentClient,
+      upcomingCalendarAgentClient: services.upcomingCalendarAgentClient,
+      networkAgentClient: services.networkAgentClient
+    )
+  }
+
+  /// Creates the controller icon that survives bar-runtime shutdown.
+  private func setupMenuBarController(stateProvider: BarContextMenuStateProviding) {
+    let controller = MenuBarController(
+      configStore: services.configSnapshotStore,
+      stateProvider: stateProvider
+    )
+    controller.runtimeState = { [weak self] in self?.barRuntimeState ?? .stopped }
+    controller.onStart = { [weak self] in self?.startBar() }
+    controller.onStop = { [weak self] in self?.stopBar() }
+    controller.onRestart = { [weak self] in self?.restartBar() }
+    controller.onRefresh = { [weak self] in self?.refreshRuntime() }
+    controller.onReloadConfig = { [weak self] in self?.reloadConfig() }
+    controller.onRestartLuaRuntime = { [weak self] in self?.restartLuaRuntime() }
+    controller.onRestartCalendarAgent = { [weak self] in self?.restartCalendarAgent() }
+    controller.onRestartNetworkAgent = { [weak self] in self?.restartNetworkAgent() }
+    controller.onQuit = { [weak self] in self?.requestAppTermination() }
+    controller.setVisible(services.configSnapshotStore.snapshot.app.showMenuBarIcon)
+    menuBarController = controller
+  }
+
+  private func startBar() {
+    runBarLifecycleTransition(finalState: .running) { [weak self] in
+      guard let self else { return }
+      await self.runtimeCoordinator.start()
+      await MainActor.run { self.barWindowController?.present() }
+    }
+  }
+
+  private func stopBar() {
+    barWindowController?.hide()
+    runBarLifecycleTransition(finalState: .stopped) { [weak self] in
+      await self?.runtimeCoordinator.stop()
+    }
+  }
+
+  private func restartBar() {
+    barWindowController?.hide()
+    runBarLifecycleTransition(finalState: .running) { [weak self] in
+      guard let self else { return }
+      await self.runtimeCoordinator.stop()
+      await self.runtimeCoordinator.start()
+      await MainActor.run { self.barWindowController?.present() }
+    }
+  }
+
+  private func runBarLifecycleTransition(
+    finalState: MenuBarController.RuntimeState,
+    operation: @escaping @MainActor () async -> Void
+  ) {
+    guard barLifecycleTask == nil else { return }
+    barRuntimeState = .transitioning
+    barLifecycleTask = Task { [weak self] in
+      await operation()
+      guard let self else { return }
+      self.barRuntimeState = finalState
+      self.barLifecycleTask = nil
+    }
+  }
+
+  private func refreshRuntime() {
+    Task { await runtimeCoordinator.refreshRuntime() }
+  }
+
+  private func reloadConfig() {
+    Task { await runtimeCoordinator.reloadConfig() }
+  }
+
+  private func restartLuaRuntime() {
+    Task { await runtimeCoordinator.restartLuaRuntime() }
+  }
+
+  private func restartCalendarAgent() {
+    let socketPath = services.configSnapshotStore.snapshot.calendarAgent.socketPath
+    Task.detached { [logger] in
+      do {
+        try AgentRestartClient.restartCalendarAgent(socketPath: socketPath)
+        logger.info("calendar agent restart acknowledged")
+      } catch {
+        logger.error("calendar agent restart failed", .field("error", "\(error)"))
+      }
+    }
+  }
+
+  private func restartNetworkAgent() {
+    let socketPath = services.configSnapshotStore.snapshot.networkAgent.socketPath
+    Task.detached { [logger] in
+      do {
+        try AgentRestartClient.restartNetworkAgent(socketPath: socketPath)
+        logger.info("network agent restart acknowledged")
+      } catch {
+        logger.error("network agent restart failed", .field("error", "\(error)"))
+      }
+    }
   }
 
   /// Wires user-facing bar actions to runtime commands.
@@ -279,11 +391,14 @@ final class AppController {
 
     guard started else { return nil }
     started = false
+    barRuntimeState = .transitioning
 
     logger.info("easybar shutting down")
     signalHandler.stop()
 
+    let pendingBarLifecycleTask = barLifecycleTask
     let shutdownTask = Task { [runtimeCoordinator] in
+      await pendingBarLifecycleTask?.value
       await runtimeCoordinator.stop()
     }
 

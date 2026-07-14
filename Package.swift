@@ -123,6 +123,7 @@ let package = Package(
         "Lua/easybar_api.themes.lua",
       ],
       resources: [
+        .copy("Assets/easybar-menubar.svg"),
         .copy("Events/event_catalog.json"),
         .copy("Theme/theme_tokens.json"),
         .copy("Lua/runtime.lua"),

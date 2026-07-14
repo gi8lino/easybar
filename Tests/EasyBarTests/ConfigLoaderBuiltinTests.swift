@@ -52,6 +52,7 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
       lock_dir = "\(lockDirectory)"
       widget_editor_stub_path = "\(widgetEditorStubPath)"
       develop = true
+      show_menu_bar_icon = false
 
       [app.env]
       PATH = "/custom/bin"
@@ -97,6 +98,7 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertEqual(config.lockDirectory, lockDirectory)
     XCTAssertEqual(config.widgetEditorStubPath, widgetEditorStubPath)
     XCTAssertTrue(config.develop)
+    XCTAssertFalse(config.showMenuBarIcon)
 
     XCTAssertEqual(config.appSection.environment[SharedEnvironmentKeys.path], "/custom/bin")
     XCTAssertEqual(config.appSection.environment["FOO"], "bar")

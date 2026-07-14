@@ -14,6 +14,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                       | Default                                             | Description                                                                              |
 | ------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `show_menu_bar_icon`      | `true`                                              | Shows the persistent EasyBar controller icon in the macOS menu bar.                      |
 | `widgets_dir`             | `"~/.config/easybar/widgets"`                       | Directory that contains your custom Lua widget files.                                    |
 | `lua_path`                | `"lua"`                                             | Path to the Lua executable EasyBar uses for scripted widgets.                            |
 | `runtime_dir`             | `"~/.local/state/easybar/runtime"`                  | Base directory used for EasyBar sockets and lock files.                                  |

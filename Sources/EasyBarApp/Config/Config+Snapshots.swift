@@ -15,6 +15,7 @@ extension Config {
         lockDirectory: appSection.lockDirectory,
         widgetEditorStubPath: appSection.widgetEditorStubPath,
         develop: appSection.develop,
+        showMenuBarIcon: appSection.showMenuBarIcon,
         luaCommandLimits: appSection.luaCommandLimits
       ),
       logging: .init(
@@ -75,6 +76,7 @@ extension Config {
       lockDirectory: snapshot.app.lockDirectory,
       widgetEditorStubPath: snapshot.app.widgetEditorStubPath,
       develop: snapshot.app.develop,
+      showMenuBarIcon: snapshot.app.showMenuBarIcon,
       luaCommandLimits: snapshot.app.luaCommandLimits
     )
 

@@ -19,6 +19,7 @@ struct ConfigSnapshot: @unchecked Sendable {
     let lockDirectory: String
     let widgetEditorStubPath: String
     let develop: Bool
+    let showMenuBarIcon: Bool
     let luaCommandLimits: Config.AppSection.LuaCommandLimits
   }
 

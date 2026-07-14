@@ -2,6 +2,11 @@ extension ConfigSchemaRegistry {
   static let coreLines: [Line] = [
     section(name: "app"),
     entry(
+      key: "show_menu_bar_icon",
+      value: "true",
+      description: "Shows the persistent EasyBar controller icon in the macOS menu bar.",
+    ),
+    entry(
       key: "widgets_dir",
       value: "\"~/.config/easybar/widgets\"",
       description: "Directory that contains your custom Lua widget files.",

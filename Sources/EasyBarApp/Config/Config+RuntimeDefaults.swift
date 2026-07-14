@@ -41,6 +41,7 @@ extension Config {
     appSection.environment = SharedPathDefaults.defaultLuaEnvironment
     appSection.watchConfigFile = true
     appSection.develop = false
+    appSection.showMenuBarIcon = true
     appSection.luaCommandLimits = .init(
       timeoutSeconds: 5,
       maxOutputBytes: 64 * 1024,

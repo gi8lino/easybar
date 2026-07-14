@@ -79,6 +79,11 @@ final class Config: ObservableObject, @unchecked Sendable {
     set { appSection.develop = newValue }
   }
 
+  var showMenuBarIcon: Bool {
+    get { appSection.showMenuBarIcon }
+    set { appSection.showMenuBarIcon = newValue }
+  }
+
   var luaCommandTimeoutSeconds: TimeInterval {
     get { appSection.luaCommandLimits.timeoutSeconds }
     set { appSection.luaCommandLimits.timeoutSeconds = newValue }
@@ -262,6 +267,7 @@ final class Config: ObservableObject, @unchecked Sendable {
       lockDirectory: "",
       widgetEditorStubPath: "",
       develop: false,
+      showMenuBarIcon: true,
       luaCommandLimits: .init(
         timeoutSeconds: 5,
         maxOutputBytes: 64 * 1024,
