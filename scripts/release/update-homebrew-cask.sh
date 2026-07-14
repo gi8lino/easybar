@@ -43,7 +43,7 @@ cask "easybar" do
   desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
   homepage "https://github.com/${repository}"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   postflight do
     system "xattr -d com.apple.quarantine #{staged_path}/easybar"

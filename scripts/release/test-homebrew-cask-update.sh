@@ -41,7 +41,7 @@ assert_contains "${easybar_cask}" 'cask "easybar" do'
 assert_contains "${easybar_cask}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBar-${version}.zip\""
 assert_contains "${easybar_cask}" "sha256 \"${sha}\""
 assert_contains "${easybar_cask}" "version \"${version}\""
-assert_contains "${easybar_cask}" 'depends_on macos: ">= :sonoma"'
+assert_contains "${easybar_cask}" 'depends_on macos: :sonoma'
 assert_contains "${easybar_cask}" 'system "xattr -d com.apple.quarantine #{staged_path}/easybar"'
 assert_contains "${easybar_cask}" 'system "xattr -dr com.apple.quarantine #{appdir}/EasyBar.app"'
 assert_contains "${easybar_cask}" 'app "EasyBar.app"'
