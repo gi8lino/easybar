@@ -18,13 +18,28 @@ public enum AgentRestartClient {
     let transport = LineSocketClientTransport<NetworkAgentRequest, NetworkAgentMessage>(
       socketPath: socketPath
     )
-    let response = try transport.send(request: NetworkAgentRequest(command: .restart))
+    let response: NetworkAgentMessage
+    do {
+      response = try transport.send(request: NetworkAgentRequest(command: .restart))
+    } catch let error as LineSocketClientTransportError {
+      throw AgentRestartError.transport(error.description)
+    }
     guard response.kind == .restarting else {
       throw AgentRestartError.unexpectedResponse
     }
   }
 }
 
-public enum AgentRestartError: Error {
+public enum AgentRestartError: LocalizedError {
   case unexpectedResponse
+  case transport(String)
+
+  public var errorDescription: String? {
+    switch self {
+    case .unexpectedResponse:
+      return "agent returned an unexpected restart response"
+    case .transport(let message):
+      return "agent socket request failed: \(message)"
+    }
+  }
 }

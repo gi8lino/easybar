@@ -13,15 +13,13 @@ brew tap gi8lino/tap
 brew install gi8lino/tap/easybar
 ```
 
-This also installs the calendar and network helper agents.
+The self-contained app includes both helper agents and supervises them itself.
 
-## 2. Start EasyBar and its agents
+## 2. Start EasyBar
 
-Start the helper agents first, then the main bar service:
+Start the main service:
 
 ```bash
-brew services start gi8lino/tap/easybar-calendar-agent
-brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
@@ -39,8 +37,8 @@ Check running processes:
 
 ```bash
 pgrep -fl EasyBar
-pgrep -fl easybar-calendar-agent
-pgrep -fl easybar-network-agent
+pgrep -fl EasyBarCalendarAgent
+pgrep -fl EasyBarNetworkAgent
 ```
 
 Trigger one refresh:

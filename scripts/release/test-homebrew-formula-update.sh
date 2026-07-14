@@ -12,6 +12,12 @@ sha="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 mkdir -p "${tap_dir}"
 git -C "${tap_dir}" init -q
+mkdir -p "${tap_dir}/Formula"
+touch \
+  "${tap_dir}/Formula/easybar-calendar-agent.rb" \
+  "${tap_dir}/Formula/easybar-network-agent.rb"
+git -C "${tap_dir}" add Formula
+git -C "${tap_dir}" -c user.name=test -c user.email=test@example.com commit -qm fixture
 
 "${repo_root}/scripts/release/update-homebrew-formulas.sh" \
   --tap-dir "${tap_dir}" \
@@ -33,29 +39,19 @@ assert_contains() {
 }
 
 easybar_formula="${tap_dir}/Formula/easybar.rb"
-calendar_formula="${tap_dir}/Formula/easybar-calendar-agent.rb"
-network_formula="${tap_dir}/Formula/easybar-network-agent.rb"
-
-for file in "${easybar_formula}" "${calendar_formula}" "${network_formula}"; do
-  test -s "${file}"
-  assert_contains "${file}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBar-${version}.zip\""
-  assert_contains "${file}" "sha256 \"${sha}\""
-  assert_contains "${file}" "version \"${version}\""
-done
+test -s "${easybar_formula}"
+assert_contains "${easybar_formula}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBar-${version}.zip\""
+assert_contains "${easybar_formula}" "sha256 \"${sha}\""
+assert_contains "${easybar_formula}" "version \"${version}\""
 
 assert_contains "${easybar_formula}" 'class Easybar < Formula'
 assert_contains "${easybar_formula}" 'depends_on "lua"'
-assert_contains "${easybar_formula}" 'depends_on "easybar-calendar-agent"'
-assert_contains "${easybar_formula}" 'depends_on "easybar-network-agent"'
 assert_contains "${easybar_formula}" 'run [opt_libexec/"EasyBar.app/Contents/MacOS/EasyBar"]'
+assert_contains "${easybar_formula}" 'EasyBar.app/Contents/Library/LoginItems/EasyBarCalendarAgent.app'
+assert_contains "${easybar_formula}" 'EasyBar.app/Contents/Library/LoginItems/EasyBarNetworkAgent.app'
 
-assert_contains "${calendar_formula}" 'class EasybarCalendarAgent < Formula'
-assert_contains "${calendar_formula}" 'libexec.install "EasyBarCalendarAgent.app"'
-assert_contains "${calendar_formula}" 'run [opt_libexec/"EasyBarCalendarAgent.app/Contents/MacOS/EasyBarCalendarAgent"]'
-
-assert_contains "${network_formula}" 'class EasybarNetworkAgent < Formula'
-assert_contains "${network_formula}" 'libexec.install "EasyBarNetworkAgent.app"'
-assert_contains "${network_formula}" 'run [opt_libexec/"EasyBarNetworkAgent.app/Contents/MacOS/EasyBarNetworkAgent"]'
+test ! -e "${tap_dir}/Formula/easybar-calendar-agent.rb"
+test ! -e "${tap_dir}/Formula/easybar-network-agent.rb"
 
 "${repo_root}/scripts/release/commit-homebrew-formulas.sh" \
   --tap-dir "${tap_dir}" \

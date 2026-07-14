@@ -12,8 +12,7 @@ pgrep -fl easybar-network-agent
 If nothing shows up:
 
 ```bash
-brew services start gi8lino/tap/easybar-calendar-agent
-brew services start gi8lino/tap/easybar-network-agent
+brew services start gi8lino/tap/easybar
 ```
 
 ## 2. Check logs
@@ -111,7 +110,7 @@ socket_path = "~/.local/state/easybar/runtime/network-agent.sock"
 Restart the agent:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
+easybar --restart-network-agent
 ```
 
 ### Wi-Fi fields missing
@@ -132,8 +131,7 @@ systemsettings Privacy LocationServices
 Then restart:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-network-agent
 ```
 
 ### IPv4 or IPv6 missing in the Wi-Fi widget
@@ -180,8 +178,7 @@ easybar --refresh
 If that does not help, restart the network agent and EasyBar:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-network-agent
 ```
 
 ### Calendar empty
@@ -196,8 +193,7 @@ Likely causes:
 Restart the calendar agent after changing permission settings:
 
 ```bash
-brew services restart gi8lino/tap/easybar-calendar-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-calendar-agent
 ```
 
 ### Permission stuck at `not_determined`
@@ -215,8 +211,7 @@ Wait or restart the agent.
 Restart agents:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar-calendar-agent
+easybar --restart-agents
 ```
 
 ## Debugging Lua vs Agent

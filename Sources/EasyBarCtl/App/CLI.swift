@@ -36,6 +36,18 @@ private struct AppController {
         } else {
           try sendCommand(command, to: socketPath, context: context)
         }
+
+      case .restartCalendarAgent:
+        try restartCalendarAgent(socketPath: parsed.socketPath, context: context)
+
+      case .restartNetworkAgent:
+        try restartNetworkAgent(socketPath: parsed.socketPath, context: context)
+
+      case .restartAgents:
+        guard parsed.socketPath == nil else {
+          throw AppError.message("--socket cannot be used with --restart-agents")
+        }
+        try restartAgents(context: context)
       }
 
       return 0

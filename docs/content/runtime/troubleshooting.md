@@ -81,9 +81,7 @@ open "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
 If that works but the service does not, restart the services:
 
 ```bash
-brew services restart gi8lino/tap/easybar-calendar-agent
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-agents
 ```
 
 If nothing appears, check logs for startup warnings, macOS permission issues, or quarantine problems.

@@ -12,16 +12,12 @@ If macOS blocks the app, helper agents, or CLI, run:
 
 ```bash
 xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar/libexec/EasyBar.app"
-xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-calendar-agent/libexec/EasyBarCalendarAgent.app"
-xattr -dr com.apple.quarantine "$(brew --prefix)/opt/easybar-network-agent/libexec/EasyBarNetworkAgent.app"
 xattr -d com.apple.quarantine "$(command -v easybar)"
 ```
 
 Then start the services again:
 
 ```bash
-brew services start gi8lino/tap/easybar-calendar-agent
-brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 

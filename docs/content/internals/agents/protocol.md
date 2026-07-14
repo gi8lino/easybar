@@ -102,9 +102,11 @@ The full restart sequence is:
 4. The service supervisor starts a fresh agent process.
 5. EasyBar reconnects when the agent socket becomes available again.
 
-Homebrew services configure the agents with `keep_alive`, so `launchd` relaunches them after the acknowledged exit. A manually launched development agent has no supervisor and therefore stays stopped after it exits.
+The packaged `EasyBar.app` supervises its nested agents and relaunches them after the acknowledged exit. Legacy Homebrew-service installations use `launchd` with `keep_alive` for the same behavior. A manually launched standalone agent has no supervisor and therefore stays stopped after it exits.
 
 Restart is available only while the agent socket is responsive. If the agent has already crashed or cannot answer requests, its service supervisor remains responsible for recovery.
+
+The CLI exposes this operation as `--restart-calendar-agent`, `--restart-network-agent`, and `--restart-agents`. The combined command attempts both agents before reporting a partial failure with a nonzero exit status.
 
 ## EasyBar command behavior
 
@@ -138,4 +140,3 @@ easybar --reload-config
 - reloads `config.toml`
 - rebuilds runtime state
 - recreates agent-backed subscriptions
-

@@ -16,6 +16,53 @@ func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppCont
   context.debug("command sent")
 }
 
+func restartCalendarAgent(socketPath: String?, context: AppContext) throws {
+  let path = socketPath ?? defaultAgentSocketPaths().calendar
+  context.debug("requesting calendar agent restart through \(path)")
+  do {
+    try AgentRestartClient.restartCalendarAgent(socketPath: path)
+  } catch {
+    throw AppError.message("calendar agent restart failed: \(error.localizedDescription)")
+  }
+}
+
+func restartNetworkAgent(socketPath: String?, context: AppContext) throws {
+  let path = socketPath ?? defaultAgentSocketPaths().network
+  context.debug("requesting network agent restart through \(path)")
+  do {
+    try AgentRestartClient.restartNetworkAgent(socketPath: path)
+  } catch {
+    throw AppError.message("network agent restart failed: \(error.localizedDescription)")
+  }
+}
+
+func restartAgents(context: AppContext) throws {
+  let paths = defaultAgentSocketPaths()
+  var failures: [String] = []
+
+  do {
+    try AgentRestartClient.restartCalendarAgent(socketPath: paths.calendar)
+  } catch {
+    failures.append("calendar: \(error.localizedDescription)")
+  }
+
+  do {
+    try AgentRestartClient.restartNetworkAgent(socketPath: paths.network)
+  } catch {
+    failures.append("network: \(error.localizedDescription)")
+  }
+
+  guard failures.isEmpty else {
+    throw AppError.message("agent restart partially failed (\(failures.joined(separator: "; ")))")
+  }
+  context.debug("both agent restart requests were acknowledged")
+}
+
+private func defaultAgentSocketPaths() -> (calendar: String, network: String) {
+  let runtime = (try? SharedRuntimeConfig.load()) ?? SharedRuntimeConfig.environmentDefaults()
+  return (runtime.calendarAgent.socketPath, runtime.networkAgent.socketPath)
+}
+
 /// Fetches one metrics snapshot.
 func fetchMetricsSnapshot(from socketPath: String, context: AppContext) throws
   -> IPC.MetricsSnapshot

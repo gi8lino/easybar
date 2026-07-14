@@ -40,8 +40,6 @@ brew install gi8lino/tap/easybar
 Start EasyBar and its helper agents:
 
 ```bash
-brew services start gi8lino/tap/easybar-calendar-agent
-brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 
@@ -92,6 +90,20 @@ themes_dir = "~/.config/easybar/themes"
 EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundled themes.
 
 ## Developing
+
+### Test the self-contained app bundle
+
+Build a local ad-hoc-signed bundle and launch it like a normal macOS application:
+
+```bash
+make bundle ARCH=arm64 VERSION=dev
+cp -R dist/EasyBar.app /Applications/
+open /Applications/EasyBar.app
+```
+
+The calendar and network helpers are nested under `EasyBar.app/Contents/Library/LoginItems` and are launched, monitored, and restarted by EasyBar. The CLI remains a separate `dist/easybar` executable.
+
+Restart helpers with `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`.
 
 Quickstart for contributors:
 

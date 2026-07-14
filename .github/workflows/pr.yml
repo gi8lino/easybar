@@ -54,7 +54,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Test Homebrew formula update scripts
+      - name: Test self-contained Homebrew formula generation
         run: scripts/release/test-homebrew-formula-update.sh
-
 

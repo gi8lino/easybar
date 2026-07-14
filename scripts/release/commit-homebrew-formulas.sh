@@ -35,9 +35,10 @@ cd "${tap_dir}"
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-git add Formula/easybar.rb
-git add Formula/easybar-calendar-agent.rb
-git add Formula/easybar-network-agent.rb
+git add -A -- \
+  Formula/easybar.rb \
+  Formula/easybar-calendar-agent.rb \
+  Formula/easybar-network-agent.rb
 
 if git diff --cached --quiet; then
   echo "No changes to commit."

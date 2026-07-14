@@ -2,6 +2,8 @@
 
 Use this page when EasyBar is stuck, stale, or behaving unexpectedly.
 
+For responsive helper agents, prefer `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`. The self-contained app relaunches each nested helper after it acknowledges the request and exits. If its socket is unresponsive, restart the main EasyBar application instead.
+
 For detailed helper-agent process checks, socket probes, permission debugging, and raw agent output inspection, see [Debugging Agents](../internals/agents/debugging.md).
 
 ## Calendar widget is empty
@@ -13,8 +15,7 @@ EasyBar exposes menu actions to open the relevant settings pages, and the calend
 If you changed permissions and nothing updates, restart the calendar agent and EasyBar:
 
 ```bash
-brew services restart gi8lino/tap/easybar-calendar-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-calendar-agent
 ```
 
 For deeper checks, including socket pings and logs, use [Debugging Agents](../internals/agents/debugging.md).
@@ -28,8 +29,7 @@ The network agent depends on Location Services permission. If permission is deni
 Restart the network agent and EasyBar after changing permission settings:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-network-agent
 ```
 
 For deeper checks, including raw Wi-Fi and network field inspection, use [Debugging Agents](../internals/agents/debugging.md).
@@ -132,15 +132,11 @@ A good recovery sequence is:
 
 ```bash
 brew services stop gi8lino/tap/easybar
-brew services stop gi8lino/tap/easybar-calendar-agent
-brew services stop gi8lino/tap/easybar-network-agent
 
 pkill -x EasyBar || true
 pkill -x easybar-calendar-agent || true
 pkill -x easybar-network-agent || true
 
-brew services start gi8lino/tap/easybar-calendar-agent
-brew services start gi8lino/tap/easybar-network-agent
 brew services start gi8lino/tap/easybar
 ```
 

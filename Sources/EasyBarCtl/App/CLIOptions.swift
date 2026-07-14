@@ -47,6 +47,9 @@ struct ParsedArguments {
 enum CLIAction: Equatable {
   case command(IPC.Command)
   case validateConfig
+  case restartCalendarAgent
+  case restartNetworkAgent
+  case restartAgents
 }
 
 /// Defines supported command-line options and formatting helpers.
@@ -107,6 +110,21 @@ enum CLI {
     placeholder: "name"
   )
 
+  static let restartCalendarAgentOption = CLIOption(
+    flag: "--restart-calendar-agent",
+    description: "Restart the calendar agent through its socket"
+  )
+
+  static let restartNetworkAgentOption = CLIOption(
+    flag: "--restart-network-agent",
+    description: "Restart the network agent through its socket"
+  )
+
+  static let restartAgentsOption = CLIOption(
+    flag: "--restart-agents",
+    description: "Restart both helper agents and report any partial failure"
+  )
+
   /// Command options that map directly to IPC commands.
   static let cmdOptions: [CLIOption] = [
     .init(
@@ -130,6 +148,9 @@ enum CLI {
       command: .metrics,
       description: "Print a metrics snapshot or stream live metrics with --watch"
     ),
+    restartCalendarAgentOption,
+    restartNetworkAgentOption,
+    restartAgentsOption,
     validateConfigOption,
   ]
 

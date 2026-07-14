@@ -54,6 +54,18 @@ This:
 
 Use this when you changed the config file itself.
 
+## Restart helper agents
+
+```bash
+easybar --restart-calendar-agent
+easybar --restart-network-agent
+easybar --restart-agents
+```
+
+These commands send an acknowledged restart request directly to the selected agent socket. The agent exits after replying, and the packaged EasyBar supervisor starts it again. The combined command attempts both agents and returns a nonzero status with partial-failure details if either request fails.
+
+`--socket <path>` can override one per-agent socket. It is not accepted with `--restart-agents`, because the agents use different sockets.
+
 ## Scripting events
 
 Use:

@@ -47,8 +47,6 @@ fi
 
 formula_dir="${tap_dir}/Formula"
 easybar_formula_file="${formula_dir}/easybar.rb"
-calendar_agent_formula_file="${formula_dir}/easybar-calendar-agent.rb"
-network_agent_formula_file="${formula_dir}/easybar-network-agent.rb"
 asset_url="https://github.com/${repository}/releases/download/${tag}/EasyBar-${version}.zip"
 
 mkdir -p "${formula_dir}"
@@ -107,8 +105,6 @@ write_easybar_formula() {
 
   cat >>"${easybar_formula_file}" <<'EOF_FORMULA'
   depends_on "lua"
-  depends_on "easybar-calendar-agent"
-  depends_on "easybar-network-agent"
 
   def install
     libexec.install "EasyBar.app"
@@ -128,59 +124,18 @@ EOF_FORMULA
 
   test do
     assert_match "easybar", shell_output("#{bin}/easybar --help 2>&1")
+    assert_predicate libexec/"EasyBar.app", :exist?
+    assert_predicate libexec/"EasyBar.app/Contents/Library/LoginItems/EasyBarCalendarAgent.app", :exist?
+    assert_predicate libexec/"EasyBar.app/Contents/Library/LoginItems/EasyBarNetworkAgent.app", :exist?
   end
 EOF_FORMULA
 
   append_formula_end "${easybar_formula_file}"
 }
 
-write_agent_formula() {
-  local file="$1"
-  local class_name="$2"
-  local description="$3"
-  local app_name="$4"
-  local log_dir="$5"
-  local log_name="$6"
-
-  write_formula_header "$file" "$class_name" "$description"
-
-  cat >>"$file" <<EOF_FORMULA
-
-  def install
-    libexec.install "${app_name}.app"
-
-    (var/"log/${log_dir}").mkpath
-  end
-EOF_FORMULA
-
-  append_service_block \
-    "$file" \
-    "${app_name}.app/Contents/MacOS/${app_name}" \
-    "$log_dir" \
-    "$log_name"
-
-  cat >>"$file" <<EOF_FORMULA
-
-  test do
-    assert_predicate libexec/"${app_name}.app", :exist?
-  end
-EOF_FORMULA
-
-  append_formula_end "$file"
-}
-
 write_easybar_formula
-write_agent_formula \
-  "${calendar_agent_formula_file}" \
-  "EasybarCalendarAgent" \
-  "Calendar EventKit helper service for EasyBar" \
-  "EasyBarCalendarAgent" \
-  "easybar-calendar-agent" \
-  "easybar-calendar-agent"
-write_agent_formula \
-  "${network_agent_formula_file}" \
-  "EasybarNetworkAgent" \
-  "Wi-Fi and network helper service for EasyBar" \
-  "EasyBarNetworkAgent" \
-  "easybar-network-agent" \
-  "easybar-network-agent"
+
+# Remove formulas made obsolete by the self-contained EasyBar.app bundle.
+rm -f \
+  "${formula_dir}/easybar-calendar-agent.rb" \
+  "${formula_dir}/easybar-network-agent.rb"

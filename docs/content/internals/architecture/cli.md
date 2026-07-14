@@ -26,11 +26,16 @@ Typical examples:
 easybar --refresh
 easybar --restart-lua-runtime
 easybar --reload-config
+easybar --restart-calendar-agent
+easybar --restart-network-agent
+easybar --restart-agents
 easybar --event workspace_change
 ```
 
 ## Design rule
 
 The CLI should stay small.
+
+Most commands use the main EasyBar control socket. Agent restart commands contact the calendar or network socket directly through the shared agent protocol.
 
 It is a transport client, not a second source of application logic.

@@ -278,8 +278,7 @@ denied_text = "denied"
 After changing Location Services permission, restart the network agent and EasyBar:
 
 ```bash
-brew services restart gi8lino/tap/easybar-network-agent
-brew services restart gi8lino/tap/easybar
+easybar --restart-network-agent
 ```
 
 ## Calendar appointments

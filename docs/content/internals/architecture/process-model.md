@@ -28,6 +28,8 @@ Helper agents are separate processes because they own permission-sensitive APIs:
 The agents collect and normalize data.
 EasyBar consumes that data and renders UI from it.
 
+The packaged agents are nested inside `EasyBar.app/Contents/Library/LoginItems`. The main app launches enabled agents, monitors them, and relaunches them after crashes or acknowledged restart requests.
+
 ## Lua runtime process
 
 Lua widgets do not run in-process inside the main app.

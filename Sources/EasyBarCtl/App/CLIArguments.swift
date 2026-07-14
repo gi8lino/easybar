@@ -98,6 +98,19 @@ private func parseAppArgument(
     return index + 1
   }
 
+  let restartOptions: [(CLIOption, CLIAction)] = [
+    (CLI.restartCalendarAgentOption, .restartCalendarAgent),
+    (CLI.restartNetworkAgentOption, .restartNetworkAgent),
+    (CLI.restartAgentsOption, .restartAgents),
+  ]
+  if let restartAction = restartOptions.first(where: { CLI.matches($0.0, argument: argument) })?.1 {
+    guard selectedAction == nil else {
+      throw AppError.message("only one command flag may be specified")
+    }
+    selectedAction = restartAction
+    return index + 1
+  }
+
   if let parsedEventArgument = try parseValueArgument(
     option: CLI.eventOption,
     argument,

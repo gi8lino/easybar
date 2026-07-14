@@ -32,7 +32,7 @@ sign_binary() {
   codesign --force "${sign_options[@]}" "$binary"
 }
 
-sign_bundle "$app_bundle"
 sign_bundle "$calendar_agent_bundle"
 sign_bundle "$network_agent_bundle"
+sign_bundle "$app_bundle"
 sign_binary "$cli_bin"
