@@ -25,6 +25,8 @@ open -a EasyBar
 
 The agents provide permission-sensitive calendar and network data. EasyBar can still start when an agent has no permission, but the related widget may show empty or denied data until macOS permissions are granted.
 
+EasyBar also shows a controller icon in the macOS menu bar. Use it to stop or restart the bar, reload configuration, restart helper agents, and open EasyBar directories. The icon remains available if you stop only the bar runtime.
+
 ## 3. Verify the install
 
 Check the installed application:

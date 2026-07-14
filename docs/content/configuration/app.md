@@ -6,6 +6,7 @@ Example:
 
 ```toml
 [app]
+show_menu_bar_icon = true
 widgets_dir = "~/.config/easybar/widgets"
 lua_path = "lua"
 runtime_dir = "~/.local/state/easybar/runtime"
@@ -13,6 +14,19 @@ watch_config = true
 widget_editor_stub_path = "~/.local/share/easybar/easybar_api.lua"
 develop = false
 ```
+
+## `show_menu_bar_icon`
+
+Controls the persistent EasyBar controller icon in the macOS menu bar.
+
+```toml
+[app]
+show_menu_bar_icon = true
+```
+
+The icon is enabled by default and provides runtime controls even while the EasyBar bar is stopped. Set it to `false` when you do not want the additional menu bar item.
+
+See [Runtime Control](../runtime/control.md#menu-bar-controller) for the available actions and recovery behavior.
 
 ## `widgets_dir`
 

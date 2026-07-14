@@ -2,6 +2,35 @@
 
 EasyBar exposes three runtime control actions because they solve different problems.
 
+## Menu bar controller
+
+EasyBar shows a persistent controller icon in the macOS menu bar by default. It remains available when the EasyBar bar itself is stopped, so you can restore the bar without opening a terminal.
+
+The controller menu provides:
+
+- start, stop, and restart EasyBar's bar runtime
+- refresh and config reload
+- Lua runtime restart
+- calendar and network agent status and restart actions
+- shortcuts to the config, widgets, and log directories
+- complete application shutdown
+
+The version shown at the top of the menu is the version embedded in the running EasyBar binary.
+
+Disable the controller icon when you do not want an additional macOS menu bar item:
+
+```toml
+[app]
+show_menu_bar_icon = false
+```
+
+The setting defaults to `true`. After disabling it, restart the application through Finder, Spotlight, or the command line when necessary:
+
+```bash
+pkill -x EasyBar
+open -a EasyBar
+```
+
 ## Refresh
 
 Use:
