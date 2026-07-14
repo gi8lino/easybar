@@ -215,14 +215,13 @@ extension Config {
       (\.builtinCalendar.month.popup.calendar.weekdayTextColorHex, \.themeAccentColorHex),
       (\.builtinCalendar.month.popup.calendar.dayTextColorHex, \.themeTextSecondaryColorHex),
       (\.builtinCalendar.month.popup.calendar.outsideMonthTextColorHex, \.themeOutsideMonthColorHex),
+      (\.builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex, \.themeTransparentColorHex),
       (\.builtinCalendar.month.popup.calendar.todayCellBorderColorHex, \.themeDangerColorHex),
       (\.builtinCalendar.month.popup.calendar.indicatorColorHex, \.themeAccentSoftColorHex),
       (\.builtinCalendar.month.popup.selection.selectedTextColorHex, \.themeSelectionTextColorHex),
       (\.builtinCalendar.month.popup.selection.selectedBackgroundColorHex, \.themeSelectionBackgroundColorHex),
       (\.builtinCalendar.month.popup.todayButton.borderColorHex, \.themeTodayButtonBorderColorHex),
     ])
-
-    builtinCalendar.month.popup.calendar.todayCellBackgroundColorHex = ""
 
     applyOptionalThemeColorDefaults([
       (\.builtinCalendar.month.popup.anchor.textColorHex, \.themeTextColorHex)

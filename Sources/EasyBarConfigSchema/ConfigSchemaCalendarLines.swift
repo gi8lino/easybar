@@ -752,7 +752,7 @@ extension ConfigSchemaRegistry {
     ),
     entry(
       key: "today_cell_background_color",
-      value: "\"\"",
+      value: "\"theme.transparent\"",
       description: "Background color of today's day cell when it is not selected.",
     ),
     entry(

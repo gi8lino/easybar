@@ -139,7 +139,7 @@ extension CalendarBuiltinConfig {
           resolvedWeekdaySymbols: resolveMonthWeekdaySymbols(format: "dd", manualSymbols: nil),
           dayTextColorHex: "#d0d0d0",
           outsideMonthTextColorHex: "#6e738d",
-          todayCellBackgroundColorHex: "",
+          todayCellBackgroundColorHex: "#00000000",
           todayCellBorderColorHex: "#FF0000",
           todayCellBorderWidth: 1.4,
           indicatorColorHex: "#8bd5ca"

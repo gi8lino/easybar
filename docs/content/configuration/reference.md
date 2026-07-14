@@ -634,7 +634,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `weekday_format`              | `"dd"`                   | Weekday label format: d \| dd \| ddd. dddd is not allowed.                 |
 | `day_text_color`              | `"theme.text_secondary"` | Text color of days in the current month.                                   |
 | `outside_month_text_color`    | `"theme.outside_month"`  | Text color of leading and trailing days outside the current month.         |
-| `today_cell_background_color` | `""`                     | Background color of today's day cell when it is not selected.              |
+| `today_cell_background_color` | `"theme.transparent"`    | Background color of today's day cell when it is not selected.              |
 | `today_cell_border_color`     | `"theme.danger"`         | Border color of today's day cell when it is not selected.                  |
 | `today_cell_border_width`     | `1.4`                    | Border width of today's day cell when it is not selected.                  |
 | `indicator_color`             | `"theme.accent_soft"`    | Default color of day event indicators when an event has no calendar color. |
