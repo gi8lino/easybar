@@ -28,10 +28,13 @@ if [ -z "${tag}" ]; then
 fi
 
 cask_dir="${tap_dir}/Casks"
+formula_dir="${tap_dir}/Formula"
 easybar_cask_file="${cask_dir}/easybar.rb"
+calendar_agent_formula_file="${formula_dir}/easybar-calendar-agent.rb"
+network_agent_formula_file="${formula_dir}/easybar-network-agent.rb"
 asset_url="https://github.com/${repository}/releases/download/${tag}/EasyBar-${version}.zip"
 
-mkdir -p "${cask_dir}"
+mkdir -p "${cask_dir}" "${formula_dir}"
 
 cat >"${easybar_cask_file}" <<EOF_CASK
 cask "easybar" do
@@ -43,11 +46,23 @@ cask "easybar" do
   desc "Scriptable macOS status bar with SwiftUI and Lua widgets"
   homepage "https://github.com/${repository}"
 
+  depends_on formula: [
+    "easybar-calendar-agent",
+    "easybar-network-agent",
+    "lua",
+  ]
   depends_on macos: :sonoma
 
   postflight do
-    system "xattr -d com.apple.quarantine #{staged_path}/easybar"
-    system "xattr -dr com.apple.quarantine #{appdir}/EasyBar.app"
+    system "xattr", "-d", "com.apple.quarantine", "#{staged_path}/easybar"
+    system "xattr", "-dr", "com.apple.quarantine", "#{appdir}/EasyBar.app"
+    system "#{HOMEBREW_PREFIX}/bin/brew", "services", "restart", "easybar-calendar-agent"
+    system "#{HOMEBREW_PREFIX}/bin/brew", "services", "restart", "easybar-network-agent"
+  end
+
+  uninstall_preflight do
+    system "#{HOMEBREW_PREFIX}/bin/brew", "services", "stop", "easybar-calendar-agent"
+    system "#{HOMEBREW_PREFIX}/bin/brew", "services", "stop", "easybar-network-agent"
   end
 
   app "EasyBar.app"
@@ -60,8 +75,59 @@ cask "easybar" do
 end
 EOF_CASK
 
-# Remove formulas made obsolete by the self-contained EasyBar cask.
-rm -f \
-  "${tap_dir}/Formula/easybar.rb" \
-  "${tap_dir}/Formula/easybar-calendar-agent.rb" \
-  "${tap_dir}/Formula/easybar-network-agent.rb"
+write_agent_formula() {
+  local file="$1"
+  local class_name="$2"
+  local description="$3"
+  local app_name="$4"
+  local log_name="$5"
+
+  cat >"$file" <<EOF_FORMULA
+class ${class_name} < Formula
+  desc "${description}"
+  homepage "https://github.com/${repository}"
+  url "${asset_url}"
+  sha256 "${sha}"
+  license "Apache-2.0"
+  version "${version}"
+
+  depends_on macos: :sonoma
+
+  def install
+    libexec.install "${app_name}.app"
+    system "xattr", "-dr", "com.apple.quarantine", libexec/"${app_name}.app"
+    (var/"log/easybar").mkpath
+  end
+
+  service do
+    run [opt_libexec/"${app_name}.app/Contents/MacOS/${app_name}"]
+    environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
+    keep_alive true
+    process_type :interactive
+    working_dir HOMEBREW_PREFIX
+    log_path var/"log/easybar/${log_name}.out.log"
+    error_log_path var/"log/easybar/${log_name}.err.log"
+  end
+
+  test do
+    assert_predicate libexec/"${app_name}.app", :exist?
+  end
+end
+EOF_FORMULA
+}
+
+write_agent_formula \
+  "${calendar_agent_formula_file}" \
+  "EasybarCalendarAgent" \
+  "Calendar EventKit helper service for EasyBar" \
+  "EasyBarCalendarAgent" \
+  "calendar-agent"
+
+write_agent_formula \
+  "${network_agent_formula_file}" \
+  "EasybarNetworkAgent" \
+  "Wi-Fi and network helper service for EasyBar" \
+  "EasyBarNetworkAgent" \
+  "network-agent"
+
+rm -f "${formula_dir}/easybar.rb"

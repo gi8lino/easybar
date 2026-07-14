@@ -64,12 +64,12 @@ The agent socket paths are derived from `app.runtime_dir` unless their individua
 
 If an agent is disabled in config, the helper app exits immediately without opening its socket.
 
-## Supervision
+## Service lifecycle
 
-The self-contained `EasyBar.app` launches enabled nested agents and restarts them when they exit unexpectedly. Launching the app also starts its configured helpers:
+Homebrew installs each agent as a separate formula dependency of the EasyBar cask. The cask starts both keep-alive services during installation:
 
 ```bash
-open -a EasyBar
+brew services list | grep easybar
 ```
 
-EasyBar connects to its supervised helpers over Unix sockets.
+EasyBar connects to these independently managed services over Unix sockets. If an enabled agent exits after a restart request or an unexpected failure, Homebrew Services relaunches it.

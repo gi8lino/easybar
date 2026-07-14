@@ -33,8 +33,8 @@ app_exec="EasyBar"
 calendar_agent_exec="EasyBarCalendarAgent"
 network_agent_exec="EasyBarNetworkAgent"
 app_bundle="$dist_dir/EasyBar.app"
-calendar_agent_bundle="$app_bundle/Contents/Library/LoginItems/EasyBarCalendarAgent.app"
-network_agent_bundle="$app_bundle/Contents/Library/LoginItems/EasyBarNetworkAgent.app"
+calendar_agent_bundle="$dist_dir/EasyBarCalendarAgent.app"
+network_agent_bundle="$dist_dir/EasyBarNetworkAgent.app"
 
 pkill -x "$app_exec" >/dev/null 2>&1 || true
 pkill -x "$calendar_agent_exec" >/dev/null 2>&1 || true

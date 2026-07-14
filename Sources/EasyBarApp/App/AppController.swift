@@ -17,8 +17,6 @@ final class AppController {
   private let startupDiagnostics: AppStartupDiagnostics
   /// Installs the generated Lua editor stub for widget authoring.
   private let widgetEditorStubInstaller: WidgetEditorStubInstaller
-  /// Supervises helper apps nested inside a packaged EasyBar.app.
-  private lazy var agentProcessSupervisor = AgentProcessSupervisor(logger: logger.child("agents"))
   /// Converts process signals into graceful termination requests.
   private lazy var signalHandler = AppSignalHandler(logger: logger.child("signals")) {
     [weak self] in
@@ -115,11 +113,6 @@ final class AppController {
     signalHandler.start()
     logger.debug("signal handler started")
 
-    agentProcessSupervisor.start(
-      calendarEnabled: services.configSnapshotStore.snapshot.calendarAgent.enabled,
-      networkEnabled: services.configSnapshotStore.snapshot.networkAgent.enabled
-    )
-
     barRuntimeState = .transitioning
     Task {
       await runtimeCoordinator.start()
@@ -184,10 +177,6 @@ final class AppController {
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
     menuBarController?.setVisible(services.configSnapshotStore.snapshot.app.showMenuBarIcon)
-    agentProcessSupervisor.update(
-      calendarEnabled: services.configSnapshotStore.snapshot.calendarAgent.enabled,
-      networkEnabled: services.configSnapshotStore.snapshot.networkAgent.enabled
-    )
     updateConfigErrorWindow()
   }
 
@@ -406,8 +395,6 @@ final class AppController {
 
     logger.info("easybar shutting down")
     signalHandler.stop()
-    agentProcessSupervisor.stop()
-
     let pendingBarLifecycleTask = barLifecycleTask
     let shutdownTask = Task { [runtimeCoordinator] in
       await pendingBarLifecycleTask?.value

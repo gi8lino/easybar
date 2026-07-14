@@ -94,7 +94,7 @@ jobs:
             "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \
             --generate-notes
 
-      - name: Trigger Homebrew cask update workflow
+      - name: Trigger Homebrew package update workflow
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -102,4 +102,3 @@ jobs:
           gh workflow run update-homebrew-cask.yml \
             -f tag="${{ steps.version.outputs.tag }}" \
             -f version="${{ steps.version.outputs.version }}"
-

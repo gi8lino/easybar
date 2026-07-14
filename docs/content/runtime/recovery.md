@@ -2,7 +2,7 @@
 
 Use this page when EasyBar is stuck, stale, or behaving unexpectedly.
 
-For responsive helper agents, prefer `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`. The self-contained app relaunches each nested helper after it acknowledges the request and exits. If its socket is unresponsive, restart the main EasyBar application instead.
+For responsive helper agents, prefer `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`. Homebrew Services relaunches each helper after it acknowledges the request and exits. If a socket is unresponsive, restart its service with `brew services restart easybar-calendar-agent` or `brew services restart easybar-network-agent`.
 
 For detailed helper-agent process checks, socket probes, permission debugging, and raw agent output inspection, see [Debugging Agents](../internals/agents/debugging.md).
 

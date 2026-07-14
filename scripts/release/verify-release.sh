@@ -54,8 +54,8 @@ app_themes_dir="$app_resources/Themes"
 app_bin="$app_contents/MacOS/EasyBar"
 plist="$app_contents/Info.plist"
 app_icon_icns="$app_resources/EasyBar.icns"
-calendar_icon_icns="$app_contents/Library/LoginItems/EasyBarCalendarAgent.app/Contents/Resources/EasyBarCalendarAgent.icns"
-network_icon_icns="$app_contents/Library/LoginItems/EasyBarNetworkAgent.app/Contents/Resources/EasyBarNetworkAgent.icns"
+calendar_icon_icns="$dist_dir/EasyBarCalendarAgent.app/Contents/Resources/EasyBarCalendarAgent.icns"
+network_icon_icns="$dist_dir/EasyBarNetworkAgent.app/Contents/Resources/EasyBarNetworkAgent.icns"
 package_zip="$dist_dir/EasyBar-$version.zip"
 
 require_file() {

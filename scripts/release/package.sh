@@ -40,6 +40,8 @@ done
 package_stage="$dist_dir/package"
 package_zip="$dist_dir/EasyBar-$version.zip"
 app_bundle="$dist_dir/EasyBar.app"
+calendar_agent_bundle="$dist_dir/EasyBarCalendarAgent.app"
+network_agent_bundle="$dist_dir/EasyBarNetworkAgent.app"
 cli_bin="$dist_dir/easybar"
 
 require_path() {
@@ -53,6 +55,8 @@ require_path() {
 }
 
 require_path "$app_bundle" "app bundle"
+require_path "$calendar_agent_bundle" "calendar agent bundle"
+require_path "$network_agent_bundle" "network agent bundle"
 require_path "$cli_bin" "CLI binary"
 
 package_dir=$(dirname "$package_zip")
@@ -64,12 +68,16 @@ rm -rf "$package_stage" "$package_zip"
 mkdir -p "$package_stage"
 
 cp -R "$app_bundle" "$package_stage/EasyBar.app"
+cp -R "$calendar_agent_bundle" "$package_stage/EasyBarCalendarAgent.app"
+cp -R "$network_agent_bundle" "$package_stage/EasyBarNetworkAgent.app"
 cp "$cli_bin" "$package_stage/easybar"
 
 (
   cd "$package_stage"
   zip -qry "$package_zip" \
     "EasyBar.app" \
+    "EasyBarCalendarAgent.app" \
+    "EasyBarNetworkAgent.app" \
     "easybar"
 )
 

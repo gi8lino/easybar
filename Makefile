@@ -21,7 +21,6 @@ APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
 APP_CONTENTS := $(APP_BUNDLE)/Contents
 APP_MACOS := $(APP_CONTENTS)/MacOS
 APP_RESOURCES := $(APP_CONTENTS)/Resources
-APP_LOGIN_ITEMS := $(APP_CONTENTS)/Library/LoginItems
 APP_RESOURCE_DIR := $(APP_RESOURCES)/$(APP_RESOURCE_DIR_NAME)
 APP_THEMES_DIR := $(APP_RESOURCES)/Themes
 APP_BIN := $(APP_MACOS)/$(APP_EXEC)
@@ -32,7 +31,7 @@ APP_ICON_FILE := $(APP_NAME)
 APP_ICON_ICNS := $(APP_RESOURCES)/$(APP_ICON_FILE).icns
 ICON_FONT ?= /System/Library/Fonts/Supplemental/Arial.ttf
 
-CALENDAR_AGENT_BUNDLE := $(APP_LOGIN_ITEMS)/$(CALENDAR_AGENT_NAME).app
+CALENDAR_AGENT_BUNDLE := $(DIST_DIR)/$(CALENDAR_AGENT_NAME).app
 CALENDAR_AGENT_CONTENTS := $(CALENDAR_AGENT_BUNDLE)/Contents
 CALENDAR_AGENT_MACOS := $(CALENDAR_AGENT_CONTENTS)/MacOS
 CALENDAR_AGENT_RESOURCES := $(CALENDAR_AGENT_CONTENTS)/Resources
@@ -43,7 +42,7 @@ CALENDAR_AGENT_ICON_SVG := packaging/easybar-calendar-agent-icon.svg
 CALENDAR_AGENT_ICON_FILE := $(CALENDAR_AGENT_NAME)
 CALENDAR_AGENT_ICON_ICNS := $(CALENDAR_AGENT_RESOURCES)/$(CALENDAR_AGENT_ICON_FILE).icns
 
-NETWORK_AGENT_BUNDLE := $(APP_LOGIN_ITEMS)/$(NETWORK_AGENT_NAME).app
+NETWORK_AGENT_BUNDLE := $(DIST_DIR)/$(NETWORK_AGENT_NAME).app
 NETWORK_AGENT_CONTENTS := $(NETWORK_AGENT_BUNDLE)/Contents
 NETWORK_AGENT_MACOS := $(NETWORK_AGENT_CONTENTS)/MacOS
 NETWORK_AGENT_RESOURCES := $(NETWORK_AGENT_CONTENTS)/Resources
@@ -199,7 +198,7 @@ lint: ## Lint Swift source formatting without modifying files.
 test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
-bundle: prepare-version ## Build the .app bundle and CLI into dist/.
+bundle: prepare-version ## Build the app, agent bundles, and CLI into dist/.
 	@scripts/build/bundle.sh \
 		--arch "$(ARCH)" \
 		--version "$(VERSION)" \
@@ -417,7 +416,6 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
 
 
 

@@ -42,7 +42,7 @@ If you are changing EasyBar itself, start with [Internals](internals/overview.md
 - AeroSpace integration for spaces, focused app state, and layout mode state
 - Event-driven updates and interactive popups
 - Calendar and network helper agents for permission-sensitive data
-- Homebrew cask installation into `/Applications`
+- Homebrew cask installation into `/Applications` with separate permission-agent services
 - Logging and startup diagnostics for troubleshooting
 - Lightweight runtime metrics
 

@@ -28,7 +28,9 @@ Helper agents are separate processes because they own permission-sensitive APIs:
 The agents collect and normalize data.
 EasyBar consumes that data and renders UI from it.
 
-The packaged agents are nested inside `EasyBar.app/Contents/Library/LoginItems`. The main app launches enabled agents, monitors them, and relaunches them after crashes or acknowledged restart requests.
+The release archive contains standalone agent application bundles. Homebrew installs each agent through its own formula and runs it as a keep-alive service. The main app only communicates with agents over Unix sockets; it does not own their processes.
+
+When an agent acknowledges a socket restart request and exits, Homebrew Services relaunches it. Keeping the agents outside `EasyBar.app` also gives macOS stable, independent identities for Calendar and Location permissions.
 
 ## Lua runtime process
 

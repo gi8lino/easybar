@@ -13,7 +13,7 @@ brew tap gi8lino/tap
 brew install --cask gi8lino/tap/easybar
 ```
 
-The self-contained app includes both helper agents and supervises them itself.
+The cask installs the main app and CLI, plus separately managed calendar and network agent formulae. It starts both agent services automatically.
 
 ## 2. Start EasyBar
 
@@ -23,7 +23,7 @@ Open the app from Finder, Spotlight, or the command line:
 open -a EasyBar
 ```
 
-The agents provide permission-sensitive calendar and network data. EasyBar can still start when an agent has no permission, but the related widget may show empty or denied data until macOS permissions are granted.
+The agents provide permission-sensitive calendar and network data. macOS asks for Calendar and Location permissions on behalf of the corresponding agent. EasyBar can still start when an agent has no permission, but the related widget may show empty or denied data until access is granted.
 
 EasyBar also shows a controller icon in the macOS menu bar. Use it to stop or restart the bar, reload configuration, restart helper agents, and open EasyBar directories. The icon remains available if you stop only the bar runtime.
 

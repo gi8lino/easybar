@@ -41,15 +41,34 @@ assert_contains "${easybar_cask}" 'cask "easybar" do'
 assert_contains "${easybar_cask}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBar-${version}.zip\""
 assert_contains "${easybar_cask}" "sha256 \"${sha}\""
 assert_contains "${easybar_cask}" "version \"${version}\""
+assert_contains "${easybar_cask}" '"easybar-calendar-agent",'
+assert_contains "${easybar_cask}" '"easybar-network-agent",'
 assert_contains "${easybar_cask}" 'depends_on macos: :sonoma'
-assert_contains "${easybar_cask}" 'system "xattr -d com.apple.quarantine #{staged_path}/easybar"'
-assert_contains "${easybar_cask}" 'system "xattr -dr com.apple.quarantine #{appdir}/EasyBar.app"'
+assert_contains "${easybar_cask}" 'system "xattr", "-d", "com.apple.quarantine", "#{staged_path}/easybar"'
+assert_contains "${easybar_cask}" 'system "xattr", "-dr", "com.apple.quarantine", "#{appdir}/EasyBar.app"'
+assert_contains "${easybar_cask}" '"services", "restart", "easybar-calendar-agent"'
+assert_contains "${easybar_cask}" '"services", "restart", "easybar-network-agent"'
+assert_contains "${easybar_cask}" '"services", "stop", "easybar-calendar-agent"'
+assert_contains "${easybar_cask}" '"services", "stop", "easybar-network-agent"'
 assert_contains "${easybar_cask}" 'app "EasyBar.app"'
 assert_contains "${easybar_cask}" 'binary "easybar"'
 
 test ! -e "${tap_dir}/Formula/easybar.rb"
-test ! -e "${tap_dir}/Formula/easybar-calendar-agent.rb"
-test ! -e "${tap_dir}/Formula/easybar-network-agent.rb"
+
+calendar_formula="${tap_dir}/Formula/easybar-calendar-agent.rb"
+network_formula="${tap_dir}/Formula/easybar-network-agent.rb"
+test -s "${calendar_formula}"
+test -s "${network_formula}"
+assert_contains "${calendar_formula}" 'class EasybarCalendarAgent < Formula'
+assert_contains "${calendar_formula}" 'libexec.install "EasyBarCalendarAgent.app"'
+assert_contains "${calendar_formula}" 'process_type :interactive'
+assert_contains "${network_formula}" 'class EasybarNetworkAgent < Formula'
+assert_contains "${network_formula}" 'libexec.install "EasyBarNetworkAgent.app"'
+assert_contains "${network_formula}" 'process_type :interactive'
+
+ruby -c "${easybar_cask}" >/dev/null
+ruby -c "${calendar_formula}" >/dev/null
+ruby -c "${network_formula}" >/dev/null
 
 "${repo_root}/scripts/release/commit-homebrew-cask.sh" \
   --tap-dir "${tap_dir}" \
@@ -61,7 +80,7 @@ if git -C "${tap_dir}" diff --cached --quiet; then
   exit 1
 fi
 
-# The commit helper must also work on subsequent releases after the old formulas are gone.
+# The commit helper must also work on subsequent split-distribution releases.
 git -C "${tap_dir}" -c user.name=test -c user.email=test@example.com commit -qm "migrate to cask"
 "${repo_root}/scripts/release/update-homebrew-cask.sh" \
   --tap-dir "${tap_dir}" \

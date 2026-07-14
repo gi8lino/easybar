@@ -16,25 +16,22 @@ Install EasyBar:
 brew install --cask gi8lino/tap/easybar
 ```
 
-The cask installs `EasyBar.app` into `/Applications` and links the `easybar` CLI into Homebrew's executable path. The self-contained app includes and supervises the calendar and network helper agents.
+The cask installs `EasyBar.app` into `/Applications`, links the `easybar` CLI into Homebrew's executable path, and installs the calendar and network agents as formula dependencies. Installation starts both agent services automatically.
+
+The agents remain separate applications so macOS can assign Calendar and Location permissions to the processes that use them. Homebrew Services keeps them running independently of the main app.
 
 EasyBar can start without a custom config file. Create `~/.config/easybar/config.toml` only when you want to customize the defaults.
 
-### Migrating from the old formulas
+### Upgrading from the self-contained app
 
-If you previously installed EasyBar and its agents as formulas, stop their services and remove them before installing the cask. This avoids duplicate processes and a conflict with the old `easybar` CLI link:
+No manual migration is required. A normal upgrade installs the agent formulae and starts their services:
 
 ```bash
-brew services stop gi8lino/tap/easybar
-brew services stop gi8lino/tap/easybar-calendar-agent
-brew services stop gi8lino/tap/easybar-network-agent
-brew uninstall --formula gi8lino/tap/easybar
-brew uninstall --formula gi8lino/tap/easybar-calendar-agent
-brew uninstall --formula gi8lino/tap/easybar-network-agent
-brew install --cask gi8lino/tap/easybar
+brew update
+brew upgrade --cask gi8lino/tap/easybar
 ```
 
-This does not remove your configuration or runtime logs.
+Quit and reopen EasyBar after upgrading if the previous version is still running.
 
 ## Launch EasyBar
 
@@ -58,6 +55,12 @@ Check running processes:
 pgrep -fl EasyBar
 pgrep -fl EasyBarCalendarAgent
 pgrep -fl EasyBarNetworkAgent
+```
+
+Check the independently managed agent services:
+
+```bash
+brew services list | grep easybar
 ```
 
 Trigger one refresh through the CLI:

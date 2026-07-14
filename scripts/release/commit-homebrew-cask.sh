@@ -23,12 +23,12 @@ cd "${tap_dir}"
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-git add -A -- Casks/easybar.rb
-
-for obsolete_formula in \
-  Formula/easybar.rb \
+git add -A -- \
+  Casks/easybar.rb \
   Formula/easybar-calendar-agent.rb \
-  Formula/easybar-network-agent.rb; do
+  Formula/easybar-network-agent.rb
+
+for obsolete_formula in Formula/easybar.rb; do
   if [ -e "${obsolete_formula}" ] || git ls-files --error-unmatch "${obsolete_formula}" >/dev/null 2>&1; then
     git add -A -- "${obsolete_formula}"
   fi

@@ -122,8 +122,7 @@ app_plist="$app_contents/Info.plist"
 app_icon_file="$app_name"
 app_icon_icns="$app_resources/${app_icon_file}.icns"
 
-login_items="$app_contents/Library/LoginItems"
-calendar_agent_bundle="$login_items/${calendar_agent_name}.app"
+calendar_agent_bundle="$dist_dir/${calendar_agent_name}.app"
 calendar_agent_contents="$calendar_agent_bundle/Contents"
 calendar_agent_macos="$calendar_agent_contents/MacOS"
 calendar_agent_resources="$calendar_agent_contents/Resources"
@@ -132,7 +131,7 @@ calendar_agent_plist="$calendar_agent_contents/Info.plist"
 calendar_agent_icon_file="$calendar_agent_name"
 calendar_agent_icon_icns="$calendar_agent_resources/${calendar_agent_icon_file}.icns"
 
-network_agent_bundle="$login_items/${network_agent_name}.app"
+network_agent_bundle="$dist_dir/${network_agent_name}.app"
 network_agent_contents="$network_agent_bundle/Contents"
 network_agent_macos="$network_agent_contents/MacOS"
 network_agent_resources="$network_agent_contents/Resources"
@@ -147,7 +146,6 @@ notary_zip="$dist_dir/${app_name}-notarize.zip"
 mkdir -p \
   "$app_macos" \
   "$app_resources" \
-  "$login_items" \
   "$calendar_agent_macos" \
   "$calendar_agent_resources" \
   "$network_agent_macos" \

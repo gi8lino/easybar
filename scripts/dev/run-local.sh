@@ -90,13 +90,12 @@ app_bin="$app_macos/$app_name"
 lua_runtime_bin="$app_macos/$lua_runtime_product"
 app_plist="$app_contents/Info.plist"
 
-login_items="$app_contents/Library/LoginItems"
-calendar_agent_bundle="$login_items/${calendar_agent_name}.app"
+calendar_agent_bundle="$dist_dir/${calendar_agent_name}.app"
 calendar_agent_macos="$calendar_agent_bundle/Contents/MacOS"
 calendar_agent_bin="$calendar_agent_macos/$calendar_agent_name"
 calendar_agent_plist="$calendar_agent_bundle/Contents/Info.plist"
 
-network_agent_bundle="$login_items/${network_agent_name}.app"
+network_agent_bundle="$dist_dir/${network_agent_name}.app"
 network_agent_macos="$network_agent_bundle/Contents/MacOS"
 network_agent_bin="$network_agent_macos/$network_agent_name"
 network_agent_plist="$network_agent_bundle/Contents/Info.plist"
@@ -134,10 +133,26 @@ scripts/build/stamp.py plist \
   --executable "$app_name" \
   --name "$app_name" \
   --icon-file "$app_name"
+scripts/build/stamp.py plist \
+  --plist "$calendar_agent_plist" \
+  --version "$version" \
+  --executable "$calendar_agent_name" \
+  --name "$calendar_agent_name" \
+  --icon-file "$calendar_agent_name"
+scripts/build/stamp.py plist \
+  --plist "$network_agent_plist" \
+  --version "$version" \
+  --executable "$network_agent_name" \
+  --name "$network_agent_name" \
+  --icon-file "$network_agent_name"
 touch "$app_bundle"
 
 echo "Stopping existing EasyBar services and local processes"
 scripts/dev/stop-local.sh --dist-dir "$dist_dir"
+
+echo "Launching standalone debug agents"
+open -g "$calendar_agent_bundle"
+open -g "$network_agent_bundle"
 
 echo "Launching $app_bin with EASYBAR_LOG_LEVEL=$log_level"
 echo "App logs follow stdout/stderr and configured logging.directory"

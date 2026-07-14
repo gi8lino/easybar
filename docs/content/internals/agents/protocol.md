@@ -102,7 +102,7 @@ The full restart sequence is:
 4. The service supervisor starts a fresh agent process.
 5. EasyBar reconnects when the agent socket becomes available again.
 
-The packaged `EasyBar.app` supervises its nested agents and relaunches them after the acknowledged exit. Legacy Homebrew-service installations use `launchd` with `keep_alive` for the same behavior. A manually launched standalone agent has no supervisor and therefore stays stopped after it exits.
+Homebrew Services runs the separately installed agents through `launchd` with `keep_alive`, so an acknowledged exit leads to a fresh process. A manually launched standalone agent has no supervisor and therefore stays stopped after it exits.
 
 Restart is available only while the agent socket is responsive. If the agent has already crashed or cannot answer requests, its service supervisor remains responsible for recovery.
 

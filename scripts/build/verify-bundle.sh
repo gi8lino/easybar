@@ -69,8 +69,7 @@ plist="$app_contents/Info.plist"
 app_icon_file="$app_name"
 app_icon_icns="$app_resources/${app_icon_file}.icns"
 
-login_items="$app_contents/Library/LoginItems"
-calendar_agent_bundle="$login_items/${calendar_agent_name}.app"
+calendar_agent_bundle="$dist_dir/${calendar_agent_name}.app"
 calendar_agent_contents="$calendar_agent_bundle/Contents"
 calendar_agent_macos="$calendar_agent_contents/MacOS"
 calendar_agent_resources="$calendar_agent_contents/Resources"
@@ -79,7 +78,7 @@ calendar_plist="$calendar_agent_contents/Info.plist"
 calendar_icon_file="$calendar_agent_name"
 calendar_icon_icns="$calendar_agent_resources/${calendar_icon_file}.icns"
 
-network_agent_bundle="$login_items/${network_agent_name}.app"
+network_agent_bundle="$dist_dir/${network_agent_name}.app"
 network_agent_contents="$network_agent_bundle/Contents"
 network_agent_macos="$network_agent_contents/MacOS"
 network_agent_resources="$network_agent_contents/Resources"
@@ -131,7 +130,10 @@ require_dir "$app_themes_dir" "themes directory"
 require_file "$app_icon_icns" "app icon"
 require_file "$calendar_icon_icns" "calendar agent icon"
 require_file "$network_icon_icns" "network agent icon"
-require_dir "$login_items" "nested helper app directory"
+if [ -e "$app_contents/Library/LoginItems" ]; then
+  echo "Unexpected nested helper app directory: $app_contents/Library/LoginItems" >&2
+  exit 1
+fi
 
 test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$plist")" = "$app_icon_file"
 test "$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIconFile' "$calendar_plist")" = "$calendar_icon_file"
