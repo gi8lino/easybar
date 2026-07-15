@@ -91,3 +91,22 @@ enum EventStateInvalidation: CaseIterable {
     }
   }
 }
+
+/// Replayable event definitions in stable invalidation order.
+enum EventReplayCatalog {
+  static let orderedInvalidations = EventStateInvalidation.allCases
+  static let orderedEventNames = orderedInvalidations.map(\.eventName)
+
+  static func isReplayable(_ eventName: String) -> Bool {
+    orderedEventNames.contains(eventName)
+  }
+
+  static func payloads(for eventNames: Set<String>) async -> [EasyBarEventPayload] {
+    var payloads: [EasyBarEventPayload] = []
+    for invalidation in orderedInvalidations where eventNames.contains(invalidation.eventName) {
+      guard let payload = await invalidation.currentPayload() else { continue }
+      payloads.append(payload)
+    }
+    return payloads
+  }
+}

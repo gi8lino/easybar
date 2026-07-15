@@ -1,5 +1,14 @@
 import Foundation
 
+enum SliderWidthResolver {
+  static func resolve(explicitWidth: CGFloat?, fallback: CGFloat) -> CGFloat {
+    if let explicitWidth, explicitWidth.isFinite, explicitWidth > 0 {
+      return explicitWidth
+    }
+    return fallback.isFinite && fallback > 0 ? fallback : 1
+  }
+}
+
 /// Normalizes widget-provided slider bounds before they reach SwiftUI controls.
 struct SliderValueRange: Equatable {
   static let minimumSpan = 0.0001

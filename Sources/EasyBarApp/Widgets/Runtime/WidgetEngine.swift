@@ -1,6 +1,21 @@
 import EasyBarShared
 import Foundation
 
+private struct WidgetRuntimeState {
+  var requiredEvents = Set<String>()
+  var isReady = false
+  var hasSubscriptions = false
+  var didEmitInitialEvents = false
+
+  var canEmitInitialEvents: Bool {
+    isReady && hasSubscriptions && !didEmitInitialEvents
+  }
+
+  mutating func reset() {
+    self = WidgetRuntimeState()
+  }
+}
+
 /// Actor-owned scripted widget runtime.
 ///
 /// This actor owns the Lua handshake state, subscriptions, and tree updates.

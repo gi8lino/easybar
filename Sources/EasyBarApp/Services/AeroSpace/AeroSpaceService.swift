@@ -2,6 +2,24 @@ import AppKit
 import EasyBarShared
 import Foundation
 
+struct AeroSpaceRefreshToken: Equatable, Sendable {
+  let generation: UInt64
+  let requestID: UInt64
+}
+
+struct AeroSpaceRefreshSequence: Sendable {
+  private var latestRequestID: UInt64 = 0
+
+  mutating func issue(generation: UInt64) -> AeroSpaceRefreshToken {
+    latestRequestID &+= 1
+    return AeroSpaceRefreshToken(generation: generation, requestID: latestRequestID)
+  }
+
+  func isCurrent(_ token: AeroSpaceRefreshToken, generation: UInt64) -> Bool {
+    token.generation == generation && token.requestID == latestRequestID
+  }
+}
+
 /// Loads workspace and focused-app state from AeroSpace.
 ///
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
