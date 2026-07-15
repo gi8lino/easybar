@@ -16,9 +16,6 @@ enum EventStateInvalidation: CaseIterable {
   case workspaceChange
   case spaceModeChange
 
-  /// Async provider that builds the latest replay payload.
-  typealias Provider = @Sendable () async -> EasyBarEventPayload?
-
   /// Runtime event name represented by this invalidation.
   var eventName: String {
     switch self {
@@ -38,63 +35,59 @@ enum EventStateInvalidation: CaseIterable {
     }
   }
 
-  /// Provider for the latest payload of this invalidation.
-  var provider: Provider {
+  /// Builds the latest payload for this invalidation.
+  func currentPayload() async -> EasyBarEventPayload? {
     switch self {
     case .systemWake:
-      return { .app(.systemWoke) }
+      return .app(.systemWoke)
 
     case .powerSourceChange:
-      return { .app(.powerSourceChange) }
+      return .app(.powerSourceChange)
 
     case .chargingStateChange:
-      return { .app(.chargingStateChange) }
+      return .app(.chargingStateChange)
 
     case .wifiChange:
-      return {
-        let interfaceName = await MainActor.run {
-          NativeWiFiStore.shared.snapshot?.interfaceName
-        }
-
-        if let interfaceName, !interfaceName.isEmpty {
-          return .app(.wifiChange, interfaceName: interfaceName)
-        }
-
-        return .app(.wifiChange)
+      let interfaceName = await MainActor.run {
+        NativeWiFiStore.shared.snapshot?.interfaceName
       }
+
+      if let interfaceName, !interfaceName.isEmpty {
+        return .app(.wifiChange, interfaceName: interfaceName)
+      }
+
+      return .app(.wifiChange)
 
     case .networkChange:
-      return {
-        let isTunnel = await MainActor.run {
-          NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
-        }
-
-        return .app(.networkChange, primaryInterfaceIsTunnel: isTunnel)
+      let isTunnel = await MainActor.run {
+        NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
       }
 
+      return .app(.networkChange, primaryInterfaceIsTunnel: isTunnel)
+
     case .volumeChange:
-      return { .app(.volumeChange) }
+      return .app(.volumeChange)
 
     case .muteChange:
-      return { .app(.muteChange) }
+      return .app(.muteChange)
 
     case .calendarChange:
-      return { .app(.calendarChange) }
+      return .app(.calendarChange)
 
     case .minuteTick:
-      return { .app(.minuteTick) }
+      return .app(.minuteTick)
 
     case .secondTick:
-      return { .app(.secondTick) }
+      return .app(.secondTick)
 
     case .focusChange:
-      return { .app(.focusChange) }
+      return .app(.focusChange)
 
     case .workspaceChange:
-      return { .app(.workspaceChange) }
+      return .app(.workspaceChange)
 
     case .spaceModeChange:
-      return { .app(.spaceModeChange) }
+      return .app(.spaceModeChange)
     }
   }
 }

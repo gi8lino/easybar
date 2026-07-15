@@ -17,7 +17,7 @@ enum EventReplayCatalog {
     var payloads: [EasyBarEventPayload] = []
 
     for invalidation in orderedInvalidations where eventNames.contains(invalidation.eventName) {
-      guard let payload = await invalidation.provider() else { continue }
+      guard let payload = await invalidation.currentPayload() else { continue }
 
       payloads.append(payload)
     }
