@@ -301,6 +301,7 @@ final class LuaTransport: @unchecked Sendable {
           }
 
           guard let line = decodeLine(from: lineData) else { continue }
+          guard isCurrent(generation: generation) else { return }
           handleLine(line)
         }
 
@@ -319,6 +320,7 @@ final class LuaTransport: @unchecked Sendable {
 
       if count == 0 {
         if !isDroppingOversizedLine, let line = decodeLine(from: pending[...]) {
+          guard isCurrent(generation: generation) else { return }
           handleLine(line)
         }
         return

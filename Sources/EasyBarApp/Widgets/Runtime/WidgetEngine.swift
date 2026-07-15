@@ -18,7 +18,7 @@ actor WidgetEngine {
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
   private var started = false
-  private var runtimeSessionID: UInt64 = 0
+  private var runtimeSession = WidgetRuntimeSession()
 
   init(
     logger: ProcessLogger,
@@ -55,20 +55,22 @@ actor WidgetEngine {
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
 
+    let sessionID = runtimeSession.begin()
     await luaRuntime.setLineHandler { [weak self] line in
       Task {
-        await self?.handleRuntimeTransportLine(line)
+        await self?.handleRuntimeTransportLine(line, runtimeSessionID: sessionID)
       }
     }
 
     let configSnapshot = await configManager.snapshot()
 
     guard await luaRuntime.start(config: configSnapshot) else {
+      runtimeSession.invalidate()
+      await luaRuntime.setLineHandler { _ in }
       logger.warn("widget engine start failed because lua runtime did not launch")
       return false
     }
 
-    runtimeSessionID &+= 1
     started = true
 
     logger.debug("widget engine start end")
@@ -103,6 +105,7 @@ actor WidgetEngine {
     logger.debug("widget engine shutdown begin")
 
     started = false
+    runtimeSession.invalidate()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
 
@@ -117,8 +120,14 @@ actor WidgetEngine {
     logger.debug("widget engine shutdown end")
   }
 
-  func handleRuntimeTransportLine(_ line: String) async {
-    guard started else { return }
+  func handleRuntimeTransportLine(_ line: String, runtimeSessionID: UInt64) async {
+    guard runtimeSession.accepts(runtimeSessionID, whileRunning: started) else {
+      logger.debug(
+        "dropping stale lua transport line",
+        .field("runtime_session_id", runtimeSessionID)
+      )
+      return
+    }
 
     logger.trace("lua transport line received", .field("bytes", line.utf8.count))
 
@@ -171,7 +180,7 @@ actor WidgetEngine {
         isSynchronous: isSynchronous,
         timeoutSecondsOverride: timeoutSeconds,
         maxOutputBytesOverride: maxOutputBytes,
-        runtimeSessionID: runtimeSessionID,
+        runtimeSessionID: runtimeSession.id,
         isRuntimeSessionActive: { [weak self] sessionID in
           guard let self else { return false }
           return await self.isRuntimeSessionActive(sessionID)
@@ -180,13 +189,13 @@ actor WidgetEngine {
     case .commandCancel(let token):
       await commandService.cancelAsyncCommand(
         token: token,
-        runtimeSessionID: runtimeSessionID
+        runtimeSessionID: runtimeSession.id
       )
     }
   }
 
   private func isRuntimeSessionActive(_ sessionID: UInt64) -> Bool {
-    started && runtimeSessionID == sessionID
+    runtimeSession.accepts(sessionID, whileRunning: started)
   }
 
   private func handleSubscriptions(_ requiredEvents: Set<String>) async {
