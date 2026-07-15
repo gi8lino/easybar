@@ -1,4 +1,3 @@
-import CryptoKit
 import EasyBarShared
 import Foundation
 
@@ -23,10 +22,8 @@ struct WidgetEditorStubInstaller {
     do {
       let bundledData = try Data(contentsOf: bundledStub)
       let existingData = try? Data(contentsOf: installedStub)
-      let bundledHash = sha256Hex(for: bundledData)
-      let existingHash = existingData.map(sha256Hex)
 
-      guard bundledHash != existingHash else {
+      guard bundledData != existingData else {
         return
       }
 
@@ -38,8 +35,7 @@ struct WidgetEditorStubInstaller {
 
       logger.info(
         "installed widget editor stub",
-        .field("bundled_hash", bundledHash),
-        .field("previous_hash", existingHash ?? "<missing>"),
+        .field("previous_file_present", existingData != nil),
         .field("path", installedStub.path)
       )
     } catch {
@@ -47,8 +43,4 @@ struct WidgetEditorStubInstaller {
     }
   }
 
-  /// Returns the SHA-256 digest for one Lua editor stub payload.
-  private func sha256Hex(for data: Data) -> String {
-    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-  }
 }
