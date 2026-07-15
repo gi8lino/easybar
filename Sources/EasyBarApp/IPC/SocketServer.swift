@@ -253,9 +253,15 @@ final class SocketServer: @unchecked Sendable {
       return .close
     }
 
-    transport.addSubscriber(request, for: clientFD)
     SynchronousTask.run {
       await self.metricsCoordinator.addStreamingSubscriber(fd: clientFD)
+    }
+
+    guard transport.addSubscriber(request, for: clientFD) else {
+      SynchronousTask.run {
+        await self.metricsCoordinator.removeStreamingSubscriber(fd: clientFD)
+      }
+      return .close
     }
 
     return .keepOpen

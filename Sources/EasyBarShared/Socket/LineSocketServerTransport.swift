@@ -233,19 +233,21 @@ public final class LineSocketServerTransport<
   }
 
   /// Adds one subscriber for future broadcasts.
-  public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) {
+  @discardableResult
+  public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) -> Bool {
     let added = state.withLock { state -> Bool in
       guard state.running, state.clientFDs.contains(fd) else { return false }
       state.subscribers[fd] = subscriber
       return true
     }
 
-    guard added else { return }
+    guard added else { return false }
 
     logger.debug(
       "\(serverLabel) subscriber added",
       .field("fd", "\(fd)"),
     )
+    return true
   }
 
   /// Removes one subscriber and closes its socket.

@@ -206,6 +206,17 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testSubscriberRegistrationFailsAfterTransportStops() throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+
+    XCTAssertTrue(server.start { _, _ in .close })
+    server.stop()
+
+    XCTAssertFalse(server.addSubscriber((), for: 42))
+    XCTAssertTrue(server.subscribersSnapshot().isEmpty)
+  }
+
   func testServerStopWakesIdleClientReadTask() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)
