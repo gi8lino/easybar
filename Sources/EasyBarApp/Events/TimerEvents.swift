@@ -75,7 +75,7 @@ final class TimerEvents {
         tolerance: min(1, max(0.05, schedule.interval * 0.05))
       ) { [widgetID = schedule.widgetID] in
         Task {
-          await EventHub.shared.emit(.intervalTick, widgetID: widgetID)
+          await EventHub.shared.emit(.app(.intervalTick, widgetID: widgetID))
         }
       }
 

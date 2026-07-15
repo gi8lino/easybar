@@ -83,7 +83,7 @@ final class PowerEvents {
       lastChargingState = newState
 
       Task {
-        await EventHub.shared.emit(.chargingStateChange, charging: newState)
+        await EventHub.shared.emit(.app(.chargingStateChange, charging: newState))
       }
     }
   }

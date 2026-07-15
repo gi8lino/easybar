@@ -150,7 +150,7 @@ final class VolumeEvents {
 
     Task {
       await EventHub.shared.emit(.volumeChange)
-      await EventHub.shared.emit(.muteChange, muted: muted)
+      await EventHub.shared.emit(.app(.muteChange, muted: muted))
     }
   }
 
@@ -192,7 +192,7 @@ final class VolumeEvents {
         self.lastMutedState = muted
 
         Task {
-          await EventHub.shared.emit(.muteChange, muted: muted)
+          await EventHub.shared.emit(.app(.muteChange, muted: muted))
         }
       }
     }

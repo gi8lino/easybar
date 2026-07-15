@@ -117,36 +117,6 @@ actor EventHub {
     await emit(.app(event, source: source))
   }
 
-  /// Emits one app-wide event with app name context.
-  func emit(_ event: AppEvent, appName: String, source: String? = nil) async {
-    await emit(.app(event, appName: appName, source: source))
-  }
-
-  /// Emits one app-wide event scoped to one widget id.
-  func emit(_ event: AppEvent, widgetID: String, source: String? = nil) async {
-    await emit(.app(event, widgetID: widgetID, source: source))
-  }
-
-  /// Emits one app-wide event with interface name context.
-  func emit(_ event: AppEvent, interfaceName: String, source: String? = nil) async {
-    await emit(.app(event, interfaceName: interfaceName, source: source))
-  }
-
-  /// Emits one app-wide event with charging state context.
-  func emit(_ event: AppEvent, charging: Bool, source: String? = nil) async {
-    await emit(.app(event, source: source, charging: charging))
-  }
-
-  /// Emits one app-wide event with muted state context.
-  func emit(_ event: AppEvent, muted: Bool, source: String? = nil) async {
-    await emit(.app(event, source: source, muted: muted))
-  }
-
-  /// Emits one app-wide event with tunnel-state context.
-  func emit(_ event: AppEvent, primaryInterfaceIsTunnel: Bool, source: String? = nil) async {
-    await emit(.app(event, source: source, primaryInterfaceIsTunnel: primaryInterfaceIsTunnel))
-  }
-
   /// Emits one widget-scoped interaction event.
   func emitWidgetEvent(
     _ event: WidgetEvent,

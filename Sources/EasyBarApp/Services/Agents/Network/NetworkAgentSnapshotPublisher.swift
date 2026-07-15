@@ -23,9 +23,10 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
 
       Task {
         await EventHub.shared.emit(
-          .networkChange,
-          primaryInterfaceIsTunnel: false
-        )
+          .app(
+            .networkChange,
+            primaryInterfaceIsTunnel: false
+          ))
 
         if self.shouldEmitWiFiChangeAfterReset(previous: previous) {
           await EventHub.shared.emit(.wifiChange)
@@ -46,9 +47,10 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
 
       Task {
         await EventHub.shared.emit(
-          .networkChange,
-          primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
-        )
+          .app(
+            .networkChange,
+            primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
+          ))
 
         let ssidChanged = previous?.ssid != snapshot.ssid
         let interfaceChanged = previous?.interfaceName != snapshot.interfaceName
@@ -56,7 +58,7 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
         guard ssidChanged || interfaceChanged else { return }
 
         if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
-          await EventHub.shared.emit(.wifiChange, interfaceName: interfaceName)
+          await EventHub.shared.emit(.app(.wifiChange, interfaceName: interfaceName))
         } else {
           await EventHub.shared.emit(.wifiChange)
         }

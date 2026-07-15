@@ -199,7 +199,7 @@ final class SystemEvents: @unchecked Sendable {
       )
 
       Task {
-        await EventHub.shared.emit(.appSwitch, appName: appName)
+        await EventHub.shared.emit(.app(.appSwitch, appName: appName))
       }
     }
 

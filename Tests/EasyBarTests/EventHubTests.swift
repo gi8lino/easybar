@@ -83,8 +83,8 @@ final class EventHubTests: XCTestCase {
   func testReplayLatestUsesMostRecentPayloadForReplayableEvent() async {
     let hub = Self.makeHub()
 
-    await hub.emit(.networkChange, primaryInterfaceIsTunnel: false)
-    await hub.emit(.networkChange, primaryInterfaceIsTunnel: true)
+    await hub.emit(.app(.networkChange, primaryInterfaceIsTunnel: false))
+    await hub.emit(.app(.networkChange, primaryInterfaceIsTunnel: true))
 
     let stream = await hub.subscribe(
       eventNames: [AppEvent.networkChange.rawValue],
@@ -119,7 +119,7 @@ final class EventHubTests: XCTestCase {
     let hub = Self.makeHub()
 
     await hub.emit(.secondTick)
-    await hub.emit(.networkChange, primaryInterfaceIsTunnel: true)
+    await hub.emit(.app(.networkChange, primaryInterfaceIsTunnel: true))
 
     let stream = await hub.subscribe(replayLatest: true)
 
