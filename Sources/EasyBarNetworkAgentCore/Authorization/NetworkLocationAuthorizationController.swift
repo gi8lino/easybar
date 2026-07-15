@@ -7,7 +7,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   @unchecked Sendable
 {
   private let locationManager = CLLocationManager()
-  private let authState = NetworkAuthorizationState()
+  private let authorizationStatus = LockedState(CLAuthorizationStatus.notDetermined)
   private let componentName: String
   private let logger: ProcessLogger
   private let lifecycle: AuthorizationLifecycle
@@ -40,11 +40,11 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     locationManager.delegate = self
 
     let status = locationManager.authorizationStatus
-    authState.setStatus(status)
+    setAuthorizationStatus(status)
 
     logger.info(
       "\(componentName) authorization status before",
-      .field("start", "\(authState.permissionState())")
+      .field("start", permissionState())
     )
 
     requestAccessIfNeeded(for: session)
@@ -62,12 +62,25 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
   /// Returns whether location access is currently authorized.
   func isAuthorized() -> Bool {
-    return authState.isAuthorized()
+    switch currentAuthorizationStatus() {
+    case .authorized, .authorizedAlways, .authorizedWhenInUse:
+      return true
+    default:
+      return false
+    }
   }
 
   /// Returns the current permission label.
   func permissionState() -> String {
-    return authState.permissionState()
+    switch currentAuthorizationStatus() {
+    case .notDetermined: return "not_determined"
+    case .restricted: return "restricted"
+    case .denied: return "denied"
+    case .authorized: return "authorized"
+    case .authorizedAlways: return "authorized_always"
+    case .authorizedWhenInUse: return "authorized_when_in_use"
+    @unknown default: return "unknown"
+    }
   }
 
   /// Handles one location authorization change.
@@ -78,10 +91,10 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     Task { @MainActor [weak self, weak session] in
       guard let self, let session, self.lifecycle.isCurrent(session) else { return }
 
-      self.authState.setStatus(status)
+      self.setAuthorizationStatus(status)
       self.logger.info(
         "\(self.componentName) authorization changed",
-        .field("status", self.authState.permissionState())
+        .field("status", self.permissionState())
       )
       self.handleAuthorizationStateChange(status, session: session)
       self.lifecycle.notify(session)
@@ -93,11 +106,11 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     guard lifecycle.isCurrent(session) else { return }
 
     let status = locationManager.authorizationStatus
-    authState.setStatus(status)
+    setAuthorizationStatus(status)
 
     logger.info(
       "\(componentName) access status",
-      .field("status", authState.permissionState()),
+      .field("status", permissionState()),
     )
 
     switch status {
@@ -106,7 +119,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
       restoreAccessoryModeIfNeeded(for: session)
       logger.info(
         "\(componentName) access already granted",
-        .field("status", authState.permissionState())
+        .field("status", permissionState())
       )
       lifecycle.notify(session)
 
@@ -114,7 +127,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
       prepareAuthorizationPromptIfNeeded(for: session)
       logger.info(
         "requesting \(componentName) when-in-use access",
-        .field("status", authState.permissionState())
+        .field("status", permissionState())
       )
       locationManager.requestWhenInUseAuthorization()
       scheduleRetry(for: session)
@@ -124,7 +137,7 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
       restoreAccessoryModeIfNeeded(for: session)
       logger.warn(
         "\(componentName) access unavailable",
-        .field("status", authState.permissionState())
+        .field("status", permissionState())
       )
 
     @unknown default:
@@ -135,6 +148,14 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
         .field("raw", status.rawValue),
       )
     }
+  }
+
+  private func setAuthorizationStatus(_ status: CLAuthorizationStatus) {
+    authorizationStatus.withLock { $0 = status }
+  }
+
+  private func currentAuthorizationStatus() -> CLAuthorizationStatus {
+    authorizationStatus.withLock { $0 }
   }
 
   /// Updates retry scheduling for one changed authorization state.
