@@ -18,11 +18,9 @@ private enum GeneratorError: Error, CustomStringConvertible {
 }
 
 private struct CatalogEntry {
-  let section: String
   let key: String
   let value: String
   let description: String
-  let commented: Bool
 }
 
 private func write(_ text: String, to relativePath: String) throws {
@@ -42,9 +40,9 @@ private func renderDefaults() -> String {
       return ""
     case .comment(let text):
       return text
-    case .section(let name, let commented, let prefix):
+    case .section(let name, let commented, let prefix, _):
       return "\(commented ? prefix : "")[\(name)]"
-    case .entry(let key, let value, let description, let commented, let prefix):
+    case .entry(let key, let value, let description, let commented, let prefix, _):
       let suffix = description.isEmpty ? "" : " # \(description)"
       return "\(commented ? prefix : "")\(key) = \(value)\(suffix)"
     case .optionalEntry(let key, let value, let description):
@@ -56,50 +54,10 @@ private func renderDefaults() -> String {
   return lines.joined(separator: "\n") + "\n"
 }
 
-private func catalogEntries(includeCommented: Bool) -> [(section: String, entry: CatalogEntry)] {
-  var currentSection = ""
-  var entries: [(section: String, entry: CatalogEntry)] = []
-
-  for line in ConfigSchemaRegistry.lines {
-    switch line {
-    case .section(let name, _, _):
-      currentSection = name
-    case .entry(let key, let value, let description, let commented, _):
-      guard includeCommented || !commented else { continue }
-      entries.append(
-        (
-          currentSection,
-          CatalogEntry(
-            section: currentSection,
-            key: key,
-            value: value,
-            description: description,
-            commented: commented
-          )
-        ))
-    case .optionalEntry(let key, let value, let description):
-      entries.append(
-        (
-          currentSection,
-          CatalogEntry(
-            section: currentSection,
-            key: key,
-            value: value,
-            description: description,
-            commented: true
-          )
-        ))
-    case .blank, .comment:
-      continue
-    }
-  }
-
-  return entries
-}
-
-private func activeSections() -> [(name: String, entries: [CatalogEntry])] {
+private func documentedSections() -> [(name: String, entries: [CatalogEntry])] {
   var result: [(name: String, entries: [CatalogEntry])] = []
   var currentName: String?
+  var currentSectionIsDocumented = false
   var currentEntries: [CatalogEntry] = []
 
   func flush() {
@@ -110,29 +68,29 @@ private func activeSections() -> [(name: String, entries: [CatalogEntry])] {
 
   for line in ConfigSchemaRegistry.lines {
     switch line {
-    case .section(let name, let commented, _):
+    case .section(let name, _, _, let documented):
       flush()
-      currentName = commented ? nil : name
-    case .entry(let key, let value, let description, let commented, _):
-      guard let section = currentName, !commented else { continue }
+      currentName = name
+      currentSectionIsDocumented = documented
+
+    case .entry(let key, let value, let description, _, _, let documented):
+      guard currentSectionIsDocumented, documented else { continue }
       currentEntries.append(
         CatalogEntry(
-          section: section,
           key: key,
           value: value,
-          description: description,
-          commented: false
+          description: description
         ))
+
     case .optionalEntry(let key, let value, let description):
-      guard let section = currentName else { continue }
+      guard currentSectionIsDocumented else { continue }
       currentEntries.append(
         CatalogEntry(
-          section: section,
           key: key,
           value: value,
-          description: description,
-          commented: true
+          description: description
         ))
+
     case .blank, .comment:
       continue
     }
@@ -166,7 +124,7 @@ private func renderConfigDocs() -> String {
     "",
   ]
 
-  for section in activeSections() {
+  for section in documentedSections() {
     lines.append("## `\(section.name)`")
     lines.append("")
     lines.append("| Key | Default | Description |")

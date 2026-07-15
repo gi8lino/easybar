@@ -61,10 +61,10 @@ extension ConfigSchemaRegistry {
 
     for line in lines {
       switch line {
-      case .section(let name, _, _):
+      case .section(let name, _, _, _):
         currentSection = name
         addSection(name)
-      case .entry(let key, _, _, _, _), .optionalEntry(let key, _, _):
+      case .entry(let key, _, _, _, _, _), .optionalEntry(let key, _, _):
         addKey(section: currentSection, key: key)
       case .blank, .comment:
         continue

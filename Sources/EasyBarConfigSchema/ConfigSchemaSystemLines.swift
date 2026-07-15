@@ -18,19 +18,14 @@ extension ConfigSchemaRegistry {
     ),
     .blank,
     .comment("# Example native group configuration. This is disabled by default."),
-    entry(
-      key: "Uncomment this block and the `group",
-      value: "\"system\"` lines below if you want",
-      description: "",
-      commented: true,
-      prefix: "# ",
-    ),
+    .comment("# Uncomment this block and the `group = \"system\"` lines below if you want"),
     .comment("# battery and Wi-Fi to be rendered inside one shared native container."),
     .blank,
     section(
       name: "builtins.groups.system",
       commented: true,
       prefix: "#",
+      documented: false,
     ),
     entry(
       key: "position",
@@ -51,6 +46,7 @@ extension ConfigSchemaRegistry {
       name: "builtins.groups.system.style",
       commented: true,
       prefix: "#",
+      documented: false,
     ),
     entry(
       key: "background_color",

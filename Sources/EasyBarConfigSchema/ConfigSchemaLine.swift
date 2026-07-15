@@ -9,17 +9,30 @@ extension ConfigSchemaRegistry {
   public enum Line: Sendable {
     case blank
     case comment(String)
-    case section(name: String, commented: Bool, prefix: String)
-    case entry(key: String, value: String, description: String, commented: Bool, prefix: String)
+    case section(name: String, commented: Bool, prefix: String, documented: Bool)
+    case entry(
+      key: String,
+      value: String,
+      description: String,
+      commented: Bool,
+      prefix: String,
+      documented: Bool
+    )
     case optionalEntry(key: String, value: String, description: String)
   }
 
   static func section(
     name: String,
     commented: Bool = false,
-    prefix: String = ""
+    prefix: String = "",
+    documented: Bool = true
   ) -> Line {
-    .section(name: name, commented: commented, prefix: prefix)
+    .section(
+      name: name,
+      commented: commented,
+      prefix: prefix,
+      documented: documented
+    )
   }
 
   static func entry(
@@ -27,14 +40,16 @@ extension ConfigSchemaRegistry {
     value: String,
     description: String,
     commented: Bool = false,
-    prefix: String = ""
+    prefix: String = "",
+    documented: Bool = true
   ) -> Line {
     .entry(
       key: key,
       value: value,
       description: description,
       commented: commented,
-      prefix: prefix
+      prefix: prefix,
+      documented: documented
     )
   }
 

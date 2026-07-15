@@ -274,11 +274,12 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.battery`
 
-| Key        | Default   | Description                                                      |
-| ---------- | --------- | ---------------------------------------------------------------- |
-| `enabled`  | `true`    | Shows or hides the battery widget.                               |
-| `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order`    | `20`      | Sort order among widgets in the same position.                   |
+| Key        | Default    | Description                                                      |
+| ---------- | ---------- | ---------------------------------------------------------------- |
+| `enabled`  | `true`     | Shows or hides the battery widget.                               |
+| `position` | `"right"`  | Places the widget on the left, center, or right side of the bar. |
+| `order`    | `20`       | Sort order among widgets in the same position.                   |
+| `group`    | `"system"` | Optional native group id that should contain this widget.        |
 
 ## `builtins.battery.style`
 
@@ -338,11 +339,12 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.wifi`
 
-| Key        | Default   | Description                                                      |
-| ---------- | --------- | ---------------------------------------------------------------- |
-| `enabled`  | `true`    | Shows or hides the built-in Wi-Fi widget.                        |
-| `position` | `"right"` | Places the widget on the left, center, or right side of the bar. |
-| `order`    | `30`      | Sort order among widgets in the same position.                   |
+| Key        | Default    | Description                                                      |
+| ---------- | ---------- | ---------------------------------------------------------------- |
+| `enabled`  | `true`     | Shows or hides the built-in Wi-Fi widget.                        |
+| `position` | `"right"`  | Places the widget on the left, center, or right side of the bar. |
+| `order`    | `30`       | Sort order among widgets in the same position.                   |
+| `group`    | `"system"` | Optional native group id that should contain this widget.        |
 
 ## `builtins.wifi.style`
 
@@ -543,6 +545,36 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `padding_y`         | `14`                    | Vertical inner padding of the appointment composer panel.   |
 | `header_text_color` | `"theme.text"`          | Header title color of the appointment composer panel.       |
 
+## `builtins.calendar.composer.alert_labels`
+
+| Key          | Default               | Description                               |
+| ------------ | --------------------- | ----------------------------------------- |
+| `none`       | `"None"`              | Label shown for no alert.                 |
+| `at_time`    | `"At time of event"`  | Label shown for alerts at event time.     |
+| `5_minutes`  | `"5 minutes before"`  | Label shown for a 5-minute alert.         |
+| `10_minutes` | `"10 minutes before"` | Label shown for a 10-minute alert.        |
+| `15_minutes` | `"15 minutes before"` | Label shown for a 15-minute alert.        |
+| `30_minutes` | `"30 minutes before"` | Label shown for a 30-minute alert.        |
+| `1_hour`     | `"1 hour before"`     | Label shown for a 1-hour alert.           |
+| `1_day`      | `"1 day before"`      | Label shown for a 1-day alert.            |
+| `custom`     | `"Custom"`            | Label shown for a custom alert lead time. |
+
+## `builtins.calendar.composer.travel_time_labels`
+
+| Key          | Default        | Description                                |
+| ------------ | -------------- | ------------------------------------------ |
+| `none`       | `"None"`       | Label shown when no travel time is set.    |
+| `5_minutes`  | `"5 minutes"`  | Label shown for 5 minutes of travel time.  |
+| `10_minutes` | `"10 minutes"` | Label shown for 10 minutes of travel time. |
+| `15_minutes` | `"15 minutes"` | Label shown for 15 minutes of travel time. |
+| `20_minutes` | `"20 minutes"` | Label shown for 20 minutes of travel time. |
+| `30_minutes` | `"30 minutes"` | Label shown for 30 minutes of travel time. |
+| `45_minutes` | `"45 minutes"` | Label shown for 45 minutes of travel time. |
+| `1_hour`     | `"1 hour"`     | Label shown for 1 hour of travel time.     |
+| `90_minutes` | `"1.5 hours"`  | Label shown for 90 minutes of travel time. |
+| `2_hours`    | `"2 hours"`    | Label shown for 2 hours of travel time.    |
+| `custom`     | `"Custom"`     | Label shown for a custom travel time.      |
+
 ## `builtins.calendar.upcoming.events`
 
 | Key                   | Default | Description                                                                     |
@@ -625,19 +657,21 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.calendar.month.popup.calendar`
 
-| Key                           | Default                  | Description                                                                |
-| ----------------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| `show_week_numbers`           | `true`                   | Shows week numbers in the calendar grid.                                   |
-| `show_event_indicators`       | `true`                   | Shows dots under days that contain events.                                 |
-| `header_text_color`           | `"theme.text"`           | Text color of the month header and appointments title.                     |
-| `weekday_text_color`          | `"theme.accent"`         | Text color of the weekday labels.                                          |
-| `weekday_format`              | `"dd"`                   | Weekday label format: d \| dd \| ddd. dddd is not allowed.                 |
-| `day_text_color`              | `"theme.text_secondary"` | Text color of days in the current month.                                   |
-| `outside_month_text_color`    | `"theme.outside_month"`  | Text color of leading and trailing days outside the current month.         |
-| `today_cell_background_color` | `"theme.transparent"`    | Background color of today's day cell when it is not selected.              |
-| `today_cell_border_color`     | `"theme.danger"`         | Border color of today's day cell when it is not selected.                  |
-| `today_cell_border_width`     | `1.4`                    | Border width of today's day cell when it is not selected.                  |
-| `indicator_color`             | `"theme.accent_soft"`    | Default color of day event indicators when an event has no calendar color. |
+| Key                           | Default                               | Description                                                                                                                         |
+| ----------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `show_week_numbers`           | `true`                                | Shows week numbers in the calendar grid.                                                                                            |
+| `show_event_indicators`       | `true`                                | Shows dots under days that contain events.                                                                                          |
+| `header_text_color`           | `"theme.text"`                        | Text color of the month header and appointments title.                                                                              |
+| `weekday_text_color`          | `"theme.accent"`                      | Text color of the weekday labels.                                                                                                   |
+| `first_weekday`               | `2`                                   | Optional first weekday override. 1 = Sunday, 2 = Monday, ... 7 = Saturday. When omitted, EasyBar uses the current calendar setting. |
+| `weekday_format`              | `"dd"`                                | Weekday label format: d \| dd \| ddd. dddd is not allowed.                                                                          |
+| `weekday_symbols`             | `["M", "T", "W", "T", "F", "S", "S"]` | Optional custom weekday labels in Monday-first order. Must contain exactly 7 entries from Monday to Sunday.                         |
+| `day_text_color`              | `"theme.text_secondary"`              | Text color of days in the current month.                                                                                            |
+| `outside_month_text_color`    | `"theme.outside_month"`               | Text color of leading and trailing days outside the current month.                                                                  |
+| `today_cell_background_color` | `"theme.transparent"`                 | Background color of today's day cell when it is not selected.                                                                       |
+| `today_cell_border_color`     | `"theme.danger"`                      | Border color of today's day cell when it is not selected.                                                                           |
+| `today_cell_border_width`     | `1.4`                                 | Border width of today's day cell when it is not selected.                                                                           |
+| `indicator_color`             | `"theme.accent_soft"`                 | Default color of day event indicators when an event has no calendar color.                                                          |
 
 ## `builtins.calendar.month.popup.selection`
 
