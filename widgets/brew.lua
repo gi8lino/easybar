@@ -15,6 +15,7 @@ local ID_UPDATE = WIDGET_ID .. "_update"
 local CHECK_INTERVAL_SECONDS = 30 * 60
 local MAX_POPUP_ITEMS = 30
 local MAX_WARNING_LINES = 4
+local MAX_ERROR_DETAIL_LINES = 80
 local BREW_LOG_FILE_NAME = "brew-widget.log"
 local BREW_LOG_MAX_LINES = 4000
 
@@ -78,6 +79,7 @@ local dynamic_rows = {}
 local active_command_token = nil
 local active_operation_kind = nil
 local cancellation_requested = false
+local last_command_output = ""
 
 local brew_widget
 local title_item
@@ -90,6 +92,7 @@ local update_button
 local render
 local add_popup_row
 local finish_cancelled_operation
+local make_error
 
 local state = {
 	formulae = {},
@@ -199,11 +202,13 @@ local function cask_upgrade_command(casks)
 	return table.concat(parts, " ")
 end
 
---- Fails the current brew operation using the current log tail.
+--- Fails the current brew operation while keeping diagnostics out of the main popup.
 local function fail_brew_operation(kind, message)
-	state.error = truncate(log.tail(80), 400)
-	if state.error == "" then
+	if type(message) == "table" then
 		state.error = message
+	else
+		local title = kind == "upgrade" and "Homebrew upgrade failed" or "Homebrew update failed"
+		state.error = make_error(title, message, last_command_output)
 	end
 
 	state.phase = "error"
@@ -227,6 +232,7 @@ local function run_logged_command(command, options, exit_label, callback)
 
 		output = tostring(output or "")
 		code = code or 0
+		last_command_output = output
 
 		append_log_output(output)
 		log.append(exit_label .. " exit " .. tostring(code))
@@ -381,6 +387,17 @@ local function warning_source(raw)
 	return package_name .. " · " .. owner .. "/" .. tap
 end
 
+--- Builds a concise error plus diagnostic details shown only on hover.
+make_error = function(title, summary, raw)
+	raw = trim(raw)
+	return {
+		title = title,
+		source = warning_source(raw),
+		summary = trim(summary),
+		raw = raw ~= "" and raw or trim(summary),
+	}
+end
+
 --- Builds warning details while retaining both readable and complete forms.
 local function parse_warning(raw)
 	local lines = {}
@@ -422,7 +439,12 @@ local function apply_outdated_json(raw)
 	state.last_checked = now_label()
 	state.phase = "ready"
 
-	log(easybar.level.debug, "apply_outdated_json", "formulae=" .. tostring(#state.formulae), "casks=" .. tostring(#state.casks))
+	log(
+		easybar.level.debug,
+		"apply_outdated_json",
+		"formulae=" .. tostring(#state.formulae),
+		"casks=" .. tostring(#state.casks)
+	)
 end
 
 --- Renders a compact warning section and returns the next popup order.
@@ -453,20 +475,22 @@ local function render_warning(order)
 	local rendered = 0
 	for line in state.warning.summary:gmatch("[^\r\n]+") do
 		if rendered >= MAX_WARNING_LINES then
-			local more_row = add_popup_row(WIDGET_ID .. "_warning_more", "  … See " .. BREW_LOG_FILE_NAME .. " for details", {
-				order = order,
-				color = COLORS.muted,
-			})
+			local more_row =
+				add_popup_row(WIDGET_ID .. "_warning_more", "  … See " .. BREW_LOG_FILE_NAME .. " for details", {
+					order = order,
+					color = COLORS.muted,
+				})
 			warning_triggers[#warning_triggers + 1] = more_row
 			order = order + 1
 			break
 		end
 
-		local summary_row = add_popup_row(WIDGET_ID .. "_warning_summary_" .. tostring(rendered), "  " .. truncate(line, 110), {
-			order = order,
-			color = COLORS.warn,
-			size = 11,
-		})
+		local summary_row =
+			add_popup_row(WIDGET_ID .. "_warning_summary_" .. tostring(rendered), "  " .. truncate(line, 110), {
+				order = order,
+				color = COLORS.warn,
+				size = 11,
+			})
 		warning_triggers[#warning_triggers + 1] = summary_row
 		order = order + 1
 		rendered = rendered + 1
@@ -506,12 +530,89 @@ end
 local function apply_outdated_result(output)
 	local ok, err = pcall(apply_outdated_json, output)
 	if not ok then
-		state.error = "Could not parse brew output: " .. tostring(err)
+		local reason = tostring(err):gsub("^.-:%d+:%s*", "")
+		state.error = make_error(
+			"Could not process Homebrew response",
+			"The outdated package response was not valid: " .. reason,
+			output
+		)
 		state.phase = "error"
 		return false
 	end
 
 	return true
+end
+
+--- Renders a concise error with complete command details in a hover popup.
+local function render_error(order)
+	if state.error == nil then
+		return order
+	end
+
+	local error_row = add_popup_row(WIDGET_ID .. "_error", "✕ " .. state.error.source, {
+		order = order,
+		color = COLORS.error,
+		popup = {
+			drawing = false,
+			background = {
+				color = COLORS.popup_bg,
+				border_color = COLORS.button_border,
+				border_width = 1,
+				corner_radius = 8,
+			},
+			padding_x = 10,
+			padding_y = 8,
+			spacing = 4,
+		},
+	})
+	order = order + 1
+
+	local summary_row = add_popup_row(WIDGET_ID .. "_error_summary", "  " .. truncate(state.error.summary, 110), {
+		order = order,
+		color = COLORS.error,
+		size = 11,
+	})
+	order = order + 1
+
+	local detail_index = 0
+	for line in state.error.raw:gmatch("[^\r\n]+") do
+		if detail_index >= MAX_ERROR_DETAIL_LINES then
+			local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_error_detail_more", {
+				position = "popup." .. error_row.name,
+				order = detail_index,
+				label = {
+					string = "… See " .. BREW_LOG_FILE_NAME .. " for complete output",
+					color = COLORS.muted,
+					font = { size = 11 },
+				},
+			})
+			dynamic_rows[#dynamic_rows + 1] = detail
+			break
+		end
+
+		local detail = easybar.add(easybar.kind.item, WIDGET_ID .. "_error_detail_" .. tostring(detail_index), {
+			position = "popup." .. error_row.name,
+			order = detail_index,
+			label = {
+				string = line,
+				color = COLORS.text,
+				font = { size = 11 },
+			},
+		})
+		dynamic_rows[#dynamic_rows + 1] = detail
+		detail_index = detail_index + 1
+	end
+
+	for _, trigger in ipairs({ error_row, summary_row }) do
+		trigger:subscribe(easybar.events.mouse.entered, function()
+			error_row:set({ popup = { drawing = true } })
+		end)
+		trigger:subscribe(easybar.events.mouse.exited, function()
+			error_row:set({ popup = { drawing = false } })
+		end)
+	end
+
+	return order
 end
 
 --- Returns the number of outdated packages.
@@ -674,7 +775,7 @@ local function render_popup()
 		summary_item:set({
 			order = POPUP_ORDER.summary,
 			label = {
-				string = "Could not check outdated packages",
+				string = state.error.title,
 				color = COLORS.error,
 			},
 		})
@@ -725,7 +826,9 @@ local function render_popup()
 
 	upgrade_button:set({
 		order = 1,
-		drawing = not (running and (state.phase == "updating" or state.phase == "upgrading" or state.phase == "cancelling")),
+		drawing = not (
+				running and (state.phase == "updating" or state.phase == "upgrading" or state.phase == "cancelling")
+			),
 		label = {
 			string = upgrade_label,
 			color = COLORS.text,
@@ -743,11 +846,7 @@ local function render_popup()
 	remove_dynamic_rows()
 
 	if state.error ~= nil then
-		add_popup_row(WIDGET_ID .. "_error", state.error, {
-			order = POPUP_ORDER.dynamic_start,
-			color = COLORS.error,
-		})
-
+		render_error(POPUP_ORDER.dynamic_start)
 		return
 	end
 
@@ -842,10 +941,11 @@ finish_cancelled_operation = function()
 		running = false
 
 		if code ~= 0 then
-			state.error = truncate(trim(output), 400)
-			if state.error == "" then
-				state.error = "Operation cancelled; brew outdated failed with exit code " .. tostring(code)
-			end
+			state.error = make_error(
+				"Could not refresh after cancellation",
+				"brew outdated failed with exit code " .. tostring(code),
+				output
+			)
 			state.phase = "error"
 		else
 			apply_outdated_result(output)
@@ -885,10 +985,11 @@ local function check_outdated(status_label)
 		running = false
 
 		if code ~= 0 then
-			state.error = truncate(trim(output), 400)
-			if state.error == "" then
-				state.error = "brew outdated failed with exit code " .. tostring(code)
-			end
+			state.error = make_error(
+				"Could not check outdated packages",
+				"brew outdated failed with exit code " .. tostring(code),
+				output
+			)
 			state.phase = "error"
 			render()
 			return
