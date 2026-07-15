@@ -1,12 +1,6 @@
 import Darwin
 import Foundation
 
-public enum SingleInstanceAcquireResult: Equatable {
-  case acquired
-  case alreadyRunning
-  case failed(String)
-}
-
 public enum SingleInstanceLockResult: Equatable {
   case acquired(lockPath: String)
   case alreadyRunning(lockPath: String)
@@ -26,7 +20,7 @@ public final class SingleInstanceGuard {
 
   /// Tries to acquire an exclusive non-blocking lock for the current process.
   @discardableResult
-  public func acquireLock(at path: String) -> SingleInstanceAcquireResult {
+  public func acquireLock(at path: String) -> SingleInstanceLockResult {
     let url = URL(fileURLWithPath: path)
     let directoryURL = url.deletingLastPathComponent()
 
@@ -37,12 +31,12 @@ public final class SingleInstanceGuard {
         attributes: nil
       )
     } catch {
-      return .failed("create_directory_failed:\(error)")
+      return .failed(lockPath: path, reason: "create_directory_failed:\(error)")
     }
 
     let fd = open(url.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
     guard fd >= 0 else {
-      return .failed("open_failed:\(String(cString: strerror(errno)))")
+      return .failed(lockPath: path, reason: "open_failed:\(String(cString: strerror(errno)))")
     }
 
     guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
@@ -50,10 +44,13 @@ public final class SingleInstanceGuard {
       close(fd)
 
       if lockError == EWOULDBLOCK {
-        return .alreadyRunning
+        return .alreadyRunning(lockPath: path)
       }
 
-      return .failed("lock_failed:\(String(cString: strerror(lockError)))")
+      return .failed(
+        lockPath: path,
+        reason: "lock_failed:\(String(cString: strerror(lockError)))"
+      )
     }
 
     let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
@@ -70,7 +67,7 @@ public final class SingleInstanceGuard {
 
     lockFileHandle?.closeFile()
     lockFileHandle = handle
-    return .acquired
+    return .acquired(lockPath: path)
   }
 
   /// Resolves the default lock path for one named process and acquires it.
@@ -84,16 +81,7 @@ public final class SingleInstanceGuard {
       directory: directory
     )
 
-    switch acquireLock(at: lockPath) {
-    case .acquired:
-      return .acquired(lockPath: lockPath)
-
-    case .alreadyRunning:
-      return .alreadyRunning(lockPath: lockPath)
-
-    case .failed(let reason):
-      return .failed(lockPath: lockPath, reason: reason)
-    }
+    return acquireLock(at: lockPath)
   }
 }
 

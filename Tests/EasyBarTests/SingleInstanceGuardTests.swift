@@ -11,13 +11,16 @@ final class SingleInstanceGuardTests: XCTestCase {
     let secondPath = directory.appendingPathComponent("second.lock").path
     let guardUnderTest = SingleInstanceGuard()
 
-    XCTAssertEqual(guardUnderTest.acquireLock(at: firstPath), .acquired)
-    XCTAssertEqual(guardUnderTest.acquireLock(at: secondPath), .acquired)
+    XCTAssertEqual(guardUnderTest.acquireLock(at: firstPath), .acquired(lockPath: firstPath))
+    XCTAssertEqual(guardUnderTest.acquireLock(at: secondPath), .acquired(lockPath: secondPath))
 
     let firstProbe = SingleInstanceGuard()
     let secondProbe = SingleInstanceGuard()
-    XCTAssertEqual(firstProbe.acquireLock(at: firstPath), .acquired)
-    XCTAssertEqual(secondProbe.acquireLock(at: secondPath), .alreadyRunning)
+    XCTAssertEqual(firstProbe.acquireLock(at: firstPath), .acquired(lockPath: firstPath))
+    XCTAssertEqual(
+      secondProbe.acquireLock(at: secondPath),
+      .alreadyRunning(lockPath: secondPath)
+    )
   }
 
   func testFailedRebindKeepsPreviousLock() throws {
@@ -29,12 +32,15 @@ final class SingleInstanceGuardTests: XCTestCase {
     let guardUnderTest = SingleInstanceGuard()
     let blocker = SingleInstanceGuard()
 
-    XCTAssertEqual(guardUnderTest.acquireLock(at: firstPath), .acquired)
-    XCTAssertEqual(blocker.acquireLock(at: blockedPath), .acquired)
-    XCTAssertEqual(guardUnderTest.acquireLock(at: blockedPath), .alreadyRunning)
+    XCTAssertEqual(guardUnderTest.acquireLock(at: firstPath), .acquired(lockPath: firstPath))
+    XCTAssertEqual(blocker.acquireLock(at: blockedPath), .acquired(lockPath: blockedPath))
+    XCTAssertEqual(
+      guardUnderTest.acquireLock(at: blockedPath),
+      .alreadyRunning(lockPath: blockedPath)
+    )
 
     let firstProbe = SingleInstanceGuard()
-    XCTAssertEqual(firstProbe.acquireLock(at: firstPath), .alreadyRunning)
+    XCTAssertEqual(firstProbe.acquireLock(at: firstPath), .alreadyRunning(lockPath: firstPath))
   }
 
   private func makeTemporaryDirectory() throws -> URL {
