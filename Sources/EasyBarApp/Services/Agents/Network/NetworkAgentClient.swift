@@ -15,6 +15,7 @@ final class NetworkAgentClient: @unchecked Sendable {
   private struct LifecycleState {
     var config: ConfigSnapshot.NetworkAgent
     var started = false
+    var publicationID: UInt64 = 0
   }
 
   /// Shared network-agent client.
@@ -33,8 +34,8 @@ final class NetworkAgentClient: @unchecked Sendable {
   /// Last logged network-agent error, used to suppress identical repeats.
   private let errorLogState = LockedState(ErrorLogState())
   /// Publishes network-agent snapshots to app stores and events.
-  private lazy var snapshotPublisher = NetworkAgentSnapshotPublisher { [weak self] in
-    self?.isStarted ?? false
+  private lazy var snapshotPublisher = NetworkAgentSnapshotPublisher { [weak self] publicationID in
+    self?.isPublicationCurrent(publicationID) ?? false
   }
 
   /// Wake-triggered refresh controller.
@@ -56,11 +57,11 @@ final class NetworkAgentClient: @unchecked Sendable {
       subscribeRequest: {
         NetworkAgentRequest(command: .subscribe, fields: NetworkAgentSnapshot.snapshotFieldSet)
       },
-      handleMessage: { [weak self] message in
-        self?.handle(message)
+      handleMessage: { [weak self] message, connectionID in
+        self?.handle(message, connectionID: connectionID)
       },
-      clearState: { [weak self] in
-        self?.handleDisconnectedStateReset()
+      clearState: { [weak self] connectionID in
+        self?.handleDisconnectedStateReset(connectionID: connectionID)
       },
       onConnected: metricCallbacks.onConnected,
       onDisconnected: metricCallbacks.onDisconnected,
@@ -88,11 +89,20 @@ final class NetworkAgentClient: @unchecked Sendable {
 
   /// Replaces the active network-agent config snapshot.
   func updateConfiguration(_ config: ConfigSnapshot.NetworkAgent) {
-    let change = lifecycleState.withLock { state -> (shouldRestart: Bool, enabled: Bool) in
+    let change = lifecycleState.withLock {
+      state -> (
+        shouldRestart: Bool,
+        enabled: Bool,
+        publicationID: UInt64?
+      ) in
       let socketPathChanged = state.config.socketPath != config.socketPath
       let enabledChanged = state.config.enabled != config.enabled
+      let shouldRestart = state.started && (socketPathChanged || enabledChanged)
       state.config = config
-      return (state.started && (socketPathChanged || enabledChanged), config.enabled)
+
+      guard shouldRestart else { return (false, config.enabled, nil) }
+      state.publicationID &+= 1
+      return (true, config.enabled, state.publicationID)
     }
 
     guard change.shouldRestart else { return }
@@ -105,10 +115,13 @@ final class NetworkAgentClient: @unchecked Sendable {
 
     client.stop()
 
+    if let publicationID = change.publicationID {
+      snapshotPublisher.clear(notify: true, publicationID: publicationID)
+    }
+
     guard change.enabled else {
       lifecycleState.withLock { $0.started = false }
       wakeRefreshController.stop()
-      snapshotPublisher.clear(notify: true)
       return
     }
 
@@ -125,11 +138,15 @@ final class NetworkAgentClient: @unchecked Sendable {
     guard let config else { return }
     guard config.enabled else {
       logger.debug("network agent client start skipped because agent is disabled")
-      snapshotPublisher.clear(notify: false)
+      let publicationID = issuePublicationID()
+      snapshotPublisher.clear(notify: false, publicationID: publicationID)
       return
     }
 
-    lifecycleState.withLock { $0.started = true }
+    lifecycleState.withLock { state in
+      state.started = true
+      state.publicationID &+= 1
+    }
 
     wakeRefreshController.start { [weak self] in
       guard let self, self.isStarted else { return }
@@ -141,17 +158,18 @@ final class NetworkAgentClient: @unchecked Sendable {
 
   /// Stops the network agent client.
   func stop() {
-    let shouldStop = lifecycleState.withLock { state -> Bool in
-      guard state.started else { return false }
+    let publicationID = lifecycleState.withLock { state -> UInt64? in
+      guard state.started else { return nil }
       state.started = false
-      return true
+      state.publicationID &+= 1
+      return state.publicationID
     }
 
-    guard shouldStop else { return }
+    guard let publicationID else { return }
 
     wakeRefreshController.stop()
     client.stop()
-    snapshotPublisher.clear(notify: false)
+    snapshotPublisher.clear(notify: false, publicationID: publicationID)
   }
 
   /// Requests one fresh network-agent update using the current subscription.
@@ -167,8 +185,8 @@ final class NetworkAgentClient: @unchecked Sendable {
   }
 
   /// Handles one decoded network agent message.
-  private func handle(_ message: NetworkAgentMessage) {
-    guard isStarted else { return }
+  private func handle(_ message: NetworkAgentMessage, connectionID: UInt64) {
+    guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
 
     switch message.kind {
     case .version:
@@ -189,24 +207,26 @@ final class NetworkAgentClient: @unchecked Sendable {
       }
 
       resetErrorLogState()
-      snapshotPublisher.publish(snapshot: snapshot)
+      let publicationID = issuePublicationID()
+      snapshotPublisher.publish(snapshot: snapshot, publicationID: publicationID)
 
     case .pong, .restarting:
       break
 
     case .error:
-      handleError(code: message.errorCode)
+      handleError(code: message.errorCode, connectionID: connectionID)
     }
   }
 
   /// Handles one network-agent error message.
-  private func handleError(code: NetworkAgentErrorCode?) {
-    guard isStarted else { return }
+  private func handleError(code: NetworkAgentErrorCode?, connectionID: UInt64) {
+    guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
 
     logAgentErrorIfNeeded(code: code)
 
     guard code == .permissionDenied else { return }
 
+    let publicationID = issuePublicationID()
     snapshotPublisher.publish(
       snapshot: NetworkAgentSnapshot(
         accessGranted: false,
@@ -236,15 +256,17 @@ final class NetworkAgentClient: @unchecked Sendable {
         roaming: nil,
         ssidChangedAt: nil,
         interfaceChangedAt: nil
-      )
+      ),
+      publicationID: publicationID
     )
   }
 
   /// Handles a socket disconnect by clearing published state.
-  private func handleDisconnectedStateReset() {
-    guard isStarted else { return }
+  private func handleDisconnectedStateReset(connectionID: UInt64) {
+    guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
     resetErrorLogState()
-    snapshotPublisher.clear(notify: true)
+    let publicationID = issuePublicationID()
+    snapshotPublisher.clear(notify: true, publicationID: publicationID)
   }
 
   /// Logs the first instance of an agent error, then suppresses identical repeats.
@@ -284,6 +306,19 @@ final class NetworkAgentClient: @unchecked Sendable {
       state.lastKey = nil
       state.repeatCount = 0
     }
+  }
+
+  /// Issues a new publication id that invalidates older queued store updates.
+  private func issuePublicationID() -> UInt64 {
+    lifecycleState.withLock { state in
+      state.publicationID &+= 1
+      return state.publicationID
+    }
+  }
+
+  /// Returns whether a queued store update is still the newest publication.
+  private func isPublicationCurrent(_ publicationID: UInt64) -> Bool {
+    lifecycleState.withLock { $0.publicationID == publicationID }
   }
 
   /// Returns the current network-agent configuration.

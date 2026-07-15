@@ -19,14 +19,15 @@ public final class AgentSocketClient<
 
   private struct StopSnapshot {
     let fd: Int32
+    let connectionID: UInt64
     let shouldNotifyDisconnect: Bool
   }
 
   private let label: String
   private let socketPath: () -> String
   private let subscribeRequest: () -> Request
-  private let handleMessage: (Message) -> Void
-  private let clearState: () -> Void
+  private let handleMessage: (Message, UInt64) -> Void
+  private let clearState: (UInt64) -> Void
   private let onConnected: (() -> Void)?
   private let onDisconnected: (() -> Void)?
   private let onDecodedMessage: (() -> Void)?
@@ -41,8 +42,8 @@ public final class AgentSocketClient<
     label: String,
     socketPath: @escaping () -> String,
     subscribeRequest: @escaping () -> Request,
-    handleMessage: @escaping (Message) -> Void,
-    clearState: @escaping () -> Void,
+    handleMessage: @escaping (Message, UInt64) -> Void,
+    clearState: @escaping (UInt64) -> Void,
     onConnected: (() -> Void)? = nil,
     onDisconnected: (() -> Void)? = nil,
     onDecodedMessage: (() -> Void)? = nil,
@@ -74,6 +75,13 @@ public final class AgentSocketClient<
     }
   }
 
+  /// Returns whether a callback generation still belongs to the current client run.
+  public func isCurrentConnectionGeneration(_ connectionID: UInt64) -> Bool {
+    state.withLock { state in
+      state.running && state.activeConnectionID == connectionID
+    }
+  }
+
   /// Starts the client connection loop.
   public func start() {
     let shouldConnect = state.withLock { state -> Bool in
@@ -94,12 +102,14 @@ public final class AgentSocketClient<
       state.nextReconnectDelayOverride = nil
 
       let currentFD = state.socketFD
+      let connectionID = state.activeConnectionID
       state.socketFD = -1
       state.connectionThread = nil
       state.activeConnectionID &+= 1
 
       return StopSnapshot(
         fd: currentFD,
+        connectionID: connectionID,
         shouldNotifyDisconnect: currentFD >= 0
       )
     }
@@ -110,7 +120,7 @@ public final class AgentSocketClient<
       close(snapshot.fd)
     }
 
-    clearState()
+    clearState(snapshot.connectionID)
 
     if snapshot.shouldNotifyDisconnect {
       onDisconnected?()
@@ -199,12 +209,20 @@ public final class AgentSocketClient<
       }
 
       if count > 0 {
-        handleDecodedMessages(lineDecoder.append(buffer.prefix(count)))
+        handleDecodedMessages(
+          lineDecoder.append(buffer.prefix(count)),
+          fd: fd,
+          connectionID: connectionID
+        )
         continue
       }
 
       if count == 0 {
-        handleDecodedMessages(lineDecoder.flush())
+        handleDecodedMessages(
+          lineDecoder.flush(),
+          fd: fd,
+          connectionID: connectionID
+        )
         break
       }
 
@@ -223,12 +241,19 @@ public final class AgentSocketClient<
   }
 
   /// Handles decoded message payloads and records decode failures.
-  private func handleDecodedMessages(_ results: [Result<Message, Error>]) {
+  private func handleDecodedMessages(
+    _ results: [Result<Message, Error>],
+    fd: Int32,
+    connectionID: UInt64
+  ) {
     for result in results {
+      guard isActiveConnection(fd: fd, connectionID: connectionID) else { return }
+
       switch result {
       case .success(let message):
         onDecodedMessage?()
-        handleMessage(message)
+        guard isActiveConnection(fd: fd, connectionID: connectionID) else { return }
+        handleMessage(message, connectionID)
 
       case .failure(let error):
         onDecodeError?()
@@ -248,7 +273,7 @@ public final class AgentSocketClient<
     shutdown(fd, SHUT_RDWR)
     close(fd)
 
-    clearState()
+    clearState(connectionID)
     onDisconnected?()
 
     guard isRunning() else { return }

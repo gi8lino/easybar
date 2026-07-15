@@ -63,10 +63,10 @@ final class AgentSocketClientTests: XCTestCase {
       label: "test agent",
       socketPath: { self.socketPath },
       subscribeRequest: { TestRequest(command: "subscribe") },
-      handleMessage: { _ in
+      handleMessage: { _, _ in
         callbacks.withLock { $0.decoded += 1 }
       },
-      clearState: {},
+      clearState: { _ in },
       onConnected: {
         callbacks.withLock { $0.connected += 1 }
       },
@@ -93,6 +93,44 @@ final class AgentSocketClientTests: XCTestCase {
     }
 
     XCTAssertFalse(client.isConnected)
+  }
+
+  func testMessageIsDroppedWhenConnectionStopsDuringDecodeCallback() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+
+    server.start { fd, _ in
+      _ = server.send(TestMessage(kind: "subscribed"), to: fd)
+      return .keepOpen
+    }
+    defer { server.stop() }
+
+    let handledMessages = LockedState(0)
+    let clientBox = LockedState<AgentSocketClient<TestRequest, TestMessage>?>(nil)
+    let client = AgentSocketClient<TestRequest, TestMessage>(
+      label: "test agent",
+      socketPath: { self.socketPath },
+      subscribeRequest: { TestRequest(command: "subscribe") },
+      handleMessage: { _, _ in
+        handledMessages.withLock { $0 += 1 }
+      },
+      clearState: { _ in },
+      onDecodedMessage: {
+        clientBox.withLock { $0 }?.stop()
+      },
+      logger: logger
+    )
+    clientBox.withLock { $0 = client }
+
+    client.start()
+    defer { client.stop() }
+
+    try await waitUntil("decode callback to stop client") {
+      !client.isConnected
+    }
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    XCTAssertEqual(handledMessages.withLock { $0 }, 0)
   }
 
   func testServerStopClosesKeptOpenSubscriberSocket() async throws {

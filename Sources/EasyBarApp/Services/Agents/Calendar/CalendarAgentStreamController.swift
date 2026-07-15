@@ -18,9 +18,9 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   /// Builds the current subscribe or refresh request.
   private let makeRequest: () -> CalendarAgentRequest
   /// Applies decoded snapshots to the caller state.
-  private let applySnapshot: (EasyBarShared.CalendarAgentSnapshot) -> Void
+  private let applySnapshot: @MainActor @Sendable (EasyBarShared.CalendarAgentSnapshot) -> Void
   /// Clears caller state after errors or disconnects.
-  private let clearState: () -> Void
+  private let clearState: @MainActor @Sendable () -> Void
   /// Metrics key used for this stream.
   private let metricsAgent: MetricsCoordinator.AgentKey
   /// Metrics recorder for agent lifecycle and messages.
@@ -46,11 +46,11 @@ final class CalendarAgentStreamController: @unchecked Sendable {
       subscribeRequest: { [weak self] in
         self?.currentRequest() ?? CalendarAgentRequest(command: .ping)
       },
-      handleMessage: { [weak self] message in
-        self?.handle(message)
+      handleMessage: { [weak self] message, connectionID in
+        self?.handle(message, connectionID: connectionID)
       },
-      clearState: { [weak self] in
-        self?.handleDisconnectedStateReset()
+      clearState: { [weak self] connectionID in
+        self?.handleDisconnectedStateReset(connectionID: connectionID)
       },
       onConnected: metricCallbacks.onConnected,
       onDisconnected: metricCallbacks.onDisconnected,
@@ -66,8 +66,8 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     metricsAgent: MetricsCoordinator.AgentKey = .calendar,
     socketPath: @escaping () -> String,
     makeRequest: @escaping () -> CalendarAgentRequest,
-    applySnapshot: @escaping (EasyBarShared.CalendarAgentSnapshot) -> Void,
-    clearState: @escaping () -> Void = {},
+    applySnapshot: @escaping @MainActor @Sendable (EasyBarShared.CalendarAgentSnapshot) -> Void,
+    clearState: @escaping @MainActor @Sendable () -> Void = {},
     metricsCoordinator: MetricsCoordinator = .shared,
     logger: ProcessLogger
   ) {
@@ -136,7 +136,10 @@ final class CalendarAgentStreamController: @unchecked Sendable {
 
     wakeRefreshController.stop()
     client.stop()
-    clearState()
+    let clearState = clearState
+    Task { @MainActor in
+      clearState()
+    }
   }
 
   /// Restarts the stream against the latest config-derived request and socket path.
@@ -158,8 +161,8 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   }
 
   /// Handles one decoded calendar-agent response.
-  private func handle(_ response: CalendarAgentMessage) {
-    guard isStarted else { return }
+  private func handle(_ response: CalendarAgentMessage, connectionID: UInt64) {
+    guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
 
     switch response.kind {
     case .snapshot:
@@ -176,15 +179,28 @@ final class CalendarAgentStreamController: @unchecked Sendable {
         .field("sections", snapshot.sections.count),
       )
 
-      applySnapshot(snapshot)
-      CalendarAgentEventRelay.shared.noteSnapshotUpdate()
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+        guard self.isStarted, self.client.isCurrentConnectionGeneration(connectionID) else {
+          return
+        }
+
+        self.applySnapshot(snapshot)
+        CalendarAgentEventRelay.shared.noteSnapshotUpdate()
+      }
 
     case .error:
       logger.warn(
         "\(label) received error",
         .field("message", response.message ?? "unknown"),
       )
-      clearState()
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+        guard self.isStarted, self.client.isCurrentConnectionGeneration(connectionID) else {
+          return
+        }
+        self.clearState()
+      }
 
     case .version:
       break
@@ -195,9 +211,15 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   }
 
   /// Clears published state only for disconnects that occur while the stream is active.
-  private func handleDisconnectedStateReset() {
-    guard isStarted else { return }
-    clearState()
+  private func handleDisconnectedStateReset(connectionID: UInt64) {
+    guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      guard self.isStarted, self.client.isCurrentConnectionGeneration(connectionID) else {
+        return
+      }
+      self.clearState()
+    }
   }
 
   /// Refreshes the cached request and socket path used by background socket work.

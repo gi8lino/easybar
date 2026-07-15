@@ -3,17 +3,18 @@ import Foundation
 
 /// Publishes network-agent snapshots into app state and emits matching runtime events.
 final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
-  /// Returns whether asynchronous publish work should still apply.
-  private let isActive: () -> Bool
+  /// Returns whether asynchronous publish work still belongs to the latest publication.
+  private let isCurrent: (UInt64) -> Bool
 
   /// Creates one network-agent snapshot publisher.
-  init(isActive: @escaping () -> Bool = { true }) {
-    self.isActive = isActive
+  init(isCurrent: @escaping (UInt64) -> Bool = { _ in true }) {
+    self.isCurrent = isCurrent
   }
 
   /// Clears the shared Wi-Fi state and optionally emits the corresponding app events.
-  func clear(notify: Bool) {
+  func clear(notify: Bool, publicationID: UInt64) {
     Task { @MainActor in
+      guard self.isCurrent(publicationID) else { return }
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.clear()
 
@@ -34,9 +35,9 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
   }
 
   /// Publishes one snapshot to the shared store on the main queue and emits app events.
-  func publish(snapshot: NetworkAgentSnapshot) {
+  func publish(snapshot: NetworkAgentSnapshot, publicationID: UInt64) {
     Task { @MainActor in
-      guard self.isActive() else { return }
+      guard self.isCurrent(publicationID) else { return }
 
       let previous = NativeWiFiStore.shared.snapshot
       let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
