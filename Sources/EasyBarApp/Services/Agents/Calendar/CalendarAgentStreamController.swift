@@ -148,6 +148,21 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     start(enabled: enabled)
   }
 
+  /// Applies configuration lifecycle changes and returns whether only a refresh is needed.
+  func configurationDidChange(
+    previousEnabled: Bool,
+    previousSocketPath: String,
+    enabled: Bool,
+    socketPath: String
+  ) -> Bool {
+    guard isStarted else { return false }
+    guard previousEnabled == enabled, previousSocketPath == socketPath else {
+      restart(enabled: enabled)
+      return false
+    }
+    return true
+  }
+
   /// Sends one fresh request built from current config and state.
   func refresh() {
     guard isStarted else { return }

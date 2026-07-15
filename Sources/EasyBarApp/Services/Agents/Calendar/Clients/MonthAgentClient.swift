@@ -71,21 +71,20 @@ final class MonthCalendarAgentClient {
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     calendarConfig: Config.CalendarBuiltinConfig
   ) {
-    let streamConfigChanged =
-      self.calendarAgentConfig.enabled != calendarAgentConfig.enabled
-      || self.calendarAgentConfig.socketPath != calendarAgentConfig.socketPath
+    let previousConfig = self.calendarAgentConfig
 
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
 
-    guard stream.isStarted else { return }
-
-    if streamConfigChanged {
-      stream.restart(enabled: calendarAgentConfig.enabled)
-      return
-    }
-
-    refresh()
+    guard
+      stream.configurationDidChange(
+        previousEnabled: previousConfig.enabled,
+        previousSocketPath: previousConfig.socketPath,
+        enabled: calendarAgentConfig.enabled,
+        socketPath: calendarAgentConfig.socketPath
+      )
+    else { return }
+    stream.refresh()
   }
 
   /// Starts the month-calendar agent socket client when enabled.
