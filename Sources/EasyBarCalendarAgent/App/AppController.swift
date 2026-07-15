@@ -7,16 +7,27 @@ import EasyBarShared
 /// This type owns macOS application concerns such as logging setup, the
 /// single-instance guard, activation policy, and runtime creation. The
 /// long-running agent behavior lives in `CalendarAgentRuntime`.
+enum AgentAppStartResult {
+  case running
+  case disabled
+  case failed
+}
+
 @MainActor
 final class AppController {
   private let logger = ProcessLogger(label: "easybar-calendar-agent")
   private let instanceGuard = SingleInstanceGuard()
+  private let onRestartRequested: @MainActor () -> Void
 
   private var runtime: CalendarAgentRuntime?
 
+  init(onRestartRequested: @escaping @MainActor () -> Void) {
+    self.onRestartRequested = onRestartRequested
+  }
+
   /// Starts the calendar agent app shell and runtime.
   @discardableResult
-  func start() -> Bool {
+  func start() -> AgentAppStartResult {
     let sharedConfig: SharedRuntimeConfig
 
     do {
@@ -26,13 +37,13 @@ final class AppController {
         "failed to load shared runtime config",
         .field("error", error.localizedDescription)
       )
-      return false
+      return .failed
     }
 
     configureLogging(sharedConfig: sharedConfig)
 
     guard acquireInstanceLock(sharedConfig: sharedConfig) else {
-      return false
+      return .failed
     }
 
     let runtimeConfig = CalendarAgentRuntimeConfig.easyBar(
@@ -40,22 +51,25 @@ final class AppController {
       appVersion: BuildInfo.appVersion
     )
 
+    guard runtimeConfig.isEnabled else {
+      logger.info("calendar agent disabled in config")
+      return .disabled
+    }
+
     runtime = CalendarAgentRuntime(
       config: runtimeConfig,
       logger: logger.child("runtime"),
-      onRestartRequested: {
-        NSApp.terminate(nil)
-      }
+      onRestartRequested: onRestartRequested
     )
 
     NSApp.setActivationPolicy(.accessory)
 
     guard runtime?.start() == true else {
       runtime = nil
-      return false
+      return .failed
     }
 
-    return true
+    return .running
   }
 
   /// Stops the calendar agent runtime.

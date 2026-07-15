@@ -61,9 +61,11 @@ test -s "${calendar_formula}"
 test -s "${network_formula}"
 assert_contains "${calendar_formula}" 'class EasybarCalendarAgent < Formula'
 assert_contains "${calendar_formula}" 'libexec.install "EasyBarCalendarAgent.app"'
+assert_contains "${calendar_formula}" 'keep_alive successful_exit: false'
 assert_contains "${calendar_formula}" 'process_type :interactive'
 assert_contains "${network_formula}" 'class EasybarNetworkAgent < Formula'
 assert_contains "${network_formula}" 'libexec.install "EasyBarNetworkAgent.app"'
+assert_contains "${network_formula}" 'keep_alive successful_exit: false'
 assert_contains "${network_formula}" 'process_type :interactive'
 
 ruby -c "${easybar_cask}" >/dev/null
@@ -92,3 +94,5 @@ git -C "${tap_dir}" -c user.name=test -c user.email=test@example.com commit -qm 
   --tap-dir "${tap_dir}" \
   --version "9.8.8" \
   --dry-run >/dev/null
+
+

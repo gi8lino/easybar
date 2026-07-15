@@ -102,7 +102,7 @@ class ${class_name} < Formula
   service do
     run [opt_libexec/"${app_name}.app/Contents/MacOS/${app_name}"]
     environment_variables PATH: std_service_path_env, LANG: "en_US.UTF-8"
-    keep_alive true
+    keep_alive successful_exit: false
     process_type :interactive
     working_dir HOMEBREW_PREFIX
     log_path var/"log/easybar/${log_name}.out.log"
@@ -131,3 +131,5 @@ write_agent_formula \
   "network-agent"
 
 rm -f "${formula_dir}/easybar.rb"
+
+

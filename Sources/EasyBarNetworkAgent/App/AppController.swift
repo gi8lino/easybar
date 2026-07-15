@@ -7,17 +7,28 @@ import EasyBarShared
 /// This type owns macOS application concerns such as logging setup, the
 /// single-instance guard, activation policy changes, and authorization prompt
 /// presentation. The reusable agent behavior lives in `NetworkAgentRuntime`.
+enum AgentAppStartResult {
+  case running
+  case disabled
+  case failed
+}
+
 @MainActor
 final class AppController: NetworkAuthorizationPromptPresenter {
   private let logger = ProcessLogger(label: "easybar-network-agent")
   private let instanceGuard = SingleInstanceGuard()
+  private let onRestartRequested: @MainActor () -> Void
 
   private var runtime: NetworkAgentRuntime?
   private var presentedAuthorizationPrompt = false
 
+  init(onRestartRequested: @escaping @MainActor () -> Void) {
+    self.onRestartRequested = onRestartRequested
+  }
+
   /// Starts the network agent app shell and runtime.
   @discardableResult
-  func start() -> Bool {
+  func start() -> AgentAppStartResult {
     let sharedConfig: SharedRuntimeConfig
 
     do {
@@ -27,13 +38,13 @@ final class AppController: NetworkAuthorizationPromptPresenter {
         "failed to load shared runtime config",
         .field("error", error.localizedDescription)
       )
-      return false
+      return .failed
     }
 
     configureLogging(sharedConfig: sharedConfig)
 
     guard acquireInstanceLock(sharedConfig: sharedConfig) else {
-      return false
+      return .failed
     }
 
     let runtimeConfig = NetworkAgentRuntimeConfig.easyBar(
@@ -41,23 +52,26 @@ final class AppController: NetworkAuthorizationPromptPresenter {
       appVersion: BuildInfo.appVersion
     )
 
+    guard runtimeConfig.isEnabled else {
+      logger.info("network agent disabled in config")
+      return .disabled
+    }
+
     runtime = NetworkAgentRuntime(
       config: runtimeConfig,
       logger: logger.child("runtime"),
       promptPresenter: self,
-      onRestartRequested: {
-        NSApp.terminate(nil)
-      }
+      onRestartRequested: onRestartRequested
     )
 
     NSApp.setActivationPolicy(.accessory)
 
     guard runtime?.start() == true else {
       runtime = nil
-      return false
+      return .failed
     }
 
-    return true
+    return .running
   }
 
   /// Stops the network agent runtime.
