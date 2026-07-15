@@ -9,7 +9,7 @@ actor EventHub {
   /// Logger used for event diagnostics.
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.
-  private let enqueueLuaEvent: (EasyBarEventPayload) -> Void
+  private let enqueueLuaEvent: @Sendable (EasyBarEventPayload) -> Void
   private let metricsCoordinator: MetricsCoordinator
   private let wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
 
@@ -39,10 +39,13 @@ actor EventHub {
   ) {
     self.init(
       logger: logger,
-      enqueueLuaEvent: LuaEventSink(
-        runtime: luaRuntime,
-        logger: logger.child("lua_sink")
-      ).enqueue,
+      enqueueLuaEvent: {
+        let sink = LuaEventSink(
+          runtime: luaRuntime,
+          logger: logger.child("lua_sink")
+        )
+        return { @Sendable payload in sink.enqueue(payload) }
+      }(),
       metricsCoordinator: metricsCoordinator,
       wifiSnapshotProvider: wifiSnapshotProvider
     )
@@ -51,7 +54,7 @@ actor EventHub {
   /// Creates one event hub with an injected sink.
   init(
     logger: ProcessLogger,
-    enqueueLuaEvent: @escaping (EasyBarEventPayload) -> Void,
+    enqueueLuaEvent: @escaping @Sendable (EasyBarEventPayload) -> Void,
     metricsCoordinator: MetricsCoordinator = .shared,
     wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
   ) {
