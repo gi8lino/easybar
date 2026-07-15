@@ -30,4 +30,15 @@ final class WidgetTreeUpdateTests: XCTestCase {
     XCTAssertTrue(update.isClearRoot)
     XCTAssertEqual(update.clearRootID, "clock")
   }
+
+  func testCommandCancellationPayloadIsDecoded() throws {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from: #"{"protocol_version":1,"type":"command_cancel","token":"job-1"}"#
+    )
+
+    guard case .commandCancel(let token) = message else {
+      return XCTFail("Expected command cancellation message")
+    }
+    XCTAssertEqual(token, "job-1")
+  }
 }

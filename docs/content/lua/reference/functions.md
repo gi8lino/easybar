@@ -181,6 +181,20 @@ Removes one or more nested properties from this node.
 | ------- | ------------------ | ----------- |
 | `paths` | `string\|string[]` |             |
 
+## `EasyBar.cancel_async`
+
+Requests cancellation of one pending background command.
+
+### Parameters
+
+| Name    | Type     | Description |
+| ------- | -------- | ----------- |
+| `token` | `string` |             |
+
+### Returns
+
+- `boolean pending`
+
 ## `EasyBar.log.with_file`
 
 Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`. The file name must be a plain file name, not a path.

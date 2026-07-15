@@ -212,6 +212,8 @@ function M.new(hooks)
 		type(hooks.request_sync_command) == "function" and hooks.request_sync_command or nil
 	local request_async_command =
 		type(hooks.request_async_command) == "function" and hooks.request_async_command or nil
+	local request_cancel_async =
+		type(hooks.request_cancel_async) == "function" and hooks.request_cancel_async or nil
 	local before_async_callback =
 		type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
 	local on_async_job_started =
@@ -444,6 +446,20 @@ function M.new(hooks)
 		on_async_job_started(token, command)
 
 		return token
+	end
+
+	--- Requests cancellation of one pending background host command.
+	function registry.cancel_async(token, ...)
+		assert(type(token) == "string" and token ~= "", "easybar.cancel_async(token) requires token")
+		assert(select("#", ...) == 0, "easybar.cancel_async(token) does not accept extra arguments")
+		assert(type(request_cancel_async) == "function", "easybar.cancel_async unavailable without host runner")
+
+		if state.pending_async_commands[token] == nil then
+			return false
+		end
+
+		request_cancel_async(token)
+		return true
 	end
 
 	--- Runs one host-owned shell command.

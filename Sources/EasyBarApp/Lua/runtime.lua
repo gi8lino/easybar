@@ -227,12 +227,22 @@ local function request_async_command(command, options)
 	return send_command_request(command, false, options)
 end
 
+--- Requests cancellation of one host-owned asynchronous command.
+local function request_cancel_async(token)
+	send_payload({
+		protocol_version = PROTOCOL_VERSION,
+		type = "command_cancel",
+		token = token,
+	})
+end
+
 registry = api.new(log, {
 	on_mutation = mark_render_dirty,
 	before_exec_callback = flush_pending_render,
 	before_async_callback = flush_pending_render,
 	request_sync_command = request_sync_command,
 	request_async_command = request_async_command,
+	request_cancel_async = request_cancel_async,
 	on_async_job_started = function(token, command)
 		log.debug("lua async started token=" .. tostring(token) .. " command_bytes=" .. tostring(#command))
 	end,

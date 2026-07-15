@@ -26,7 +26,7 @@ actor LuaCommandService {
   private let encoder = JSONEncoder()
 
   private var activeAsyncCommandSessionID: UInt64?
-  private var activeAsyncCommands: [UUID: Task<Void, Never>] = [:]
+  private var activeAsyncCommands: [String: Task<Void, Never>] = [:]
 
   init(logger: ProcessLogger, luaRuntime: LuaRuntime, configManager: ConfigManager) {
     self.logger = logger
@@ -110,7 +110,6 @@ actor LuaCommandService {
       return
     }
 
-    let commandID = UUID()
     let commandRunner = commandRunner
 
     let task = Task { [weak self] in
@@ -120,7 +119,6 @@ actor LuaCommandService {
         environment: commandSettings.environment
       )
       await self?.sendAsyncCommandResponse(
-        commandID: commandID,
         token: token,
         result: result,
         runtimeSessionID: runtimeSessionID,
@@ -128,7 +126,19 @@ actor LuaCommandService {
       )
     }
 
-    activeAsyncCommands[commandID] = task
+    activeAsyncCommands[token] = task
+  }
+
+  /// Cancels one host-owned asynchronous command from the active Lua runtime session.
+  func cancelAsyncCommand(token: String, runtimeSessionID: UInt64) {
+    guard activeAsyncCommandSessionID == runtimeSessionID else { return }
+    guard let task = activeAsyncCommands[token] else {
+      logger.debug("lua async cancellation ignored for unknown token", .field("token", token))
+      return
+    }
+
+    logger.debug("cancelling lua async command", .field("token", token))
+    task.cancel()
   }
 
   /// Sends one command response back into the Lua runtime.
@@ -148,13 +158,12 @@ actor LuaCommandService {
 
   /// Sends one async command response only when the originating runtime session is still active.
   private func sendAsyncCommandResponse(
-    commandID: UUID,
     token: String,
     result: LuaCommandResult,
     runtimeSessionID: UInt64,
     isRuntimeSessionActive: @escaping @Sendable (UInt64) async -> Bool
   ) async {
-    activeAsyncCommands.removeValue(forKey: commandID)
+    activeAsyncCommands.removeValue(forKey: token)
 
     guard await isRuntimeSessionActive(runtimeSessionID) else {
       logger.debug(

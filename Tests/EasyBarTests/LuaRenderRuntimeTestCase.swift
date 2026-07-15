@@ -111,6 +111,8 @@ extension LuaRenderRuntimeTestCase {
             "command_request:\(request.command):sync=\(request.isSynchronous):timeout=\(String(describing: request.timeoutSeconds)):max_output=\(String(describing: request.maxOutputBytes))"
         }
         return "command_request"
+      case .commandCancel:
+        return "command_cancel:\(update.commandCancelToken ?? "unknown")"
       case .tree:
         if let payload = update.treePayload,
           let root = payload.nodes.first(where: { $0.id == payload.root })

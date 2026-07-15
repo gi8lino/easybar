@@ -512,6 +512,7 @@
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, options?: EasyBarCommandOptions): string, integer Runs one shell command and returns trimmed output plus exit code.
 ---@field exec_async fun(command: string, options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
+---@field cancel_async fun(token: string): boolean Requests cancellation of one pending `exec_async` command and returns whether the token was pending.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of one node's props by id.
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
@@ -611,6 +612,11 @@ function EasyBar.exec(command, options) end
 ---@param callback fun(output: string, code: integer): any
 ---@return string
 function EasyBar.exec_async(command, options, callback) end
+
+---Requests cancellation of one pending background command.
+---@param token string
+---@return boolean pending
+function EasyBar.cancel_async(token) end
 
 ---EasyBar application version (`dev`).
 ---@type string

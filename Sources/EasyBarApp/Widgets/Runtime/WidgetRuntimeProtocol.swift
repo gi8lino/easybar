@@ -13,6 +13,7 @@ enum WidgetRuntimeMessage {
     timeoutSeconds: TimeInterval?,
     maxOutputBytes: Int?
   )
+  case commandCancel(token: String)
 }
 
 /// Decodes and classifies structured messages emitted by the Lua widget runtime.
@@ -76,6 +77,13 @@ struct WidgetRuntimeProtocolDecoder {
         timeoutSeconds: request.timeoutSeconds,
         maxOutputBytes: request.maxOutputBytes
       )
+    case .commandCancel:
+      guard let token = update.commandCancelToken, !token.isEmpty else {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua command cancellation request"
+        )
+      }
+      return .commandCancel(token: token)
     }
   }
 

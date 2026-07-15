@@ -36,6 +36,7 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case tree
     case clearRoot = "clear_root"
     case commandRequest = "command_request"
+    case commandCancel = "command_cancel"
   }
 
   /// Returns whether this update contains subscriptions.
@@ -66,6 +67,12 @@ struct WidgetTreeUpdate: Codable, Sendable {
   /// Returns whether this update is a host command execution request.
   var isCommandRequest: Bool {
     return type == .commandRequest
+  }
+
+  /// Returns the asynchronous command token to cancel when present.
+  var commandCancelToken: String? {
+    guard type == .commandCancel else { return nil }
+    return token
   }
 
   /// Returns the subscribed event names or an empty list.

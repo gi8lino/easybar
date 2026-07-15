@@ -177,6 +177,11 @@ actor WidgetEngine {
           return await self.isRuntimeSessionActive(sessionID)
         }
       )
+    case .commandCancel(let token):
+      await commandService.cancelAsyncCommand(
+        token: token,
+        runtimeSessionID: runtimeSessionID
+      )
     }
   }
 

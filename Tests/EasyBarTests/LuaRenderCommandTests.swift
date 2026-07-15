@@ -6,6 +6,48 @@ import XCTest
 @testable import EasyBarApp
 
 final class LuaRenderCommandTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
+  func testCancelAsyncEmitsCancellationForPendingCommandToken() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+    try """
+    easybar.add("item", "brew", { position = "right" })
+    easybar.subscribe("brew", { easybar.events.forced }, function(_)
+      local token = easybar.exec_async("sleep 30", {}, function(_, _) end)
+      easybar.cancel_async(token)
+    end)
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("brew.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let runtimeController = LuaProcessController(
+      logger: ProcessLogger(label: "lua.cancel-async.test", minimumLevel: .error)
+    )
+    let runtimePath = try XCTUnwrap(runtimeController.resolvedRuntimePath())
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "brew.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
+      autoRespondToCommands: false
+    )
+    defer { runtime.stop() }
+
+    try runtime.sendHostEvent("{\"name\":\"forced\"}\n")
+    let request = try await nextCommandRequest(
+      from: recorder,
+      matching: { !$0.isSynchronous && $0.command == "sleep 30" }
+    )
+    let cancellation = try await nextUpdate(
+      from: recorder,
+      matching: { $0.commandCancelToken == request.token }
+    )
+    XCTAssertEqual(cancellation.commandCancelToken, request.token)
+  }
+
   func testExecCallbackFlushesIntermediateRenderBeforeFinalMutation() async throws {
     let widgetsDirectoryURL = try makeWidgetsDirectory()
 

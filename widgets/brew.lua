@@ -75,6 +75,9 @@ local THRESHOLDS = {
 
 local running = false
 local dynamic_rows = {}
+local active_command_token = nil
+local active_operation_kind = nil
+local cancellation_requested = false
 
 local brew_widget
 local title_item
@@ -86,6 +89,7 @@ local update_button
 
 local render
 local add_popup_row
+local finish_cancelled_operation
 
 local state = {
 	formulae = {},
@@ -204,6 +208,7 @@ local function fail_brew_operation(kind, message)
 
 	state.phase = "error"
 	running = false
+	active_operation_kind = nil
 
 	append_log_marker(kind, "failed")
 	prune_brew_log()
@@ -214,15 +219,27 @@ end
 local function run_logged_command(command, options, exit_label, callback)
 	log.append("$ " .. command)
 
-	easybar.exec_async(command, options, function(output, code)
+	local token
+	token = easybar.exec_async(command, options, function(output, code)
+		if active_command_token == token then
+			active_command_token = nil
+		end
+
 		output = tostring(output or "")
 		code = code or 0
 
 		append_log_output(output)
 		log.append(exit_label .. " exit " .. tostring(code))
 
+		if cancellation_requested then
+			finish_cancelled_operation()
+			return
+		end
+
 		callback(output, code)
 	end)
+
+	active_command_token = token
 end
 
 --- Runs `brew update`.
@@ -609,6 +626,10 @@ end
 
 --- Returns labels for action buttons based on the current phase.
 local function action_button_labels()
+	if running and (state.phase == "updating" or state.phase == "upgrading" or state.phase == "cancelling") then
+		return "", state.phase == "cancelling" and "Cancelling…" or "Cancel"
+	end
+
 	if not running then
 		return "Upgrade", "Update"
 	end
@@ -704,6 +725,7 @@ local function render_popup()
 
 	upgrade_button:set({
 		order = 1,
+		drawing = not (running and (state.phase == "updating" or state.phase == "upgrading" or state.phase == "cancelling")),
 		label = {
 			string = upgrade_label,
 			color = COLORS.text,
@@ -799,8 +821,55 @@ local function start_operation(phase, status)
 	state.error = nil
 	state.last_attempted_at = os.time()
 	state.phase = phase
+	cancellation_requested = false
 
 	render()
+end
+
+--- Refreshes package state after an update or upgrade was cancelled.
+finish_cancelled_operation = function()
+	local kind = active_operation_kind or "operation"
+	cancellation_requested = false
+	active_operation_kind = nil
+	append_log_marker(kind, "cancelled")
+	prune_brew_log()
+
+	state.phase = "checking"
+	state.status = (kind == "upgrade" and "Upgrade" or "Update") .. " cancelled. Refreshing outdated packages…"
+	render()
+
+	run_outdated_json(function(output, code)
+		running = false
+
+		if code ~= 0 then
+			state.error = truncate(trim(output), 400)
+			if state.error == "" then
+				state.error = "Operation cancelled; brew outdated failed with exit code " .. tostring(code)
+			end
+			state.phase = "error"
+		else
+			apply_outdated_result(output)
+		end
+
+		render()
+	end)
+end
+
+--- Cancels the active update or upgrade command and its process group.
+local function cancel_operation()
+	if not running or (state.phase ~= "updating" and state.phase ~= "upgrading") then
+		return
+	end
+
+	cancellation_requested = true
+	state.phase = "cancelling"
+	state.status = "Cancelling Homebrew operation…"
+	append_log_marker(active_operation_kind or "operation", "cancel-requested")
+	render()
+
+	if active_command_token == nil or not easybar.cancel_async(active_command_token) then
+		finish_cancelled_operation()
+	end
 end
 
 --- Checks outdated packages without updating Homebrew.
@@ -833,6 +902,7 @@ end
 --- Completes a successful brew operation.
 local function finish_brew_operation(kind)
 	running = false
+	active_operation_kind = nil
 	append_log_marker(kind, "ok")
 	prune_brew_log()
 	render()
@@ -873,6 +943,7 @@ local function update_now()
 	end
 
 	append_log_marker("update", "start")
+	active_operation_kind = "update"
 	start_operation("updating", "Updating Homebrew… writing " .. BREW_LOG_FILE_NAME)
 
 	run_brew_update(handle_update_brew_update)
@@ -941,6 +1012,7 @@ local function upgrade_now()
 	end
 
 	append_log_marker("upgrade", "start")
+	active_operation_kind = "upgrade"
 	start_operation("upgrading", "Updating and upgrading… writing " .. BREW_LOG_FILE_NAME)
 
 	run_brew_update(handle_upgrade_brew_update)
@@ -1064,9 +1136,14 @@ update_button = easybar.add(easybar.kind.item, ID_UPDATE, {
 
 --- Starts the update flow when the update button is left-clicked.
 update_button:subscribe(easybar.events.mouse.clicked, function(event)
-	if (event.button == nil or event.button == easybar.events.mouse.left_button) and not running then
-		log(easybar.level.debug, "update click")
-		update_now()
+	if event.button == nil or event.button == easybar.events.mouse.left_button then
+		if running and (state.phase == "updating" or state.phase == "upgrading") then
+			log(easybar.level.debug, "cancel click", "phase=" .. state.phase)
+			cancel_operation()
+		elseif not running then
+			log(easybar.level.debug, "update click")
+			update_now()
+		end
 	end
 end)
 
