@@ -1,5 +1,5 @@
 /// Renders the native spaces widget root.
-struct SpacesRenderer: NativeWidgetRenderer {
+struct SpacesRenderer {
 
   let rootID: String
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Renders the native volume widget tree from a volume snapshot.
-struct VolumeRenderer: NativeWidgetRenderer {
+struct VolumeRenderer {
 
   typealias Snapshot = VolumeSliderNativeWidget.Snapshot
 

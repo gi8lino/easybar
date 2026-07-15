@@ -1,7 +1,7 @@
 import Foundation
 
 /// Renders the native battery widget tree from a battery snapshot.
-struct BatteryRenderer: NativeWidgetRenderer {
+struct BatteryRenderer {
 
   typealias Snapshot = BatteryNativeWidget.Snapshot
 

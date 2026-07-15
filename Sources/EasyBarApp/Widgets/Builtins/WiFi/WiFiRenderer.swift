@@ -1,7 +1,7 @@
 import Foundation
 
 /// Renders the native Wi-Fi widget tree from a Wi-Fi snapshot.
-struct WiFiRenderer: NativeWidgetRenderer {
+struct WiFiRenderer {
 
   typealias Snapshot = WiFiNativeWidget.Snapshot
 

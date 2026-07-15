@@ -1,7 +1,7 @@
 import Foundation
 
 /// Renders the native CPU sparkline widget.
-struct CPURenderer: NativeWidgetRenderer {
+struct CPURenderer {
 
   typealias Snapshot = CPUSparklineNativeWidget.Snapshot
 

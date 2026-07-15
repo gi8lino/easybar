@@ -9,7 +9,7 @@ import Foundation
 /// - `NativeMonthCalendarPopupView`
 ///
 /// So this renderer is responsible only for the anchor node tree.
-final class CalendarRenderer: NativeWidgetRenderer {
+final class CalendarRenderer {
 
   typealias Snapshot = CalendarNativeWidget.Snapshot
 
