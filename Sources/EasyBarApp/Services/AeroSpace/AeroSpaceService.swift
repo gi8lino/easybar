@@ -71,34 +71,6 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
       / 1_000_000_000,
     logger: logger
   )
-  /// Delayed refresh scheduler used after macOS reports a newly launched app.
-  private lazy var launchRefreshScheduler = DebouncedActionScheduler(
-    label: "aerospace launch refresh",
-    delay: 0.6,
-    logger: logger
-  )
-  /// macOS app lifecycle observer used to complement AeroSpace subscription events.
-  private lazy var appObserver = AeroSpaceAppObserver(
-    logger: logger.child("app-observer"),
-    appActivated: { [weak self] app in
-      Task { @MainActor [weak self] in
-        self?.applyOptimisticFocusedApp(from: app)
-      }
-    },
-    appLaunched: { [weak self] app in
-      self?.scheduleLaunchRefresh(for: app)
-    },
-    appTerminated: { [weak self] app in
-      guard let self else { return }
-
-      self.logger.debug(
-        "aerospace observed app termination",
-        .field("app", app.localizedName ?? "")
-      )
-      self.cancelPendingLaunchRefresh(reason: "app terminated")
-      self.refresh()
-    }
-  )
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
 
@@ -205,8 +177,6 @@ extension AeroSpaceService {
 
   /// Queues a state reload for one AeroSpace-triggered update source.
   private func triggerRefresh(source: String) {
-    cancelPendingLaunchRefresh(reason: source)
-
     guard isActive else {
       logger.debug("aerospace refresh skipped, service inactive or no registered consumers")
       return
@@ -347,7 +317,6 @@ extension AeroSpaceService {
       logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
     }
 
-    appObserver.start()
     refresh()
 
     logger.debug("aerospace service activate end")
@@ -370,8 +339,6 @@ extension AeroSpaceService {
 
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
-    launchRefreshScheduler.cancel()
-    appObserver.stop()
 
     logger.debug(
       "aerospace service deactivate end",
@@ -424,70 +391,6 @@ extension AeroSpaceService {
       .field("source", source),
       .field("delay_ms", Int(delayNanoseconds / 1_000_000))
     )
-  }
-}
-
-// MARK: - App Observation Handlers
-
-extension AeroSpaceService {
-  /// Schedules one delayed refresh for freshly launched apps that may create windows later.
-  fileprivate func scheduleLaunchRefresh(for app: NSRunningApplication) {
-    logger.debug(
-      "aerospace observed app launch",
-      .field("app", app.localizedName ?? "")
-    )
-
-    let appName = app.localizedName ?? ""
-    let generation = currentGeneration()
-    launchRefreshScheduler.schedule { [weak self] in
-      guard let self, self.shouldExecute(generation: generation) else { return }
-      self.logger.debug(
-        "aerospace delayed launch refresh firing",
-        .field("app", appName)
-      )
-      self.refresh()
-    }
-  }
-
-  /// Cancels any delayed launch refresh once a stronger signal arrives first.
-  fileprivate func cancelPendingLaunchRefresh(reason: String) {
-    launchRefreshScheduler.cancel()
-    logger.debug(
-      "aerospace delayed launch refresh canceled",
-      .field("reason", reason)
-    )
-  }
-
-  /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
-  @MainActor
-  fileprivate func applyOptimisticFocusedApp(from app: NSRunningApplication) {
-    cancelPendingLaunchRefresh(reason: "app activated")
-
-    let bundlePath = app.bundleURL?.path
-    let name = app.localizedName ?? ""
-    let id = resolvedAppID(name: name, bundlePath: bundlePath)
-
-    guard !id.isEmpty else { return }
-
-    let focused = SpaceApp(
-      id: id,
-      bundleID: app.bundleIdentifier ?? "",
-      name: name,
-      bundlePath: bundlePath
-    )
-
-    let didChange = focusedApp != focused || focusedAppID != focused.id
-    guard didChange else { return }
-
-    focusedApp = focused
-    focusedAppID = focused.id
-
-    logger.debug(
-      "aerospace optimistic focus updated",
-      .field("app", focused.name)
-    )
-
-    NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
   }
 }
 
