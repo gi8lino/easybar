@@ -1,21 +1,8 @@
 import Foundation
 
-/// Supplies dynamic status values used by the bar context menu.
-@MainActor
-protocol BarContextMenuStateProviding: AnyObject {
-  /// Whether any calendar-agent client is currently connected.
-  var calendarAgentConnected: Bool { get }
-  /// Whether the network-agent client is currently connected.
-  var networkAgentConnected: Bool { get }
-  /// Human-readable calendar permission state.
-  var calendarPermissionLabel: String { get }
-  /// Human-readable Wi-Fi/location permission state.
-  var wifiPermissionLabel: String { get }
-}
-
 /// Default context-menu state provider backed by app-owned runtime services.
 @MainActor
-final class BarContextMenuStateProvider: BarContextMenuStateProviding {
+final class BarContextMenuStateProvider {
   /// Wi-Fi state store owned by the app service graph.
   private let nativeWiFiStore: NativeWiFiStore
   /// Month-calendar state store owned by the app service graph.

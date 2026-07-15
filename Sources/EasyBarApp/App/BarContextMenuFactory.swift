@@ -33,14 +33,14 @@ final class BarContextMenuFactory: NSObject {
   /// Runtime actions forwarded to the app controller.
   private let actions: BarContextMenuActions
   /// State provider for dynamic menu labels.
-  private let stateProvider: BarContextMenuStateProviding
+  private let stateProvider: BarContextMenuStateProvider
 
   /// Creates a context menu factory for the current app services.
   init(
     logger: ProcessLogger,
     configStore: ConfigSnapshotStore,
     actions: BarContextMenuActions,
-    stateProvider: BarContextMenuStateProviding
+    stateProvider: BarContextMenuStateProvider
   ) {
     self.logger = logger
     self.configStore = configStore

@@ -243,7 +243,7 @@ final class AppController {
   }
 
   /// Creates and presents the main bar window controller.
-  private func setupBarWindowController(menuStateProvider: BarContextMenuStateProviding) {
+  private func setupBarWindowController(menuStateProvider: BarContextMenuStateProvider) {
     let controller = BarWindowController(
       logger: logger.child("window"),
       configStore: services.configSnapshotStore,
@@ -268,7 +268,7 @@ final class AppController {
   }
 
   /// Creates the controller icon that survives bar-runtime shutdown.
-  private func setupMenuBarController(stateProvider: BarContextMenuStateProviding) {
+  private func setupMenuBarController(stateProvider: BarContextMenuStateProvider) {
     let controller = MenuBarController(
       configStore: services.configSnapshotStore,
       stateProvider: stateProvider

@@ -23,7 +23,7 @@ final class BarWindowController: NSWindowController {
   /// Hosting view containing the SwiftUI bar content.
   private let hostingView: BarHostingView<AnyView>
   /// Provider for dynamic context-menu state.
-  private let menuStateProvider: BarContextMenuStateProviding
+  private let menuStateProvider: BarContextMenuStateProvider
 
   /// Factory that builds the bar context menu.
   private lazy var contextMenuFactory = BarContextMenuFactory(
@@ -44,7 +44,7 @@ final class BarWindowController: NSWindowController {
     configStore: ConfigSnapshotStore,
     widgetStore: WidgetStore,
     aeroSpaceService: AeroSpaceService,
-    menuStateProvider: BarContextMenuStateProviding
+    menuStateProvider: BarContextMenuStateProvider
   ) {
     self.logger = logger
     self.configStore = configStore

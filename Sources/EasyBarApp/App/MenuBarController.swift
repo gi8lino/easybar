@@ -23,11 +23,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   var runtimeState: () -> RuntimeState = { .stopped }
 
   private let configStore: ConfigSnapshotStore
-  private let stateProvider: BarContextMenuStateProviding
+  private let stateProvider: BarContextMenuStateProvider
   private let statusItem: NSStatusItem
   private let menu = NSMenu()
 
-  init(configStore: ConfigSnapshotStore, stateProvider: BarContextMenuStateProviding) {
+  init(configStore: ConfigSnapshotStore, stateProvider: BarContextMenuStateProvider) {
     self.configStore = configStore
     self.stateProvider = stateProvider
     self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
