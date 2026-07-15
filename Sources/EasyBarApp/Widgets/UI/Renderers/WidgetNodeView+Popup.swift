@@ -1,5 +1,12 @@
 import SwiftUI
 
+private enum PopupContentKind {
+  case none
+  case calendarUpcoming
+  case calendarMonth
+  case genericNodePopup
+}
+
 // MARK: - Popup State
 
 extension WidgetNodeView {
@@ -171,17 +178,15 @@ extension WidgetNodeView {
     return !popupChildren.isEmpty
   }
 
-  var popupContentResolver: WidgetPopupContentResolver {
-    return WidgetPopupContentResolver(
-      node: node,
-      hasPopupChildren: hasPopupChildren,
-      configStore: configStore,
-      widgetStore: store
-    )
+  var nodeCanPresentPopup: Bool {
+    return popupContentKind != .none
   }
 
-  var nodeCanPresentPopup: Bool {
-    return popupContentResolver.canPresentPopup
+  var usesNativePopupAnchor: Bool {
+    switch popupContentKind {
+    case .calendarUpcoming, .calendarMonth: return true
+    case .none, .genericNodePopup: return false
+    }
   }
 
   var popupHoverBackground: some View {
@@ -189,10 +194,41 @@ extension WidgetNodeView {
   }
 
   var popupPanelContent: AnyView {
-    return popupContentResolver.makeContent(
-      regularContent: popupContent,
-      hoverBackground: popupHoverBackground
-    )
+    switch popupContentKind {
+    case .none:
+      return AnyView(EmptyView())
+    case .calendarUpcoming:
+      return AnyView(
+        NativeUpcomingCalendarPopupView()
+          .environmentObject(configStore)
+          .background(popupHoverBackground)
+      )
+    case .calendarMonth:
+      return AnyView(
+        NativeMonthCalendarPopupView()
+          .environmentObject(configStore)
+          .background(popupHoverBackground)
+      )
+    case .genericNodePopup:
+      return AnyView(
+        popupContent
+          .environmentObject(configStore)
+          .environmentObject(store)
+          .background(popupHoverBackground)
+      )
+    }
+  }
+
+  private var popupContentKind: PopupContentKind {
+    if node.isCalendarRoot {
+      switch configStore.snapshot.builtins.calendar.popupMode {
+      case .none: return .none
+      case .upcoming: return .calendarUpcoming
+      case .month: return .calendarMonth
+      }
+    }
+
+    return node.kind == .popup || hasPopupChildren ? .genericNodePopup : .none
   }
 
   var nodeStyle: WidgetNodeStyle {

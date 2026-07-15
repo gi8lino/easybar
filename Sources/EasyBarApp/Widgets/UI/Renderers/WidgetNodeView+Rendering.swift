@@ -91,7 +91,7 @@ extension WidgetNodeView {
 
   var rowOrGroupView: some View {
     Group {
-      if popupContentResolver.usesNativePopupAnchor {
+      if usesNativePopupAnchor {
         nativePopupAnchorView {
           childRow
         }
