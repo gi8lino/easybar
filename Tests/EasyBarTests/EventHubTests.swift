@@ -12,13 +12,8 @@ final class EventHubTests: XCTestCase {
         label: "eventhub.test",
         minimumLevel: .error
       ),
-      luaEventSink: NoopEventSink()
+      enqueueLuaEvent: { _ in }
     )
-  }
-
-  private final class NoopEventSink: EventPayloadSink {
-    /// Accepts forwarded payloads without delivering them to Lua during tests.
-    func enqueue(_ payload: EasyBarEventPayload) {}
   }
 
   /// Verifies that filtered subscription receives matching event only.

@@ -1,14 +1,6 @@
 import EasyBarShared
 import Foundation
 
-/// Receives event payloads emitted by the event hub.
-protocol EventPayloadSink {
-  /// Enqueues one event payload for downstream delivery.
-  func enqueue(_ payload: EasyBarEventPayload)
-}
-
-extension LuaEventSink: EventPayloadSink {}
-
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
   /// Prefix used for Lua interval subscriptions.
@@ -17,7 +9,7 @@ actor EventHub {
   /// Logger used for event diagnostics.
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.
-  private let luaEventSink: EventPayloadSink
+  private let enqueueLuaEvent: (EasyBarEventPayload) -> Void
   private let metricsCoordinator: MetricsCoordinator
   private let wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
 
@@ -47,10 +39,10 @@ actor EventHub {
   ) {
     self.init(
       logger: logger,
-      luaEventSink: LuaEventSink(
+      enqueueLuaEvent: LuaEventSink(
         runtime: luaRuntime,
         logger: logger.child("lua_sink")
-      ),
+      ).enqueue,
       metricsCoordinator: metricsCoordinator,
       wifiSnapshotProvider: wifiSnapshotProvider
     )
@@ -59,12 +51,12 @@ actor EventHub {
   /// Creates one event hub with an injected sink.
   init(
     logger: ProcessLogger,
-    luaEventSink: EventPayloadSink,
+    enqueueLuaEvent: @escaping (EasyBarEventPayload) -> Void,
     metricsCoordinator: MetricsCoordinator = .shared,
     wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
   ) {
     self.logger = logger
-    self.luaEventSink = luaEventSink
+    self.enqueueLuaEvent = enqueueLuaEvent
     self.metricsCoordinator = metricsCoordinator
     self.wifiSnapshotProvider = wifiSnapshotProvider
   }
@@ -173,7 +165,7 @@ actor EventHub {
     logEmission(payload)
 
     if shouldForwardPayloadToLua(payload) {
-      luaEventSink.enqueue(payload)
+      enqueueLuaEvent(payload)
     }
   }
 
