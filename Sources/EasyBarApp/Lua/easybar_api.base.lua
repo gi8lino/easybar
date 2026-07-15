@@ -230,9 +230,14 @@
 ---@field remove fun(self: EasyBarNodeHandle) Removes this node and all descendants.
 ---@field subscribe fun(self: EasyBarNodeHandle, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes this node to runtime or interaction events.
 
+---@class EasyBarJsonNull
+
 ---@class EasyBarJson
+---@field null EasyBarJsonNull Sentinel used for decoded JSON null values.
+---@field array fun(value?: table): table Marks a table as a JSON array, including an empty table.
+---@field object fun(value?: table): table Marks a table as a JSON object, including an empty table.
 ---@field encode fun(value: any): string Encodes one Lua value tree into a JSON string.
----@field decode fun(text: string): any Decodes one JSON string into Lua values.
+---@field decode fun(text: string): any Decodes one JSON string while preserving null and container shapes.
 
 -- GENERATED SECTION: easybar.themes
 -- EasyBar generated theme stub. Do not edit by hand.
