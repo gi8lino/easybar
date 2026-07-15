@@ -111,6 +111,7 @@ let package = Package(
         "EasyBarConfigParsing",
         "EasyBarConfigSchema",
         "EasyBarCalendarConfig",
+        "EasyBarCalendarCore",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
         .product(name: "TOMLKit", package: "TOMLKit"),

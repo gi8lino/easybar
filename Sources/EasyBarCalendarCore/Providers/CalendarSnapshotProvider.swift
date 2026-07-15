@@ -8,13 +8,16 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
   enum EventTravelTimeBridge {
     /// Key-value coding key used by EventKit for travel time.
     static let key = "travelTime"
+    /// Getter selector used to verify that the current EventKit object supports travel time.
+    static let getterSelector = NSSelectorFromString(key)
+    /// Setter selector used to avoid an Objective-C exception for unsupported KVC writes.
+    static let setterSelector = NSSelectorFromString("setTravelTime:")
 
-    /// Reads positive travel time from one EventKit event.
-    static func getSeconds(from event: EKEvent) -> TimeInterval? {
-      let selector = NSSelectorFromString(key)
-      guard event.responds(to: selector) else { return nil }
+    /// Reads positive travel time from one compatible object.
+    static func getSeconds(from object: NSObject) -> TimeInterval? {
+      guard object.responds(to: getterSelector) else { return nil }
 
-      if let value = event.value(forKey: key) as? NSNumber {
+      if let value = object.value(forKey: key) as? NSNumber {
         let seconds = value.doubleValue
         return seconds > 0 ? seconds : nil
       }
@@ -22,14 +25,14 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
       return nil
     }
 
-    /// Writes travel time onto one EventKit event.
-    static func setSeconds(_ seconds: TimeInterval?, on event: EKEvent) {
-      guard let seconds, seconds > 0 else {
-        event.setValue(NSNumber(value: 0), forKey: key)
-        return
-      }
+    /// Writes travel time only when the current object exposes the matching setter.
+    @discardableResult
+    static func setSeconds(_ seconds: TimeInterval?, on object: NSObject) -> Bool {
+      guard object.responds(to: setterSelector) else { return false }
 
-      event.setValue(NSNumber(value: seconds), forKey: key)
+      let normalizedSeconds = max(0, seconds ?? 0)
+      object.setValue(NSNumber(value: normalizedSeconds), forKey: key)
+      return true
     }
   }
 
@@ -189,7 +192,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
     event.endDate = draft.endDate
     event.isAllDay = draft.isAllDay
     event.location = normalizedOptionalText(draft.location)
-    EventTravelTimeBridge.setSeconds(draft.travelTimeSeconds, on: event)
+    applyTravelTime(draft.travelTimeSeconds, to: event)
     event.alarms = draft.alertOffsetsSeconds.map { EKAlarm(relativeOffset: -abs($0)) }
 
     try eventStore.save(event, span: .thisEvent, commit: true)
@@ -233,7 +236,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
     event.endDate = draft.endDate
     event.isAllDay = draft.isAllDay
     event.location = normalizedOptionalText(draft.location)
-    EventTravelTimeBridge.setSeconds(draft.travelTimeSeconds, on: event)
+    applyTravelTime(draft.travelTimeSeconds, to: event)
 
     if draft.alertOffsetsSeconds.isEmpty {
       event.alarms = nil
@@ -282,6 +285,16 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
     Task { @MainActor [weak self] in
       self?.onChange?()
     }
+  }
+
+  /// Applies EventKit travel time when the current macOS implementation supports it.
+  private func applyTravelTime(_ seconds: TimeInterval?, to event: EKEvent) {
+    guard !EventTravelTimeBridge.setSeconds(seconds, on: event), seconds != nil else { return }
+
+    logger.debug(
+      "calendar event travel time unsupported",
+      .field("seconds", seconds ?? 0)
+    )
   }
 
   /// Returns one normalized fetch range when valid.
