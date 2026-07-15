@@ -10,11 +10,11 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   private let authState = NetworkAuthorizationState()
   private let componentName: String
   private let logger: ProcessLogger
-  private let retryBackoff: AuthorizationRetryBackoff
+  private let lifecycle: AuthorizationLifecycle
   private weak var promptPresenter: NetworkAuthorizationPromptPresenter?
 
-  private var onChange: (() -> Void)?
-  private var presentedAuthorizationPrompt = false
+  /// Session that currently owns the temporary authorization prompt UI.
+  private let promptOwner = LockedState<ObjectIdentifier?>(nil)
 
   /// Creates one location authorization controller that logs through the provided logger.
   init(
@@ -25,15 +25,18 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     self.componentName = componentName
     self.logger = logger
     self.promptPresenter = promptPresenter
-    retryBackoff = AuthorizationRetryBackoff(logger: logger.child("retry_backoff"))
+    lifecycle = AuthorizationLifecycle(logger: logger)
 
     super.init()
   }
 
   /// Starts tracking and requesting location authorization when needed.
   func start(onChange: @escaping () -> Void) {
-    self.onChange = onChange
+    if let previousSession = lifecycle.currentSession() {
+      restoreAccessoryModeIfNeeded(for: previousSession)
+    }
 
+    let session = lifecycle.start(onChange: onChange)
     locationManager.delegate = self
 
     let status = locationManager.authorizationStatus
@@ -44,15 +47,17 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
       .field("start", "\(authState.permissionState())")
     )
 
-    requestAccessIfNeeded()
+    requestAccessIfNeeded(for: session)
   }
 
-  /// Stops authorization callbacks.
+  /// Stops authorization callbacks and invalidates pending work.
   func stop() {
-    retryBackoff.reset()
-    restoreAccessoryModeIfNeeded()
+    if let session = lifecycle.currentSession() {
+      restoreAccessoryModeIfNeeded(for: session)
+    }
+
     locationManager.delegate = nil
-    onChange = nil
+    lifecycle.stop()
   }
 
   /// Returns whether location access is currently authorized.
@@ -67,23 +72,26 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
   /// Handles one location authorization change.
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    guard let session = lifecycle.currentSession() else { return }
     let status = manager.authorizationStatus
 
-    Task { @MainActor [weak self] in
-      guard let self else { return }
+    Task { @MainActor [weak self, weak session] in
+      guard let self, let session, self.lifecycle.isCurrent(session) else { return }
 
       self.authState.setStatus(status)
       self.logger.info(
         "\(self.componentName) authorization changed",
         .field("status", self.authState.permissionState())
       )
-      self.handleAuthorizationStateChange(status)
-      self.onChange?()
+      self.handleAuthorizationStateChange(status, session: session)
+      self.lifecycle.notify(session)
     }
   }
 
-  /// Requests location access when the current state allows it.
-  private func requestAccessIfNeeded() {
+  /// Requests location access when the current generation still owns the flow.
+  private func requestAccessIfNeeded(for session: AuthorizationLifecycle.Session) {
+    guard lifecycle.isCurrent(session) else { return }
+
     let status = locationManager.authorizationStatus
     authState.setStatus(status)
 
@@ -94,34 +102,34 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
 
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse:
-      retryBackoff.reset()
-      restoreAccessoryModeIfNeeded()
+      lifecycle.resetRetry(for: session)
+      restoreAccessoryModeIfNeeded(for: session)
       logger.info(
         "\(componentName) access already granted",
         .field("status", authState.permissionState())
       )
-      onChange?()
+      lifecycle.notify(session)
 
     case .notDetermined:
-      prepareAuthorizationPromptIfNeeded()
+      prepareAuthorizationPromptIfNeeded(for: session)
       logger.info(
         "requesting \(componentName) when-in-use access",
         .field("status", authState.permissionState())
       )
       locationManager.requestWhenInUseAuthorization()
-      scheduleRetry()
+      scheduleRetry(for: session)
 
     case .denied, .restricted:
-      retryBackoff.reset()
-      restoreAccessoryModeIfNeeded()
+      lifecycle.resetRetry(for: session)
+      restoreAccessoryModeIfNeeded(for: session)
       logger.warn(
         "\(componentName) access unavailable",
         .field("status", authState.permissionState())
       )
 
     @unknown default:
-      retryBackoff.reset()
-      restoreAccessoryModeIfNeeded()
+      lifecycle.resetRetry(for: session)
+      restoreAccessoryModeIfNeeded(for: session)
       logger.warn(
         "\(componentName) access status unknown",
         .field("raw", status.rawValue),
@@ -130,56 +138,79 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
   }
 
   /// Updates retry scheduling for one changed authorization state.
-  private func handleAuthorizationStateChange(_ status: CLAuthorizationStatus) {
+  private func handleAuthorizationStateChange(
+    _ status: CLAuthorizationStatus,
+    session: AuthorizationLifecycle.Session
+  ) {
     switch status {
     case .authorized, .authorizedAlways, .authorizedWhenInUse, .denied, .restricted:
-      retryBackoff.reset()
-      restoreAccessoryModeIfNeeded()
+      lifecycle.resetRetry(for: session)
+      restoreAccessoryModeIfNeeded(for: session)
 
     case .notDetermined:
-      scheduleRetry()
+      scheduleRetry(for: session)
 
     @unknown default:
-      retryBackoff.reset()
+      lifecycle.resetRetry(for: session)
     }
   }
 
   /// Schedules one follow-up authorization check while access is unresolved.
-  private func scheduleRetry() {
-    retryBackoff.schedule { [weak self] in
-      self?.requestAccessIfNeeded()
+  private func scheduleRetry(for session: AuthorizationLifecycle.Session) {
+    lifecycle.scheduleRetry(for: session) { [weak self] session in
+      self?.requestAccessIfNeeded(for: session)
     }
   }
 
   /// Temporarily prepares the host so macOS can surface the permission prompt.
-  private func prepareAuthorizationPromptIfNeeded() {
-    guard !presentedAuthorizationPrompt else { return }
+  private func prepareAuthorizationPromptIfNeeded(for session: AuthorizationLifecycle.Session) {
+    guard lifecycle.isCurrent(session) else { return }
 
-    presentedAuthorizationPrompt = true
+    let owner = ObjectIdentifier(session)
+    let shouldPrepare = promptOwner.withLock { currentOwner -> Bool in
+      guard currentOwner == nil else { return false }
+      currentOwner = owner
+      return true
+    }
+    guard shouldPrepare else { return }
 
     logger.info(
       "\(componentName) preparing authorization prompt",
-      .field("presented", "\(presentedAuthorizationPrompt)"),
+      .field("presented", true),
     )
 
-    Task { @MainActor [weak promptPresenter] in
-      promptPresenter?.preparePrompt()
+    Task { @MainActor [weak self, weak promptPresenter, weak session] in
+      guard let self, let session, self.lifecycle.isCurrent(session) else { return }
+
+      self.promptOwner.withLock { currentOwner in
+        guard currentOwner == owner else { return }
+        promptPresenter?.preparePrompt()
+      }
     }
   }
 
   /// Restores host UI after the location permission state resolves.
-  private func restoreAccessoryModeIfNeeded() {
-    guard presentedAuthorizationPrompt else { return }
-
-    presentedAuthorizationPrompt = false
+  private func restoreAccessoryModeIfNeeded(for session: AuthorizationLifecycle.Session) {
+    let owner = ObjectIdentifier(session)
+    let shouldRestore = promptOwner.withLock { currentOwner -> Bool in
+      guard currentOwner == owner else { return false }
+      currentOwner = nil
+      return true
+    }
+    guard shouldRestore else { return }
 
     logger.info(
       "\(componentName) restoring UI after authorization prompt",
-      .field("presented", "\(presentedAuthorizationPrompt)"),
+      .field("presented", false),
     )
 
-    Task { @MainActor [weak promptPresenter] in
-      promptPresenter?.restoreUI()
+    Task { @MainActor [weak self, weak promptPresenter] in
+      guard let self else { return }
+
+      self.promptOwner.withLock { currentOwner in
+        guard currentOwner == nil else { return }
+        promptPresenter?.restoreUI()
+      }
     }
   }
 }

@@ -10,11 +10,8 @@ final class CalendarAuthorizationController: @unchecked Sendable {
   private let authState: CalendarAuthorizationState
   /// Logger used for authorization diagnostics.
   private let logger: ProcessLogger
-  /// Backoff helper for retrying unresolved authorization prompts.
-  private let retryBackoff: AuthorizationRetryBackoff
-
-  /// Callback invoked once access is resolved as usable.
-  private var onResolvedChange: (() -> Void)?
+  /// Generation-scoped callback and retry ownership.
+  private let lifecycle: AuthorizationLifecycle
 
   /// Creates one calendar authorization controller.
   init(
@@ -25,12 +22,12 @@ final class CalendarAuthorizationController: @unchecked Sendable {
     self.eventStore = eventStore
     self.authState = authState
     self.logger = logger
-    retryBackoff = AuthorizationRetryBackoff(logger: logger.child("retry_backoff"))
+    lifecycle = AuthorizationLifecycle(logger: logger)
   }
 
   /// Starts authorization handling and requests access when needed.
   func start(onResolvedChange: @escaping () -> Void) {
-    self.onResolvedChange = onResolvedChange
+    let session = lifecycle.start(onChange: onResolvedChange)
 
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
@@ -40,13 +37,12 @@ final class CalendarAuthorizationController: @unchecked Sendable {
       .field("start", "\(authState.describe(status))"),
     )
 
-    requestAccessIfNeeded()
+    requestAccessIfNeeded(for: session)
   }
 
-  /// Stops any pending retry work.
+  /// Stops callbacks and pending retry work for the current generation.
   func stop() {
-    retryBackoff.reset()
-    onResolvedChange = nil
+    lifecycle.stop()
   }
 
   /// Refreshes the stored status from EventKit.
@@ -69,8 +65,10 @@ final class CalendarAuthorizationController: @unchecked Sendable {
     return authState.describe(status)
   }
 
-  /// Requests calendar access when the current state allows it.
-  private func requestAccessIfNeeded() {
+  /// Requests calendar access when the current generation still owns the flow.
+  private func requestAccessIfNeeded(for session: AuthorizationLifecycle.Session) {
+    guard lifecycle.isCurrent(session) else { return }
+
     let status = EKEventStore.authorizationStatus(for: .event)
     authState.setStatus(status)
 
@@ -81,15 +79,15 @@ final class CalendarAuthorizationController: @unchecked Sendable {
 
     switch status {
     case .authorized, .fullAccess:
-      retryBackoff.reset()
+      lifecycle.resetRetry(for: session)
       logger.info("calendar agent access already granted")
-      onResolvedChange?()
+      lifecycle.notify(session)
 
     case .notDetermined:
       logger.info("requesting calendar full access")
 
-      eventStore.requestFullAccessToEvents { [weak self] granted, error in
-        guard let self else { return }
+      eventStore.requestFullAccessToEvents { [weak self, weak session] granted, error in
+        guard let self, let session, self.lifecycle.isCurrent(session) else { return }
 
         let newStatus = EKEventStore.authorizationStatus(for: .event)
         self.authState.setStatus(newStatus)
@@ -99,7 +97,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
             "calendar agent access request failed",
             .field("status", "\(self.authState.describe(newStatus))"),
             .field("error", "\(error)"))
-          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
+          self.scheduleAuthorizationRetryIfNeeded(for: newStatus, session: session)
           return
         }
 
@@ -110,27 +108,28 @@ final class CalendarAuthorizationController: @unchecked Sendable {
         )
 
         guard granted else {
-          self.scheduleAuthorizationRetryIfNeeded(for: newStatus)
+          self.scheduleAuthorizationRetryIfNeeded(for: newStatus, session: session)
           return
         }
 
-        self.retryBackoff.reset()
+        self.lifecycle.resetRetry(for: session)
         self.authState.markGrantedInProcess()
 
-        Task { @MainActor in
-          self.onResolvedChange?()
+        Task { @MainActor [weak self, weak session] in
+          guard let self, let session else { return }
+          self.lifecycle.notify(session)
         }
       }
 
     case .denied, .restricted, .writeOnly:
-      retryBackoff.reset()
+      lifecycle.resetRetry(for: session)
       logger.warn(
         "calendar agent access unavailable",
         .field("status", "\(authState.describe(status))"),
       )
 
     @unknown default:
-      retryBackoff.reset()
+      lifecycle.resetRetry(for: session)
       logger.warn(
         "calendar agent access status unknown",
         .field("raw", "\(status.rawValue)"),
@@ -139,14 +138,17 @@ final class CalendarAuthorizationController: @unchecked Sendable {
   }
 
   /// Schedules one follow-up access request while authorization is unresolved.
-  private func scheduleAuthorizationRetryIfNeeded(for status: EKAuthorizationStatus) {
+  private func scheduleAuthorizationRetryIfNeeded(
+    for status: EKAuthorizationStatus,
+    session: AuthorizationLifecycle.Session
+  ) {
     guard status == .notDetermined else {
-      retryBackoff.reset()
+      lifecycle.resetRetry(for: session)
       return
     }
 
-    retryBackoff.schedule { [weak self] in
-      self?.requestAccessIfNeeded()
+    lifecycle.scheduleRetry(for: session) { [weak self] session in
+      self?.requestAccessIfNeeded(for: session)
     }
   }
 }
