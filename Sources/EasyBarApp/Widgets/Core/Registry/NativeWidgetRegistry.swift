@@ -179,17 +179,27 @@ final class NativeWidgetRegistry {
         )
       },
       Registration(id: "date", enabled: builtins.date.enabled) {
-        DateNativeWidget(
-          config: builtins.date,
+        FormattedClockNativeWidget(
+          rootID: "builtin_date",
           widgetStore: self.widgetStore,
-          eventHub: self.eventHub
+          eventHub: self.eventHub,
+          snapshot: .init(
+            placement: builtins.date.placement,
+            style: builtins.date.style,
+            format: builtins.date.format
+          )
         )
       },
       Registration(id: "time", enabled: builtins.time.enabled) {
-        TimeNativeWidget(
-          config: builtins.time,
+        FormattedClockNativeWidget(
+          rootID: "builtin_time",
           widgetStore: self.widgetStore,
-          eventHub: self.eventHub
+          eventHub: self.eventHub,
+          snapshot: .init(
+            placement: builtins.time.placement,
+            style: builtins.time.style,
+            format: builtins.time.format
+          )
         )
       },
       Registration(id: "calendar", enabled: builtins.calendar.enabled) {

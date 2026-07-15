@@ -26,9 +26,9 @@ final class FormattedDateFormatterCache {
   }
 }
 
-/// Shared controller for simple date/time native widgets that render one formatted timestamp.
+/// Native widget that renders one formatted timestamp.
 @MainActor
-final class FormattedClockNativeWidgetController: NativeWidget {
+final class FormattedClockNativeWidget: NativeWidget {
 
   struct Snapshot {
     let placement: Config.BuiltinWidgetPlacement
