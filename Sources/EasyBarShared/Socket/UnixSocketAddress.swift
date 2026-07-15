@@ -1,6 +1,11 @@
 import Darwin
 import Foundation
 
+/// Returns the parent directory of the given Unix socket path.
+public func socketDirectoryPath(for socketPath: String) -> String {
+  return URL(fileURLWithPath: socketPath).deletingLastPathComponent().path
+}
+
 /// Errors produced while building Unix-domain socket addresses.
 public enum UnixSocketAddressError: Error, CustomStringConvertible, LocalizedError {
   case pathTooLong(path: String, maxBytes: Int)

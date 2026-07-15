@@ -1,6 +1,13 @@
 import Darwin
 import Foundation
 
+/// Returns the default log directory used by EasyBar processes.
+public func defaultLoggingDirectoryPath() -> String {
+  FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent(".local/state/easybar")
+    .path
+}
+
 /// One structured field attached to a process log entry.
 public struct ProcessLogField {
   public let key: String

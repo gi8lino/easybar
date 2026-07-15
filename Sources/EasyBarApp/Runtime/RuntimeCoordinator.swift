@@ -497,3 +497,10 @@ extension Notification.Name {
   /// Posted after one config reload attempt finishes and UI should resync.
   static let easyBarConfigReloadDidFinish = Notification.Name("easybar.configReloadDidFinish")
 }
+
+/// Returns the EasyBar log path inside one logging directory.
+private func easyBarLogPath(in directory: String) -> String {
+  URL(fileURLWithPath: directory)
+    .appendingPathComponent("easybar.out")
+    .path
+}
