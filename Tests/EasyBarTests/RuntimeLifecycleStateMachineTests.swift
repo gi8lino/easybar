@@ -59,8 +59,8 @@ final class RuntimeLifecycleStateMachineTests: XCTestCase {
       return XCTFail("Expected repeated duplicate reload to stay queued")
     }
 
-    XCTAssertEqual(lifecycle.finish(.reloadConfig), .reloadConfig)
-    XCTAssertNil(lifecycle.finish(.reloadConfig))
+    XCTAssertEqual(lifecycle.finish(), .reloadConfig)
+    XCTAssertNil(lifecycle.finish())
   }
 
   func testQueuedReloadTakesPriorityOverQueuedLuaRestart() {
@@ -79,8 +79,8 @@ final class RuntimeLifecycleStateMachineTests: XCTestCase {
       return XCTFail("Expected reload to queue while restart is active")
     }
 
-    XCTAssertEqual(lifecycle.finish(.restartLuaRuntime), .reloadConfig)
-    XCTAssertEqual(lifecycle.finish(.reloadConfig), .restartLuaRuntime)
-    XCTAssertNil(lifecycle.finish(.restartLuaRuntime))
+    XCTAssertEqual(lifecycle.finish(), .reloadConfig)
+    XCTAssertEqual(lifecycle.finish(), .restartLuaRuntime)
+    XCTAssertNil(lifecycle.finish())
   }
 }

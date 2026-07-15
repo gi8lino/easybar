@@ -446,7 +446,7 @@ actor RuntimeCoordinator {
 
   /// Marks one lifecycle operation finished and runs the next queued operation when present.
   private func finishLifecycleOperation(_ operation: RuntimeLifecycleOperation) async {
-    switch lifecycle.finish(operation) {
+    switch lifecycle.finish() {
     case .reloadConfig:
       await reloadConfig()
     case .restartLuaRuntime:

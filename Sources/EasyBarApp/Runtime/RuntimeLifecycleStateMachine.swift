@@ -93,7 +93,7 @@ struct RuntimeLifecycleStateMachine {
   }
 
   /// Marks one lifecycle operation as finished and returns the next queued operation.
-  mutating func finish(_ operation: RuntimeLifecycleOperation) -> RuntimeLifecycleOperation? {
+  mutating func finish() -> RuntimeLifecycleOperation? {
     activeOperation = nil
     return dequeueNextOperation()
   }
