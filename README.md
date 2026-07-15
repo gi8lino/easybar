@@ -142,7 +142,7 @@ Remove the standalone build with:
 make uninstall-local
 ```
 
-If released Homebrew agent formulae are installed, `make uninstall-local` starts their services again after removing the local LaunchAgents.
+The first local installation records whether each released Homebrew agent service was started, stopped, or absent. `make uninstall-local` restores those exact states after removing the local LaunchAgents.
 
 Quickstart for contributors:
 
@@ -159,7 +159,7 @@ Useful build and runtime commands:
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
 - `make install-local` installs the current release-mode checkout as a standalone user-local build.
-- `make uninstall-local` removes that standalone build and restores installed Homebrew agent services when present.
+- `make uninstall-local` removes that standalone build and restores the Homebrew agent service states recorded before local testing.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
 - `make validate-config CONFIG=/path/to/config.toml` builds the CLI and asks EasyBar to dry-run config validation without reloading the bar.
 

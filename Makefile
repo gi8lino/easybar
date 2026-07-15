@@ -94,6 +94,7 @@ LOCAL_BIN_DIR ?= $(HOME)/.local/bin
 LOCAL_AGENT_DIR ?= $(HOME)/Library/Application Support/EasyBar/Agents
 LOCAL_LAUNCH_AGENT_DIR ?= $(HOME)/Library/LaunchAgents
 LOCAL_LOG_DIR ?= $(HOME)/Library/Logs/EasyBar
+LOCAL_STATE_DIR ?= $(HOME)/Library/Application Support/EasyBar/LocalInstall
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
 
@@ -306,14 +307,16 @@ install-local: ## Build and install the current checkout as a standalone local i
 		--bin-dir "$(LOCAL_BIN_DIR)" \
 		--agent-dir "$(LOCAL_AGENT_DIR)" \
 		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)" \
-		--log-dir "$(LOCAL_LOG_DIR)"
+		--log-dir "$(LOCAL_LOG_DIR)" \
+		--state-dir "$(LOCAL_STATE_DIR)"
 
-uninstall-local: ## Remove the standalone local installation and restore installed Homebrew agent services.
+uninstall-local: ## Remove the local installation and restore the previous Homebrew service states.
 	@scripts/dev/uninstall-local.sh \
 		--app-dir "$(LOCAL_APP_DIR)" \
 		--bin-dir "$(LOCAL_BIN_DIR)" \
 		--agent-dir "$(LOCAL_AGENT_DIR)" \
-		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)"
+		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)" \
+		--state-dir "$(LOCAL_STATE_DIR)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"

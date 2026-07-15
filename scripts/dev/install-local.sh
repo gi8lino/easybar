@@ -15,6 +15,7 @@ Options:
   --agent-dir <dir>         Helper-agent directory. Default: ~/Library/Application Support/EasyBar/Agents
   --launch-agent-dir <dir>  LaunchAgent plist directory. Default: ~/Library/LaunchAgents
   --log-dir <dir>           launchd log directory. Default: ~/Library/Logs/EasyBar
+  --state-dir <dir>         Local installer state directory. Default: ~/Library/Application Support/EasyBar/LocalInstall
   --no-launch               Install everything without launching EasyBar.
 EOF_USAGE
 }
@@ -28,6 +29,7 @@ bin_dir="${LOCAL_BIN_DIR:-$HOME/.local/bin}"
 agent_dir="${LOCAL_AGENT_DIR:-$HOME/Library/Application Support/EasyBar/Agents}"
 launch_agent_dir="${LOCAL_LAUNCH_AGENT_DIR:-$HOME/Library/LaunchAgents}"
 log_dir="${LOCAL_LOG_DIR:-$HOME/Library/Logs/EasyBar}"
+state_dir="${LOCAL_STATE_DIR:-$HOME/Library/Application Support/EasyBar/LocalInstall}"
 launch_app=true
 
 while [ "$#" -gt 0 ]; do
@@ -54,6 +56,10 @@ while [ "$#" -gt 0 ]; do
     ;;
   --log-dir)
     log_dir="${2:?missing value for --log-dir}"
+    shift 2
+    ;;
+  --state-dir)
+    state_dir="${2:?missing value for --state-dir}"
     shift 2
     ;;
   --no-launch)
@@ -259,31 +265,74 @@ bootstrap_service() {
   launchctl kickstart -k "$target"
 }
 
-homebrew_service_is_started() {
+homebrew_formula_state() {
   local formula="$1"
 
   if [ -z "$brew_command" ]; then
-    return 1
+    printf '%s' not-installed
+    return
   fi
   if ! "$brew_command" list --formula "$formula" >/dev/null 2>&1; then
-    return 1
+    printf '%s' not-installed
+    return
   fi
 
-  "$brew_command" services list 2>/dev/null | awk -v formula="$formula" '
+  if "$brew_command" services list 2>/dev/null | awk -v formula="$formula" '
     $1 == formula && $2 == "started" { found = 1 }
     END { exit found ? 0 : 1 }
-  '
+  '; then
+    printf '%s' started
+  else
+    printf '%s' stopped
+  fi
+}
+
+is_valid_homebrew_state() {
+  case "$1" in
+  started | stopped | not-installed) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+load_homebrew_state() {
+  local key
+  local value
+
+  while IFS='=' read -r key value; do
+    case "$key" in
+    calendar) brew_calendar_previous_state="$value" ;;
+    network) brew_network_previous_state="$value" ;;
+    esac
+  done <"$service_state_file"
+
+  if ! is_valid_homebrew_state "$brew_calendar_previous_state"; then
+    echo "Invalid calendar-agent state in $service_state_file" >&2
+    exit 1
+  fi
+  if ! is_valid_homebrew_state "$brew_network_previous_state"; then
+    echo "Invalid network-agent state in $service_state_file" >&2
+    exit 1
+  fi
+}
+
+write_homebrew_state() {
+  local stage="${service_state_file}.local-install.$$"
+
+  cat >"$stage" <<EOF_STATE
+calendar=$brew_calendar_previous_state
+network=$brew_network_previous_state
+EOF_STATE
+  chmod 0600 "$stage"
+  mv -f "$stage" "$service_state_file"
 }
 
 stop_homebrew_service_if_started() {
   local formula="$1"
-  local state_variable="$2"
 
-  if ! homebrew_service_is_started "$formula"; then
+  if [ "$(homebrew_formula_state "$formula")" != started ]; then
     return
   fi
 
-  printf -v "$state_variable" '%s' true
   echo "Stopping conflicting Homebrew service: $formula"
   "$brew_command" services stop "$formula" >/dev/null
 }
@@ -317,12 +366,14 @@ calendar_stdout="${log_dir%/}/calendar-agent.out.log"
 calendar_stderr="${log_dir%/}/calendar-agent.err.log"
 network_stdout="${log_dir%/}/network-agent.out.log"
 network_stderr="${log_dir%/}/network-agent.err.log"
+service_state_file="${state_dir%/}/homebrew-services.state"
 
 user_id="$(id -u)"
 user_domain="gui/$user_id"
 brew_command="$(command -v brew || true)"
-brew_calendar_was_started=false
-brew_network_was_started=false
+brew_calendar_previous_state=""
+brew_network_previous_state=""
+service_state_file_created=false
 installation_complete=false
 
 restore_service_after_failure() {
@@ -330,7 +381,7 @@ restore_service_after_failure() {
   local plist="$2"
   local executable="$3"
   local formula="$4"
-  local brew_was_started="$5"
+  local previous_state="$5"
 
   if [ -f "$plist" ] && [ -x "$executable" ]; then
     if bootstrap_service "$label" "$plist" >/dev/null 2>&1; then
@@ -338,7 +389,7 @@ restore_service_after_failure() {
     fi
   fi
 
-  if [ "$brew_was_started" = true ]; then
+  if [ "$previous_state" = started ] && [ -n "$brew_command" ]; then
     "$brew_command" services start "$formula" >/dev/null 2>&1 || true
   fi
 }
@@ -354,13 +405,17 @@ cleanup() {
       "$calendar_plist" \
       "$calendar_agent_destination/Contents/MacOS/EasyBarCalendarAgent" \
       easybar-calendar-agent \
-      "$brew_calendar_was_started"
+      "$brew_calendar_previous_state"
     restore_service_after_failure \
       "$network_label" \
       "$network_plist" \
       "$network_agent_destination/Contents/MacOS/EasyBarNetworkAgent" \
       easybar-network-agent \
-      "$brew_network_was_started"
+      "$brew_network_previous_state"
+
+    if [ "$service_state_file_created" = true ]; then
+      rm -f "$service_state_file"
+    fi
   fi
 
   exit "$status"
@@ -372,6 +427,7 @@ ensure_directory "$bin_dir"
 ensure_directory "$agent_dir"
 ensure_directory "$launch_agent_dir"
 ensure_directory "$log_dir"
+ensure_directory "$state_dir"
 
 if [ ! -w "$launch_agent_dir" ]; then
   echo "LaunchAgent directory must be writable by the current user: $launch_agent_dir" >&2
@@ -382,8 +438,17 @@ if [ ! -w "$log_dir" ]; then
   exit 1
 fi
 
-stop_homebrew_service_if_started easybar-calendar-agent brew_calendar_was_started
-stop_homebrew_service_if_started easybar-network-agent brew_network_was_started
+if [ -f "$service_state_file" ]; then
+  load_homebrew_state
+else
+  brew_calendar_previous_state="$(homebrew_formula_state easybar-calendar-agent)"
+  brew_network_previous_state="$(homebrew_formula_state easybar-network-agent)"
+  write_homebrew_state
+  service_state_file_created=true
+fi
+
+stop_homebrew_service_if_started easybar-calendar-agent
+stop_homebrew_service_if_started easybar-network-agent
 
 bootout_service "$calendar_label"
 bootout_service "$network_label"
