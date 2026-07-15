@@ -106,6 +106,30 @@ The calendar and network helpers are standalone application bundles installed th
 
 Restart helpers with `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`.
 
+### Install the current checkout for longer testing
+
+After installing one released EasyBar version through Homebrew, install the current checkout over that installation with:
+
+```bash
+make install-local
+```
+
+This builds release-mode artifacts for `LOCAL_INSTALL_ARCH` (which defaults to `RUN_ARCH`), replaces the app in `/Applications`, overlays the CLI and both Homebrew-managed agent bundles, restarts the agent services, and launches EasyBar. Repeat the command whenever you want to test a newer local state without creating a release.
+
+Use another architecture or app directory when needed:
+
+```bash
+make install-local LOCAL_INSTALL_ARCH=universal
+make install-local LOCAL_APP_DIR="$HOME/Applications"
+```
+
+The target intentionally modifies the installed Homebrew package files. Restore the latest released build at any time with:
+
+```bash
+brew reinstall gi8lino/tap/easybar-calendar-agent gi8lino/tap/easybar-network-agent
+brew reinstall --cask gi8lino/tap/easybar
+```
+
 Quickstart for contributors:
 
 ```bash
@@ -120,6 +144,7 @@ Useful build and runtime commands:
 - `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
+- `make install-local` installs the current release-mode checkout over the existing Homebrew installation.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
 - `make validate-config CONFIG=/path/to/config.toml` builds the CLI and asks EasyBar to dry-run config validation without reloading the bar.
 

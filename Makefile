@@ -88,6 +88,8 @@ LOCAL_HOME := $(CURDIR)/.home
 LOCAL_CACHE_DIR := $(CURDIR)/.cache
 LOCAL_CLANG_MODULE_CACHE := $(CURDIR)/.build/clang-module-cache
 LOCAL_SWIFT_ENV := HOME="$(LOCAL_HOME)" XDG_CACHE_HOME="$(LOCAL_CACHE_DIR)" CLANG_MODULE_CACHE_PATH="$(LOCAL_CLANG_MODULE_CACHE)"
+LOCAL_INSTALL_ARCH ?= $(RUN_ARCH)
+LOCAL_APP_DIR ?= /Applications
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
 
@@ -116,7 +118,7 @@ endif
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
-        clean clean-dist run run-debug run-trace stop restart-app icons \
+        clean clean-dist run run-debug run-trace install-local stop restart-app icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
@@ -285,6 +287,17 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
 	@scripts/dev/run-local.sh trace --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
+install-local: ## Build and install the current checkout over the existing Homebrew installation.
+	@$(MAKE) --no-print-directory bundle \
+		ARCH="$(LOCAL_INSTALL_ARCH)" \
+		VERSION="$(VERSION)" \
+		BUNDLE_ID="$(BUNDLE_ID)" \
+		CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" \
+		NOTARY_SUBMIT=0 \
+		NOTARYTOOL_PROFILE= \
+		CLEAN_BUILD="$(CLEAN_BUILD)"
+	@scripts/dev/install-local.sh --dist-dir "$(DIST_DIR)" --app-dir "$(LOCAL_APP_DIR)"
+
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
 
@@ -416,9 +429,3 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-
-
-
-
-
-
