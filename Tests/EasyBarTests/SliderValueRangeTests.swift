@@ -3,6 +3,20 @@ import XCTest
 @testable import EasyBarApp
 
 final class SliderValueRangeTests: XCTestCase {
+  func testSliderWidthUsesValidExplicitWidth() {
+    XCTAssertEqual(resolvedSliderWidth(explicit: 80, fallback: 140), 80)
+  }
+
+  func testSliderWidthFallsBackForInvalidExplicitWidth() {
+    XCTAssertEqual(resolvedSliderWidth(explicit: -1, fallback: 140), 140)
+    XCTAssertEqual(resolvedSliderWidth(explicit: 0, fallback: 140), 140)
+    XCTAssertEqual(resolvedSliderWidth(explicit: .infinity, fallback: 140), 140)
+  }
+
+  func testSliderWidthUsesSafeMinimumForInvalidFallback() {
+    XCTAssertEqual(resolvedSliderWidth(explicit: nil, fallback: .nan), 1)
+  }
+
   func testReversedBoundsAreOrdered() {
     let range = SliderValueRange(minimum: 100, maximum: 0, step: 1)
 

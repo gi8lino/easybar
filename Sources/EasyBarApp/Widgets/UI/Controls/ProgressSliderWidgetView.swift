@@ -106,8 +106,8 @@ struct ProgressSliderWidgetView: View {
 
   /// Returns the resolved slider width.
   private var resolvedWidth: CGFloat {
-    SliderWidthResolver.resolve(
-      explicitWidth: width,
+    resolvedSliderWidth(
+      explicit: width,
       fallback: 72
     )
   }
