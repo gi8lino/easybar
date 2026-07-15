@@ -21,35 +21,6 @@ extension BuiltinNativeNodeFactory {
     return node
   }
 
-  /// Builds one simple root slider node.
-  static func makeSliderNode(
-    rootID: String,
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle,
-    text: String,
-    value: Double,
-    min: Double,
-    max: Double,
-    step: Double,
-    width: Double? = nil
-  ) -> WidgetNodeState {
-    var node = makeRootNode(
-      id: rootID,
-      kind: .slider,
-      placement: placement,
-      style: style,
-      icon: style.icon,
-      text: text,
-      color: style.textColorHex,
-      value: value,
-      min: min,
-      max: max,
-      step: step
-    )
-    node.width = width
-    return node
-  }
-
   /// Builds one simple root progress-slider node.
   static func makeProgressSliderNode(
     rootID: String,
@@ -162,31 +133,4 @@ extension BuiltinNativeNodeFactory {
     return node
   }
 
-  /// Builds one root column container node.
-  static func makeColumnContainerNode(
-    rootID: String,
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle
-  ) -> WidgetNodeState {
-    makeRootNode(
-      id: rootID,
-      kind: .column,
-      placement: placement,
-      style: style
-    )
-  }
-
-  /// Builds one root popup node.
-  static func makePopupRootNode(
-    rootID: String,
-    placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle
-  ) -> WidgetNodeState {
-    makeRootNode(
-      id: rootID,
-      kind: .popup,
-      placement: placement,
-      style: style
-    )
-  }
 }

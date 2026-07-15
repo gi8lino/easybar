@@ -1,5 +1,8 @@
 import Foundation
 
+/// Factory helpers for building native widget node state.
+enum BuiltinNativeNodeFactory {}
+
 extension BuiltinNativeNodeFactory {
   /// Builds one root node with the shared built-in style defaults.
   static func makeRootNode(

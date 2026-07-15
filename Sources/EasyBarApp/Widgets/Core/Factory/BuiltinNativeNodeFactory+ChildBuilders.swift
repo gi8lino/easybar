@@ -21,51 +21,6 @@ extension BuiltinNativeNodeFactory {
     )
   }
 
-  /// Builds one child row node.
-  static func makeRowNode(
-    rootID: String,
-    parentID: String,
-    rowID: String,
-    position: WidgetPosition,
-    order: Int,
-    spacing: Double?,
-    visible: Bool = true
-  ) -> WidgetNodeState {
-    makeChildNode(
-      id: rowID,
-      root: rootID,
-      kind: .row,
-      parent: parentID,
-      position: position,
-      order: order,
-      visible: visible,
-      spacing: spacing
-    )
-  }
-
-  /// Builds one popup anchor row attached to the popup root.
-  static func makePopupAnchorRowNode(
-    rootID: String,
-    anchorID: String,
-    position: WidgetPosition,
-    spacing: Double? = 4
-  ) -> WidgetNodeState {
-    makeChildNode(
-      id: anchorID,
-      root: rootID,
-      kind: .row,
-      parent: rootID,
-      position: position,
-      order: 0,
-      visible: true,
-      role: .popupAnchor,
-      paddingX: 0,
-      paddingY: 0,
-      spacing: spacing,
-      opacity: 1
-    )
-  }
-
   /// Builds one popup content column attached to the popup root.
   static func makePopupContentColumnNode(
     rootID: String,
@@ -134,35 +89,6 @@ extension BuiltinNativeNodeFactory {
       borderColor: borderColor,
       borderWidth: borderWidth,
       cornerRadius: cornerRadius,
-      opacity: opacity
-    )
-  }
-
-  /// Builds one simple spacer item.
-  static func makeSpacerNode(
-    rootID: String,
-    spacerID: String,
-    parentID: String?,
-    position: WidgetPosition,
-    order: Int,
-    visible: Bool = false,
-    paddingX: Double? = 0,
-    paddingY: Double? = 0,
-    opacity: Double? = 1
-  ) -> WidgetNodeState {
-    makeNode(
-      id: spacerID,
-      root: rootID,
-      kind: .item,
-      parent: parentID,
-      position: position,
-      order: order,
-      icon: "",
-      text: "",
-      color: nil,
-      visible: visible,
-      paddingX: paddingX,
-      paddingY: paddingY,
       opacity: opacity
     )
   }
@@ -279,38 +205,6 @@ extension BuiltinNativeNodeFactory {
       spacing: 0,
       width: width,
       height: height
-    )
-  }
-
-  /// Builds one child slider node.
-  static func makeChildSliderNode(
-    rootID: String,
-    parentID: String,
-    childID: String,
-    position: WidgetPosition,
-    order: Int,
-    value: Double,
-    min: Double,
-    max: Double,
-    step: Double,
-    color: String? = nil,
-    visible: Bool = true,
-    width: Double? = nil
-  ) -> WidgetNodeState {
-    makeChildNode(
-      id: childID,
-      root: rootID,
-      kind: .slider,
-      parent: parentID,
-      position: position,
-      order: order,
-      color: color,
-      visible: visible,
-      value: value,
-      min: min,
-      max: max,
-      step: step,
-      width: width
     )
   }
 
