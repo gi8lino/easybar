@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 7 ]; then
-  echo "Usage: $0 <debug|release> <arm64|x86_64|universal> <resource-bundle-name> <app-bundle> <app-resource-dir> <themes-dir> <app-themes-dir>" >&2
+if [ "$#" -ne 8 ]; then
+  echo "Usage: $0 <debug|release> <arm64|x86_64|universal> <resource-bundle-name> <app-bundle> <app-resource-dir> <themes-dir> <app-themes-dir> <version>" >&2
   exit 2
 fi
 
@@ -13,6 +13,7 @@ app_bundle="$4"
 app_resource_dir="$5"
 themes_dir="$6"
 app_themes_dir="$7"
+version="$8"
 
 case "$configuration" in
 debug | release) ;;
@@ -79,6 +80,9 @@ copy_required_dir() {
 
 copy_required_file "$resource_source/runtime.lua" "$app_resource_dir/Lua/runtime.lua"
 copy_required_file "$resource_source/easybar_api.lua" "$app_resource_dir/Lua/easybar_api.lua"
+scripts/build/stamp.py lua-api \
+  --file "$app_resource_dir/Lua/easybar_api.lua" \
+  --version "$version"
 copy_required_dir "$resource_source/easybar" "$app_resource_dir/Lua/easybar"
 copy_required_file "$resource_source/event_catalog.json" "$app_resource_dir/Events/event_catalog.json"
 copy_required_file "$resource_source/theme_tokens.json" "$app_resource_dir/ThemeTokens/theme_tokens.json"

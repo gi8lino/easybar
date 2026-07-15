@@ -104,7 +104,7 @@ cli_bin="$dist_dir/$cli_exec"
 
 mkdir -p "$app_macos" "$app_resources" "$calendar_agent_macos" "$network_agent_macos" "$dist_dir"
 
-scripts/build/build-products.sh debug "$run_arch" \
+scripts/build/build-products.sh debug "$run_arch" --version "$version" \
   "$app_name=$app_bin" \
   "$lua_runtime_product=$lua_runtime_bin" \
   "$calendar_agent_name=$calendar_agent_bin" \
@@ -119,7 +119,8 @@ scripts/build/copy-resources.sh \
   "$app_bundle" \
   "$app_resource_dir" \
   "$themes_dir" \
-  "$app_themes_dir"
+  "$app_themes_dir" \
+  "$version"
 
 echo "Preparing debug app bundle"
 mkdir -p "$app_contents"

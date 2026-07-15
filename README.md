@@ -126,7 +126,7 @@ This builds release-mode artifacts for `LOCAL_INSTALL_ARCH` (which defaults to `
 
 The helper agents run as normal user LaunchAgents, so no Homebrew EasyBar cask or agent formula is required. If released Homebrew agent services are already active, the installer stops them to prevent duplicate agents and leaves the released package files untouched.
 
-`make install-local` automatically stamps a Git-derived development version into the app, CLI, and helper agents. A clean checkout looks like:
+`make install-local` automatically injects a Git-derived development version into the app, CLI, and helper agents. A clean checkout looks like:
 
 ```text
 0.5.0-dev.218886be
@@ -151,7 +151,9 @@ make print-local-version
 ~/.local/bin/easybar --version
 ```
 
-Version strings written into generated build metadata by an earlier local build are ignored when determining dirtiness. Any other edits to those generated files still mark the version dirty. Release builds are unchanged and continue to use the version derived from the release tag in CI.
+Before invoking SwiftPM, the build helper writes the selected version to the untracked `.build/easybar-build-version` input file. The SwiftPM plugin reads that file and generates `BuildInfo` inside its plugin work directory. The file is rewritten only when the selected version changes, so repeated product builds do not invalidate SwiftPM unnecessarily. You can inspect the active compiler input directly with `cat .build/easybar-build-version`; a direct SwiftPM build with no version file falls back to `dev`.
+
+The Lua API version is stamped only into the copied file under `dist/`. Local and release builds never rewrite tracked source files, so building does not create version-only changes that could be committed accidentally. Release builds remain unchanged from a user perspective and continue to write the version derived from the release tag before compiling in CI.
 
 Repeat `make install-local` whenever you want to test a newer local state. Override any destination when needed:
 
@@ -193,7 +195,7 @@ Useful build and runtime commands:
 
 ## Generated artifacts
 
-Regenerate checked-in generated files before committing changes to theme tokens, event catalog data, Lua API stubs, or generated Lua reference docs:
+Build and install targets consume checked-in generated files without rewriting them. Regenerate those files explicitly before committing changes to theme tokens, event catalog data, Lua API stubs, or generated Lua reference docs:
 
 ```bash
 make generate

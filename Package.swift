@@ -51,7 +51,10 @@ let package = Package(
         .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarShared",
-      swiftSettings: strictConcurrencySettings
+      swiftSettings: strictConcurrencySettings,
+      plugins: [
+        .plugin(name: "EasyBarBuildInfoPlugin")
+      ]
     ),
     .target(
       name: "EasyBarConfigParsing",
@@ -111,7 +114,6 @@ let package = Package(
         "EasyBarConfigParsing",
         "EasyBarConfigSchema",
         "EasyBarCalendarConfig",
-        "EasyBarCalendarCore",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
         .product(name: "TOMLKit", package: "TOMLKit"),
@@ -187,6 +189,10 @@ let package = Package(
       ],
       path: "Tests/EasyBarTests",
       swiftSettings: strictConcurrencySettings
+    ),
+    .plugin(
+      name: "EasyBarBuildInfoPlugin",
+      capability: .buildTool()
     ),
   ]
 )

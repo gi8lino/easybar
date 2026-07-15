@@ -343,7 +343,7 @@ def render_lua_api_block(manifest: dict) -> str:
     return "\n".join(lines)
 
 
-def rebuild_lua_api_stub(manifest: dict, version: str) -> None:
+def rebuild_lua_api_stub(manifest: dict) -> None:
     """Regenerate the standalone Lua API stub from the base file and event annotations."""
     generated_events = render_lua_api_block(manifest)
     LUA_API_EVENTS_PATH.write_text(generated_events)
@@ -355,26 +355,20 @@ def rebuild_lua_api_stub(manifest: dict, version: str) -> None:
         )
 
     combined = base.replace(LUA_API_INSERT_MARKER, generated_events, 1)
-    combined = combined.replace(LUA_API_VERSION_PLACEHOLDER, version).rstrip()
+    combined = combined.replace(LUA_API_VERSION_PLACEHOLDER, "dev").rstrip()
     LUA_API_STUB_PATH.write_text(f"{combined}\n")
 
 
 def main() -> None:
     """Generate Lua runtime event tokens and API annotation files."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--version",
-        default="dev",
-        help="Version string stamped into the generated Lua API stub.",
-    )
-    args = parser.parse_args()
+    argparse.ArgumentParser(description=__doc__).parse_args()
 
     manifest = load_manifest()
 
     EVENT_TOKENS_PATH.write_text(render_event_tokens(manifest))
-    rebuild_lua_api_stub(manifest, args.version)
+    rebuild_lua_api_stub(manifest)
 
-    print(f"Generated event catalog artifacts for version {args.version}:")
+    print("Generated event catalog artifacts:")
     for path in (EVENT_TOKENS_PATH, LUA_API_EVENTS_PATH, LUA_API_STUB_PATH):
         print(f"- {repo_relative(path)}")
 

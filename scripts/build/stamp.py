@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stamp EasyBar build metadata and bundle Info.plist files."""
+"""Stamp EasyBar staged resources and bundle Info.plist files."""
 
 from __future__ import annotations
 
@@ -10,24 +10,76 @@ import sys
 from pathlib import Path
 
 
-APP_VERSION_PATTERN = re.compile(r'public static let appVersion = ".*?"')
-DEFAULT_BUILD_INFO = Path("Sources/EasyBarShared/Build/BuildInfo.swift")
+LUA_API_HEADER_PATTERN = re.compile(
+    r"^-- EasyBar Lua API stub version: .*$", re.MULTILINE
+)
+LUA_API_DOC_PATTERN = re.compile(
+    r"EasyBar application version \(`[^`]*`\)"
+)
+LUA_API_VALUE_PATTERN = re.compile(
+    r'^EasyBar\.version = "[^"]*"$', re.MULTILINE
+)
 
 
-def stamp_build_info(path: Path, version: str) -> int:
+def replace_required(
+    text: str,
+    pattern: re.Pattern[str],
+    replacement: str,
+    description: str,
+    expected_count: int | None = None,
+) -> tuple[str, bool]:
+    updated, count = pattern.subn(lambda _: replacement, text)
+
+    if count == 0:
+        print(f"Could not find {description}", file=sys.stderr)
+        return text, False
+    if expected_count is not None and count != expected_count:
+        print(
+            f"Expected {expected_count} {description} occurrence(s), found {count}",
+            file=sys.stderr,
+        )
+        return text, False
+
+    return updated, True
+
+
+def stamp_lua_api(path: Path, version: str) -> int:
     if not path.exists():
-        print(f"Missing BuildInfo.swift file: {path}", file=sys.stderr)
+        print(f"Missing staged Lua API stub: {path}", file=sys.stderr)
         return 1
 
     text = path.read_text(encoding="utf-8")
-    replacement = f'public static let appVersion = "{version}"'
-    updated, count = APP_VERSION_PATTERN.subn(replacement, text, count=1)
 
-    if count != 1:
-        print(f"Could not find appVersion declaration in {path}", file=sys.stderr)
+    text, ok = replace_required(
+        text,
+        LUA_API_HEADER_PATTERN,
+        f"-- EasyBar Lua API stub version: {version}",
+        f"Lua API version header in {path}",
+        expected_count=1,
+    )
+    if not ok:
         return 1
 
-    path.write_text(updated, encoding="utf-8")
+    text, ok = replace_required(
+        text,
+        LUA_API_DOC_PATTERN,
+        f"EasyBar application version (`{version}`)",
+        f"Lua API version documentation in {path}",
+    )
+    if not ok:
+        return 1
+
+    text, ok = replace_required(
+        text,
+        LUA_API_VALUE_PATTERN,
+        f'EasyBar.version = "{version}"',
+        f"EasyBar.version assignment in {path}",
+        expected_count=1,
+    )
+    if not ok:
+        return 1
+
+    path.write_text(text, encoding="utf-8")
     return 0
 
 
@@ -78,9 +130,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    build_info = subparsers.add_parser("build-info", help="Stamp BuildInfo.swift.")
-    build_info.add_argument("--file", type=Path, default=DEFAULT_BUILD_INFO)
-    build_info.add_argument("--version", required=True)
+    lua_api = subparsers.add_parser(
+        "lua-api", help="Stamp a staged Lua API stub."
+    )
+    lua_api.add_argument("--file", type=Path, required=True)
+    lua_api.add_argument("--version", required=True)
 
     plist = subparsers.add_parser("plist", help="Stamp one Info.plist file.")
     plist.add_argument("--plist", type=Path, required=True)
@@ -96,8 +150,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
 
-    if args.command == "build-info":
-        return stamp_build_info(args.file, args.version)
+    if args.command == "lua-api":
+        return stamp_lua_api(args.file, args.version)
 
     if args.command == "plist":
         return stamp_plist(

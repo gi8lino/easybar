@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 <debug|release> <arm64|x86_64|universal> <product=output> [...]" >&2
+  echo "Usage: $0 <debug|release> <arm64|x86_64|universal> [--version <version>] <product=output> [...]" >&2
 }
 
 if [ "$#" -lt 3 ]; then
@@ -13,6 +13,16 @@ fi
 configuration=$1
 arch=$2
 shift 2
+version="dev"
+
+if [ "${1:-}" = "--version" ]; then
+  if [ "$#" -lt 3 ]; then
+    usage
+    exit 2
+  fi
+  version=$2
+  shift 2
+fi
 
 case "$configuration" in
 debug | release) ;;
@@ -29,6 +39,11 @@ arm64 | x86_64 | universal) ;;
   exit 2
   ;;
 esac
+
+if [ -z "$version" ]; then
+  echo "Build version must not be empty." >&2
+  exit 2
+fi
 
 products=()
 outputs=()
@@ -67,6 +82,20 @@ require_built_product() {
   if [ ! -f "$path" ]; then
     echo "SwiftPM did not produce product '$product' at: $path" >&2
     exit 1
+  fi
+}
+
+write_build_version() {
+  local version_file=".build/easybar-build-version"
+  local temporary_file="${version_file}.tmp.$$"
+
+  mkdir -p "$(dirname "$version_file")"
+  printf '%s\n' "$version" >"$temporary_file"
+
+  if [ -f "$version_file" ] && cmp -s "$temporary_file" "$version_file"; then
+    rm -f "$temporary_file"
+  else
+    mv -f "$temporary_file" "$version_file"
   fi
 }
 
@@ -123,6 +152,8 @@ lipo_universal_outputs() {
     index=$((index + 1))
   done
 }
+
+write_build_version
 
 if [ "$arch" = "universal" ]; then
   build_arch arm64

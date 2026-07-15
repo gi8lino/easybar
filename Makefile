@@ -61,9 +61,6 @@ PACKAGE_NAME = $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP = $(DIST_DIR)/$(PACKAGE_NAME)
 PACKAGE_STAGE := $(DIST_DIR)/package
 
-BUILD_INFO := Sources/EasyBarShared/Build/BuildInfo.swift
-LUA_API_STUB := Sources/EasyBarApp/Lua/easybar_api.lua
-
 BUNDLE_ID ?= com.gi8lino.EasyBar
 VERSION ?= dev
 ARCH ?= universal
@@ -122,7 +119,7 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
-        prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
+        build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
         clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -149,7 +146,7 @@ generate-theme-tokens: ## Regenerate shared theme token artifacts for Swift and 
 	@python3 scripts/generate/theme_tokens.py
 
 generate-event-catalog: ## Regenerate Lua event catalog files from the shared manifest.
-	@python3 scripts/generate/event_catalog.py --version "$(VERSION)"
+	@python3 scripts/generate/event_catalog.py
 
 generate-config: ## Regenerate default config and config docs from the app config schema.
 	@swift run EasyBarGenerateConfig all
@@ -161,11 +158,6 @@ generate-default-config: ## Regenerate the visible default config reference from
 
 all: build ## Build the default artifacts.
 
-prepare-version: ## Update generated build metadata and source-derived artifacts for VERSION.
-	@$(MAKE) --no-print-directory generate-theme-tokens
-	@$(MAKE) --no-print-directory generate-event-catalog
-	@python3 scripts/build/stamp.py build-info --file "$(BUILD_INFO)" --version "$(VERSION)"
-
 generate-swift-env: ## Create repo-local directories for SwiftPM and compiler caches.
 	@mkdir -p "$(LOCAL_HOME)/Library/org.swift.swiftpm/configuration" \
 		"$(LOCAL_HOME)/Library/org.swift.swiftpm/security" \
@@ -176,10 +168,10 @@ generate-swift-env: ## Create repo-local directories for SwiftPM and compiler ca
 
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
 
-app: prepare-version ## Build only the app executable for the selected ARCH.
+app: ## Build only the app executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-app ARCH=$(ARCH) VERSION=$(VERSION)
 
-cli: prepare-version ## Build only the CLI executable for the selected ARCH.
+cli: ## Build only the CLI executable for the selected ARCH.
 	@$(MAKE) --no-print-directory build-cli ARCH=$(ARCH) VERSION=$(VERSION)
 
 validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
@@ -205,7 +197,7 @@ lint: ## Lint Swift source formatting without modifying files.
 test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
-bundle: prepare-version ## Build the app, agent bundles, and CLI into dist/.
+bundle: ## Build the app, agent bundles, and CLI into dist/.
 	@scripts/build/bundle.sh \
 		--arch "$(ARCH)" \
 		--version "$(VERSION)" \
@@ -223,25 +215,25 @@ release: verify-release ## Build and verify the zipped release artifact.
 	@echo "Release artifact ready: $(PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
-	@scripts/build/build-products.sh release "$(ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(APP_PRODUCT)=$(APP_BIN)"
 
 build-lua-runtime: ## Internal target: build the Lua runtime executable for ARCH.
-	@scripts/build/build-products.sh release "$(ARCH)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
 
 build-calendar-agent: ## Internal target: build the calendar agent executable for ARCH.
-	@scripts/build/build-products.sh release "$(ARCH)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
 
 build-network-agent: ## Internal target: build the network agent executable for ARCH.
-	@scripts/build/build-products.sh release "$(ARCH)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
 
 build-cli: ## Internal target: build the CLI executable for ARCH.
-	@scripts/build/build-products.sh release "$(ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
+	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
 copy-resources: ## Internal target: copy SwiftPM resources and root assets into the app bundle.
-	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+	@scripts/build/copy-resources.sh release "$(ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)" "$(VERSION)"
 
 copy-debug-resources: ## Internal target: copy debug SwiftPM resources and root assets into the app bundle.
-	@scripts/build/copy-resources.sh debug "$(RUN_ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)"
+	@scripts/build/copy-resources.sh debug "$(RUN_ARCH)" "$(RESOURCE_BUNDLE_NAME)" "$(APP_BUNDLE)" "$(APP_RESOURCE_DIR)" "$(THEMES_DIR)" "$(APP_THEMES_DIR)" "$(VERSION)"
 
 prepare-debug-app-bundle: ## Internal target: prepare local debug app bundle metadata.
 	@mkdir -p "$(APP_CONTENTS)"
@@ -283,13 +275,13 @@ verify: ## Show the built bundle structure and validate key packaged files.
 verify-release: package ## Build and validate the release package and print fingerprints.
 	@scripts/release/verify-release.sh --version "$(VERSION)" --arch "$(ARCH)" --dist-dir "$(DIST_DIR)"
 
-run: prepare-version ## Fast local run with debug builds and local agents.
+run: ## Fast local run with debug builds and local agents.
 	@scripts/dev/run-local.sh info --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
-run-debug: prepare-version ## Fast local run with debug builds and debug logging enabled.
+run-debug: ## Fast local run with debug builds and debug logging enabled.
 	@scripts/dev/run-local.sh debug --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
-run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
+run-trace: ## Fast local run with debug builds and trace logging enabled.
 	@scripts/dev/run-local.sh trace --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
 install-local: ## Build and install the current checkout with a Git-derived local version.
@@ -321,19 +313,19 @@ uninstall-local: ## Remove the local installation and restore the previous Homeb
 		--state-dir "$(LOCAL_STATE_DIR)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
-	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" --version "$(VERSION)" "$(APP_PRODUCT)=$(APP_BIN)"
 
 run-build-lua-runtime: ## Internal target: fast local Lua runtime build for RUN_ARCH.
-	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" --version "$(VERSION)" "$(LUA_RUNTIME_PRODUCT)=$(LUA_RUNTIME_BIN)"
 
 run-build-calendar-agent: ## Internal target: fast local calendar agent build for RUN_ARCH.
-	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" --version "$(VERSION)" "$(CALENDAR_AGENT_PRODUCT)=$(CALENDAR_AGENT_BIN)"
 
 run-build-network-agent: ## Internal target: fast local network agent build for RUN_ARCH.
-	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" --version "$(VERSION)" "$(NETWORK_AGENT_PRODUCT)=$(NETWORK_AGENT_BIN)"
 
 run-build-cli: ## Internal target: fast local CLI build for RUN_ARCH.
-	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(CLI_PRODUCT)=$(CLI_BIN)"
+	@scripts/build/build-products.sh debug "$(RUN_ARCH)" --version "$(VERSION)" "$(CLI_PRODUCT)=$(CLI_BIN)"
 
 stop: ## Stop EasyBar and its agents from installed and local app runs.
 	@scripts/dev/stop-local.sh --dist-dir "$(DIST_DIR)"
@@ -346,10 +338,8 @@ restart-app: stop ## Restart the installed EasyBar application.
 clean-dist: ## Remove dist/.
 	@rm -rf "$(DIST_DIR)"
 
-clean: ## Remove dist/, .build, and reset BuildInfo.swift and generated event catalog to dev.
+clean: ## Remove dist/ and .build without modifying tracked sources.
 	@rm -rf "$(DIST_DIR)" ".build"
-	@python3 scripts/build/stamp.py build-info --file "$(BUILD_INFO)" --version dev
-	@python3 scripts/generate/event_catalog.py --version dev
 
 ##@ Info
 

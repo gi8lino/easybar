@@ -153,7 +153,7 @@ mkdir -p \
   "$dist_dir"
 
 echo "Building release products for $arch"
-scripts/build/build-products.sh release "$arch" \
+scripts/build/build-products.sh release "$arch" --version "$version" \
   "$app_product=$app_bin" \
   "$lua_runtime_product=$lua_runtime_bin" \
   "$calendar_agent_name=$calendar_agent_bin" \
@@ -168,7 +168,8 @@ scripts/build/copy-resources.sh \
   "$app_bundle" \
   "$app_resource_dir" \
   "$themes_dir" \
-  "$app_themes_dir"
+  "$app_themes_dir" \
+  "$version"
 
 echo "Generating app icons"
 scripts/assets/app_icons.sh "$image_convert" "$icon_font" "$dist_dir" \

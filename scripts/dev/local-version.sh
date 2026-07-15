@@ -7,7 +7,7 @@ Usage: scripts/dev/local-version.sh [--version-prefix PREFIX]
 
 Print the version used by make install-local. The version contains the latest
 release version, the current short Git commit, and a -dirty suffix when the
-working tree contains source changes.
+working tree contains tracked, staged, or untracked source changes.
 EOF_USAGE
 }
 
@@ -54,52 +54,11 @@ else
   base_version="0.0.0"
 fi
 
-build_info_path="Sources/EasyBarShared/Build/BuildInfo.swift"
-lua_api_stub_path="Sources/EasyBarApp/Lua/easybar_api.lua"
-
 dirty=false
-
-# Compare all tracked files except the two files whose version strings are
-# intentionally rewritten by prepare-version. They are normalized separately
-# below so real edits to either file still make the build dirty.
-if ! git diff --quiet HEAD -- . \
-  ":(exclude)$build_info_path" \
-  ":(exclude)$lua_api_stub_path"; then
+if ! git diff --quiet HEAD -- .; then
   dirty=true
 fi
-
 if [ -n "$(git ls-files --others --exclude-standard)" ]; then
-  dirty=true
-fi
-
-normalize_build_info() {
-  sed -E 's/public static let appVersion = "[^"]*"/public static let appVersion = "__LOCAL_VERSION__"/'
-}
-
-normalize_lua_api_stub() {
-  sed -E \
-    -e 's/^-- EasyBar Lua API stub version: .*/-- EasyBar Lua API stub version: __LOCAL_VERSION__/' \
-    -e 's/EasyBar application version \(`[^`]*`\)/EasyBar application version (`__LOCAL_VERSION__`)/g' \
-    -e 's/^EasyBar\.version = "[^"]*"$/EasyBar.version = "__LOCAL_VERSION__"/'
-}
-
-if [ -f "$build_info_path" ]; then
-  if ! cmp -s \
-    <(git show "HEAD:$build_info_path" | normalize_build_info) \
-    <(normalize_build_info <"$build_info_path"); then
-    dirty=true
-  fi
-else
-  dirty=true
-fi
-
-if [ -f "$lua_api_stub_path" ]; then
-  if ! cmp -s \
-    <(git show "HEAD:$lua_api_stub_path" | normalize_lua_api_stub) \
-    <(normalize_lua_api_stub <"$lua_api_stub_path"); then
-    dirty=true
-  fi
-else
   dirty=true
 fi
 
