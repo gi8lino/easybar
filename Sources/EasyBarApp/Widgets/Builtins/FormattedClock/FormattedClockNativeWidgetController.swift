@@ -62,10 +62,7 @@ final class FormattedClockNativeWidgetController: NativeWidget {
 
   /// Starts observing clock refresh events.
   func start() {
-    NativeWidgetEventDriver.start(
-      observer: eventObserver,
-      eventNames: appEventSubscriptions
-    ) { [weak self] payload in
+    eventObserver.start(eventNames: appEventSubscriptions) { [weak self] payload in
       guard let self else { return }
       guard let event = payload.appEvent else { return }
       guard event == self.refreshEvent || event == .systemWoke else { return }

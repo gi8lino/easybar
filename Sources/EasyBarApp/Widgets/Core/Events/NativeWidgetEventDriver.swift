@@ -19,13 +19,4 @@ enum NativeWidgetEventDriver {
       widgetHandler(payload)
     }
   }
-
-  /// Starts observing EasyBar events with a single raw handler.
-  static func start(
-    observer: EasyBarEventObserver,
-    eventNames: Set<String>,
-    handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
-  ) {
-    observer.start(eventNames: eventNames, handler: handler)
-  }
 }
