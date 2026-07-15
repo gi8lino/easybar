@@ -58,7 +58,15 @@ public final class CalendarAgentRuntime {
       }
     }
 
-    socketServer.start(provider: snapshotProvider)
+    guard socketServer.start(provider: snapshotProvider) else {
+      snapshotProvider.stop()
+      logger.error(
+        "calendar agent failed to start socket server",
+        .field("socket_path", config.socketPath)
+      )
+      return false
+    }
+
     return true
   }
 

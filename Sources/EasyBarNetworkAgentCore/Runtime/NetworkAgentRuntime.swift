@@ -76,7 +76,15 @@ public final class NetworkAgentRuntime {
       }
     }
 
-    socketServer.start(provider: snapshotProvider)
+    guard socketServer.start(provider: snapshotProvider) else {
+      snapshotProvider.stop()
+      logger.error(
+        "network agent failed to start socket server",
+        .field("socket_path", config.socketPath)
+      )
+      return false
+    }
+
     return true
   }
 

@@ -51,19 +51,26 @@ final class NetworkSocketServer {
   }
 
   /// Starts accepting network agent requests.
-  func start(provider: NetworkSnapshotProvider) {
+  @discardableResult
+  func start(provider: NetworkSnapshotProvider) -> Bool {
     self.provider = provider
-    transport.start { [weak self] clientFD, request in
+    let started = transport.start { [weak self] clientFD, request in
       SynchronousTask.runOnMainActor { [weak self] in
         guard let self else { return .close }
         return self.handleClient(clientFD, request: request)
       }
     }
+
+    if !started {
+      self.provider = nil
+    }
+    return started
   }
 
   /// Stops the network socket server.
   func stop() {
     transport.stop()
+    provider = nil
   }
 
   /// Broadcasts the latest requested fields to all subscribers.

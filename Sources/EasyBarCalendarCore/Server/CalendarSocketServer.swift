@@ -47,19 +47,26 @@ final class CalendarSocketServer {
   }
 
   /// Starts accepting calendar agent requests.
-  func start(provider: CalendarSnapshotProvider) {
+  @discardableResult
+  func start(provider: CalendarSnapshotProvider) -> Bool {
     self.provider = provider
-    transport.start { [weak self] clientFD, request in
+    let started = transport.start { [weak self] clientFD, request in
       SynchronousTask.runOnMainActor { [weak self] in
         guard let self else { return .close }
         return self.handleClient(clientFD, request: request)
       }
     }
+
+    if !started {
+      self.provider = nil
+    }
+    return started
   }
 
   /// Stops the calendar socket server.
   func stop() {
     transport.stop()
+    provider = nil
   }
 
   /// Broadcasts fresh snapshots to all subscribers.
