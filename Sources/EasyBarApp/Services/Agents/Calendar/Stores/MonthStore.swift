@@ -10,7 +10,6 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   )
 
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
-  @Published private(set) var sections: [EasyBarShared.CalendarAgentSection] = []
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 
   private var subscribedMonthRangeStart: Date?
@@ -112,14 +111,12 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     let applyChange = {
       self.snapshot = snapshot
-      self.sections = snapshot?.sections ?? []
       self.events = snapshot?.events ?? []
 
       self.logger.debug(
         "month calendar store published",
         .field("snapshot_present", "\(snapshot != nil)"),
         .field("events", "\(self.events.count)"),
-        .field("sections", "\(self.sections.count)"),
       )
     }
 
