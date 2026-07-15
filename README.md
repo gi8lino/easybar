@@ -126,6 +126,33 @@ This builds release-mode artifacts for `LOCAL_INSTALL_ARCH` (which defaults to `
 
 The helper agents run as normal user LaunchAgents, so no Homebrew EasyBar cask or agent formula is required. If released Homebrew agent services are already active, the installer stops them to prevent duplicate agents and leaves the released package files untouched.
 
+`make install-local` automatically stamps a Git-derived development version into the app, CLI, and helper agents. A clean checkout looks like:
+
+```text
+0.5.0-dev.218886be
+```
+
+Local tracked, staged, or untracked changes add `-dirty`:
+
+```text
+0.5.0-dev.218886be-dirty
+```
+
+Show the version that the next local installation will use without building anything:
+
+```bash
+make print-local-version
+```
+
+After installation, compare it with the CLI and the version shown by the bar menu or context menu:
+
+```bash
+make print-local-version
+~/.local/bin/easybar --version
+```
+
+Version strings written into generated build metadata by an earlier local build are ignored when determining dirtiness. Any other edits to those generated files still mark the version dirty. Release builds are unchanged and continue to use the version derived from the release tag in CI.
+
 Repeat `make install-local` whenever you want to test a newer local state. Override any destination when needed:
 
 ```bash
@@ -158,7 +185,8 @@ Useful build and runtime commands:
 - `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
-- `make install-local` installs the current release-mode checkout as a standalone user-local build.
+- `make install-local` installs the current release-mode checkout with a Git commit and dirty-state version.
+- `make print-local-version` prints the exact version the next local installation will use.
 - `make uninstall-local` removes that standalone build and restores the Homebrew agent service states recorded before local testing.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
 - `make validate-config CONFIG=/path/to/config.toml` builds the CLI and asks EasyBar to dry-run config validation without reloading the bar.

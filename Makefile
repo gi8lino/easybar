@@ -127,7 +127,7 @@ endif
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
-        print-arch print-run-arch print-version print-latest-tag print-package-sha256 \
+        print-arch print-run-arch print-version print-local-version print-latest-tag print-package-sha256 \
         tag-patch tag-minor tag-major push-tags tag \
         run-build-app run-build-lua-runtime run-build-calendar-agent run-build-network-agent run-build-cli \
         demo \
@@ -292,15 +292,17 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
 	@scripts/dev/run-local.sh trace --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
-install-local: ## Build and install the current checkout as a standalone local installation.
-	@$(MAKE) --no-print-directory bundle \
-		ARCH="$(LOCAL_INSTALL_ARCH)" \
-		VERSION="$(VERSION)" \
-		BUNDLE_ID="$(BUNDLE_ID)" \
-		CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" \
-		NOTARY_SUBMIT=0 \
-		NOTARYTOOL_PROFILE= \
-		CLEAN_BUILD="$(CLEAN_BUILD)"
+install-local: ## Build and install the current checkout with a Git-derived local version.
+	@local_version="$$(scripts/dev/local-version.sh --version-prefix "$(VERSION_PREFIX)")"; \
+		echo "Building local version $$local_version"; \
+		$(MAKE) --no-print-directory bundle \
+			ARCH="$(LOCAL_INSTALL_ARCH)" \
+			VERSION="$$local_version" \
+			BUNDLE_ID="$(BUNDLE_ID)" \
+			CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" \
+			NOTARY_SUBMIT=0 \
+			NOTARYTOOL_PROFILE= \
+			CLEAN_BUILD="$(CLEAN_BUILD)"
 	@scripts/dev/install-local.sh \
 		--dist-dir "$(DIST_DIR)" \
 		--app-dir "$(LOCAL_APP_DIR)" \
@@ -359,6 +361,9 @@ print-run-arch: ## Print the selected RUN_ARCH.
 
 print-version: ## Print the current version derived from the latest tag.
 	@echo "$(CURRENT_VERSION)"
+
+print-local-version: ## Print the Git-derived version used by install-local.
+	@scripts/dev/local-version.sh --version-prefix "$(VERSION_PREFIX)"
 
 print-latest-tag: ## Print the latest matching git tag.
 	@echo "$(LATEST_TAG)"
