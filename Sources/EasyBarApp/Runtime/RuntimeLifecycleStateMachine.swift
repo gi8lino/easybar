@@ -1,7 +1,7 @@
 import Foundation
 
 /// Lifecycle operation that must be serialized by the runtime coordinator.
-enum RuntimeLifecycleOperation: String {
+enum RuntimeLifecycleOperation: String, Hashable {
   /// Reloads config and reapplies all dependent runtime state.
   case reloadConfig
   /// Restarts only the Lua/widget runtime.
@@ -32,18 +32,14 @@ struct RuntimeLifecycleStateMachine {
   private(set) var started = false
   /// Generation used to cancel stale lifecycle work.
   private(set) var generation: UInt64 = 0
-  /// Whether a config reload is in progress.
-  private var isReloadingConfig = false
-  /// Whether a Lua runtime restart is in progress.
-  private var isRestartingLuaRuntime = false
-  /// Whether another config reload should run after current work.
-  private var queuedConfigReload = false
-  /// Whether another Lua restart should run after current work.
-  private var queuedLuaRuntimeRestart = false
+  /// Operation currently holding lifecycle ownership.
+  private var activeOperation: RuntimeLifecycleOperation?
+  /// Operations requested while lifecycle ownership is busy.
+  private var pendingOperations = Set<RuntimeLifecycleOperation>()
 
   /// Returns whether the runtime is currently busy with another lifecycle operation.
   private var isBusy: Bool {
-    isReloadingConfig || isRestartingLuaRuntime
+    activeOperation != nil
   }
 
   /// Starts the runtime lifecycle and returns the generation for startup work.
@@ -70,11 +66,11 @@ struct RuntimeLifecycleStateMachine {
     guard started else { return .notStarted }
 
     if isBusy {
-      queue(operation)
+      pendingOperations.insert(operation)
       return .queued
     }
 
-    markStarted(operation)
+    activeOperation = operation
     return .started(generation: generation)
   }
 
@@ -98,7 +94,7 @@ struct RuntimeLifecycleStateMachine {
 
   /// Marks one lifecycle operation as finished and returns the next queued operation.
   mutating func finish(_ operation: RuntimeLifecycleOperation) -> RuntimeLifecycleOperation? {
-    markFinished(operation)
+    activeOperation = nil
     return dequeueNextOperation()
   }
 
@@ -108,53 +104,19 @@ struct RuntimeLifecycleStateMachine {
     return generation
   }
 
-  /// Queues the provided lifecycle operation.
-  private mutating func queue(_ operation: RuntimeLifecycleOperation) {
-    switch operation {
-    case .reloadConfig:
-      queuedConfigReload = true
-    case .restartLuaRuntime:
-      queuedLuaRuntimeRestart = true
-    }
-  }
-
-  /// Marks one lifecycle operation as started.
-  private mutating func markStarted(_ operation: RuntimeLifecycleOperation) {
-    switch operation {
-    case .reloadConfig:
-      isReloadingConfig = true
-    case .restartLuaRuntime:
-      isRestartingLuaRuntime = true
-    }
-  }
-
-  /// Marks one lifecycle operation as finished.
-  private mutating func markFinished(_ operation: RuntimeLifecycleOperation) {
-    switch operation {
-    case .reloadConfig:
-      isReloadingConfig = false
-    case .restartLuaRuntime:
-      isRestartingLuaRuntime = false
-    }
-  }
-
   /// Clears queued and in-flight lifecycle work.
   private mutating func resetWork() {
-    isReloadingConfig = false
-    isRestartingLuaRuntime = false
-    queuedConfigReload = false
-    queuedLuaRuntimeRestart = false
+    activeOperation = nil
+    pendingOperations.removeAll()
   }
 
   /// Dequeues the next pending lifecycle operation in priority order.
   private mutating func dequeueNextOperation() -> RuntimeLifecycleOperation? {
-    if queuedConfigReload {
-      queuedConfigReload = false
+    if pendingOperations.remove(.reloadConfig) != nil {
       return .reloadConfig
     }
 
-    if queuedLuaRuntimeRestart {
-      queuedLuaRuntimeRestart = false
+    if pendingOperations.remove(.restartLuaRuntime) != nil {
       return .restartLuaRuntime
     }
 
