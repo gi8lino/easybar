@@ -12,12 +12,12 @@ final class AeroSpaceSocketSubscriptionLauncher: AeroSpaceSubscriptionLaunching,
     self.socketPath = socketPath
   }
 
-  func canLaunchSubscription(arguments: [String]) -> Bool {
+  var isAvailable: Bool {
     FileManager.default.fileExists(atPath: socketPath)
   }
 
-  func makeSubscription(arguments: [String]) -> AeroSpaceSubscriptionSession? {
-    AeroSpaceSocketSubscriptionSession(socketPath: socketPath, arguments: arguments)
+  func makeSubscription() -> AeroSpaceSubscriptionSession? {
+    AeroSpaceSocketSubscriptionSession(socketPath: socketPath)
   }
 }
 
@@ -29,7 +29,6 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
   private struct State {
     var fd: Int32 = -1
     var stopped = false
-    var terminationStatus: Int32 = 0
   }
 
   private struct Request: Encodable {
@@ -40,22 +39,15 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
   }
 
   private let socketPath: String
-  private let arguments: [String]
   private let state = LockedState(State())
 
-  var terminationStatus: Int32 {
-    state.withLock(\.terminationStatus)
-  }
-
-  init(socketPath: String, arguments: [String]) {
+  init(socketPath: String) {
     self.socketPath = socketPath
-    self.arguments = arguments
   }
 
   func start(
-    onOutputData: @escaping @Sendable (Data) -> Void,
-    onErrorData: @escaping @Sendable (Data) -> Void,
-    onTermination: @escaping @Sendable (AeroSpaceSubscriptionSession) -> Void
+    onEventFrame: @escaping @Sendable (Data) -> Void,
+    onDisconnect: @escaping @Sendable (AeroSpaceSubscriptionSession, String?) -> Void
   ) throws {
     let fd = try openConnectedUnixSocket(at: socketPath)
     do {
@@ -78,13 +70,9 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
 
     DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
-      self.readEvents(
-        fd: fd,
-        onOutputData: onOutputData,
-        onErrorData: onErrorData
-      )
+      let errorMessage = self.readEvents(fd: fd, onEventFrame: onEventFrame)
       self.finish(fd: fd)
-      onTermination(self)
+      onDisconnect(self, errorMessage)
     }
   }
 
@@ -105,7 +93,9 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
   }
 
   private func sendSubscriptionRequest(fd: Int32) throws {
-    let payload = try JSONEncoder().encode(Request(args: arguments))
+    let payload = try JSONEncoder().encode(
+      Request(args: AeroSpaceSubscriptionEvent.subscribeArguments)
+    )
     try writeUInt32(UInt32(payload.count), to: fd)
     guard writeAll(payload, to: fd) else {
       throw SocketError("failed to write AeroSpace subscription request")
@@ -114,21 +104,20 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
 
   private func readEvents(
     fd: Int32,
-    onOutputData: @escaping @Sendable (Data) -> Void,
-    onErrorData: @escaping @Sendable (Data) -> Void
-  ) {
+    onEventFrame: @escaping @Sendable (Data) -> Void
+  ) -> String? {
     do {
       while !state.withLock(\.stopped) {
         let length = try readUInt32(from: fd)
         guard length > 0, length <= 1_048_576 else {
           throw SocketError("invalid AeroSpace event frame length \(length)")
         }
-        onOutputData(try readExactly(Int(length), from: fd))
+        onEventFrame(try readExactly(Int(length), from: fd))
       }
+      return nil
     } catch {
-      guard !state.withLock(\.stopped) else { return }
-      state.withLock { $0.terminationStatus = 1 }
-      onErrorData(Data("\(error)\n".utf8))
+      guard !state.withLock(\.stopped) else { return nil }
+      return String(describing: error)
     }
   }
 

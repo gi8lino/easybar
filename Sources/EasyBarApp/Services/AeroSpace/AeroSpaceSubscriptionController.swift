@@ -117,8 +117,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private func startSubscription(generation: UInt64) {
     guard isActive(generation: generation) else { return }
 
-    let arguments = AeroSpaceSubscriptionEvent.subscribeArguments
-    guard let subscription = subscriptionLauncher.makeSubscription(arguments: arguments) else {
+    guard let subscription = subscriptionLauncher.makeSubscription() else {
       logger.debug("aerospace subscription skipped because its socket is unavailable")
       return
     }
@@ -134,14 +133,15 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
 
     do {
       try subscription.start(
-        onOutputData: { [weak self] data in
+        onEventFrame: { [weak self] data in
           self?.handleEventFrame(data, generation: generation)
         },
-        onErrorData: { [weak self] data in
-          self?.handleErrorData(data, generation: generation)
-        },
-        onTermination: { [weak self] subscription in
-          self?.handleTermination(subscription: subscription, generation: generation)
+        onDisconnect: { [weak self] subscription, errorMessage in
+          self?.handleDisconnect(
+            subscription: subscription,
+            errorMessage: errorMessage,
+            generation: generation
+          )
         }
       )
     } catch {
@@ -151,7 +151,6 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       result.subscription?.invalidate()
       logger.debug(
         "failed to start aerospace subscription",
-        .field("args", arguments.joined(separator: " ")),
         .field("error", error)
       )
       scheduleReconnect(generation: generation)
@@ -188,21 +187,12 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     handleEvent(event)
   }
 
-  /// Logs a socket read error reported by the subscription session.
-  private func handleErrorData(_ data: Data, generation: UInt64) {
-    guard isActive(generation: generation), !data.isEmpty else { return }
-    logger.debug(
-      "aerospace subscription read error",
-      .field("message", String(decoding: data, as: UTF8.self))
-    )
-  }
-
-  /// Handles process termination.
-  private func handleTermination(
+  /// Handles a closed AeroSpace socket subscription.
+  private func handleDisconnect(
     subscription: AeroSpaceSubscriptionSession,
+    errorMessage: String?,
     generation: UInt64
   ) {
-    let status = subscription.terminationStatus
     let result = withLock { state in
       state.detach(subscription: subscription, generation: generation)
     }
@@ -211,13 +201,13 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
 
     guard result.wasActive else { return }
 
-    if status == 0 {
-      logger.debug("aerospace subscription ended")
-    } else {
+    if let errorMessage {
       logger.warn(
-        "aerospace subscription exited",
-        .field("status", status)
+        "aerospace subscription disconnected",
+        .field("error", errorMessage)
       )
+    } else {
+      logger.debug("aerospace subscription ended")
     }
 
     scheduleReconnect(generation: generation)
@@ -226,12 +216,8 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   /// Schedules a bounded reconnect attempt when AeroSpace still appears installed.
   private func scheduleReconnect(generation: UInt64) {
     guard isActive(generation: generation) else { return }
-    guard
-      subscriptionLauncher.canLaunchSubscription(
-        arguments: AeroSpaceSubscriptionEvent.subscribeArguments
-      )
-    else {
-      logger.debug("aerospace subscription reconnect skipped because executable is unavailable")
+    guard subscriptionLauncher.isAvailable else {
+      logger.debug("aerospace subscription reconnect skipped because socket is unavailable")
       return
     }
 

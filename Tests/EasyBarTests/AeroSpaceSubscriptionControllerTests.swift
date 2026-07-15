@@ -10,11 +10,11 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     private var subscriptions: [FakeSubscriptionSession] = []
     private var available = true
 
-    func canLaunchSubscription(arguments: [String]) -> Bool {
+    var isAvailable: Bool {
       lock.withLock { available }
     }
 
-    func makeSubscription(arguments: [String]) -> AeroSpaceSubscriptionSession? {
+    func makeSubscription() -> AeroSpaceSubscriptionSession? {
       lock.withLock {
         guard available else { return nil }
         let subscription = FakeSubscriptionSession()
@@ -43,28 +43,20 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
 
   private final class FakeSubscriptionSession: AeroSpaceSubscriptionSession, @unchecked Sendable {
     private let lock = NSLock()
-    private var outputDataHandler: (@Sendable (Data) -> Void)?
-    private var errorDataHandler: (@Sendable (Data) -> Void)?
-    private var terminationHandler: (@Sendable (AeroSpaceSubscriptionSession) -> Void)?
-    private var terminationStatusValue: Int32 = 0
+    private var eventFrameHandler: (@Sendable (Data) -> Void)?
+    private var disconnectHandler: (@Sendable (AeroSpaceSubscriptionSession, String?) -> Void)?
     private(set) var started = false
     private(set) var stopped = false
     private(set) var invalidated = false
 
-    var terminationStatus: Int32 {
-      lock.withLock { terminationStatusValue }
-    }
-
     func start(
-      onOutputData: @escaping @Sendable (Data) -> Void,
-      onErrorData: @escaping @Sendable (Data) -> Void,
-      onTermination: @escaping @Sendable (AeroSpaceSubscriptionSession) -> Void
+      onEventFrame: @escaping @Sendable (Data) -> Void,
+      onDisconnect: @escaping @Sendable (AeroSpaceSubscriptionSession, String?) -> Void
     ) throws {
       lock.withLock {
         started = true
-        outputDataHandler = onOutputData
-        errorDataHandler = onErrorData
-        terminationHandler = onTermination
+        eventFrameHandler = onEventFrame
+        disconnectHandler = onDisconnect
       }
     }
 
@@ -83,29 +75,22 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     }
 
     func emitOutputLine(_ line: String) {
-      let handler = lock.withLock { outputDataHandler }
+      let handler = lock.withLock { eventFrameHandler }
       handler?(Data(line.utf8))
     }
 
-    func emitErrorLine(_ line: String) {
-      let handler = lock.withLock { errorDataHandler }
-      handler?(Data((line + "\n").utf8))
-    }
-
     func terminate(status: Int32) {
-      let handler = lock.withLock { () -> (@Sendable (AeroSpaceSubscriptionSession) -> Void)? in
-        terminationStatusValue = status
-        let handler = terminationHandler
-        terminationHandler = nil
+      let handler = lock.withLock { () -> (@Sendable (AeroSpaceSubscriptionSession, String?) -> Void)? in
+        let handler = disconnectHandler
+        disconnectHandler = nil
         return handler
       }
-      handler?(self)
+      handler?(self, status == 0 ? nil : "socket error \(status)")
     }
 
     private func clearHandlers() {
-      outputDataHandler = nil
-      errorDataHandler = nil
-      terminationHandler = nil
+      eventFrameHandler = nil
+      disconnectHandler = nil
     }
   }
 
