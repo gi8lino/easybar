@@ -19,7 +19,7 @@ actor WidgetEngine {
   private var scriptedRoots = Set<String>()
   private var started = false
   private var runtimeAvailable = false
-  private var runtimeSession = WidgetRuntimeSession()
+  private var runtimeSessionID: UInt64 = 0
   private let restartScheduler: BackoffScheduler
 
   init(
@@ -76,7 +76,8 @@ actor WidgetEngine {
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
 
-    let sessionID = runtimeSession.begin()
+    runtimeSessionID &+= 1
+    let sessionID = runtimeSessionID
     runtimeAvailable = false
 
     await luaRuntime.setLineHandler { [weak self] line in
@@ -96,13 +97,13 @@ actor WidgetEngine {
     let configSnapshot = await configManager.snapshot()
 
     guard await luaRuntime.start(config: configSnapshot) else {
-      runtimeSession.invalidate()
+      invalidateRuntimeSession()
       await luaRuntime.setLineHandler { _ in }
       await luaRuntime.setTerminationHandler { _ in }
       return false
     }
 
-    guard runtimeSession.accepts(sessionID, whileRunning: started) else {
+    guard acceptsRuntimeSession(sessionID, whileRunning: started) else {
       await luaRuntime.shutdown()
       return false
     }
@@ -142,7 +143,7 @@ actor WidgetEngine {
     started = false
     runtimeAvailable = false
     restartScheduler.cancel()
-    runtimeSession.invalidate()
+    invalidateRuntimeSession()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
 
@@ -164,10 +165,10 @@ actor WidgetEngine {
     _ termination: LuaProcessController.Termination,
     runtimeSessionID: UInt64
   ) async {
-    guard runtimeSession.accepts(runtimeSessionID, whileRunning: started) else { return }
+    guard acceptsRuntimeSession(runtimeSessionID, whileRunning: started) else { return }
 
     runtimeAvailable = false
-    runtimeSession.invalidate()
+    invalidateRuntimeSession()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
     await eventHub.clearLuaForwardedAppEvents()
@@ -188,7 +189,7 @@ actor WidgetEngine {
       .field("reason", String(describing: termination.reason))
     )
 
-    scheduleRuntimeRestart(expectedSessionID: runtimeSession.id)
+    scheduleRuntimeRestart(expectedSessionID: self.runtimeSessionID)
   }
 
   /// Schedules one bounded-backoff restart while the widget engine still wants to run.
@@ -204,7 +205,7 @@ actor WidgetEngine {
 
   /// Attempts one recovery launch and reschedules when startup still fails.
   private func restartRuntimeAfterUnexpectedExit(expectedSessionID: UInt64) async {
-    guard started, !runtimeAvailable, runtimeSession.id == expectedSessionID else { return }
+    guard started, !runtimeAvailable, runtimeSessionID == expectedSessionID else { return }
 
     if await startRuntimeSession() {
       logger.info("lua runtime restarted after unexpected exit")
@@ -212,12 +213,12 @@ actor WidgetEngine {
     }
 
     guard started else { return }
-    scheduleRuntimeRestart(expectedSessionID: runtimeSession.id)
+    scheduleRuntimeRestart(expectedSessionID: runtimeSessionID)
   }
 
   func handleRuntimeTransportLine(_ line: String, runtimeSessionID: UInt64) async {
     guard
-      runtimeSession.accepts(
+      acceptsRuntimeSession(
         runtimeSessionID,
         whileRunning: started && runtimeAvailable
       )
@@ -280,7 +281,7 @@ actor WidgetEngine {
         isSynchronous: isSynchronous,
         timeoutSecondsOverride: timeoutSeconds,
         maxOutputBytesOverride: maxOutputBytes,
-        runtimeSessionID: runtimeSession.id,
+        runtimeSessionID: runtimeSessionID,
         isRuntimeSessionActive: { [weak self] sessionID in
           guard let self else { return false }
           return await self.isRuntimeSessionActive(sessionID)
@@ -289,13 +290,23 @@ actor WidgetEngine {
     case .commandCancel(let token):
       await commandService.cancelAsyncCommand(
         token: token,
-        runtimeSessionID: runtimeSession.id
+        runtimeSessionID: runtimeSessionID
       )
     }
   }
 
   private func isRuntimeSessionActive(_ sessionID: UInt64) -> Bool {
-    runtimeSession.accepts(sessionID, whileRunning: started && runtimeAvailable)
+    acceptsRuntimeSession(sessionID, whileRunning: started && runtimeAvailable)
+  }
+
+  /// Invalidates queued work captured by the active Lua process generation.
+  private func invalidateRuntimeSession() {
+    runtimeSessionID &+= 1
+  }
+
+  /// Returns whether work belongs to the active Lua process generation.
+  private func acceptsRuntimeSession(_ candidate: UInt64, whileRunning: Bool) -> Bool {
+    whileRunning && runtimeSessionID == candidate
   }
 
   private func handleSubscriptions(_ requiredEvents: Set<String>) async {
