@@ -122,6 +122,62 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertLessThan(elapsedSeconds, 2.0)
   }
 
+  func testRunAcceptsOutputOneByteBelowLimit() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      command: "python3 -c \"import sys; sys.stdout.write('x' * 127)\"",
+      limits: .init(timeoutSeconds: 1, maxOutputBytes: 128)
+    )
+
+    XCTAssertEqual(result.status, 0)
+    XCTAssertEqual(result.output.utf8.count, 127)
+  }
+
+  func testRunAcceptsOutputExactlyAtLimit() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      command: "python3 -c \"import sys; sys.stdout.write('x' * 128)\"",
+      limits: .init(timeoutSeconds: 1, maxOutputBytes: 128)
+    )
+
+    XCTAssertEqual(result.status, 0)
+    XCTAssertEqual(result.output.utf8.count, 128)
+  }
+
+  func testRunAcceptsChunkedOutputExactlyAtLimit() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      command: "python3 -c \"import sys; [sys.stdout.write('12345678') for _ in range(16)]\"",
+      limits: .init(timeoutSeconds: 1, maxOutputBytes: 128)
+    )
+
+    XCTAssertEqual(result.status, 0)
+    XCTAssertEqual(result.output.utf8.count, 128)
+  }
+
+  func testRunRejectsTheFirstByteBeyondOutputLimit() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      command: "python3 -c \"import sys; sys.stdout.write('x' * 129)\"",
+      limits: .init(timeoutSeconds: 1, maxOutputBytes: 128)
+    )
+
+    XCTAssertEqual(result.status, LuaCommandRunner.Limits.outputLimitStatus)
+    XCTAssertEqual(result.output.utf8.count, 128)
+  }
+
   func testRunTerminatesCommandThatExceedsOutputLimit() async {
     let runner = LuaCommandRunner(
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)

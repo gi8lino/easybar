@@ -95,7 +95,7 @@ private final class CommandExecution: @unchecked Sendable {
         outputData.append(data.prefix(remainingBytes))
       }
 
-      guard outputData.count >= maxOutputBytes else {
+      guard data.count > remainingBytes else {
         return false
       }
 
@@ -391,7 +391,7 @@ private final class CommandExecution: @unchecked Sendable {
 
     let chunk = readCurrentlyAvailableOutput(
       from: handle,
-      maxBytes: remainingOutputCapacity()
+      maxBytes: outputReadLimit()
     )
     let shouldTerminate = state.withLock { state in
       state.appendOutput(chunk, maxOutputBytes: limits.maxOutputBytes)
@@ -464,7 +464,7 @@ private final class CommandExecution: @unchecked Sendable {
       appendRemainingOutput(
         readCurrentlyAvailableOutput(
           from: outputReadHandle,
-          maxBytes: remainingOutputCapacity()
+          maxBytes: outputReadLimit()
         )
       )
     }
@@ -517,11 +517,17 @@ private final class CommandExecution: @unchecked Sendable {
     return output
   }
 
-  /// Returns how many more command-output bytes can be kept.
-  private func remainingOutputCapacity() -> Int {
-    state.withLock { state in
+  /// Returns a read cap that includes one byte beyond the retained output limit.
+  ///
+  /// The sentinel byte distinguishes output that ends exactly at the configured
+  /// limit from output that actually exceeds it.
+  private func outputReadLimit() -> Int {
+    let remainingBytes = state.withLock { state in
       max(0, limits.maxOutputBytes - state.outputData.count)
     }
+
+    guard remainingBytes < Int.max else { return Int.max }
+    return remainingBytes + 1
   }
 
   /// Appends final output read after process termination.
