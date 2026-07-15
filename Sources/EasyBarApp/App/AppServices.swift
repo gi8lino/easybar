@@ -28,36 +28,48 @@ struct AppServices: @unchecked Sendable {
 
   @MainActor
   static func bootstrap(logger: ProcessLogger) -> AppServices {
-    let configServices = makeConfigServices()
+    let config = Config.makeUnloadedConfig()
+    let bootstrapSnapshot = config.snapshot()
+    let configSnapshotStore = ConfigSnapshotStore(snapshot: bootstrapSnapshot)
+    let configManager = ConfigManager(config: config)
     let metricsCoordinator = MetricsCoordinator()
     let luaRuntime = LuaRuntime(logger: logger.child("lua"))
-    let eventServices = makeEventServices(
-      logger: logger.child("events"),
-      luaRuntime: luaRuntime
+    let eventLogger = logger.child("events")
+    let eventHub = EventHub(logger: eventLogger.child("hub"), luaRuntime: luaRuntime)
+    let systemEvents = SystemEvents(logger: eventLogger.child("system"))
+    let powerEvents = PowerEvents(logger: eventLogger.child("power"))
+    let timerEvents = TimerEvents(logger: eventLogger.child("timer"))
+    let volumeEvents = VolumeEvents(logger: eventLogger.child("volume"))
+    let eventManager = EventManager(
+      logger: eventLogger.child("manager"),
+      systemEvents: systemEvents,
+      powerEvents: powerEvents,
+      timerEvents: timerEvents,
+      volumeEvents: volumeEvents
     )
     let agentServices = makeAgentServices(
       logger: logger,
-      snapshot: configServices.bootstrapSnapshot,
+      snapshot: bootstrapSnapshot,
       metricsCoordinator: metricsCoordinator
     )
     let nativeServices = makeNativeServices(
       logger: logger,
-      snapshot: configServices.bootstrapSnapshot,
-      eventManager: eventServices.eventManager,
+      snapshot: bootstrapSnapshot,
+      eventManager: eventManager,
       agentServices: agentServices
     )
 
     let services = AppServices(
-      config: configServices.config,
-      configManager: configServices.configManager,
-      configSnapshotStore: configServices.configSnapshotStore,
+      config: config,
+      configManager: configManager,
+      configSnapshotStore: configSnapshotStore,
       luaRuntime: luaRuntime,
-      eventHub: eventServices.eventHub,
-      eventManager: eventServices.eventManager,
-      systemEvents: eventServices.systemEvents,
-      powerEvents: eventServices.powerEvents,
-      timerEvents: eventServices.timerEvents,
-      volumeEvents: eventServices.volumeEvents,
+      eventHub: eventHub,
+      eventManager: eventManager,
+      systemEvents: systemEvents,
+      powerEvents: powerEvents,
+      timerEvents: timerEvents,
+      volumeEvents: volumeEvents,
       widgetStore: nativeServices.widgetStore,
       nativeWidgetRegistry: nativeServices.nativeWidgetRegistry,
       aeroSpaceService: nativeServices.aeroSpaceService,
@@ -104,48 +116,6 @@ struct AppServices: @unchecked Sendable {
     MonthCalendarAgentClient.shared = monthCalendarAgentClient
     UpcomingCalendarAgentClient.shared = upcomingCalendarAgentClient
     ComposerCalendarAgentClient.shared = composerCalendarAgentClient
-  }
-
-  @MainActor
-  private static func makeConfigServices() -> ConfigServices {
-    let config = Config.makeUnloadedConfig()
-    let bootstrapSnapshot = config.snapshot()
-
-    return ConfigServices(
-      config: config,
-      bootstrapSnapshot: bootstrapSnapshot,
-      configSnapshotStore: ConfigSnapshotStore(snapshot: bootstrapSnapshot),
-      configManager: ConfigManager(config: config)
-    )
-  }
-
-  @MainActor
-  private static func makeEventServices(logger: ProcessLogger, luaRuntime: LuaRuntime)
-    -> EventServices
-  {
-    let eventHub = EventHub(
-      logger: logger.child("hub"),
-      luaRuntime: luaRuntime
-    )
-    let systemEvents = SystemEvents(logger: logger.child("system"))
-    let powerEvents = PowerEvents(logger: logger.child("power"))
-    let timerEvents = TimerEvents(logger: logger.child("timer"))
-    let volumeEvents = VolumeEvents(logger: logger.child("volume"))
-
-    return EventServices(
-      eventHub: eventHub,
-      eventManager: EventManager(
-        logger: logger.child("manager"),
-        systemEvents: systemEvents,
-        powerEvents: powerEvents,
-        timerEvents: timerEvents,
-        volumeEvents: volumeEvents
-      ),
-      systemEvents: systemEvents,
-      powerEvents: powerEvents,
-      timerEvents: timerEvents,
-      volumeEvents: volumeEvents
-    )
   }
 
   @MainActor
@@ -225,24 +195,6 @@ struct AppServices: @unchecked Sendable {
       )
     )
   }
-}
-
-/// Config-related services built before loading the user's config file.
-private struct ConfigServices {
-  let config: Config
-  let bootstrapSnapshot: ConfigSnapshot
-  let configSnapshotStore: ConfigSnapshotStore
-  let configManager: ConfigManager
-}
-
-/// Event services that feed native widgets and Lua widgets.
-private struct EventServices {
-  let eventHub: EventHub
-  let eventManager: EventManager
-  let systemEvents: SystemEvents
-  let powerEvents: PowerEvents
-  let timerEvents: TimerEvents
-  let volumeEvents: VolumeEvents
 }
 
 /// UI-facing services and stores for native widgets.
