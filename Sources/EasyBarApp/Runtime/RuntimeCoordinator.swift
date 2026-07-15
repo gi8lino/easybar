@@ -13,7 +13,7 @@ actor RuntimeCoordinator {
   private let configWatcherCoordinator: ConfigWatcherCoordinator
   private let widgetEngine: WidgetEngine
   private let aeroSpaceService: AeroSpaceService
-  private let socketCommandAdapter: RuntimeSocketCommandAdapter
+  private let socketServer: SocketServer
   private let rebindInstanceLock: @MainActor @Sendable (String) -> Bool
 
   private var lifecycle = RuntimeLifecycleStateMachine()
@@ -43,7 +43,7 @@ actor RuntimeCoordinator {
       metricsCoordinator: services.metricsCoordinator
     )
 
-    self.socketCommandAdapter = RuntimeSocketCommandAdapter(
+    self.socketServer = SocketServer(
       logger: logger.child("socket_server"),
       metricsCoordinator: services.metricsCoordinator
     )
@@ -100,7 +100,8 @@ actor RuntimeCoordinator {
     logger.info("runtime coordinator stop begin")
 
     await configWatcherCoordinator.stop()
-    await socketCommandAdapter.stop()
+    await services.metricsCoordinator.setSnapshotHandler(nil)
+    socketServer.stop()
 
     await widgetEngine.shutdown()
 
@@ -174,7 +175,7 @@ actor RuntimeCoordinator {
     let previousSocketPath = SharedPathDefaults.easyBarSocketPath(
       in: result.previousSnapshot.app.runtimeDirectory
     )
-    let socketOutcome = await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
+    let socketOutcome = socketServer.reloadConfiguration(socketPath: socketPath)
     guard socketOutcome.succeeded else {
       await configManager.restorePreviousState()
       logger.error(
@@ -187,7 +188,7 @@ actor RuntimeCoordinator {
     if result.snapshot.app.lockDirectory != result.previousSnapshot.app.lockDirectory {
       let acquired = await rebindInstanceLock(result.snapshot.app.lockDirectory)
       guard acquired else {
-        let rollbackOutcome = await socketCommandAdapter.reloadConfiguration(
+        let rollbackOutcome = socketServer.reloadConfiguration(
           socketPath: previousSocketPath
         )
         await configManager.restorePreviousState()
@@ -459,10 +460,18 @@ actor RuntimeCoordinator {
   /// Starts the IPC socket server.
   private func startSocketServer() async {
     let socketPath = await configManager.easyBarSocketPath()
-    await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
+    socketServer.reloadConfiguration(socketPath: socketPath)
 
-    await socketCommandAdapter.start { [weak self] command in
-      await self?.handleSocketCommand(command)
+    await services.metricsCoordinator.setSnapshotHandler { [weak self] snapshot in
+      Task {
+        await self?.broadcastMetrics(snapshot)
+      }
+    }
+
+    socketServer.start { [weak self] command in
+      Task {
+        await self?.handleSocketCommand(command)
+      }
     } validateConfigHandler: { [weak self] configPathOverride in
       guard let self else {
         return .rejected(message: "config validation unavailable")
@@ -475,7 +484,12 @@ actor RuntimeCoordinator {
   /// Rebinds the IPC socket server when the config changed the socket path.
   private func reloadSocketServerConfiguration() async {
     let socketPath = await configManager.easyBarSocketPath()
-    await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
+    socketServer.reloadConfiguration(socketPath: socketPath)
+  }
+
+  /// Broadcasts one metrics snapshot through the runtime socket server.
+  private func broadcastMetrics(_ snapshot: IPC.MetricsSnapshot) {
+    socketServer.broadcastMetrics(snapshot)
   }
 }
 
