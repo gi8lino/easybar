@@ -20,6 +20,8 @@ Use the full reference when you need exact property tables or event payload type
   Set widget-local default properties for future `add(...)` calls.
 - `easybar.exec(...)` and `easybar.exec_async(...)`
   Run shell commands from a widget, with optional per-call command limits.
+- `easybar.cancel_async(token)`
+  Request cancellation of a pending asynchronous command and its child processes.
 - `easybar.log(level, ...)`
   Write widget-scoped log output.
 - `easybar.log.with_prefix(prefix)`

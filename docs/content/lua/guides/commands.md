@@ -61,6 +61,43 @@ end)
 Leave `options` as `{}` when you want the global defaults from `[app.lua_commands]`.
 Use `easybar.DEFAULT_EXEC_OPTIONS` when you want to reference the current configured host defaults directly.
 
+## Cancelling asynchronous commands
+
+`easybar.exec_async(...)` returns a job token. Pass that token to
+`easybar.cancel_async(token)` when the command should stop:
+
+```lua
+local active_job
+
+active_job = easybar.exec_async("long-running-command", {}, function(output, code)
+    active_job = nil
+
+    if code == 130 then
+        easybar.log(easybar.level.info, "command cancelled")
+        return
+    end
+
+    if code ~= 0 then
+        easybar.log(easybar.level.warn, "command failed", code, output)
+    end
+end)
+
+local cancellation_requested = easybar.cancel_async(active_job)
+```
+
+`easybar.cancel_async(token)` returns `true` when the token still identifies a pending command and
+the cancellation request was sent. It returns `false` when the command already completed or the
+token is unknown. The return value confirms the request, not that the process has already exited.
+
+Cancellation first asks the command's complete process group to terminate, so child processes are
+stopped along with the shell command. EasyBar forcibly stops processes that do not exit during the
+grace period. The original callback runs after termination and receives exit code `130`; `output`
+contains anything captured before cancellation.
+
+Command tokens belong to the current Lua runtime session. Keep them only while the corresponding
+job is active, and do not persist them across config reloads or application restarts. Synchronous
+commands started with `easybar.exec(...)` cannot be cancelled this way.
+
 ## Environment
 
 Commands run with the environment configured under `[app.env]`.

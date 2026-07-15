@@ -449,7 +449,7 @@ function EasyBar.exec(command, options) end
 ---@return string
 function EasyBar.exec_async(command, options, callback) end
 
----Requests cancellation of one pending background command.
+---Requests cancellation of one pending background command. Returns immediately after sending the request; the original callback receives exit code 130 after the process group exits.
 ---@param token string
 ---@return boolean pending
 function EasyBar.cancel_async(token) end
