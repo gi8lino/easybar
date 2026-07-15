@@ -232,6 +232,23 @@ public final class LineSocketServerTransport<
     }
   }
 
+  /// Sends one terminal response and closes the client after the handler returns.
+  public func sendAndClose(_ response: Response, to clientFD: Int32) -> ClientDisposition {
+    _ = send(response, to: clientFD)
+    return .close
+  }
+
+  /// Sends one terminal response before scheduling its acknowledged action on the main actor.
+  public func sendAndClose(
+    _ response: Response,
+    to clientFD: Int32,
+    then action: @escaping @MainActor @Sendable () -> Void
+  ) -> ClientDisposition {
+    guard send(response, to: clientFD) else { return .close }
+    DispatchQueue.main.async(execute: action)
+    return .close
+  }
+
   /// Adds one subscriber for future broadcasts.
   @discardableResult
   public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) -> Bool {

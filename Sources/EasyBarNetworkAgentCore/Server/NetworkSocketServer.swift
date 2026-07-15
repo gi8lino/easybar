@@ -109,24 +109,20 @@ final class NetworkSocketServer {
 
   /// Acknowledges the request before allowing the host app to terminate.
   private func handleRestart(to clientFD: Int32) -> ClientDisposition {
-    guard transport.send(NetworkAgentMessage(kind: .restarting), to: clientFD) else {
-      return .close
-    }
-    DispatchQueue.main.async { [onRestartRequested] in
+    return transport.sendAndClose(NetworkAgentMessage(kind: .restarting), to: clientFD) {
+      [onRestartRequested] in
       onRestartRequested()
     }
-    return .close
   }
 
   /// Sends a pong response.
   private func sendPong(to clientFD: Int32) -> ClientDisposition {
-    _ = transport.send(NetworkAgentMessage(kind: .pong), to: clientFD)
-    return .close
+    return transport.sendAndClose(NetworkAgentMessage(kind: .pong), to: clientFD)
   }
 
   /// Sends the network-agent version response.
   private func sendVersion(to clientFD: Int32) -> ClientDisposition {
-    _ = transport.send(
+    return transport.sendAndClose(
       NetworkAgentMessage(
         kind: .version,
         version: NetworkAgentVersion(
@@ -136,7 +132,6 @@ final class NetworkSocketServer {
       ),
       to: clientFD
     )
-    return .close
   }
 
   /// Handles a one-shot field fetch.
@@ -153,8 +148,7 @@ final class NetworkSocketServer {
     }
 
     let response = responseFields(for: fields, provider: provider)
-    _ = transport.send(makeResponseMessage(from: response), to: clientFD)
-    return .close
+    return transport.sendAndClose(makeResponseMessage(from: response), to: clientFD)
   }
 
   /// Handles a live field subscription.

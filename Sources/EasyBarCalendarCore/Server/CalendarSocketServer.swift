@@ -114,18 +114,15 @@ final class CalendarSocketServer {
 
   /// Acknowledges the request before allowing the host app to terminate.
   private func handleRestart(to clientFD: Int32) -> ClientDisposition {
-    guard transport.send(CalendarAgentMessage(kind: .restarting), to: clientFD) else {
-      return .close
-    }
-    DispatchQueue.main.async { [onRestartRequested] in
+    return transport.sendAndClose(CalendarAgentMessage(kind: .restarting), to: clientFD) {
+      [onRestartRequested] in
       onRestartRequested()
     }
-    return .close
   }
 
   /// Sends the calendar-agent version response.
   private func sendVersion(to clientFD: Int32) -> ClientDisposition {
-    _ = transport.send(
+    transport.sendAndClose(
       CalendarAgentMessage(
         kind: .version,
         version: CalendarAgentVersion(
@@ -135,13 +132,11 @@ final class CalendarSocketServer {
       ),
       to: clientFD
     )
-    return .close
   }
 
   /// Sends a pong response.
   private func sendPong(to clientFD: Int32) -> ClientDisposition {
-    _ = transport.send(CalendarAgentMessage(kind: .pong), to: clientFD)
-    return .close
+    return transport.sendAndClose(CalendarAgentMessage(kind: .pong), to: clientFD)
   }
 
   /// Handles a one-shot snapshot fetch.
@@ -158,11 +153,10 @@ final class CalendarSocketServer {
     }
 
     let snapshot = provider.snapshot(for: query)
-    _ = transport.send(
+    return transport.sendAndClose(
       CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
       to: clientFD
     )
-    return .close
   }
 
   /// Handles a live snapshot subscription.
