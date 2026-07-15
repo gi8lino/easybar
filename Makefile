@@ -89,7 +89,11 @@ LOCAL_CACHE_DIR := $(CURDIR)/.cache
 LOCAL_CLANG_MODULE_CACHE := $(CURDIR)/.build/clang-module-cache
 LOCAL_SWIFT_ENV := HOME="$(LOCAL_HOME)" XDG_CACHE_HOME="$(LOCAL_CACHE_DIR)" CLANG_MODULE_CACHE_PATH="$(LOCAL_CLANG_MODULE_CACHE)"
 LOCAL_INSTALL_ARCH ?= $(RUN_ARCH)
-LOCAL_APP_DIR ?= /Applications
+LOCAL_APP_DIR ?= $(HOME)/Applications
+LOCAL_BIN_DIR ?= $(HOME)/.local/bin
+LOCAL_AGENT_DIR ?= $(HOME)/Library/Application Support/EasyBar/Agents
+LOCAL_LAUNCH_AGENT_DIR ?= $(HOME)/Library/LaunchAgents
+LOCAL_LOG_DIR ?= $(HOME)/Library/Logs/EasyBar
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
 
@@ -118,7 +122,7 @@ endif
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         prepare-version build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
-        clean clean-dist run run-debug run-trace install-local stop restart-app icons \
+        clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
@@ -287,7 +291,7 @@ run-debug: prepare-version ## Fast local run with debug builds and debug logging
 run-trace: prepare-version ## Fast local run with debug builds and trace logging enabled.
 	@scripts/dev/run-local.sh trace --run-arch "$(RUN_ARCH)" --version "$(VERSION)" --bundle-id "$(BUNDLE_ID)" --dist-dir "$(DIST_DIR)"
 
-install-local: ## Build and install the current checkout over the existing Homebrew installation.
+install-local: ## Build and install the current checkout as a standalone local installation.
 	@$(MAKE) --no-print-directory bundle \
 		ARCH="$(LOCAL_INSTALL_ARCH)" \
 		VERSION="$(VERSION)" \
@@ -296,7 +300,20 @@ install-local: ## Build and install the current checkout over the existing Homeb
 		NOTARY_SUBMIT=0 \
 		NOTARYTOOL_PROFILE= \
 		CLEAN_BUILD="$(CLEAN_BUILD)"
-	@scripts/dev/install-local.sh --dist-dir "$(DIST_DIR)" --app-dir "$(LOCAL_APP_DIR)"
+	@scripts/dev/install-local.sh \
+		--dist-dir "$(DIST_DIR)" \
+		--app-dir "$(LOCAL_APP_DIR)" \
+		--bin-dir "$(LOCAL_BIN_DIR)" \
+		--agent-dir "$(LOCAL_AGENT_DIR)" \
+		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)" \
+		--log-dir "$(LOCAL_LOG_DIR)"
+
+uninstall-local: ## Remove the standalone local installation and restore installed Homebrew agent services.
+	@scripts/dev/uninstall-local.sh \
+		--app-dir "$(LOCAL_APP_DIR)" \
+		--bin-dir "$(LOCAL_BIN_DIR)" \
+		--agent-dir "$(LOCAL_AGENT_DIR)" \
+		--launch-agent-dir "$(LOCAL_LAUNCH_AGENT_DIR)"
 
 run-build-app: ## Internal target: fast local app build for RUN_ARCH.
 	@scripts/build/build-products.sh debug "$(RUN_ARCH)" "$(APP_PRODUCT)=$(APP_BIN)"

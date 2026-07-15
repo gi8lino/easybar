@@ -108,27 +108,41 @@ Restart helpers with `easybar --restart-calendar-agent`, `easybar --restart-netw
 
 ### Install the current checkout for longer testing
 
-After installing one released EasyBar version through Homebrew, install the current checkout over that installation with:
+Install the current checkout directly without creating a release and without first installing EasyBar through Homebrew:
 
 ```bash
 make install-local
 ```
 
-This builds release-mode artifacts for `LOCAL_INSTALL_ARCH` (which defaults to `RUN_ARCH`), replaces the app in `/Applications`, overlays the CLI and both Homebrew-managed agent bundles, restarts the agent services, and launches EasyBar. Repeat the command whenever you want to test a newer local state without creating a release.
+This builds release-mode artifacts for `LOCAL_INSTALL_ARCH` (which defaults to `RUN_ARCH`) and installs a standalone user-local setup:
 
-Use another architecture or app directory when needed:
+```text
+~/Applications/EasyBar.app
+~/.local/bin/easybar
+~/Library/Application Support/EasyBar/Agents/EasyBarCalendarAgent.app
+~/Library/Application Support/EasyBar/Agents/EasyBarNetworkAgent.app
+~/Library/LaunchAgents/io.github.gi8lino.easybar.local.*.plist
+```
+
+The helper agents run as normal user LaunchAgents, so no Homebrew EasyBar cask or agent formula is required. If released Homebrew agent services are already active, the installer stops them to prevent duplicate agents and leaves the released package files untouched.
+
+Repeat `make install-local` whenever you want to test a newer local state. Override any destination when needed:
 
 ```bash
 make install-local LOCAL_INSTALL_ARCH=universal
-make install-local LOCAL_APP_DIR="$HOME/Applications"
+make install-local LOCAL_APP_DIR=/Applications
+make install-local LOCAL_BIN_DIR=/usr/local/bin
 ```
 
-The target intentionally modifies the installed Homebrew package files. Restore the latest released build at any time with:
+Make sure `~/.local/bin` is in `PATH` when using the default CLI location.
+
+Remove the standalone build with:
 
 ```bash
-brew reinstall gi8lino/tap/easybar-calendar-agent gi8lino/tap/easybar-network-agent
-brew reinstall --cask gi8lino/tap/easybar
+make uninstall-local
 ```
+
+If released Homebrew agent formulae are installed, `make uninstall-local` starts their services again after removing the local LaunchAgents.
 
 Quickstart for contributors:
 
@@ -144,7 +158,8 @@ Useful build and runtime commands:
 - `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.
-- `make install-local` installs the current release-mode checkout over the existing Homebrew installation.
+- `make install-local` installs the current release-mode checkout as a standalone user-local build.
+- `make uninstall-local` removes that standalone build and restores installed Homebrew agent services when present.
 - `make stop` stops the running EasyBar app and helper agents cleanly.
 - `make validate-config CONFIG=/path/to/config.toml` builds the CLI and asks EasyBar to dry-run config validation without reloading the bar.
 
@@ -173,6 +188,7 @@ make check-generated
 Reusable automation lives under `scripts/` and is grouped by purpose:
 
 - `scripts/ci/` contains CI-only wrappers such as dependency setup and long-running Swift test logging.
+- `scripts/dev/` contains local run, standalone install, and uninstall workflows.
 - `scripts/release/` contains release automation such as Homebrew cask rendering and tap commits.
 - Existing generator scripts remain the source of truth for generated Swift, Lua, and documentation artifacts and are still orchestrated through the Makefile.
 

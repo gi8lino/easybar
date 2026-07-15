@@ -5,17 +5,29 @@ usage() {
   cat >&2 <<'EOF_USAGE'
 Usage: scripts/dev/install-local.sh [options]
 
-Install the bundles from dist/ over an existing Homebrew EasyBar installation.
+Build artifacts must already exist in dist/. This installer is standalone and
+does not require EasyBar or its helper agents to be installed through Homebrew.
 
 Options:
-  --dist-dir <dir>  Distribution directory. Default: dist
-  --app-dir <dir>   Directory containing EasyBar.app. Default: /Applications
-  --no-launch       Install and restart agents without launching EasyBar.
+  --dist-dir <dir>          Distribution directory. Default: dist
+  --app-dir <dir>           App installation directory. Default: ~/Applications
+  --bin-dir <dir>           CLI installation directory. Default: ~/.local/bin
+  --agent-dir <dir>         Helper-agent directory. Default: ~/Library/Application Support/EasyBar/Agents
+  --launch-agent-dir <dir>  LaunchAgent plist directory. Default: ~/Library/LaunchAgents
+  --log-dir <dir>           launchd log directory. Default: ~/Library/Logs/EasyBar
+  --no-launch               Install everything without launching EasyBar.
 EOF_USAGE
 }
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+project_root="$(cd -- "$script_dir/../.." && pwd -P)"
+
 dist_dir="${DIST_DIR:-dist}"
-app_dir="${LOCAL_APP_DIR:-/Applications}"
+app_dir="${LOCAL_APP_DIR:-$HOME/Applications}"
+bin_dir="${LOCAL_BIN_DIR:-$HOME/.local/bin}"
+agent_dir="${LOCAL_AGENT_DIR:-$HOME/Library/Application Support/EasyBar/Agents}"
+launch_agent_dir="${LOCAL_LAUNCH_AGENT_DIR:-$HOME/Library/LaunchAgents}"
+log_dir="${LOCAL_LOG_DIR:-$HOME/Library/Logs/EasyBar}"
 launch_app=true
 
 while [ "$#" -gt 0 ]; do
@@ -26,6 +38,22 @@ while [ "$#" -gt 0 ]; do
     ;;
   --app-dir)
     app_dir="${2:?missing value for --app-dir}"
+    shift 2
+    ;;
+  --bin-dir)
+    bin_dir="${2:?missing value for --bin-dir}"
+    shift 2
+    ;;
+  --agent-dir)
+    agent_dir="${2:?missing value for --agent-dir}"
+    shift 2
+    ;;
+  --launch-agent-dir)
+    launch_agent_dir="${2:?missing value for --launch-agent-dir}"
+    shift 2
+    ;;
+  --log-dir)
+    log_dir="${2:?missing value for --log-dir}"
     shift 2
     ;;
   --no-launch)
@@ -49,6 +77,11 @@ if [ "$(uname -s)" != "Darwin" ]; then
   exit 1
 fi
 
+case "$dist_dir" in
+/*) ;;
+*) dist_dir="$project_root/$dist_dir" ;;
+esac
+
 require_command() {
   local command_name="$1"
 
@@ -68,28 +101,14 @@ require_path() {
   fi
 }
 
-require_homebrew_install() {
-  local kind="$1"
-  local name="$2"
-
-  if ! brew list "$kind" "$name" >/dev/null 2>&1; then
-    echo "Homebrew package '${name}' is not installed." >&2
-    echo "Install the released EasyBar cask once before using make install-local." >&2
-    exit 1
-  fi
-}
-
 ensure_directory() {
   local directory="$1"
-  local parent
 
   if [ -d "$directory" ]; then
     return
   fi
 
-  parent="$(dirname "$directory")"
-  if [ -w "$parent" ]; then
-    mkdir -p "$directory"
+  if mkdir -p "$directory" 2>/dev/null; then
     return
   fi
 
@@ -103,7 +122,7 @@ replace_bundle() {
   local parent
   local stage
 
-  parent="$(dirname "$destination")"
+  parent="$(dirname -- "$destination")"
   ensure_directory "$parent"
   stage="${parent}/.${destination##*/}.local-install.$$"
 
@@ -126,9 +145,12 @@ replace_binary() {
   local source="$1"
   local destination="$2"
   local parent
-  local stage="${destination}.local-install.$$"
+  local stage
 
-  parent="$(dirname "$destination")"
+  parent="$(dirname -- "$destination")"
+  ensure_directory "$parent"
+  stage="${destination}.local-install.$$"
+
   if [ -w "$parent" ]; then
     cp "$source" "$stage"
     chmod 0755 "$stage"
@@ -142,68 +164,227 @@ replace_binary() {
   sudo mv -f "$stage" "$destination"
 }
 
-require_command brew
+xml_escape() {
+  local value="$1"
+
+  value=${value//&/\&amp;}
+  value=${value//</\&lt;}
+  value=${value//>/\&gt;}
+  value=${value//\"/\&quot;}
+  value=${value//\'/\&apos;}
+  printf '%s' "$value"
+}
+
+write_launch_agent() {
+  local plist="$1"
+  local label="$2"
+  local executable="$3"
+  local stdout_path="$4"
+  local stderr_path="$5"
+  local stage="${plist}.local-install.$$"
+  local escaped_label
+  local escaped_executable
+  local escaped_home
+  local escaped_stdout
+  local escaped_stderr
+
+  escaped_label="$(xml_escape "$label")"
+  escaped_executable="$(xml_escape "$executable")"
+  escaped_home="$(xml_escape "$HOME")"
+  escaped_stdout="$(xml_escape "$stdout_path")"
+  escaped_stderr="$(xml_escape "$stderr_path")"
+
+  cat >"$stage" <<EOF_PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${escaped_label}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${escaped_executable}</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LANG</key>
+    <string>en_US.UTF-8</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>${escaped_home}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+  <key>StandardOutPath</key>
+  <string>${escaped_stdout}</string>
+  <key>StandardErrorPath</key>
+  <string>${escaped_stderr}</string>
+</dict>
+</plist>
+EOF_PLIST
+
+  chmod 0644 "$stage"
+  mv -f "$stage" "$plist"
+}
+
+service_target() {
+  local label="$1"
+  printf 'gui/%s/%s' "$user_id" "$label"
+}
+
+bootout_service() {
+  local label="$1"
+
+  launchctl bootout "$(service_target "$label")" >/dev/null 2>&1 || true
+}
+
+bootstrap_service() {
+  local label="$1"
+  local plist="$2"
+  local target
+
+  target="$(service_target "$label")"
+  launchctl bootstrap "$user_domain" "$plist"
+  launchctl enable "$target"
+  launchctl kickstart -k "$target"
+}
+
+homebrew_service_is_started() {
+  local formula="$1"
+
+  if [ -z "$brew_command" ]; then
+    return 1
+  fi
+  if ! "$brew_command" list --formula "$formula" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  "$brew_command" services list 2>/dev/null | awk -v formula="$formula" '
+    $1 == formula && $2 == "started" { found = 1 }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+stop_homebrew_service_if_started() {
+  local formula="$1"
+  local state_variable="$2"
+
+  if ! homebrew_service_is_started "$formula"; then
+    return
+  fi
+
+  printf -v "$state_variable" '%s' true
+  echo "Stopping conflicting Homebrew service: $formula"
+  "$brew_command" services stop "$formula" >/dev/null
+}
+
+require_command awk
 require_command ditto
+require_command launchctl
 require_command open
-require_command python3
 require_command xattr
 
-app_source="${dist_dir}/EasyBar.app"
-calendar_agent_source="${dist_dir}/EasyBarCalendarAgent.app"
-network_agent_source="${dist_dir}/EasyBarNetworkAgent.app"
-cli_source="${dist_dir}/easybar"
+app_source="$dist_dir/EasyBar.app"
+calendar_agent_source="$dist_dir/EasyBarCalendarAgent.app"
+network_agent_source="$dist_dir/EasyBarNetworkAgent.app"
+cli_source="$dist_dir/easybar"
 
 require_path "$app_source" "EasyBar app bundle"
 require_path "$calendar_agent_source" "calendar agent bundle"
 require_path "$network_agent_source" "network agent bundle"
 require_path "$cli_source" "EasyBar CLI"
 
-require_homebrew_install --cask easybar
-require_homebrew_install --formula easybar-calendar-agent
-require_homebrew_install --formula easybar-network-agent
-
-brew_prefix="$(brew --prefix)"
-calendar_prefix="$(brew --prefix easybar-calendar-agent)"
-network_prefix="$(brew --prefix easybar-network-agent)"
-
 app_destination="${app_dir%/}/EasyBar.app"
-calendar_agent_destination="${calendar_prefix}/libexec/EasyBarCalendarAgent.app"
-network_agent_destination="${network_prefix}/libexec/EasyBarNetworkAgent.app"
-cli_link="${brew_prefix}/bin/easybar"
+calendar_agent_destination="${agent_dir%/}/EasyBarCalendarAgent.app"
+network_agent_destination="${agent_dir%/}/EasyBarNetworkAgent.app"
+cli_destination="${bin_dir%/}/easybar"
 
-require_path "$cli_link" "Homebrew EasyBar CLI link"
-cli_destination="$(python3 - "$cli_link" <<'PY'
-import os
-import sys
+calendar_label="io.github.gi8lino.easybar.local.calendar-agent"
+network_label="io.github.gi8lino.easybar.local.network-agent"
+calendar_plist="${launch_agent_dir%/}/${calendar_label}.plist"
+network_plist="${launch_agent_dir%/}/${network_label}.plist"
+calendar_stdout="${log_dir%/}/calendar-agent.out.log"
+calendar_stderr="${log_dir%/}/calendar-agent.err.log"
+network_stdout="${log_dir%/}/network-agent.out.log"
+network_stderr="${log_dir%/}/network-agent.err.log"
 
-print(os.path.realpath(sys.argv[1]))
-PY
-)"
-require_path "$cli_destination" "Homebrew EasyBar CLI target"
+user_id="$(id -u)"
+user_domain="gui/$user_id"
+brew_command="$(command -v brew || true)"
+brew_calendar_was_started=false
+brew_network_was_started=false
+installation_complete=false
 
-calendar_formula="easybar-calendar-agent"
-network_formula="easybar-network-agent"
-restart_services_on_exit=false
+restore_service_after_failure() {
+  local label="$1"
+  local plist="$2"
+  local executable="$3"
+  local formula="$4"
+  local brew_was_started="$5"
+
+  if [ -f "$plist" ] && [ -x "$executable" ]; then
+    if bootstrap_service "$label" "$plist" >/dev/null 2>&1; then
+      return
+    fi
+  fi
+
+  if [ "$brew_was_started" = true ]; then
+    "$brew_command" services start "$formula" >/dev/null 2>&1 || true
+  fi
+}
 
 cleanup() {
   local status=$?
   trap - EXIT
 
-  if [ "$restart_services_on_exit" = true ]; then
-    echo "Restarting EasyBar agent services after interrupted installation" >&2
-    brew services start "$calendar_formula" >/dev/null 2>&1 || true
-    brew services start "$network_formula" >/dev/null 2>&1 || true
+  if [ "$status" -ne 0 ] && [ "$installation_complete" = false ]; then
+    echo "Local installation failed; restoring previously active agent services" >&2
+    restore_service_after_failure \
+      "$calendar_label" \
+      "$calendar_plist" \
+      "$calendar_agent_destination/Contents/MacOS/EasyBarCalendarAgent" \
+      easybar-calendar-agent \
+      "$brew_calendar_was_started"
+    restore_service_after_failure \
+      "$network_label" \
+      "$network_plist" \
+      "$network_agent_destination/Contents/MacOS/EasyBarNetworkAgent" \
+      easybar-network-agent \
+      "$brew_network_was_started"
   fi
 
   exit "$status"
 }
 trap cleanup EXIT
 
-echo "Stopping installed EasyBar and Homebrew agent services"
-brew services stop "$calendar_formula" >/dev/null 2>&1 || true
-brew services stop "$network_formula" >/dev/null 2>&1 || true
-restart_services_on_exit=true
-scripts/dev/stop-local.sh --dist-dir "$dist_dir"
+ensure_directory "$app_dir"
+ensure_directory "$bin_dir"
+ensure_directory "$agent_dir"
+ensure_directory "$launch_agent_dir"
+ensure_directory "$log_dir"
+
+if [ ! -w "$launch_agent_dir" ]; then
+  echo "LaunchAgent directory must be writable by the current user: $launch_agent_dir" >&2
+  exit 1
+fi
+if [ ! -w "$log_dir" ]; then
+  echo "Agent log directory must be writable by the current user: $log_dir" >&2
+  exit 1
+fi
+
+stop_homebrew_service_if_started easybar-calendar-agent brew_calendar_was_started
+stop_homebrew_service_if_started easybar-network-agent brew_network_was_started
+
+bootout_service "$calendar_label"
+bootout_service "$network_label"
+bash "$project_root/scripts/dev/stop-local.sh" --dist-dir "$dist_dir"
 
 echo "Installing EasyBar.app into $app_destination"
 replace_bundle "$app_source" "$app_destination"
@@ -222,13 +403,29 @@ xattr -dr com.apple.quarantine "$calendar_agent_destination" >/dev/null 2>&1 || 
 xattr -dr com.apple.quarantine "$network_agent_destination" >/dev/null 2>&1 || true
 xattr -d com.apple.quarantine "$cli_destination" >/dev/null 2>&1 || true
 
-echo "Starting Homebrew agent services"
-brew services start "$calendar_formula"
-brew services start "$network_formula"
-restart_services_on_exit=false
+write_launch_agent \
+  "$calendar_plist" \
+  "$calendar_label" \
+  "$calendar_agent_destination/Contents/MacOS/EasyBarCalendarAgent" \
+  "$calendar_stdout" \
+  "$calendar_stderr"
 
-installed_app_version="$($app_destination/Contents/MacOS/EasyBar --version)"
-installed_cli_version="$($cli_destination --version)"
+write_launch_agent \
+  "$network_plist" \
+  "$network_label" \
+  "$network_agent_destination/Contents/MacOS/EasyBarNetworkAgent" \
+  "$network_stdout" \
+  "$network_stderr"
+
+echo "Starting local EasyBar agent services"
+bootstrap_service "$calendar_label" "$calendar_plist"
+bootstrap_service "$network_label" "$network_plist"
+
+launchctl print "$(service_target "$calendar_label")" >/dev/null
+launchctl print "$(service_target "$network_label")" >/dev/null
+
+installed_app_version="$("$app_destination/Contents/MacOS/EasyBar" --version)"
+installed_cli_version="$("$cli_destination" --version)"
 echo "Installed $installed_app_version"
 echo "Installed $installed_cli_version"
 
@@ -237,11 +434,29 @@ if [ "$launch_app" = true ]; then
   open "$app_destination"
 fi
 
+installation_complete=true
+
 cat <<EOF_SUMMARY
 
-Local EasyBar build installed successfully.
+Local EasyBar build installed successfully without a Homebrew EasyBar installation.
+
+App:             $app_destination
+CLI:             $cli_destination
+Calendar agent:  $calendar_agent_destination
+Network agent:   $network_agent_destination
+LaunchAgents:    $calendar_plist
+                 $network_plist
+
 Repeat 'make install-local' after further changes.
-Restore the released packages with:
-  brew reinstall gi8lino/tap/easybar-calendar-agent gi8lino/tap/easybar-network-agent
-  brew reinstall --cask gi8lino/tap/easybar
 EOF_SUMMARY
+
+case ":$PATH:" in
+*":$bin_dir:"*) ;;
+*)
+  cat <<EOF_PATH
+
+The CLI directory is not currently in PATH. Add this to your shell configuration:
+  export PATH="$bin_dir:\$PATH"
+EOF_PATH
+  ;;
+esac
