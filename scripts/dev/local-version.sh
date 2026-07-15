@@ -6,8 +6,8 @@ usage() {
 Usage: scripts/dev/local-version.sh [--version-prefix PREFIX]
 
 Print the version used by make install-local. The version contains the latest
-release version, the current short Git commit, and a -dirty suffix when the
-working tree contains tracked, staged, or untracked source changes.
+release version reachable from HEAD, the current short Git commit, and a -dirty
+suffix when the working tree contains tracked, staged, or untracked source changes.
 EOF_USAGE
 }
 
@@ -46,7 +46,10 @@ fi
 
 head_commit="$(git rev-parse --verify HEAD)"
 short_commit="$(git rev-parse --short=8 "$head_commit")"
-latest_tag="$(git tag --list "${version_prefix}*" --sort=-v:refname | head -n 1)"
+latest_tag="$(
+  git tag --merged "$head_commit" --list "${version_prefix}*" --sort=-v:refname |
+    sed -n '1p'
+)"
 
 if [ -n "$latest_tag" ]; then
   base_version="${latest_tag#"$version_prefix"}"
@@ -68,3 +71,4 @@ if [ "$dirty" = true ]; then
 fi
 
 printf '%s\n' "$version"
+
