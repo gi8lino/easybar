@@ -10,13 +10,14 @@ actor RuntimeCoordinator {
   private let logger: ProcessLogger
   private let services: AppServices
   private let configManager: ConfigManager
-  private let configWatcherCoordinator: ConfigWatcherCoordinator
+  private let fileWatcher: FileWatcher
   private let widgetEngine: WidgetEngine
   private let aeroSpaceService: AeroSpaceService
   private let socketServer: SocketServer
   private let rebindInstanceLock: @MainActor @Sendable (String) -> Bool
 
   private var lifecycle = RuntimeLifecycleStateMachine()
+  private var configWatcherTask: Task<Void, Never>?
 
   init(
     logger: ProcessLogger,
@@ -28,10 +29,7 @@ actor RuntimeCoordinator {
     self.rebindInstanceLock = rebindInstanceLock
     self.configManager = services.configManager
     self.aeroSpaceService = services.aeroSpaceService
-    self.configWatcherCoordinator = ConfigWatcherCoordinator(
-      configManager: services.configManager,
-      fileWatcher: FileWatcher(logger: logger.child("file_watcher"))
-    )
+    self.fileWatcher = FileWatcher(logger: logger.child("file_watcher"))
 
     self.widgetEngine = WidgetEngine(
       logger: logger.child("widget_engine"),
@@ -99,7 +97,7 @@ actor RuntimeCoordinator {
 
     logger.info("runtime coordinator stop begin")
 
-    await configWatcherCoordinator.stop()
+    await stopConfigWatcher()
     await services.metricsCoordinator.setSnapshotHandler(nil)
     socketServer.stop()
 
@@ -365,16 +363,31 @@ actor RuntimeCoordinator {
 
   /// Starts the config watcher loop.
   private func startConfigWatcher() async {
-    await configWatcherCoordinator.start { [weak self] in
-      await self?.reloadConfig()
+    configWatcherTask?.cancel()
+
+    let path = await configManager.configPath()
+    let enabled = await configManager.watchConfigFileEnabled()
+    let stream = await fileWatcher.start(configPath: path, enabled: enabled)
+
+    configWatcherTask = Task { [weak self] in
+      for await event in stream {
+        guard case .changed = event else { continue }
+        await self?.reloadConfig()
+      }
     }
   }
 
   /// Restarts the config watcher after a config reload.
   private func restartConfigWatcher() async {
-    await configWatcherCoordinator.restart { [weak self] in
-      await self?.reloadConfig()
-    }
+    await stopConfigWatcher()
+    await startConfigWatcher()
+  }
+
+  /// Stops consuming config changes and closes the filesystem watcher.
+  private func stopConfigWatcher() async {
+    configWatcherTask?.cancel()
+    configWatcherTask = nil
+    await fileWatcher.stop()
   }
 
   /// Returns whether one in-flight lifecycle operation is still allowed to mutate runtime state.
