@@ -6,6 +6,10 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   tests:
     uses: ./.github/workflows/test.yml
@@ -85,14 +89,19 @@ jobs:
           path: dist/EasyBar-${{ steps.version.outputs.version }}.zip
           if-no-files-found: error
 
-      - name: Create release
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            "dist/EasyBar-${{ steps.version.outputs.version }}.zip" \
-            --generate-notes
+          TAG="${{ steps.version.outputs.tag }}"
+          ASSET="dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${ASSET}" --clobber
+          else
+            gh release create "${TAG}" "${ASSET}" --generate-notes
+          fi
 
       - name: Trigger Homebrew package update workflow
         env:
