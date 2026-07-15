@@ -414,6 +414,9 @@ actor RuntimeCoordinator {
     let generation: UInt64
 
     switch lifecycle.begin(operation) {
+    case .notStarted:
+      logger.debug("\(operation.rawValue) ignored because runtime is stopped")
+      return
     case .queued:
       logger.debug(queuedMessage)
       return

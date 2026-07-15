@@ -31,6 +31,18 @@ final class RuntimeLifecycleStateMachineTests: XCTestCase {
     XCTAssertFalse(lifecycle.stop())
   }
 
+  func testLifecycleOperationsAreRejectedWhileStopped() {
+    var lifecycle = RuntimeLifecycleStateMachine()
+
+    guard case .notStarted = lifecycle.begin(.reloadConfig) else {
+      return XCTFail("Expected reload to be rejected while stopped")
+    }
+
+    guard case .notStarted = lifecycle.begin(.restartLuaRuntime) else {
+      return XCTFail("Expected Lua restart to be rejected while stopped")
+    }
+  }
+
   func testBusyLifecycleOperationQueuesDuplicateReloadOnce() {
     var lifecycle = RuntimeLifecycleStateMachine()
     _ = lifecycle.start()

@@ -18,6 +18,8 @@ enum RuntimeLifecycleStartResult {
 
 /// Result of attempting to begin a serialized lifecycle operation.
 enum RuntimeLifecycleBeginResult {
+  /// The operation was rejected because runtime services are stopped.
+  case notStarted
   /// The operation was queued because another operation is already running.
   case queued
   /// The operation may proceed for the returned generation.
@@ -65,6 +67,8 @@ struct RuntimeLifecycleStateMachine {
 
   /// Begins one lifecycle operation or queues it when another operation is active.
   mutating func begin(_ operation: RuntimeLifecycleOperation) -> RuntimeLifecycleBeginResult {
+    guard started else { return .notStarted }
+
     if isBusy {
       queue(operation)
       return .queued
