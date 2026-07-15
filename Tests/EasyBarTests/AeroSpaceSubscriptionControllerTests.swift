@@ -270,18 +270,10 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     scheduler: RecordingReconnectScheduler
   ) -> AeroSpaceSubscriptionController {
     AeroSpaceSubscriptionController(
-      commandRunner: makeCommandRunner(logger: logger),
       logger: logger,
       subscriptionLauncher: launcher,
       reconnectScheduler: scheduler,
       handleEvent: { _ in }
-    )
-  }
-
-  private static func makeCommandRunner(logger: ProcessLogger) -> AeroSpaceCommandRunner {
-    AeroSpaceCommandRunner(
-      logger: logger,
-      executablePathResolver: { nil }
     )
   }
 

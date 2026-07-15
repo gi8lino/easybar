@@ -58,7 +58,6 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
   private let commandRunner: AeroSpaceCommandRunner
   /// Long-lived AeroSpace event subscription.
   private lazy var subscriptionController = AeroSpaceSubscriptionController(
-    commandRunner: commandRunner,
     logger: logger.child("subscribe"),
     handleEvent: { [weak self] event in
       self?.handleAeroSpaceSubscriptionEvent(event)

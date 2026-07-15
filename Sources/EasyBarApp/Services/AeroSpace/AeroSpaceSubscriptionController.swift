@@ -1,7 +1,7 @@
 import EasyBarShared
 import Foundation
 
-/// Owns the long-lived `aerospace subscribe` process.
+/// Owns the long-lived AeroSpace socket subscription.
 ///
 /// Sendability is guarded by `LockedState`; process session ownership,
 /// generation checks, reconnect queue state, and stream buffering are serialized
@@ -10,7 +10,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   /// Default reconnect delays used after an existing AeroSpace subscription exits.
   private static let defaultReconnectDelays: [TimeInterval] = [0.25, 0.5, 1, 2, 5]
 
-  /// Locked lifecycle state for the subscription process.
+  /// Locked lifecycle state for the subscription.
   private struct State {
     var running = false
     var generation: UInt64 = 0
@@ -86,7 +86,6 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
 
   /// Creates one AeroSpace subscription controller.
   init(
-    commandRunner: AeroSpaceCommandRunner,
     logger: ProcessLogger,
     subscriptionLauncher: (any AeroSpaceSubscriptionLaunching)? = nil,
     reconnectScheduler: (any AeroSpaceReconnectScheduling)? = nil,
@@ -97,7 +96,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     self.logger = logger
     self.subscriptionLauncher =
       subscriptionLauncher
-      ?? ProcessAeroSpaceSubscriptionLauncher(commandRunner: commandRunner)
+      ?? AeroSpaceSocketSubscriptionLauncher()
     self.reconnectScheduler =
       reconnectScheduler
       ?? BackoffScheduler(
@@ -116,10 +115,10 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     guard let generation else { return }
 
     reconnectScheduler.cancel()
-    startProcess(generation: generation)
+    startSubscription(generation: generation)
   }
 
-  /// Stops the subscription process.
+  /// Stops the subscription.
   func stop() {
     let subscription = withLock { state in state.stop() }
 
@@ -129,13 +128,13 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     logger.debug("aerospace subscription stopped")
   }
 
-  /// Starts one concrete `aerospace subscribe` session.
-  private func startProcess(generation: UInt64) {
+  /// Starts one concrete AeroSpace socket subscription session.
+  private func startSubscription(generation: UInt64) {
     guard isActive(generation: generation) else { return }
 
     let arguments = AeroSpaceSubscriptionEvent.subscribeArguments
     guard let subscription = subscriptionLauncher.makeSubscription(arguments: arguments) else {
-      logger.debug("aerospace subscription skipped because executable is unavailable")
+      logger.debug("aerospace subscription skipped because its socket is unavailable")
       return
     }
 
@@ -274,7 +273,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     reconnectScheduler.schedule { [weak self] in
       guard let self else { return }
       guard self.isActive(generation: generation) else { return }
-      self.startProcess(generation: generation)
+      self.startSubscription(generation: generation)
     }
   }
 
