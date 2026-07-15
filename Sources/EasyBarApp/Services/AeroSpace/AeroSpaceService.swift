@@ -54,7 +54,11 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
     logger: logger
   )
   /// Delayed refresh scheduler used after macOS reports a newly launched app.
-  private lazy var launchRefreshScheduler = AeroSpaceLaunchRefreshScheduler(logger: logger)
+  private lazy var launchRefreshScheduler = DebouncedActionScheduler(
+    label: "aerospace launch refresh",
+    delay: 0.6,
+    logger: logger
+  )
   /// macOS app lifecycle observer used to complement AeroSpace subscription events.
   private lazy var appObserver = AeroSpaceAppObserver(
     logger: logger.child("app-observer"),
@@ -348,7 +352,7 @@ extension AeroSpaceService {
 
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
-    launchRefreshScheduler.cancel(reason: reason)
+    launchRefreshScheduler.cancel()
     appObserver.stop()
 
     logger.debug(
@@ -415,21 +419,25 @@ extension AeroSpaceService {
       .field("app", app.localizedName ?? "")
     )
 
-    launchRefreshScheduler.schedule(
-      appName: app.localizedName ?? "",
-      generation: currentGeneration(),
-      shouldExecute: { [weak self] generation in
-        self?.shouldExecute(generation: generation) == true
-      },
-      refresh: { [weak self] in
-        self?.refresh()
-      }
-    )
+    let appName = app.localizedName ?? ""
+    let generation = currentGeneration()
+    launchRefreshScheduler.schedule { [weak self] in
+      guard let self, self.shouldExecute(generation: generation) else { return }
+      self.logger.debug(
+        "aerospace delayed launch refresh firing",
+        .field("app", appName)
+      )
+      self.refresh()
+    }
   }
 
   /// Cancels any delayed launch refresh once a stronger signal arrives first.
   fileprivate func cancelPendingLaunchRefresh(reason: String) {
-    launchRefreshScheduler.cancel(reason: reason)
+    launchRefreshScheduler.cancel()
+    logger.debug(
+      "aerospace delayed launch refresh canceled",
+      .field("reason", reason)
+    )
   }
 
   /// Applies an immediate focused-app update from macOS before AeroSpace catches up.
