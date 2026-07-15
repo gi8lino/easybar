@@ -5,35 +5,21 @@ struct PopupHoverRegion: NSViewRepresentable {
 
   let onHoverChanged: (Bool) -> Void
 
-  /// Creates the coordinator that forwards hover changes.
-  func makeCoordinator() -> Coordinator {
-    return Coordinator(onHoverChanged: onHoverChanged)
-  }
-
   /// Creates the AppKit hover region.
   func makeNSView(context: Context) -> PopupHoverNSView {
     let view = PopupHoverNSView()
-    view.hoverChanged = context.coordinator.onHoverChanged
+    view.hoverChanged = onHoverChanged
     return view
   }
 
   /// Updates the AppKit hover callback.
   func updateNSView(_ nsView: PopupHoverNSView, context: Context) {
-    nsView.hoverChanged = context.coordinator.onHoverChanged
+    nsView.hoverChanged = onHoverChanged
   }
 
   /// Clears popup hover state when SwiftUI removes the panel content.
-  static func dismantleNSView(_ nsView: PopupHoverNSView, coordinator: Coordinator) {
+  static func dismantleNSView(_ nsView: PopupHoverNSView, coordinator: Void) {
     nsView.prepareForRemoval()
-  }
-
-  final class Coordinator {
-    let onHoverChanged: (Bool) -> Void
-
-    /// Stores the hover callback for the representable.
-    init(onHoverChanged: @escaping (Bool) -> Void) {
-      self.onHoverChanged = onHoverChanged
-    }
   }
 }
 
