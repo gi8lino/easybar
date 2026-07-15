@@ -1,4 +1,4 @@
-import EasyBarShared
+import EasyBarCalendarCore
 import XCTest
 
 final class CalendarFilterMatcherTests: XCTestCase {
