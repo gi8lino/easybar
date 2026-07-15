@@ -6,22 +6,20 @@ final class RuntimeLifecycleStateMachineTests: XCTestCase {
   func testStartAdvancesGenerationAndRejectsDuplicateStart() {
     var lifecycle = RuntimeLifecycleStateMachine()
 
-    guard case .started(let generation) = lifecycle.start() else {
+    guard let generation = lifecycle.start() else {
       return XCTFail("Expected lifecycle to start")
     }
 
     XCTAssertEqual(generation, 1)
     XCTAssertEqual(lifecycle.generation, generation)
 
-    guard case .alreadyStarted = lifecycle.start() else {
-      return XCTFail("Expected duplicate start to be ignored")
-    }
+    XCTAssertNil(lifecycle.start())
   }
 
   func testStopCancelsStartupAndLifecycleWork() {
     var lifecycle = RuntimeLifecycleStateMachine()
 
-    guard case .started(let generation) = lifecycle.start() else {
+    guard let generation = lifecycle.start() else {
       return XCTFail("Expected lifecycle to start")
     }
 

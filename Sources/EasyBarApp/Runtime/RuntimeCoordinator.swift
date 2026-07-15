@@ -48,14 +48,9 @@ actor RuntimeCoordinator {
   }
 
   func start() async {
-    let generation: UInt64
-
-    switch lifecycle.start() {
-    case .alreadyStarted:
+    guard let generation = lifecycle.start() else {
       logger.warn("runtime coordinator already started")
       return
-    case .started(let startedGeneration):
-      generation = startedGeneration
     }
 
     logger.info("runtime coordinator start begin")

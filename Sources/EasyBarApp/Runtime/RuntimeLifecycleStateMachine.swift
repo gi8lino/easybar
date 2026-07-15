@@ -8,14 +8,6 @@ enum RuntimeLifecycleOperation: String, Hashable {
   case restartLuaRuntime
 }
 
-/// Result of attempting to start runtime lifecycle ownership.
-enum RuntimeLifecycleStartResult {
-  /// The runtime was already started.
-  case alreadyStarted
-  /// Startup may proceed for the returned generation.
-  case started(generation: UInt64)
-}
-
 /// Result of attempting to begin a serialized lifecycle operation.
 enum RuntimeLifecycleBeginResult {
   /// The operation was rejected because runtime services are stopped.
@@ -43,12 +35,12 @@ struct RuntimeLifecycleStateMachine {
   }
 
   /// Starts the runtime lifecycle and returns the generation for startup work.
-  mutating func start() -> RuntimeLifecycleStartResult {
-    guard !started else { return .alreadyStarted }
+  mutating func start() -> UInt64? {
+    guard !started else { return nil }
 
     let generation = advanceGeneration()
     started = true
-    return .started(generation: generation)
+    return generation
   }
 
   /// Stops the runtime lifecycle and clears all queued or in-flight work.
