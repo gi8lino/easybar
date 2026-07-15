@@ -22,6 +22,22 @@ final class LuaProcessController: @unchecked Sendable {
     let error = Pipe()
   }
 
+  /// Describes one observed Lua child-process termination.
+  struct Termination: Equatable, Sendable {
+    enum Reason: Equatable, Sendable {
+      case exited(code: Int32)
+      case signaled(signal: Int32)
+      case unknown(status: Int32)
+      case reapFailed(errno: Int32)
+    }
+
+    let processIdentifier: Int32
+    let reason: Reason
+    let wasRequested: Bool
+  }
+
+  typealias TerminationHandler = @Sendable (Termination) -> Void
+
   let logger: ProcessLogger
 
   private let stateLock = LockedState(())
@@ -31,6 +47,7 @@ final class LuaProcessController: @unchecked Sendable {
   var terminationTask: Task<Void, Never>?
   var forcedKillTask: Task<Void, Never>?
   private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
+  private var terminationHandler: TerminationHandler?
 
   /// Creates one Lua process controller.
   init(logger: ProcessLogger) {
@@ -47,7 +64,8 @@ final class LuaProcessController: @unchecked Sendable {
   /// Starts the Lua runtime process using the prepared launch context.
   func start(
     context: LaunchContext,
-    resources: LaunchResources
+    resources: LaunchResources,
+    terminationHandler: @escaping TerminationHandler
   ) -> (processIdentifier: Int32, error: Pipe)? {
     if withLock({ isShuttingDown }) {
       logger.debug("lua runtime start skipped because shutdown is in progress")
@@ -69,6 +87,7 @@ final class LuaProcessController: @unchecked Sendable {
         processIdentifierValue = pid
         processGroupIdentifier = pid
         isShuttingDown = false
+        self.terminationHandler = terminationHandler
       }
 
       installTerminationSource(for: pid)
@@ -92,22 +111,18 @@ final class LuaProcessController: @unchecked Sendable {
 
   /// Stops the Lua runtime process and waits until the child has fully exited.
   func shutdownAndWait() async {
-    guard let snapshot = shutdownSnapshot() else {
+    guard let snapshot = beginShutdownSnapshot() else {
       logger.debug("lua runtime shutdown skipped because no process is running")
       return
     }
 
-    if snapshot.isShuttingDown {
+    if snapshot.wasAlreadyShuttingDown {
       logger.debug(
         "lua runtime shutdown already in progress",
         .field("pid", snapshot.processIdentifier)
       )
       await waitForShutdownCompletion()
       return
-    }
-
-    withLock {
-      isShuttingDown = true
     }
 
     if let processGroupIdentifier = snapshot.processGroupIdentifier {
@@ -131,13 +146,26 @@ final class LuaProcessController: @unchecked Sendable {
     await waitForShutdownCompletion()
   }
 
-  /// Clears the currently tracked Lua process state.
-  func clearTrackedProcessState() {
+  /// Clears the tracked Lua process and returns its termination delivery state.
+  func clearTrackedProcessIfMatching(pid: Int32) -> (
+    wasRequested: Bool,
+    handler: TerminationHandler?
+  )? {
     let clearedState = withLock {
-      () -> (Task<Void, Never>?, Task<Void, Never>?, [CheckedContinuation<Void, Never>]) in
-      let source = terminationTask
-      let workItem = forcedKillTask
-      let waiters = shutdownWaiters
+      () -> (
+        wasRequested: Bool,
+        forcedKillTask: Task<Void, Never>?,
+        waiters: [CheckedContinuation<Void, Never>],
+        handler: TerminationHandler?
+      )? in
+      guard processIdentifierValue == pid else { return nil }
+
+      let result = (
+        wasRequested: isShuttingDown,
+        forcedKillTask: forcedKillTask,
+        waiters: shutdownWaiters,
+        handler: terminationHandler
+      )
 
       terminationTask = nil
       forcedKillTask = nil
@@ -145,20 +173,16 @@ final class LuaProcessController: @unchecked Sendable {
       processGroupIdentifier = nil
       isShuttingDown = false
       shutdownWaiters.removeAll()
+      terminationHandler = nil
 
-      return (source, workItem, waiters)
+      return result
     }
 
-    clearedState.0?.cancel()
-    clearedState.1?.cancel()
-    resumeShutdownWaiters(clearedState.2)
-  }
+    guard let clearedState else { return nil }
 
-  /// Clears the tracked Lua process only when it matches the given pid.
-  func clearTrackedProcessIfMatching(pid: Int32) {
-    guard withLock({ processIdentifierValue == pid }) else { return }
-
-    clearTrackedProcessState()
+    clearedState.forcedKillTask?.cancel()
+    resumeShutdownWaiters(clearedState.waiters)
+    return (clearedState.wasRequested, clearedState.handler)
   }
 
   /// Suspends until the current shutdown sequence has completed.
@@ -190,16 +214,18 @@ final class LuaProcessController: @unchecked Sendable {
     }
   }
 
-  /// Returns the current shutdown-relevant process snapshot.
-  private func shutdownSnapshot() -> (
+  /// Atomically begins shutdown and returns the current process snapshot.
+  private func beginShutdownSnapshot() -> (
     processIdentifier: Int32,
     processGroupIdentifier: Int32?,
-    isShuttingDown: Bool
+    wasAlreadyShuttingDown: Bool
   )? {
     withLock {
       guard let processIdentifierValue else { return nil }
 
-      return (processIdentifierValue, processGroupIdentifier, isShuttingDown)
+      let wasAlreadyShuttingDown = isShuttingDown
+      isShuttingDown = true
+      return (processIdentifierValue, processGroupIdentifier, wasAlreadyShuttingDown)
     }
   }
 

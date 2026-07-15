@@ -219,17 +219,43 @@ extension LuaProcessController {
 
   /// Handles one observed Lua runtime termination.
   func handleTermination(pid: Int32, waitResult: Int32, status: Int32, errnoValue: Int32) {
+    let reason: Termination.Reason
+
     if waitResult == pid {
       logTermination(pid: pid, status: status)
-    } else if shouldLogReapFailure(waitResult: waitResult, errnoValue: errnoValue) {
-      logger.warn(
-        "failed to reap lua runtime",
-        .field("pid", pid),
-        .field("errno", errnoValue)
-      )
+      reason = terminationReason(status: status)
+    } else {
+      if shouldLogReapFailure(waitResult: waitResult, errnoValue: errnoValue) {
+        logger.warn(
+          "failed to reap lua runtime",
+          .field("pid", pid),
+          .field("errno", errnoValue)
+        )
+      }
+      reason = .reapFailed(errno: errnoValue)
     }
 
-    clearTrackedProcessIfMatching(pid: pid)
+    guard let delivery = clearTrackedProcessIfMatching(pid: pid) else { return }
+    delivery.handler?(
+      Termination(
+        processIdentifier: pid,
+        reason: reason,
+        wasRequested: delivery.wasRequested
+      )
+    )
+  }
+
+  /// Converts one Darwin wait status into a stable termination reason.
+  func terminationReason(status: Int32) -> Termination.Reason {
+    if waitStatusExited(status) {
+      return .exited(code: waitStatusExitCode(status))
+    }
+
+    if waitStatusSignaled(status) {
+      return .signaled(signal: waitStatusTerminationSignal(status))
+    }
+
+    return .unknown(status: status)
   }
 
   /// Returns whether a failed reap should be logged for the observed child process.

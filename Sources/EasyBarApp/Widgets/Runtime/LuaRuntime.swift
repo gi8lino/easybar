@@ -8,6 +8,8 @@ actor LuaRuntime {
   private let transport: LuaTransport
 
   private var lineHandler: (@Sendable (String) -> Void)?
+  private var terminationHandler: LuaProcessController.TerminationHandler?
+  private var runtimeGeneration: UInt64 = 0
 
   /// Creates one Lua runtime.
   init(logger: ProcessLogger) {
@@ -24,7 +26,13 @@ actor LuaRuntime {
   /// Sets the current transport line handler for the Lua runtime.
   func setLineHandler(_ handler: @escaping @Sendable (String) -> Void) {
     lineHandler = handler
-    return
+  }
+
+  /// Sets the current child-process termination handler.
+  func setTerminationHandler(
+    _ handler: @escaping LuaProcessController.TerminationHandler
+  ) {
+    terminationHandler = handler
   }
 
   /// Starts the Lua runtime if it is not already running.
@@ -33,6 +41,8 @@ actor LuaRuntime {
     guard let context = processController.launchContext(config: config) else { return false }
 
     let resources = LuaProcessController.LaunchResources()
+    runtimeGeneration &+= 1
+    let generation = runtimeGeneration
 
     do {
       try transport.startListening(
@@ -45,7 +55,20 @@ actor LuaRuntime {
       return false
     }
 
-    guard let result = processController.start(context: context, resources: resources) else {
+    guard
+      let result = processController.start(
+        context: context,
+        resources: resources,
+        terminationHandler: { [weak self] termination in
+          Task {
+            await self?.handleProcessTermination(
+              termination,
+              generation: generation
+            )
+          }
+        }
+      )
+    else {
       transport.shutdown()
       return false
     }
@@ -69,7 +92,21 @@ actor LuaRuntime {
       await MetricsCoordinator.shared.recordLuaRuntimeStopped()
     }
 
+    runtimeGeneration &+= 1
     logger.debug("lua runtime facade shutdown completed")
+  }
+
+  /// Handles one child-process exit after the controller has reaped it.
+  private func handleProcessTermination(
+    _ termination: LuaProcessController.Termination,
+    generation: UInt64
+  ) async {
+    guard runtimeGeneration == generation else { return }
+    guard !termination.wasRequested else { return }
+
+    transport.shutdown()
+    await MetricsCoordinator.shared.recordLuaRuntimeStopped()
+    terminationHandler?(termination)
   }
 
   /// Sends one encoded event line to the Lua runtime socket transport.

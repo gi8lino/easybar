@@ -18,7 +18,9 @@ actor WidgetEngine {
   private var runtimeState = WidgetRuntimeState()
   private var scriptedRoots = Set<String>()
   private var started = false
+  private var runtimeAvailable = false
   private var runtimeSession = WidgetRuntimeSession()
+  private let restartScheduler: BackoffScheduler
 
   init(
     logger: ProcessLogger,
@@ -41,6 +43,12 @@ actor WidgetEngine {
       luaRuntime: luaRuntime,
       configManager: configManager
     )
+    self.restartScheduler = BackoffScheduler(
+      label: "lua runtime restart",
+      delays: [1, 2, 5, 10, 30],
+      logger: logger,
+      logLevel: .warn
+    )
   }
 
   @discardableResult
@@ -51,14 +59,37 @@ actor WidgetEngine {
     }
 
     logger.debug("widget engine start begin")
+    started = true
 
+    guard await startRuntimeSession() else {
+      started = false
+      logger.warn("widget engine start failed because lua runtime did not launch")
+      return false
+    }
+
+    logger.debug("widget engine start end")
+    return true
+  }
+
+  /// Starts one fresh Lua child-process session for the active widget engine.
+  private func startRuntimeSession() async -> Bool {
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
 
     let sessionID = runtimeSession.begin()
+    runtimeAvailable = false
+
     await luaRuntime.setLineHandler { [weak self] line in
       Task {
         await self?.handleRuntimeTransportLine(line, runtimeSessionID: sessionID)
+      }
+    }
+    await luaRuntime.setTerminationHandler { [weak self] termination in
+      Task {
+        await self?.handleRuntimeTermination(
+          termination,
+          runtimeSessionID: sessionID
+        )
       }
     }
 
@@ -67,13 +98,16 @@ actor WidgetEngine {
     guard await luaRuntime.start(config: configSnapshot) else {
       runtimeSession.invalidate()
       await luaRuntime.setLineHandler { _ in }
-      logger.warn("widget engine start failed because lua runtime did not launch")
+      await luaRuntime.setTerminationHandler { _ in }
       return false
     }
 
-    started = true
+    guard runtimeSession.accepts(sessionID, whileRunning: started) else {
+      await luaRuntime.shutdown()
+      return false
+    }
 
-    logger.debug("widget engine start end")
+    runtimeAvailable = true
     return true
   }
 
@@ -97,7 +131,8 @@ actor WidgetEngine {
   }
 
   func shutdown() async {
-    guard started else {
+    guard started || runtimeAvailable else {
+      restartScheduler.cancel()
       logger.debug("widget engine shutdown skipped, not started")
       return
     }
@@ -105,6 +140,8 @@ actor WidgetEngine {
     logger.debug("widget engine shutdown begin")
 
     started = false
+    runtimeAvailable = false
+    restartScheduler.cancel()
     runtimeSession.invalidate()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
@@ -115,13 +152,76 @@ actor WidgetEngine {
       eventManager.stopLuaSubscriptions()
     }
 
+    await luaRuntime.setLineHandler { _ in }
+    await luaRuntime.setTerminationHandler { _ in }
     await luaRuntime.shutdown()
 
     logger.debug("widget engine shutdown end")
   }
 
+  /// Handles an observed Lua child-process exit for one runtime session.
+  private func handleRuntimeTermination(
+    _ termination: LuaProcessController.Termination,
+    runtimeSessionID: UInt64
+  ) async {
+    guard runtimeSession.accepts(runtimeSessionID, whileRunning: started) else { return }
+
+    runtimeAvailable = false
+    runtimeSession.invalidate()
+    runtimeState.reset()
+    await commandService.resetActiveAsyncCommandCount()
+    await eventHub.clearLuaForwardedAppEvents()
+
+    let rootsToClear = scriptedRoots
+    scriptedRoots.removeAll()
+
+    await MainActor.run {
+      eventManager.stopLuaSubscriptions()
+      widgetStore.clear(owners: Set(rootsToClear.map { .scripted(root: $0) }))
+    }
+
+    guard !termination.wasRequested else { return }
+
+    logger.warn(
+      "lua runtime exited unexpectedly",
+      .field("pid", termination.processIdentifier),
+      .field("reason", String(describing: termination.reason))
+    )
+
+    scheduleRuntimeRestart(expectedSessionID: runtimeSession.id)
+  }
+
+  /// Schedules one bounded-backoff restart while the widget engine still wants to run.
+  private func scheduleRuntimeRestart(expectedSessionID: UInt64) {
+    restartScheduler.schedule { [weak self] in
+      Task {
+        await self?.restartRuntimeAfterUnexpectedExit(
+          expectedSessionID: expectedSessionID
+        )
+      }
+    }
+  }
+
+  /// Attempts one recovery launch and reschedules when startup still fails.
+  private func restartRuntimeAfterUnexpectedExit(expectedSessionID: UInt64) async {
+    guard started, !runtimeAvailable, runtimeSession.id == expectedSessionID else { return }
+
+    if await startRuntimeSession() {
+      logger.info("lua runtime restarted after unexpected exit")
+      return
+    }
+
+    guard started else { return }
+    scheduleRuntimeRestart(expectedSessionID: runtimeSession.id)
+  }
+
   func handleRuntimeTransportLine(_ line: String, runtimeSessionID: UInt64) async {
-    guard runtimeSession.accepts(runtimeSessionID, whileRunning: started) else {
+    guard
+      runtimeSession.accepts(
+        runtimeSessionID,
+        whileRunning: started && runtimeAvailable
+      )
+    else {
       logger.debug(
         "dropping stale lua transport line",
         .field("runtime_session_id", runtimeSessionID)
@@ -195,7 +295,7 @@ actor WidgetEngine {
   }
 
   private func isRuntimeSessionActive(_ sessionID: UInt64) -> Bool {
-    runtimeSession.accepts(sessionID, whileRunning: started)
+    runtimeSession.accepts(sessionID, whileRunning: started && runtimeAvailable)
   }
 
   private func handleSubscriptions(_ requiredEvents: Set<String>) async {
@@ -218,6 +318,7 @@ actor WidgetEngine {
   private func handleReady() async {
     logger.debug("lua runtime handshake received")
 
+    restartScheduler.resetDelay()
     runtimeState.isReady = true
     await metricsCoordinator.recordLuaReady()
 
