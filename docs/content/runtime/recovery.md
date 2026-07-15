@@ -44,7 +44,7 @@ aerospace --version
 
 Both the CLI client and the running AeroSpace.app server should be at least 0.21.0. If the versions differ after updating, restart AeroSpace.app.
 
-EasyBar updates AeroSpace widgets from a long-lived `aerospace subscribe --all` stream.
+EasyBar updates AeroSpace widgets through a long-lived connection to AeroSpace's native Unix socket. It sends the equivalent of an `aerospace subscribe --all` request without spawning the CLI subscription process.
 
 Raise EasyBar logging to debug and look for subscription lifecycle messages:
 
@@ -54,9 +54,9 @@ enabled = true
 level = "debug"
 ```
 
-Useful messages include `aerospace subscription started`, `aerospace subscription event received`, `aerospace subscription exited`, and `aerospace subscription reconnect scheduled`.
+Useful messages include `aerospace subscription started`, `aerospace subscription event received`, `aerospace subscription disconnected`, and `aerospace subscription reconnect scheduled`.
 
-If AeroSpace is restarted or updated while EasyBar is running, EasyBar reconnects to the subscription stream with bounded backoff as long as the `aerospace` executable is still available.
+If AeroSpace is restarted or updated while EasyBar is running, EasyBar reconnects with bounded backoff while AeroSpace's socket remains available.
 
 You can trigger one refresh manually with:
 
@@ -72,7 +72,7 @@ easybar --event workspace_change
 
 ## Spaces widget misses an app launch or quit
 
-The built-in spaces widget refreshes AeroSpace-derived state from a mix of `aerospace subscribe --all` events and macOS app lifecycle notifications.
+The built-in spaces widget refreshes AeroSpace-derived state from a mix of native socket subscription events and macOS app lifecycle notifications.
 
 App quits are also refreshed from macOS termination notifications.
 

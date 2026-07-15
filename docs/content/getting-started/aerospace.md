@@ -1,12 +1,12 @@
 # AeroSpace Integration
 
-EasyBar v0.4.0 and newer keeps AeroSpace-backed widgets current by opening a long-lived `aerospace subscribe` stream from the main app.
+EasyBar v0.4.0 and newer keeps AeroSpace-backed widgets current through a long-lived subscription to AeroSpace's native Unix socket.
 
 That means the built-in spaces, front-app, and AeroSpace mode widgets update without extra workspace or focus commands in your AeroSpace config. EasyBar subscribes to all AeroSpace event types and refreshes its AeroSpace snapshot when those events arrive.
 
 ## Requirements
 
-EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer. The AeroSpace integration uses formatted JSON output from `aerospace list-workspaces` and `aerospace list-windows`, plus the JSON-lines event stream from `aerospace subscribe`.
+EasyBar v0.4.0 and newer require AeroSpace 0.21.0 or newer. The AeroSpace integration uses formatted JSON output from the `aerospace list-workspaces` and `aerospace list-windows` CLI commands, plus framed subscription events received directly from AeroSpace's Unix socket.
 
 EasyBar v0.3.0 was the last release that supported text-based AeroSpace output. Use v0.3.0 only if you must keep an older AeroSpace version.
 
@@ -20,7 +20,7 @@ Both the CLI client and the running AeroSpace.app server should be at least 0.21
 
 ## Automatic subscription
 
-When EasyBar starts, it runs a subscription equivalent to:
+When an AeroSpace-backed widget starts, EasyBar connects directly to AeroSpace's Unix socket and sends a subscription request equivalent to:
 
 ```bash
 aerospace subscribe --all
@@ -28,7 +28,7 @@ aerospace subscribe --all
 
 AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as an immediate sync signal. Event bursts are debounced before EasyBar re-reads AeroSpace state; `binding-triggered` gets a slightly longer debounce because AeroSpace emits it before running the binding's commands.
 
-If the subscription process exits while AeroSpace is still installed, EasyBar schedules a reconnect with bounded backoff. This covers common cases such as restarting or updating AeroSpace while EasyBar is already running.
+EasyBar does not spawn the `aerospace subscribe` CLI process. If the socket connection closes while AeroSpace's socket remains available, EasyBar schedules a reconnect with bounded backoff. This covers common cases such as restarting or updating AeroSpace while EasyBar is already running.
 
 EasyBar uses the subscription events only as update triggers. The source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`.
 
@@ -53,7 +53,7 @@ EasyBar still observes a few native macOS notifications as a complement:
 
 ## AeroSpace config
 
-EasyBar updates AeroSpace-backed widgets from its automatic subscription stream, so no EasyBar commands are required in your AeroSpace config for normal updates.
+EasyBar updates AeroSpace-backed widgets from its automatic socket subscription, so no EasyBar commands are required in your AeroSpace config for normal updates. Refreshed state is delivered directly to the registered native widgets through typed in-process callbacks.
 
 EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, so separate layout commands are not needed either.
 
@@ -79,7 +79,8 @@ Useful log messages include:
 
 - `aerospace subscription started`
 - `aerospace subscription event received`
-- `aerospace subscription exited`
+- `aerospace subscription disconnected`
+- `aerospace subscription ended`
 - `aerospace subscription reconnect scheduled`
 
 If a local script needs to notify widgets about a known state change, use EasyBar scripting events from [Runtime Control](../runtime/control.md).
