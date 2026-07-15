@@ -84,15 +84,37 @@ final class NativeWidgetRegistry {
     let registrations = registrations()
 
     logger.debug("registering native widgets")
-    logConfig(registrations)
+    logger.debug(
+      "native widget config",
+      .field(
+        "widgets",
+        registrations.map { "\($0.id)=\($0.enabled)" }.joined(separator: ",")
+      ),
+      .field("calendar_popup_mode", snapshot.builtins.calendar.popupMode.rawValue),
+    )
 
     publishGroups(snapshot.builtins.groups)
-    widgets = makeEnabledWidgets(from: registrations)
+    widgets = registrations.filter(\.enabled).map { $0.makeWidget() }
 
-    logRegisteredWidgets()
+    logger.debug(
+      "native widgets registered",
+      .field("count", widgets.count),
+      .field("ids", widgets.map(\.rootID).joined(separator: ",")),
+    )
 
-    applyNativeEventSubscriptions()
-    startWidgets()
+    let subscriptions = widgets.reduce(into: Set<String>()) { result, widget in
+      result.formUnion(widget.appEventSubscriptions)
+    }
+    logger.debug(
+      "native widget event subscriptions",
+      .field("subscriptions", subscriptions),
+    )
+    eventManager.setNativeSubscriptions(subscriptions)
+
+    for widget in widgets {
+      logger.debug("starting native widget", .field("id", widget.rootID))
+      widget.start()
+    }
 
     logger.debug("native widget registry registerAll end")
   }
@@ -142,11 +164,6 @@ final class NativeWidgetRegistry {
       widgetStore.apply(owner: .native(root: rootID), nodes: [])
     }
     groupRootIDs.removeAll()
-  }
-
-  /// Builds the enabled native widget list from the current config snapshot.
-  private func makeEnabledWidgets(from registrations: [Registration]) -> [NativeWidget] {
-    return registrations.compactMap(makeWidgetIfEnabled)
   }
 
   /// Returns the native widget registration list for the current config snapshot.
@@ -245,61 +262,4 @@ final class NativeWidgetRegistry {
     ]
   }
 
-  /// Builds one native widget when its registration is enabled.
-  private func makeWidgetIfEnabled(_ registration: Registration) -> NativeWidget? {
-    guard registration.enabled else { return nil }
-    return registration.makeWidget()
-  }
-
-  /// Applies the merged native widget event subscriptions to the event manager.
-  private func applyNativeEventSubscriptions() {
-    let subscriptions = widgets.reduce(into: Set<String>()) { result, widget in
-      result.formUnion(widget.appEventSubscriptions)
-    }
-
-    logger.debug(
-      "native widget event subscriptions",
-      .field("subscriptions", subscriptions),
-    )
-    eventManager.setNativeSubscriptions(subscriptions)
-  }
-
-  /// Logs the current built-in widget enablement snapshot.
-  private func logConfig(_ registrations: [Registration]) {
-    logger.debug(
-      "native widget config",
-      .field("widgets", enabledWidgetSummary(registrations)),
-      .field("calendar_popup_mode", snapshot.builtins.calendar.popupMode.rawValue),
-    )
-  }
-
-  /// Returns a stable summary of all built-in widget enablement flags.
-  private func enabledWidgetSummary(_ registrations: [Registration]) -> String {
-    return
-      registrations
-      .map { registration in
-        "\(registration.id)=\(registration.enabled)"
-      }
-      .joined(separator: ",")
-  }
-
-  /// Logs the final registered widget ids.
-  private func logRegisteredWidgets() {
-    logger.debug(
-      "native widgets registered",
-      .field("count", widgets.count),
-      .field("ids", widgets.map(\.rootID).joined(separator: ",")),
-    )
-  }
-
-  /// Starts all currently registered widgets.
-  private func startWidgets() {
-    for widget in widgets {
-      logger.debug(
-        "starting native widget",
-        .field("id", widget.rootID),
-      )
-      widget.start()
-    }
-  }
 }
