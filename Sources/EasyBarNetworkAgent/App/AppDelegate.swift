@@ -12,15 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   /// Starts the network agent after launch.
   func applicationDidFinishLaunching(_ notification: Notification) {
-    switch appController.start() {
-    case .running:
-      return
-    case .disabled:
-      exitCode = 0
-    case .failed:
-      exitCode = 1
-    }
-
+    guard let terminationExitCode = appController.start().terminationExitCode else { return }
+    exitCode = terminationExitCode
     NSApp.terminate(nil)
   }
 

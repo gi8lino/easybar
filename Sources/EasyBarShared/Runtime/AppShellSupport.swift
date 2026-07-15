@@ -5,6 +5,15 @@ public enum AgentAppStartResult {
   case running
   case disabled
   case failed
+
+  /// Process exit code when startup should terminate, or nil while the agent is running.
+  public var terminationExitCode: Int32? {
+    switch self {
+    case .running: return nil
+    case .disabled: return 0
+    case .failed: return 1
+    }
+  }
 }
 
 /// Shared helpers for macOS app-shell startup, locking, and logging.
