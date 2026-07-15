@@ -21,9 +21,9 @@ final class NativeWidgetRegistry {
   private let nativeComposerCalendarStore: NativeComposerCalendarStore
   private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
   private let monthCalendarAgentClient: MonthCalendarAgentClient
-  private let nativeGroupRegistry: NativeGroupRegistry
   private var snapshot: ConfigSnapshot
   private var widgets: [NativeWidget] = []
+  private var groupRootIDs: [String] = []
 
   init(
     logger: ProcessLogger,
@@ -53,7 +53,6 @@ final class NativeWidgetRegistry {
     self.nativeComposerCalendarStore = nativeComposerCalendarStore
     self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
     self.monthCalendarAgentClient = monthCalendarAgentClient
-    self.nativeGroupRegistry = NativeGroupRegistry(widgetStore: widgetStore)
   }
 
   /// Starts all enabled native widgets using the current immutable config snapshot.
@@ -87,7 +86,7 @@ final class NativeWidgetRegistry {
     logger.debug("registering native widgets")
     logConfig(registrations)
 
-    nativeGroupRegistry.reload(groups: snapshot.builtins.groups)
+    publishGroups(snapshot.builtins.groups)
     widgets = makeEnabledWidgets(from: registrations)
 
     logRegisteredWidgets()
@@ -117,7 +116,32 @@ final class NativeWidgetRegistry {
 
     widgets.removeAll()
     eventManager.setNativeSubscriptions([])
-    nativeGroupRegistry.clear()
+    clearGroups()
+  }
+
+  private func publishGroups(_ groups: [Config.BuiltinGroupConfig]) {
+    clearGroups()
+
+    for group in groups {
+      widgetStore.apply(
+        owner: .native(root: group.id),
+        nodes: [
+          BuiltinNativeNodeFactory.makeGroupNode(
+            id: group.id,
+            placement: group.placement,
+            style: group.style
+          )
+        ]
+      )
+      groupRootIDs.append(group.id)
+    }
+  }
+
+  private func clearGroups() {
+    for rootID in groupRootIDs {
+      widgetStore.apply(owner: .native(root: rootID), nodes: [])
+    }
+    groupRootIDs.removeAll()
   }
 
   /// Builds the enabled native widget list from the current config snapshot.
