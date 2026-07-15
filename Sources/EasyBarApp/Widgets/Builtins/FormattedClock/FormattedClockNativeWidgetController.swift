@@ -30,16 +30,12 @@ final class FormattedDateFormatterCache {
 @MainActor
 final class FormattedClockNativeWidget: NativeWidget {
 
-  struct Snapshot {
-    let placement: Config.BuiltinWidgetPlacement
-    let style: Config.BuiltinWidgetStyle
-    let format: String
-  }
-
   let rootID: String
   let widgetStore: WidgetStore
 
-  private let snapshot: Snapshot
+  private let placement: Config.BuiltinWidgetPlacement
+  private let style: Config.BuiltinWidgetStyle
+  private let format: String
   private let eventObserver: EasyBarEventObserver
   private let formatterCache = FormattedDateFormatterCache()
 
@@ -47,12 +43,16 @@ final class FormattedClockNativeWidget: NativeWidget {
     rootID: String,
     widgetStore: WidgetStore,
     eventHub: EventHub,
-    snapshot: Snapshot
+    placement: Config.BuiltinWidgetPlacement,
+    style: Config.BuiltinWidgetStyle,
+    format: String
   ) {
     self.rootID = rootID
     self.widgetStore = widgetStore
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
-    self.snapshot = snapshot
+    self.placement = placement
+    self.style = style
+    self.format = format
   }
 
   var appEventSubscriptions: Set<String> {
@@ -81,16 +81,16 @@ final class FormattedClockNativeWidget: NativeWidget {
   }
 
   private var refreshEvent: AppEvent {
-    return FormattedClockRefreshPolicy.event(for: snapshot.format)
+    return FormattedClockRefreshPolicy.event(for: format)
   }
 
   /// Publishes the current formatted timestamp.
   private func publish() {
     let node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,
-      placement: snapshot.placement,
-      style: snapshot.style,
-      text: formatterCache.string(from: Date(), format: snapshot.format)
+      placement: placement,
+      style: style,
+      text: formatterCache.string(from: Date(), format: format)
     )
 
     applyNodes([node])

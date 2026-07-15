@@ -183,11 +183,9 @@ final class NativeWidgetRegistry {
           rootID: "builtin_date",
           widgetStore: self.widgetStore,
           eventHub: self.eventHub,
-          snapshot: .init(
-            placement: builtins.date.placement,
-            style: builtins.date.style,
-            format: builtins.date.format
-          )
+          placement: builtins.date.placement,
+          style: builtins.date.style,
+          format: builtins.date.format
         )
       },
       Registration(id: "time", enabled: builtins.time.enabled) {
@@ -195,11 +193,9 @@ final class NativeWidgetRegistry {
           rootID: "builtin_time",
           widgetStore: self.widgetStore,
           eventHub: self.eventHub,
-          snapshot: .init(
-            placement: builtins.time.placement,
-            style: builtins.time.style,
-            format: builtins.time.format
-          )
+          placement: builtins.time.placement,
+          style: builtins.time.style,
+          format: builtins.time.format
         )
       },
       Registration(id: "calendar", enabled: builtins.calendar.enabled) {
