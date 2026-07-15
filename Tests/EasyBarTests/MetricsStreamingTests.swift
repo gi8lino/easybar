@@ -159,6 +159,35 @@ final class MetricsStreamingTests: XCTestCase {
     XCTAssertEqual(validatedPath, "<default>")
   }
 
+  func testSamePathReloadRetriesFailedInitialListener() throws {
+    FileManager.default.createFile(atPath: socketPath, contents: Data())
+
+    let server = SocketServer(
+      logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    XCTAssertFalse(
+      server.start(
+        handler: { _ in },
+        validateConfigHandler: { configPath in
+          .configValidated(configPath: configPath ?? "<default>", warnings: [])
+        }
+      )
+    )
+
+    try FileManager.default.removeItem(atPath: socketPath)
+    XCTAssertEqual(server.reloadConfiguration(socketPath: socketPath), .rebound)
+    defer { server.stop() }
+
+    let client = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+    let response = try client.send(request: .makeValidateConfig(configPath: nil))
+
+    guard case .configValidated(let validatedPath, _) = response else {
+      return XCTFail("Expected configValidated response, got \(response)")
+    }
+    XCTAssertEqual(validatedPath, "<default>")
+  }
+
   func testReloadKeepsNewMetricsSubscriberActive() async throws {
     await MetricsCoordinator.shared.resetStreaming()
 

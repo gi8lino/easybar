@@ -61,39 +61,45 @@ final class SocketServer: @unchecked Sendable {
   }
 
   /// Starts the socket listener.
+  @discardableResult
   func start(
     handler: @escaping @Sendable (IPC.Command) -> Void,
     validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
-  ) {
-    guard !started else { return }
+  ) -> Bool {
+    guard !started else { return true }
 
-    let activeTransport = transport
-
-    let didStart = activeTransport.start { [weak self, weak activeTransport] clientFD, request in
-      guard let self, let activeTransport else {
-        return .close
-      }
-
-      return self.handle(
-        clientFD: clientFD,
-        request: request,
-        handler: handler,
-        validateConfigHandler: validateConfigHandler,
-        transport: activeTransport
-      )
-    }
-
-    guard didStart else { return }
-
-    started = true
     commandHandler = handler
     self.validateConfigHandler = validateConfigHandler
+
+    let didStart = startTransport(
+      transport,
+      handler: handler,
+      validateConfigHandler: validateConfigHandler
+    )
+    started = didStart
+    return didStart
   }
 
   /// Reloads the socket server when the configured socket path changed.
   @discardableResult
   func reloadConfiguration(socketPath updatedSocketPath: String) -> ReloadOutcome {
-    guard updatedSocketPath != socketPath else { return .unchanged }
+    if updatedSocketPath == socketPath {
+      guard !started else { return .unchanged }
+      guard let commandHandler else { return .failed(requestedPath: updatedSocketPath) }
+
+      let activeValidateConfigHandler: @Sendable (String?) async -> IPC.Message =
+        validateConfigHandler ?? { _ in
+          .rejected(message: "config validation unavailable")
+        }
+
+      let didStart = startTransport(
+        transport,
+        handler: commandHandler,
+        validateConfigHandler: activeValidateConfigHandler
+      )
+      started = didStart
+      return didStart ? .rebound : .failed(requestedPath: updatedSocketPath)
+    }
 
     guard let commandHandler else {
       socketPath = updatedSocketPath
@@ -122,20 +128,11 @@ final class SocketServer: @unchecked Sendable {
         .rejected(message: "config validation unavailable")
       }
 
-    let didStart = replacementTransport.start {
-      [weak self, weak replacementTransport] clientFD, request in
-      guard let self, let replacementTransport else {
-        return .close
-      }
-
-      return self.handle(
-        clientFD: clientFD,
-        request: request,
-        handler: commandHandler,
-        validateConfigHandler: activeValidateConfigHandler,
-        transport: replacementTransport
-      )
-    }
+    let didStart = startTransport(
+      replacementTransport,
+      handler: commandHandler,
+      validateConfigHandler: activeValidateConfigHandler
+    )
 
     guard didStart else {
       logger.error(
@@ -149,6 +146,7 @@ final class SocketServer: @unchecked Sendable {
     let previousTransport = transport
     transport = replacementTransport
     socketPath = updatedSocketPath
+    started = true
 
     previousTransport.stop()
     SynchronousTask.run {
@@ -177,6 +175,27 @@ final class SocketServer: @unchecked Sendable {
       if !transport.send(message, to: subscriber.fd) {
         _ = transport.removeSubscriber(fd: subscriber.fd)
       }
+    }
+  }
+
+  /// Starts one concrete transport with the retained request handlers.
+  private func startTransport(
+    _ transport: Transport,
+    handler: @escaping @Sendable (IPC.Command) -> Void,
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
+  ) -> Bool {
+    transport.start { [weak self, weak transport] clientFD, request in
+      guard let self, let transport else {
+        return .close
+      }
+
+      return self.handle(
+        clientFD: clientFD,
+        request: request,
+        handler: handler,
+        validateConfigHandler: validateConfigHandler,
+        transport: transport
+      )
     }
   }
 
