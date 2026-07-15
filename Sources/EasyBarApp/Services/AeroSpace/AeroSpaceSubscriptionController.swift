@@ -15,13 +15,11 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     var running = false
     var generation: UInt64 = 0
     var subscription: AeroSpaceSubscriptionSession?
-    var streamBuffer = AeroSpaceSubscriptionStreamBuffer()
 
     mutating func start() -> UInt64? {
       guard !running else { return nil }
       running = true
       generation &+= 1
-      clearBuffer()
       return generation
     }
 
@@ -29,7 +27,6 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       guard running else { return nil }
       running = false
       generation &+= 1
-      clearBuffer()
 
       let stoppedSubscription = subscription
       subscription = nil
@@ -55,21 +52,9 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       let matchedSubscription = self.subscription === subscription ? self.subscription : nil
       if matchedSubscription != nil {
         self.subscription = nil
-        clearBuffer()
       }
 
       return (running && self.generation == generation, matchedSubscription)
-    }
-
-    mutating func append(
-      data: Data,
-      stream: AeroSpaceSubscriptionStreamKind
-    ) -> (lines: [String], droppedBuffer: Bool) {
-      streamBuffer.append(data: data, stream: stream)
-    }
-
-    private mutating func clearBuffer() {
-      streamBuffer.clear()
     }
   }
 
@@ -150,10 +135,10 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     do {
       try subscription.start(
         onOutputData: { [weak self] data in
-          self?.handleAvailableData(data, stream: .output, generation: generation)
+          self?.handleEventFrame(data, generation: generation)
         },
         onErrorData: { [weak self] data in
-          self?.handleAvailableData(data, stream: .error, generation: generation)
+          self?.handleErrorData(data, generation: generation)
         },
         onTermination: { [weak self] subscription in
           self?.handleTermination(subscription: subscription, generation: generation)
@@ -179,47 +164,18 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     )
   }
 
-  /// Handles newly available stdout or stderr bytes.
-  private func handleAvailableData(
-    _ data: Data,
-    stream: AeroSpaceSubscriptionStreamKind,
-    generation: UInt64
-  ) {
+  /// Decodes one complete length-prefixed event frame.
+  private func handleEventFrame(_ data: Data, generation: UInt64) {
     guard isActive(generation: generation), !data.isEmpty else { return }
-
-    let result = withLock { state in
-      state.append(data: data, stream: stream)
-    }
-
-    if result.droppedBuffer {
-      logger.warn("aerospace subscription stream buffer exceeded limit")
-    }
-
-    for line in result.lines {
-      switch stream {
-      case .output:
-        handleOutputLine(line, generation: generation)
-      case .error:
-        logger.debug("aerospace subscription stderr", .field("line", line))
-      }
-    }
-  }
-
-  /// Handles one complete stdout line from `aerospace subscribe`.
-  private func handleOutputLine(_ line: String, generation: UInt64) {
-    guard isActive(generation: generation) else { return }
 
     let event: AeroSpaceSubscriptionEvent
     do {
-      event = try JSONDecoder().decode(
-        AeroSpaceSubscriptionEvent.self,
-        from: Data(line.utf8)
-      )
+      event = try JSONDecoder().decode(AeroSpaceSubscriptionEvent.self, from: data)
     } catch {
       event = AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.unknown)
       logger.debug(
-        "aerospace subscription output was not a known JSON event",
-        .field("bytes", line.utf8.count),
+        "aerospace subscription frame was not a known JSON event",
+        .field("bytes", data.count),
         .field("error", error)
       )
     }
@@ -230,6 +186,15 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     )
     resetReconnectBackoff(generation: generation)
     handleEvent(event)
+  }
+
+  /// Logs a socket read error reported by the subscription session.
+  private func handleErrorData(_ data: Data, generation: UInt64) {
+    guard isActive(generation: generation), !data.isEmpty else { return }
+    logger.debug(
+      "aerospace subscription read error",
+      .field("message", String(decoding: data, as: UTF8.self))
+    )
   }
 
   /// Handles process termination.

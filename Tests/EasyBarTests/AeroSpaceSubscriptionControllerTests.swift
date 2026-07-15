@@ -84,7 +84,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
 
     func emitOutputLine(_ line: String) {
       let handler = lock.withLock { outputDataHandler }
-      handler?(Data((line + "\n").utf8))
+      handler?(Data(line.utf8))
     }
 
     func emitErrorLine(_ line: String) {

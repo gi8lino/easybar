@@ -123,9 +123,7 @@ private final class AeroSpaceSocketSubscriptionSession: AeroSpaceSubscriptionSes
         guard length > 0, length <= 1_048_576 else {
           throw SocketError("invalid AeroSpace event frame length \(length)")
         }
-        var payload = try readExactly(Int(length), from: fd)
-        payload.append(0x0A)
-        onOutputData(payload)
+        onOutputData(try readExactly(Int(length), from: fd))
       }
     } catch {
       guard !state.withLock(\.stopped) else { return }
