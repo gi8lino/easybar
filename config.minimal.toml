@@ -2,31 +2,12 @@
 # EasyBar already starts with spaces, battery, Wi-Fi, and calendar enabled.
 # This file groups battery and Wi-Fi and opens Wi-Fi in details mode.
 
-[builtins.spaces]
-enabled = true
-
 [builtins.groups.system]
-position = "right"
-order = 40
-
-[builtins.groups.system.style]
-background_color = "theme.surface"
-border_color = "theme.border"
-border_width = 1
-corner_radius = 8
-padding_x = 8
-padding_y = 2
-spacing = 6
 
 [builtins.battery]
-enabled = true
 group = "system"
 
-[builtins.calendar]
-enabled = true
-
 [builtins.wifi]
-enabled = true
 group = "system"
 
 [builtins.wifi.content]
