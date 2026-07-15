@@ -4,6 +4,7 @@ import EasyBarShared
 import Foundation
 
 /// Shared month-calendar snapshot store used by the native month popup.
+@MainActor
 final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
@@ -103,26 +104,18 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
     return (start: subscribedMonthRangeStart, end: subscribedMonthRangeEnd)
   }
 
-  /// Publishes one calendar snapshot update on the main queue.
+  /// Publishes one calendar snapshot update.
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
-    let applyChange = {
-      self.snapshot = snapshot
-      self.events = snapshot?.events ?? []
+    self.snapshot = snapshot
+    events = snapshot?.events ?? []
 
-      self.logger.debug(
-        "month calendar store published",
-        .field("snapshot_present", "\(snapshot != nil)"),
-        .field("events", "\(self.events.count)"),
-      )
-    }
-
-    if Thread.isMainThread {
-      applyChange()
-      return
-    }
-
-    Task { @MainActor in applyChange() }
+    logger.debug(
+      "month calendar store published",
+      .field("snapshot_present", "\(snapshot != nil)"),
+      .field("events", "\(events.count)"),
+    )
   }
+
   /// Formats one debug date string.
   private func debugDate(_ date: Date) -> String {
     let formatter = ISO8601DateFormatter()
