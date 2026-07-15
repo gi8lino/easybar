@@ -7,12 +7,6 @@ import EasyBarShared
 /// This type owns macOS application concerns such as logging setup, the
 /// single-instance guard, activation policy, and runtime creation. The
 /// long-running agent behavior lives in `CalendarAgentRuntime`.
-enum AgentAppStartResult {
-  case running
-  case disabled
-  case failed
-}
-
 @MainActor
 final class AppController {
   private let logger = ProcessLogger(label: "easybar-calendar-agent")
@@ -28,21 +22,14 @@ final class AppController {
   /// Starts the calendar agent app shell and runtime.
   @discardableResult
   func start() -> AgentAppStartResult {
-    let sharedConfig: SharedRuntimeConfig
-
-    do {
-      sharedConfig = try SharedRuntimeConfig.load()
-    } catch {
-      logger.error(
-        "failed to load shared runtime config",
-        .field("error", error.localizedDescription)
+    guard
+      let sharedConfig = AppShellSupport.prepareAgent(
+        processName: "easybar-calendar-agent",
+        logFileName: "calendar-agent.out",
+        logger: logger,
+        instanceGuard: instanceGuard
       )
-      return .failed
-    }
-
-    configureLogging(sharedConfig: sharedConfig)
-
-    guard acquireInstanceLock(sharedConfig: sharedConfig) else {
+    else {
       return .failed
     }
 
@@ -77,27 +64,4 @@ final class AppController {
     runtime?.stop()
   }
 
-  /// Configures process logging from the shared runtime config.
-  private func configureLogging(sharedConfig: SharedRuntimeConfig) {
-    AppShellSupport.configureLogging(
-      logger: logger,
-      minimumLevel: sharedConfig.logging.level,
-      fileLoggingEnabled: sharedConfig.logging.enabled,
-      loggingDirectory: sharedConfig.logging.directory,
-      logFileName: "calendar-agent.out"
-    )
-  }
-
-  /// Acquires the single-instance lock for the calendar agent process.
-  private func acquireInstanceLock(sharedConfig: SharedRuntimeConfig) -> Bool {
-    AppShellSupport.acquireInstanceLock(
-      instanceGuard: instanceGuard,
-      processName: "easybar-calendar-agent",
-      directory: sharedConfig.app.lockDirectory,
-      logger: logger,
-      acquireMessage: "easybar-calendar-agent acquired instance lock",
-      alreadyRunningMessage: "easybar-calendar-agent already running",
-      failureMessage: "easybar-calendar-agent failed to acquire single-instance lock",
-    )
-  }
 }

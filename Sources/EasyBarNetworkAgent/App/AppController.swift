@@ -7,12 +7,6 @@ import EasyBarShared
 /// This type owns macOS application concerns such as logging setup, the
 /// single-instance guard, activation policy changes, and authorization prompt
 /// presentation. The reusable agent behavior lives in `NetworkAgentRuntime`.
-enum AgentAppStartResult {
-  case running
-  case disabled
-  case failed
-}
-
 @MainActor
 final class AppController: NetworkAuthorizationPromptPresenter {
   private let logger = ProcessLogger(label: "easybar-network-agent")
@@ -29,21 +23,14 @@ final class AppController: NetworkAuthorizationPromptPresenter {
   /// Starts the network agent app shell and runtime.
   @discardableResult
   func start() -> AgentAppStartResult {
-    let sharedConfig: SharedRuntimeConfig
-
-    do {
-      sharedConfig = try SharedRuntimeConfig.load()
-    } catch {
-      logger.error(
-        "failed to load shared runtime config",
-        .field("error", error.localizedDescription)
+    guard
+      let sharedConfig = AppShellSupport.prepareAgent(
+        processName: "easybar-network-agent",
+        logFileName: "network-agent.out",
+        logger: logger,
+        instanceGuard: instanceGuard
       )
-      return .failed
-    }
-
-    configureLogging(sharedConfig: sharedConfig)
-
-    guard acquireInstanceLock(sharedConfig: sharedConfig) else {
+    else {
       return .failed
     }
 
@@ -104,27 +91,4 @@ final class AppController: NetworkAuthorizationPromptPresenter {
     )
   }
 
-  /// Configures process logging from the shared runtime config.
-  private func configureLogging(sharedConfig: SharedRuntimeConfig) {
-    AppShellSupport.configureLogging(
-      logger: logger,
-      minimumLevel: sharedConfig.logging.level,
-      fileLoggingEnabled: sharedConfig.logging.enabled,
-      loggingDirectory: sharedConfig.logging.directory,
-      logFileName: "network-agent.out"
-    )
-  }
-
-  /// Acquires the single-instance lock for the network agent process.
-  private func acquireInstanceLock(sharedConfig: SharedRuntimeConfig) -> Bool {
-    AppShellSupport.acquireInstanceLock(
-      instanceGuard: instanceGuard,
-      processName: "easybar-network-agent",
-      directory: sharedConfig.app.lockDirectory,
-      logger: logger,
-      acquireMessage: "easybar-network-agent acquired instance lock",
-      alreadyRunningMessage: "easybar-network-agent already running",
-      failureMessage: "easybar-network-agent failed to acquire instance lock",
-    )
-  }
 }

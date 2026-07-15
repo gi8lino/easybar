@@ -1,7 +1,58 @@
 import Foundation
 
+/// Result of starting a standalone EasyBar helper agent.
+public enum AgentAppStartResult {
+  case running
+  case disabled
+  case failed
+}
+
 /// Shared helpers for macOS app-shell startup, locking, and logging.
 public enum AppShellSupport {
+  /// Loads shared configuration and prepares logging and single-instance ownership.
+  public static func prepareAgent(
+    processName: String,
+    logFileName: String,
+    logger: ProcessLogger,
+    instanceGuard: SingleInstanceGuard
+  ) -> SharedRuntimeConfig? {
+    let config: SharedRuntimeConfig
+
+    do {
+      config = try SharedRuntimeConfig.load()
+    } catch {
+      logger.error(
+        "failed to load shared runtime config",
+        .field("error", error.localizedDescription)
+      )
+      return nil
+    }
+
+    configureLogging(
+      logger: logger,
+      minimumLevel: config.logging.level,
+      fileLoggingEnabled: config.logging.enabled,
+      loggingDirectory: config.logging.directory,
+      logFileName: logFileName
+    )
+
+    guard
+      acquireInstanceLock(
+        instanceGuard: instanceGuard,
+        processName: processName,
+        directory: config.app.lockDirectory,
+        logger: logger,
+        acquireMessage: "\(processName) acquired instance lock",
+        alreadyRunningMessage: "\(processName) already running",
+        failureMessage: "\(processName) failed to acquire single-instance lock"
+      )
+    else {
+      return nil
+    }
+
+    return config
+  }
+
   /// Configures runtime logging for one app shell.
   public static func configureLogging(
     logger: ProcessLogger,
