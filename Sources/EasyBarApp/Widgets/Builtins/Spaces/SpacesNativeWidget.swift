@@ -10,7 +10,6 @@ final class SpacesNativeWidget: NativeWidget {
   private let config: Config.SpacesBuiltinConfig
   private let aeroSpaceService: AeroSpaceService
   private let aeroSpaceObserver = AeroSpaceUpdateObserver()
-  private lazy var renderer = SpacesRenderer(rootID: rootID)
 
   /// Creates the native spaces widget from an immutable config section.
   init(
@@ -43,6 +42,12 @@ final class SpacesNativeWidget: NativeWidget {
 
   /// Publishes the current spaces widget nodes.
   private func publish() {
-    applyNodes(renderer.makeNodes(snapshot: config))
+    applyNodes([
+      BuiltinNativeNodeFactory.makeSpacesNode(
+        rootID: rootID,
+        placement: config.placement,
+        style: config.style
+      )
+    ])
   }
 }
