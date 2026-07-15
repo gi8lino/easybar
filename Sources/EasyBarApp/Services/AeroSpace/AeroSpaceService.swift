@@ -28,8 +28,10 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
     var active = false
     /// Cached AeroSpace version validation result for the current active run.
     var versionRequirementSatisfied: Bool?
-    /// Generation used to ignore stale refresh work.
+    /// Generation used to ignore stale lifecycle work.
     var generation: UInt64 = 0
+    /// Sequence used to ensure only the newest refresh can publish.
+    var refreshSequence = AeroSpaceRefreshSequence()
   }
 
   /// Logger used for AeroSpace diagnostics.
@@ -188,17 +190,18 @@ extension AeroSpaceService {
       return
     }
 
-    let generation = currentGeneration()
+    guard let refreshToken = reserveRefreshToken() else { return }
 
     logger.debug(
       "aerospace triggerRefresh queued",
       .field("source", source),
-      .field("consumers", consumerCount)
+      .field("consumers", consumerCount),
+      .field("request_id", refreshToken.requestID)
     )
 
     DetachedTask.run(priority: .userInitiated) { [weak self] in
-      guard let self, self.shouldExecute(generation: generation) else { return }
-      self.reloadState(generation: generation)
+      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
+      self.reloadState(refreshToken: refreshToken)
     }
   }
 
@@ -229,7 +232,10 @@ extension AeroSpaceService {
       _ = self.runAeroSpace(arguments: ["workspace", workspace])
 
       guard self.shouldExecute(generation: generation) else { return }
-      self.reloadState(generation: generation)
+      guard let refreshToken = self.reserveRefreshToken(expectedGeneration: generation) else {
+        return
+      }
+      self.reloadState(refreshToken: refreshToken)
     }
   }
 
@@ -273,16 +279,17 @@ extension AeroSpaceService {
       return
     }
 
-    let generation = currentGeneration()
+    guard let refreshToken = reserveRefreshToken() else { return }
 
     logger.debug(
       "aerospace refresh queued",
-      .field("consumers", consumerCount)
+      .field("consumers", consumerCount),
+      .field("request_id", refreshToken.requestID)
     )
 
     DetachedTask.run(priority: .userInitiated) { [weak self] in
-      guard let self, self.shouldExecute(generation: generation) else { return }
-      self.reloadState(generation: generation)
+      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
+      self.reloadState(refreshToken: refreshToken)
     }
   }
 }
@@ -462,8 +469,8 @@ extension AeroSpaceService {
 
 extension AeroSpaceService {
   /// Reads current AeroSpace state and publishes it.
-  fileprivate func reloadState(generation: UInt64) {
-    guard shouldExecute(generation: generation) else { return }
+  fileprivate func reloadState(refreshToken: AeroSpaceRefreshToken) {
+    guard shouldExecute(refreshToken: refreshToken) else { return }
 
     logger.debug("aerospace reloadState begin")
 
@@ -472,7 +479,7 @@ extension AeroSpaceService {
       return
     }
 
-    guard shouldExecute(generation: generation) else { return }
+    guard shouldExecute(refreshToken: refreshToken) else { return }
 
     let snapshot = AeroSpaceSnapshotLoader.load(
       run: runAeroSpace(arguments:),
@@ -482,7 +489,7 @@ extension AeroSpaceService {
 
     Task { @MainActor [weak self] in
       guard let self else { return }
-      guard self.shouldExecute(generation: generation) else { return }
+      guard self.shouldExecute(refreshToken: refreshToken) else { return }
 
       guard self.hasStateChanged(for: snapshot) else {
         self.logger.debug("aerospace reloadState end without changes")
@@ -571,6 +578,42 @@ extension AeroSpaceService {
   fileprivate func shouldExecute(generation: UInt64) -> Bool {
     withLock { state in
       state.running && state.active && !state.consumers.isEmpty && state.generation == generation
+    }
+  }
+
+  /// Reserves the newest refresh token while the service is active.
+  fileprivate func reserveRefreshToken() -> AeroSpaceRefreshToken? {
+    withLock { state in
+      guard state.running, state.active, !state.consumers.isEmpty else { return nil }
+      return state.refreshSequence.issue(generation: state.generation)
+    }
+  }
+
+  /// Reserves a refresh token only if the originating lifecycle is still active.
+  fileprivate func reserveRefreshToken(
+    expectedGeneration: UInt64
+  ) -> AeroSpaceRefreshToken? {
+    withLock { state in
+      guard
+        state.running,
+        state.active,
+        !state.consumers.isEmpty,
+        state.generation == expectedGeneration
+      else {
+        return nil
+      }
+
+      return state.refreshSequence.issue(generation: state.generation)
+    }
+  }
+
+  /// Returns whether this token is still the newest refresh in the active lifecycle.
+  fileprivate func shouldExecute(refreshToken: AeroSpaceRefreshToken) -> Bool {
+    withLock { state in
+      state.running
+        && state.active
+        && !state.consumers.isEmpty
+        && state.refreshSequence.isCurrent(refreshToken, generation: state.generation)
     }
   }
 
