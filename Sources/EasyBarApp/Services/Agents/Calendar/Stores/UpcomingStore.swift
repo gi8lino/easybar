@@ -5,10 +5,6 @@ import Foundation
 /// Shared upcoming-calendar snapshot store used by the native upcoming popup.
 @MainActor
 final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
-  static var shared = NativeUpcomingCalendarStore(
-    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_store")
-  )
-
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 

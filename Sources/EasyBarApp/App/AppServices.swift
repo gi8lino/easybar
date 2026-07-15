@@ -32,14 +32,30 @@ struct AppServices: @unchecked Sendable {
     let bootstrapSnapshot = config.snapshot()
     let configSnapshotStore = ConfigSnapshotStore(snapshot: bootstrapSnapshot)
     let configManager = ConfigManager(config: config)
-    let metricsCoordinator = MetricsCoordinator()
-    let luaRuntime = LuaRuntime(logger: logger.child("lua"))
+    let metricsCoordinator = MetricsCoordinator.shared
+    let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
+    let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
+    let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
+      logger: logger.child("upcoming_store")
+    )
+    let nativeComposerCalendarStore = NativeComposerCalendarStore(
+      logger: logger.child("composer_calendar_store")
+    )
+    let luaRuntime = LuaRuntime(
+      logger: logger.child("lua"),
+      metricsCoordinator: metricsCoordinator
+    )
     let eventLogger = logger.child("events")
-    let eventHub = EventHub(logger: eventLogger.child("hub"), luaRuntime: luaRuntime)
-    let systemEvents = SystemEvents(logger: eventLogger.child("system"))
-    let powerEvents = PowerEvents(logger: eventLogger.child("power"))
-    let timerEvents = TimerEvents(logger: eventLogger.child("timer"))
-    let volumeEvents = VolumeEvents(logger: eventLogger.child("volume"))
+    let eventHub = EventHub(
+      logger: eventLogger.child("hub"),
+      luaRuntime: luaRuntime,
+      metricsCoordinator: metricsCoordinator,
+      wifiSnapshotProvider: { nativeWiFiStore.snapshot }
+    )
+    let systemEvents = SystemEvents(logger: eventLogger.child("system"), eventHub: eventHub)
+    let powerEvents = PowerEvents(logger: eventLogger.child("power"), eventHub: eventHub)
+    let timerEvents = TimerEvents(logger: eventLogger.child("timer"), eventHub: eventHub)
+    let volumeEvents = VolumeEvents(logger: eventLogger.child("volume"), eventHub: eventHub)
     let eventManager = EventManager(
       logger: eventLogger.child("manager"),
       systemEvents: systemEvents,
@@ -50,12 +66,22 @@ struct AppServices: @unchecked Sendable {
     let agentServices = makeAgentServices(
       logger: logger,
       snapshot: bootstrapSnapshot,
-      metricsCoordinator: metricsCoordinator
+      metricsCoordinator: metricsCoordinator,
+      eventHub: eventHub,
+      nativeWiFiStore: nativeWiFiStore,
+      nativeMonthCalendarStore: nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+      nativeComposerCalendarStore: nativeComposerCalendarStore
     )
     let nativeServices = makeNativeServices(
       logger: logger,
       snapshot: bootstrapSnapshot,
       eventManager: eventManager,
+      eventHub: eventHub,
+      nativeWiFiStore: nativeWiFiStore,
+      nativeMonthCalendarStore: nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
+      nativeComposerCalendarStore: nativeComposerCalendarStore,
       agentServices: agentServices
     )
 
@@ -85,7 +111,6 @@ struct AppServices: @unchecked Sendable {
       metricsCoordinator: metricsCoordinator
     )
 
-    services.installSharedCompatibilityLayer()
     return services
   }
 
@@ -105,37 +130,23 @@ struct AppServices: @unchecked Sendable {
   }
 
   @MainActor
-  private func installSharedCompatibilityLayer() {
-    MetricsCoordinator.shared = metricsCoordinator
-    EventHub.shared = eventHub
-    CalendarAgentEventRelay.shared = calendarAgentEventRelay
-    NativeWiFiStore.shared = nativeWiFiStore
-    NativeMonthCalendarStore.shared = nativeMonthCalendarStore
-    NativeUpcomingCalendarStore.shared = nativeUpcomingCalendarStore
-    NativeComposerCalendarStore.shared = nativeComposerCalendarStore
-    MonthCalendarAgentClient.shared = monthCalendarAgentClient
-    UpcomingCalendarAgentClient.shared = upcomingCalendarAgentClient
-    ComposerCalendarAgentClient.shared = composerCalendarAgentClient
-  }
-
-  @MainActor
   private static func makeNativeServices(
     logger: ProcessLogger,
     snapshot: ConfigSnapshot,
     eventManager: EventManager,
+    eventHub: EventHub,
+    nativeWiFiStore: NativeWiFiStore,
+    nativeMonthCalendarStore: NativeMonthCalendarStore,
+    nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
+    nativeComposerCalendarStore: NativeComposerCalendarStore,
     agentServices: AgentServices
   )
     -> NativeServices
   {
     let widgetStore = WidgetStore()
-    let aeroSpaceService = AeroSpaceService(logger: logger.child("aerospace"))
-    let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
-    let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
-    let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
-      logger: logger.child("upcoming_store")
-    )
-    let nativeComposerCalendarStore = NativeComposerCalendarStore(
-      logger: logger.child("composer_calendar_store")
+    let aeroSpaceService = AeroSpaceService(
+      logger: logger.child("aerospace"),
+      eventHub: eventHub
     )
 
     return NativeServices(
@@ -145,6 +156,7 @@ struct AppServices: @unchecked Sendable {
         snapshot: snapshot,
         widgetStore: widgetStore,
         eventManager: eventManager,
+        eventHub: eventHub,
         aeroSpaceService: aeroSpaceService,
         networkAgentClient: agentServices.networkAgentClient,
         nativeWiFiStore: nativeWiFiStore,
@@ -166,33 +178,57 @@ struct AppServices: @unchecked Sendable {
   private static func makeAgentServices(
     logger: ProcessLogger,
     snapshot: ConfigSnapshot,
-    metricsCoordinator: MetricsCoordinator
+    metricsCoordinator: MetricsCoordinator,
+    eventHub: EventHub,
+    nativeWiFiStore: NativeWiFiStore,
+    nativeMonthCalendarStore: NativeMonthCalendarStore,
+    nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
+    nativeComposerCalendarStore: NativeComposerCalendarStore
   )
     -> AgentServices
   {
-    AgentServices(
-      calendarAgentEventRelay: CalendarAgentEventRelay(logger: logger.child("calendar_relay")),
+    let eventRelay = CalendarAgentEventRelay(
+      logger: logger.child("calendar_relay"),
+      eventHub: eventHub
+    )
+    let upcomingClient = UpcomingCalendarAgentClient(
+      logger: logger.child("upcoming_agent"),
+      calendarAgentConfig: snapshot.calendarAgent,
+      calendarConfig: snapshot.builtins.calendar,
+      store: nativeUpcomingCalendarStore,
+      eventRelay: eventRelay,
+      metricsCoordinator: metricsCoordinator
+    )
+    let composerClient = ComposerCalendarAgentClient(
+      logger: logger.child("composer_calendar_agent"),
+      calendarAgentConfig: snapshot.calendarAgent,
+      store: nativeComposerCalendarStore
+    )
+    let monthClient = MonthCalendarAgentClient(
+      logger: logger.child("month_agent"),
+      calendarAgentConfig: snapshot.calendarAgent,
+      calendarConfig: snapshot.builtins.calendar,
+      store: nativeMonthCalendarStore,
+      eventRelay: eventRelay,
+      metricsCoordinator: metricsCoordinator
+    )
+    monthClient.setRelatedClientRefresh {
+      upcomingClient.refresh()
+      composerClient.refresh()
+    }
+
+    return AgentServices(
+      calendarAgentEventRelay: eventRelay,
       networkAgentClient: NetworkAgentClient(
         logger: logger.child("network_agent"),
         config: snapshot.networkAgent,
+        nativeWiFiStore: nativeWiFiStore,
+        eventHub: eventHub,
         metricsCoordinator: metricsCoordinator
       ),
-      monthCalendarAgentClient: MonthCalendarAgentClient(
-        logger: logger.child("month_agent"),
-        calendarAgentConfig: snapshot.calendarAgent,
-        calendarConfig: snapshot.builtins.calendar,
-        metricsCoordinator: metricsCoordinator
-      ),
-      upcomingCalendarAgentClient: UpcomingCalendarAgentClient(
-        logger: logger.child("upcoming_agent"),
-        calendarAgentConfig: snapshot.calendarAgent,
-        calendarConfig: snapshot.builtins.calendar,
-        metricsCoordinator: metricsCoordinator
-      ),
-      composerCalendarAgentClient: ComposerCalendarAgentClient(
-        logger: logger.child("composer_calendar_agent"),
-        calendarAgentConfig: snapshot.calendarAgent
-      )
+      monthCalendarAgentClient: monthClient,
+      upcomingCalendarAgentClient: upcomingClient,
+      composerCalendarAgentClient: composerClient
     )
   }
 }

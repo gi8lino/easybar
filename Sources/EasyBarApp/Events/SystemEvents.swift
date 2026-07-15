@@ -7,6 +7,7 @@ final class SystemEvents: @unchecked Sendable {
   /// Shared system event source.
   /// Logger used for system event diagnostics.
   private let logger: ProcessLogger
+  private let eventHub: EventHub
 
   /// Active notification observers keyed by kind.
   private var observers: [ObserverKind: NSObjectProtocol] = [:]
@@ -36,8 +37,9 @@ final class SystemEvents: @unchecked Sendable {
   }
 
   /// Creates one system event source.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
   }
 
   /// Starts observation for system wake notifications.
@@ -75,7 +77,7 @@ final class SystemEvents: @unchecked Sendable {
       self.logger.debug("received workspace sessionDidBecomeActive notification")
 
       Task {
-        await EventHub.shared.emit(.sessionActive)
+        await self.eventHub.emit(.sessionActive)
       }
     }
 
@@ -102,7 +104,7 @@ final class SystemEvents: @unchecked Sendable {
       self.logger.debug("received workspace sessionDidResignActive notification")
 
       Task {
-        await EventHub.shared.emit(.sessionInactive)
+        await self.eventHub.emit(.sessionInactive)
       }
     }
 
@@ -129,7 +131,7 @@ final class SystemEvents: @unchecked Sendable {
       self.logger.debug("received workspace willSleep notification")
 
       Task {
-        await EventHub.shared.emit(.sleep)
+        await self.eventHub.emit(.sleep)
       }
     }
 
@@ -156,7 +158,7 @@ final class SystemEvents: @unchecked Sendable {
       self.logger.debug("received workspace activeSpaceDidChange notification")
 
       Task {
-        await EventHub.shared.emit(.spaceChange)
+        await self.eventHub.emit(.spaceChange)
       }
     }
 
@@ -195,7 +197,7 @@ final class SystemEvents: @unchecked Sendable {
       )
 
       Task {
-        await EventHub.shared.emit(.app(.appSwitch, appName: appName))
+        await self.eventHub.emit(.app(.appSwitch, appName: appName))
       }
     }
 
@@ -222,7 +224,7 @@ final class SystemEvents: @unchecked Sendable {
       self.logger.debug("received didChangeScreenParameters notification")
 
       Task {
-        await EventHub.shared.emit(.displayChange)
+        await self.eventHub.emit(.displayChange)
       }
     }
 
@@ -277,7 +279,7 @@ final class SystemEvents: @unchecked Sendable {
         self.logger.debug("emitting coalesced system_woke")
       }
 
-      await EventHub.shared.emit(.systemWoke)
+      await eventHub.emit(.systemWoke)
     }
   }
 

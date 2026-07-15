@@ -16,16 +16,17 @@ final class CPUSparklineNativeWidget: NativeWidget {
   }
 
   private let config: Config.CPUBuiltinConfig
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
   private var lastSampleDate: Date?
   private var isRunning = false
 
   /// Creates the native CPU widget from an immutable config section.
-  init(config: Config.CPUBuiltinConfig, widgetStore: WidgetStore) {
+  init(config: Config.CPUBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
     self.config = config
     self.widgetStore = widgetStore
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
   /// Starts CPU sampling and publishes the initial widget state.

@@ -20,6 +20,7 @@ final class BarWindowController: NSWindowController {
   private let configStore: ConfigSnapshotStore
   private let widgetStore: WidgetStore
   private let aeroSpaceService: AeroSpaceService
+  private let appViewServices: AppViewServices
   /// Hosting view containing the SwiftUI bar content.
   private let hostingView: BarHostingView<AnyView>
   /// Provider for dynamic context-menu state.
@@ -44,12 +45,14 @@ final class BarWindowController: NSWindowController {
     configStore: ConfigSnapshotStore,
     widgetStore: WidgetStore,
     aeroSpaceService: AeroSpaceService,
+    appViewServices: AppViewServices,
     menuStateProvider: BarContextMenuStateProvider
   ) {
     self.logger = logger
     self.configStore = configStore
     self.widgetStore = widgetStore
     self.aeroSpaceService = aeroSpaceService
+    self.appViewServices = appViewServices
     self.menuStateProvider = menuStateProvider
 
     let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -64,6 +67,7 @@ final class BarWindowController: NSWindowController {
         .environmentObject(configStore)
         .environmentObject(widgetStore)
         .environmentObject(aeroSpaceService)
+        .environment(\.appViewServices, appViewServices)
     )
 
     let window = BarPanel(
@@ -133,6 +137,7 @@ final class BarWindowController: NSWindowController {
         .environmentObject(configStore)
         .environmentObject(widgetStore)
         .environmentObject(aeroSpaceService)
+        .environment(\.appViewServices, appViewServices)
     )
     window.setFrame(frame, display: true)
     window.setContentSize(frame.size)

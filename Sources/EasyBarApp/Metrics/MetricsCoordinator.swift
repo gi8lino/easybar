@@ -174,7 +174,7 @@ actor MetricsCoordinator {
   }
 
   /// Shared process-wide metrics coordinator.
-  nonisolated(unsafe) static var shared = MetricsCoordinator()
+  static let shared = MetricsCoordinator()
 
   /// Metrics sampling interval.
   let sampleIntervalSeconds: TimeInterval = 1

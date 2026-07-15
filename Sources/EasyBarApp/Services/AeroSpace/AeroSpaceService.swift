@@ -54,6 +54,7 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
 
   /// Logger used for AeroSpace diagnostics.
   private let logger: ProcessLogger
+  private let eventHub: EventHub
   /// Runner for AeroSpace CLI commands.
   private let commandRunner: AeroSpaceCommandRunner
   /// Long-lived AeroSpace event subscription.
@@ -74,8 +75,9 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
   private let coordination = LockedState(CoordinationState())
 
   /// Creates the shared AeroSpace service.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
     self.commandRunner = AeroSpaceCommandRunner(logger: logger.child("commands"))
   }
 }
@@ -360,7 +362,7 @@ extension AeroSpaceService {
     guard let appEvent = event.appEvent else { return }
 
     Task {
-      await EventHub.shared.emit(appEvent, source: source)
+      await eventHub.emit(appEvent, source: source)
     }
   }
 

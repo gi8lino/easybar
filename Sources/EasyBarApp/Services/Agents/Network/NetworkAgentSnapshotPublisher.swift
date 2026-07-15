@@ -5,9 +5,17 @@ import Foundation
 final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
   /// Returns whether asynchronous publish work still belongs to the latest publication.
   private let isCurrent: (UInt64) -> Bool
+  private let store: NativeWiFiStore
+  private let eventHub: EventHub
 
   /// Creates one network-agent snapshot publisher.
-  init(isCurrent: @escaping (UInt64) -> Bool = { _ in true }) {
+  init(
+    store: NativeWiFiStore,
+    eventHub: EventHub,
+    isCurrent: @escaping (UInt64) -> Bool = { _ in true }
+  ) {
+    self.store = store
+    self.eventHub = eventHub
     self.isCurrent = isCurrent
   }
 
@@ -15,21 +23,21 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
   func clear(notify: Bool, publicationID: UInt64) {
     Task { @MainActor in
       guard self.isCurrent(publicationID) else { return }
-      let previous = NativeWiFiStore.shared.snapshot
-      let changed = NativeWiFiStore.shared.clear()
+      let previous = self.store.snapshot
+      let changed = self.store.clear()
 
       guard changed else { return }
       guard notify else { return }
 
       Task {
-        await EventHub.shared.emit(
+        await self.eventHub.emit(
           .app(
             .networkChange,
             primaryInterfaceIsTunnel: false
           ))
 
         if self.shouldEmitWiFiChangeAfterReset(previous: previous) {
-          await EventHub.shared.emit(.wifiChange)
+          await self.eventHub.emit(.wifiChange)
         }
       }
     }
@@ -40,13 +48,13 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
     Task { @MainActor in
       guard self.isCurrent(publicationID) else { return }
 
-      let previous = NativeWiFiStore.shared.snapshot
-      let changed = NativeWiFiStore.shared.apply(snapshot: snapshot)
+      let previous = self.store.snapshot
+      let changed = self.store.apply(snapshot: snapshot)
 
       guard changed else { return }
 
       Task {
-        await EventHub.shared.emit(
+        await self.eventHub.emit(
           .app(
             .networkChange,
             primaryInterfaceIsTunnel: snapshot.primaryInterfaceIsTunnel
@@ -58,9 +66,9 @@ final class NetworkAgentSnapshotPublisher: @unchecked Sendable {
         guard ssidChanged || interfaceChanged else { return }
 
         if let interfaceName = snapshot.interfaceName, !interfaceName.isEmpty {
-          await EventHub.shared.emit(.app(.wifiChange, interfaceName: interfaceName))
+          await self.eventHub.emit(.app(.wifiChange, interfaceName: interfaceName))
         } else {
-          await EventHub.shared.emit(.wifiChange)
+          await self.eventHub.emit(.wifiChange)
         }
       }
     }

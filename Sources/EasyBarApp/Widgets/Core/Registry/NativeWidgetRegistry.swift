@@ -12,6 +12,7 @@ final class NativeWidgetRegistry {
   private let logger: ProcessLogger
   private let widgetStore: WidgetStore
   private let eventManager: EventManager
+  private let eventHub: EventHub
   private let aeroSpaceService: AeroSpaceService
   private let networkAgentClient: NetworkAgentClient
   private let nativeWiFiStore: NativeWiFiStore
@@ -29,6 +30,7 @@ final class NativeWidgetRegistry {
     snapshot: ConfigSnapshot,
     widgetStore: WidgetStore,
     eventManager: EventManager,
+    eventHub: EventHub,
     aeroSpaceService: AeroSpaceService,
     networkAgentClient: NetworkAgentClient,
     nativeWiFiStore: NativeWiFiStore,
@@ -42,6 +44,7 @@ final class NativeWidgetRegistry {
     self.snapshot = snapshot
     self.widgetStore = widgetStore
     self.eventManager = eventManager
+    self.eventHub = eventHub
     self.aeroSpaceService = aeroSpaceService
     self.networkAgentClient = networkAgentClient
     self.nativeWiFiStore = nativeWiFiStore
@@ -138,7 +141,11 @@ final class NativeWidgetRegistry {
         )
       },
       Registration(id: "battery", enabled: builtins.battery.enabled) {
-        BatteryNativeWidget(config: builtins.battery, widgetStore: self.widgetStore)
+        BatteryNativeWidget(
+          config: builtins.battery,
+          widgetStore: self.widgetStore,
+          eventHub: self.eventHub
+        )
       },
       Registration(id: "front_app", enabled: builtins.frontApp.enabled) {
         FrontAppNativeWidget(
@@ -155,7 +162,11 @@ final class NativeWidgetRegistry {
         )
       },
       Registration(id: "volume", enabled: builtins.volume.enabled) {
-        VolumeSliderNativeWidget(config: builtins.volume, widgetStore: self.widgetStore)
+        VolumeSliderNativeWidget(
+          config: builtins.volume,
+          widgetStore: self.widgetStore,
+          eventHub: self.eventHub
+        )
       },
       Registration(id: "wifi", enabled: builtins.wifi.enabled) {
         WiFiNativeWidget(
@@ -163,14 +174,23 @@ final class NativeWidgetRegistry {
           networkAgentConfig: networkAgent,
           widgetStore: self.widgetStore,
           networkAgentClient: self.networkAgentClient,
-          nativeWiFiStore: self.nativeWiFiStore
+          nativeWiFiStore: self.nativeWiFiStore,
+          eventHub: self.eventHub
         )
       },
       Registration(id: "date", enabled: builtins.date.enabled) {
-        DateNativeWidget(config: builtins.date, widgetStore: self.widgetStore)
+        DateNativeWidget(
+          config: builtins.date,
+          widgetStore: self.widgetStore,
+          eventHub: self.eventHub
+        )
       },
       Registration(id: "time", enabled: builtins.time.enabled) {
-        TimeNativeWidget(config: builtins.time, widgetStore: self.widgetStore)
+        TimeNativeWidget(
+          config: builtins.time,
+          widgetStore: self.widgetStore,
+          eventHub: self.eventHub
+        )
       },
       Registration(id: "calendar", enabled: builtins.calendar.enabled) {
         CalendarNativeWidget(
@@ -181,11 +201,16 @@ final class NativeWidgetRegistry {
           nativeMonthCalendarStore: self.nativeMonthCalendarStore,
           nativeComposerCalendarStore: self.nativeComposerCalendarStore,
           upcomingCalendarAgentClient: self.upcomingCalendarAgentClient,
-          monthCalendarAgentClient: self.monthCalendarAgentClient
+          monthCalendarAgentClient: self.monthCalendarAgentClient,
+          eventHub: self.eventHub
         )
       },
       Registration(id: "cpu", enabled: builtins.cpu.enabled) {
-        CPUSparklineNativeWidget(config: builtins.cpu, widgetStore: self.widgetStore)
+        CPUSparklineNativeWidget(
+          config: builtins.cpu,
+          widgetStore: self.widgetStore,
+          eventHub: self.eventHub
+        )
       },
     ]
   }

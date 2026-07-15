@@ -23,7 +23,7 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   private let config: Config.BatteryBuiltinConfig
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
   private var timer: Timer?
   private var isHovered = false
   private lazy var renderer = BatteryRenderer(rootID: rootID)
@@ -46,9 +46,10 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Creates the native battery widget from an immutable config section.
-  init(config: Config.BatteryBuiltinConfig, widgetStore: WidgetStore) {
+  init(config: Config.BatteryBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
     self.config = config
     self.widgetStore = widgetStore
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
   // MARK: - Lifecycle

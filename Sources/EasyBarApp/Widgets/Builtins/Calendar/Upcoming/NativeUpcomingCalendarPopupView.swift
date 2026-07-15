@@ -4,14 +4,24 @@ import SwiftUI
 /// EasyBar adapter for the reusable upcoming-calendar popup.
 struct NativeUpcomingCalendarPopupView: View {
   @EnvironmentObject private var configStore: ConfigSnapshotStore
-  @StateObject private var composerPanel = CalendarEventComposerPanelController()
+  @StateObject private var composerPanel: CalendarEventComposerPanelController
+  private let services: AppViewServices
+
+  init(services: AppViewServices) {
+    self.services = services
+    _composerPanel = StateObject(
+      wrappedValue: CalendarEventComposerPanelController(
+        dependencies: .live(services: services)
+      )
+    )
+  }
 
   /// Renders the EasyBar-wired upcoming-calendar popup.
   var body: some View {
     let config = configStore.snapshot.builtins.calendar
 
     CalendarUpcomingPopupView(
-      store: NativeUpcomingCalendarStore.shared,
+      store: services.upcomingCalendarStore,
       config: config.calendarUpcomingPopupUIConfig,
       appointmentsStyle: config.appointmentsCalendarUIStyle,
       birthdays: config.birthdayCalendarUIStyle,
@@ -19,8 +29,8 @@ struct NativeUpcomingCalendarPopupView: View {
       eventActions: CalendarEventActionFactory.makeActions(),
       onEventTap: { event in
         composerPanel.present(event: event, config: config) {
-          MonthCalendarAgentClient.shared.refresh()
-          UpcomingCalendarAgentClient.shared.refresh()
+          services.monthCalendarClient.refresh()
+          services.upcomingCalendarClient.refresh()
         }
       }
     )

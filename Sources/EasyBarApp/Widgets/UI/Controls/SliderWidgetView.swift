@@ -12,6 +12,7 @@ struct SliderWidgetView: View {
 
   @State private var value: Double
   @State private var isEditing = false
+  @Environment(\.appViewServices) private var appViewServices
 
   private var range: SliderValueRange {
     SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
@@ -52,8 +53,9 @@ struct SliderWidgetView: View {
           let clampedValue = range.clamped(newValue)
           value = clampedValue
 
+          guard let eventHub = appViewServices?.eventHub else { return }
           WidgetEventDispatcher.shared.enqueue {
-            await EventHub.shared.emitWidgetEvent(
+            await eventHub.emitWidgetEvent(
               .sliderPreview,
               widgetID: rootWidgetID,
               targetWidgetID: targetWidgetID,
@@ -70,8 +72,9 @@ struct SliderWidgetView: View {
         if !editing {
           let committedValue = value
 
+          guard let eventHub = appViewServices?.eventHub else { return }
           WidgetEventDispatcher.shared.enqueue {
-            await EventHub.shared.emitWidgetEvent(
+            await eventHub.emitWidgetEvent(
               .sliderChanged,
               widgetID: rootWidgetID,
               targetWidgetID: targetWidgetID,

@@ -40,12 +40,14 @@ final class LuaTransport: @unchecked Sendable {
 
   private let logger: ProcessLogger
   private let logBridge: LuaLogBridge
+  private let metricsCoordinator: MetricsCoordinator
   private let state = LockedState(State())
   private let writerQueue = DispatchQueue(label: "easybar.lua-transport.writer")
 
   /// Creates one Lua transport.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, metricsCoordinator: MetricsCoordinator = .shared) {
     self.logger = logger
+    self.metricsCoordinator = metricsCoordinator
     self.logBridge = LuaLogBridge(logger: logger.child("stderr"))
   }
 
@@ -72,7 +74,7 @@ final class LuaTransport: @unchecked Sendable {
       guard let self else { return }
       self.readLinesFromFD(stderrFD, generation: generation) { [weak self] line in
         Task {
-          await MetricsCoordinator.shared.recordLuaStderrLine()
+          await self?.metricsCoordinator.recordLuaStderrLine()
         }
         self?.logBridge.handle(line)
       }
@@ -160,7 +162,7 @@ final class LuaTransport: @unchecked Sendable {
 
       if writeAll(data, to: snapshot.clientFD) {
         Task {
-          await MetricsCoordinator.shared.recordLuaWrite()
+          await self.metricsCoordinator.recordLuaWrite()
         }
         self.logger.trace("sent to lua socket", .field("bytes", byteCount))
       } else {
@@ -232,7 +234,7 @@ final class LuaTransport: @unchecked Sendable {
       guard let self else { return }
       self.readLinesFromFD(clientFD, generation: generation) { [weak self] line in
         Task {
-          await MetricsCoordinator.shared.recordLuaTransportLine()
+          await self?.metricsCoordinator.recordLuaTransportLine()
         }
         self?.logger.debug("lua socket line received", .field("bytes", line.utf8.count))
         lineHandler(line)

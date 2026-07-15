@@ -3,10 +3,6 @@ import Foundation
 
 @MainActor
 final class NativeWiFiStore: ObservableObject {
-  static var shared = NativeWiFiStore(
-    logger: ProcessLogger(label: "easybar.bootstrap.wifi_store")
-  )
-
   static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")
 
   @Published private(set) var snapshot: NetworkAgentSnapshot?

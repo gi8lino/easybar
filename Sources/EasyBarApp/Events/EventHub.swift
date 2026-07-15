@@ -9,25 +9,17 @@ protocol EventPayloadSink {
 
 extension LuaEventSink: EventPayloadSink {}
 
-private struct NoOpEventPayloadSink: EventPayloadSink {
-  func enqueue(_ payload: EasyBarEventPayload) {}
-}
-
 /// Actor-owned event hub for native widgets and the Lua runtime.
 actor EventHub {
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
 
-  /// Shared event hub instance, initialized with a no-op sink until bootstrap.
-  nonisolated(unsafe) static var shared = EventHub(
-    logger: ProcessLogger(label: "easybar.bootstrap.event_hub"),
-    luaEventSink: NoOpEventPayloadSink()
-  )
-
   /// Logger used for event diagnostics.
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.
   private let luaEventSink: EventPayloadSink
+  private let metricsCoordinator: MetricsCoordinator
+  private let wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
 
   /// Active stream subscribers keyed by id.
   private var subscribers: [UUID: Subscriber] = [:]
@@ -49,24 +41,32 @@ actor EventHub {
   /// Creates one production event hub.
   init(
     logger: ProcessLogger,
-    luaRuntime: LuaRuntime
+    luaRuntime: LuaRuntime,
+    metricsCoordinator: MetricsCoordinator,
+    wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot?
   ) {
     self.init(
       logger: logger,
       luaEventSink: LuaEventSink(
         runtime: luaRuntime,
         logger: logger.child("lua_sink")
-      )
+      ),
+      metricsCoordinator: metricsCoordinator,
+      wifiSnapshotProvider: wifiSnapshotProvider
     )
   }
 
   /// Creates one event hub with an injected sink.
   init(
     logger: ProcessLogger,
-    luaEventSink: EventPayloadSink
+    luaEventSink: EventPayloadSink,
+    metricsCoordinator: MetricsCoordinator = .shared,
+    wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
   ) {
     self.logger = logger
     self.luaEventSink = luaEventSink
+    self.metricsCoordinator = metricsCoordinator
+    self.wifiSnapshotProvider = wifiSnapshotProvider
   }
 
   /// Subscribes to the app-wide event stream.
@@ -146,7 +146,7 @@ actor EventHub {
 
   /// Emits one fully constructed payload.
   func emit(_ payload: EasyBarEventPayload) async {
-    await MetricsCoordinator.shared.recordEvent(
+    await metricsCoordinator.recordEvent(
       name: payload.eventName,
       isWidgetEvent: payload.widgetEvent != nil
     )
@@ -163,7 +163,7 @@ actor EventHub {
       let result = subscriber.continuation.yield(payload)
 
       if case .dropped = result {
-        await MetricsCoordinator.shared.recordEventBackpressure(
+        await metricsCoordinator.recordEventBackpressure(
           name: payload.eventName,
           coalesced: deliveryPolicy == .coalescing
         )
@@ -189,7 +189,10 @@ actor EventHub {
 
   /// Emits the latest replayable state for the requested event names.
   func emitReplayableState(for eventNames: Set<String>) async {
-    let payloads = await EventReplayCatalog.payloads(for: eventNames)
+    let payloads = await EventReplayCatalog.payloads(
+      for: eventNames,
+      wifiSnapshotProvider: wifiSnapshotProvider
+    )
 
     for payload in payloads {
       await emit(payload)

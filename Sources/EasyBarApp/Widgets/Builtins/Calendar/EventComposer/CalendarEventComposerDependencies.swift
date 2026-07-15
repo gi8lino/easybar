@@ -17,22 +17,22 @@ struct CalendarEventComposerDependencies {
   /// Opens the system Calendar app.
   let openCalendarApp: () -> Void
 
-  /// Builds the production composer dependency set from shared stores and clients.
+  /// Builds the production composer dependency set from app-owned stores and clients.
   @MainActor
-  static func live() -> CalendarEventComposerDependencies {
+  static func live(services: AppViewServices) -> CalendarEventComposerDependencies {
     CalendarEventComposerDependencies(
-      snapshotPublisher: NativeComposerCalendarStore.shared.$snapshot.eraseToAnyPublisher(),
+      snapshotPublisher: services.composerCalendarStore.$snapshot.eraseToAnyPublisher(),
       refreshSnapshots: {
-        ComposerCalendarAgentClient.shared.refresh()
+        services.composerCalendarClient.refresh()
       },
       createEvent: { event, completion in
-        MonthCalendarAgentClient.shared.createEvent(event, completion: completion)
+        services.monthCalendarClient.createEvent(event, completion: completion)
       },
       updateEvent: { event, completion in
-        MonthCalendarAgentClient.shared.updateEvent(event, completion: completion)
+        services.monthCalendarClient.updateEvent(event, completion: completion)
       },
       deleteEvent: { event, completion in
-        MonthCalendarAgentClient.shared.deleteEvent(event, completion: completion)
+        services.monthCalendarClient.deleteEvent(event, completion: completion)
       },
       openCalendarApp: {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal")

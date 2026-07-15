@@ -10,7 +10,7 @@ final class AgentWakeRefreshController: @unchecked Sendable {
   /// Logger used for wake-refresh diagnostics.
   private let logger: ProcessLogger
   /// Observer for app-wide wake events.
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
 
   /// Scheduler that coalesces wake refresh requests.
   private lazy var scheduler = DebouncedActionScheduler(
@@ -23,10 +23,12 @@ final class AgentWakeRefreshController: @unchecked Sendable {
   init(
     label: String,
     delay: TimeInterval = 0.20,
+    eventHub: EventHub,
     logger: ProcessLogger
   ) {
     self.label = label
     self.delay = delay
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
     self.logger = logger
   }
 

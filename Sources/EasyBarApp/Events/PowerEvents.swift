@@ -3,10 +3,11 @@ import Foundation
 import IOKit.ps
 
 /// Observes macOS power source changes.
-final class PowerEvents {
+final class PowerEvents: @unchecked Sendable {
   /// Shared power event source.
   /// Logger used for power diagnostics.
   private let logger: ProcessLogger
+  private let eventHub: EventHub
 
   /// IOKit run-loop source for power notifications.
   private var runLoopSource: CFRunLoopSource?
@@ -14,21 +15,22 @@ final class PowerEvents {
   private var lastChargingState: Bool?
 
   /// Creates one power event source.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
   }
 
   /// Starts power-source observation for power and charging events.
   func subscribePowerSource() {
     guard runLoopSource == nil else { return }
-
     let callback: IOPowerSourceCallbackType = { context in
-      Task {
-        await EventHub.shared.emit(.powerSourceChange)
-      }
-
       guard let context else { return }
       let owner = Unmanaged<PowerEvents>.fromOpaque(context).takeUnretainedValue()
+
+      Task {
+        await owner.eventHub.emit(.powerSourceChange)
+      }
+
       owner.handlePowerSourceCallback()
     }
 
@@ -77,9 +79,8 @@ final class PowerEvents {
 
     if lastChargingState != newState {
       lastChargingState = newState
-
       Task {
-        await EventHub.shared.emit(.app(.chargingStateChange, charging: newState))
+        await self.eventHub.emit(.app(.chargingStateChange, charging: newState))
       }
     }
   }

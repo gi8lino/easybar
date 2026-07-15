@@ -29,7 +29,7 @@ final class CalendarNativeWidget: NativeWidget {
   private let nativeComposerCalendarStore: NativeComposerCalendarStore
   private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
   private let monthCalendarAgentClient: MonthCalendarAgentClient
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
   private var started = false
@@ -50,7 +50,8 @@ final class CalendarNativeWidget: NativeWidget {
     nativeMonthCalendarStore: NativeMonthCalendarStore,
     nativeComposerCalendarStore: NativeComposerCalendarStore,
     upcomingCalendarAgentClient: UpcomingCalendarAgentClient,
-    monthCalendarAgentClient: MonthCalendarAgentClient
+    monthCalendarAgentClient: MonthCalendarAgentClient,
+    eventHub: EventHub
   ) {
     self.config = config
     self.calendarAgentConfig = calendarAgentConfig
@@ -60,6 +61,7 @@ final class CalendarNativeWidget: NativeWidget {
     self.nativeComposerCalendarStore = nativeComposerCalendarStore
     self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
     self.monthCalendarAgentClient = monthCalendarAgentClient
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
   // MARK: - Lifecycle

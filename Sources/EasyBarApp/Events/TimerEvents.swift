@@ -12,6 +12,7 @@ final class TimerEvents {
   /// Shared timer event source.
   /// Logger used for timer diagnostics.
   private let logger: ProcessLogger
+  private let eventHub: EventHub
 
   /// Timer for minute ticks.
   private var minuteTimer: Timer?
@@ -21,8 +22,9 @@ final class TimerEvents {
   private var intervalTimers: [String: Timer] = [:]
 
   /// Creates one timer event source.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
   }
 
   /// Starts the minute timer used by Lua `minute_tick` subscriptions.
@@ -64,6 +66,7 @@ final class TimerEvents {
   /// Replaces every widget-scoped interval timer used by Lua `interval` callbacks.
   func replaceIntervalTimers(schedules: Set<WidgetIntervalSchedule>) {
     stopIntervalTimers()
+    let eventHub = eventHub
 
     for schedule in schedules {
       let timer = makeRepeatingTimer(
@@ -71,7 +74,7 @@ final class TimerEvents {
         tolerance: min(1, max(0.05, schedule.interval * 0.05))
       ) { [widgetID = schedule.widgetID] in
         Task {
-          await EventHub.shared.emit(.app(.intervalTick, widgetID: widgetID))
+          await eventHub.emit(.app(.intervalTick, widgetID: widgetID))
         }
       }
 
@@ -107,13 +110,14 @@ final class TimerEvents {
     tolerance: TimeInterval,
     event: AppEvent
   ) -> Timer {
+    let eventHub = eventHub
     let timer = Timer(
       fire: nextBoundary(after: Date(), interval: interval),
       interval: interval,
       repeats: true
     ) { _ in
       Task {
-        await EventHub.shared.emit(event)
+        await eventHub.emit(event)
       }
     }
 

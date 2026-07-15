@@ -40,16 +40,18 @@ final class FormattedClockNativeWidgetController: NativeWidget {
   let widgetStore: WidgetStore
 
   private let snapshotProvider: () -> Snapshot
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
   private let formatterCache = FormattedDateFormatterCache()
 
   init(
     rootID: String,
     widgetStore: WidgetStore,
+    eventHub: EventHub,
     snapshotProvider: @escaping () -> Snapshot
   ) {
     self.rootID = rootID
     self.widgetStore = widgetStore
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
     self.snapshotProvider = snapshotProvider
   }
 

@@ -3,10 +3,11 @@ import EasyBarShared
 import Foundation
 
 /// Observes CoreAudio output volume and mute changes.
-final class VolumeEvents {
+final class VolumeEvents: @unchecked Sendable {
   /// Shared volume event source.
   /// Logger used for volume diagnostics.
   private let logger: ProcessLogger
+  private let eventHub: EventHub
 
   /// Serializes CoreAudio callbacks and mutable listener state.
   private let stateQueue = DispatchQueue(label: "io.github.gi8lino.easybar.volume-events")
@@ -29,8 +30,9 @@ final class VolumeEvents {
   private var lastMutedState: Bool?
 
   /// Creates one volume event source.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
     stateQueue.setSpecific(key: stateQueueKey, value: ())
   }
 
@@ -78,12 +80,13 @@ final class VolumeEvents {
   /// Starts listening for default output device changes.
   private func installDefaultOutputDeviceListener() {
     guard defaultDeviceListener == nil else { return }
+    let eventHub = eventHub
 
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       self?.refreshDeviceSubscription()
 
       Task {
-        await EventHub.shared.emit(.volumeChange)
+        await eventHub.emit(.volumeChange)
       }
     }
 
@@ -143,20 +146,22 @@ final class VolumeEvents {
     lastMutedState = readMutedState(for: newDeviceID)
     installDeviceListeners()
     let muted = lastMutedState ?? false
+    let eventHub = eventHub
 
     Task {
-      await EventHub.shared.emit(.volumeChange)
-      await EventHub.shared.emit(.app(.muteChange, muted: muted))
+      await eventHub.emit(.volumeChange)
+      await eventHub.emit(.app(.muteChange, muted: muted))
     }
   }
 
   /// Starts volume and mute listeners for the current output device.
   private func installDeviceListeners() {
     guard let deviceID = currentDeviceID else { return }
+    let eventHub = eventHub
 
     let volumeBlock: AudioObjectPropertyListenerBlock = { _, _ in
       Task {
-        await EventHub.shared.emit(.volumeChange)
+        await eventHub.emit(.volumeChange)
       }
     }
 
@@ -178,7 +183,7 @@ final class VolumeEvents {
 
     let muteBlock: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       Task {
-        await EventHub.shared.emit(.volumeChange)
+        await eventHub.emit(.volumeChange)
       }
 
       guard let self, let deviceID = self.currentDeviceID else { return }
@@ -188,7 +193,7 @@ final class VolumeEvents {
         self.lastMutedState = muted
 
         Task {
-          await EventHub.shared.emit(.app(.muteChange, muted: muted))
+          await eventHub.emit(.app(.muteChange, muted: muted))
         }
       }
     }

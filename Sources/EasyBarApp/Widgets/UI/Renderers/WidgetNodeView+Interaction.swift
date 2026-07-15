@@ -101,6 +101,7 @@ extension WidgetNodeView {
         widgetID: node.root,
         targetWidgetID: node.id,
         logger: logger,
+        eventHub: appViewServices?.eventHub,
         tracksHover: tracksHover,
         emitsMouseHover: node.isMouseHoverInteractive,
         emitsMouseDown: node.isMouseDownInteractive,
@@ -145,6 +146,7 @@ extension WidgetNodeView {
           widgetID: node.root,
           targetWidgetID: node.id,
           logger: logger,
+          eventHub: appViewServices?.eventHub,
           tracksHover: true,
           emitsMouseHover: node.isMouseHoverInteractive,
           emitsMouseDown: node.isMouseDownInteractive,
@@ -166,10 +168,11 @@ extension WidgetNodeView {
 
   /// Emits a widget hover event for this node.
   func emitNodeHoverEvent(_ hovering: Bool) {
+    guard let eventHub = appViewServices?.eventHub else { return }
     let event: WidgetEvent = hovering ? .mouseEntered : .mouseExited
 
     WidgetEventDispatcher.shared.enqueue {
-      await EventHub.shared.emitWidgetEvent(
+      await eventHub.emitWidgetEvent(
         event,
         widgetID: node.root,
         targetWidgetID: node.id
@@ -179,8 +182,9 @@ extension WidgetNodeView {
 
   /// Emits a left-click event for this node.
   func emitNodeClickEvent() {
+    guard let eventHub = appViewServices?.eventHub else { return }
     WidgetEventDispatcher.shared.enqueue {
-      await EventHub.shared.emitWidgetEvent(
+      await eventHub.emitWidgetEvent(
         .mouseClicked,
         widgetID: node.root,
         targetWidgetID: node.id,

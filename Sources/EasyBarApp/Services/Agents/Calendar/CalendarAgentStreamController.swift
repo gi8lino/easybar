@@ -25,6 +25,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   private let metricsAgent: MetricsCoordinator.AgentKey
   /// Metrics recorder for agent lifecycle and messages.
   private let metricsCoordinator: MetricsCoordinator
+  private let eventRelay: CalendarAgentEventRelay
   /// Wake-triggered refresh controller.
   private let wakeRefreshController: AgentWakeRefreshController
   /// Logger used for stream diagnostics.
@@ -69,11 +70,13 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     applySnapshot: @escaping @MainActor @Sendable (EasyBarShared.CalendarAgentSnapshot) -> Void,
     clearState: @escaping @MainActor @Sendable () -> Void = {},
     metricsCoordinator: MetricsCoordinator = .shared,
+    eventRelay: CalendarAgentEventRelay,
     logger: ProcessLogger
   ) {
     self.label = label
     self.metricsAgent = metricsAgent
     self.metricsCoordinator = metricsCoordinator
+    self.eventRelay = eventRelay
     self.socketPath = socketPath
     self.makeRequest = makeRequest
     self.applySnapshot = applySnapshot
@@ -85,6 +88,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
 
     wakeRefreshController = AgentWakeRefreshController(
       label: label,
+      eventHub: eventRelay.eventHub,
       logger: logger.child("wake_refresh")
     )
   }
@@ -201,7 +205,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
         }
 
         self.applySnapshot(snapshot)
-        CalendarAgentEventRelay.shared.noteSnapshotUpdate()
+        self.eventRelay.noteSnapshotUpdate()
       }
 
     case .error:

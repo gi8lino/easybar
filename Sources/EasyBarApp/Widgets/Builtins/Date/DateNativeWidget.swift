@@ -7,9 +7,11 @@ final class DateNativeWidget: NativeWidget {
   let rootID = "builtin_date"
   let widgetStore: WidgetStore
   private let config: Config.DateBuiltinConfig
+  private let eventHub: EventHub
   private lazy var controller = FormattedClockNativeWidgetController(
     rootID: rootID,
-    widgetStore: widgetStore
+    widgetStore: widgetStore,
+    eventHub: eventHub
   ) { [config] in
     .init(
       placement: config.placement,
@@ -19,9 +21,10 @@ final class DateNativeWidget: NativeWidget {
   }
 
   /// Creates the native date widget from an immutable config section.
-  init(config: Config.DateBuiltinConfig, widgetStore: WidgetStore) {
+  init(config: Config.DateBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
     self.config = config
     self.widgetStore = widgetStore
+    self.eventHub = eventHub
   }
 
   var appEventSubscriptions: Set<String> { controller.appEventSubscriptions }

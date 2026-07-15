@@ -5,10 +5,6 @@ import Foundation
 
 /// Shared month-calendar snapshot store used by the native month popup.
 final class NativeMonthCalendarStore: CalendarMonthPopupStore {
-  static var shared = NativeMonthCalendarStore(
-    logger: ProcessLogger(label: "easybar.bootstrap.month_store")
-  )
-
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 

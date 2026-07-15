@@ -14,6 +14,7 @@ struct ProgressSliderWidgetView: View {
 
   @State private var value: Double
   @State private var isDragging = false
+  @Environment(\.appViewServices) private var appViewServices
 
   private var range: SliderValueRange {
     SliderValueRange(minimum: minValue, maximum: maxValue, step: step)
@@ -67,8 +68,9 @@ struct ProgressSliderWidgetView: View {
             let newValue = value(for: x, width: geometry.size.width)
             value = newValue
 
+            guard let eventHub = appViewServices?.eventHub else { return }
             WidgetEventDispatcher.shared.enqueue {
-              await EventHub.shared.emitWidgetEvent(
+              await eventHub.emitWidgetEvent(
                 .sliderPreview,
                 widgetID: rootWidgetID,
                 targetWidgetID: targetWidgetID,
@@ -81,8 +83,9 @@ struct ProgressSliderWidgetView: View {
             value = newValue
             isDragging = false
 
+            guard let eventHub = appViewServices?.eventHub else { return }
             WidgetEventDispatcher.shared.enqueue {
-              await EventHub.shared.emitWidgetEvent(
+              await eventHub.emitWidgetEvent(
                 .sliderChanged,
                 widgetID: rootWidgetID,
                 targetWidgetID: targetWidgetID,

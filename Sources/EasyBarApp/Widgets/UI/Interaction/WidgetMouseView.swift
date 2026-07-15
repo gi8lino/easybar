@@ -16,6 +16,7 @@ struct WidgetMouseView: NSViewRepresentable {
   let widgetID: String
   let targetWidgetID: String
   let logger: ProcessLogger
+  let eventHub: EventHub?
   let tracksHover: Bool
   let emitsMouseHover: Bool
   let emitsMouseDown: Bool
@@ -28,6 +29,7 @@ struct WidgetMouseView: NSViewRepresentable {
     widgetID: String,
     targetWidgetID: String? = nil,
     logger: ProcessLogger,
+    eventHub: EventHub?,
     tracksHover: Bool = true,
     emitsMouseHover: Bool = false,
     emitsMouseDown: Bool = false,
@@ -39,6 +41,7 @@ struct WidgetMouseView: NSViewRepresentable {
     self.widgetID = widgetID
     self.targetWidgetID = targetWidgetID ?? widgetID
     self.logger = logger
+    self.eventHub = eventHub
     self.tracksHover = tracksHover
     self.emitsMouseHover = emitsMouseHover
     self.emitsMouseDown = emitsMouseDown
@@ -51,6 +54,7 @@ struct WidgetMouseView: NSViewRepresentable {
   /// Creates the AppKit-backed mouse surface.
   func makeNSView(context: Context) -> MouseTrackingNSView {
     let view = MouseTrackingNSView(logger: logger)
+    view.eventHub = eventHub
     view.widgetID = widgetID
     view.targetWidgetID = targetWidgetID
     view.tracksHover = tracksHover
@@ -76,6 +80,7 @@ struct WidgetMouseView: NSViewRepresentable {
     nsView.emitsMouseClick = emitsMouseClick
     nsView.emitsMouseScroll = emitsMouseScroll
     nsView.onHoverChanged = onHoverChanged
+    nsView.eventHub = eventHub
   }
 
   /// Releases hover ownership when SwiftUI removes the backing AppKit view.
@@ -88,6 +93,7 @@ final class MouseTrackingNSView: NSView {
   var widgetID: String = ""
   var targetWidgetID: String = ""
   let logger: ProcessLogger
+  var eventHub: EventHub?
   var tracksHover = true
   var emitsMouseHover = false
   var emitsMouseDown = false
@@ -219,7 +225,7 @@ final class MouseTrackingNSView: NSView {
       onHoverChanged?(false)
       guard emitsMouseHover else { return }
       WidgetEventDispatcher.shared.enqueue {
-        await EventHub.shared.emitWidgetEvent(
+        await self.eventHub?.emitWidgetEvent(
           .mouseExited,
           widgetID: widgetID,
           targetWidgetID: targetWidgetID
@@ -281,7 +287,7 @@ final class MouseTrackingNSView: NSView {
     )
 
     WidgetEventDispatcher.shared.enqueue {
-      await EventHub.shared.emitWidgetEvent(
+      await self.eventHub?.emitWidgetEvent(
         .mouseScrolled,
         widgetID: eventWidgetID,
         targetWidgetID: eventTargetWidgetID,
@@ -353,7 +359,7 @@ final class MouseTrackingNSView: NSView {
     )
 
     WidgetEventDispatcher.shared.enqueue {
-      await EventHub.shared.emitWidgetEvent(
+      await self.eventHub?.emitWidgetEvent(
         event,
         widgetID: eventWidgetID,
         targetWidgetID: eventTargetWidgetID,

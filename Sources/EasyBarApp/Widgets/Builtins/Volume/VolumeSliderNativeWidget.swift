@@ -17,7 +17,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   let config: Config.VolumeBuiltinConfig
-  let eventObserver = EasyBarEventObserver()
+  let eventObserver: EasyBarEventObserver
   var isHovered = false
   var isAdjustingSlider = false
   var autoHideTask: Task<Void, Never>?
@@ -43,9 +43,10 @@ final class VolumeSliderNativeWidget: NativeWidget {
   }
 
   /// Creates the native volume widget from an immutable config section.
-  init(config: Config.VolumeBuiltinConfig, widgetStore: WidgetStore) {
+  init(config: Config.VolumeBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
     self.config = config
     self.widgetStore = widgetStore
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
   // MARK: - Lifecycle

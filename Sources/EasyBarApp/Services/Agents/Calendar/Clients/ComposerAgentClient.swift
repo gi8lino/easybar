@@ -4,26 +4,23 @@ import Foundation
 /// One-shot calendar-agent client used by the event composer for fresh writable-calendar options.
 @MainActor
 final class ComposerCalendarAgentClient {
-  /// Shared composer-calendar agent client.
-  static var shared = ComposerCalendarAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.composer_calendar_agent"),
-    calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent
-  )
-
   /// Logger used for composer-calendar agent diagnostics.
   private let logger: ProcessLogger
   /// Active calendar-agent config snapshot.
   private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
+  private let store: NativeComposerCalendarStore
   /// Monotonic refresh generation used to ignore stale one-shot responses.
   private var refreshGeneration: UInt64 = 0
 
   /// Creates one composer-calendar agent client.
   init(
     logger: ProcessLogger,
-    calendarAgentConfig: ConfigSnapshot.CalendarAgent
+    calendarAgentConfig: ConfigSnapshot.CalendarAgent,
+    store: NativeComposerCalendarStore
   ) {
     self.logger = logger
     self.calendarAgentConfig = calendarAgentConfig
+    self.store = store
   }
 
   /// Replaces the active calendar-agent config snapshot.
@@ -32,11 +29,11 @@ final class ComposerCalendarAgentClient {
 
     guard calendarAgentConfig.enabled else {
       refreshGeneration &+= 1
-      NativeComposerCalendarStore.shared.clear()
+      store.clear()
       return
     }
 
-    if NativeComposerCalendarStore.shared.snapshot != nil {
+    if store.snapshot != nil {
       refresh()
     }
   }
@@ -45,7 +42,7 @@ final class ComposerCalendarAgentClient {
   func refresh() {
     guard calendarAgentConfig.enabled else {
       refreshGeneration &+= 1
-      NativeComposerCalendarStore.shared.clear()
+      store.clear()
       return
     }
 
@@ -97,25 +94,25 @@ final class ComposerCalendarAgentClient {
     case .snapshot:
       guard let snapshot = response.snapshot else {
         logger.warn("composer calendar snapshot response had no payload")
-        NativeComposerCalendarStore.shared.clear()
+        store.clear()
         return
       }
 
-      NativeComposerCalendarStore.shared.apply(snapshot: snapshot)
+      store.apply(snapshot: snapshot)
 
     case .error:
       logger.warn(
         "composer calendar snapshot request failed",
         .field("message", response.message ?? "unknown")
       )
-      NativeComposerCalendarStore.shared.clear()
+      store.clear()
 
     default:
       logger.warn(
         "composer calendar snapshot request returned unexpected response",
         .field("response", response.kind.rawValue)
       )
-      NativeComposerCalendarStore.shared.clear()
+      store.clear()
     }
   }
 
@@ -131,7 +128,7 @@ final class ComposerCalendarAgentClient {
       "composer calendar snapshot request failed",
       .field("error", error)
     )
-    NativeComposerCalendarStore.shared.clear()
+    store.clear()
   }
 
   /// Returns whether a one-shot response still belongs to the current config and refresh generation.

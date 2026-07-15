@@ -6,11 +6,6 @@ import Foundation
 /// Sendability is guarded by `LockedState`; running state and generation checks
 /// are serialized, and the debounced scheduler owns its own locked state.
 final class CalendarAgentEventRelay: @unchecked Sendable {
-  /// Shared calendar-agent event relay.
-  nonisolated(unsafe) static var shared = CalendarAgentEventRelay(
-    logger: ProcessLogger(label: "easybar.bootstrap.calendar_relay")
-  )
-
   private struct State {
     var running = false
     var generation: UInt64 = 0
@@ -18,6 +13,7 @@ final class CalendarAgentEventRelay: @unchecked Sendable {
 
   /// Logger used for relay diagnostics.
   private let logger: ProcessLogger
+  let eventHub: EventHub
   /// Locked relay state.
   private let state = LockedState(State())
 
@@ -29,8 +25,9 @@ final class CalendarAgentEventRelay: @unchecked Sendable {
   )
 
   /// Creates the shared calendar-agent event relay.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, eventHub: EventHub) {
     self.logger = logger
+    self.eventHub = eventHub
   }
 
   /// Activates the relay for runtime event delivery.
@@ -71,7 +68,7 @@ final class CalendarAgentEventRelay: @unchecked Sendable {
       guard shouldEmit else { return }
 
       Task {
-        await EventHub.shared.emit(.calendarChange)
+        await self.eventHub.emit(.calendarChange)
       }
     }
   }

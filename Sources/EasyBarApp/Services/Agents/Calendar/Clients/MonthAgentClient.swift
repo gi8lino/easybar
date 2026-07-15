@@ -5,14 +5,6 @@ import Foundation
 /// Agent client used by the reusable month-calendar popup.
 @MainActor
 final class MonthCalendarAgentClient {
-  /// Shared month-calendar agent client instance.
-  static var shared = MonthCalendarAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.month_agent"),
-    calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent,
-    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar,
-    metricsCoordinator: .shared
-  )
-
   /// Logger used for month-calendar agent diagnostics.
   private let logger: ProcessLogger
   /// Active calendar-agent config snapshot.
@@ -21,6 +13,9 @@ final class MonthCalendarAgentClient {
   private var calendarConfig: Config.CalendarBuiltinConfig
   /// Metrics recorder for calendar-agent lifecycle and messages.
   private let metricsCoordinator: MetricsCoordinator
+  private let store: NativeMonthCalendarStore
+  private let eventRelay: CalendarAgentEventRelay
+  private var refreshRelatedClients: @MainActor () -> Void = {}
 
   /// Month radii loaded around the currently visible month.
   private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
@@ -39,12 +34,13 @@ final class MonthCalendarAgentClient {
       self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
     applySnapshot: { snapshot in
-      NativeMonthCalendarStore.shared.apply(snapshot: snapshot)
+      self.store.apply(snapshot: snapshot)
     },
     clearState: {
-      NativeMonthCalendarStore.shared.clear()
+      self.store.clear()
     },
     metricsCoordinator: metricsCoordinator,
+    eventRelay: eventRelay,
     logger: logger.child("stream")
   )
 
@@ -53,12 +49,21 @@ final class MonthCalendarAgentClient {
     logger: ProcessLogger,
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     calendarConfig: Config.CalendarBuiltinConfig,
+    store: NativeMonthCalendarStore,
+    eventRelay: CalendarAgentEventRelay,
     metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
+    self.store = store
+    self.eventRelay = eventRelay
     self.metricsCoordinator = metricsCoordinator
+  }
+
+  /// Installs the refresh action run after successful calendar mutations.
+  func setRelatedClientRefresh(_ refresh: @escaping @MainActor () -> Void) {
+    refreshRelatedClients = refresh
   }
 
   /// Returns whether the month-calendar agent client is currently active.
@@ -125,7 +130,7 @@ final class MonthCalendarAgentClient {
   /// Refreshes the active month subscription if the preload window changed.
   func refreshMonthSubscriptionIfNeeded(for visibleMonth: Date, radius: Int) {
     let calendar = resolvedCalendar()
-    let changed = NativeMonthCalendarStore.shared.prepareMonthSubscriptionRange(
+    let changed = store.prepareMonthSubscriptionRange(
       for: visibleMonth,
       radius: radius,
       calendar: calendar
@@ -221,8 +226,7 @@ final class MonthCalendarAgentClient {
     switch response.kind {
     case successKind:
       refresh()
-      UpcomingCalendarAgentClient.shared.refresh()
-      ComposerCalendarAgentClient.shared.refresh()
+      refreshRelatedClients()
       completion(true, nil)
 
     case .error:
@@ -258,7 +262,7 @@ final class MonthCalendarAgentClient {
   private func makeRequest() -> CalendarAgentRequest {
     let requestedRange: DateInterval
 
-    if let prepared = NativeMonthCalendarStore.shared.monthSubscriptionRange() {
+    if let prepared = store.monthSubscriptionRange() {
       requestedRange = DateInterval(start: prepared.start, end: prepared.end)
     } else {
       requestedRange = defaultRequestedDateRange(referenceDate: Date())

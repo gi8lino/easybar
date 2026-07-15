@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 /// Replayable invalidation signals backed by current app state providers.
@@ -36,7 +37,9 @@ enum EventStateInvalidation: CaseIterable {
   }
 
   /// Builds the latest payload for this invalidation.
-  func currentPayload() async -> EasyBarEventPayload? {
+  func currentPayload(
+    wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
+  ) async -> EasyBarEventPayload? {
     switch self {
     case .systemWake:
       return .app(.systemWoke)
@@ -49,7 +52,7 @@ enum EventStateInvalidation: CaseIterable {
 
     case .wifiChange:
       let interfaceName = await MainActor.run {
-        NativeWiFiStore.shared.snapshot?.interfaceName
+        wifiSnapshotProvider()?.interfaceName
       }
 
       if let interfaceName, !interfaceName.isEmpty {
@@ -60,7 +63,7 @@ enum EventStateInvalidation: CaseIterable {
 
     case .networkChange:
       let isTunnel = await MainActor.run {
-        NativeWiFiStore.shared.snapshot?.primaryInterfaceIsTunnel ?? false
+        wifiSnapshotProvider()?.primaryInterfaceIsTunnel ?? false
       }
 
       return .app(.networkChange, primaryInterfaceIsTunnel: isTunnel)
@@ -101,10 +104,17 @@ enum EventReplayCatalog {
     orderedEventNames.contains(eventName)
   }
 
-  static func payloads(for eventNames: Set<String>) async -> [EasyBarEventPayload] {
+  static func payloads(
+    for eventNames: Set<String>,
+    wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
+  ) async -> [EasyBarEventPayload] {
     var payloads: [EasyBarEventPayload] = []
     for invalidation in orderedInvalidations where eventNames.contains(invalidation.eventName) {
-      guard let payload = await invalidation.currentPayload() else { continue }
+      guard
+        let payload = await invalidation.currentPayload(
+          wifiSnapshotProvider: wifiSnapshotProvider
+        )
+      else { continue }
       payloads.append(payload)
     }
     return payloads

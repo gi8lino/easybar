@@ -6,16 +6,21 @@ actor LuaRuntime {
   private let logger: ProcessLogger
   private let processController: LuaProcessController
   private let transport: LuaTransport
+  private let metricsCoordinator: MetricsCoordinator
 
   private var lineHandler: (@Sendable (String) -> Void)?
   private var terminationHandler: LuaProcessController.TerminationHandler?
   private var runtimeGeneration: UInt64 = 0
 
   /// Creates one Lua runtime.
-  init(logger: ProcessLogger) {
+  init(logger: ProcessLogger, metricsCoordinator: MetricsCoordinator = .shared) {
     self.logger = logger
+    self.metricsCoordinator = metricsCoordinator
     self.processController = LuaProcessController(logger: logger.child("process"))
-    self.transport = LuaTransport(logger: logger.child("transport"))
+    self.transport = LuaTransport(
+      logger: logger.child("transport"),
+      metricsCoordinator: metricsCoordinator
+    )
   }
 
   /// Returns the running Lua process identifier when available.
@@ -73,7 +78,7 @@ actor LuaRuntime {
       return false
     }
 
-    await MetricsCoordinator.shared.recordLuaRuntimeStarted(pid: result.processIdentifier)
+    await metricsCoordinator.recordLuaRuntimeStarted(pid: result.processIdentifier)
     logger.debug(
       "lua runtime facade started",
       .field("pid", result.processIdentifier),
@@ -89,7 +94,7 @@ actor LuaRuntime {
     await processController.shutdownAndWait()
 
     if hadRunningProcess {
-      await MetricsCoordinator.shared.recordLuaRuntimeStopped()
+      await metricsCoordinator.recordLuaRuntimeStopped()
     }
 
     runtimeGeneration &+= 1
@@ -105,7 +110,7 @@ actor LuaRuntime {
     guard !termination.wasRequested else { return }
 
     transport.shutdown()
-    await MetricsCoordinator.shared.recordLuaRuntimeStopped()
+    await metricsCoordinator.recordLuaRuntimeStopped()
     terminationHandler?(termination)
   }
 

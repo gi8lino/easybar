@@ -4,18 +4,12 @@ import Foundation
 
 @MainActor
 final class UpcomingCalendarAgentClient {
-  /// Shared upcoming-calendar agent client.
-  static var shared = UpcomingCalendarAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.upcoming_agent"),
-    calendarAgentConfig: Config.makeUnloadedConfig().snapshot().calendarAgent,
-    calendarConfig: Config.makeUnloadedConfig().snapshot().builtins.calendar,
-    metricsCoordinator: .shared
-  )
-
   private let logger: ProcessLogger
   private var calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private var calendarConfig: Config.CalendarBuiltinConfig
   private let metricsCoordinator: MetricsCoordinator
+  private let store: NativeUpcomingCalendarStore
+  private let eventRelay: CalendarAgentEventRelay
 
   private lazy var stream: CalendarAgentStreamController = CalendarAgentStreamController(
     label: "upcoming calendar agent client",
@@ -24,12 +18,13 @@ final class UpcomingCalendarAgentClient {
       self?.makeRequest() ?? CalendarAgentRequest(command: .ping)
     },
     applySnapshot: { snapshot in
-      NativeUpcomingCalendarStore.shared.apply(snapshot: snapshot)
+      self.store.apply(snapshot: snapshot)
     },
     clearState: {
-      NativeUpcomingCalendarStore.shared.clear()
+      self.store.clear()
     },
     metricsCoordinator: metricsCoordinator,
+    eventRelay: eventRelay,
     logger: logger.child("stream")
   )
 
@@ -37,11 +32,15 @@ final class UpcomingCalendarAgentClient {
     logger: ProcessLogger,
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     calendarConfig: Config.CalendarBuiltinConfig,
+    store: NativeUpcomingCalendarStore,
+    eventRelay: CalendarAgentEventRelay,
     metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
     self.calendarAgentConfig = calendarAgentConfig
     self.calendarConfig = calendarConfig
+    self.store = store
+    self.eventRelay = eventRelay
     self.metricsCoordinator = metricsCoordinator
   }
 

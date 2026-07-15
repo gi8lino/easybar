@@ -6,7 +6,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
   private var task: Task<Void, Never>?
 
   /// Creates one EasyBar event observer.
-  init(eventHub: EventHub = .shared) {
+  init(eventHub: EventHub) {
     self.eventHub = eventHub
   }
 

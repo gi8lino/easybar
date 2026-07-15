@@ -8,6 +8,7 @@ struct WidgetNodeView: View {
 
   @EnvironmentObject var store: WidgetStore
   @EnvironmentObject var configStore: ConfigSnapshotStore
+  @Environment(\.appViewServices) var appViewServices
 
   @StateObject var popupPanel = WidgetPopupPanelController()
   @StateObject var imageLoader = WidgetImageLoader()

@@ -18,7 +18,7 @@ final class WiFiNativeWidget: NativeWidget {
   private let networkAgentConfig: ConfigSnapshot.NetworkAgent
   private let networkAgentClient: NetworkAgentClient
   private let nativeWiFiStore: NativeWiFiStore
-  private let eventObserver = EasyBarEventObserver()
+  private let eventObserver: EasyBarEventObserver
   private var isHovered = false
   private var started = false
   private var startedNetworkAgent = false
@@ -42,13 +42,15 @@ final class WiFiNativeWidget: NativeWidget {
     networkAgentConfig: ConfigSnapshot.NetworkAgent,
     widgetStore: WidgetStore,
     networkAgentClient: NetworkAgentClient,
-    nativeWiFiStore: NativeWiFiStore
+    nativeWiFiStore: NativeWiFiStore,
+    eventHub: EventHub
   ) {
     self.config = config
     self.networkAgentConfig = networkAgentConfig
     self.widgetStore = widgetStore
     self.networkAgentClient = networkAgentClient
     self.nativeWiFiStore = nativeWiFiStore
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
   // MARK: - Lifecycle

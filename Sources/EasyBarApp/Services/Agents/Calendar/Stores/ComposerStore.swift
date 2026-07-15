@@ -4,11 +4,6 @@ import Foundation
 /// Shared fresh calendar snapshot store used only by the event composer.
 @MainActor
 final class NativeComposerCalendarStore: ObservableObject {
-  /// Shared composer-calendar snapshot store.
-  static var shared = NativeComposerCalendarStore(
-    logger: ProcessLogger(label: "easybar.bootstrap.composer_calendar_store")
-  )
-
   /// Latest fresh snapshot used for composer calendar choices.
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
 

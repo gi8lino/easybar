@@ -23,18 +23,25 @@ final class NetworkAgentClient: @unchecked Sendable {
   private let logger: ProcessLogger
   /// Metrics recorder for network-agent lifecycle and messages.
   private let metricsCoordinator: MetricsCoordinator
+  private let nativeWiFiStore: NativeWiFiStore
+  private let eventHub: EventHub
   /// Active network-agent lifecycle state.
   private let lifecycleState: LockedState<LifecycleState>
   /// Last logged network-agent error, used to suppress identical repeats.
   private let errorLogState = LockedState(ErrorLogState())
   /// Publishes network-agent snapshots to app stores and events.
-  private lazy var snapshotPublisher = NetworkAgentSnapshotPublisher { [weak self] publicationID in
-    self?.isPublicationCurrent(publicationID) ?? false
-  }
+  private lazy var snapshotPublisher = NetworkAgentSnapshotPublisher(
+    store: nativeWiFiStore,
+    eventHub: eventHub,
+    isCurrent: { [weak self] publicationID in
+      self?.isPublicationCurrent(publicationID) ?? false
+    }
+  )
 
   /// Wake-triggered refresh controller.
   private lazy var wakeRefreshController = AgentWakeRefreshController(
     label: "network agent client",
+    eventHub: eventHub,
     logger: logger.child("wake_refresh")
   )
 
@@ -69,10 +76,14 @@ final class NetworkAgentClient: @unchecked Sendable {
   init(
     logger: ProcessLogger,
     config: ConfigSnapshot.NetworkAgent,
+    nativeWiFiStore: NativeWiFiStore,
+    eventHub: EventHub,
     metricsCoordinator: MetricsCoordinator = .shared
   ) {
     self.logger = logger
     self.lifecycleState = LockedState(LifecycleState(config: config))
+    self.nativeWiFiStore = nativeWiFiStore
+    self.eventHub = eventHub
     self.metricsCoordinator = metricsCoordinator
   }
 

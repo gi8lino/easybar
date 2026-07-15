@@ -198,14 +198,16 @@ extension WidgetNodeView {
     case .none:
       return AnyView(EmptyView())
     case .calendarUpcoming:
+      guard let appViewServices else { return AnyView(EmptyView()) }
       return AnyView(
-        NativeUpcomingCalendarPopupView()
+        NativeUpcomingCalendarPopupView(services: appViewServices)
           .environmentObject(configStore)
           .background(popupHoverBackground)
       )
     case .calendarMonth:
+      guard let appViewServices else { return AnyView(EmptyView()) }
       return AnyView(
-        NativeMonthCalendarPopupView()
+        NativeMonthCalendarPopupView(services: appViewServices)
           .environmentObject(configStore)
           .background(popupHoverBackground)
       )

@@ -249,6 +249,15 @@ final class AppController {
       configStore: services.configSnapshotStore,
       widgetStore: services.widgetStore,
       aeroSpaceService: services.aeroSpaceService,
+      appViewServices: AppViewServices(
+        eventHub: services.eventHub,
+        monthCalendarStore: services.nativeMonthCalendarStore,
+        upcomingCalendarStore: services.nativeUpcomingCalendarStore,
+        composerCalendarStore: services.nativeComposerCalendarStore,
+        monthCalendarClient: services.monthCalendarAgentClient,
+        upcomingCalendarClient: services.upcomingCalendarAgentClient,
+        composerCalendarClient: services.composerCalendarAgentClient
+      ),
       menuStateProvider: menuStateProvider
     )
     installBarWindowActions(on: controller)
