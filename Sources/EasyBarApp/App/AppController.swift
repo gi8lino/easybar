@@ -43,19 +43,34 @@ final class AppController {
   /// Presenter for config load and reload errors.
   private let configErrorWindowController = ConfigErrorWindowController()
   /// Prevents multiple EasyBar instances from running at once.
-  private let instanceGuard = SingleInstanceGuard()
+  private let instanceGuard: SingleInstanceGuard
 
   /// Creates the app shell with its process logger.
   init(
     logger: ProcessLogger,
     requestAppTermination: @escaping () -> Void
   ) {
+    let services = Self.bootstrapSharedDependencies(logger: logger.child("services"))
+    let instanceGuard = SingleInstanceGuard()
+
     self.logger = logger
     self.requestAppTermination = requestAppTermination
-    self.services = Self.bootstrapSharedDependencies(logger: logger.child("services"))
+    self.services = services
+    self.instanceGuard = instanceGuard
     self.runtimeCoordinator = RuntimeCoordinator(
       logger: logger.child("runtime"),
-      services: services
+      services: services,
+      rebindInstanceLock: { directory in
+        AppShellSupport.acquireInstanceLock(
+          instanceGuard: instanceGuard,
+          processName: "easybar",
+          directory: directory,
+          logger: logger,
+          acquireMessage: "easybar rebound instance lock",
+          alreadyRunningMessage: "easybar lock rebind found another running instance",
+          failureMessage: "easybar failed to rebind instance lock",
+        )
+      }
     )
     self.startupDiagnostics = AppStartupDiagnostics(logger: logger.child("diagnostics"))
     self.widgetEditorStubInstaller = WidgetEditorStubInstaller(logger: logger.child("editor_stub"))

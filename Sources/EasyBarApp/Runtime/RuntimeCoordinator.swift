@@ -14,12 +14,18 @@ actor RuntimeCoordinator {
   private let widgetEngine: WidgetEngine
   private let aeroSpaceService: AeroSpaceService
   private let socketCommandAdapter: RuntimeSocketCommandAdapter
+  private let rebindInstanceLock: @MainActor @Sendable (String) -> Bool
 
   private var lifecycle = RuntimeLifecycleStateMachine()
 
-  init(logger: ProcessLogger, services: AppServices) {
+  init(
+    logger: ProcessLogger,
+    services: AppServices,
+    rebindInstanceLock: @escaping @MainActor @Sendable (String) -> Bool
+  ) {
     self.logger = logger
     self.services = services
+    self.rebindInstanceLock = rebindInstanceLock
     self.configManager = services.configManager
     self.aeroSpaceService = services.aeroSpaceService
     self.configWatcherCoordinator = ConfigWatcherCoordinator(
@@ -165,6 +171,9 @@ actor RuntimeCoordinator {
     let socketPath = SharedPathDefaults.easyBarSocketPath(
       in: result.snapshot.app.runtimeDirectory
     )
+    let previousSocketPath = SharedPathDefaults.easyBarSocketPath(
+      in: result.previousSnapshot.app.runtimeDirectory
+    )
     let socketOutcome = await socketCommandAdapter.reloadConfiguration(socketPath: socketPath)
     guard socketOutcome.succeeded else {
       await configManager.restorePreviousState()
@@ -173,6 +182,22 @@ actor RuntimeCoordinator {
         .field("socket_path", "\(socketPath)")
       )
       return false
+    }
+
+    if result.snapshot.app.lockDirectory != result.previousSnapshot.app.lockDirectory {
+      let acquired = await rebindInstanceLock(result.snapshot.app.lockDirectory)
+      guard acquired else {
+        let rollbackOutcome = await socketCommandAdapter.reloadConfiguration(
+          socketPath: previousSocketPath
+        )
+        await configManager.restorePreviousState()
+        logger.error(
+          "config reload rolled back after instance lock failure",
+          .field("lock_directory", result.snapshot.app.lockDirectory),
+          .field("socket_rollback_succeeded", rollbackOutcome.succeeded)
+        )
+        return false
+      }
     }
 
     guard await runLifecycleStep(generation: generation, operation: operation, configureLogging)
