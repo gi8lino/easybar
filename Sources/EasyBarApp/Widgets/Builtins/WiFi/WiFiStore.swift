@@ -3,8 +3,6 @@ import Foundation
 
 @MainActor
 final class NativeWiFiStore: ObservableObject {
-  static let didChangeNotification = Notification.Name("easybar.native-wifi-store.did-change")
-
   @Published private(set) var snapshot: NetworkAgentSnapshot?
   private var lastPublishedSignature: NetworkAgentSnapshotRenderSignature?
   let logger: ProcessLogger
@@ -50,6 +48,5 @@ final class NativeWiFiStore: ObservableObject {
   /// Publishes one snapshot change.
   private func publish(snapshot: NetworkAgentSnapshot?) {
     self.snapshot = snapshot
-    NotificationCenter.default.post(name: Self.didChangeNotification, object: snapshot)
   }
 }
