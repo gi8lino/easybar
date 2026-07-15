@@ -19,12 +19,6 @@ final class NetworkAgentClient: @unchecked Sendable {
   }
 
   /// Shared network-agent client.
-  nonisolated(unsafe) static var shared = NetworkAgentClient(
-    logger: ProcessLogger(label: "easybar.bootstrap.network_agent"),
-    config: Config.makeUnloadedConfig().snapshot().networkAgent,
-    metricsCoordinator: .shared
-  )
-
   /// Logger used for network-agent diagnostics.
   private let logger: ProcessLogger
   /// Metrics recorder for network-agent lifecycle and messages.

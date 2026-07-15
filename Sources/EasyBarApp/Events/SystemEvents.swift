@@ -5,10 +5,6 @@ import Foundation
 /// Observes AppKit and workspace system events.
 final class SystemEvents: @unchecked Sendable {
   /// Shared system event source.
-  nonisolated(unsafe) static var shared = SystemEvents(
-    logger: ProcessLogger(label: "easybar.bootstrap.system_events")
-  )
-
   /// Logger used for system event diagnostics.
   private let logger: ProcessLogger
 

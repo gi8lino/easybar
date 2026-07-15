@@ -96,13 +96,7 @@ struct AppServices: @unchecked Sendable {
   private func installSharedCompatibilityLayer() {
     MetricsCoordinator.shared = metricsCoordinator
     EventHub.shared = eventHub
-    EventManager.shared = eventManager
-    SystemEvents.shared = systemEvents
-    PowerEvents.shared = powerEvents
-    TimerEvents.shared = timerEvents
-    VolumeEvents.shared = volumeEvents
     CalendarAgentEventRelay.shared = calendarAgentEventRelay
-    NetworkAgentClient.shared = networkAgentClient
     NativeWiFiStore.shared = nativeWiFiStore
     NativeMonthCalendarStore.shared = nativeMonthCalendarStore
     NativeUpcomingCalendarStore.shared = nativeUpcomingCalendarStore

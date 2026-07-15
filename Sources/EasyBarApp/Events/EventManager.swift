@@ -5,14 +5,6 @@ import Foundation
 @MainActor
 final class EventManager {
   /// Shared event manager instance.
-  static var shared = EventManager(
-    logger: ProcessLogger(label: "easybar.bootstrap.event_manager"),
-    systemEvents: .shared,
-    powerEvents: .shared,
-    timerEvents: .shared,
-    volumeEvents: .shared
-  )
-
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
   /// Native event source managed by subscription demand.
