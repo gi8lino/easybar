@@ -11,14 +11,14 @@ final class TimeNativeWidget: NativeWidget {
   private lazy var controller = FormattedClockNativeWidgetController(
     rootID: rootID,
     widgetStore: widgetStore,
-    eventHub: eventHub
-  ) { [config] in
-    .init(
-      placement: config.placement,
-      style: config.style,
-      format: config.format
-    )
-  }
+    eventHub: eventHub,
+    snapshot:
+      .init(
+        placement: config.placement,
+        style: config.style,
+        format: config.format
+      )
+  )
 
   /// Creates the native time widget from an immutable config section.
   init(config: Config.TimeBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {

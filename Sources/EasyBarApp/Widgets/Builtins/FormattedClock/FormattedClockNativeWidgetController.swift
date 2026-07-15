@@ -39,7 +39,7 @@ final class FormattedClockNativeWidgetController: NativeWidget {
   let rootID: String
   let widgetStore: WidgetStore
 
-  private let snapshotProvider: () -> Snapshot
+  private let snapshot: Snapshot
   private let eventObserver: EasyBarEventObserver
   private let formatterCache = FormattedDateFormatterCache()
 
@@ -47,12 +47,12 @@ final class FormattedClockNativeWidgetController: NativeWidget {
     rootID: String,
     widgetStore: WidgetStore,
     eventHub: EventHub,
-    snapshotProvider: @escaping () -> Snapshot
+    snapshot: Snapshot
   ) {
     self.rootID = rootID
     self.widgetStore = widgetStore
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
-    self.snapshotProvider = snapshotProvider
+    self.snapshot = snapshot
   }
 
   var appEventSubscriptions: Set<String> {
@@ -81,13 +81,11 @@ final class FormattedClockNativeWidgetController: NativeWidget {
   }
 
   private var refreshEvent: AppEvent {
-    return FormattedClockRefreshPolicy.event(for: snapshotProvider().format)
+    return FormattedClockRefreshPolicy.event(for: snapshot.format)
   }
 
   /// Publishes the current formatted timestamp.
   private func publish() {
-    let snapshot = snapshotProvider()
-
     let node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,
       placement: snapshot.placement,
