@@ -32,6 +32,11 @@ let package = Package(
   ],
   targets: [
     .executableTarget(
+      name: "EasyBarGenerateBuildInfo",
+      path: "Sources/EasyBarGenerateBuildInfo",
+      swiftSettings: strictConcurrencySettings
+    ),
+    .executableTarget(
       name: "EasyBarGenerateConfig",
       dependencies: [
         "EasyBarConfigSchema"
@@ -184,6 +189,7 @@ let package = Package(
         "EasyBarConfigParsing",
         "EasyBarConfigSchema",
         "EasyBarCalendarConfig",
+        "EasyBarCalendarCore",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
       ],
@@ -192,7 +198,10 @@ let package = Package(
     ),
     .plugin(
       name: "EasyBarBuildInfoPlugin",
-      capability: .buildTool()
+      capability: .buildTool(),
+      dependencies: [
+        "EasyBarGenerateBuildInfo"
+      ]
     ),
   ]
 )

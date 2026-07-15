@@ -151,7 +151,7 @@ make print-local-version
 ~/.local/bin/easybar --version
 ```
 
-Before invoking SwiftPM, the build helper writes the selected version to the untracked `.build/easybar-build-version` input file. The SwiftPM plugin reads that file and generates `BuildInfo` inside its plugin work directory. The file is rewritten only when the selected version changes, so repeated product builds do not invalidate SwiftPM unnecessarily. You can inspect the active compiler input directly with `cat .build/easybar-build-version`; a direct SwiftPM build with no version file falls back to `dev`.
+Before invoking SwiftPM, the build helper writes the selected version to the untracked `.build/easybar-build-version` input file. The SwiftPM plugin invokes the small `EasyBarGenerateBuildInfo` Swift tool, which reads that input and writes `BuildInfo` inside the plugin work directory. The file is rewritten only when the selected version changes, so repeated product builds do not invalidate SwiftPM unnecessarily. You can inspect the active compiler input directly with `cat .build/easybar-build-version`; a direct SwiftPM build with no version file falls back to `dev`.
 
 The Lua API version is stamped only into the copied file under `dist/`. Local and release builds never rewrite tracked source files, so building does not create version-only changes that could be committed accidentally. Release builds remain unchanged from a user perspective and continue to write the version derived from the release tag before compiling in CI.
 
