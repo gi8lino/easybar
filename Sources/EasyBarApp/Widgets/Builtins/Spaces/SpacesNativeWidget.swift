@@ -9,7 +9,6 @@ final class SpacesNativeWidget: NativeWidget {
 
   private let config: Config.SpacesBuiltinConfig
   private let aeroSpaceService: AeroSpaceService
-  private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
   /// Creates the native spaces widget from an immutable config section.
   init(
@@ -24,9 +23,7 @@ final class SpacesNativeWidget: NativeWidget {
 
   /// Starts the spaces widget and registers AeroSpace interest.
   func start() {
-    aeroSpaceService.registerConsumer(rootID)
-
-    aeroSpaceObserver.start { [weak self] in
+    aeroSpaceService.registerConsumer(rootID) { [weak self] in
       self?.publish()
     }
 
@@ -35,7 +32,6 @@ final class SpacesNativeWidget: NativeWidget {
 
   /// Stops the spaces widget and removes observers.
   func stop() {
-    aeroSpaceObserver.stop()
     aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }

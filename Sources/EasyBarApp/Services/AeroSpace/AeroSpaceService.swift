@@ -39,7 +39,7 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
   /// Locked service coordination state.
   private struct CoordinationState {
     /// Registered widget consumers.
-    var consumers = Set<String>()
+    var consumers: [String: @MainActor @Sendable () -> Void] = [:]
     /// Whether the service lifecycle is running.
     var running = false
     /// Whether AeroSpace observation is active for at least one consumer.
@@ -136,9 +136,12 @@ extension AeroSpaceService {
   }
 
   /// Registers one widget that depends on AeroSpace state.
-  func registerConsumer(_ id: String) {
+  func registerConsumer(
+    _ id: String,
+    onUpdate: @escaping @MainActor @Sendable () -> Void
+  ) {
     let count = withLock { coordination -> Int in
-      coordination.consumers.insert(id)
+      coordination.consumers[id] = onUpdate
       return coordination.consumers.count
     }
 
@@ -156,7 +159,7 @@ extension AeroSpaceService {
   /// Unregisters one widget that no longer depends on AeroSpace state.
   func unregisterConsumer(_ id: String) {
     let count = withLock { coordination -> Int in
-      coordination.consumers.remove(id)
+      coordination.consumers.removeValue(forKey: id)
       return coordination.consumers.count
     }
 
@@ -438,7 +441,9 @@ extension AeroSpaceService {
         .field("layout", snapshot.focusedLayoutMode.rawValue)
       )
 
-      NotificationCenter.default.post(name: .easyBarAeroSpaceDidUpdate, object: nil)
+      for callback in self.withLock({ Array($0.consumers.values) }) {
+        callback()
+      }
 
       self.logger.debug("aerospace reloadState end with changes")
     }
@@ -556,9 +561,4 @@ extension AeroSpaceService {
   private func withLock<T>(_ body: @Sendable (inout CoordinationState) -> T) -> T {
     coordination.withLock(body)
   }
-}
-
-extension Notification.Name {
-  /// Notification posted when AeroSpace-derived state changes.
-  static let easyBarAeroSpaceDidUpdate = Notification.Name("easybar.aerospace.did-update")
 }

@@ -9,7 +9,6 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   private let config: Config.AeroSpaceModeBuiltinConfig
   private let aeroSpaceService: AeroSpaceService
-  private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
   /// Creates the native AeroSpace mode widget from an immutable config section.
   init(
@@ -24,9 +23,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
-    aeroSpaceService.registerConsumer(rootID)
-
-    aeroSpaceObserver.start { [weak self] in
+    aeroSpaceService.registerConsumer(rootID) { [weak self] in
       self?.publish()
     }
 
@@ -35,7 +32,6 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   /// Stops the widget and removes observers.
   func stop() {
-    aeroSpaceObserver.stop()
     aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }

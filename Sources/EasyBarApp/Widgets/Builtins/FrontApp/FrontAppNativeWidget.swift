@@ -9,7 +9,6 @@ final class FrontAppNativeWidget: NativeWidget {
 
   private let config: Config.FrontAppBuiltinConfig
   private let aeroSpaceService: AeroSpaceService
-  private let aeroSpaceObserver = AeroSpaceUpdateObserver()
 
   /// Creates the native front-app widget from an immutable config section.
   init(
@@ -24,9 +23,7 @@ final class FrontAppNativeWidget: NativeWidget {
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
-    aeroSpaceService.registerConsumer(rootID)
-
-    aeroSpaceObserver.start { [weak self] in
+    aeroSpaceService.registerConsumer(rootID) { [weak self] in
       self?.publish()
     }
 
@@ -35,7 +32,6 @@ final class FrontAppNativeWidget: NativeWidget {
 
   /// Stops the widget and removes observers.
   func stop() {
-    aeroSpaceObserver.stop()
     aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }
