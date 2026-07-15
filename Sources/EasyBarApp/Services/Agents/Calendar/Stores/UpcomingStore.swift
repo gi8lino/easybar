@@ -12,7 +12,6 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
   @Published private(set) var snapshot: EasyBarShared.CalendarAgentSnapshot?
   @Published private(set) var events: [EasyBarShared.CalendarAgentEvent] = []
 
-  private let calendar = Calendar.current
   let logger: ProcessLogger
 
   init(logger: ProcessLogger) {
@@ -36,65 +35,6 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
     publish(snapshot: nil)
   }
 
-  /// Returns all events overlapping one day.
-  func overlappingEvents(on date: Date) -> [EasyBarShared.CalendarAgentEvent] {
-    let startOfDay = calendar.startOfDay(for: date)
-    guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
-      logger.debug(
-        "upcoming calendar store overlappingEvents(on:) failed",
-        .field("date", "\(startOfDay)"),
-      )
-      return []
-    }
-
-    let matches = events.filter { event in
-      event.startDate < endOfDay && event.endDate > startOfDay
-    }
-
-    logger.debug(
-      "upcoming calendar store overlappingEvents(on:)",
-      .field("date", "\(debugDate(startOfDay))"),
-      .field("matches", "\(matches.count)"),
-    )
-
-    return matches
-  }
-
-  /// Returns all events overlapping the inclusive day range.
-  func overlappingEvents(from startDate: Date, to endDate: Date) -> [EasyBarShared
-    .CalendarAgentEvent]
-  {
-    let startOfRange = calendar.startOfDay(for: startDate)
-    let endDayStart = calendar.startOfDay(for: endDate)
-
-    guard let endOfRange = calendar.date(byAdding: .day, value: 1, to: endDayStart) else {
-      logger.debug(
-        "upcoming calendar store overlappingEvents(from:to:) failed",
-        .field("start", "\(debugDate(startOfRange))"),
-        .field("end", "\(debugDate(endDayStart))"),
-      )
-      return []
-    }
-
-    let matches = events.filter { event in
-      event.startDate < endOfRange && event.endDate > startOfRange
-    }
-
-    logger.debug(
-      "upcoming calendar store overlappingEvents(from:to:)",
-      .field("start", "\(debugDate(startOfRange))"),
-      .field("end", "\(debugDate(endDayStart))"),
-      .field("matches", "\(matches.count)"),
-    )
-
-    return matches
-  }
-
-  /// Returns whether one day has at least one event.
-  func hasEvents(on date: Date) -> Bool {
-    return !overlappingEvents(on: date).isEmpty
-  }
-
   /// Publishes one calendar snapshot update.
   private func publish(snapshot: EasyBarShared.CalendarAgentSnapshot?) {
     self.snapshot = snapshot
@@ -105,11 +45,5 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
       .field("snapshot_present", "\(snapshot != nil)"),
       .field("events", "\(self.events.count)"),
     )
-  }
-
-  /// Formats one debug date string.
-  private func debugDate(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    return formatter.string(from: date)
   }
 }
