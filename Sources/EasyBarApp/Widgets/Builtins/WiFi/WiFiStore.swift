@@ -29,7 +29,7 @@ final class NativeWiFiStore: ObservableObject {
       .field("ipv6_present", "\(snapshot.ipv6Address != nil)"),
       .field("rssi", "\(snapshot.rssi.map(String.init) ?? "<none>")"),
     )
-    publish(snapshot: snapshot)
+    self.snapshot = snapshot
     return true
   }
 
@@ -41,12 +41,7 @@ final class NativeWiFiStore: ObservableObject {
     guard snapshot != nil else { return false }
     lastPublishedSignature = nil
     logger.debug("wifi widget cleared")
-    publish(snapshot: nil)
+    snapshot = nil
     return true
-  }
-
-  /// Publishes one snapshot change.
-  private func publish(snapshot: NetworkAgentSnapshot?) {
-    self.snapshot = snapshot
   }
 }
