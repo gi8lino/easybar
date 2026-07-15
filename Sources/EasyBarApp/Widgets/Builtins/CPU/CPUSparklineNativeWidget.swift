@@ -22,22 +22,10 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private var lastSampleDate: Date?
   private var isRunning = false
 
-  private lazy var renderer = CPURenderer(rootID: rootID)
-
   /// Creates the native CPU widget from an immutable config section.
   init(config: Config.CPUBuiltinConfig, widgetStore: WidgetStore) {
     self.config = config
     self.widgetStore = widgetStore
-  }
-
-  /// Immutable render input for the CPU widget.
-  struct Snapshot {
-    let placement: Config.BuiltinWidgetPlacement
-    let style: Config.BuiltinWidgetStyle
-    let label: String
-    let colorHex: String?
-    let lineWidth: Double
-    let samples: [Double]
   }
 
   /// Starts CPU sampling and publishes the initial widget state.
@@ -123,22 +111,19 @@ final class CPUSparklineNativeWidget: NativeWidget {
     publish()
   }
 
-  /// Publishes the current snapshot to the widget store.
+  /// Publishes the current CPU sparkline to the widget store.
   private func publish() {
-    let snapshot = makeSnapshot()
-    applyNodes(renderer.makeNodes(snapshot: snapshot))
-  }
-
-  /// Builds one render snapshot from config and current samples.
-  private func makeSnapshot() -> Snapshot {
-    return Snapshot(
-      placement: config.placement,
-      style: config.style,
-      label: config.label,
-      colorHex: config.colorHex ?? config.style.textColorHex,
-      lineWidth: config.lineWidth,
-      samples: samples
-    )
+    applyNodes([
+      BuiltinNativeNodeFactory.makeSparklineNode(
+        rootID: rootID,
+        placement: config.placement,
+        style: config.style,
+        text: config.label,
+        values: samples,
+        lineWidth: config.lineWidth,
+        color: config.colorHex ?? config.style.textColorHex
+      )
+    ])
   }
 
   /// Appends one clamped CPU sample and keeps the configured history size.
