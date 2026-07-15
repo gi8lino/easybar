@@ -113,12 +113,8 @@ final class AppController {
     signalHandler.start()
     logger.debug("signal handler started")
 
-    barRuntimeState = .transitioning
-    Task {
-      await runtimeCoordinator.start()
-      await MainActor.run { [weak self] in
-        self?.barRuntimeState = .running
-      }
+    runBarLifecycleTransition(finalState: .running) { [weak self] in
+      await self?.runtimeCoordinator.start()
     }
     logger.debug("runtime coordinator start scheduled")
 
@@ -311,7 +307,10 @@ final class AppController {
     barLifecycleTask = Task { [weak self] in
       await operation()
       guard let self else { return }
-      self.barRuntimeState = finalState
+
+      if self.started {
+        self.barRuntimeState = finalState
+      }
       self.barLifecycleTask = nil
     }
   }
