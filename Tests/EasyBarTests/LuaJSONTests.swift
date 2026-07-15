@@ -30,7 +30,7 @@ final class LuaJSONTests: XCTestCase {
     let output = try runLua(
       """
       local json = dofile("Sources/EasyBarApp/Lua/easybar/json.lua")
-      local value = json.decode('"\\uD83D\\uDE00"')
+      local value = json.decode([["\\uD83D\\uDE00"]])
       assert(value == "😀")
       print(value)
       """
@@ -43,8 +43,8 @@ final class LuaJSONTests: XCTestCase {
     let output = try runLua(
       """
       local json = dofile("Sources/EasyBarApp/Lua/easybar/json.lua")
-      assert(not pcall(json.decode, '"\\uD83D"'))
-      assert(not pcall(json.decode, '"\\uDE00"'))
+      assert(not pcall(json.decode, [["\\uD83D"]]))
+      assert(not pcall(json.decode, [["\\uDE00"]]))
       assert(not pcall(json.encode, 0 / 0))
       assert(not pcall(json.encode, math.huge))
       assert(not pcall(json.decode, '1e9999'))
