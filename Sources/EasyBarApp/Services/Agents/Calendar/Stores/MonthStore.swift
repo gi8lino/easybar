@@ -13,6 +13,7 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   private var subscribedMonthRangeEnd: Date?
   private var focusedVisibleMonth: Date?
   private var subscribedMonthRadius: Int?
+  private let debugDateFormatter = ISO8601DateFormatter()
 
   let logger: ProcessLogger
 
@@ -118,7 +119,6 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
 
   /// Formats one debug date string.
   private func debugDate(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    return formatter.string(from: date)
+    return debugDateFormatter.string(from: date)
   }
 }
