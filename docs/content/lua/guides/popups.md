@@ -24,6 +24,36 @@ easybar.add(easybar.kind.item, "calendar_popup_label", {
 })
 ```
 
+## Interactive popup items
+
+Popup children subscribe to mouse events like bar items. Attach the subscription to the child
+node so `event.target_widget_id` identifies the control that was clicked.
+
+```lua
+local tools = easybar.add(easybar.kind.item, "tools", {
+    position = "right",
+    label = "Tools",
+    popup = {
+        drawing = true,
+    },
+})
+
+local refresh = easybar.add(easybar.kind.item, "tools_refresh", {
+    position = "popup." .. tools.name,
+    label = "Refresh",
+})
+
+refresh:subscribe(easybar.events.mouse.clicked, function(event)
+    if event.button == nil or event.button == easybar.events.mouse.left_button then
+        refresh:set({ label = "Refreshing…" })
+        -- Start the refresh work here.
+    end
+end)
+```
+
+Use a row or group when a popup needs several controls on the same line. Each child item can keep
+its own click handler.
+
 ## Show on hover
 
 ```lua

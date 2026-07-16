@@ -40,6 +40,22 @@ end)
 render()
 ```
 
+## Bundled Homebrew widget
+
+[`widgets/brew.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/brew.lua) is a complete
+example of a stateful popup widget. It:
+
+- checks formulae and casks with `brew outdated`
+- exposes Update and Upgrade actions as clickable popup children
+- runs Homebrew commands asynchronously so other widgets remain responsive
+- changes Update to Cancel while an operation is active
+- returns directly to the idle actions after cancellation while preserving the last known package list
+- writes command diagnostics to `brew-widget.log` under the configured EasyBar logging directory
+
+The widget is intentionally more extensive than the snippets on this page. Use it as a reference
+for command chaining, cancellation, structured state rendering, popup rows, error presentation,
+and bounded file logging.
+
 ## Clock widget
 
 ```lua

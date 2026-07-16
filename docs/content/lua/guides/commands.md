@@ -85,6 +85,39 @@ end)
 local cancellation_requested = easybar.cancel_async(active_job)
 ```
 
+Restore the widget's idle state from the async callback, because the cancellation request is
+asynchronous. Whether to refresh data afterwards is up to the widget. If the last known data is
+still useful, keep it and render the normal action again:
+
+```lua
+local running = false
+local active_job
+
+local function render()
+    action:set({ label = running and "Cancel" or "Update" })
+end
+
+local function start_update()
+    running = true
+    render()
+
+    active_job = easybar.exec_async("long-running-update", {}, function(output, code)
+        active_job = nil
+        running = false
+
+        if code ~= 0 and code ~= 130 then
+            easybar.log(easybar.level.warn, "update failed", code, output)
+        end
+
+        render()
+    end)
+end
+```
+
+Do not start a follow-up check merely to finish cancellation unless the cancelled command may
+have changed the data you display. A separate refresh produces an additional busy state after the
+user has already asked the operation to stop.
+
 `easybar.cancel_async(token)` returns `true` when the token still identifies a pending command and
 the cancellation request was sent. It returns `false` when the command already completed or the
 token is unknown. The return value confirms the request, not that the process has already exited.
