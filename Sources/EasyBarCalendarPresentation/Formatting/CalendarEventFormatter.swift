@@ -23,18 +23,6 @@ public enum CalendarEventFormatter {
     return endTime
   }
 
-  /// Returns the rendered departure time when travel time is present.
-  public static func travelDepartureTimeText(
-    startDate: Date,
-    travelTimeSeconds: TimeInterval,
-    calendar: Calendar
-  ) -> String? {
-    guard travelTimeSeconds > 0 else { return nil }
-
-    let departureDate = startDate.addingTimeInterval(-travelTimeSeconds)
-    return formattedEventTime(departureDate, calendar: calendar)
-  }
-
   /// Returns the rendered travel-time text when available.
   public static func travelTimeText(travelTimeSeconds: TimeInterval) -> String? {
     guard travelTimeSeconds > 0 else { return nil }
