@@ -232,11 +232,16 @@ extension BatteryNativeWidget {
     config: Config.BatteryBuiltinConfig,
     text: String
   ) -> Bool {
-    NativeWidgetHoverSupport.showsInlineLabel(
-      text: text,
-      mode: config.displayMode,
-      isHovered: isHovered
-    )
+    guard !text.isEmpty else { return false }
+
+    switch config.displayMode {
+    case .none, .tooltip:
+      return false
+    case .expand:
+      return isHovered
+    case .always:
+      return true
+    }
   }
 
   /// Hover only affects layout for inline expand mode.

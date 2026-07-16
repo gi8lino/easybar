@@ -17,22 +17,4 @@ enum NativeWidgetHoverSupport {
       return false
     }
   }
-
-  /// Returns whether an inline label should be visible.
-  static func showsInlineLabel(
-    text: String,
-    mode: Config.BuiltinBatteryDisplayMode,
-    isHovered: Bool
-  ) -> Bool {
-    guard !text.isEmpty else { return false }
-
-    switch mode {
-    case .none, .tooltip:
-      return false
-    case .expand:
-      return isHovered
-    case .always:
-      return true
-    }
-  }
 }
