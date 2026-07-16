@@ -8,15 +8,9 @@ enum CalendarEventActionFactory {
   /// Returns the default action set used by calendar popups.
   static func makeActions() -> CalendarEventActions {
     CalendarEventActions(
-      copyDetails: { event in
-        copyDetails(for: event)
-      },
-      openURL: { event in
-        openURL(for: event)
-      },
-      openCalendar: { _ in
-        openCalendarApp()
-      }
+      copyDetails: copyDetails(for:),
+      openURL: openURL(for:),
+      openCalendar: { _ in openCalendarApp() }
     )
   }
 
