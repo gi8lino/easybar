@@ -29,6 +29,11 @@ final class CalendarEventComposerPanelController: ObservableObject {
     self.dependencies = dependencies
   }
 
+  /// Creates the app-wired composer panel used by calendar popup adapters.
+  convenience init(services: AppViewServices) {
+    self.init(dependencies: .live(services: services))
+  }
+
   /// Presents the composer panel for one new appointment.
   func present(
     defaultDate: Date,

@@ -10,9 +10,7 @@ struct NativeMonthCalendarPopupView: View {
   init(services: AppViewServices) {
     self.services = services
     _composerPanel = StateObject(
-      wrappedValue: CalendarEventComposerPanelController(
-        dependencies: .live(services: services)
-      )
+      wrappedValue: CalendarEventComposerPanelController(services: services)
     )
   }
 
