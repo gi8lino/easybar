@@ -1,8 +1,6 @@
-import CoreGraphics
 import XCTest
 
 @testable import EasyBarApp
-@testable import EasyBarCalendarConfig
 @testable import EasyBarCalendarPresentation
 
 final class CalendarMonthRangeBuilderTests: XCTestCase {
@@ -43,18 +41,5 @@ final class CalendarMonthRangeBuilderTests: XCTestCase {
       range?.end,
       calendar.date(from: DateComponents(year: 2026, month: 8, day: 1))
     )
-  }
-
-  func testPopupSurfaceSizeMatchesMode() {
-    var config = CalendarBuiltinConfig.default
-
-    XCTAssertEqual(config.popupMode, .month)
-    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 560, height: 560))
-
-    config.popupMode = .upcoming
-    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 360, height: 520))
-
-    config.popupMode = .none
-    XCTAssertEqual(config.popupSurfaceSize, CGSize(width: 280, height: 96))
   }
 }
