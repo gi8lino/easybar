@@ -56,20 +56,16 @@ final class BatteryNativeWidget: NativeWidget {
 
   /// Starts the widget and battery refresh handling.
   func start() {
-    NativeWidgetEventDriver.start(
-      observer: eventObserver,
+    eventObserver.start(
       eventNames: appEventSubscriptions.union([
         WidgetEvent.mouseEntered.rawValue,
         WidgetEvent.mouseExited.rawValue,
       ]),
-      widgetTargetIDs: [rootID],
-      appHandler: { [weak self] payload in
-        self?.handleAppEvent(payload) ?? false
-      },
-      widgetHandler: { [weak self] payload in
-        self?.handleWidgetEvent(payload)
-      }
-    )
+      widgetTargetIDs: [rootID]
+    ) { [weak self] payload in
+      guard let self, !self.handleAppEvent(payload) else { return }
+      self.handleWidgetEvent(payload)
+    }
 
     timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
       guard let self else { return }

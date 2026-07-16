@@ -53,22 +53,18 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
   /// Starts the volume widget.
   func start() {
-    NativeWidgetEventDriver.start(
-      observer: eventObserver,
+    eventObserver.start(
       eventNames: appEventSubscriptions.union([
         WidgetEvent.mouseEntered.rawValue,
         WidgetEvent.mouseExited.rawValue,
         WidgetEvent.sliderPreview.rawValue,
         WidgetEvent.sliderChanged.rawValue,
       ]),
-      widgetTargetIDs: [rootID, "\(rootID)_slider"],
-      appHandler: { [weak self] payload in
-        self?.handleAppEvent(payload) ?? false
-      },
-      widgetHandler: { [weak self] payload in
-        self?.handleWidgetEvent(payload)
-      }
-    )
+      widgetTargetIDs: [rootID, "\(rootID)_slider"]
+    ) { [weak self] payload in
+      guard let self, !self.handleAppEvent(payload) else { return }
+      self.handleWidgetEvent(payload)
+    }
 
     publish()
   }
