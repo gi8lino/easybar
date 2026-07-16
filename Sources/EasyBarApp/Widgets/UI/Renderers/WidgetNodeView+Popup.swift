@@ -40,7 +40,7 @@ extension WidgetNodeView {
     cancelPopupCloseCheck()
     popupCloseTask = Task { @MainActor in
       do {
-        try await WidgetHoverDelay.sleep()
+        try await Task.sleep(nanoseconds: widgetHoverDelayNanoseconds)
       } catch {
         return
       }

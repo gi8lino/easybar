@@ -2,6 +2,8 @@ import AppKit
 import EasyBarShared
 import SwiftUI
 
+let widgetHoverDelayNanoseconds: UInt64 = 80_000_000
+
 enum WidgetScrollDirectionResolver {
   static func resolve(deltaY: Double) -> ScrollDirection? {
     guard deltaY.isFinite else { return nil }
@@ -420,7 +422,7 @@ final class WidgetHoverState: @unchecked Sendable {
 
     let task = Task { [weak self] in
       do {
-        try await WidgetHoverDelay.sleep()
+        try await Task.sleep(nanoseconds: widgetHoverDelayNanoseconds)
       } catch {
         return
       }
