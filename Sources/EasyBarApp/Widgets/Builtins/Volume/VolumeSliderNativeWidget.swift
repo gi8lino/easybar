@@ -23,7 +23,6 @@ final class VolumeSliderNativeWidget: NativeWidget {
   var autoHideTask: Task<Void, Never>?
   var autoHideTaskID: UInt64?
   var nextAutoHideTaskID: UInt64 = 1
-  private lazy var renderer = VolumeRenderer(rootID: rootID)
 
   struct SystemVolumeState {
     let clampedSystem: Double
@@ -84,7 +83,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   /// Publishes the current volume widget state.
   func publish() {
     let snapshot = makeSnapshot()
-    applyNodes(renderer.makeNodes(snapshot: snapshot))
+    applyNodes(makeNodes(snapshot: snapshot))
   }
 
   /// Returns the current render snapshot.
@@ -113,5 +112,81 @@ final class VolumeSliderNativeWidget: NativeWidget {
       step: volumeState.step,
       isHovered: isHovered
     )
+  }
+
+  private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    guard !snapshot.config.expandToSliderOnHover else {
+      return makeExpandableNodes(snapshot: snapshot)
+    }
+
+    return [
+      BuiltinNativeNodeFactory.makeProgressSliderNode(
+        rootID: rootID,
+        placement: snapshot.placement,
+        style: snapshot.style,
+        text: snapshot.text,
+        value: snapshot.value,
+        min: snapshot.config.minValue,
+        max: snapshot.config.maxValue,
+        step: snapshot.step,
+        width: snapshot.config.sliderWidth
+      )
+    ]
+  }
+
+  private func makeExpandableNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    var nodes: [WidgetNodeState] = [
+      BuiltinNativeNodeFactory.makeRowContainerNode(
+        rootID: rootID,
+        placement: snapshot.placement,
+        style: snapshot.style
+      )
+    ]
+
+    if !snapshot.style.icon.isEmpty {
+      nodes.append(
+        BuiltinNativeNodeFactory.makeChildItemNode(
+          rootID: rootID,
+          parentID: rootID,
+          childID: "\(rootID)_icon",
+          position: snapshot.placement.position,
+          order: 0,
+          icon: snapshot.style.icon,
+          color: snapshot.style.textColorHex
+        )
+      )
+    }
+
+    nodes.append(
+      BuiltinNativeNodeFactory.makeChildItemNode(
+        rootID: rootID,
+        parentID: rootID,
+        childID: "\(rootID)_label",
+        position: snapshot.placement.position,
+        order: 1,
+        text: snapshot.text,
+        color: snapshot.style.textColorHex,
+        visible: snapshot.isHovered && !snapshot.text.isEmpty
+      )
+    )
+
+    nodes.append(
+      BuiltinNativeNodeFactory.makeChildProgressSliderNode(
+        rootID: rootID,
+        parentID: rootID,
+        childID: "\(rootID)_slider",
+        position: snapshot.placement.position,
+        order: 2,
+        value: snapshot.value,
+        min: snapshot.config.minValue,
+        max: snapshot.config.maxValue,
+        step: snapshot.step,
+        color: snapshot.style.textColorHex,
+        visible: snapshot.isHovered,
+        width: snapshot.config.sliderWidth
+      )
+    )
+
+    return nodes
   }
 }
