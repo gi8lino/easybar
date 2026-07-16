@@ -735,14 +735,6 @@ local function action_button_labels()
 		return "Upgrade", "Update"
 	end
 
-	if state.phase == "upgrading" then
-		return "Upgrading…", "Working…"
-	end
-
-	if state.phase == "updating" then
-		return "Working…", "Updating…"
-	end
-
 	if state.phase == "checking" then
 		return "Working…", "Checking…"
 	end
