@@ -925,7 +925,7 @@ local function start_operation(phase, status)
 	render()
 end
 
---- Refreshes package state after an update or upgrade was cancelled.
+--- Returns to the previous package state after an update or upgrade was cancelled.
 finish_cancelled_operation = function()
 	local kind = active_operation_kind or "operation"
 	cancellation_requested = false
@@ -933,26 +933,10 @@ finish_cancelled_operation = function()
 	append_log_marker(kind, "cancelled")
 	prune_brew_log()
 
-	state.phase = "checking"
-	state.status = (kind == "upgrade" and "Upgrade" or "Update") .. " cancelled. Refreshing outdated packages…"
+	running = false
+	state.phase = "ready"
+	state.status = (kind == "upgrade" and "Upgrade" or "Update") .. " cancelled."
 	render()
-
-	run_outdated_json(function(output, code)
-		running = false
-
-		if code ~= 0 then
-			state.error = make_error(
-				"Could not refresh after cancellation",
-				"brew outdated failed with exit code " .. tostring(code),
-				output
-			)
-			state.phase = "error"
-		else
-			apply_outdated_result(output)
-		end
-
-		render()
-	end)
 end
 
 --- Cancels the active update or upgrade command and its process group.
