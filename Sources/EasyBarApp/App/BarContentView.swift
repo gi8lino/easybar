@@ -5,21 +5,22 @@ import SwiftUI
 struct BarContentView: View {
   let logger: ProcessLogger
   @EnvironmentObject private var configStore: ConfigSnapshotStore
+  @EnvironmentObject private var widgetStore: WidgetStore
   private let globalBarFont = Font.custom("Symbols Nerd Font Mono", size: 13)
 
   var body: some View {
     let snapshot = configStore.snapshot
 
     HStack(spacing: 8) {
-      WidgetBar(position: .left, logger: logger)
+      widgetBar(position: .left)
 
       Spacer(minLength: 0)
 
-      WidgetBar(position: .center, logger: logger)
+      widgetBar(position: .center)
 
       Spacer(minLength: 0)
 
-      WidgetBar(position: .right, logger: logger)
+      widgetBar(position: .right)
     }
     .font(globalBarFont)
     .padding(.horizontal, snapshot.bar.paddingX)
@@ -39,5 +40,13 @@ struct BarContentView: View {
     }
     .foregroundStyle(Theme.defaultTextColor(snapshot: snapshot))
     .ignoresSafeArea()
+  }
+
+  private func widgetBar(position: WidgetPosition) -> some View {
+    HStack(spacing: 4) {
+      ForEach(widgetStore.topLevelNodes(for: position)) { node in
+        WidgetNodeView(node: node, logger: logger)
+      }
+    }
   }
 }
