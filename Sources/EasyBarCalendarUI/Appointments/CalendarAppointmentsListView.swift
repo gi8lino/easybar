@@ -214,9 +214,15 @@ public struct CalendarAppointmentsListView: View {
             .foregroundStyle(color(style.secondaryTextColorHex))
         }
       } else {
-        Text(CalendarEventFormatter.formattedEventTime(event.startDate, calendar: calendar))
-          .font(.system(size: 13, weight: .medium))
-          .foregroundStyle(color(style.eventTextColorHex))
+        Text(
+          CalendarDateFormatter.string(
+            from: event.startDate,
+            calendar: calendar,
+            dateFormat: "HH:mm"
+          )
+        )
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(color(style.eventTextColorHex))
       }
 
       if CalendarAgendaBuilder.isBirthdayEvent(event) {

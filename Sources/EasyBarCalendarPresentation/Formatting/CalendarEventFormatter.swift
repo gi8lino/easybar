@@ -2,11 +2,6 @@ import Foundation
 
 /// Formatting helpers for calendar event rows.
 public enum CalendarEventFormatter {
-  /// Formats one event time using the provided calendar.
-  public static func formattedEventTime(_ date: Date, calendar: Calendar) -> String {
-    CalendarDateFormatter.string(from: date, calendar: calendar, dateFormat: "HH:mm")
-  }
-
   /// Returns the rendered end time for timed events when it differs from the start.
   public static func endTimeText(
     startDate: Date,
@@ -16,8 +11,16 @@ public enum CalendarEventFormatter {
   ) -> String? {
     guard !isAllDay, endDate > startDate else { return nil }
 
-    let startTime = formattedEventTime(startDate, calendar: calendar)
-    let endTime = formattedEventTime(endDate, calendar: calendar)
+    let startTime = CalendarDateFormatter.string(
+      from: startDate,
+      calendar: calendar,
+      dateFormat: "HH:mm"
+    )
+    let endTime = CalendarDateFormatter.string(
+      from: endDate,
+      calendar: calendar,
+      dateFormat: "HH:mm"
+    )
     guard startTime != endTime else { return nil }
 
     return endTime
