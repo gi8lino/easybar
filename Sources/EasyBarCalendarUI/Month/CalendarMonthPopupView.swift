@@ -115,7 +115,7 @@ public struct CalendarMonthPopupView<Store: CalendarMonthPopupStore>: View {
       RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous)
         .stroke(
           color(config.borderColorHex),
-          lineWidth: CalendarUIPrimitives.borderLineWidth(config.borderWidth)
+          lineWidth: max(CGFloat(config.borderWidth), 0)
         )
     }
     .clipShape(RoundedRectangle(cornerRadius: popupCornerRadius, style: .continuous))

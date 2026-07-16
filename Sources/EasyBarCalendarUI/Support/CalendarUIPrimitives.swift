@@ -9,11 +9,6 @@ enum CalendarUIPrimitives {
   static func iconFont(size: CGFloat) -> Font {
     .custom(iconFontFamily, size: size)
   }
-
-  /// Returns the visible stroke width for a configured border width.
-  static func borderLineWidth(_ configuredWidth: Double) -> CGFloat {
-    max(CGFloat(configuredWidth), 0)
-  }
 }
 
 extension String {
