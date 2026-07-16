@@ -24,7 +24,6 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
     )
     self.snapshot = snapshot
     events = snapshot.events
-    logPublishedSnapshot()
   }
 
   /// Clears the current calendar snapshot.
@@ -32,14 +31,5 @@ final class NativeUpcomingCalendarStore: CalendarUpcomingPopupStore {
     logger.debug("upcoming calendar popup cleared")
     snapshot = nil
     events = []
-    logPublishedSnapshot()
-  }
-
-  private func logPublishedSnapshot() {
-    logger.debug(
-      "upcoming calendar store published",
-      .field("snapshot_present", "\(snapshot != nil)"),
-      .field("events", "\(events.count)"),
-    )
   }
 }
