@@ -176,7 +176,7 @@ local function render_popup()
 	popup_footer:set({
 		drawing = should_draw(),
 		label = {
-			string = "Click to open GitHub Notifications",
+			string = "Left-click to open · Right-click to refresh",
 			color = COLORS.muted,
 		},
 	})
@@ -284,7 +284,7 @@ end
 
 github = easybar.add(easybar.kind.item, "github_notifications", {
 	position = "right",
-	order = 0,
+	order = 45,
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
@@ -346,7 +346,7 @@ popup_footer = easybar.add(easybar.kind.item, "github_notifications_footer", {
 	order = MAX_POPUP_ITEMS + 1,
 	drawing = false,
 	label = {
-		string = "Click to open GitHub Notifications",
+		string = "Left-click to open · Right-click to refresh",
 		color = COLORS.muted,
 	},
 	padding_x = 8,
@@ -429,6 +429,11 @@ end
 attach_popup_hover(popup_footer)
 
 github:subscribe(easybar.events.mouse.clicked, function(event)
+	if event.button == easybar.events.mouse.right_button then
+		refresh()
+		return
+	end
+
 	if event.button ~= nil and event.button ~= easybar.events.mouse.left_button then
 		return
 	end
