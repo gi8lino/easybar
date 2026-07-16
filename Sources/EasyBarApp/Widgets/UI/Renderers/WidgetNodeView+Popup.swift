@@ -212,10 +212,12 @@ extension WidgetNodeView {
           .background(popupHoverBackground)
       )
     case .genericNodePopup:
+      guard let appViewServices else { return AnyView(EmptyView()) }
       return AnyView(
         popupContent
           .environmentObject(configStore)
           .environmentObject(store)
+          .environment(\.appViewServices, appViewServices)
           .background(popupHoverBackground)
       )
     }
