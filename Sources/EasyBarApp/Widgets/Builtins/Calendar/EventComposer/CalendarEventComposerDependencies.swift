@@ -22,18 +22,10 @@ struct CalendarEventComposerDependencies {
   static func live(services: AppViewServices) -> CalendarEventComposerDependencies {
     CalendarEventComposerDependencies(
       snapshotPublisher: services.composerCalendarStore.$snapshot.eraseToAnyPublisher(),
-      refreshSnapshots: {
-        services.composerCalendarClient.refresh()
-      },
-      createEvent: { event, completion in
-        services.monthCalendarClient.createEvent(event, completion: completion)
-      },
-      updateEvent: { event, completion in
-        services.monthCalendarClient.updateEvent(event, completion: completion)
-      },
-      deleteEvent: { event, completion in
-        services.monthCalendarClient.deleteEvent(event, completion: completion)
-      },
+      refreshSnapshots: services.composerCalendarClient.refresh,
+      createEvent: services.monthCalendarClient.createEvent(_:completion:),
+      updateEvent: services.monthCalendarClient.updateEvent(_:completion:),
+      deleteEvent: services.monthCalendarClient.deleteEvent(_:completion:),
       openCalendarApp: {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.iCal")
         else { return }
