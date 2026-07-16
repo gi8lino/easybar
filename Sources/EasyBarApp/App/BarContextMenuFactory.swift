@@ -1,15 +1,6 @@
 import AppKit
 import EasyBarShared
 
-private enum RuntimeMenuTooltips {
-  static let refresh =
-    "Refreshes visible widgets and runtime data without reloading configuration or restarting Lua."
-  static let reloadConfig =
-    "Reloads config.toml, rebuilds EasyBar state, and reconnects agent-backed subscriptions."
-  static let restartLuaRuntime =
-    "Stops and starts the Lua widget runtime, reloads all Lua widget files, and resets Lua widget state."
-}
-
 /// Runtime actions exposed by the bar context menu.
 @MainActor
 struct BarContextMenuActions {
@@ -78,17 +69,20 @@ final class BarContextMenuFactory: NSObject {
       actionItem(
         title: "Refresh",
         action: #selector(refresh(_:)),
-        toolTip: RuntimeMenuTooltips.refresh
+        toolTip:
+          "Refreshes visible widgets and runtime data without reloading configuration or restarting Lua."
       ),
       actionItem(
         title: "Reload Config",
         action: #selector(reloadConfig(_:)),
-        toolTip: RuntimeMenuTooltips.reloadConfig
+        toolTip:
+          "Reloads config.toml, rebuilds EasyBar state, and reconnects agent-backed subscriptions."
       ),
       actionItem(
         title: "Restart Lua Runtime",
         action: #selector(restartLuaRuntime(_:)),
-        toolTip: RuntimeMenuTooltips.restartLuaRuntime
+        toolTip:
+          "Stops and starts the Lua widget runtime, reloads all Lua widget files, and resets Lua widget state."
       ),
     ]
   }
