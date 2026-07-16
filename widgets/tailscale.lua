@@ -242,14 +242,14 @@ end
 
 local function current_icon_name(snapshot)
 	if not snapshot.tailscale_connected then
-		return "tailscale-inactive.png"
+		return "tailscale-inactive.svg"
 	end
 
 	if snapshot.exit_node_enabled then
-		return "tailscale-active-exit-node.png"
+		return "tailscale-active-exit-node.svg"
 	end
 
-	return "tailscale-active.png"
+	return "tailscale-active.svg"
 end
 
 local function render(snapshot)
@@ -390,7 +390,7 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 	order = 2,
 	interval = CHECK_INTERVAL_SECONDS,
 	icon = {
-		image = asset_path("tailscale-inactive.png"),
+		image = asset_path("tailscale-inactive.svg"),
 		image_size = 16,
 	},
 	popup = {
