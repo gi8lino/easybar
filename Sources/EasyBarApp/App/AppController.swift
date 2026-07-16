@@ -352,24 +352,29 @@ final class AppController {
 
   private func restartCalendarAgent() {
     let socketPath = services.configSnapshotStore.snapshot.calendarAgent.socketPath
-    Task.detached { [logger] in
-      do {
-        try AgentRestartClient.restartCalendarAgent(socketPath: socketPath)
-        logger.info("calendar agent restart acknowledged")
-      } catch {
-        logger.error("calendar agent restart failed", .field("error", "\(error)"))
-      }
+    restartAgent(name: "calendar") {
+      try AgentRestartClient.restartCalendarAgent(socketPath: socketPath)
     }
   }
 
   private func restartNetworkAgent() {
     let socketPath = services.configSnapshotStore.snapshot.networkAgent.socketPath
+    restartAgent(name: "network") {
+      try AgentRestartClient.restartNetworkAgent(socketPath: socketPath)
+    }
+  }
+
+  /// Runs one acknowledged helper-agent restart away from the main actor.
+  private func restartAgent(
+    name: String,
+    operation: @escaping @Sendable () throws -> Void
+  ) {
     Task.detached { [logger] in
       do {
-        try AgentRestartClient.restartNetworkAgent(socketPath: socketPath)
-        logger.info("network agent restart acknowledged")
+        try operation()
+        logger.info("\(name) agent restart acknowledged")
       } catch {
-        logger.error("network agent restart failed", .field("error", "\(error)"))
+        logger.error("\(name) agent restart failed", .field("error", "\(error)"))
       }
     }
   }
