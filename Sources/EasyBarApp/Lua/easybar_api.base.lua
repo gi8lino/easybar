@@ -94,16 +94,17 @@
 ---@field string? string Icon glyph text.
 ---@field color? string Hex color override for the icon.
 ---@field font? EasyBarFontProps Icon font overrides.
----@field image? string Image path to render instead of icon text.
+---@field image? string|EasyBarImage Image path or structured image source to render instead of icon text.
 ---@field image_size? number Image size in points.
 ---@field image_corner_radius? number Image corner radius in points.
 ---@field padding_right? number Additional layout spacing between the icon and following inline content.
 ---@field offset_x? number Horizontal visual icon offset in points without changing layout spacing.
 ---@field offset_y? number Vertical visual icon offset in points without changing layout spacing.
 
----Standalone image configuration for nodes that render an image instead of text.
----@class (exact) EasyBarImageProps
----@field path? string Image path.
+---Image configuration for nodes that render an image instead of text.
+---@class (exact) EasyBarImage
+---@field path? string Filesystem path of an image. Mutually exclusive with `svg`.
+---@field svg? string Inline SVG source. Mutually exclusive with `path`.
 ---@field size? number Image size in points.
 ---@field corner_radius? number Image corner radius in points.
 
@@ -172,7 +173,7 @@
 ---@field color? string Primary foreground color.
 ---@field icon? EasyBarIconLike Icon table or shorthand value.
 ---@field label? EasyBarLabelLike Label table or shorthand value.
----@field image? EasyBarImageProps Standalone image content.
+---@field image? EasyBarImage Standalone image content.
 ---@field background? EasyBarBackgroundProps Background and padding styling.
 ---@field margin? EasyBarMarginProps Margin overrides for individual edges.
 ---@field popup? EasyBarPopupProps Popup container properties.
@@ -348,6 +349,7 @@
 ---@field DEFAULT_EXEC_OPTIONS EasyBarCommandOptions Read-only table exposing the current host default command limits.
 ---@field version string EasyBar application version (`__EASYBAR_VERSION__`).
 ---@field add fun(kind: EasyBarKind, id: string, props?: EasyBarNodeProps): EasyBarNodeHandle Creates one node and returns its handle.
+---@field asset fun(path: string): string Resolves a path relative to the current widget file.
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
@@ -366,6 +368,11 @@
 ---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
 ---@field theme EasyBarTheme Active resolved theme.
 local EasyBar = {}
+
+---Resolves a path relative to the current widget file.
+---@param path string
+---@return string
+function EasyBar.asset(path) end
 
 ---@class EasyBarFileLogger
 local EasyBarFileLogger = {}

@@ -5,10 +5,10 @@
 local M = {}
 
 --- Builds one isolated environment for a widget file.
-local function make_widget_env(registry, file)
+local function make_widget_env(registry, source_path)
 	local env = {
 		-- Each widget gets its own scoped EasyBar API instance.
-		easybar = registry.make_widget_api(file),
+		easybar = registry.make_widget_api(source_path),
 	}
 
 	setmetatable(env, {
@@ -21,7 +21,7 @@ end
 --- Loads and executes one widget file.
 local function load_widget_file(widget_dir, file, registry, log)
 	local path = widget_dir .. "/" .. file
-	local env = make_widget_env(registry, file)
+	local env = make_widget_env(registry, path)
 	local chunk, load_err = loadfile(path, "t", env)
 
 	if not chunk then

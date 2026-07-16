@@ -18,7 +18,11 @@ enum WidgetRuntimeMessage {
 
 /// Decodes and classifies structured messages emitted by the Lua widget runtime.
 struct WidgetRuntimeProtocolDecoder {
-  private let decoder = JSONDecoder()
+  private let decoder: JSONDecoder = {
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return decoder
+  }()
 
   /// Decodes one raw protocol line into a typed runtime message.
   func decodeMessage(from line: String) throws -> WidgetRuntimeMessage {

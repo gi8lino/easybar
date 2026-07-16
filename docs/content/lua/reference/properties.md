@@ -91,29 +91,30 @@ Modifiers: `exact`.
 
 Detailed icon configuration used when a plain icon value is not enough.
 
-| Property                           | Type               | Description                                                              |
-| ---------------------------------- | ------------------ | ------------------------------------------------------------------------ |
-| `string` _(optional)_              | `string`           | Icon glyph text.                                                         |
-| `color` _(optional)_               | `string`           | Hex color override for the icon.                                         |
-| `font` _(optional)_                | `EasyBarFontProps` | Icon font overrides.                                                     |
-| `image` _(optional)_               | `string`           | Image path to render instead of icon text.                               |
-| `image_size` _(optional)_          | `number`           | Image size in points.                                                    |
-| `image_corner_radius` _(optional)_ | `number`           | Image corner radius in points.                                           |
-| `padding_right` _(optional)_       | `number`           | Additional layout spacing between the icon and following inline content. |
-| `offset_x` _(optional)_            | `number`           | Horizontal visual icon offset in points without changing layout spacing. |
-| `offset_y` _(optional)_            | `number`           | Vertical visual icon offset in points without changing layout spacing.   |
+| Property                           | Type                   | Description                                                              |
+| ---------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `string` _(optional)_              | `string`               | Icon glyph text.                                                         |
+| `color` _(optional)_               | `string`               | Hex color override for the icon.                                         |
+| `font` _(optional)_                | `EasyBarFontProps`     | Icon font overrides.                                                     |
+| `image` _(optional)_               | `string\|EasyBarImage` | Image path or structured image source to render instead of icon text.    |
+| `image_size` _(optional)_          | `number`               | Image size in points.                                                    |
+| `image_corner_radius` _(optional)_ | `number`               | Image corner radius in points.                                           |
+| `padding_right` _(optional)_       | `number`               | Additional layout spacing between the icon and following inline content. |
+| `offset_x` _(optional)_            | `number`               | Horizontal visual icon offset in points without changing layout spacing. |
+| `offset_y` _(optional)_            | `number`               | Vertical visual icon offset in points without changing layout spacing.   |
 
-## `EasyBarImageProps`
+## `EasyBarImage`
 
 Modifiers: `exact`.
 
-Standalone image configuration for nodes that render an image instead of text.
+Image configuration for nodes that render an image instead of text.
 
-| Property                     | Type     | Description                    |
-| ---------------------------- | -------- | ------------------------------ |
-| `path` _(optional)_          | `string` | Image path.                    |
-| `size` _(optional)_          | `number` | Image size in points.          |
-| `corner_radius` _(optional)_ | `number` | Image corner radius in points. |
+| Property                     | Type     | Description                                                 |
+| ---------------------------- | -------- | ----------------------------------------------------------- |
+| `path` _(optional)_          | `string` | Filesystem path of an image. Mutually exclusive with `svg`. |
+| `svg` _(optional)_           | `string` | Inline SVG source. Mutually exclusive with `path`.          |
+| `size` _(optional)_          | `number` | Image size in points.                                       |
+| `corner_radius` _(optional)_ | `number` | Image corner radius in points.                              |
 
 ## `EasyBarLabelProps`
 
@@ -161,7 +162,7 @@ The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 | `color` _(optional)_         | `string`                 | Primary foreground color.                                                     |
 | `icon` _(optional)_          | `EasyBarIconLike`        | Icon table or shorthand value.                                                |
 | `label` _(optional)_         | `EasyBarLabelLike`       | Label table or shorthand value.                                               |
-| `image` _(optional)_         | `EasyBarImageProps`      | Standalone image content.                                                     |
+| `image` _(optional)_         | `EasyBarImage`           | Standalone image content.                                                     |
 | `background` _(optional)_    | `EasyBarBackgroundProps` | Background and padding styling.                                               |
 | `margin` _(optional)_        | `EasyBarMarginProps`     | Margin overrides for individual edges.                                        |
 | `popup` _(optional)_         | `EasyBarPopupProps`      | Popup container properties.                                                   |

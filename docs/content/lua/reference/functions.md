@@ -181,6 +181,20 @@ Removes one or more nested properties from this node.
 | ------- | ------------------ | ----------- |
 | `paths` | `string\|string[]` |             |
 
+## `EasyBar.asset`
+
+Resolves a path relative to the current widget file.
+
+### Parameters
+
+| Name   | Type     | Description |
+| ------ | -------- | ----------- |
+| `path` | `string` |             |
+
+### Returns
+
+- `string`
+
 ## `EasyBar.cancel_async`
 
 Requests cancellation of one pending background command. Returns immediately after sending the request; the original callback receives exit code 130 after the process group exits.

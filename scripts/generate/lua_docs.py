@@ -490,7 +490,7 @@ def write_properties(aliases: dict[str, AliasDoc], classes: dict[str, ClassDoc])
     ]
     property_classes = [
         "EasyBarBackgroundProps", "EasyBarFontProps", "EasyBarIconProps",
-        "EasyBarImageProps", "EasyBarLabelProps", "EasyBarMarginProps",
+        "EasyBarImage", "EasyBarLabelProps", "EasyBarMarginProps",
         "EasyBarNodeProps", "EasyBarPopupProps",
     ]
 

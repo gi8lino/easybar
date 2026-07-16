@@ -25,6 +25,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
   var receivesMouseScroll: Bool?
 
   var imagePath: String?
+  var imageSvg: String?
   var imageSize: Double?
   var imageCornerRadius: Double?
   var symbolName: String?
@@ -84,6 +85,20 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
   var width: Double?
   var height: Double?
   var yOffset: Double?
+
+  /// Returns the single valid image source represented by the decoded wire fields.
+  var imageSource: WidgetImageSource? {
+    switch (imagePath, imageSvg) {
+    case (.some(let path), nil):
+      return path.isEmpty ? nil : .path(path)
+    case (nil, .some(let svg)):
+      guard !svg.isEmpty, svg.lengthOfBytes(using: .utf8) <= WidgetImageSource.maximumInlineSVGBytes
+      else { return nil }
+      return .svg(svg)
+    default:
+      return nil
+    }
+  }
 
   /// Returns whether this node is attached directly to the bar.
   var isTopLevel: Bool {

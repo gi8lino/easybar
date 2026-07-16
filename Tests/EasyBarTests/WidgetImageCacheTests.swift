@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 import XCTest
 
@@ -8,6 +9,12 @@ final class WidgetImageCacheTests: XCTestCase {
     base64Encoded:
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
   )!
+  private static let redSVG = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8">
+      <rect width="8" height="8" fill="red"/>
+    </svg>
+    """
+  private static let blueSVG = redSVG.replacingOccurrences(of: "red", with: "blue")
 
   private func loadedImage(from result: WidgetImageLoadResult) throws -> LoadedWidgetImage {
     guard case .loaded(let image) = result else {
@@ -127,5 +134,72 @@ final class WidgetImageCacheTests: XCTestCase {
     let second = WidgetImageRevision(path: url.path)
 
     XCTAssertNotEqual(first, second)
+  }
+
+  func testValidInlineSVGDecodesAndReusesCachedImage() async throws {
+    let cache = WidgetImageCache()
+    let source = WidgetImageSource.svg(Self.redSVG)
+
+    let first = try loadedImage(from: await cache.image(for: source))
+    let second = try loadedImage(from: await cache.image(for: source))
+
+    XCTAssertNotEqual(first.image.size, .zero)
+    XCTAssertTrue(first === second)
+  }
+
+  func testInvalidInlineSVGFailsCleanly() async {
+    let cache = WidgetImageCache()
+
+    guard case .failed(let source) = await cache.image(for: .svg("not svg")) else {
+      XCTFail("Expected inline SVG decoding to fail")
+      return
+    }
+
+    XCTAssertEqual(source, .svg("not svg"))
+  }
+
+  func testChangedInlineSVGContentCausesReload() async throws {
+    let cache = WidgetImageCache()
+    let first = try loadedImage(from: await cache.image(for: .svg(Self.redSVG)))
+    let second = try loadedImage(from: await cache.image(for: .svg(Self.blueSVG)))
+
+    XCTAssertFalse(first === second)
+  }
+
+  @MainActor
+  func testPathAndInlineSVGUseTheSameTintingBehavior() throws {
+    let pathImage = try XCTUnwrap(NSImage(data: Self.pixelPNG))
+    let svgImage = try XCTUnwrap(NSImage(data: Data(Self.redSVG.utf8)))
+    let tintedNode = try makeNode(iconColor: "#ffffff")
+    let untintedNode = try makeNode(iconColor: nil)
+    let logger = ProcessLogger(label: "image.tint.test", minimumLevel: .error)
+
+    let tintedView = WidgetNodeView(node: tintedNode, logger: logger)
+    XCTAssertEqual(
+      tintedView.tintedImage(from: pathImage, isCustomImage: true)?.isTemplate,
+      true
+    )
+    XCTAssertEqual(
+      tintedView.tintedImage(from: svgImage, isCustomImage: true)?.isTemplate,
+      true
+    )
+
+    let untintedView = WidgetNodeView(node: untintedNode, logger: logger)
+    XCTAssertNil(untintedView.tintedImage(from: pathImage, isCustomImage: true))
+    XCTAssertNil(untintedView.tintedImage(from: svgImage, isCustomImage: true))
+  }
+
+  private func makeNode(iconColor: String?) throws -> WidgetNodeState {
+    let iconColorField = iconColor.map { ",\"icon_color\":\"\($0)\"" } ?? ""
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return try decoder.decode(
+      WidgetNodeState.self,
+      from: Data(
+        """
+        {"id":"image","root":"image","kind":"item","position":"right","order":0,"icon":"","text":"","visible":true\(iconColorField)}
+        """.utf8
+      )
+    )
   }
 }

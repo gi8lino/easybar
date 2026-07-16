@@ -18,7 +18,7 @@ struct WidgetTreeUpdate: Codable, Sendable {
   let maxOutputBytes: Int?
 
   enum CodingKeys: String, CodingKey {
-    case protocolVersion = "protocol_version"
+    case protocolVersion
     case type
     case root
     case nodes
@@ -26,8 +26,8 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case token
     case command
     case sync
-    case timeoutSeconds = "timeout_seconds"
-    case maxOutputBytes = "max_output_bytes"
+    case timeoutSeconds
+    case maxOutputBytes
   }
 
   enum Kind: String, Codable, Sendable {

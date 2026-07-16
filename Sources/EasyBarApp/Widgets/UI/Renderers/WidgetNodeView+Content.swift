@@ -83,8 +83,7 @@ extension WidgetNodeView {
 
 extension WidgetNodeView {
   var hasImage: Bool {
-    guard let imagePath = node.imagePath else { return false }
-    return !imagePath.isEmpty
+    return node.imageSource != nil
   }
 
   var hasIcon: Bool {
@@ -392,10 +391,10 @@ extension WidgetNodeView {
   /// Builds the rendered image view for one node.
   @ViewBuilder
   func renderedImageView() -> some View {
-    if hasImage, let imagePath = node.imagePath {
-      let imageRevision = WidgetImageRevision(path: imagePath)
+    if let imageSource = node.imageSource {
+      let imageRevision = WidgetImageRevision(source: imageSource)
       Group {
-        if let loadedImage = imageLoader.image(for: imagePath) {
+        if let loadedImage = imageLoader.image(for: imageSource) {
           if let tintedImage = tintedImage(
             from: loadedImage.image,
             isCustomImage: true
@@ -419,7 +418,7 @@ extension WidgetNodeView {
           logger.warn(
             "widget image could not be decoded",
             .field("widget", node.id),
-            .field("path", imagePath)
+            .field("source", imageSource.diagnosticLabel)
           )
         }
       }

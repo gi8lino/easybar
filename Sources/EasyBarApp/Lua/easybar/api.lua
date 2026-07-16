@@ -432,6 +432,36 @@ function M.new(log, hooks)
 	function api.make_widget_api(source)
 		local widget_api = {}
 		local widget_defaults = {}
+		local source_directory = tostring(source):match("^(.*)/[^/]+$") or "."
+
+		--- Resolves one safe path relative to this widget's source directory.
+		function widget_api.asset(path)
+			if type(path) ~= "string" or path == "" then
+				error("easybar.asset(path) requires a non-empty relative path")
+			end
+
+			if path:sub(1, 1) == "/" then
+				error("easybar.asset(path) rejects absolute paths")
+			end
+
+			local segments = {}
+			for segment in path:gmatch("[^/]+") do
+				if segment == ".." then
+					if #segments == 0 then
+						error("easybar.asset(path) cannot escape the widget directory")
+					end
+					segments[#segments] = nil
+				elseif segment ~= "." then
+					segments[#segments + 1] = segment
+				end
+			end
+
+			if #segments == 0 then
+				error("easybar.asset(path) requires a non-empty relative path")
+			end
+
+			return source_directory .. "/" .. table.concat(segments, "/")
+		end
 
 		--- Merges properties into one item and optionally updates its interval callback.
 		local function set_node(id, props)
@@ -565,4 +595,3 @@ function M.new(log, hooks)
 end
 
 return M
-

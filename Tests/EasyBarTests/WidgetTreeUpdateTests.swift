@@ -3,8 +3,14 @@ import XCTest
 @testable import EasyBarApp
 
 final class WidgetTreeUpdateTests: XCTestCase {
+  private let decoder: JSONDecoder = {
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return decoder
+  }()
+
   func testSupportedProtocolVersionIsAccepted() throws {
-    let update = try JSONDecoder().decode(
+    let update = try decoder.decode(
       WidgetTreeUpdate.self,
       from: Data(#"{"protocol_version":1,"type":"ready"}"#.utf8)
     )
@@ -13,7 +19,7 @@ final class WidgetTreeUpdateTests: XCTestCase {
   }
 
   func testUnexpectedProtocolVersionIsRejected() throws {
-    let update = try JSONDecoder().decode(
+    let update = try decoder.decode(
       WidgetTreeUpdate.self,
       from: Data(#"{"protocol_version":2,"type":"ready"}"#.utf8)
     )
@@ -22,7 +28,7 @@ final class WidgetTreeUpdateTests: XCTestCase {
   }
 
   func testClearRootPayloadIsDecoded() throws {
-    let update = try JSONDecoder().decode(
+    let update = try decoder.decode(
       WidgetTreeUpdate.self,
       from: Data(#"{"protocol_version":1,"type":"clear_root","root":"clock"}"#.utf8)
     )
@@ -40,5 +46,50 @@ final class WidgetTreeUpdateTests: XCTestCase {
       return XCTFail("Expected command cancellation message")
     }
     XCTAssertEqual(token, "job-1")
+  }
+
+  func testImagePathDecodesToPathSource() throws {
+    let node = try decodeNode(imageFields: ",\"image_path\":\"/tmp/icon.svg\"")
+
+    XCTAssertEqual(node.imagePath, "/tmp/icon.svg")
+    XCTAssertEqual(node.imageSource, .path("/tmp/icon.svg"))
+  }
+
+  func testImageSVGDecodesToInlineSource() throws {
+    let svg = #"<svg viewBox=\"0 0 1 1\"></svg>"#
+    let encoded = try XCTUnwrap(String(data: JSONEncoder().encode(svg), encoding: .utf8))
+    let node = try decodeNode(imageFields: ",\"image_svg\":\(encoded)")
+
+    XCTAssertEqual(node.imageSvg, svg)
+    XCTAssertEqual(node.imageSource, .svg(svg))
+  }
+
+  func testBothImageFieldsProduceNoSource() throws {
+    let node = try decodeNode(
+      imageFields: ",\"image_path\":\"/tmp/icon.svg\",\"image_svg\":\"<svg/>\""
+    )
+
+    XCTAssertNil(node.imageSource)
+  }
+
+  func testOversizedInlineSVGProducesNoSource() throws {
+    let oversized = "<svg>" + String(repeating: " ", count: 256 * 1024) + "</svg>"
+    let encoded = try XCTUnwrap(String(data: JSONEncoder().encode(oversized), encoding: .utf8))
+    let node = try decodeNode(imageFields: ",\"image_svg\":\(encoded)")
+
+    XCTAssertNil(node.imageSource)
+  }
+
+  private func decodeNode(imageFields: String) throws -> WidgetNodeState {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from: """
+        {"protocol_version":1,"type":"tree","root":"icon","nodes":[{"id":"icon","root":"icon","kind":"item","position":"right","order":0,"icon":"","text":"","visible":true\(imageFields)}]}
+        """
+    )
+
+    guard case .tree(_, let nodes) = message else {
+      throw WidgetRuntimeProtocolError.invalidPayload("expected tree")
+    }
+    return try XCTUnwrap(nodes.first)
   }
 }

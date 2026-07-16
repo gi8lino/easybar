@@ -1,32 +1,58 @@
 import AppKit
 import Foundation
 
+/// One validated source for a rendered widget image.
+enum WidgetImageSource: Hashable, Sendable {
+  static let maximumInlineSVGBytes = 256 * 1024
+
+  case path(String)
+  case svg(String)
+
+  var diagnosticLabel: String {
+    switch self {
+    case .path(let path): return path
+    case .svg: return "inline-svg"
+    }
+  }
+}
+
 /// A decoded widget image that can safely cross the cache actor boundary.
 final class LoadedWidgetImage: @unchecked Sendable {
-  let path: String
+  let source: WidgetImageSource
   let image: NSImage
 
-  init(path: String, image: NSImage) {
-    self.path = path
+  init(source: WidgetImageSource, image: NSImage) {
+    self.source = source
     self.image = image
   }
 }
 
 enum WidgetImageLoadResult: @unchecked Sendable {
   case loaded(LoadedWidgetImage)
-  case failed(path: String)
+  case failed(source: WidgetImageSource)
 }
 
 struct WidgetImageRevision: Hashable, Sendable {
-  let path: String
+  let source: WidgetImageSource
   let modificationDate: Date?
   let fileSize: UInt64?
 
   init(path: String) {
-    self.path = path
-    let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-    self.modificationDate = attributes?[.modificationDate] as? Date
-    self.fileSize = (attributes?[.size] as? NSNumber)?.uint64Value
+    self.init(source: .path(path))
+  }
+
+  init(source: WidgetImageSource) {
+    self.source = source
+
+    switch source {
+    case .path(let path):
+      let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+      self.modificationDate = attributes?[.modificationDate] as? Date
+      self.fileSize = (attributes?[.size] as? NSNumber)?.uint64Value
+    case .svg:
+      self.modificationDate = nil
+      self.fileSize = nil
+    }
   }
 }
 
@@ -41,7 +67,7 @@ actor WidgetImageCache {
   }
 
   private let capacity: Int
-  private var entries: [String: Entry] = [:]
+  private var entries: [WidgetImageSource: Entry] = [:]
   private var accessCounter: UInt64 = 0
 
   init(capacity: Int = 128) {
@@ -49,23 +75,35 @@ actor WidgetImageCache {
   }
 
   func image(for path: String) -> WidgetImageLoadResult {
-    image(for: WidgetImageRevision(path: path))
+    image(for: .path(path))
+  }
+
+  func image(for source: WidgetImageSource) -> WidgetImageLoadResult {
+    image(for: WidgetImageRevision(source: source))
   }
 
   func image(for revision: WidgetImageRevision) -> WidgetImageLoadResult {
     accessCounter &+= 1
 
-    if var entry = entries[revision.path], entry.revision == revision {
+    if var entry = entries[revision.source], entry.revision == revision {
       entry.lastAccess = accessCounter
-      entries[revision.path] = entry
+      entries[revision.source] = entry
       return entry.result
     }
 
+    let image: NSImage?
+    switch revision.source {
+    case .path(let path):
+      image = NSImage(contentsOfFile: path)
+    case .svg(let svg):
+      image = NSImage(data: Data(svg.utf8))
+    }
+
     let result =
-      NSImage(contentsOfFile: revision.path).map {
-        WidgetImageLoadResult.loaded(LoadedWidgetImage(path: revision.path, image: $0))
-      } ?? .failed(path: revision.path)
-    entries[revision.path] = Entry(
+      image.map {
+        WidgetImageLoadResult.loaded(LoadedWidgetImage(source: revision.source, image: $0))
+      } ?? .failed(source: revision.source)
+    entries[revision.source] = Entry(
       revision: revision,
       result: result,
       lastAccess: accessCounter
@@ -76,10 +114,10 @@ actor WidgetImageCache {
 
   private func evictLeastRecentlyUsedEntryIfNeeded() {
     guard entries.count > capacity else { return }
-    guard let oldestPath = entries.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key else {
+    guard let oldestSource = entries.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key else {
       return
     }
-    entries.removeValue(forKey: oldestPath)
+    entries.removeValue(forKey: oldestSource)
   }
 
 }
@@ -88,15 +126,23 @@ actor WidgetImageCache {
 @MainActor
 final class WidgetImageLoader: ObservableObject {
   @Published private(set) var loadedImage: LoadedWidgetImage?
-  private var loggedFailurePaths = Set<String>()
+  private var loggedFailures = Set<WidgetImageSource>()
 
   func image(for path: String) -> LoadedWidgetImage? {
-    guard loadedImage?.path == path else { return nil }
+    image(for: .path(path))
+  }
+
+  func image(for source: WidgetImageSource) -> LoadedWidgetImage? {
+    guard loadedImage?.source == source else { return nil }
     return loadedImage
   }
 
   func load(path: String) async -> Bool {
-    await load(revision: WidgetImageRevision(path: path))
+    await load(source: .path(path))
+  }
+
+  func load(source: WidgetImageSource) async -> Bool {
+    await load(revision: WidgetImageRevision(source: source))
   }
 
   func load(revision: WidgetImageRevision) async -> Bool {
@@ -106,13 +152,13 @@ final class WidgetImageLoader: ObservableObject {
     switch result {
     case .loaded(let image):
       loadedImage = image
-      loggedFailurePaths.remove(revision.path)
+      loggedFailures.remove(revision.source)
       return false
     case .failed:
-      if loadedImage?.path == revision.path {
+      if loadedImage?.source == revision.source {
         loadedImage = nil
       }
-      return loggedFailurePaths.insert(revision.path).inserted
+      return loggedFailures.insert(revision.source).inserted
     }
   }
 }

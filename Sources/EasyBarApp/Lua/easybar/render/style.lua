@@ -145,19 +145,38 @@ local function resolve_icon_offset_y(props)
 	return nil
 end
 
-local function resolve_image_path(props)
+local function resolve_image_props(props)
 	if type(props.icon) == "table" and type(props.icon.image) == "string" then
+		return { path = props.icon.image }
+	end
+
+	if type(props.icon) == "table" and type(props.icon.image) == "table" then
 		return props.icon.image
 	end
 
-	if type(props.image) == "table" and type(props.image.path) == "string" then
-		return props.image.path
+	if type(props.image) == "table" then
+		return props.image
 	end
 
 	return nil
 end
 
+local function resolve_image_path(props)
+	local image = resolve_image_props(props)
+	return type(image) == "table" and image.path or nil
+end
+
+local function resolve_image_svg(props)
+	local image = resolve_image_props(props)
+	return type(image) == "table" and image.svg or nil
+end
+
 local function resolve_image_size(props)
+	local image = resolve_image_props(props)
+	if type(image) == "table" and image.size ~= nil then
+		return tonumber(image.size)
+	end
+
 	if type(props.icon) == "table" and props.icon.image_size ~= nil then
 		return tonumber(props.icon.image_size)
 	end
@@ -170,6 +189,11 @@ local function resolve_image_size(props)
 end
 
 local function resolve_image_corner_radius(props)
+	local image = resolve_image_props(props)
+	if type(image) == "table" and image.corner_radius ~= nil then
+		return tonumber(image.corner_radius)
+	end
+
 	if type(props.icon) == "table" and props.icon.image_corner_radius ~= nil then
 		return tonumber(props.icon.image_corner_radius)
 	end
@@ -359,6 +383,7 @@ function M.make_node(registry, id, item, root_position, children)
 	node.iconColor = resolve_icon_color(resolved_props)
 	node.labelColor = resolve_label_color(resolved_props)
 	node.imagePath = resolve_image_path(resolved_props)
+	node.imageSVG = resolve_image_svg(resolved_props)
 	node.imageSize = resolve_image_size(resolved_props)
 	node.imageCornerRadius = resolve_image_corner_radius(resolved_props)
 	node.iconFontSize = resolve_icon_font_size(resolved_props)

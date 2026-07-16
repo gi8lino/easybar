@@ -75,21 +75,50 @@ clock = easybar.add(easybar.kind.item, "clock", {
 })
 ```
 
-## Image-only widget
+## Widget-relative image asset
 
 ```lua
-local tailscale = easybar.add(easybar.kind.item, "tailscale", {
-    position = "right",
-    order = 2,
+local github = easybar.add(easybar.kind.item, "github", {
     icon = {
-        image = "/path/to/tailscale.png",
-        image_size = 16,
-    },
-    popup = {
-        drawing = true,
+        color = easybar.theme.ref.text,
+        image = {
+            path = easybar.asset("github-mark.svg"),
+            size = 16,
+        },
     },
 })
 ```
+
+`easybar.asset()` resolves relative to the Lua file that calls it, so the example expects
+`github-mark.svg` beside the widget file. Nested paths such as
+`easybar.asset("assets/github-mark.svg")` work too. This approach is best for larger images or
+assets reused by more than one part of a widget. Existing absolute paths remain valid when passed
+directly as `image.path`.
+
+## Inline SVG image
+
+```lua
+local github_svg = [[
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="..." />
+</svg>
+]]
+
+local github = easybar.add(easybar.kind.item, "github", {
+    icon = {
+        color = easybar.theme.ref.text,
+        image = {
+            svg = github_svg,
+            size = 16,
+        },
+    },
+})
+```
+
+Inline SVG is useful for small, self-contained widgets. Set either `path` or `svg`, never both.
+Without an icon color, SVG images keep their original colors; setting `icon.color` applies the
+same template tint used for file-backed images. Inline SVG does not sandbox a widget: widget files
+remain trusted local code.
 
 ## Related pages
 

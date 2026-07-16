@@ -128,6 +128,39 @@ local function normalize_string_prop(value)
 	}
 end
 
+local MAX_INLINE_SVG_BYTES = 256 * 1024
+
+--- Validates one structured image source while preserving its display options.
+local function normalize_image_prop(image, path, report)
+	if type(image) ~= "table" then
+		return image
+	end
+
+	if image.path ~= nil and image.svg ~= nil then
+		report(path, image, "path or svg, but not both")
+		image.path = nil
+		image.svg = nil
+		return image
+	end
+
+	if image.path ~= nil and type(image.path) ~= "string" then
+		report(path .. ".path", image.path, "string")
+		image.path = nil
+	end
+
+	if image.svg ~= nil then
+		if type(image.svg) ~= "string" or image.svg == "" then
+			report(path .. ".svg", image.svg, "non-empty SVG string")
+			image.svg = nil
+		elseif #image.svg > MAX_INLINE_SVG_BYTES then
+			report(path .. ".svg", image.svg, "SVG string at most 262144 UTF-8 bytes")
+			image.svg = nil
+		end
+	end
+
+	return image
+end
+
 --- Normalizes item props into the shape expected by the renderer.
 local function normalize_props(props, report)
 	local normalized = helpers.deep_copy(props or {})
@@ -138,7 +171,12 @@ local function normalize_props(props, report)
 
 	if normalized.icon ~= nil then
 		normalized.icon = normalize_string_prop(normalized.icon)
+		if type(normalized.icon) == "table" then
+			normalized.icon.image = normalize_image_prop(normalized.icon.image, "icon.image", report)
+		end
 	end
+
+	normalized.image = normalize_image_prop(normalized.image, "image", report)
 
 	if normalized.drawing ~= nil then
 		normalized.drawing = normalize_bool(normalized.drawing, true, "drawing", report)
