@@ -2,6 +2,16 @@ import AppKit
 import EasyBarShared
 import SwiftUI
 
+private final class BarHostingView<Content: View>: NSHostingView<Content> {
+  override var safeAreaInsets: NSEdgeInsets {
+    .init(top: 0, left: 0, bottom: 0, right: 0)
+  }
+
+  override var safeAreaRect: NSRect {
+    bounds
+  }
+}
+
 /// Hosts the top-level borderless bar window.
 @MainActor
 final class BarWindowController: NSWindowController {
