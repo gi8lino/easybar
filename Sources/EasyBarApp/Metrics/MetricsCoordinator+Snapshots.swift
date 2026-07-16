@@ -2,6 +2,12 @@ import EasyBarShared
 import Foundation
 
 extension MetricsCoordinator {
+  /// Computes a per-second rate from cumulative counters.
+  func rate(current: Int, previous: Int?, context: RateContext) -> Double {
+    guard context.collectionEnabled, let previous, context.interval > 0 else { return 0 }
+    return Double(max(0, current - previous)) / context.interval
+  }
+
   /// Collects one metrics snapshot and updates rate baselines when enabled.
   func collectSnapshot(collectionEnabled: Bool) -> IPC.MetricsSnapshot {
     let now = Date()
