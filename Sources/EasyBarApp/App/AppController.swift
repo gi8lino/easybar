@@ -50,7 +50,7 @@ final class AppController {
     logger: ProcessLogger,
     requestAppTermination: @escaping () -> Void
   ) {
-    let services = Self.bootstrapSharedDependencies(logger: logger.child("services"))
+    let services = AppServices.bootstrap(logger: logger.child("services"))
     let instanceGuard = SingleInstanceGuard()
 
     self.logger = logger
@@ -224,11 +224,6 @@ final class AppController {
         }
       }
     )
-  }
-
-  /// Bootstraps all shared logger-owning services before runtime startup begins.
-  private static func bootstrapSharedDependencies(logger: ProcessLogger) -> AppServices {
-    AppServices.bootstrap(logger: logger)
   }
 
   /// Configures file logging from the current app config.
