@@ -88,9 +88,10 @@ extension BatteryRenderer {
   /// Builds the tooltip popup layout.
   private func makeTooltipNodes(snapshot: Snapshot) -> [WidgetNodeState] {
     let popup = snapshot.config.popup
-    var popupNode = BuiltinNativeNodeFactory.makePopupContentColumnNode(
+    var popupNode = BuiltinNativeNodeFactory.makePopupContentNode(
       rootID: rootID,
       contentID: "\(rootID)_popup",
+      kind: .column,
       position: snapshot.placement.position,
       order: 0,
       visible: !snapshot.text.isEmpty,

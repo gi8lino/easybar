@@ -41,10 +41,11 @@ extension BuiltinNativeNodeFactory {
     )
   }
 
-  /// Builds one popup content column attached to the popup root.
-  static func makePopupContentColumnNode(
+  /// Builds one row or column of popup content attached to the popup root.
+  static func makePopupContentNode(
     rootID: String,
     contentID: String,
+    kind: WidgetNodeKind,
     position: WidgetPosition,
     order: Int = 0,
     visible: Bool = true,
@@ -57,46 +58,12 @@ extension BuiltinNativeNodeFactory {
     cornerRadius: Double? = nil,
     opacity: Double? = 1
   ) -> WidgetNodeState {
-    makeChildNode(
-      id: contentID,
-      root: rootID,
-      kind: .column,
-      parent: rootID,
-      position: position,
-      order: order,
-      visible: visible,
-      role: .popupContent,
-      paddingX: paddingX,
-      paddingY: paddingY,
-      spacing: spacing,
-      backgroundColor: backgroundColor,
-      borderColor: borderColor,
-      borderWidth: borderWidth,
-      cornerRadius: cornerRadius,
-      opacity: opacity
-    )
-  }
+    precondition(kind == .row || kind == .column, "popup content must be a row or column")
 
-  /// Builds one popup content row attached to the popup root.
-  static func makePopupContentRowNode(
-    rootID: String,
-    contentID: String,
-    position: WidgetPosition,
-    order: Int = 0,
-    visible: Bool = true,
-    paddingX: Double? = 0,
-    paddingY: Double? = 0,
-    spacing: Double? = 4,
-    backgroundColor: String? = nil,
-    borderColor: String? = nil,
-    borderWidth: Double? = nil,
-    cornerRadius: Double? = nil,
-    opacity: Double? = 1
-  ) -> WidgetNodeState {
-    makeChildNode(
+    return makeChildNode(
       id: contentID,
       root: rootID,
-      kind: .row,
+      kind: kind,
       parent: rootID,
       position: position,
       order: order,

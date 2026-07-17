@@ -81,9 +81,10 @@ extension WiFiRenderer {
     let popup = snapshot.config.popup
     let gridID = "\(rootID)_popup_details"
 
-    var popupNode = BuiltinNativeNodeFactory.makePopupContentRowNode(
+    var popupNode = BuiltinNativeNodeFactory.makePopupContentNode(
       rootID: rootID,
       contentID: gridID,
+      kind: .row,
       position: snapshot.config.placement.position,
       order: 0,
       visible: true,
