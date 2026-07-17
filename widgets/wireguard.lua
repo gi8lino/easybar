@@ -1,3 +1,6 @@
+-- macOS Network Extension VPN example. Set `vpn_name` in lib/secrets.lua to
+-- the service name shown by `scutil --nc list`; left-click toggles that service.
+
 local secrets = require("secrets")
 local shell = require("shell")
 local text = require("text")

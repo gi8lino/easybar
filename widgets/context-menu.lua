@@ -1,3 +1,7 @@
+-- Native context-menu example. Right-click the widget to open the menu.
+-- A selectable item's `id` is delivered as `event.action_id`; rebuild the
+-- menu with `set` after state changes so native checkmarks stay current.
+
 local shell = require("shell")
 
 local filter = "all"

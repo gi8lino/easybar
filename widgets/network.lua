@@ -1,3 +1,5 @@
+-- Read-only network example driven by EasyBar's native network event snapshot.
+
 local state = {
 	interface_name = nil,
 }

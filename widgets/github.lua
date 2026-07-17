@@ -1,3 +1,6 @@
+-- GitHub notification widget. Requires an authenticated `gh` CLI and the
+-- bundled assets/github-mark.svg file beside this example's directory.
+
 local shell = require("shell")
 local text = require("text")
 

@@ -1,3 +1,6 @@
+-- Read-only VPN indicator using the primary-interface tunnel flag from native
+-- network events; it does not start or stop the VPN.
+
 local state = {
 	vpn_connected = false,
 }

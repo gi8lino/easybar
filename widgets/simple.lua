@@ -1,3 +1,5 @@
+-- Minimal stateful widget: left-click toggles local state and re-renders it.
+
 local enabled = false
 local toggle
 

@@ -1,3 +1,6 @@
+-- Group example showing shared styling, child items, group-level mouse events,
+-- and popup content attached through `popup.<group name>`.
+
 local hovered = false
 local enabled = false
 
