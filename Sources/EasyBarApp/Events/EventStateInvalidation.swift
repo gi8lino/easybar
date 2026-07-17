@@ -18,10 +18,8 @@ enum EventReplayCatalog {
     .workspaceChange,
     .spaceModeChange,
   ]
-  static let orderedEventNames = orderedEvents.map(\.rawValue)
-
   static func isReplayable(_ eventName: String) -> Bool {
-    orderedEventNames.contains(eventName)
+    orderedEvents.contains { $0.rawValue == eventName }
   }
 
   static func payloads(

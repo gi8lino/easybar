@@ -89,7 +89,8 @@ actor EventHub {
       )
 
       if replayLatest {
-        for eventName in EventReplayCatalog.orderedEventNames {
+        for event in EventReplayCatalog.orderedEvents {
+          let eventName = event.rawValue
           if let normalizedEventNames, !normalizedEventNames.contains(eventName) {
             continue
           }
