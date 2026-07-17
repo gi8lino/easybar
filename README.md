@@ -91,6 +91,17 @@ EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundl
 
 ## Developing
 
+### Install development tools
+
+Install Lua and StyLua before running the contributor checks:
+
+```bash
+brew install lua stylua
+```
+
+The repository-level `.stylua.toml` is the source of truth for Lua formatting. `make fmt` and
+`make lint` use the `stylua` executable from `PATH`.
+
 ### Test the release bundles
 
 Build the local ad-hoc-signed bundles and launch the standalone agents before the main app:
@@ -176,6 +187,8 @@ The first local installation records whether each released Homebrew agent servic
 Quickstart for contributors:
 
 ```bash
+make fmt
+make lint
 make test
 make stop
 make run-debug
@@ -184,6 +197,9 @@ make run-debug
 Useful build and runtime commands:
 
 - `make verify-source-tree` checks required source, packaging, and Homebrew cask inputs.
+- `make fmt` formats Swift and Lua sources.
+- `make fmt-all` formats Swift, Lua, and Markdown sources.
+- `make lint` checks Swift and Lua formatting without modifying files.
 - `make test` runs the full Swift test suite without regenerating checked-in artifacts.
 - `make build` builds the local app, agents, and CLI artifacts.
 - `make run-debug` starts EasyBar with verbose logging for local debugging.

@@ -72,3 +72,21 @@ Good places for side effects:
 - `on_interval`
 - `node:subscribe(...)` handlers
 - explicit refresh functions
+
+## Format with StyLua
+
+Use StyLua to keep widget files consistently formatted:
+
+```bash
+brew install stylua
+stylua ~/.config/easybar/widgets
+```
+
+Check formatting without changing files:
+
+```bash
+stylua --check ~/.config/easybar/widgets
+```
+
+For widgets stored inside the EasyBar repository, use `make fmt-lua` and `make lint-lua` so the
+repository `.stylua.toml` settings are applied consistently.

@@ -41,6 +41,26 @@ Use this page when changing the Lua runtime or public Lua API.
 - `LuaProcessController.swift`
 - `LuaTransport.swift`
 
+## Formatting
+
+Install StyLua before running the repository formatting checks:
+
+```bash
+brew install stylua
+```
+
+The root `.stylua.toml` defines the Lua 5.4 formatting rules used by local development and CI.
+
+Use the Makefile entry points rather than invoking different formatter options manually:
+
+```bash
+make fmt       # Format Swift and Lua.
+make fmt-all   # Format Swift, Lua, and Markdown.
+make lint      # Check Swift and Lua formatting without modifying files.
+make fmt-lua   # Format only Lua.
+make lint-lua  # Check only Lua formatting.
+```
+
 ## Generated artifacts
 
 Regenerate every checked-in generated artifact through the Makefile:
@@ -77,7 +97,7 @@ make generate-docs
 
 Generated docs are produced by `scripts/generate/lua_docs.py` and `EasyBarGenerateConfig config-docs`. Call those directly only when debugging the generation pipeline.
 
-`make fmt` formats Swift only. Generated Markdown is formatted automatically as part of `make generate-docs`, so generated-doc comparisons stay stable. Run `make fmt-markdown` only when you intentionally want to format all Markdown with Prettier.
+Generated Markdown is formatted automatically as part of `make generate-docs`, so generated-doc comparisons stay stable. Run `make fmt-all` or `make fmt-markdown` only when you intentionally want to format all Markdown with Prettier.
 
 ## Helper scripts
 
@@ -107,7 +127,3 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
-
-
-
-

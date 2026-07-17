@@ -3,11 +3,12 @@ set -euo pipefail
 
 usage() {
   cat >&2 <<'EOF_USAGE'
-Usage: scripts/ci/install-dependencies.sh <test|release|lua|imagemagick> [...]
+Usage: scripts/ci/install-dependencies.sh <test|release|format|lua|imagemagick> [...]
 
 Modes:
   test         Install dependencies needed for tests.
   release      Install dependencies needed for release packaging.
+  format       Install dependencies needed for source-format checks.
   lua          Install Lua only.
   imagemagick  Install ImageMagick only.
 
@@ -23,6 +24,7 @@ fi
 
 need_lua=false
 need_imagemagick=false
+need_stylua=false
 
 for mode in "$@"; do
   case "$mode" in
@@ -32,6 +34,9 @@ for mode in "$@"; do
     release)
       need_lua=true
       need_imagemagick=true
+      ;;
+    format)
+      need_stylua=true
       ;;
     imagemagick)
       need_imagemagick=true
@@ -101,4 +106,9 @@ fi
 if [ "$need_lua" = true ]; then
   install_if_missing lua lua
   lua -v
+fi
+
+if [ "$need_stylua" = true ]; then
+  install_if_missing stylua stylua
+  stylua --version
 fi

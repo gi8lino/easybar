@@ -22,7 +22,11 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
-      - name: Lint Swift formatting
+      - name: Install formatting dependencies
+        shell: bash
+        run: scripts/ci/install-dependencies.sh format
+
+      - name: Lint source formatting
         run: make lint
 
   test-and-verify-generated:
