@@ -28,6 +28,7 @@ end
 github = easybar.add(easybar.kind.item, "context_menu_example", {
 	position = "right",
 	icon = "󰊤",
+	spacing = 2,
 	label = "GitHub",
 	context_menu = menu(),
 })

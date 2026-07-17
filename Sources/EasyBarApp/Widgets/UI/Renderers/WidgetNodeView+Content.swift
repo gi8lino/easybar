@@ -362,7 +362,7 @@ extension WidgetNodeView {
   @ViewBuilder
   var iconText: some View {
     if hasIcon && !hasSymbol {
-      Text(iconDisplayString)
+      OverflowSafeIconText(node.icon, trailingAllowance: iconTrailingAllowance)
         .font(iconResolvedFont)
         .foregroundStyle(iconResolvedColor)
         .fixedSize()
@@ -370,15 +370,10 @@ extension WidgetNodeView {
     }
   }
 
-  /// Returns the icon string to render for the current node.
-  ///
-  /// Some Nerd Font and private-use glyphs have visual overhangs that SwiftUI
-  /// measures too tightly when rendered as a bare `Text`. For icon-only items,
-  /// six-per-em spaces widen the text run enough to avoid clipping without
-  /// requiring widget authors to add fake spaces to their icon strings.
-  private var iconDisplayString: String {
-    guard !hasLabel else { return node.icon }
-    return "\u{2006}\(node.icon)\u{2006}"
+  /// Reserves room for Nerd Font and private-use glyphs whose visual bounds
+  /// extend beyond the advance width reported to SwiftUI.
+  private var iconTrailingAllowance: CGFloat {
+    return 4
   }
 
   @ViewBuilder
@@ -459,5 +454,38 @@ extension WidgetNodeView {
       .resizable()
       .interpolation(.high)
       .scaledToFit()
+  }
+}
+
+/// Draws glyphs into a surface wider than their typographic advance width.
+///
+/// Some icon fonts report an advance that is narrower than the visible glyph. A
+/// regular `Text` view clips that overhang before surrounding layout padding is
+/// applied. This view keeps `Text` for measurement but draws into the expanded
+/// canvas itself, so the additional width protects the glyph rather than merely
+/// moving the following view.
+private struct OverflowSafeIconText: View {
+  let value: String
+  let trailingAllowance: CGFloat
+
+  init(_ value: String, trailingAllowance: CGFloat) {
+    self.value = value
+    self.trailingAllowance = trailingAllowance
+  }
+
+  var body: some View {
+    Text(value)
+      .hidden()
+      .padding(.trailing, trailingAllowance)
+      .overlay(alignment: .leading) {
+        Canvas { context, size in
+          let text = context.resolve(Text(value))
+          context.draw(
+            text,
+            at: CGPoint(x: 0, y: size.height / 2),
+            anchor: .leading
+          )
+        }
+      }
   }
 }
