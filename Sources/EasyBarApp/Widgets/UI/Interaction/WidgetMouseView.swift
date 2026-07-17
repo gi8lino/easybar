@@ -16,6 +16,7 @@ struct WidgetMouseView: NSViewRepresentable {
   let emitsMouseUp: Bool
   let emitsMouseClick: Bool
   let emitsMouseScroll: Bool
+  let contextMenuItems: [WidgetContextMenuItem]?
   let onHoverChanged: ((Bool) -> Void)?
 
   init(
@@ -29,6 +30,7 @@ struct WidgetMouseView: NSViewRepresentable {
     emitsMouseUp: Bool = false,
     emitsMouseClick: Bool = false,
     emitsMouseScroll: Bool = false,
+    contextMenuItems: [WidgetContextMenuItem]? = nil,
     onHoverChanged: ((Bool) -> Void)? = nil
   ) {
     self.widgetID = widgetID
@@ -41,6 +43,7 @@ struct WidgetMouseView: NSViewRepresentable {
     self.emitsMouseUp = emitsMouseUp
     self.emitsMouseClick = emitsMouseClick
     self.emitsMouseScroll = emitsMouseScroll
+    self.contextMenuItems = contextMenuItems
     self.onHoverChanged = onHoverChanged
   }
 
@@ -56,6 +59,7 @@ struct WidgetMouseView: NSViewRepresentable {
     view.emitsMouseUp = emitsMouseUp
     view.emitsMouseClick = emitsMouseClick
     view.emitsMouseScroll = emitsMouseScroll
+    view.contextMenuItems = contextMenuItems
     view.onHoverChanged = onHoverChanged
     return view
   }
@@ -72,6 +76,7 @@ struct WidgetMouseView: NSViewRepresentable {
     nsView.emitsMouseUp = emitsMouseUp
     nsView.emitsMouseClick = emitsMouseClick
     nsView.emitsMouseScroll = emitsMouseScroll
+    nsView.contextMenuItems = contextMenuItems
     nsView.onHoverChanged = onHoverChanged
     nsView.eventHub = eventHub
   }
@@ -93,6 +98,8 @@ final class MouseTrackingNSView: NSView {
   var emitsMouseUp = false
   var emitsMouseClick = false
   var emitsMouseScroll = false
+  var contextMenuItems: [WidgetContextMenuItem]?
+  var onContextMenuAction: ((String) -> Void)?
   var onHoverChanged: ((Bool) -> Void)?
 
   private var trackingArea: NSTrackingArea?
@@ -125,12 +132,25 @@ final class MouseTrackingNSView: NSView {
   /// to win hit-testing.
   override func hitTest(_ point: NSPoint) -> NSView? {
     guard bounds.contains(point) else { return nil }
-    return handlesDirectMouseEvents ? self : nil
+    if handlesMouseEvents {
+      return self
+    }
+    guard consumesRightClickWithContextMenu else { return nil }
+    switch NSApp?.currentEvent?.type {
+    case .rightMouseDown, .rightMouseUp:
+      return self
+    default:
+      return nil
+    }
   }
 
-  /// Returns whether this surface needs direct event ownership.
-  private var handlesDirectMouseEvents: Bool {
+  /// Returns whether ordinary mouse handlers require direct event ownership.
+  private var handlesMouseEvents: Bool {
     return emitsMouseDown || emitsMouseUp || emitsMouseClick || emitsMouseScroll
+  }
+
+  var consumesRightClickWithContextMenu: Bool {
+    contextMenuItems?.isEmpty == false
   }
 
   /// Rebuilds tracking areas after layout updates.
@@ -166,6 +186,7 @@ final class MouseTrackingNSView: NSView {
   func prepareForRemoval() {
     endHover(immediately: true)
     onHoverChanged = nil
+    onContextMenuAction = nil
   }
 
   /// Begins hover tracking for this concrete AppKit surface.
@@ -245,12 +266,75 @@ final class MouseTrackingNSView: NSView {
 
   /// Emits a right-button mouse-down event.
   override func rightMouseDown(with event: NSEvent) {
+    if let menu = makeContextMenu() {
+      NSMenu.popUpContextMenu(menu, with: event, for: self)
+      return
+    }
     emitMouseDown(button: .right)
   }
 
   /// Emits a right-button mouse-up and clicked event.
   override func rightMouseUp(with event: NSEvent) {
+    guard !consumesRightClickWithContextMenu else { return }
     emitMouseUp(button: .right)
+  }
+
+  /// Builds the current native menu from immutable rendered-node state.
+  func makeContextMenu() -> NSMenu? {
+    guard let contextMenuItems, !contextMenuItems.isEmpty else { return nil }
+    let menu = NSMenu()
+    appendContextMenuItems(contextMenuItems, to: menu)
+    return menu.items.isEmpty ? nil : menu
+  }
+
+  private func appendContextMenuItems(_ entries: [WidgetContextMenuItem], to menu: NSMenu) {
+    for entry in entries {
+      if entry.separator {
+        menu.addItem(.separator())
+        continue
+      }
+
+      guard let title = entry.title, !title.isEmpty else { continue }
+      let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+      if let submenu = entry.submenu, !submenu.isEmpty {
+        let childMenu = NSMenu(title: title)
+        appendContextMenuItems(submenu, to: childMenu)
+        guard !childMenu.items.isEmpty else { continue }
+        item.submenu = childMenu
+      } else if let actionID = entry.id, !actionID.isEmpty {
+        item.action = #selector(contextMenuItemSelected(_:))
+        item.target = self
+        item.representedObject = actionID
+        item.isEnabled = entry.enabled
+        item.state = entry.checked ? .on : .off
+      } else {
+        continue
+      }
+      menu.addItem(item)
+    }
+  }
+
+  @objc private func contextMenuItemSelected(_ sender: NSMenuItem) {
+    handleContextMenuItemSelection(sender)
+  }
+
+  func handleContextMenuItemSelection(_ sender: NSMenuItem) {
+    guard sender.isEnabled, let actionID = sender.representedObject as? String else { return }
+    if let onContextMenuAction {
+      onContextMenuAction(actionID)
+      return
+    }
+    let eventWidgetID = widgetID
+    let eventTargetWidgetID = targetWidgetID
+    let eventHub = eventHub
+    WidgetEventDispatcher.shared.enqueue {
+      await eventHub?.emitWidgetEvent(
+        .contextMenuClicked,
+        widgetID: eventWidgetID,
+        targetWidgetID: eventTargetWidgetID,
+        actionID: actionID
+      )
+    }
   }
 
   /// Emits a middle-button mouse-down event.

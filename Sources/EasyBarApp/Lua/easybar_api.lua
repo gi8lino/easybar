@@ -158,6 +158,24 @@
 ---Accepted shorthand forms for icon content.
 ---@alias EasyBarIconLike string|number|boolean|EasyBarIconProps
 
+---One selectable native context-menu action.
+---@class (exact) EasyBarContextMenuAction
+---@field id string Action id returned as `event.action_id` when selected.
+---@field title string Native menu item title.
+---@field enabled? EasyBarBoolLike Whether the action can be selected. Defaults to true.
+---@field checked? EasyBarBoolLike Whether the native checkmark is shown. Defaults to false.
+
+---One native context-menu separator.
+---@class (exact) EasyBarContextMenuSeparator
+---@field separator true Marks this entry as a separator.
+
+---One native context-menu submenu heading.
+---@class (exact) EasyBarContextMenuSubmenu
+---@field title string Native submenu title.
+---@field submenu EasyBarContextMenuEntry[] Non-empty recursive submenu entries.
+
+---@alias EasyBarContextMenuEntry EasyBarContextMenuAction|EasyBarContextMenuSeparator|EasyBarContextMenuSubmenu
+
 ---The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 ---@class (exact) EasyBarNodeProps
 ---@field position? EasyBarPosition Root nodes use `left`, `center`, or `right`; popup children use `popup.<id>`.
@@ -177,6 +195,7 @@
 ---@field background? EasyBarBackgroundProps Background and padding styling.
 ---@field margin? EasyBarMarginProps Margin overrides for individual edges.
 ---@field popup? EasyBarPopupProps Popup container properties.
+---@field context_menu? EasyBarContextMenuEntry[] Native right-click menu. Use `node:unset("context_menu")` to remove it.
 ---@field spacing? number Child spacing for rows, groups, and popup content.
 ---@field value? number Current scalar value for progress/slider nodes.
 ---@field min? number Minimum value for progress/slider nodes.
@@ -259,6 +278,8 @@
 ---| '"mouse.up"'
 ---Fired when the pointer scrolls over the subscribed node.
 ---| '"mouse.scrolled"'
+---Fired when a native widget context menu action is selected.
+---| '"context_menu.clicked"'
 ---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
 ---Fired when a slider value is committed.
@@ -291,6 +312,7 @@
 ---@field value? number|string|boolean The event value for slider and driver updates.
 ---@field delta_x? number Horizontal scroll delta.
 ---@field delta_y? number Vertical scroll delta.
+---@field action_id? string Selected native context-menu action id.
 ---@field network? EasyBarNetworkEventData Structured network event data.
 ---@field power? EasyBarPowerEventData Structured power event data.
 ---@field audio? EasyBarAudioEventData Structured audio event data.
@@ -338,6 +360,10 @@
 ---@field preview? EasyBarEventToken Fired while a slider is being previewed or dragged.
 ---@field changed? EasyBarEventToken Fired when a slider value is committed.
 
+---Native widget context menu events.
+---@class EasyBarContextMenuEvents
+---@field clicked? EasyBarEventToken Fired when a native widget context menu action is selected.
+
 ---Namespace object exposed as `easybar.events`.
 ---Use these tokens when subscribing widgets instead of hard-coding event-name strings.
 ---@class EasyBarEvents
@@ -362,6 +388,7 @@
 ---@field workspace_change? EasyBarEventToken Fired when workspace layout or selection changes.
 ---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
+---@field context_menu? EasyBarContextMenuEvents Native widget context menu events.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
 ---Namespace object exposed as `easybar.level`.

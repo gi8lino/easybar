@@ -123,7 +123,8 @@ actor EventHub {
     direction: ScrollDirection? = nil,
     value: Double? = nil,
     deltaX: Double? = nil,
-    deltaY: Double? = nil
+    deltaY: Double? = nil,
+    actionID: String? = nil
   ) async {
     await emit(
       .widget(
@@ -135,7 +136,8 @@ actor EventHub {
         direction: direction,
         value: value,
         deltaX: deltaX,
-        deltaY: deltaY
+        deltaY: deltaY,
+        actionID: actionID
       )
     )
   }

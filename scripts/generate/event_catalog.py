@@ -160,9 +160,24 @@ def render_event_tokens(manifest: dict) -> str:
             )
         )
 
+    lines.append("\t},")
+
+    for group in manifest["widgetGroups"]:
+        if group["name"] in {"mouse", "slider"}:
+            continue
+        lines.append(f'\t{group["name"]} = {{')
+        for event in group["events"]:
+            lines.append(
+                event_token_line(
+                    event["luaField"],
+                    event["runtimeName"],
+                    indent="\t\t",
+                )
+            )
+        lines.append("\t},")
+
     lines.extend(
         [
-            "\t},",
             "}",
             "",
             "---- Driver event lookup table used by subscription discovery.",
@@ -262,6 +277,7 @@ def render_lua_api_block(manifest: dict) -> str:
         "---@field value? number|string|boolean The event value for slider and driver updates.",
         "---@field delta_x? number Horizontal scroll delta.",
         "---@field delta_y? number Vertical scroll delta.",
+        "---@field action_id? string Selected native context-menu action id.",
         "---@field network? EasyBarNetworkEventData Structured network event data.",
         "---@field power? EasyBarPowerEventData Structured power event data.",
         "---@field audio? EasyBarAudioEventData Structured audio event data.",
@@ -323,6 +339,14 @@ def render_lua_api_block(manifest: dict) -> str:
             f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
         )
 
+    context_menu = widget_groups.get("context_menu")
+    if context_menu:
+        lines.extend(["", f'---{context_menu["doc"]}', "---@class EasyBarContextMenuEvents"])
+        for event in context_menu["events"]:
+            lines.append(
+                f'---@field {event["luaField"]}? EasyBarEventToken {event["doc"]}'
+            )
+
     lines.extend(["", f'---{docs["eventsClass"]}',
                  f'---{docs["eventsClassExtra"]}', "---@class EasyBarEvents"])
     lines.append(
@@ -335,8 +359,9 @@ def render_lua_api_block(manifest: dict) -> str:
         )
 
     for group in manifest["widgetGroups"]:
+        type_name = "ContextMenu" if group["name"] == "context_menu" else group["name"].title()
         lines.append(
-            f'---@field {group["name"]}? EasyBar{group["name"].title()}Events {group["doc"]}'
+            f'---@field {group["name"]}? EasyBar{type_name}Events {group["doc"]}'
         )
 
     lines.append("")

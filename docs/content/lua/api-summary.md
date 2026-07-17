@@ -68,6 +68,7 @@ See [Node Kinds](reference/node-kinds.md).
 - `easybar.events.volume_change`
   Output volume changed.
 - `easybar.events.mouse.clicked`
+- `easybar.events.context_menu.clicked`
   Node clicked.
 - `easybar.events.mouse.entered`
   Pointer entered node frame.

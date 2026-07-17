@@ -64,6 +64,7 @@ nav:
           - Editor Support: lua/guides/editor-support.md
           - Grouping: lua/guides/grouping.md
           - Popups: lua/guides/popups.md
+          - Native Context Menus: lua/guides/context-menus.md
           - Intervals: lua/guides/intervals.md
           - Commands: lua/guides/commands.md
           - Logging: lua/guides/logging.md

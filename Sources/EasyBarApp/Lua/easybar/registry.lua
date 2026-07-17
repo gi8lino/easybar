@@ -16,7 +16,9 @@ local function deep_merge(target, source)
 	end
 
 	for key, value in pairs(source) do
-		if type(value) == "table" and type(target[key]) == "table" then
+		if key == "context_menu" then
+			target[key] = helpers.deep_copy(value)
+		elseif type(value) == "table" and type(target[key]) == "table" then
 			deep_merge(target[key], value)
 		else
 			target[key] = helpers.deep_copy(value)
@@ -123,6 +125,86 @@ local function normalize_string_prop(value)
 end
 
 local MAX_INLINE_SVG_BYTES = 256 * 1024
+local MAX_CONTEXT_MENU_DEPTH = 8
+local MAX_CONTEXT_MENU_ITEMS = 256
+local MAX_CONTEXT_MENU_TEXT_BYTES = 1024
+
+local function normalize_menu_bool(value, default, path, report)
+	if value == nil then
+		return default
+	elseif value == true or value == "on" then
+		return true
+	elseif value == false or value == "off" then
+		return false
+	end
+	report(path, value, "true, false, 'on', or 'off'")
+	return default
+end
+
+--- Normalizes one recursive native context menu, dropping invalid entries safely.
+local function normalize_context_menu(menu, path, report)
+	if type(menu) ~= "table" then
+		report(path, menu, "array of context menu entries")
+		return {}
+	end
+
+	local item_count = 0
+	local action_ids = {}
+
+	local function normalize_entries(entries, entry_path, depth)
+		if depth > MAX_CONTEXT_MENU_DEPTH then
+			report(entry_path, entries, "context menu nesting at most 8 levels")
+			return {}
+		end
+
+		local normalized = {}
+		for index, entry in ipairs(entries) do
+			item_count = item_count + 1
+			local current_path = entry_path .. "[" .. tostring(index) .. "]"
+			if item_count > MAX_CONTEXT_MENU_ITEMS then
+				report(current_path, entry, "at most 256 context menu entries")
+				break
+			elseif type(entry) ~= "table" then
+				report(current_path, entry, "context menu entry table")
+			elseif entry.separator == true then
+				normalized[#normalized + 1] = { separator = true }
+			else
+				local title = entry.title
+				local submenu = entry.submenu
+				local has_submenu = type(submenu) == "table"
+				local id = entry.id
+				if type(title) ~= "string" or title == "" or #title > MAX_CONTEXT_MENU_TEXT_BYTES then
+					report(current_path .. ".title", title, "non-empty string at most 1024 UTF-8 bytes")
+				elseif has_submenu then
+					local children = normalize_entries(submenu, current_path .. ".submenu", depth + 1)
+					if id ~= nil then
+						report(current_path .. ".id", id, "no id on submenu headings")
+					elseif #children == 0 then
+						report(current_path .. ".submenu", submenu, "non-empty valid submenu")
+					else
+						normalized[#normalized + 1] = { title = title, submenu = children }
+					end
+				elseif type(id) ~= "string" or id == "" or #id > MAX_CONTEXT_MENU_TEXT_BYTES then
+					report(current_path .. ".id", id, "non-empty string at most 1024 UTF-8 bytes")
+				else
+					if action_ids[id] then
+						report(current_path .. ".id", id, "unique action id within this context menu")
+					end
+					action_ids[id] = true
+					normalized[#normalized + 1] = {
+						id = id,
+						title = title,
+						enabled = normalize_menu_bool(entry.enabled, true, current_path .. ".enabled", report),
+						checked = normalize_menu_bool(entry.checked, false, current_path .. ".checked", report),
+					}
+				end
+			end
+		end
+		return normalized
+	end
+
+	return normalize_entries(menu, path, 1)
+end
 
 --- Validates one structured image source while preserving its display options.
 local function normalize_image_prop(image, path, report)
@@ -171,6 +253,10 @@ local function normalize_props(props, report)
 	end
 
 	normalized.image = normalize_image_prop(normalized.image, "image", report)
+
+	if normalized.context_menu ~= nil then
+		normalized.context_menu = normalize_context_menu(normalized.context_menu, "context_menu", report)
+	end
 
 	if normalized.drawing ~= nil then
 		normalized.drawing = normalize_bool(normalized.drawing, true, "drawing", report)

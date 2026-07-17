@@ -147,44 +147,45 @@ Modifiers: `exact`.
 
 The main property table accepted by `easybar.add(...)` and `node:set(...)`.
 
-| Property                     | Type                     | Description                                                                   |
-| ---------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
-| `position` _(optional)_      | `EasyBarPosition`        | Root nodes use `left`, `center`, or `right`; popup children use `popup.<id>`. |
-| `order` _(optional)_         | `integer`                | Render order within one bar position.                                         |
-| `drawing` _(optional)_       | `EasyBarBoolLike`        | Whether the node is visible.                                                  |
-| `parent` _(optional)_        | `string`                 | Parent node id for nested layout.                                             |
-| `width` _(optional)_         | `number`                 | Width in points.                                                              |
-| `height` _(optional)_        | `number`                 | Height in points.                                                             |
-| `opacity` _(optional)_       | `number`                 | Opacity from `0` to `1`.                                                      |
-| `y_offset` _(optional)_      | `number`                 | Vertical offset in points.                                                    |
-| `interval` _(optional)_      | `number`                 | Polling interval in seconds.                                                  |
-| `on_interval` _(optional)_   | `fun()`                  | Interval callback executed on this widget's own interval schedule.            |
-| `color` _(optional)_         | `string`                 | Primary foreground color.                                                     |
-| `icon` _(optional)_          | `EasyBarIconLike`        | Icon table or shorthand value.                                                |
-| `label` _(optional)_         | `EasyBarLabelLike`       | Label table or shorthand value.                                               |
-| `image` _(optional)_         | `EasyBarImage`           | Standalone image content.                                                     |
-| `background` _(optional)_    | `EasyBarBackgroundProps` | Background and padding styling.                                               |
-| `margin` _(optional)_        | `EasyBarMarginProps`     | Margin overrides for individual edges.                                        |
-| `popup` _(optional)_         | `EasyBarPopupProps`      | Popup container properties.                                                   |
-| `spacing` _(optional)_       | `number`                 | Child spacing for rows, groups, and popup content.                            |
-| `value` _(optional)_         | `number`                 | Current scalar value for progress/slider nodes.                               |
-| `min` _(optional)_           | `number`                 | Minimum value for progress/slider nodes.                                      |
-| `max` _(optional)_           | `number`                 | Maximum value for progress/slider nodes.                                      |
-| `step` _(optional)_          | `number`                 | Slider step size.                                                             |
-| `values` _(optional)_        | `number[]`               | Sparkline sample values.                                                      |
-| `line_width` _(optional)_    | `number`                 | Sparkline stroke width.                                                       |
-| `padding_x` _(optional)_     | `number`                 | Horizontal padding shorthand.                                                 |
-| `padding_y` _(optional)_     | `number`                 | Vertical padding shorthand.                                                   |
-| `paddingX` _(optional)_      | `number`                 | Horizontal padding shorthand.                                                 |
-| `paddingY` _(optional)_      | `number`                 | Vertical padding shorthand.                                                   |
-| `margin_x` _(optional)_      | `number`                 | Horizontal margin shorthand.                                                  |
-| `margin_y` _(optional)_      | `number`                 | Vertical margin shorthand.                                                    |
-| `marginX` _(optional)_       | `number`                 | Horizontal margin shorthand.                                                  |
-| `marginY` _(optional)_       | `number`                 | Vertical margin shorthand.                                                    |
-| `margin_left` _(optional)_   | `number`                 | Left margin in points.                                                        |
-| `margin_right` _(optional)_  | `number`                 | Right margin in points.                                                       |
-| `margin_top` _(optional)_    | `number`                 | Top margin in points.                                                         |
-| `margin_bottom` _(optional)_ | `number`                 | Bottom margin in points.                                                      |
+| Property                     | Type                        | Description                                                                   |
+| ---------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `position` _(optional)_      | `EasyBarPosition`           | Root nodes use `left`, `center`, or `right`; popup children use `popup.<id>`. |
+| `order` _(optional)_         | `integer`                   | Render order within one bar position.                                         |
+| `drawing` _(optional)_       | `EasyBarBoolLike`           | Whether the node is visible.                                                  |
+| `parent` _(optional)_        | `string`                    | Parent node id for nested layout.                                             |
+| `width` _(optional)_         | `number`                    | Width in points.                                                              |
+| `height` _(optional)_        | `number`                    | Height in points.                                                             |
+| `opacity` _(optional)_       | `number`                    | Opacity from `0` to `1`.                                                      |
+| `y_offset` _(optional)_      | `number`                    | Vertical offset in points.                                                    |
+| `interval` _(optional)_      | `number`                    | Polling interval in seconds.                                                  |
+| `on_interval` _(optional)_   | `fun()`                     | Interval callback executed on this widget's own interval schedule.            |
+| `color` _(optional)_         | `string`                    | Primary foreground color.                                                     |
+| `icon` _(optional)_          | `EasyBarIconLike`           | Icon table or shorthand value.                                                |
+| `label` _(optional)_         | `EasyBarLabelLike`          | Label table or shorthand value.                                               |
+| `image` _(optional)_         | `EasyBarImage`              | Standalone image content.                                                     |
+| `background` _(optional)_    | `EasyBarBackgroundProps`    | Background and padding styling.                                               |
+| `margin` _(optional)_        | `EasyBarMarginProps`        | Margin overrides for individual edges.                                        |
+| `popup` _(optional)_         | `EasyBarPopupProps`         | Popup container properties.                                                   |
+| `context_menu` _(optional)_  | `EasyBarContextMenuEntry[]` | Native right-click menu. Use `node:unset("context_menu")` to remove it.       |
+| `spacing` _(optional)_       | `number`                    | Child spacing for rows, groups, and popup content.                            |
+| `value` _(optional)_         | `number`                    | Current scalar value for progress/slider nodes.                               |
+| `min` _(optional)_           | `number`                    | Minimum value for progress/slider nodes.                                      |
+| `max` _(optional)_           | `number`                    | Maximum value for progress/slider nodes.                                      |
+| `step` _(optional)_          | `number`                    | Slider step size.                                                             |
+| `values` _(optional)_        | `number[]`                  | Sparkline sample values.                                                      |
+| `line_width` _(optional)_    | `number`                    | Sparkline stroke width.                                                       |
+| `padding_x` _(optional)_     | `number`                    | Horizontal padding shorthand.                                                 |
+| `padding_y` _(optional)_     | `number`                    | Vertical padding shorthand.                                                   |
+| `paddingX` _(optional)_      | `number`                    | Horizontal padding shorthand.                                                 |
+| `paddingY` _(optional)_      | `number`                    | Vertical padding shorthand.                                                   |
+| `margin_x` _(optional)_      | `number`                    | Horizontal margin shorthand.                                                  |
+| `margin_y` _(optional)_      | `number`                    | Vertical margin shorthand.                                                    |
+| `marginX` _(optional)_       | `number`                    | Horizontal margin shorthand.                                                  |
+| `marginY` _(optional)_       | `number`                    | Vertical margin shorthand.                                                    |
+| `margin_left` _(optional)_   | `number`                    | Left margin in points.                                                        |
+| `margin_right` _(optional)_  | `number`                    | Right margin in points.                                                       |
+| `margin_top` _(optional)_    | `number`                    | Top margin in points.                                                         |
+| `margin_bottom` _(optional)_ | `number`                    | Bottom margin in points.                                                      |
 
 ## `EasyBarPopupProps`
 

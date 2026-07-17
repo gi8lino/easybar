@@ -23,6 +23,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
   var receivesMouseUp: Bool?
   var receivesMouseClick: Bool?
   var receivesMouseScroll: Bool?
+  var contextMenu: [WidgetContextMenuItem]? = nil
 
   var imagePath: String?
   var imageSvg: String?
@@ -87,6 +88,15 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
   var width: Double?
   var height: Double?
   var yOffset: Double?
+
+  /// Returns the bounded menu definition accepted by the native renderer.
+  var validatedContextMenu: [WidgetContextMenuItem]? {
+    WidgetContextMenuItem.validated(contextMenu)
+  }
+
+  var hasContextMenu: Bool {
+    validatedContextMenu?.isEmpty == false
+  }
 
   /// Returns the single valid image source represented by the decoded wire fields.
   var imageSource: WidgetImageSource? {

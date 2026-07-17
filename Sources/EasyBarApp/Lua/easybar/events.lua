@@ -33,6 +33,10 @@ function M.normalize_event(payload)
 		event.direction = tostring(event.direction)
 	end
 
+	if event.action_id ~= nil then
+		event.action_id = tostring(event.action_id)
+	end
+
 	if event.delta_x ~= nil then
 		event.delta_x = tonumber(event.delta_x)
 	end

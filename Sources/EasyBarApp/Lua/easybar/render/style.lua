@@ -397,6 +397,7 @@ function M.make_node(registry, id, item, root_position, children)
 	node.values = resolved_props.values
 	node.lineWidth = tonumber(resolved_props.line_width or resolved_props.lineWidth)
 	node.children = children
+	node.contextMenu = resolved_props.context_menu
 
 	if is_popup_item(item) and node.color == "" then
 		node.color = DEFAULT_POPUP_TEXT_COLOR

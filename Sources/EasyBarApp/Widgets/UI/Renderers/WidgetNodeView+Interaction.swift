@@ -107,7 +107,8 @@ extension WidgetNodeView {
         emitsMouseDown: node.isMouseDownInteractive,
         emitsMouseUp: node.isMouseUpInteractive,
         emitsMouseClick: node.isMouseClickInteractive,
-        emitsMouseScroll: node.isMouseScrollInteractive
+        emitsMouseScroll: node.isMouseScrollInteractive,
+        contextMenuItems: node.validatedContextMenu
       )
       .frame(width: proxy.size.width, height: proxy.size.height)
       .contentShape(Rectangle())
@@ -116,14 +117,14 @@ extension WidgetNodeView {
 
   @ViewBuilder
   var scrollOverlay: some View {
-    if node.isMouseScrollInteractive {
+    if node.isMouseScrollInteractive || node.hasContextMenu {
       nodeEventSurface(tracksHover: false)
     }
   }
 
   @ViewBuilder
   var nodeMouseOverlay: some View {
-    if node.hasMouseInteractionHandlers {
+    if node.hasMouseInteractionHandlers || node.hasContextMenu {
       nodeEventSurface(tracksHover: node.isMouseHoverInteractive)
     }
   }
@@ -153,6 +154,7 @@ extension WidgetNodeView {
           emitsMouseUp: node.isMouseUpInteractive,
           emitsMouseClick: node.isMouseClickInteractive,
           emitsMouseScroll: node.isMouseScrollInteractive,
+          contextMenuItems: node.validatedContextMenu,
           onHoverChanged: handleAnchorHover
         )
         .frame(width: proxy.size.width, height: proxy.size.height)
@@ -163,7 +165,7 @@ extension WidgetNodeView {
 
   /// Returns whether the popup anchor needs an AppKit mouse overlay.
   var shouldShowPopupAnchorMouseOverlay: Bool {
-    return nodeCanPresentPopup || node.hasMouseInteractionHandlers
+    return nodeCanPresentPopup || node.hasMouseInteractionHandlers || node.hasContextMenu
   }
 
   /// Emits a widget hover event for this node.

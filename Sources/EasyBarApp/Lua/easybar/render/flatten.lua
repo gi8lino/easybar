@@ -44,6 +44,7 @@ function M.flatten_node(node, root_id, parent_id, inherited_position, out)
 		receivesMouseUp = true_or_nil(node.receivesMouseUp),
 		receivesMouseClick = true_or_nil(node.receivesMouseClick),
 		receivesMouseScroll = true_or_nil(node.receivesMouseScroll),
+		context_menu = node.contextMenu,
 		value = tonumber(node.value),
 		min = tonumber(node.min),
 		max = tonumber(node.max),

@@ -78,6 +78,7 @@ Examples:
 - `network_change`
 - `minute_tick`
 - `mouse.clicked`
+- `context_menu.clicked`
 
 ### Manual refresh
 

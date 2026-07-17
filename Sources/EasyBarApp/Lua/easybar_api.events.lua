@@ -58,6 +58,8 @@
 ---| '"mouse.up"'
 ---Fired when the pointer scrolls over the subscribed node.
 ---| '"mouse.scrolled"'
+---Fired when a native widget context menu action is selected.
+---| '"context_menu.clicked"'
 ---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
 ---Fired when a slider value is committed.
@@ -90,6 +92,7 @@
 ---@field value? number|string|boolean The event value for slider and driver updates.
 ---@field delta_x? number Horizontal scroll delta.
 ---@field delta_y? number Vertical scroll delta.
+---@field action_id? string Selected native context-menu action id.
 ---@field network? EasyBarNetworkEventData Structured network event data.
 ---@field power? EasyBarPowerEventData Structured power event data.
 ---@field audio? EasyBarAudioEventData Structured audio event data.
@@ -137,6 +140,10 @@
 ---@field preview? EasyBarEventToken Fired while a slider is being previewed or dragged.
 ---@field changed? EasyBarEventToken Fired when a slider value is committed.
 
+---Native widget context menu events.
+---@class EasyBarContextMenuEvents
+---@field clicked? EasyBarEventToken Fired when a native widget context menu action is selected.
+
 ---Namespace object exposed as `easybar.events`.
 ---Use these tokens when subscribing widgets instead of hard-coding event-name strings.
 ---@class EasyBarEvents
@@ -161,4 +168,5 @@
 ---@field workspace_change? EasyBarEventToken Fired when workspace layout or selection changes.
 ---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
+---@field context_menu? EasyBarContextMenuEvents Native widget context menu events.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.

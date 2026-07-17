@@ -204,6 +204,18 @@
       ]
     },
     {
+      "name": "context_menu",
+      "doc": "Native widget context menu events.",
+      "events": [
+        {
+          "swiftCase": "contextMenuClicked",
+          "luaField": "clicked",
+          "runtimeName": "context_menu.clicked",
+          "doc": "Fired when a native widget context menu action is selected."
+        }
+      ]
+    },
+    {
       "name": "slider",
       "doc": "Slider interaction event tokens.",
       "events": [

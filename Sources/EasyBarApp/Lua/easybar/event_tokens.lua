@@ -97,6 +97,9 @@ M.tokens = {
 		preview = make_event_token("slider.preview"),
 		changed = make_event_token("slider.changed"),
 	},
+	context_menu = {
+		clicked = make_event_token("context_menu.clicked"),
+	},
 }
 
 ---- Driver event lookup table used by subscription discovery.

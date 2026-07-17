@@ -5,7 +5,7 @@ dist/
 .home/
 
 # mkdocs
-docs/site/
+docs/.site/
 docs/.venv/
 
 .DS_Store

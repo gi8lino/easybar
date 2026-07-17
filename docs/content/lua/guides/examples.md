@@ -75,6 +75,13 @@ clock = easybar.add(easybar.kind.item, "clock", {
 })
 ```
 
+## Native context menu widget
+
+[`widgets/context-menu.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/context-menu.lua)
+shows a native macOS right-click menu with actions, a separator, disabled/checked state, a
+submenu, and dynamic menu replacement. See [Native Context Menus](context-menus.md) for the full
+API and right-click precedence rules.
+
 ## Widget-relative image asset
 
 ```lua

@@ -41,6 +41,8 @@ enum WidgetEvent: String, CaseIterable, Sendable {
   case mouseClicked = "mouse.clicked"
   case mouseScrolled = "mouse.scrolled"
 
+  case contextMenuClicked = "context_menu.clicked"
+
   case sliderPreview = "slider.preview"
   case sliderChanged = "slider.changed"
 }
@@ -95,6 +97,8 @@ struct EasyBarEventPayload: Sendable {
   let deltaX: Double?
   /// Vertical scroll delta.
   let deltaY: Double?
+  /// Selected native context-menu action identifier.
+  let actionID: String?
 
   // MARK: - Builders
 
@@ -131,7 +135,8 @@ struct EasyBarEventPayload: Sendable {
     direction: ScrollDirection? = nil,
     value: Double? = nil,
     deltaX: Double? = nil,
-    deltaY: Double? = nil
+    deltaY: Double? = nil,
+    actionID: String? = nil
   ) -> EasyBarEventPayload {
     makePayload(
       widgetEvent: event,
@@ -142,7 +147,8 @@ struct EasyBarEventPayload: Sendable {
       direction: direction,
       value: value,
       deltaX: deltaX,
-      deltaY: deltaY
+      deltaY: deltaY,
+      actionID: actionID
     )
   }
 
@@ -165,6 +171,7 @@ struct EasyBarEventPayload: Sendable {
       value: value,
       deltaX: deltaX,
       deltaY: deltaY,
+      actionID: actionID,
       network: hasNetworkPayload
         ? .init(
           primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
@@ -194,6 +201,7 @@ struct EasyBarEventPayload: Sendable {
     if value != nil { keys.append("value") }
     if deltaX != nil { keys.append("delta_x") }
     if deltaY != nil { keys.append("delta_y") }
+    if actionID != nil { keys.append("action_id") }
     if hasNetworkPayload { keys.append("network") }
     if charging != nil { keys.append("power") }
     if hasAudioPayload { keys.append("audio") }
@@ -220,7 +228,8 @@ struct EasyBarEventPayload: Sendable {
     primaryInterfaceIsTunnel: Bool? = nil,
     value: Double? = nil,
     deltaX: Double? = nil,
-    deltaY: Double? = nil
+    deltaY: Double? = nil,
+    actionID: String? = nil
   ) -> EasyBarEventPayload {
     EasyBarEventPayload(
       appEvent: appEvent,
@@ -237,7 +246,8 @@ struct EasyBarEventPayload: Sendable {
       primaryInterfaceIsTunnel: primaryInterfaceIsTunnel,
       value: value,
       deltaX: deltaX,
-      deltaY: deltaY
+      deltaY: deltaY,
+      actionID: actionID
     )
   }
 
@@ -282,6 +292,7 @@ struct LuaEventPayload: Encodable, Equatable, Sendable {
   let value: Double?
   let deltaX: Double?
   let deltaY: Double?
+  let actionID: String?
   let network: Network?
   let power: Power?
   let audio: Audio?
@@ -297,6 +308,7 @@ struct LuaEventPayload: Encodable, Equatable, Sendable {
     case value
     case deltaX = "delta_x"
     case deltaY = "delta_y"
+    case actionID = "action_id"
     case network
     case power
     case audio

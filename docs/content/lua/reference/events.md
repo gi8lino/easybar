@@ -48,6 +48,7 @@ Canonical runtime event-name strings carried inside `EasyBarEventToken.name`. In
 | `"mouse.down"`            | Fired on mouse button press over the subscribed node.                                       |
 | `"mouse.up"`              | Fired on mouse button release over the subscribed node.                                     |
 | `"mouse.scrolled"`        | Fired when the pointer scrolls over the subscribed node.                                    |
+| `"context_menu.clicked"`  | Fired when a native widget context menu action is selected.                                 |
 | `"slider.preview"`        | Fired while a slider is being previewed or dragged.                                         |
 | `"slider.changed"`        | Fired when a slider value is committed.                                                     |
 
@@ -81,6 +82,14 @@ Structured audio-specific fields that may be present on mute or volume events.
 | `muted` _(optional)_ | `boolean` | Whether the current audio output is muted.     |
 | `value` _(optional)_ | `number`  | The current audio-related value when provided. |
 
+## `EasyBarContextMenuEvents`
+
+Native widget context menu events.
+
+| Property               | Type                | Description                                                 |
+| ---------------------- | ------------------- | ----------------------------------------------------------- |
+| `clicked` _(optional)_ | `EasyBarEventToken` | Fired when a native widget context menu action is selected. |
+
 ## `EasyBarEvent`
 
 The event payload object delivered to event handlers. Different event families populate different optional fields.
@@ -97,6 +106,7 @@ The event payload object delivered to event handlers. Different event families p
 | `value` _(optional)_            | `number\|string\|boolean`        | The event value for slider and driver updates.                  |
 | `delta_x` _(optional)_          | `number`                         | Horizontal scroll delta.                                        |
 | `delta_y` _(optional)_          | `number`                         | Vertical scroll delta.                                          |
+| `action_id` _(optional)_        | `string`                         | Selected native context-menu action id.                         |
 | `network` _(optional)_          | `EasyBarNetworkEventData`        | Structured network event data.                                  |
 | `power` _(optional)_            | `EasyBarPowerEventData`          | Structured power event data.                                    |
 | `audio` _(optional)_            | `EasyBarAudioEventData`          | Structured audio event data.                                    |
@@ -113,30 +123,31 @@ Opaque subscribe token object passed through from `easybar.events.*`.
 
 Namespace object exposed as `easybar.events`. Use these tokens when subscribing widgets instead of hard-coding event-name strings.
 
-| Property                             | Type                  | Description                                                |
-| ------------------------------------ | --------------------- | ---------------------------------------------------------- |
-| `forced` _(optional)_                | `EasyBarEventToken`   | Fired when EasyBar or `easybar` triggers a manual refresh. |
-| `system_woke` _(optional)_           | `EasyBarEventToken`   | Fired after the system wakes from sleep.                   |
-| `session_active` _(optional)_        | `EasyBarEventToken`   | Fired when the macOS user session becomes active.          |
-| `session_inactive` _(optional)_      | `EasyBarEventToken`   | Fired when the macOS user session resigns active status.   |
-| `sleep` _(optional)_                 | `EasyBarEventToken`   | Fired before the system goes to sleep.                     |
-| `space_change` _(optional)_          | `EasyBarEventToken`   | Fired when the active macOS space changes.                 |
-| `app_switch` _(optional)_            | `EasyBarEventToken`   | Fired when the frontmost app changes.                      |
-| `display_change` _(optional)_        | `EasyBarEventToken`   | Fired when attached displays change.                       |
-| `power_source_change` _(optional)_   | `EasyBarEventToken`   | Fired when the power source changes.                       |
-| `charging_state_change` _(optional)_ | `EasyBarEventToken`   | Fired when charging starts or stops.                       |
-| `wifi_change` _(optional)_           | `EasyBarEventToken`   | Fired when Wi-Fi state or SSID changes.                    |
-| `network_change` _(optional)_        | `EasyBarEventToken`   | Fired when network routing or tunnel state changes.        |
-| `volume_change` _(optional)_         | `EasyBarEventToken`   | Fired when output volume changes.                          |
-| `mute_change` _(optional)_           | `EasyBarEventToken`   | Fired when mute state changes.                             |
-| `minute_tick` _(optional)_           | `EasyBarEventToken`   | Fired once per minute.                                     |
-| `second_tick` _(optional)_           | `EasyBarEventToken`   | Fired once per second.                                     |
-| `calendar_change` _(optional)_       | `EasyBarEventToken`   | Fired when the calendar snapshot updates.                  |
-| `focus_change` _(optional)_          | `EasyBarEventToken`   | Fired when workspace focus changes.                        |
-| `workspace_change` _(optional)_      | `EasyBarEventToken`   | Fired when workspace layout or selection changes.          |
-| `space_mode_change` _(optional)_     | `EasyBarEventToken`   | Fired when the AeroSpace layout mode changes.              |
-| `mouse` _(optional)_                 | `EasyBarMouseEvents`  | Mouse interaction event tokens and constants.              |
-| `slider` _(optional)_                | `EasyBarSliderEvents` | Slider interaction event tokens.                           |
+| Property                             | Type                       | Description                                                |
+| ------------------------------------ | -------------------------- | ---------------------------------------------------------- |
+| `forced` _(optional)_                | `EasyBarEventToken`        | Fired when EasyBar or `easybar` triggers a manual refresh. |
+| `system_woke` _(optional)_           | `EasyBarEventToken`        | Fired after the system wakes from sleep.                   |
+| `session_active` _(optional)_        | `EasyBarEventToken`        | Fired when the macOS user session becomes active.          |
+| `session_inactive` _(optional)_      | `EasyBarEventToken`        | Fired when the macOS user session resigns active status.   |
+| `sleep` _(optional)_                 | `EasyBarEventToken`        | Fired before the system goes to sleep.                     |
+| `space_change` _(optional)_          | `EasyBarEventToken`        | Fired when the active macOS space changes.                 |
+| `app_switch` _(optional)_            | `EasyBarEventToken`        | Fired when the frontmost app changes.                      |
+| `display_change` _(optional)_        | `EasyBarEventToken`        | Fired when attached displays change.                       |
+| `power_source_change` _(optional)_   | `EasyBarEventToken`        | Fired when the power source changes.                       |
+| `charging_state_change` _(optional)_ | `EasyBarEventToken`        | Fired when charging starts or stops.                       |
+| `wifi_change` _(optional)_           | `EasyBarEventToken`        | Fired when Wi-Fi state or SSID changes.                    |
+| `network_change` _(optional)_        | `EasyBarEventToken`        | Fired when network routing or tunnel state changes.        |
+| `volume_change` _(optional)_         | `EasyBarEventToken`        | Fired when output volume changes.                          |
+| `mute_change` _(optional)_           | `EasyBarEventToken`        | Fired when mute state changes.                             |
+| `minute_tick` _(optional)_           | `EasyBarEventToken`        | Fired once per minute.                                     |
+| `second_tick` _(optional)_           | `EasyBarEventToken`        | Fired once per second.                                     |
+| `calendar_change` _(optional)_       | `EasyBarEventToken`        | Fired when the calendar snapshot updates.                  |
+| `focus_change` _(optional)_          | `EasyBarEventToken`        | Fired when workspace focus changes.                        |
+| `workspace_change` _(optional)_      | `EasyBarEventToken`        | Fired when workspace layout or selection changes.          |
+| `space_mode_change` _(optional)_     | `EasyBarEventToken`        | Fired when the AeroSpace layout mode changes.              |
+| `mouse` _(optional)_                 | `EasyBarMouseEvents`       | Mouse interaction event tokens and constants.              |
+| `context_menu` _(optional)_          | `EasyBarContextMenuEvents` | Native widget context menu events.                         |
+| `slider` _(optional)_                | `EasyBarSliderEvents`      | Slider interaction event tokens.                           |
 
 ## `EasyBarMouseEvents`
 
