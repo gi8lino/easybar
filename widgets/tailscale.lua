@@ -216,11 +216,7 @@ end
 --- Stores the latest snapshot and logs meaningful state transitions.
 local function update_state(snapshot)
 	if state.tailscale_connected ~= snapshot.tailscale_connected then
-		easybar.log(
-			easybar.level.debug,
-			"tailscale state changed",
-			snapshot.tailscale_connected and "active" or "inactive"
-		)
+		easybar.log(easybar.level.debug, "tailscale state changed", snapshot.tailscale_connected and "active" or "inactive")
 	end
 
 	if state.exit_node_enabled ~= snapshot.exit_node_enabled then

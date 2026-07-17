@@ -54,12 +54,7 @@ function M.new(state, ensure_item_exists, log, event_tokens)
 
 			if not ok and log then
 				log.error(
-					"lua handler failed id="
-						.. tostring(id)
-						.. " event="
-						.. tostring(event.name)
-						.. " error="
-						.. tostring(err)
+					"lua handler failed id=" .. tostring(id) .. " event=" .. tostring(event.name) .. " error=" .. tostring(err)
 				)
 			end
 		end

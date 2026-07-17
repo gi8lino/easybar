@@ -151,8 +151,7 @@ local function render_popup()
 		popup_header:set({
 			drawing = true,
 			label = {
-				string = count == 1 and "1 unread GitHub notification"
-					or tostring(count) .. " unread GitHub notifications",
+				string = count == 1 and "1 unread GitHub notification" or tostring(count) .. " unread GitHub notifications",
 				color = COLORS.accent,
 			},
 		})
@@ -222,8 +221,7 @@ local function render()
 			color = color,
 		},
 		background = {
-			color = (state.trigger_hovered or state.popup_hovered) and COLORS.surface_hover
-				or easybar.theme.ref.transparent,
+			color = (state.trigger_hovered or state.popup_hovered) and COLORS.surface_hover or easybar.theme.ref.transparent,
 			border_color = easybar.theme.ref.transparent,
 			border_width = 0,
 			corner_radius = 8,

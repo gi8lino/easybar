@@ -171,10 +171,7 @@ local function codepoint_to_utf8(codepoint)
 		return string.char(codepoint)
 	end
 	if codepoint <= 0x7FF then
-		return string.char(
-			0xC0 + math.floor(codepoint / 0x40),
-			0x80 + (codepoint % 0x40)
-		)
+		return string.char(0xC0 + math.floor(codepoint / 0x40), 0x80 + (codepoint % 0x40))
 	end
 	if codepoint <= 0xFFFF then
 		return string.char(
@@ -496,5 +493,3 @@ function M.decode(text)
 end
 
 return M
-
-

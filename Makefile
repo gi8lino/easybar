@@ -95,6 +95,7 @@ LOCAL_LOG_DIR ?= $(HOME)/Library/Logs/EasyBar
 LOCAL_STATE_DIR ?= $(HOME)/Library/Application Support/EasyBar/LocalInstall
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
+STYLUA ?= stylua
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -120,7 +121,9 @@ endif
 
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
-        build bundle package release app cli validate-config fmt fmt-all fmt-swift fmt-markdown lint test \
+        build bundle package release app cli validate-config \
+        fmt fmt-all fmt-swift fmt-lua fmt-markdown \
+        lint lint-swift lint-lua test \
         clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -166,7 +169,6 @@ generate-swift-env: ## Create repo-local directories for SwiftPM and compiler ca
 		"$(LOCAL_CACHE_DIR)" \
 		"$(LOCAL_CLANG_MODULE_CACHE)"
 
-
 build: bundle ## Build the app bundle and CLI for the selected ARCH.
 
 app: ## Build only the app executable for the selected ARCH.
@@ -182,18 +184,28 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 	fi
 	@"$(CLI_BIN)" --validate-config --config "$(CONFIG)"
 
-fmt: fmt-swift ## Format Swift sources.
+##@ Formatting
 
-fmt-all: fmt-swift fmt-markdown ## Format Swift and Markdown sources.
+fmt: fmt-swift fmt-lua ## Format Swift and Lua source files.
+
+fmt-all: fmt-swift fmt-lua fmt-markdown ## Format Swift, Lua, and Markdown files.
 
 fmt-swift: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
 
+fmt-lua: ## Format all Lua source files in the repository.
+	@$(STYLUA) .
+
 fmt-markdown: ## Format Markdown files with Prettier.
 	@$(PRETTIER) --write "**/*.md"
 
-lint: ## Lint Swift source formatting without modifying files.
+lint: lint-swift lint-lua ## Check Swift and Lua formatting without modifying files.
+
+lint-swift: ## Check Swift source formatting without modifying files.
 	@swift format lint --recursive .
+
+lint-lua: ## Check Lua source formatting without modifying files.
+	@$(STYLUA) --check .
 
 test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
@@ -445,4 +457,3 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
-

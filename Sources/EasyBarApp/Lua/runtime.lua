@@ -250,12 +250,7 @@ registry = api.new(log, {
 		log.debug("lua async completed token=" .. tostring(token) .. " code=" .. tostring(code))
 	end,
 	on_async_callback_error = function(command, err)
-		log.error(
-			"lua async callback failed command_bytes="
-				.. tostring(#command)
-				.. " error_type="
-				.. type(err)
-		)
+		log.error("lua async callback failed command_bytes=" .. tostring(#command) .. " error_type=" .. type(err))
 	end,
 	on_invalid_public_api = function(path, value, expected)
 		log.error(

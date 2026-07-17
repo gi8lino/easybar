@@ -91,7 +91,6 @@ local function configured_log_dir()
 	return (os.getenv("HOME") or "/tmp") .. "/.local/state/easybar"
 end
 
-
 --- Returns a safe widget log file name, or nil plus an error message.
 local function validate_log_file_name(file_name)
 	file_name = tostring(file_name or "")

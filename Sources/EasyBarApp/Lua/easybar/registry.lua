@@ -7,8 +7,7 @@ local M = {}
 local helpers = require("easybar.helpers")
 
 --- Returns one no-op callback when a hook is missing.
-local function noop()
-end
+local function noop() end
 
 --- Deep-merges one source table into one target table.
 local function deep_merge(target, source)
@@ -87,12 +86,7 @@ end
 local function invalid_public_value(path, value, expected, report)
 	report(path, value, expected)
 	error(
-		"invalid easybar value for "
-			.. tostring(path)
-			.. ": expected "
-			.. tostring(expected)
-			.. ", got "
-			.. tostring(value)
+		"invalid easybar value for " .. tostring(path) .. ": expected " .. tostring(expected) .. ", got " .. tostring(value)
 	)
 end
 
@@ -183,8 +177,7 @@ local function normalize_props(props, report)
 	end
 
 	if type(normalized.popup) == "table" and normalized.popup.drawing ~= nil then
-		normalized.popup.drawing =
-			normalize_bool(normalized.popup.drawing, false, "popup.drawing", report)
+		normalized.popup.drawing = normalize_bool(normalized.popup.drawing, false, "popup.drawing", report)
 	end
 
 	return normalized
@@ -246,22 +239,16 @@ function M.new(hooks)
 
 	local on_mutation = type(hooks.on_mutation) == "function" and hooks.on_mutation or noop
 	local before_exec_callback = type(hooks.before_exec_callback) == "function" and hooks.before_exec_callback or noop
-	local request_sync_command =
-		type(hooks.request_sync_command) == "function" and hooks.request_sync_command or nil
-	local request_async_command =
-		type(hooks.request_async_command) == "function" and hooks.request_async_command or nil
-	local request_cancel_async =
-		type(hooks.request_cancel_async) == "function" and hooks.request_cancel_async or nil
-	local before_async_callback =
-		type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
-	local on_async_job_started =
-		type(hooks.on_async_job_started) == "function" and hooks.on_async_job_started or noop
-	local on_async_job_completed =
-		type(hooks.on_async_job_completed) == "function" and hooks.on_async_job_completed or noop
-	local on_async_callback_error =
-		type(hooks.on_async_callback_error) == "function" and hooks.on_async_callback_error or noop
-	local on_invalid_public_api =
-		type(hooks.on_invalid_public_api) == "function" and hooks.on_invalid_public_api or noop
+	local request_sync_command = type(hooks.request_sync_command) == "function" and hooks.request_sync_command or nil
+	local request_async_command = type(hooks.request_async_command) == "function" and hooks.request_async_command or nil
+	local request_cancel_async = type(hooks.request_cancel_async) == "function" and hooks.request_cancel_async or nil
+	local before_async_callback = type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
+	local on_async_job_started = type(hooks.on_async_job_started) == "function" and hooks.on_async_job_started or noop
+	local on_async_job_completed = type(hooks.on_async_job_completed) == "function" and hooks.on_async_job_completed
+		or noop
+	local on_async_callback_error = type(hooks.on_async_callback_error) == "function" and hooks.on_async_callback_error
+		or noop
+	local on_invalid_public_api = type(hooks.on_invalid_public_api) == "function" and hooks.on_invalid_public_api or noop
 	local state = {
 		items = {},
 		item_order = {},
@@ -425,28 +412,20 @@ function M.new(hooks)
 		for key in pairs(options) do
 			assert(
 				COMMAND_OPTION_KEYS[key] == true,
-				signature
-					.. " received unknown option '"
-					.. tostring(key)
-					.. "'; expected timeout_seconds or max_output_bytes"
+				signature .. " received unknown option '" .. tostring(key) .. "'; expected timeout_seconds or max_output_bytes"
 			)
 		end
 
 		if options.timeout_seconds ~= nil then
 			local timeout_seconds = tonumber(options.timeout_seconds)
-			assert(
-				timeout_seconds ~= nil and timeout_seconds > 0,
-				signature .. " requires options.timeout_seconds > 0"
-			)
+			assert(timeout_seconds ~= nil and timeout_seconds > 0, signature .. " requires options.timeout_seconds > 0")
 			normalized.timeout_seconds = timeout_seconds
 		end
 
 		if options.max_output_bytes ~= nil then
 			local max_output_bytes = tonumber(options.max_output_bytes)
 			assert(
-				max_output_bytes ~= nil
-					and max_output_bytes > 0
-					and math.floor(max_output_bytes) == max_output_bytes,
+				max_output_bytes ~= nil and max_output_bytes > 0 and math.floor(max_output_bytes) == max_output_bytes,
 				signature .. " requires options.max_output_bytes as positive integer"
 			)
 			normalized.max_output_bytes = max_output_bytes
@@ -466,14 +445,10 @@ function M.new(hooks)
 			"easybar.exec_async(command, options, callback) requires command"
 		)
 		assert(select("#", ...) == 0, "easybar.exec_async(command, options, callback) does not accept extra arguments")
-		assert(
-			type(callback) == "function",
-			"easybar.exec_async(command, options, callback) requires callback"
-		)
+		assert(type(callback) == "function", "easybar.exec_async(command, options, callback) requires callback")
 		assert(type(request_async_command) == "function", "easybar.exec_async unavailable without host runner")
 
-		local normalized_options =
-			normalize_command_options(options, "easybar.exec_async(command, options, callback)")
+		local normalized_options = normalize_command_options(options, "easybar.exec_async(command, options, callback)")
 		local token = request_async_command(command, normalized_options) or make_async_job_token()
 
 		state.pending_async_commands[token] = {
@@ -502,10 +477,7 @@ function M.new(hooks)
 
 	--- Runs one host-owned shell command.
 	function registry.exec(command, options, ...)
-		assert(
-			type(command) == "string" and command ~= "",
-			"easybar.exec(command, options) requires command"
-		)
+		assert(type(command) == "string" and command ~= "", "easybar.exec(command, options) requires command")
 		assert(select("#", ...) == 0, "easybar.exec(command, options) does not accept a callback")
 		assert(type(request_sync_command) == "function", "easybar.exec unavailable without host runner")
 

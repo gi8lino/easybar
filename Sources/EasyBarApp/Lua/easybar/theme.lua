@@ -130,5 +130,3 @@ function M.current()
 end
 
 return M
-
-
