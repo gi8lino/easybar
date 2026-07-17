@@ -1,4 +1,8 @@
 local secrets = require("secrets")
+local shell = require("shell")
+local text = require("text")
+
+local WIREGUARD_ICON_PATH = easybar.asset("assets/wireguard.png")
 
 local COLORS = {
 	text = easybar.theme.ref.text,
@@ -17,15 +21,6 @@ local ACTION_COMMAND_OPTIONS = {
 	timeout_seconds = 30,
 	max_output_bytes = 65536,
 }
-
-local function trim(s)
-	return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-local function shell_quote(s)
-	s = tostring(s or "")
-	return "'" .. s:gsub("'", [['"'"']]) .. "'"
-end
 
 local wireguard
 local wireguard_icon
@@ -46,7 +41,7 @@ local function status_label(connected)
 end
 
 local function log_command_result(action, command, output, ok, code)
-	output = trim(output or "")
+	output = text.trim(output or "")
 
 	if ok then
 		if output ~= "" then
@@ -68,14 +63,14 @@ end
 
 local function run_shell_async(command, options, callback)
 	easybar.exec_async(command, options or COMMAND_OPTIONS, function(output, code)
-		output = trim(output or "")
+		output = text.trim(output or "")
 		code = code or 0
 		callback(output, code == 0, code)
 	end)
 end
 
 local function current_status_async(vpn_name, callback)
-	local command = "scutil --nc status " .. shell_quote(vpn_name)
+	local command = "scutil --nc status " .. shell.quote(vpn_name)
 
 	run_shell_async(command, COMMAND_OPTIONS, function(output, ok, code)
 		if not ok then
@@ -113,7 +108,7 @@ local function refresh()
 		icon = {
 			string = "",
 			image = {
-				path = easybar.asset("assets/wireguard.png"),
+				path = WIREGUARD_ICON_PATH,
 				size = 16,
 				corner_radius = 0,
 			},
@@ -163,7 +158,7 @@ local function toggle_wireguard()
 
 		local command
 		local action
-		local name = shell_quote(vpn_name)
+		local name = shell.quote(vpn_name)
 
 		if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
 			command = "scutil --nc stop " .. name
@@ -208,7 +203,7 @@ wireguard_icon = easybar.add(easybar.kind.item, "wireguard_icon", {
 	icon = {
 		string = "",
 		image = {
-			path = easybar.asset("assets/wireguard.png"),
+			path = WIREGUARD_ICON_PATH,
 			size = 22,
 			corner_radius = 0,
 		},

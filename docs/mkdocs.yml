@@ -58,6 +58,7 @@ nav:
       - API Summary: lua/api-summary.md
       - Guides:
           - First Widget: lua/guides/first-widget.md
+          - Reusable Modules: lua/guides/modules.md
           - Subscribe To Events: lua/guides/subscribe-to-events.md
           - Style Popups And Groups: lua/guides/style-popups-and-groups.md
           - Editor Support: lua/guides/editor-support.md

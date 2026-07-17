@@ -38,7 +38,8 @@ Example `.luarc.json`:
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "runtime": {
-    "version": "Lua 5.4"
+    "version": "Lua 5.4",
+    "path": ["?.lua", "?/init.lua", "lib/?.lua", "lib/?/init.lua"]
   },
   "workspace": {
     "library": ["~/.local/share/easybar/easybar_api.lua"]
@@ -50,3 +51,7 @@ Example `.luarc.json`:
 ```
 
 If your editor still only knows about the `easybar` global but not nested property tables, restart EasyBar once so it reinstalls the latest `easybar_api.lua` stub.
+
+## User modules
+
+The `runtime.path` entries above let LuaLS resolve the same widget-local modules that EasyBar loads from `lib/`. See [Reusable Modules](modules.md) for directory layout, `require(...)` behavior, and module lifetime.

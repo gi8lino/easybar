@@ -1,8 +1,26 @@
 --- Module contract:
---- Owns widget file discovery, isolated load environments, and widget startup.
+--- Owns widget file discovery, user-library search paths, isolated load environments, and widget startup.
 --- Returns one helper that loads every widget in one directory.
 --- Widget loader module table.
 local M = {}
+
+--- Prepends one package path entry unless it is already configured.
+local function prepend_package_path(entry)
+	for existing in package.path:gmatch("[^;]+") do
+		if existing == entry then
+			return
+		end
+	end
+
+	package.path = entry .. ";" .. package.path
+end
+
+--- Makes modules below `<widgets_dir>/lib` available through standard `require` calls.
+local function configure_widget_library_path(widget_dir)
+	-- Prepend in reverse order so direct module files are checked before package init files.
+	prepend_package_path(widget_dir .. "/lib/?/init.lua")
+	prepend_package_path(widget_dir .. "/lib/?.lua")
+end
 
 --- Builds one isolated environment for a widget file.
 local function make_widget_env(registry, source_path)
@@ -43,6 +61,9 @@ end
 function M.load_widgets(widget_dir, widget_files, registry, log)
 	log.debug("runtime started")
 	log.debug("runtime widget_dir=" .. widget_dir)
+
+	configure_widget_library_path(widget_dir)
+	log.debug("runtime widget_lib=" .. widget_dir .. "/lib")
 
 	for _, file in ipairs(widget_files or {}) do
 		load_widget_file(widget_dir, file, registry, log)

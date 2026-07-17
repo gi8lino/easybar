@@ -8,19 +8,27 @@ Bootstrap begins in `runtime.lua`.
 2. load runtime modules
 3. call `loader.load_widgets(...)`
 
+Before `loader.lua` executes widget entrypoints, it prepends these user-library paths to Lua's standard module search path:
+
+```text
+<widgets_dir>/lib/?.lua
+<widgets_dir>/lib/?/init.lua
+```
+
 Inside `loader.lua`:
 
-1. list `*.lua` files
-2. sort deterministically
-3. create isolated environment per file
-4. inject scoped `easybar` API
-5. execute file
+1. configure the widget `lib/` module paths
+2. create an isolated environment per top-level widget file
+3. inject the scoped `easybar` API
+4. execute the widget file
 
 ## Important details
 
 - each widget has isolated defaults
 - all widgets share one runtime registry
-- every `*.lua` file in the widget directory is loaded
+- only regular top-level `*.lua` files are loaded as widget entrypoints
+- modules below `lib/` run only through standard `require(...)` calls
+- required modules use Lua's process-wide `package.loaded` cache
 - reload is a full reset
 - widget environments fall back to `_G`, so isolation is about local state, not security
 

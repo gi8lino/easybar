@@ -1,7 +1,12 @@
+local shell = require("shell")
+local text = require("text")
+
 local POLL_INTERVAL_SECONDS = 300
 local MAX_POPUP_ITEMS = 6
 local HOVER_CLOSE_DELAY_SECONDS = 0.20
 local NOTIFICATIONS_URL = "https://github.com/notifications"
+
+local GITHUB_ICON_PATH = easybar.asset("assets/github-mark.svg")
 
 local COLORS = {
 	text = easybar.theme.ref.text,
@@ -31,32 +36,10 @@ local popup_header
 local popup_rows = {}
 local popup_footer
 
-local function shell_quote(value)
-	value = tostring(value or "")
-	return "'" .. value:gsub("'", [['"'"']]) .. "'"
-end
-
-local function trim(value)
-	if type(value) ~= "string" then
-		return ""
-	end
-
-	return value:gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-local function truncate(value, maximum_length)
-	value = trim(value)
-	if #value <= maximum_length then
-		return value
-	end
-
-	return value:sub(1, maximum_length - 3) .. "..."
-end
-
 local function notification_text(notification)
 	local repository = "GitHub"
 	if type(notification.repository) == "table" then
-		repository = trim(notification.repository.full_name)
+		repository = text.trim(notification.repository.full_name)
 		if repository == "" then
 			repository = "GitHub"
 		end
@@ -65,22 +48,22 @@ local function notification_text(notification)
 	local title = "Untitled notification"
 	local reason = nil
 	if type(notification.subject) == "table" then
-		local candidate = trim(notification.subject.title)
+		local candidate = text.trim(notification.subject.title)
 		if candidate ~= "" then
 			title = candidate
 		end
 	end
 
 	if type(notification.reason) == "string" then
-		reason = trim(notification.reason)
+		reason = text.trim(notification.reason)
 	end
 
-	local text = repository .. "  ·  " .. title
+	local summary = repository .. "  ·  " .. title
 	if reason ~= nil and reason ~= "" then
-		text = text .. "  [" .. reason .. "]"
+		summary = summary .. "  [" .. reason .. "]"
 	end
 
-	return truncate(text, 96)
+	return text.truncate(summary, 96)
 end
 
 local function decode_notifications(output)
@@ -126,7 +109,7 @@ local function render_popup()
 		popup_rows[1]:set({
 			drawing = true,
 			label = {
-				string = truncate(state.error, 96),
+				string = text.truncate(state.error, 96),
 				color = COLORS.text,
 			},
 		})
@@ -204,7 +187,7 @@ local function render()
 		drawing = visible,
 		icon = {
 			image = {
-				path = easybar.asset("assets/github-mark.svg"),
+				path = GITHUB_ICON_PATH,
 				size = 15,
 				corner_radius = 0,
 			},
@@ -238,8 +221,8 @@ local function refresh()
 		"--paginate",
 		"--slurp",
 		"-H",
-		shell_quote("Accept: application/vnd.github+json"),
-		shell_quote("notifications?all=false&per_page=100"),
+		shell.quote("Accept: application/vnd.github+json"),
+		shell.quote("notifications?all=false&per_page=100"),
 	}, " ")
 
 	state.active_job = easybar.exec_async(command, {
@@ -250,7 +233,7 @@ local function refresh()
 		state.loading = false
 
 		if code ~= 0 then
-			local message = trim(output)
+			local message = text.trim(output)
 			if message == "" then
 				message = "Run 'gh auth login' and verify that gh is available in app.env PATH"
 			end
@@ -276,7 +259,7 @@ end
 
 github = easybar.add(easybar.kind.item, "github_notifications", {
 	position = "right",
-	order = 45,
+	order = 0,
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
@@ -432,7 +415,7 @@ github:subscribe(easybar.events.mouse.clicked, function(event)
 		return
 	end
 
-	easybar.exec_async("open " .. shell_quote(NOTIFICATIONS_URL), {
+	easybar.exec_async("open " .. shell.quote(NOTIFICATIONS_URL), {
 		timeout_seconds = 5,
 		max_output_bytes = 4096,
 	}, function(_, code)

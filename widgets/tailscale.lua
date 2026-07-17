@@ -7,11 +7,9 @@
 --- TAILSCALE may point to a command/path such as `tailscale` or `/opt/homebrew/bin/tailscale`.
 --- Paths with spaces are not supported.
 
-local CHECK_INTERVAL_SECONDS = 60
+local text = require("text")
 
-local function trim(value)
-	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
+local CHECK_INTERVAL_SECONDS = 60
 
 local COLORS = {
 	text = easybar.theme.ref.text,
@@ -32,7 +30,7 @@ local ACTION_COMMAND_OPTIONS = {
 	max_output_bytes = 65536,
 }
 
-local TAILSCALE = trim(os.getenv("TAILSCALE") or "")
+local TAILSCALE = text.trim(os.getenv("TAILSCALE") or "")
 if TAILSCALE == "" then
 	TAILSCALE = "tailscale"
 end
@@ -64,7 +62,7 @@ end
 --- Runs a Tailscale CLI command asynchronously and normalizes output/code.
 local function run_command(command, options, callback)
 	easybar.exec_async(command, options or COMMAND_OPTIONS, function(output, code)
-		output = trim(output or "")
+		output = text.trim(output or "")
 		code = code or 0
 
 		callback(output, code == 0, code)
@@ -111,8 +109,8 @@ local function first_health_message(status)
 	end
 
 	for _, message in ipairs(health) do
-		if type(message) == "string" and trim(message) ~= "" then
-			return trim(message)
+		if type(message) == "string" and text.trim(message) ~= "" then
+			return text.trim(message)
 		end
 	end
 
@@ -135,11 +133,11 @@ end
 
 --- Converts raw `tailscale status --json` data into widget state.
 local function snapshot_from_status(status)
-	local backend_state = trim(status.BackendState or "")
+	local backend_state = text.trim(status.BackendState or "")
 	local connected = backend_state == "Running"
 	local health_message = first_health_message(status)
 
-	local status_detail = trim(health_message or backend_state)
+	local status_detail = text.trim(health_message or backend_state)
 	if status_detail == "" then
 		status_detail = status_label(connected)
 	end

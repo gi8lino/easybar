@@ -77,7 +77,7 @@ flowchart TD
 - `runtime.lua`
   runtime bootstrap and main loop over socket-backed stdin/stdout
 - `loader.lua`
-  loads widget files into per-file environments that still fall back to `_G`
+  configures user module paths and loads top-level widget files into per-file environments that still fall back to `_G`
 - `api.lua`
   public `easybar` API, node handles, and registry bridge
 - `registry.lua`

@@ -3,6 +3,9 @@
 -- Icon-only widget for the bar, with a popup that shows outdated packages and
 -- actions for updating Homebrew and upgrading packages.
 
+local shell = require("shell")
+local text = require("text")
+
 local WIDGET_ID = "brew_outdated"
 
 local ID_TITLE = WIDGET_ID .. "_title"
@@ -114,26 +117,6 @@ local function now_label()
 	return os.date("%H:%M")
 end
 
---- Returns a trimmed string value.
-local function trim(value)
-	return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
---- Truncates a value to a maximum visible length.
-local function truncate(value, max)
-	value = tostring(value or "")
-
-	if max <= 1 then
-		return value:sub(1, max)
-	end
-
-	if #value <= max then
-		return value
-	end
-
-	return value:sub(1, max - 1) .. "…"
-end
-
 --- Returns a timestamp suitable for log section markers.
 local function log_timestamp()
 	return os.date("%Y-%m-%dT%H:%M:%S%z")
@@ -160,11 +143,6 @@ local function prune_brew_log()
 	end
 end
 
---- Quotes one value for safe use as a POSIX shell argument.
-local function shell_quote(value)
-	return "'" .. tostring(value or ""):gsub("'", "'\\''") .. "'"
-end
-
 --- Returns whether one cask should be upgraded by the widget.
 local function cask_allowed(cask)
 	return CASK_DENYLIST[tostring(cask or "")] ~= true
@@ -175,7 +153,7 @@ local function allowed_casks_from_output(output)
 	local casks = {}
 
 	for line in tostring(output or ""):gmatch("[^\r\n]+") do
-		local cask = trim(line)
+		local cask = text.trim(line)
 		if cask ~= "" then
 			if cask_allowed(cask) then
 				casks[#casks + 1] = cask
@@ -196,7 +174,7 @@ local function cask_upgrade_command(casks)
 	}
 
 	for _, cask in ipairs(casks) do
-		parts[#parts + 1] = shell_quote(cask)
+		parts[#parts + 1] = shell.quote(cask)
 	end
 
 	return table.concat(parts, " ")
@@ -366,7 +344,7 @@ local function split_outdated_output(raw)
 	end
 
 	local json = raw:sub(json_start, json_end)
-	local warning = trim(raw:sub(1, json_start - 1) .. "\n" .. raw:sub(json_end + 1))
+	local warning = text.trim(raw:sub(1, json_start - 1) .. "\n" .. raw:sub(json_end + 1))
 
 	return json, warning
 end
@@ -389,22 +367,22 @@ end
 
 --- Builds a concise error plus diagnostic details shown only on hover.
 make_error = function(title, summary, raw)
-	raw = trim(raw)
+	raw = text.trim(raw)
 	return {
 		title = title,
 		source = warning_source(raw),
-		summary = trim(summary),
-		raw = raw ~= "" and raw or trim(summary),
+		summary = text.trim(summary),
+		raw = raw ~= "" and raw or text.trim(summary),
 	}
 end
 
 --- Builds warning details while retaining both readable and complete forms.
 local function parse_warning(raw)
 	local lines = {}
-	raw = trim(raw)
+	raw = text.trim(raw)
 
 	for line in raw:gmatch("[^\r\n]+") do
-		local value = trim(line)
+		local value = text.trim(line)
 		local is_report_instruction = value:match("^Please report this issue") ~= nil
 		local is_source_path = value:match("^/.+/Casks/.+:%d+$") ~= nil
 
@@ -486,7 +464,7 @@ local function render_warning(order)
 		end
 
 		local summary_row =
-			add_popup_row(WIDGET_ID .. "_warning_summary_" .. tostring(rendered), "  " .. truncate(line, 110), {
+			add_popup_row(WIDGET_ID .. "_warning_summary_" .. tostring(rendered), "  " .. text.truncate(line, 110, "…"), {
 				order = order,
 				color = COLORS.warn,
 				size = 11,
@@ -567,11 +545,12 @@ local function render_error(order)
 	})
 	order = order + 1
 
-	local summary_row = add_popup_row(WIDGET_ID .. "_error_summary", "  " .. truncate(state.error.summary, 110), {
-		order = order,
-		color = COLORS.error,
-		size = 11,
-	})
+	local summary_row =
+		add_popup_row(WIDGET_ID .. "_error_summary", "  " .. text.truncate(state.error.summary, 110, "…"), {
+			order = order,
+			color = COLORS.error,
+			size = 11,
+		})
 	order = order + 1
 
 	local detail_index = 0
@@ -679,15 +658,15 @@ local function render_list_section(title, packages, row_prefix, order, remaining
 		end
 
 		local pin = package.pinned and "  pinned" or ""
-		local text = string.format(
+		local row_text = string.format(
 			"  • %s  %s → %s%s",
-			truncate(package.name, 28),
-			truncate(package.installed, 18),
-			truncate(package.current, 18),
+			text.truncate(package.name, 28, "…"),
+			text.truncate(package.installed, 18, "…"),
+			text.truncate(package.current, 18, "…"),
 			pin
 		)
 
-		add_popup_row(row_prefix .. "_" .. tostring(order), text, {
+		add_popup_row(row_prefix .. "_" .. tostring(order), row_text, {
 			order = order,
 		})
 

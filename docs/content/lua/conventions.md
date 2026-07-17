@@ -8,6 +8,12 @@ A widget is one Lua file loaded by EasyBar from your widgets directory.
 
 That file can create one node or many nodes. It can also keep local state, run commands, subscribe to events, and update its own nodes over time.
 
+## Module
+
+A module is reusable Lua code stored below the widget `lib/` directory and loaded with standard `require(...)` calls. Modules are not started as widgets.
+
+See [Reusable Modules](guides/modules.md).
+
 ## Node
 
 A node is one renderable unit in the EasyBar runtime.
