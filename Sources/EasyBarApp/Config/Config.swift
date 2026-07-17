@@ -246,8 +246,8 @@ final class Config: ObservableObject, @unchecked Sendable {
   var builtinVolume: VolumeBuiltinConfig = .default
   var builtinWiFi: WiFiBuiltinConfig = .default
   var builtinCalendar: CalendarBuiltinConfig = .default
-  var builtinTime: TimeBuiltinConfig = .timeDefault
-  var builtinDate: DateBuiltinConfig = .dateDefault
+  var builtinTime: FormattedBuiltinConfig = .timeDefault
+  var builtinDate: FormattedBuiltinConfig = .dateDefault
 
   // MARK: - Transient config state
 

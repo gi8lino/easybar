@@ -12,26 +12,6 @@ extension Config {
     var style: BuiltinWidgetStyle
     var content: Content
 
-    var enabled: Bool {
-      get { placement.enabled }
-      set { placement.enabled = newValue }
-    }
-
-    var position: WidgetPosition {
-      get { placement.position }
-      set { placement.position = newValue }
-    }
-
-    var order: Int {
-      get { placement.order }
-      set { placement.order = newValue }
-    }
-
-    var format: String {
-      get { content.format }
-      set { content.format = newValue }
-    }
-
     static let timeDefault = FormattedBuiltinConfig(
       placement: .init(enabled: false, position: .right, order: 40),
       style: .init(
@@ -71,9 +51,6 @@ extension Config {
     )
   }
 
-  typealias TimeBuiltinConfig = FormattedBuiltinConfig
-  typealias DateBuiltinConfig = FormattedBuiltinConfig
-
   func parseTimeBuiltin(from builtins: ConfigReader) throws {
     guard let reader = try builtins.optionalSection("time") else { return }
     builtinTime = try parseFormattedBuiltin(reader: reader, fallback: builtinTime)
@@ -93,7 +70,7 @@ extension Config {
       style: try parseBuiltinStyle(
         reader: try reader.section("style"), fallback: fallback.style),
       content: .init(
-        format: try reader.section("content").string("format", fallback: fallback.format)
+        format: try reader.section("content").string("format", fallback: fallback.content.format)
       )
     )
   }

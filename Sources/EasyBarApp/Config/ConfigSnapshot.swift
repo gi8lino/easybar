@@ -67,8 +67,8 @@ struct ConfigSnapshot: @unchecked Sendable {
     let volume: Config.VolumeBuiltinConfig
     let wifi: Config.WiFiBuiltinConfig
     let calendar: Config.CalendarBuiltinConfig
-    let time: Config.TimeBuiltinConfig
-    let date: Config.DateBuiltinConfig
+    let time: Config.FormattedBuiltinConfig
+    let date: Config.FormattedBuiltinConfig
   }
 
   /// App-level config values.

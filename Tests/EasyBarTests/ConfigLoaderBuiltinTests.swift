@@ -222,9 +222,9 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
 
     XCTAssertEqual(config.barHeight, 44)
     XCTAssertEqual(config.barBackgroundHex, "#224466")
-    XCTAssertTrue(config.builtinTime.enabled)
-    XCTAssertEqual(config.builtinTime.position, .left)
-    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinTime.placement.enabled)
+    XCTAssertEqual(config.builtinTime.placement.position, .left)
+    XCTAssertEqual(config.builtinTime.content.format, "HH:mm:ss")
     XCTAssertTrue(config.builtinCPU.enabled)
     XCTAssertEqual(config.builtinCPU.historySize, 24)
 
@@ -248,9 +248,9 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertEqual(configError.configPath, "builtins.time.position")
     XCTAssertEqual(config.barHeight, 44)
     XCTAssertEqual(config.barBackgroundHex, "#224466")
-    XCTAssertTrue(config.builtinTime.enabled)
-    XCTAssertEqual(config.builtinTime.position, .left)
-    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinTime.placement.enabled)
+    XCTAssertEqual(config.builtinTime.placement.position, .left)
+    XCTAssertEqual(config.builtinTime.content.format, "HH:mm:ss")
     XCTAssertTrue(config.builtinCPU.enabled)
     XCTAssertEqual(config.builtinCPU.historySize, 24)
   }
@@ -348,8 +348,8 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     let error = config.reload()
 
     XCTAssertNil(error)
-    XCTAssertTrue(config.builtinTime.enabled)
-    XCTAssertEqual(config.builtinTime.position, .left)
+    XCTAssertTrue(config.builtinTime.placement.enabled)
+    XCTAssertEqual(config.builtinTime.placement.position, .left)
   }
 
   /// Verifies that reload applies Wi-Fi popup style from the canonical table.

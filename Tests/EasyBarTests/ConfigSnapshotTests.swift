@@ -26,9 +26,9 @@ final class ConfigSnapshotTests: XCTestCase {
     config.loggingLevel = .debug
     config.barHeight = 41
     config.barBackgroundHex = "#112233"
-    config.builtinTime.enabled = true
-    config.builtinTime.position = .left
-    config.builtinTime.format = "HH:mm:ss"
+    config.builtinTime.placement.enabled = true
+    config.builtinTime.placement.position = .left
+    config.builtinTime.content.format = "HH:mm:ss"
     config.builtinCPU.enabled = true
     config.builtinCPU.historySize = 18
 
@@ -39,9 +39,9 @@ final class ConfigSnapshotTests: XCTestCase {
     config.loggingLevel = .error
     config.barHeight = 22
     config.barBackgroundHex = "#abcdef"
-    config.builtinTime.enabled = false
-    config.builtinTime.position = .right
-    config.builtinTime.format = "mm"
+    config.builtinTime.placement.enabled = false
+    config.builtinTime.placement.position = .right
+    config.builtinTime.content.format = "mm"
     config.builtinCPU.enabled = false
     config.builtinCPU.historySize = 4
 
@@ -52,9 +52,9 @@ final class ConfigSnapshotTests: XCTestCase {
     XCTAssertEqual(config.loggingLevel, .debug)
     XCTAssertEqual(config.barHeight, 41)
     XCTAssertEqual(config.barBackgroundHex, "#112233")
-    XCTAssertTrue(config.builtinTime.enabled)
-    XCTAssertEqual(config.builtinTime.position, .left)
-    XCTAssertEqual(config.builtinTime.format, "HH:mm:ss")
+    XCTAssertTrue(config.builtinTime.placement.enabled)
+    XCTAssertEqual(config.builtinTime.placement.position, .left)
+    XCTAssertEqual(config.builtinTime.content.format, "HH:mm:ss")
     XCTAssertTrue(config.builtinCPU.enabled)
     XCTAssertEqual(config.builtinCPU.historySize, 18)
   }

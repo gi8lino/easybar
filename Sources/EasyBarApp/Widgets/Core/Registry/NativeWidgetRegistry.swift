@@ -219,24 +219,24 @@ final class NativeWidgetRegistry {
           eventHub: self.eventHub
         )
       },
-      Registration(id: "date", enabled: builtins.date.enabled) {
+      Registration(id: "date", enabled: builtins.date.placement.enabled) {
         FormattedClockNativeWidget(
           rootID: "builtin_date",
           widgetStore: self.widgetStore,
           eventHub: self.eventHub,
           placement: builtins.date.placement,
           style: builtins.date.style,
-          format: builtins.date.format
+          format: builtins.date.content.format
         )
       },
-      Registration(id: "time", enabled: builtins.time.enabled) {
+      Registration(id: "time", enabled: builtins.time.placement.enabled) {
         FormattedClockNativeWidget(
           rootID: "builtin_time",
           widgetStore: self.widgetStore,
           eventHub: self.eventHub,
           placement: builtins.time.placement,
           style: builtins.time.style,
-          format: builtins.time.format
+          format: builtins.time.content.format
         )
       },
       Registration(id: "calendar", enabled: builtins.calendar.enabled) {
