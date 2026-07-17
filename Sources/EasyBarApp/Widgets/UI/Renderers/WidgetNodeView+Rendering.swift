@@ -6,18 +6,21 @@ extension WidgetNodeView {
   /// Returns the rendered view for the current node kind.
   @ViewBuilder
   var renderedNodeView: some View {
-    if node.kind.isRowLikeContainer {
+    switch node.kind {
+    case .row, .group:
       rowOrGroupView
-    } else if node.kind.isCustomRenderedKind {
+
+    case .spaces, .wifiIndicator:
       customRenderedNodeView
-    } else if node.kind.isDedicatedContainerKind {
+
+    case .column, .popup:
       dedicatedContainerNodeView
-    } else if node.kind.isInteractiveKind {
+
+    case .slider, .progressSlider, .progress, .sparkline:
       interactiveNodeView
-    } else if node.kind == .item {
+
+    case .item:
       itemView
-    } else {
-      EmptyView()
     }
   }
 

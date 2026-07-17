@@ -19,28 +19,6 @@ enum WidgetNodeKind: String, Codable {
   case spaces
   case wifiIndicator = "wifi_indicator"
 
-  /// Returns whether this kind renders as a horizontal child container.
-  var isRowLikeContainer: Bool {
-    return self == .row || self == .group
-  }
-
-  /// Returns whether this kind renders inside the interactive content wrapper.
-  var isInteractiveKind: Bool {
-    self == .slider
-      || self == .progressSlider
-      || self == .progress
-      || self == .sparkline
-  }
-
-  /// Returns whether this kind renders through a dedicated custom view.
-  var isCustomRenderedKind: Bool {
-    return self == .spaces || self == .wifiIndicator
-  }
-
-  /// Returns whether this kind renders through a dedicated container view.
-  var isDedicatedContainerKind: Bool {
-    return self == .column || self == .popup
-  }
 }
 
 /// Internal role markers for special child nodes.
