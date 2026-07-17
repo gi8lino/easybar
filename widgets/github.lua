@@ -36,6 +36,7 @@ local popup_header
 local popup_rows = {}
 local popup_footer
 
+--- Returns the display text for one GitHub notification.
 local function notification_text(notification)
 	local repository = "GitHub"
 	if type(notification.repository) == "table" then
@@ -47,6 +48,7 @@ local function notification_text(notification)
 
 	local title = "Untitled notification"
 	local reason = nil
+
 	if type(notification.subject) == "table" then
 		local candidate = text.trim(notification.subject.title)
 		if candidate ~= "" then
@@ -66,6 +68,91 @@ local function notification_text(notification)
 	return text.truncate(summary, 96)
 end
 
+--- Returns the browser URL for one GitHub notification when it can be derived.
+local function notification_web_url(notification)
+	if type(notification) ~= "table" then
+		return nil
+	end
+
+	if type(notification.repository) ~= "table" or type(notification.subject) ~= "table" then
+		return nil
+	end
+
+	local repository_url = text.trim(notification.repository.html_url)
+	local subject_url = text.trim(notification.subject.url)
+	local subject_type = text.trim(notification.subject.type)
+
+	if repository_url == "" or subject_url == "" then
+		return nil
+	end
+
+	if subject_type == "PullRequest" then
+		local number = subject_url:match("/pulls/(%d+)$")
+		if number ~= nil then
+			return repository_url .. "/pull/" .. number
+		end
+	end
+
+	if subject_type == "Issue" then
+		local number = subject_url:match("/issues/(%d+)$")
+		if number ~= nil then
+			return repository_url .. "/issues/" .. number
+		end
+	end
+
+	if subject_type == "Discussion" then
+		local number = subject_url:match("/discussions/(%d+)$")
+		if number ~= nil then
+			return repository_url .. "/discussions/" .. number
+		end
+	end
+
+	if subject_type == "Commit" then
+		local commit = subject_url:match("/commits/([^/]+)$")
+		if commit ~= nil then
+			return repository_url .. "/commit/" .. commit
+		end
+	end
+
+	return nil
+end
+
+--- Opens one URL using the default macOS browser.
+local function open_url(url, failure_message)
+	url = text.trim(url)
+	if url == "" then
+		return
+	end
+
+	easybar.exec_async("open " .. shell.quote(url), {
+		timeout_seconds = 5,
+		max_output_bytes = 4096,
+	}, function(_, code)
+		if code ~= 0 then
+			easybar.log(easybar.level.warn, failure_message, url)
+		end
+	end)
+end
+
+--- Opens the target represented by one GitHub notification.
+local function open_notification(notification)
+	local url = notification_web_url(notification)
+
+	if url == nil then
+		easybar.log(
+			easybar.level.warn,
+			"could not derive GitHub notification URL",
+			type(notification) == "table" and notification_text(notification) or "<invalid notification>"
+		)
+
+		open_url(NOTIFICATIONS_URL, "failed to open GitHub notifications")
+		return
+	end
+
+	open_url(url, "failed to open GitHub notification")
+end
+
+--- Decodes the paginated GitHub notification response.
 local function decode_notifications(output)
 	local ok, pages = pcall(easybar.json.decode, output)
 	if not ok then
@@ -77,6 +164,7 @@ local function decode_notifications(output)
 	end
 
 	local notifications = {}
+
 	for _, page in ipairs(pages) do
 		if type(page) == "table" then
 			for _, notification in ipairs(page) do
@@ -90,10 +178,12 @@ local function decode_notifications(output)
 	return notifications, nil
 end
 
+--- Returns whether the bar widget should be visible.
 local function should_draw()
 	return state.error ~= nil or #state.notifications > 0
 end
 
+--- Updates all popup rows from the current notification state.
 local function render_popup()
 	local count = #state.notifications
 
@@ -119,6 +209,7 @@ local function render_popup()
 		end
 	elseif count == 0 then
 		popup_header:set({ drawing = false })
+
 		for _, row in ipairs(popup_rows) do
 			row:set({ drawing = false })
 		end
@@ -133,6 +224,7 @@ local function render_popup()
 
 		for index, row in ipairs(popup_rows) do
 			local notification = state.notifications[index]
+
 			if notification ~= nil then
 				row:set({
 					drawing = true,
@@ -150,12 +242,13 @@ local function render_popup()
 	popup_footer:set({
 		drawing = should_draw(),
 		label = {
-			string = "Left-click to open · Right-click to refresh",
+			string = "Click a notification to open it · Right-click the icon to refresh",
 			color = COLORS.muted,
 		},
 	})
 end
 
+--- Returns popup presentation properties.
 local function popup_props(drawing)
 	return {
 		drawing = drawing,
@@ -172,6 +265,7 @@ local function popup_props(drawing)
 	}
 end
 
+--- Renders the bar item and popup contents.
 local function render()
 	local count = #state.notifications
 	local visible = should_draw()
@@ -209,6 +303,7 @@ local function render()
 	render_popup()
 end
 
+--- Fetches unread GitHub notifications.
 local function refresh()
 	if state.loading then
 		return
@@ -234,6 +329,7 @@ local function refresh()
 
 		if code ~= 0 then
 			local message = text.trim(output)
+
 			if message == "" then
 				message = "Run 'gh auth login' and verify that gh is available in app.env PATH"
 			end
@@ -245,6 +341,7 @@ local function refresh()
 		end
 
 		local notifications, decode_error = decode_notifications(output)
+
 		if notifications == nil then
 			state.error = decode_error
 			state.notifications = {}
@@ -323,13 +420,14 @@ popup_footer = easybar.add(easybar.kind.item, "github_notifications_footer", {
 	order = MAX_POPUP_ITEMS + 1,
 	drawing = false,
 	label = {
-		string = "Left-click to open · Right-click to refresh",
+		string = "Click a notification to open it · Right-click the icon to refresh",
 		color = COLORS.muted,
 	},
 	padding_x = 8,
 	padding_y = 5,
 })
 
+--- Cancels a pending delayed popup close.
 local function cancel_hover_close()
 	if state.hover_close_job == nil then
 		return
@@ -339,9 +437,11 @@ local function cancel_hover_close()
 	state.hover_close_job = nil
 end
 
+--- Opens the popup and records which surface is hovered.
 local function open_popup(source)
 	cancel_hover_close()
 	state.hover_revision = state.hover_revision + 1
+
 	if source == "trigger" then
 		state.trigger_hovered = true
 	else
@@ -352,8 +452,10 @@ local function open_popup(source)
 	render()
 end
 
+--- Schedules the popup to close after the hover grace period.
 local function schedule_popup_close(source)
 	state.hover_revision = state.hover_revision + 1
+
 	if source == "trigger" then
 		state.trigger_hovered = false
 	else
@@ -361,13 +463,16 @@ local function schedule_popup_close(source)
 	end
 
 	cancel_hover_close()
+
 	local revision = state.hover_revision
 	local command = "sleep " .. tostring(HOVER_CLOSE_DELAY_SECONDS)
+
 	state.hover_close_job = easybar.exec_async(command, {
 		timeout_seconds = 1,
 		max_output_bytes = 256,
 	}, function()
 		state.hover_close_job = nil
+
 		if revision ~= state.hover_revision then
 			return
 		end
@@ -381,6 +486,7 @@ local function schedule_popup_close(source)
 	end)
 end
 
+--- Adds popup hover behavior to one node.
 local function attach_popup_hover(node)
 	node:subscribe(easybar.events.mouse.entered, function()
 		open_popup("popup")
@@ -400,11 +506,29 @@ github:subscribe(easybar.events.mouse.exited, function()
 end)
 
 attach_popup_hover(popup_header)
-for _, row in ipairs(popup_rows) do
+
+for index, row in ipairs(popup_rows) do
+	local row_index = index
+
 	attach_popup_hover(row)
+
+	row:subscribe(easybar.events.mouse.clicked, function(event)
+		if event.button ~= nil and event.button ~= easybar.events.mouse.left_button then
+			return
+		end
+
+		local notification = state.notifications[row_index]
+		if notification == nil then
+			return
+		end
+
+		open_notification(notification)
+	end)
 end
+
 attach_popup_hover(popup_footer)
 
+--- Handles clicks on the main bar item.
 github:subscribe(easybar.events.mouse.clicked, function(event)
 	if event.button == easybar.events.mouse.right_button then
 		refresh()
@@ -415,14 +539,7 @@ github:subscribe(easybar.events.mouse.clicked, function(event)
 		return
 	end
 
-	easybar.exec_async("open " .. shell.quote(NOTIFICATIONS_URL), {
-		timeout_seconds = 5,
-		max_output_bytes = 4096,
-	}, function(_, code)
-		if code ~= 0 then
-			easybar.log(easybar.level.warn, "failed to open GitHub notifications")
-		end
-	end)
+	open_url(NOTIFICATIONS_URL, "failed to open GitHub notifications")
 end)
 
 github:subscribe({
