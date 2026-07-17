@@ -13,7 +13,9 @@ extension Config {
 
     let loadedConfig = try loadConfigFile(from: fileURL, resolvedPath: resolvedConfigPath)
     try parseConfig(from: loadedConfig.table)
-    configWarnings = ConfigUnknownKeyWarningBuilder.warnings(for: loadedConfig.table)
+    configWarnings =
+      ConfigUnknownKeyWarningBuilder.warnings(for: loadedConfig.table)
+      + ConfigSemanticWarningBuilder.warnings(for: snapshot())
 
     if !validateOnly {
       try ensureRequiredDirectoriesExist()

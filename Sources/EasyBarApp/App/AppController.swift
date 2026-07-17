@@ -40,7 +40,7 @@ final class AppController {
   /// Observer token for runtime config reload completion notifications.
   private var configReloadObserver: NSObjectProtocol?
 
-  /// Presenter for config load and reload errors.
+  /// Presenter for config load errors and non-fatal warnings.
   private let configErrorWindowController = ConfigErrorWindowController()
   /// Prevents multiple EasyBar instances from running at once.
   private let instanceGuard: SingleInstanceGuard
@@ -124,7 +124,7 @@ final class AppController {
     logger.debug("bar window presented")
 
     installConfigReloadObserver()
-    updateConfigErrorWindow()
+    updateConfigIssueWindow()
     signalHandler.start()
     logger.debug("signal handler started")
 
@@ -188,7 +188,7 @@ final class AppController {
     installWidgetEditorStub()
     barWindowController?.reloadLayout()
     menuBarController?.setVisible(services.configSnapshotStore.snapshot.app.showMenuBarIcon)
-    updateConfigErrorWindow()
+    updateConfigIssueWindow()
   }
 
   /// Observes runtime config reload completion so UI stays in sync.
@@ -206,23 +206,43 @@ final class AppController {
     }
   }
 
-  /// Keeps the config error window in sync with the current config state.
-  func updateConfigErrorWindow() {
-    guard let failureState = services.config.loadFailureState else {
+  /// Keeps the config issue window in sync with load failures and active warnings.
+  func updateConfigIssueWindow() {
+    let reload: () -> Void = { [weak self] in
+      guard let self else { return }
+
+      Task {
+        await self.runtimeCoordinator.reloadConfig()
+      }
+    }
+
+    if let failureState = services.config.loadFailureState {
+      configErrorWindowController.present(
+        failureState: failureState,
+        configPath: services.config.configPath,
+        onReload: reload
+      )
+      return
+    }
+
+    let warnings = services.config.configWarnings
+    guard !warnings.isEmpty else {
       configErrorWindowController.close()
       return
     }
 
-    configErrorWindowController.present(
-      failureState: failureState,
-      configPath: services.config.configPath,
-      onReload: { [weak self] in
-        guard let self else { return }
+    for warning in warnings {
+      logger.warn(
+        "config warning",
+        .field("config_path", services.config.configPath),
+        .field("warning", warning)
+      )
+    }
 
-        Task {
-          await self.runtimeCoordinator.reloadConfig()
-        }
-      }
+    configErrorWindowController.present(
+      warnings: warnings,
+      configPath: services.config.configPath,
+      onReload: reload
     )
   }
 

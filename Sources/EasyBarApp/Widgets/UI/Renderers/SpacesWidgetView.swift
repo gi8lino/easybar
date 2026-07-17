@@ -11,20 +11,34 @@ struct SpacesWidgetView: View {
   }
 
   /// Renders the native spaces widget.
+  @ViewBuilder
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: CGFloat(config.layout.spacing)) {
-        ForEach(Self.visibleSpaces(aeroSpaceService.spaces, hideEmpty: config.layout.hideEmpty)) {
-          space in
-          spacePill(for: space)
-            .contentShape(Rectangle())
-            .onTapGesture { focusSpaceIfEnabled(space) }
+    if Self.hasVisibleContent(
+      showLabel: config.layout.showLabel,
+      showIcons: config.layout.showIcons
+    ) {
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: CGFloat(config.layout.spacing)) {
+          ForEach(
+            Self.visibleSpaces(
+              aeroSpaceService.spaces,
+              hideEmpty: config.layout.hideEmpty,
+              showLabel: config.layout.showLabel,
+              showIcons: config.layout.showIcons,
+              showOnlyFocusedLabel: config.layout.showOnlyFocusedLabel,
+              collapseInactive: config.layout.collapseInactive
+            )
+          ) { space in
+            spacePill(for: space)
+              .contentShape(Rectangle())
+              .onTapGesture { focusSpaceIfEnabled(space) }
+          }
         }
+        .padding(.horizontal, CGFloat(config.layout.marginX))
+        .padding(.vertical, CGFloat(config.layout.marginY))
       }
-      .padding(.horizontal, CGFloat(config.layout.marginX))
-      .padding(.vertical, CGFloat(config.layout.marginY))
+      .fixedSize(horizontal: true, vertical: false)
     }
-    .fixedSize(horizontal: true, vertical: false)
   }
 
   /// Builds one tappable space pill without using Button styling.
@@ -188,10 +202,38 @@ struct SpacesWidgetView: View {
     return config.layout.collapseInactive && !space.isFocused
   }
 
-  /// Returns the workspace list after applying the configured empty-space rule.
-  static func visibleSpaces(_ spaces: [SpaceItem], hideEmpty: Bool) -> [SpaceItem] {
-    guard hideEmpty else { return spaces }
-    return spaces.filter { $0.isFocused || !$0.apps.isEmpty }
+  /// Returns whether the spaces widget has any enabled visible content.
+  static func hasVisibleContent(showLabel: Bool, showIcons: Bool) -> Bool {
+    return showLabel || showIcons
+  }
+
+  /// Returns the workspace list after applying content, collapse, and empty-space rules.
+  static func visibleSpaces(
+    _ spaces: [SpaceItem],
+    hideEmpty: Bool,
+    showLabel: Bool,
+    showIcons: Bool,
+    showOnlyFocusedLabel: Bool,
+    collapseInactive: Bool
+  ) -> [SpaceItem] {
+    guard hasVisibleContent(showLabel: showLabel, showIcons: showIcons) else {
+      return []
+    }
+
+    let inactiveSpacesHaveContent: Bool
+    if collapseInactive {
+      inactiveSpacesHaveContent = showLabel && showIcons && !showOnlyFocusedLabel
+    } else {
+      inactiveSpacesHaveContent = showIcons || (showLabel && !showOnlyFocusedLabel)
+    }
+
+    return spaces.filter { space in
+      guard space.isFocused || inactiveSpacesHaveContent else {
+        return false
+      }
+
+      return !hideEmpty || space.isFocused || !space.apps.isEmpty
+    }
   }
 }
 

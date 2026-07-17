@@ -93,6 +93,29 @@ For the native `spaces` widget:
 - `[builtins.spaces]` controls the outer container placement and shared box model.
 - `[builtins.spaces.layout]` controls the internal workspace-pill layout.
 
+### Content and collapsed inactive spaces
+
+The `show_label`, `show_icons`, and `collapse_inactive` settings work together:
+
+| `show_label` | `show_icons` | `collapse_inactive` | Result                                                                                   |
+| ------------ | ------------ | ------------------- | ---------------------------------------------------------------------------------------- |
+| `true`       | `true`       | `false`             | Shows every visible space with its label and app icons.                                  |
+| `true`       | `true`       | `true`              | Shows the focused space with its label and icons; inactive spaces become compact labels. |
+| `true`       | `false`      | `false`             | Shows every visible space as a label.                                                    |
+| `true`       | `false`      | `true`              | Shows only the focused space label.                                                      |
+| `false`      | `true`       | `false`             | Shows every visible space with app icons.                                                |
+| `false`      | `true`       | `true`              | Shows only the focused space with its app icons.                                         |
+| `false`      | `false`      | either              | Renders no spaces widget and shows a config warning.                                     |
+
+The table assumes `show_only_focused_label = false`. When that option is `true`, inactive labels are removed as well; inactive spaces are omitted whenever they would have no visible content.
+
+To disable the spaces widget intentionally, prefer:
+
+```toml
+[builtins.spaces]
+enabled = false
+```
+
 ## Wi-Fi
 
 The native Wi-Fi widget is configured under `[builtins.wifi]`.

@@ -16,11 +16,37 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
     configPath: String,
     onReload: @escaping () -> Void
   ) {
-    let presentation = makePresentation(
-      failureState: failureState,
-      configPath: configPath
+    present(
+      makePresentation(failureState: failureState, configPath: configPath),
+      configPath: configPath,
+      onReload: onReload
     )
+  }
 
+  /// Presents non-fatal config warnings in the same floating issue window.
+  func present(
+    warnings: [String],
+    configPath: String,
+    onReload: @escaping () -> Void
+  ) {
+    guard !warnings.isEmpty else {
+      close()
+      return
+    }
+
+    present(
+      makeWarningPresentation(warnings: warnings, configPath: configPath),
+      configPath: configPath,
+      onReload: onReload
+    )
+  }
+
+  /// Presents one prepared config issue model.
+  private func present(
+    _ presentation: SharedConfigErrorPresentation,
+    configPath: String,
+    onReload: @escaping () -> Void
+  ) {
     hostingController.rootView = AnyView(
       SharedConfigErrorView(
         presentation: presentation,
@@ -129,6 +155,38 @@ final class ConfigErrorWindowController: NSObject, NSWindowDelegate {
       problemItemText: configError?.problemItem,
       problemValueText: configError?.problemValue,
       detailText: detailText(for: failureState.error, configError: configError),
+      openButtonTitle: "Open Config",
+      retryButtonTitle: "Reload Config"
+    )
+  }
+
+  /// Builds one shared presentation model for non-fatal config warnings.
+  private func makeWarningPresentation(
+    warnings: [String],
+    configPath: String
+  ) -> SharedConfigErrorPresentation {
+    let detailText: String
+    if warnings.count == 1 {
+      detailText = warnings[0]
+    } else {
+      detailText = warnings.enumerated().map { index, warning in
+        "\(index + 1). \(warning)"
+      }.joined(separator: " ")
+    }
+
+    return SharedConfigErrorPresentation(
+      windowTitle: "EasyBar Config Warning",
+      title: warnings.count == 1
+        ? "EasyBar loaded the config with a warning"
+        : "EasyBar loaded the config with warnings",
+      summary: warnings.count == 1
+        ? "The config is valid and active, but one setting needs attention."
+        : "The config is valid and active, but multiple settings need attention.",
+      filePath: configPath,
+      locationSectionTitle: nil,
+      problemSectionTitle: nil,
+      detailSectionTitle: warnings.count == 1 ? "Warning" : "Warnings",
+      detailText: detailText,
       openButtonTitle: "Open Config",
       retryButtonTitle: "Reload Config"
     )

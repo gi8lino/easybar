@@ -105,6 +105,13 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     XCTAssertEqual(snapshot.focusedLayoutMode, .hTiles)
   }
 
+  func testSpacesWidgetRequiresLabelsOrIcons() {
+    XCTAssertFalse(SpacesWidgetView.hasVisibleContent(showLabel: false, showIcons: false))
+    XCTAssertTrue(SpacesWidgetView.hasVisibleContent(showLabel: true, showIcons: false))
+    XCTAssertTrue(SpacesWidgetView.hasVisibleContent(showLabel: false, showIcons: true))
+    XCTAssertTrue(SpacesWidgetView.hasVisibleContent(showLabel: true, showIcons: true))
+  }
+
   func testVisibleSpacesRespectsHideEmptyConfiguration() {
     let spaces = [
       SpaceItem(id: "1", name: "1", isFocused: false, isVisible: false, apps: []),
@@ -119,12 +126,86 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     ]
 
     XCTAssertEqual(
-      SpacesWidgetView.visibleSpaces(spaces, hideEmpty: false).map(\.name),
+      visibleSpaceNames(
+        spaces,
+        hideEmpty: false,
+        showLabel: true,
+        showIcons: true,
+        collapseInactive: false
+      ),
       ["1", "2", "3"]
     )
     XCTAssertEqual(
-      SpacesWidgetView.visibleSpaces(spaces, hideEmpty: true).map(\.name),
+      visibleSpaceNames(
+        spaces,
+        hideEmpty: true,
+        showLabel: true,
+        showIcons: true,
+        collapseInactive: false
+      ),
       ["2", "3"]
+    )
+  }
+
+  func testVisibleSpacesFollowsContentAndCollapseMatrix() {
+    let spaces = contentVisibilityTestSpaces()
+
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: true, showIcons: true, collapseInactive: false),
+      ["1", "2", "3"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: true, showIcons: true, collapseInactive: true),
+      ["1", "2", "3"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: true, showIcons: false, collapseInactive: false),
+      ["1", "2", "3"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: true, showIcons: false, collapseInactive: true),
+      ["2"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: false, showIcons: true, collapseInactive: false),
+      ["1", "2", "3"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: false, showIcons: true, collapseInactive: true),
+      ["2"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: false, showIcons: false, collapseInactive: false),
+      []
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(spaces, showLabel: false, showIcons: false, collapseInactive: true),
+      []
+    )
+  }
+
+  func testVisibleSpacesOmitsInactiveSpacesWithoutRemainingContent() {
+    let spaces = contentVisibilityTestSpaces()
+
+    XCTAssertEqual(
+      visibleSpaceNames(
+        spaces,
+        showLabel: true,
+        showIcons: true,
+        showOnlyFocusedLabel: true,
+        collapseInactive: true
+      ),
+      ["2"]
+    )
+    XCTAssertEqual(
+      visibleSpaceNames(
+        spaces,
+        showLabel: true,
+        showIcons: false,
+        showOnlyFocusedLabel: true,
+        collapseInactive: false
+      ),
+      ["2"]
     )
   }
 
@@ -277,6 +358,50 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
       ]),
       executableURL.path
     )
+  }
+
+  private func contentVisibilityTestSpaces() -> [SpaceItem] {
+    return [
+      SpaceItem(
+        id: "1",
+        name: "1",
+        isFocused: false,
+        isVisible: false,
+        apps: [SpaceApp(id: "mail", bundleID: "", name: "Mail", bundlePath: nil)]
+      ),
+      SpaceItem(
+        id: "2",
+        name: "2",
+        isFocused: true,
+        isVisible: true,
+        apps: [SpaceApp(id: "terminal", bundleID: "", name: "Terminal", bundlePath: nil)]
+      ),
+      SpaceItem(
+        id: "3",
+        name: "3",
+        isFocused: false,
+        isVisible: false,
+        apps: [SpaceApp(id: "browser", bundleID: "", name: "Browser", bundlePath: nil)]
+      ),
+    ]
+  }
+
+  private func visibleSpaceNames(
+    _ spaces: [SpaceItem],
+    hideEmpty: Bool = false,
+    showLabel: Bool,
+    showIcons: Bool,
+    showOnlyFocusedLabel: Bool = false,
+    collapseInactive: Bool
+  ) -> [String] {
+    return SpacesWidgetView.visibleSpaces(
+      spaces,
+      hideEmpty: hideEmpty,
+      showLabel: showLabel,
+      showIcons: showIcons,
+      showOnlyFocusedLabel: showOnlyFocusedLabel,
+      collapseInactive: collapseInactive
+    ).map(\.name)
   }
 
   private func loadSnapshot(
