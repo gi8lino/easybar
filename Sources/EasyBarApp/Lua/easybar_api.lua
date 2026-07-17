@@ -364,7 +364,6 @@
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.
 
-
 ---Namespace object exposed as `easybar.level`.
 ---@class EasyBarLevels
 ---@field trace EasyBarLevel

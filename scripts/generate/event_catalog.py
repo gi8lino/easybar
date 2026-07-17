@@ -345,8 +345,9 @@ def render_lua_api_block(manifest: dict) -> str:
 
 def rebuild_lua_api_stub(manifest: dict) -> None:
     """Regenerate the standalone Lua API stub from the base file and event annotations."""
-    generated_events = render_lua_api_block(manifest)
-    LUA_API_EVENTS_PATH.write_text(generated_events)
+    generated_events = render_lua_api_block(manifest).rstrip()
+
+    LUA_API_EVENTS_PATH.write_text(f"{generated_events}\n")
 
     base = LUA_API_BASE_PATH.read_text()
     if LUA_API_INSERT_MARKER not in base:
