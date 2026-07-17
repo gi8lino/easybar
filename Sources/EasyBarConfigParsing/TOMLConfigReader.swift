@@ -232,6 +232,25 @@ public struct TOMLConfigReader<Failure: Error> {
     return try requiredStringArray(value, path: path(for: key))
   }
 
+  /// Returns a string-backed enum array or the fallback when absent.
+  public func enumArray<Value: TOMLStringDecodable>(
+    _ key: String,
+    fallback: [Value]
+  ) throws -> [Value] {
+    guard let rawValues = try optionalStringArray(key) else { return fallback }
+
+    return try rawValues.enumerated().map { index, rawValue in
+      let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+      guard let value = Value(rawValue: normalized) else {
+        throw makeInvalidValueError(
+          "\(path(for: key))[\(index)]",
+          "expected one of \(Value.allowedValues.joined(separator: ", "))"
+        )
+      }
+      return value
+    }
+  }
+
   /// Returns the current table as a string map, merged over the fallback.
   public func stringTable(fallback: [String: String]) throws -> [String: String] {
     guard !table.isEmpty else { return fallback }

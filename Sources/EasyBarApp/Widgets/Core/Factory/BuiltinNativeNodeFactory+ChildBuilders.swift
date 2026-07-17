@@ -1,6 +1,26 @@
 import Foundation
 
 extension BuiltinNativeNodeFactory {
+  /// Builds one child row node.
+  static func makeRowNode(
+    rootID: String,
+    parentID: String,
+    rowID: String,
+    position: WidgetPosition,
+    order: Int,
+    spacing: Double?
+  ) -> WidgetNodeState {
+    makeChildNode(
+      id: rowID,
+      root: rootID,
+      kind: .row,
+      parent: parentID,
+      position: position,
+      order: order,
+      spacing: spacing
+    )
+  }
+
   /// Builds one child column node.
   static func makeColumnNode(
     rootID: String,

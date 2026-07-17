@@ -114,30 +114,56 @@ public struct CalendarBuiltinConfig: @unchecked Sendable {
   }
 
   public struct Anchor {
-    public var itemFormat: String
     public var layout: CalendarAnchorLayout
-    public var topFormat: String
-    public var bottomFormat: String
-    public var lineSpacing: Double
-    public var topTextColorHex: String?
-    public var bottomTextColorHex: String?
+    public var fields: [CalendarAnchorFieldKind]
+    public var spacing: Double
+    public var separator: String
+    public var time: Field
+    public var date: Field
+
+    public struct Field {
+      public var format: String
+      public var textColorHex: String?
+      public var fontFamily: String?
+      public var fontSize: Double?
+      public var fontWeight: CalendarAnchorFontWeight
+
+      public init(
+        format: String,
+        textColorHex: String?,
+        fontFamily: String?,
+        fontSize: Double?,
+        fontWeight: CalendarAnchorFontWeight
+      ) {
+        self.format = format
+        self.textColorHex = textColorHex
+        self.fontFamily = fontFamily
+        self.fontSize = fontSize
+        self.fontWeight = fontWeight
+      }
+    }
 
     public init(
-      itemFormat: String,
       layout: CalendarAnchorLayout,
-      topFormat: String,
-      bottomFormat: String,
-      lineSpacing: Double,
-      topTextColorHex: String?,
-      bottomTextColorHex: String?
+      fields: [CalendarAnchorFieldKind],
+      spacing: Double,
+      separator: String,
+      time: Field,
+      date: Field
     ) {
-      self.itemFormat = itemFormat
       self.layout = layout
-      self.topFormat = topFormat
-      self.bottomFormat = bottomFormat
-      self.lineSpacing = lineSpacing
-      self.topTextColorHex = topTextColorHex
-      self.bottomTextColorHex = bottomTextColorHex
+      self.fields = fields
+      self.spacing = spacing
+      self.separator = separator
+      self.time = time
+      self.date = date
+    }
+
+    public func field(_ kind: CalendarAnchorFieldKind) -> Field {
+      switch kind {
+      case .time: return time
+      case .date: return date
+      }
     }
   }
 

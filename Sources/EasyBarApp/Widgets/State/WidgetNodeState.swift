@@ -52,6 +52,8 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
   var fontSize: Double?
   var iconFontSize: Double?
   var labelFontSize: Double?
+  var labelFontFamily: String? = nil
+  var labelFontWeight: String? = nil
   var iconOffsetX: Double?
   var iconOffsetY: Double?
 
@@ -112,7 +114,7 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
 
   /// Returns whether this node is the built-in calendar root.
   var isCalendarRoot: Bool {
-    return root == "builtin_calendar"
+    return id == root && root == "builtin_calendar"
   }
 
   /// Returns whether this node is a popup anchor child.

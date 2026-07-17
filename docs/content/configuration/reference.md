@@ -495,15 +495,32 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.calendar.anchor`
 
-| Key                 | Default                  | Description                                                    |
-| ------------------- | ------------------------ | -------------------------------------------------------------- |
-| `layout`            | `"stack"`                | Anchor layout: item \| stack \| inline.                        |
-| `item_format`       | `"EEE, MMM d"`           | Format used when anchor layout is item.                        |
-| `top_format`        | `"HH:mm"`                | Top line format used in stack or inline layouts.               |
-| `bottom_format`     | `"d. MMM"`               | Bottom or second line format used in stack or inline layouts.  |
-| `line_spacing`      | `0`                      | Vertical spacing between top and bottom lines in stack layout. |
-| `top_text_color`    | `"theme.text"`           | Text color of the top line.                                    |
-| `bottom_text_color` | `"theme.text_secondary"` | Text color of the bottom line.                                 |
+| Key         | Default            | Description                                 |
+| ----------- | ------------------ | ------------------------------------------- |
+| `layout`    | `"row"`            | Field layout: row \| column.                |
+| `fields`    | `["date", "time"]` | Ordered anchor fields: time and/or date.    |
+| `spacing`   | `2`                | Optional gap between configured fields.     |
+| `separator` | `" "`              | Text inserted between fields in row layout. |
+
+## `builtins.calendar.anchor.time`
+
+| Key           | Default        | Description                                                                                          |
+| ------------- | -------------- | ---------------------------------------------------------------------------------------------------- |
+| `format`      | `"HH:mm"`      | DateFormatter pattern for the time field.                                                            |
+| `text_color`  | `"theme.text"` | Text color of the time field.                                                                        |
+| `font_family` | `"SF Pro"`     | Optional font family.                                                                                |
+| `font_size`   | `13`           | Optional font size in points.                                                                        |
+| `font_weight` | `"regular"`    | Font weight: ultralight \| thin \| light \| regular \| medium \| semibold \| bold \| heavy \| black. |
+
+## `builtins.calendar.anchor.date`
+
+| Key           | Default                  | Description                                                                                          |
+| ------------- | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `format`      | `"d. MMM"`               | DateFormatter pattern for the date field.                                                            |
+| `text_color`  | `"theme.text_secondary"` | Text color of the date field.                                                                        |
+| `font_family` | `"SF Pro"`               | Optional font family.                                                                                |
+| `font_size`   | `12`                     | Optional font size in points.                                                                        |
+| `font_weight` | `"regular"`              | Font weight: ultralight \| thin \| light \| regular \| medium \| semibold \| bold \| heavy \| black. |
 
 ## `builtins.calendar.composer`
 
@@ -697,11 +714,11 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.calendar.month.popup.anchor`
 
-| Key              | Default        | Description                                                            |
-| ---------------- | -------------- | ---------------------------------------------------------------------- |
-| `date_format`    | `"EEE d MMM"`  | Date format used when popup_mode = "month" and anchor layout = "item". |
-| `text_color`     | `"theme.text"` | Text color used when popup_mode = "month".                             |
-| `show_date_text` | `true`         | Shows the date text when popup_mode = "month".                         |
+| Key              | Default        | Description                                        |
+| ---------------- | -------------- | -------------------------------------------------- |
+| `date_format`    | `"EEE d MMM"`  | Date format used by the month popup agenda anchor. |
+| `text_color`     | `"theme.text"` | Text color used when popup_mode = "month".         |
+| `show_date_text` | `true`         | Shows the date text when popup_mode = "month".     |
 
 ## `builtins.calendar.month.popup.today_button`
 

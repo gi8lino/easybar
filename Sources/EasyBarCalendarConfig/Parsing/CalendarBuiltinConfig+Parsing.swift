@@ -12,7 +12,15 @@ extension MonthCalendarPopupLayout: TOMLStringDecodable {
 }
 
 extension CalendarAnchorLayout: TOMLStringDecodable {
-  public static let allowedValues = ["item", "stack", "inline"]
+  public static let allowedValues = allCases.map(\.rawValue)
+}
+
+extension CalendarAnchorFieldKind: TOMLStringDecodable {
+  public static let allowedValues = allCases.map(\.rawValue)
+}
+
+extension CalendarAnchorFontWeight: TOMLStringDecodable {
+  public static let allowedValues = allCases.map(\.rawValue)
 }
 
 extension CalendarBuiltinConfig {
@@ -97,17 +105,27 @@ extension CalendarBuiltinConfig {
     fallback: CalendarBuiltinConfig.Anchor
   ) throws -> CalendarBuiltinConfig.Anchor {
     CalendarBuiltinConfig.Anchor(
-      itemFormat: try reader.string("item_format", fallback: fallback.itemFormat),
       layout: try reader.enum("layout", fallback: fallback.layout),
-      topFormat: try reader.string("top_format", fallback: fallback.topFormat),
-      bottomFormat: try reader.string("bottom_format", fallback: fallback.bottomFormat),
-      lineSpacing: try reader.double("line_spacing", fallback: fallback.lineSpacing, minimum: 0),
-      topTextColorHex: try reader.optionalString(
-        "top_text_color", fallback: fallback.topTextColorHex),
-      bottomTextColorHex: try reader.optionalString(
-        "bottom_text_color",
-        fallback: fallback.bottomTextColorHex
-      )
+      fields: try reader.enumArray("fields", fallback: fallback.fields),
+      spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
+      separator: try reader.string("separator", fallback: fallback.separator),
+      time: try parseAnchorField(
+        reader: try reader.section("time"), fallback: fallback.time),
+      date: try parseAnchorField(
+        reader: try reader.section("date"), fallback: fallback.date)
+    )
+  }
+
+  private static func parseAnchorField(
+    reader: Reader,
+    fallback: CalendarBuiltinConfig.Anchor.Field
+  ) throws -> CalendarBuiltinConfig.Anchor.Field {
+    CalendarBuiltinConfig.Anchor.Field(
+      format: try reader.string("format", fallback: fallback.format),
+      textColorHex: try reader.optionalString("text_color", fallback: fallback.textColorHex),
+      fontFamily: try reader.optionalString("font_family", fallback: fallback.fontFamily),
+      fontSize: try reader.optionalDouble("font_size", fallback: fallback.fontSize, minimum: 1),
+      fontWeight: try reader.enum("font_weight", fallback: fallback.fontWeight)
     )
   }
 

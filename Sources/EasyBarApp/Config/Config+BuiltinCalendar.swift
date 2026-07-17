@@ -84,12 +84,12 @@ extension CalendarBuiltinConfig {
   /// Resolves calendar anchor colors.
   private mutating func resolveAnchorColors(using resolver: CalendarColorReferenceResolver) throws {
     try resolver.optional(
-      &anchor.topTextColorHex,
-      path: "builtins.calendar.anchor.top_text_color"
+      &anchor.time.textColorHex,
+      path: "builtins.calendar.anchor.time.text_color"
     )
     try resolver.optional(
-      &anchor.bottomTextColorHex,
-      path: "builtins.calendar.anchor.bottom_text_color"
+      &anchor.date.textColorHex,
+      path: "builtins.calendar.anchor.date.text_color"
     )
   }
 

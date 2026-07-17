@@ -19,13 +19,24 @@ extension CalendarBuiltinConfig {
     ),
     popupMode: .month,
     anchor: .init(
-      itemFormat: "EEE, MMM d",
-      layout: .stack,
-      topFormat: "HH:mm",
-      bottomFormat: "d. MMM",
-      lineSpacing: 0,
-      topTextColorHex: "#ffffff",
-      bottomTextColorHex: "#d0d0d0"
+      layout: .row,
+      fields: [.date, .time],
+      spacing: 0,
+      separator: " ",
+      time: .init(
+        format: "HH:mm",
+        textColorHex: "#ffffff",
+        fontFamily: nil,
+        fontSize: nil,
+        fontWeight: .regular
+      ),
+      date: .init(
+        format: "d. MMM",
+        textColorHex: "#d0d0d0",
+        fontFamily: nil,
+        fontSize: nil,
+        fontWeight: .regular
+      )
     ),
     filters: .init(
       includedCalendarNames: [],

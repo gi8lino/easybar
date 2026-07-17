@@ -1,14 +1,6 @@
 import Foundation
 
-/// Renders the native calendar anchor from a calendar snapshot.
-///
-/// Popup presentation is handled by:
-/// - `WidgetNodeView`
-/// - `WidgetPopupPanelController`
-/// - `NativeUpcomingCalendarPopupView`
-/// - `NativeMonthCalendarPopupView`
-///
-/// So this renderer is responsible only for the anchor node tree.
+/// Renders the native calendar anchor from one ordered field configuration.
 final class CalendarRenderer {
 
   typealias Snapshot = CalendarNativeWidget.Snapshot
@@ -20,37 +12,20 @@ final class CalendarRenderer {
     self.rootID = rootID
   }
 
-  /// Builds the calendar anchor nodes for the current snapshot.
+  /// Builds a row or column of independently styled date/time fields.
   func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
-    switch snapshot.config.anchor.layout {
-    case .stack:
-      return makeStack(snapshot)
-    case .inline:
-      return makeInline(snapshot)
-    case .item:
-      return makeItem(snapshot)
-    }
-  }
-}
-
-// MARK: - Anchor Layouts
-
-extension CalendarRenderer {
-
-  /// Builds the stacked two-line calendar anchor layout.
-  private func makeStack(_ snapshot: Snapshot) -> [WidgetNodeState] {
     let config = snapshot.config
     let anchor = config.anchor
     let placement = Config.BuiltinWidgetPlacement(config.placement)
     let style = Config.BuiltinWidgetStyle(config.style)
+    let contentID = "\(rootID)_fields"
 
-    return [
+    var nodes = [
       BuiltinNativeNodeFactory.makeRowContainerNode(
         rootID: rootID,
         placement: placement,
         style: style
       ),
-
       BuiltinNativeNodeFactory.makeChildItemNode(
         rootID: rootID,
         parentID: rootID,
@@ -60,103 +35,73 @@ extension CalendarRenderer {
         icon: style.icon,
         color: style.textColorHex
       ),
-
-      BuiltinNativeNodeFactory.makeColumnNode(
-        rootID: rootID,
-        parentID: rootID,
-        columnID: "\(rootID)_text_column",
-        position: placement.position,
-        order: 1,
-        spacing: anchor.lineSpacing
-      ),
-
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: "\(rootID)_text_column",
-        childID: "\(rootID)_top",
-        position: placement.position,
-        order: 0,
-        text: format(snapshot.now, anchor.topFormat),
-        color: anchor.topTextColorHex ?? style.textColorHex
-      ),
-
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: "\(rootID)_text_column",
-        childID: "\(rootID)_bottom",
-        position: placement.position,
-        order: 1,
-        text: format(snapshot.now, anchor.bottomFormat),
-        color: anchor.bottomTextColorHex ?? style.textColorHex
-      ),
-    ]
-  }
-
-  /// Builds the inline two-part calendar anchor layout.
-  private func makeInline(_ snapshot: Snapshot) -> [WidgetNodeState] {
-    let config = snapshot.config
-    let anchor = config.anchor
-    let placement = Config.BuiltinWidgetPlacement(config.placement)
-    let style = Config.BuiltinWidgetStyle(config.style)
-
-    return [
-      BuiltinNativeNodeFactory.makeRowContainerNode(
-        rootID: rootID,
+      makeContentContainer(
+        layout: anchor.layout,
+        contentID: contentID,
         placement: placement,
-        style: style
-      ),
-
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: rootID,
-        childID: "\(rootID)_icon",
-        position: placement.position,
-        order: 0,
-        icon: style.icon,
-        color: style.textColorHex
-      ),
-
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: rootID,
-        childID: "\(rootID)_left",
-        position: placement.position,
-        order: 1,
-        text: format(snapshot.now, anchor.topFormat),
-        color: anchor.topTextColorHex ?? style.textColorHex
-      ),
-
-      BuiltinNativeNodeFactory.makeChildItemNode(
-        rootID: rootID,
-        parentID: rootID,
-        childID: "\(rootID)_right",
-        position: placement.position,
-        order: 2,
-        text: format(snapshot.now, anchor.bottomFormat),
-        color: anchor.bottomTextColorHex ?? style.textColorHex
+        spacing: anchor.spacing
       ),
     ]
-  }
 
-  /// Builds the single-item calendar anchor layout.
-  private func makeItem(_ snapshot: Snapshot) -> [WidgetNodeState] {
-    [
-      BuiltinNativeNodeFactory.makeItemNode(
+    for (index, kind) in anchor.fields.enumerated() {
+      if anchor.layout == .row, index > 0, !anchor.separator.isEmpty {
+        nodes.append(
+          BuiltinNativeNodeFactory.makeChildItemNode(
+            rootID: rootID,
+            parentID: contentID,
+            childID: "\(rootID)_separator_\(index)",
+            position: placement.position,
+            order: index * 2 - 1,
+            text: anchor.separator,
+            color: style.textColorHex
+          )
+        )
+      }
+
+      let field = anchor.field(kind)
+      var node = BuiltinNativeNodeFactory.makeChildItemNode(
         rootID: rootID,
-        placement: .init(snapshot.config.placement),
-        style: .init(snapshot.config.style),
-        text: format(snapshot.now, snapshot.config.anchor.itemFormat)
+        parentID: contentID,
+        childID: "\(rootID)_field_\(index)_\(kind.rawValue)",
+        position: placement.position,
+        order: index * 2,
+        text: formatterCache.string(from: snapshot.now, format: field.format),
+        color: field.textColorHex ?? style.textColorHex,
+        labelFontSize: field.fontSize
       )
-    ]
+      node.labelFontFamily = field.fontFamily
+      node.labelFontWeight = field.fontWeight.rawValue
+      nodes.append(node)
+    }
+
+    return nodes
   }
-}
 
-// MARK: - Formatting
-
-extension CalendarRenderer {
-
-  /// Formats one date using the configured calendar anchor format.
-  private func format(_ date: Date, _ format: String) -> String {
-    return formatterCache.string(from: date, format: format)
+  private func makeContentContainer(
+    layout: CalendarAnchorLayout,
+    contentID: String,
+    placement: Config.BuiltinWidgetPlacement,
+    spacing: Double
+  ) -> WidgetNodeState {
+    switch layout {
+    case .row:
+      return BuiltinNativeNodeFactory.makeRowNode(
+        rootID: rootID,
+        parentID: rootID,
+        rowID: contentID,
+        position: placement.position,
+        order: 1,
+        spacing: spacing
+      )
+    case .column:
+      return BuiltinNativeNodeFactory.makeColumnNode(
+        rootID: rootID,
+        parentID: rootID,
+        columnID: contentID,
+        position: placement.position,
+        order: 1,
+        spacing: spacing
+      )
+    }
   }
 }

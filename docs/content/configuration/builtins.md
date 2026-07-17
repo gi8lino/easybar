@@ -304,6 +304,44 @@ After changing Location Services permission, restart the network agent and EasyB
 easybar --restart-network-agent
 ```
 
+## Calendar anchor fields
+
+The calendar anchor uses one ordered list of `time` and `date` fields. `layout = "row"` places
+them beside each other; `layout = "column"` stacks them. Reversing `fields` reverses their order,
+and a one-element list creates a single-field anchor.
+
+```toml
+[builtins.calendar.anchor]
+layout = "row"
+fields = ["time", "date"]
+spacing = 0
+separator = ", "
+
+[builtins.calendar.anchor.time]
+format = "HH:mm"
+text_color = "theme.text"
+font_size = 13
+font_weight = "semibold"
+
+[builtins.calendar.anchor.date]
+format = "EEE, MMM d"
+text_color = "theme.text_secondary"
+font_size = 12
+font_weight = "regular"
+```
+
+Each field has its own `format`, `text_color`, optional `font_family`, optional `font_size`, and
+`font_weight`. Supported weights are `ultralight`, `thin`, `light`, `regular`, `medium`,
+`semibold`, `bold`, `heavy`, and `black`. The `separator` is rendered only for row layouts.
+
+The standalone `[builtins.time]` and `[builtins.date]` widgets remain available when the values
+should appear elsewhere in the bar. They use the same formatting and refresh implementation as
+the calendar fields.
+
+The previous `item`, `stack`, and `inline` layouts and their `item_format`, `top_format`, and
+`bottom_format` keys have been replaced by this model. Use a one-element `fields` list instead of
+`item`, `layout = "column"` instead of `stack`, and `layout = "row"` instead of `inline`.
+
 ## Calendar appointments
 
 Appointment row details are configured under `[builtins.calendar.appointments]`.

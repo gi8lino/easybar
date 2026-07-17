@@ -14,10 +14,26 @@ public enum MonthCalendarPopupLayout: String, CaseIterable {
   case appointmentsCalendarVertical = "appointments_calendar_vertical"
 }
 
-public enum CalendarAnchorLayout: String, Codable {
-  case item
-  case stack
-  case inline
+public enum CalendarAnchorLayout: String, Codable, CaseIterable {
+  case row
+  case column
+}
+
+public enum CalendarAnchorFieldKind: String, Codable, CaseIterable {
+  case time
+  case date
+}
+
+public enum CalendarAnchorFontWeight: String, Codable, CaseIterable {
+  case ultraLight = "ultralight"
+  case thin
+  case light
+  case regular
+  case medium
+  case semibold
+  case bold
+  case heavy
+  case black
 }
 
 public struct CalendarWidgetPlacement {

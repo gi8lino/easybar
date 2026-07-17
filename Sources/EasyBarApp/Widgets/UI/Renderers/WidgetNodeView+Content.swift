@@ -122,7 +122,31 @@ extension WidgetNodeView {
   }
 
   var labelResolvedFont: Font? {
-    return fontValue(size: node.labelFontSize ?? node.fontSize)
+    let size = node.labelFontSize ?? node.fontSize
+    guard size != nil || node.labelFontFamily != nil || node.labelFontWeight != nil else {
+      return nil
+    }
+
+    let resolvedSize = WidgetRenderMetrics.positive(size, fallback: 12)
+    let weight = fontWeight(node.labelFontWeight)
+    if let family = node.labelFontFamily, !family.isEmpty {
+      return .custom(family, size: resolvedSize).weight(weight)
+    }
+    return .system(size: resolvedSize, weight: weight)
+  }
+
+  private func fontWeight(_ value: String?) -> Font.Weight {
+    switch value {
+    case "ultralight": return .ultraLight
+    case "thin": return .thin
+    case "light": return .light
+    case "medium": return .medium
+    case "semibold": return .semibold
+    case "bold": return .bold
+    case "heavy": return .heavy
+    case "black": return .black
+    default: return .regular
+    }
   }
 
   var iconOffset: CGSize {

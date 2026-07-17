@@ -143,12 +143,7 @@ final class CalendarNativeWidget: NativeWidget {
 
   /// Returns only the format strings used by the current anchor layout.
   private static func activeFormats(for config: Config.CalendarBuiltinConfig) -> [String] {
-    switch config.anchor.layout {
-    case .stack, .inline:
-      return [config.anchor.topFormat, config.anchor.bottomFormat]
-    case .item:
-      return [config.anchor.itemFormat]
-    }
+    config.anchor.fields.map { config.anchor.field($0).format }
   }
 }
 

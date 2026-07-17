@@ -161,8 +161,8 @@ extension Config {
     builtinCalendar.style.borderColorHex = themeBorderColorHex
 
     applyOptionalThemeColorDefaults([
-      (\.builtinCalendar.anchor.topTextColorHex, \.themeTextColorHex),
-      (\.builtinCalendar.anchor.bottomTextColorHex, \.themeTextSecondaryColorHex),
+      (\.builtinCalendar.anchor.time.textColorHex, \.themeTextColorHex),
+      (\.builtinCalendar.anchor.date.textColorHex, \.themeTextSecondaryColorHex),
     ])
   }
 
