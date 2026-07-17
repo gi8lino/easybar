@@ -1,8 +1,3 @@
-local home = os.getenv("HOME") or ""
-if home ~= "" then
-	package.path = package.path .. ";" .. home .. "/personal/private/config/easybar/?.lua"
-end
-
 local secrets = require("secrets")
 
 local COLORS = {
@@ -112,15 +107,16 @@ end
 
 local function refresh()
 	local wireguard_connected = state.wireguard_connected
-	local logo_path = home .. "/.config/easybar/assets/wireguard.png"
 	local icon_opacity = wireguard_connected and 1.0 or 0.45
 
 	wireguard_icon:set({
 		icon = {
 			string = "",
-			image = logo_path,
-			image_size = 16,
-			image_corner_radius = 0,
+			image = {
+				path = easybar.asset("assets/wireguard.png"),
+				size = 16,
+				corner_radius = 0,
+			},
 		},
 		label = {
 			string = "",
@@ -211,9 +207,11 @@ wireguard_icon = easybar.add(easybar.kind.item, "wireguard_icon", {
 	parent = wireguard.name,
 	icon = {
 		string = "",
-		image = home .. "/.config/easybar/assets/wireguard.png",
-		image_size = 22,
-		image_corner_radius = 0,
+		image = {
+			path = easybar.asset("assets/wireguard.png"),
+			size = 22,
+			corner_radius = 0,
+		},
 	},
 	label = {
 		string = "",

@@ -57,21 +57,6 @@ local refresh_generation = 0
 -- Prevents double-clicks from starting overlapping up/down or exit-node commands.
 local action_running = false
 
-local function script_dir()
-	local source = debug.getinfo(1, "S").source or ""
-	local path = source:gsub("^@", "")
-	return path:match("(.*/)")
-end
-
-local function asset_path(name)
-	local dir = script_dir()
-	if dir == nil then
-		return name
-	end
-
-	return dir .. "assets/" .. name
-end
-
 local function tailscale_command(args)
 	return TAILSCALE .. " " .. args
 end
@@ -255,9 +240,11 @@ local function render(snapshot)
 	tailscale_icon:set({
 		icon = {
 			string = "",
-			image = asset_path(current_icon_name(snapshot)),
-			image_size = 16,
-			image_corner_radius = 0,
+			image = {
+				path = easybar.asset("assets/" .. current_icon_name(snapshot)),
+				size = 16,
+				corner_radius = 0,
+			},
 		},
 		label = {
 			string = "",
@@ -386,8 +373,10 @@ tailscale_icon = easybar.add(easybar.kind.item, "tailscale_icon", {
 	order = 2,
 	interval = CHECK_INTERVAL_SECONDS,
 	icon = {
-		image = asset_path("tailscale-inactive.svg"),
-		image_size = 16,
+		image = {
+			path = easybar.asset("assets/tailscale-inactive.svg"),
+			size = 16,
+		},
 	},
 	popup = {
 		drawing = "on",

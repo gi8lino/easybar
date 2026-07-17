@@ -3,14 +3,6 @@ local MAX_POPUP_ITEMS = 6
 local HOVER_CLOSE_DELAY_SECONDS = 0.20
 local NOTIFICATIONS_URL = "https://github.com/notifications"
 
-local function script_dir()
-	local source = debug.getinfo(1, "S").source or ""
-	local path = source:gsub("^@", "")
-	return path:match("(.*/)") or ""
-end
-
-local GITHUB_ICON_PATH = script_dir() .. "assets/github-mark.svg"
-
 local COLORS = {
 	text = easybar.theme.ref.text,
 	muted = easybar.theme.ref.muted,
@@ -211,9 +203,11 @@ local function render()
 	github:set({
 		drawing = visible,
 		icon = {
-			image = GITHUB_ICON_PATH,
-			image_size = 15,
-			image_corner_radius = 0,
+			image = {
+				path = easybar.asset("assets/github-mark.svg"),
+				size = 15,
+				corner_radius = 0,
+			},
 			color = color,
 		},
 		label = {
@@ -287,9 +281,11 @@ github = easybar.add(easybar.kind.item, "github_notifications", {
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
 	icon = {
-		image = GITHUB_ICON_PATH,
-		image_size = 15,
-		image_corner_radius = 0,
+		image = {
+			path = GITHUB_ICON_PATH,
+			size = 15,
+			corner_radius = 0,
+		},
 		color = COLORS.muted,
 	},
 	label = {
