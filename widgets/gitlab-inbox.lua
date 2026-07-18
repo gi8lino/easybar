@@ -25,8 +25,9 @@ local function refresh()
 		return
 	end
 	refreshing = true
-	local issues = "issues?scope=assigned_to_me&state=opened&order_by=updated_at&sort=desc&per_page=100"
-	local merge_requests = "merge_requests?scope=assigned_to_me&state=opened&order_by=updated_at&sort=desc&per_page=100"
+	local issues = "issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
+	local merge_requests =
+		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 	local command = table.concat({
 		"set -e",
 		"issues=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(issues) .. ")",
