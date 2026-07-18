@@ -56,6 +56,31 @@ The widget is intentionally more extensive than the snippets on this page. Use i
 for command chaining, cancellation, structured state rendering, popup rows, error presentation,
 and bounded file logging.
 
+## Bundled GitLab work-items widget
+
+[`widgets/gitlab.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/gitlab.lua) shows the
+open issues and merge requests assigned to the authenticated user. It works with GitLab.com and
+private GitLab Self-Managed or Dedicated instances through the official `glab` CLI.
+
+Install `glab`, authenticate the instance, and make the CLI and host available to GUI-launched
+EasyBar sessions:
+
+```sh
+brew install glab
+glab auth login --hostname gitlab.example.com
+```
+
+```toml
+[app.env]
+PATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+GITLAB_HOST = "https://gitlab.example.com"
+```
+
+Then add `gitlab.lua` to the configured `widgets_dir` together with the bundled `lib` directory.
+The widget refreshes every five minutes, orders assigned work by its most recent update, opens an
+item when its popup row is clicked, and provides Refresh and Open GitLab actions in its native
+right-click menu. `GITLAB_HOST` is optional for GitLab.com.
+
 ## Clock widget
 
 ```lua
