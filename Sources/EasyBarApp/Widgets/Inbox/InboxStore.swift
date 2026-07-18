@@ -1,0 +1,247 @@
+import Foundation
+
+@MainActor
+final class InboxStore: ObservableObject {
+  @Published private(set) var presentedItems: [InboxPresentedItem] = []
+
+  private var sources: [String: [InboxItem]] = [:]
+  private var readItemIDs = Set<String>()
+  private var unreadItemIDs = Set<String>()
+  private var dismissedItemIDs = Set<String>()
+  private var configuration: Config.InboxBuiltinConfig
+  private var persistence: InboxStatePersistence?
+
+  init(configuration: Config.InboxBuiltinConfig = .default, stateURL: URL? = nil) {
+    self.configuration = configuration
+    persistence = stateURL.map(InboxStatePersistence.init(fileURL:))
+    if let persistence {
+      let state = persistence.load()
+      readItemIDs = state.readItemIDs
+      unreadItemIDs = state.unreadItemIDs
+      dismissedItemIDs = state.dismissedItemIDs
+    }
+  }
+
+  var unreadCount: Int {
+    presentedItems.lazy.filter(\.isUnread).count
+  }
+
+  func updateStateURL(_ stateURL: URL) {
+    guard persistence?.fileURL.standardizedFileURL != stateURL.standardizedFileURL else { return }
+    persistState()
+    persistence = InboxStatePersistence(fileURL: stateURL)
+    let state = persistence?.load() ?? .init()
+    readItemIDs = state.readItemIDs
+    unreadItemIDs = state.unreadItemIDs
+    dismissedItemIDs = state.dismissedItemIDs
+    rebuild()
+  }
+
+  func updateConfiguration(_ configuration: Config.InboxBuiltinConfig) {
+    self.configuration = configuration
+    rebuild()
+  }
+
+  func replace(source: String, items: [InboxItem]) {
+    let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedSource.isEmpty, normalizedSource.utf8.count <= 512 else { return }
+
+    let uniqueItems = Dictionary(
+      items.lazy.filter(isValid).prefix(configuration.maxItems).map { ($0.id, $0) },
+      uniquingKeysWith: { _, newest in newest }
+    )
+    sources[normalizedSource] = Array(uniqueItems.values)
+
+    reconcileState(source: normalizedSource, items: uniqueItems.values)
+    persistState()
+    rebuild()
+  }
+
+  func clear(source: String) {
+    sources.removeValue(forKey: source)
+    readItemIDs = readItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
+    unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
+    dismissedItemIDs = dismissedItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
+    persistState()
+    rebuild()
+  }
+
+  func clearAll() {
+    sources.removeAll()
+    readItemIDs.removeAll()
+    unreadItemIDs.removeAll()
+    dismissedItemIDs.removeAll()
+    persistState()
+    rebuild()
+  }
+
+  func clearPublishedItems() {
+    sources.removeAll()
+    rebuild()
+  }
+
+  func markRead(_ presentedItem: InboxPresentedItem) {
+    readItemIDs.insert(presentedItem.id)
+    unreadItemIDs.remove(presentedItem.id)
+    persistState()
+    rebuild()
+  }
+
+  func markUnread(_ presentedItem: InboxPresentedItem) {
+    readItemIDs.remove(presentedItem.id)
+    unreadItemIDs.insert(presentedItem.id)
+    dismissedItemIDs.remove(presentedItem.id)
+    persistState()
+    rebuild()
+  }
+
+  func toggleRead(_ presentedItem: InboxPresentedItem) {
+    if presentedItem.isUnread {
+      markRead(presentedItem)
+    } else {
+      markUnread(presentedItem)
+    }
+  }
+
+  func markAllRead() {
+    for item in presentedItems where item.isUnread {
+      readItemIDs.insert(item.id)
+      unreadItemIDs.remove(item.id)
+    }
+    persistState()
+    rebuild()
+  }
+
+  func dismiss(_ presentedItem: InboxPresentedItem) {
+    guard presentedItem.item.isDismissible else { return }
+    dismissedItemIDs.insert(presentedItem.id)
+    readItemIDs.remove(presentedItem.id)
+    unreadItemIDs.remove(presentedItem.id)
+    persistState()
+    rebuild()
+  }
+
+  func dismissAll() {
+    for item in presentedItems where item.item.isDismissible {
+      dismissedItemIDs.insert(item.id)
+      readItemIDs.remove(item.id)
+      unreadItemIDs.remove(item.id)
+    }
+    persistState()
+    rebuild()
+  }
+
+  func groups() -> [(title: String?, items: [InboxPresentedItem])] {
+    guard configuration.groupBy != .none else {
+      return [(nil, presentedItems)]
+    }
+
+    var order: [String] = []
+    var grouped: [String: [InboxPresentedItem]] = [:]
+    for item in presentedItems {
+      let title = groupTitle(for: item)
+      if grouped[title] == nil { order.append(title) }
+      grouped[title, default: []].append(item)
+    }
+    return order.map { ($0, grouped[$0] ?? []) }
+  }
+
+  private func rebuild() {
+    let flattened: [InboxPresentedItem] = sources.flatMap { source, items in
+      items.compactMap { item in
+        let id = compositeID(source: source, itemID: item.id)
+        guard !dismissedItemIDs.contains(id) else { return nil }
+        return InboxPresentedItem(
+          source: source,
+          item: item,
+          isUnread: unreadItemIDs.contains(id)
+            || (item.isInitiallyUnread
+              && !readItemIDs.contains(id))
+        )
+      }
+    }
+
+    presentedItems = flattened.sorted(by: compare)
+  }
+
+  private func compare(_ left: InboxPresentedItem, _ right: InboxPresentedItem) -> Bool {
+    let result: ComparisonResult
+    switch configuration.sortBy {
+    case .timestamp:
+      result = compareValues(left.item.timestamp ?? 0, right.item.timestamp ?? 0)
+    case .source:
+      result = left.source.localizedCaseInsensitiveCompare(right.source)
+    case .severity:
+      result = compareValues(left.item.resolvedSeverity.rank, right.item.resolvedSeverity.rank)
+    case .title:
+      result = left.item.title.localizedCaseInsensitiveCompare(right.item.title)
+    }
+    if result == .orderedSame { return left.id < right.id }
+    return configuration.sortDescending ? result == .orderedDescending : result == .orderedAscending
+  }
+
+  private func compareValues<T: Comparable>(_ left: T, _ right: T) -> ComparisonResult {
+    if left < right { return .orderedAscending }
+    if left > right { return .orderedDescending }
+    return .orderedSame
+  }
+
+  private func groupTitle(for item: InboxPresentedItem) -> String {
+    switch configuration.groupBy {
+    case .source:
+      return item.source
+    case .category:
+      return nonempty(item.item.category) ?? "Other"
+    case .severity:
+      return item.item.resolvedSeverity.rawValue.capitalized
+    case .date:
+      guard let timestamp = item.item.timestamp else { return "No date" }
+      let date = Date(timeIntervalSince1970: timestamp)
+      if Calendar.current.isDateInToday(date) { return "Today" }
+      if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+      return date.formatted(date: .abbreviated, time: .omitted)
+    case .none:
+      return ""
+    }
+  }
+
+  private func nonempty(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
+  private func compositeID(source: String, itemID: String) -> String {
+    source + "\u{1f}" + itemID
+  }
+
+  private func reconcileState<S: Sequence>(source: String, items: S) where S.Element == InboxItem {
+    let prefix = source + "\u{1f}"
+    let liveIDs = Set(items.map { compositeID(source: source, itemID: $0.id) })
+    readItemIDs = readItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
+    unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
+    dismissedItemIDs = dismissedItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
+  }
+
+  private func persistState() {
+    persistence?.save(
+      InboxPersistedState(
+        readItemIDs: readItemIDs,
+        unreadItemIDs: unreadItemIDs,
+        dismissedItemIDs: dismissedItemIDs
+      ))
+  }
+
+  private func isValid(_ item: InboxItem) -> Bool {
+    let id = item.id.trimmingCharacters(in: .whitespacesAndNewlines)
+    let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !id.isEmpty, id.utf8.count <= 512, !title.isEmpty, title.utf8.count <= 4_096 else {
+      return false
+    }
+    guard (item.body?.utf8.count ?? 0) <= 64 * 1_024 else { return false }
+    return (item.actions ?? []).count <= 16
+      && (item.actions ?? []).allSatisfy {
+        !$0.id.isEmpty && $0.id.utf8.count <= 512 && !$0.title.isEmpty && $0.title.utf8.count <= 1_024
+      }
+  }
+}

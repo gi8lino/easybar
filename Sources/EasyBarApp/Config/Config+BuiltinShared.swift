@@ -75,6 +75,7 @@ extension Config {
     }
 
     try parseBuiltinGroups(from: builtins)
+    try parseInboxBuiltin(from: builtins)
     try parseCPUBuiltin(from: builtins)
     try parseBatteryBuiltin(from: builtins)
     try parseSpacesBuiltin(from: builtins)

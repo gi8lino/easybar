@@ -56,11 +56,24 @@ The widget is intentionally more extensive than the snippets on this page. Use i
 for command chaining, cancellation, structured state rendering, popup rows, error presentation,
 and bounded file logging.
 
+Use the inbox-only
+[`widgets/brew-inbox.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/brew-inbox.lua)
+variant to publish outdated formulae, casks, Homebrew warnings, and command errors into the native
+inbox. It supports refresh, `brew update`, individual or complete upgrades, and cancellation while
+an update or upgrade is running. Load either `brew.lua` or `brew-inbox.lua`, not both.
+
 ## Bundled GitLab work-items widget
 
 [`widgets/gitlab.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/gitlab.lua) shows the
 open issues and merge requests assigned to the authenticated user. It works with GitLab.com and
-private GitLab Self-Managed or Dedicated instances through the official `glab` CLI.
+private GitLab Self-Managed or Dedicated instances through the official `glab` CLI. Use the
+inbox-only [`widgets/gitlab-inbox.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/gitlab-inbox.lua)
+variant to publish the same work items into EasyBar's shared [native inbox](inbox.md).
+
+The equivalent inbox-only GitHub publisher is
+[`widgets/github-inbox.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/github-inbox.lua).
+Use [`widgets/inbox-demo.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/inbox-demo.lua)
+to preview inbox grouping, severities, Markdown, unread state, and actions without external services.
 
 Install `glab`, authenticate the instance, and make the CLI and host available to GUI-launched
 EasyBar sessions:

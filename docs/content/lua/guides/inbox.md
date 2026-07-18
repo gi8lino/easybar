@@ -1,0 +1,132 @@
+# Native Inbox
+
+EasyBar provides one shared native inbox for messages published by Lua widgets. The bar icon shows
+the total unread count, and the popup can group messages from GitHub, GitLab, Homebrew, agents, or
+any other widget source.
+
+Copy [`widgets/inbox-demo.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/inbox-demo.lua)
+into your widgets directory to populate every severity with test data. Inbox-only GitHub and GitLab
+publishers are available as `widgets/github-inbox.lua` and `widgets/gitlab-inbox.lua`; the original
+widgets remain standalone alternatives.
+
+[`widgets/brew-inbox.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/brew-inbox.lua)
+publishes outdated formulae and casks with actions for updating, upgrading, refreshing, and
+cancelling a running operation.
+
+## Publish a source snapshot
+
+Use `replace` to atomically replace all current messages owned by one source:
+
+```lua
+easybar.inbox.replace("gitlab", {
+    {
+        id = "project!42",
+        title = "Review merge request",
+        body = "**Pipeline passed** · waiting for review",
+        format = "markdown",
+        timestamp = os.time(),
+        category = "Merge requests",
+        severity = "success",
+        unread = true,
+        actions = {
+            { id = "open", title = "Open" },
+            { id = "dismiss", title = "Dismiss" },
+        },
+    },
+})
+```
+
+Stable `id` values preserve locally read messages across repeated source refreshes. Items omitted
+from the next snapshot are removed. Clear the complete source explicitly with:
+
+```lua
+easybar.inbox.clear("gitlab")
+```
+
+Message content is owned by publishers and remains in memory. EasyBar persists only local read,
+unread, and dismissed state in `inbox-state.json` inside `app.runtime_dir`.
+
+Click a message to mark it read. Click its status dot to toggle read/unread, or right-click the
+message to change its state or dismiss it. **Dismiss all** suppresses every currently displayed
+message. Local changes survive restarts and publisher refreshes while the source and item ID remain
+stable. Once a publisher omits an item, EasyBar removes its saved local state as well.
+
+Set `dismissible = false` on persistent controls or status rows that must remain available. Such
+items are excluded from both the per-message dismiss action and **Dismiss all**.
+
+## Handle actions
+
+Actions are routed to the widget that registered the matching source handler. EasyBar does not
+execute arbitrary commands stored in inbox messages:
+
+```lua
+easybar.inbox.on_action("gitlab", function(event)
+    if event.action_id == "open" then
+        open_work_item(event.target_widget_id)
+    elseif event.action_id == "dismiss" then
+        dismiss_work_item(event.target_widget_id)
+    end
+end)
+```
+
+The event contains `source`, `target_widget_id` (the item id), and `action_id`.
+
+## Text and Markdown
+
+`body` defaults to plain text. Set `format = "markdown"` for limited inline Markdown such as
+emphasis, strong text, inline code, and links. EasyBar deliberately does not render raw HTML,
+remote images, tables, or embedded content in inbox messages.
+
+## Configure the native center
+
+```toml
+[builtins.inbox]
+enabled = true
+position = "right"
+order = 5
+
+[builtins.inbox.style]
+icon = "󰂚"
+text_color = "theme.accent"
+
+[builtins.inbox.colors]
+background = "theme.background"
+border = "theme.border_strong"
+title = "theme.text"
+text = "theme.text_secondary"
+muted = "theme.muted"
+item_background = "theme.surface"
+action = "theme.accent"
+info = "theme.accent"
+success = "theme.success"
+warning = "theme.warning"
+error = "theme.error"
+
+[builtins.inbox.content]
+group_by = "source"       # source | date | category | severity | none
+sort_by = "timestamp"     # timestamp | source | severity | title
+sort_descending = true
+show_unread_count = true
+use_inactive_style_when_read = true
+show_when_empty = true
+inactive_icon = "󰂜"
+inactive_color = "theme.muted"
+max_items = 100
+```
+
+When there are no unread messages, EasyBar uses `inactive_icon` and `inactive_color`. Set
+`use_inactive_style_when_read = false` to keep the active icon and color after everything is read. Set
+`show_when_empty = false` to remove the native icon when the inbox contains no messages. Set
+`show_unread_count = false` to keep the stateful icon without displaying its numeric badge.
+
+The `colors` section controls the complete native popup independently from the anchor's `style`.
+Every value accepts a theme reference or a literal color, so a theme remains the default while
+individual users can override only the parts they want.
+
+The supported grouping modes are:
+
+- `source`: publisher names such as GitHub and GitLab
+- `date`: Today, Yesterday, an older date, or No date
+- `category`: the item-provided category, with Other as a fallback
+- `severity`: Info, Success, Warning, or Error
+- `none`: one flat sorted list

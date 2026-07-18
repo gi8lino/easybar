@@ -4,6 +4,7 @@ private enum PopupContentKind {
   case none
   case calendarUpcoming
   case calendarMonth
+  case inbox
   case genericNodePopup
 }
 
@@ -184,7 +185,7 @@ extension WidgetNodeView {
 
   var usesNativePopupAnchor: Bool {
     switch popupContentKind {
-    case .calendarUpcoming, .calendarMonth: return true
+    case .calendarUpcoming, .calendarMonth, .inbox: return true
     case .none, .genericNodePopup: return false
     }
   }
@@ -211,6 +212,13 @@ extension WidgetNodeView {
           .environmentObject(configStore)
           .background(popupHoverBackground)
       )
+    case .inbox:
+      guard let appViewServices else { return AnyView(EmptyView()) }
+      return AnyView(
+        InboxPopupView(store: appViewServices.inboxStore, eventHub: appViewServices.eventHub)
+          .environmentObject(configStore)
+          .background(popupHoverBackground)
+      )
     case .genericNodePopup:
       guard let appViewServices else { return AnyView(EmptyView()) }
       return AnyView(
@@ -224,6 +232,7 @@ extension WidgetNodeView {
   }
 
   private var popupContentKind: PopupContentKind {
+    if node.isInboxRoot { return .inbox }
     if node.isCalendarRoot {
       switch configStore.snapshot.builtins.calendar.popupMode {
       case .none: return .none

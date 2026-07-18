@@ -19,6 +19,7 @@ final class NativeWidgetRegistry {
   private let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
   private let nativeMonthCalendarStore: NativeMonthCalendarStore
   private let nativeComposerCalendarStore: NativeComposerCalendarStore
+  private let inboxStore: InboxStore
   private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
   private let monthCalendarAgentClient: MonthCalendarAgentClient
   private var snapshot: ConfigSnapshot
@@ -37,6 +38,7 @@ final class NativeWidgetRegistry {
     nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
     nativeMonthCalendarStore: NativeMonthCalendarStore,
     nativeComposerCalendarStore: NativeComposerCalendarStore,
+    inboxStore: InboxStore,
     upcomingCalendarAgentClient: UpcomingCalendarAgentClient,
     monthCalendarAgentClient: MonthCalendarAgentClient
   ) {
@@ -51,6 +53,7 @@ final class NativeWidgetRegistry {
     self.nativeUpcomingCalendarStore = nativeUpcomingCalendarStore
     self.nativeMonthCalendarStore = nativeMonthCalendarStore
     self.nativeComposerCalendarStore = nativeComposerCalendarStore
+    self.inboxStore = inboxStore
     self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
     self.monthCalendarAgentClient = monthCalendarAgentClient
   }
@@ -174,6 +177,13 @@ final class NativeWidgetRegistry {
     let calendarAgent = snapshot.calendarAgent
 
     return [
+      Registration(id: "inbox", enabled: builtins.inbox.enabled) {
+        InboxNativeWidget(
+          config: builtins.inbox,
+          widgetStore: self.widgetStore,
+          inboxStore: self.inboxStore
+        )
+      },
       Registration(id: "spaces", enabled: builtins.spaces.enabled) {
         SpacesNativeWidget(
           config: builtins.spaces,

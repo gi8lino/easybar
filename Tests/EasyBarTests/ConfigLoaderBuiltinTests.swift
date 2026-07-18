@@ -6,6 +6,73 @@ import XCTest
 @testable import EasyBarApp
 
 final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
+  func testReloadAppliesInboxConfiguration() throws {
+    let config = Config.makeUnloadedConfig()
+    let configFileURL = tempDirectoryURL.appendingPathComponent("inbox.toml")
+    try writeConfig(
+      """
+      [builtins.inbox]
+      enabled = true
+      position = "left"
+      order = 7
+
+      [builtins.inbox.style]
+      icon = "IN"
+
+      [builtins.inbox.colors]
+      background = "#010101"
+      border = "#020202"
+      title = "#030303"
+      text = "#040404"
+      muted = "#050505"
+      item_background = "#060606"
+      action = "#070707"
+      info = "#080808"
+      success = "#090909"
+      warning = "#101010"
+      error = "#111111"
+
+      [builtins.inbox.content]
+      group_by = "date"
+      sort_by = "severity"
+      sort_descending = false
+      show_unread_count = false
+      use_inactive_style_when_read = false
+      show_when_empty = false
+      inactive_icon = "OUT"
+      inactive_color = "#123456"
+      max_items = 25
+      """,
+      to: configFileURL
+    )
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+
+    XCTAssertNil(config.reload())
+    XCTAssertEqual(config.builtinInbox.placement.position, .left)
+    XCTAssertEqual(config.builtinInbox.placement.order, 7)
+    XCTAssertEqual(config.builtinInbox.style.icon, "IN")
+    XCTAssertEqual(config.builtinInbox.groupBy, .date)
+    XCTAssertEqual(config.builtinInbox.sortBy, .severity)
+    XCTAssertFalse(config.builtinInbox.sortDescending)
+    XCTAssertFalse(config.builtinInbox.showUnreadCount)
+    XCTAssertFalse(config.builtinInbox.useInactiveStyleWhenRead)
+    XCTAssertFalse(config.builtinInbox.showWhenEmpty)
+    XCTAssertEqual(config.builtinInbox.inactiveIcon, "OUT")
+    XCTAssertEqual(config.builtinInbox.inactiveColorHex, "#123456")
+    XCTAssertEqual(config.builtinInbox.popupBackgroundColorHex, "#010101")
+    XCTAssertEqual(config.builtinInbox.popupBorderColorHex, "#020202")
+    XCTAssertEqual(config.builtinInbox.popupTitleColorHex, "#030303")
+    XCTAssertEqual(config.builtinInbox.popupTextColorHex, "#040404")
+    XCTAssertEqual(config.builtinInbox.popupMutedColorHex, "#050505")
+    XCTAssertEqual(config.builtinInbox.popupItemBackgroundColorHex, "#060606")
+    XCTAssertEqual(config.builtinInbox.popupActionColorHex, "#070707")
+    XCTAssertEqual(config.builtinInbox.infoColorHex, "#080808")
+    XCTAssertEqual(config.builtinInbox.successColorHex, "#090909")
+    XCTAssertEqual(config.builtinInbox.warningColorHex, "#101010")
+    XCTAssertEqual(config.builtinInbox.errorColorHex, "#111111")
+    XCTAssertEqual(config.builtinInbox.maxItems, 25)
+  }
+
   /// Verifies that a missing config file still loads a useful default bar.
   func testReloadUsesUsefulBuiltinsWhenConfigFileIsMissing() throws {
     let config = Config.makeUnloadedConfig()

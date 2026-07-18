@@ -65,6 +65,7 @@ nav:
           - Grouping: lua/guides/grouping.md
           - Popups: lua/guides/popups.md
           - Native Context Menus: lua/guides/context-menus.md
+          - Native Inbox: lua/guides/inbox.md
           - Intervals: lua/guides/intervals.md
           - Commands: lua/guides/commands.md
           - Logging: lua/guides/logging.md

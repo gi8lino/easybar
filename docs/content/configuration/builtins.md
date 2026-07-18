@@ -86,6 +86,33 @@ Built-in widgets and native groups share common layout keys:
 
 See [Box Model](box-model.md).
 
+## Inbox
+
+The native inbox collects structured messages published by Lua widgets into one bar item. It shows
+the total unread count, renders plain text or limited inline Markdown, and can group messages by
+source, date, category, severity, or not at all.
+
+```toml
+[builtins.inbox]
+enabled = true
+position = "right"
+order = 5
+
+[builtins.inbox.content]
+group_by = "source"
+show_unread_count = true
+use_inactive_style_when_read = true
+show_when_empty = true
+inactive_icon = "󰂜"
+inactive_color = "theme.muted"
+```
+
+The popup itself can be recolored under `[builtins.inbox.colors]`, including its background,
+border, title, body, muted labels, item background, actions, and all four severity indicators.
+
+See [Native Inbox](../lua/guides/inbox.md) for the publishing API, Markdown limits, actions, and
+all grouping and display options.
+
 ## Spaces
 
 For the native `spaces` widget:

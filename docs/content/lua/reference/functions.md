@@ -296,3 +296,35 @@ Keeps only the newest log lines in the widget log file.
 
 - `boolean`
 - `string?`
+
+## `EasyBarInbox.clear`
+
+Clears every current inbox item for one source.
+
+### Parameters
+
+| Name     | Type     | Description |
+| -------- | -------- | ----------- |
+| `source` | `string` |             |
+
+## `EasyBarInbox.on_action`
+
+Registers an action handler for one source.
+
+### Parameters
+
+| Name      | Type                                  | Description |
+| --------- | ------------------------------------- | ----------- |
+| `source`  | `string`                              |             |
+| `handler` | `fun(event: EasyBarInboxActionEvent)` |             |
+
+## `EasyBarInbox.replace`
+
+Atomically replaces every current inbox item for one source.
+
+### Parameters
+
+| Name     | Type                 | Description |
+| -------- | -------------------- | ----------- |
+| `source` | `string`             |             |
+| `items`  | `EasyBarInboxItem[]` |             |

@@ -63,6 +63,7 @@ extension Config {
 
   /// Applies component-specific theme defaults to every native built-in.
   private func applyThemeBuiltinDefaults() {
+    applyThemeInboxDefaults()
     applyThemeCPUSparklineDefaults()
     applyThemeBatteryDefaults()
     applyThemeSpacesDefaults()
@@ -73,6 +74,22 @@ extension Config {
     applyThemeCalendarDefaults()
     applyThemeTimeDefaults()
     applyThemeDateDefaults()
+  }
+
+  private func applyThemeInboxDefaults() {
+    applyTransparentBuiltinStyle(&builtinInbox.style, textColorHex: themeAccentColorHex)
+    builtinInbox.inactiveColorHex = themeMutedColorHex
+    builtinInbox.popupBackgroundColorHex = themeBackgroundHex
+    builtinInbox.popupBorderColorHex = themeBorderStrongColorHex
+    builtinInbox.popupTitleColorHex = themeTextColorHex
+    builtinInbox.popupTextColorHex = themeTextSecondaryColorHex
+    builtinInbox.popupMutedColorHex = themeMutedColorHex
+    builtinInbox.popupItemBackgroundColorHex = themeSurfaceHex
+    builtinInbox.popupActionColorHex = themeAccentColorHex
+    builtinInbox.infoColorHex = themeAccentColorHex
+    builtinInbox.successColorHex = themeSuccessColorHex
+    builtinInbox.warningColorHex = themeWarningColorHex
+    builtinInbox.errorColorHex = themeErrorColorHex
   }
 
   /// Applies theme defaults to the CPU built-in.

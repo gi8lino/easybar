@@ -1,0 +1,73 @@
+import Foundation
+
+enum InboxGroupMode: String, CaseIterable, Sendable {
+  case source
+  case date
+  case category
+  case severity
+  case none
+}
+
+enum InboxSortMode: String, CaseIterable, Sendable {
+  case timestamp
+  case source
+  case severity
+  case title
+}
+
+enum InboxSeverity: String, Codable, CaseIterable, Sendable {
+  case info
+  case success
+  case warning
+  case error
+
+  var rank: Int {
+    switch self {
+    case .error: 3
+    case .warning: 2
+    case .success: 1
+    case .info: 0
+    }
+  }
+}
+
+enum InboxBodyFormat: String, Codable, Sendable {
+  case plain
+  case markdown
+}
+
+struct InboxAction: Codable, Equatable, Identifiable, Sendable {
+  let id: String
+  let title: String
+}
+
+struct InboxItem: Codable, Equatable, Identifiable, Sendable {
+  let id: String
+  let title: String
+  let body: String?
+  let format: InboxBodyFormat?
+  let timestamp: TimeInterval?
+  let category: String?
+  let severity: InboxSeverity?
+  let unread: Bool?
+  let dismissible: Bool?
+  let actions: [InboxAction]?
+
+  var resolvedFormat: InboxBodyFormat { format ?? .plain }
+  var resolvedSeverity: InboxSeverity { severity ?? .info }
+  var isInitiallyUnread: Bool { unread ?? true }
+  var isDismissible: Bool { dismissible ?? true }
+}
+
+struct InboxSourceSnapshot: Codable, Equatable, Sendable {
+  let source: String
+  let items: [InboxItem]
+}
+
+struct InboxPresentedItem: Identifiable, Equatable, Sendable {
+  let source: String
+  let item: InboxItem
+  let isUnread: Bool
+
+  var id: String { source + "\u{1f}" + item.id }
+}

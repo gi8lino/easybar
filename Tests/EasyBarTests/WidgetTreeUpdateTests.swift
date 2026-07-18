@@ -48,6 +48,29 @@ final class WidgetTreeUpdateTests: XCTestCase {
     XCTAssertEqual(token, "job-1")
   }
 
+  func testInboxReplacementPayloadIsDecoded() throws {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from:
+        #"{"protocol_version":1,"type":"inbox_replace","source":"gitlab","items":[{"id":"one","title":"Review","body":"**Ready**","format":"markdown","severity":"success"}]}"#
+    )
+
+    guard case .inboxReplace(let snapshot) = message else {
+      return XCTFail("Expected inbox replacement message")
+    }
+    XCTAssertEqual(snapshot.source, "gitlab")
+    XCTAssertEqual(snapshot.items.first?.title, "Review")
+    XCTAssertEqual(snapshot.items.first?.resolvedFormat, .markdown)
+    XCTAssertEqual(snapshot.items.first?.resolvedSeverity, .success)
+  }
+
+  func testInboxClearRejectsEmptySource() throws {
+    XCTAssertThrowsError(
+      try WidgetRuntimeProtocolDecoder().decodeMessage(
+        from: #"{"protocol_version":1,"type":"inbox_clear","source":""}"#
+      )
+    )
+  }
+
   func testImagePathDecodesToPathSource() throws {
     let node = try decodeNode(imageFields: ",\"image_path\":\"/tmp/icon.svg\"")
 

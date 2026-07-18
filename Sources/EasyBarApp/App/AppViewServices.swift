@@ -3,6 +3,7 @@ import SwiftUI
 /// App-owned services needed by deeply nested SwiftUI widget views.
 struct AppViewServices {
   let eventHub: EventHub
+  let inboxStore: InboxStore
   let monthCalendarStore: NativeMonthCalendarStore
   let upcomingCalendarStore: NativeUpcomingCalendarStore
   let composerCalendarStore: NativeComposerCalendarStore

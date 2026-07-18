@@ -1,0 +1,69 @@
+import EasyBarShared
+import Foundation
+import XCTest
+
+@testable import EasyBarApp
+
+final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
+  func testPublishesClearsAndHandlesInboxActions() async throws {
+    let widgetsDirectoryURL = try makeWidgetsDirectory()
+    try """
+    local status = easybar.add(easybar.kind.item, "inbox_test", {
+      position = "right",
+      label = "idle",
+    })
+
+    easybar.inbox.on_action("gitlab", function(event)
+      status:set({ label = event.target_widget_id .. ":" .. event.action_id })
+    end)
+
+    easybar.inbox.replace("gitlab", {
+      {
+        id = "mr-42",
+        title = "Review merge request",
+        body = "**Pipeline passed**",
+        format = "markdown",
+        timestamp = 123,
+        category = "Reviews",
+        severity = "success",
+        actions = { { id = "open", title = "Open" } },
+      },
+    })
+    """.write(
+      to: widgetsDirectoryURL.appendingPathComponent("inbox.lua"),
+      atomically: true,
+      encoding: .utf8
+    )
+
+    let runtimeController = LuaProcessController(
+      logger: ProcessLogger(label: "lua.inbox.test", minimumLevel: .error)
+    )
+    let runtimePath = try XCTUnwrap(runtimeController.resolvedRuntimePath())
+    let recorder = RuntimeUpdateRecorder()
+    let runtime = try RuntimeProcess(
+      runtimePath: runtimePath,
+      widgetsDirectoryURL: widgetsDirectoryURL,
+      widgetFile: "inbox.lua",
+      recorder: recorder,
+      decoder: decoder,
+      environment: try luaRuntimeEnvironment(for: widgetsDirectoryURL),
+      autoRespondToCommands: true
+    )
+    defer { runtime.stop() }
+
+    let replacement = try await nextUpdate(from: recorder) {
+      $0.inboxReplacePayload?.source == "gitlab"
+    }
+    XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.id, "mr-42")
+
+    try runtime.sendHostEvent(
+      #"{"name":"inbox.action","widget_id":"builtin_inbox","target_widget_id":"mr-42","source":"gitlab","action_id":"open"}"#
+        + "\n"
+    )
+
+    let actionUpdate = try await nextTreeUpdate(from: recorder) { [self] in
+      rootNode(in: $0)?.text == "mr-42:open"
+    }
+    XCTAssertEqual(rootNode(in: actionUpdate)?.text, "mr-42:open")
+  }
+}

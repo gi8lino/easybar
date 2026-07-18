@@ -127,6 +127,10 @@ struct WidgetNodeState: Identifiable, Codable, Equatable, @unchecked Sendable {
     return id == root && root == "builtin_calendar"
   }
 
+  var isInboxRoot: Bool {
+    id == root && root == "builtin_inbox"
+  }
+
   /// Returns whether this node is a popup anchor child.
   var isPopupAnchor: Bool {
     return role == .popupAnchor

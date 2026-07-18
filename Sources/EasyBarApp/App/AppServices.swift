@@ -1,4 +1,5 @@
 import EasyBarShared
+import Foundation
 
 /// Explicitly owned app services used by the app shell and runtime coordinator.
 struct AppServices: @unchecked Sendable {
@@ -14,6 +15,7 @@ struct AppServices: @unchecked Sendable {
   let volumeEvents: VolumeEvents
   let widgetStore: WidgetStore
   let nativeWidgetRegistry: NativeWidgetRegistry
+  let inboxStore: InboxStore
   let aeroSpaceService: AeroSpaceService
   let calendarAgentEventRelay: CalendarAgentEventRelay
   let networkAgentClient: NetworkAgentClient
@@ -33,6 +35,14 @@ struct AppServices: @unchecked Sendable {
     let configSnapshotStore = ConfigSnapshotStore(snapshot: bootstrapSnapshot)
     let configManager = ConfigManager(config: config)
     let metricsCoordinator = MetricsCoordinator.shared
+    let inboxStateURL = URL(
+      fileURLWithPath: bootstrapSnapshot.app.runtimeDirectory,
+      isDirectory: true
+    ).appendingPathComponent("inbox-state.json")
+    let inboxStore = InboxStore(
+      configuration: bootstrapSnapshot.builtins.inbox,
+      stateURL: inboxStateURL
+    )
     let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
     let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))
     let nativeUpcomingCalendarStore = NativeUpcomingCalendarStore(
@@ -82,6 +92,7 @@ struct AppServices: @unchecked Sendable {
       nativeMonthCalendarStore: nativeMonthCalendarStore,
       nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
       nativeComposerCalendarStore: nativeComposerCalendarStore,
+      inboxStore: inboxStore,
       agentServices: agentServices
     )
 
@@ -98,6 +109,7 @@ struct AppServices: @unchecked Sendable {
       volumeEvents: volumeEvents,
       widgetStore: nativeServices.widgetStore,
       nativeWidgetRegistry: nativeServices.nativeWidgetRegistry,
+      inboxStore: inboxStore,
       aeroSpaceService: nativeServices.aeroSpaceService,
       calendarAgentEventRelay: agentServices.calendarAgentEventRelay,
       networkAgentClient: agentServices.networkAgentClient,
@@ -117,6 +129,10 @@ struct AppServices: @unchecked Sendable {
   @MainActor
   func applyRuntimeConfiguration(_ snapshot: ConfigSnapshot) {
     configSnapshotStore.apply(snapshot)
+    inboxStore.updateStateURL(
+      URL(fileURLWithPath: snapshot.app.runtimeDirectory, isDirectory: true)
+        .appendingPathComponent("inbox-state.json")
+    )
     networkAgentClient.updateConfiguration(snapshot.networkAgent)
     monthCalendarAgentClient.updateConfiguration(
       calendarAgentConfig: snapshot.calendarAgent,
@@ -139,6 +155,7 @@ struct AppServices: @unchecked Sendable {
     nativeMonthCalendarStore: NativeMonthCalendarStore,
     nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
     nativeComposerCalendarStore: NativeComposerCalendarStore,
+    inboxStore: InboxStore,
     agentServices: AgentServices
   )
     -> NativeServices
@@ -163,6 +180,7 @@ struct AppServices: @unchecked Sendable {
         nativeUpcomingCalendarStore: nativeUpcomingCalendarStore,
         nativeMonthCalendarStore: nativeMonthCalendarStore,
         nativeComposerCalendarStore: nativeComposerCalendarStore,
+        inboxStore: inboxStore,
         upcomingCalendarAgentClient: agentServices.upcomingCalendarAgentClient,
         monthCalendarAgentClient: agentServices.monthCalendarAgentClient
       ),

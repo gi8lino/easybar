@@ -266,6 +266,7 @@ final class AppController {
       aeroSpaceService: services.aeroSpaceService,
       appViewServices: AppViewServices(
         eventHub: services.eventHub,
+        inboxStore: services.inboxStore,
         monthCalendarStore: services.nativeMonthCalendarStore,
         upcomingCalendarStore: services.nativeUpcomingCalendarStore,
         composerCalendarStore: services.nativeComposerCalendarStore,

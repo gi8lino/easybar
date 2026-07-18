@@ -27,6 +27,7 @@ actor WidgetEngine {
   private let eventManager: EventManager
   private let widgetStore: WidgetStore
   private let metricsCoordinator: MetricsCoordinator
+  private let inboxStore: InboxStore
   private let commandService: LuaCommandService
   private let protocolDecoder = WidgetRuntimeProtocolDecoder()
 
@@ -46,7 +47,8 @@ actor WidgetEngine {
     eventHub: EventHub,
     eventManager: EventManager,
     widgetStore: WidgetStore,
-    metricsCoordinator: MetricsCoordinator
+    metricsCoordinator: MetricsCoordinator,
+    inboxStore: InboxStore
   ) {
     self.logger = logger
     self.configManager = configManager
@@ -55,6 +57,7 @@ actor WidgetEngine {
     self.eventManager = eventManager
     self.widgetStore = widgetStore
     self.metricsCoordinator = metricsCoordinator
+    self.inboxStore = inboxStore
     self.commandService = LuaCommandService(
       logger: logger.child("commands"),
       luaRuntime: luaRuntime,
@@ -144,6 +147,7 @@ actor WidgetEngine {
 
     await MainActor.run {
       widgetStore.clear(owners: Set(rootsToClear.map { .scripted(root: $0) }))
+      inboxStore.clearPublishedItems()
     }
 
     scriptedRoots.removeAll()
@@ -175,6 +179,7 @@ actor WidgetEngine {
 
     await MainActor.run {
       eventManager.stopLuaSubscriptions()
+      inboxStore.clearPublishedItems()
     }
 
     await luaRuntime.setLineHandler { _ in }
@@ -203,6 +208,7 @@ actor WidgetEngine {
     await MainActor.run {
       eventManager.stopLuaSubscriptions()
       widgetStore.clear(owners: Set(rootsToClear.map { .scripted(root: $0) }))
+      inboxStore.clearPublishedItems()
     }
 
     guard !termination.wasRequested else { return }
@@ -316,6 +322,14 @@ actor WidgetEngine {
         token: token,
         runtimeSessionID: runtimeSessionID
       )
+    case .inboxReplace(let snapshot):
+      await MainActor.run {
+        inboxStore.replace(source: snapshot.source, items: snapshot.items)
+      }
+    case .inboxClear(let source):
+      await MainActor.run {
+        inboxStore.clear(source: source)
+      }
     }
   }
 

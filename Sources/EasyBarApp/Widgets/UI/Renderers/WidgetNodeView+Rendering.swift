@@ -107,6 +107,10 @@ extension WidgetNodeView {
   }
 
   var itemView: some View {
+    if usesNativePopupAnchor {
+      return AnyView(nativePopupAnchorView { itemContent })
+    }
+
     if hasPopupChildren {
       return AnyView(popupItemSurface(itemContent))
     }

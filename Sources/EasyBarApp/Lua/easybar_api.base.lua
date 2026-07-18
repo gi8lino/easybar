@@ -250,6 +250,55 @@
 ---@field remove fun(self: EasyBarNodeHandle) Removes this node and all descendants.
 ---@field subscribe fun(self: EasyBarNodeHandle, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes this node to runtime or interaction events.
 
+---@alias EasyBarInboxFormat
+---| 'plain'
+---| 'markdown'
+
+---@alias EasyBarInboxSeverity
+---| 'info'
+---| 'success'
+---| 'warning'
+---| 'error'
+
+---@class (exact) EasyBarInboxAction
+---@field id string Action id returned to the publisher.
+---@field title string Button title shown in the inbox.
+
+---@class (exact) EasyBarInboxItem
+---@field id string Stable id within the source snapshot.
+---@field title string Message title.
+---@field body? string Optional plain text or limited inline Markdown body.
+---@field format? EasyBarInboxFormat Body format. Defaults to plain.
+---@field timestamp? number Unix timestamp used for sorting and date grouping.
+---@field category? string Optional category used for grouping.
+---@field severity? EasyBarInboxSeverity Message severity. Defaults to info.
+---@field unread? boolean Initial unread state. Defaults to true.
+---@field dismissible? boolean Whether local dismiss actions are available. Defaults to true.
+---@field actions? EasyBarInboxAction[] Actions routed back through `on_action`.
+
+---@class EasyBarInboxActionEvent
+---@field name 'inbox.action'
+---@field source string Publisher source.
+---@field target_widget_id string Inbox item id.
+---@field action_id string Selected action id.
+
+---@class EasyBarInbox
+local EasyBarInbox = {}
+
+---Atomically replaces every current inbox item for one source.
+---@param source string
+---@param items EasyBarInboxItem[]
+function EasyBarInbox.replace(source, items) end
+
+---Clears every current inbox item for one source.
+---@param source string
+function EasyBarInbox.clear(source) end
+
+---Registers an action handler for one source.
+---@param source string
+---@param handler fun(event: EasyBarInboxActionEvent)
+function EasyBarInbox.on_action(source, handler) end
+
 ---@class EasyBarJsonNull
 
 ---@class EasyBarJson
@@ -386,6 +435,7 @@
 ---@field unset fun(id: string, paths: string|string[]) Removes one or more nested property paths from one node by id.
 ---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
 ---@field theme EasyBarTheme Active resolved theme.
+---@field inbox EasyBarInbox Shared native inbox publishing API.
 local EasyBar = {}
 
 ---Resolves a path relative to the current widget file.
@@ -516,6 +566,10 @@ EasyBar.log_dir = ""
 ---Active resolved EasyBar theme.
 ---@type EasyBarTheme
 EasyBar.theme = {}
+
+---Shared native inbox publishing API.
+---@type EasyBarInbox
+EasyBar.inbox = {}
 
 ---Writes one widget-scoped log line to the EasyBar host logger.
 ---Supported levels are `trace`, `debug`, `info`, `warn`, and `error`.

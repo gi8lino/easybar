@@ -60,6 +60,8 @@
 ---| '"mouse.scrolled"'
 ---Fired when a native widget context menu action is selected.
 ---| '"context_menu.clicked"'
+---Fired when a native inbox action is selected. Prefer easybar.inbox.on_action for source routing.
+---| '"inbox.action"'
 ---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
 ---Fired when a slider value is committed.
@@ -169,4 +171,5 @@
 ---@field space_mode_change? EasyBarEventToken Fired when the AeroSpace layout mode changes.
 ---@field mouse? EasyBarMouseEvents Mouse interaction event tokens and constants.
 ---@field context_menu? EasyBarContextMenuEvents Native widget context menu events.
+---@field inbox? EasyBarInboxEvents Native shared inbox events.
 ---@field slider? EasyBarSliderEvents Slider interaction event tokens.

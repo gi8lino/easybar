@@ -243,6 +243,21 @@ registry = api.new(log, {
 	request_sync_command = request_sync_command,
 	request_async_command = request_async_command,
 	request_cancel_async = request_cancel_async,
+	publish_inbox = function(source, items)
+		send_payload({
+			protocol_version = PROTOCOL_VERSION,
+			type = "inbox_replace",
+			source = source,
+			items = items,
+		})
+	end,
+	clear_inbox = function(source)
+		send_payload({
+			protocol_version = PROTOCOL_VERSION,
+			type = "inbox_clear",
+			source = source,
+		})
+	end,
 	on_async_job_started = function(token, command)
 		log.debug("lua async started token=" .. tostring(token) .. " command_bytes=" .. tostring(#command))
 	end,

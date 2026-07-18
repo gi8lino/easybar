@@ -117,6 +117,10 @@ extension LuaRenderRuntimeTestCase {
         return "command_request"
       case .commandCancel:
         return "command_cancel:\(update.commandCancelToken ?? "unknown")"
+      case .inboxReplace:
+        return "inbox_replace:\(update.source ?? "unknown"):\(update.items?.count ?? 0)"
+      case .inboxClear:
+        return "inbox_clear:\(update.source ?? "unknown")"
       case .tree:
         if let payload = update.treePayload,
           let root = payload.nodes.first(where: { $0.id == payload.root })

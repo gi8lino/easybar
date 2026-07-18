@@ -216,6 +216,18 @@
       ]
     },
     {
+      "name": "inbox",
+      "doc": "Native shared inbox events.",
+      "events": [
+        {
+          "swiftCase": "inboxAction",
+          "luaField": "action",
+          "runtimeName": "inbox.action",
+          "doc": "Fired when a native inbox action is selected. Prefer easybar.inbox.on_action for source routing."
+        }
+      ]
+    },
+    {
       "name": "slider",
       "doc": "Slider interaction event tokens.",
       "events": [

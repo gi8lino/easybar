@@ -257,6 +257,7 @@ function M.new(log, hooks)
 	local subscriptions = subscriptions_module.new(registry._state, registry.ensure_item_exists, log, event_tokens)
 	local default_exec_options = type(hooks.default_exec_options) == "table" and hooks.default_exec_options or {}
 	local log_dir = configured_log_dir()
+	local inbox_action_handlers = {}
 
 	local function readonly_copy(values, name)
 		local copy = {}
@@ -406,6 +407,19 @@ function M.new(log, hooks)
 		return result
 	end
 
+	local function handle_event(event)
+		if event.name == "inbox.action" then
+			local handlers = inbox_action_handlers[tostring(event.source or "")]
+			for _, handler in ipairs(handlers or {}) do
+				local ok, err = pcall(handler, event)
+				if not ok then
+					log.error("inbox action handler failed source=" .. tostring(event.source) .. " error=" .. tostring(err))
+				end
+			end
+		end
+		subscriptions.handle_event(event)
+	end
+
 	local api = {
 		_state = registry._state,
 		add = registry.add,
@@ -420,7 +434,7 @@ function M.new(log, hooks)
 		handle_command_response = registry.handle_command_response,
 		take_pending_command_response = registry.take_pending_command_response,
 		subscribe = subscriptions.subscribe,
-		handle_event = subscriptions.handle_event,
+		handle_event = handle_event,
 		required_events = required_events,
 		log_dir = log_dir,
 		theme = theme_module.current(),
@@ -584,6 +598,25 @@ function M.new(log, hooks)
 		widget_api.level = LOG_LEVELS
 		widget_api.log_dir = api.log_dir
 		widget_api.theme = theme_module.current()
+		widget_api.inbox = {}
+
+		function widget_api.inbox.replace(source, items)
+			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			assert(type(items) == "table", "inbox items must be an array")
+			hooks.publish_inbox(source, items)
+		end
+
+		function widget_api.inbox.clear(source)
+			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			hooks.clear_inbox(source)
+		end
+
+		function widget_api.inbox.on_action(source, handler)
+			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			assert(type(handler) == "function", "inbox action handler must be a function")
+			inbox_action_handlers[source] = inbox_action_handlers[source] or {}
+			table.insert(inbox_action_handlers[source], handler)
+		end
 
 		widget_api.log = make_log_api(source)
 

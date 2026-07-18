@@ -237,6 +237,61 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `floating_text`    | `"floating"`    | Text label used for floating windows or containers.          |
 | `unknown_text`     | `"unknown"`     | Fallback text label used when the layout cannot be detected. |
 
+## `builtins.inbox`
+
+| Key        | Default   | Description                                                     |
+| ---------- | --------- | --------------------------------------------------------------- |
+| `enabled`  | `true`    | Shows or hides the native shared inbox.                         |
+| `position` | `"right"` | Places the inbox on the left, center, or right side of the bar. |
+| `order`    | `5`       | Sort order among widgets in the same position.                  |
+
+## `builtins.inbox.style`
+
+| Key                | Default               | Description                                      |
+| ------------------ | --------------------- | ------------------------------------------------ |
+| `icon`             | `"󰂚"`                 | Icon shown when unread inbox messages exist.     |
+| `text_color`       | `"theme.accent"`      | Color of the active icon and unread count.       |
+| `background_color` | `"theme.transparent"` | Background color of the inbox anchor.            |
+| `border_color`     | `"theme.transparent"` | Border color of the inbox anchor.                |
+| `border_width`     | `0`                   | Border width of the inbox anchor.                |
+| `corner_radius`    | `8`                   | Corner radius of the inbox anchor.               |
+| `margin_x`         | `0`                   | Horizontal outer margin around the inbox anchor. |
+| `margin_y`         | `0`                   | Vertical outer margin around the inbox anchor.   |
+| `padding_x`        | `7`                   | Horizontal inner padding of the inbox anchor.    |
+| `padding_y`        | `3`                   | Vertical inner padding of the inbox anchor.      |
+| `spacing`          | `4`                   | Gap between the inbox icon and unread count.     |
+| `opacity`          | `1`                   | Overall opacity of the inbox anchor.             |
+
+## `builtins.inbox.colors`
+
+| Key               | Default                  | Description                                  |
+| ----------------- | ------------------------ | -------------------------------------------- |
+| `background`      | `"theme.background"`     | Background color of the inbox popup.         |
+| `border`          | `"theme.border_strong"`  | Border color of the inbox popup.             |
+| `title`           | `"theme.text"`           | Color of titles in the inbox popup.          |
+| `text`            | `"theme.text_secondary"` | Color of message body text.                  |
+| `muted`           | `"theme.muted"`          | Color of secondary labels and empty text.    |
+| `item_background` | `"theme.surface"`        | Background color of individual messages.     |
+| `action`          | `"theme.accent"`         | Color of message action buttons.             |
+| `info`            | `"theme.accent"`         | Unread indicator color for info messages.    |
+| `success`         | `"theme.success"`        | Unread indicator color for success messages. |
+| `warning`         | `"theme.warning"`        | Unread indicator color for warning messages. |
+| `error`           | `"theme.error"`          | Unread indicator color for error messages.   |
+
+## `builtins.inbox.content`
+
+| Key                            | Default         | Description                                                      |
+| ------------------------------ | --------------- | ---------------------------------------------------------------- |
+| `group_by`                     | `"source"`      | Groups messages by source, date, category, severity, or none.    |
+| `sort_by`                      | `"timestamp"`   | Sorts messages by timestamp, source, severity, or title.         |
+| `sort_descending`              | `true`          | Reverses the configured sort order when true.                    |
+| `show_unread_count`            | `true`          | Shows the total unread message count beside the icon.            |
+| `use_inactive_style_when_read` | `true`          | Uses the inactive icon and color when no unread messages remain. |
+| `show_when_empty`              | `true`          | Keeps an inactive inbox icon visible when no messages exist.     |
+| `inactive_icon`                | `"󰂜"`           | Icon shown when no unread messages exist.                        |
+| `inactive_color`               | `"theme.muted"` | Color used by the inactive icon.                                 |
+| `max_items`                    | `100`           | Maximum number of current messages accepted from each publisher. |
+
 ## `builtins.cpu`
 
 | Key        | Default   | Description                                                      |

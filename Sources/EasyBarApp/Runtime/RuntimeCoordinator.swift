@@ -38,7 +38,8 @@ actor RuntimeCoordinator {
       eventHub: services.eventHub,
       eventManager: services.eventManager,
       widgetStore: services.widgetStore,
-      metricsCoordinator: services.metricsCoordinator
+      metricsCoordinator: services.metricsCoordinator,
+      inboxStore: services.inboxStore
     )
 
     self.socketServer = SocketServer(

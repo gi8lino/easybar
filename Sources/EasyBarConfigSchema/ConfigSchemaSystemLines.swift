@@ -1,5 +1,61 @@
 extension ConfigSchemaRegistry {
   static let systemLines: [Line] = [
+    section(name: "builtins.inbox"),
+    entry(key: "enabled", value: "true", description: "Shows or hides the native shared inbox."),
+    entry(
+      key: "position", value: "\"right\"",
+      description: "Places the inbox on the left, center, or right side of the bar."),
+    entry(key: "order", value: "5", description: "Sort order among widgets in the same position."),
+    .blank,
+    section(name: "builtins.inbox.style"),
+    entry(key: "icon", value: "\"󰂚\"", description: "Icon shown when unread inbox messages exist."),
+    entry(key: "text_color", value: "\"theme.accent\"", description: "Color of the active icon and unread count."),
+    entry(
+      key: "background_color", value: "\"theme.transparent\"", description: "Background color of the inbox anchor."),
+    entry(key: "border_color", value: "\"theme.transparent\"", description: "Border color of the inbox anchor."),
+    entry(key: "border_width", value: "0", description: "Border width of the inbox anchor."),
+    entry(key: "corner_radius", value: "8", description: "Corner radius of the inbox anchor."),
+    entry(key: "margin_x", value: "0", description: "Horizontal outer margin around the inbox anchor."),
+    entry(key: "margin_y", value: "0", description: "Vertical outer margin around the inbox anchor."),
+    entry(key: "padding_x", value: "7", description: "Horizontal inner padding of the inbox anchor."),
+    entry(key: "padding_y", value: "3", description: "Vertical inner padding of the inbox anchor."),
+    entry(key: "spacing", value: "4", description: "Gap between the inbox icon and unread count."),
+    entry(key: "opacity", value: "1", description: "Overall opacity of the inbox anchor."),
+    .blank,
+    section(name: "builtins.inbox.colors"),
+    entry(key: "background", value: "\"theme.background\"", description: "Background color of the inbox popup."),
+    entry(key: "border", value: "\"theme.border_strong\"", description: "Border color of the inbox popup."),
+    entry(key: "title", value: "\"theme.text\"", description: "Color of titles in the inbox popup."),
+    entry(key: "text", value: "\"theme.text_secondary\"", description: "Color of message body text."),
+    entry(key: "muted", value: "\"theme.muted\"", description: "Color of secondary labels and empty text."),
+    entry(
+      key: "item_background", value: "\"theme.surface\"", description: "Background color of individual messages."),
+    entry(key: "action", value: "\"theme.accent\"", description: "Color of message action buttons."),
+    entry(key: "info", value: "\"theme.accent\"", description: "Unread indicator color for info messages."),
+    entry(key: "success", value: "\"theme.success\"", description: "Unread indicator color for success messages."),
+    entry(key: "warning", value: "\"theme.warning\"", description: "Unread indicator color for warning messages."),
+    entry(key: "error", value: "\"theme.error\"", description: "Unread indicator color for error messages."),
+    .blank,
+    section(name: "builtins.inbox.content"),
+    entry(
+      key: "group_by", value: "\"source\"", description: "Groups messages by source, date, category, severity, or none."
+    ),
+    entry(
+      key: "sort_by", value: "\"timestamp\"", description: "Sorts messages by timestamp, source, severity, or title."),
+    entry(key: "sort_descending", value: "true", description: "Reverses the configured sort order when true."),
+    entry(
+      key: "show_unread_count", value: "true", description: "Shows the total unread message count beside the icon."),
+    entry(
+      key: "use_inactive_style_when_read", value: "true",
+      description: "Uses the inactive icon and color when no unread messages remain."),
+    entry(
+      key: "show_when_empty", value: "true", description: "Keeps an inactive inbox icon visible when no messages exist."
+    ),
+    entry(key: "inactive_icon", value: "\"󰂜\"", description: "Icon shown when no unread messages exist."),
+    entry(key: "inactive_color", value: "\"theme.muted\"", description: "Color used by the inactive icon."),
+    entry(
+      key: "max_items", value: "100", description: "Maximum number of current messages accepted from each publisher."),
+    .blank,
     section(name: "builtins.cpu"),
     entry(
       key: "enabled",

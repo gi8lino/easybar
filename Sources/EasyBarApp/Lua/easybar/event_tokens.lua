@@ -100,6 +100,9 @@ M.tokens = {
 	context_menu = {
 		clicked = make_event_token("context_menu.clicked"),
 	},
+	inbox = {
+		action = make_event_token("inbox.action"),
+	},
 }
 
 ---- Driver event lookup table used by subscription discovery.

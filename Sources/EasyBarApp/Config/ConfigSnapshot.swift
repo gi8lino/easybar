@@ -58,6 +58,7 @@ struct ConfigSnapshot: @unchecked Sendable {
 
   /// Built-in widget config snapshot.
   struct Builtins {
+    let inbox: Config.InboxBuiltinConfig
     let cpu: Config.CPUBuiltinConfig
     let battery: Config.BatteryBuiltinConfig
     let groups: [Config.BuiltinGroupConfig]
