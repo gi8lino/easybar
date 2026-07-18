@@ -3,6 +3,11 @@ import Foundation
 
 /// Handles Lua command requests, async command limits, and command responses.
 actor LuaCommandService {
+  private struct ActiveAsyncCommand {
+    let runtimeSessionID: UInt64
+    let task: Task<Void, Never>
+  }
+
   private struct LuaCommandResponse: Encodable {
     let protocolVersion = easyBarLuaRuntimeProtocolVersion
     let type = "command_response"
@@ -26,7 +31,7 @@ actor LuaCommandService {
   private let encoder = JSONEncoder()
 
   private var activeAsyncCommandSessionID: UInt64?
-  private var activeAsyncCommands: [String: Task<Void, Never>] = [:]
+  private var activeAsyncCommands: [String: ActiveAsyncCommand] = [:]
 
   init(logger: ProcessLogger, luaRuntime: LuaRuntime, configManager: ConfigManager) {
     self.logger = logger
@@ -126,19 +131,22 @@ actor LuaCommandService {
       )
     }
 
-    activeAsyncCommands[token] = task
+    activeAsyncCommands[token] = ActiveAsyncCommand(
+      runtimeSessionID: runtimeSessionID,
+      task: task
+    )
   }
 
   /// Cancels one host-owned asynchronous command from the active Lua runtime session.
   func cancelAsyncCommand(token: String, runtimeSessionID: UInt64) {
     guard activeAsyncCommandSessionID == runtimeSessionID else { return }
-    guard let task = activeAsyncCommands[token] else {
+    guard let command = activeAsyncCommands[token], command.runtimeSessionID == runtimeSessionID else {
       logger.debug("lua async cancellation ignored for unknown token", .field("token", token))
       return
     }
 
     logger.debug("cancelling lua async command", .field("token", token))
-    task.cancel()
+    command.task.cancel()
   }
 
   /// Sends one command response back into the Lua runtime.
@@ -163,6 +171,17 @@ actor LuaCommandService {
     runtimeSessionID: UInt64,
     isRuntimeSessionActive: @escaping @Sendable (UInt64) async -> Bool
   ) async {
+    guard activeAsyncCommandSessionID == runtimeSessionID,
+      let command = activeAsyncCommands[token],
+      command.runtimeSessionID == runtimeSessionID
+    else {
+      logger.debug(
+        "dropping async lua command response from stale session accounting",
+        .field("token", token),
+        .field("runtime_session_id", runtimeSessionID)
+      )
+      return
+    }
     activeAsyncCommands.removeValue(forKey: token)
 
     guard await isRuntimeSessionActive(runtimeSessionID) else {
@@ -174,21 +193,12 @@ actor LuaCommandService {
       return
     }
 
-    guard activeAsyncCommandSessionID == runtimeSessionID else {
-      logger.debug(
-        "dropping async lua command response from reset session accounting",
-        .field("token", token),
-        .field("runtime_session_id", runtimeSessionID)
-      )
-      return
-    }
-
     await sendCommandResponse(token: token, result: result)
   }
 
   /// Cancels and forgets all async command tasks owned by the current session.
   private func cancelActiveAsyncCommands() {
-    let tasks = activeAsyncCommands.values
+    let tasks = activeAsyncCommands.values.map(\.task)
     activeAsyncCommands.removeAll()
 
     for task in tasks {
