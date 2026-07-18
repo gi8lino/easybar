@@ -470,11 +470,14 @@ local function schedule_popup_close(source)
 	local revision = state.hover_revision
 	local command = "sleep " .. tostring(HOVER_CLOSE_DELAY_SECONDS)
 
-	state.hover_close_job = easybar.exec_async(command, {
+	local job_token
+	job_token = easybar.exec_async(command, {
 		timeout_seconds = 1,
 		max_output_bytes = 256,
 	}, function()
-		state.hover_close_job = nil
+		if state.hover_close_job == job_token then
+			state.hover_close_job = nil
+		end
 
 		if revision ~= state.hover_revision then
 			return
@@ -487,6 +490,7 @@ local function schedule_popup_close(source)
 		state.popup_open = false
 		render()
 	end)
+	state.hover_close_job = job_token
 end
 
 --- Adds popup hover behavior to one node.
