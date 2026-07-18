@@ -35,6 +35,8 @@ actor WidgetEngine {
   private var started = false
   private var runtimeAvailable = false
   private var runtimeSessionID: UInt64 = 0
+  private var runtimeLineContinuation: AsyncStream<String>.Continuation?
+  private var runtimeLineTask: Task<Void, Never>?
   private let restartScheduler: BackoffScheduler
 
   init(
@@ -95,10 +97,17 @@ actor WidgetEngine {
     let sessionID = runtimeSessionID
     runtimeAvailable = false
 
-    await luaRuntime.setLineHandler { [weak self] line in
-      Task {
-        await self?.handleRuntimeTransportLine(line, runtimeSessionID: sessionID)
+    let (stream, continuation) = AsyncStream<String>.makeStream()
+    runtimeLineContinuation = continuation
+    runtimeLineTask = Task { [weak self] in
+      for await line in stream {
+        guard let self else { return }
+        await self.handleRuntimeTransportLine(line, runtimeSessionID: sessionID)
       }
+    }
+
+    await luaRuntime.setLineHandler { line in
+      continuation.yield(line)
     }
     await luaRuntime.setTerminationHandler { [weak self] termination in
       Task {
@@ -317,6 +326,10 @@ actor WidgetEngine {
   /// Invalidates queued work captured by the active Lua process generation.
   private func invalidateRuntimeSession() {
     runtimeSessionID &+= 1
+    runtimeLineContinuation?.finish()
+    runtimeLineContinuation = nil
+    runtimeLineTask?.cancel()
+    runtimeLineTask = nil
   }
 
   /// Returns whether work belongs to the active Lua process generation.
