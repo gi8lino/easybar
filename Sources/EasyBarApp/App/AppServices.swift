@@ -87,6 +87,7 @@ struct AppServices: @unchecked Sendable {
     let nativeServices = makeNativeServices(
       logger: logger,
       snapshot: bootstrapSnapshot,
+      configSnapshotStore: configSnapshotStore,
       eventManager: eventManager,
       eventHub: eventHub,
       nativeWiFiStore: nativeWiFiStore,
@@ -150,6 +151,7 @@ struct AppServices: @unchecked Sendable {
   private static func makeNativeServices(
     logger: ProcessLogger,
     snapshot: ConfigSnapshot,
+    configSnapshotStore: ConfigSnapshotStore,
     eventManager: EventManager,
     eventHub: EventHub,
     nativeWiFiStore: NativeWiFiStore,
@@ -173,6 +175,7 @@ struct AppServices: @unchecked Sendable {
         logger: logger.child("widgets"),
         snapshot: snapshot,
         widgetStore: widgetStore,
+        configSnapshotStore: configSnapshotStore,
         eventManager: eventManager,
         eventHub: eventHub,
         aeroSpaceService: aeroSpaceService,

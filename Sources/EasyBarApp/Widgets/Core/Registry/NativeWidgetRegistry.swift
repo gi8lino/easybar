@@ -11,6 +11,7 @@ final class NativeWidgetRegistry {
 
   private let logger: ProcessLogger
   private let widgetStore: WidgetStore
+  private let configSnapshotStore: ConfigSnapshotStore
   private let eventManager: EventManager
   private let eventHub: EventHub
   private let aeroSpaceService: AeroSpaceService
@@ -30,6 +31,7 @@ final class NativeWidgetRegistry {
     logger: ProcessLogger,
     snapshot: ConfigSnapshot,
     widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
     eventManager: EventManager,
     eventHub: EventHub,
     aeroSpaceService: AeroSpaceService,
@@ -45,6 +47,7 @@ final class NativeWidgetRegistry {
     self.logger = logger
     self.snapshot = snapshot
     self.widgetStore = widgetStore
+    self.configSnapshotStore = configSnapshotStore
     self.eventManager = eventManager
     self.eventHub = eventHub
     self.aeroSpaceService = aeroSpaceService
@@ -254,6 +257,7 @@ final class NativeWidgetRegistry {
           config: builtins.calendar,
           calendarAgentConfig: calendarAgent,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
           nativeUpcomingCalendarStore: self.nativeUpcomingCalendarStore,
           nativeMonthCalendarStore: self.nativeMonthCalendarStore,
           nativeComposerCalendarStore: self.nativeComposerCalendarStore,

@@ -1,3 +1,5 @@
+import AppKit
+import EasyBarCalendarConfig
 import Foundation
 
 /// Native calendar anchor widget.
@@ -23,6 +25,7 @@ final class CalendarNativeWidget: NativeWidget {
   }
 
   private let config: Config.CalendarBuiltinConfig
+  private let configSnapshotStore: ConfigSnapshotStore
   private let calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
   private let nativeMonthCalendarStore: NativeMonthCalendarStore
@@ -30,6 +33,8 @@ final class CalendarNativeWidget: NativeWidget {
   private let upcomingCalendarAgentClient: UpcomingCalendarAgentClient
   private let monthCalendarAgentClient: MonthCalendarAgentClient
   private let eventObserver: EasyBarEventObserver
+  private var sessionConfig: Config.CalendarBuiltinConfig
+  private var hasSessionOverrides = false
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
   private var started = false
@@ -46,6 +51,7 @@ final class CalendarNativeWidget: NativeWidget {
     config: Config.CalendarBuiltinConfig,
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
     nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
     nativeMonthCalendarStore: NativeMonthCalendarStore,
     nativeComposerCalendarStore: NativeComposerCalendarStore,
@@ -54,6 +60,7 @@ final class CalendarNativeWidget: NativeWidget {
     eventHub: EventHub
   ) {
     self.config = config
+    self.configSnapshotStore = configSnapshotStore
     self.calendarAgentConfig = calendarAgentConfig
     self.widgetStore = widgetStore
     self.nativeUpcomingCalendarStore = nativeUpcomingCalendarStore
@@ -62,6 +69,7 @@ final class CalendarNativeWidget: NativeWidget {
     self.upcomingCalendarAgentClient = upcomingCalendarAgentClient
     self.monthCalendarAgentClient = monthCalendarAgentClient
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
+    self.sessionConfig = config
   }
 
   // MARK: - Lifecycle
@@ -73,12 +81,24 @@ final class CalendarNativeWidget: NativeWidget {
 
     let snapshot = currentSnapshot()
 
-    eventObserver.start(eventNames: appEventSubscriptions) { [weak self] payload in
+    eventObserver.start(
+      eventNames: appEventSubscriptions.union([WidgetEvent.contextMenuClicked.rawValue]),
+      widgetTargetIDs: [rootID]
+    ) { [weak self] payload in
       guard let self else { return }
+
+      if payload.widgetEvent == .contextMenuClicked,
+        payload.widgetID == self.rootID,
+        let actionID = payload.actionID
+      {
+        self.handleContextMenuAction(actionID)
+        return
+      }
+
       guard let event = payload.appEvent else { return }
 
       switch event {
-      case Self.refreshEvent(for: self.config), .systemWoke, .calendarChange:
+      case Self.refreshEvent(for: self.sessionConfig), .systemWoke, .calendarChange:
         self.publish()
       default:
         break
@@ -120,7 +140,15 @@ final class CalendarNativeWidget: NativeWidget {
   /// Publishes the current calendar anchor nodes.
   private func publish() {
     let snapshot = currentSnapshot()
-    applyNodes(renderer.makeNodes(snapshot: snapshot))
+    var nodes = renderer.makeNodes(snapshot: snapshot)
+    let contextMenu = CalendarContextMenu.make(
+      config: sessionConfig,
+      hasSessionOverrides: hasSessionOverrides
+    )
+    for index in nodes.indices where nodes[index].id != rootID {
+      nodes[index].contextMenu = contextMenu
+    }
+    applyNodes(nodes)
   }
 
   // MARK: - Snapshot
@@ -128,7 +156,7 @@ final class CalendarNativeWidget: NativeWidget {
   /// Returns the current calendar render snapshot.
   private func currentSnapshot() -> Snapshot {
     Snapshot(
-      config: config,
+      config: sessionConfig,
       now: Date()
     )
   }
@@ -144,6 +172,122 @@ final class CalendarNativeWidget: NativeWidget {
   /// Returns only the format strings used by the current anchor layout.
   private static func activeFormats(for config: Config.CalendarBuiltinConfig) -> [String] {
     config.anchor.fields.map { config.anchor.field($0).format }
+  }
+}
+
+// MARK: - Context Menu
+
+extension CalendarNativeWidget {
+  private func handleContextMenuAction(_ actionID: String) {
+    guard let action = CalendarContextMenuAction(id: actionID) else { return }
+
+    switch action {
+    case .setPopupMode(let mode):
+      updatePopupMode(mode)
+    case .setAnchorLayout(let layout):
+      sessionConfig.anchor.layout = layout
+      applySessionOverride()
+    case .toggleAnchorField(let field):
+      toggleAnchorField(field)
+    case .toggleAppointmentOption(let optionID):
+      toggleAppointmentOption(optionID)
+    case .toggleBirthdayOption(let optionID):
+      toggleBirthdayOption(optionID)
+    case .refresh:
+      refreshActiveCalendarClient()
+    case .openCalendarSettings:
+      openCalendarSettings()
+    case .resetToConfig:
+      resetSessionOverride()
+    }
+  }
+
+  private func updatePopupMode(_ mode: CalendarPopupMode) {
+    guard sessionConfig.popupMode != mode else { return }
+
+    if startedCalendarAgent {
+      stopCalendarAgent()
+    }
+    sessionConfig.popupMode = mode
+    updateAgentConfiguration()
+    startedPopupMode = mode
+    if startedCalendarAgent {
+      startCalendarAgent(for: currentSnapshot())
+    }
+    applySessionOverride()
+  }
+
+  private func toggleAnchorField(_ field: CalendarAnchorFieldKind) {
+    if let index = sessionConfig.anchor.fields.firstIndex(of: field) {
+      guard sessionConfig.anchor.fields.count > 1 else { return }
+      sessionConfig.anchor.fields.remove(at: index)
+    } else {
+      sessionConfig.anchor.fields.append(field)
+    }
+    applySessionOverride()
+  }
+
+  private func toggleAppointmentOption(_ optionID: String) {
+    guard let option = appointmentOptions.first(where: { $0.id == optionID }) else { return }
+    sessionConfig.appointments[keyPath: option.keyPath].toggle()
+    applySessionOverride()
+  }
+
+  private func toggleBirthdayOption(_ optionID: String) {
+    guard let option = birthdayOptions.first(where: { $0.id == optionID }) else { return }
+    sessionConfig.birthdays[keyPath: option.keyPath].toggle()
+    updateAgentConfiguration()
+    refreshActiveCalendarClient()
+    applySessionOverride()
+  }
+
+  private func applySessionOverride() {
+    hasSessionOverrides = true
+    configSnapshotStore.applyCalendarSessionOverride(sessionConfig)
+    publish()
+  }
+
+  private func resetSessionOverride() {
+    if startedCalendarAgent {
+      stopCalendarAgent()
+    }
+    sessionConfig = config
+    hasSessionOverrides = false
+    updateAgentConfiguration()
+    startedPopupMode = sessionConfig.popupMode
+    if startedCalendarAgent {
+      startCalendarAgent(for: currentSnapshot())
+    }
+    configSnapshotStore.applyCalendarSessionOverride(config)
+    publish()
+  }
+
+  private func updateAgentConfiguration() {
+    upcomingCalendarAgentClient.updateConfiguration(
+      calendarAgentConfig: calendarAgentConfig,
+      calendarConfig: sessionConfig
+    )
+    monthCalendarAgentClient.updateConfiguration(
+      calendarAgentConfig: calendarAgentConfig,
+      calendarConfig: sessionConfig
+    )
+  }
+
+  private func refreshActiveCalendarClient() {
+    switch sessionConfig.popupMode {
+    case .none: break
+    case .upcoming: upcomingCalendarAgentClient.refresh()
+    case .month: monthCalendarAgentClient.refresh()
+    }
+  }
+
+  private func openCalendarSettings() {
+    guard
+      let url = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+      )
+    else { return }
+    NSWorkspace.shared.open(url)
   }
 }
 
