@@ -120,6 +120,15 @@ shows a native macOS right-click menu with actions, a separator, checked state, 
 dynamic menu replacement. See [Native Context Menus](context-menus.md) for the full
 API and right-click precedence rules.
 
+## Popup and context menu widget
+
+[`widgets/popup-context-menu.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/popup-context-menu.lua)
+attaches both interaction surfaces to one anchor. Hovering shows status in a popup, while
+right-clicking opens a native menu with an action and checked mode submenu. The example also shows
+how one render function keeps popup content, anchor content, and menu checkmarks synchronized. The
+popup uses EasyBar's native hover tracking, so it remains open while moving from the anchor into
+the popup without custom `mouse.entered` or `mouse.exited` handlers.
+
 ## Widget-relative image asset
 
 ```lua
@@ -170,4 +179,6 @@ remain trusted local code.
 - [Bundled Widgets](bundled-widgets.md)
 - [Subscribe To Events](subscribe-to-events.md)
 - [Style Popups And Groups](style-popups-and-groups.md)
+- [Popups](popups.md)
+- [Native Context Menus](context-menus.md)
 - [API Summary](../api-summary.md)

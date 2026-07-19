@@ -4,22 +4,23 @@ The repository's `widgets/` directory contains examples ranging from minimal API
 
 ## Catalog
 
-| Widget             | Purpose                            | Requirements                                      | Inbox publisher |
-| ------------------ | ---------------------------------- | ------------------------------------------------- | --------------- |
-| `simple.lua`       | Minimal stateful toggle            | None                                              | No              |
-| `group_demo.lua`   | Groups, shared styling, and popups | None                                              | No              |
-| `context-menu.lua` | Native right-click menu API        | `gh` for its example action                       | No              |
-| `inbox-demo.lua`   | Representative inbox test messages | Native inbox enabled                              | Yes             |
-| `brew.lua`         | Homebrew updates in its own popup  | `brew` in `[app.env].PATH`                        | No              |
-| `brew-inbox.lua`   | Homebrew updates and actions       | `brew` in `[app.env].PATH`                        | Yes             |
-| `github.lua`       | GitHub notifications popup         | Authenticated `gh`; bundled GitHub SVG asset      | No              |
-| `github-inbox.lua` | GitHub notifications               | Authenticated `gh`                                | Yes             |
-| `gitlab.lua`       | Assigned GitLab work items         | Authenticated `glab`; optional `GITLAB_HOST`      | No              |
-| `gitlab-inbox.lua` | Assigned GitLab work items         | Authenticated `glab`; optional `GITLAB_HOST`      | Yes             |
-| `network.lua`      | Native network snapshot            | Network agent                                     | No              |
-| `wifi+vpn.lua`     | Read-only tunnel indicator         | Network agent                                     | No              |
-| `tailscale.lua`    | Tailscale state and controls       | `tailscale`; optional `TAILSCALE` command setting | No              |
-| `wireguard.lua`    | Network Extension VPN control      | Service name in `lib/secrets.lua`                 | No              |
+| Widget                   | Purpose                            | Requirements                                      | Inbox publisher |
+| ------------------------ | ---------------------------------- | ------------------------------------------------- | --------------- |
+| `simple.lua`             | Minimal stateful toggle            | None                                              | No              |
+| `group_demo.lua`         | Groups, shared styling, and popups | None                                              | No              |
+| `context-menu.lua`       | Native right-click menu API        | `gh` for its example action                       | No              |
+| `popup-context-menu.lua` | Popup and context menu on one item | None                                              | No              |
+| `inbox-demo.lua`         | Representative inbox test messages | Native inbox enabled                              | Yes             |
+| `brew.lua`               | Homebrew updates in its own popup  | `brew` in `[app.env].PATH`                        | No              |
+| `brew-inbox.lua`         | Homebrew updates and actions       | `brew` in `[app.env].PATH`                        | Yes             |
+| `github.lua`             | GitHub notifications popup         | Authenticated `gh`; bundled GitHub SVG asset      | No              |
+| `github-inbox.lua`       | GitHub notifications               | Authenticated `gh`                                | Yes             |
+| `gitlab.lua`             | Assigned GitLab work items         | Authenticated `glab`; optional `GITLAB_HOST`      | No              |
+| `gitlab-inbox.lua`       | Assigned GitLab work items         | Authenticated `glab`; optional `GITLAB_HOST`      | Yes             |
+| `network.lua`            | Native network snapshot            | Network agent                                     | No              |
+| `wifi+vpn.lua`           | Read-only tunnel indicator         | Network agent                                     | No              |
+| `tailscale.lua`          | Tailscale state and controls       | `tailscale`; optional `TAILSCALE` command setting | No              |
+| `wireguard.lua`          | Network Extension VPN control      | Service name in `lib/secrets.lua`                 | No              |
 
 ## Choose one presentation
 
