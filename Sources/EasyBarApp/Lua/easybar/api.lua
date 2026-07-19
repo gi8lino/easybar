@@ -91,6 +91,14 @@ local function configured_log_dir()
 	return (os.getenv("HOME") or "/tmp") .. "/.local/state/easybar"
 end
 
+--- Returns a validated, whitespace-trimmed inbox source.
+local function normalize_inbox_source(source)
+	assert(type(source) == "string", "inbox source must be a non-empty string")
+	local normalized = source:match("^%s*(.-)%s*$")
+	assert(normalized ~= "", "inbox source must be a non-empty string")
+	return normalized
+end
+
 --- Returns a safe widget log file name, or nil plus an error message.
 local function validate_log_file_name(file_name)
 	file_name = tostring(file_name or "")
@@ -613,18 +621,18 @@ function M.new(log, hooks)
 		widget_api.inbox = {}
 
 		function widget_api.inbox.replace(source, items)
-			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			source = normalize_inbox_source(source)
 			assert(type(items) == "table", "inbox items must be an array")
 			hooks.publish_inbox(source, items)
 		end
 
 		function widget_api.inbox.clear(source)
-			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			source = normalize_inbox_source(source)
 			hooks.clear_inbox(source)
 		end
 
 		function widget_api.inbox.configure(source, configuration)
-			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			source = normalize_inbox_source(source)
 			assert(type(configuration) == "table", "inbox configuration must be a table")
 			local actions = configuration.actions or {}
 			assert(type(actions) == "table", "inbox configuration actions must be an array")
@@ -632,14 +640,14 @@ function M.new(log, hooks)
 		end
 
 		function widget_api.inbox.on_action(source, handler)
-			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			source = normalize_inbox_source(source)
 			assert(type(handler) == "function", "inbox action handler must be a function")
 			inbox_action_handlers[source] = inbox_action_handlers[source] or {}
 			table.insert(inbox_action_handlers[source], handler)
 		end
 
 		function widget_api.inbox.on_context_action(source, handler)
-			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			source = normalize_inbox_source(source)
 			assert(type(handler) == "function", "inbox context action handler must be a function")
 			inbox_context_action_handlers[source] = inbox_context_action_handlers[source] or {}
 			table.insert(inbox_context_action_handlers[source], handler)

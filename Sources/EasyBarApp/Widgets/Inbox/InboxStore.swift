@@ -45,21 +45,21 @@ final class InboxStore: ObservableObject {
   }
 
   func replace(source: String, items: [InboxItem]) {
-    let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedSource.isEmpty, normalizedSource.utf8.count <= 512 else { return }
+    guard let source = normalizedSource(source) else { return }
 
     let uniqueItems = Dictionary(
       items.lazy.filter(isValid).prefix(configuration.maxItems).map { ($0.id, $0) },
       uniquingKeysWith: { _, newest in newest }
     )
-    sources[normalizedSource] = Array(uniqueItems.values)
+    sources[source] = Array(uniqueItems.values)
 
-    reconcileState(source: normalizedSource, items: uniqueItems.values)
+    reconcileState(source: source, items: uniqueItems.values)
     persistState()
     rebuild()
   }
 
   func clear(source: String) {
+    guard let source = normalizedSource(source) else { return }
     sources.removeValue(forKey: source)
     readItemIDs = readItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
     unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
@@ -87,13 +87,12 @@ final class InboxStore: ObservableObject {
   }
 
   func configure(source: String, actions: [InboxAction]) {
-    let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedSource.isEmpty, normalizedSource.utf8.count <= 512 else { return }
+    guard let source = normalizedSource(source) else { return }
     let validActions = Array(actions.lazy.filter(isValidAction).prefix(16))
     if validActions.isEmpty {
-      sourceActions.removeValue(forKey: normalizedSource)
+      sourceActions.removeValue(forKey: source)
     } else {
-      sourceActions[normalizedSource] = validActions
+      sourceActions[source] = validActions
     }
     rebuildSourceConfigurations()
   }
@@ -227,6 +226,11 @@ final class InboxStore: ObservableObject {
     guard let value else { return nil }
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
+  }
+
+  private func normalizedSource(_ source: String) -> String? {
+    let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
+    return source.isEmpty || source.utf8.count > 512 ? nil : source
   }
 
   private func compositeID(source: String, itemID: String) -> String {

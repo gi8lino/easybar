@@ -13,19 +13,19 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
       label = "idle",
     })
 
-    easybar.inbox.on_action("gitlab", function(event)
+    easybar.inbox.on_action("  gitlab ", function(event)
       status:set({ label = event.target_widget_id .. ":" .. event.action_id })
     end)
 
-    easybar.inbox.on_context_action("gitlab", function(event)
+    easybar.inbox.on_context_action(" gitlab  ", function(event)
       status:set({ label = "context:" .. event.action_id })
     end)
 
-    easybar.inbox.configure("gitlab", {
+    easybar.inbox.configure(" gitlab ", {
       actions = { { id = "refresh", title = "Refresh" } },
     })
 
-    easybar.inbox.replace("gitlab", {
+    easybar.inbox.replace("  gitlab  ", {
       {
         id = "mr-42",
         title = "Review merge request",
