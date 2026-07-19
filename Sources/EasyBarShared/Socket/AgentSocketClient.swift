@@ -115,6 +115,7 @@ public final class AgentSocketClient<
     }
 
     reconnectScheduler.cancel()
+    writerQueue.sync {}
     if snapshot.fd >= 0 {
       shutdown(snapshot.fd, SHUT_RDWR)
       close(snapshot.fd)
@@ -139,7 +140,7 @@ public final class AgentSocketClient<
     let connection = currentConnection()
     guard connection.fd >= 0 else { return }
 
-    guard send(subscribeRequest(), to: connection.fd) else {
+    guard send(subscribeRequest(), to: connection) else {
       logger.warn("\(label) failed to send refresh request")
       handleDisconnect(fd: connection.fd, connectionID: connection.id)
       return
@@ -187,7 +188,7 @@ public final class AgentSocketClient<
       .field("socket", resolvedSocketPath),
     )
 
-    guard send(subscribeRequest(), to: fd) else {
+    guard send(subscribeRequest(), to: (fd, connectionID)) else {
       logger.warn("\(label) failed to send subscribe request")
       handleDisconnect(fd: fd, connectionID: connectionID)
       return
@@ -270,6 +271,7 @@ public final class AgentSocketClient<
     let wasActive = clearConnectedSocketFD(fd, connectionID: connectionID)
     guard wasActive else { return }
 
+    writerQueue.sync {}
     shutdown(fd, SHUT_RDWR)
     close(fd)
 
@@ -311,18 +313,22 @@ public final class AgentSocketClient<
 
   /// Stores one newly connected socket when still running.
   private func activateConnectedSocketFD(_ fd: Int32) -> UInt64? {
-    state.withLock { state -> UInt64? in
+    let activation = state.withLock { state -> (connectionID: UInt64, replacedFD: Int32)? in
       guard state.running else { return nil }
 
-      if state.socketFD >= 0, state.socketFD != fd {
-        shutdown(state.socketFD, SHUT_RDWR)
-        close(state.socketFD)
-      }
-
+      let replacedFD = state.socketFD >= 0 && state.socketFD != fd ? state.socketFD : -1
       state.socketFD = fd
       state.activeConnectionID &+= 1
-      return state.activeConnectionID
+      return (state.activeConnectionID, replacedFD)
     }
+
+    guard let activation else { return nil }
+    if activation.replacedFD >= 0 {
+      writerQueue.sync {}
+      shutdown(activation.replacedFD, SHUT_RDWR)
+      close(activation.replacedFD)
+    }
+    return activation.connectionID
   }
 
   /// Clears the active fd if it still matches the given connection.
@@ -360,15 +366,20 @@ public final class AgentSocketClient<
   }
 
   /// Encodes and sends one request line.
-  private func send(_ request: Request, to fd: Int32) -> Bool {
+  private func send(_ request: Request, to connection: (fd: Int32, id: UInt64)) -> Bool {
     return writerQueue.sync {
+      guard isActiveConnection(fd: connection.fd, connectionID: connection.id) else {
+        logger.debug("\(label) dropping stale socket write")
+        return false
+      }
+
       let encoder = JSONEncoder()
       encoder.outputFormatting = [.sortedKeys]
       encoder.dateEncodingStrategy = .iso8601
 
       do {
         let data = try encoder.encode(request) + Data([0x0A])
-        return writeAll(data, to: fd)
+        return writeAll(data, to: connection.fd)
       } catch {
         logger.warn(
           "\(label) failed to encode request",
