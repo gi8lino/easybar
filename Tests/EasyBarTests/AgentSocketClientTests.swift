@@ -421,6 +421,24 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertThrowsError(try client.send(request: TestRequest(command: "ping")))
   }
 
+  func testOneShotClientTimesOutWhileWaitingForResponse() throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+    server.start { _, _ in .keepOpen }
+    defer { server.stop() }
+
+    let client = LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath,
+      responseTimeout: 0.02
+    )
+
+    XCTAssertThrowsError(try client.send(request: TestRequest(command: "ping"))) { error in
+      guard case LineSocketClientTransportError.responseTimedOut = error else {
+        return XCTFail("unexpected error: \(error)")
+      }
+    }
+  }
+
   func testRapidServerRestartsKeepAcceptLoopBoundToCurrentRun() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)

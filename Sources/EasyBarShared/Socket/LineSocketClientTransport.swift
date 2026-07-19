@@ -113,7 +113,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     )
     var buffer = [UInt8](repeating: 0, count: 1024)
 
-    let deadline = Date().addingTimeInterval(responseTimeout)
+    let deadline = monotonicPollDeadline(after: responseTimeout)
 
     while true {
       try waitForReadable(fd: fd, deadline: deadline)
@@ -138,15 +138,14 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
   }
 
   /// Waits until the socket has data to read or the response deadline expires.
-  private func waitForReadable(fd: Int32, deadline: Date) throws {
+  private func waitForReadable(fd: Int32, deadline: UInt64) throws {
     while true {
-      let remaining = deadline.timeIntervalSinceNow
-      guard remaining > 0 else {
+      let timeoutMilliseconds = remainingPollMilliseconds(until: deadline)
+      guard timeoutMilliseconds > 0 else {
         throw LineSocketClientTransportError.responseTimedOut(responseTimeout)
       }
 
       var pollFD = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
-      let timeoutMilliseconds = Int32(min(Double(Int32.max), ceil(remaining * 1000)))
       let result = poll(&pollFD, 1, timeoutMilliseconds)
 
       if result > 0 {
