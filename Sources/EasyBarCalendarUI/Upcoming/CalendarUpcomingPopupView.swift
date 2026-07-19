@@ -58,9 +58,7 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
           calendar: resolvedCalendar,
           dateHeaderText: formattedDayHeader,
           eventActions: eventActions,
-          onEventTap: { event in
-            openComposer(for: event)
-          }
+          onEventTap: onEventTap
         )
       }
     }
@@ -147,11 +145,6 @@ public struct CalendarUpcomingPopupView<Store: CalendarUpcomingPopupStore>: View
       calendar: resolvedCalendar,
       dateFormat: config.selectionDateFormat
     )
-  }
-
-  /// Opens the shared event composer for one existing appointment.
-  private func openComposer(for event: CalendarAgentEvent) {
-    onEventTap(event)
   }
 
   /// Converts one hex string into SwiftUI color.
