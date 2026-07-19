@@ -79,7 +79,10 @@ local function refresh()
 				category = text.trim(subject.type) ~= "" and subject.type or "Notification",
 				severity = "info",
 				unread = true,
-				actions = { { id = "open", title = "Open" } },
+				actions = {
+					{ id = "mark_read", title = "Mark as read" },
+					{ id = "open", title = "Open" },
+				},
 			}
 		end
 		easybar.inbox.replace(SOURCE, items)
@@ -89,6 +92,22 @@ end
 easybar.inbox.on_action(SOURCE, function(event)
 	if event.action_id == "refresh" then
 		refresh()
+	elseif event.action_id == "mark_read" then
+		local thread_id = tostring(event.target_widget_id or "")
+		if thread_id ~= "" then
+			local command = "gh api --method PATCH " .. shell.quote("notifications/threads/" .. thread_id)
+			easybar.exec_async(command, { timeout_seconds = 20 }, function(output, code)
+				if code == 0 then
+					refresh()
+				else
+					easybar.log(
+						easybar.level.error,
+						"failed to mark GitHub notification as read: "
+							.. (text.trim(output) ~= "" and text.trim(output) or "exit " .. tostring(code))
+					)
+				end
+			end)
+		end
 	elseif event.action_id == "open" then
 		for _, notification in ipairs(notifications) do
 			if tostring(notification.id) == event.target_widget_id then

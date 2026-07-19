@@ -66,7 +66,10 @@ local function refresh()
 				category = item.kind == "merge_request" and "Merge requests" or "Issues",
 				severity = "info",
 				unread = true,
-				actions = { { id = "open", title = "Open" } },
+				actions = {
+					{ id = "mark_read", title = "Mark as read" },
+					{ id = "open", title = "Open" },
+				},
 			}
 		end
 		easybar.inbox.replace(SOURCE, items)
@@ -76,6 +79,8 @@ end
 easybar.inbox.on_action(SOURCE, function(event)
 	if event.action_id == "refresh" then
 		refresh()
+	elseif event.action_id == "mark_read" then
+		-- Item actions are marked read by the native inbox before they are routed here.
 	elseif event.action_id == "open" then
 		for _, item in ipairs(work_items) do
 			if item.kind .. ":" .. tostring(item.id or item.iid) == event.target_widget_id then

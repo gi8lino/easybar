@@ -31,6 +31,8 @@ Do not load both presentation variants for the same service:
 
 The regular variants own a bar icon and popup. The inbox variants publish snapshots into the shared native inbox and register their operations as source actions.
 
+GitHub and GitLab inbox items expose a dedicated **Mark as read** action. GitHub also acknowledges the notification through the GitHub API. GitLab publishes assigned work items rather than notification records, so its action updates EasyBar's persistent local read state.
+
 ## GUI environment
 
 Apps opened from Finder or Spotlight do not inherit `.zshrc`. Make required CLIs and instance settings explicit:
