@@ -296,7 +296,8 @@ final class AppController {
   private func setupMenuBarController(stateProvider: BarContextMenuStateProvider) {
     let controller = MenuBarController(
       configStore: services.configSnapshotStore,
-      stateProvider: stateProvider
+      stateProvider: stateProvider,
+      logger: logger.child("menu_bar")
     )
     controller.runtimeState = { [weak self] in self?.barRuntimeState ?? .stopped }
     controller.onStart = { [weak self] in self?.startBar() }

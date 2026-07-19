@@ -24,12 +24,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
   private let configStore: ConfigSnapshotStore
   private let stateProvider: BarContextMenuStateProvider
+  private let logger: ProcessLogger
   private let statusItem: NSStatusItem
   private let menu = NSMenu()
 
-  init(configStore: ConfigSnapshotStore, stateProvider: BarContextMenuStateProvider) {
+  init(
+    configStore: ConfigSnapshotStore,
+    stateProvider: BarContextMenuStateProvider,
+    logger: ProcessLogger
+  ) {
     self.configStore = configStore
     self.stateProvider = stateProvider
+    self.logger = logger
     self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     super.init()
 
@@ -163,7 +169,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     submenu.addItem(configured)
     submenu.addItem(.separator())
 
-    for name in ThemeCatalog.availableThemeNames(for: snapshot) {
+    for name in ThemeCatalog.availableThemeNames(for: snapshot, logger: logger) {
       let theme = actionItem(name, #selector(selectTheme(_:)))
       theme.representedObject = name
       theme.state = snapshot.theme.name == name ? .on : .off

@@ -109,7 +109,7 @@ final class BarContextMenuFactory: NSObject {
     submenu.addItem(configured)
     submenu.addItem(.separator())
 
-    for name in ThemeCatalog.availableThemeNames(for: snapshot) {
+    for name in ThemeCatalog.availableThemeNames(for: snapshot, logger: logger) {
       let theme = actionItem(title: name, action: #selector(selectTheme(_:)))
       theme.representedObject = name
       theme.state = snapshot.theme.name == name ? .on : .off

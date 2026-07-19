@@ -1,9 +1,13 @@
+import EasyBarShared
 import Foundation
 
 /// Discovers bundled and user-provided themes available for session preview.
 enum ThemeCatalog {
   /// Returns normalized theme names in stable display order.
-  static func availableThemeNames(for snapshot: ConfigSnapshot) -> [String] {
+  static func availableThemeNames(
+    for snapshot: ConfigSnapshot,
+    logger: ProcessLogger
+  ) -> [String] {
     var directories: [URL] = []
 
     let userDirectory = NSString(string: snapshot.theme.themesDir).expandingTildeInPath
@@ -26,14 +30,28 @@ enum ThemeCatalog {
     )
 
     var names: Set<String> = [snapshot.theme.configuredName, snapshot.theme.name]
+    let fileManager = FileManager.default
+    var seenDirectories = Set<String>()
     for directory in directories {
-      guard
-        let urls = try? FileManager.default.contentsOfDirectory(
+      let directory = directory.standardizedFileURL
+      guard seenDirectories.insert(directory.path).inserted else { continue }
+      guard fileManager.fileExists(atPath: directory.path) else { continue }
+
+      let urls: [URL]
+      do {
+        urls = try fileManager.contentsOfDirectory(
           at: directory,
           includingPropertiesForKeys: nil,
           options: [.skipsHiddenFiles]
         )
-      else { continue }
+      } catch {
+        logger.warn(
+          "failed to discover themes",
+          .field("directory", directory.path),
+          .field("error", error)
+        )
+        continue
+      }
 
       for url in urls where url.pathExtension.lowercased() == "toml" {
         names.insert(url.deletingPathExtension().lastPathComponent.lowercased())
