@@ -167,6 +167,33 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertTrue(store.sourceConfigurations.isEmpty)
   }
 
+  func testPersistedStateIsFormattedAndDeterministic() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let stateURL = directory.appendingPathComponent("inbox-state.json")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let persistence = InboxStatePersistence(fileURL: stateURL)
+    let state = InboxPersistedState(
+      readItemIDs: ["GitHub\u{1f}z/item", "GitHub\u{1f}a/item"],
+      unreadItemIDs: ["GitLab\u{1f}one"],
+      dismissedItemIDs: []
+    )
+
+    persistence.save(state)
+
+    let text = try String(contentsOf: stateURL, encoding: .utf8)
+    XCTAssertTrue(text.hasSuffix("\n"))
+    XCTAssertTrue(text.contains("\n  \"dismissedItemIDs\" : ["))
+    XCTAssertTrue(text.contains("GitHub\\u001fa/item"))
+    XCTAssertTrue(text.contains("GitHub\\u001fz/item"))
+    XCTAssertFalse(text.contains("z\\/item"))
+    XCTAssertLessThan(
+      try XCTUnwrap(text.range(of: "GitHub\\u001fa/item")?.lowerBound),
+      try XCTUnwrap(text.range(of: "GitHub\\u001fz/item")?.lowerBound)
+    )
+    XCTAssertEqual(persistence.load(), state)
+  }
+
   private func item(
     _ id: String,
     title: String? = nil,
