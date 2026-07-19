@@ -1,3 +1,4 @@
+import AppKit
 import EasyBarShared
 import Foundation
 
@@ -19,6 +20,8 @@ final class WiFiNativeWidget: NativeWidget {
   private let networkAgentClient: NetworkAgentClient
   private let nativeWiFiStore: NativeWiFiStore
   private let eventObserver: EasyBarEventObserver
+  private var sessionConfig: Config.WiFiBuiltinConfig
+  private var hasSessionOverrides = false
   private var isHovered = false
   private var started = false
   private var startedNetworkAgent = false
@@ -51,6 +54,7 @@ final class WiFiNativeWidget: NativeWidget {
     self.networkAgentClient = networkAgentClient
     self.nativeWiFiStore = nativeWiFiStore
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
+    self.sessionConfig = config
   }
 
   // MARK: - Lifecycle
@@ -64,6 +68,7 @@ final class WiFiNativeWidget: NativeWidget {
       eventNames: appEventSubscriptions.union([
         WidgetEvent.mouseEntered.rawValue,
         WidgetEvent.mouseExited.rawValue,
+        WidgetEvent.contextMenuClicked.rawValue,
       ]),
       widgetTargetIDs: [rootID]
     ) { [weak self] payload in
@@ -103,24 +108,31 @@ final class WiFiNativeWidget: NativeWidget {
   /// Publishes the current Wi-Fi nodes.
   private func publish() {
     let snapshot = makeSnapshot()
-    applyNodes(renderer.makeNodes(snapshot: snapshot))
+    var nodes = renderer.makeNodes(snapshot: snapshot)
+    if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
+      nodes[rootIndex].contextMenu = WiFiContextMenu.make(
+        config: sessionConfig,
+        hasSessionOverrides: hasSessionOverrides
+      )
+    }
+    applyNodes(nodes)
   }
 
   /// Returns the current render snapshot.
   private func makeSnapshot() -> Snapshot {
     let network = nativeWiFiStore.snapshot
-    let presentation = WiFiPresentation(snapshot: network, config: config)
+    let presentation = WiFiPresentation(snapshot: network, config: sessionConfig)
 
     return Snapshot(
-      config: config,
+      config: sessionConfig,
       network: network,
       content: presentation.content,
       signalLevel: presentation.signalLevel,
       visualState: presentation.visualState,
       activeColorHex: presentation.activeColorHex,
       inactiveColorHex: presentation.inactiveColorHex,
-      inlineContentVisible: shouldShowInlineContent(config: config),
-      detailsContentVisible: shouldShowDetailsContent(config: config)
+      inlineContentVisible: shouldShowInlineContent(config: sessionConfig),
+      detailsContentVisible: shouldShowDetailsContent(config: sessionConfig)
     )
   }
 }
@@ -142,12 +154,55 @@ extension WiFiNativeWidget {
     }
   }
 
-  /// Handles widget-local hover events.
+  /// Handles widget-local hover and context-menu events.
   private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard payload.widgetID == rootID else { return }
     guard let event = payload.widgetEvent else { return }
-    guard NativeWidgetHoverSupport.updateHoverState(event, isHovered: &isHovered) else { return }
-    publish()
+
+    if event == .contextMenuClicked, let actionID = payload.actionID {
+      handleContextMenuAction(actionID)
+      return
+    }
+
+    if NativeWidgetHoverSupport.updateHoverState(event, isHovered: &isHovered) {
+      publish()
+    }
+  }
+
+  /// Applies one session-only context-menu action.
+  private func handleContextMenuAction(_ actionID: String) {
+    guard let action = WiFiContextMenuAction(id: actionID) else { return }
+
+    switch action {
+    case .setMode(let mode):
+      sessionConfig.mode = mode
+      hasSessionOverrides = true
+      publish()
+    case .toggleField(let configKey):
+      guard
+        let field = BuiltinWiFiFieldCatalog.fields.first(where: {
+          $0.configKey == configKey
+        })
+      else { return }
+      sessionConfig.fields[keyPath: field.keyPath].toggle()
+      hasSessionOverrides = true
+      publish()
+    case .refresh:
+      networkAgentClient.refresh()
+    case .openNetworkSettings:
+      openNetworkSettings()
+    case .resetToConfig:
+      sessionConfig = config
+      hasSessionOverrides = false
+      publish()
+    }
+  }
+
+  /// Opens the macOS Network settings pane.
+  private func openNetworkSettings() {
+    guard let url = URL(string: "x-apple.systempreferences:com.apple.Network-Settings.extension")
+    else { return }
+    NSWorkspace.shared.open(url)
   }
 
   /// Returns whether inline content should be visible.

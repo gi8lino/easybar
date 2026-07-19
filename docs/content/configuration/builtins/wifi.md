@@ -51,4 +51,13 @@ After changing permission, restart the network agent:
 easybar --restart-network-agent
 ```
 
+## Context menu overrides
+
+Right-click the Wi-Fi anchor to change its content mode or toggle individual fields for the current
+session. The menu also provides Refresh, Open Network Settings, and Reset to Config actions.
+
+These overrides never edit `config.toml`. Restarting EasyBar or reloading configuration restores
+the configured mode and fields. Checked menu items always show the currently effective session
+values.
+
 See [Agents](../agents.md) and [Recovery](../../runtime/recovery.md) for further checks.

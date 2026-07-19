@@ -10,8 +10,41 @@ extension WidgetNodeView {
       content
         .modifier(nodeStyle)
         .contentShape(Rectangle())
-        .background(nodeMouseOverlay)
+        .background(containerMouseOverlay)
+        .overlay(containerContextMenuOverlay)
     )
+  }
+
+  /// Builds the ordinary mouse-event surface behind container children.
+  ///
+  /// Keeping this surface behind the children preserves child click precedence.
+  @ViewBuilder
+  var containerMouseOverlay: some View {
+    if node.hasMouseInteractionHandlers {
+      nodeEventSurface(includesContextMenu: false)
+    }
+  }
+
+  /// Places a right-click-only context-menu surface above container children.
+  ///
+  /// `MouseTrackingNSView` ignores non-right-click hit tests when it has no ordinary
+  /// mouse handlers, so child hover and left-click behavior remains unchanged.
+  @ViewBuilder
+  var containerContextMenuOverlay: some View {
+    if node.hasContextMenu {
+      GeometryReader { proxy in
+        WidgetMouseView(
+          widgetID: node.root,
+          targetWidgetID: node.id,
+          logger: logger,
+          eventHub: appViewServices?.eventHub,
+          tracksHover: false,
+          contextMenuItems: node.validatedContextMenu
+        )
+        .frame(width: proxy.size.width, height: proxy.size.height)
+        .contentShape(Rectangle())
+      }
+    }
   }
 
   /// Applies node styling and mouse handling to a leaf node.
@@ -95,7 +128,10 @@ extension WidgetNodeView {
   }
 
   /// Builds the AppKit-backed event surface for one node.
-  func nodeEventSurface(tracksHover: Bool = true) -> some View {
+  func nodeEventSurface(
+    tracksHover: Bool = true,
+    includesContextMenu: Bool = true
+  ) -> some View {
     GeometryReader { proxy in
       WidgetMouseView(
         widgetID: node.root,
@@ -108,7 +144,7 @@ extension WidgetNodeView {
         emitsMouseUp: node.isMouseUpInteractive,
         emitsMouseClick: node.isMouseClickInteractive,
         emitsMouseScroll: node.isMouseScrollInteractive,
-        contextMenuItems: node.validatedContextMenu
+        contextMenuItems: includesContextMenu ? node.validatedContextMenu : nil
       )
       .frame(width: proxy.size.width, height: proxy.size.height)
       .contentShape(Rectangle())
