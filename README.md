@@ -9,14 +9,16 @@ It combines native built-in widgets with custom Lua widgets and is designed for 
 ## Features
 
 - Native macOS bar window built with SwiftUI
-- Built-in widgets plus scriptable Lua widgets
+- Configurable native widgets for spaces, applications, system status, calendar, and more
+- Object-style Lua widgets with events, timers, asynchronous commands, popups, and groups
+- Native right-click context menus for Lua widgets
+- Shared native inbox with unread state, grouping, persistence, Markdown, and publisher actions
 - File-based themes with bundled and custom TOML palettes
 - AeroSpace integration for spaces, focused app state, and layout mode state
-- Event-driven updates and interactive popups
-- Calendar and network helper agents
-- Homebrew cask installation into `/Applications`
-- Config-driven logging and troubleshooting support
-- Lightweight runtime metrics
+- Calendar and network helper agents for permission-sensitive macOS data
+- Persistent menu bar controller and CLI commands for reloads, restarts, and diagnostics
+- Homebrew cask installation into `/Applications` with separately managed agent services
+- Config-driven logging, troubleshooting diagnostics, and lightweight runtime metrics
 
 ## Requirements
 

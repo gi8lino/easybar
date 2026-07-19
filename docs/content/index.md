@@ -38,15 +38,16 @@ If you are changing EasyBar itself, start with [Internals](internals/overview.md
 ## Features
 
 - Native macOS bar window built with SwiftUI
-- Native built-in widgets plus Lua widgets
+- Configurable native widgets for spaces, applications, system status, calendar, and more
+- Object-style Lua widgets with events, timers, asynchronous commands, popups, and groups
+- Native right-click context menus for Lua widgets
+- Shared native inbox with unread state, grouping, persistence, Markdown, and publisher actions
 - File-based themes with bundled and custom TOML palettes
-- Object-style Lua widget API with node handles
 - AeroSpace integration for spaces, focused app state, and layout mode state
-- Event-driven updates and interactive popups
 - Calendar and network helper agents for permission-sensitive data
+- Persistent menu bar controller and CLI commands for reloads, restarts, and diagnostics
 - Homebrew cask installation into `/Applications` with separate permission-agent services
-- Logging and startup diagnostics for troubleshooting
-- Lightweight runtime metrics
+- Config-driven logging, troubleshooting diagnostics, and lightweight runtime metrics
 
 ## How EasyBar is meant to be used
 
