@@ -88,7 +88,12 @@ final class InboxStore: ObservableObject {
 
   func configure(source: String, actions: [InboxAction]) {
     guard let source = normalizedSource(source) else { return }
-    let validActions = Array(actions.lazy.filter(isValidAction).prefix(16))
+    var actionIDs = Set<String>()
+    var validActions: [InboxAction] = []
+    for action in actions where isValidAction(action) && actionIDs.insert(action.id).inserted {
+      validActions.append(action)
+      if validActions.count == 16 { break }
+    }
     if validActions.isEmpty {
       sourceActions.removeValue(forKey: source)
     } else {
@@ -272,6 +277,9 @@ final class InboxStore: ObservableObject {
       return false
     }
     guard (item.body?.utf8.count ?? 0) <= 64 * 1_024 else { return false }
-    return (item.actions ?? []).count <= 16 && (item.actions ?? []).allSatisfy(isValidAction)
+    let actions = item.actions ?? []
+    return actions.count <= 16
+      && actions.allSatisfy(isValidAction)
+      && Set(actions.map(\.id)).count == actions.count
   }
 }

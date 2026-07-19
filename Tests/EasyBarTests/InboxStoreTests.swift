@@ -183,6 +183,36 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertTrue(store.sourceConfigurations.isEmpty)
   }
 
+  func testDuplicateActionIDsAreRejectedOrDeduplicated() {
+    let duplicateActions = [
+      InboxAction(id: "open", title: "Open first"),
+      InboxAction(id: "open", title: "Open second"),
+    ]
+    let store = InboxStore()
+    var message = item("one")
+    message = InboxItem(
+      id: message.id,
+      title: message.title,
+      body: message.body,
+      format: message.format,
+      timestamp: message.timestamp,
+      category: message.category,
+      severity: message.severity,
+      unread: message.unread,
+      dismissible: message.dismissible,
+      actions: duplicateActions
+    )
+
+    store.replace(source: "GitLab", items: [message])
+    store.configure(source: "GitLab", actions: duplicateActions)
+
+    XCTAssertTrue(store.presentedItems.isEmpty)
+    XCTAssertEqual(
+      store.sourceConfigurations.first?.actions,
+      [InboxAction(id: "open", title: "Open first")]
+    )
+  }
+
   func testPersistedStateIsFormattedAndDeterministic() throws {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent(UUID().uuidString, isDirectory: true)
