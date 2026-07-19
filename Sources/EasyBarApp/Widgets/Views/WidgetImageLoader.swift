@@ -37,10 +37,6 @@ struct WidgetImageRevision: Hashable, Sendable {
   let modificationDate: Date?
   let fileSize: UInt64?
 
-  init(path: String) {
-    self.init(source: .path(path))
-  }
-
   init(source: WidgetImageSource) {
     self.source = source
 
@@ -72,10 +68,6 @@ actor WidgetImageCache {
 
   init(capacity: Int = 128) {
     self.capacity = max(1, capacity)
-  }
-
-  func image(for path: String) -> WidgetImageLoadResult {
-    image(for: .path(path))
   }
 
   func image(for source: WidgetImageSource) -> WidgetImageLoadResult {
@@ -128,17 +120,9 @@ final class WidgetImageLoader: ObservableObject {
   @Published private(set) var loadedImage: LoadedWidgetImage?
   private var loggedFailures = Set<WidgetImageSource>()
 
-  func image(for path: String) -> LoadedWidgetImage? {
-    image(for: .path(path))
-  }
-
   func image(for source: WidgetImageSource) -> LoadedWidgetImage? {
     guard loadedImage?.source == source else { return nil }
     return loadedImage
-  }
-
-  func load(path: String) async -> Bool {
-    await load(source: .path(path))
   }
 
   func load(source: WidgetImageSource) async -> Bool {

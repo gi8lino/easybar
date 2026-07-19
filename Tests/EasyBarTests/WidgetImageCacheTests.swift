@@ -34,11 +34,11 @@ final class WidgetImageCacheTests: XCTestCase {
     try Self.pixelPNG.write(to: url)
 
     let loader = WidgetImageLoader()
-    XCTAssertNil(loader.image(for: url.path))
+    XCTAssertNil(loader.image(for: .path(url.path)))
 
-    let shouldLogFailure = await loader.load(path: url.path)
+    let shouldLogFailure = await loader.load(source: .path(url.path))
 
-    let loaded = try XCTUnwrap(loader.image(for: url.path))
+    let loaded = try XCTUnwrap(loader.image(for: .path(url.path)))
     XCTAssertFalse(shouldLogFailure)
     XCTAssertEqual(loaded.image.size, CGSize(width: 1, height: 1))
   }
@@ -50,12 +50,12 @@ final class WidgetImageCacheTests: XCTestCase {
       .appendingPathExtension("png").path
     let loader = WidgetImageLoader()
 
-    let firstShouldLog = await loader.load(path: path)
-    let secondShouldLog = await loader.load(path: path)
+    let firstShouldLog = await loader.load(source: .path(path))
+    let secondShouldLog = await loader.load(source: .path(path))
 
     XCTAssertTrue(firstShouldLog)
     XCTAssertFalse(secondShouldLog)
-    XCTAssertNil(loader.image(for: path))
+    XCTAssertNil(loader.image(for: .path(path)))
   }
 
   func testUnchangedPathReusesDecodedImage() async throws {
@@ -67,8 +67,8 @@ final class WidgetImageCacheTests: XCTestCase {
     let path = directory.appendingPathComponent("image.png").path
     try Self.pixelPNG.write(to: URL(fileURLWithPath: path))
     let cache = WidgetImageCache()
-    let first = try loadedImage(from: await cache.image(for: path))
-    let second = try loadedImage(from: await cache.image(for: path))
+    let first = try loadedImage(from: await cache.image(for: .path(path)))
+    let second = try loadedImage(from: await cache.image(for: .path(path)))
 
     XCTAssertTrue(first === second)
   }
@@ -87,12 +87,12 @@ final class WidgetImageCacheTests: XCTestCase {
     try Self.pixelPNG.write(to: URL(fileURLWithPath: thirdPath))
     let cache = WidgetImageCache(capacity: 2)
 
-    let first = try loadedImage(from: await cache.image(for: firstPath))
-    let second = try loadedImage(from: await cache.image(for: secondPath))
-    _ = await cache.image(for: firstPath)
-    _ = await cache.image(for: thirdPath)
-    let reloadedFirst = try loadedImage(from: await cache.image(for: firstPath))
-    let reloadedSecond = try loadedImage(from: await cache.image(for: secondPath))
+    let first = try loadedImage(from: await cache.image(for: .path(firstPath)))
+    let second = try loadedImage(from: await cache.image(for: .path(secondPath)))
+    _ = await cache.image(for: .path(firstPath))
+    _ = await cache.image(for: .path(thirdPath))
+    let reloadedFirst = try loadedImage(from: await cache.image(for: .path(firstPath)))
+    let reloadedSecond = try loadedImage(from: await cache.image(for: .path(secondPath)))
 
     XCTAssertTrue(first === reloadedFirst)
     XCTAssertFalse(second === reloadedSecond)
@@ -107,13 +107,13 @@ final class WidgetImageCacheTests: XCTestCase {
     let url = directory.appendingPathComponent("changing.png")
     try Self.pixelPNG.write(to: url)
     let cache = WidgetImageCache()
-    let first = try loadedImage(from: await cache.image(for: url.path))
+    let first = try loadedImage(from: await cache.image(for: .path(url.path)))
 
     try FileManager.default.setAttributes(
       [.modificationDate: Date(timeIntervalSinceNow: 10)],
       ofItemAtPath: url.path
     )
-    let second = try loadedImage(from: await cache.image(for: url.path))
+    let second = try loadedImage(from: await cache.image(for: .path(url.path)))
 
     XCTAssertFalse(first === second)
   }
@@ -126,12 +126,12 @@ final class WidgetImageCacheTests: XCTestCase {
 
     let url = directory.appendingPathComponent("changing.png")
     try Self.pixelPNG.write(to: url)
-    let first = WidgetImageRevision(path: url.path)
+    let first = WidgetImageRevision(source: .path(url.path))
 
     var enlarged = Self.pixelPNG
     enlarged.append(0)
     try enlarged.write(to: url)
-    let second = WidgetImageRevision(path: url.path)
+    let second = WidgetImageRevision(source: .path(url.path))
 
     XCTAssertNotEqual(first, second)
   }
