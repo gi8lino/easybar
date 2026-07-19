@@ -59,6 +59,8 @@ PLIST := $(APP_CONTENTS)/Info.plist
 
 PACKAGE_NAME = $(APP_NAME)-$(VERSION).zip
 PACKAGE_ZIP = $(DIST_DIR)/$(PACKAGE_NAME)
+CALENDAR_AGENT_PACKAGE_ZIP = $(DIST_DIR)/$(CALENDAR_AGENT_NAME)-$(VERSION).zip
+NETWORK_AGENT_PACKAGE_ZIP = $(DIST_DIR)/$(NETWORK_AGENT_NAME)-$(VERSION).zip
 PACKAGE_STAGE := $(DIST_DIR)/package
 
 BUNDLE_ID ?= com.gi8lino.EasyBar
@@ -221,11 +223,11 @@ bundle: ## Build the app, agent bundles, and CLI into dist/.
 		--clean-build "$(CLEAN_BUILD)" \
 		--dist-dir "$(DIST_DIR)"
 
-package: bundle ## Create the release ZIP consumed by the Homebrew cask.
+package: bundle ## Create separate release ZIPs for the cask and agent formulae.
 	@scripts/release/package.sh --version "$(VERSION)" --dist-dir "$(DIST_DIR)"
 
-release: verify-release ## Build and verify the zipped release artifact.
-	@echo "Release artifact ready: $(PACKAGE_ZIP)"
+release: verify-release ## Build and verify the zipped release artifacts.
+	@echo "Release artifacts ready: $(PACKAGE_ZIP) $(CALENDAR_AGENT_PACKAGE_ZIP) $(NETWORK_AGENT_PACKAGE_ZIP)"
 
 build-app: ## Internal target: build the app executable for ARCH.
 	@scripts/build/build-products.sh release "$(ARCH)" --version "$(VERSION)" "$(APP_PRODUCT)=$(APP_BIN)"
@@ -371,8 +373,8 @@ print-local-version: ## Print the Git-derived version used by install-local.
 print-latest-tag: ## Print the latest matching git tag.
 	@echo "$(LATEST_TAG)"
 
-print-package-sha256: package ## Print the SHA-256 of the packaged zip.
-	@shasum -a 256 "$(PACKAGE_ZIP)"
+print-package-sha256: package ## Print the SHA-256 of the packaged ZIPs.
+	@shasum -a 256 "$(PACKAGE_ZIP)" "$(CALENDAR_AGENT_PACKAGE_ZIP)" "$(NETWORK_AGENT_PACKAGE_ZIP)"
 
 ##@ Tagging
 

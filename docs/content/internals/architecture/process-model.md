@@ -28,7 +28,7 @@ Helper agents are separate processes because they own permission-sensitive APIs:
 The agents collect and normalize data.
 EasyBar consumes that data and renders UI from it.
 
-The release archive contains standalone agent application bundles. Homebrew installs each agent through its own formula and runs it as a keep-alive service. The main app only communicates with agents over Unix sockets; it does not own their processes.
+Releases package the app and CLI separately from each standalone agent application bundle. Homebrew installs each agent archive through its own formula and runs it as a keep-alive service. Keeping the cask and formula downloads distinct also prevents them from sharing quarantine state in Homebrew's download cache. The main app only communicates with agents over Unix sockets; it does not own their processes.
 
 When an agent acknowledges a socket restart request and exits, Homebrew Services relaunches it. Keeping the agents outside `EasyBar.app` also gives macOS stable, independent identities for Calendar and Location permissions.
 

@@ -86,7 +86,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: EasyBar-${{ steps.version.outputs.version }}
-          path: dist/EasyBar-${{ steps.version.outputs.version }}.zip
+          path: |
+            dist/EasyBar-${{ steps.version.outputs.version }}.zip
+            dist/EasyBarCalendarAgent-${{ steps.version.outputs.version }}.zip
+            dist/EasyBarNetworkAgent-${{ steps.version.outputs.version }}.zip
           if-no-files-found: error
 
       - name: Create or update release
@@ -95,12 +98,16 @@ jobs:
         shell: bash
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          ASSET="dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+          ASSETS=(
+            "dist/EasyBar-${{ steps.version.outputs.version }}.zip"
+            "dist/EasyBarCalendarAgent-${{ steps.version.outputs.version }}.zip"
+            "dist/EasyBarNetworkAgent-${{ steps.version.outputs.version }}.zip"
+          )
 
           if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" "${ASSET}" --clobber
+            gh release upload "${TAG}" "${ASSETS[@]}" --clobber
           else
-            gh release create "${TAG}" "${ASSET}" --generate-notes
+            gh release create "${TAG}" "${ASSETS[@]}" --generate-notes
           fi
 
       - name: Trigger Homebrew package update workflow

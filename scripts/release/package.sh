@@ -39,6 +39,8 @@ done
 
 package_stage="$dist_dir/package"
 package_zip="$dist_dir/EasyBar-$version.zip"
+calendar_agent_zip="$dist_dir/EasyBarCalendarAgent-$version.zip"
+network_agent_zip="$dist_dir/EasyBarNetworkAgent-$version.zip"
 app_bundle="$dist_dir/EasyBar.app"
 calendar_agent_bundle="$dist_dir/EasyBarCalendarAgent.app"
 network_agent_bundle="$dist_dir/EasyBarNetworkAgent.app"
@@ -64,22 +66,28 @@ package_name=$(basename "$package_zip")
 mkdir -p "$package_dir"
 package_zip="$(cd "$package_dir" && pwd)/${package_name}"
 
-rm -rf "$package_stage" "$package_zip"
+rm -rf "$package_stage" "$package_zip" "$calendar_agent_zip" "$network_agent_zip"
 mkdir -p "$package_stage"
 
 cp -R "$app_bundle" "$package_stage/EasyBar.app"
-cp -R "$calendar_agent_bundle" "$package_stage/EasyBarCalendarAgent.app"
-cp -R "$network_agent_bundle" "$package_stage/EasyBarNetworkAgent.app"
 cp "$cli_bin" "$package_stage/easybar"
 
 (
   cd "$package_stage"
   zip -qry "$package_zip" \
     "EasyBar.app" \
-    "EasyBarCalendarAgent.app" \
-    "EasyBarNetworkAgent.app" \
     "easybar"
+)
+
+calendar_agent_zip="$(cd "$(dirname "$calendar_agent_zip")" && pwd)/$(basename "$calendar_agent_zip")"
+network_agent_zip="$(cd "$(dirname "$network_agent_zip")" && pwd)/$(basename "$network_agent_zip")"
+(
+  cd "$dist_dir"
+  zip -qry "$calendar_agent_zip" "EasyBarCalendarAgent.app"
+  zip -qry "$network_agent_zip" "EasyBarNetworkAgent.app"
 )
 
 rm -rf "$package_stage"
 echo "Created $package_zip"
+echo "Created $calendar_agent_zip"
+echo "Created $network_agent_zip"

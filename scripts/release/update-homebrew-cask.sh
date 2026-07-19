@@ -6,6 +6,8 @@ repository="${GITHUB_REPOSITORY:-gi8lino/easybar}"
 tag=""
 version=""
 sha=""
+calendar_agent_sha=""
+network_agent_sha=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -14,12 +16,15 @@ while [ "$#" -gt 0 ]; do
   --tag) tag="${2:?missing value for --tag}"; shift 2 ;;
   --version) version="${2:?missing value for --version}"; shift 2 ;;
   --sha) sha="${2:?missing value for --sha}"; shift 2 ;;
+  --calendar-agent-sha) calendar_agent_sha="${2:?missing value for --calendar-agent-sha}"; shift 2 ;;
+  --network-agent-sha) network_agent_sha="${2:?missing value for --network-agent-sha}"; shift 2 ;;
   *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
-if [ -z "${tap_dir}" ] || [ -z "${version}" ] || [ -z "${sha}" ]; then
-  echo "Usage: $0 --tap-dir DIR --version VERSION --sha SHA [--repository OWNER/REPO] [--tag TAG]" >&2
+if [ -z "${tap_dir}" ] || [ -z "${version}" ] || [ -z "${sha}" ] || \
+  [ -z "${calendar_agent_sha}" ] || [ -z "${network_agent_sha}" ]; then
+  echo "Usage: $0 --tap-dir DIR --version VERSION --sha SHA --calendar-agent-sha SHA --network-agent-sha SHA [--repository OWNER/REPO] [--tag TAG]" >&2
   exit 2
 fi
 
@@ -81,13 +86,15 @@ write_agent_formula() {
   local description="$3"
   local app_name="$4"
   local log_name="$5"
+  local asset_name="$6"
+  local asset_sha="$7"
 
   cat >"$file" <<EOF_FORMULA
 class ${class_name} < Formula
   desc "${description}"
   homepage "https://github.com/${repository}"
-  url "${asset_url}"
-  sha256 "${sha}"
+  url "https://github.com/${repository}/releases/download/${tag}/${asset_name}-${version}.zip"
+  sha256 "${asset_sha}"
   license "Apache-2.0"
   version "${version}"
 
@@ -121,15 +128,18 @@ write_agent_formula \
   "EasybarCalendarAgent" \
   "Calendar EventKit helper service for EasyBar" \
   "EasyBarCalendarAgent" \
-  "calendar-agent"
+  "calendar-agent" \
+  "EasyBarCalendarAgent" \
+  "${calendar_agent_sha}"
 
 write_agent_formula \
   "${network_agent_formula_file}" \
   "EasybarNetworkAgent" \
   "Wi-Fi and network helper service for EasyBar" \
   "EasyBarNetworkAgent" \
-  "network-agent"
+  "network-agent" \
+  "EasyBarNetworkAgent" \
+  "${network_agent_sha}"
 
 rm -f "${formula_dir}/easybar.rb"
-
 

@@ -9,6 +9,8 @@ tap_dir="${tmp_dir}/homebrew-tap"
 version="9.8.7"
 tag="v${version}"
 sha="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+calendar_agent_sha="1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+network_agent_sha="2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 mkdir -p "${tap_dir}/Formula"
 git -C "${tap_dir}" init -q
@@ -23,7 +25,9 @@ git -C "${tap_dir}" -c user.name=test -c user.email=test@example.com commit -qm 
   --repository gi8lino/easybar \
   --tag "${tag}" \
   --version "${version}" \
-  --sha "${sha}"
+  --sha "${sha}" \
+  --calendar-agent-sha "${calendar_agent_sha}" \
+  --network-agent-sha "${network_agent_sha}"
 
 assert_contains() {
   local file="$1"
@@ -60,10 +64,14 @@ network_formula="${tap_dir}/Formula/easybar-network-agent.rb"
 test -s "${calendar_formula}"
 test -s "${network_formula}"
 assert_contains "${calendar_formula}" 'class EasybarCalendarAgent < Formula'
+assert_contains "${calendar_formula}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBarCalendarAgent-${version}.zip\""
+assert_contains "${calendar_formula}" "sha256 \"${calendar_agent_sha}\""
 assert_contains "${calendar_formula}" 'libexec.install "EasyBarCalendarAgent.app"'
 assert_contains "${calendar_formula}" 'keep_alive successful_exit: false'
 assert_contains "${calendar_formula}" 'process_type :interactive'
 assert_contains "${network_formula}" 'class EasybarNetworkAgent < Formula'
+assert_contains "${network_formula}" "url \"https://github.com/gi8lino/easybar/releases/download/${tag}/EasyBarNetworkAgent-${version}.zip\""
+assert_contains "${network_formula}" "sha256 \"${network_agent_sha}\""
 assert_contains "${network_formula}" 'libexec.install "EasyBarNetworkAgent.app"'
 assert_contains "${network_formula}" 'keep_alive successful_exit: false'
 assert_contains "${network_formula}" 'process_type :interactive'
@@ -89,10 +97,11 @@ git -C "${tap_dir}" -c user.name=test -c user.email=test@example.com commit -qm 
   --repository gi8lino/easybar \
   --tag "v9.8.8" \
   --version "9.8.8" \
-  --sha "${sha}"
+  --sha "${sha}" \
+  --calendar-agent-sha "${calendar_agent_sha}" \
+  --network-agent-sha "${network_agent_sha}"
 "${repo_root}/scripts/release/commit-homebrew-cask.sh" \
   --tap-dir "${tap_dir}" \
   --version "9.8.8" \
   --dry-run >/dev/null
-
 

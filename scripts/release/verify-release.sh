@@ -57,6 +57,8 @@ app_icon_icns="$app_resources/EasyBar.icns"
 calendar_icon_icns="$dist_dir/EasyBarCalendarAgent.app/Contents/Resources/EasyBarCalendarAgent.icns"
 network_icon_icns="$dist_dir/EasyBarNetworkAgent.app/Contents/Resources/EasyBarNetworkAgent.icns"
 package_zip="$dist_dir/EasyBar-$version.zip"
+calendar_agent_zip="$dist_dir/EasyBarCalendarAgent-$version.zip"
+network_agent_zip="$dist_dir/EasyBarNetworkAgent-$version.zip"
 
 require_file() {
   local path="$1"
@@ -71,6 +73,8 @@ require_file() {
 scripts/build/verify-bundle.sh --arch "$arch" --version "$version" --dist-dir "$dist_dir"
 
 require_file "$package_zip" "release package"
+require_file "$calendar_agent_zip" "calendar agent release package"
+require_file "$network_agent_zip" "network agent release package"
 require_file "$app_resource_dir/Lua/easybar_api.lua" "Lua API stub"
 require_file "$app_resource_dir/Lua/runtime.lua" "Lua runtime"
 require_file "$app_resource_dir/Events/event_catalog.json" "event catalog"
@@ -79,6 +83,8 @@ require_file "$app_themes_dir/default.toml" "default bundled theme"
 
 echo "Release package:"
 ls -lh "$package_zip"
+ls -lh "$calendar_agent_zip"
+ls -lh "$network_agent_zip"
 echo "Build fingerprints:"
 shasum -a 256 "$app_bin"
 shasum -a 256 "$plist"
@@ -88,4 +94,6 @@ shasum -a 256 "$network_icon_icns"
 shasum -a 256 "$app_resource_dir/Lua/easybar_api.lua"
 shasum -a 256 "$app_themes_dir/default.toml"
 shasum -a 256 "$package_zip"
+shasum -a 256 "$calendar_agent_zip"
+shasum -a 256 "$network_agent_zip"
 codesign -dv --verbose=4 "$app_bundle" 2>&1 || true

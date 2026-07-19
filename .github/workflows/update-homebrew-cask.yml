@@ -41,13 +41,23 @@ jobs:
           curl -fL --retry 5 --retry-all-errors --retry-delay 5 \
             "${{ steps.vars.outputs.asset_url }}" \
             -o EasyBar.zip
+          curl -fL --retry 5 --retry-all-errors --retry-delay 5 \
+            "${{ steps.vars.outputs.calendar_agent_asset_url }}" \
+            -o EasyBarCalendarAgent.zip
+          curl -fL --retry 5 --retry-all-errors --retry-delay 5 \
+            "${{ steps.vars.outputs.network_agent_asset_url }}" \
+            -o EasyBarNetworkAgent.zip
 
       - name: Compute SHA-256
         id: sha
         shell: bash
         run: |
           SHA="$(sha256sum EasyBar.zip | awk '{print $1}')"
+          CALENDAR_AGENT_SHA="$(sha256sum EasyBarCalendarAgent.zip | awk '{print $1}')"
+          NETWORK_AGENT_SHA="$(sha256sum EasyBarNetworkAgent.zip | awk '{print $1}')"
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "calendar_agent_sha=${CALENDAR_AGENT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "network_agent_sha=${NETWORK_AGENT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Homebrew tap
         uses: actions/checkout@v7
@@ -64,7 +74,9 @@ jobs:
             --repository "${GITHUB_REPOSITORY}" \
             --tag "${{ steps.vars.outputs.tag }}" \
             --version "${{ steps.vars.outputs.version }}" \
-            --sha "${{ steps.sha.outputs.sha }}"
+            --sha "${{ steps.sha.outputs.sha }}" \
+            --calendar-agent-sha "${{ steps.sha.outputs.calendar_agent_sha }}" \
+            --network-agent-sha "${{ steps.sha.outputs.network_agent_sha }}"
 
       - name: Commit and push Homebrew package changes
         shell: bash

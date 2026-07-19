@@ -90,6 +90,8 @@ write_output "version" "$version"
 
 if [ -n "$repository" ]; then
   write_output "asset_url" "https://github.com/${repository}/releases/download/${tag}/EasyBar-${version}.zip"
+  write_output "calendar_agent_asset_url" "https://github.com/${repository}/releases/download/${tag}/EasyBarCalendarAgent-${version}.zip"
+  write_output "network_agent_asset_url" "https://github.com/${repository}/releases/download/${tag}/EasyBarNetworkAgent-${version}.zip"
 fi
 
 echo "Tag: ${tag}"
