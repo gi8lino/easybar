@@ -1,9 +1,10 @@
+import EasyBarShared
 import Foundation
 
 /// Small helper for observing typed EasyBar events in native widgets.
-final class EasyBarEventObserver: @unchecked Sendable {
+final class EasyBarEventObserver: Sendable {
   private let eventHub: EventHub
-  private var task: Task<Void, Never>?
+  private let task = LockedState<Task<Void, Never>?>(nil)
 
   /// Creates one EasyBar event observer.
   init(eventHub: EventHub) {
@@ -52,9 +53,7 @@ final class EasyBarEventObserver: @unchecked Sendable {
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy?,
     handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
-    stop()
-
-    task = Task {
+    let nextTask = Task {
       let stream = await eventHub.subscribe(
         eventNames: eventNames,
         widgetTargetIDs: widgetTargetIDs,
@@ -68,11 +67,22 @@ final class EasyBarEventObserver: @unchecked Sendable {
         await handler(payload)
       }
     }
+
+    let previousTask = task.withLock { task -> Task<Void, Never>? in
+      let previousTask = task
+      task = nextTask
+      return previousTask
+    }
+    previousTask?.cancel()
   }
 
   /// Stops observing EasyBar events.
   func stop() {
-    task?.cancel()
-    task = nil
+    let activeTask = task.withLock { task -> Task<Void, Never>? in
+      let activeTask = task
+      task = nil
+      return activeTask
+    }
+    activeTask?.cancel()
   }
 }
