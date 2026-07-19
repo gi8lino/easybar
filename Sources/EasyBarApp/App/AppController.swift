@@ -386,6 +386,19 @@ final class AppController {
     Task { await runtimeCoordinator.reloadConfig() }
   }
 
+  private func setNativeWidgetEnabled(_ key: String, enabled: Bool) {
+    let persistence = ConfigPersistence(
+      configPath: services.configSnapshotStore.snapshot.app.configPath,
+      logger: logger.child("native_widgets.config_persistence")
+    )
+    guard
+      persistence.apply([
+        TOMLEdit(path: ["builtins", key, "enabled"], value: .bool(enabled))
+      ])
+    else { return }
+    Task { await runtimeCoordinator.reloadConfig() }
+  }
+
   private func restartCalendarAgent() {
     let socketPath = services.configSnapshotStore.snapshot.calendarAgent.socketPath
     restartAgent(name: "calendar") {
@@ -443,6 +456,10 @@ final class AppController {
 
     controller.onSelectTheme = { [weak self] name in
       self?.selectTheme(name)
+    }
+
+    controller.onSetNativeWidgetEnabled = { [weak self] key, enabled in
+      self?.setNativeWidgetEnabled(key, enabled: enabled)
     }
   }
 

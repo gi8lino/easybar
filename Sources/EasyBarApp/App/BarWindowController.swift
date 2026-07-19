@@ -23,6 +23,8 @@ final class BarWindowController: NSWindowController {
   var onRestartLuaRuntime: (() -> Void)?
   /// Callback for persistent theme selection.
   var onSelectTheme: ((String?) -> Void)?
+  /// Callback for persistent native-widget visibility changes.
+  var onSetNativeWidgetEnabled: ((String, Bool) -> Void)?
 
   /// Logger used for window diagnostics.
   private let logger: ProcessLogger
@@ -44,7 +46,10 @@ final class BarWindowController: NSWindowController {
       refresh: { [weak self] in self?.onRefresh?() },
       reloadConfig: { [weak self] in self?.onReloadConfig?() },
       restartLuaRuntime: { [weak self] in self?.onRestartLuaRuntime?() },
-      selectTheme: { [weak self] name in self?.onSelectTheme?(name) }
+      selectTheme: { [weak self] name in self?.onSelectTheme?(name) },
+      setNativeWidgetEnabled: { [weak self] key, enabled in
+        self?.onSetNativeWidgetEnabled?(key, enabled)
+      }
     ),
     stateProvider: menuStateProvider
   )

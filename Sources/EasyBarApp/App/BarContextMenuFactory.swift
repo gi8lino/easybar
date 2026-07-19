@@ -12,6 +12,8 @@ struct BarContextMenuActions {
   let restartLuaRuntime: () -> Void
   /// Persists a theme selection to the active configuration.
   let selectTheme: (String?) -> Void
+  /// Persists the enabled state of one native widget.
+  let setNativeWidgetEnabled: (String, Bool) -> Void
 }
 
 /// Builds the right-click context menu shown by the bar panel.
@@ -46,6 +48,7 @@ final class BarContextMenuFactory: NSObject {
 
     appendItems([versionItem("EasyBar \(BuildInfo.appVersion)")], to: menu)
     appendSection(runtimeMenuItems, to: menu)
+    appendSection([nativeWidgetsMenuItem()], to: menu)
     appendSection([themeMenuItem()], to: menu)
     appendSection(openMenuItems, to: menu)
     appendItems(agentMenuItems, to: menu)
@@ -61,6 +64,34 @@ final class BarContextMenuFactory: NSObject {
   /// Returns whether the developer section should be visible.
   private func shouldShowDeveloperSection(_ shiftRequested: Bool) -> Bool {
     return configStore.snapshot.app.develop || shiftRequested
+  }
+
+  /// Creates the submenu used to enable or disable top-level native widgets.
+  private func nativeWidgetsMenuItem() -> NSMenuItem {
+    let builtins = configStore.snapshot.builtins
+    let widgets: [(key: String, title: String, enabled: Bool)] = [
+      ("spaces", "Spaces", builtins.spaces.enabled),
+      ("inbox", "Inbox", builtins.inbox.enabled),
+      ("battery", "Battery", builtins.battery.enabled),
+      ("wifi", "Wi-Fi", builtins.wifi.enabled),
+      ("calendar", "Calendar", builtins.calendar.enabled),
+      ("volume", "Volume", builtins.volume.enabled),
+      ("front_app", "Front App", builtins.frontApp.enabled),
+      ("aerospace_mode", "AeroSpace Mode", builtins.aerospaceMode.enabled),
+      ("cpu", "CPU", builtins.cpu.enabled),
+      ("time", "Time", builtins.time.placement.enabled),
+      ("date", "Date", builtins.date.placement.enabled),
+    ]
+    let item = NSMenuItem(title: "Native Widgets", action: nil, keyEquivalent: "")
+    let submenu = NSMenu(title: "Native Widgets")
+    for widget in widgets {
+      let toggle = actionItem(title: widget.title, action: #selector(toggleNativeWidget(_:)))
+      toggle.representedObject = widget.key
+      toggle.state = widget.enabled ? .on : .off
+      submenu.addItem(toggle)
+    }
+    item.submenu = submenu
+    return item
   }
 
   /// Returns the runtime control menu items.
@@ -259,6 +290,12 @@ final class BarContextMenuFactory: NSObject {
   @objc private func selectTheme(_ sender: NSMenuItem) {
     guard let name = sender.representedObject as? String else { return }
     actions.selectTheme(name)
+  }
+
+  /// Persists the inverse of the selected widget's current checked state.
+  @objc private func toggleNativeWidget(_ sender: NSMenuItem) {
+    guard let key = sender.representedObject as? String else { return }
+    actions.setNativeWidgetEnabled(key, sender.state != .on)
   }
 
   /// Updates the runtime log level immediately.
