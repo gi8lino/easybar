@@ -98,6 +98,18 @@ local function array_shape(value)
 	return length ~= nil, length
 end
 
+--- Returns whether a value is a dense JSON-array table.
+function M.is_array(value)
+	if type(value) ~= "table" then
+		return false
+	end
+
+	local succeeded, is_array = pcall(function()
+		return select(1, array_shape(value))
+	end)
+	return succeeded and is_array
+end
+
 --- Encodes one Lua value as JSON.
 local function encode_value(value, seen)
 	if value == nil or value == M.null then

@@ -13,6 +13,12 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
       label = "idle",
     })
 
+    assert(not pcall(easybar.inbox.replace, "gitlab", { item = { id = "one" } }))
+    assert(not pcall(easybar.inbox.replace, "gitlab", easybar.json.object()))
+    assert(not pcall(easybar.inbox.configure, "gitlab", {
+      actions = { refresh = { id = "refresh", title = "Refresh" } },
+    }))
+
     easybar.inbox.on_action("  gitlab ", function(event)
       status:set({ label = event.target_widget_id .. ":" .. event.action_id })
     end)

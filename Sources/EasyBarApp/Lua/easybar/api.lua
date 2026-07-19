@@ -622,7 +622,7 @@ function M.new(log, hooks)
 
 		function widget_api.inbox.replace(source, items)
 			source = normalize_inbox_source(source)
-			assert(type(items) == "table", "inbox items must be an array")
+			assert(json_module.is_array(items), "inbox items must be a dense array")
 			hooks.publish_inbox(source, items)
 		end
 
@@ -635,7 +635,7 @@ function M.new(log, hooks)
 			source = normalize_inbox_source(source)
 			assert(type(configuration) == "table", "inbox configuration must be a table")
 			local actions = configuration.actions or {}
-			assert(type(actions) == "table", "inbox configuration actions must be an array")
+			assert(json_module.is_array(actions), "inbox configuration actions must be a dense array")
 			hooks.configure_inbox(source, actions)
 		end
 
