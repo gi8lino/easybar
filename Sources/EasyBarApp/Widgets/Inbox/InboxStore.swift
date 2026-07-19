@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 @MainActor
@@ -12,10 +13,16 @@ final class InboxStore: ObservableObject {
   private var dismissedItemIDs = Set<String>()
   private var configuration: Config.InboxBuiltinConfig
   private var persistence: InboxStatePersistence?
+  private let logger: ProcessLogger
 
-  init(configuration: Config.InboxBuiltinConfig = .default, stateURL: URL? = nil) {
+  init(
+    configuration: Config.InboxBuiltinConfig = .default,
+    stateURL: URL? = nil,
+    logger: ProcessLogger = ProcessLogger(label: "easybar.inbox")
+  ) {
     self.configuration = configuration
-    persistence = stateURL.map(InboxStatePersistence.init(fileURL:))
+    self.logger = logger
+    persistence = stateURL.map { InboxStatePersistence(fileURL: $0, logger: logger) }
     if let persistence {
       let state = persistence.load()
       readItemIDs = state.readItemIDs
@@ -31,7 +38,7 @@ final class InboxStore: ObservableObject {
   func updateStateURL(_ stateURL: URL) {
     guard persistence?.fileURL.standardizedFileURL != stateURL.standardizedFileURL else { return }
     persistState()
-    persistence = InboxStatePersistence(fileURL: stateURL)
+    persistence = InboxStatePersistence(fileURL: stateURL, logger: logger)
     let state = persistence?.load() ?? .init()
     readItemIDs = state.readItemIDs
     unreadItemIDs = state.unreadItemIDs

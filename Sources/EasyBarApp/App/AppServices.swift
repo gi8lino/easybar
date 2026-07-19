@@ -41,7 +41,8 @@ struct AppServices: @unchecked Sendable {
     ).appendingPathComponent("inbox-state.json")
     let inboxStore = InboxStore(
       configuration: bootstrapSnapshot.builtins.inbox,
-      stateURL: inboxStateURL
+      stateURL: inboxStateURL,
+      logger: logger.child("inbox")
     )
     let nativeWiFiStore = NativeWiFiStore(logger: logger.child("wifi_store"))
     let nativeMonthCalendarStore = NativeMonthCalendarStore(logger: logger.child("month_store"))

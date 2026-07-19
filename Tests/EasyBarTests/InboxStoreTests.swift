@@ -1,3 +1,4 @@
+import EasyBarShared
 import XCTest
 
 @testable import EasyBarApp
@@ -218,7 +219,10 @@ final class InboxStoreTests: XCTestCase {
       .appendingPathComponent(UUID().uuidString, isDirectory: true)
     let stateURL = directory.appendingPathComponent("inbox-state.json")
     defer { try? FileManager.default.removeItem(at: directory) }
-    let persistence = InboxStatePersistence(fileURL: stateURL)
+    let persistence = InboxStatePersistence(
+      fileURL: stateURL,
+      logger: ProcessLogger(label: "inbox.persistence.test", minimumLevel: .error)
+    )
     let state = InboxPersistedState(
       readItemIDs: ["GitHub\u{1f}z/item", "GitHub\u{1f}a/item"],
       unreadItemIDs: ["GitLab\u{1f}one"],

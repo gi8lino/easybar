@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 struct InboxPersistedState: Codable, Equatable {
@@ -39,19 +40,38 @@ struct InboxPersistedState: Codable, Equatable {
 
 struct InboxStatePersistence {
   let fileURL: URL
+  let logger: ProcessLogger
 
   func load() -> InboxPersistedState {
-    guard let data = try? Data(contentsOf: fileURL) else { return .init() }
-    return (try? JSONDecoder().decode(InboxPersistedState.self, from: data)) ?? .init()
+    guard FileManager.default.fileExists(atPath: fileURL.path) else { return .init() }
+    do {
+      let data = try Data(contentsOf: fileURL)
+      return try JSONDecoder().decode(InboxPersistedState.self, from: data)
+    } catch {
+      logger.error(
+        "failed to load inbox state",
+        .field("path", fileURL.path),
+        .field("error", error)
+      )
+      return .init()
+    }
   }
 
   func save(_ state: InboxPersistedState) {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-    guard var data = try? encoder.encode(state) else { return }
-    data.append(0x0A)
-    let directory = fileURL.deletingLastPathComponent()
-    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    try? data.write(to: fileURL, options: .atomic)
+    do {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+      var data = try encoder.encode(state)
+      data.append(0x0A)
+      let directory = fileURL.deletingLastPathComponent()
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      try data.write(to: fileURL, options: .atomic)
+    } catch {
+      logger.error(
+        "failed to save inbox state",
+        .field("path", fileURL.path),
+        .field("error", error)
+      )
+    }
   }
 }
