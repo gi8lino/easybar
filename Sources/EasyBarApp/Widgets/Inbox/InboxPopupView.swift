@@ -28,7 +28,12 @@ struct InboxPopupView: View {
               Menu(configuration.source) {
                 ForEach(configuration.actions) { action in
                   Button(action.title) {
-                    emitContextAction(action.id, source: configuration.source)
+                    emitAction(
+                      .inboxContextAction,
+                      actionID: action.id,
+                      source: configuration.source,
+                      targetWidgetID: "builtin_inbox"
+                    )
                   }
                 }
               }
@@ -125,7 +130,12 @@ struct InboxPopupView: View {
           ForEach(actions) { action in
             Button(action.title) {
               store.markRead(presented)
-              emitAction(action.id, for: presented)
+              emitAction(
+                .inboxAction,
+                actionID: action.id,
+                source: presented.source,
+                targetWidgetID: presented.item.id
+              )
             }
             .buttonStyle(.plain)
             .foregroundStyle(color(config.popupActionColorHex))
@@ -164,24 +174,17 @@ struct InboxPopupView: View {
     }
   }
 
-  private func emitAction(_ actionID: String, for item: InboxPresentedItem) {
+  private func emitAction(
+    _ event: WidgetEvent,
+    actionID: String,
+    source: String,
+    targetWidgetID: String
+  ) {
     Task {
       await eventHub.emitWidgetEvent(
-        .inboxAction,
+        event,
         widgetID: "builtin_inbox",
-        targetWidgetID: item.item.id,
-        source: item.source,
-        actionID: actionID
-      )
-    }
-  }
-
-  private func emitContextAction(_ actionID: String, source: String) {
-    Task {
-      await eventHub.emitWidgetEvent(
-        .inboxContextAction,
-        widgetID: "builtin_inbox",
-        targetWidgetID: "builtin_inbox",
+        targetWidgetID: targetWidgetID,
         source: source,
         actionID: actionID
       )
