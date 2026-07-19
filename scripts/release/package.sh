@@ -38,6 +38,8 @@ while [ "$#" -gt 0 ]; do
 done
 
 package_stage="$dist_dir/package"
+calendar_agent_stage="$dist_dir/package-calendar-agent"
+network_agent_stage="$dist_dir/package-network-agent"
 package_zip="$dist_dir/EasyBar-$version.zip"
 calendar_agent_zip="$dist_dir/EasyBarCalendarAgent-$version.zip"
 network_agent_zip="$dist_dir/EasyBarNetworkAgent-$version.zip"
@@ -66,7 +68,13 @@ package_name=$(basename "$package_zip")
 mkdir -p "$package_dir"
 package_zip="$(cd "$package_dir" && pwd)/${package_name}"
 
-rm -rf "$package_stage" "$package_zip" "$calendar_agent_zip" "$network_agent_zip"
+rm -rf \
+  "$package_stage" \
+  "$calendar_agent_stage" \
+  "$network_agent_stage" \
+  "$package_zip" \
+  "$calendar_agent_zip" \
+  "$network_agent_zip"
 mkdir -p "$package_stage"
 
 cp -R "$app_bundle" "$package_stage/EasyBar.app"
@@ -81,13 +89,22 @@ cp "$cli_bin" "$package_stage/easybar"
 
 calendar_agent_zip="$(cd "$(dirname "$calendar_agent_zip")" && pwd)/$(basename "$calendar_agent_zip")"
 network_agent_zip="$(cd "$(dirname "$network_agent_zip")" && pwd)/$(basename "$network_agent_zip")"
+calendar_agent_wrapper="EasyBarCalendarAgent-$version"
+network_agent_wrapper="EasyBarNetworkAgent-$version"
+mkdir -p "$calendar_agent_stage/$calendar_agent_wrapper"
+mkdir -p "$network_agent_stage/$network_agent_wrapper"
+cp -R "$calendar_agent_bundle" "$calendar_agent_stage/$calendar_agent_wrapper/EasyBarCalendarAgent.app"
+cp -R "$network_agent_bundle" "$network_agent_stage/$network_agent_wrapper/EasyBarNetworkAgent.app"
 (
-  cd "$dist_dir"
-  zip -qry "$calendar_agent_zip" "EasyBarCalendarAgent.app"
-  zip -qry "$network_agent_zip" "EasyBarNetworkAgent.app"
+  cd "$calendar_agent_stage"
+  zip -qry "$calendar_agent_zip" "$calendar_agent_wrapper"
+)
+(
+  cd "$network_agent_stage"
+  zip -qry "$network_agent_zip" "$network_agent_wrapper"
 )
 
-rm -rf "$package_stage"
+rm -rf "$package_stage" "$calendar_agent_stage" "$network_agent_stage"
 echo "Created $package_zip"
 echo "Created $calendar_agent_zip"
 echo "Created $network_agent_zip"

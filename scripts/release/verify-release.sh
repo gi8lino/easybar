@@ -81,6 +81,33 @@ require_file "$app_resource_dir/Events/event_catalog.json" "event catalog"
 require_file "$app_resource_dir/ThemeTokens/theme_tokens.json" "theme token catalog"
 require_file "$app_themes_dir/default.toml" "default bundled theme"
 
+verify_agent_archive() {
+  local archive="$1"
+  local wrapper="$2"
+  local app_name="$3"
+  local expected_entry="${wrapper}/${app_name}.app/Contents/MacOS/${app_name}"
+
+  if ! unzip -Z1 "$archive" | grep -Fxq "$expected_entry"; then
+    echo "Agent archive does not contain expected Homebrew layout: ${expected_entry}" >&2
+    unzip -Z1 "$archive" >&2
+    exit 1
+  fi
+
+  if unzip -Z1 "$archive" | grep -Fqx "${app_name}.app/Contents/MacOS/${app_name}"; then
+    echo "Agent archive must use a wrapper directory so Homebrew preserves ${app_name}.app" >&2
+    exit 1
+  fi
+}
+
+verify_agent_archive \
+  "$calendar_agent_zip" \
+  "EasyBarCalendarAgent-$version" \
+  "EasyBarCalendarAgent"
+verify_agent_archive \
+  "$network_agent_zip" \
+  "EasyBarNetworkAgent-$version" \
+  "EasyBarNetworkAgent"
+
 echo "Release package:"
 ls -lh "$package_zip"
 ls -lh "$calendar_agent_zip"
