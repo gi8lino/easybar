@@ -9,7 +9,11 @@ extension ConfigSchemaRegistry {
     .blank,
     section(name: "builtins.inbox.style"),
     entry(key: "icon", value: "\"󰂚\"", description: "Icon shown when unread inbox messages exist."),
-    entry(key: "text_color", value: "\"theme.accent\"", description: "Color of the active icon and unread count."),
+    entry(
+      key: "text_color", value: "\"theme.text_secondary\"",
+      description: "Fallback color used by the active icon when icon_color is omitted."),
+    entry(key: "icon_color", value: "\"theme.text_secondary\"", description: "Color of the active inbox icon."),
+    entry(key: "unread_count_color", value: "\"theme.accent\"", description: "Color of the unread count."),
     entry(
       key: "background_color", value: "\"theme.transparent\"", description: "Background color of the inbox anchor."),
     entry(key: "border_color", value: "\"theme.transparent\"", description: "Border color of the inbox anchor."),

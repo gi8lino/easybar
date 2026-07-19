@@ -247,20 +247,22 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.inbox.style`
 
-| Key                | Default               | Description                                      |
-| ------------------ | --------------------- | ------------------------------------------------ |
-| `icon`             | `"󰂚"`                 | Icon shown when unread inbox messages exist.     |
-| `text_color`       | `"theme.accent"`      | Color of the active icon and unread count.       |
-| `background_color` | `"theme.transparent"` | Background color of the inbox anchor.            |
-| `border_color`     | `"theme.transparent"` | Border color of the inbox anchor.                |
-| `border_width`     | `0`                   | Border width of the inbox anchor.                |
-| `corner_radius`    | `8`                   | Corner radius of the inbox anchor.               |
-| `margin_x`         | `0`                   | Horizontal outer margin around the inbox anchor. |
-| `margin_y`         | `0`                   | Vertical outer margin around the inbox anchor.   |
-| `padding_x`        | `7`                   | Horizontal inner padding of the inbox anchor.    |
-| `padding_y`        | `3`                   | Vertical inner padding of the inbox anchor.      |
-| `spacing`          | `4`                   | Gap between the inbox icon and unread count.     |
-| `opacity`          | `1`                   | Overall opacity of the inbox anchor.             |
+| Key                  | Default                  | Description                                                        |
+| -------------------- | ------------------------ | ------------------------------------------------------------------ |
+| `icon`               | `"󰂚"`                    | Icon shown when unread inbox messages exist.                       |
+| `text_color`         | `"theme.text_secondary"` | Fallback color used by the active icon when icon_color is omitted. |
+| `icon_color`         | `"theme.text_secondary"` | Color of the active inbox icon.                                    |
+| `unread_count_color` | `"theme.accent"`         | Color of the unread count.                                         |
+| `background_color`   | `"theme.transparent"`    | Background color of the inbox anchor.                              |
+| `border_color`       | `"theme.transparent"`    | Border color of the inbox anchor.                                  |
+| `border_width`       | `0`                      | Border width of the inbox anchor.                                  |
+| `corner_radius`      | `8`                      | Corner radius of the inbox anchor.                                 |
+| `margin_x`           | `0`                      | Horizontal outer margin around the inbox anchor.                   |
+| `margin_y`           | `0`                      | Vertical outer margin around the inbox anchor.                     |
+| `padding_x`          | `7`                      | Horizontal inner padding of the inbox anchor.                      |
+| `padding_y`          | `3`                      | Vertical inner padding of the inbox anchor.                        |
+| `spacing`            | `4`                      | Gap between the inbox icon and unread count.                       |
+| `opacity`            | `1`                      | Overall opacity of the inbox anchor.                               |
 
 ## `builtins.inbox.colors`
 

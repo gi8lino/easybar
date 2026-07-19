@@ -41,8 +41,8 @@ final class InboxNativeWidget: NativeWidget {
     )
     let inactive = !hasUnread && config.useInactiveStyleWhenRead
     node.icon = inactive ? config.inactiveIcon : config.style.icon
-    node.iconColor = inactive ? config.inactiveColorHex : config.style.textColorHex
-    node.labelColor = node.iconColor
+    node.iconColor = inactive ? config.inactiveColorHex : config.iconColorHex
+    node.labelColor = inactive ? config.inactiveColorHex : config.unreadCountColorHex
     node.visible = shouldShow
     applyNodes([node])
   }

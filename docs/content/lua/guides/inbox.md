@@ -112,7 +112,9 @@ order = 5
 
 [builtins.inbox.style]
 icon = "󰂚"
-text_color = "theme.accent"
+text_color = "theme.text_secondary"
+icon_color = "theme.text_secondary"
+unread_count_color = "theme.accent"
 
 [builtins.inbox.colors]
 background = "theme.background"

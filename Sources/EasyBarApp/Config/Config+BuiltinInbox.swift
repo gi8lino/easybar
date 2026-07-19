@@ -8,6 +8,8 @@ extension Config {
   struct InboxBuiltinConfig: @unchecked Sendable {
     var placement: BuiltinWidgetPlacement
     var style: BuiltinWidgetStyle
+    var iconColorHex: String?
+    var unreadCountColorHex: String?
     var groupBy: InboxGroupMode
     var sortBy: InboxSortMode
     var sortDescending: Bool
@@ -38,7 +40,7 @@ extension Config {
       placement: .init(enabled: true, position: .right, order: 5),
       style: .init(
         icon: "󰂚",
-        textColorHex: "theme.accent",
+        textColorHex: "theme.text_secondary",
         backgroundColorHex: "theme.transparent",
         borderColorHex: "theme.transparent",
         borderWidth: 0,
@@ -50,6 +52,8 @@ extension Config {
         spacing: 4,
         opacity: 1
       ),
+      iconColorHex: "theme.text_secondary",
+      unreadCountColorHex: "theme.accent",
       groupBy: .source,
       sortBy: .timestamp,
       sortDescending: true,
@@ -79,13 +83,17 @@ extension Config {
   func parseInboxBuiltin(from builtins: ConfigReader) throws {
     guard let inbox = try builtins.optionalSection("inbox") else { return }
     let placement = try parseBuiltinPlacement(reader: inbox, fallback: builtinInbox.placement)
-    let style = try parseBuiltinStyle(reader: try inbox.section("style"), fallback: builtinInbox.style)
+    let styleReader = try inbox.section("style")
+    let style = try parseBuiltinStyle(reader: styleReader, fallback: builtinInbox.style)
     let content = try inbox.section("content")
     let colors = try inbox.optionalSection("colors")
 
     builtinInbox = InboxBuiltinConfig(
       placement: placement,
       style: style,
+      iconColorHex: try styleReader.optionalColor("icon_color", fallback: style.textColorHex),
+      unreadCountColorHex: try styleReader.optionalColor(
+        "unread_count_color", fallback: builtinInbox.unreadCountColorHex),
       groupBy: try content.enum("group_by", fallback: builtinInbox.groupBy),
       sortBy: try content.enum("sort_by", fallback: builtinInbox.sortBy),
       sortDescending: try content.bool("sort_descending", fallback: builtinInbox.sortDescending),

@@ -18,6 +18,8 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
 
       [builtins.inbox.style]
       icon = "IN"
+      icon_color = "#eeeeee"
+      unread_count_color = "#dddddd"
 
       [builtins.inbox.colors]
       background = "#010101"
@@ -54,6 +56,8 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertEqual(config.builtinInbox.placement.position, .left)
     XCTAssertEqual(config.builtinInbox.placement.order, 7)
     XCTAssertEqual(config.builtinInbox.style.icon, "IN")
+    XCTAssertEqual(config.builtinInbox.iconColorHex, "#eeeeee")
+    XCTAssertEqual(config.builtinInbox.unreadCountColorHex, "#dddddd")
     XCTAssertEqual(config.builtinInbox.groupBy, .date)
     XCTAssertEqual(config.builtinInbox.sortBy, .severity)
     XCTAssertFalse(config.builtinInbox.sortDescending)

@@ -112,6 +112,9 @@ inactive_color = "theme.muted"
 
 The popup itself can be recolored under `[builtins.inbox.colors]`, including its background,
 border, title, body, muted labels, item background, actions, and all four severity indicators.
+The active bell and unread counter can be colored independently with `icon_color` and
+`unread_count_color` under `[builtins.inbox.style]`. `text_color` remains the icon fallback when
+`icon_color` is omitted.
 The popup header exposes publisher-provided source submenus through its actions button. Set
 `show_source_actions = false` to hide that button.
 
