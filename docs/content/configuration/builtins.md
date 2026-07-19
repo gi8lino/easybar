@@ -97,6 +97,10 @@ The generated [Configuration Reference](reference.md) lists every key and defaul
 | Wi-Fi    | [Wi-Fi](builtins/wifi.md)        |
 | Calendar | [Calendar](builtins/calendar.md) |
 
+The battery anchor context menu changes its display mode or color mode and writes the selection to
+`config.toml` immediately. Native context-menu persistence preserves comments, whitespace, and
+unrelated settings.
+
 ## When to switch to Lua
 
 Stay with built-ins when the widget already exists and you mainly need native placement, grouping, theming, or styling.

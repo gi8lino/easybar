@@ -28,7 +28,7 @@ my-theme -> my-theme.toml
 
 `themes_dir` is the custom theme directory.
 
-## Try themes without editing config
+## Switch themes from the menus
 
 You can switch themes live from either EasyBar menu:
 
@@ -37,9 +37,8 @@ right-click the bar -> Theme -> <theme name>
 menu bar icon      -> Theme -> <theme name>
 ```
 
-This applies a session-only override and does not change `config.toml`. The override remains active
-when EasyBar reloads the config. Choose `Use Configured Theme (<name>)` to clear it and return to the
-theme selected in `config.toml`. Quitting EasyBar also clears the override.
+Selecting a theme immediately updates `theme.name` in `config.toml` and reloads EasyBar. Comments,
+whitespace, and unrelated settings are preserved.
 
 The menus list themes bundled with EasyBar and `.toml` themes found in the configured `themes_dir`.
 

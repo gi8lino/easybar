@@ -1,7 +1,7 @@
 import EasyBarCalendarConfig
 import Foundation
 
-/// Session actions exposed by the native calendar context menu.
+/// Persistent actions exposed by the native calendar context menu.
 enum CalendarContextMenuAction: Equatable {
   case setPopupMode(CalendarPopupMode)
   case setAnchorLayout(CalendarAnchorLayout)
@@ -10,7 +10,6 @@ enum CalendarContextMenuAction: Equatable {
   case toggleBirthdayOption(String)
   case refresh
   case openCalendarSettings
-  case resetToConfig
 
   init?(id: String) {
     if let value = id.removingPrefix("calendar.popup."),
@@ -47,7 +46,6 @@ enum CalendarContextMenuAction: Equatable {
     switch id {
     case "calendar.refresh": self = .refresh
     case "calendar.open_settings": self = .openCalendarSettings
-    case "calendar.reset_to_config": self = .resetToConfig
     default: return nil
     }
   }
@@ -55,10 +53,7 @@ enum CalendarContextMenuAction: Equatable {
 
 /// Builds the calendar menu from its effective session configuration.
 enum CalendarContextMenu {
-  static func make(
-    config: Config.CalendarBuiltinConfig,
-    hasSessionOverrides: Bool
-  ) -> [WidgetContextMenuItem] {
+  static func make(config: Config.CalendarBuiltinConfig) -> [WidgetContextMenuItem] {
     let popupModes = CalendarPopupMode.allCases.map { mode in
       WidgetContextMenuItem(
         id: "calendar.popup.\(mode.rawValue)",
@@ -98,12 +93,6 @@ enum CalendarContextMenu {
       WidgetContextMenuItem(separator: true),
       WidgetContextMenuItem(id: "calendar.refresh", title: "Refresh"),
       WidgetContextMenuItem(id: "calendar.open_settings", title: "Open Calendar Settings"),
-      WidgetContextMenuItem(separator: true),
-      WidgetContextMenuItem(
-        id: "calendar.reset_to_config",
-        title: "Reset to Config",
-        enabled: hasSessionOverrides
-      ),
     ]
   }
 
@@ -144,6 +133,7 @@ enum CalendarContextMenu {
 struct CalendarAppointmentMenuOption {
   let id: String
   let title: String
+  let configKey: String
   let keyPath: WritableKeyPath<CalendarBuiltinConfig.Appointments, Bool>
 
   func value(_ appointments: CalendarBuiltinConfig.Appointments) -> Bool {
@@ -154,6 +144,7 @@ struct CalendarAppointmentMenuOption {
 struct CalendarBirthdayMenuOption {
   let id: String
   let title: String
+  let configKey: String
   let keyPath: WritableKeyPath<CalendarBuiltinConfig.Birthdays, Bool>
 
   func value(_ birthdays: CalendarBuiltinConfig.Birthdays) -> Bool {
@@ -162,17 +153,29 @@ struct CalendarBirthdayMenuOption {
 }
 
 nonisolated(unsafe) let appointmentOptions: [CalendarAppointmentMenuOption] = [
-  .init(id: "calendar_name", title: "Calendar Name", keyPath: \.showCalendarName),
-  .init(id: "all_day_label", title: "All-day Label", keyPath: \.showAllDayLabel),
-  .init(id: "location", title: "Location", keyPath: \.showLocation),
-  .init(id: "travel_time", title: "Travel Time", keyPath: \.showTravelTime),
-  .init(id: "end_time", title: "End Time", keyPath: \.showEndTime),
-  .init(id: "alert_icon", title: "Alert Icon", keyPath: \.showAlertIcon),
+  .init(
+    id: "calendar_name", title: "Calendar Name", configKey: "show_calendar_name",
+    keyPath: \.showCalendarName),
+  .init(
+    id: "all_day_label", title: "All-day Label", configKey: "show_all_day_label",
+    keyPath: \.showAllDayLabel),
+  .init(id: "location", title: "Location", configKey: "show_location", keyPath: \.showLocation),
+  .init(
+    id: "travel_time", title: "Travel Time", configKey: "show_travel_time",
+    keyPath: \.showTravelTime),
+  .init(id: "end_time", title: "End Time", configKey: "show_end_time", keyPath: \.showEndTime),
+  .init(
+    id: "alert_icon", title: "Alert Icon", configKey: "show_alert_icon",
+    keyPath: \.showAlertIcon),
 ]
 
 nonisolated(unsafe) let birthdayOptions: [CalendarBirthdayMenuOption] = [
-  .init(id: "show_birthdays", title: "Show Birthdays", keyPath: \.showBirthdays),
-  .init(id: "show_age", title: "Show Age", keyPath: \.birthdaysShowAge),
+  .init(
+    id: "show_birthdays", title: "Show Birthdays", configKey: "show_birthdays",
+    keyPath: \.showBirthdays),
+  .init(
+    id: "show_age", title: "Show Age", configKey: "birthdays_show_age",
+    keyPath: \.birthdaysShowAge),
 ]
 
 extension String {

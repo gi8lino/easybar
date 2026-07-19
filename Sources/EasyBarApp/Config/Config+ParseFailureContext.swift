@@ -1,16 +1,16 @@
+import EasyBarConfigParsing
 import Foundation
-import TOMLKit
 
 extension Config {
 
-  /// Converts a TOMLKit parse error into a user-facing config error.
+  /// Converts a lossless parser error into a user-facing config error.
   func makeParseFailure(
     from error: TOMLParseError,
     text: String,
     sourceDescription: String? = nil
   ) -> ConfigError {
-    let line = positive(Int(error.source.begin.line))
-    let column = positive(Int(error.source.begin.column))
+    let line = error.line
+    let column = error.column
     let lines = text.components(separatedBy: .newlines)
     let lineText = sourceLine(in: lines, line: line)
 
@@ -20,22 +20,13 @@ extension Config {
     let value = valueText(from: lineText)
 
     return ConfigError.parseFailure(
-      message: error.description,
+      message: error.message,
       sourceDescription: sourceDescription,
       line: line,
       column: column,
       item: item,
       value: value
     )
-  }
-
-  /// Returns a positive integer or nil.
-  private func positive(_ value: Int) -> Int? {
-    guard value > 0 else {
-      return nil
-    }
-
-    return value
   }
 
   /// Returns one source line for a 1-based line number.

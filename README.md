@@ -11,7 +11,8 @@ It combines native built-in widgets with custom Lua widgets and is designed for 
 - Native macOS bar window built with SwiftUI
 - Configurable native widgets for spaces, applications, system status, calendar, and more
 - Object-style Lua widgets with events, timers, asynchronous commands, popups, and groups
-- Native right-click context menus for Lua widgets
+- Native right-click context menus for built-in and Lua widgets
+- Immediate, comment-preserving configuration updates from native context menus
 - Shared native inbox with unread state, grouping, persistence, Markdown, and publisher actions
 - File-based themes with bundled and custom TOML palettes
 - AeroSpace integration for spaces, focused app state, and layout mode state
@@ -95,11 +96,18 @@ EasyBar first looks for a custom theme in `themes_dir`, then falls back to bundl
 
 ### Install development tools
 
-Install Lua and StyLua before running the contributor checks:
+Install Lua, StyLua, and rustup before running the contributor checks:
 
 ```bash
-brew install lua stylua
+brew install lua stylua rustup
+export PATH="$(brew --prefix rustup)/bin:$PATH"
+rustup default stable
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
 ```
+
+EasyBar links a small Rust `toml_edit` bridge into every executable so configuration parsing and
+comment-preserving updates use the same TOML implementation. Both Rust targets are required for
+universal release builds; `make test` only builds the selected local architecture.
 
 The repository-level `.stylua.toml` is the source of truth for Lua formatting. `make fmt` and
 `make lint` use the `stylua` executable from `PATH`.

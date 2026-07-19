@@ -155,6 +155,8 @@ lipo_universal_outputs() {
 
 write_build_version
 
+scripts/build/build-toml-library.sh "$configuration" "$arch"
+
 if [ "$arch" = "universal" ]; then
   build_arch arm64
   build_arch x86_64

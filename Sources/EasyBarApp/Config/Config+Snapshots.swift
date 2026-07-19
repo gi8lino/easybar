@@ -36,8 +36,6 @@ extension Config {
       ),
       theme: .init(
         name: themeSection.name,
-        configuredName: configuredThemeName,
-        sessionOverrideName: sessionThemeOverrideName,
         themesDir: themeSection.themesDir,
         colors: themeSection.colors
       ),
@@ -105,8 +103,6 @@ extension Config {
 
   /// Restores the theme config snapshot.
   func applyThemeSnapshot(_ snapshot: ConfigSnapshot) {
-    configuredThemeName = snapshot.theme.configuredName
-    sessionThemeOverrideName = snapshot.theme.sessionOverrideName
     themeSection = .init(
       name: snapshot.theme.name,
       themesDir: snapshot.theme.themesDir,

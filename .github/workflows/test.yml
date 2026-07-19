@@ -94,7 +94,9 @@ jobs:
         shell: bash
         env:
           CI_COMMAND_TIMEOUT_MINUTES: ${{ inputs.test_timeout_minutes }}
-        run: scripts/ci/run-swift-tests.sh test.log swift test
+        run: |
+          scripts/build/build-toml-library.sh debug "$(uname -m)"
+          scripts/ci/run-swift-tests.sh test.log swift test
 
       - name: Check strict concurrency
         shell: bash

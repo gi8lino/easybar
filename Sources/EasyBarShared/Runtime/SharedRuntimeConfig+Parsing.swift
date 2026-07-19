@@ -1,6 +1,5 @@
 import EasyBarConfigParsing
 import Foundation
-import TOMLKit
 
 /// Returns the resolved EasyBar config path, honoring EASYBAR_CONFIG_PATH.
 func resolvedConfigPath() -> String {

@@ -19,7 +19,7 @@ final class ConfigSnapshotStore: ObservableObject {
     self.snapshot = snapshot
   }
 
-  /// Applies one session-only calendar override for native calendar popup views.
+  /// Applies a calendar configuration written by its native context menu.
   func applyCalendarSessionOverride(_ calendar: Config.CalendarBuiltinConfig) {
     let builtins = snapshot.builtins
     snapshot = ConfigSnapshot(
@@ -40,6 +40,60 @@ final class ConfigSnapshotStore: ObservableObject {
         volume: builtins.volume,
         wifi: builtins.wifi,
         calendar: calendar,
+        time: builtins.time,
+        date: builtins.date
+      )
+    )
+  }
+
+  /// Applies an inbox configuration written by its native context menu.
+  func applyInboxOverride(_ inbox: Config.InboxBuiltinConfig) {
+    let builtins = snapshot.builtins
+    snapshot = ConfigSnapshot(
+      app: snapshot.app,
+      logging: snapshot.logging,
+      calendarAgent: snapshot.calendarAgent,
+      networkAgent: snapshot.networkAgent,
+      theme: snapshot.theme,
+      bar: snapshot.bar,
+      builtins: .init(
+        inbox: inbox,
+        cpu: builtins.cpu,
+        battery: builtins.battery,
+        groups: builtins.groups,
+        spaces: builtins.spaces,
+        frontApp: builtins.frontApp,
+        aerospaceMode: builtins.aerospaceMode,
+        volume: builtins.volume,
+        wifi: builtins.wifi,
+        calendar: builtins.calendar,
+        time: builtins.time,
+        date: builtins.date
+      )
+    )
+  }
+
+  /// Applies a battery configuration written by its native context menu.
+  func applyBatteryOverride(_ battery: Config.BatteryBuiltinConfig) {
+    let builtins = snapshot.builtins
+    snapshot = ConfigSnapshot(
+      app: snapshot.app,
+      logging: snapshot.logging,
+      calendarAgent: snapshot.calendarAgent,
+      networkAgent: snapshot.networkAgent,
+      theme: snapshot.theme,
+      bar: snapshot.bar,
+      builtins: .init(
+        inbox: builtins.inbox,
+        cpu: builtins.cpu,
+        battery: battery,
+        groups: builtins.groups,
+        spaces: builtins.spaces,
+        frontApp: builtins.frontApp,
+        aerospaceMode: builtins.aerospaceMode,
+        volume: builtins.volume,
+        wifi: builtins.wifi,
+        calendar: builtins.calendar,
         time: builtins.time,
         date: builtins.date
       )

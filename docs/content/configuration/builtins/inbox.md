@@ -39,3 +39,9 @@ When there are no unread messages, `use_inactive_style_when_read` selects `inact
 The popup header exposes publisher-provided source submenus through its actions button. Set `show_source_actions = false` to hide these actions while retaining the inbox-wide controls.
 
 See [Native Inbox for Lua](../../lua/guides/inbox.md) for publishing snapshots, limited Markdown, item actions, source actions, persistence, and dismissal behavior.
+
+## Context menu
+
+Right-click the inbox anchor to change grouping, sorting, unread-count visibility, inactive styling,
+empty-state visibility, or source-action visibility. Each change is written to `config.toml`
+immediately while preserving comments, whitespace, and unrelated settings.

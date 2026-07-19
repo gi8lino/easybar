@@ -1,4 +1,5 @@
 import AppKit
+import EasyBarConfigParsing
 import EasyBarShared
 import Foundation
 
@@ -15,13 +16,13 @@ final class WiFiNativeWidget: NativeWidget {
     ]
   }
 
-  private let config: Config.WiFiBuiltinConfig
+  private var configuredConfig: Config.WiFiBuiltinConfig
+  private let configPersistence: ConfigPersistence
   private let networkAgentConfig: ConfigSnapshot.NetworkAgent
   private let networkAgentClient: NetworkAgentClient
   private let nativeWiFiStore: NativeWiFiStore
   private let eventObserver: EasyBarEventObserver
   private var sessionConfig: Config.WiFiBuiltinConfig
-  private var hasSessionOverrides = false
   private var isHovered = false
   private var started = false
   private var startedNetworkAgent = false
@@ -46,9 +47,11 @@ final class WiFiNativeWidget: NativeWidget {
     widgetStore: WidgetStore,
     networkAgentClient: NetworkAgentClient,
     nativeWiFiStore: NativeWiFiStore,
+    configPersistence: ConfigPersistence,
     eventHub: EventHub
   ) {
-    self.config = config
+    self.configuredConfig = config
+    self.configPersistence = configPersistence
     self.networkAgentConfig = networkAgentConfig
     self.widgetStore = widgetStore
     self.networkAgentClient = networkAgentClient
@@ -76,7 +79,7 @@ final class WiFiNativeWidget: NativeWidget {
       self.handleWidgetEvent(payload)
     }
 
-    startedNetworkAgent = config.enabled && networkAgentConfig.enabled
+    startedNetworkAgent = configuredConfig.enabled && networkAgentConfig.enabled
 
     guard startedNetworkAgent else {
       publish()
@@ -110,10 +113,7 @@ final class WiFiNativeWidget: NativeWidget {
     let snapshot = makeSnapshot()
     var nodes = renderer.makeNodes(snapshot: snapshot)
     if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
-      nodes[rootIndex].contextMenu = WiFiContextMenu.make(
-        config: sessionConfig,
-        hasSessionOverrides: hasSessionOverrides
-      )
+      nodes[rootIndex].contextMenu = WiFiContextMenu.make(config: sessionConfig)
     }
     applyNodes(nodes)
   }
@@ -169,15 +169,14 @@ extension WiFiNativeWidget {
     }
   }
 
-  /// Applies one session-only context-menu action.
+  /// Applies one persistent context-menu action.
   private func handleContextMenuAction(_ actionID: String) {
     guard let action = WiFiContextMenuAction(id: actionID) else { return }
 
     switch action {
     case .setMode(let mode):
       sessionConfig.mode = mode
-      hasSessionOverrides = true
-      publish()
+      persistConfiguration()
     case .toggleField(let configKey):
       guard
         let field = BuiltinWiFiFieldCatalog.fields.first(where: {
@@ -185,17 +184,36 @@ extension WiFiNativeWidget {
         })
       else { return }
       sessionConfig.fields[keyPath: field.keyPath].toggle()
-      hasSessionOverrides = true
-      publish()
+      persistConfiguration()
     case .refresh:
       networkAgentClient.refresh()
     case .openNetworkSettings:
       openNetworkSettings()
-    case .resetToConfig:
-      sessionConfig = config
-      hasSessionOverrides = false
-      publish()
     }
+  }
+
+  private func persistConfiguration() {
+    var edits = [
+      TOMLEdit(
+        path: ["builtins", "wifi", "content", "mode"],
+        value: .string(sessionConfig.mode.rawValue)
+      )
+    ]
+    edits.append(
+      contentsOf: BuiltinWiFiFieldCatalog.fields.map { field in
+        TOMLEdit(
+          path: ["builtins", "wifi", "fields", field.configKey],
+          value: .bool(sessionConfig.fields[keyPath: field.keyPath])
+        )
+      }
+    )
+    guard configPersistence.apply(edits) else {
+      sessionConfig = configuredConfig
+      publish()
+      return
+    }
+    configuredConfig = sessionConfig
+    publish()
   }
 
   /// Opens the macOS Network settings pane.

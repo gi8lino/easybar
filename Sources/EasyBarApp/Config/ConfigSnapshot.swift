@@ -48,10 +48,6 @@ struct ConfigSnapshot: @unchecked Sendable {
   struct Theme {
     /// Theme currently applied to the UI.
     let name: String
-    /// Theme selected by config.toml.
-    let configuredName: String
-    /// Temporary in-memory theme override, when active.
-    let sessionOverrideName: String?
     let themesDir: String
     let colors: Config.ThemeColors
   }

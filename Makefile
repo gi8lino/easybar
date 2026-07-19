@@ -124,10 +124,10 @@ endif
 .PHONY: help all \
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         build bundle package release app cli validate-config \
-        fmt fmt-all fmt-swift fmt-lua fmt-markdown \
-        lint lint-swift lint-lua test \
+        fmt fmt-all fmt-swift fmt-lua fmt-rust fmt-markdown \
+        lint lint-swift lint-lua lint-rust test \
         clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons \
-        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli \
+        build-app build-lua-runtime build-calendar-agent build-network-agent build-cli build-toml-debug build-toml-release \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
         print-arch print-run-arch print-version print-local-version print-latest-tag print-package-sha256 \
@@ -188,9 +188,9 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 
 ##@ Formatting
 
-fmt: fmt-swift fmt-lua ## Format Swift and Lua source files.
+fmt: fmt-swift fmt-lua fmt-rust ## Format Swift, Lua, and Rust source files.
 
-fmt-all: fmt-swift fmt-lua fmt-markdown ## Format Swift, Lua, and Markdown files.
+fmt-all: fmt-swift fmt-lua fmt-rust fmt-markdown ## Format Swift, Lua, Rust, and Markdown files.
 
 fmt-swift: ## Format all Swift source files in the repository.
 	@swift format format --in-place --recursive --parallel .
@@ -198,10 +198,13 @@ fmt-swift: ## Format all Swift source files in the repository.
 fmt-lua: ## Format all Lua source files in the repository.
 	@$(STYLUA) .
 
+fmt-rust: ## Format the native TOML bridge.
+	@cargo fmt --manifest-path Rust/EasyBarTOML/Cargo.toml
+
 fmt-markdown: ## Format Markdown files with Prettier.
 	@$(PRETTIER) --write "**/*.md"
 
-lint: lint-swift lint-lua ## Check Swift and Lua formatting without modifying files.
+lint: lint-swift lint-lua lint-rust ## Check Swift, Lua, and Rust formatting without modifying files.
 
 lint-swift: ## Check Swift source formatting without modifying files.
 	@swift format lint --recursive .
@@ -209,7 +212,17 @@ lint-swift: ## Check Swift source formatting without modifying files.
 lint-lua: ## Check Lua source formatting without modifying files.
 	@$(STYLUA) --check .
 
-test: generate-swift-env ## Run the Swift test suite without regenerating checked-in artifacts.
+lint-rust: ## Check Rust formatting without modifying files.
+	@cargo fmt --manifest-path Rust/EasyBarTOML/Cargo.toml --check
+
+
+build-toml-debug: ## Build the lossless TOML library for local Swift builds.
+	@scripts/build/build-toml-library.sh debug "$(RUN_ARCH)"
+
+build-toml-release: ## Build the lossless TOML library for release Swift builds.
+	@scripts/build/build-toml-library.sh release "$(ARCH)"
+
+test: generate-swift-env build-toml-debug ## Run the Swift test suite without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: ## Build the app, agent bundles, and CLI into dist/.

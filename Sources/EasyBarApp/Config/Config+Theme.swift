@@ -1,6 +1,6 @@
 import EasyBarCalendarConfig
+import EasyBarConfigParsing
 import Foundation
-import TOMLKit
 
 extension Config {
 
@@ -10,9 +10,7 @@ extension Config {
     let theme = try configReader(table: toml, path: "").section("theme")
     let colorsReader = try theme.section("colors")
 
-    let configuredName = try theme.string("name", fallback: currentTheme.name)
-    configuredThemeName = normalizedThemeName(configuredName)
-    let selectedName = sessionThemeOverrideName ?? configuredName
+    let selectedName = try theme.string("name", fallback: currentTheme.name)
     let configuredThemesDir = try theme.optionalExpandedPath("themes_dir")
     let resolvedThemesDir = configuredThemesDir ?? currentTheme.themesDir
     let fileColors = try loadThemeColors(

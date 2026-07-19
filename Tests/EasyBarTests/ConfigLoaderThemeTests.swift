@@ -1,4 +1,5 @@
 import Darwin
+import EasyBarConfigParsing
 import EasyBarShared
 import Foundation
 import XCTest
@@ -141,8 +142,9 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     }
   }
 
-  /// Verifies that menu-selected themes remain session-only and survive config reloads.
-  func testSessionThemeOverridePersistsUntilCleared() async throws {
+  /// Verifies that a menu-style theme edit survives a config reload.
+  @MainActor
+  func testPersistedThemeSelectionSurvivesReload() async throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("config.toml")
     let themesDirectoryURL = tempDirectoryURL.appendingPathComponent("themes")
     try writeConfig(
@@ -159,26 +161,20 @@ final class ConfigLoaderThemeTests: ConfigLoaderTestCase {
     let initial = await manager.loadInitialConfig()
     XCTAssertTrue(initial.succeeded)
     XCTAssertEqual(initial.snapshot.theme.name, "default")
-    XCTAssertNil(initial.snapshot.theme.sessionOverrideName)
 
-    let overridden = await manager.reload(
-      themeOverrideName: "nord",
-      updateThemeOverride: true
+    let persistence = ConfigPersistence(
+      configPath: configFileURL.path,
+      logger: ProcessLogger(label: "theme-persistence-test")
     )
-    XCTAssertTrue(overridden.succeeded)
-    XCTAssertEqual(overridden.snapshot.theme.name, "nord")
-    XCTAssertEqual(overridden.snapshot.theme.configuredName, "default")
-    XCTAssertEqual(overridden.snapshot.theme.sessionOverrideName, "nord")
+    XCTAssertTrue(
+      persistence.apply([
+        TOMLEdit(path: ["theme", "name"], value: .string("nord"))
+      ])
+    )
 
     let reloaded = await manager.reload()
     XCTAssertTrue(reloaded.succeeded)
     XCTAssertEqual(reloaded.snapshot.theme.name, "nord")
-    XCTAssertEqual(reloaded.snapshot.theme.sessionOverrideName, "nord")
-
-    let cleared = await manager.reload(themeOverrideName: nil, updateThemeOverride: true)
-    XCTAssertTrue(cleared.succeeded)
-    XCTAssertEqual(cleared.snapshot.theme.name, "default")
-    XCTAssertNil(cleared.snapshot.theme.sessionOverrideName)
   }
 
   /// Verifies that invalid config color values fail during validation instead of rendering later.

@@ -21,7 +21,7 @@ final class BarWindowController: NSWindowController {
   var onReloadConfig: (() -> Void)?
   /// Callback for Lua runtime restart menu actions.
   var onRestartLuaRuntime: (() -> Void)?
-  /// Callback for session-only theme selection.
+  /// Callback for persistent theme selection.
   var onSelectTheme: ((String?) -> Void)?
 
   /// Logger used for window diagnostics.

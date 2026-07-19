@@ -27,10 +27,12 @@ let package = Package(
     .executable(name: "EasyBarNetworkAgent", targets: ["EasyBarNetworkAgent"]),
     .executable(name: "EasyBarGenerateConfig", targets: ["EasyBarGenerateConfig"]),
   ],
-  dependencies: [
-    .package(url: "https://github.com/LebJe/TOMLKit", from: "0.6.0")
-  ],
+  dependencies: [],
   targets: [
+    .systemLibrary(
+      name: "CEasyBarTOML",
+      path: "Sources/CEasyBarTOML"
+    ),
     .executableTarget(
       name: "EasyBarGenerateBuildInfo",
       path: "Sources/EasyBarGenerateBuildInfo",
@@ -52,8 +54,7 @@ let package = Package(
     .target(
       name: "EasyBarShared",
       dependencies: [
-        "EasyBarConfigParsing",
-        .product(name: "TOMLKit", package: "TOMLKit"),
+        "EasyBarConfigParsing"
       ],
       path: "Sources/EasyBarShared",
       swiftSettings: strictConcurrencySettings,
@@ -64,10 +65,13 @@ let package = Package(
     .target(
       name: "EasyBarConfigParsing",
       dependencies: [
-        .product(name: "TOMLKit", package: "TOMLKit")
+        "CEasyBarTOML"
       ],
       path: "Sources/EasyBarConfigParsing",
-      swiftSettings: strictConcurrencySettings
+      swiftSettings: strictConcurrencySettings,
+      linkerSettings: [
+        .unsafeFlags(["-L", ".build/easybar-toml", "-leasybar_toml"])
+      ]
     ),
     .target(
       name: "EasyBarCalendarCore",
@@ -99,7 +103,6 @@ let package = Package(
       dependencies: [
         "EasyBarShared",
         "EasyBarConfigParsing",
-        .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarCalendarConfig",
       swiftSettings: strictConcurrencySettings
@@ -121,7 +124,6 @@ let package = Package(
         "EasyBarCalendarConfig",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
-        .product(name: "TOMLKit", package: "TOMLKit"),
       ],
       path: "Sources/EasyBarApp",
       exclude: [

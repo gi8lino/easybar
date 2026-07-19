@@ -258,10 +258,6 @@ final class Config: ObservableObject, @unchecked Sendable {
   var registeredDirectories: [String: RequiredDirectory] = [:]
   /// Non-fatal warnings produced while parsing the current config.
   var configWarnings: [String] = []
-  /// Theme name read from config.toml before any session override is applied.
-  var configuredThemeName = ThemeSection.default.name
-  /// Optional in-memory theme selection that takes precedence over config.toml.
-  var sessionThemeOverrideName: String?
 
   private init(configPathOverride: String? = nil) {
     self.configPathOverride = expandedPath(configPathOverride)

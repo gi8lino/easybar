@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 /// Small explicit TOML reader for default-backed app configuration.
 public struct TOMLConfigReader<Failure: Error> {
@@ -386,7 +385,7 @@ public struct TOMLConfigReader<Failure: Error> {
     return String(value)
   }
 
-  private func requiredString(_ value: any TOMLValueConvertible, path: String) throws -> String {
+  private func requiredString(_ value: TOMLValue, path: String) throws -> String {
     if let string = value.string {
       return string
     }
@@ -394,7 +393,7 @@ public struct TOMLConfigReader<Failure: Error> {
     throw makeInvalidTypeError(path, "string", describe(value))
   }
 
-  private func requiredBool(_ value: any TOMLValueConvertible, path: String) throws -> Bool {
+  private func requiredBool(_ value: TOMLValue, path: String) throws -> Bool {
     if let bool = value.bool {
       return bool
     }
@@ -402,7 +401,7 @@ public struct TOMLConfigReader<Failure: Error> {
     throw makeInvalidTypeError(path, "bool", describe(value))
   }
 
-  private func requiredInt(_ value: any TOMLValueConvertible, path: String) throws -> Int {
+  private func requiredInt(_ value: TOMLValue, path: String) throws -> Int {
     if let int = value.int {
       return int
     }
@@ -410,7 +409,7 @@ public struct TOMLConfigReader<Failure: Error> {
     throw makeInvalidTypeError(path, "integer", describe(value))
   }
 
-  private func requiredDouble(_ value: any TOMLValueConvertible, path: String) throws -> Double {
+  private func requiredDouble(_ value: TOMLValue, path: String) throws -> Double {
     let number: Double
 
     if let double = value.double {
@@ -429,7 +428,7 @@ public struct TOMLConfigReader<Failure: Error> {
   }
 
   private func requiredStringArray(
-    _ value: any TOMLValueConvertible,
+    _ value: TOMLValue,
     path: String
   ) throws -> [String] {
     guard let array = value.array else {
@@ -442,7 +441,7 @@ public struct TOMLConfigReader<Failure: Error> {
   }
 
   private func requiredStringTable(
-    _ value: any TOMLValueConvertible,
+    _ value: TOMLValue,
     path: String
   ) throws -> [String: String] {
     guard let table = value.table else {
@@ -455,9 +454,9 @@ public struct TOMLConfigReader<Failure: Error> {
     }
   }
 
-  private func describe(_ value: any TOMLValueConvertible) -> String {
+  private func describe(_ value: TOMLValue) -> String {
     if let string = value.string {
-      return "string(\(string.debugDescription))"
+      return "string(\(string))"
     }
 
     if let int = value.int {

@@ -1,7 +1,6 @@
 import EasyBarConfigParsing
 import EasyBarShared
 import Foundation
-import TOMLKit
 
 extension CalendarPopupMode: TOMLStringDecodable {
   public static let allowedValues = allCases.map(\.rawValue)

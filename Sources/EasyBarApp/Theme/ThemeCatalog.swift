@@ -29,7 +29,7 @@ enum ThemeCatalog {
         .appendingPathComponent("themes", isDirectory: true)
     )
 
-    var names: Set<String> = [snapshot.theme.configuredName, snapshot.theme.name]
+    var names: Set<String> = [snapshot.theme.name]
     let fileManager = FileManager.default
     var seenDirectories = Set<String>()
     for directory in directories {

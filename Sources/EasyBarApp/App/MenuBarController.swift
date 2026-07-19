@@ -161,14 +161,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     item.isEnabled = enabled
     let submenu = NSMenu(title: "Theme")
 
-    let configured = actionItem(
-      "Use Configured Theme (\(snapshot.theme.configuredName))",
-      #selector(selectConfiguredTheme(_:))
-    )
-    configured.state = snapshot.theme.sessionOverrideName == nil ? .on : .off
-    submenu.addItem(configured)
-    submenu.addItem(.separator())
-
     for name in ThemeCatalog.availableThemeNames(for: snapshot, logger: logger) {
       let theme = actionItem(name, #selector(selectTheme(_:)))
       theme.representedObject = name
@@ -188,7 +180,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   @objc private func restartLuaRuntime(_ sender: Any?) { onRestartLuaRuntime?() }
   @objc private func restartCalendarAgent(_ sender: Any?) { onRestartCalendarAgent?() }
   @objc private func restartNetworkAgent(_ sender: Any?) { onRestartNetworkAgent?() }
-  @objc private func selectConfiguredTheme(_ sender: Any?) { onSelectTheme?(nil) }
   @objc private func selectTheme(_ sender: NSMenuItem) {
     guard let name = sender.representedObject as? String else { return }
     onSelectTheme?(name)

@@ -1,5 +1,6 @@
 import AppKit
 import EasyBarCalendarConfig
+import EasyBarConfigParsing
 import Foundation
 
 /// Native calendar anchor widget.
@@ -16,7 +17,7 @@ final class CalendarNativeWidget: NativeWidget {
   let widgetStore: WidgetStore
 
   var appEventSubscriptions: Set<String> {
-    let refreshEvent = Self.refreshEvent(for: config)
+    let refreshEvent = Self.refreshEvent(for: configuredConfig)
     return [
       refreshEvent.rawValue,
       AppEvent.systemWoke.rawValue,
@@ -24,8 +25,9 @@ final class CalendarNativeWidget: NativeWidget {
     ]
   }
 
-  private let config: Config.CalendarBuiltinConfig
+  private var configuredConfig: Config.CalendarBuiltinConfig
   private let configSnapshotStore: ConfigSnapshotStore
+  private let configPersistence: ConfigPersistence
   private let calendarAgentConfig: ConfigSnapshot.CalendarAgent
   private let nativeUpcomingCalendarStore: NativeUpcomingCalendarStore
   private let nativeMonthCalendarStore: NativeMonthCalendarStore
@@ -34,7 +36,6 @@ final class CalendarNativeWidget: NativeWidget {
   private let monthCalendarAgentClient: MonthCalendarAgentClient
   private let eventObserver: EasyBarEventObserver
   private var sessionConfig: Config.CalendarBuiltinConfig
-  private var hasSessionOverrides = false
   private lazy var renderer = CalendarRenderer(rootID: rootID)
 
   private var started = false
@@ -52,6 +53,7 @@ final class CalendarNativeWidget: NativeWidget {
     calendarAgentConfig: ConfigSnapshot.CalendarAgent,
     widgetStore: WidgetStore,
     configSnapshotStore: ConfigSnapshotStore,
+    configPersistence: ConfigPersistence,
     nativeUpcomingCalendarStore: NativeUpcomingCalendarStore,
     nativeMonthCalendarStore: NativeMonthCalendarStore,
     nativeComposerCalendarStore: NativeComposerCalendarStore,
@@ -59,8 +61,9 @@ final class CalendarNativeWidget: NativeWidget {
     monthCalendarAgentClient: MonthCalendarAgentClient,
     eventHub: EventHub
   ) {
-    self.config = config
+    self.configuredConfig = config
     self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = configPersistence
     self.calendarAgentConfig = calendarAgentConfig
     self.widgetStore = widgetStore
     self.nativeUpcomingCalendarStore = nativeUpcomingCalendarStore
@@ -141,10 +144,7 @@ final class CalendarNativeWidget: NativeWidget {
   private func publish() {
     let snapshot = currentSnapshot()
     var nodes = renderer.makeNodes(snapshot: snapshot)
-    let contextMenu = CalendarContextMenu.make(
-      config: sessionConfig,
-      hasSessionOverrides: hasSessionOverrides
-    )
+    let contextMenu = CalendarContextMenu.make(config: sessionConfig)
     for index in nodes.indices where nodes[index].id != rootID {
       nodes[index].contextMenu = contextMenu
     }
@@ -186,7 +186,7 @@ extension CalendarNativeWidget {
       updatePopupMode(mode)
     case .setAnchorLayout(let layout):
       sessionConfig.anchor.layout = layout
-      applySessionOverride()
+      persistConfiguration()
     case .toggleAnchorField(let field):
       toggleAnchorField(field)
     case .toggleAppointmentOption(let optionID):
@@ -197,8 +197,6 @@ extension CalendarNativeWidget {
       refreshActiveCalendarClient()
     case .openCalendarSettings:
       openCalendarSettings()
-    case .resetToConfig:
-      resetSessionOverride()
     }
   }
 
@@ -214,7 +212,7 @@ extension CalendarNativeWidget {
     if startedCalendarAgent {
       startCalendarAgent(for: currentSnapshot())
     }
-    applySessionOverride()
+    persistConfiguration()
   }
 
   private func toggleAnchorField(_ field: CalendarAnchorFieldKind) {
@@ -224,13 +222,13 @@ extension CalendarNativeWidget {
     } else {
       sessionConfig.anchor.fields.append(field)
     }
-    applySessionOverride()
+    persistConfiguration()
   }
 
   private func toggleAppointmentOption(_ optionID: String) {
     guard let option = appointmentOptions.first(where: { $0.id == optionID }) else { return }
     sessionConfig.appointments[keyPath: option.keyPath].toggle()
-    applySessionOverride()
+    persistConfiguration()
   }
 
   private func toggleBirthdayOption(_ optionID: String) {
@@ -238,27 +236,50 @@ extension CalendarNativeWidget {
     sessionConfig.birthdays[keyPath: option.keyPath].toggle()
     updateAgentConfiguration()
     refreshActiveCalendarClient()
-    applySessionOverride()
+    persistConfiguration()
   }
 
-  private func applySessionOverride() {
-    hasSessionOverrides = true
+  private func persistConfiguration() {
+    var edits: [TOMLEdit] = [
+      TOMLEdit(
+        path: ["builtins", "calendar", "popup_mode"],
+        value: .string(sessionConfig.popupMode.rawValue)
+      ),
+      TOMLEdit(
+        path: ["builtins", "calendar", "anchor", "layout"],
+        value: .string(sessionConfig.anchor.layout.rawValue)
+      ),
+      TOMLEdit(
+        path: ["builtins", "calendar", "anchor", "fields"],
+        value: .stringArray(sessionConfig.anchor.fields.map(\.rawValue))
+      ),
+    ]
+    edits.append(
+      contentsOf: appointmentOptions.map { option in
+        TOMLEdit(
+          path: ["builtins", "calendar", "appointments", option.configKey],
+          value: .bool(option.value(sessionConfig.appointments))
+        )
+      }
+    )
+    edits.append(
+      contentsOf: birthdayOptions.map { option in
+        TOMLEdit(
+          path: ["builtins", "calendar", "birthdays", option.configKey],
+          value: .bool(option.value(sessionConfig.birthdays))
+        )
+      }
+    )
+    guard configPersistence.apply(edits) else {
+      sessionConfig = configuredConfig
+      updateAgentConfiguration()
+      startedPopupMode = sessionConfig.popupMode
+      configSnapshotStore.applyCalendarSessionOverride(configuredConfig)
+      publish()
+      return
+    }
+    configuredConfig = sessionConfig
     configSnapshotStore.applyCalendarSessionOverride(sessionConfig)
-    publish()
-  }
-
-  private func resetSessionOverride() {
-    if startedCalendarAgent {
-      stopCalendarAgent()
-    }
-    sessionConfig = config
-    hasSessionOverrides = false
-    updateAgentConfiguration()
-    startedPopupMode = sessionConfig.popupMode
-    if startedCalendarAgent {
-      startCalendarAgent(for: currentSnapshot())
-    }
-    configSnapshotStore.applyCalendarSessionOverride(config)
     publish()
   }
 

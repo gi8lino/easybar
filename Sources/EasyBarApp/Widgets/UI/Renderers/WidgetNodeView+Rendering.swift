@@ -126,6 +126,11 @@ extension WidgetNodeView {
       .foregroundStyle(nodeColor)
       .modifier(nodeStyle)
       .onHover { hovering in handleAnchorHover(hovering) }
+      .contextMenu {
+        NativePopupContextMenu(items: node.validatedContextMenu ?? []) { actionID in
+          emitNodeContextMenuAction(actionID)
+        }
+      }
       .background {
         WidgetPopupAnchorView { anchor in
           popupPanel.updateAnchorView(anchor)
@@ -154,5 +159,35 @@ extension WidgetNodeView {
       }
     }
     .fixedSize()
+  }
+}
+
+/// SwiftUI context-menu content used by native popup anchors, which cannot host the ordinary
+/// AppKit mouse overlay without creating an AttributeGraph cycle.
+private struct NativePopupContextMenu: View {
+  let items: [WidgetContextMenuItem]
+  let onAction: (String) -> Void
+
+  var body: some View {
+    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+      if item.separator {
+        Divider()
+      } else if let title = item.title, let submenu = item.submenu, !submenu.isEmpty {
+        Menu(title) {
+          NativePopupContextMenu(items: submenu, onAction: onAction)
+        }
+      } else if let title = item.title, let actionID = item.id {
+        Button {
+          onAction(actionID)
+        } label: {
+          if item.checked {
+            Label(title, systemImage: "checkmark")
+          } else {
+            Text(title)
+          }
+        }
+        .disabled(!item.enabled)
+      }
+    }
   }
 }

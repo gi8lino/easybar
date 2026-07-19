@@ -10,7 +10,7 @@ struct BarContextMenuActions {
   let reloadConfig: () -> Void
   /// Restarts only the Lua widget runtime.
   let restartLuaRuntime: () -> Void
-  /// Applies or clears a session-only theme override.
+  /// Persists a theme selection to the active configuration.
   let selectTheme: (String?) -> Void
 }
 
@@ -100,14 +100,6 @@ final class BarContextMenuFactory: NSObject {
     let snapshot = configStore.snapshot
     let item = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
     let submenu = NSMenu(title: "Theme")
-
-    let configured = actionItem(
-      title: "Use Configured Theme (\(snapshot.theme.configuredName))",
-      action: #selector(selectConfiguredTheme(_:))
-    )
-    configured.state = snapshot.theme.sessionOverrideName == nil ? .on : .off
-    submenu.addItem(configured)
-    submenu.addItem(.separator())
 
     for name in ThemeCatalog.availableThemeNames(for: snapshot, logger: logger) {
       let theme = actionItem(title: name, action: #selector(selectTheme(_:)))
@@ -262,10 +254,6 @@ final class BarContextMenuFactory: NSObject {
   /// Restarts only the Lua runtime through the app layer.
   @objc private func restartLuaRuntime(_ sender: Any?) {
     actions.restartLuaRuntime()
-  }
-
-  @objc private func selectConfiguredTheme(_ sender: Any?) {
-    actions.selectTheme(nil)
   }
 
   @objc private func selectTheme(_ sender: NSMenuItem) {

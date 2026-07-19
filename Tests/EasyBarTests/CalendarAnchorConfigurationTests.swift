@@ -1,6 +1,6 @@
 import EasyBarCalendarConfig
+import EasyBarConfigParsing
 import Foundation
-import TOMLKit
 import XCTest
 
 @testable import EasyBarApp

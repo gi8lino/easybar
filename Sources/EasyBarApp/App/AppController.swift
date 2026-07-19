@@ -1,4 +1,5 @@
 import AppKit
+import EasyBarConfigParsing
 import EasyBarShared
 import Foundation
 
@@ -369,7 +370,20 @@ final class AppController {
   }
 
   private func selectTheme(_ name: String?) {
-    Task { await runtimeCoordinator.applyThemeOverride(name) }
+    guard let name else {
+      Task { await runtimeCoordinator.reloadConfig() }
+      return
+    }
+    let persistence = ConfigPersistence(
+      configPath: services.configSnapshotStore.snapshot.app.configPath,
+      logger: logger.child("theme.config_persistence")
+    )
+    guard
+      persistence.apply([
+        TOMLEdit(path: ["theme", "name"], value: .string(name))
+      ])
+    else { return }
+    Task { await runtimeCoordinator.reloadConfig() }
   }
 
   private func restartCalendarAgent() {

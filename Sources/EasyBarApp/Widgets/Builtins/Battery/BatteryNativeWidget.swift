@@ -1,3 +1,4 @@
+import EasyBarConfigParsing
 import Foundation
 import IOKit.ps
 
@@ -22,7 +23,9 @@ final class BatteryNativeWidget: NativeWidget {
     ]
   }
 
-  private let config: Config.BatteryBuiltinConfig
+  private var config: Config.BatteryBuiltinConfig
+  private let configSnapshotStore: ConfigSnapshotStore
+  private let configPersistence: ConfigPersistence
   private let eventObserver: EasyBarEventObserver
   private var timer: Timer?
   private var isHovered = false
@@ -46,9 +49,17 @@ final class BatteryNativeWidget: NativeWidget {
   }
 
   /// Creates the native battery widget from an immutable config section.
-  init(config: Config.BatteryBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
+  init(
+    config: Config.BatteryBuiltinConfig,
+    widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
+    configPersistence: ConfigPersistence,
+    eventHub: EventHub
+  ) {
     self.config = config
     self.widgetStore = widgetStore
+    self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = configPersistence
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
@@ -60,6 +71,7 @@ final class BatteryNativeWidget: NativeWidget {
       eventNames: appEventSubscriptions.union([
         WidgetEvent.mouseEntered.rawValue,
         WidgetEvent.mouseExited.rawValue,
+        WidgetEvent.contextMenuClicked.rawValue,
       ]),
       widgetTargetIDs: [rootID]
     ) { [weak self] payload in
@@ -93,7 +105,12 @@ final class BatteryNativeWidget: NativeWidget {
   /// Publishes the current battery snapshot.
   private func publish() {
     let snapshot = readSnapshot()
-    applyNodes(renderer.makeNodes(snapshot: snapshot))
+    var nodes = renderer.makeNodes(snapshot: snapshot)
+    let contextMenu = BatteryContextMenu.make(config: config)
+    for index in nodes.indices {
+      nodes[index].contextMenu = contextMenu
+    }
+    applyNodes(nodes)
   }
 }
 
@@ -192,8 +209,39 @@ extension BatteryNativeWidget {
   private func handleWidgetEvent(_ payload: EasyBarEventPayload) {
     guard payload.widgetID == rootID else { return }
     guard let event = payload.widgetEvent else { return }
+    if event == .contextMenuClicked, let actionID = payload.actionID {
+      handleContextMenuAction(actionID)
+      return
+    }
     guard NativeWidgetHoverSupport.updateHoverState(event, isHovered: &isHovered) else { return }
     publishIfHoverAffectsLayout()
+  }
+
+  private func handleContextMenuAction(_ actionID: String) {
+    guard let action = BatteryContextMenuAction(id: actionID) else { return }
+    var updated = config
+    let edit: TOMLEdit
+    switch action {
+    case .setDisplayMode(let mode):
+      updated.displayMode = mode
+      edit = .init(
+        path: ["builtins", "battery", "content", "display_mode"],
+        value: .string(mode.rawValue)
+      )
+    case .setColorMode(let mode):
+      updated.colorMode = mode
+      edit = .init(
+        path: ["builtins", "battery", "content", "color_mode"],
+        value: .string(mode.rawValue)
+      )
+    case .refresh:
+      publish()
+      return
+    }
+    guard configPersistence.apply([edit]) else { return }
+    config = updated
+    configSnapshotStore.applyBatteryOverride(updated)
+    publish()
   }
 
   /// Returns the unavailable fallback snapshot.

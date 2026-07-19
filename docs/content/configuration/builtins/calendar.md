@@ -54,15 +54,15 @@ macOS grants Calendar access to the calendar agent, not the main EasyBar applica
 easybar --restart-calendar-agent
 ```
 
-## Context menu overrides
+## Context menu
 
-Right-click the calendar anchor to select the month, upcoming, or disabled popup mode for the
-current session. The menu can also change the anchor layout, toggle the time and date fields,
+Right-click the calendar anchor to select the month, upcoming, or disabled popup mode. The menu can
+also change the anchor layout, toggle the time and date fields,
 control appointment and birthday details, refresh calendar data, and open Calendar privacy
 settings.
 
 At least one anchor field remains enabled so the calendar keeps a visible interaction target.
-Session overrides never edit `config.toml`; restarting EasyBar or reloading configuration restores
-the configured values. Use **Reset to Config** to discard overrides immediately.
+Each configuration change is written to `config.toml` immediately. Comments, whitespace, and
+unrelated settings are preserved.
 
 See the [Configuration Reference](../reference.md) for month, upcoming, selection, composer, appointment, and filter keys. See [Calendar Agent](../../internals/agents/calendar-agent.md) for the process boundary and [Recovery](../../runtime/recovery.md) for permission troubleshooting.

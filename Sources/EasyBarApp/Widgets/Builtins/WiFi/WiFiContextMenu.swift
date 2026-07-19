@@ -1,12 +1,11 @@
 import Foundation
 
-/// Session actions exposed by the native Wi-Fi widget context menu.
+/// Persistent actions exposed by the native Wi-Fi widget context menu.
 enum WiFiContextMenuAction: Equatable {
   case setMode(Config.BuiltinWiFiContentMode)
   case toggleField(String)
   case refresh
   case openNetworkSettings
-  case resetToConfig
 
   /// Decodes one stable context-menu action identifier.
   init?(id: String) {
@@ -27,7 +26,6 @@ enum WiFiContextMenuAction: Equatable {
     switch id {
     case "wifi.refresh": self = .refresh
     case "wifi.open_network_settings": self = .openNetworkSettings
-    case "wifi.reset_to_config": self = .resetToConfig
     default: return nil
     }
   }
@@ -35,10 +33,7 @@ enum WiFiContextMenuAction: Equatable {
 
 /// Builds the native Wi-Fi context menu from the effective session configuration.
 enum WiFiContextMenu {
-  static func make(
-    config: Config.WiFiBuiltinConfig,
-    hasSessionOverrides: Bool
-  ) -> [WidgetContextMenuItem] {
+  static func make(config: Config.WiFiBuiltinConfig) -> [WidgetContextMenuItem] {
     let modes = Config.BuiltinWiFiContentMode.allCases.map { mode in
       WidgetContextMenuItem(
         id: "wifi.mode.\(mode.rawValue)",
@@ -63,12 +58,6 @@ enum WiFiContextMenu {
       WidgetContextMenuItem(
         id: "wifi.open_network_settings",
         title: "Open Network Settings"
-      ),
-      WidgetContextMenuItem(separator: true),
-      WidgetContextMenuItem(
-        id: "wifi.reset_to_config",
-        title: "Reset to Config",
-        enabled: hasSessionOverrides
       ),
     ]
   }

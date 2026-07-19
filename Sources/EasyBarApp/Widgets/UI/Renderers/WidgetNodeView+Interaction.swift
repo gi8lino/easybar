@@ -218,6 +218,19 @@ extension WidgetNodeView {
     }
   }
 
+  /// Emits a context-menu selection from a native popup anchor.
+  func emitNodeContextMenuAction(_ actionID: String) {
+    guard let eventHub = appViewServices?.eventHub else { return }
+    WidgetEventDispatcher.shared.enqueue {
+      await eventHub.emitWidgetEvent(
+        .contextMenuClicked,
+        widgetID: node.root,
+        targetWidgetID: node.id,
+        actionID: actionID
+      )
+    }
+  }
+
   /// Emits a left-click event for this node.
   func emitNodeClickEvent() {
     guard let eventHub = appViewServices?.eventHub else { return }

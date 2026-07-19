@@ -12,6 +12,7 @@ final class NativeWidgetRegistry {
   private let logger: ProcessLogger
   private let widgetStore: WidgetStore
   private let configSnapshotStore: ConfigSnapshotStore
+  private let configPersistence: ConfigPersistence
   private let eventManager: EventManager
   private let eventHub: EventHub
   private let aeroSpaceService: AeroSpaceService
@@ -48,6 +49,10 @@ final class NativeWidgetRegistry {
     self.snapshot = snapshot
     self.widgetStore = widgetStore
     self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = ConfigPersistence(
+      configPath: snapshot.app.configPath,
+      logger: logger.child("config_persistence")
+    )
     self.eventManager = eventManager
     self.eventHub = eventHub
     self.aeroSpaceService = aeroSpaceService
@@ -184,7 +189,10 @@ final class NativeWidgetRegistry {
         InboxNativeWidget(
           config: builtins.inbox,
           widgetStore: self.widgetStore,
-          inboxStore: self.inboxStore
+          inboxStore: self.inboxStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
+          eventHub: self.eventHub
         )
       },
       Registration(id: "spaces", enabled: builtins.spaces.enabled) {
@@ -198,6 +206,8 @@ final class NativeWidgetRegistry {
         BatteryNativeWidget(
           config: builtins.battery,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
           eventHub: self.eventHub
         )
       },
@@ -229,6 +239,7 @@ final class NativeWidgetRegistry {
           widgetStore: self.widgetStore,
           networkAgentClient: self.networkAgentClient,
           nativeWiFiStore: self.nativeWiFiStore,
+          configPersistence: self.configPersistence,
           eventHub: self.eventHub
         )
       },
@@ -258,6 +269,7 @@ final class NativeWidgetRegistry {
           calendarAgentConfig: calendarAgent,
           widgetStore: self.widgetStore,
           configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
           nativeUpcomingCalendarStore: self.nativeUpcomingCalendarStore,
           nativeMonthCalendarStore: self.nativeMonthCalendarStore,
           nativeComposerCalendarStore: self.nativeComposerCalendarStore,

@@ -11,7 +11,7 @@ final class CalendarContextMenuTests: XCTestCase {
     config.anchor.fields = [.time]
     config.appointments.showLocation = false
 
-    let menu = CalendarContextMenu.make(config: config, hasSessionOverrides: false)
+    let menu = CalendarContextMenu.make(config: config)
     let validated = try XCTUnwrap(WidgetContextMenuItem.validated(menu))
     let popupItems = try XCTUnwrap(validated.first?.submenu)
     let layoutItems = try XCTUnwrap(validated.dropFirst().first?.submenu)
@@ -54,6 +54,7 @@ final class CalendarContextMenuTests: XCTestCase {
       .toggleAppointmentOption("location")
     )
     XCTAssertEqual(CalendarContextMenuAction(id: "calendar.refresh"), .refresh)
+    XCTAssertNil(CalendarContextMenuAction(id: "calendar.save_to_config"))
     XCTAssertNil(CalendarContextMenuAction(id: "calendar.appointment.unknown"))
     XCTAssertNil(CalendarContextMenuAction(id: "calendar.unknown"))
   }
