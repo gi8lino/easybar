@@ -54,6 +54,7 @@ The Lua runtime is for custom widgets and user-specific behavior. Built-in platf
 - [Grouping](guides/grouping.md) and [Popups](guides/popups.md) for richer layouts.
 - [Editor Support](guides/editor-support.md) for LuaLS setup.
 - [Examples](guides/examples.md) for complete patterns.
+- [Bundled Widgets](guides/bundled-widgets.md) for shipped examples, dependencies, and inbox variants.
 
 ## Exact API reference
 

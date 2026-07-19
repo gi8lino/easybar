@@ -30,6 +30,8 @@ extra_css:
   - stylesheets/extra.css
 
 nav:
+  - Home: index.md
+
   - Getting Started:
       - Quick Start: getting-started/quick-start.md
       - Installation: getting-started/installation.md
@@ -45,6 +47,10 @@ nav:
       - Environment: configuration/environment.md
       - Themes: configuration/themes.md
       - Built-ins: configuration/builtins.md
+      - Spaces: configuration/builtins/spaces.md
+      - Inbox: configuration/builtins/inbox.md
+      - Wi-Fi: configuration/builtins/wifi.md
+      - Calendar: configuration/builtins/calendar.md
       - Native Groups: configuration/native-groups.md
       - Box Model: configuration/box-model.md
       - Agents: configuration/agents.md
@@ -70,6 +76,7 @@ nav:
           - Commands: lua/guides/commands.md
           - Logging: lua/guides/logging.md
           - Examples: lua/guides/examples.md
+          - Bundled Widgets: lua/guides/bundled-widgets.md
           - Style Guidelines: lua/guides/style-guidelines.md
       - Reference:
           - Overview: lua/reference/index.md
@@ -79,6 +86,7 @@ nav:
           - Properties: lua/reference/properties.md
 
   - Runtime:
+      - CLI Reference: runtime/cli.md
       - Control: runtime/control.md
       - Metrics: runtime/metrics.md
       - Troubleshooting: runtime/troubleshooting.md

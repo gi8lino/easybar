@@ -1,6 +1,6 @@
 # Examples
 
-This page shows complete Lua widget patterns.
+This page explains a few complete Lua widget patterns. For every shipped example, its dependency, and inbox behavior, use the [Bundled Widgets](bundled-widgets.md) catalog.
 
 If you are just starting out, read [First Widget](first-widget.md) before using these as templates.
 
@@ -167,6 +167,7 @@ remain trusted local code.
 
 ## Related pages
 
+- [Bundled Widgets](bundled-widgets.md)
 - [Subscribe To Events](subscribe-to-events.md)
 - [Style Popups And Groups](style-popups-and-groups.md)
 - [API Summary](../api-summary.md)

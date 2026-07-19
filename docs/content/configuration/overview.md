@@ -114,9 +114,14 @@ See [Themes](themes.md).
 | Configure shell command environment | [Environment](environment.md)           |
 | Choose colors                       | [Themes](themes.md)                     |
 | Configure native widgets            | [Built-ins](builtins.md)                |
+| Configure spaces behavior           | [Spaces](builtins/spaces.md)            |
+| Configure the shared inbox          | [Inbox](builtins/inbox.md)              |
+| Configure Wi-Fi details             | [Wi-Fi](builtins/wifi.md)               |
+| Configure calendar behavior         | [Calendar](builtins/calendar.md)        |
 | Group native widgets                | [Native Groups](native-groups.md)       |
 | Configure helper agents             | [Agents](agents.md)                     |
 | Debug logging                       | [Logging](logging.md)                   |
 | Check exact defaults                | [Configuration Reference](reference.md) |
+| Control the running app             | [CLI Reference](../runtime/cli.md)      |
 
 Contributor-focused implementation details are in [Internals](../internals/overview.md).

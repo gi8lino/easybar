@@ -13,7 +13,7 @@ brew tap gi8lino/tap
 brew install --cask gi8lino/tap/easybar
 ```
 
-The cask installs the main app and CLI, plus separately managed calendar and network agent formulae. It starts both agent services automatically.
+The cask installs the app and CLI and starts the separately managed calendar and network agent services. [Installation](installation.md) explains the component lifecycle, upgrades, and uninstall behavior.
 
 ## 2. Start EasyBar
 
@@ -27,29 +27,15 @@ The agents provide permission-sensitive calendar and network data. macOS asks fo
 
 EasyBar also shows a controller icon in the macOS menu bar. Use it to stop or restart the bar, reload configuration, restart helper agents, and open EasyBar directories. The icon remains available if you stop only the bar runtime.
 
-## 3. Verify the install
+## 3. Verify the bar responds
 
-Check the installed application:
-
-```bash
-test -d /Applications/EasyBar.app && echo "EasyBar is installed"
-```
-
-Check running processes:
-
-```bash
-pgrep -fl EasyBar
-pgrep -fl EasyBarCalendarAgent
-pgrep -fl EasyBarNetworkAgent
-```
-
-Trigger one refresh:
+Trigger one refresh through the installed CLI:
 
 ```bash
 easybar --refresh
 ```
 
-If the bar does not appear, open [Troubleshooting](../runtime/troubleshooting.md). If macOS blocks the app or helper agents, open [macOS Quarantine](macos-quarantine.md).
+If this fails or the bar does not appear, follow the matching symptom in [Troubleshooting](../runtime/troubleshooting.md). Installation-specific process checks are in [Installation](installation.md).
 
 ## 4. Optional: create a custom config
 
@@ -122,12 +108,11 @@ mkdir -p ~/.config/easybar/widgets
 
 Then follow [First Widget](../lua/guides/first-widget.md).
 
-## 7. Keep deeper docs separate
+## 7. Use references when needed
 
-The first-run path should not require architecture docs, process model docs, generated reference pages, or Lua runtime internals.
-
-Use these only when needed:
+After the initial setup:
 
 - [Configuration Reference](../configuration/reference.md) for exact config keys and defaults.
 - [Lua Reference](../lua/reference/index.md) for exact Lua API shapes.
+- [CLI Reference](../runtime/cli.md) for every control and diagnostic command.
 - [Internals](../internals/overview.md) for contributors, architecture, agents, process boundaries, and runtime implementation details.

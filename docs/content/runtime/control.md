@@ -1,6 +1,6 @@
 # Runtime Control
 
-EasyBar exposes three runtime control actions because they solve different problems.
+EasyBar exposes several runtime control actions because refresh, reload, and restart operations solve different problems. This page explains their behavior; [CLI Reference](cli.md) lists every option.
 
 ## Menu bar controller
 
@@ -111,6 +111,7 @@ Use this from local scripts when an external action should notify widgets that w
 
 ## Related pages
 
+- [CLI Reference](cli.md)
 - [Metrics](metrics.md)
 - [Troubleshooting](troubleshooting.md)
 - [Control Socket](../internals/architecture/control-socket.md)
