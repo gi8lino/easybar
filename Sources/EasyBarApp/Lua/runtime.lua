@@ -258,6 +258,14 @@ registry = api.new(log, {
 			source = source,
 		})
 	end,
+	configure_inbox = function(source, actions)
+		send_payload({
+			protocol_version = PROTOCOL_VERSION,
+			type = "inbox_configure",
+			source = source,
+			actions = actions,
+		})
+	end,
 	on_async_job_started = function(token, command)
 		log.debug("lua async started token=" .. tostring(token) .. " command_bytes=" .. tostring(#command))
 	end,

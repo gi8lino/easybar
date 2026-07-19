@@ -64,6 +64,11 @@ struct InboxSourceSnapshot: Codable, Equatable, Sendable {
   let items: [InboxItem]
 }
 
+struct InboxSourceConfiguration: Codable, Equatable, Sendable {
+  let source: String
+  let actions: [InboxAction]
+}
+
 struct InboxPresentedItem: Identifiable, Equatable, Sendable {
   let source: String
   let item: InboxItem

@@ -51,6 +51,14 @@ extension ConfigSchemaRegistry {
     entry(
       key: "show_when_empty", value: "true", description: "Keeps an inactive inbox icon visible when no messages exist."
     ),
+    entry(
+      key: "show_source_actions", value: "true",
+      description: "Shows publisher-provided actions in the inbox popup header."),
+    entry(
+      key: "popup_width", value: "360", description: "Sets the inbox popup width in points (240–800)."),
+    entry(
+      key: "popup_max_height", value: "440",
+      description: "Sets the maximum scrollable message-list height in points (120–1000)."),
     entry(key: "inactive_icon", value: "\"󰂜\"", description: "Icon shown when no unread messages exist."),
     entry(key: "inactive_color", value: "\"theme.muted\"", description: "Color used by the inactive icon."),
     entry(

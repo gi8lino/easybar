@@ -39,6 +39,9 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
       show_unread_count = false
       use_inactive_style_when_read = false
       show_when_empty = false
+      show_source_actions = false
+      popup_width = 480
+      popup_max_height = 600
       inactive_icon = "OUT"
       inactive_color = "#123456"
       max_items = 25
@@ -57,6 +60,9 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertFalse(config.builtinInbox.showUnreadCount)
     XCTAssertFalse(config.builtinInbox.useInactiveStyleWhenRead)
     XCTAssertFalse(config.builtinInbox.showWhenEmpty)
+    XCTAssertFalse(config.builtinInbox.showSourceActions)
+    XCTAssertEqual(config.builtinInbox.popupWidth, 480)
+    XCTAssertEqual(config.builtinInbox.popupMaxHeight, 600)
     XCTAssertEqual(config.builtinInbox.inactiveIcon, "OUT")
     XCTAssertEqual(config.builtinInbox.inactiveColorHex, "#123456")
     XCTAssertEqual(config.builtinInbox.popupBackgroundColorHex, "#010101")

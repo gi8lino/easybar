@@ -43,6 +43,7 @@ enum WidgetEvent: String, CaseIterable, Sendable {
 
   case contextMenuClicked = "context_menu.clicked"
   case inboxAction = "inbox.action"
+  case inboxContextAction = "inbox.context_action"
 
   case sliderPreview = "slider.preview"
   case sliderChanged = "slider.changed"

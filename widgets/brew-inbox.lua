@@ -149,26 +149,17 @@ local function publish()
 		}
 	end
 
-	local control_actions
+	local context_actions
 	if state.active_token ~= nil then
-		control_actions = { { id = "cancel", title = state.cancellation_requested and "Cancelling…" or "Cancel" } }
+		context_actions = { { id = "cancel", title = state.cancellation_requested and "Cancelling…" or "Cancel" } }
 	else
-		control_actions = {
+		context_actions = {
 			{ id = "refresh", title = "Refresh" },
 			{ id = "update", title = "Update" },
 			{ id = "upgrade_all", title = "Upgrade all" },
 		}
 	end
-	items[#items + 1] = {
-		id = "controls",
-		title = state.operation or (#state.formulae + #state.casks == 0 and "Homebrew is up to date" or "Homebrew actions"),
-		category = "Actions",
-		severity = state.active_token ~= nil and "warning" or "success",
-		unread = false,
-		dismissible = false,
-		actions = control_actions,
-	}
-
+	easybar.inbox.configure(SOURCE, { actions = context_actions })
 	easybar.inbox.replace(SOURCE, items)
 end
 
@@ -249,6 +240,21 @@ local function package_for_id(id)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
+	if event.action_id == "refresh" then
+		refresh()
+	elseif event.action_id == "upgrade" then
+		local package = package_for_id(event.target_widget_id)
+		if package ~= nil and not package.pinned then
+			local command = "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --"
+				.. package.kind
+				.. " --yes "
+				.. shell.quote(package.name)
+			run_operation("Upgrade " .. package.name, command, EXEC.upgrade)
+		end
+	end
+end)
+
+easybar.inbox.on_context_action(SOURCE, function(event)
 	if event.action_id == "cancel" then
 		if state.active_token ~= nil then
 			state.cancellation_requested = true
@@ -262,15 +268,6 @@ easybar.inbox.on_action(SOURCE, function(event)
 		run_operation("Homebrew update", "brew update", EXEC.update)
 	elseif event.action_id == "upgrade_all" then
 		run_operation("Homebrew upgrade", "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes", EXEC.upgrade)
-	elseif event.action_id == "upgrade" then
-		local package = package_for_id(event.target_widget_id)
-		if package ~= nil and not package.pinned then
-			local command = "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --"
-				.. package.kind
-				.. " --yes "
-				.. shell.quote(package.name)
-			run_operation("Upgrade " .. package.name, command, EXEC.upgrade)
-		end
 	end
 end)
 

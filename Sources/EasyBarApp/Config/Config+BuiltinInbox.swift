@@ -14,6 +14,9 @@ extension Config {
     var showUnreadCount: Bool
     var useInactiveStyleWhenRead: Bool
     var showWhenEmpty: Bool
+    var showSourceActions: Bool
+    var popupWidth: Int
+    var popupMaxHeight: Int
     var inactiveIcon: String
     var inactiveColorHex: String?
     var popupBackgroundColorHex: String?
@@ -53,6 +56,9 @@ extension Config {
       showUnreadCount: true,
       useInactiveStyleWhenRead: true,
       showWhenEmpty: true,
+      showSourceActions: true,
+      popupWidth: 360,
+      popupMaxHeight: 440,
       inactiveIcon: "󰂜",
       inactiveColorHex: "theme.muted",
       popupBackgroundColorHex: "theme.background",
@@ -87,6 +93,12 @@ extension Config {
       useInactiveStyleWhenRead: try content.bool(
         "use_inactive_style_when_read", fallback: builtinInbox.useInactiveStyleWhenRead),
       showWhenEmpty: try content.bool("show_when_empty", fallback: builtinInbox.showWhenEmpty),
+      showSourceActions: try content.bool(
+        "show_source_actions", fallback: builtinInbox.showSourceActions),
+      popupWidth: try content.int(
+        "popup_width", fallback: builtinInbox.popupWidth, minimum: 240, maximum: 800),
+      popupMaxHeight: try content.int(
+        "popup_max_height", fallback: builtinInbox.popupMaxHeight, minimum: 120, maximum: 1000),
       inactiveIcon: try content.string("inactive_icon", fallback: builtinInbox.inactiveIcon),
       inactiveColorHex: try content.optionalColor(
         "inactive_color", fallback: builtinInbox.inactiveColorHex),

@@ -8,6 +8,10 @@ local POLL_INTERVAL_SECONDS = 300
 local notifications = {}
 local refreshing = false
 
+easybar.inbox.configure(SOURCE, {
+	actions = { { id = "refresh", title = "Refresh" } },
+})
+
 local function notification_url(notification)
 	local repository = type(notification.repository) == "table" and text.trim(notification.repository.html_url) or ""
 	local subject = type(notification.subject) == "table" and notification.subject or {}
@@ -92,6 +96,12 @@ easybar.inbox.on_action(SOURCE, function(event)
 				break
 			end
 		end
+	end
+end)
+
+easybar.inbox.on_context_action(SOURCE, function(event)
+	if event.action_id == "refresh" then
+		refresh()
 	end
 end)
 

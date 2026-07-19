@@ -282,6 +282,8 @@
 ---| '"context_menu.clicked"'
 ---Fired when a native inbox action is selected. Prefer easybar.inbox.on_action for source routing.
 ---| '"inbox.action"'
+---Fired when a publisher-provided inbox context-menu action is selected. Prefer easybar.inbox.on_context_action for source routing.
+---| '"inbox.context_action"'
 ---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
 ---Fired when a slider value is committed.
@@ -456,6 +458,14 @@
 ---@field target_widget_id string Inbox item id.
 ---@field action_id string Selected action id.
 
+---@class (exact) EasyBarInboxConfiguration
+---@field actions? EasyBarInboxAction[] Actions shown under this source in the inbox context menu.
+
+---@class EasyBarInboxContextActionEvent
+---@field name 'inbox.context_action'
+---@field source string Publisher source.
+---@field action_id string Selected source action id.
+
 ---@class EasyBarInbox
 local EasyBarInbox = {}
 
@@ -468,10 +478,20 @@ function EasyBarInbox.replace(source, items) end
 ---@param source string
 function EasyBarInbox.clear(source) end
 
+---Configures source-owned actions shown in the inbox popup header.
+---@param source string
+---@param configuration EasyBarInboxConfiguration
+function EasyBarInbox.configure(source, configuration) end
+
 ---Registers an action handler for one source.
 ---@param source string
 ---@param handler fun(event: EasyBarInboxActionEvent)
 function EasyBarInbox.on_action(source, handler) end
+
+---Registers a source context-menu action handler.
+---@param source string
+---@param handler fun(event: EasyBarInboxContextActionEvent)
+function EasyBarInbox.on_context_action(source, handler) end
 
 ---@class EasyBarJsonNull
 

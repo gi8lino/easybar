@@ -260,6 +260,10 @@ If you want the architectural map before editing code, start with the docs secti
 
 <img src="./docs/content/assets/upcoming.png" alt="Upcoming screenshot" width="320">
 
+### Inbox
+
+<img src="./docs/content/assets/inbox.png" alt="Inbox screenshot" width="320">
+
 ### CPU
 
 <img src="./docs/content/assets/cpu.png" alt="CPU screenshot" width="500">

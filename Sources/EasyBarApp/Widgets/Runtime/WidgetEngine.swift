@@ -330,6 +330,10 @@ actor WidgetEngine {
       await MainActor.run {
         inboxStore.clear(source: source)
       }
+    case .inboxConfigure(let configuration):
+      await MainActor.run {
+        inboxStore.configure(source: configuration.source, actions: configuration.actions)
+      }
     }
   }
 

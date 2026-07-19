@@ -8,6 +8,10 @@ local POLL_INTERVAL_SECONDS = 300
 local work_items = {}
 local refreshing = false
 
+easybar.inbox.configure(SOURCE, {
+	actions = { { id = "refresh", title = "Refresh" } },
+})
+
 local function publish_error(message)
 	easybar.inbox.replace(SOURCE, {
 		{
@@ -79,6 +83,12 @@ easybar.inbox.on_action(SOURCE, function(event)
 				break
 			end
 		end
+	end
+end)
+
+easybar.inbox.on_context_action(SOURCE, function(event)
+	if event.action_id == "refresh" then
+		refresh()
 	end
 end)
 

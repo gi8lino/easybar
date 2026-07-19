@@ -22,6 +22,25 @@ struct InboxPopupView: View {
             .buttonStyle(.plain)
             .foregroundStyle(color(config.popupMutedColorHex))
         }
+        if config.showSourceActions, !store.sourceConfigurations.isEmpty {
+          Menu {
+            ForEach(store.sourceConfigurations, id: \.source) { configuration in
+              Menu(configuration.source) {
+                ForEach(configuration.actions) { action in
+                  Button(action.title) {
+                    emitContextAction(action.id, source: configuration.source)
+                  }
+                }
+              }
+            }
+          } label: {
+            Image(systemName: "ellipsis.circle")
+          }
+          .menuStyle(.borderlessButton)
+          .fixedSize()
+          .foregroundStyle(color(config.popupMutedColorHex))
+          .help("Inbox actions")
+        }
       }
 
       if store.presentedItems.isEmpty {
@@ -43,10 +62,10 @@ struct InboxPopupView: View {
             }
           }
         }
-        .frame(maxHeight: 440)
+        .frame(maxHeight: CGFloat(config.popupMaxHeight))
       }
     }
-    .frame(width: 360, alignment: .leading)
+    .frame(width: CGFloat(config.popupWidth), alignment: .leading)
     .padding(12)
     .background(color(config.popupBackgroundColorHex))
     .overlay {
@@ -152,6 +171,18 @@ struct InboxPopupView: View {
         widgetID: "builtin_inbox",
         targetWidgetID: item.item.id,
         source: item.source,
+        actionID: actionID
+      )
+    }
+  }
+
+  private func emitContextAction(_ actionID: String, source: String) {
+    Task {
+      await eventHub.emitWidgetEvent(
+        .inboxContextAction,
+        widgetID: "builtin_inbox",
+        targetWidgetID: "builtin_inbox",
+        source: source,
         actionID: actionID
       )
     }

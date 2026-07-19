@@ -3,8 +3,10 @@ import Foundation
 @MainActor
 final class InboxStore: ObservableObject {
   @Published private(set) var presentedItems: [InboxPresentedItem] = []
+  @Published private(set) var sourceConfigurations: [InboxSourceConfiguration] = []
 
   private var sources: [String: [InboxItem]] = [:]
+  private var sourceActions: [String: [InboxAction]] = [:]
   private var readItemIDs = Set<String>()
   private var unreadItemIDs = Set<String>()
   private var dismissedItemIDs = Set<String>()
@@ -68,16 +70,32 @@ final class InboxStore: ObservableObject {
 
   func clearAll() {
     sources.removeAll()
+    sourceActions.removeAll()
     readItemIDs.removeAll()
     unreadItemIDs.removeAll()
     dismissedItemIDs.removeAll()
     persistState()
     rebuild()
+    rebuildSourceConfigurations()
   }
 
   func clearPublishedItems() {
     sources.removeAll()
+    sourceActions.removeAll()
     rebuild()
+    rebuildSourceConfigurations()
+  }
+
+  func configure(source: String, actions: [InboxAction]) {
+    let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedSource.isEmpty, normalizedSource.utf8.count <= 512 else { return }
+    let validActions = Array(actions.lazy.filter(isValidAction).prefix(16))
+    if validActions.isEmpty {
+      sourceActions.removeValue(forKey: normalizedSource)
+    } else {
+      sourceActions[normalizedSource] = validActions
+    }
+    rebuildSourceConfigurations()
   }
 
   func markRead(_ presentedItem: InboxPresentedItem) {
@@ -232,6 +250,17 @@ final class InboxStore: ObservableObject {
       ))
   }
 
+  private func rebuildSourceConfigurations() {
+    sourceConfigurations = sourceActions.keys.sorted().map {
+      InboxSourceConfiguration(source: $0, actions: sourceActions[$0] ?? [])
+    }
+  }
+
+  private func isValidAction(_ action: InboxAction) -> Bool {
+    !action.id.isEmpty && action.id.utf8.count <= 512
+      && !action.title.isEmpty && action.title.utf8.count <= 1_024
+  }
+
   private func isValid(_ item: InboxItem) -> Bool {
     let id = item.id.trimmingCharacters(in: .whitespacesAndNewlines)
     let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -239,9 +268,6 @@ final class InboxStore: ObservableObject {
       return false
     }
     guard (item.body?.utf8.count ?? 0) <= 64 * 1_024 else { return false }
-    return (item.actions ?? []).count <= 16
-      && (item.actions ?? []).allSatisfy {
-        !$0.id.isEmpty && $0.id.utf8.count <= 512 && !$0.title.isEmpty && $0.title.utf8.count <= 1_024
-      }
+    return (item.actions ?? []).count <= 16 && (item.actions ?? []).allSatisfy(isValidAction)
   }
 }

@@ -102,6 +102,7 @@ M.tokens = {
 	},
 	inbox = {
 		action = make_event_token("inbox.action"),
+		context_action = make_event_token("inbox.context_action"),
 	},
 }
 

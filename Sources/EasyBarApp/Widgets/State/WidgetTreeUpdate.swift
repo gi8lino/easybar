@@ -18,6 +18,7 @@ struct WidgetTreeUpdate: Codable, Sendable {
   let maxOutputBytes: Int?
   let source: String?
   let items: [InboxItem]?
+  let actions: [InboxAction]?
 
   enum CodingKeys: String, CodingKey {
     case protocolVersion
@@ -32,6 +33,7 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case maxOutputBytes
     case source
     case items
+    case actions
   }
 
   enum Kind: String, Codable, Sendable {
@@ -43,6 +45,7 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case commandCancel = "command_cancel"
     case inboxReplace = "inbox_replace"
     case inboxClear = "inbox_clear"
+    case inboxConfigure = "inbox_configure"
   }
 
   /// Returns whether this update contains subscriptions.
@@ -89,6 +92,11 @@ struct WidgetTreeUpdate: Codable, Sendable {
   var inboxClearSource: String? {
     guard type == .inboxClear else { return nil }
     return source
+  }
+
+  var inboxConfigurationPayload: InboxSourceConfiguration? {
+    guard type == .inboxConfigure, let source, let actions else { return nil }
+    return InboxSourceConfiguration(source: source, actions: actions)
   }
 
   /// Returns the subscribed event names or an empty list.

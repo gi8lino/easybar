@@ -17,6 +17,14 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
       status:set({ label = event.target_widget_id .. ":" .. event.action_id })
     end)
 
+    easybar.inbox.on_context_action("gitlab", function(event)
+      status:set({ label = "context:" .. event.action_id })
+    end)
+
+    easybar.inbox.configure("gitlab", {
+      actions = { { id = "refresh", title = "Refresh" } },
+    })
+
     easybar.inbox.replace("gitlab", {
       {
         id = "mr-42",
@@ -56,6 +64,11 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
     }
     XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.id, "mr-42")
 
+    let configuration = try await nextUpdate(from: recorder) {
+      $0.inboxConfigurationPayload?.source == "gitlab"
+    }
+    XCTAssertEqual(configuration.inboxConfigurationPayload?.actions.first?.id, "refresh")
+
     try runtime.sendHostEvent(
       #"{"name":"inbox.action","widget_id":"builtin_inbox","target_widget_id":"mr-42","source":"gitlab","action_id":"open"}"#
         + "\n"
@@ -65,5 +78,15 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
       rootNode(in: $0)?.text == "mr-42:open"
     }
     XCTAssertEqual(rootNode(in: actionUpdate)?.text, "mr-42:open")
+
+    try runtime.sendHostEvent(
+      #"{"name":"inbox.context_action","widget_id":"builtin_inbox","source":"gitlab","action_id":"refresh"}"#
+        + "\n"
+    )
+
+    let contextActionUpdate = try await nextTreeUpdate(from: recorder) { [self] in
+      rootNode(in: $0)?.text == "context:refresh"
+    }
+    XCTAssertEqual(rootNode(in: contextActionUpdate)?.text, "context:refresh")
   }
 }

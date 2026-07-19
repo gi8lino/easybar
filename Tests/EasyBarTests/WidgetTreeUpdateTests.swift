@@ -71,6 +71,19 @@ final class WidgetTreeUpdateTests: XCTestCase {
     )
   }
 
+  func testInboxConfigurationPayloadIsDecoded() throws {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from:
+        #"{"protocol_version":1,"type":"inbox_configure","source":"GitLab","actions":[{"id":"refresh","title":"Refresh"}]}"#
+    )
+
+    guard case .inboxConfigure(let configuration) = message else {
+      return XCTFail("Expected inbox configuration message")
+    }
+    XCTAssertEqual(configuration.source, "GitLab")
+    XCTAssertEqual(configuration.actions, [InboxAction(id: "refresh", title: "Refresh")])
+  }
+
   func testImagePathDecodesToPathSource() throws {
     let node = try decodeNode(imageFields: ",\"image_path\":\"/tmp/icon.svg\"")
 

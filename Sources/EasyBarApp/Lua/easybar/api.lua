@@ -258,6 +258,7 @@ function M.new(log, hooks)
 	local default_exec_options = type(hooks.default_exec_options) == "table" and hooks.default_exec_options or {}
 	local log_dir = configured_log_dir()
 	local inbox_action_handlers = {}
+	local inbox_context_action_handlers = {}
 
 	local function readonly_copy(values, name)
 		local copy = {}
@@ -414,6 +415,17 @@ function M.new(log, hooks)
 				local ok, err = pcall(handler, event)
 				if not ok then
 					log.error("inbox action handler failed source=" .. tostring(event.source) .. " error=" .. tostring(err))
+				end
+			end
+		end
+		if event.name == "inbox.context_action" then
+			local handlers = inbox_context_action_handlers[tostring(event.source or "")]
+			for _, handler in ipairs(handlers or {}) do
+				local ok, err = pcall(handler, event)
+				if not ok then
+					log.error(
+						"inbox context action handler failed source=" .. tostring(event.source) .. " error=" .. tostring(err)
+					)
 				end
 			end
 		end
@@ -611,11 +623,26 @@ function M.new(log, hooks)
 			hooks.clear_inbox(source)
 		end
 
+		function widget_api.inbox.configure(source, configuration)
+			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			assert(type(configuration) == "table", "inbox configuration must be a table")
+			local actions = configuration.actions or {}
+			assert(type(actions) == "table", "inbox configuration actions must be an array")
+			hooks.configure_inbox(source, actions)
+		end
+
 		function widget_api.inbox.on_action(source, handler)
 			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
 			assert(type(handler) == "function", "inbox action handler must be a function")
 			inbox_action_handlers[source] = inbox_action_handlers[source] or {}
 			table.insert(inbox_action_handlers[source], handler)
+		end
+
+		function widget_api.inbox.on_context_action(source, handler)
+			assert(type(source) == "string" and source ~= "", "inbox source must be a non-empty string")
+			assert(type(handler) == "function", "inbox context action handler must be a function")
+			inbox_context_action_handlers[source] = inbox_context_action_handlers[source] or {}
+			table.insert(inbox_context_action_handlers[source], handler)
 		end
 
 		widget_api.log = make_log_api(source)

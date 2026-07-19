@@ -16,6 +16,7 @@ enum WidgetRuntimeMessage {
   case commandCancel(token: String)
   case inboxReplace(InboxSourceSnapshot)
   case inboxClear(source: String)
+  case inboxConfigure(InboxSourceConfiguration)
 }
 
 /// Decodes and classifies structured messages emitted by the Lua widget runtime.
@@ -104,6 +105,13 @@ struct WidgetRuntimeProtocolDecoder {
         throw WidgetRuntimeProtocolError.invalidPayload("invalid inbox clear")
       }
       return .inboxClear(source: source)
+    case .inboxConfigure:
+      guard let configuration = update.inboxConfigurationPayload,
+        !configuration.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      else {
+        throw WidgetRuntimeProtocolError.invalidPayload("invalid inbox configuration")
+      }
+      return .inboxConfigure(configuration)
     }
   }
 

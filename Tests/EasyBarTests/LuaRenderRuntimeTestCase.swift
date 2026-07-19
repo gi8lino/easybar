@@ -121,6 +121,8 @@ extension LuaRenderRuntimeTestCase {
         return "inbox_replace:\(update.source ?? "unknown"):\(update.items?.count ?? 0)"
       case .inboxClear:
         return "inbox_clear:\(update.source ?? "unknown")"
+      case .inboxConfigure:
+        return "inbox_configure:\(update.source ?? "unknown"):\(update.actions?.count ?? 0)"
       case .tree:
         if let payload = update.treePayload,
           let root = payload.nodes.first(where: { $0.id == payload.root })

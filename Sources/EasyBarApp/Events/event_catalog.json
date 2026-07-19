@@ -224,6 +224,12 @@
           "luaField": "action",
           "runtimeName": "inbox.action",
           "doc": "Fired when a native inbox action is selected. Prefer easybar.inbox.on_action for source routing."
+        },
+        {
+          "swiftCase": "inboxContextAction",
+          "luaField": "context_action",
+          "runtimeName": "inbox.context_action",
+          "doc": "Fired when a publisher-provided inbox context-menu action is selected. Prefer easybar.inbox.on_context_action for source routing."
         }
       ]
     },

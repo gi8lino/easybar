@@ -307,6 +307,17 @@ Clears every current inbox item for one source.
 | -------- | -------- | ----------- |
 | `source` | `string` |             |
 
+## `EasyBarInbox.configure`
+
+Configures source-owned actions shown in the inbox popup header.
+
+### Parameters
+
+| Name            | Type                        | Description |
+| --------------- | --------------------------- | ----------- |
+| `source`        | `string`                    |             |
+| `configuration` | `EasyBarInboxConfiguration` |             |
+
 ## `EasyBarInbox.on_action`
 
 Registers an action handler for one source.
@@ -317,6 +328,17 @@ Registers an action handler for one source.
 | --------- | ------------------------------------- | ----------- |
 | `source`  | `string`                              |             |
 | `handler` | `fun(event: EasyBarInboxActionEvent)` |             |
+
+## `EasyBarInbox.on_context_action`
+
+Registers a source context-menu action handler.
+
+### Parameters
+
+| Name      | Type                                         | Description |
+| --------- | -------------------------------------------- | ----------- |
+| `source`  | `string`                                     |             |
+| `handler` | `fun(event: EasyBarInboxContextActionEvent)` |             |
 
 ## `EasyBarInbox.replace`
 

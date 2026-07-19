@@ -133,6 +133,40 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertEqual(store.presentedItems.map(\.item.id), ["valid"])
   }
 
+  func testSourceActionsRemainConfiguredWhenMessagesAreCleared() {
+    let store = InboxStore()
+    store.configure(
+      source: "GitLab",
+      actions: [InboxAction(id: "refresh", title: "Refresh")]
+    )
+
+    XCTAssertEqual(
+      store.sourceConfigurations,
+      [
+        InboxSourceConfiguration(
+          source: "GitLab",
+          actions: [InboxAction(id: "refresh", title: "Refresh")]
+        )
+      ]
+    )
+
+    store.clear(source: "GitLab")
+    XCTAssertEqual(store.sourceConfigurations.first?.source, "GitLab")
+
+    store.configure(source: "GitLab", actions: [])
+    XCTAssertTrue(store.sourceConfigurations.isEmpty)
+  }
+
+  func testInvalidSourceContextActionsAreDropped() {
+    let store = InboxStore()
+    store.configure(
+      source: "GitLab",
+      actions: [InboxAction(id: "", title: "Refresh")]
+    )
+
+    XCTAssertTrue(store.sourceConfigurations.isEmpty)
+  }
+
   private func item(
     _ id: String,
     title: String? = nil,

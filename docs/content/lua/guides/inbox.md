@@ -10,8 +10,8 @@ publishers are available as `widgets/github-inbox.lua` and `widgets/gitlab-inbox
 widgets remain standalone alternatives.
 
 [`widgets/brew-inbox.lua`](https://github.com/gi8lino/easybar/blob/main/widgets/brew-inbox.lua)
-publishes outdated formulae and casks with actions for updating, upgrading, refreshing, and
-cancelling a running operation.
+publishes outdated formulae and casks. Its source submenu provides refresh, update, upgrade-all,
+and cancellation actions without adding control messages to the inbox.
 
 ## Publish a source snapshot
 
@@ -71,6 +71,31 @@ end)
 
 The event contains `source`, `target_widget_id` (the item id), and `action_id`.
 
+## Add source actions to the icon menu
+
+A publisher can add commands to its own submenu under the actions button in the inbox popup header.
+Configure presentation separately from the handler so item actions and source-wide commands remain
+distinct:
+
+```lua
+easybar.inbox.configure("gitlab", {
+    actions = {
+        { id = "refresh", title = "Refresh" },
+    },
+})
+
+easybar.inbox.on_context_action("gitlab", function(event)
+    if event.action_id == "refresh" then
+        refresh_work_items()
+    end
+end)
+```
+
+Calling `configure` again replaces the source's complete action list, which allows widgets to
+change their menu while work is running—for example, Homebrew replaces Update and Upgrade with
+Cancel. Passing an empty `actions` array removes the submenu. Clearing a source's messages leaves
+its independently configured actions available.
+
 ## Text and Markdown
 
 `body` defaults to plain text. Set `format = "markdown"` for limited inline Markdown such as
@@ -107,6 +132,9 @@ group_by = "source"       # source | date | category | severity | none
 sort_by = "timestamp"     # timestamp | source | severity | title
 sort_descending = true
 show_unread_count = true
+show_source_actions = true
+popup_width = 360
+popup_max_height = 440
 use_inactive_style_when_read = true
 show_when_empty = true
 inactive_icon = "󰂜"
@@ -118,6 +146,11 @@ When there are no unread messages, EasyBar uses `inactive_icon` and `inactive_co
 `use_inactive_style_when_read = false` to keep the active icon and color after everything is read. Set
 `show_when_empty = false` to remove the native icon when the inbox contains no messages. Set
 `show_unread_count = false` to keep the stateful icon without displaying its numeric badge.
+Set `show_source_actions = false` to hide the popup's publisher actions button while keeping
+Mark all as read and Dismiss all available.
+
+`popup_width` controls the complete popup width. `popup_max_height` limits the message list before
+it becomes scrollable, while short inboxes continue to size naturally.
 
 The `colors` section controls the complete native popup independently from the anchor's `style`.
 Every value accepts a theme reference or a literal color, so a theme remains the default while

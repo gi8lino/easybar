@@ -101,6 +101,9 @@ order = 5
 [builtins.inbox.content]
 group_by = "source"
 show_unread_count = true
+show_source_actions = true
+popup_width = 360
+popup_max_height = 440
 use_inactive_style_when_read = true
 show_when_empty = true
 inactive_icon = "󰂜"
@@ -109,6 +112,8 @@ inactive_color = "theme.muted"
 
 The popup itself can be recolored under `[builtins.inbox.colors]`, including its background,
 border, title, body, muted labels, item background, actions, and all four severity indicators.
+The popup header exposes publisher-provided source submenus through its actions button. Set
+`show_source_actions = false` to hide that button.
 
 See [Native Inbox](../lua/guides/inbox.md) for the publishing API, Markdown limits, actions, and
 all grouping and display options.

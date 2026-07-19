@@ -62,6 +62,8 @@
 ---| '"context_menu.clicked"'
 ---Fired when a native inbox action is selected. Prefer easybar.inbox.on_action for source routing.
 ---| '"inbox.action"'
+---Fired when a publisher-provided inbox context-menu action is selected. Prefer easybar.inbox.on_context_action for source routing.
+---| '"inbox.context_action"'
 ---Fired while a slider is being previewed or dragged.
 ---| '"slider.preview"'
 ---Fired when a slider value is committed.
