@@ -6,6 +6,12 @@ EasyBar exposes several runtime control actions because refresh, reload, and res
 
 EasyBar shows a persistent controller icon in the macOS menu bar by default. It remains available when the EasyBar bar itself is stopped, so you can restore the bar without opening a terminal.
 
+The controller icon and an empty-area right-click on the bar share the same native menu groups, so
+common labels, checked states, themes, and actions stay consistent. Their scope differs: the bar
+menu contains runtime, widget, theme, and file shortcuts, while the persistent controller also
+contains application lifecycle, helper-agent, and quit actions. When the bar is stopped, the
+controller offers **Start EasyBar**.
+
 The controller menu provides:
 
 - start, stop, and restart EasyBar's bar runtime
@@ -14,6 +20,13 @@ The controller menu provides:
 - calendar and network agent status and restart actions
 - shortcuts to the config, widgets, and log directories
 - complete application shutdown
+
+Right-click an empty area of the bar for the commonly used controls:
+
+- refresh, config reload, and Lua runtime restart
+- native widget and theme selection
+- shortcuts to the config, widgets, and log directories
+- log-level controls when developer mode is enabled or Shift is held while opening the menu
 
 The version shown at the top of the menu is the version embedded in the running EasyBar binary.
 

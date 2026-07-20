@@ -15,17 +15,6 @@ private final class BarHostingView<Content: View>: NSHostingView<Content> {
 /// Hosts the top-level borderless bar window.
 @MainActor
 final class BarWindowController: NSWindowController {
-  /// Callback for manual refresh menu actions.
-  var onRefresh: (() -> Void)?
-  /// Callback for config reload menu actions.
-  var onReloadConfig: (() -> Void)?
-  /// Callback for Lua runtime restart menu actions.
-  var onRestartLuaRuntime: (() -> Void)?
-  /// Callback for persistent theme selection.
-  var onSelectTheme: ((String?) -> Void)?
-  /// Callback for persistent native-widget visibility changes.
-  var onSetNativeWidgetEnabled: ((String, Bool) -> Void)?
-
   /// Logger used for window diagnostics.
   private let logger: ProcessLogger
   /// Store that exposes the active immutable config snapshot to SwiftUI.
@@ -35,24 +24,8 @@ final class BarWindowController: NSWindowController {
   private let appViewServices: AppViewServices
   /// Hosting view containing the SwiftUI bar content.
   private let hostingView: BarHostingView<AnyView>
-  /// Provider for dynamic context-menu state.
-  private let menuStateProvider: BarContextMenuStateProvider
-
-  /// Factory that builds the bar context menu.
-  private lazy var contextMenuFactory = BarContextMenuFactory(
-    logger: logger,
-    configStore: configStore,
-    actions: BarContextMenuActions(
-      refresh: { [weak self] in self?.onRefresh?() },
-      reloadConfig: { [weak self] in self?.onReloadConfig?() },
-      restartLuaRuntime: { [weak self] in self?.onRestartLuaRuntime?() },
-      selectTheme: { [weak self] name in self?.onSelectTheme?(name) },
-      setNativeWidgetEnabled: { [weak self] key, enabled in
-        self?.onSetNativeWidgetEnabled?(key, enabled)
-      }
-    ),
-    stateProvider: menuStateProvider
-  )
+  /// Shared factory used by both EasyBar menus.
+  private let menuFactory: EasyBarMenuFactory
 
   /// Creates a borderless bar window pinned to the top of the screen.
   init(
@@ -61,14 +34,14 @@ final class BarWindowController: NSWindowController {
     widgetStore: WidgetStore,
     aeroSpaceService: AeroSpaceService,
     appViewServices: AppViewServices,
-    menuStateProvider: BarContextMenuStateProvider
+    menuFactory: EasyBarMenuFactory
   ) {
     self.logger = logger
     self.configStore = configStore
     self.widgetStore = widgetStore
     self.aeroSpaceService = aeroSpaceService
     self.appViewServices = appViewServices
-    self.menuStateProvider = menuStateProvider
+    self.menuFactory = menuFactory
 
     let screen = NSScreen.main ?? NSScreen.screens[0]
     let frame = Self.makeFrame(for: screen, snapshot: configStore.snapshot)
@@ -122,7 +95,10 @@ final class BarWindowController: NSWindowController {
     super.init(window: window)
 
     window.contextMenuProvider = { [weak self] showDeveloperSection in
-      self?.contextMenuFactory.makeMenu(showDeveloperSection: showDeveloperSection) ?? NSMenu()
+      self?.menuFactory.makeMenu(
+        groups: EasyBarMenuGroup.barContext,
+        showDeveloperSection: showDeveloperSection
+      ) ?? NSMenu()
     }
   }
 

@@ -103,10 +103,10 @@ unrelated settings.
 
 ## Enable or disable widgets from the bar
 
-Right-click an empty area of the bar and open **Native Widgets** to enable or disable any top-level
-built-in widget. Checked items are enabled. Each selection immediately updates the corresponding
-`builtins.<widget>.enabled` value in `config.toml` and reloads the bar, while preserving comments,
-whitespace, and unrelated settings.
+Open **Native Widgets** from the menu bar icon or by right-clicking an empty area of the bar to
+enable or disable any top-level built-in widget. Checked items are enabled. Each selection
+immediately updates the corresponding `builtins.<widget>.enabled` value in `config.toml` and reloads
+the bar, while preserving comments, whitespace, and unrelated settings.
 
 ## When to switch to Lua
 

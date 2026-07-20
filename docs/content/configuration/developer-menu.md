@@ -1,6 +1,6 @@
 # Developer Menu
 
-EasyBar can expose a developer section in the bar context menu.
+EasyBar can expose a developer section in its shared native menu.
 
 ## Default behavior
 
@@ -8,6 +8,7 @@ By default:
 
 - normal right-click shows the standard menu
 - `Shift` + right-click also shows the hidden developer section
+- the menu bar icon shows the section only when `[app].develop` is enabled
 
 ## Always show the developer section
 
@@ -20,12 +21,8 @@ develop = true
 
 ## Developer actions
 
-The developer section currently includes:
-
-- `Log Level`
-  Switch the active runtime log level from the menu.
-- `Open Log Folder`
-  Open the configured log directory in Finder.
+The developer section currently includes **Log Level**, which changes the active runtime log level.
+**Open Log Folder** remains available in the standard file-actions group.
 
 ## Example
 

@@ -1,0 +1,107 @@
+import AppKit
+import EasyBarShared
+import XCTest
+
+@testable import EasyBarApp
+
+@MainActor
+final class EasyBarMenuFactoryTests: XCTestCase {
+  func testSharedMenuCompositionHasStableGroupsAndSeparators() {
+    let factory = makeFactory(runtimeState: { .running })
+
+    let first = factory.makeMenu()
+    let second = factory.makeMenu()
+
+    XCTAssertEqual(menuShape(first), menuShape(second))
+    XCTAssertEqual(first.items.first?.title, "EasyBar \(BuildInfo.appVersion)")
+    XCTAssertEqual(first.items.last?.title, "Quit Completely")
+    XCTAssertFalse(first.items.first?.isSeparatorItem == true)
+    XCTAssertFalse(first.items.last?.isSeparatorItem == true)
+    XCTAssertFalse(
+      zip(first.items, first.items.dropFirst()).contains { left, right in
+        left.isSeparatorItem && right.isSeparatorItem
+      }
+    )
+  }
+
+  func testStoppedMenuEnablesStartAndDisablesRuntimeConfigurationGroups() throws {
+    let menu = makeFactory(runtimeState: { .stopped }).makeMenu()
+
+    XCTAssertNotNil(menu.item(withTitle: "Start EasyBar"))
+    XCTAssertNil(menu.item(withTitle: "Stop EasyBar"))
+    XCTAssertFalse(try XCTUnwrap(menu.item(withTitle: "Refresh")).isEnabled)
+    XCTAssertFalse(try XCTUnwrap(menu.item(withTitle: "Native Widgets")).isEnabled)
+    XCTAssertFalse(try XCTUnwrap(menu.item(withTitle: "Theme")).isEnabled)
+  }
+
+  func testSelectedGroupsComposeWithoutExtraSeparators() {
+    let menu = makeFactory(runtimeState: { .running }).makeMenu(
+      groups: [.runtime, .files]
+    )
+
+    XCTAssertEqual(
+      menu.items.map { $0.isSeparatorItem ? "-" : $0.title },
+      [
+        "Refresh", "Reload Config", "Restart Lua Runtime", "-", "Open Config",
+        "Open Widgets Folder", "Open Log Folder",
+      ]
+    )
+  }
+
+  func testBarContextExcludesApplicationAndAgentControls() {
+    let menu = makeFactory(runtimeState: { .running }).makeMenu(
+      groups: EasyBarMenuGroup.barContext
+    )
+
+    XCTAssertNotNil(menu.item(withTitle: "Refresh"))
+    XCTAssertNotNil(menu.item(withTitle: "Native Widgets"))
+    XCTAssertNotNil(menu.item(withTitle: "Theme"))
+    XCTAssertNotNil(menu.item(withTitle: "Open Config"))
+    XCTAssertNil(menu.item(withTitle: "Stop EasyBar"))
+    XCTAssertNil(menu.item(withTitle: "Restart EasyBar"))
+    XCTAssertNil(menu.item(withTitle: "Calendar Agent"))
+    XCTAssertNil(menu.item(withTitle: "Network Agent"))
+    XCTAssertNil(menu.item(withTitle: "Quit Completely"))
+  }
+
+  private func makeFactory(
+    runtimeState: @escaping () -> EasyBarRuntimeState
+  ) -> EasyBarMenuFactory {
+    let logger = ProcessLogger(label: "menu.factory.test", minimumLevel: .error)
+    let services = AppServices.bootstrap(logger: logger)
+    let stateProvider = BarContextMenuStateProvider(
+      nativeWiFiStore: services.nativeWiFiStore,
+      nativeMonthCalendarStore: services.nativeMonthCalendarStore,
+      nativeUpcomingCalendarStore: services.nativeUpcomingCalendarStore,
+      monthCalendarAgentClient: services.monthCalendarAgentClient,
+      upcomingCalendarAgentClient: services.upcomingCalendarAgentClient,
+      networkAgentClient: services.networkAgentClient
+    )
+    return EasyBarMenuFactory(
+      logger: logger,
+      configStore: services.configSnapshotStore,
+      actions: EasyBarMenuActions(
+        start: {},
+        stop: {},
+        restart: {},
+        refresh: {},
+        reloadConfig: {},
+        restartLuaRuntime: {},
+        restartCalendarAgent: {},
+        restartNetworkAgent: {},
+        selectTheme: { _ in },
+        setNativeWidgetEnabled: { _, _ in },
+        quit: {}
+      ),
+      stateProvider: stateProvider,
+      runtimeState: runtimeState
+    )
+  }
+
+  private func menuShape(_ menu: NSMenu) -> [String] {
+    menu.items.map { item in
+      let children = item.submenu.map(menuShape) ?? []
+      return ([item.isSeparatorItem ? "-" : item.title] + children).joined(separator: "/")
+    }
+  }
+}
