@@ -470,27 +470,27 @@
 local EasyBarInbox = {}
 
 ---Atomically replaces every current inbox item for one source.
----@param source string
----@param items EasyBarInboxItem[]
+---@param source string Stable publisher name used for grouping and action routing.
+---@param items EasyBarInboxItem[] Complete current snapshot for this source.
 function EasyBarInbox.replace(source, items) end
 
 ---Clears every current inbox item for one source.
----@param source string
+---@param source string Publisher name previously used with `replace(...)`.
 function EasyBarInbox.clear(source) end
 
 ---Configures source-owned actions shown in the inbox popup header.
----@param source string
----@param configuration EasyBarInboxConfiguration
+---@param source string Stable publisher name used for context-action routing.
+---@param configuration EasyBarInboxConfiguration Source-level action configuration.
 function EasyBarInbox.configure(source, configuration) end
 
 ---Registers an action handler for one source.
----@param source string
----@param handler fun(event: EasyBarInboxActionEvent)
+---@param source string Publisher name whose item actions should be delivered.
+---@param handler fun(event:EasyBarInboxActionEvent) Callback invoked for matching item actions.
 function EasyBarInbox.on_action(source, handler) end
 
 ---Registers a source context-menu action handler.
----@param source string
----@param handler fun(event: EasyBarInboxContextActionEvent)
+---@param source string Publisher name whose source actions should be delivered.
+---@param handler fun(event:EasyBarInboxContextActionEvent) Callback invoked for matching source actions.
 function EasyBarInbox.on_context_action(source, handler) end
 
 ---@class EasyBarJsonNull
@@ -577,11 +577,27 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@field ref EasyBarThemeRefs Theme reference strings such as `theme.text`.
 -- END GENERATED SECTION: easybar.themes
 
----Widget-scoped EasyBar API injected into every widget file.
----Use it to create nodes, run commands, and write widget logs.
----@class EasyBarCommandOptions
----@field timeout_seconds? number Optional per-command timeout override in seconds.
----@field max_output_bytes? integer Optional per-command combined stdout+stderr capture limit.
+---Per-call limits for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`.
+---Omitted fields use the current `[app.lua_commands]` defaults.
+---@class (exact) EasyBarCommandOptions
+---@field timeout_seconds? number Hard timeout in seconds. Must be greater than zero.
+---@field max_output_bytes? integer Maximum combined stdout and stderr bytes. Must be a positive integer.
+
+---Opaque token identifying one asynchronous command in the current Lua runtime session.
+---Do not persist tokens across config reloads or application restarts.
+---@alias EasyBarAsyncToken string
+
+---Exit status returned by EasyBar command APIs.
+---Normal process exit codes are preserved. EasyBar uses `124` for timeout, `65` for output-limit
+---termination, `127` when an executable cannot be found, and `130` after cancellation.
+---@alias EasyBarCommandExitCode integer
+
+---Completion callback for asynchronous command APIs.
+---It runs exactly once with combined stdout and stderr after the process exits or is terminated.
+---@alias EasyBarCommandCallback fun(output:string, code:EasyBarCommandExitCode)
+
+---One-shot callback scheduled by `easybar.after(...)`.
+---@alias EasyBarTimerCallback fun()
 
 ---Options for `easybar.log.with_file(...)`.
 ---@class EasyBarLogFileOptions
@@ -615,11 +631,11 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@field clear_defaults fun() Clears widget-local defaults previously set with `easybar.default(...)`.
 ---@field default fun(props: EasyBarNodeProps) Sets widget-local default props for future `easybar.add(...)` calls.
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
----@field exec fun(command: string, options?: EasyBarCommandOptions): string, integer Runs one shell command and returns trimmed output plus exit code.
----@field exec_async fun(command: string, options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
----@field spawn_async fun(arguments: string[], options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one executable directly in the background without shell parsing.
----@field cancel_async fun(token: string): boolean Requests cancellation of one pending asynchronous command and returns whether the token was pending.
----@field after fun(delay_seconds: number, callback: fun(): any): EasyBarTimerHandle Schedules one non-blocking callback after a delay.
+---@field exec fun(command: string, options?: EasyBarCommandOptions): string, EasyBarCommandExitCode Runs one shell command synchronously and returns combined output plus exit status.
+---@field exec_async fun(command: string, options: EasyBarCommandOptions|nil, callback: EasyBarCommandCallback): EasyBarAsyncToken Runs one shell command asynchronously.
+---@field spawn_async fun(arguments: string[], options: EasyBarCommandOptions|nil, callback: EasyBarCommandCallback): EasyBarAsyncToken Runs one executable asynchronously without shell parsing.
+---@field cancel_async fun(token: EasyBarAsyncToken): boolean Requests cancellation of one pending asynchronous command.
+---@field after fun(delay_seconds: number, callback: EasyBarTimerCallback): EasyBarTimerHandle Schedules one cancellable, non-blocking callback.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of one node's props by id.
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
@@ -635,8 +651,8 @@ function EasyBarInbox.on_context_action(source, handler) end
 local EasyBar = {}
 
 ---Resolves a path relative to the current widget file.
----@param path string
----@return string
+---@param path string Relative asset path, or an absolute path to preserve unchanged.
+---@return string resolved_path Filesystem path resolved for the current widget source.
 function EasyBar.asset(path) end
 
 ---@class EasyBarFileLogger
@@ -646,66 +662,67 @@ local EasyBarFileLogger = {}
 local EasyBarNodeHandle = {}
 
 ---Cancellable one-shot timer returned by `easybar.after(...)`.
----@class EasyBarTimerHandle
----@field token string Host-owned timer token for the current runtime session.
+---The handle belongs to the current Lua runtime session and becomes inactive after firing or cancellation.
+---@class (exact) EasyBarTimerHandle
+---@field token string Opaque host timer token. Do not persist or modify it.
 local EasyBarTimerHandle = {}
 
----Cancels this timer when it has not fired yet.
----@return boolean pending
+---Cancels this timer if its callback has not fired yet.
+---@return boolean cancelled `true` when a pending callback was cancelled; otherwise `false`.
 function EasyBarTimerHandle:cancel() end
 
 ---Merges properties into this node.
----@param props EasyBarNodeProps
+---@param props EasyBarNodeProps Properties to merge; unspecified properties remain unchanged.
 function EasyBarNodeHandle:set(props) end
 
 ---Returns a copy of this node's current property table.
----@return EasyBarNodeProps
+---@return EasyBarNodeProps props Snapshot safe to inspect or modify locally.
 function EasyBarNodeHandle:get() end
 
 ---Removes this node and all of its descendants.
 function EasyBarNodeHandle:remove() end
 
 ---Removes one or more nested properties from this node.
----@param paths string|string[]
+---@param paths string|string[] Dot-separated property path or array of paths to remove.
 function EasyBarNodeHandle:unset(paths) end
 
 ---Subscribes this node to one or more event tokens.
 ---Interaction belongs to this node frame.
----@param events EasyBarEventToken|EasyBarEventToken[]
----@param handler EasyBarEventHandler
+---@param events EasyBarEventToken|EasyBarEventToken[] One event token or an array of tokens.
+---@param handler EasyBarEventHandler Callback invoked when one subscribed event is delivered.
 function EasyBarNodeHandle:subscribe(events, handler) end
 
 ---Sets per-widget default properties for future `easybar.add(...)` calls.
 ---Defaults apply only within the current widget file.
----@param props EasyBarNodeProps
+---@param props EasyBarNodeProps Defaults merged into future nodes created by this widget file.
 function EasyBar.default(props) end
 
 ---Clears previously configured widget defaults.
 function EasyBar.clear_defaults() end
 
 ---Merges properties into one existing node by id.
----@param id string
----@param props EasyBarNodeProps
+---@param id string Existing node id in the current widget runtime.
+---@param props EasyBarNodeProps Properties to merge; unspecified properties remain unchanged.
 function EasyBar.set(id, props) end
 
 ---Removes one or more nested properties from one existing node by id.
----@param id string
----@param paths string|string[]
+---@param id string Existing node id in the current widget runtime.
+---@param paths string|string[] Dot-separated property path or array of paths to remove.
 function EasyBar.unset(id, paths) end
 
 ---Returns a copy of one existing node's current property table.
----@param id string
----@return EasyBarNodeProps
+---@param id string Existing node id in the current widget runtime.
+---@return EasyBarNodeProps props Snapshot safe to inspect or modify locally.
 function EasyBar.get(id) end
 
 ---Removes one existing node and all of its descendants by id.
----@param id string
+---@param id string Existing node id in the current widget runtime.
 function EasyBar.remove(id) end
 
 ---Subscribes one existing node to one or more event tokens by id.
----@param id string
----@param events EasyBarEventToken|EasyBarEventToken[]
----@param handler EasyBarEventHandler
+---@param id string Existing node id in the current widget runtime.
+---@param events EasyBarEventToken|EasyBarEventToken[] One event token or an array of tokens.
+---@param handler EasyBarEventHandler Callback invoked when one subscribed event is delivered.
 function EasyBar.subscribe(id, events, handler) end
 
 ---Creates one EasyBar node and returns its handle.
@@ -713,46 +730,52 @@ function EasyBar.subscribe(id, events, handler) end
 ---and `easybar.kind.row` / `easybar.kind.column` for layout wrappers around child nodes.
 ---When `interval` and `on_interval` are provided, EasyBar runs `on_interval`
 ---on this widget's own repeating schedule without requiring an event subscription.
----@param kind EasyBarKind
----@param id string
----@param props? EasyBarNodeProps
----@return EasyBarNodeHandle
+---@param kind EasyBarKind Node kind, normally selected from `easybar.kind`.
+---@param id string Widget-unique node id used for updates, events, and parent references.
+---@param props? EasyBarNodeProps Initial node properties merged with widget-local defaults.
+---@return EasyBarNodeHandle node Handle for local updates, subscriptions, and removal.
 function EasyBar.add(kind, id, props) end
 
----Runs one shell command.
----Returns trimmed command output and exit code.
----@param command string
----@param options? EasyBarCommandOptions
----@return string
----@return integer
+---Runs one shell command synchronously through `/bin/sh -lc`.
+---This blocks the Lua runtime until completion, so prefer it only for short, local commands.
+---Output combines stdout and stderr and strips trailing newline characters.
+---@param command string Shell source passed to `/bin/sh -lc`.
+---@param options? EasyBarCommandOptions Optional per-call limits; omitted fields use host defaults.
+---@return string output Combined stdout and stderr with trailing newlines removed.
+---@return EasyBarCommandExitCode code Process exit status or an EasyBar termination status.
 function EasyBar.exec(command, options) end
 
----Runs one shell command in the background.
----The callback receives trimmed output and the command exit code when the job finishes.
----@param command string
----@param options EasyBarCommandOptions|nil
----@param callback fun(output: string, code: integer): any
----@return string
+---Runs one shell command asynchronously through `/bin/sh -lc`.
+---Use this only when shell syntax such as pipes, redirection, expansion, or compound commands is required.
+---The callback runs exactly once after normal exit, timeout, output-limit termination, launch failure, or cancellation.
+---@param command string Shell source passed to `/bin/sh -lc`.
+---@param options EasyBarCommandOptions|nil Optional per-call limits, or `nil` to use host defaults.
+---@param callback EasyBarCommandCallback Receives combined output and the final exit status.
+---@return EasyBarAsyncToken token Token accepted by `easybar.cancel_async(...)` while the command is pending.
 function EasyBar.exec_async(command, options, callback) end
 
----Runs one executable directly in the background without shell parsing or interpolation.
----Each argument is passed to the process exactly as provided.
----@param arguments string[]
----@param options EasyBarCommandOptions|nil
----@param callback fun(output: string, code: integer): any
----@return string
+---Runs one executable asynchronously without shell parsing or interpolation.
+---The first array element is the executable; remaining elements are passed exactly as process arguments.
+---Prefer this over `easybar.exec_async(...)` whenever shell behavior is not required.
+---@param arguments string[] Dense argument array whose first element is an executable name or path.
+---@param options EasyBarCommandOptions|nil Optional per-call limits, or `nil` to use host defaults.
+---@param callback EasyBarCommandCallback Receives combined output and the final exit status.
+---@return EasyBarAsyncToken token Token accepted by `easybar.cancel_async(...)` while the command is pending.
 function EasyBar.spawn_async(arguments, options, callback) end
 
----Schedules one non-blocking callback after a delay.
----The returned timer handle can cancel the callback before it fires.
----@param delay_seconds number
----@param callback fun(): any
----@return EasyBarTimerHandle
+---Schedules one non-blocking, one-shot callback using a host-owned timer.
+---The delay must be finite and non-negative. A zero delay schedules the callback asynchronously;
+---it does not run inline before `easybar.after(...)` returns.
+---@param delay_seconds number Minimum delay in seconds before the callback becomes eligible to run.
+---@param callback EasyBarTimerCallback Callback invoked at most once unless cancelled first.
+---@return EasyBarTimerHandle timer Handle used to cancel the pending callback.
 function EasyBar.after(delay_seconds, callback) end
 
----Requests cancellation of one pending background command. Returns immediately after sending the request; the original callback receives exit code 130 after the process group exits.
----@param token string
----@return boolean pending
+---Requests cancellation of one pending asynchronous command and its process group.
+---This function returns immediately. When cancellation succeeds, the original command callback runs
+---after termination with exit status `130` and any output captured before the process stopped.
+---@param token EasyBarAsyncToken Token returned by `easybar.exec_async(...)` or `easybar.spawn_async(...)`.
+---@return boolean pending `true` when the token was still pending and cancellation was requested; otherwise `false`.
 function EasyBar.cancel_async(token) end
 
 ---EasyBar application version (`dev`).
@@ -794,43 +817,43 @@ EasyBar.inbox = {}
 ---Writes one widget-scoped log line to the EasyBar host logger.
 ---Supported levels are `trace`, `debug`, `info`, `warn`, and `error`.
 ---Which messages are actually emitted depends on the host logging level.
----@param level EasyBarLevel|string
----@param ... any
+---@param level EasyBarLevel|string Minimum severity for this message.
+---@param ... any Values converted to text and joined into one log message.
 function EasyBar.log(level, ...) end
 
 ---Creates a widget logger that prepends a stable prefix to normal EasyBar host logs.
----@param prefix string
----@return EasyBarPrefixedLogger
+---@param prefix string Prefix added to every message from the returned logger.
+---@return EasyBarPrefixedLogger logger Callable prefixed host logger.
 function EasyBar.log.with_prefix(prefix) end
 
 ---Creates a widget logger that writes normal EasyBar logs and appends to a file in `easybar.log_dir`.
 ---The file name must be a plain file name, not a path.
----@param file_name string
----@param options? EasyBarLogFileOptions
----@return EasyBarFileLogger
+---@param file_name string Plain file name created inside `easybar.log_dir`; paths are rejected.
+---@param options? EasyBarLogFileOptions Optional line prefix configuration.
+---@return EasyBarFileLogger logger Callable host-and-file logger with file utility methods.
 function EasyBar.log.with_file(file_name, options) end
 
 ---Appends raw text to the widget log file and adds a trailing newline when missing.
----@param text any
----@return boolean
----@return string?
+---@param text any Value appended as text; one trailing newline is added when missing.
+---@return boolean ok Whether the write succeeded.
+---@return string? error_message Failure detail when `ok` is `false`.
 function EasyBarFileLogger.append(text) end
 
 ---Appends one line to the widget log file.
----@param text any
----@return boolean
----@return string?
+---@param text any Value appended as exactly one logical line.
+---@return boolean ok Whether the write succeeded.
+---@return string? error_message Failure detail when `ok` is `false`.
 function EasyBarFileLogger.line(text) end
 
 ---Returns the newest log lines as one newline-delimited string.
----@param limit integer
----@return string
+---@param limit integer Maximum number of newest lines to return.
+---@return string text Newline-delimited tail content, or an empty string when unavailable.
 function EasyBarFileLogger.tail(limit) end
 
 ---Keeps only the newest log lines in the widget log file.
----@param limit integer
----@return boolean
----@return string?
+---@param limit integer Number of newest lines to retain.
+---@return boolean ok Whether the trim succeeded.
+---@return string? error_message Failure detail when `ok` is `false`.
 function EasyBarFileLogger.trim(limit) end
 
 ---@type EasyBar

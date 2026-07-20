@@ -57,11 +57,18 @@ class ParamDoc:
 
 
 @dataclass
+class ReturnDoc:
+    type_expr: str
+    name: str = ""
+    description: str = ""
+
+
+@dataclass
 class FunctionDoc:
     name: str
     description: str
     params: list[ParamDoc] = field(default_factory=list)
-    returns: list[str] = field(default_factory=list)
+    returns: list[ReturnDoc] = field(default_factory=list)
 
 
 def comment_text(line: str) -> str | None:
@@ -89,6 +96,32 @@ def heading_id(name: str) -> str:
     return f"`{name}`"
 
 
+def split_type_and_description(value: str) -> tuple[str, str]:
+    """Split one LuaLS type from trailing prose without breaking function types."""
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+
+        if char in {"'", '"'}:
+            quote = char
+        elif char in "({[<":
+            depth += 1
+        elif char in ")}]>" and depth > 0:
+            depth -= 1
+        elif char.isspace() and depth == 0:
+            return value[:index].strip(), value[index:].strip()
+    return value.strip(), ""
+
+
 @dataclass
 class LuaDocParserState:
     aliases: dict[str, AliasDoc] = field(default_factory=dict)
@@ -97,7 +130,7 @@ class LuaDocParserState:
     pending_comments: list[str] = field(default_factory=list)
     pending_function_description: str = ""
     pending_params: list[ParamDoc] = field(default_factory=list)
-    pending_returns: list[str] = field(default_factory=list)
+    pending_returns: list[ReturnDoc] = field(default_factory=list)
     current_alias: AliasDoc | None = None
     current_class: ClassDoc | None = None
     current_function: FunctionDoc | None = None
@@ -200,6 +233,7 @@ class LuaDocParserState:
             return False
 
         name = param_match.group(1)
+        type_expr, description = split_type_and_description(param_match.group(2))
         optional = name.endswith("?")
         if optional:
             name = name[:-1]
@@ -207,8 +241,8 @@ class LuaDocParserState:
         self.pending_params.append(
             ParamDoc(
                 name=name,
-                type_expr=param_match.group(2).strip(),
-                description="",
+                type_expr=type_expr,
+                description=description,
                 optional=optional,
             )
         )
@@ -220,8 +254,25 @@ class LuaDocParserState:
         if not return_match:
             return False
 
+        type_expr, remainder = split_type_and_description(return_match.group(1))
+        name = ""
+        description = ""
+        if remainder:
+            name_match = re.match(r"([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$", remainder)
+            if name_match:
+                name = name_match.group(1)
+                description = (name_match.group(2) or "").strip()
+            else:
+                description = remainder
+
         self.capture_function_description()
-        self.pending_returns.append(return_match.group(1).strip())
+        self.pending_returns.append(
+            ReturnDoc(
+                type_expr=type_expr,
+                name=name,
+                description=description,
+            )
+        )
         self.pending_comments = []
         return True
 
@@ -294,7 +345,7 @@ def function_from_field(name: str, field_doc: FieldDoc) -> FunctionDoc:
     )
 
 
-def parse_fun_type(type_expr: str) -> tuple[list[ParamDoc], list[str]]:
+def parse_fun_type(type_expr: str) -> tuple[list[ParamDoc], list[ReturnDoc]]:
     match = re.match(r"fun\((.*?)\)(?::\s*(.*))?$", type_expr)
     if not match:
         return [], []
@@ -316,8 +367,11 @@ def parse_fun_type(type_expr: str) -> tuple[list[ParamDoc], list[str]]:
             params.append(ParamDoc(
                 name=name, type_expr=param_type.strip(), description="", optional=optional))
 
-    returns = [part.strip()
-               for part in split_top_level(raw_returns, ",") if part.strip()]
+    returns = [
+        ReturnDoc(type_expr=part.strip())
+        for part in split_top_level(raw_returns, ",")
+        if part.strip()
+    ]
     return params, returns
 
 
@@ -378,8 +432,9 @@ If this reference is wrong, update the stub and regenerate the docs.
     (OUT / "index.md").write_text(content)
 
 
-def render_alias(alias: AliasDoc) -> list[str]:
-    lines = [f"## {heading_id(alias.name)}", ""]
+def render_alias(alias: AliasDoc, heading_level: int = 2) -> list[str]:
+    heading = "#" * heading_level
+    lines = [f"{heading} {heading_id(alias.name)}", ""]
     if alias.description:
         lines += [alias.description, ""]
     if alias.type_expr:
@@ -394,8 +449,9 @@ def render_alias(alias: AliasDoc) -> list[str]:
     return lines
 
 
-def render_class(cls: ClassDoc) -> list[str]:
-    lines = [f"## {heading_id(cls.name)}", ""]
+def render_class(cls: ClassDoc, heading_level: int = 2) -> list[str]:
+    heading = "#" * heading_level
+    lines = [f"{heading} {heading_id(cls.name)}", ""]
     if cls.modifiers:
         lines += [f"Modifiers: `{cls.modifiers}`.", ""]
     if cls.description:
@@ -414,12 +470,14 @@ def render_class(cls: ClassDoc) -> list[str]:
     return lines
 
 
-def render_function(fn: FunctionDoc) -> list[str]:
-    lines = [f"## {heading_id(fn.name)}", ""]
+def render_function(fn: FunctionDoc, heading_level: int = 2) -> list[str]:
+    heading = "#" * heading_level
+    detail_heading = "#" * (heading_level + 1)
+    lines = [f"{heading} {heading_id(fn.name)}", ""]
     if fn.description:
         lines += [fn.description, ""]
     if fn.params:
-        lines += ["### Parameters", "", "| Name | Type | Description |",
+        lines += [f"{detail_heading} Parameters", "", "| Name | Type | Description |",
                   "| ---- | ---- | ----------- |"]
         for param in fn.params:
             name = f"`{param.name}`"
@@ -429,17 +487,34 @@ def render_function(fn: FunctionDoc) -> list[str]:
                 f"| {name} | `{display_type(param.type_expr)}` | {table_escape(param.description)} |")
         lines.append("")
     if fn.returns:
-        lines += ["### Returns", ""]
-        for ret in fn.returns:
-            lines.append(f"- `{display_type(ret)}`")
+        lines += [f"{detail_heading} Returns", ""]
+        if any(ret.name or ret.description for ret in fn.returns):
+            lines += [
+                "| Type | Name | Description |",
+                "| ---- | ---- | ----------- |",
+            ]
+            for ret in fn.returns:
+                name = f"`{ret.name}`" if ret.name else ""
+                lines.append(
+                    f"| `{display_type(ret.type_expr)}` | {name} | {table_escape(ret.description)} |"
+                )
+        else:
+            for ret in fn.returns:
+                lines.append(f"- `{display_type(ret.type_expr)}`")
         lines.append("")
     return lines
 
 
-def write_functions(functions: dict[str, FunctionDoc]) -> None:
+def write_functions(
+    aliases: dict[str, AliasDoc],
+    classes: dict[str, ClassDoc],
+    functions: dict[str, FunctionDoc],
+) -> None:
     preferred = [
         "EasyBar.add", "EasyBar.clear_defaults", "EasyBar.default", "EasyBar.exec",
-        "EasyBar.exec_async", "EasyBar.get", "EasyBar.log", "EasyBar.remove",
+        "EasyBar.exec_async", "EasyBar.spawn_async", "EasyBar.after", "EasyBarTimerHandle:cancel",
+        "EasyBar.cancel_async",
+        "EasyBar.get", "EasyBar.log", "EasyBar.remove",
         "EasyBar.set", "EasyBar.subscribe", "EasyBar.unset",
         "EasyBarNodeHandle:get", "EasyBarNodeHandle:remove", "EasyBarNodeHandle:set",
         "EasyBarNodeHandle:subscribe", "EasyBarNodeHandle:unset",
@@ -451,8 +526,21 @@ def write_functions(functions: dict[str, FunctionDoc]) -> None:
 
     lines = [HEADER, "# Functions", "",
              "Generated from LuaLS function annotations.", ""]
+    lines += ["## Command and timer types", ""]
+    for name in [
+        "EasyBarAsyncToken",
+        "EasyBarCommandExitCode",
+        "EasyBarCommandCallback",
+        "EasyBarTimerCallback",
+    ]:
+        if name in aliases:
+            lines.extend(render_alias(aliases[name], heading_level=3))
+    for name in ["EasyBarCommandOptions", "EasyBarTimerHandle"]:
+        if name in classes:
+            lines.extend(render_class(classes[name], heading_level=3))
+    lines += ["## API functions", ""]
     for fn in ordered:
-        lines.extend(render_function(fn))
+        lines.extend(render_function(fn, heading_level=3))
     (OUT / "functions.md").write_text("\n".join(lines).rstrip() + "\n")
 
 
@@ -511,7 +599,7 @@ def main() -> int:
     aliases, classes, functions = parse_docs(STUB.read_text())
     OUT.mkdir(parents=True, exist_ok=True)
     write_index()
-    write_functions(functions)
+    write_functions(aliases, classes, functions)
     write_node_kinds(aliases, classes)
     write_events(aliases, classes)
     write_properties(aliases, classes)
@@ -521,3 +609,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

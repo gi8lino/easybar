@@ -1,14 +1,16 @@
 # Commands
 
-EasyBar exposes bounded process-execution helpers for Lua widgets.
+EasyBar exposes bounded process-execution and scheduling helpers for Lua widgets.
 
-Use commands carefully. Long-running synchronous commands block the Lua runtime.
-EasyBar also enforces configurable host-side limits for command timeout, captured output size,
-and concurrent async jobs through `[app.lua_commands]`.
+Use commands carefully. Long-running synchronous commands block the Lua runtime. EasyBar enforces
+host-side limits for command timeout, captured output size, and concurrent asynchronous jobs through
+`[app.lua_commands]`.
 
 ## Synchronous commands
 
-`easybar.exec(command, options?)` runs a command synchronously and returns output plus exit code.
+`easybar.exec(command, options?)` runs `/bin/sh -lc <command>` synchronously and returns combined
+stdout and stderr plus the final status. EasyBar removes trailing newline characters but otherwise
+preserves the captured output.
 
 ```lua
 local output, code = easybar.exec("date +%H:%M", easybar.DEFAULT_EXEC_OPTIONS)
@@ -22,19 +24,20 @@ if code == 0 then
 end
 ```
 
-Use this only for fast commands.
+Use this only for fast, local commands. The Lua runtime cannot dispatch widget events or callbacks
+while a synchronous command is running.
 
-## Asynchronous commands
+## Asynchronous shell commands
 
-`easybar.exec_async(command, options, callback)` runs a command in the background and calls back later with output and exit code.
+`easybar.exec_async(command, options, callback)` runs `/bin/sh -lc <command>` in the background and
+calls back exactly once with combined output and the final status.
 
-This is preferred for:
+Use it for commands that genuinely require shell behavior such as:
 
-- package managers
-- network requests
-- slow scripts
-- commands used by popup buttons
-- anything that should not block other widgets
+- pipes and redirection
+- command substitution or wildcard expansion
+- compound shell scripts
+- background work that should not block other widgets
 
 ```lua
 easybar.exec_async("brew outdated --json=v2", {
@@ -53,19 +56,38 @@ easybar.exec_async("brew outdated --json=v2", {
 end)
 ```
 
-`options` accepts:
+## Command options
+
+All command APIs accept the same optional limits:
 
 - `timeout_seconds`
 - `max_output_bytes`
 
-Leave `options` as `{}` when you want the global defaults from `[app.lua_commands]`.
-Use `easybar.DEFAULT_EXEC_OPTIONS` when you want to reference the current configured host defaults directly.
+Both values must be greater than zero, and `max_output_bytes` must be an integer. Pass `nil` or `{}`
+when you want the global defaults from `[app.lua_commands]`. Use
+`easybar.DEFAULT_EXEC_OPTIONS` when you want to pass the current configured host defaults explicitly.
+
+## Output and status codes
+
+All command APIs combine stdout and stderr into one bounded output string. Trailing newline
+characters are removed before Lua receives the result.
+
+Normal executable exit codes are preserved. EasyBar reserves these statuses for host-side outcomes:
+
+| Status | Meaning                                                                        |
+| ------ | ------------------------------------------------------------------------------ |
+| `65`   | Captured output exceeded `max_output_bytes`; the process group was terminated. |
+| `124`  | The command exceeded `timeout_seconds`; the process group was terminated.      |
+| `127`  | The requested executable could not be found.                                   |
+| `130`  | Cancellation was requested and the process group was terminated.               |
+
+Treat every non-zero status as failure unless the specific executable documents another meaning.
 
 ## Direct executable commands
 
 Prefer `easybar.spawn_async(arguments, options, callback)` when you are invoking one executable and
 do not need shell syntax. EasyBar passes each argument directly to the process, so spaces, dollar
-signs, semicolons, and other shell characters are treated as literal argument content.
+signs, semicolons, and other shell characters are literal argument content.
 
 ```lua
 easybar.spawn_async({
@@ -77,6 +99,10 @@ easybar.spawn_async({
     -- Handle the final process result.
 end)
 ```
+
+The argument table must be a dense array of strings. The first element is the executable name or
+path. Empty executable names, sparse arrays, non-string arguments, and NUL bytes are rejected before
+the host process starts.
 
 The executable is resolved through the `PATH` from `[app.env]`. Use `/usr/bin/env` as the executable
 when one command needs additional environment values without invoking a shell:
@@ -91,9 +117,8 @@ easybar.spawn_async({
 }, {}, callback)
 ```
 
-Use `easybar.exec_async(...)` only when the command genuinely needs shell features such as pipes,
-redirection, command substitution, wildcard expansion, or a compound script. Both asynchronous APIs
-return a token accepted by `easybar.cancel_async(...)` and use the same timeout and output limits.
+Both asynchronous APIs return a token accepted by `easybar.cancel_async(...)` and use the same
+command limits.
 
 ## Cancelling asynchronous commands
 
@@ -119,51 +144,52 @@ end)
 local cancellation_requested = easybar.cancel_async(active_job)
 ```
 
-Restore the widget's idle state from the async callback, because the cancellation request is
-asynchronous. Whether to refresh data afterwards is up to the widget. If the last known data is
-still useful, keep it and render the normal action again:
-
-```lua
-local running = false
-local active_job
-
-local function render()
-    action:set({ label = running and "Cancel" or "Update" })
-end
-
-local function start_update()
-    running = true
-    render()
-
-    active_job = easybar.exec_async("long-running-update", {}, function(output, code)
-        active_job = nil
-        running = false
-
-        if code ~= 0 and code ~= 130 then
-            easybar.log(easybar.level.warn, "update failed", code, output)
-        end
-
-        render()
-    end)
-end
-```
-
-Do not start a follow-up check merely to finish cancellation unless the cancelled command may
-have changed the data you display. A separate refresh produces an additional busy state after the
-user has already asked the operation to stop.
+Restore the widget's idle state from the async callback because the cancellation request is
+asynchronous. Whether to refresh data afterwards is up to the widget. If the last known data remains
+useful, keep it and render the normal action again.
 
 `easybar.cancel_async(token)` returns `true` when the token still identifies a pending command and
 the cancellation request was sent. It returns `false` when the command already completed or the
 token is unknown. The return value confirms the request, not that the process has already exited.
 
-Cancellation first asks the command's complete process group to terminate, so child processes are
-stopped along with the requested executable or shell command. EasyBar forcibly stops processes that do not exit during the
-grace period. The original callback runs after termination and receives exit code `130`; `output`
-contains anything captured before cancellation.
+Cancellation first asks the command's complete process group to terminate, so child processes stop
+with the requested executable or shell command. EasyBar forcibly stops processes that do not exit
+during the grace period. The original callback then receives status `130` and any output captured
+before cancellation.
 
-Command tokens belong to the current Lua runtime session. Keep them only while the corresponding
-job is active, and do not persist them across config reloads or application restarts. Synchronous
+Command tokens belong to the current Lua runtime session. Keep them only while the corresponding job
+is active, and do not persist them across config reloads or application restarts. Synchronous
 commands started with `easybar.exec(...)` cannot be cancelled this way.
+
+## Delayed callbacks
+
+`easybar.after(delay_seconds, callback)` schedules a host-owned one-shot timer. It does not launch
+`sleep`, consume an asynchronous command slot, or block the Lua runtime.
+
+```lua
+local pending_refresh
+
+pending_refresh = easybar.after(3, function()
+    pending_refresh = nil
+    refresh()
+end)
+```
+
+The delay must be finite and non-negative. A delay of zero still schedules the callback
+asynchronously; the callback does not run before `easybar.after(...)` returns.
+
+Cancel a callback that is no longer useful:
+
+```lua
+if pending_refresh ~= nil then
+    pending_refresh:cancel()
+    pending_refresh = nil
+end
+```
+
+`timer:cancel()` returns `true` only when the callback was still pending. It returns `false` after the
+timer fired or was already cancelled. Timer handles belong to the current Lua runtime session and
+should not be persisted across reloads.
 
 ## Environment
 

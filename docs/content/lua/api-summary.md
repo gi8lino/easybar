@@ -18,10 +18,12 @@ Use the full reference when you need exact property tables or event payload type
   Subscribe one node by id to runtime or interaction events.
 - `easybar.default(props)`
   Set widget-local default properties for future `add(...)` calls.
-- `easybar.exec(...)` and `easybar.exec_async(...)`
-  Run shell commands from a widget, with optional per-call command limits.
+- `easybar.exec(command, options?)`
+  Run a short shell command synchronously. This blocks the Lua runtime until completion.
+- `easybar.exec_async(command, options, callback)`
+  Run shell syntax asynchronously and receive combined output plus the final status.
 - `easybar.spawn_async(arguments, options, callback)`
-  Run one executable directly without shell parsing.
+  Run one executable directly without shell parsing. Prefer this when pipes or expansion are not needed.
 - `easybar.after(delay_seconds, callback)`
   Schedule a cancellable, host-owned one-shot callback without launching `sleep`.
 - `easybar.cancel_async(token)`
@@ -34,6 +36,10 @@ Use the full reference when you need exact property tables or event payload type
   Create a file-backed widget logger for command/output logs.
 
 See [Functions](reference/functions.md).
+
+Command callbacks receive status `0` for success. Host-side termination uses `65` for output-limit
+termination, `124` for timeout, `127` for a missing executable, and `130` for cancellation. See
+[Commands](guides/commands.md) for exact execution and cancellation behavior.
 
 ## Handle methods
 

@@ -171,14 +171,12 @@ final class LuaRenderSchedulingTests: LuaRenderRuntimeTestCase, @unchecked Senda
     easybar.add("item", "retry", { position = "right", label = "waiting" })
     easybar.subscribe("retry", { easybar.events.forced }, function()
       retry.run(easybar, {
-        delays = { 2, 5 },
+        delays = { 2, 5, 9 },
         attempt = function(done)
           attempts = attempts + 1
           return easybar.spawn_async({ "printf", "%s", "attempt" }, {}, done)
         end,
-        should_retry = function(_, code)
-          return code ~= 0
-        end,
+        should_retry = retry.is_transient_network_error,
         on_complete = function(output, code, count)
           easybar.set("retry", { label = output .. ":" .. tostring(code) .. ":" .. tostring(count) })
         end,
@@ -209,7 +207,7 @@ final class LuaRenderSchedulingTests: LuaRenderRuntimeTestCase, @unchecked Senda
     try runtime.sendHostEvent("{\"name\":\"forced\"}\n")
 
     let first = try await nextCommandRequest(from: recorder, matching: { _ in true })
-    try runtime.sendCommandResponse(token: first.token, output: "temporary", status: 1)
+    try runtime.sendCommandResponse(token: first.token, output: "i/o timeout", status: 1)
     let firstDelay = try await nextUpdate(from: recorder) { $0.type == .timerRequest }
     XCTAssertEqual(firstDelay.delaySeconds, 2)
     try runtime.sendHostEvent(
@@ -217,7 +215,7 @@ final class LuaRenderSchedulingTests: LuaRenderRuntimeTestCase, @unchecked Senda
     )
 
     let second = try await nextCommandRequest(from: recorder, matching: { _ in true })
-    try runtime.sendCommandResponse(token: second.token, output: "temporary", status: 1)
+    try runtime.sendCommandResponse(token: second.token, output: "connection reset", status: 1)
     let secondDelay = try await nextUpdate(from: recorder) { $0.type == .timerRequest }
     XCTAssertEqual(secondDelay.delaySeconds, 5)
     try runtime.sendHostEvent(
@@ -225,12 +223,16 @@ final class LuaRenderSchedulingTests: LuaRenderRuntimeTestCase, @unchecked Senda
     )
 
     let third = try await nextCommandRequest(from: recorder, matching: { _ in true })
-    try runtime.sendCommandResponse(token: third.token, output: "success", status: 0)
+    try runtime.sendCommandResponse(
+      token: third.token,
+      output: "success mentions timeout",
+      status: 0
+    )
     let update = try await nextTreeUpdate(
       from: recorder,
-      matching: { [self] in rootNode(in: $0)?.text == "success:0:3" }
+      matching: { [self] in rootNode(in: $0)?.text == "success mentions timeout:0:3" }
     )
-    XCTAssertEqual(rootNode(in: update)?.text, "success:0:3")
+    XCTAssertEqual(rootNode(in: update)?.text, "success mentions timeout:0:3")
   }
 
 }

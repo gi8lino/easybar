@@ -1,4 +1,29 @@
---- Asynchronous retry helpers for EasyBar widgets.
+---Completion callback supplied to one retry attempt.
+---@alias RetryDoneCallback fun(output:string, code:EasyBarCommandExitCode)
+
+---Starts one asynchronous attempt and returns its EasyBar command token.
+---@alias RetryAttempt fun(done:RetryDoneCallback, attempt_number:integer):EasyBarAsyncToken
+
+---Decides whether one failed attempt should be retried.
+---@alias RetryPredicate fun(output:string, code:EasyBarCommandExitCode, attempt_number:integer):boolean
+
+---Receives the final non-retried result and total number of started attempts.
+---@alias RetryCompletion fun(output:string, code:EasyBarCommandExitCode, attempts:integer)
+
+---Options accepted by `retry.run(...)`.
+---@class (exact) RetryOptions
+---@field delays? number[] Delay before each subsequent attempt. `delays[1]` follows attempt 1.
+---@field attempt RetryAttempt Starts one asynchronous command and invokes `done` exactly once.
+---@field should_retry? RetryPredicate Defaults to retrying every non-zero status except cancellation.
+---@field on_complete RetryCompletion Runs once for the final result; it is not called after cancellation.
+
+---Cancellable retry operation returned by `retry.run(...)`.
+---@class (exact) RetryOperation
+---@field cancel fun(self:RetryOperation):boolean Cancels the active command or pending delay.
+---@field is_active fun(self:RetryOperation):boolean Returns whether the operation can still complete.
+
+---Asynchronous retry helpers for EasyBar widgets.
+---@class RetryModule
 local M = {}
 
 local TRANSIENT_NETWORK_PATTERNS = {
@@ -24,12 +49,18 @@ local TRANSIENT_NETWORK_PATTERNS = {
 	"http 504",
 }
 
---- Returns whether a failed command looks like a transient network failure.
----@param output string
----@param code integer
----@return boolean
+---Returns whether a failed command looks like a transient network failure.
+---Successful commands are never classified as transient, even when their output contains words
+---such as "timeout". The check is heuristic and intended for idempotent network reads.
+---@param output string Combined command output.
+---@param code EasyBarCommandExitCode Final command status.
+---@return boolean transient `true` only for a non-zero status that appears temporary.
 function M.is_transient_network_error(output, code)
-	if tonumber(code) == 124 then
+	local normalized_code = tonumber(code) or 1
+	if normalized_code == 0 or normalized_code == 130 then
+		return false
+	end
+	if normalized_code == 124 then
 		return true
 	end
 
@@ -42,14 +73,18 @@ function M.is_transient_network_error(output, code)
 	return false
 end
 
---- Runs one asynchronous operation with delays before subsequent attempts.
+---Runs one asynchronous operation with delays before subsequent attempts.
 ---
 --- `attempt(done, attempt_number)` must start an asynchronous operation, return its EasyBar
 --- command token, and invoke `done(output, code)` once. The returned handle cancels either the
 --- active command or the pending host timer. Cancellation never invokes `on_complete`.
----@param easybar_api EasyBar
----@param options table
----@return table operation
+---
+--- The first attempt starts immediately. `delays[1]` is used before attempt 2, `delays[2]`
+--- before attempt 3, and so on. Store the returned operation only when the caller needs to cancel
+--- it or inspect its active state; callbacks and timers retain it until completion otherwise.
+---@param easybar_api EasyBar Widget-scoped EasyBar API used for timers and command cancellation.
+---@param options RetryOptions Retry policy and asynchronous operation callbacks.
+---@return RetryOperation operation Cancellable handle for the complete retry sequence.
 function M.run(easybar_api, options)
 	assert(type(easybar_api) == "table", "retry.run requires the widget easybar API")
 	assert(type(options) == "table", "retry.run requires an options table")
@@ -78,6 +113,7 @@ function M.run(easybar_api, options)
 		cancelled = false,
 		completed = false,
 	}
+	---@type RetryOperation
 	local operation = {}
 	local run_attempt
 

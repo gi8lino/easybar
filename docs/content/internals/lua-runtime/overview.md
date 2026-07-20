@@ -125,8 +125,8 @@ timeouts, output limits, and scheduling remain host-owned.
 `system_woke` remains an immediate event. EasyBar does not delay it globally because widgets that do
 not depend on network recovery may need to react immediately.
 
-Network-dependent widgets schedule their own delayed refresh with `easybar.after(...)`. Their retry
-policy is implemented in Lua, while each delay and external process remains owned by the Swift host.
+Network-dependent widgets schedule their own settling delay with `easybar.after(...)`. Their retry
+policy stays in Lua, while every delay and external process remains owned by the Swift host.
 
 ```mermaid
 flowchart TD
@@ -136,15 +136,15 @@ flowchart TD
     HostTimer["LuaTimerService schedules host timer"]
     TimerFired["Swift sends timer_fired"]
     Retry["retry.run starts refresh attempt"]
-    Spawn["easybar.spawn_async(argv, options, callback)"]
+    Spawn["easybar.spawn_async(arguments, options, callback)"]
     CommandRequest["Lua sends command_request with arguments"]
     CommandRunner["LuaCommandRunner starts direct process"]
     Result{"Command succeeded?"}
     Publish["Widget decodes and publishes data"]
-    Transient{"Transient failure and retries remain?"}
+    Transient{"Transient failure and delays remain?"}
     Backoff["retry.run schedules next backoff delay"]
     Failure["Widget publishes final error"]
-    Cancel["Widget or runtime cancels operation"]
+    Cancel["Widget cancels RetryOperation"]
     CancelTimer["timer_cancel"]
     CancelCommand["command_cancel"]
 
@@ -157,24 +157,22 @@ flowchart TD
     Spawn --> CommandRequest
     CommandRequest --> CommandRunner
     CommandRunner --> Result
-
     Result -- Yes --> Publish
     Result -- No --> Transient
     Transient -- Yes --> Backoff
     Backoff --> TimerRequest
     Transient -- No --> Failure
-
     Retry -. returns cancellable operation .-> Cancel
     Cancel --> CancelTimer
     Cancel --> CancelCommand
 ```
 
-The responsibilities are deliberately separated:
+The layers have deliberately narrow responsibilities:
 
 | Layer                      | Responsibility                                                                     |
 | -------------------------- | ---------------------------------------------------------------------------------- |
 | Widget                     | Chooses when to refresh and how to present the final result.                       |
-| `retry.lua`                | Decides whether an operation should be retried and selects the next backoff delay. |
+| `retry.lua`                | Decides whether to retry and selects the next backoff delay.                       |
 | `easybar.after(...)`       | Requests a cancellable, non-blocking one-shot timer.                               |
 | `easybar.spawn_async(...)` | Requests direct executable invocation without shell parsing.                       |
 | Lua runtime                | Tracks callbacks and routes timer and command responses.                           |
@@ -182,20 +180,20 @@ The responsibilities are deliberately separated:
 | `LuaCommandService`        | Enforces command concurrency and routes execution requests.                        |
 | `LuaCommandRunner`         | Resolves executables, starts process groups, captures output, and enforces limits. |
 
-A typical network-backed inbox refresh uses the following sequence:
+A typical network-backed inbox refresh follows this sequence:
 
 1. `system_woke` is delivered immediately.
-2. The widget schedules a three-second delayed refresh.
+2. The widget schedules a short delayed refresh.
 3. `retry.run(...)` starts the first read-only request.
 4. `easybar.spawn_async(...)` runs `gh`, `glab`, or `brew` without a shell.
 5. Successful output is decoded and published.
 6. A transient network failure schedules another attempt after the configured backoff.
 7. Authentication, parsing, configuration, and other permanent failures are returned immediately.
-8. Reloading or cancelling the operation cancels both pending timers and active commands.
+8. Cancelling the operation stops either its pending timer or active process.
 
-Only idempotent read operations should use automatic retries. Commands that mark notifications as
-read, update Homebrew metadata, install packages, or otherwise mutate state remain one-shot unless
-the caller can prove that repeating them is safe.
+Only idempotent reads should use automatic retries. Commands that acknowledge notifications, update
+Homebrew metadata, install packages, or otherwise mutate state remain one-shot unless repeating them
+is proven safe.
 
 ## Why direct process execution is preferred
 
@@ -214,11 +212,14 @@ easybar.spawn_async({
 Use `easybar.exec_async(...)` only when a command genuinely requires shell behavior such as pipes,
 redirection, command substitution, or a compound script.
 
-Keeping the retry policy outside the command string means:
+Keeping retry policy outside the command string means:
 
-- retry state is visible to Lua
+- retry state remains visible to Lua
 - pending delays can be cancelled
-- retries do not occupy a command slot while waiting
+- retries do not consume command slots while waiting
 - transient and permanent failures can be classified separately
 - mutation commands are not accidentally repeated
 - external commands remain simple, single-attempt operations
+
+See [Commands](../../lua/guides/commands.md) for the public API behavior and
+[Reusable Modules](../../lua/guides/modules.md) for the bundled retry helper.

@@ -24,6 +24,7 @@ That gives you:
 - no `unknown global 'easybar'` warning
 - hover documentation
 - autocomplete for the `easybar` API
+- named command callbacks, command status values, async tokens, and timer handles
 - diagnostics and autocomplete for supported node properties such as `background.border_width`, `popup.drawing`, `interval`, and `on_interval`
 
 Suggested setup:
@@ -55,3 +56,7 @@ If your editor still only knows about the `easybar` global but not nested proper
 ## User modules
 
 The `runtime.path` entries above let LuaLS resolve the same widget-local modules that EasyBar loads from `lib/`. See [Reusable Modules](modules.md) for directory layout, `require(...)` behavior, and module lifetime.
+
+Keep reusable-module annotations beside the module implementation. For example, the bundled
+`lib/retry.lua` declares `RetryOptions` and `RetryOperation` locally, so LuaLS can validate retry
+callbacks when the module is required without polluting the global EasyBar API.
