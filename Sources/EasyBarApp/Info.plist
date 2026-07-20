@@ -24,5 +24,7 @@
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>EasyBar widgets connect to services on your local network.</string>
 </dict>
 </plist>
