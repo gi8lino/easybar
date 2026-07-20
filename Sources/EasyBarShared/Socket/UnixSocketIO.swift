@@ -39,6 +39,22 @@ public func openConnectedUnixSocket(
   at socketPath: String,
   timeout: TimeInterval = 5
 ) throws -> Int32 {
+  let normalizedTimeout = max(0.001, timeout)
+  return try openConnectedUnixSocket(
+    at: socketPath,
+    timeout: normalizedTimeout,
+    deadline: monotonicPollDeadline(after: normalizedTimeout),
+    restoreBlocking: true
+  )
+}
+
+/// Creates and connects one Unix-domain client socket against an existing deadline.
+func openConnectedUnixSocket(
+  at socketPath: String,
+  timeout: TimeInterval,
+  deadline: UInt64,
+  restoreBlocking: Bool
+) throws -> Int32 {
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
     throw UnixSocketConnectError.createSocket(errnoValue: errno)
@@ -73,7 +89,6 @@ public func openConnectedUnixSocket(
       }
 
       var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
-      let deadline = monotonicPollDeadline(after: timeout)
       var pollResult: Int32
       repeat {
         pollResult = poll(&descriptor, 1, remainingPollMilliseconds(until: deadline))
@@ -92,9 +107,13 @@ public func openConnectedUnixSocket(
         throw UnixSocketConnectError.connect(errnoValue: socketError)
       }
     }
-    guard fcntl(fd, F_SETFL, originalFlags) == 0 else {
-      throw UnixSocketConnectError.connect(errnoValue: errno)
+
+    if restoreBlocking {
+      guard fcntl(fd, F_SETFL, originalFlags) == 0 else {
+        throw UnixSocketConnectError.connect(errnoValue: errno)
+      }
     }
+
     return fd
   } catch {
     close(fd)

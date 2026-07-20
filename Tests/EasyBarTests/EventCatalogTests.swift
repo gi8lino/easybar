@@ -137,7 +137,8 @@ final class EventCatalogTests: XCTestCase {
     )
 
     XCTAssertEqual(plan.sources, [])
-    XCTAssertEqual(plan.intervalSchedules, [WidgetIntervalSchedule(widgetID: "brew", interval: 2.5)])
+    XCTAssertEqual(
+      plan.intervalSchedules, [WidgetIntervalSchedule(widgetID: "brew", interval: 2.5)])
   }
 
   @MainActor
@@ -158,6 +159,25 @@ final class EventCatalogTests: XCTestCase {
         WidgetIntervalSchedule(widgetID: "brew", interval: 10),
         WidgetIntervalSchedule(widgetID: "clock", interval: 2.5),
         WidgetIntervalSchedule(widgetID: "calendar", interval: 5),
+      ]
+    )
+  }
+
+  @MainActor
+  /// Verifies that one widget may request more than one distinct interval schedule.
+  func testSubscriptionPlanKeepsDistinctIntervalsForSameWidget() {
+    let plan = EventManager.subscriptionPlan(
+      for: [
+        "interval_tick:clock:2.5",
+        "interval_tick:clock:10",
+      ]
+    )
+
+    XCTAssertEqual(
+      plan.intervalSchedules,
+      [
+        WidgetIntervalSchedule(widgetID: "clock", interval: 2.5),
+        WidgetIntervalSchedule(widgetID: "clock", interval: 10),
       ]
     )
   }

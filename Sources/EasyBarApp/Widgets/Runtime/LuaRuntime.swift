@@ -43,6 +43,14 @@ actor LuaRuntime {
   /// Starts the Lua runtime if it is not already running.
   @discardableResult
   func start(config: ConfigSnapshot) async -> Bool {
+    if let processIdentifier = processController.processIdentifier {
+      logger.debug(
+        "lua runtime start skipped because it is already running",
+        .field("pid", processIdentifier)
+      )
+      return true
+    }
+
     guard let context = processController.launchContext(config: config) else { return false }
 
     let resources = LuaProcessController.LaunchResources()

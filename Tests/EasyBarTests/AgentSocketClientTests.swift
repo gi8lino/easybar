@@ -439,6 +439,50 @@ final class AgentSocketClientTests: XCTestCase {
     }
   }
 
+  func testOneShotClientTimesOutWhenPeerDoesNotReadRequest() throws {
+    let listeningFD = try makeListeningUnixSocket(at: socketPath, backlog: 1)
+    let releaseAcceptedSocket = DispatchSemaphore(value: 0)
+    let acceptFinished = DispatchSemaphore(value: 0)
+
+    DispatchQueue.global().async {
+      let acceptedFD = accept(listeningFD, nil, nil)
+      if acceptedFD >= 0 {
+        var receiveBufferSize: Int32 = 1_024
+        _ = setsockopt(
+          acceptedFD,
+          SOL_SOCKET,
+          SO_RCVBUF,
+          &receiveBufferSize,
+          socklen_t(MemoryLayout<Int32>.size)
+        )
+        _ = releaseAcceptedSocket.wait(timeout: .now() + 2)
+        close(acceptedFD)
+      }
+      acceptFinished.signal()
+    }
+
+    defer {
+      releaseAcceptedSocket.signal()
+      closeListeningUnixSocket(listeningFD, at: socketPath)
+      _ = acceptFinished.wait(timeout: .now() + 2)
+    }
+
+    let client = LineSocketClientTransport<TestRequest, TestMessage>(
+      socketPath: socketPath,
+      responseTimeout: 0.05
+    )
+    let oversizedRequest = TestRequest(command: String(repeating: "x", count: 16 * 1_024 * 1_024))
+    let start = Date()
+
+    XCTAssertThrowsError(try client.send(request: oversizedRequest)) { error in
+      guard case LineSocketClientTransportError.writeTimedOut = error else {
+        return XCTFail("unexpected error: \(error)")
+      }
+    }
+
+    XCTAssertLessThan(Date().timeIntervalSince(start), 2)
+  }
+
   func testRapidServerRestartsKeepAcceptLoopBoundToCurrentRun() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)

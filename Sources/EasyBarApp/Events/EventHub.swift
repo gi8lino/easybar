@@ -144,27 +144,20 @@ actor EventHub {
 
   /// Emits one fully constructed payload.
   func emit(_ payload: EasyBarEventPayload) async {
-    await metricsCoordinator.recordEvent(
-      name: payload.eventName,
-      isWidgetEvent: payload.widgetEvent != nil
-    )
-
+    // Complete every ordering-sensitive hub mutation and delivery before the first suspension.
+    // Metrics live on a separate actor and may allow another emission to enter this actor.
     if EventReplayCatalog.isReplayable(payload.eventName) {
       replayablePayloads[payload.eventName] = payload
     }
 
     let deliveryPolicy = EventDeliveryPolicy.forEventName(payload.eventName)
+    var backpressureCount = 0
 
     for subscriber in subscribers.values {
       guard shouldDeliver(payload, to: subscriber) else { continue }
 
-      let result = subscriber.continuation.yield(payload)
-
-      if case .dropped = result {
-        await metricsCoordinator.recordEventBackpressure(
-          name: payload.eventName,
-          coalesced: deliveryPolicy == .coalescing
-        )
+      if case .dropped = subscriber.continuation.yield(payload) {
+        backpressureCount += 1
       }
     }
 
@@ -172,6 +165,18 @@ actor EventHub {
 
     if shouldForwardPayloadToLua(payload) {
       enqueueLuaEvent(payload)
+    }
+
+    await metricsCoordinator.recordEvent(
+      name: payload.eventName,
+      isWidgetEvent: payload.widgetEvent != nil
+    )
+
+    for _ in 0..<backpressureCount {
+      await metricsCoordinator.recordEventBackpressure(
+        name: payload.eventName,
+        coalesced: deliveryPolicy == .coalescing
+      )
     }
   }
 

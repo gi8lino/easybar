@@ -10,6 +10,7 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
   case writeFailed(String)
   case readFailed(String)
   case connectionTimedOut(TimeInterval)
+  case writeTimedOut(TimeInterval)
   case responseTimedOut(TimeInterval)
   case noReply
 
@@ -30,6 +31,8 @@ public enum LineSocketClientTransportError: Error, CustomStringConvertible {
       return "read failed: \(message)"
     case .connectionTimedOut(let timeout):
       return "connection timed out after \(timeout) seconds"
+    case .writeTimedOut(let timeout):
+      return "request write timed out after \(timeout) seconds"
     case .responseTimedOut(let timeout):
       return "response timed out after \(timeout) seconds"
     case .noReply:
@@ -72,26 +75,28 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
 
   /// Sends one request and returns one decoded response.
   public func send(request: Request) throws -> Response {
-    let fd = try connectSocket()
-
-    defer { close(fd) }
-
     let encoder = makeEncoder()
 
     guard let payload = try? encoder.encode(request) else {
       throw LineSocketClientTransportError.encodeFailed
     }
 
-    guard writeAll(payload + Data([0x0A]), to: fd) else {
-      throw LineSocketClientTransportError.writeFailed("socket write failed")
-    }
+    let deadline = monotonicPollDeadline(after: responseTimeout)
+    let fd = try connectSocket(deadline: deadline)
+    defer { close(fd) }
 
-    return try readOneResponse(from: fd)
+    try writeRequest(payload + Data([0x0A]), to: fd, deadline: deadline)
+    return try readOneResponse(from: fd, deadline: deadline)
   }
 
-  private func connectSocket() throws -> Int32 {
+  private func connectSocket(deadline: UInt64) throws -> Int32 {
     do {
-      return try openConnectedUnixSocket(at: socketPath, timeout: responseTimeout)
+      return try openConnectedUnixSocket(
+        at: socketPath,
+        timeout: responseTimeout,
+        deadline: deadline,
+        restoreBlocking: false
+      )
     } catch let error as UnixSocketConnectError {
       if case .timedOut(let timeout) = error {
         throw LineSocketClientTransportError.connectionTimedOut(timeout)
@@ -105,39 +110,108 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
   }
 
+  /// Writes the complete request without exceeding the operation deadline.
+  private func writeRequest(_ data: Data, to fd: Int32, deadline: UInt64) throws {
+    guard !data.isEmpty else { return }
+
+    try data.withUnsafeBytes { rawBuffer in
+      guard let baseAddress = rawBuffer.baseAddress else {
+        throw LineSocketClientTransportError.writeFailed("request buffer is unavailable")
+      }
+
+      var sent = 0
+      while sent < data.count {
+        let count = Darwin.write(fd, baseAddress.advanced(by: sent), data.count - sent)
+
+        if count > 0 {
+          sent += count
+          continue
+        }
+
+        if count == 0 {
+          throw LineSocketClientTransportError.writeFailed("socket write returned zero bytes")
+        }
+
+        let errnoValue = errno
+        if errnoValue == EINTR {
+          continue
+        }
+
+        if errnoValue == EAGAIN || errnoValue == EWOULDBLOCK {
+          try waitForWritable(fd: fd, deadline: deadline)
+          continue
+        }
+
+        throw LineSocketClientTransportError.writeFailed(errnoDescription(errnoValue))
+      }
+    }
+  }
+
   /// Reads bytes until one response line decodes or EOF is reached.
-  private func readOneResponse(from fd: Int32) throws -> Response {
+  private func readOneResponse(from fd: Int32, deadline: UInt64) throws -> Response {
     var lineDecoder = LineDelimitedJSONDecoder<Response>(
       decoder: makeDecoder(),
       maxLineBytes: maxResponseBytes
     )
     var buffer = [UInt8](repeating: 0, count: 1024)
 
-    let deadline = monotonicPollDeadline(after: responseTimeout)
-
     while true {
       try waitForReadable(fd: fd, deadline: deadline)
 
-      let n = read(fd, &buffer, buffer.count)
-      if n < 0 {
-        if errno == EINTR {
+      let count = read(fd, &buffer, buffer.count)
+      if count < 0 {
+        let errnoValue = errno
+        if errnoValue == EINTR || errnoValue == EAGAIN || errnoValue == EWOULDBLOCK {
           continue
         }
-        throw LineSocketClientTransportError.noReply
+        throw LineSocketClientTransportError.readFailed(errnoDescription(errnoValue))
       }
 
-      if n == 0 {
+      if count == 0 {
         return try decodeOneResult(lineDecoder.flush())
       }
 
-      let results = lineDecoder.append(buffer.prefix(n))
+      let results = lineDecoder.append(buffer.prefix(count))
       if !results.isEmpty {
         return try decodeOneResult(results)
       }
     }
   }
 
-  /// Waits until the socket has data to read or the response deadline expires.
+  /// Waits until the socket can accept more request bytes.
+  private func waitForWritable(fd: Int32, deadline: UInt64) throws {
+    while true {
+      let timeoutMilliseconds = remainingPollMilliseconds(until: deadline)
+      guard timeoutMilliseconds > 0 else {
+        throw LineSocketClientTransportError.writeTimedOut(responseTimeout)
+      }
+
+      var descriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
+      let result = poll(&descriptor, 1, timeoutMilliseconds)
+
+      if result > 0 {
+        let revents = Int32(descriptor.revents)
+        if (revents & POLLOUT) != 0, (revents & (POLLERR | POLLHUP | POLLNVAL)) == 0 {
+          return
+        }
+        throw LineSocketClientTransportError.writeFailed(
+          "socket became unavailable while writing (poll events \(revents))"
+        )
+      }
+
+      if result == 0 {
+        throw LineSocketClientTransportError.writeTimedOut(responseTimeout)
+      }
+
+      if errno == EINTR {
+        continue
+      }
+
+      throw LineSocketClientTransportError.writeFailed(errnoDescription(errno))
+    }
+  }
+
+  /// Waits until the socket has data to read or the operation deadline expires.
   private func waitForReadable(fd: Int32, deadline: UInt64) throws {
     while true {
       let timeoutMilliseconds = remainingPollMilliseconds(until: deadline)
@@ -145,11 +219,17 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
         throw LineSocketClientTransportError.responseTimedOut(responseTimeout)
       }
 
-      var pollFD = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
-      let result = poll(&pollFD, 1, timeoutMilliseconds)
+      var descriptor = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+      let result = poll(&descriptor, 1, timeoutMilliseconds)
 
       if result > 0 {
-        return
+        let revents = Int32(descriptor.revents)
+        if (revents & (POLLIN | POLLHUP)) != 0 {
+          return
+        }
+        throw LineSocketClientTransportError.readFailed(
+          "socket became unavailable while reading (poll events \(revents))"
+        )
       }
 
       if result == 0 {
@@ -160,7 +240,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
         continue
       }
 
-      throw LineSocketClientTransportError.noReply
+      throw LineSocketClientTransportError.readFailed(errnoDescription(errno))
     }
   }
 
@@ -175,5 +255,9 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     } catch {
       throw LineSocketClientTransportError.decodeFailed("\(error)")
     }
+  }
+
+  private func errnoDescription(_ value: Int32) -> String {
+    "\(String(cString: strerror(value))) (errno \(value))"
   }
 }

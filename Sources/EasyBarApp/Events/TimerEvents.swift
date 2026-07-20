@@ -19,7 +19,12 @@ final class TimerEvents {
   /// Timer for second ticks.
   private var secondTimer: Timer?
   /// Timers for widget-scoped Lua interval callbacks.
-  private var intervalTimers: [String: Timer] = [:]
+  private var intervalTimers: [WidgetIntervalSchedule: Timer] = [:]
+
+  /// Active widget interval schedules retained by the timer source.
+  var activeIntervalSchedules: Set<WidgetIntervalSchedule> {
+    Set(intervalTimers.keys)
+  }
 
   /// Creates one timer event source.
   init(logger: ProcessLogger, eventHub: EventHub) {
@@ -78,7 +83,7 @@ final class TimerEvents {
         }
       }
 
-      intervalTimers[schedule.widgetID] = timer
+      intervalTimers[schedule] = timer
 
       logger.debug(
         "interval timer started",
