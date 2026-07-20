@@ -2,7 +2,6 @@
 -- the service name shown by `scutil --nc list`; left-click toggles that service.
 
 local secrets = require("secrets")
-local shell = require("shell")
 local text = require("text")
 
 local WIREGUARD_ICON_PATH = easybar.asset("assets/wireguard.png")
@@ -64,8 +63,16 @@ local function log_command_result(action, command, output, ok, code)
 	)
 end
 
-local function run_shell_async(command, options, callback)
-	easybar.exec_async(command, options or COMMAND_OPTIONS, function(output, code)
+local function command_label(arguments)
+	local values = {}
+	for index, argument in ipairs(arguments) do
+		values[index] = tostring(argument)
+	end
+	return table.concat(values, " ")
+end
+
+local function run_command(arguments, options, callback)
+	easybar.spawn_async(arguments, options or COMMAND_OPTIONS, function(output, code)
 		output = text.trim(output or "")
 		code = code or 0
 		callback(output, code == 0, code)
@@ -73,11 +80,11 @@ local function run_shell_async(command, options, callback)
 end
 
 local function current_status_async(vpn_name, callback)
-	local command = "scutil --nc status " .. shell.quote(vpn_name)
+	local arguments = { "scutil", "--nc", "status", vpn_name }
 
-	run_shell_async(command, COMMAND_OPTIONS, function(output, ok, code)
+	run_command(arguments, COMMAND_OPTIONS, function(output, ok, code)
 		if not ok then
-			log_command_result("wireguard status", command, output, false, code)
+			log_command_result("wireguard status", command_label(arguments), output, false, code)
 			callback(nil, code)
 			return
 		end
@@ -159,22 +166,21 @@ local function toggle_wireguard()
 
 		easybar.log(easybar.level.debug, "wireguard status", vpn_name, status)
 
-		local command
+		local arguments
 		local action
-		local name = shell.quote(vpn_name)
 
 		if status:match("^connected") or status:match("^connecting") or status:match("^on demand") then
-			command = "scutil --nc stop " .. name
+			arguments = { "scutil", "--nc", "stop", vpn_name }
 			action = "wireguard stop"
 		else
-			command = "scutil --nc start " .. name
+			arguments = { "scutil", "--nc", "start", vpn_name }
 			action = "wireguard start"
 		end
 
 		easybar.log(easybar.level.info, action, vpn_name)
 
-		run_shell_async(command, ACTION_COMMAND_OPTIONS, function(output, ok, code)
-			log_command_result(action, command, output, ok, code)
+		run_command(arguments, ACTION_COMMAND_OPTIONS, function(output, ok, code)
+			log_command_result(action, command_label(arguments), output, ok, code)
 			finish_toggle()
 		end)
 	end)

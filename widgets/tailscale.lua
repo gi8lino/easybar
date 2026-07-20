@@ -3,12 +3,10 @@
 --- Left click toggles Tailscale up/down.
 --- Right click opens exit-node controls.
 ---
---- This personal widget intentionally keeps command construction simple:
---- TAILSCALE may point to a command/path such as `tailscale` or `/opt/homebrew/bin/tailscale`.
---- Paths with spaces are not supported.
+--- `TAILSCALE` may point to an executable name or absolute path, such as
+--- `tailscale` or `/opt/homebrew/bin/tailscale`. It must not contain shell arguments.
 
 local text = require("text")
-local shell = require("shell")
 
 local CHECK_INTERVAL_SECONDS = 60
 
@@ -57,13 +55,21 @@ local refresh_generation = 0
 -- Prevents double-clicks from starting overlapping up/down or exit-node commands.
 local action_running = false
 
-local function tailscale_command(args)
-	return TAILSCALE .. " " .. args
+local function tailscale_arguments(...)
+	return { TAILSCALE, ... }
+end
+
+local function command_label(arguments)
+	local values = {}
+	for index, argument in ipairs(arguments) do
+		values[index] = tostring(argument)
+	end
+	return table.concat(values, " ")
 end
 
 --- Runs a Tailscale CLI command asynchronously and normalizes output/code.
-local function run_command(command, options, callback)
-	easybar.exec_async(command, options or COMMAND_OPTIONS, function(output, code)
+local function run_command(arguments, options, callback)
+	easybar.spawn_async(arguments, options or COMMAND_OPTIONS, function(output, code)
 		output = text.trim(output or "")
 		code = code or 0
 
@@ -204,9 +210,9 @@ end
 
 --- Reads current Tailscale status and returns a normalized snapshot.
 local function read_status(callback)
-	local command = tailscale_command("status --json")
+	local arguments = tailscale_arguments("status", "--json")
 
-	run_command(command, COMMAND_OPTIONS, function(output, ok, code)
+	run_command(arguments, COMMAND_OPTIONS, function(output, ok, code)
 		if not ok then
 			easybar.log(
 				easybar.level.warn,
@@ -332,14 +338,14 @@ local function render(snapshot)
 	})
 end
 
-local function render_working(text)
+local function render_working(message)
 	if popup_label == nil then
 		return
 	end
 
 	popup_label:set({
 		label = {
-			string = text,
+			string = message,
 			color = COLORS.accent,
 		},
 	})
@@ -381,15 +387,15 @@ local function toggle_tailscale()
 			return
 		end
 
-		local command
+		local arguments
 		if snapshot.tailscale_connected then
-			command = tailscale_command("down")
+			arguments = tailscale_arguments("down")
 		else
-			command = tailscale_command("up")
+			arguments = tailscale_arguments("up")
 		end
 
-		run_command(command, ACTION_COMMAND_OPTIONS, function(output, ok, code)
-			log_command_result("tailscale toggle", command, output, ok, code)
+		run_command(arguments, ACTION_COMMAND_OPTIONS, function(output, ok, code)
+			log_command_result("tailscale toggle", command_label(arguments), output, ok, code)
 			finish_action()
 		end)
 	end)
@@ -418,11 +424,10 @@ local function set_exit_node(target)
 			return
 		end
 
-		local argument = target == nil and "" or shell.quote(target)
-		local command = tailscale_command("set --exit-node=" .. argument .. " --accept-routes")
+		local arguments = tailscale_arguments("set", "--exit-node=" .. (target or ""), "--accept-routes")
 
-		run_command(command, ACTION_COMMAND_OPTIONS, function(output, ok, code)
-			log_command_result("tailscale exit node change", command, output, ok, code)
+		run_command(arguments, ACTION_COMMAND_OPTIONS, function(output, ok, code)
+			log_command_result("tailscale exit node change", command_label(arguments), output, ok, code)
 			finish_action()
 		end)
 	end)

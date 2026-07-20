@@ -2,8 +2,6 @@
 -- A selectable item's `id` is delivered as `event.action_id`; rebuild the
 -- menu with `set` after state changes so native checkmarks stay current.
 
-local shell = require("shell")
-
 local filter = "all"
 local github
 
@@ -41,7 +39,7 @@ github:subscribe(easybar.events.context_menu.clicked, function(event)
 	if event.action_id == "refresh" then
 		easybar.log(easybar.level.info, "refresh requested from native context menu")
 	elseif event.action_id == "open_notifications" then
-		easybar.exec_async("open " .. shell.quote("https://github.com/notifications"), nil, function(_, code)
+		easybar.spawn_async({ "open", "https://github.com/notifications" }, nil, function(_, code)
 			if code ~= 0 then
 				easybar.log(easybar.level.warn, "failed to open GitHub notifications")
 			end

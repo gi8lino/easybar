@@ -3,7 +3,6 @@
 -- Icon-only widget for the bar, with a popup that shows outdated packages and
 -- actions for updating Homebrew and upgrading packages.
 
-local shell = require("shell")
 local text = require("text")
 
 local WIDGET_ID = "brew_outdated"
@@ -167,17 +166,32 @@ local function allowed_casks_from_output(output)
 	return casks
 end
 
---- Builds one shell-safe brew cask upgrade command for allowed casks.
-local function cask_upgrade_command(casks)
-	local parts = {
-		"HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --cask --yes",
+--- Builds the direct argument vector for allowed cask upgrades.
+local function cask_upgrade_arguments(casks)
+	local arguments = {
+		"/usr/bin/env",
+		"HOMEBREW_NO_AUTO_UPDATE=1",
+		"HOMEBREW_NO_ASK=1",
+		"brew",
+		"upgrade",
+		"--cask",
+		"--yes",
 	}
 
 	for _, cask in ipairs(casks) do
-		parts[#parts + 1] = shell.quote(cask)
+		arguments[#arguments + 1] = cask
 	end
 
-	return table.concat(parts, " ")
+	return arguments
+end
+
+--- Returns a readable command label for widget logs.
+local function command_label(arguments)
+	local values = {}
+	for index, argument in ipairs(arguments) do
+		values[index] = tostring(argument)
+	end
+	return table.concat(values, " ")
 end
 
 --- Fails the current brew operation while keeping diagnostics out of the main popup.
@@ -198,12 +212,12 @@ local function fail_brew_operation(kind, message)
 	render()
 end
 
---- Runs one command, logs its output and exit code, then invokes the callback.
-local function run_logged_command(command, options, exit_label, callback)
-	log.append("$ " .. command)
+--- Runs one direct command, logs its output and exit code, then invokes the callback.
+local function run_logged_command(arguments, options, exit_label, callback)
+	log.append("$ " .. command_label(arguments))
 
 	local token
-	token = easybar.exec_async(command, options, function(output, code)
+	token = easybar.spawn_async(arguments, options, function(output, code)
 		if active_command_token == token then
 			active_command_token = nil
 		end
@@ -228,32 +242,43 @@ end
 
 --- Runs `brew update`.
 local function run_brew_update(callback)
-	run_logged_command("brew update", EXEC.update, "brew update", callback)
+	run_logged_command({ "brew", "update" }, EXEC.update, "brew update", callback)
 end
 
 --- Runs `brew outdated --json=v2`.
 local function run_outdated_json(callback)
-	run_logged_command("HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2", EXEC.check, "brew outdated", callback)
+	run_logged_command({
+		"/usr/bin/env",
+		"HOMEBREW_NO_AUTO_UPDATE=1",
+		"brew",
+		"outdated",
+		"--json=v2",
+	}, EXEC.check, "brew outdated", callback)
 end
 
 --- Runs formula upgrades.
 local function run_formula_upgrade(callback)
-	run_logged_command(
-		"HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --formula --yes",
-		EXEC.upgrade,
-		"brew upgrade --formula",
-		callback
-	)
+	run_logged_command({
+		"/usr/bin/env",
+		"HOMEBREW_NO_AUTO_UPDATE=1",
+		"HOMEBREW_NO_ASK=1",
+		"brew",
+		"upgrade",
+		"--formula",
+		"--yes",
+	}, EXEC.upgrade, "brew upgrade --formula", callback)
 end
 
 --- Runs the cask outdated list command.
 local function run_outdated_casks(callback)
-	run_logged_command(
-		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --cask --quiet",
-		EXEC.check,
-		"brew outdated --cask",
-		callback
-	)
+	run_logged_command({
+		"/usr/bin/env",
+		"HOMEBREW_NO_AUTO_UPDATE=1",
+		"brew",
+		"outdated",
+		"--cask",
+		"--quiet",
+	}, EXEC.check, "brew outdated --cask", callback)
 end
 
 --- Runs cask upgrades for allowed casks, or skips when none remain.
@@ -264,7 +289,7 @@ local function run_allowed_cask_upgrade(casks, callback)
 		return
 	end
 
-	run_logged_command(cask_upgrade_command(casks), EXEC.upgrade, "brew upgrade --cask", callback)
+	run_logged_command(cask_upgrade_arguments(casks), EXEC.upgrade, "brew upgrade --cask", callback)
 end
 
 --- Returns whether the widget should run another Homebrew update now.

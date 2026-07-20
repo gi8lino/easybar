@@ -5,7 +5,7 @@
 ---@alias RetryAttempt fun(done:RetryDoneCallback, attempt_number:integer):string
 
 ---Decides whether one failed attempt should be retried.
----@alias RetryPredicate fun(output:string, code:EasyBarCommandExitCode, attempt_number:integer):boolean
+---@alias RetryPredicate fun(output:string, code:EasyBarCommandExitCode):boolean
 
 ---Receives the final non-retried result and total number of started attempts.
 ---@alias RetryCompletion fun(output:string, code:EasyBarCommandExitCode, attempts:integer)
@@ -55,11 +55,12 @@ local TRANSIENT_NETWORK_PATTERNS = {
 ---@param output string Combined command output.
 ---@param code EasyBarCommandExitCode Final command status.
 ---@return boolean transient `true` only for a non-zero status that appears temporary.
-function M.is_transient_network_error(output, code, ...)
+function M.is_transient_network_error(output, code)
 	local normalized_code = tonumber(code) or 1
 	if normalized_code == 0 or normalized_code == 130 then
 		return false
 	end
+
 	if normalized_code == 124 then
 		return true
 	end
@@ -70,18 +71,19 @@ function M.is_transient_network_error(output, code, ...)
 			return true
 		end
 	end
+
 	return false
 end
 
 ---Runs one asynchronous operation with delays before subsequent attempts.
 ---
---- `attempt(done, attempt_number)` must start an asynchronous operation, return its EasyBar
---- command token, and invoke `done(output, code)` once. The returned handle cancels either the
---- active command or the pending host timer. Cancellation never invokes `on_complete`.
+---`attempt(done, attempt_number)` must start an asynchronous operation, return its EasyBar
+---command token, and invoke `done(output, code)` once. The returned handle cancels either the
+---active command or the pending host timer. Cancellation never invokes `on_complete`.
 ---
---- The first attempt starts immediately. `delays[1]` is used before attempt 2, `delays[2]`
---- before attempt 3, and so on. Store the returned operation only when the caller needs to cancel
---- it or inspect its active state; callbacks and timers retain it until completion otherwise.
+---The first attempt starts immediately. `delays[1]` is used before attempt 2, `delays[2]`
+---before attempt 3, and so on. Store the returned operation only when the caller needs to cancel
+---it or inspect its active state; callbacks and timers retain it until completion otherwise.
 ---@param easybar_api EasyBar Widget-scoped EasyBar API used for timers and command cancellation.
 ---@param options RetryOptions Retry policy and asynchronous operation callbacks.
 ---@return RetryOperation operation Cancellable handle for the complete retry sequence.
@@ -102,10 +104,9 @@ function M.run(easybar_api, options)
 	end
 
 	---@type RetryPredicate
-	local should_retry = type(options.should_retry) == "function" and options.should_retry
-		or function(_, code, ...)
-			return tonumber(code) ~= 0
-		end
+	local should_retry = options.should_retry or function(_, code)
+		return tonumber(code) ~= 0
+	end
 
 	local state = {
 		attempts = 0,
@@ -114,7 +115,7 @@ function M.run(easybar_api, options)
 		cancelled = false,
 		completed = false,
 	}
-	---@type RetryOperation
+
 	local operation = {}
 	local run_attempt
 
@@ -122,6 +123,7 @@ function M.run(easybar_api, options)
 		if state.cancelled or state.completed then
 			return
 		end
+
 		state.completed = true
 		state.active_token = nil
 		state.timer = nil
@@ -134,23 +136,26 @@ function M.run(easybar_api, options)
 		end
 
 		state.attempts = state.attempts + 1
+
 		local callback_called = false
 		local ok, token_or_error = pcall(options.attempt, function(output, code)
 			if callback_called then
 				return
 			end
+
 			callback_called = true
 			state.active_token = nil
+
 			if state.cancelled or state.completed then
 				return
 			end
 
+			local normalized_code = tonumber(code) or 1
 			local delay = delays[state.attempts]
-			local retryable = tonumber(code) ~= 130
-				and delay ~= nil
-				and should_retry(output, tonumber(code) or 1, state.attempts)
+			local retryable = normalized_code ~= 130 and delay ~= nil and should_retry(output, normalized_code)
+
 			if not retryable then
-				complete(output, tonumber(code) or 1)
+				complete(output, normalized_code)
 				return
 			end
 
@@ -164,13 +169,16 @@ function M.run(easybar_api, options)
 			complete(tostring(token_or_error), 1)
 			return
 		end
+
 		if callback_called then
 			return
 		end
+
 		if type(token_or_error) ~= "string" or token_or_error == "" then
 			complete("retry attempt did not return an asynchronous command token", 1)
 			return
 		end
+
 		state.active_token = token_or_error
 	end
 
@@ -178,22 +186,27 @@ function M.run(easybar_api, options)
 		if state.cancelled or state.completed then
 			return false
 		end
+
 		state.cancelled = true
 
 		if state.timer ~= nil then
 			state.timer:cancel()
 			state.timer = nil
 		end
+
 		if type(state.active_token) == "string" and state.active_token ~= "" then
 			easybar_api.cancel_async(state.active_token)
 			state.active_token = nil
 		end
+
 		return true
 	end
 
 	function operation:is_active()
 		return not state.cancelled and not state.completed
 	end
+
+	---@cast operation RetryOperation
 
 	run_attempt()
 	return operation

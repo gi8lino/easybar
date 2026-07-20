@@ -1,15 +1,20 @@
--- GitHub notification widget. Requires an authenticated `gh` CLI and the
--- bundled assets/github-mark.svg file beside this example's directory.
+-- GitLab work-items widget. Requires an authenticated `glab` CLI.
+-- Set GITLAB_HOST in app.env for a self-managed or dedicated instance.
 
-local shell = require("shell")
 local text = require("text")
 
 local POLL_INTERVAL_SECONDS = 300
-local MAX_POPUP_ITEMS = 6
+local MAX_POPUP_ITEMS = 8
 local HOVER_CLOSE_DELAY_SECONDS = 0.20
-local NOTIFICATIONS_URL = "https://github.com/notifications"
 
-local GITHUB_ICON_PATH = easybar.asset("assets/github-mark.svg")
+local configured_host = text.trim(os.getenv("GITLAB_HOST"))
+if configured_host == "" then
+	configured_host = "https://gitlab.com"
+elseif not configured_host:match("^https?://") then
+	configured_host = "https://" .. configured_host
+end
+
+local GITLAB_URL = configured_host:gsub("/+$", "")
 
 local COLORS = {
 	text = easybar.theme.ref.text,
@@ -23,235 +28,107 @@ local COLORS = {
 }
 
 local state = {
-	notifications = {},
+	items = {},
 	error = nil,
 	loading = false,
 	popup_open = false,
 	trigger_hovered = false,
 	popup_hovered = false,
 	hover_revision = 0,
-	hover_close_job = nil,
-	active_job = nil,
+	hover_close_timer = nil,
 }
 
-local github
+local gitlab
 local popup_header
 local popup_rows = {}
 local popup_footer
 
---- Returns the display text for one GitHub notification.
-local function notification_text(notification)
-	local repository = "GitHub"
-	if type(notification.repository) == "table" then
-		repository = text.trim(notification.repository.full_name)
-		if repository == "" then
-			repository = "GitHub"
-		end
-	end
-
-	local title = "Untitled notification"
-	local reason = nil
-
-	if type(notification.subject) == "table" then
-		local candidate = text.trim(notification.subject.title)
-		if candidate ~= "" then
-			title = candidate
-		end
-	end
-
-	if type(notification.reason) == "string" then
-		reason = text.trim(notification.reason)
-	end
-
-	local summary = repository .. "  ·  " .. title
-	if reason ~= nil and reason ~= "" then
-		summary = summary .. "  [" .. reason .. "]"
-	end
-
-	return text.truncate(summary, 96)
-end
-
---- Returns the browser URL for one GitHub notification when it can be derived.
-local function notification_web_url(notification)
-	if type(notification) ~= "table" then
-		return nil
-	end
-
-	if type(notification.repository) ~= "table" or type(notification.subject) ~= "table" then
-		return nil
-	end
-
-	local repository_url = text.trim(notification.repository.html_url)
-	local subject_url = text.trim(notification.subject.url)
-	local subject_type = text.trim(notification.subject.type)
-
-	if repository_url == "" or subject_url == "" then
-		return nil
-	end
-
-	if subject_type == "PullRequest" then
-		local number = subject_url:match("/pulls/(%d+)$")
-		if number ~= nil then
-			return repository_url .. "/pull/" .. number
-		end
-	end
-
-	if subject_type == "Issue" then
-		local number = subject_url:match("/issues/(%d+)$")
-		if number ~= nil then
-			return repository_url .. "/issues/" .. number
-		end
-	end
-
-	if subject_type == "Discussion" then
-		local number = subject_url:match("/discussions/(%d+)$")
-		if number ~= nil then
-			return repository_url .. "/discussions/" .. number
-		end
-	end
-
-	if subject_type == "Commit" then
-		local commit = subject_url:match("/commits/([^/]+)$")
-		if commit ~= nil then
-			return repository_url .. "/commit/" .. commit
-		end
-	end
-
-	return nil
-end
-
---- Opens one URL using the default macOS browser.
-local function open_url(url, failure_message)
+--- Opens a URL using the default macOS browser.
+---@param url string
+local function open_url(url)
 	url = text.trim(url)
 	if url == "" then
 		return
 	end
 
-	easybar.exec_async("open " .. shell.quote(url), {
+	easybar.spawn_async({ "open", url }, {
 		timeout_seconds = 5,
 		max_output_bytes = 4096,
 	}, function(_, code)
 		if code ~= 0 then
-			easybar.log(easybar.level.warn, failure_message, url)
+			easybar.log(easybar.level.warn, "failed to open GitLab URL", url)
 		end
 	end)
 end
 
---- Opens the target represented by one GitHub notification.
-local function open_notification(notification)
-	local url = notification_web_url(notification)
-
-	if url == nil then
-		easybar.log(
-			easybar.level.warn,
-			"could not derive GitHub notification URL",
-			type(notification) == "table" and notification_text(notification) or "<invalid notification>"
-		)
-
-		open_url(NOTIFICATIONS_URL, "failed to open GitHub notifications")
-		return
+--- Returns the display reference for a GitLab work item.
+---@param item table
+---@return string
+local function item_reference(item)
+	if type(item.references) == "table" then
+		local reference = text.trim(item.references.full)
+		if reference ~= "" then
+			return reference
+		end
 	end
 
-	open_url(url, "failed to open GitHub notification")
+	return item.kind == "merge_request" and "Merge request" or "Issue"
 end
 
---- Decodes the paginated GitHub notification response.
-local function decode_notifications(output)
-	local ok, pages = pcall(easybar.json.decode, output)
-	if not ok then
-		return nil, "GitHub returned invalid JSON"
+--- Returns the popup text for a GitLab work item.
+---@param item table
+---@return string
+local function item_text(item)
+	local title = text.trim(item.title)
+	if title == "" then
+		title = "Untitled"
 	end
 
-	if type(pages) ~= "table" then
-		return nil, "GitHub returned an unexpected response"
-	end
-
-	local notifications = {}
-
-	for _, page in ipairs(pages) do
-		if type(page) == "table" then
-			for _, notification in ipairs(page) do
-				if type(notification) == "table" and notification.unread ~= false then
-					table.insert(notifications, notification)
-				end
-			end
-		end
-	end
-
-	return notifications, nil
+	return text.truncate(item_reference(item) .. "  ·  " .. title, 100)
 end
 
---- Returns whether the bar widget should be visible.
-local function should_draw()
-	return state.error ~= nil or #state.notifications > 0
-end
+--- Adds normalized GitLab work items to a target list.
+---@param target table[]
+---@param source table
+---@param kind "issue"|"merge_request"
+---@return boolean
+local function append_items(target, source, kind)
+	if type(source) ~= "table" then
+		return false
+	end
 
---- Updates all popup rows from the current notification state.
-local function render_popup()
-	local count = #state.notifications
-
-	if state.error ~= nil then
-		popup_header:set({
-			drawing = true,
-			label = {
-				string = "GitHub notifications unavailable",
-				color = COLORS.danger,
-			},
-		})
-
-		popup_rows[1]:set({
-			drawing = true,
-			label = {
-				string = text.truncate(state.error, 96),
-				color = COLORS.text,
-			},
-		})
-
-		for index = 2, MAX_POPUP_ITEMS do
-			popup_rows[index]:set({ drawing = false })
-		end
-	elseif count == 0 then
-		popup_header:set({ drawing = false })
-
-		for _, row in ipairs(popup_rows) do
-			row:set({ drawing = false })
-		end
-	else
-		popup_header:set({
-			drawing = true,
-			label = {
-				string = count == 1 and "1 unread GitHub notification" or tostring(count) .. " unread GitHub notifications",
-				color = COLORS.accent,
-			},
-		})
-
-		for index, row in ipairs(popup_rows) do
-			local notification = state.notifications[index]
-
-			if notification ~= nil then
-				row:set({
-					drawing = true,
-					label = {
-						string = notification_text(notification),
-						color = COLORS.text,
-					},
-				})
-			else
-				row:set({ drawing = false })
-			end
+	for _, item in ipairs(source) do
+		if type(item) == "table" then
+			item.kind = kind
+			table.insert(target, item)
 		end
 	end
 
-	popup_footer:set({
-		drawing = should_draw(),
-		label = {
-			string = "Click a notification to open it · Right-click the icon to refresh",
-			color = COLORS.muted,
-		},
-	})
+	return true
+end
+
+--- Combines and sorts assigned issues and merge requests.
+---@param issues table
+---@param merge_requests table
+---@return table[]? items
+---@return string? error_message
+local function combine_items(issues, merge_requests)
+	local items = {}
+
+	if not append_items(items, issues, "issue") or not append_items(items, merge_requests, "merge_request") then
+		return nil, "GitLab returned an unexpected response"
+	end
+
+	table.sort(items, function(left, right)
+		return text.trim(left.updated_at) > text.trim(right.updated_at)
+	end)
+
+	return items, nil
 end
 
 --- Returns popup presentation properties.
+---@param drawing boolean
+---@return table
 local function popup_props(drawing)
 	return {
 		drawing = drawing,
@@ -268,30 +145,76 @@ local function popup_props(drawing)
 	}
 end
 
---- Renders the bar item and popup contents.
-local function render()
-	local count = #state.notifications
-	local visible = should_draw()
-	local color = state.error ~= nil and COLORS.danger or COLORS.accent
+--- Renders the GitLab popup.
+local function render_popup()
+	local count = #state.items
 
-	if not visible then
-		state.popup_open = false
-		state.trigger_hovered = false
-		state.popup_hovered = false
+	if state.error ~= nil then
+		popup_header:set({
+			drawing = true,
+			label = {
+				string = "GitLab work items unavailable",
+				color = COLORS.danger,
+			},
+		})
+
+		popup_rows[1]:set({
+			drawing = true,
+			label = {
+				string = text.truncate(state.error, 100),
+				color = COLORS.text,
+			},
+		})
+
+		for index = 2, MAX_POPUP_ITEMS do
+			popup_rows[index]:set({ drawing = false })
+		end
+	else
+		popup_header:set({
+			drawing = true,
+			label = {
+				string = count == 1 and "1 assigned GitLab work item" or tostring(count) .. " assigned GitLab work items",
+				color = count == 0 and COLORS.muted or COLORS.accent,
+			},
+		})
+
+		for index, row in ipairs(popup_rows) do
+			local item = state.items[index]
+
+			if item == nil then
+				row:set({ drawing = false })
+			else
+				row:set({
+					drawing = true,
+					label = {
+						string = item_text(item),
+						color = COLORS.text,
+					},
+				})
+			end
+		end
 	end
 
-	github:set({
-		drawing = visible,
+	popup_footer:set({
+		drawing = true,
+		label = {
+			string = state.loading and "Refreshing..." or "Click an item to open it · Right-click to refresh",
+			color = COLORS.muted,
+		},
+	})
+end
+
+--- Renders the bar item and popup.
+local function render()
+	local color = state.error ~= nil and COLORS.danger or (#state.items > 0 and COLORS.accent or COLORS.muted)
+
+	gitlab:set({
 		icon = {
-			image = {
-				path = GITHUB_ICON_PATH,
-				size = 15,
-				corner_radius = 0,
-			},
+			string = "󰮠",
 			color = color,
 		},
 		label = {
-			string = state.error ~= nil and "!" or tostring(count),
+			string = state.error ~= nil and "!" or tostring(#state.items),
 			color = color,
 		},
 		background = {
@@ -300,79 +223,113 @@ local function render()
 			border_width = 0,
 			corner_radius = 8,
 		},
-		popup = popup_props(visible and state.popup_open),
+		popup = popup_props(state.popup_open),
 	})
 
 	render_popup()
 end
 
---- Fetches unread GitHub notifications.
+--- Fetches assigned GitLab issues and merge requests.
 local function refresh()
 	if state.loading then
 		return
 	end
 
 	state.loading = true
+	render()
 
-	local command = table.concat({
-		"gh api",
-		"--paginate",
-		"--slurp",
-		"-H",
-		shell.quote("Accept: application/vnd.github+json"),
-		shell.quote("notifications?all=false&per_page=100"),
-	}, " ")
+	local issues_endpoint =
+		"issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
+	local merge_requests_endpoint =
+		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 
-	state.active_job = easybar.exec_async(command, {
-		timeout_seconds = 20,
-		max_output_bytes = 1048576,
-	}, function(output, code)
-		state.active_job = nil
+	local options = {
+		timeout_seconds = 30,
+		max_output_bytes = 2097152,
+	}
+
+	local function fail(output, fallback)
 		state.loading = false
 
-		if code ~= 0 then
-			local message = text.trim(output)
+		local message = text.trim(output)
+		state.error = message ~= "" and message or fallback
+		state.items = {}
 
-			if message == "" then
-				message = "Run 'gh auth login' and verify that gh is available in app.env PATH"
-			end
+		render()
+	end
 
-			state.error = message
-			state.notifications = {}
-			render()
+	local function fetch(endpoint, callback)
+		easybar.spawn_async({
+			"/usr/bin/env",
+			"GLAB_NO_PROMPT=1",
+			"glab",
+			"api",
+			"--paginate",
+			endpoint,
+		}, options, callback)
+	end
+
+	fetch(issues_endpoint, function(issues_output, issues_code)
+		if issues_code ~= 0 then
+			fail(issues_output, "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH")
 			return
 		end
 
-		local notifications, decode_error = decode_notifications(output)
-
-		if notifications == nil then
-			state.error = decode_error
-			state.notifications = {}
-		else
-			state.error = nil
-			state.notifications = notifications
+		local issues_ok, issues = pcall(easybar.json.decode, issues_output)
+		if not issues_ok or type(issues) ~= "table" then
+			fail("", "GitLab returned invalid issues JSON")
+			return
 		end
 
-		render()
+		fetch(merge_requests_endpoint, function(merge_requests_output, merge_requests_code)
+			state.loading = false
+
+			if merge_requests_code ~= 0 then
+				local message = text.trim(merge_requests_output)
+
+				state.error = message ~= "" and message or "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH"
+				state.items = {}
+
+				render()
+				return
+			end
+
+			local merge_requests_ok, merge_requests = pcall(easybar.json.decode, merge_requests_output)
+
+			if not merge_requests_ok or type(merge_requests) ~= "table" then
+				state.error = "GitLab returned invalid merge request JSON"
+				state.items = {}
+
+				render()
+				return
+			end
+
+			local items, combine_error = combine_items(issues, merge_requests)
+
+			if items == nil then
+				state.error = combine_error
+				state.items = {}
+			else
+				state.error = nil
+				state.items = items
+			end
+
+			render()
+		end)
 	end)
 end
 
-github = easybar.add(easybar.kind.item, "github_notifications", {
+gitlab = easybar.add(easybar.kind.item, "gitlab_work_items", {
 	position = "right",
 	order = 0,
-	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
 	icon = {
-		image = {
-			path = GITHUB_ICON_PATH,
-			size = 15,
-			corner_radius = 0,
-		},
+		string = "󰮠",
 		color = COLORS.muted,
 	},
 	label = {
-		string = "",
+		string = "0",
 		color = COLORS.muted,
 	},
 	background = {
@@ -384,14 +341,18 @@ github = easybar.add(easybar.kind.item, "github_notifications", {
 	padding_x = 7,
 	padding_y = 3,
 	popup = popup_props(false),
+	context_menu = {
+		{ id = "refresh", title = "Refresh" },
+		{ id = "open", title = "Open GitLab" },
+	},
 })
 
-popup_header = easybar.add(easybar.kind.item, "github_notifications_header", {
-	position = "popup." .. github.name,
+popup_header = easybar.add(easybar.kind.item, "gitlab_work_items_header", {
+	position = "popup." .. gitlab.name,
 	order = 0,
-	drawing = false,
+	drawing = true,
 	label = {
-		string = "GitHub notifications",
+		string = "GitLab work items",
 		color = COLORS.accent,
 	},
 	padding_x = 8,
@@ -399,8 +360,8 @@ popup_header = easybar.add(easybar.kind.item, "github_notifications_header", {
 })
 
 for index = 1, MAX_POPUP_ITEMS do
-	popup_rows[index] = easybar.add(easybar.kind.item, "github_notification_" .. tostring(index), {
-		position = "popup." .. github.name,
+	popup_rows[index] = easybar.add(easybar.kind.item, "gitlab_work_item_" .. tostring(index), {
+		position = "popup." .. gitlab.name,
 		order = index,
 		drawing = false,
 		label = {
@@ -418,12 +379,12 @@ for index = 1, MAX_POPUP_ITEMS do
 	})
 end
 
-popup_footer = easybar.add(easybar.kind.item, "github_notifications_footer", {
-	position = "popup." .. github.name,
+popup_footer = easybar.add(easybar.kind.item, "gitlab_work_items_footer", {
+	position = "popup." .. gitlab.name,
 	order = MAX_POPUP_ITEMS + 1,
-	drawing = false,
+	drawing = true,
 	label = {
-		string = "Click a notification to open it · Right-click the icon to refresh",
+		string = "Click an item to open it · Right-click to refresh",
 		color = COLORS.muted,
 	},
 	padding_x = 8,
@@ -432,15 +393,14 @@ popup_footer = easybar.add(easybar.kind.item, "github_notifications_footer", {
 
 --- Cancels a pending delayed popup close.
 local function cancel_hover_close()
-	if state.hover_close_job == nil then
-		return
+	if state.hover_close_timer ~= nil then
+		state.hover_close_timer:cancel()
+		state.hover_close_timer = nil
 	end
-
-	easybar.cancel_async(state.hover_close_job)
-	state.hover_close_job = nil
 end
 
---- Opens the popup and records which surface is hovered.
+--- Opens the popup and records the hovered surface.
+---@param source "trigger"|"popup"
 local function open_popup(source)
 	cancel_hover_close()
 	state.hover_revision = state.hover_revision + 1
@@ -456,6 +416,7 @@ local function open_popup(source)
 end
 
 --- Schedules the popup to close after the hover grace period.
+---@param source "trigger"|"popup"
 local function schedule_popup_close(source)
 	state.hover_revision = state.hover_revision + 1
 
@@ -468,15 +429,11 @@ local function schedule_popup_close(source)
 	cancel_hover_close()
 
 	local revision = state.hover_revision
-	local command = "sleep " .. tostring(HOVER_CLOSE_DELAY_SECONDS)
+	local timer
 
-	local job_token
-	job_token = easybar.exec_async(command, {
-		timeout_seconds = 1,
-		max_output_bytes = 256,
-	}, function()
-		if state.hover_close_job == job_token then
-			state.hover_close_job = nil
+	timer = easybar.after(HOVER_CLOSE_DELAY_SECONDS, function()
+		if state.hover_close_timer == timer then
+			state.hover_close_timer = nil
 		end
 
 		if revision ~= state.hover_revision then
@@ -490,10 +447,12 @@ local function schedule_popup_close(source)
 		state.popup_open = false
 		render()
 	end)
-	state.hover_close_job = job_token
+
+	state.hover_close_timer = timer
 end
 
---- Adds popup hover behavior to one node.
+--- Adds popup hover handling to a node.
+---@param node EasyBarNode
 local function attach_popup_hover(node)
 	node:subscribe(easybar.events.mouse.entered, function()
 		open_popup("popup")
@@ -504,15 +463,16 @@ local function attach_popup_hover(node)
 	end)
 end
 
-github:subscribe(easybar.events.mouse.entered, function()
+gitlab:subscribe(easybar.events.mouse.entered, function()
 	open_popup("trigger")
 end)
 
-github:subscribe(easybar.events.mouse.exited, function()
+gitlab:subscribe(easybar.events.mouse.exited, function()
 	schedule_popup_close("trigger")
 end)
 
 attach_popup_hover(popup_header)
+attach_popup_hover(popup_footer)
 
 for index, row in ipairs(popup_rows) do
 	local row_index = index
@@ -524,32 +484,28 @@ for index, row in ipairs(popup_rows) do
 			return
 		end
 
-		local notification = state.notifications[row_index]
-		if notification == nil then
-			return
+		local item = state.items[row_index]
+		if item ~= nil then
+			open_url(item.web_url)
 		end
-
-		open_notification(notification)
 	end)
 end
 
-attach_popup_hover(popup_footer)
-
---- Handles clicks on the main bar item.
-github:subscribe(easybar.events.mouse.clicked, function(event)
-	if event.button == easybar.events.mouse.right_button then
-		refresh()
-		return
+gitlab:subscribe(easybar.events.mouse.clicked, function(event)
+	if event.button == nil or event.button == easybar.events.mouse.left_button then
+		open_url(GITLAB_URL .. "/dashboard/issues")
 	end
-
-	if event.button ~= nil and event.button ~= easybar.events.mouse.left_button then
-		return
-	end
-
-	open_url(NOTIFICATIONS_URL, "failed to open GitHub notifications")
 end)
 
-github:subscribe({
+gitlab:subscribe(easybar.events.context_menu.clicked, function(event)
+	if event.action_id == "refresh" then
+		refresh()
+	elseif event.action_id == "open" then
+		open_url(GITLAB_URL)
+	end
+end)
+
+gitlab:subscribe({
 	easybar.events.forced,
 	easybar.events.system_woke,
 }, function()

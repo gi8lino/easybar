@@ -2,7 +2,6 @@
 -- GitLab work-items widget. Requires an authenticated `glab` CLI.
 -- Set GITLAB_HOST in app.env for a self-managed or dedicated instance.
 
-local shell = require("shell")
 local text = require("text")
 
 local POLL_INTERVAL_SECONDS = 300
@@ -36,7 +35,7 @@ local state = {
 	trigger_hovered = false,
 	popup_hovered = false,
 	hover_revision = 0,
-	hover_close_job = nil,
+	hover_close_timer = nil,
 }
 
 local gitlab
@@ -50,7 +49,7 @@ local function open_url(url)
 		return
 	end
 
-	easybar.exec_async("open " .. shell.quote(url), {
+	easybar.spawn_async({ "open", url }, {
 		timeout_seconds = 5,
 		max_output_bytes = 4096,
 	}, function(_, code)
@@ -95,17 +94,9 @@ local function append_items(target, source, kind)
 	return true
 end
 
-local function decode_items(output)
-	local ok, response = pcall(easybar.json.decode, output)
-	if not ok or type(response) ~= "table" then
-		return nil, "GitLab returned invalid JSON"
-	end
-
+local function combine_items(issues, merge_requests)
 	local items = {}
-	if
-		not append_items(items, response.issues, "issue")
-		or not append_items(items, response.merge_requests, "merge_request")
-	then
+	if not append_items(items, issues, "issue") or not append_items(items, merge_requests, "merge_request") then
 		return nil, "GitLab returned an unexpected response"
 	end
 
@@ -214,39 +205,67 @@ local function refresh()
 		"issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 	local merge_requests_endpoint =
 		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
-	local command = table.concat({
-		"set -e",
-		"issues=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(issues_endpoint) .. ")",
-		"merge_requests=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(merge_requests_endpoint) .. ")",
-		[[printf '{"issues":%s,"merge_requests":%s}\n' "$issues" "$merge_requests"]],
-	}, "; ")
+	local options = { timeout_seconds = 30, max_output_bytes = 2097152 }
 
-	easybar.exec_async(command, {
-		timeout_seconds = 30,
-		max_output_bytes = 2097152,
-	}, function(output, code)
+	local function fail(output, fallback)
 		state.loading = false
+		local message = text.trim(output)
+		state.error = message ~= "" and message or fallback
+		state.items = {}
+		render()
+	end
 
-		if code ~= 0 then
-			local message = text.trim(output)
-			if message == "" then
-				message = "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH"
-			end
-			state.error = message
-			state.items = {}
-			render()
+	local function fetch(endpoint, callback)
+		easybar.spawn_async({
+			"/usr/bin/env",
+			"GLAB_NO_PROMPT=1",
+			"glab",
+			"api",
+			"--paginate",
+			endpoint,
+		}, options, callback)
+	end
+
+	fetch(issues_endpoint, function(issues_output, issues_code)
+		if issues_code ~= 0 then
+			fail(issues_output, "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH")
 			return
 		end
 
-		local items, decode_error = decode_items(output)
-		if items == nil then
-			state.error = decode_error
-			state.items = {}
-		else
-			state.error = nil
-			state.items = items
+		local issues_ok, issues = pcall(easybar.json.decode, issues_output)
+		if not issues_ok or type(issues) ~= "table" then
+			fail("", "GitLab returned invalid issues JSON")
+			return
 		end
-		render()
+
+		fetch(merge_requests_endpoint, function(merge_requests_output, merge_requests_code)
+			state.loading = false
+			if merge_requests_code ~= 0 then
+				local message = text.trim(merge_requests_output)
+				state.error = message ~= "" and message or "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH"
+				state.items = {}
+				render()
+				return
+			end
+
+			local merge_requests_ok, merge_requests = pcall(easybar.json.decode, merge_requests_output)
+			if not merge_requests_ok or type(merge_requests) ~= "table" then
+				state.error = "GitLab returned invalid merge request JSON"
+				state.items = {}
+				render()
+				return
+			end
+
+			local items, combine_error = combine_items(issues, merge_requests)
+			if items == nil then
+				state.error = combine_error
+				state.items = {}
+			else
+				state.error = nil
+				state.items = items
+			end
+			render()
+		end)
 	end)
 end
 
@@ -308,9 +327,9 @@ popup_footer = easybar.add(easybar.kind.item, "gitlab_work_items_footer", {
 })
 
 local function cancel_hover_close()
-	if state.hover_close_job ~= nil then
-		easybar.cancel_async(state.hover_close_job)
-		state.hover_close_job = nil
+	if state.hover_close_timer ~= nil then
+		state.hover_close_timer:cancel()
+		state.hover_close_timer = nil
 	end
 end
 
@@ -333,20 +352,17 @@ local function schedule_popup_close(source)
 	cancel_hover_close()
 
 	local revision = state.hover_revision
-	local job_token
-	job_token = easybar.exec_async("sleep " .. tostring(HOVER_CLOSE_DELAY_SECONDS), {
-		timeout_seconds = 1,
-		max_output_bytes = 256,
-	}, function()
-		if state.hover_close_job == job_token then
-			state.hover_close_job = nil
+	local timer
+	timer = easybar.after(HOVER_CLOSE_DELAY_SECONDS, function()
+		if state.hover_close_timer == timer then
+			state.hover_close_timer = nil
 		end
 		if revision == state.hover_revision and not state.trigger_hovered and not state.popup_hovered then
 			state.popup_open = false
 			render()
 		end
 	end)
-	state.hover_close_job = job_token
+	state.hover_close_timer = timer
 end
 
 local function attach_popup_hover(node)
@@ -403,7 +419,6 @@ render()
 refresh()
 -- Set GITLAB_HOST in app.env for a self-managed or dedicated instance.
 
-local shell = require("shell")
 local text = require("text")
 
 local POLL_INTERVAL_SECONDS = 300
@@ -437,7 +452,7 @@ local state = {
 	trigger_hovered = false,
 	popup_hovered = false,
 	hover_revision = 0,
-	hover_close_job = nil,
+	hover_close_timer = nil,
 }
 
 local gitlab
@@ -451,7 +466,7 @@ local function open_url(url)
 		return
 	end
 
-	easybar.exec_async("open " .. shell.quote(url), {
+	easybar.spawn_async({ "open", url }, {
 		timeout_seconds = 5,
 		max_output_bytes = 4096,
 	}, function(_, code)
@@ -496,17 +511,9 @@ local function append_items(target, source, kind)
 	return true
 end
 
-local function decode_items(output)
-	local ok, response = pcall(easybar.json.decode, output)
-	if not ok or type(response) ~= "table" then
-		return nil, "GitLab returned invalid JSON"
-	end
-
+local function combine_items(issues, merge_requests)
 	local items = {}
-	if
-		not append_items(items, response.issues, "issue")
-		or not append_items(items, response.merge_requests, "merge_request")
-	then
+	if not append_items(items, issues, "issue") or not append_items(items, merge_requests, "merge_request") then
 		return nil, "GitLab returned an unexpected response"
 	end
 
@@ -612,39 +619,67 @@ local function refresh()
 		"issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 	local merge_requests_endpoint =
 		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
-	local command = table.concat({
-		"set -e",
-		"issues=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(issues_endpoint) .. ")",
-		"merge_requests=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(merge_requests_endpoint) .. ")",
-		[[printf '{"issues":%s,"merge_requests":%s}\n' "$issues" "$merge_requests"]],
-	}, "; ")
+	local options = { timeout_seconds = 30, max_output_bytes = 2097152 }
 
-	easybar.exec_async(command, {
-		timeout_seconds = 30,
-		max_output_bytes = 2097152,
-	}, function(output, code)
+	local function fail(output, fallback)
 		state.loading = false
+		local message = text.trim(output)
+		state.error = message ~= "" and message or fallback
+		state.items = {}
+		render()
+	end
 
-		if code ~= 0 then
-			local message = text.trim(output)
-			if message == "" then
-				message = "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH"
-			end
-			state.error = message
-			state.items = {}
-			render()
+	local function fetch(endpoint, callback)
+		easybar.spawn_async({
+			"/usr/bin/env",
+			"GLAB_NO_PROMPT=1",
+			"glab",
+			"api",
+			"--paginate",
+			endpoint,
+		}, options, callback)
+	end
+
+	fetch(issues_endpoint, function(issues_output, issues_code)
+		if issues_code ~= 0 then
+			fail(issues_output, "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH")
 			return
 		end
 
-		local items, decode_error = decode_items(output)
-		if items == nil then
-			state.error = decode_error
-			state.items = {}
-		else
-			state.error = nil
-			state.items = items
+		local issues_ok, issues = pcall(easybar.json.decode, issues_output)
+		if not issues_ok or type(issues) ~= "table" then
+			fail("", "GitLab returned invalid issues JSON")
+			return
 		end
-		render()
+
+		fetch(merge_requests_endpoint, function(merge_requests_output, merge_requests_code)
+			state.loading = false
+			if merge_requests_code ~= 0 then
+				local message = text.trim(merge_requests_output)
+				state.error = message ~= "" and message or "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH"
+				state.items = {}
+				render()
+				return
+			end
+
+			local merge_requests_ok, merge_requests = pcall(easybar.json.decode, merge_requests_output)
+			if not merge_requests_ok or type(merge_requests) ~= "table" then
+				state.error = "GitLab returned invalid merge request JSON"
+				state.items = {}
+				render()
+				return
+			end
+
+			local items, combine_error = combine_items(issues, merge_requests)
+			if items == nil then
+				state.error = combine_error
+				state.items = {}
+			else
+				state.error = nil
+				state.items = items
+			end
+			render()
+		end)
 	end)
 end
 
@@ -706,9 +741,9 @@ popup_footer = easybar.add(easybar.kind.item, "gitlab_work_items_footer", {
 })
 
 local function cancel_hover_close()
-	if state.hover_close_job ~= nil then
-		easybar.cancel_async(state.hover_close_job)
-		state.hover_close_job = nil
+	if state.hover_close_timer ~= nil then
+		state.hover_close_timer:cancel()
+		state.hover_close_timer = nil
 	end
 end
 
@@ -731,20 +766,17 @@ local function schedule_popup_close(source)
 	cancel_hover_close()
 
 	local revision = state.hover_revision
-	local job_token
-	job_token = easybar.exec_async("sleep " .. tostring(HOVER_CLOSE_DELAY_SECONDS), {
-		timeout_seconds = 1,
-		max_output_bytes = 256,
-	}, function()
-		if state.hover_close_job == job_token then
-			state.hover_close_job = nil
+	local timer
+	timer = easybar.after(HOVER_CLOSE_DELAY_SECONDS, function()
+		if state.hover_close_timer == timer then
+			state.hover_close_timer = nil
 		end
 		if revision == state.hover_revision and not state.trigger_hovered and not state.popup_hovered then
 			state.popup_open = false
 			render()
 		end
 	end)
-	state.hover_close_job = job_token
+	state.hover_close_timer = timer
 end
 
 local function attach_popup_hover(node)
