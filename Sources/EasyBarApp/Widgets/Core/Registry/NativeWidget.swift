@@ -32,6 +32,12 @@ extension NativeWidget {
 
   /// Applies the latest rendered nodes owned by this native widget.
   func applyNodes(_ nodes: [WidgetNodeState]) {
+    var nodes = nodes
+    if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
+      nodes[rootIndex].contextMenu = NativeWidgetContextMenu.appendingCommonActions(
+        to: nodes[rootIndex].contextMenu
+      )
+    }
     widgetStore.apply(owner: .native(root: rootID), nodes: nodes)
   }
 }

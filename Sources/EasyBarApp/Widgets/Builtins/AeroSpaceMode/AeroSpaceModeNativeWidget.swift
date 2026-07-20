@@ -1,3 +1,4 @@
+import EasyBarConfigParsing
 import Foundation
 
 /// Native AeroSpace layout-mode widget backed by `AeroSpaceService` state.
@@ -7,22 +8,45 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   let rootID = "builtin_aerospace_mode"
   let widgetStore: WidgetStore
 
-  private let config: Config.AeroSpaceModeBuiltinConfig
+  private var config: Config.AeroSpaceModeBuiltinConfig
+  private let configSnapshotStore: ConfigSnapshotStore
+  private let configPersistence: ConfigPersistence
+  private let eventObserver: EasyBarEventObserver
   private let aeroSpaceService: AeroSpaceService
 
   /// Creates the native AeroSpace mode widget from an immutable config section.
   init(
     config: Config.AeroSpaceModeBuiltinConfig,
     widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
+    configPersistence: ConfigPersistence,
+    eventHub: EventHub,
     aeroSpaceService: AeroSpaceService
   ) {
     self.config = config
     self.widgetStore = widgetStore
+    self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = configPersistence
+    self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
     self.aeroSpaceService = aeroSpaceService
   }
 
   /// Starts the widget and registers AeroSpace interest.
   func start() {
+    eventObserver.start(
+      eventNames: [WidgetEvent.contextMenuClicked.rawValue],
+      widgetTargetIDs: [rootID]
+    ) { [weak self] payload in
+      guard
+        let self,
+        payload.widgetEvent == .contextMenuClicked,
+        payload.widgetID == self.rootID,
+        let actionID = payload.actionID
+      else { return }
+
+      self.handleContextMenuAction(actionID)
+    }
+
     aeroSpaceService.registerConsumer(rootID) { [weak self] in
       self?.publish()
     }
@@ -32,6 +56,7 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
   /// Stops the widget and removes observers.
   func stop() {
+    eventObserver.stop()
     aeroSpaceService.unregisterConsumer(rootID)
     clearNodes()
   }
@@ -51,8 +76,59 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
 
     var renderedNode = node
     renderedNode.icon = resolvedIcon(for: mode, config: config)
+    renderedNode.contextMenu = AeroSpaceModeContextMenu.make(
+      config: config,
+      currentLayout: mode
+    )
 
     applyNodes([renderedNode])
+  }
+
+  /// Handles one AeroSpace-mode-specific native context-menu action.
+  private func handleContextMenuAction(_ actionID: String) {
+    guard let action = AeroSpaceModeContextMenuAction(id: actionID) else { return }
+
+    switch action {
+    case .setLayout(let mode):
+      aeroSpaceService.setFocusedLayout(mode)
+
+    case .toggleShowIcon:
+      guard !config.showIcon || config.showText else { return }
+      var updated = config
+      updated.showIcon.toggle()
+      persist(
+        updated,
+        edit: TOMLEdit(
+          path: ["builtins", "aerospace_mode", "content", "show_icon"],
+          value: .bool(updated.showIcon)
+        )
+      )
+
+    case .toggleShowText:
+      guard !config.showText || config.showIcon else { return }
+      var updated = config
+      updated.showText.toggle()
+      persist(
+        updated,
+        edit: TOMLEdit(
+          path: ["builtins", "aerospace_mode", "content", "show_text"],
+          value: .bool(updated.showText)
+        )
+      )
+
+    case .openConfig:
+      aeroSpaceService.openConfig()
+
+    case .refresh:
+      aeroSpaceService.refresh()
+    }
+  }
+
+  private func persist(_ updated: Config.AeroSpaceModeBuiltinConfig, edit: TOMLEdit) {
+    guard configPersistence.apply([edit]) else { return }
+    config = updated
+    configSnapshotStore.applyAeroSpaceModeOverride(updated)
+    publish()
   }
 
   /// Returns the configured icon for the current layout mode.

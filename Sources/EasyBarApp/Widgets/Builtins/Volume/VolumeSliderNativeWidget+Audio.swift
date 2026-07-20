@@ -168,7 +168,7 @@ extension VolumeSliderNativeWidget {
   }
 
   /// Sets the mute state when the current device exposes a mute control.
-  private func setMutedState(_ muted: Bool, deviceID: AudioDeviceID) {
+  func setMutedState(_ muted: Bool, deviceID: AudioDeviceID) {
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyMute,
       mScope: kAudioDevicePropertyScopeOutput,
@@ -188,6 +188,12 @@ extension VolumeSliderNativeWidget {
       UInt32(MemoryLayout<UInt32>.size),
       &value
     )
+  }
+
+  /// Sets the mute state on the current default output device when supported.
+  func setMutedState(_ muted: Bool) {
+    guard let deviceID = defaultOutputDeviceID() else { return }
+    setMutedState(muted, deviceID: deviceID)
   }
 
   /// Returns whether a successful non-zero volume write should also clear mute.

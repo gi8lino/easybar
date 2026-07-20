@@ -1,4 +1,6 @@
+import AppKit
 import CoreAudio
+import EasyBarConfigParsing
 import Foundation
 
 /// Native volume widget with optional inline expansion.
@@ -16,7 +18,9 @@ final class VolumeSliderNativeWidget: NativeWidget {
     ]
   }
 
-  let config: Config.VolumeBuiltinConfig
+  var config: Config.VolumeBuiltinConfig
+  let configSnapshotStore: ConfigSnapshotStore
+  let configPersistence: ConfigPersistence
   let eventObserver: EasyBarEventObserver
   var isHovered = false
   var isAdjustingSlider = false
@@ -39,12 +43,21 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let value: Double
     let step: Double
     let isHovered: Bool
+    let isMuted: Bool
   }
 
   /// Creates the native volume widget from an immutable config section.
-  init(config: Config.VolumeBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
+  init(
+    config: Config.VolumeBuiltinConfig,
+    widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
+    configPersistence: ConfigPersistence,
+    eventHub: EventHub
+  ) {
     self.config = config
     self.widgetStore = widgetStore
+    self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = configPersistence
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
@@ -58,6 +71,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
         WidgetEvent.mouseExited.rawValue,
         WidgetEvent.sliderPreview.rawValue,
         WidgetEvent.sliderChanged.rawValue,
+        WidgetEvent.contextMenuClicked.rawValue,
       ]),
       widgetTargetIDs: [rootID, "\(rootID)_slider"]
     ) { [weak self] payload in
@@ -83,7 +97,12 @@ final class VolumeSliderNativeWidget: NativeWidget {
   /// Publishes the current volume widget state.
   func publish() {
     let snapshot = makeSnapshot()
-    applyNodes(makeNodes(snapshot: snapshot))
+    var nodes = makeNodes(snapshot: snapshot)
+    let contextMenu = VolumeContextMenu.make(config: config, isMuted: snapshot.isMuted)
+    if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
+      nodes[rootIndex].contextMenu = contextMenu
+    }
+    applyNodes(nodes)
   }
 
   /// Returns the current render snapshot.
@@ -110,7 +129,8 @@ final class VolumeSliderNativeWidget: NativeWidget {
       text: text,
       value: volumeState.roundedValue,
       step: volumeState.step,
-      isHovered: isHovered
+      isHovered: isHovered,
+      isMuted: volumeState.isMuted
     )
   }
 
@@ -188,5 +208,52 @@ final class VolumeSliderNativeWidget: NativeWidget {
     )
 
     return nodes
+  }
+
+  // MARK: - Context Menu
+
+  /// Handles one volume-specific native context-menu action.
+  func handleContextMenuAction(_ actionID: String) {
+    guard let action = VolumeContextMenuAction(id: actionID) else { return }
+
+    switch action {
+    case .toggleMute:
+      setMutedState(!readMutedState())
+      publish()
+
+    case .toggleShowPercentage:
+      var updated = config
+      updated.showPercentage.toggle()
+      persist(
+        updated,
+        edit: TOMLEdit(
+          path: ["builtins", "volume", "content", "show_percentage"],
+          value: .bool(updated.showPercentage)
+        )
+      )
+
+    case .toggleExpandOnHover:
+      var updated = config
+      updated.expandToSliderOnHover.toggle()
+      persist(
+        updated,
+        edit: TOMLEdit(
+          path: ["builtins", "volume", "slider", "expand_to_slider_on_hover"],
+          value: .bool(updated.expandToSliderOnHover)
+        )
+      )
+
+    case .openSoundSettings:
+      guard let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension")
+      else { return }
+      NSWorkspace.shared.open(url)
+    }
+  }
+
+  private func persist(_ updated: Config.VolumeBuiltinConfig, edit: TOMLEdit) {
+    guard configPersistence.apply([edit]) else { return }
+    config = updated
+    configSnapshotStore.applyVolumeOverride(updated)
+    publish()
   }
 }

@@ -268,6 +268,78 @@ extension AeroSpaceService {
     }
   }
 
+  /// Hides the application represented by the current AeroSpace snapshot.
+  @MainActor
+  func hideFocusedApp() {
+    guard let app = focusedApp else { return }
+    _ = runningApplication(for: app)?.hide()
+  }
+
+  /// Reveals the focused application bundle in Finder.
+  @MainActor
+  func revealFocusedAppInFinder() {
+    guard let path = focusedApp?.bundlePath, !path.isEmpty else { return }
+    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+  }
+
+  /// Resolves the running application represented by one AeroSpace app snapshot.
+  @MainActor
+  private func runningApplication(for app: SpaceApp) -> NSRunningApplication? {
+    if !app.bundleID.isEmpty,
+      let running = NSWorkspace.shared.runningApplications.first(where: { running in
+        running.bundleIdentifier == app.bundleID
+      })
+    {
+      return running
+    }
+
+    guard let path = app.bundlePath, !path.isEmpty else { return nil }
+    return NSWorkspace.shared.runningApplications.first { running in
+      running.bundleURL?.path == path
+    }
+  }
+
+  /// Changes the focused AeroSpace window/container layout and reloads state.
+  func setFocusedLayout(_ mode: AeroSpaceLayoutMode) {
+    guard mode != .unknown else { return }
+
+    logger.info(
+      "aerospace layout requested",
+      .field("layout", mode.rawValue)
+    )
+
+    let generation = currentGeneration()
+
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
+      guard let self else { return }
+      guard self.shouldExecute(generation: generation) else { return }
+      guard self.runAeroSpace(arguments: ["layout", mode.rawValue]) != nil else { return }
+      guard self.shouldExecute(generation: generation) else { return }
+      guard let refreshToken = self.reserveRefreshToken(expectedGeneration: generation) else {
+        return
+      }
+      self.reloadState(refreshToken: refreshToken)
+    }
+  }
+
+  /// Opens the configuration file currently loaded by AeroSpace.
+  func openConfig() {
+    let generation = currentGeneration()
+
+    DetachedTask.run(priority: .userInitiated) { [weak self] in
+      guard let self else { return }
+      guard self.shouldExecute(generation: generation) else { return }
+      guard
+        let path = self.runAeroSpace(arguments: ["config", "--config-path"]),
+        !path.isEmpty
+      else { return }
+
+      Task { @MainActor in
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+      }
+    }
+  }
+
   /// Public refresh entry.
   func refresh() {
     guard isActive else {

@@ -25,6 +25,10 @@ extension VolumeSliderNativeWidget {
     guard payload.widgetID == rootID || payload.widgetID == "\(rootID)_slider" else { return }
 
     switch event {
+    case .contextMenuClicked:
+      guard payload.widgetID == rootID, let actionID = payload.actionID else { return }
+      handleContextMenuAction(actionID)
+
     case .mouseEntered:
       isHovered = true
       cancelAutoHide()

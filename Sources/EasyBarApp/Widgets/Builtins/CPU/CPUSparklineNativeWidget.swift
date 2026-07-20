@@ -1,4 +1,6 @@
+import AppKit
 import Darwin.Mach
+import EasyBarConfigParsing
 import Foundation
 
 /// Native CPU widget that samples system usage and renders a sparkline.
@@ -15,7 +17,9 @@ final class CPUSparklineNativeWidget: NativeWidget {
     ]
   }
 
-  private let config: Config.CPUBuiltinConfig
+  private var config: Config.CPUBuiltinConfig
+  private let configSnapshotStore: ConfigSnapshotStore
+  private let configPersistence: ConfigPersistence
   private let eventObserver: EasyBarEventObserver
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
@@ -23,9 +27,17 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private var isRunning = false
 
   /// Creates the native CPU widget from an immutable config section.
-  init(config: Config.CPUBuiltinConfig, widgetStore: WidgetStore, eventHub: EventHub) {
+  init(
+    config: Config.CPUBuiltinConfig,
+    widgetStore: WidgetStore,
+    configSnapshotStore: ConfigSnapshotStore,
+    configPersistence: ConfigPersistence,
+    eventHub: EventHub
+  ) {
     self.config = config
     self.widgetStore = widgetStore
+    self.configSnapshotStore = configSnapshotStore
+    self.configPersistence = configPersistence
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
   }
 
@@ -38,8 +50,20 @@ final class CPUSparklineNativeWidget: NativeWidget {
     previousCPUInfo = readCPUInfo()
     lastSampleDate = nil
 
-    eventObserver.start(eventNames: appEventSubscriptions) { [weak self] payload in
+    eventObserver.start(
+      eventNames: appEventSubscriptions.union([WidgetEvent.contextMenuClicked.rawValue]),
+      widgetTargetIDs: [rootID]
+    ) { [weak self] payload in
       guard let self else { return }
+
+      if payload.widgetEvent == .contextMenuClicked,
+        payload.widgetID == self.rootID,
+        let actionID = payload.actionID
+      {
+        self.handleContextMenuAction(actionID)
+        return
+      }
+
       guard let event = payload.appEvent else { return }
 
       switch event {
@@ -111,29 +135,33 @@ final class CPUSparklineNativeWidget: NativeWidget {
 
   /// Publishes the current CPU sparkline to the widget store.
   private func publish() {
-    applyNodes([
-      BuiltinNativeNodeFactory.makeSparklineNode(
-        rootID: rootID,
-        placement: config.placement,
-        style: config.style,
-        text: config.label,
-        values: samples,
-        lineWidth: config.lineWidth,
-        color: config.colorHex ?? config.style.textColorHex
-      )
-    ])
+    var node = BuiltinNativeNodeFactory.makeSparklineNode(
+      rootID: rootID,
+      placement: config.placement,
+      style: config.style,
+      text: config.label,
+      values: samples,
+      lineWidth: config.lineWidth,
+      color: config.colorHex ?? config.style.textColorHex
+    )
+    node.contextMenu = CPUContextMenu.make(config: config)
+    applyNodes([node])
   }
 
   /// Appends one clamped CPU sample and keeps the configured history size.
   private func pushSample(_ value: Double) {
     samples.append(min(max(value, 0), 100))
+    resizeHistory()
+  }
 
-    while samples.count > historySize {
-      samples.removeFirst()
+  /// Resizes the current sample buffer while preserving the newest values.
+  private func resizeHistory() {
+    if samples.count > historySize {
+      samples.removeFirst(samples.count - historySize)
     }
 
-    while samples.count < historySize {
-      samples.insert(0, at: 0)
+    if samples.count < historySize {
+      samples.insert(contentsOf: repeatElement(0, count: historySize - samples.count), at: 0)
     }
   }
 
@@ -145,6 +173,67 @@ final class CPUSparklineNativeWidget: NativeWidget {
   /// Returns the configured CPU sample interval in seconds.
   private var sampleIntervalSeconds: TimeInterval {
     return max(1, config.sampleIntervalSeconds)
+  }
+
+  // MARK: - Context Menu
+
+  /// Handles one CPU-specific native context-menu action.
+  private func handleContextMenuAction(_ actionID: String) {
+    guard let action = CPUContextMenuAction(id: actionID) else { return }
+
+    switch action {
+    case .setHistorySize(let size):
+      var updated = config
+      updated.historySize = size
+      guard
+        persist(
+          updated,
+          edit: TOMLEdit(
+            path: ["builtins", "cpu", "content", "history_size"],
+            value: .integer(size)
+          )
+        )
+      else { return }
+      resizeHistory()
+      publish()
+
+    case .setSampleInterval(let seconds):
+      var updated = config
+      updated.sampleIntervalSeconds = Double(seconds)
+      guard
+        persist(
+          updated,
+          edit: TOMLEdit(
+            path: ["builtins", "cpu", "content", "sample_interval_seconds"],
+            value: .integer(seconds)
+          )
+        )
+      else { return }
+      lastSampleDate = nil
+      publish()
+
+    case .resetHistory:
+      samples = Array(repeating: 0, count: historySize)
+      previousCPUInfo = readCPUInfo()
+      lastSampleDate = nil
+      publish()
+
+    case .openActivityMonitor:
+      guard
+        let url = NSWorkspace.shared.urlForApplication(
+          withBundleIdentifier: "com.apple.ActivityMonitor"
+        )
+      else { return }
+      NSWorkspace.shared.open(url)
+    }
+  }
+
+  @discardableResult
+  private func persist(_ updated: Config.CPUBuiltinConfig, edit: TOMLEdit) -> Bool {
+    guard configPersistence.apply([edit]) else { return false }
+    config = updated
+    configSnapshotStore.applyCPUOverride(updated)
+    return true
   }
 
   /// Reads cumulative CPU tick counters from Mach.

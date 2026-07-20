@@ -1,3 +1,4 @@
+import EasyBarConfigParsing
 import EasyBarShared
 import Foundation
 
@@ -15,6 +16,7 @@ final class NativeWidgetRegistry {
   private let configPersistence: ConfigPersistence
   private let eventManager: EventManager
   private let eventHub: EventHub
+  private let contextMenuObserver: EasyBarEventObserver
   private let aeroSpaceService: AeroSpaceService
   private let networkAgentClient: NetworkAgentClient
   private let nativeWiFiStore: NativeWiFiStore
@@ -55,6 +57,7 @@ final class NativeWidgetRegistry {
     )
     self.eventManager = eventManager
     self.eventHub = eventHub
+    self.contextMenuObserver = EasyBarEventObserver(eventHub: eventHub)
     self.aeroSpaceService = aeroSpaceService
     self.networkAgentClient = networkAgentClient
     self.nativeWiFiStore = nativeWiFiStore
@@ -127,11 +130,14 @@ final class NativeWidgetRegistry {
       widget.start()
     }
 
+    observeCommonContextMenuActions()
+
     logger.debug("native widget registry registerAll end")
   }
 
   /// Stops and clears all widgets.
   private func stopAll() {
+    contextMenuObserver.stop()
     if !widgets.isEmpty {
       logger.debug(
         "native widget registry stopping",
@@ -151,6 +157,62 @@ final class NativeWidgetRegistry {
     eventManager.setNativeSubscriptions([])
     clearGroups()
   }
+
+  /// Observes controls that are present in every native widget context menu.
+  private func observeCommonContextMenuActions() {
+    contextMenuObserver.start(
+      eventNames: [WidgetEvent.contextMenuClicked.rawValue],
+      widgetTargetIDs: Set(widgets.map(\.rootID))
+    ) { [weak self] payload in
+      guard
+        let self,
+        let rootID = payload.widgetID,
+        let actionID = payload.actionID,
+        let action = NativeWidgetContextMenuAction(rawValue: actionID)
+      else { return }
+
+      switch action {
+      case .reload:
+        self.widgets.first(where: { $0.rootID == rootID })?.reload()
+      case .disable:
+        self.disableWidget(rootID: rootID)
+      }
+    }
+  }
+
+  /// Persists a disabled widget and removes it from the running registry immediately.
+  private func disableWidget(rootID: String) {
+    guard let key = Self.configKeyByRootID[rootID] else { return }
+    guard
+      configPersistence.apply([
+        TOMLEdit(path: ["builtins", key, "enabled"], value: .bool(false))
+      ])
+    else { return }
+
+    configSnapshotStore.applyNativeWidgetEnabledOverride(key, enabled: false)
+    guard let index = widgets.firstIndex(where: { $0.rootID == rootID }) else { return }
+    widgets.remove(at: index).stop()
+    eventManager.setNativeSubscriptions(
+      widgets.reduce(into: Set<String>()) { result, widget in
+        result.formUnion(widget.appEventSubscriptions)
+      }
+    )
+    observeCommonContextMenuActions()
+  }
+
+  private static let configKeyByRootID = [
+    "builtin_inbox": "inbox",
+    "builtin_spaces": "spaces",
+    "builtin_battery": "battery",
+    "builtin_front_app": "front_app",
+    "builtin_aerospace_mode": "aerospace_mode",
+    "builtin_volume": "volume",
+    "builtin_wifi": "wifi",
+    "builtin_date": "date",
+    "builtin_time": "time",
+    "builtin_calendar": "calendar",
+    "builtin_cpu": "cpu",
+  ]
 
   private func publishGroups(_ groups: [Config.BuiltinGroupConfig]) {
     clearGroups()
@@ -215,6 +277,9 @@ final class NativeWidgetRegistry {
         FrontAppNativeWidget(
           config: builtins.frontApp,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
+          eventHub: self.eventHub,
           aeroSpaceService: self.aeroSpaceService
         )
       },
@@ -222,6 +287,9 @@ final class NativeWidgetRegistry {
         AeroSpaceModeNativeWidget(
           config: builtins.aerospaceMode,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
+          eventHub: self.eventHub,
           aeroSpaceService: self.aeroSpaceService
         )
       },
@@ -229,6 +297,8 @@ final class NativeWidgetRegistry {
         VolumeSliderNativeWidget(
           config: builtins.volume,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
           eventHub: self.eventHub
         )
       },
@@ -282,6 +352,8 @@ final class NativeWidgetRegistry {
         CPUSparklineNativeWidget(
           config: builtins.cpu,
           widgetStore: self.widgetStore,
+          configSnapshotStore: self.configSnapshotStore,
+          configPersistence: self.configPersistence,
           eventHub: self.eventHub
         )
       },
