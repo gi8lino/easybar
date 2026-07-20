@@ -70,6 +70,8 @@ public final class BackoffScheduler: @unchecked Sendable {
       do {
         try await sleeper.sleep(nanoseconds: nanoseconds)
       } catch {
+        guard let self else { return }
+        _ = self.clearScheduledTask(id: scheduledID)
         return
       }
 
@@ -87,6 +89,11 @@ public final class BackoffScheduler: @unchecked Sendable {
     if shouldCancel {
       task.cancel()
     }
+  }
+
+  /// Returns whether one retry is still pending.
+  var hasScheduledAction: Bool {
+    state.withLock { $0.scheduledID != nil }
   }
 
   /// Cancels any pending retry and resets the delay sequence.

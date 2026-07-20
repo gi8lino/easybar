@@ -33,8 +33,13 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
+    guard wifiClient == nil else {
+      return
+    }
+
     let client = CWWiFiClient.shared()
     client.delegate = self
+    wifiClient = client
 
     do {
       try client.startMonitoringEvent(with: .ssidDidChange)
@@ -45,34 +50,51 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       try client.startMonitoringEvent(with: .modeDidChange)
       try client.startMonitoringEvent(with: .powerDidChange)
       try client.startMonitoringEvent(with: .scanCacheUpdated)
-      wifiClient = client
       logger.info(
         "\(componentName) subscribed",
         .field("event", "wifi_change"),
       )
     } catch {
+      let registrationError = error
+
+      do {
+        try client.stopMonitoringAllEvents()
+        client.delegate = nil
+        wifiClient = nil
+      } catch {
+        // Keep the client retained so a later stop can retry cleanup instead
+        // of registering over a partially active callback set.
+        logger.error(
+          "failed to roll back partial \(componentName) Wi-Fi monitoring",
+          .field("error", error),
+        )
+      }
+
       logger.warn(
         "failed to subscribe \(componentName) Wi-Fi events",
-        .field("error", error),
+        .field("error", registrationError),
       )
     }
   }
 
   /// Stops Wi-Fi monitoring.
   func stop() {
+    onChange = nil
+
     if let wifiClient {
       do {
         try wifiClient.stopMonitoringAllEvents()
+        wifiClient.delegate = nil
+        self.wifiClient = nil
       } catch {
+        // Retain the client after a failed stop so a later stop or restart can
+        // retry cleanup without creating duplicate event registrations.
         logger.warn(
           "failed to stop Wi-Fi monitoring",
           .field("error", error),
         )
       }
     }
-
-    wifiClient = nil
-    onChange = nil
 
     trackingState.withLock { state in
       state = TrackingState()
@@ -259,7 +281,8 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
 
       return (
         roaming: state.roaming,
-        ssidChangedAt: state.ssidChangedAt.map(NetworkWiFiSnapshot.fieldDateFormatter.string(from:)),
+        ssidChangedAt: state.ssidChangedAt.map(
+          NetworkWiFiSnapshot.fieldDateFormatter.string(from:)),
         interfaceChangedAt: state.interfaceChangedAt.map(
           NetworkWiFiSnapshot.fieldDateFormatter.string(from:))
       )

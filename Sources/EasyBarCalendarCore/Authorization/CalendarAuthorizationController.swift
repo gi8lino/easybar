@@ -98,6 +98,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
             .field("status", "\(self.authState.describe(newStatus))"),
             .field("error", "\(error)"))
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus, session: session)
+          self.notifyResolvedChange(for: session)
           return
         }
 
@@ -109,16 +110,13 @@ final class CalendarAuthorizationController: @unchecked Sendable {
 
         guard granted else {
           self.scheduleAuthorizationRetryIfNeeded(for: newStatus, session: session)
+          self.notifyResolvedChange(for: session)
           return
         }
 
         self.lifecycle.resetRetry(for: session)
         self.authState.markGrantedInProcess()
-
-        Task { @MainActor [weak self, weak session] in
-          guard let self, let session else { return }
-          self.lifecycle.notify(session)
-        }
+        self.notifyResolvedChange(for: session)
       }
 
     case .denied, .restricted, .writeOnly:
@@ -127,6 +125,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
         "calendar agent access unavailable",
         .field("status", "\(authState.describe(status))"),
       )
+      lifecycle.notify(session)
 
     @unknown default:
       lifecycle.resetRetry(for: session)
@@ -134,6 +133,15 @@ final class CalendarAuthorizationController: @unchecked Sendable {
         "calendar agent access status unknown",
         .field("raw", "\(status.rawValue)"),
       )
+      lifecycle.notify(session)
+    }
+  }
+
+  /// Delivers one asynchronous permission-result notification on the main actor.
+  private func notifyResolvedChange(for session: AuthorizationLifecycle.Session) {
+    Task { @MainActor [weak self, weak session] in
+      guard let self, let session else { return }
+      self.lifecycle.notify(session)
     }
   }
 

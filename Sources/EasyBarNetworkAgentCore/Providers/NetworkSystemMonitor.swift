@@ -30,6 +30,10 @@ final class NetworkSystemMonitor: @unchecked Sendable {
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
 
+    guard store == nil, storeSource == nil else {
+      return
+    }
+
     var context = SCDynamicStoreContext(
       version: 0,
       info: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),

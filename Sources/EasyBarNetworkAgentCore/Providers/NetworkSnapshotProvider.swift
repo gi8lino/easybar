@@ -45,6 +45,7 @@ public final class NetworkSnapshotProvider: @unchecked Sendable {
 
   /// Starts permission, Wi-Fi, and network monitoring.
   public func start(onChange: @escaping () -> Void) {
+    stop()
     self.onChange = onChange
 
     authorizer.start { [weak self] in

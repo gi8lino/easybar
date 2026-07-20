@@ -7,6 +7,7 @@ import Foundation
 public final class DebouncedActionScheduler: @unchecked Sendable {
   private struct State {
     var pendingTask: Task<Void, Never>?
+    var pendingGeneration: UInt64?
     var generation: UInt64 = 0
   }
 
@@ -39,6 +40,8 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
     let scheduledGeneration = state.withLock { state -> UInt64 in
       state.generation &+= 1
       state.pendingTask?.cancel()
+      state.pendingTask = nil
+      state.pendingGeneration = state.generation
       return state.generation
     }
 
@@ -55,6 +58,8 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
       do {
         try await sleeper.sleep(nanoseconds: nanoseconds)
       } catch {
+        guard let self else { return }
+        _ = self.finishScheduledAction(generation: scheduledGeneration)
         return
       }
 
@@ -64,7 +69,7 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
     }
 
     let shouldCancel = state.withLock { state -> Bool in
-      guard state.generation == scheduledGeneration else { return true }
+      guard state.pendingGeneration == scheduledGeneration else { return true }
       state.pendingTask = task
       return false
     }
@@ -74,12 +79,18 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
     }
   }
 
+  /// Returns whether one delayed action is still pending.
+  var hasPendingAction: Bool {
+    state.withLock { $0.pendingGeneration != nil }
+  }
+
   /// Cancels any pending action.
   public func cancel() {
     let task = state.withLock { state -> Task<Void, Never>? in
       state.generation &+= 1
       let task = state.pendingTask
       state.pendingTask = nil
+      state.pendingGeneration = nil
       return task
     }
 
@@ -89,11 +100,12 @@ public final class DebouncedActionScheduler: @unchecked Sendable {
   /// Clears the pending action if it is still the currently scheduled generation.
   private func finishScheduledAction(generation scheduledGeneration: UInt64) -> Bool {
     state.withLock { state -> Bool in
-      guard state.generation == scheduledGeneration else {
+      guard state.pendingGeneration == scheduledGeneration else {
         return false
       }
 
       state.pendingTask = nil
+      state.pendingGeneration = nil
       return true
     }
   }

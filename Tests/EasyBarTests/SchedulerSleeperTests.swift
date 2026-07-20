@@ -1,9 +1,34 @@
-import EasyBarShared
 import XCTest
+
+@testable import EasyBarShared
 
 final class SchedulerSleeperTests: XCTestCase {
   private struct ImmediateSleeper: AsyncSleeper {
     func sleep(nanoseconds: UInt64) async throws {}
+  }
+
+  private enum TestSleeperError: Error {
+    case failed
+  }
+
+  private struct ThrowingSleeper: AsyncSleeper {
+    func sleep(nanoseconds: UInt64) async throws {
+      throw TestSleeperError.failed
+    }
+  }
+
+  private final class ThrowingOnceSleeper: AsyncSleeper, @unchecked Sendable {
+    private let callState = LockedState(0)
+
+    func sleep(nanoseconds: UInt64) async throws {
+      let call = callState.withLock { count -> Int in
+        count += 1
+        return count
+      }
+      if call == 1 {
+        throw TestSleeperError.failed
+      }
+    }
   }
 
   private final class RecordingSleeper: AsyncSleeper, @unchecked Sendable {
@@ -138,6 +163,78 @@ final class SchedulerSleeperTests: XCTestCase {
       }
       wait(for: [retry], timeout: 1)
     }
+  }
+
+  func testBackoffSchedulerClearsFailedSleepBeforeNextSchedule() {
+    let sleeper = ThrowingOnceSleeper()
+    let scheduler = BackoffScheduler(
+      label: "test retry",
+      delays: [0],
+      logger: ProcessLogger(label: "test"),
+      sleeper: sleeper
+    )
+    let failedAction = expectation(description: "failed sleep action must not fire")
+    failedAction.isInverted = true
+
+    scheduler.schedule {
+      failedAction.fulfill()
+    }
+
+    XCTAssertTrue(waitUntil { !scheduler.hasScheduledAction })
+    wait(for: [failedAction], timeout: 0.02)
+
+    let replacement = expectation(description: "replacement retry accepted")
+    scheduler.schedule {
+      replacement.fulfill()
+    }
+    wait(for: [replacement], timeout: 1)
+  }
+
+  func testDebouncedActionSchedulerClearsStateAfterSleeperError() {
+    let action = expectation(description: "failed sleep action must not fire")
+    action.isInverted = true
+    let scheduler = DebouncedActionScheduler(
+      delay: 0,
+      logger: ProcessLogger(label: "test"),
+      sleeper: ThrowingSleeper()
+    )
+
+    scheduler.schedule {
+      action.fulfill()
+    }
+
+    XCTAssertTrue(waitUntil { !scheduler.hasPendingAction })
+    wait(for: [action], timeout: 0.02)
+  }
+
+  func testDebouncedActionSchedulerDoesNotRetainCompletedImmediateTask() {
+    let action = expectation(description: "immediate action fired")
+    let scheduler = DebouncedActionScheduler(
+      delay: 0,
+      logger: ProcessLogger(label: "test"),
+      sleeper: ImmediateSleeper()
+    )
+
+    scheduler.schedule {
+      action.fulfill()
+    }
+    wait(for: [action], timeout: 1)
+
+    XCTAssertTrue(waitUntil { !scheduler.hasPendingAction })
+  }
+
+  private func waitUntil(
+    timeout: TimeInterval = 1,
+    condition: () -> Bool
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+      if condition() {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.001)
+    }
+    return condition()
   }
 
   func testSchedulersClampUnsafeDelays() {

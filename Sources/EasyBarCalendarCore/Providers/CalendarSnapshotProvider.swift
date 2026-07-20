@@ -75,6 +75,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
 
   /// Starts calendar access, observation, and change callbacks.
   func start(onChange: @escaping () -> Void) {
+    stop()
     self.onChange = onChange
 
     authorizationController.start { [weak self] in
