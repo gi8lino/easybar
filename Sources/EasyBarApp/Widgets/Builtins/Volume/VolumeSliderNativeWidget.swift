@@ -1,6 +1,7 @@
 import AppKit
 import CoreAudio
 import EasyBarConfigParsing
+import EasyBarShared
 import Foundation
 
 /// Native volume widget with optional inline expansion.
@@ -22,6 +23,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
   let configSnapshotStore: ConfigSnapshotStore
   let configPersistence: ConfigPersistence
   let eventObserver: EasyBarEventObserver
+  let logger: ProcessLogger
   var isHovered = false
   var isAdjustingSlider = false
   var autoHideTask: Task<Void, Never>?
@@ -33,6 +35,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let roundedValue: Double
     let step: Double
     let isMuted: Bool
+    let capabilities: AudioDeviceCapabilities
   }
 
   struct Snapshot {
@@ -44,6 +47,7 @@ final class VolumeSliderNativeWidget: NativeWidget {
     let step: Double
     let isHovered: Bool
     let isMuted: Bool
+    let capabilities: AudioDeviceCapabilities
   }
 
   /// Creates the native volume widget from an immutable config section.
@@ -52,13 +56,15 @@ final class VolumeSliderNativeWidget: NativeWidget {
     widgetStore: WidgetStore,
     configSnapshotStore: ConfigSnapshotStore,
     configPersistence: ConfigPersistence,
-    eventHub: EventHub
+    eventHub: EventHub,
+    logger: ProcessLogger
   ) {
     self.config = config
     self.widgetStore = widgetStore
     self.configSnapshotStore = configSnapshotStore
     self.configPersistence = configPersistence
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
+    self.logger = logger
   }
 
   // MARK: - Lifecycle
@@ -98,7 +104,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
   func publish() {
     let snapshot = makeSnapshot()
     var nodes = makeNodes(snapshot: snapshot)
-    let contextMenu = VolumeContextMenu.make(config: config, isMuted: snapshot.isMuted)
+    let contextMenu = VolumeContextMenu.make(
+      config: config,
+      isMuted: snapshot.isMuted,
+      capabilities: snapshot.capabilities
+    )
     if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
       nodes[rootIndex].contextMenu = contextMenu
     }
@@ -117,10 +127,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
       config: config
     )
 
-    let text =
-      config.showPercentage && isHovered
-      ? "\(Int((volumeState.clampedSystem * 100.0).rounded()))%"
-      : ""
+    let text = VolumePresentation.percentageText(
+      normalizedVolume: volumeState.clampedSystem,
+      config: config,
+      isHovered: isHovered,
+      canReadVolume: volumeState.capabilities.canReadVolume,
+      canSetVolume: volumeState.capabilities.canSetVolume
+    )
 
     return Snapshot(
       config: config,
@@ -130,11 +143,23 @@ final class VolumeSliderNativeWidget: NativeWidget {
       value: volumeState.roundedValue,
       step: volumeState.step,
       isHovered: isHovered,
-      isMuted: volumeState.isMuted
+      isMuted: volumeState.isMuted,
+      capabilities: volumeState.capabilities
     )
   }
 
   private func makeNodes(snapshot: Snapshot) -> [WidgetNodeState] {
+    guard snapshot.capabilities.canSetVolume else {
+      return [
+        BuiltinNativeNodeFactory.makeItemNode(
+          rootID: rootID,
+          placement: snapshot.placement,
+          style: snapshot.style,
+          text: snapshot.text
+        )
+      ]
+    }
+
     guard !snapshot.config.expandToSliderOnHover else {
       return makeExpandableNodes(snapshot: snapshot)
     }
@@ -218,7 +243,11 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     switch action {
     case .toggleMute:
-      setMutedState(!readMutedState())
+      guard currentAudioDeviceCapabilities().canMute else {
+        logger.warn("volume mute action unavailable for current output device")
+        return
+      }
+      _ = setMutedState(!readMutedState())
       publish()
 
     case .toggleShowPercentage:
@@ -233,6 +262,10 @@ final class VolumeSliderNativeWidget: NativeWidget {
       )
 
     case .toggleExpandOnHover:
+      guard currentAudioDeviceCapabilities().canSetVolume else {
+        logger.warn("volume slider mode unavailable for current output device")
+        return
+      }
       var updated = config
       updated.expandToSliderOnHover.toggle()
       persist(
@@ -245,15 +278,23 @@ final class VolumeSliderNativeWidget: NativeWidget {
 
     case .openSoundSettings:
       guard let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension")
-      else { return }
-      NSWorkspace.shared.open(url)
+      else {
+        logger.warn("failed to build Sound Settings URL")
+        return
+      }
+      guard NSWorkspace.shared.open(url) else {
+        logger.warn("failed to open Sound Settings")
+        return
+      }
+      logger.debug("opened Sound Settings")
     }
   }
 
   private func persist(_ updated: Config.VolumeBuiltinConfig, edit: TOMLEdit) {
-    guard configPersistence.apply([edit]) else { return }
-    config = updated
-    configSnapshotStore.applyVolumeOverride(updated)
-    publish()
+    NativeWidgetConfigUpdate.persist(edits: [edit], using: configPersistence) {
+      config = updated
+      configSnapshotStore.applyVolumeOverride(updated)
+      publish()
+    }
   }
 }

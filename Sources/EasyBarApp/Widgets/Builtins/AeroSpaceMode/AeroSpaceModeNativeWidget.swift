@@ -125,10 +125,11 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   }
 
   private func persist(_ updated: Config.AeroSpaceModeBuiltinConfig, edit: TOMLEdit) {
-    guard configPersistence.apply([edit]) else { return }
-    config = updated
-    configSnapshotStore.applyAeroSpaceModeOverride(updated)
-    publish()
+    NativeWidgetConfigUpdate.persist(edits: [edit], using: configPersistence) {
+      config = updated
+      configSnapshotStore.applyAeroSpaceModeOverride(updated)
+      publish()
+    }
   }
 
   /// Returns the configured icon for the current layout mode.

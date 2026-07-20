@@ -268,18 +268,67 @@ extension AeroSpaceService {
     }
   }
 
+  /// Returns whether the focused application can currently be hidden.
+  @MainActor
+  var canHideFocusedApp: Bool {
+    guard let app = focusedApp else { return false }
+    return runningApplication(for: app) != nil
+  }
+
+  /// Returns whether the focused application bundle can be revealed in Finder.
+  @MainActor
+  var canRevealFocusedApp: Bool {
+    guard let path = focusedApp?.bundlePath, !path.isEmpty else { return false }
+    return FileManager.default.fileExists(atPath: path)
+  }
+
   /// Hides the application represented by the current AeroSpace snapshot.
   @MainActor
-  func hideFocusedApp() {
-    guard let app = focusedApp else { return }
-    _ = runningApplication(for: app)?.hide()
+  @discardableResult
+  func hideFocusedApp() -> Bool {
+    guard let app = focusedApp else {
+      logger.warn("cannot hide focused app, AeroSpace has no focused application")
+      return false
+    }
+    guard let runningApplication = runningApplication(for: app) else {
+      logger.warn(
+        "cannot hide focused app, running application was not resolved",
+        .field("app", app.name)
+      )
+      return false
+    }
+    guard runningApplication.hide() else {
+      logger.warn("failed to hide focused app", .field("app", app.name))
+      return false
+    }
+    logger.debug("hid focused app", .field("app", app.name))
+    return true
   }
 
   /// Reveals the focused application bundle in Finder.
   @MainActor
-  func revealFocusedAppInFinder() {
-    guard let path = focusedApp?.bundlePath, !path.isEmpty else { return }
+  @discardableResult
+  func revealFocusedAppInFinder() -> Bool {
+    guard let app = focusedApp else {
+      logger.warn("cannot reveal focused app, AeroSpace has no focused application")
+      return false
+    }
+    guard let path = app.bundlePath, !path.isEmpty else {
+      logger.warn("cannot reveal focused app, bundle path is missing", .field("app", app.name))
+      return false
+    }
+    guard FileManager.default.fileExists(atPath: path) else {
+      logger.warn(
+        "cannot reveal focused app, bundle path does not exist",
+        .field("app", app.name),
+        .field("path", path)
+      )
+      return false
+    }
+
     NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    logger.debug("revealed focused app in Finder", .field("app", app.name))
+    return true
   }
 
   /// Resolves the running application represented by one AeroSpace app snapshot.
@@ -301,7 +350,10 @@ extension AeroSpaceService {
 
   /// Changes the focused AeroSpace window/container layout and reloads state.
   func setFocusedLayout(_ mode: AeroSpaceLayoutMode) {
-    guard mode != .unknown else { return }
+    guard mode != .unknown else {
+      logger.warn("ignored unsupported AeroSpace layout request")
+      return
+    }
 
     logger.info(
       "aerospace layout requested",
@@ -313,7 +365,17 @@ extension AeroSpaceService {
     DetachedTask.run(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
-      guard self.runAeroSpace(arguments: ["layout", mode.rawValue]) != nil else { return }
+      guard self.runAeroSpace(arguments: AeroSpaceCommandArguments.layout(mode)) != nil else {
+        self.logger.warn(
+          "failed to change AeroSpace layout",
+          .field("layout", mode.rawValue)
+        )
+        return
+      }
+      self.logger.debug(
+        "changed AeroSpace layout",
+        .field("layout", mode.rawValue)
+      )
       guard self.shouldExecute(generation: generation) else { return }
       guard let refreshToken = self.reserveRefreshToken(expectedGeneration: generation) else {
         return
@@ -330,12 +392,29 @@ extension AeroSpaceService {
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
       guard
-        let path = self.runAeroSpace(arguments: ["config", "--config-path"]),
+        let path = self.runAeroSpace(arguments: AeroSpaceCommandArguments.configPath),
         !path.isEmpty
-      else { return }
+      else {
+        self.logger.warn("failed to resolve AeroSpace config path")
+        return
+      }
+      guard FileManager.default.fileExists(atPath: path) else {
+        self.logger.warn(
+          "AeroSpace config path does not exist",
+          .field("path", path)
+        )
+        return
+      }
 
       Task { @MainActor in
-        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        guard NSWorkspace.shared.open(URL(fileURLWithPath: path)) else {
+          self.logger.warn(
+            "failed to open AeroSpace config",
+            .field("path", path)
+          )
+          return
+        }
+        self.logger.debug("opened AeroSpace config", .field("path", path))
       }
     }
   }

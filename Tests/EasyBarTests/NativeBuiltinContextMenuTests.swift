@@ -1,42 +1,88 @@
+import EasyBarConfigParsing
+import EasyBarShared
+import Foundation
 import XCTest
 
 @testable import EasyBarApp
 
 final class NativeBuiltinContextMenuTests: XCTestCase {
-  func testVolumeMenuReflectsMuteAndConfiguration() throws {
+  func testVolumeMenuReflectsMuteConfigurationAndCapabilities() throws {
     var config = Config.VolumeBuiltinConfig.default
     config.showPercentage = false
     config.expandToSliderOnHover = true
 
     let menu = try XCTUnwrap(
       WidgetContextMenuItem.validated(
-        VolumeContextMenu.make(config: config, isMuted: true)
+        VolumeContextMenu.make(
+          config: config,
+          isMuted: true,
+          capabilities: .init(canReadVolume: true, canSetVolume: true, canMute: true)
+        )
       )
     )
 
     XCTAssertEqual(menu.first?.title, "Unmute")
+    XCTAssertEqual(menu.first?.enabled, true)
     XCTAssertEqual(
-      menu.first(where: { $0.id == "volume.toggle_show_percentage" })?.checked,
+      menu.first(where: { $0.id == VolumeContextMenuAction.toggleShowPercentage.id })?.checked,
       false
     )
     XCTAssertEqual(
-      menu.first(where: { $0.id == "volume.toggle_expand_on_hover" })?.checked,
+      menu.first(where: { $0.id == VolumeContextMenuAction.toggleExpandOnHover.id })?.checked,
       true
     )
   }
 
-  func testVolumeActionsDecodeOnlySupportedValues() {
-    XCTAssertEqual(VolumeContextMenuAction(id: "volume.toggle_mute"), .toggleMute)
+  func testVolumeMenuDisablesUnsupportedAudioActions() throws {
+    let menu = try XCTUnwrap(
+      WidgetContextMenuItem.validated(
+        VolumeContextMenu.make(
+          config: .default,
+          isMuted: false,
+          capabilities: .init(canReadVolume: true, canSetVolume: false, canMute: false)
+        )
+      )
+    )
+
     XCTAssertEqual(
-      VolumeContextMenuAction(id: "volume.toggle_show_percentage"),
+      menu.first(where: { $0.id == VolumeContextMenuAction.toggleMute.id })?.enabled,
+      false
+    )
+    XCTAssertEqual(
+      menu.first(where: { $0.id == VolumeContextMenuAction.toggleExpandOnHover.id })?.enabled,
+      false
+    )
+  }
+
+  func testVolumePercentageRemainsVisibleInAlwaysExpandedMode() {
+    var config = Config.VolumeBuiltinConfig.default
+    config.showPercentage = true
+    config.expandToSliderOnHover = false
+
+    XCTAssertEqual(
+      VolumePresentation.percentageText(
+        normalizedVolume: 0.42,
+        config: config,
+        isHovered: false,
+        canReadVolume: true,
+        canSetVolume: true
+      ),
+      "42%"
+    )
+  }
+
+  func testVolumeActionsDecodeOnlySupportedValues() {
+    XCTAssertEqual(VolumeContextMenuAction(id: VolumeContextMenuAction.toggleMute.id), .toggleMute)
+    XCTAssertEqual(
+      VolumeContextMenuAction(id: VolumeContextMenuAction.toggleShowPercentage.id),
       .toggleShowPercentage
     )
     XCTAssertEqual(
-      VolumeContextMenuAction(id: "volume.toggle_expand_on_hover"),
+      VolumeContextMenuAction(id: VolumeContextMenuAction.toggleExpandOnHover.id),
       .toggleExpandOnHover
     )
     XCTAssertEqual(
-      VolumeContextMenuAction(id: "volume.open_sound_settings"),
+      VolumeContextMenuAction(id: VolumeContextMenuAction.openSoundSettings.id),
       .openSoundSettings
     )
     XCTAssertNil(VolumeContextMenuAction(id: "volume.unknown"))
@@ -53,18 +99,55 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
       menu.first(where: { $0.title == "Refresh Interval" })?.submenu
     )
 
-    XCTAssertEqual(historyItems.first(where: { $0.id == "cpu.history.30" })?.checked, true)
-    XCTAssertEqual(intervalItems.first(where: { $0.id == "cpu.interval.5" })?.checked, true)
+    XCTAssertEqual(
+      historyItems.first(where: { $0.id == CPUContextMenuAction.setHistorySize(30).id })?.checked,
+      true
+    )
+    XCTAssertEqual(
+      intervalItems.first(where: { $0.id == CPUContextMenuAction.setSampleInterval(5).id })?
+        .checked,
+      true
+    )
+  }
+
+  func testCPUMenuShowsCheckedCustomValues() throws {
+    var config = Config.CPUBuiltinConfig.default
+    config.historySize = 20
+    config.sampleIntervalSeconds = 3.5
+
+    let menu = try XCTUnwrap(WidgetContextMenuItem.validated(CPUContextMenu.make(config: config)))
+    let historyItems = try XCTUnwrap(menu.first(where: { $0.title == "History" })?.submenu)
+    let intervalItems = try XCTUnwrap(
+      menu.first(where: { $0.title == "Refresh Interval" })?.submenu
+    )
+
+    XCTAssertEqual(historyItems.first?.title, "Custom: 20 Samples")
+    XCTAssertEqual(historyItems.first?.checked, true)
+    XCTAssertEqual(historyItems.first?.enabled, false)
+    XCTAssertEqual(intervalItems.first?.title, "Custom: 3.5 Seconds")
+    XCTAssertEqual(intervalItems.first?.checked, true)
+    XCTAssertEqual(intervalItems.first?.enabled, false)
   }
 
   func testCPUActionsRejectUnsupportedPresetValues() {
-    XCTAssertEqual(CPUContextMenuAction(id: "cpu.history.60"), .setHistorySize(60))
-    XCTAssertEqual(CPUContextMenuAction(id: "cpu.interval.2"), .setSampleInterval(2))
-    XCTAssertEqual(CPUContextMenuAction(id: "cpu.reset_history"), .resetHistory)
     XCTAssertEqual(
-      CPUContextMenuAction(id: "cpu.open_activity_monitor"),
+      CPUContextMenuAction(id: CPUContextMenuAction.setHistorySize(60).id),
+      .setHistorySize(60)
+    )
+    XCTAssertEqual(
+      CPUContextMenuAction(id: CPUContextMenuAction.setSampleInterval(2).id),
+      .setSampleInterval(2)
+    )
+    XCTAssertEqual(
+      CPUContextMenuAction(id: CPUContextMenuAction.resetHistory.id),
+      .resetHistory
+    )
+    XCTAssertEqual(
+      CPUContextMenuAction(id: CPUContextMenuAction.openActivityMonitor.id),
       .openActivityMonitor
     )
+    XCTAssertNil(CPUContextMenuAction(id: CPUContextMenuAction.customHistoryID))
+    XCTAssertNil(CPUContextMenuAction(id: CPUContextMenuAction.customIntervalID))
     XCTAssertNil(CPUContextMenuAction(id: "cpu.history.20"))
     XCTAssertNil(CPUContextMenuAction(id: "cpu.interval.3"))
   }
@@ -82,33 +165,41 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
     let layoutItems = try XCTUnwrap(menu.first?.submenu)
 
     XCTAssertEqual(
-      layoutItems.first(where: { $0.id == "aerospace_mode.layout.v_accordion" })?.checked,
+      layoutItems.first(where: {
+        $0.id == AeroSpaceModeContextMenuAction.setLayout(.vAccordion).id
+      })?.checked,
       true
     )
     XCTAssertEqual(
-      menu.first(where: { $0.id == "aerospace_mode.toggle_show_icon" })?.enabled,
+      menu.first(where: { $0.id == AeroSpaceModeContextMenuAction.toggleShowIcon.id })?.enabled,
       false
     )
     XCTAssertEqual(
-      menu.first(where: { $0.id == "aerospace_mode.toggle_show_text" })?.enabled,
+      menu.first(where: { $0.id == AeroSpaceModeContextMenuAction.toggleShowText.id })?.enabled,
       true
     )
   }
 
   func testAeroSpaceModeActionsRejectUnknownLayout() {
     XCTAssertEqual(
-      AeroSpaceModeContextMenuAction(id: "aerospace_mode.layout.h_tiles"),
+      AeroSpaceModeContextMenuAction(id: AeroSpaceModeContextMenuAction.setLayout(.hTiles).id),
       .setLayout(.hTiles)
     )
     XCTAssertEqual(
-      AeroSpaceModeContextMenuAction(id: "aerospace_mode.open_config"),
+      AeroSpaceModeContextMenuAction(id: AeroSpaceModeContextMenuAction.openConfig.id),
       .openConfig
     )
     XCTAssertNil(AeroSpaceModeContextMenuAction(id: "aerospace_mode.layout.unknown"))
     XCTAssertNil(AeroSpaceModeContextMenuAction(id: "aerospace_mode.layout.grid"))
   }
 
-  func testFrontAppMenuDisablesRemovingLastVisibleField() throws {
+  func testAeroSpaceActionsUseExpectedCLIArguments() {
+    XCTAssertEqual(AeroSpaceCommandArguments.layout(.hTiles), ["layout", "h_tiles"])
+    XCTAssertEqual(AeroSpaceCommandArguments.layout(.floating), ["layout", "floating"])
+    XCTAssertEqual(AeroSpaceCommandArguments.configPath, ["config", "--config-path"])
+  }
+
+  func testFrontAppMenuUsesResolvedCapabilitiesAndKeepsVisibleContent() throws {
     var config = Config.FrontAppBuiltinConfig.default
     config.showIcon = false
     config.showName = true
@@ -117,24 +208,31 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
       WidgetContextMenuItem.validated(
         FrontAppContextMenu.make(
           config: config,
-          hasFocusedApp: false,
+          canHideFocusedApp: false,
           canRevealFocusedApp: false
         )
       )
     )
 
-    XCTAssertEqual(menu.first(where: { $0.id == "front_app.hide" })?.enabled, false)
     XCTAssertEqual(
-      menu.first(where: { $0.id == "front_app.toggle_show_icon" })?.enabled,
+      menu.first(where: { $0.id == FrontAppContextMenuAction.hideApplication.id })?.enabled,
+      false
+    )
+    XCTAssertEqual(
+      menu.first(where: { $0.id == FrontAppContextMenuAction.toggleShowIcon.id })?.enabled,
       true
     )
     XCTAssertEqual(
-      menu.first(where: { $0.id == "front_app.toggle_show_name" })?.enabled,
+      menu.first(where: { $0.id == FrontAppContextMenuAction.toggleShowName.id })?.enabled,
       false
     )
     XCTAssertEqual(
-      menu.first(where: { $0.id == "front_app.reveal_in_finder" })?.enabled,
+      menu.first(where: { $0.id == FrontAppContextMenuAction.revealInFinder.id })?.enabled,
       false
+    )
+    XCTAssertEqual(
+      menu.first(where: { $0.id == FrontAppContextMenuAction.revealInFinder.id })?.title,
+      "Show in Finder"
     )
   }
 
@@ -148,7 +246,9 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
     store.applyCPUOverride(cpu)
     XCTAssertEqual(store.snapshot.builtins.cpu.historySize, 60)
     XCTAssertEqual(
-      store.snapshot.builtins.volume.showPercentage, original.builtins.volume.showPercentage)
+      store.snapshot.builtins.volume.showPercentage,
+      original.builtins.volume.showPercentage
+    )
 
     var volume = original.builtins.volume
     volume.showPercentage = false
@@ -161,12 +261,105 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
     store.applyFrontAppOverride(frontApp)
     XCTAssertEqual(store.snapshot.builtins.frontApp.showName, false)
     XCTAssertEqual(
-      store.snapshot.builtins.aerospaceMode.showText, original.builtins.aerospaceMode.showText)
+      store.snapshot.builtins.aerospaceMode.showText,
+      original.builtins.aerospaceMode.showText
+    )
 
     var mode = original.builtins.aerospaceMode
     mode.showText = true
     store.applyAeroSpaceModeOverride(mode)
     XCTAssertEqual(store.snapshot.builtins.aerospaceMode.showText, true)
     XCTAssertEqual(store.snapshot.builtins.frontApp.showName, false)
+  }
+
+  @MainActor
+  func testConfigUpdateCommitsRuntimeStateOnlyAfterSuccessfulPersistence() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-context-menu-success-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let configURL = directory.appendingPathComponent("config.toml")
+    try """
+    # Keep this comment.
+    [builtins.volume.content]
+    show_percentage = true # Keep this inline comment.
+    """.write(to: configURL, atomically: true, encoding: .utf8)
+
+    let original = Config.makeUnloadedConfig().snapshot()
+    let store = ConfigSnapshotStore(snapshot: original)
+    var localConfig = original.builtins.volume
+    var updated = localConfig
+    updated.showPercentage = false
+
+    let persisted = NativeWidgetConfigUpdate.persist(
+      edits: [
+        TOMLEdit(
+          path: ["builtins", "volume", "content", "show_percentage"],
+          value: .bool(false)
+        )
+      ],
+      using: ConfigPersistence(configPath: configURL.path, logger: silentLogger())
+    ) {
+      localConfig = updated
+      store.applyVolumeOverride(updated)
+    }
+
+    XCTAssertTrue(persisted)
+    XCTAssertEqual(localConfig.showPercentage, false)
+    XCTAssertEqual(store.snapshot.builtins.volume.showPercentage, false)
+
+    let source = try String(contentsOf: configURL, encoding: .utf8)
+    XCTAssertTrue(source.contains("# Keep this comment."))
+    XCTAssertTrue(source.contains("show_percentage = false # Keep this inline comment."))
+  }
+
+  @MainActor
+  func testConfigUpdateLeavesRuntimeStateUnchangedWhenPersistenceFails() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-context-menu-failure-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let configURL = directory.appendingPathComponent("config.toml")
+    try "[invalid".write(to: configURL, atomically: true, encoding: .utf8)
+
+    let original = Config.makeUnloadedConfig().snapshot()
+    let store = ConfigSnapshotStore(snapshot: original)
+    var localConfig = original.builtins.volume
+    var updated = localConfig
+    updated.showPercentage.toggle()
+
+    var commitCalled = false
+    let persisted = NativeWidgetConfigUpdate.persist(
+      edits: [
+        TOMLEdit(
+          path: ["builtins", "volume", "content", "show_percentage"],
+          value: .bool(updated.showPercentage)
+        )
+      ],
+      using: ConfigPersistence(configPath: configURL.path, logger: silentLogger())
+    ) {
+      commitCalled = true
+      localConfig = updated
+      store.applyVolumeOverride(updated)
+    }
+
+    XCTAssertFalse(persisted)
+    XCTAssertFalse(commitCalled)
+    XCTAssertEqual(localConfig.showPercentage, original.builtins.volume.showPercentage)
+    XCTAssertEqual(
+      store.snapshot.builtins.volume.showPercentage,
+      original.builtins.volume.showPercentage
+    )
+  }
+
+  private func silentLogger() -> ProcessLogger {
+    ProcessLogger(
+      label: "native-context-menu-tests",
+      minimumLevel: .error,
+      outputStream: nil,
+      errorStream: nil
+    )
   }
 }

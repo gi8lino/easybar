@@ -1,6 +1,7 @@
 import AppKit
 import Darwin.Mach
 import EasyBarConfigParsing
+import EasyBarShared
 import Foundation
 
 /// Native CPU widget that samples system usage and renders a sparkline.
@@ -21,6 +22,7 @@ final class CPUSparklineNativeWidget: NativeWidget {
   private let configSnapshotStore: ConfigSnapshotStore
   private let configPersistence: ConfigPersistence
   private let eventObserver: EasyBarEventObserver
+  private let logger: ProcessLogger
   private var samples: [Double] = []
   private var previousCPUInfo: host_cpu_load_info_data_t?
   private var lastSampleDate: Date?
@@ -32,13 +34,15 @@ final class CPUSparklineNativeWidget: NativeWidget {
     widgetStore: WidgetStore,
     configSnapshotStore: ConfigSnapshotStore,
     configPersistence: ConfigPersistence,
-    eventHub: EventHub
+    eventHub: EventHub,
+    logger: ProcessLogger
   ) {
     self.config = config
     self.widgetStore = widgetStore
     self.configSnapshotStore = configSnapshotStore
     self.configPersistence = configPersistence
     self.eventObserver = EasyBarEventObserver(eventHub: eventHub)
+    self.logger = logger
   }
 
   /// Starts CPU sampling and publishes the initial widget state.
@@ -223,17 +227,24 @@ final class CPUSparklineNativeWidget: NativeWidget {
         let url = NSWorkspace.shared.urlForApplication(
           withBundleIdentifier: "com.apple.ActivityMonitor"
         )
-      else { return }
-      NSWorkspace.shared.open(url)
+      else {
+        logger.warn("Activity Monitor application was not found")
+        return
+      }
+      guard NSWorkspace.shared.open(url) else {
+        logger.warn("failed to open Activity Monitor")
+        return
+      }
+      logger.debug("opened Activity Monitor")
     }
   }
 
   @discardableResult
   private func persist(_ updated: Config.CPUBuiltinConfig, edit: TOMLEdit) -> Bool {
-    guard configPersistence.apply([edit]) else { return false }
-    config = updated
-    configSnapshotStore.applyCPUOverride(updated)
-    return true
+    NativeWidgetConfigUpdate.persist(edits: [edit], using: configPersistence) {
+      config = updated
+      configSnapshotStore.applyCPUOverride(updated)
+    }
   }
 
   /// Reads cumulative CPU tick counters from Mach.

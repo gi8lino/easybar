@@ -76,8 +76,8 @@ final class FrontAppNativeWidget: NativeWidget {
     if let rootIndex = nodes.firstIndex(where: { $0.id == rootID }) {
       nodes[rootIndex].contextMenu = FrontAppContextMenu.make(
         config: config,
-        hasFocusedApp: aeroSpaceService.focusedApp != nil,
-        canRevealFocusedApp: aeroSpaceService.focusedApp?.bundlePath?.isEmpty == false
+        canHideFocusedApp: aeroSpaceService.canHideFocusedApp,
+        canRevealFocusedApp: aeroSpaceService.canRevealFocusedApp
       )
     }
 
@@ -122,10 +122,11 @@ final class FrontAppNativeWidget: NativeWidget {
   }
 
   private func persist(_ updated: Config.FrontAppBuiltinConfig, edit: TOMLEdit) {
-    guard configPersistence.apply([edit]) else { return }
-    config = updated
-    configSnapshotStore.applyFrontAppOverride(updated)
-    publish()
+    NativeWidgetConfigUpdate.persist(edits: [edit], using: configPersistence) {
+      config = updated
+      configSnapshotStore.applyFrontAppOverride(updated)
+      publish()
+    }
   }
 
   /// Returns the focused app already resolved by `AeroSpaceService`.

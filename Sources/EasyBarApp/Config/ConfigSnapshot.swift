@@ -5,7 +5,7 @@ import SwiftUI
 /// Complete in-memory config snapshot used for rollback.
 ///
 /// This is sendable as an immutable value snapshot; mutable app configuration is
-/// copied into `let` fields before the snapshot crosses task boundaries.
+/// copied into an immutable top-level value before the snapshot crosses task boundaries.
 struct ConfigSnapshot: @unchecked Sendable {
   /// App-level config snapshot.
   struct App {
@@ -54,18 +54,18 @@ struct ConfigSnapshot: @unchecked Sendable {
 
   /// Built-in widget config snapshot.
   struct Builtins {
-    let inbox: Config.InboxBuiltinConfig
-    let cpu: Config.CPUBuiltinConfig
-    let battery: Config.BatteryBuiltinConfig
-    let groups: [Config.BuiltinGroupConfig]
-    let spaces: Config.SpacesBuiltinConfig
-    let frontApp: Config.FrontAppBuiltinConfig
-    let aerospaceMode: Config.AeroSpaceModeBuiltinConfig
-    let volume: Config.VolumeBuiltinConfig
-    let wifi: Config.WiFiBuiltinConfig
-    let calendar: Config.CalendarBuiltinConfig
-    let time: Config.FormattedBuiltinConfig
-    let date: Config.FormattedBuiltinConfig
+    var inbox: Config.InboxBuiltinConfig
+    var cpu: Config.CPUBuiltinConfig
+    var battery: Config.BatteryBuiltinConfig
+    var groups: [Config.BuiltinGroupConfig]
+    var spaces: Config.SpacesBuiltinConfig
+    var frontApp: Config.FrontAppBuiltinConfig
+    var aerospaceMode: Config.AeroSpaceModeBuiltinConfig
+    var volume: Config.VolumeBuiltinConfig
+    var wifi: Config.WiFiBuiltinConfig
+    var calendar: Config.CalendarBuiltinConfig
+    var time: Config.FormattedBuiltinConfig
+    var date: Config.FormattedBuiltinConfig
   }
 
   /// App-level config values.
@@ -85,6 +85,19 @@ struct ConfigSnapshot: @unchecked Sendable {
 }
 
 extension ConfigSnapshot {
+
+  /// Returns a copy with one updated built-in widget snapshot.
+  func replacing(builtins: Builtins) -> ConfigSnapshot {
+    ConfigSnapshot(
+      app: app,
+      logging: logging,
+      calendarAgent: calendarAgent,
+      networkAgent: networkAgent,
+      theme: theme,
+      bar: bar,
+      builtins: builtins
+    )
+  }
   /// Resolves a color reference such as `theme.text` against this snapshot.
   func resolveThemeColorHex(_ value: String) -> String? {
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)

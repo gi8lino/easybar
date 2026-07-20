@@ -8,12 +8,23 @@ enum AeroSpaceModeContextMenuAction: Equatable {
   case openConfig
   case refresh
 
+  private static let layoutPrefix = "aerospace_mode.layout."
+
+  /// Stable context-menu action identifier.
+  var id: String {
+    switch self {
+    case .setLayout(let mode): return "\(Self.layoutPrefix)\(mode.rawValue)"
+    case .toggleShowIcon: return "aerospace_mode.toggle_show_icon"
+    case .toggleShowText: return "aerospace_mode.toggle_show_text"
+    case .openConfig: return "aerospace_mode.open_config"
+    case .refresh: return "aerospace_mode.refresh"
+    }
+  }
+
   /// Decodes one stable context-menu action identifier.
   init?(id: String) {
-    if id.hasPrefix("aerospace_mode.layout."),
-      let mode = AeroSpaceLayoutMode(
-        rawValue: String(id.dropFirst("aerospace_mode.layout.".count))
-      ),
+    if id.hasPrefix(Self.layoutPrefix),
+      let mode = AeroSpaceLayoutMode(rawValue: String(id.dropFirst(Self.layoutPrefix.count))),
       mode != .unknown
     {
       self = .setLayout(mode)
@@ -21,10 +32,10 @@ enum AeroSpaceModeContextMenuAction: Equatable {
     }
 
     switch id {
-    case "aerospace_mode.toggle_show_icon": self = .toggleShowIcon
-    case "aerospace_mode.toggle_show_text": self = .toggleShowText
-    case "aerospace_mode.open_config": self = .openConfig
-    case "aerospace_mode.refresh": self = .refresh
+    case Self.toggleShowIcon.id: self = .toggleShowIcon
+    case Self.toggleShowText.id: self = .toggleShowText
+    case Self.openConfig.id: self = .openConfig
+    case Self.refresh.id: self = .refresh
     default: return nil
     }
   }
@@ -46,7 +57,7 @@ enum AeroSpaceModeContextMenu {
   ) -> [WidgetContextMenuItem] {
     let layoutItems = layoutOptions.map { mode, title in
       WidgetContextMenuItem(
-        id: "aerospace_mode.layout.\(mode.rawValue)",
+        id: AeroSpaceModeContextMenuAction.setLayout(mode).id,
         title: title,
         checked: currentLayout == mode
       )
@@ -56,23 +67,26 @@ enum AeroSpaceModeContextMenu {
       WidgetContextMenuItem(title: "Layout", submenu: layoutItems),
       WidgetContextMenuItem(separator: true),
       WidgetContextMenuItem(
-        id: "aerospace_mode.toggle_show_icon",
+        id: AeroSpaceModeContextMenuAction.toggleShowIcon.id,
         title: "Show Icon",
         enabled: !config.showIcon || config.showText,
         checked: config.showIcon
       ),
       WidgetContextMenuItem(
-        id: "aerospace_mode.toggle_show_text",
+        id: AeroSpaceModeContextMenuAction.toggleShowText.id,
         title: "Show Text",
         enabled: !config.showText || config.showIcon,
         checked: config.showText
       ),
       WidgetContextMenuItem(separator: true),
       WidgetContextMenuItem(
-        id: "aerospace_mode.open_config",
+        id: AeroSpaceModeContextMenuAction.openConfig.id,
         title: "Open AeroSpace Config"
       ),
-      WidgetContextMenuItem(id: "aerospace_mode.refresh", title: "Refresh AeroSpace State"),
+      WidgetContextMenuItem(
+        id: AeroSpaceModeContextMenuAction.refresh.id,
+        title: "Refresh AeroSpace State"
+      ),
     ]
   }
 }

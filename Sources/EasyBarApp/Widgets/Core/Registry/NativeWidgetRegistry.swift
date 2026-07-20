@@ -299,7 +299,8 @@ final class NativeWidgetRegistry {
           widgetStore: self.widgetStore,
           configSnapshotStore: self.configSnapshotStore,
           configPersistence: self.configPersistence,
-          eventHub: self.eventHub
+          eventHub: self.eventHub,
+          logger: self.logger.child("volume")
         )
       },
       Registration(id: "wifi", enabled: builtins.wifi.enabled) {
@@ -354,7 +355,8 @@ final class NativeWidgetRegistry {
           widgetStore: self.widgetStore,
           configSnapshotStore: self.configSnapshotStore,
           configPersistence: self.configPersistence,
-          eventHub: self.eventHub
+          eventHub: self.eventHub,
+          logger: self.logger.child("cpu")
         )
       },
     ]
