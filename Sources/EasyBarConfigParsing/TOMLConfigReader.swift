@@ -77,8 +77,7 @@ public struct TOMLConfigReader<Failure: Error> {
 
   /// Returns an optional string value or the optional fallback when absent.
   public func optionalString(_ key: String, fallback: String? = nil) throws -> String? {
-    guard let value = table[key] else { return fallback }
-    return try requiredString(value, path: path(for: key))
+    try optionalValue(key, fallback: fallback, decode: requiredString)
   }
 
   /// Returns a boolean value or the fallback when absent.
@@ -88,8 +87,7 @@ public struct TOMLConfigReader<Failure: Error> {
 
   /// Returns an optional boolean value or the optional fallback when absent.
   public func optionalBool(_ key: String, fallback: Bool? = nil) throws -> Bool? {
-    guard let value = table[key] else { return fallback }
-    return try requiredBool(value, path: path(for: key))
+    try optionalValue(key, fallback: fallback, decode: requiredBool)
   }
 
   /// Returns an integer value for one key, or the fallback when the key is absent.
@@ -137,13 +135,7 @@ public struct TOMLConfigReader<Failure: Error> {
     minimum: Int? = nil,
     maximum: Int? = nil
   ) throws -> Int? {
-    let value: Int
-
-    if let configuredValue = table[key] {
-      value = try requiredInt(configuredValue, path: path(for: key))
-    } else if let fallback {
-      value = fallback
-    } else {
+    guard let value = try optionalValue(key, fallback: fallback, decode: requiredInt) else {
       return nil
     }
 
@@ -201,13 +193,7 @@ public struct TOMLConfigReader<Failure: Error> {
     minimum: Double? = nil,
     maximum: Double? = nil
   ) throws -> Double? {
-    let value: Double
-
-    if let configuredValue = table[key] {
-      value = try requiredDouble(configuredValue, path: path(for: key))
-    } else if let fallback {
-      value = fallback
-    } else {
+    guard let value = try optionalValue(key, fallback: fallback, decode: requiredDouble) else {
       return nil
     }
 
@@ -227,8 +213,7 @@ public struct TOMLConfigReader<Failure: Error> {
 
   /// Returns an optional string array value or the optional fallback when absent.
   public func optionalStringArray(_ key: String, fallback: [String]? = nil) throws -> [String]? {
-    guard let value = table[key] else { return fallback }
-    return try requiredStringArray(value, path: path(for: key))
+    try optionalValue(key, fallback: fallback, decode: requiredStringArray)
   }
 
   /// Returns a string-backed enum array or the fallback when absent.
@@ -273,8 +258,7 @@ public struct TOMLConfigReader<Failure: Error> {
     _ key: String,
     fallback: [String: String]? = nil
   ) throws -> [String: String]? {
-    guard let value = table[key] else { return fallback }
-    return try requiredStringTable(value, path: path(for: key))
+    try optionalValue(key, fallback: fallback, decode: requiredStringTable)
   }
 
   /// Returns a string-backed enum value or the fallback when absent.
@@ -306,6 +290,15 @@ public struct TOMLConfigReader<Failure: Error> {
   private func optionalDirectSection(_ key: String) throws -> TOMLConfigReader<Failure>? {
     guard table[key] != nil else { return nil }
     return try directSection(key)
+  }
+
+  private func optionalValue<Value>(
+    _ key: String,
+    fallback: Value?,
+    decode: (TOMLValue, String) throws -> Value
+  ) throws -> Value? {
+    guard let value = table[key] else { return fallback }
+    return try decode(value, path(for: key))
   }
 
   private func directSection(_ key: String) throws -> TOMLConfigReader<Failure> {
@@ -386,27 +379,27 @@ public struct TOMLConfigReader<Failure: Error> {
   }
 
   private func requiredString(_ value: TOMLValue, path: String) throws -> String {
-    if let string = value.string {
-      return string
-    }
-
-    throw makeInvalidTypeError(path, "string", describe(value))
+    try required(value, path: path, expected: "string", extract: \.string)
   }
 
   private func requiredBool(_ value: TOMLValue, path: String) throws -> Bool {
-    if let bool = value.bool {
-      return bool
-    }
-
-    throw makeInvalidTypeError(path, "bool", describe(value))
+    try required(value, path: path, expected: "bool", extract: \.bool)
   }
 
   private func requiredInt(_ value: TOMLValue, path: String) throws -> Int {
-    if let int = value.int {
-      return int
-    }
+    try required(value, path: path, expected: "integer", extract: \.int)
+  }
 
-    throw makeInvalidTypeError(path, "integer", describe(value))
+  private func required<Value>(
+    _ value: TOMLValue,
+    path: String,
+    expected: String,
+    extract: KeyPath<TOMLValue, Value?>
+  ) throws -> Value {
+    guard let result = value[keyPath: extract] else {
+      throw makeInvalidTypeError(path, expected, describe(value))
+    }
+    return result
   }
 
   private func requiredDouble(_ value: TOMLValue, path: String) throws -> Double {

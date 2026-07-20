@@ -1,3 +1,5 @@
+//! Lossless TOML parsing and editing for EasyBar's Swift code.
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, CString, c_char};
@@ -133,6 +135,11 @@ unsafe fn input_string(input: *const c_char) -> Result<String, BridgeError> {
 }
 
 #[unsafe(no_mangle)]
+/// Parses TOML and returns a JSON response.
+///
+/// # Safety
+/// `input` must point to a valid NUL-terminated UTF-8 string. Free the result with
+/// [`easybar_toml_string_free`].
 pub unsafe extern "C" fn easybar_toml_parse(input: *const c_char) -> *mut c_char {
     let response = match unsafe { input_string(input) } {
         Ok(text) => match text.parse::<DocumentMut>() {
@@ -202,6 +209,11 @@ fn apply_edit(document: &mut DocumentMut, edit: Edit) -> Result<(), BridgeError>
 }
 
 #[unsafe(no_mangle)]
+/// Applies JSON-encoded edits and returns the updated TOML in a JSON response.
+///
+/// # Safety
+/// Both arguments must point to valid NUL-terminated UTF-8 strings. Free the result with
+/// [`easybar_toml_string_free`].
 pub unsafe extern "C" fn easybar_toml_edit(
     input: *const c_char,
     request_json: *const c_char,
@@ -237,6 +249,10 @@ pub unsafe extern "C" fn easybar_toml_edit(
 }
 
 #[unsafe(no_mangle)]
+/// Frees a response returned by this library.
+///
+/// # Safety
+/// `value` must be null or a pointer returned by an EasyBar TOML function that has not been freed.
 pub unsafe extern "C" fn easybar_toml_string_free(value: *mut c_char) {
     if !value.is_null() {
         // SAFETY: the pointer was returned by CString::into_raw in this library.
