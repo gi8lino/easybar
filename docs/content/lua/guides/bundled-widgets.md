@@ -32,6 +32,10 @@ Do not load both presentation variants for the same service:
 
 The regular variants own a bar icon and popup. The inbox variants publish snapshots into the shared native inbox and register their operations as source actions.
 
+The Tailscale widget uses left click to bring Tailscale up or down. Its right-click menu lists the
+currently advertised exit nodes and a **Disabled** option. Selecting one changes Tailscale's own
+persistent state; EasyBar does not duplicate the selected node in `config.toml`.
+
 GitHub and GitLab inbox items expose a dedicated **Mark as read** action. GitHub also acknowledges the notification through the GitHub API. GitLab publishes assigned work items rather than notification records, so its action updates EasyBar's persistent local read state.
 
 ## GUI environment

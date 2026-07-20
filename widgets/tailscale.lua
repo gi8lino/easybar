@@ -1,13 +1,14 @@
 --- Tailscale widget for EasyBar.
 ---
 --- Left click toggles Tailscale up/down.
---- Right click toggles automatic exit-node usage.
+--- Right click opens exit-node controls.
 ---
 --- This personal widget intentionally keeps command construction simple:
 --- TAILSCALE may point to a command/path such as `tailscale` or `/opt/homebrew/bin/tailscale`.
 --- Paths with spaces are not supported.
 
 local text = require("text")
+local shell = require("shell")
 
 local CHECK_INTERVAL_SECONDS = 60
 
@@ -43,6 +44,7 @@ local state = {
 	available = false,
 	tailscale_connected = false,
 	exit_node_enabled = false,
+	exit_nodes = {},
 	status_detail = "Inactive",
 	exit_node_detail = "Exit node unavailable",
 }
@@ -121,11 +123,40 @@ local function has_exit_node(status)
 	return status.ExitNodeStatus ~= nil
 end
 
+--- Returns the exit nodes advertised by peers, sorted for a stable native menu.
+local function exit_nodes_from_status(status)
+	local active_id = type(status.ExitNodeStatus) == "table" and status.ExitNodeStatus.ID or nil
+	local nodes = {}
+
+	if type(status.Peer) == "table" then
+		for peer_id, peer in pairs(status.Peer) do
+			if type(peer) == "table" and peer.ExitNodeOption == true then
+				local ips = type(peer.TailscaleIPs) == "table" and peer.TailscaleIPs or {}
+				local target = text.trim(ips[1] or peer.DNSName or peer.HostName or "")
+				if target ~= "" then
+					local label = text.trim(peer.HostName or peer.DNSName or target):gsub("%.$", "")
+					table.insert(nodes, {
+						label = label,
+						target = target,
+						active = active_id ~= nil and (peer.ID == active_id or peer_id == active_id),
+					})
+				end
+			end
+		end
+	end
+
+	table.sort(nodes, function(left, right)
+		return left.label:lower() < right.label:lower()
+	end)
+	return nodes
+end
+
 local function unavailable_snapshot(detail)
 	return {
 		available = false,
 		tailscale_connected = false,
 		exit_node_enabled = false,
+		exit_nodes = {},
 		status_detail = detail or "Unavailable",
 		exit_node_detail = "Exit node unavailable",
 	}
@@ -143,12 +174,20 @@ local function snapshot_from_status(status)
 	end
 
 	local exit_node_enabled = connected and has_exit_node(status)
+	local exit_nodes = exit_nodes_from_status(status)
+	local active_exit_node_label
+	for _, node in ipairs(exit_nodes) do
+		if node.active then
+			active_exit_node_label = node.label
+			break
+		end
+	end
 
 	local exit_node_detail
 	if not connected then
 		exit_node_detail = "Exit node unavailable"
 	elseif exit_node_enabled then
-		exit_node_detail = "Exit node on"
+		exit_node_detail = active_exit_node_label ~= nil and "Exit node: " .. active_exit_node_label or "Exit node on"
 	else
 		exit_node_detail = "Exit node off"
 	end
@@ -157,6 +196,7 @@ local function snapshot_from_status(status)
 		available = true,
 		tailscale_connected = connected,
 		exit_node_enabled = exit_node_enabled,
+		exit_nodes = exit_nodes,
 		status_detail = status_detail,
 		exit_node_detail = exit_node_detail,
 	}
@@ -213,6 +253,7 @@ local function update_state(snapshot)
 	state.available = snapshot.available
 	state.tailscale_connected = snapshot.tailscale_connected
 	state.exit_node_enabled = snapshot.exit_node_enabled
+	state.exit_nodes = snapshot.exit_nodes
 	state.status_detail = snapshot.status_detail
 	state.exit_node_detail = snapshot.exit_node_detail
 
@@ -229,6 +270,30 @@ local function current_icon_name(snapshot)
 	end
 
 	return "tailscale-active.svg"
+end
+
+local function context_menu(snapshot)
+	local exit_nodes = {
+		{ id = "exit_node:disable", title = "Disabled", checked = not snapshot.exit_node_enabled },
+	}
+
+	for index, node in ipairs(snapshot.exit_nodes or {}) do
+		table.insert(exit_nodes, {
+			id = "exit_node:" .. tostring(index),
+			title = node.label,
+			checked = node.active,
+		})
+	end
+
+	if #exit_nodes == 1 then
+		table.insert(exit_nodes, { title = "No exit nodes available", enabled = false })
+	end
+
+	return {
+		{ title = "Exit Node", submenu = exit_nodes },
+		{ separator = true },
+		{ id = "refresh", title = "Refresh" },
+	}
 end
 
 local function render(snapshot)
@@ -248,6 +313,7 @@ local function render(snapshot)
 			string = "",
 		},
 		opacity = 1.0,
+		context_menu = context_menu(snapshot),
 	})
 
 	popup_label:set({
@@ -329,10 +395,10 @@ local function toggle_tailscale()
 	end)
 end
 
---- Toggles automatic exit-node usage while Tailscale is active.
-local function toggle_exit_node()
+--- Selects or disables an exit node while Tailscale is active.
+local function set_exit_node(target)
 	if action_running then
-		easybar.log(easybar.level.debug, "tailscale exit node toggle ignored", "action already running")
+		easybar.log(easybar.level.debug, "tailscale exit node change ignored", "action already running")
 		return
 	end
 
@@ -341,26 +407,22 @@ local function toggle_exit_node()
 
 	read_status(function(snapshot)
 		if not snapshot.available then
-			easybar.log(easybar.level.warn, "tailscale exit node toggle skipped", "status unavailable")
+			easybar.log(easybar.level.warn, "tailscale exit node change skipped", "status unavailable")
 			finish_action()
 			return
 		end
 
 		if not snapshot.tailscale_connected then
-			easybar.log(easybar.level.warn, "tailscale exit node toggle ignored", "tailscale inactive")
+			easybar.log(easybar.level.warn, "tailscale exit node change ignored", "tailscale inactive")
 			finish_action()
 			return
 		end
 
-		local command
-		if snapshot.exit_node_enabled then
-			command = tailscale_command("set --exit-node= --accept-routes")
-		else
-			command = tailscale_command("set --exit-node=auto:any --accept-routes")
-		end
+		local argument = target == nil and "" or shell.quote(target)
+		local command = tailscale_command("set --exit-node=" .. argument .. " --accept-routes")
 
 		run_command(command, ACTION_COMMAND_OPTIONS, function(output, ok, code)
-			log_command_result("tailscale exit node toggle", command, output, ok, code)
+			log_command_result("tailscale exit node change", command, output, ok, code)
 			finish_action()
 		end)
 	end)
@@ -421,11 +483,20 @@ end)
 tailscale_icon:subscribe(easybar.events.mouse.clicked, function(event)
 	if event.button == nil or event.button == easybar.events.mouse.left_button then
 		toggle_tailscale()
-		return
 	end
+end)
 
-	if event.button == easybar.events.mouse.right_button then
-		toggle_exit_node()
+tailscale_icon:subscribe(easybar.events.context_menu.clicked, function(event)
+	if event.action_id == "refresh" then
+		refresh()
+	elseif event.action_id == "exit_node:disable" then
+		set_exit_node(nil)
+	else
+		local index = tonumber((event.action_id or ""):match("^exit_node:(%d+)$"))
+		local node = index ~= nil and state.exit_nodes[index] or nil
+		if node ~= nil then
+			set_exit_node(node.target)
+		end
 	end
 end)
 
