@@ -11,7 +11,7 @@ if ! command -v "${lua_bin}" >/dev/null 2>&1; then
   exit 1
 fi
 
-"${lua_bin}" -e 'assert(_VERSION == "Lua 5.4", "expected Lua 5.4, got " .. tostring(_VERSION))'
+"${lua_bin}" -e 'assert(_VERSION == "Lua 5.5", "expected Lua 5.5, got " .. tostring(_VERSION))'
 
 if [ ! -f widgets/assets/github-mark.svg ]; then
   echo "Bundled GitHub widget asset is missing: widgets/assets/github-mark.svg" >&2
