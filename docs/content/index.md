@@ -67,20 +67,24 @@ For architecture, process boundaries, agent protocols, Lua runtime internals, an
 
 ## Inbox
 
-[![Inbox screenshot](assets/inbox.png)](assets/inbox.png)
+[![Inbox screenshot](assets/inbox.png){ .screenshot-compact }](assets/inbox.png)
 
 ### CPU
 
-[![CPU screenshot](assets/cpu.png)](assets/cpu.png)
+[![CPU screenshot](assets/cpu.png){ .screenshot-compact }](assets/cpu.png)
 
 ### Wi-Fi
 
-[![Wi-Fi screenshot](assets/wifi.png)](assets/wifi.png)
+[![Wi-Fi screenshot](assets/wifi.png){ .screenshot-compact }](assets/wifi.png)
 
-### Front app
+### Spaces with Front App
 
-[![Front app screenshot](assets/front_app.png)](assets/front_app.png)
+[![Spaces with Front app screenshot](assets/spaces_with_front_app.png){ .screenshot-compact }](assets/spaces_with_front_app.png)
 
 ### Custom context menu
 
-[![Context menu screenshot](assets/custom_context.png)](assets/custom_context.png)
+[![Context menu screenshot](assets/custom_context.png){ .screenshot-compact }](assets/custom_context.png)
+
+### Top bar app context menu
+
+[![Topbar App](assets/topbar_app.png){ .screenshot-compact }](assets/topbar_app.png)
