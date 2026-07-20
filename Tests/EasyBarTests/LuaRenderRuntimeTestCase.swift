@@ -47,6 +47,7 @@ extension LuaRenderRuntimeTestCase {
   struct RuntimeCommandRequest: Equatable, Sendable {
     let token: String
     let command: String
+    let arguments: [String]?
     let isSynchronous: Bool
     let timeoutSeconds: TimeInterval?
     let maxOutputBytes: Int?
@@ -82,6 +83,7 @@ extension LuaRenderRuntimeTestCase {
           RuntimeCommandRequest(
             token: request.token,
             command: request.command,
+            arguments: request.arguments,
             isSynchronous: request.isSynchronous,
             timeoutSeconds: request.timeoutSeconds,
             maxOutputBytes: request.maxOutputBytes
@@ -117,6 +119,11 @@ extension LuaRenderRuntimeTestCase {
         return "command_request"
       case .commandCancel:
         return "command_cancel:\(update.commandCancelToken ?? "unknown")"
+      case .timerRequest:
+        return
+          "timer_request:\(update.token ?? "unknown"):\(String(describing: update.delaySeconds))"
+      case .timerCancel:
+        return "timer_cancel:\(update.timerCancelToken ?? "unknown")"
       case .inboxReplace:
         return "inbox_replace:\(update.source ?? "unknown"):\(update.items?.count ?? 0)"
       case .inboxClear:

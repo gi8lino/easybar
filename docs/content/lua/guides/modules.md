@@ -11,6 +11,7 @@ use standard `require(...)` calls without changing `package.path` themselves.
 ├── clock.lua
 ├── github.lua
 ├── lib/
+│   ├── retry.lua
 │   ├── shell.lua
 │   ├── text.lua
 │   └── status/
@@ -103,6 +104,32 @@ local command = "open " .. shell.quote(url)
 
 These files are examples in the user widget directory, not built-in functions of the public
 `easybar` API. You own them and can extend or replace them.
+
+The bundled `retry.lua` module coordinates asynchronous attempts through `easybar.after(...)`. Pass
+the widget-scoped API explicitly because modules do not receive `easybar` automatically:
+
+```lua
+local retry = require("retry")
+
+retry.run(easybar, {
+    delays = { 2, 5 },
+    attempt = function(done)
+        return easybar.spawn_async({ "gh", "api", "notifications" }, {}, done)
+    end,
+    should_retry = retry.is_transient_network_error,
+    on_complete = function(output, code, attempts)
+        -- Runs once with the final result.
+    end,
+})
+```
+
+`retry.run(...)` returns an operation with `operation:is_active()` and `operation:cancel()`.
+Cancellation stops either the active asynchronous command or the pending backoff timer and does not
+call `on_complete`.
+
+The retry helper is intended for idempotent reads. Do not automatically retry updates, upgrades,
+acknowledgements, or other mutations because the remote operation may have succeeded even when the
+local response was lost.
 
 ## Module lifetime and state
 

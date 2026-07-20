@@ -13,7 +13,9 @@ struct WidgetTreeUpdate: Codable, Sendable {
   let events: [String]?
   let token: String?
   let command: String?
+  let arguments: [String]?
   let sync: Bool?
+  let delaySeconds: TimeInterval?
   let timeoutSeconds: TimeInterval?
   let maxOutputBytes: Int?
   let source: String?
@@ -28,7 +30,9 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case events
     case token
     case command
+    case arguments
     case sync
+    case delaySeconds
     case timeoutSeconds
     case maxOutputBytes
     case source
@@ -43,6 +47,8 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case clearRoot = "clear_root"
     case commandRequest = "command_request"
     case commandCancel = "command_cancel"
+    case timerRequest = "timer_request"
+    case timerCancel = "timer_cancel"
     case inboxReplace = "inbox_replace"
     case inboxClear = "inbox_clear"
     case inboxConfigure = "inbox_configure"
@@ -82,6 +88,18 @@ struct WidgetTreeUpdate: Codable, Sendable {
   var commandCancelToken: String? {
     guard type == .commandCancel else { return nil }
     return token
+  }
+
+  /// Returns the timer token to cancel when present.
+  var timerCancelToken: String? {
+    guard type == .timerCancel else { return nil }
+    return token
+  }
+
+  /// Returns the timer request payload when present.
+  var timerRequestPayload: (token: String, delaySeconds: TimeInterval)? {
+    guard type == .timerRequest, let token, let delaySeconds else { return nil }
+    return (token: token, delaySeconds: delaySeconds)
   }
 
   var inboxReplacePayload: InboxSourceSnapshot? {
@@ -126,15 +144,40 @@ struct WidgetTreeUpdate: Codable, Sendable {
     (
       token: String,
       command: String,
+      arguments: [String]?,
+      invocation: LuaCommandInvocation,
       isSynchronous: Bool,
       timeoutSeconds: TimeInterval?,
       maxOutputBytes: Int?
     )?
   {
-    guard let token, let command, let sync else { return nil }
+    guard let token, let sync else { return nil }
+
+    let invocation: LuaCommandInvocation
+    if let command, !command.isEmpty, arguments == nil {
+      invocation = .shell(command)
+    } else if command == nil, let arguments, !arguments.isEmpty {
+      invocation = .executable(arguments)
+    } else {
+      return nil
+    }
+
+    let displayCommand: String
+    let directArguments: [String]?
+    switch invocation {
+    case .shell(let command):
+      displayCommand = command
+      directArguments = nil
+    case .executable(let arguments):
+      displayCommand = arguments.joined(separator: " ")
+      directArguments = arguments
+    }
+
     return (
       token: token,
-      command: command,
+      command: displayCommand,
+      arguments: directArguments,
+      invocation: invocation,
       isSynchronous: sync,
       timeoutSeconds: timeoutSeconds,
       maxOutputBytes: maxOutputBytes

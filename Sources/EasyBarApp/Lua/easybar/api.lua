@@ -450,8 +450,11 @@ function M.new(log, hooks)
 		remove = registry.remove,
 		exec = registry.exec,
 		exec_async = registry.exec_async,
+		spawn_async = registry.spawn_async,
 		cancel_async = registry.cancel_async,
+		after = registry.after,
 		handle_command_response = registry.handle_command_response,
+		handle_timer_fired = registry.handle_timer_fired,
 		take_pending_command_response = registry.take_pending_command_response,
 		subscribe = subscriptions.subscribe,
 		handle_event = handle_event,
@@ -610,7 +613,9 @@ function M.new(log, hooks)
 
 		widget_api.exec = api.exec
 		widget_api.exec_async = api.exec_async
+		widget_api.spawn_async = api.spawn_async
 		widget_api.cancel_async = api.cancel_async
+		widget_api.after = api.after
 		widget_api.DEFAULT_EXEC_OPTIONS = api.DEFAULT_EXEC_OPTIONS
 		widget_api.events = event_tokens.tokens
 		widget_api.json = json_module

@@ -8,7 +8,40 @@ struct LuaCommandResult: Sendable {
   let status: Int32
 }
 
-/// Executes Lua-requested shell commands in the host process.
+/// One process invocation requested by the Lua runtime.
+enum LuaCommandInvocation: Sendable, Equatable {
+  case shell(String)
+  case executable([String])
+
+  var displayName: String {
+    switch self {
+    case .shell:
+      return "shell command"
+    case .executable(let arguments):
+      return arguments.first ?? "executable"
+    }
+  }
+
+  var payloadByteCount: Int {
+    switch self {
+    case .shell(let command):
+      return command.utf8.count
+    case .executable(let arguments):
+      return arguments.reduce(0) { $0 + $1.utf8.count }
+    }
+  }
+
+  var asynchronousAPIName: String {
+    switch self {
+    case .shell:
+      return "easybar.exec_async"
+    case .executable:
+      return "easybar.spawn_async"
+    }
+  }
+}
+
+/// Executes Lua-requested shell commands and direct executable invocations in the host process.
 ///
 /// The runner is immutable after initialization; each command execution owns
 /// its mutable state in a separate locked `CommandExecution`.
@@ -35,12 +68,30 @@ final class LuaCommandRunner: @unchecked Sendable {
     limits: Limits,
     environment: [String: String] = ProcessInfo.processInfo.environment
   ) async -> LuaCommandResult {
+    await run(invocation: .shell(command), limits: limits, environment: environment)
+  }
+
+  /// Runs one executable directly without shell parsing or interpolation.
+  func run(
+    arguments: [String],
+    limits: Limits,
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) async -> LuaCommandResult {
+    await run(invocation: .executable(arguments), limits: limits, environment: environment)
+  }
+
+  /// Runs one validated Lua process invocation.
+  func run(
+    invocation: LuaCommandInvocation,
+    limits: Limits,
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) async -> LuaCommandResult {
     let executionState = LockedState<CommandExecution?>(nil)
 
     return await withTaskCancellationHandler {
       await withCheckedContinuation { continuation in
         let execution = CommandExecution(
-          command: command,
+          invocation: invocation,
           limits: limits,
           environment: environment,
           logger: logger,
@@ -127,7 +178,7 @@ private final class CommandExecution: @unchecked Sendable {
     }
   }
 
-  private let command: String
+  private let invocation: LuaCommandInvocation
   private let limits: LuaCommandRunner.Limits
   private let environment: [String: String]
   private let logger: ProcessLogger
@@ -144,13 +195,13 @@ private final class CommandExecution: @unchecked Sendable {
   private var forceKillTask: Task<Void, Never>?
 
   init(
-    command: String,
+    invocation: LuaCommandInvocation,
     limits: LuaCommandRunner.Limits,
     environment: [String: String],
     logger: ProcessLogger,
     continuation: CheckedContinuation<LuaCommandResult, Never>
   ) {
-    self.command = command
+    self.invocation = invocation
     self.limits = limits
     self.environment = environment
     self.logger = logger
@@ -177,7 +228,7 @@ private final class CommandExecution: @unchecked Sendable {
     guard let pipeResult else { return }
 
     do {
-      let pid = try spawnShell(
+      let pid = try spawnProcess(
         outputReadFD: pipeResult.readFD,
         outputWriteFD: pipeResult.writeFD
       )
@@ -196,13 +247,20 @@ private final class CommandExecution: @unchecked Sendable {
 
       logger.warn(
         "failed to launch lua command",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("error", "\(error)")
       )
 
-      complete(
-        LuaCommandResult(output: "failed to launch command: \(error)", status: 1)
-      )
+      let nsError = error as NSError
+      let isMissingExecutable = nsError.domain == NSPOSIXErrorDomain && nsError.code == Int(ENOENT)
+      let result =
+        isMissingExecutable
+        ? LuaCommandResult(
+          output: "command not found: \(invocation.displayName)",
+          status: 127
+        )
+        : LuaCommandResult(output: "failed to launch command: \(error)", status: 1)
+      complete(result)
     }
   }
 
@@ -257,8 +315,8 @@ private final class CommandExecution: @unchecked Sendable {
     return true
   }
 
-  /// Spawns `/bin/sh -lc <command>` in a dedicated process group.
-  private func spawnShell(outputReadFD: Int32, outputWriteFD: Int32) throws -> Int32 {
+  /// Spawns the requested shell or direct executable invocation in a dedicated process group.
+  private func spawnProcess(outputReadFD: Int32, outputWriteFD: Int32) throws -> Int32 {
     var fileActions: posix_spawn_file_actions_t?
     var attributes: posix_spawnattr_t?
 
@@ -296,17 +354,35 @@ private final class CommandExecution: @unchecked Sendable {
     )
     try PosixSpawnSupport.configureDedicatedProcessGroup(attributes: &attributes)
 
-    let argv = try PosixSpawnSupport.makeCStringVector([Self.shellPath, "-lc", command])
+    let processArguments: [String]
+    let executablePath: String
+    switch invocation {
+    case .shell(let command):
+      processArguments = [Self.shellPath, "-lc", command]
+      executablePath = Self.shellPath
+    case .executable(let arguments):
+      guard let executable = arguments.first, !executable.isEmpty else {
+        throw NSError(
+          domain: NSPOSIXErrorDomain,
+          code: Int(EINVAL),
+          userInfo: [NSLocalizedDescriptionKey: "direct lua command requires an executable"]
+        )
+      }
+      processArguments = arguments
+      executablePath = try resolveExecutable(executable, environment: environment)
+    }
+
+    let argv = try PosixSpawnSupport.makeCStringVector(processArguments)
     defer { PosixSpawnSupport.freeCStringVector(argv) }
 
     let envp = try makeEnvironmentVector(environment)
     defer { PosixSpawnSupport.freeCStringVector(envp) }
 
     var pid: pid_t = 0
-    let spawnResult = Self.shellPath.withCString { executablePath in
+    let spawnResult = executablePath.withCString { path in
       posix_spawn(
         &pid,
-        executablePath,
+        path,
         &fileActions,
         &attributes,
         argv,
@@ -320,12 +396,36 @@ private final class CommandExecution: @unchecked Sendable {
         code: Int(spawnResult),
         userInfo: [
           NSLocalizedDescriptionKey:
-            "posix_spawn failed for lua command shell errno=\(spawnResult)"
+            "posix_spawn failed for lua command errno=\(spawnResult)"
         ]
       )
     }
 
     return pid
+  }
+
+  /// Resolves one executable through the command environment PATH.
+  private func resolveExecutable(
+    _ executable: String,
+    environment: [String: String]
+  ) throws -> String {
+    if executable.contains("/") {
+      guard access(executable, X_OK) == 0 else {
+        throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+      }
+      return executable
+    }
+
+    let searchPath = environment["PATH"] ?? "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    for directory in searchPath.split(separator: ":", omittingEmptySubsequences: false) {
+      let base = directory.isEmpty ? "." : String(directory)
+      let candidate = URL(fileURLWithPath: base).appendingPathComponent(executable).path
+      if access(candidate, X_OK) == 0 {
+        return candidate
+      }
+    }
+
+    throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOENT))
   }
 
   /// Builds a process environment vector for `posix_spawn`.
@@ -455,7 +555,7 @@ private final class CommandExecution: @unchecked Sendable {
     if waitResult < 0, errnoValue != ECHILD {
       logger.warn(
         "failed to reap lua command",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("errno", errnoValue)
       )
     }
@@ -508,7 +608,7 @@ private final class CommandExecution: @unchecked Sendable {
 
       logger.warn(
         "failed to read lua command output",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("errno", errnoValue)
       )
       return output
@@ -555,7 +655,7 @@ private final class CommandExecution: @unchecked Sendable {
     if snapshot.timedOut {
       logger.warn(
         "lua command timed out",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("timeout_seconds", limits.timeoutSeconds)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.timedOutStatus)
@@ -564,7 +664,7 @@ private final class CommandExecution: @unchecked Sendable {
     if snapshot.cancelled {
       logger.debug(
         "lua command cancelled",
-        .field("command_bytes", command.utf8.count)
+        .field("command_bytes", invocation.payloadByteCount)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.cancelledStatus)
     }
@@ -572,7 +672,7 @@ private final class CommandExecution: @unchecked Sendable {
     if snapshot.exceededOutputLimit {
       logger.warn(
         "lua command output exceeded limit",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("max_output_bytes", limits.maxOutputBytes)
       )
       return LuaCommandResult(output: output, status: LuaCommandRunner.Limits.outputLimitStatus)
@@ -588,7 +688,7 @@ private final class CommandExecution: @unchecked Sendable {
 
         logger.warn(
           "lua command not found",
-          .field("command_bytes", command.utf8.count),
+          .field("command_bytes", invocation.payloadByteCount),
           .field("status", exitStatus)
         )
 
@@ -597,7 +697,7 @@ private final class CommandExecution: @unchecked Sendable {
 
       logger.debug(
         "lua command exited non-zero",
-        .field("command_bytes", command.utf8.count),
+        .field("command_bytes", invocation.payloadByteCount),
         .field("status", exitStatus)
       )
     }
@@ -631,7 +731,7 @@ private final class CommandExecution: @unchecked Sendable {
 
     logger.warn(
       "lua command ignored graceful termination",
-      .field("command_bytes", command.utf8.count)
+      .field("command_bytes", invocation.payloadByteCount)
     )
     terminateProcessTree(signal: SIGKILL)
   }

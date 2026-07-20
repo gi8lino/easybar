@@ -13,6 +13,7 @@ The registry stores:
 - `interval_next_due`
 - `pending_async_commands`
 - `pending_command_responses`
+- `pending_timers`
 
 ## Responsibilities
 
@@ -22,8 +23,9 @@ Internal registry helpers mutate this state:
 - set node props
 - get node props
 - remove node
-- run commands
+- run shell commands and direct executable invocations
 - store command callbacks
+- store and cancel host-owned one-shot timer callbacks
 
 ## Notes
 

@@ -61,6 +61,7 @@ local registry
 local render_dirty = false
 local last_subscription_payload = nil
 local next_command_sequence = 0
+local next_timer_sequence = 0
 local runtime_command_session = tostring({}):gsub("[^%w]", "_")
 local default_exec_options = {
 	timeout_seconds = default_command_timeout_seconds,
@@ -117,17 +118,28 @@ local function next_command_token()
 	return runtime_command_session .. ":" .. tostring(next_command_sequence)
 end
 
+--- Returns one unique timer token.
+local function next_timer_token()
+	next_timer_sequence = next_timer_sequence + 1
+	return runtime_command_session .. ":timer:" .. tostring(next_timer_sequence)
+end
+
 --- Sends one command request to the Swift host.
-local function send_command_request(command, synchronous, options)
+local function send_command_request(request, synchronous, options)
 	local token = next_command_token()
 
 	local payload = {
 		protocol_version = PROTOCOL_VERSION,
 		type = "command_request",
 		token = token,
-		command = tostring(command),
 		sync = synchronous == true,
 	}
+
+	if type(request) == "table" and request.arguments ~= nil then
+		payload.arguments = request.arguments
+	else
+		payload.command = tostring(request)
+	end
 
 	if type(options) == "table" then
 		if options.timeout_seconds ~= nil then
@@ -162,6 +174,17 @@ local function handle_command_response(payload)
 	flush_pending_outputs(false, false)
 end
 
+--- Dispatches one host timer response into the registry and flushes callback mutations.
+local function handle_timer_fired(payload)
+	if type(payload.token) ~= "string" or payload.token == "" then
+		log.error("runtime ignored timer response missing token")
+		return
+	end
+
+	registry.handle_timer_fired(payload.token)
+	flush_pending_outputs(false, false)
+end
+
 --- Dispatches one JSON-decoded host payload by kind.
 local function handle_host_payload(payload, raw_line)
 	if type(payload) ~= "table" then
@@ -171,6 +194,11 @@ local function handle_host_payload(payload, raw_line)
 
 	if payload.type == "command_response" then
 		handle_command_response(payload)
+		return
+	end
+
+	if payload.type == "timer_fired" then
+		handle_timer_fired(payload)
 		return
 	end
 
@@ -227,6 +255,32 @@ local function request_async_command(command, options)
 	return send_command_request(command, false, options)
 end
 
+--- Starts one host-owned asynchronous executable without shell parsing.
+local function request_async_process(arguments, options)
+	return send_command_request({ arguments = arguments }, false, options)
+end
+
+--- Requests one host-owned one-shot timer.
+local function request_timer(delay_seconds)
+	local token = next_timer_token()
+	send_payload({
+		protocol_version = PROTOCOL_VERSION,
+		type = "timer_request",
+		token = token,
+		delay_seconds = delay_seconds,
+	})
+	return token
+end
+
+--- Requests cancellation of one host-owned timer.
+local function request_cancel_timer(token)
+	send_payload({
+		protocol_version = PROTOCOL_VERSION,
+		type = "timer_cancel",
+		token = token,
+	})
+end
+
 --- Requests cancellation of one host-owned asynchronous command.
 local function request_cancel_async(token)
 	send_payload({
@@ -242,7 +296,10 @@ registry = api.new(log, {
 	before_async_callback = flush_pending_render,
 	request_sync_command = request_sync_command,
 	request_async_command = request_async_command,
+	request_async_process = request_async_process,
 	request_cancel_async = request_cancel_async,
+	request_timer = request_timer,
+	request_cancel_timer = request_cancel_timer,
 	publish_inbox = function(source, items)
 		send_payload({
 			protocol_version = PROTOCOL_VERSION,

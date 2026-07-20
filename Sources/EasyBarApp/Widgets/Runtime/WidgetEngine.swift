@@ -29,6 +29,7 @@ actor WidgetEngine {
   private let metricsCoordinator: MetricsCoordinator
   private let inboxStore: InboxStore
   private let commandService: LuaCommandService
+  private let timerService: LuaTimerService
   private let protocolDecoder = WidgetRuntimeProtocolDecoder()
 
   private var runtimeState = WidgetRuntimeState()
@@ -63,6 +64,10 @@ actor WidgetEngine {
       luaRuntime: luaRuntime,
       configManager: configManager
     )
+    self.timerService = LuaTimerService(
+      logger: logger.child("timers"),
+      luaRuntime: luaRuntime
+    )
     self.restartScheduler = BackoffScheduler(
       label: "lua runtime restart",
       delays: [1, 2, 5, 10, 30],
@@ -95,6 +100,7 @@ actor WidgetEngine {
   private func startRuntimeSession() async -> Bool {
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
+    await timerService.reset()
 
     runtimeSessionID &+= 1
     let sessionID = runtimeSessionID
@@ -174,6 +180,7 @@ actor WidgetEngine {
     invalidateRuntimeSession()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
+    await timerService.reset()
 
     await eventHub.clearLuaForwardedAppEvents()
 
@@ -200,6 +207,7 @@ actor WidgetEngine {
     invalidateRuntimeSession()
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
+    await timerService.reset()
     await eventHub.clearLuaForwardedAppEvents()
 
     let rootsToClear = scriptedRoots
@@ -304,10 +312,11 @@ actor WidgetEngine {
       await handleTree(root: root, nodes: nodes)
     case .clearRoot(let rootID):
       await handleClearRoot(rootID: rootID)
-    case .commandRequest(let token, let command, let isSynchronous, let timeoutSeconds, let maxOutputBytes):
+    case .commandRequest(
+      let token, let invocation, let isSynchronous, let timeoutSeconds, let maxOutputBytes):
       await commandService.handleCommandRequest(
         token: token,
-        command: command,
+        invocation: invocation,
         isSynchronous: isSynchronous,
         timeoutSecondsOverride: timeoutSeconds,
         maxOutputBytesOverride: maxOutputBytes,
@@ -322,6 +331,18 @@ actor WidgetEngine {
         token: token,
         runtimeSessionID: runtimeSessionID
       )
+    case .timerRequest(let token, let delaySeconds):
+      await timerService.schedule(
+        token: token,
+        delaySeconds: delaySeconds,
+        runtimeSessionID: runtimeSessionID,
+        isRuntimeSessionActive: { [weak self] sessionID in
+          guard let self else { return false }
+          return await self.isRuntimeSessionActive(sessionID)
+        }
+      )
+    case .timerCancel(let token):
+      await timerService.cancel(token: token, runtimeSessionID: runtimeSessionID)
     case .inboxReplace(let snapshot):
       await MainActor.run {
         inboxStore.replace(source: snapshot.source, items: snapshot.items)

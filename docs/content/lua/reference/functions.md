@@ -181,6 +181,21 @@ Removes one or more nested properties from this node.
 | ------- | ------------------ | ----------- |
 | `paths` | `string\|string[]` |             |
 
+## `EasyBar.after`
+
+Schedules one non-blocking callback after a delay. The returned timer handle can cancel the callback before it fires.
+
+### Parameters
+
+| Name            | Type         | Description |
+| --------------- | ------------ | ----------- |
+| `delay_seconds` | `number`     |             |
+| `callback`      | `fun(): any` |             |
+
+### Returns
+
+- `EasyBarTimerHandle`
+
 ## `EasyBar.asset`
 
 Resolves a path relative to the current widget file.
@@ -237,6 +252,22 @@ Creates a widget logger that prepends a stable prefix to normal EasyBar host log
 ### Returns
 
 - `EasyBarPrefixedLogger`
+
+## `EasyBar.spawn_async`
+
+Runs one executable directly in the background without shell parsing or interpolation. Each argument is passed to the process exactly as provided.
+
+### Parameters
+
+| Name        | Type                                      | Description |
+| ----------- | ----------------------------------------- | ----------- |
+| `arguments` | `string[]`                                |             |
+| `options`   | `EasyBarCommandOptions\|nil`              |             |
+| `callback`  | `fun(output: string, code: integer): any` |             |
+
+### Returns
+
+- `string`
 
 ## `EasyBarFileLogger.append`
 
@@ -350,3 +381,11 @@ Atomically replaces every current inbox item for one source.
 | -------- | -------------------- | ----------- |
 | `source` | `string`             |             |
 | `items`  | `EasyBarInboxItem[]` |             |
+
+## `EasyBarTimerHandle:cancel`
+
+Cancels this timer when it has not fired yet.
+
+### Returns
+
+- `boolean pending`

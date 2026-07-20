@@ -8,12 +8,14 @@ enum WidgetRuntimeMessage {
   case clearRoot(String)
   case commandRequest(
     token: String,
-    command: String,
+    invocation: LuaCommandInvocation,
     isSynchronous: Bool,
     timeoutSeconds: TimeInterval?,
     maxOutputBytes: Int?
   )
   case commandCancel(token: String)
+  case timerRequest(token: String, delaySeconds: TimeInterval)
+  case timerCancel(token: String)
   case inboxReplace(InboxSourceSnapshot)
   case inboxClear(source: String)
   case inboxConfigure(InboxSourceConfiguration)
@@ -77,9 +79,17 @@ struct WidgetRuntimeProtocolDecoder {
         )
       }
 
+      if case .executable(let arguments) = request.invocation,
+        arguments.first?.isEmpty != false || arguments.contains(where: { $0.contains("\0") })
+      {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua executable arguments"
+        )
+      }
+
       return .commandRequest(
         token: request.token,
-        command: request.command,
+        invocation: request.invocation,
         isSynchronous: request.isSynchronous,
         timeoutSeconds: request.timeoutSeconds,
         maxOutputBytes: request.maxOutputBytes
@@ -91,6 +101,24 @@ struct WidgetRuntimeProtocolDecoder {
         )
       }
       return .commandCancel(token: token)
+    case .timerRequest:
+      guard let request = update.timerRequestPayload,
+        !request.token.isEmpty,
+        request.delaySeconds.isFinite,
+        request.delaySeconds >= 0
+      else {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua timer request"
+        )
+      }
+      return .timerRequest(token: request.token, delaySeconds: request.delaySeconds)
+    case .timerCancel:
+      guard let token = update.timerCancelToken, !token.isEmpty else {
+        throw WidgetRuntimeProtocolError.invalidPayload(
+          "invalid lua timer cancellation request"
+        )
+      }
+      return .timerCancel(token: token)
     case .inboxReplace:
       guard let snapshot = update.inboxReplacePayload,
         !snapshot.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

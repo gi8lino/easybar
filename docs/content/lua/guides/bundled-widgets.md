@@ -60,7 +60,9 @@ See [Environment](../../configuration/environment.md) for precedence and GUI-lau
 
 ## Shared modules and assets
 
-Several examples import `shell`, `text`, or `secrets` from `widgets/lib`. Preserve that directory structure when copying them. File-backed assets are resolved relative to the widget with `easybar.asset(...)`; copy those assets as well.
+Several examples import `retry`, `shell`, `text`, or `secrets` from `widgets/lib`. Preserve that directory structure when copying them. File-backed assets are resolved relative to the widget with `easybar.asset(...)`; copy those assets as well.
+
+The GitHub, GitLab, and Homebrew inbox examples keep `system_woke` immediate for the rest of EasyBar, then schedule their own three-second network settling delay with `easybar.after(...)`. Their read-only refresh checks use the shared pure-Lua retry helper with two- and five-second backoff. Authentication failures and Homebrew/GitHub mutations remain one-shot. Ordinary CLI invocations use `easybar.spawn_async(...)`; shell execution is reserved for examples that genuinely need shell syntax.
 
 ## Diagnostics
 

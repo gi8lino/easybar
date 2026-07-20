@@ -441,7 +441,9 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@field events EasyBarEvents Event token namespace used by `node:subscribe(...)`, plus mouse constants.
 ---@field exec fun(command: string, options?: EasyBarCommandOptions): string, integer Runs one shell command and returns trimmed output plus exit code.
 ---@field exec_async fun(command: string, options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one shell command in the background and calls back later with trimmed output and exit code.
----@field cancel_async fun(token: string): boolean Requests cancellation of one pending `exec_async` command and returns whether the token was pending.
+---@field spawn_async fun(arguments: string[], options: EasyBarCommandOptions|nil, callback: fun(output: string, code: integer): any): string Runs one executable directly in the background without shell parsing.
+---@field cancel_async fun(token: string): boolean Requests cancellation of one pending asynchronous command and returns whether the token was pending.
+---@field after fun(delay_seconds: number, callback: fun(): any): EasyBarTimerHandle Schedules one non-blocking callback after a delay.
 ---@field get fun(id: string): EasyBarNodeProps Returns a copy of one node's props by id.
 ---@field json EasyBarJson JSON helper namespace for widget-side encoding and decoding.
 ---@field kind EasyBarKinds Kind constants used by `easybar.add(...)`.
@@ -466,6 +468,15 @@ local EasyBarFileLogger = {}
 
 ---@class EasyBarNodeHandle
 local EasyBarNodeHandle = {}
+
+---Cancellable one-shot timer returned by `easybar.after(...)`.
+---@class EasyBarTimerHandle
+---@field token string Host-owned timer token for the current runtime session.
+local EasyBarTimerHandle = {}
+
+---Cancels this timer when it has not fired yet.
+---@return boolean pending
+function EasyBarTimerHandle:cancel() end
 
 ---Merges properties into this node.
 ---@param props EasyBarNodeProps
@@ -547,6 +558,21 @@ function EasyBar.exec(command, options) end
 ---@param callback fun(output: string, code: integer): any
 ---@return string
 function EasyBar.exec_async(command, options, callback) end
+
+---Runs one executable directly in the background without shell parsing or interpolation.
+---Each argument is passed to the process exactly as provided.
+---@param arguments string[]
+---@param options EasyBarCommandOptions|nil
+---@param callback fun(output: string, code: integer): any
+---@return string
+function EasyBar.spawn_async(arguments, options, callback) end
+
+---Schedules one non-blocking callback after a delay.
+---The returned timer handle can cancel the callback before it fires.
+---@param delay_seconds number
+---@param callback fun(): any
+---@return EasyBarTimerHandle
+function EasyBar.after(delay_seconds, callback) end
 
 ---Requests cancellation of one pending background command. Returns immediately after sending the request; the original callback receives exit code 130 after the process group exits.
 ---@param token string

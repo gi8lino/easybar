@@ -59,7 +59,7 @@ Use intervals only for polling external state.
 
 ## Avoid blocking the runtime
 
-Prefer `easybar.exec_async(...)` for slow commands.
+Prefer `easybar.spawn_async(...)` for ordinary executable invocations and `easybar.exec_async(...)` only when shell syntax is required. Use `easybar.after(...)` for delays instead of launching `sleep`.
 
 Avoid expensive synchronous work in mouse handlers, interval callbacks, and frequent events.
 

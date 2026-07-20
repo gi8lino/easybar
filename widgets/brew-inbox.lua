@@ -1,10 +1,12 @@
 -- Inbox-only Homebrew updates. Requires Homebrew in app.env PATH.
 
-local shell = require("shell")
+local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "Homebrew"
 local POLL_INTERVAL_SECONDS = 30 * 60
+local WAKE_REFRESH_DELAY_SECONDS = 3
+local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 
 local EXEC = {
 	check = { timeout_seconds = 30, max_output_bytes = 1024 * 1024 },
@@ -18,10 +20,12 @@ local state = {
 	warning = nil,
 	error = nil,
 	operation = nil,
-	active_token = nil,
+	active_operation = nil,
+	operation_kind = nil,
+	can_cancel = false,
 	cancellation_requested = false,
 }
-
+local pending_wake_refresh = nil
 local refresh
 
 local function split_outdated_output(raw)
@@ -114,7 +118,7 @@ local function publish()
 	local items = {}
 	for _, package in ipairs(all_packages()) do
 		local actions = {}
-		if not package.pinned and state.active_token == nil then
+		if not package.pinned and state.active_operation == nil then
 			actions = { { id = "upgrade", title = "Upgrade" } }
 		end
 		items[#items + 1] = {
@@ -150,8 +154,10 @@ local function publish()
 	end
 
 	local context_actions
-	if state.active_token ~= nil then
-		context_actions = { { id = "cancel", title = state.cancellation_requested and "Cancelling…" or "Cancel" } }
+	if state.active_operation ~= nil then
+		context_actions = state.can_cancel
+				and { { id = "cancel", title = state.cancellation_requested and "Cancelling…" or "Cancel" } }
+			or {}
 	else
 		context_actions = {
 			{ id = "refresh", title = "Refresh" },
@@ -177,18 +183,36 @@ local function apply_outdated(output)
 end
 
 refresh = function()
-	if state.active_token ~= nil then
+	if state.active_operation ~= nil then
 		return
 	end
+	if pending_wake_refresh ~= nil then
+		pending_wake_refresh:cancel()
+		pending_wake_refresh = nil
+	end
+
 	state.operation = "Checking outdated packages…"
 	state.cancellation_requested = false
+	state.can_cancel = true
+	state.operation_kind = "refresh"
 	publish()
-	state.active_token = easybar.exec_async(
-		"HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --json=v2",
-		EXEC.check,
-		function(output, code)
-			state.active_token = nil
+	state.active_operation = retry.run(easybar, {
+		delays = REFRESH_BACKOFF_SECONDS,
+		attempt = function(done)
+			return easybar.spawn_async({
+				"/usr/bin/env",
+				"HOMEBREW_NO_AUTO_UPDATE=1",
+				"brew",
+				"outdated",
+				"--json=v2",
+			}, EXEC.check, done)
+		end,
+		should_retry = retry.is_transient_network_error,
+		on_complete = function(output, code)
+			state.active_operation = nil
 			state.operation = nil
+			state.operation_kind = nil
+			state.can_cancel = false
 			if code ~= 0 then
 				state.error = {
 					title = "Could not check outdated packages",
@@ -199,22 +223,33 @@ refresh = function()
 				apply_outdated(output)
 			end
 			publish()
-		end
-	)
+		end,
+	})
 	publish()
 end
 
-local function run_operation(label, command, options)
-	if state.active_token ~= nil then
+local function run_operation(label, arguments, options)
+	if state.active_operation ~= nil then
 		return
 	end
 	state.operation = label
+	state.operation_kind = "mutation"
 	state.error = nil
+	state.can_cancel = true
 	state.cancellation_requested = false
-	state.active_token = easybar.exec_async(command, options, function(output, code)
+
+	local token
+	local operation = {}
+	function operation:cancel()
+		return type(token) == "string" and easybar.cancel_async(token) or false
+	end
+	state.active_operation = operation
+	token = easybar.spawn_async(arguments, options, function(output, code)
 		local cancelled = state.cancellation_requested
-		state.active_token = nil
+		state.active_operation = nil
 		state.operation = nil
+		state.operation_kind = nil
+		state.can_cancel = false
 		state.cancellation_requested = false
 		if not cancelled and code ~= 0 then
 			state.error = {
@@ -239,35 +274,67 @@ local function package_for_id(id)
 	return nil
 end
 
+local function schedule_wake_refresh()
+	if pending_wake_refresh ~= nil then
+		pending_wake_refresh:cancel()
+	end
+	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
+		pending_wake_refresh = nil
+		refresh()
+	end)
+end
+
 easybar.inbox.on_action(SOURCE, function(event)
 	if event.action_id == "refresh" then
 		refresh()
 	elseif event.action_id == "upgrade" then
 		local package = package_for_id(event.target_widget_id)
 		if package ~= nil and not package.pinned then
-			local command = "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --"
-				.. package.kind
-				.. " --yes "
-				.. shell.quote(package.name)
-			run_operation("Upgrade " .. package.name, command, EXEC.upgrade)
+			run_operation("Upgrade " .. package.name, {
+				"/usr/bin/env",
+				"HOMEBREW_NO_AUTO_UPDATE=1",
+				"HOMEBREW_NO_ASK=1",
+				"brew",
+				"upgrade",
+				"--" .. package.kind,
+				"--yes",
+				package.name,
+			}, EXEC.upgrade)
 		end
 	end
 end)
 
 easybar.inbox.on_context_action(SOURCE, function(event)
 	if event.action_id == "cancel" then
-		if state.active_token ~= nil then
-			state.cancellation_requested = true
-			state.operation = "Cancelling Homebrew operation…"
-			easybar.cancel_async(state.active_token)
+		if state.active_operation ~= nil and state.can_cancel then
+			if state.operation_kind == "refresh" then
+				if state.active_operation:cancel() then
+					state.active_operation = nil
+					state.operation = nil
+					state.operation_kind = nil
+					state.can_cancel = false
+					state.cancellation_requested = false
+				end
+			else
+				state.cancellation_requested = true
+				state.operation = "Cancelling Homebrew operation…"
+				state.active_operation:cancel()
+			end
 			publish()
 		end
 	elseif event.action_id == "refresh" then
 		refresh()
 	elseif event.action_id == "update" then
-		run_operation("Homebrew update", "brew update", EXEC.update)
+		run_operation("Homebrew update", { "brew", "update" }, EXEC.update)
 	elseif event.action_id == "upgrade_all" then
-		run_operation("Homebrew upgrade", "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ASK=1 brew upgrade --yes", EXEC.upgrade)
+		run_operation("Homebrew upgrade", {
+			"/usr/bin/env",
+			"HOMEBREW_NO_AUTO_UPDATE=1",
+			"HOMEBREW_NO_ASK=1",
+			"brew",
+			"upgrade",
+			"--yes",
+		}, EXEC.upgrade)
 	end
 end)
 
@@ -276,5 +343,7 @@ local timer = easybar.add(easybar.kind.item, "brew_inbox_timer", {
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
 })
-timer:subscribe({ easybar.events.forced, easybar.events.system_woke, easybar.events.session_active }, refresh)
+timer:subscribe(easybar.events.forced, refresh)
+timer:subscribe(easybar.events.system_woke, schedule_wake_refresh)
+timer:subscribe(easybar.events.session_active, refresh)
 refresh()

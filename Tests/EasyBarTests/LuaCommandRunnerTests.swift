@@ -241,4 +241,50 @@ final class LuaCommandRunnerTests: XCTestCase {
     }
   }
 
+  func testRunExecutesDirectArgumentsWithoutShellInterpolation() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      arguments: ["printf", "%s", "$HOME; echo unsafe"],
+      limits: defaultLimits
+    )
+
+    XCTAssertEqual(result.output, "$HOME; echo unsafe")
+    XCTAssertEqual(result.status, 0)
+  }
+
+  func testRunDirectArgumentsUseProvidedPath() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+    var environment = ProcessInfo.processInfo.environment
+    environment["PATH"] = "/usr/bin:/bin"
+
+    let result = await runner.run(
+      arguments: ["printenv", "PATH"],
+      limits: defaultLimits,
+      environment: environment
+    )
+
+    XCTAssertEqual(result.status, 0)
+    XCTAssertEqual(result.output, "/usr/bin:/bin")
+  }
+
+  func testRunDirectArgumentsReportMissingExecutable() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(
+      arguments: ["__easybar_missing_executable__"],
+      limits: defaultLimits
+    )
+
+    XCTAssertEqual(result.status, 127)
+    XCTAssertTrue(result.output.contains("command not found"))
+    XCTAssertTrue(result.output.contains("__easybar_missing_executable__"))
+  }
+
 }

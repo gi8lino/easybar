@@ -49,7 +49,7 @@ actor LuaCommandService {
   /// Handles one Lua command execution request.
   func handleCommandRequest(
     token: String,
-    command: String,
+    invocation: LuaCommandInvocation,
     isSynchronous: Bool,
     timeoutSecondsOverride: TimeInterval?,
     maxOutputBytesOverride: Int?,
@@ -66,14 +66,14 @@ actor LuaCommandService {
       "lua command requested",
       .field("token", token),
       .field("sync", isSynchronous),
-      .field("command_bytes", command.utf8.count),
+      .field("command_bytes", invocation.payloadByteCount),
       .field("timeout_seconds", commandLimits.timeoutSeconds),
       .field("max_output_bytes", commandLimits.maxOutputBytes)
     )
 
     if isSynchronous {
       let result = await commandRunner.run(
-        command: command,
+        invocation: invocation,
         limits: commandLimits,
         environment: commandSettings.environment
       )
@@ -103,12 +103,12 @@ actor LuaCommandService {
         .field("token", token),
         .field("active_async_jobs", activeAsyncCommands.count),
         .field("max_async_jobs", maxAsyncJobs),
-        .field("command_bytes", command.utf8.count)
+        .field("command_bytes", invocation.payloadByteCount)
       )
       await sendCommandResponse(
         token: token,
         result: LuaCommandResult(
-          output: "easybar.exec_async rejected: max async job limit reached",
+          output: "\(invocation.asynchronousAPIName) rejected: max async job limit reached",
           status: 69
         )
       )
@@ -119,7 +119,7 @@ actor LuaCommandService {
 
     let task = Task { [weak self] in
       let result = await commandRunner.run(
-        command: command,
+        invocation: invocation,
         limits: commandLimits,
         environment: commandSettings.environment
       )
@@ -140,7 +140,8 @@ actor LuaCommandService {
   /// Cancels one host-owned asynchronous command from the active Lua runtime session.
   func cancelAsyncCommand(token: String, runtimeSessionID: UInt64) {
     guard activeAsyncCommandSessionID == runtimeSessionID else { return }
-    guard let command = activeAsyncCommands[token], command.runtimeSessionID == runtimeSessionID else {
+    guard let command = activeAsyncCommands[token], command.runtimeSessionID == runtimeSessionID
+    else {
       logger.debug("lua async cancellation ignored for unknown token", .field("token", token))
       return
     }

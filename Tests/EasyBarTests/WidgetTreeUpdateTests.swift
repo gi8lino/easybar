@@ -48,6 +48,48 @@ final class WidgetTreeUpdateTests: XCTestCase {
     XCTAssertEqual(token, "job-1")
   }
 
+  func testDirectExecutableCommandPayloadIsDecoded() throws {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from:
+        #"{"protocol_version":1,"type":"command_request","token":"job-1","arguments":["printf","%s","hello world"],"sync":false}"#
+    )
+
+    guard case .commandRequest(let token, let invocation, let isSynchronous, _, _) = message else {
+      return XCTFail("Expected command request message")
+    }
+    XCTAssertEqual(token, "job-1")
+    XCTAssertEqual(invocation, .executable(["printf", "%s", "hello world"]))
+    XCTAssertFalse(isSynchronous)
+  }
+
+  func testCommandPayloadRejectsShellAndArgumentsTogether() throws {
+    XCTAssertThrowsError(
+      try WidgetRuntimeProtocolDecoder().decodeMessage(
+        from:
+          #"{"protocol_version":1,"type":"command_request","token":"job-1","command":"printf x","arguments":["printf","x"],"sync":false}"#
+      )
+    )
+  }
+
+  func testTimerRequestAndCancellationPayloadsAreDecoded() throws {
+    let request = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from: #"{"protocol_version":1,"type":"timer_request","token":"timer-1","delay_seconds":2.5}"#
+    )
+    guard case .timerRequest(let token, let delaySeconds) = request else {
+      return XCTFail("Expected timer request")
+    }
+    XCTAssertEqual(token, "timer-1")
+    XCTAssertEqual(delaySeconds, 2.5)
+
+    let cancellation = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from: #"{"protocol_version":1,"type":"timer_cancel","token":"timer-1"}"#
+    )
+    guard case .timerCancel(let cancelledToken) = cancellation else {
+      return XCTFail("Expected timer cancellation")
+    }
+    XCTAssertEqual(cancelledToken, "timer-1")
+  }
+
   func testInboxReplacementPayloadIsDecoded() throws {
     let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
       from:

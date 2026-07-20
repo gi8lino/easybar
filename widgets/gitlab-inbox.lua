@@ -1,12 +1,15 @@
 -- Inbox-only assigned GitLab work items. Requires an authenticated `glab` CLI.
 
-local shell = require("shell")
+local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "GitLab"
 local POLL_INTERVAL_SECONDS = 300
+local WAKE_REFRESH_DELAY_SECONDS = 3
+local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 local work_items = {}
 local refreshing = false
+local pending_wake_refresh = nil
 
 easybar.inbox.configure(SOURCE, {
 	actions = { { id = "refresh", title = "Refresh" } },
@@ -24,55 +27,116 @@ local function publish_error(message)
 	})
 end
 
+local function fetch(endpoint, complete)
+	retry.run(easybar, {
+		delays = REFRESH_BACKOFF_SECONDS,
+		attempt = function(done)
+			return easybar.spawn_async({
+				"/usr/bin/env",
+				"GLAB_NO_PROMPT=1",
+				"glab",
+				"api",
+				"--paginate",
+				endpoint,
+			}, { timeout_seconds = 30, max_output_bytes = 2097152 }, done)
+		end,
+		should_retry = retry.is_transient_network_error,
+		on_complete = complete,
+	})
+end
+
+local function publish(issues, merge_requests)
+	work_items = {}
+
+	for _, pair in ipairs({ { "issue", issues }, { "merge_request", merge_requests } }) do
+		for _, item in ipairs(type(pair[2]) == "table" and pair[2] or {}) do
+			item.kind = pair[1]
+			work_items[#work_items + 1] = item
+		end
+	end
+
+	local items = {}
+	for _, item in ipairs(work_items) do
+		local id = item.kind .. ":" .. tostring(item.id or item.iid)
+		items[#items + 1] = {
+			id = id,
+			title = text.trim(item.title) ~= "" and item.title or "Untitled work item",
+			body = type(item.references) == "table" and item.references.full or nil,
+			category = item.kind == "merge_request" and "Merge requests" or "Issues",
+			severity = "info",
+			unread = true,
+			actions = {
+				{ id = "mark_read", title = "Mark as read" },
+				{ id = "open", title = "Open" },
+			},
+		}
+	end
+
+	easybar.inbox.replace(SOURCE, items)
+end
+
+local function finish_error(output, fallback)
+	refreshing = false
+	publish_error(text.trim(output) ~= "" and text.trim(output) or fallback)
+end
+
 local function refresh()
 	if refreshing then
 		return
 	end
+
+	if pending_wake_refresh ~= nil then
+		pending_wake_refresh:cancel()
+		pending_wake_refresh = nil
+	end
+
 	refreshing = true
-	local issues = "issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
-	local merge_requests =
+
+	local issues_endpoint =
+		"issues?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
+	local merge_requests_endpoint =
 		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
-	local command = table.concat({
-		"set -e",
-		"issues=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(issues) .. ")",
-		"mrs=$(GLAB_NO_PROMPT=1 glab api --paginate " .. shell.quote(merge_requests) .. ")",
-		[[printf '{"issues":%s,"merge_requests":%s}\n' "$issues" "$mrs"]],
-	}, "; ")
-	easybar.exec_async(command, { timeout_seconds = 30, max_output_bytes = 2097152 }, function(output, code)
-		refreshing = false
-		if code ~= 0 then
-			publish_error(text.trim(output) ~= "" and text.trim(output) or "Run 'glab auth login' and check app.env PATH")
+
+	fetch(issues_endpoint, function(issues_output, issues_code)
+		if issues_code ~= 0 then
+			finish_error(issues_output, "Run 'glab auth login' and check app.env PATH")
 			return
 		end
-		local ok, response = pcall(easybar.json.decode, output)
-		if not ok or type(response) ~= "table" then
-			publish_error("GitLab returned invalid JSON")
+
+		local issues_ok, issues = pcall(easybar.json.decode, issues_output)
+		if not issues_ok or type(issues) ~= "table" then
+			finish_error("GitLab returned invalid issues JSON", "GitLab returned invalid issues JSON")
 			return
 		end
-		work_items = {}
-		for _, pair in ipairs({ { "issue", response.issues }, { "merge_request", response.merge_requests } }) do
-			for _, item in ipairs(type(pair[2]) == "table" and pair[2] or {}) do
-				item.kind = pair[1]
-				work_items[#work_items + 1] = item
+
+		fetch(merge_requests_endpoint, function(mrs_output, mrs_code)
+			refreshing = false
+			if mrs_code ~= 0 then
+				publish_error(
+					text.trim(mrs_output) ~= "" and text.trim(mrs_output) or "Run 'glab auth login' and check app.env PATH"
+				)
+				return
 			end
-		end
-		local items = {}
-		for _, item in ipairs(work_items) do
-			local id = item.kind .. ":" .. tostring(item.id or item.iid)
-			items[#items + 1] = {
-				id = id,
-				title = text.trim(item.title) ~= "" and item.title or "Untitled work item",
-				body = type(item.references) == "table" and item.references.full or nil,
-				category = item.kind == "merge_request" and "Merge requests" or "Issues",
-				severity = "info",
-				unread = true,
-				actions = {
-					{ id = "mark_read", title = "Mark as read" },
-					{ id = "open", title = "Open" },
-				},
-			}
-		end
-		easybar.inbox.replace(SOURCE, items)
+
+			local mrs_ok, merge_requests = pcall(easybar.json.decode, mrs_output)
+			if not mrs_ok or type(merge_requests) ~= "table" then
+				publish_error("GitLab returned invalid merge request JSON")
+				return
+			end
+
+			publish(issues, merge_requests)
+		end)
+	end)
+end
+
+local function schedule_wake_refresh()
+	if pending_wake_refresh ~= nil then
+		pending_wake_refresh:cancel()
+	end
+
+	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
+		pending_wake_refresh = nil
+		refresh()
 	end)
 end
 
@@ -84,7 +148,7 @@ easybar.inbox.on_action(SOURCE, function(event)
 	elseif event.action_id == "open" then
 		for _, item in ipairs(work_items) do
 			if item.kind .. ":" .. tostring(item.id or item.iid) == event.target_widget_id then
-				easybar.exec_async("open " .. shell.quote(item.web_url), nil, function() end)
+				easybar.spawn_async({ "open", item.web_url }, nil, function() end)
 				break
 			end
 		end
@@ -102,5 +166,8 @@ local timer = easybar.add(easybar.kind.item, "gitlab_inbox_timer", {
 	interval = POLL_INTERVAL_SECONDS,
 	on_interval = refresh,
 })
-timer:subscribe({ easybar.events.forced, easybar.events.system_woke }, refresh)
+
+timer:subscribe(easybar.events.forced, refresh)
+timer:subscribe(easybar.events.system_woke, schedule_wake_refresh)
+
 refresh()

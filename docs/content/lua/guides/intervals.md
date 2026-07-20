@@ -93,3 +93,38 @@ Use event subscriptions for real events:
 - `volume_change`
 - `system_woke`
 - mouse events
+
+## One-shot delays
+
+Use `easybar.after(delay_seconds, callback)` for one non-blocking callback. The delay is owned by the
+Swift host, so it does not launch `sleep`, consume an async command slot, or block the Lua runtime.
+
+```lua
+local pending_refresh
+
+local function schedule_refresh()
+    if pending_refresh ~= nil then
+        pending_refresh:cancel()
+    end
+
+    pending_refresh = easybar.after(3, function()
+        pending_refresh = nil
+        refresh()
+    end)
+end
+```
+
+The returned timer handle supports `timer:cancel()`. Cancellation returns `true` only while the
+callback is still pending. Timer handles belong to the current Lua runtime session and should not be
+persisted across reloads.
+
+## Network work after wake
+
+`system_woke` is emitted promptly after macOS reports wake. EasyBar does not delay the event globally
+because non-network widgets may need to react immediately. A widget that depends on Wi-Fi, VPN
+routes, or DNS should schedule its own short delay and then use bounded retries for transient network
+failures.
+
+The bundled GitHub, GitLab, and Homebrew inbox widgets use a three-second wake delay and retry
+read-only checks after two and five seconds. Authentication failures and mutating operations are not
+retried.

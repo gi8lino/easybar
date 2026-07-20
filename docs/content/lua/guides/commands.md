@@ -1,6 +1,6 @@
 # Commands
 
-EasyBar exposes shell command helpers for Lua widgets.
+EasyBar exposes bounded process-execution helpers for Lua widgets.
 
 Use commands carefully. Long-running synchronous commands block the Lua runtime.
 EasyBar also enforces configurable host-side limits for command timeout, captured output size,
@@ -61,9 +61,43 @@ end)
 Leave `options` as `{}` when you want the global defaults from `[app.lua_commands]`.
 Use `easybar.DEFAULT_EXEC_OPTIONS` when you want to reference the current configured host defaults directly.
 
+## Direct executable commands
+
+Prefer `easybar.spawn_async(arguments, options, callback)` when you are invoking one executable and
+do not need shell syntax. EasyBar passes each argument directly to the process, so spaces, dollar
+signs, semicolons, and other shell characters are treated as literal argument content.
+
+```lua
+easybar.spawn_async({
+    "gh",
+    "api",
+    "--paginate",
+    "notifications?all=false&per_page=100",
+}, { timeout_seconds = 20 }, function(output, code)
+    -- Handle the final process result.
+end)
+```
+
+The executable is resolved through the `PATH` from `[app.env]`. Use `/usr/bin/env` as the executable
+when one command needs additional environment values without invoking a shell:
+
+```lua
+easybar.spawn_async({
+    "/usr/bin/env",
+    "GLAB_NO_PROMPT=1",
+    "glab",
+    "api",
+    "issues?scope=assigned_to_me",
+}, {}, callback)
+```
+
+Use `easybar.exec_async(...)` only when the command genuinely needs shell features such as pipes,
+redirection, command substitution, wildcard expansion, or a compound script. Both asynchronous APIs
+return a token accepted by `easybar.cancel_async(...)` and use the same timeout and output limits.
+
 ## Cancelling asynchronous commands
 
-`easybar.exec_async(...)` returns a job token. Pass that token to
+`easybar.exec_async(...)` and `easybar.spawn_async(...)` return a job token. Pass that token to
 `easybar.cancel_async(token)` when the command should stop:
 
 ```lua
@@ -123,7 +157,7 @@ the cancellation request was sent. It returns `false` when the command already c
 token is unknown. The return value confirms the request, not that the process has already exited.
 
 Cancellation first asks the command's complete process group to terminate, so child processes are
-stopped along with the shell command. EasyBar forcibly stops processes that do not exit during the
+stopped along with the requested executable or shell command. EasyBar forcibly stops processes that do not exit during the
 grace period. The original callback runs after termination and receives exit code `130`; `output`
 contains anything captured before cancellation.
 

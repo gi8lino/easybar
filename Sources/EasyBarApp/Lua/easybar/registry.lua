@@ -327,7 +327,10 @@ function M.new(hooks)
 	local before_exec_callback = type(hooks.before_exec_callback) == "function" and hooks.before_exec_callback or noop
 	local request_sync_command = type(hooks.request_sync_command) == "function" and hooks.request_sync_command or nil
 	local request_async_command = type(hooks.request_async_command) == "function" and hooks.request_async_command or nil
+	local request_async_process = type(hooks.request_async_process) == "function" and hooks.request_async_process or nil
 	local request_cancel_async = type(hooks.request_cancel_async) == "function" and hooks.request_cancel_async or nil
+	local request_timer = type(hooks.request_timer) == "function" and hooks.request_timer or nil
+	local request_cancel_timer = type(hooks.request_cancel_timer) == "function" and hooks.request_cancel_timer or nil
 	local before_async_callback = type(hooks.before_async_callback) == "function" and hooks.before_async_callback or noop
 	local on_async_job_started = type(hooks.on_async_job_started) == "function" and hooks.on_async_job_started or noop
 	local on_async_job_completed = type(hooks.on_async_job_completed) == "function" and hooks.on_async_job_completed
@@ -342,6 +345,7 @@ function M.new(hooks)
 		interval_handlers = {},
 		pending_async_commands = {},
 		pending_command_responses = {},
+		pending_timers = {},
 	}
 
 	local registry = {
@@ -522,6 +526,91 @@ function M.new(hooks)
 		end
 
 		return normalized
+	end
+
+	--- Validates one direct executable argument vector.
+	local function normalize_process_arguments(arguments, signature)
+		assert(type(arguments) == "table", signature .. " requires an argument array")
+		local normalized = {}
+		local length = #arguments
+		for key in pairs(arguments) do
+			assert(
+				type(key) == "number" and key >= 1 and key <= length and math.floor(key) == key,
+				signature .. " requires a dense argument array"
+			)
+		end
+		for index, value in ipairs(arguments) do
+			assert(type(value) == "string", signature .. " requires string arguments")
+			assert(not value:find("%z"), signature .. " rejects NUL bytes")
+			normalized[index] = value
+		end
+		assert(#normalized > 0 and normalized[1] ~= "", signature .. " requires a non-empty executable")
+		return normalized
+	end
+
+	--- Starts one background host-owned executable without shell parsing.
+	function registry.spawn_async(arguments, options, callback, ...)
+		local signature = "easybar.spawn_async(arguments, options, callback)"
+		assert(select("#", ...) == 0, signature .. " does not accept extra arguments")
+		assert(type(callback) == "function", signature .. " requires callback")
+		assert(type(request_async_process) == "function", "easybar.spawn_async unavailable without host runner")
+
+		local normalized_arguments = normalize_process_arguments(arguments, signature)
+		local normalized_options = normalize_command_options(options, signature)
+		local token = request_async_process(normalized_arguments, normalized_options) or make_async_job_token()
+		local display_command = table.concat(normalized_arguments, " ")
+
+		state.pending_async_commands[token] = {
+			command = display_command,
+			callback = callback,
+		}
+
+		on_async_job_started(token, display_command)
+		return token
+	end
+
+	--- Schedules one host-owned, non-blocking callback.
+	function registry.after(delay_seconds, callback, ...)
+		local signature = "easybar.after(delay_seconds, callback)"
+		assert(select("#", ...) == 0, signature .. " does not accept extra arguments")
+		local delay = tonumber(delay_seconds)
+		assert(
+			delay ~= nil and delay == delay and delay ~= math.huge and delay ~= -math.huge and delay >= 0,
+			signature .. " requires a finite delay >= 0"
+		)
+		assert(type(callback) == "function", signature .. " requires callback")
+		assert(type(request_timer) == "function", "easybar.after unavailable without host timer")
+		assert(type(request_cancel_timer) == "function", "easybar.after unavailable without host timer cancellation")
+
+		local token = request_timer(delay) or make_async_job_token()
+		state.pending_timers[token] = callback
+		local handle = { token = token }
+
+		function handle:cancel()
+			if state.pending_timers[self.token] == nil then
+				return false
+			end
+			state.pending_timers[self.token] = nil
+			request_cancel_timer(self.token)
+			return true
+		end
+
+		return handle
+	end
+
+	--- Dispatches one fired host timer callback exactly once.
+	function registry.handle_timer_fired(token)
+		local callback = state.pending_timers[token]
+		if callback == nil then
+			return false
+		end
+		state.pending_timers[token] = nil
+		before_async_callback()
+		local ok, err = pcall(callback)
+		if not ok then
+			on_async_callback_error("timer", err)
+		end
+		return true
 	end
 
 	--- Starts one background host-owned shell command.
