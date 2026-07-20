@@ -11,6 +11,38 @@ final class ConfigReferenceTests: ConfigLoaderTestCase {
     XCTAssertEqual(referenceKeys(in: reference), documentedSchemaKeys())
   }
 
+  func testGeneratedReferenceDistinguishesDefaultsFromExamples() throws {
+    let referenceURL = repoRootURL()
+      .appendingPathComponent("docs/content/configuration/reference.md")
+    let reference = try String(contentsOf: referenceURL, encoding: .utf8)
+
+    XCTAssertEqual(
+      referenceRow(in: reference, section: "app", key: "show_menu_bar_icon"),
+      ["`true`", "—"]
+    )
+    XCTAssertEqual(
+      referenceRow(in: reference, section: "builtins.battery", key: "group"),
+      ["Not set", "`\"system\"`"]
+    )
+    XCTAssertEqual(
+      referenceRow(in: reference, section: "app", key: "lua_socket_path"),
+      ["Not set", "`\"~/.local/state/easybar/runtime/lua-runtime.sock\"`"]
+    )
+    XCTAssertEqual(
+      referenceRow(in: reference, section: "builtins.calendar.anchor", key: "spacing"),
+      ["Not set", "`2`"]
+    )
+    XCTAssertEqual(
+      referenceRow(
+        in: reference,
+        section: "builtins.calendar.month.popup.calendar",
+        key: "first_weekday"
+      ),
+      ["Not set", "`2`"]
+    )
+    XCTAssertTrue(reference.contains("Generated from the `EasyBarConfigSchema` module."))
+  }
+
   private func documentedSchemaKeys() -> Set<String> {
     var keys: Set<String> = []
     var currentSection: String?
@@ -36,6 +68,34 @@ final class ConfigReferenceTests: ConfigLoaderTestCase {
     }
 
     return keys
+  }
+
+  private func referenceRow(
+    in reference: String,
+    section targetSection: String,
+    key targetKey: String
+  ) -> [String]? {
+    var currentSection: String?
+
+    for line in reference.split(separator: "\n", omittingEmptySubsequences: false) {
+      let value = String(line)
+
+      if value.hasPrefix("## `"), value.hasSuffix("`") {
+        currentSection = String(value.dropFirst(4).dropLast())
+        continue
+      }
+
+      guard currentSection == targetSection, value.hasPrefix("| `\(targetKey)`") else {
+        continue
+      }
+
+      let columns = value.split(separator: "|", omittingEmptySubsequences: true)
+        .map { String($0).trimmingCharacters(in: .whitespaces) }
+      guard columns.count >= 4 else { return nil }
+      return [columns[1], columns[2]]
+    }
+
+    return nil
   }
 
   private func referenceKeys(in reference: String) -> Set<String> {

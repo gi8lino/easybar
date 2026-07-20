@@ -13,6 +13,7 @@ jobs:
   create-release-tag:
     if: >
       github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
       contains(github.event.pull_request.labels.*.name, 'Build')
     runs-on: ubuntu-latest
     steps:
