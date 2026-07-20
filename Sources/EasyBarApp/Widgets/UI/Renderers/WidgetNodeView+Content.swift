@@ -386,8 +386,8 @@ extension WidgetNodeView {
   }
 
   /// Returns a templated image when custom image tinting is enabled.
-  func tintedImage(from image: NSImage, isCustomImage: Bool) -> NSImage? {
-    guard isCustomImage,
+  func tintedImage(from image: NSImage, allowsTemplateTint: Bool) -> NSImage? {
+    guard allowsTemplateTint,
       let tint = node.iconColor ?? node.color,
       !tint.isEmpty
     else {
@@ -416,7 +416,7 @@ extension WidgetNodeView {
         if let loadedImage = imageLoader.image(for: imageSource) {
           if let tintedImage = tintedImage(
             from: loadedImage.image,
-            isCustomImage: true
+            allowsTemplateTint: imageSource.allowsTemplateTint
           ) {
             imageBaseView(image: tintedImage, renderingMode: .template)
               .foregroundStyle(iconResolvedColor)

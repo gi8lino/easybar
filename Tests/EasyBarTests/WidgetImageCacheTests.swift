@@ -73,6 +73,17 @@ final class WidgetImageCacheTests: XCTestCase {
     XCTAssertTrue(first === second)
   }
 
+  func testApplicationBundlePathLoadsWorkspaceIcon() async throws {
+    let path = "/System/Library/CoreServices/Finder.app"
+    guard FileManager.default.fileExists(atPath: path) else {
+      throw XCTSkip("Finder application bundle is unavailable")
+    }
+
+    let image = try loadedImage(from: await WidgetImageCache().image(for: .path(path)))
+
+    XCTAssertNotEqual(image.image.size, .zero)
+  }
+
   func testLeastRecentlyUsedImageIsEvictedAtCapacity() async throws {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -176,17 +187,25 @@ final class WidgetImageCacheTests: XCTestCase {
 
     let tintedView = WidgetNodeView(node: tintedNode, logger: logger)
     XCTAssertEqual(
-      tintedView.tintedImage(from: pathImage, isCustomImage: true)?.isTemplate,
+      tintedView.tintedImage(from: pathImage, allowsTemplateTint: true)?.isTemplate,
       true
     )
     XCTAssertEqual(
-      tintedView.tintedImage(from: svgImage, isCustomImage: true)?.isTemplate,
+      tintedView.tintedImage(from: svgImage, allowsTemplateTint: true)?.isTemplate,
       true
     )
 
     let untintedView = WidgetNodeView(node: untintedNode, logger: logger)
-    XCTAssertNil(untintedView.tintedImage(from: pathImage, isCustomImage: true))
-    XCTAssertNil(untintedView.tintedImage(from: svgImage, isCustomImage: true))
+    XCTAssertNil(untintedView.tintedImage(from: pathImage, allowsTemplateTint: true))
+    XCTAssertNil(untintedView.tintedImage(from: svgImage, allowsTemplateTint: true))
+    XCTAssertNil(tintedView.tintedImage(from: pathImage, allowsTemplateTint: false))
+  }
+
+  func testApplicationBundleIconsKeepOriginalRendering() {
+    XCTAssertFalse(WidgetImageSource.path("/Applications/Example.app").allowsTemplateTint)
+    XCTAssertFalse(WidgetImageSource.path("/Applications/Example.APP").allowsTemplateTint)
+    XCTAssertTrue(WidgetImageSource.path("/tmp/icon.png").allowsTemplateTint)
+    XCTAssertTrue(WidgetImageSource.svg(Self.redSVG).allowsTemplateTint)
   }
 
   private func makeNode(iconColor: String?) throws -> WidgetNodeState {

@@ -14,6 +14,16 @@ enum WidgetImageSource: Hashable, Sendable {
     case .svg: return "inline-svg"
     }
   }
+
+  /// Returns whether the renderer may apply the configured icon tint.
+  var allowsTemplateTint: Bool {
+    switch self {
+    case .path(let path):
+      return URL(fileURLWithPath: path).pathExtension.lowercased() != "app"
+    case .svg:
+      return true
+    }
+  }
 }
 
 /// A decoded widget image that can safely cross the cache actor boundary.
@@ -86,7 +96,7 @@ actor WidgetImageCache {
     let image: NSImage?
     switch revision.source {
     case .path(let path):
-      image = NSImage(contentsOfFile: path)
+      image = Self.image(at: path)
     case .svg(let svg):
       image = NSImage(data: Data(svg.utf8))
     }
@@ -102,6 +112,18 @@ actor WidgetImageCache {
     )
     evictLeastRecentlyUsedEntryIfNeeded()
     return result
+  }
+
+  /// Loads regular image files and resolves application bundles through Launch Services.
+  private static func image(at path: String) -> NSImage? {
+    var isDirectory: ObjCBool = false
+    if URL(fileURLWithPath: path).pathExtension.lowercased() == "app",
+      FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory),
+      isDirectory.boolValue
+    {
+      return NSWorkspace.shared.icon(forFile: path)
+    }
+    return NSImage(contentsOfFile: path)
   }
 
   private func evictLeastRecentlyUsedEntryIfNeeded() {
