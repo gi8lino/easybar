@@ -368,21 +368,20 @@ function M.new(hooks)
 		assert(type(kind) == "string" and kind ~= "", "easybar.add(kind, id, props) requires kind")
 		assert(type(id) == "string" and id ~= "", "easybar.add(kind, id, props) requires id")
 
+		if state.items[id] ~= nil then
+			error("easybar item already exists: " .. id, 2)
+		end
+
 		local merged = {}
 		deep_merge(merged, normalize_props(defaults or {}, on_invalid_public_api))
 		deep_merge(merged, normalize_props(props or {}, on_invalid_public_api))
-
-		local is_new = state.items[id] == nil
 
 		state.items[id] = {
 			id = id,
 			kind = kind,
 			props = merged,
 		}
-
-		if is_new then
-			state.item_order[#state.item_order + 1] = id
-		end
+		state.item_order[#state.item_order + 1] = id
 
 		on_mutation()
 	end

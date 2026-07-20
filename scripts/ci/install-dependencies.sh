@@ -39,6 +39,7 @@ for mode in "$@"; do
       need_rust=true
       ;;
     format)
+      need_lua=true
       need_stylua=true
       ;;
     imagemagick)

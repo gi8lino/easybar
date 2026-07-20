@@ -98,6 +98,7 @@ LOCAL_STATE_DIR ?= $(HOME)/Library/Application Support/EasyBar/LocalInstall
 IMAGE_CONVERT ?= magick
 PRETTIER ?= npx prettier
 STYLUA ?= stylua
+LUA ?= lua
 
 ifeq ($(ARCH),universal)
 ARCHES := arm64 x86_64
@@ -125,7 +126,7 @@ endif
         generate check-generated generate-event-catalog generate-theme-tokens generate-config generate-default-config generate-swift-env \
         build bundle package release app cli validate-config \
         fmt fmt-all fmt-swift fmt-lua fmt-rust fmt-markdown \
-        lint lint-swift lint-lua lint-rust test \
+        lint lint-swift lint-lua lint-rust check-lua test \
         clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons screenshots check-screenshots \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli build-toml-debug build-toml-release \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
@@ -217,8 +218,12 @@ lint: lint-swift lint-lua lint-rust ## Check Swift, Lua, and Rust formatting wit
 lint-swift: ## Check Swift source formatting without modifying files.
 	@swift format lint --recursive .
 
-lint-lua: ## Check Lua source formatting without modifying files.
+lint-lua: ## Check Lua formatting, syntax, and bundled widget startup.
 	@$(STYLUA) --check .
+	@$(MAKE) --no-print-directory check-lua
+
+check-lua: ## Parse Lua sources and smoke-test every bundled widget.
+	@LUA="$(LUA)" scripts/ci/check-lua.sh
 
 lint-rust: ## Check Rust formatting without modifying files.
 	@cargo fmt --manifest-path Rust/EasyBarTOML/Cargo.toml --check
@@ -230,7 +235,7 @@ build-toml-debug: ## Build the lossless TOML library for local Swift builds.
 build-toml-release: ## Build the lossless TOML library for release Swift builds.
 	@scripts/build/build-toml-library.sh release "$(ARCH)"
 
-test: generate-swift-env build-toml-debug ## Run the Swift test suite without regenerating checked-in artifacts.
+test: generate-swift-env build-toml-debug check-lua ## Run the Swift and Lua test suites without regenerating checked-in artifacts.
 	@env $(LOCAL_SWIFT_ENV) swift test --disable-sandbox
 
 bundle: ## Build the app, agent bundles, and CLI into dist/.

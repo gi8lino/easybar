@@ -73,6 +73,10 @@ jobs:
         shell: bash
         run: scripts/ci/install-dependencies.sh "${{ inputs.dependency_mode }}"
 
+      - name: Check Lua syntax and bundled widgets
+        shell: bash
+        run: make check-lua
+
       - name: Clean stale build directories
         if: ${{ inputs.clean_before_cache }}
         shell: bash
