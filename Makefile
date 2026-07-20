@@ -126,7 +126,7 @@ endif
         build bundle package release app cli validate-config \
         fmt fmt-all fmt-swift fmt-lua fmt-rust fmt-markdown \
         lint lint-swift lint-lua lint-rust test \
-        clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons \
+        clean clean-dist run run-debug run-trace install-local uninstall-local stop restart-app icons screenshots check-screenshots \
         build-app build-lua-runtime build-calendar-agent build-network-agent build-cli build-toml-debug build-toml-release \
         copy-resources copy-debug-resources prepare-debug-app-bundle verify verify-release \
         sign notarize \
@@ -159,6 +159,14 @@ generate-config: ## Regenerate default config and config docs from the app confi
 
 generate-default-config: ## Regenerate the visible default config reference from the app config schema.
 	@swift run EasyBarGenerateConfig defaults
+
+screenshots: ## Regenerate consistently cropped documentation screenshots.
+	@scripts/assets/screenshots.sh "$(IMAGE_CONVERT)" docs/screenshots/screenshots.manifest \
+		docs/screenshots/raw docs/content/assets
+
+check-screenshots: ## Verify documentation screenshots match their raw captures and manifest.
+	@scripts/assets/screenshots.sh "$(IMAGE_CONVERT)" docs/screenshots/screenshots.manifest \
+		docs/screenshots/raw docs/content/assets --check
 
 ##@ Build
 

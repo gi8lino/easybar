@@ -94,6 +94,7 @@ nav:
 
   - Internals:
       - Overview: internals/overview.md
+      - Development: internals/development.md
       - Architecture:
           - Overview: internals/architecture/overview.md
           - Targets: internals/architecture/targets.md

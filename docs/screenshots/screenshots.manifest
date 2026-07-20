@@ -1,0 +1,10 @@
+# name|crop|padding
+bar|-|0
+month|-|32
+upcoming|-|32
+inbox|850x790+2200+0|32
+cpu|520x64+2700+0|32
+front_app|300x64+260+0|32
+wifi|950x990+2350+0|32
+context|-|32
+custom_context|780x350+2650+0|32

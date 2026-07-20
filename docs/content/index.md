@@ -65,6 +65,10 @@ For architecture, process boundaries, agent protocols, Lua runtime internals, an
 
 [![Upcoming screenshot](assets/upcoming.png){ .screenshot-compact }](assets/upcoming.png)
 
+## Inbox
+
+[![Inbox screenshot](assets/inbox.png)](assets/inbox.png)
+
 ### CPU
 
 [![CPU screenshot](assets/cpu.png)](assets/cpu.png)
@@ -77,6 +81,6 @@ For architecture, process boundaries, agent protocols, Lua runtime internals, an
 
 [![Front app screenshot](assets/front_app.png)](assets/front_app.png)
 
-### Context menu
+### Custom context menu
 
-[![Context menu screenshot](assets/context.png)](assets/context.png)
+[![Context menu screenshot](assets/custom_context.png)](assets/custom_context.png)

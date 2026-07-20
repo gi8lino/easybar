@@ -19,13 +19,14 @@ Internals pages explain implementation details and project boundaries:
 
 Use this reading order when changing EasyBar itself:
 
-1. [Architecture Overview](architecture/overview.md)
-2. [Targets](architecture/targets.md)
-3. [Process Model](architecture/process-model.md)
-4. [Architectural Boundaries](architecture/boundaries.md)
-5. [Agent Protocol](agents/protocol.md)
-6. [Lua Runtime Overview](lua-runtime/overview.md)
-7. [Contributor Notes](lua-runtime/contributor-notes.md)
+1. [Development](development.md)
+2. [Architecture Overview](architecture/overview.md)
+3. [Targets](architecture/targets.md)
+4. [Process Model](architecture/process-model.md)
+5. [Architectural Boundaries](architecture/boundaries.md)
+6. [Agent Protocol](agents/protocol.md)
+7. [Lua Runtime Overview](lua-runtime/overview.md)
+8. [Contributor Notes](lua-runtime/contributor-notes.md)
 
 ## User docs vs internals
 
