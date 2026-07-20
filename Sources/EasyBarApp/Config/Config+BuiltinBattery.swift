@@ -106,7 +106,7 @@ extension Config {
         group: nil
       ),
       style: .init(
-        icon: "🔋",
+        icon: "􀫯",
         textColorHex: "#cdd6f4",
         backgroundColorHex: "#00000000",
         borderColorHex: "#00000000",

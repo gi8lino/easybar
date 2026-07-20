@@ -103,7 +103,7 @@ clock = easybar.add(easybar.kind.item, "clock", {
     position = "right",
     order = 10,
     interval = 60,
-    icon = "🕒",
+    icon = "􀐫",
     label = os.date("%H:%M"),
     on_interval = function()
         clock:set({

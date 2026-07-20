@@ -108,6 +108,11 @@ enable or disable any top-level built-in widget. Checked items are enabled. Each
 immediately updates the corresponding `builtins.<widget>.enabled` value in `config.toml` and reloads
 the bar, while preserving comments, whitespace, and unrelated settings.
 
+Every visible native widget also has a right-click context menu with **Reload Widget** and
+**Disable Widget**. Disabling is written to the active config file immediately; use **Native
+Widgets** from the bar or controller menu to enable it again. Widgets with interactive settings add
+their own controls above these common actions.
+
 ## When to switch to Lua
 
 Stay with built-ins when the widget already exists and you mainly need native placement, grouping, theming, or styling.

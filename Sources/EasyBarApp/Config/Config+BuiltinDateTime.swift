@@ -15,7 +15,7 @@ extension Config {
     static let timeDefault = FormattedBuiltinConfig(
       placement: .init(enabled: false, position: .right, order: 40),
       style: .init(
-        icon: "🕒",
+        icon: "􀐫",
         textColorHex: "#ffffff",
         backgroundColorHex: "#1a1a1a",
         borderColorHex: "#333333",
@@ -34,7 +34,7 @@ extension Config {
     static let dateDefault = FormattedBuiltinConfig(
       placement: .init(enabled: false, position: .right, order: 50),
       style: .init(
-        icon: "📅",
+        icon: "􀉉",
         textColorHex: "#ffffff",
         backgroundColorHex: "#1a1a1a",
         borderColorHex: "#333333",

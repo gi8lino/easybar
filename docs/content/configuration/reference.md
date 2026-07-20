@@ -345,7 +345,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default               | Description                                           |
 | ------------------ | --------------------- | ----------------------------------------------------- |
-| `icon`             | `"🔋"`                | Fallback or default battery icon.                     |
+| `icon`             | `"􀫯"`                 | Fallback or default battery icon.                     |
 | `text_color`       | `"theme.text"`        | Used when color_mode is fixed or data is unavailable. |
 | `background_color` | `"theme.transparent"` | Background color of the widget.                       |
 | `border_color`     | `"theme.transparent"` | Border color of the widget.                           |
@@ -801,7 +801,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default           | Description                                |
 | ------------------ | ----------------- | ------------------------------------------ |
-| `icon`             | `"🕒"`            | Leading icon of the widget.                |
+| `icon`             | `"􀐫"`             | Leading icon of the widget.                |
 | `text_color`       | `"theme.text"`    | Text color of the widget.                  |
 | `background_color` | `"theme.surface"` | Background color of the widget.            |
 | `border_color`     | `"theme.border"`  | Border color of the widget.                |
@@ -832,7 +832,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default           | Description                                |
 | ------------------ | ----------------- | ------------------------------------------ |
-| `icon`             | `"📅"`            | Leading icon of the widget.                |
+| `icon`             | `"􀉉"`             | Leading icon of the widget.                |
 | `text_color`       | `"theme.text"`    | Text color of the widget.                  |
 | `background_color` | `"theme.surface"` | Background color of the widget.            |
 | `border_color`     | `"theme.border"`  | Border color of the widget.                |

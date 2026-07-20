@@ -21,7 +21,7 @@ extension ConfigSchemaRegistry {
     ]
     + widgetStyleLines(
       sectionName: "builtins.time.style",
-      icon: "\"🕒\""
+      icon: "\"􀐫\""
     ) + [
       .blank,
       section(name: "builtins.time.content"),
@@ -51,7 +51,7 @@ extension ConfigSchemaRegistry {
     ]
     + widgetStyleLines(
       sectionName: "builtins.date.style",
-      icon: "\"📅\""
+      icon: "\"􀉉\""
     ) + [
       .blank,
       section(name: "builtins.date.content"),

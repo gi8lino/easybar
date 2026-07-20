@@ -303,7 +303,7 @@ extension ConfigSchemaRegistry {
     section(name: "builtins.battery.style"),
     entry(
       key: "icon",
-      value: "\"🔋\"",
+      value: "\"􀫯\"",
       description: "Fallback or default battery icon.",
     ),
     entry(
