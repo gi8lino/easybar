@@ -32,7 +32,10 @@ struct AppServices: @unchecked Sendable {
   static func bootstrap(logger: ProcessLogger) -> AppServices {
     let config = Config.makeUnloadedConfig()
     let bootstrapSnapshot = config.snapshot()
-    let configSnapshotStore = ConfigSnapshotStore(snapshot: bootstrapSnapshot)
+    let configSnapshotStore = ConfigSnapshotStore(
+      snapshot: bootstrapSnapshot,
+      snapshotDidChange: { config.apply($0) }
+    )
     let configManager = ConfigManager(config: config)
     let metricsCoordinator = MetricsCoordinator.shared
     let inboxStateURL = URL(

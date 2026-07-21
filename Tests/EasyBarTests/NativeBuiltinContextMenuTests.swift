@@ -273,6 +273,22 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
   }
 
   @MainActor
+  func testSnapshotStoreKeepsLiveConfigSynchronizedWithWidgetOverrides() async {
+    let config = Config.makeUnloadedConfig()
+    let store = ConfigSnapshotStore(
+      snapshot: config.snapshot(),
+      snapshotDidChange: { config.apply($0) }
+    )
+    var battery = store.snapshot.builtins.battery
+    battery.displayMode = .always
+
+    store.applyBatteryOverride(battery)
+
+    let managerSnapshot = await ConfigManager(config: config).snapshot()
+    XCTAssertEqual(managerSnapshot.builtins.battery.displayMode, .always)
+  }
+
+  @MainActor
   func testConfigUpdateCommitsRuntimeStateOnlyAfterSuccessfulPersistence() throws {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent("easybar-context-menu-success-\(UUID().uuidString)")

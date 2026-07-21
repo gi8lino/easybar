@@ -8,15 +8,22 @@ import Foundation
 final class ConfigSnapshotStore: ObservableObject {
   /// Active config snapshot used by UI renderers.
   @Published private(set) var snapshot: ConfigSnapshot
+  /// Keeps the authoritative live config synchronized with immediate UI overrides.
+  private let snapshotDidChange: (ConfigSnapshot) -> Void
 
   /// Creates a snapshot store with the provided initial snapshot.
-  init(snapshot: ConfigSnapshot) {
+  init(
+    snapshot: ConfigSnapshot,
+    snapshotDidChange: @escaping (ConfigSnapshot) -> Void = { _ in }
+  ) {
     self.snapshot = snapshot
+    self.snapshotDidChange = snapshotDidChange
   }
 
   /// Replaces the active snapshot after a successful or rejected config load.
   func apply(_ snapshot: ConfigSnapshot) {
     self.snapshot = snapshot
+    snapshotDidChange(snapshot)
   }
 
   /// Applies a calendar configuration written by its native context menu.
@@ -84,6 +91,6 @@ final class ConfigSnapshotStore: ObservableObject {
   private func updateBuiltins(_ update: (inout ConfigSnapshot.Builtins) -> Void) {
     var builtins = snapshot.builtins
     update(&builtins)
-    snapshot = snapshot.replacing(builtins: builtins)
+    apply(snapshot.replacing(builtins: builtins))
   }
 }
