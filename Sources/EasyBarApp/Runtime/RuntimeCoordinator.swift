@@ -56,9 +56,6 @@ actor RuntimeCoordinator {
 
     logger.info("runtime coordinator start begin")
 
-    await configureLogging()
-    guard shouldContinueStartup(generation: generation) else { return }
-
     let startupSnapshot = await configManager.snapshot()
     guard shouldContinueStartup(generation: generation) else { return }
 
