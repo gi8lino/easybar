@@ -131,6 +131,7 @@ actor MetricsCoordinator {
     var stderrLines = 0
     var luaWrites = 0
     var decodeErrors = 0
+    var luaRuntimeInputOverflows = 0
 
     var treeUpdates = 0
     var lastTreeRoot: String?
@@ -279,6 +280,11 @@ actor MetricsCoordinator {
   /// Records one runtime decode failure.
   func recordDecodeError() {
     state.decodeErrors += 1
+  }
+
+  /// Records one bounded Lua runtime input queue overflow.
+  func recordLuaRuntimeInputOverflow() {
+    state.luaRuntimeInputOverflows += 1
   }
 
   /// Records the Lua runtime starting with a new PID.

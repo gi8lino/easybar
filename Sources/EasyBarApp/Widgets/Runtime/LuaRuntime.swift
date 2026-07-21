@@ -123,6 +123,14 @@ actor LuaRuntime {
     terminationHandler?(termination)
   }
 
+  /// Terminates the current child as an unexpected failure so supervision restarts it.
+  func terminateForRecovery(reason: String) {
+    logger.error("terminating lua runtime for recovery", .field("reason", reason))
+    if !processController.terminateForRecovery() {
+      logger.debug("lua runtime recovery termination skipped because no process is running")
+    }
+  }
+
   /// Sends one encoded event line to the Lua runtime socket transport.
   func send(_ string: String) {
     transport.send(string)

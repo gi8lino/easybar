@@ -105,6 +105,38 @@ final class LuaProcessControllerTerminationTests: XCTestCase, @unchecked Sendabl
     XCTAssertNil(controller.processIdentifier)
   }
 
+  func testRecoveryTerminationRemainsUnexpected() async throws {
+    let scriptURL = try makeExecutableScript("while true; do sleep 1; done")
+    defer { try? FileManager.default.removeItem(at: scriptURL.deletingLastPathComponent()) }
+
+    let controller = LuaProcessController(
+      logger: ProcessLogger(label: "lua.termination.tests", minimumLevel: .error)
+    )
+    let resources = LuaProcessController.LaunchResources()
+    defer { close(resources) }
+
+    let terminated = expectation(description: "recovery termination delivered")
+    let result = LockedState<LuaProcessController.Termination?>(nil)
+
+    XCTAssertNotNil(
+      controller.start(
+        context: makeContext(executablePath: scriptURL.path),
+        resources: resources,
+        terminationHandler: { termination in
+          result.withLock { $0 = termination }
+          terminated.fulfill()
+        }
+      )
+    )
+
+    XCTAssertTrue(controller.terminateForRecovery())
+    await fulfillment(of: [terminated], timeout: 2)
+
+    let termination = try XCTUnwrap(result.withLock { $0 })
+    XCTAssertFalse(termination.wasRequested)
+    XCTAssertNil(controller.processIdentifier)
+  }
+
   func testShutdownMarksTerminationAsRequested() async throws {
     let scriptURL = try makeExecutableScript("while true; do sleep 1; done")
     defer { try? FileManager.default.removeItem(at: scriptURL.deletingLastPathComponent()) }

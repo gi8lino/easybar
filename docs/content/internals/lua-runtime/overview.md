@@ -120,6 +120,10 @@ external process execution and one-shot scheduling to Swift:
 This keeps retries and backoff orchestration in Lua while process lifecycle, PATH resolution,
 timeouts, output limits, and scheduling remain host-owned.
 
+## Runtime input backpressure
+
+The host accepts at most 256 complete Lua protocol lines waiting for actor-side processing. A full queue is treated as an unhealthy runtime rather than silently dropping an ordered protocol message. EasyBar records `luaRuntimeInputOverflows`, terminates the current child as an unexpected failure, and restarts it through normal bounded-backoff supervision.
+
 ## Scheduling and retry architecture
 
 `system_woke` remains an immediate event. EasyBar does not delay it globally because widgets that do

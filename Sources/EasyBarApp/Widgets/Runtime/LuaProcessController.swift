@@ -132,6 +132,27 @@ final class LuaProcessController: @unchecked Sendable {
     }
   }
 
+  /// Terminates a running process without marking its exit as requested.
+  @discardableResult
+  func terminateForRecovery() -> Bool {
+    let process = state.withLock { state -> (Int32, Int32)? in
+      guard
+        case .running(let processIdentifier, let processGroupIdentifier, false) =
+          state.lifecycle
+      else {
+        return nil
+      }
+      return (processIdentifier, processGroupIdentifier)
+    }
+
+    guard let process else { return false }
+    terminateProcess(
+      processIdentifier: process.0,
+      processGroupIdentifier: process.1
+    )
+    return true
+  }
+
   /// Stops the Lua runtime process and waits until startup or child exit has completed.
   func shutdownAndWait() async {
     switch beginShutdownSnapshot() {

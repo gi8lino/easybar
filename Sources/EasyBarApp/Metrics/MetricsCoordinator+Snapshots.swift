@@ -128,6 +128,7 @@ extension MetricsCoordinator {
         context: rateContext
       ),
       decodeErrors: snapshotState.decodeErrors,
+      luaRuntimeInputOverflows: snapshotState.luaRuntimeInputOverflows,
       lastTreeRoot: snapshotState.lastTreeRoot,
       lastTreeNodeCount: snapshotState.lastTreeNodeCount,
       lastTreeAt: snapshotState.lastTreeAt

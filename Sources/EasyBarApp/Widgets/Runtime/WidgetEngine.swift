@@ -20,6 +20,9 @@ private struct WidgetRuntimeState {
 ///
 /// This actor owns the Lua handshake state, subscriptions, and tree updates.
 actor WidgetEngine {
+  /// Maximum complete protocol lines waiting for actor-side processing.
+  static let maximumBufferedRuntimeLines = 256
+
   private let logger: ProcessLogger
   private let configManager: ConfigManager
   private let luaRuntime: LuaRuntime
@@ -37,8 +40,9 @@ actor WidgetEngine {
   private var started = false
   private var runtimeAvailable = false
   private var runtimeSessionID: UInt64 = 0
-  private var runtimeLineContinuation: AsyncStream<String>.Continuation?
+  private var runtimeLineBuffer: LuaRuntimeLineBuffer?
   private var runtimeLineTask: Task<Void, Never>?
+  private var runtimeInputOverflowSessionID: UInt64?
   private let restartScheduler: BackoffScheduler
 
   init(
@@ -105,18 +109,24 @@ actor WidgetEngine {
     runtimeSessionID &+= 1
     let sessionID = runtimeSessionID
     runtimeAvailable = false
+    runtimeInputOverflowSessionID = nil
 
-    let (stream, continuation) = AsyncStream<String>.makeStream()
-    runtimeLineContinuation = continuation
+    let lineBuffer = LuaRuntimeLineBuffer(
+      maximumBufferedLines: Self.maximumBufferedRuntimeLines
+    )
+    runtimeLineBuffer = lineBuffer
     runtimeLineTask = Task { [weak self] in
-      for await line in stream {
+      for await line in lineBuffer.stream {
         guard let self else { return }
         await self.handleRuntimeTransportLine(line, runtimeSessionID: sessionID)
       }
     }
 
-    await luaRuntime.setLineHandler { line in
-      continuation.yield(line)
+    await luaRuntime.setLineHandler { [weak self] line in
+      guard lineBuffer.enqueue(line) == .overflow else { return }
+      Task {
+        await self?.handleRuntimeInputOverflow(runtimeSessionID: sessionID)
+      }
     }
     await luaRuntime.setTerminationHandler { [weak self] termination in
       Task {
@@ -254,6 +264,24 @@ actor WidgetEngine {
     scheduleRuntimeRestart(expectedSessionID: runtimeSessionID)
   }
 
+  /// Restarts a runtime that can no longer keep up with valid protocol input.
+  private func handleRuntimeInputOverflow(runtimeSessionID: UInt64) async {
+    guard acceptsRuntimeSession(runtimeSessionID, whileRunning: started && runtimeAvailable),
+      runtimeInputOverflowSessionID != runtimeSessionID
+    else {
+      return
+    }
+
+    runtimeInputOverflowSessionID = runtimeSessionID
+    await metricsCoordinator.recordLuaRuntimeInputOverflow()
+    logger.error(
+      "lua runtime input buffer overflowed; restarting runtime",
+      .field("runtime_session_id", runtimeSessionID),
+      .field("maximum_buffered_lines", Self.maximumBufferedRuntimeLines)
+    )
+    await luaRuntime.terminateForRecovery(reason: "runtime input buffer overflow")
+  }
+
   func handleRuntimeTransportLine(_ line: String, runtimeSessionID: UInt64) async {
     guard
       acceptsRuntimeSession(
@@ -371,8 +399,8 @@ actor WidgetEngine {
   /// Invalidates queued work captured by the active Lua process generation.
   private func invalidateRuntimeSession() {
     runtimeSessionID &+= 1
-    runtimeLineContinuation?.finish()
-    runtimeLineContinuation = nil
+    runtimeLineBuffer?.finish()
+    runtimeLineBuffer = nil
     runtimeLineTask?.cancel()
     runtimeLineTask = nil
   }
