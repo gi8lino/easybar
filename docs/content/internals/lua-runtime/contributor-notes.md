@@ -49,7 +49,7 @@ Install StyLua before running the repository formatting checks:
 brew install stylua
 ```
 
-The root `.stylua.toml` defines the Lua 5.4 formatting rules used by local development and CI.
+The root `.stylua.toml` defines the Lua 5.5 formatting rules used by local development and CI.
 
 Use the Makefile entry points rather than invoking different formatter options manually:
 
@@ -128,3 +128,5 @@ When changing the Lua API:
 2. update stubs
 3. run `make generate-docs`
 4. update hand-written guides and examples
+
+

@@ -62,8 +62,12 @@ See [Environment](../../configuration/environment.md) for precedence and GUI-lau
 
 Several examples import `retry`, `shell`, `text`, or `secrets` from `widgets/lib`. Preserve that directory structure when copying them. File-backed assets are resolved relative to the widget with `easybar.asset(...)`; copy those assets as well.
 
+Keep the secrets helper at `widgets/lib/secrets.lua`. Do not place a copy at the top level: EasyBar executes every top-level `*.lua` file as a widget entrypoint, while files below `lib/` are loaded only through `require(...)`. Edit the module before copying `wireguard.lua`, then copy `lib/secrets.lua` with the widget.
+
 The GitHub, GitLab, and Homebrew inbox examples keep `system_woke` immediate for the rest of EasyBar, then schedule their own three-second network settling delay with `easybar.after(...)`. Their read-only refresh checks use the shared pure-Lua retry helper with two- and five-second backoff. Authentication failures and Homebrew/GitHub mutations remain one-shot. Ordinary CLI invocations use `easybar.spawn_async(...)`; shell execution is reserved for examples that genuinely need shell syntax.
 
 ## Diagnostics
 
 Lua loader and command failures appear in EasyBar's logs. The Homebrew examples also maintain a bounded `brew-widget.log` in the configured logging directory. Use [Lua Logging](logging.md), [Commands](commands.md), and [Troubleshooting](../../runtime/troubleshooting.md) when an example does not update.
+
+

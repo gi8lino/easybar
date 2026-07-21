@@ -39,7 +39,7 @@ Example `.luarc.json`:
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "runtime": {
-    "version": "Lua 5.4",
+    "version": "Lua 5.5",
     "path": ["?.lua", "?/init.lua", "lib/?.lua", "lib/?/init.lua"]
   },
   "workspace": {
@@ -60,3 +60,5 @@ The `runtime.path` entries above let LuaLS resolve the same widget-local modules
 Keep reusable-module annotations beside the module implementation. For example, the bundled
 `lib/retry.lua` declares `RetryOptions` and `RetryOperation` locally, so LuaLS can validate retry
 callbacks when the module is required without polluting the global EasyBar API.
+
+
