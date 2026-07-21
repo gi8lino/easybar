@@ -33,6 +33,10 @@ Clients request only what they need.
   "fields": {
     "wifi.ssid": "Office Wi-Fi",
     "network.primary_interface_is_tunnel": false
+  },
+  "fieldStatuses": {
+    "wifi.ssid": "available",
+    "network.primary_interface_is_tunnel": "available"
   }
 }
 ```
@@ -50,7 +54,11 @@ The network agent returns a flat map of typed values:
 ```
 
 Keys are dot-separated.
-Values are typed, not stringified UI values.
+Values are typed, not stringified UI values. Every requested field in a successful
+`fields` response also receives one `fieldStatuses` entry: `available`,
+`permission_denied`, or `unavailable`. A permission error may include statuses for the
+protected fields that caused the request to fail. This lets a client distinguish an
+absent live value from a field intentionally withheld by the location-privacy policy.
 
 This is different from Lua events, where values are structured into objects.
 
@@ -100,8 +108,15 @@ Common network fields include:
 - `network.ipv6_address`
 - `network.default_gateway`
 - `network.dns_servers`
-- `network.internet_reachable`
-- `network.captive_portal`
+- `network.route_reachable`
+- `network.route_unavailable_with_local_address`
+- `network.internet_reachable` (compatibility alias for route reachability)
+- `network.captive_portal` (unavailable until a real portal probe supplies a result)
+
+`network.route_reachable` is a SystemConfiguration route fact. It does not claim that
+DNS, remote packets, or the public Internet are usable. An offline LAN is represented
+by `network.route_unavailable_with_local_address`; it is not labeled as a captive
+portal.
 
 The built-in Wi-Fi widget can render `network.ipv4_address` and `network.ipv6_address` in inline and details views. They are network fields, not CoreWLAN fields.
 
@@ -166,8 +181,12 @@ The agent still returns a flat field map. EasyBar converts that field map into t
 
 - Wi-Fi fields require location permission.
 - Permission denied returns an error unless unauthorized non-sensitive fields are allowed.
-- RSSI is smoothed before it is returned.
-- Primary IPv4 and IPv6 addresses are read from system network state.
+- Partial responses explicitly mark protected fields as `permission_denied`.
+- Supported fields with no current value are marked `unavailable`.
+- RSSI is smoothed only when a monitor event or polling tick updates the cached sample; reading a response does not mutate it.
+- Primary IPv4 and IPv6 addresses are read from system network state. Global IPv6 is preferred over unique-local and scoped link-local addresses.
+- Tunnel discovery reconciles dynamic-store services with the active system interface inventory.
+- CoreWLAN enums are converted through protocol-owned raw-value tables rather than human-readable runtime descriptions.
 - The agent does not map UI labels.
 - The agent does not format values for presentation.
 - EasyBar decides how fields are rendered.

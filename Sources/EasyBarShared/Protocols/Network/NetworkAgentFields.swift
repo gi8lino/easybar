@@ -31,6 +31,8 @@ public enum NetworkAgentField: String, Codable, CaseIterable, Sendable {
   case ipv6Address = "network.ipv6_address"
   case defaultGateway = "network.default_gateway"
   case dnsServers = "network.dns_servers"
+  case routeReachable = "network.route_reachable"
+  case routeUnavailableWithLocalAddress = "network.route_unavailable_with_local_address"
   case internetReachable = "network.internet_reachable"
   case captivePortal = "network.captive_portal"
   case locationAuthorized = "auth.location_authorized"
@@ -141,8 +143,19 @@ public let networkAgentFieldRegistry: [NetworkAgentFieldSpec] = [
   .init(field: .ipv6Address, help: "Primary IPv6 address"),
   .init(field: .defaultGateway, help: "Default gateway address"),
   .init(field: .dnsServers, help: "Configured DNS servers"),
-  .init(field: .internetReachable, help: "Internet reachability state"),
-  .init(field: .captivePortal, help: "Captive portal state"),
+  .init(field: .routeReachable, help: "Whether SystemConfiguration reports a usable route"),
+  .init(
+    field: .routeUnavailableWithLocalAddress,
+    help: "Whether a local address exists while no usable route is reported"
+  ),
+  .init(
+    field: .internetReachable,
+    help: "Compatibility alias for route_reachable; it does not probe Internet access"
+  ),
+  .init(
+    field: .captivePortal,
+    help: "Confirmed captive-portal state when a probe is available"
+  ),
   .init(field: .locationAuthorized, help: "Location authorization state"),
   .init(field: .locationPermissionState, help: "Location permission label"),
   .init(field: .generatedAt, help: "Snapshot generation time"),

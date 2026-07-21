@@ -1,181 +1,262 @@
 import EasyBarShared
 import Foundation
 
+/// Injectable monitor operations used by the main-actor snapshot provider.
+@MainActor
+struct NetworkSnapshotProviderDependencies {
+  let startAuthorization: @MainActor (@escaping () -> Void) -> Void
+  let stopAuthorization: @MainActor () -> Void
+  let authorizationSnapshot: @MainActor () -> NetworkAuthorizationSnapshot
+  let startWiFi: @MainActor (@escaping () -> Void) -> Void
+  let stopWiFi: @MainActor () -> Void
+  let refreshWiFi: @MainActor (Date) -> Void
+  let currentWiFi: @MainActor () -> NetworkWiFiSnapshot
+  let startSystem: @MainActor (@escaping () -> Void) -> Void
+  let stopSystem: @MainActor () -> Void
+  let currentSystem: @MainActor () -> NetworkSystemSnapshot
+}
+
 /// Provides authorization-aware network snapshots.
-public final class NetworkSnapshotProvider: @unchecked Sendable {
+@MainActor
+public final class NetworkSnapshotProvider {
   /// Immutable values used while resolving requested field values.
   private struct FieldResolutionContext {
     let now: Date
-    let permissionState: String
-    let locationAuthorized: Bool
+    let authorization: NetworkAuthorizationSnapshot
     let wifi: NetworkWiFiSnapshot
     let network: NetworkSystemSnapshot
   }
 
   private let componentName: String
-  private let authorizer: NetworkLocationAuthorizationController
-  private let wifiMonitor: NetworkWiFiMonitor
-  private let systemMonitor: NetworkSystemMonitor
   private let refreshIntervalSeconds: TimeInterval
   private let logger: ProcessLogger
+  private let dependencies: NetworkSnapshotProviderDependencies
 
   private var onChange: (() -> Void)?
-  private var refreshTimer: Timer?
+  private var refreshTask: Task<Void, Never>?
+  private var isRunning = false
 
   /// Builds the network snapshot provider with one refresh interval.
-  public init(
+  public convenience init(
     componentName: String,
     refreshIntervalSeconds: TimeInterval,
     logger: ProcessLogger,
     promptPresenter: NetworkAuthorizationPromptPresenter? = nil
   ) {
-    self.componentName = componentName
-    self.refreshIntervalSeconds = refreshIntervalSeconds
-    self.logger = logger
-    authorizer = NetworkLocationAuthorizationController(
+    let authorizer = NetworkLocationAuthorizationController(
       componentName: componentName,
       logger: logger.child("authorization"),
       promptPresenter: promptPresenter
     )
-    wifiMonitor = NetworkWiFiMonitor(
-      componentName: componentName, logger: logger.child("wifi_monitor"))
-    systemMonitor = NetworkSystemMonitor(
-      componentName: componentName, logger: logger.child("system_monitor"))
+    let wifiMonitor = NetworkWiFiMonitor(
+      componentName: componentName,
+      logger: logger.child("wifi_monitor")
+    )
+    let systemMonitor = NetworkSystemMonitor(
+      componentName: componentName,
+      logger: logger.child("system_monitor")
+    )
+
+    self.init(
+      componentName: componentName,
+      refreshIntervalSeconds: refreshIntervalSeconds,
+      logger: logger,
+      dependencies: NetworkSnapshotProviderDependencies(
+        startAuthorization: authorizer.start(onChange:),
+        stopAuthorization: authorizer.stop,
+        authorizationSnapshot: authorizer.snapshot,
+        startWiFi: wifiMonitor.start(onChange:),
+        stopWiFi: wifiMonitor.stop,
+        refreshWiFi: wifiMonitor.refreshState(now:),
+        currentWiFi: wifiMonitor.currentState,
+        startSystem: systemMonitor.start(onChange:),
+        stopSystem: systemMonitor.stop,
+        currentSystem: systemMonitor.currentState
+      )
+    )
   }
 
-  /// Starts permission, Wi-Fi, and network monitoring.
+  /// Builds a provider from injected monitor operations for regression testing.
+  init(
+    componentName: String,
+    refreshIntervalSeconds: TimeInterval,
+    logger: ProcessLogger,
+    dependencies: NetworkSnapshotProviderDependencies
+  ) {
+    self.componentName = componentName
+    self.refreshIntervalSeconds = refreshIntervalSeconds
+    self.logger = logger
+    self.dependencies = dependencies
+  }
+
+  /// Starts permission, Wi-Fi, and network monitoring once.
   public func start(onChange: @escaping () -> Void) {
-    stop()
     self.onChange = onChange
 
-    authorizer.start { [weak self] in
-      self?.onChange?()
+    guard !isRunning else {
+      onChange()
+      return
+    }
+    isRunning = true
+
+    let notify: () -> Void = { [weak self] in
+      Task { @MainActor [weak self] in
+        guard let self, self.isRunning else { return }
+        self.onChange?()
+      }
     }
 
-    wifiMonitor.start { [weak self] in
-      self?.onChange?()
+    dependencies.startAuthorization { [weak self] in
+      Task { @MainActor [weak self] in
+        guard let self, self.isRunning else { return }
+        self.dependencies.refreshWiFi(Date())
+        self.onChange?()
+      }
     }
-
-    systemMonitor.start { [weak self] in
-      self?.onChange?()
-    }
+    dependencies.startWiFi(notify)
+    dependencies.startSystem(notify)
 
     logger.info(
       "\(componentName) refresh",
-      .field("interval_seconds", refreshIntervalSeconds),
+      .field("interval_seconds", refreshIntervalSeconds)
     )
 
-    if refreshIntervalSeconds > 0 {
-      refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshIntervalSeconds, repeats: true) {
-        [weak self] _ in
-        self?.onChange?()
+    if refreshIntervalSeconds.isFinite, refreshIntervalSeconds > 0 {
+      refreshTask = Task { @MainActor [weak self] in
+        while let self, self.isRunning, !Task.isCancelled {
+          do {
+            try await Task.sleep(for: .seconds(self.refreshIntervalSeconds))
+          } catch {
+            return
+          }
+
+          guard self.isRunning, !Task.isCancelled else { return }
+          self.dependencies.refreshWiFi(Date())
+          self.onChange?()
+        }
       }
     }
 
     onChange()
   }
 
-  /// Stops timers and all active monitoring.
+  /// Stops delayed refreshes and all active monitoring.
   public func stop() {
-    refreshTimer?.invalidate()
-    refreshTimer = nil
+    guard isRunning else {
+      onChange = nil
+      return
+    }
+    isRunning = false
 
-    authorizer.stop()
-    wifiMonitor.stop()
-    systemMonitor.stop()
+    refreshTask?.cancel()
+    refreshTask = nil
+
+    dependencies.stopAuthorization()
+    dependencies.stopWiFi()
+    dependencies.stopSystem()
 
     onChange = nil
   }
 
-  /// Builds one network snapshot from current system state.
+  /// Builds one network snapshot from a consistent current-state context.
   public func snapshot() -> NetworkAgentSnapshot {
-    let now = Date()
-    let permissionState = authorizer.permissionState()
-    let wifi = wifiMonitor.currentState(now: now)
-    let network = systemMonitor.currentState()
+    let context = fieldResolutionContext()
 
     logger.debug(
       "\(componentName) snapshot",
-      .field("access_granted", authorizer.isAuthorized()),
-      .field("permission_state", permissionState),
-      .field("ssid", wifi.ssid ?? "<none>"),
-      .field("interface", wifi.interfaceName ?? "<none>"),
-      .field("ipv4_address", network.ipv4Address ?? "<none>"),
-      .field("ipv6_address", network.ipv6Address ?? "<none>"),
-      .field("rssi", wifi.rssi.map(String.init) ?? "<none>"),
-      .field("primary_is_tunnel", network.primaryInterfaceIsTunnel),
+      .field("access_granted", context.authorization.isAuthorized),
+      .field("permission_state", context.authorization.permissionState),
+      .field("ssid", context.wifi.ssid ?? "<none>"),
+      .field("interface", context.wifi.interfaceName ?? "<none>"),
+      .field("ipv4_address", context.network.ipv4Address ?? "<none>"),
+      .field("ipv6_address", context.network.ipv6Address ?? "<none>"),
+      .field("rssi", context.wifi.rssi.map(String.init) ?? "<none>"),
+      .field("primary_is_tunnel", context.network.primaryInterfaceIsTunnel),
     )
 
     return NetworkAgentSnapshot(
-      accessGranted: authorizer.isAuthorized(),
-      permissionState: permissionState,
-      generatedAt: now,
-      ssid: wifi.ssid,
-      ipv4Address: network.ipv4Address,
-      ipv6Address: network.ipv6Address,
-      bssid: wifi.bssid,
-      interfaceName: wifi.interfaceName,
-      hardwareAddress: wifi.hardwareAddress,
-      power: wifi.power,
-      serviceActive: wifi.serviceActive,
-      primaryInterfaceIsTunnel: network.primaryInterfaceIsTunnel,
-      rssi: wifi.rssi,
-      noise: wifi.noise,
-      snr: wifi.snr,
-      linkQuality: wifi.linkQuality,
-      txRate: wifi.txRate,
-      channel: wifi.channel,
-      channelBand: wifi.channelBand,
-      channelWidth: wifi.channelWidth,
-      security: wifi.security,
-      phyMode: wifi.phyMode,
-      interfaceMode: wifi.interfaceMode,
-      countryCode: wifi.countryCode,
-      roaming: wifi.roaming,
-      ssidChangedAt: wifi.ssidChangedAt,
-      interfaceChangedAt: wifi.interfaceChangedAt
+      accessGranted: context.authorization.isAuthorized,
+      permissionState: context.authorization.permissionState,
+      generatedAt: context.now,
+      ssid: context.wifi.ssid,
+      ipv4Address: context.network.ipv4Address,
+      ipv6Address: context.network.ipv6Address,
+      bssid: context.wifi.bssid,
+      interfaceName: context.wifi.interfaceName,
+      hardwareAddress: context.wifi.hardwareAddress,
+      power: context.wifi.power,
+      serviceActive: context.wifi.serviceActive,
+      primaryInterfaceIsTunnel: context.network.primaryInterfaceIsTunnel,
+      rssi: context.wifi.rssi,
+      noise: context.wifi.noise,
+      snr: context.wifi.snr,
+      linkQuality: context.wifi.linkQuality,
+      txRate: context.wifi.txRate,
+      channel: context.wifi.channel,
+      channelBand: context.wifi.channelBand,
+      channelWidth: context.wifi.channelWidth,
+      security: context.wifi.security,
+      phyMode: context.wifi.phyMode,
+      interfaceMode: context.wifi.interfaceMode,
+      countryCode: context.wifi.countryCode,
+      roaming: context.wifi.roaming,
+      ssidChangedAt: context.wifi.ssidChangedAt,
+      interfaceChangedAt: context.wifi.interfaceChangedAt
     )
   }
 
-  /// Returns the requested field values, applying the current privacy policy.
+  /// Returns requested values and explicit availability for every requested field.
   public func responseFields(
     for fields: [NetworkAgentField],
     allowUnauthorizedFieldsWithoutLocation: Bool
-  ) -> (values: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
-    guard authorizer.isAuthorized() else {
+  ) -> (
+    values: [String: NetworkAgentFieldValue]?,
+    statuses: [String: NetworkAgentFieldStatus]?,
+    errorCode: NetworkAgentErrorCode?
+  ) {
+    let context = fieldResolutionContext()
+    guard context.authorization.isAuthorized else {
       return unauthorizedFieldResponse(
         for: fields,
+        context: context,
         allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedFieldsWithoutLocation
       )
     }
 
-    return (resolvedFieldValues(for: fields), nil)
+    let response = resolvedFieldResponse(for: fields, context: context)
+    return (response.values, response.statuses, nil)
   }
 
-  /// Returns the requested field values for the current network state.
-  private func resolvedFieldValues(for fields: [NetworkAgentField]) -> [String:
-    NetworkAgentFieldValue]
-  {
-    let context = fieldResolutionContext()
+  /// Returns values and availability statuses for one immutable context.
+  private func resolvedFieldResponse(
+    for fields: [NetworkAgentField],
+    context: FieldResolutionContext
+  ) -> (
+    values: [String: NetworkAgentFieldValue],
+    statuses: [String: NetworkAgentFieldStatus]
+  ) {
     var values: [String: NetworkAgentFieldValue] = [:]
+    var statuses: [String: NetworkAgentFieldStatus] = [:]
 
     for field in fields {
-      guard let value = fieldValue(for: field, context: context) else { continue }
-      values[field.rawValue] = value
+      if let value = fieldValue(for: field, context: context) {
+        values[field.rawValue] = value
+        statuses[field.rawValue] = .available
+      } else {
+        statuses[field.rawValue] = .unavailable
+      }
     }
 
-    return values
+    return (values, statuses)
   }
 
-  /// Captures a consistent set of values for one field-response build.
+  /// Captures authorization, Wi-Fi, and network values exactly once per response.
   private func fieldResolutionContext() -> FieldResolutionContext {
-    let now = Date()
-    return FieldResolutionContext(
-      now: now,
-      permissionState: authorizer.permissionState(),
-      locationAuthorized: authorizer.isAuthorized(),
-      wifi: wifiMonitor.currentState(now: now),
-      network: systemMonitor.currentState()
+    FieldResolutionContext(
+      now: Date(),
+      authorization: dependencies.authorizationSnapshot(),
+      wifi: dependencies.currentWiFi(),
+      network: dependencies.currentSystem()
     )
   }
 
@@ -193,10 +274,10 @@ public final class NetworkSnapshotProvider: @unchecked Sendable {
       return wifiFieldValue(for: field, wifi: context.wifi)
     case .primaryInterfaceIsTunnel, .primaryInterface, .activeTunnelInterface,
       .activeTunnelInterfaces, .ipv4Address, .ipv6Address, .defaultGateway, .dnsServers,
-      .internetReachable, .captivePortal:
+      .routeReachable, .routeUnavailableWithLocalAddress, .internetReachable, .captivePortal:
       return networkFieldValue(for: field, network: context.network)
     case .locationAuthorized, .locationPermissionState:
-      return authorizationFieldValue(for: field, context: context)
+      return authorizationFieldValue(for: field, authorization: context.authorization)
     }
   }
 
@@ -275,10 +356,14 @@ public final class NetworkSnapshotProvider: @unchecked Sendable {
       return network.defaultGateway.map(NetworkAgentFieldValue.string)
     case .dnsServers:
       return .stringList(network.dnsServers)
+    case .routeReachable:
+      return .bool(network.routeReachable)
+    case .routeUnavailableWithLocalAddress:
+      return .bool(network.routeUnavailableWithLocalAddress)
     case .internetReachable:
       return .bool(network.internetReachable)
     case .captivePortal:
-      return .bool(network.captivePortal)
+      return network.captivePortal.map(NetworkAgentFieldValue.bool)
     default:
       return nil
     }
@@ -287,13 +372,13 @@ public final class NetworkSnapshotProvider: @unchecked Sendable {
   /// Resolves one authorization field value.
   private func authorizationFieldValue(
     for field: NetworkAgentField,
-    context: FieldResolutionContext
+    authorization: NetworkAuthorizationSnapshot
   ) -> NetworkAgentFieldValue? {
     switch field {
     case .locationAuthorized:
-      return .bool(context.locationAuthorized)
+      return .bool(authorization.isAuthorized)
     case .locationPermissionState:
-      return .string(context.permissionState)
+      return .string(authorization.permissionState)
     default:
       return nil
     }
@@ -302,24 +387,35 @@ public final class NetworkSnapshotProvider: @unchecked Sendable {
   /// Returns the unauthorized response for one requested field list.
   private func unauthorizedFieldResponse(
     for fields: [NetworkAgentField],
+    context: FieldResolutionContext,
     allowUnauthorizedFieldsWithoutLocation: Bool
-  ) -> (values: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
-    let hasLocationProtectedFields = fields.contains(where: fieldRequiresLocationAuthorization)
-
-    guard hasLocationProtectedFields else {
-      return (resolvedFieldValues(for: fields), nil)
+  ) -> (
+    values: [String: NetworkAgentFieldValue]?,
+    statuses: [String: NetworkAgentFieldStatus]?,
+    errorCode: NetworkAgentErrorCode?
+  ) {
+    let protectedFields = fields.filter(fieldRequiresLocationAuthorization)
+    guard !protectedFields.isEmpty else {
+      let response = resolvedFieldResponse(for: fields, context: context)
+      return (response.values, response.statuses, nil)
     }
 
     guard allowUnauthorizedFieldsWithoutLocation else {
-      return (nil, .permissionDenied)
+      let statuses = Dictionary(
+        uniqueKeysWithValues: protectedFields.map {
+          ($0.rawValue, NetworkAgentFieldStatus.permissionDenied)
+        }
+      )
+      return (nil, statuses, .permissionDenied)
     }
 
     let allowedFields = fields.filter { !fieldRequiresLocationAuthorization($0) }
-    guard !allowedFields.isEmpty else {
-      return (nil, .permissionDenied)
+    var response = resolvedFieldResponse(for: allowedFields, context: context)
+    for field in protectedFields {
+      response.statuses[field.rawValue] = .permissionDenied
     }
 
-    return (resolvedFieldValues(for: allowedFields), nil)
+    return (response.values, response.statuses, nil)
   }
 
   /// Returns whether the field should be hidden without location authorization.

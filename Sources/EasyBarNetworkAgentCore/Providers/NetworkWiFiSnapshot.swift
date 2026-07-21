@@ -1,9 +1,31 @@
 import Foundation
 
 /// Normalized CoreWLAN Wi-Fi state.
-struct NetworkWiFiSnapshot {
-  /// Formats field timestamps for wire values.
-  nonisolated(unsafe) static let fieldDateFormatter = ISO8601DateFormatter()
+struct NetworkWiFiSnapshot: Equatable, Sendable {
+  /// Empty fallback snapshot used before monitoring produces a sample.
+  static let empty = NetworkWiFiSnapshot(
+    ssid: nil,
+    bssid: nil,
+    interfaceName: nil,
+    hardwareAddress: nil,
+    power: nil,
+    serviceActive: nil,
+    rssi: nil,
+    noise: nil,
+    snr: nil,
+    linkQuality: nil,
+    txRate: nil,
+    channel: nil,
+    channelBand: nil,
+    channelWidth: nil,
+    security: nil,
+    phyMode: nil,
+    interfaceMode: nil,
+    countryCode: nil,
+    roaming: false,
+    ssidChangedAt: nil,
+    interfaceChangedAt: nil
+  )
 
   /// Current Wi-Fi network name.
   let ssid: String?

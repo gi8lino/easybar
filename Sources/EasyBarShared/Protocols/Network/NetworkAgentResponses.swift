@@ -9,6 +9,16 @@ public enum NetworkAgentMessageKind: String, Codable, Sendable {
   case error
 }
 
+/// Availability of one requested network-agent field.
+public enum NetworkAgentFieldStatus: String, Codable, Equatable, Sendable {
+  /// The field was resolved and is present in the values payload.
+  case available
+  /// The field was intentionally withheld because location authorization is unavailable.
+  case permissionDenied = "permission_denied"
+  /// The field is supported but no value is currently available.
+  case unavailable
+}
+
 /// One message sent over the network agent socket.
 public struct NetworkAgentMessage: Codable, Sendable {
   /// Message kind discriminator.
@@ -17,6 +27,8 @@ public struct NetworkAgentMessage: Codable, Sendable {
   public var version: NetworkAgentVersion?
   /// Optional field values payload.
   public var fields: [String: NetworkAgentFieldValue]?
+  /// Availability metadata for every requested field.
+  public var fieldStatuses: [String: NetworkAgentFieldStatus]?
   /// Optional stable wire-level error code.
   public var errorCode: NetworkAgentErrorCode?
 
@@ -25,11 +37,13 @@ public struct NetworkAgentMessage: Codable, Sendable {
     kind: NetworkAgentMessageKind,
     version: NetworkAgentVersion? = nil,
     fields: [String: NetworkAgentFieldValue]? = nil,
+    fieldStatuses: [String: NetworkAgentFieldStatus]? = nil,
     errorCode: NetworkAgentErrorCode? = nil
   ) {
     self.kind = kind
     self.version = version
     self.fields = fields
+    self.fieldStatuses = fieldStatuses
     self.errorCode = errorCode
   }
 }

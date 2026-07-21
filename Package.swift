@@ -200,6 +200,7 @@ let package = Package(
         "EasyBarCalendarCore",
         "EasyBarCalendarPresentation",
         "EasyBarCalendarUI",
+        "EasyBarNetworkAgentCore",
       ],
       path: "Tests/EasyBarTests",
       swiftSettings: strictConcurrencySettings

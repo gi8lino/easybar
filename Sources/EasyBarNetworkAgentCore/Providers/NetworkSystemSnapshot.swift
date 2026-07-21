@@ -1,7 +1,7 @@
 import Foundation
 
 /// Normalized SystemConfiguration network state.
-struct NetworkSystemSnapshot {
+struct NetworkSystemSnapshot: Equatable, Sendable {
   /// Empty fallback snapshot used when system state cannot be read.
   static let empty = NetworkSystemSnapshot(
     primaryInterface: nil,
@@ -12,8 +12,9 @@ struct NetworkSystemSnapshot {
     ipv6Address: nil,
     defaultGateway: nil,
     dnsServers: [],
-    internetReachable: false,
-    captivePortal: false
+    routeReachable: false,
+    routeUnavailableWithLocalAddress: false,
+    captivePortal: nil
   )
 
   /// Primary network interface name.
@@ -26,14 +27,21 @@ struct NetworkSystemSnapshot {
   let primaryInterfaceIsTunnel: Bool
   /// Primary IPv4 address.
   let ipv4Address: String?
-  /// Primary IPv6 address.
+  /// Preferred primary IPv6 address.
   let ipv6Address: String?
   /// Default gateway address.
   let defaultGateway: String?
   /// Configured DNS servers.
   let dnsServers: [String]
-  /// Whether internet reachability is available.
-  let internetReachable: Bool
-  /// Whether the network looks captive.
-  let captivePortal: Bool
+  /// Whether SystemConfiguration reports a usable route.
+  let routeReachable: Bool
+  /// Whether local addressing exists while a route is unavailable.
+  let routeUnavailableWithLocalAddress: Bool
+  /// Confirmed captive-portal state, or nil when no probe ran.
+  let captivePortal: Bool?
+
+  /// Backward-compatible route-level alias retained for existing clients.
+  var internetReachable: Bool {
+    routeReachable
+  }
 }

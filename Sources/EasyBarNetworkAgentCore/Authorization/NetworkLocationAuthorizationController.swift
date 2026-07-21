@@ -2,6 +2,31 @@ import CoreLocation
 import EasyBarShared
 import Foundation
 
+/// One atomically sampled location-authorization state.
+struct NetworkAuthorizationSnapshot: Equatable, Sendable {
+  let isAuthorized: Bool
+  let permissionState: String
+
+  init(status: CLAuthorizationStatus) {
+    switch status {
+    case .authorized, .authorizedAlways, .authorizedWhenInUse:
+      isAuthorized = true
+    default:
+      isAuthorized = false
+    }
+
+    switch status {
+    case .notDetermined: permissionState = "not_determined"
+    case .restricted: permissionState = "restricted"
+    case .denied: permissionState = "denied"
+    case .authorized: permissionState = "authorized"
+    case .authorizedAlways: permissionState = "authorized_always"
+    case .authorizedWhenInUse: permissionState = "authorized_when_in_use"
+    @unknown default: permissionState = "unknown"
+    }
+  }
+}
+
 /// Coordinates CoreLocation authorization for network data.
 final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerDelegate,
   @unchecked Sendable
@@ -60,27 +85,19 @@ final class NetworkLocationAuthorizationController: NSObject, CLLocationManagerD
     lifecycle.stop()
   }
 
+  /// Samples authorization once so permission fields cannot disagree.
+  func snapshot() -> NetworkAuthorizationSnapshot {
+    NetworkAuthorizationSnapshot(status: currentAuthorizationStatus())
+  }
+
   /// Returns whether location access is currently authorized.
   func isAuthorized() -> Bool {
-    switch currentAuthorizationStatus() {
-    case .authorized, .authorizedAlways, .authorizedWhenInUse:
-      return true
-    default:
-      return false
-    }
+    snapshot().isAuthorized
   }
 
   /// Returns the current permission label.
   func permissionState() -> String {
-    switch currentAuthorizationStatus() {
-    case .notDetermined: return "not_determined"
-    case .restricted: return "restricted"
-    case .denied: return "denied"
-    case .authorized: return "authorized"
-    case .authorizedAlways: return "authorized_always"
-    case .authorizedWhenInUse: return "authorized_when_in_use"
-    @unknown default: return "unknown"
-    }
+    snapshot().permissionState
   }
 
   /// Handles one location authorization change.

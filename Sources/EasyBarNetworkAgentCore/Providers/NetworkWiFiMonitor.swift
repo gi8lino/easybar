@@ -1,10 +1,12 @@
-import CoreWLAN
+@preconcurrency import CoreWLAN
 import EasyBarShared
 import Foundation
 
 /// Watches CoreWLAN Wi-Fi state.
+@MainActor
 final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private let smoothingFactor = 0.35
+
   private struct TrackingState {
     var smoothedRSSI: Double?
     var lastSSID: String?
@@ -15,17 +17,25 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
     var roaming = false
   }
 
-  private let trackingState = LockedState(TrackingState())
   private let componentName: String
   private let logger: ProcessLogger
-
+  private let makeClient: @MainActor () -> NetworkWiFiClientAdapter
+  private var trackingState = TrackingState()
+  private var cachedSnapshot = NetworkWiFiSnapshot.empty
   private var onChange: (() -> Void)?
-  private var wifiClient: CWWiFiClient?
+  private var wifiClient: NetworkWiFiClientAdapter?
 
   /// Creates one Wi-Fi monitor that logs through the provided logger.
-  init(componentName: String, logger: ProcessLogger) {
+  init(
+    componentName: String,
+    logger: ProcessLogger,
+    makeClient: @escaping @MainActor () -> NetworkWiFiClientAdapter = {
+      CoreWLANClientAdapter()
+    }
+  ) {
     self.componentName = componentName
     self.logger = logger
+    self.makeClient = makeClient
     super.init()
   }
 
@@ -37,7 +47,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       return
     }
 
-    let client = CWWiFiClient.shared()
+    let client = makeClient()
     client.delegate = self
     wifiClient = client
 
@@ -50,6 +60,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       try client.startMonitoringEvent(with: .modeDidChange)
       try client.startMonitoringEvent(with: .powerDidChange)
       try client.startMonitoringEvent(with: .scanCacheUpdated)
+      refreshState(now: Date())
       logger.info(
         "\(componentName) subscribed",
         .field("event", "wifi_change"),
@@ -60,7 +71,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       do {
         try client.stopMonitoringAllEvents()
         client.delegate = nil
-        wifiClient = nil
+        if wifiClient === client {
+          wifiClient = nil
+        }
       } catch {
         // Keep the client retained so a later stop can retry cleanup instead
         // of registering over a partially active callback set.
@@ -85,7 +98,9 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       do {
         try wifiClient.stopMonitoringAllEvents()
         wifiClient.delegate = nil
-        self.wifiClient = nil
+        if self.wifiClient === wifiClient {
+          self.wifiClient = nil
+        }
       } catch {
         // Retain the client after a failed stop so a later stop or restart can
         // retry cleanup without creating duplicate event registrations.
@@ -96,28 +111,29 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       }
     }
 
-    trackingState.withLock { state in
-      state = TrackingState()
-    }
+    trackingState = TrackingState()
+    cachedSnapshot = .empty
   }
 
-  /// Returns the current normalized Wi-Fi state.
-  func currentState(now: Date) -> NetworkWiFiSnapshot {
-    let interface = CWWiFiClient.shared().interface()
-    let ssid = normalized(interface?.ssid())
-    let bssid = normalized(interface?.bssid())
-    let interfaceName = normalized(interface?.interfaceName)
-    let hardwareAddress = normalized(interface?.hardwareAddress())
-    let power = interface?.powerOn()
-    let serviceActive = interface?.serviceActive()
-    let rssi = smoothedRSSIValue(from: validMeasurement(interface?.rssiValue()))
-    let noise = validMeasurement(interface?.noiseMeasurement())
+  /// Refreshes cached Wi-Fi state in response to one event or polling tick.
+  func refreshState(now: Date) {
+    guard let interface = wifiClient?.interface() else {
+      cachedSnapshot = .empty
+      trackingState.smoothedRSSI = nil
+      return
+    }
+
+    let ssid = normalized(interface.ssid())
+    let bssid = normalized(interface.bssid())
+    let interfaceName = normalized(interface.interfaceName)
+    let hardwareAddress = normalized(interface.hardwareAddress())
+    let power = interface.powerOn()
+    let serviceActive = interface.serviceActive()
+    let rssi = smoothedRSSIValue(from: validMeasurement(interface.rssiValue()))
+    let noise = validMeasurement(interface.noiseMeasurement())
     let snr = makeSNR(rssi: rssi, noise: noise)
     let linkQuality = makeLinkQuality(snr: snr)
-    let txRate = interface.map { Int($0.transmitRate()) }
-    let channelInfo = interface?.wlanChannel()
-    let phyMode = interface.map { phyModeString($0.activePHYMode()) }
-
+    let channelInfo = interface.wlanChannel()
     let changeTracking = updateChangeTracking(
       ssid: ssid,
       bssid: bssid,
@@ -125,7 +141,7 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       now: now
     )
 
-    return NetworkWiFiSnapshot(
+    cachedSnapshot = NetworkWiFiSnapshot(
       ssid: ssid,
       bssid: bssid,
       interfaceName: interfaceName,
@@ -136,163 +152,160 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
       noise: noise,
       snr: snr,
       linkQuality: linkQuality,
-      txRate: txRate,
-      channel: channelInfo.map { Int($0.channelNumber) },
-      channelBand: channelInfo.map { channelBandString($0.channelBand) },
-      channelWidth: channelInfo.map { channelWidthString($0.channelWidth) },
-      security: interface.map(securityString),
-      phyMode: phyMode,
-      interfaceMode: interface.map { interfaceModeString($0.interfaceMode()) },
-      countryCode: normalized(interface?.countryCode()),
+      txRate: NetworkWiFiNormalization.transmitRate(interface.transmitRate()),
+      channel: channelInfo.flatMap { Int(exactly: $0.channelNumber) },
+      channelBand: channelInfo.map {
+        NetworkWiFiNormalization.channelBand(rawValue: $0.channelBand.rawValue)
+      },
+      channelWidth: channelInfo.map {
+        NetworkWiFiNormalization.channelWidth(rawValue: $0.channelWidth.rawValue)
+      },
+      security: NetworkWiFiNormalization.security(rawValue: interface.security().rawValue),
+      phyMode: NetworkWiFiNormalization.phyMode(rawValue: interface.activePHYMode().rawValue),
+      interfaceMode: NetworkWiFiNormalization.interfaceMode(
+        rawValue: interface.interfaceMode().rawValue
+      ),
+      countryCode: normalized(interface.countryCode()),
       roaming: changeTracking.roaming,
       ssidChangedAt: changeTracking.ssidChangedAt,
       interfaceChangedAt: changeTracking.interfaceChangedAt
     )
   }
 
-  /// Handles one Wi-Fi SSID change callback.
-  func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi SSID changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
+  /// Returns the last monitor-produced state without changing smoothing or timestamps.
+  func currentState() -> NetworkWiFiSnapshot {
+    cachedSnapshot
   }
 
-  /// Handles one Wi-Fi BSSID change callback.
-  func bssidDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi BSSID changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
+  nonisolated func ssidDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "SSID", interfaceName: interfaceName)
   }
 
-  /// Handles one Wi-Fi country code change callback.
-  func countryCodeDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi country code changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
+  nonisolated func bssidDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "BSSID", interfaceName: interfaceName)
   }
 
-  /// Handles one Wi-Fi link change callback.
-  func linkDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi link changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
+  nonisolated func countryCodeDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "country code", interfaceName: interfaceName)
   }
 
-  /// Handles one Wi-Fi link quality change callback.
-  func linkQualityDidChangeForWiFiInterface(
-    withName interfaceName: String, rssi: Int, transmitRate: Double
+  nonisolated func linkDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "link", interfaceName: interfaceName)
+  }
+
+  nonisolated func linkQualityDidChangeForWiFiInterface(
+    withName interfaceName: String,
+    rssi: Int,
+    transmitRate: Double
   ) {
-    logger.info(
-      "\(componentName) Wi-Fi link quality changed",
-      .field("interface", interfaceName),
-      .field("rssi", rssi),
-      .field("tx_rate", transmitRate),
-    )
-    onChange?()
-  }
-
-  /// Handles one Wi-Fi mode change callback.
-  func modeDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi mode changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
-  }
-
-  /// Handles one Wi-Fi power change callback.
-  func powerStateDidChangeForWiFiInterface(withName interfaceName: String) {
-    logger.info(
-      "\(componentName) Wi-Fi power changed",
-      .field("interface", interfaceName),
-    )
-    onChange?()
-  }
-
-  /// Handles one Wi-Fi scan cache update callback.
-  func scanCacheUpdatedForWiFiInterface(withName interfaceName: String) {
-    logger.debug(
-      "\(componentName) Wi-Fi scan cache updated",
-      .field("interface", interfaceName),
-    )
-    onChange?()
-  }
-
-  /// Smooths RSSI so the UI does not jump on every sample.
-  private func smoothedRSSIValue(from rssi: Int?) -> Int? {
-    trackingState.withLock { state in
-      guard let rssi else {
-        state.smoothedRSSI = nil
-        logger.debug(
-          "\(componentName) RSSI unavailable",
-          .field("rssi", "<none>"),
-        )
-        return nil
-      }
-
-      guard let smoothedRSSI = state.smoothedRSSI else {
-        state.smoothedRSSI = Double(rssi)
-        return rssi
-      }
-
-      state.smoothedRSSI = (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
-      return Int((state.smoothedRSSI ?? Double(rssi)).rounded())
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.logger.info(
+        "\(self.componentName) Wi-Fi link quality changed",
+        .field("interface", interfaceName),
+        .field("rssi", rssi),
+        .field("tx_rate", transmitRate),
+      )
+      self.refreshAndNotify()
     }
   }
 
-  /// Updates cached SSID and interface change tracking.
+  nonisolated func modeDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "mode", interfaceName: interfaceName)
+  }
+
+  nonisolated func powerStateDidChangeForWiFiInterface(withName interfaceName: String) {
+    enqueueChange(label: "power", interfaceName: interfaceName)
+  }
+
+  nonisolated func scanCacheUpdatedForWiFiInterface(withName interfaceName: String) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.logger.debug(
+        "\(self.componentName) Wi-Fi scan cache updated",
+        .field("interface", interfaceName),
+      )
+      self.refreshAndNotify()
+    }
+  }
+
+  /// Hops one CoreWLAN callback onto the monitor's lifecycle actor.
+  private nonisolated func enqueueChange(label: String, interfaceName: String) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.logger.info(
+        "\(self.componentName) Wi-Fi \(label) changed",
+        .field("interface", interfaceName),
+      )
+      self.refreshAndNotify()
+    }
+  }
+
+  /// Refreshes the cached sample and notifies the current lifecycle callback.
+  private func refreshAndNotify() {
+    guard wifiClient != nil else { return }
+    refreshState(now: Date())
+    onChange?()
+  }
+
+  /// Smooths RSSI so the UI does not jump on every monitor sample.
+  private func smoothedRSSIValue(from rssi: Int?) -> Int? {
+    guard let rssi else {
+      trackingState.smoothedRSSI = nil
+      logger.debug(
+        "\(componentName) RSSI unavailable",
+        .field("rssi", "<none>"),
+      )
+      return nil
+    }
+
+    guard let smoothedRSSI = trackingState.smoothedRSSI else {
+      trackingState.smoothedRSSI = Double(rssi)
+      return rssi
+    }
+
+    trackingState.smoothedRSSI =
+      (smoothedRSSI * (1 - smoothingFactor)) + (Double(rssi) * smoothingFactor)
+    return Int((trackingState.smoothedRSSI ?? Double(rssi)).rounded())
+  }
+
+  /// Updates cached SSID and interface change tracking for a new sample.
   private func updateChangeTracking(
     ssid: String?,
     bssid: String?,
     interface: String?,
     now: Date
   ) -> (roaming: Bool, ssidChangedAt: String?, interfaceChangedAt: String?) {
-    trackingState.withLock { state in
-      if state.lastSSID != ssid {
-        state.ssidChangedAt = now
-      }
-
-      if state.lastInterface != interface {
-        state.interfaceChangedAt = now
-      }
-
-      if state.lastSSID == ssid,
-        ssid != nil,
-        state.lastBSSID != nil,
-        bssid != nil,
-        state.lastBSSID != bssid
-      {
-        state.roaming = true
-      } else {
-        state.roaming = false
-      }
-
-      state.lastSSID = ssid
-      state.lastBSSID = bssid
-      state.lastInterface = interface
-
-      return (
-        roaming: state.roaming,
-        ssidChangedAt: state.ssidChangedAt.map(
-          NetworkWiFiSnapshot.fieldDateFormatter.string(from:)),
-        interfaceChangedAt: state.interfaceChangedAt.map(
-          NetworkWiFiSnapshot.fieldDateFormatter.string(from:))
-      )
+    if trackingState.lastSSID != ssid {
+      trackingState.ssidChangedAt = now
     }
+
+    if trackingState.lastInterface != interface {
+      trackingState.interfaceChangedAt = now
+    }
+
+    trackingState.roaming =
+      trackingState.lastSSID == ssid
+      && ssid != nil
+      && trackingState.lastBSSID != nil
+      && bssid != nil
+      && trackingState.lastBSSID != bssid
+
+    trackingState.lastSSID = ssid
+    trackingState.lastBSSID = bssid
+    trackingState.lastInterface = interface
+
+    return (
+      roaming: trackingState.roaming,
+      ssidChangedAt: trackingState.ssidChangedAt.map(NetworkAgentSnapshot.dateString(from:)),
+      interfaceChangedAt: trackingState.interfaceChangedAt.map(
+        NetworkAgentSnapshot.dateString(from:))
+    )
   }
 
   /// Filters out unusable measurements from system APIs.
-  private func validMeasurement(_ value: Int?) -> Int? {
-    guard let value, value != 0 else { return nil }
-    return value
+  private func validMeasurement(_ value: Int) -> Int? {
+    value == 0 ? nil : value
   }
 
   /// Returns signal-to-noise ratio.
@@ -305,140 +318,6 @@ final class NetworkWiFiMonitor: NSObject, CWEventDelegate {
   private func makeLinkQuality(snr: Int?) -> Int? {
     guard let snr else { return nil }
     return min(max((snr - 10) * 4, 0), 100)
-  }
-
-  /// Returns a normalized Wi-Fi band string.
-  private func channelBandString(_ band: CWChannelBand) -> String {
-    let raw = String(describing: band).lowercased()
-
-    switch raw {
-    case "band2ghz":
-      return "2.4ghz"
-    case "band5ghz":
-      return "5ghz"
-    case "band6ghz":
-      return "6ghz"
-    case "bandunknown":
-      return "unknown"
-    default:
-      return "unknown"
-    }
-  }
-
-  /// Returns a normalized Wi-Fi channel width string.
-  private func channelWidthString(_ width: CWChannelWidth) -> String {
-    let raw = String(describing: width).lowercased()
-
-    switch raw {
-    case "widthunknown":
-      return "unknown"
-    case "width20mhz":
-      return "20mhz"
-    case "width40mhz":
-      return "40mhz"
-    case "width80mhz":
-      return "80mhz"
-    case "width160mhz":
-      return "160mhz"
-    default:
-      return raw.isEmpty ? "unknown" : raw
-    }
-  }
-
-  /// Returns a normalized security string from the interface.
-  private func securityString(_ interface: CWInterface) -> String {
-    let raw = String(describing: interface.security())
-      .replacingOccurrences(of: "CWSecurity", with: "")
-      .replacingOccurrences(of: ".", with: "")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-      .lowercased()
-
-    switch raw {
-    case "none":
-      return "open"
-    case "wep":
-      return "wep"
-    case "dynamicwep":
-      return "dynamic_wep"
-    case "wpapersonal":
-      return "wpa_personal"
-    case "wpapersonalmixed":
-      return "wpa_personal_mixed"
-    case "wpa2personal":
-      return "wpa2_personal"
-    case "personal":
-      return "personal"
-    case "wpaenterprise":
-      return "wpa_enterprise"
-    case "wpaenterprisemixed":
-      return "wpa_enterprise_mixed"
-    case "wpa2enterprise":
-      return "wpa2_enterprise"
-    case "enterprise":
-      return "enterprise"
-    case "wpa3personal":
-      return "wpa3_personal"
-    case "wpa3transition":
-      return "wpa3_transition"
-    case "wpa3enterprise":
-      return "wpa3_enterprise"
-    case "owe":
-      return "enhanced_open"
-    case "owetransition":
-      return "enhanced_open_transition"
-    case "unknown":
-      return "unknown"
-    default:
-      return raw.isEmpty ? "unknown" : raw
-    }
-  }
-
-  /// Returns a normalized PHY mode string.
-  private func phyModeString(_ mode: CWPHYMode) -> String {
-    let raw = String(describing: mode)
-      .replacingOccurrences(of: "CWPHYMode", with: "")
-      .replacingOccurrences(of: ".", with: "")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    switch raw.lowercased() {
-    case "modenone", "none":
-      return "none"
-    case "mode11a", "11a":
-      return "802.11a"
-    case "mode11b", "11b":
-      return "802.11b"
-    case "mode11g", "11g":
-      return "802.11g"
-    case "mode11n", "11n":
-      return "802.11n"
-    case "mode11ac", "11ac":
-      return "802.11ac"
-    case "mode11ax", "11ax":
-      return "802.11ax"
-    default:
-      return raw.isEmpty ? "unknown" : raw.lowercased()
-    }
-  }
-
-  /// Returns a normalized interface mode string.
-  private func interfaceModeString(_ mode: CWInterfaceMode) -> String {
-    let raw = String(describing: mode)
-      .replacingOccurrences(of: "CWInterfaceMode", with: "")
-      .replacingOccurrences(of: ".", with: "")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    switch raw.lowercased() {
-    case "modenone", "none":
-      return "none"
-    case "modestation", "station":
-      return "station"
-    case "modeibss", "ibss":
-      return "ibss"
-    case "modehostap", "hostap":
-      return "hostap"
-    default:
-      return raw.isEmpty ? "unknown" : raw.lowercased()
-    }
   }
 
   /// Trims one optional string and drops empty values.

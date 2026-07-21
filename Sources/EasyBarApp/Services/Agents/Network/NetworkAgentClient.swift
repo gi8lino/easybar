@@ -201,6 +201,17 @@ final class NetworkAgentClient: @unchecked Sendable {
       logger.debug("network agent client subscribed")
 
     case .fields:
+      let permissionDeniedFields =
+        message.fieldStatuses?.compactMap { key, status in
+          status == .permissionDenied ? key : nil
+        } ?? []
+      if !permissionDeniedFields.isEmpty {
+        logger.debug(
+          "network agent omitted permission-protected fields",
+          .field("fields", permissionDeniedFields.sorted())
+        )
+      }
+
       guard let fields = message.fields else {
         logger.warn("network agent returned fields message without payload")
         return

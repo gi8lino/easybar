@@ -1,10 +1,12 @@
 @preconcurrency import CoreFoundation
+import Darwin
 import EasyBarShared
 import Foundation
 import SystemConfiguration
 
 /// Watches SystemConfiguration network state.
-final class NetworkSystemMonitor: @unchecked Sendable {
+@MainActor
+final class NetworkSystemMonitor {
   /// Dynamic store keys that should trigger refreshes.
   nonisolated(unsafe) private static let watchedNetworkPatterns: [CFString] = [
     "State:/Network/Global/IPv4" as CFString,
@@ -12,18 +14,30 @@ final class NetworkSystemMonitor: @unchecked Sendable {
     "State:/Network/Global/DNS" as CFString,
     "State:/Network/Service/.*/IPv4" as CFString,
     "State:/Network/Service/.*/IPv6" as CFString,
+    "State:/Network/Interface/.*/Link" as CFString,
+    "State:/Network/Interface/.*/IPv4" as CFString,
+    "State:/Network/Interface/.*/IPv6" as CFString,
   ]
 
   private let componentName: String
   private let logger: ProcessLogger
+  private let interfaceNames: () -> [String]
+  private let routeReachable: () -> Bool
   private var onChange: (() -> Void)?
   private var store: SCDynamicStore?
   private var storeSource: CFRunLoopSource?
 
   /// Creates one network system monitor that logs through the provided logger.
-  init(componentName: String, logger: ProcessLogger) {
+  init(
+    componentName: String,
+    logger: ProcessLogger,
+    interfaceNames: @escaping () -> [String] = NetworkInterfaceDiscovery.activeInterfaceNames,
+    routeReachable: @escaping () -> Bool = NetworkSystemMonitor.currentRouteReachability
+  ) {
     self.componentName = componentName
     self.logger = logger
+    self.interfaceNames = interfaceNames
+    self.routeReachable = routeReachable
   }
 
   /// Starts listening for primary network interface changes.
@@ -109,6 +123,11 @@ final class NetworkSystemMonitor: @unchecked Sendable {
       guard seenInterfaces.insert(name).inserted else { return }
       allInterfaces.append(name)
     }
+
+    for name in interfaceNames() {
+      appendInterface(name)
+    }
+
     let globalIPv4 = raw["State:/Network/Global/IPv4"] as? [String: Any]
     let globalIPv6 = raw["State:/Network/Global/IPv6"] as? [String: Any]
     let globalDNS = raw["State:/Network/Global/DNS"] as? [String: Any]
@@ -138,8 +157,9 @@ final class NetworkSystemMonitor: @unchecked Sendable {
       appendInterface(interfaceName)
     }
 
-    let tunnelInterfaces = allInterfaces.filter(isTunnelInterface)
-    let primaryInterfaceIsTunnel = primaryInterface.map(isTunnelInterface) ?? false
+    let tunnelInterfaces = NetworkInterfaceDiscovery.tunnelInterfaces(from: allInterfaces)
+    let primaryInterfaceIsTunnel =
+      primaryInterface.map(NetworkInterfaceDiscovery.isTunnelInterface) ?? false
     let activeTunnelInterface = primaryInterfaceIsTunnel ? primaryInterface : tunnelInterfaces.first
     let primaryIPv4 = primaryServiceID.flatMap {
       raw["State:/Network/Service/\($0)/IPv4"] as? [String: Any]
@@ -149,13 +169,18 @@ final class NetworkSystemMonitor: @unchecked Sendable {
     }
 
     let ipv4Address = firstString(in: primaryIPv4?["Addresses"])
-    let ipv6Address = firstString(in: primaryIPv6?["Addresses"])
+    let ipv6Address = NetworkAddressSelection.preferredIPv6(
+      from: stringArray(in: primaryIPv6?["Addresses"]),
+      scopeInterface: primaryInterface
+    )
     let defaultGateway =
       normalized(globalIPv4?["Router"] as? String)
       ?? normalized(primaryIPv4?["Router"] as? String)
     let dnsServers = stringArray(in: globalDNS?["ServerAddresses"])
-    let internetReachable = isInternetReachable()
-    let captivePortal = !internetReachable && ipv4Address != nil && defaultGateway != nil
+    let assessment = NetworkRouteAssessment.make(
+      routeReachable: routeReachable(),
+      hasLocalAddress: ipv4Address != nil || ipv6Address != nil
+    )
 
     return NetworkSystemSnapshot(
       primaryInterface: primaryInterface,
@@ -166,8 +191,9 @@ final class NetworkSystemMonitor: @unchecked Sendable {
       ipv6Address: ipv6Address,
       defaultGateway: defaultGateway,
       dnsServers: dnsServers,
-      internetReachable: internetReachable,
-      captivePortal: captivePortal
+      routeReachable: assessment.routeReachable,
+      routeUnavailableWithLocalAddress: assessment.routeUnavailableWithLocalAddress,
+      captivePortal: assessment.captivePortal
     )
   }
 
@@ -177,20 +203,18 @@ final class NetworkSystemMonitor: @unchecked Sendable {
     onChange?()
   }
 
-  /// Returns whether one interface name represents a tunnel.
-  private func isTunnelInterface(_ name: String) -> Bool {
-    name.hasPrefix("utun")
-      || name.hasPrefix("ppp")
-      || name.hasPrefix("ipsec")
-      || name.hasPrefix("tap")
-      || name.hasPrefix("tun")
-  }
+  /// Returns whether SystemConfiguration reports a usable route.
+  private nonisolated static func currentRouteReachability() -> Bool {
+    var address = sockaddr_in()
+    address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    address.sin_family = sa_family_t(AF_INET)
 
-  /// Returns whether the network looks internet-reachable.
-  private func isInternetReachable() -> Bool {
-    guard let reachability = SCNetworkReachabilityCreateWithName(nil, "1.1.1.1") else {
-      return false
+    let reachability = withUnsafePointer(to: &address) { pointer in
+      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { socketAddress in
+        SCNetworkReachabilityCreateWithAddress(nil, socketAddress)
+      }
     }
+    guard let reachability else { return false }
 
     var flags = SCNetworkReachabilityFlags()
     guard SCNetworkReachabilityGetFlags(reachability, &flags) else {
@@ -202,8 +226,7 @@ final class NetworkSystemMonitor: @unchecked Sendable {
 
   /// Returns the first trimmed string from an array-like value.
   private func firstString(in value: Any?) -> String? {
-    guard let values = value as? [String] else { return nil }
-    return values.first.flatMap(normalized)
+    stringArray(in: value).first
   }
 
   /// Returns a cleaned string array from an array-like value.

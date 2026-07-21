@@ -209,22 +209,39 @@ final class NetworkSocketServer {
   private func responseFields(
     for fields: [NetworkAgentField],
     provider: NetworkSnapshotProvider
-  ) -> (fields: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?) {
+  ) -> (
+    fields: [String: NetworkAgentFieldValue]?,
+    statuses: [String: NetworkAgentFieldStatus]?,
+    errorCode: NetworkAgentErrorCode?
+  ) {
     let response = provider.responseFields(
       for: fields,
       allowUnauthorizedFieldsWithoutLocation: allowUnauthorizedNonSensitiveFields
     )
-    return (response.values, response.errorCode)
+    return (response.values, response.statuses, response.errorCode)
   }
 
   /// Builds one network-agent message from a field response result.
   private func makeResponseMessage(
-    from response: (fields: [String: NetworkAgentFieldValue]?, errorCode: NetworkAgentErrorCode?)
+    from response: (
+      fields: [String: NetworkAgentFieldValue]?,
+      statuses: [String: NetworkAgentFieldStatus]?,
+      errorCode: NetworkAgentErrorCode?
+    )
   ) -> NetworkAgentMessage {
     if let fields = response.fields {
-      return NetworkAgentMessage(kind: .fields, fields: fields)
+      return NetworkAgentMessage(
+        kind: .fields,
+        fields: fields,
+        fieldStatuses: response.statuses
+      )
     }
 
-    return NetworkAgentMessage(kind: .error, errorCode: response.errorCode ?? .unknown)
+    return NetworkAgentMessage(
+      kind: .error,
+      fieldStatuses: response.statuses,
+      errorCode: response.errorCode ?? .unknown
+    )
   }
+
 }
