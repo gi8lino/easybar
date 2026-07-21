@@ -104,17 +104,7 @@ jobs:
 
       - name: Check strict concurrency
         shell: bash
-        run: |
-          for target in \
-            EasyBarShared \
-            EasyBarCalendarCore \
-            EasyBarNetworkAgentCore \
-            EasyBarApp
-          do
-            swift build --target "${target}" \
-              -Xswiftc -strict-concurrency=complete \
-              -Xswiftc -warnings-as-errors
-          done
+        run: scripts/ci/check-strict-concurrency.sh
 
       - name: Upload Swift test logs
         if: failure()
@@ -127,3 +117,5 @@ jobs:
       - name: Verify generated artifacts are current
         if: ${{ inputs.check_generated }}
         run: make check-generated
+
+

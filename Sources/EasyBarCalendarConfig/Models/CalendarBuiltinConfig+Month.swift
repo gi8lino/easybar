@@ -1,9 +1,9 @@
 import Foundation
 
 extension CalendarBuiltinConfig {
-  public struct Month {
-    public struct Popup {
-      public struct Style {
+  public struct Month: Sendable {
+    public struct Popup: Sendable {
+      public struct Style: Sendable {
         public var backgroundColorHex: String
         public var borderColorHex: String
         public var borderWidth: Double
@@ -37,7 +37,7 @@ extension CalendarBuiltinConfig {
         }
       }
 
-      public struct CalendarStyle {
+      public struct CalendarStyle: Sendable {
         public var showWeekNumbers: Bool
         public var showEventIndicators: Bool
         public var headerTextColorHex: String
@@ -86,7 +86,7 @@ extension CalendarBuiltinConfig {
         }
       }
 
-      public struct SelectionStyle {
+      public struct SelectionStyle: Sendable {
         public var selectedTextColorHex: String
         public var selectedBackgroundColorHex: String
         public var selectionDateFormat: String
@@ -111,7 +111,7 @@ extension CalendarBuiltinConfig {
         }
       }
 
-      public struct AgendaStyle {
+      public struct AgendaStyle: Sendable {
         public var layout: MonthCalendarPopupLayout
         public var appointmentsScrollable: Bool
         public var appointmentsMinHeight: Double
@@ -136,7 +136,7 @@ extension CalendarBuiltinConfig {
         }
       }
 
-      public struct AnchorStyle {
+      public struct AnchorStyle: Sendable {
         public var dateFormat: String
         public var textColorHex: String?
         public var showDateText: Bool
@@ -148,7 +148,7 @@ extension CalendarBuiltinConfig {
         }
       }
 
-      public struct TodayButtonStyle {
+      public struct TodayButtonStyle: Sendable {
         public var title: String
         public var icon: String
         public var borderColorHex: String

@@ -1,8 +1,8 @@
 import EasyBarShared
 import Foundation
 
-public struct CalendarBuiltinConfig: @unchecked Sendable {
-  public struct Filters {
+public struct CalendarBuiltinConfig: Sendable {
+  public struct Filters: Sendable {
     public var includedCalendarNames: [String]
     public var excludedCalendarNames: [String]
     public var includedCalendarIDs: [String]
@@ -27,7 +27,7 @@ public struct CalendarBuiltinConfig: @unchecked Sendable {
     }
   }
 
-  public struct Appointments {
+  public struct Appointments: Sendable {
     public var itemIndent: Double
     public var eventTextColorHex: String
     public var emptyTextColorHex: String
@@ -94,7 +94,7 @@ public struct CalendarBuiltinConfig: @unchecked Sendable {
     }
   }
 
-  public struct Birthdays {
+  public struct Birthdays: Sendable {
     public var showBirthdays: Bool
     public var birthdaysShowAge: Bool
     public var birthdayIcon: String
@@ -113,7 +113,7 @@ public struct CalendarBuiltinConfig: @unchecked Sendable {
     }
   }
 
-  public struct Anchor {
+  public struct Anchor: Sendable {
     public var layout: CalendarAnchorLayout
     public var fields: [CalendarAnchorFieldKind]
     public var spacing: Double
@@ -121,7 +121,7 @@ public struct CalendarBuiltinConfig: @unchecked Sendable {
     public var time: Field
     public var date: Field
 
-    public struct Field {
+    public struct Field: Sendable {
       public var format: String
       public var textColorHex: String?
       public var fontFamily: String?

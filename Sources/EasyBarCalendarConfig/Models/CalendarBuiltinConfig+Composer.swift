@@ -1,8 +1,8 @@
 import Foundation
 
 extension CalendarBuiltinConfig {
-  public struct Composer {
-    public struct Style {
+  public struct Composer: Sendable {
+    public struct Style: Sendable {
       public var backgroundColorHex: String
       public var borderColorHex: String
       public var borderWidth: Double
@@ -30,7 +30,7 @@ extension CalendarBuiltinConfig {
       }
     }
 
-    public struct Content {
+    public struct Content: Sendable {
       public var createTitle: String
       public var editTitle: String
       public var titleLabel: String

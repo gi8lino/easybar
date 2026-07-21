@@ -1,8 +1,8 @@
 import Foundation
 
 extension CalendarBuiltinConfig {
-  public struct Upcoming {
-    public struct Events {
+  public struct Upcoming: Sendable {
+    public struct Events: Sendable {
       public var days: Int
       public var excludePastEvents: Bool
 
@@ -12,7 +12,7 @@ extension CalendarBuiltinConfig {
       }
     }
 
-    public struct Popup {
+    public struct Popup: Sendable {
       public var backgroundColorHex: String
       public var borderColorHex: String
       public var borderWidth: Double

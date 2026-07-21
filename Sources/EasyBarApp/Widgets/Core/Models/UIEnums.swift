@@ -6,7 +6,7 @@ typealias CalendarAnchorLayout = EasyBarCalendarConfig.CalendarAnchorLayout
 typealias WidgetPosition = EasyBarShared.WidgetPosition
 
 /// Fixed node kinds rendered by SwiftUI.
-enum WidgetNodeKind: String, Codable {
+enum WidgetNodeKind: String, Codable, Sendable {
   case item
   case row
   case column
@@ -22,7 +22,7 @@ enum WidgetNodeKind: String, Codable {
 }
 
 /// Internal role markers for special child nodes.
-enum WidgetNodeRole: String, Codable {
+enum WidgetNodeRole: String, Codable, Sendable {
   case popupAnchor = "popup-anchor"
   case popupContent = "popup-content"
 }

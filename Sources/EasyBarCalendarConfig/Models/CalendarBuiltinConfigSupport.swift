@@ -1,30 +1,30 @@
 import EasyBarShared
 import Foundation
 
-public enum CalendarPopupMode: String, CaseIterable {
+public enum CalendarPopupMode: String, CaseIterable, Sendable {
   case none
   case upcoming
   case month
 }
 
-public enum MonthCalendarPopupLayout: String, CaseIterable {
+public enum MonthCalendarPopupLayout: String, CaseIterable, Sendable {
   case calendarAppointmentsHorizontal = "calendar_appointments_horizontal"
   case appointmentsCalendarHorizontal = "appointments_calendar_horizontal"
   case calendarAppointmentsVertical = "calendar_appointments_vertical"
   case appointmentsCalendarVertical = "appointments_calendar_vertical"
 }
 
-public enum CalendarAnchorLayout: String, Codable, CaseIterable {
+public enum CalendarAnchorLayout: String, Codable, CaseIterable, Sendable {
   case row
   case column
 }
 
-public enum CalendarAnchorFieldKind: String, Codable, CaseIterable {
+public enum CalendarAnchorFieldKind: String, Codable, CaseIterable, Sendable {
   case time
   case date
 }
 
-public enum CalendarAnchorFontWeight: String, Codable, CaseIterable {
+public enum CalendarAnchorFontWeight: String, Codable, CaseIterable, Sendable {
   case ultraLight = "ultralight"
   case thin
   case light
@@ -36,7 +36,7 @@ public enum CalendarAnchorFontWeight: String, Codable, CaseIterable {
   case black
 }
 
-public struct CalendarWidgetPlacement {
+public struct CalendarWidgetPlacement: Sendable {
   public var enabled: Bool
   public var position: WidgetPosition
   public var order: Int
@@ -64,7 +64,7 @@ public struct CalendarWidgetPlacement {
   }
 }
 
-public struct CalendarWidgetStyle {
+public struct CalendarWidgetStyle: Sendable {
   public var icon: String
   public var textColorHex: String?
   public var backgroundColorHex: String?

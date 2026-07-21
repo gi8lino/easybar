@@ -2,7 +2,7 @@ import EasyBarConfigParsing
 import Foundation
 
 /// Fixed placement used by bar widgets and nodes.
-public enum WidgetPosition: String, Codable, CaseIterable, TOMLStringDecodable {
+public enum WidgetPosition: String, Codable, CaseIterable, TOMLStringDecodable, Sendable {
   case left
   case center
   case right
