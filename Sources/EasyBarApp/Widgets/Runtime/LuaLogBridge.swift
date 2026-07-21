@@ -29,9 +29,7 @@ final class LuaLogBridge {
     let source = String(parts[2])
     let message = String(parts[3])
 
-    let formatted = "lua[\(source)] \(message)"
-
-    logFormatted(level: level, message: formatted)
+    logFormatted(level: level, source: source, message: message)
   }
 
   /// Logs one raw stderr line that does not follow the structured format.
@@ -40,20 +38,25 @@ final class LuaLogBridge {
   }
 
   /// Logs one structured Lua message at the requested level.
-  private func logFormatted(level: String, message: String) {
+  private func logFormatted(level: String, source: String, message: String) {
+    let field: ProcessLogField =
+      source == "runtime"
+      ? .field("component", "runtime")
+      : .field("widget", source)
+
     switch level {
     case "TRACE":
-      logger.trace(message)
+      logger.trace(message, field)
     case "DEBUG":
-      logger.debug(message)
+      logger.debug(message, field)
     case "INFO":
-      logger.info(message)
+      logger.info(message, field)
     case "WARN":
-      logger.warn(message)
+      logger.warn(message, field)
     case "ERROR":
-      logger.error(message)
+      logger.error(message, field)
     default:
-      logger.info(message)
+      logger.info(message, field)
     }
   }
 }

@@ -43,6 +43,7 @@ local async_sequence = 0
 local timer_sequence = 0
 local warnings = {}
 local inbox_publish_count = 0
+local widget_logs = {}
 
 local log = {
 	trace = function() end,
@@ -54,7 +55,13 @@ local log = {
 	error = function(message)
 		warnings[#warnings + 1] = tostring(message)
 	end,
-	widget = function() end,
+	widget = function(source, level, message)
+		widget_logs[#widget_logs + 1] = {
+			source = source,
+			level = level,
+			message = message,
+		}
+	end,
 }
 
 local function new_api()
@@ -96,6 +103,17 @@ local function new_api()
 			max_output_bytes = 65536,
 		},
 	})
+end
+
+-- Widget host logs use a stable entrypoint name instead of the complete source path.
+do
+	local api = new_api()
+	local widget = api.make_widget_api("/widgets/github-inbox.lua")
+	widget.log(widget.level.debug, "refresh started")
+	local entry = widget_logs[#widget_logs]
+	assert(entry.source == "github-inbox")
+	assert(entry.level == "DEBUG")
+	assert(entry.message == "refresh started")
 end
 
 -- Duplicate ids identify both owners and do not overwrite the first node.
@@ -262,3 +280,5 @@ do
 end
 
 print("Lua runtime regression checks passed")
+
+

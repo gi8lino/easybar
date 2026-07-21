@@ -60,6 +60,24 @@ log.trim(4000)
 
 `append` is useful for raw command output. `tail` is useful for showing recent failure context in a popup. `trim` keeps long-running widget logs bounded.
 
+## Widget context
+
+EasyBar automatically attaches the widget file name to host log entries. A call from
+`github-inbox.lua` is therefore rendered with `widget=github-inbox`; widgets do not need to repeat
+their own name in every message.
+
+Prefer compact `key=value` context for operations that span multiple callbacks:
+
+```lua
+local log = easybar.log
+log(easybar.level.debug, "inbox refresh started reason=manual")
+log(easybar.level.trace, "inbox retry scheduled attempt=1 delay_seconds=2")
+log(easybar.level.info, "inbox mutation completed operation=mark_read")
+```
+
+Avoid logging raw API payloads, credentials, private titles, or complete command output. Put long
+command output in a bounded file-backed log only when the widget explicitly needs it.
+
 ## Host filtering
 
 The Swift host decides which logs are emitted based on the configured host log level.
@@ -74,8 +92,10 @@ For example:
 
 Use:
 
-- `trace` for very verbose raw payloads
-- `debug` for state transitions and values
-- `info` for important widget lifecycle events
-- `warn` for recoverable command or parsing failures
-- `error` for failures that prevent the widget from working
+- `trace` for retry decisions, protocol diagnostics, and detailed scheduling state
+- `debug` for refresh starts, action routing, snapshot counts, and successful read-only completion
+- `info` for explicit user-triggered mutations, cancellation, and mutation completion
+- `warn` for exhausted retries, invalid responses, and recoverable failures
+- `error` for failed mutations or failures that prevent the widget from working
+
+

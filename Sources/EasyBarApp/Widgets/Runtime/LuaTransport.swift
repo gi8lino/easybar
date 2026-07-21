@@ -56,7 +56,7 @@ final class LuaTransport: @unchecked Sendable {
   init(logger: ProcessLogger, metricsCoordinator: MetricsCoordinator = .shared) {
     self.logger = logger
     self.metricsCoordinator = metricsCoordinator
-    self.logBridge = LuaLogBridge(logger: logger.child("stderr"))
+    self.logBridge = LuaLogBridge(logger: logger.child("runtime"))
   }
 
   /// Starts listening on the configured Lua socket and installs stderr handling.
@@ -164,7 +164,11 @@ final class LuaTransport: @unchecked Sendable {
       Task {
         await self.metricsCoordinator.recordLuaWrite()
       }
-      self.logger.trace("sent to lua socket", .field("bytes", data.count - 1))
+      self.logger.trace(
+        "lua protocol message sent",
+        .field("direction", "host_to_runtime"),
+        .field("bytes", data.count - 1)
+      )
     }
 
     guard accepted else {
@@ -346,7 +350,11 @@ final class LuaTransport: @unchecked Sendable {
         Task {
           await self?.metricsCoordinator.recordLuaTransportLine()
         }
-        self?.logger.debug("lua socket line received", .field("bytes", line.utf8.count))
+        self?.logger.trace(
+          "lua protocol message received",
+          .field("direction", "runtime_to_host"),
+          .field("bytes", line.utf8.count)
+        )
         lineHandler(line)
       }
 

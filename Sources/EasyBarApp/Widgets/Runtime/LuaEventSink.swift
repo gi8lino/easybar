@@ -225,7 +225,6 @@ final class LuaEventSink: @unchecked Sendable {
       return
     }
 
-    logger.trace("sent event to lua socket", .field("bytes", encoded.utf8.count))
     await runtime.send(encoded)
   }
 

@@ -10,6 +10,7 @@ local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 local notifications = {}
 local refreshing = false
 local pending_wake_refresh = nil
+local log = easybar.log
 
 easybar.inbox.configure(SOURCE, {
 	actions = { { id = "refresh", title = "Refresh" } },
@@ -47,8 +48,9 @@ end
 local function publish_notifications(output)
 	local ok, pages = pcall(easybar.json.decode, output)
 	if not ok or type(pages) ~= "table" then
+		log(easybar.level.warn, "inbox response invalid operation=refresh format=json")
 		publish_error("GitHub returned invalid JSON")
-		return
+		return nil
 	end
 
 	notifications = {}
@@ -77,10 +79,14 @@ local function publish_notifications(output)
 	end
 
 	easybar.inbox.replace(SOURCE, items)
+	log(easybar.level.debug, "inbox snapshot published operation=refresh items=" .. tostring(#items))
+	return #items
 end
 
-local function refresh()
+local function refresh(reason)
+	reason = tostring(reason or "unspecified")
 	if refreshing then
+		log(easybar.level.trace, "inbox refresh skipped reason=" .. reason .. " state=already_refreshing")
 		return
 	end
 
@@ -90,10 +96,17 @@ local function refresh()
 	end
 
 	refreshing = true
+	log(easybar.level.debug, "inbox refresh started reason=" .. reason)
 
+	local current_attempt = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
-		attempt = function(done)
+		attempt = function(done, attempt_number)
+			current_attempt = attempt_number
+			log(
+				easybar.level.trace,
+				"inbox command started operation=refresh attempt=" .. tostring(attempt_number) .. " executable=gh"
+			)
 			return easybar.spawn_async({
 				"gh",
 				"api",
@@ -104,15 +117,49 @@ local function refresh()
 				"notifications?all=false&per_page=100",
 			}, { timeout_seconds = 20, max_output_bytes = 1048576 }, done)
 		end,
-		should_retry = retry.is_transient_network_error,
-		on_complete = function(output, code)
+		should_retry = function(output, code)
+			local retryable = retry.is_transient_network_error(output, code)
+			if retryable then
+				log(
+					easybar.level.trace,
+					"inbox retry scheduled operation=refresh attempt="
+						.. tostring(current_attempt)
+						.. " next_attempt="
+						.. tostring(current_attempt + 1)
+						.. " delay_seconds="
+						.. tostring(REFRESH_BACKOFF_SECONDS[current_attempt])
+				)
+			end
+			return retryable
+		end,
+		on_complete = function(output, code, attempts)
 			refreshing = false
 			if code ~= 0 then
+				log(
+					easybar.level.warn,
+					"inbox refresh failed reason="
+						.. reason
+						.. " attempts="
+						.. tostring(attempts)
+						.. " status="
+						.. tostring(code)
+				)
 				publish_error(text.trim(output) ~= "" and text.trim(output) or "Run 'gh auth login' and check app.env PATH")
 				return
 			end
 
-			publish_notifications(output)
+			local item_count = publish_notifications(output)
+			if item_count ~= nil then
+				log(
+					easybar.level.debug,
+					"inbox refresh completed reason="
+						.. reason
+						.. " attempts="
+						.. tostring(attempts)
+						.. " items="
+						.. tostring(item_count)
+				)
+			end
 		end,
 	})
 end
@@ -122,36 +169,57 @@ local function schedule_wake_refresh()
 		pending_wake_refresh:cancel()
 	end
 
+	log(
+		easybar.level.trace,
+		"inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS)
+	)
 	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
 		pending_wake_refresh = nil
-		refresh()
+		refresh("wake")
+	end)
+end
+
+local function open_notification(notification)
+	local item_id = tostring(notification.id)
+	log(easybar.level.debug, "inbox item open started item_id=" .. item_id)
+	easybar.spawn_async({ "open", notification_url(notification) }, nil, function(_, code)
+		if code ~= 0 then
+			log(easybar.level.warn, "inbox item open failed item_id=" .. item_id .. " status=" .. tostring(code))
+		end
 	end)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
-	if event.action_id == "refresh" then
-		refresh()
-	elseif event.action_id == "mark_read" then
-		local thread_id = tostring(event.target_widget_id or "")
-		if thread_id ~= "" then
-			easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. thread_id }, {
+	local action_id = tostring(event.action_id or "unknown")
+	local item_id = tostring(event.target_widget_id or "")
+	log(easybar.level.debug, "inbox action received action=" .. action_id .. " item_id=" .. item_id)
+
+	if action_id == "refresh" then
+		refresh("manual")
+	elseif action_id == "mark_read" then
+		if item_id ~= "" then
+			log(easybar.level.info, "inbox mutation started operation=mark_read item_id=" .. item_id)
+			easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. item_id }, {
 				timeout_seconds = 20,
 			}, function(output, code)
 				if code == 0 then
-					refresh()
+					log(easybar.level.info, "inbox mutation completed operation=mark_read item_id=" .. item_id)
+					refresh("post_mutation")
 				else
-					easybar.log(
+					log(
 						easybar.level.error,
-						"failed to mark GitHub notification as read: "
-							.. (text.trim(output) ~= "" and text.trim(output) or "exit " .. tostring(code))
+						"inbox mutation failed operation=mark_read item_id="
+							.. item_id
+							.. " status="
+							.. tostring(code)
 					)
 				end
 			end)
 		end
-	elseif event.action_id == "open" then
+	elseif action_id == "open" then
 		for _, notification in ipairs(notifications) do
-			if tostring(notification.id) == event.target_widget_id then
-				easybar.spawn_async({ "open", notification_url(notification) }, nil, function() end)
+			if tostring(notification.id) == item_id then
+				open_notification(notification)
 				break
 			end
 		end
@@ -159,18 +227,24 @@ easybar.inbox.on_action(SOURCE, function(event)
 end)
 
 easybar.inbox.on_context_action(SOURCE, function(event)
-	if event.action_id == "refresh" then
-		refresh()
+	local action_id = tostring(event.action_id or "unknown")
+	log(easybar.level.debug, "inbox context action received action=" .. action_id)
+	if action_id == "refresh" then
+		refresh("manual")
 	end
 end)
 
 local timer = easybar.add(easybar.kind.item, "github_inbox_timer", {
 	drawing = false,
 	interval = POLL_INTERVAL_SECONDS,
-	on_interval = refresh,
+	on_interval = function()
+		refresh("interval")
+	end,
 })
 
-timer:subscribe(easybar.events.forced, refresh)
+timer:subscribe(easybar.events.forced, function()
+	refresh("forced")
+end)
 timer:subscribe(easybar.events.system_woke, schedule_wake_refresh)
 
-refresh()
+refresh("startup")

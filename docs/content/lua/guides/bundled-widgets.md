@@ -68,6 +68,22 @@ The GitHub, GitLab, and Homebrew inbox examples keep `system_woke` immediate for
 
 ## Diagnostics
 
-Lua loader and command failures appear in EasyBar's logs. The Homebrew examples also maintain a bounded `brew-widget.log` in the configured logging directory. Use [Lua Logging](logging.md), [Commands](commands.md), and [Troubleshooting](../../runtime/troubleshooting.md) when an example does not update.
+The GitHub, GitLab, and Homebrew inbox widgets emit semantic operation logs:
+
+- `debug` for refresh reasons, action routing, and published item counts
+- `trace` for command attempts, retry scheduling, and wake-delay handling
+- `info` for user-triggered mutations and cancellation
+- `warn` or `error` for invalid responses, exhausted retries, and failed mutations
+
+The widget file name is attached automatically as a structured `widget` field. Transport byte counts
+remain trace-only and are emitted once per direction, so normal debug logs focus on what the widget
+was doing rather than every internal socket boundary.
+
+Lua loader and command failures also appear in EasyBar's logs. The Homebrew examples maintain a
+bounded `brew-widget.log` in the configured logging directory. Use [Lua Logging](logging.md),
+[Commands](commands.md), and [Troubleshooting](../../runtime/troubleshooting.md) when an example does
+not update.
+
+
 
 

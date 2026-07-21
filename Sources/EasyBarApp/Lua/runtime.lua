@@ -125,6 +125,11 @@ local function next_timer_token()
 	return runtime_command_session .. ":timer:" .. tostring(next_timer_sequence)
 end
 
+local function log_request_id(token)
+	local sequence = tostring(token or ""):match("([^:]+)$")
+	return sequence ~= nil and "lua-" .. sequence or "lua-unknown"
+end
+
 --- Sends one command request to the Swift host.
 local function send_command_request(request, synchronous, options)
 	local token = next_command_token()
@@ -225,7 +230,6 @@ local function process_next_host_message()
 		return false
 	end
 
-	log.trace("runtime stdin bytes=" .. tostring(#line))
 
 	local ok, payload = pcall(json.decode, line)
 
@@ -330,10 +334,17 @@ registry = api.new(log, {
 		})
 	end,
 	on_async_job_started = function(token, command)
-		log.debug("lua async started token=" .. tostring(token) .. " command_bytes=" .. tostring(#command))
+		log.trace(
+			"async callback registered request_id="
+				.. log_request_id(token)
+				.. " command_bytes="
+				.. tostring(#command)
+		)
 	end,
 	on_async_job_completed = function(token, code)
-		log.debug("lua async completed token=" .. tostring(token) .. " code=" .. tostring(code))
+		log.trace(
+			"async callback resumed request_id=" .. log_request_id(token) .. " status=" .. tostring(code)
+		)
 	end,
 	on_async_callback_error = function(command, err)
 		log.error("lua async callback failed command_bytes=" .. tostring(#command) .. " error_type=" .. type(err))
@@ -371,3 +382,5 @@ flush_pending_outputs(true, false)
 
 while process_next_host_message() do
 end
+
+

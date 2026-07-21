@@ -62,9 +62,10 @@ actor LuaCommandService {
       maxOutputBytes: maxOutputBytesOverride ?? commandSettings.maxOutputBytes
     )
 
+    let requestID = logRequestID(for: token)
     logger.debug(
-      "lua command requested",
-      .field("token", token),
+      "lua command started",
+      .field("request_id", requestID),
       .field("sync", isSynchronous),
       .field("command_bytes", invocation.payloadByteCount),
       .field("timeout_seconds", commandLimits.timeoutSeconds),
@@ -77,11 +78,17 @@ actor LuaCommandService {
         limits: commandLimits,
         environment: commandSettings.environment
       )
+      logger.debug(
+        "lua command completed",
+        .field("request_id", requestID),
+        .field("sync", true),
+        .field("status", result.status)
+      )
 
       guard await isRuntimeSessionActive(runtimeSessionID) else {
         logger.debug(
           "dropping stale sync lua command response",
-          .field("token", token),
+          .field("request_id", requestID),
           .field("runtime_session_id", runtimeSessionID)
         )
         return
@@ -100,7 +107,7 @@ actor LuaCommandService {
     guard activeAsyncCommands.count < maxAsyncJobs else {
       logger.warn(
         "lua async command rejected because limit was reached",
-        .field("token", token),
+        .field("request_id", requestID),
         .field("active_async_jobs", activeAsyncCommands.count),
         .field("max_async_jobs", maxAsyncJobs),
         .field("command_bytes", invocation.payloadByteCount)
@@ -123,6 +130,7 @@ actor LuaCommandService {
         limits: commandLimits,
         environment: commandSettings.environment
       )
+      await self?.logAsyncCommandCompletion(requestID: requestID, result: result)
       await self?.sendAsyncCommandResponse(
         token: token,
         result: result,
@@ -142,11 +150,17 @@ actor LuaCommandService {
     guard activeAsyncCommandSessionID == runtimeSessionID else { return }
     guard let command = activeAsyncCommands[token], command.runtimeSessionID == runtimeSessionID
     else {
-      logger.debug("lua async cancellation ignored for unknown token", .field("token", token))
+      logger.debug(
+        "lua async cancellation ignored for unknown request",
+        .field("request_id", logRequestID(for: token))
+      )
       return
     }
 
-    logger.debug("cancelling lua async command", .field("token", token))
+    logger.debug(
+      "cancelling lua async command",
+      .field("request_id", logRequestID(for: token))
+    )
     command.task.cancel()
   }
 
@@ -158,11 +172,27 @@ actor LuaCommandService {
       let data = try? encoder.encode(response),
       let encoded = String(data: data, encoding: .utf8)
     else {
-      logger.error("failed to encode lua command response", .field("token", token))
+      logger.error(
+        "failed to encode lua command response",
+        .field("request_id", logRequestID(for: token))
+      )
       return
     }
 
     await luaRuntime.send(encoded)
+  }
+
+  /// Logs one completed asynchronous command before session filtering decides delivery.
+  private func logAsyncCommandCompletion(
+    requestID: String,
+    result: LuaCommandResult
+  ) {
+    logger.debug(
+      "lua command completed",
+      .field("request_id", requestID),
+      .field("sync", false),
+      .field("status", result.status)
+    )
   }
 
   /// Sends one async command response only when the originating runtime session is still active.
@@ -178,7 +208,7 @@ actor LuaCommandService {
     else {
       logger.debug(
         "dropping async lua command response from stale session accounting",
-        .field("token", token),
+        .field("request_id", logRequestID(for: token)),
         .field("runtime_session_id", runtimeSessionID)
       )
       return
@@ -188,13 +218,21 @@ actor LuaCommandService {
     guard await isRuntimeSessionActive(runtimeSessionID) else {
       logger.debug(
         "dropping stale async lua command response",
-        .field("token", token),
+        .field("request_id", logRequestID(for: token)),
         .field("runtime_session_id", runtimeSessionID)
       )
       return
     }
 
     await sendCommandResponse(token: token, result: result)
+  }
+
+  /// Returns one compact request identifier for human-readable logs.
+  private func logRequestID(for token: String) -> String {
+    guard let sequence = token.split(separator: ":").last, !sequence.isEmpty else {
+      return "lua-unknown"
+    }
+    return "lua-\(sequence)"
   }
 
   /// Cancels and forgets all async command tasks owned by the current session.

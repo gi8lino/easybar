@@ -268,8 +268,6 @@ actor WidgetEngine {
       return
     }
 
-    logger.trace("lua transport line received", .field("bytes", line.utf8.count))
-
     do {
       let message = try protocolDecoder.decodeMessage(from: line)
       await handleRuntimeMessage(message)

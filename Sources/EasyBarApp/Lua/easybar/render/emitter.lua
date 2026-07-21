@@ -24,9 +24,6 @@ local function emit_tree(tree, log, json)
 	local encoded = json.encode(payload)
 
 	if last_emitted[root_id] == encoded then
-		if log then
-			log.trace("render skipped unchanged tree root=" .. root_id)
-		end
 		return
 	end
 
@@ -70,3 +67,5 @@ function M.emit_all(trees, live_roots, log, json)
 end
 
 return M
+
+

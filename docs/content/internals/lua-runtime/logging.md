@@ -58,8 +58,17 @@ local tail = log.tail(80)
 ```
 
 `LuaLogBridge.swift` is the translation boundary that maps Lua log levels into the Swift host logger.
+Runtime messages receive `component=runtime`; widget messages receive a stable `widget=<file-name>`
+field derived from the widget entrypoint rather than the complete filesystem path.
+
+The host keeps one trace line per protocol direction. Higher layers log semantic events such as event
+dispatch, command start and completion, refresh lifecycle, retries, and inbox publication instead of
+repeating every socket boundary.
 
 That means:
 
 - Lua widgets should log using the public Lua API values.
+- Widget messages should describe operations and outcomes, not transport byte movement.
 - Swift remains the canonical implementation of filtering and output behavior.
+
+

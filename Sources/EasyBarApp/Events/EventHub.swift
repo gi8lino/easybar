@@ -405,10 +405,9 @@ actor EventHub {
     guard !payload.eventName.isEmpty else { return }
 
     logger.trace(
-      "emit event",
+      "event emitted",
       .field("name", payload.eventName),
-      .field("source", payload.source ?? "<unknown>"),
-      .field("payload_keys", payload.luaPayloadKeys)
+      .field("source", payload.source ?? payload.widgetID ?? "system")
     )
   }
 }

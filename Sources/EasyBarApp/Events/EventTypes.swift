@@ -191,27 +191,6 @@ struct EasyBarEventPayload: Sendable {
     )
   }
 
-  /// Encoded payload keys used in trace logs.
-  var luaPayloadKeys: [String] {
-    var keys = ["name"]
-
-    if widgetID != nil { keys.append("widget_id") }
-    if targetWidgetID != nil { keys.append("target_widget_id") }
-    if source != nil { keys.append("source") }
-    if button != nil { keys.append("button") }
-    if direction != nil { keys.append("direction") }
-    if value != nil { keys.append("value") }
-    if deltaX != nil { keys.append("delta_x") }
-    if deltaY != nil { keys.append("delta_y") }
-    if actionID != nil { keys.append("action_id") }
-    if hasNetworkPayload { keys.append("network") }
-    if charging != nil { keys.append("power") }
-    if hasAudioPayload { keys.append("audio") }
-    if appName != nil { keys.append("app_name") }
-
-    return keys.sorted()
-  }
-
   // MARK: - Internal
 
   /// Creates one event payload from optional app or widget context.

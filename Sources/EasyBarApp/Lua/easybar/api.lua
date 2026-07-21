@@ -283,6 +283,12 @@ local function valid_interval(value)
 	return validation.interval_seconds(value) ~= nil
 end
 
+local function widget_log_source(source)
+	local path = tostring(source or "widget")
+	local file = path:match("([^/]+)$") or path
+	return file:gsub("%.lua$", "")
+end
+
 --- Builds one widget-scoped EasyBar API instance.
 function M.new(log, hooks)
 	local registry = registry_module.new(hooks)
@@ -733,7 +739,7 @@ function M.new(log, hooks)
 			)
 		end
 
-		widget_api.log = make_log_api(source)
+		widget_api.log = make_log_api(widget_log_source(source))
 
 		return widget_api
 	end
@@ -742,3 +748,5 @@ function M.new(log, hooks)
 end
 
 return M
+
+
