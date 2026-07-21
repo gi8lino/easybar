@@ -81,6 +81,7 @@ final class PopupHoverNSView: NSView {
   private func removeTrackingAreaIfNeeded() {
     guard let trackingArea else { return }
     removeTrackingArea(trackingArea)
+    self.trackingArea = nil
   }
 
   /// Returns the hover tracking options used by the popup region.

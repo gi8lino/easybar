@@ -395,6 +395,7 @@ final class MouseTrackingNSView: NSView {
   private func removeTrackingAreaIfNeeded() {
     guard let trackingArea else { return }
     removeTrackingArea(trackingArea)
+    self.trackingArea = nil
   }
 
   /// Returns the tracking options used for widget mouse handling.
