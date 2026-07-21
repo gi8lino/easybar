@@ -10,6 +10,10 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     var socketPath: String
     var request: CalendarAgentRequest
     var permanentlyRejectedRequest: CalendarAgentRequest?
+    var nextRequestSequence: UInt64 = 0
+    var pendingRequests: [String: CalendarAgentRequest] = [:]
+    var pendingRequestIDs: [String] = []
+    var observedRequestCorrelation = false
   }
 
   private struct ConnectionInputUpdate {
@@ -51,7 +55,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
       label: label,
       socketPath: { [weak self] in self?.currentSocketPath() ?? "" },
       subscribeRequest: { [weak self] in
-        self?.currentRequest() ?? CalendarAgentRequest(command: .ping)
+        self?.nextCorrelatedRequest() ?? CalendarAgentRequest(command: .ping)
       },
       handleMessage: { [weak self] message, connectionID in
         self?.handle(message, connectionID: connectionID)
@@ -204,6 +208,14 @@ final class CalendarAgentStreamController: @unchecked Sendable {
 
     switch response.kind {
     case .snapshot:
+      guard shouldApplySnapshot(response) else {
+        logger.debug(
+          "\(label) ignored stale or uncorrelated snapshot",
+          .field("request_id", response.requestID ?? "none")
+        )
+        return
+      }
+
       guard let snapshot = response.snapshot else {
         logger.warn("\(label) received snapshot without payload")
         return
@@ -229,21 +241,33 @@ final class CalendarAgentStreamController: @unchecked Sendable {
 
     case .error:
       if response.errorCode == .invalidRequest {
-        let shouldLog = lifecycleState.withLock { state -> Bool in
-          let shouldLog = state.permanentlyRejectedRequest != state.request
-          state.permanentlyRejectedRequest = state.request
-          return shouldLog
+        let resolution = resolveErrorRequest(response)
+        guard resolution.matchesCurrentRequest else {
+          logger.debug(
+            "\(label) ignored stale permanent rejection",
+            .field("request_id", response.requestID ?? "none")
+          )
+          return
         }
 
         client.suspendReconnect()
 
-        if shouldLog {
+        if resolution.shouldLog {
           logger.warn(
             "\(label) request permanently rejected",
             .field("code", response.errorCode?.rawValue ?? "unknown"),
             .field("message", response.message ?? "unknown"),
+            .field("request_id", response.requestID ?? "none")
           )
         }
+        return
+      }
+
+      guard resolveErrorRequest(response).matchesCurrentRequest else {
+        logger.debug(
+          "\(label) ignored stale error response",
+          .field("request_id", response.requestID ?? "none")
+        )
         return
       }
 
@@ -272,7 +296,9 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   private func handleDisconnectedStateReset(connectionID: UInt64) {
     guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
     let retainsLastSnapshot = lifecycleState.withLock { state in
-      state.permanentlyRejectedRequest == state.request
+      state.pendingRequests.removeAll()
+      state.pendingRequestIDs.removeAll()
+      return state.permanentlyRejectedRequest == state.request
     }
     guard !retainsLastSnapshot else { return }
 
@@ -300,6 +326,11 @@ final class CalendarAgentStreamController: @unchecked Sendable {
       if resetPermanentError || requestChanged {
         state.permanentlyRejectedRequest = nil
       }
+      if resetPermanentError {
+        state.pendingRequests.removeAll()
+        state.pendingRequestIDs.removeAll()
+        state.observedRequestCorrelation = false
+      }
 
       state.started = started
       state.socketPath = socketPath
@@ -317,8 +348,90 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     lifecycleState.withLock { $0.socketPath }
   }
 
-  /// Returns the latest request prepared on the stream owner thread.
-  private func currentRequest() -> CalendarAgentRequest {
-    lifecycleState.withLock { $0.request }
+  /// Builds one uniquely correlated copy of the latest subscription request.
+  private func nextCorrelatedRequest() -> CalendarAgentRequest {
+    lifecycleState.withLock { state in
+      state.nextRequestSequence &+= 1
+      let requestID = String(state.nextRequestSequence)
+      let baseRequest = state.request
+      state.pendingRequests[requestID] = baseRequest
+      state.pendingRequestIDs.append(requestID)
+      return baseRequest.correlated(requestID: requestID)
+    }
+  }
+
+  /// Returns whether one snapshot belongs to the latest requested subscription.
+  private func shouldApplySnapshot(_ response: CalendarAgentMessage) -> Bool {
+    lifecycleState.withLock { state in
+      if let requestID = response.requestID {
+        state.observedRequestCorrelation = true
+        guard let request = takePendingRequest(requestID: requestID, state: &state) else {
+          return false
+        }
+        return request == state.request
+      }
+
+      if state.observedRequestCorrelation {
+        return state.pendingRequests.isEmpty
+      }
+
+      guard let request = takeOldestPendingRequest(state: &state) else {
+        return true
+      }
+      return request == state.request
+    }
+  }
+
+  /// Removes one pending request by identifier while preserving FIFO fallback state.
+  private func takePendingRequest(
+    requestID: String,
+    state: inout LifecycleState
+  ) -> CalendarAgentRequest? {
+    guard let request = state.pendingRequests.removeValue(forKey: requestID) else {
+      return nil
+    }
+    state.pendingRequestIDs.removeAll { $0 == requestID }
+    return request
+  }
+
+  /// Removes the oldest request for compatibility with agents that do not echo identifiers.
+  private func takeOldestPendingRequest(
+    state: inout LifecycleState
+  ) -> CalendarAgentRequest? {
+    while let requestID = state.pendingRequestIDs.first {
+      state.pendingRequestIDs.removeFirst()
+      if let request = state.pendingRequests.removeValue(forKey: requestID) {
+        return request
+      }
+    }
+    return nil
+  }
+
+  /// Resolves one error to the exact request that produced it.
+  private func resolveErrorRequest(
+    _ response: CalendarAgentMessage
+  ) -> (matchesCurrentRequest: Bool, shouldLog: Bool) {
+    lifecycleState.withLock { state in
+      let rejectedRequest: CalendarAgentRequest
+      if let requestID = response.requestID {
+        state.observedRequestCorrelation = true
+        rejectedRequest = takePendingRequest(requestID: requestID, state: &state) ?? state.request
+      } else if !state.observedRequestCorrelation,
+        let pendingRequest = takeOldestPendingRequest(state: &state)
+      {
+        rejectedRequest = pendingRequest
+      } else {
+        rejectedRequest = state.request
+      }
+
+      let matchesCurrentRequest = rejectedRequest == state.request
+      guard matchesCurrentRequest else { return (false, false) }
+
+      let shouldLog = state.permanentlyRejectedRequest != rejectedRequest
+      if response.errorCode == .invalidRequest {
+        state.permanentlyRejectedRequest = rejectedRequest
+      }
+      return (true, shouldLog)
+    }
   }
 }

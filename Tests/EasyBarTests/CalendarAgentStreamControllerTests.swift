@@ -42,6 +42,7 @@ final class CalendarAgentStreamControllerTests: XCTestCase {
           _ = server.send(
             CalendarAgentMessage(
               kind: .error,
+              requestID: request.requestID,
               errorCode: .invalidRequest,
               message: "invalid request"
             ),
@@ -52,7 +53,11 @@ final class CalendarAgentStreamControllerTests: XCTestCase {
 
         server.addSubscriber((), for: fd)
         _ = server.send(
-          CalendarAgentMessage(kind: .snapshot, snapshot: Self.makeSnapshot()),
+          CalendarAgentMessage(
+            kind: .snapshot,
+            requestID: request.requestID,
+            snapshot: Self.makeSnapshot()
+          ),
           to: fd
         )
         return .keepOpen
@@ -98,6 +103,103 @@ final class CalendarAgentStreamControllerTests: XCTestCase {
       requestCount.withLock { $0 == 3 } && appliedSnapshots.withLock { $0 == 2 }
     }
     XCTAssertEqual(clearedSnapshots.withLock { $0 }, 0)
+  }
+
+  func testStaleInvalidRequestDoesNotBlockLatestSubscription() async throws {
+    let logger = ProcessLogger(
+      label: "calendar.stream.correlation.tests",
+      minimumLevel: .error,
+      outputStream: nil,
+      errorStream: nil
+    )
+    let temporaryDirectory = URL(fileURLWithPath: "/tmp", isDirectory: true)
+      .appendingPathComponent("eb-calendar-correlation-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: temporaryDirectory,
+      withIntermediateDirectories: true
+    )
+    defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+    let socketPath = temporaryDirectory.appendingPathComponent("agent.sock").path
+    let currentRequest = LockedState(Self.makeRequest(marker: "initial"))
+    let appliedSnapshots = LockedState(0)
+    let requestCount = LockedState(0)
+
+    let server = LineSocketServerTransport<
+      Void, CalendarAgentRequest, CalendarAgentMessage
+    >(
+      socketPath: socketPath,
+      serverLabel: "calendar correlation tests",
+      logger: logger
+    )
+    XCTAssertTrue(
+      server.start { fd, request in
+        requestCount.withLock { $0 += 1 }
+        let marker = request.query?.emptyText
+
+        if marker == "stale" {
+          let requestID = request.requestID
+          Task.detached {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            _ = server.send(
+              CalendarAgentMessage(
+                kind: .error,
+                requestID: requestID,
+                errorCode: .invalidRequest,
+                message: "stale invalid request"
+              ),
+              to: fd
+            )
+            _ = server.removeSubscriber(fd: fd)
+          }
+          return .keepOpen
+        }
+
+        server.addSubscriber((), for: fd)
+        _ = server.send(
+          CalendarAgentMessage(
+            kind: .snapshot,
+            requestID: request.requestID,
+            snapshot: Self.makeSnapshot()
+          ),
+          to: fd
+        )
+        return .keepOpen
+      }
+    )
+    defer { server.stop() }
+
+    let eventHub = EventHub(logger: logger, enqueueLuaEvent: { _ in })
+    let controller = CalendarAgentStreamController(
+      label: "calendar correlation test client",
+      socketPath: { socketPath },
+      makeRequest: { currentRequest.withLock { $0 } },
+      applySnapshot: { _ in appliedSnapshots.withLock { $0 += 1 } },
+      eventRelay: CalendarAgentEventRelay(logger: logger, eventHub: eventHub),
+      logger: logger
+    )
+    controller.start(enabled: true)
+    defer { controller.stop() }
+
+    try await waitUntil("initial correlated snapshot") {
+      appliedSnapshots.withLock { $0 == 1 }
+    }
+
+    currentRequest.withLock { $0 = Self.makeRequest(marker: "stale") }
+    controller.refresh()
+    currentRequest.withLock { $0 = Self.makeRequest(marker: "latest") }
+    controller.refresh()
+
+    try await waitUntil("latest snapshot before stale rejection") {
+      appliedSnapshots.withLock { $0 == 2 }
+    }
+
+    try await waitUntil(
+      "reconnect after stale rejection",
+      timeoutNanoseconds: 4_000_000_000
+    ) {
+      requestCount.withLock { $0 >= 4 } && appliedSnapshots.withLock { $0 >= 3 }
+    }
   }
 
   private static func makeRequest(marker: String) -> CalendarAgentRequest {

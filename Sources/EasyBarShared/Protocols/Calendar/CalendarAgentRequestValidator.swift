@@ -10,6 +10,8 @@ public enum CalendarAgentRequestLimits {
   public static let maximumFilterValueCount = 128
   /// Largest one calendar filter token.
   public static let maximumFilterValueLength = 512
+  /// Largest client-generated request correlation identifier.
+  public static let maximumRequestIDLength = 128
   /// Largest user-visible query label.
   public static let maximumQueryTextLength = 512
   /// Largest date-format string accepted by the protocol.
@@ -65,6 +67,16 @@ public enum CalendarAgentRequestValidationError: LocalizedError, Equatable, Send
 public enum CalendarAgentRequestValidator {
   /// Validates only the payload selected by one wire-level command.
   public static func validate(_ request: CalendarAgentRequest) throws {
+    if let requestID = request.requestID {
+      let trimmed = requestID.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !trimmed.isEmpty,
+        requestID.utf8.count <= CalendarAgentRequestLimits.maximumRequestIDLength,
+        !requestID.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+      else {
+        throw CalendarAgentRequestValidationError.valueOutOfRange(field: "requestID")
+      }
+    }
+
     switch request.command {
     case .fetch, .subscribe:
       if let query = request.query {

@@ -71,6 +71,16 @@ Error responses may include a stable `errorCode` in addition to the human-readab
 calendar agent uses `invalid_request` when a decoded request violates protocol limits, including its
 maximum 366-day date range.
 
+
+## Request correlation
+
+Calendar requests may include an optional `requestID`. The calendar agent echoes that identifier in
+every direct response produced by the request, including `subscribed`, `snapshot`, success, and
+`error` messages. Broadcast snapshots caused by EventKit changes are unsolicited and omit it.
+
+EasyBar uses the identifier to reject delayed errors or snapshots from an older subscription. The
+client retains a FIFO fallback for older agents that do not yet echo request identifiers.
+
 ## Typical behavior
 
 - `ping`
@@ -160,3 +170,5 @@ easybar --reload-config
 - reloads `config.toml`
 - rebuilds runtime state
 - recreates agent-backed subscriptions
+
+

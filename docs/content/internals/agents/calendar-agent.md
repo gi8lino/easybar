@@ -15,6 +15,7 @@ It is responsible for:
 
 ```json
 {
+  "requestID": "month-42",
   "command": "ping | version | fetch | subscribe | create_event | update_event | delete_event",
   "query": {
     "startDate": "2026-03-29T00:00:00Z",
@@ -25,6 +26,7 @@ It is responsible for:
 
 Notes:
 
+- `requestID` is optional and is echoed by every direct response for request correlation
 - `query` is required for `fetch` and `subscribe`
 - date range is inclusive/exclusive, must be forward and finite, and may span at most 366 days
 - section counts, filter arrays, text, identifiers, alerts, and mutation durations are bounded before EventKit work begins
@@ -35,6 +37,7 @@ Notes:
 ```json
 {
   "kind": "snapshot",
+  "requestID": "month-42",
   "snapshot": { ... }
 }
 ```
@@ -94,6 +97,8 @@ failures.
 
 - the month client derives its preload radius from the shared 366-day request limit instead of
   using a hard-coded radius
+- EasyBar assigns request identifiers to subscriptions and ignores delayed direct responses that
+  belong to an older request; unsolicited broadcast snapshots intentionally omit an identifier
 - no access returns an empty snapshot
 - birthdays are separated and use the same calendar filters as regular events
 - occurrence ids are deterministic even when EventKit omits an event identifier
@@ -111,3 +116,5 @@ failures.
 The calendar agent collects calendar data and performs calendar mutations.
 
 EasyBar decides how calendar data is rendered.
+
+

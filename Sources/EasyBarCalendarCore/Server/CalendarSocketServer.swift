@@ -27,7 +27,8 @@ final class CalendarSocketServer {
   /// Host callback invoked after a restart acknowledgement has been sent.
   private let onRestartRequested: @MainActor () -> Void
   /// Line-delimited socket transport backing the server.
-  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+  private let transport:
+    LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
   init(
@@ -102,6 +103,7 @@ final class CalendarSocketServer {
       )
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .invalidRequest,
         message: errorMessage(for: error, code: .invalidRequest)
       )
@@ -109,15 +111,15 @@ final class CalendarSocketServer {
 
     switch request.command {
     case .version:
-      return sendVersion(to: clientFD)
+      return sendVersion(to: clientFD, requestID: request.requestID)
     case .ping:
-      return sendPong(to: clientFD)
+      return sendPong(to: clientFD, requestID: request.requestID)
     case .fetch:
       return handleFetch(to: clientFD, request: request)
     case .subscribe:
       return handleSubscribe(to: clientFD, request: request)
     case .restart:
-      return handleRestart(to: clientFD)
+      return handleRestart(to: clientFD, requestID: request.requestID)
     case .createEvent:
       return handleCreateEvent(to: clientFD, request: request)
     case .updateEvent:
@@ -128,18 +130,22 @@ final class CalendarSocketServer {
   }
 
   /// Acknowledges the request before allowing the host app to terminate.
-  private func handleRestart(to clientFD: Int32) -> ClientDisposition {
-    return transport.closeAfterSending(CalendarAgentMessage(kind: .restarting), to: clientFD) {
+  private func handleRestart(to clientFD: Int32, requestID: String?) -> ClientDisposition {
+    return transport.closeAfterSending(
+      CalendarAgentMessage(kind: .restarting, requestID: requestID),
+      to: clientFD
+    ) {
       [onRestartRequested] in
       onRestartRequested()
     }
   }
 
   /// Sends the calendar-agent version response.
-  private func sendVersion(to clientFD: Int32) -> ClientDisposition {
+  private func sendVersion(to clientFD: Int32, requestID: String?) -> ClientDisposition {
     transport.closeAfterSending(
       CalendarAgentMessage(
         kind: .version,
+        requestID: requestID,
         version: CalendarAgentVersion(
           appVersion: appVersion,
           protocolVersion: easyBarIPCProtocolVersion
@@ -150,8 +156,11 @@ final class CalendarSocketServer {
   }
 
   /// Sends a pong response.
-  private func sendPong(to clientFD: Int32) -> ClientDisposition {
-    return transport.closeAfterSending(CalendarAgentMessage(kind: .pong), to: clientFD)
+  private func sendPong(to clientFD: Int32, requestID: String?) -> ClientDisposition {
+    return transport.closeAfterSending(
+      CalendarAgentMessage(kind: .pong, requestID: requestID),
+      to: clientFD
+    )
   }
 
   /// Handles a one-shot snapshot fetch.
@@ -162,6 +171,7 @@ final class CalendarSocketServer {
     guard let provider, let query = request.query else {
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .missingQuery,
         message: "Missing calendar query."
       )
@@ -169,7 +179,11 @@ final class CalendarSocketServer {
 
     let snapshot = provider.snapshot(for: query)
     return transport.closeAfterSending(
-      CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
+      CalendarAgentMessage(
+        kind: .snapshot,
+        requestID: request.requestID,
+        snapshot: snapshot
+      ),
       to: clientFD
     )
   }
@@ -182,6 +196,7 @@ final class CalendarSocketServer {
     guard let provider, let query = request.query else {
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .missingQuery,
         message: "Missing calendar query."
       )
@@ -196,7 +211,10 @@ final class CalendarSocketServer {
       .field("fd", clientFD),
     )
 
-    guard transport.send(CalendarAgentMessage(kind: .subscribed), to: clientFD) else {
+    guard
+      transport.send(
+        CalendarAgentMessage(kind: .subscribed, requestID: request.requestID), to: clientFD)
+    else {
       _ = transport.removeSubscriber(fd: clientFD)
       return .close
     }
@@ -204,7 +222,11 @@ final class CalendarSocketServer {
     let snapshot = provider.snapshot(for: query)
     guard
       transport.send(
-        CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
+        CalendarAgentMessage(
+          kind: .snapshot,
+          requestID: request.requestID,
+          snapshot: snapshot
+        ),
         to: clientFD
       )
     else {
@@ -223,6 +245,7 @@ final class CalendarSocketServer {
     guard let createEvent = request.createEvent else {
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .missingCreateEvent,
         message: "Missing create-event payload."
       )
@@ -230,6 +253,7 @@ final class CalendarSocketServer {
 
     return handleMutation(
       to: clientFD,
+      requestID: request.requestID,
       successKind: .created,
       failureLogMessage: "calendar event creation failed"
     ) { provider in
@@ -245,6 +269,7 @@ final class CalendarSocketServer {
     guard let updateEvent = request.updateEvent else {
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .missingUpdateEvent,
         message: "Missing update-event payload."
       )
@@ -252,6 +277,7 @@ final class CalendarSocketServer {
 
     return handleMutation(
       to: clientFD,
+      requestID: request.requestID,
       successKind: .updated,
       failureLogMessage: "calendar event update failed"
     ) { provider in
@@ -267,6 +293,7 @@ final class CalendarSocketServer {
     guard let deleteEvent = request.deleteEvent else {
       return sendError(
         to: clientFD,
+        requestID: request.requestID,
         code: .missingDeleteEvent,
         message: "Missing delete-event payload."
       )
@@ -274,6 +301,7 @@ final class CalendarSocketServer {
 
     return handleMutation(
       to: clientFD,
+      requestID: request.requestID,
       successKind: .deleted,
       failureLogMessage: "calendar event delete failed"
     ) { provider in
@@ -284,6 +312,7 @@ final class CalendarSocketServer {
   /// Runs one calendar mutation and sends either its success kind or a structured error.
   private func handleMutation(
     to clientFD: Int32,
+    requestID: String?,
     successKind: CalendarAgentMessageKind,
     failureLogMessage: String,
     action: (CalendarSnapshotProvider) throws -> Void
@@ -291,6 +320,7 @@ final class CalendarSocketServer {
     guard let provider else {
       return sendError(
         to: clientFD,
+        requestID: requestID,
         code: .unknown,
         message: "Calendar provider is unavailable."
       )
@@ -298,9 +328,15 @@ final class CalendarSocketServer {
 
     do {
       try action(provider)
-      _ = transport.send(CalendarAgentMessage(kind: successKind), to: clientFD)
+      _ = transport.send(
+        CalendarAgentMessage(kind: successKind, requestID: requestID), to: clientFD)
     } catch {
-      sendMutationError(error, to: clientFD, logMessage: failureLogMessage)
+      sendMutationError(
+        error,
+        to: clientFD,
+        requestID: requestID,
+        logMessage: failureLogMessage
+      )
     }
 
     return .close
@@ -309,12 +345,14 @@ final class CalendarSocketServer {
   /// Sends a structured error response.
   private func sendError(
     to clientFD: Int32,
+    requestID: String?,
     code: CalendarAgentErrorCode,
     message: String
   ) -> ClientDisposition {
     _ = transport.send(
       CalendarAgentMessage(
         kind: .error,
+        requestID: requestID,
         errorCode: code,
         message: message
       ),
@@ -327,6 +365,7 @@ final class CalendarSocketServer {
   private func sendMutationError(
     _ error: Error,
     to clientFD: Int32,
+    requestID: String?,
     logMessage: String
   ) {
     let code = errorCode(for: error, fallback: .unknown)
@@ -338,6 +377,7 @@ final class CalendarSocketServer {
     _ = transport.send(
       CalendarAgentMessage(
         kind: .error,
+        requestID: requestID,
         errorCode: code,
         message: errorMessage(for: error, code: code)
       ),

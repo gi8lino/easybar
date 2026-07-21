@@ -228,6 +228,8 @@ public struct CalendarAgentDeleteEvent: Codable, Equatable, Sendable {
 
 /// One request sent to the calendar agent.
 public struct CalendarAgentRequest: Codable, Equatable, Sendable {
+  /// Optional client-generated identifier echoed by direct agent responses.
+  public var requestID: String?
   /// Command to execute on the agent.
   public var command: CalendarAgentCommand
   /// Optional query used for fetch and subscribe requests.
@@ -242,16 +244,25 @@ public struct CalendarAgentRequest: Codable, Equatable, Sendable {
   /// Creates one calendar agent request.
   public init(
     command: CalendarAgentCommand,
+    requestID: String? = nil,
     query: CalendarAgentQuery? = nil,
     createEvent: CalendarAgentCreateEvent? = nil,
     updateEvent: CalendarAgentUpdateEvent? = nil,
     deleteEvent: CalendarAgentDeleteEvent? = nil
   ) {
+    self.requestID = requestID
     self.command = command
     self.query = query
     self.createEvent = createEvent
     self.updateEvent = updateEvent
     self.deleteEvent = deleteEvent
+  }
+
+  /// Returns a copy carrying one client-generated correlation identifier.
+  public func correlated(requestID: String) -> Self {
+    var request = self
+    request.requestID = requestID
+    return request
   }
 
   /// Builds one fetch request.

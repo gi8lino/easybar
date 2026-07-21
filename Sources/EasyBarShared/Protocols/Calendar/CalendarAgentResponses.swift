@@ -31,6 +31,8 @@ public enum CalendarAgentMessageKind: String, Codable, Sendable {
 
 /// One message sent over the calendar agent socket.
 public struct CalendarAgentMessage: Codable, Sendable {
+  /// Optional identifier echoed from the direct request that produced this response.
+  public var requestID: String?
   /// Message kind discriminator.
   public var kind: CalendarAgentMessageKind
   /// Optional version payload.
@@ -45,11 +47,13 @@ public struct CalendarAgentMessage: Codable, Sendable {
   /// Creates one calendar agent message.
   public init(
     kind: CalendarAgentMessageKind,
+    requestID: String? = nil,
     version: CalendarAgentVersion? = nil,
     snapshot: CalendarAgentSnapshot? = nil,
     errorCode: CalendarAgentErrorCode? = nil,
     message: String? = nil
   ) {
+    self.requestID = requestID
     self.kind = kind
     self.version = version
     self.snapshot = snapshot
