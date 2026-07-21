@@ -271,6 +271,11 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   /// Clears published state only for disconnects that occur while the stream is active.
   private func handleDisconnectedStateReset(connectionID: UInt64) {
     guard isStarted, client.isCurrentConnectionGeneration(connectionID) else { return }
+    let retainsLastSnapshot = lifecycleState.withLock { state in
+      state.permanentlyRejectedRequest == state.request
+    }
+    guard !retainsLastSnapshot else { return }
+
     Task { @MainActor [weak self] in
       guard let self else { return }
       guard self.isStarted, self.client.isCurrentConnectionGeneration(connectionID) else {

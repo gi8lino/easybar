@@ -34,6 +34,7 @@ public final class AgentSocketClient<
     var connectionThread: Thread?
     var nextReconnectDelayOverride: TimeInterval?
     var nextConnectionID: UInt64 = 0
+    var currentConnectionGeneration: UInt64 = 0
     var connection: Connection?
   }
 
@@ -97,7 +98,7 @@ public final class AgentSocketClient<
   /// Returns whether a callback generation still belongs to the current client run.
   public func isCurrentConnectionGeneration(_ connectionID: UInt64) -> Bool {
     state.withLock { state in
-      state.running && state.connection?.identifier == connectionID
+      state.running && state.currentConnectionGeneration == connectionID
     }
   }
 
@@ -126,6 +127,7 @@ public final class AgentSocketClient<
       state.connection = nil
       state.connectionThread = nil
       state.nextConnectionID &+= 1
+      state.currentConnectionGeneration = state.nextConnectionID
 
       return StopSnapshot(
         connection: connection,
@@ -365,6 +367,7 @@ public final class AgentSocketClient<
       )
       let replacedConnection = state.connection
       state.connection = connection
+      state.currentConnectionGeneration = connection.identifier
       return (connection, replacedConnection)
     }
 

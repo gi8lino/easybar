@@ -95,6 +95,42 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertFalse(client.isConnected)
   }
 
+  func testDisconnectClearStateCallbackMatchesCurrentRunGeneration() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+
+    server.start { fd, _ in
+      _ = server.send(TestMessage(kind: "subscribed"), to: fd)
+      return .close
+    }
+    defer { server.stop() }
+
+    let callbackAccepted = LockedState(false)
+    let clientBox = LockedState<AgentSocketClient<TestRequest, TestMessage>?>(nil)
+    let client = AgentSocketClient<TestRequest, TestMessage>(
+      label: "test agent",
+      socketPath: { self.socketPath },
+      subscribeRequest: { TestRequest(command: "subscribe") },
+      handleMessage: { _, _ in },
+      clearState: { connectionID in
+        let accepted = clientBox.withLock { client in
+          client?.isCurrentConnectionGeneration(connectionID) ?? false
+        }
+        callbackAccepted.withLock { $0 = accepted }
+      },
+      logger: logger
+    )
+    clientBox.withLock { $0 = client }
+    client.setNextReconnectDelay(30)
+
+    client.start()
+    defer { client.stop() }
+
+    try await waitUntil("disconnect clear-state callback") {
+      callbackAccepted.withLock { $0 }
+    }
+  }
+
   func testMessageIsDroppedWhenConnectionStopsDuringDecodeCallback() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)
