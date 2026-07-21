@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 /// The current AeroSpace layout mode resolved from the focused window/container.
-enum AeroSpaceLayoutMode: String, Codable {
+enum AeroSpaceLayoutMode: String, Codable, Sendable {
   case hTiles = "h_tiles"
   case vTiles = "v_tiles"
   case hAccordion = "h_accordion"
@@ -12,7 +12,7 @@ enum AeroSpaceLayoutMode: String, Codable {
 }
 
 /// A single running application shown inside a workspace.
-struct SpaceApp: Identifiable, Hashable {
+struct SpaceApp: Identifiable, Hashable, Sendable {
   /// Stable application identifier used by the bar diffing model.
   let id: String
   /// Application bundle identifier.
@@ -30,7 +30,7 @@ struct SpaceApp: Identifiable, Hashable {
 }
 
 /// A workspace shown in the bar.
-struct SpaceItem: Identifiable, Hashable {
+struct SpaceItem: Identifiable, Hashable, Sendable {
   /// Stable workspace identifier.
   let id: String
   /// Workspace display name.

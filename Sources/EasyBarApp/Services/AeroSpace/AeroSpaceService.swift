@@ -7,6 +7,11 @@ struct AeroSpaceRefreshToken: Equatable, Sendable {
   let requestID: UInt64
 }
 
+struct AeroSpaceWorkspaceFocusToken: Equatable, Sendable {
+  let generation: UInt64
+  let requestID: UInt64
+}
+
 struct AeroSpaceRefreshSequence: Sendable {
   private var latestRequestID: UInt64 = 0
 
@@ -140,6 +145,12 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
     var pendingRefreshToken: AeroSpaceRefreshToken?
     /// Cancellable refresh task that owns current CLI commands.
     var refreshTask: Task<Void, Never>?
+    /// Sequence used to own optimistic workspace-focus mutations.
+    var workspaceFocusRequestID: UInt64 = 0
+    /// Current optimistic workspace-focus request.
+    var pendingWorkspaceFocusToken: AeroSpaceWorkspaceFocusToken?
+    /// Cancellable workspace-focus command task.
+    var workspaceFocusTask: Task<Void, Never>?
   }
 
   /// Logger used for AeroSpace diagnostics.
@@ -309,7 +320,7 @@ extension AeroSpaceService {
     queueRefresh(source: source)
   }
 
-  /// Focuses the requested workspace.
+  /// Focuses the requested workspace and rolls back the optimistic state on command failure.
   @MainActor
   func focusWorkspace(_ workspace: String) {
     logger.info(
@@ -317,6 +328,15 @@ extension AeroSpaceService {
       .field("workspace", workspace)
     )
 
+    guard spaces.contains(where: { $0.name == workspace }) else {
+      logger.warn(
+        "cannot focus unknown AeroSpace workspace",
+        .field("workspace", workspace)
+      )
+      return
+    }
+
+    let previousSpaces = spaces
     spaces = spaces.map { space in
       SpaceItem(
         id: space.id,
@@ -326,17 +346,49 @@ extension AeroSpaceService {
         apps: space.apps
       )
     }
+    notifyConsumers()
 
-    let generation = currentGeneration()
+    let reservation = reserveWorkspaceFocus()
+    guard let reservation else {
+      spaces = previousSpaces
+      notifyConsumers()
+      return
+    }
+    reservation.replacedTask?.cancel()
 
-    Task.detached(priority: .userInitiated) { [weak self] in
+    let task = Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else { return }
-      guard self.shouldExecute(generation: generation) else { return }
+      defer { self.finishWorkspaceFocus(reservation.token) }
+      guard self.shouldExecute(workspaceFocusToken: reservation.token) else { return }
 
-      _ = await self.runAeroSpace(arguments: ["workspace", workspace])
+      guard await self.runAeroSpace(arguments: ["workspace", workspace]) != nil else {
+        guard self.shouldExecute(workspaceFocusToken: reservation.token) else { return }
+        await self.rollbackWorkspaceFocus(
+          previousSpaces,
+          workspace: workspace,
+          token: reservation.token
+        )
+        return
+      }
 
-      guard self.shouldExecute(generation: generation) else { return }
-      self.queueRefresh(source: "workspace focus completed", expectedGeneration: generation)
+      guard self.shouldExecute(workspaceFocusToken: reservation.token) else { return }
+      self.logger.debug(
+        "aerospace workspace focused",
+        .field("workspace", workspace)
+      )
+      self.queueRefresh(
+        source: "workspace focus completed",
+        expectedGeneration: reservation.token.generation
+      )
+    }
+
+    let shouldCancel = withLock { state -> Bool in
+      guard state.pendingWorkspaceFocusToken == reservation.token else { return true }
+      state.workspaceFocusTask = task
+      return false
+    }
+    if shouldCancel {
+      task.cancel()
     }
   }
 
@@ -565,21 +617,30 @@ extension AeroSpaceService {
 
   /// Stops AeroSpace observation once the last consumer disappears.
   fileprivate func deactivateIfNeeded(reason: String) {
-    let result = withLock { coordination -> (didDeactivate: Bool, task: Task<Void, Never>?) in
-      guard coordination.active else { return (false, nil) }
+    let result = withLock {
+      coordination -> (
+        didDeactivate: Bool,
+        refreshTask: Task<Void, Never>?,
+        workspaceFocusTask: Task<Void, Never>?
+      ) in
+      guard coordination.active else { return (false, nil, nil) }
 
       coordination.active = false
       coordination.generation &+= 1
       coordination.pendingRefreshToken = nil
-      let task = coordination.refreshTask
+      coordination.pendingWorkspaceFocusToken = nil
+      let refreshTask = coordination.refreshTask
+      let workspaceFocusTask = coordination.workspaceFocusTask
       coordination.refreshTask = nil
+      coordination.workspaceFocusTask = nil
 
-      return (true, task)
+      return (true, refreshTask, workspaceFocusTask)
     }
 
     guard result.didDeactivate else { return }
 
-    result.task?.cancel()
+    result.refreshTask?.cancel()
+    result.workspaceFocusTask?.cancel()
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
     refreshRetryScheduler.cancel()
@@ -820,6 +881,75 @@ extension AeroSpaceService {
     spaces != snapshot.spaces
       || focusedApp != snapshot.focusedApp
       || focusedLayoutMode != snapshot.focusedLayoutMode
+  }
+}
+
+// MARK: - Workspace Focus Ownership
+
+extension AeroSpaceService {
+  /// Reserves ownership for one optimistic workspace-focus mutation.
+  private func reserveWorkspaceFocus() -> (
+    token: AeroSpaceWorkspaceFocusToken,
+    replacedTask: Task<Void, Never>?
+  )? {
+    withLock { state in
+      guard state.running, state.active, !state.consumers.isEmpty else { return nil }
+
+      state.workspaceFocusRequestID &+= 1
+      let token = AeroSpaceWorkspaceFocusToken(
+        generation: state.generation,
+        requestID: state.workspaceFocusRequestID
+      )
+      let replacedTask = state.workspaceFocusTask
+      state.pendingWorkspaceFocusToken = token
+      state.workspaceFocusTask = nil
+      return (token, replacedTask)
+    }
+  }
+
+  /// Restores the previous published focus only while the failed command still owns it.
+  @MainActor
+  private func rollbackWorkspaceFocus(
+    _ previousSpaces: [SpaceItem],
+    workspace: String,
+    token: AeroSpaceWorkspaceFocusToken
+  ) {
+    guard shouldExecute(workspaceFocusToken: token) else { return }
+
+    spaces = previousSpaces
+    notifyConsumers()
+    logger.warn(
+      "failed to focus AeroSpace workspace; restored previous focus",
+      .field("workspace", workspace)
+    )
+  }
+
+  /// Clears focus-task ownership only when the completed task is still current.
+  private func finishWorkspaceFocus(_ token: AeroSpaceWorkspaceFocusToken) {
+    withLock { state in
+      guard state.pendingWorkspaceFocusToken == token else { return }
+      state.pendingWorkspaceFocusToken = nil
+      state.workspaceFocusTask = nil
+    }
+  }
+
+  /// Returns whether one workspace-focus command still owns the optimistic state.
+  private func shouldExecute(workspaceFocusToken token: AeroSpaceWorkspaceFocusToken) -> Bool {
+    withLock { state in
+      state.running
+        && state.active
+        && !state.consumers.isEmpty
+        && state.generation == token.generation
+        && state.pendingWorkspaceFocusToken == token
+    }
+  }
+
+  /// Notifies the active native consumers about a main-actor state mutation.
+  @MainActor
+  private func notifyConsumers() {
+    for callback in withLock({ Array($0.consumers.values) }) {
+      callback()
+    }
   }
 }
 

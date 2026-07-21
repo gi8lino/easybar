@@ -11,9 +11,12 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       var versionFailuresRemaining = 0
       var snapshotFailuresEnabled = false
       var workspaceName = "1"
+      var workspaceNames = ["1"]
+      var workspaceCommandSucceeds = true
       var snapshotDelayNanoseconds: UInt64 = 0
       var versionCallCount = 0
       var workspaceCallCount = 0
+      var workspaceCommandCallCount = 0
       var activeCalls = 0
       var maximumActiveCalls = 0
       var cancellationCount = 0
@@ -28,6 +31,15 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       }
       defer {
         state.withLock { state in state.activeCalls -= 1 }
+      }
+
+      if arguments.first == "workspace", arguments.count == 2 {
+        return state.withLock { state in
+          state.workspaceCommandCallCount += 1
+          guard state.workspaceCommandSucceeds else { return nil }
+          state.workspaceName = arguments[1]
+          return ""
+        }
       }
 
       if arguments == ["--version"] {
@@ -58,7 +70,8 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       let snapshotState = state.withLock { state in
         (
           shouldFail: state.snapshotFailuresEnabled,
-          workspaceName: state.workspaceName
+          workspaceName: state.workspaceName,
+          workspaceNames: state.workspaceNames
         )
       }
       if snapshotState.shouldFail { return nil }
@@ -66,12 +79,12 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       switch arguments.first {
       case "list-workspaces":
         state.withLock { $0.workspaceCallCount += 1 }
-        return
-          """
-          [
-            {"workspace":"\(snapshotState.workspaceName)","workspace-is-focused":true,"workspace-is-visible":true}
-          ]
-          """
+        let rows = snapshotState.workspaceNames.map { name in
+          let focused = name == snapshotState.workspaceName ? "true" : "false"
+          return
+            #"{"workspace":"\#(name)","workspace-is-focused":\#(focused),"workspace-is-visible":true}"#
+        }
+        return "[\(rows.joined(separator: ","))]"
       case "list-windows":
         if arguments.contains("--focused") {
           return "[]"
@@ -94,12 +107,24 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       state.withLock { $0.workspaceName = name }
     }
 
+    func setWorkspaces(_ names: [String], focused name: String) {
+      state.withLock { state in
+        state.workspaceNames = names
+        state.workspaceName = name
+      }
+    }
+
+    func setWorkspaceCommandSucceeds(_ succeeds: Bool) {
+      state.withLock { $0.workspaceCommandSucceeds = succeeds }
+    }
+
     func setSnapshotDelayNanoseconds(_ value: UInt64) {
       state.withLock { $0.snapshotDelayNanoseconds = value }
     }
 
     var versionCallCount: Int { state.withLock(\.versionCallCount) }
     var workspaceCallCount: Int { state.withLock(\.workspaceCallCount) }
+    var workspaceCommandCallCount: Int { state.withLock(\.workspaceCommandCallCount) }
     var maximumActiveCalls: Int { state.withLock(\.maximumActiveCalls) }
     var cancellationCount: Int { state.withLock(\.cancellationCount) }
 
@@ -246,6 +271,51 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
     XCTAssertGreaterThan(runner.cancellationCount, 0)
     XCTAssertLessThanOrEqual(runner.maximumActiveCalls, 2)
     XCTAssertEqual(runner.versionCallCount, 1)
+  }
+
+  func testFailedWorkspaceFocusRestoresPreviousPublishedFocus() async {
+    let runner = ScriptedRunner()
+    runner.setWorkspaces(["1", "2"], focused: "1")
+    let service = makeService(runner: runner, retry: RecordingRetryScheduler())
+    var updateCount = 0
+
+    service.start()
+    service.registerConsumer("test") { updateCount += 1 }
+    defer { service.stop() }
+
+    XCTAssertTrue(await waitUntil { service.snapshotStatus == .current })
+    runner.setWorkspaceCommandSucceeds(false)
+
+    service.focusWorkspace("2")
+    XCTAssertEqual(service.spaces.first(where: { $0.isFocused })?.name, "2")
+
+    let rolledBack = await waitUntil {
+      service.spaces.first(where: { $0.isFocused })?.name == "1"
+    }
+    XCTAssertTrue(rolledBack)
+    XCTAssertEqual(runner.workspaceCommandCallCount, 1)
+    XCTAssertGreaterThanOrEqual(updateCount, 3)
+  }
+
+  func testSuccessfulWorkspaceFocusRefreshesCanonicalState() async {
+    let runner = ScriptedRunner()
+    runner.setWorkspaces(["1", "2"], focused: "1")
+    let service = makeService(runner: runner, retry: RecordingRetryScheduler())
+
+    service.start()
+    service.registerConsumer("test") {}
+    defer { service.stop() }
+
+    XCTAssertTrue(await waitUntil { service.snapshotStatus == .current })
+
+    service.focusWorkspace("2")
+
+    let focused = await waitUntil {
+      service.spaces.first(where: { $0.isFocused })?.name == "2"
+        && runner.workspaceCommandCallCount == 1
+        && runner.workspaceCallCount >= 2
+    }
+    XCTAssertTrue(focused)
   }
 
   private func makeService(
