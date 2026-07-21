@@ -30,6 +30,14 @@ extension Config {
     luaSocketPath = resolvedLuaSocketPath
 
     if let configuredEnvironment = try app.optionalStringTable("env") {
+      do {
+        try ProcessSpawnSupport.validateEnvironment(configuredEnvironment)
+      } catch {
+        throw ConfigError.invalidValue(
+          path: app.path(for: "env"),
+          message: error.localizedDescription
+        )
+      }
       appSection.environment = Self.mergedAppEnvironment(with: configuredEnvironment)
     }
 

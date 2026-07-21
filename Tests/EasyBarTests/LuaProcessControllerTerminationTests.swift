@@ -4,6 +4,30 @@ import XCTest
 
 @testable import EasyBarApp
 
+private actor AsyncTestBarrier {
+  private let participantCount: Int
+  private var continuations: [CheckedContinuation<Void, Never>] = []
+
+  init(participantCount: Int) {
+    self.participantCount = participantCount
+  }
+
+  func wait() async {
+    await withCheckedContinuation { continuation in
+      if continuations.count + 1 == participantCount {
+        let waiting = continuations
+        continuations.removeAll(keepingCapacity: false)
+        continuation.resume()
+        for continuation in waiting {
+          continuation.resume()
+        }
+      } else {
+        continuations.append(continuation)
+      }
+    }
+  }
+}
+
 final class LuaProcessControllerTerminationTests: XCTestCase, @unchecked Sendable {
   func testUnexpectedExitReportsExitCode() async throws {
     let scriptURL = try makeExecutableScript("exit 7")
@@ -34,6 +58,50 @@ final class LuaProcessControllerTerminationTests: XCTestCase, @unchecked Sendabl
     let termination = try XCTUnwrap(result.withLock { $0 })
     XCTAssertEqual(termination.reason, .exited(code: 7))
     XCTAssertFalse(termination.wasRequested)
+    XCTAssertNil(controller.processIdentifier)
+  }
+
+  func testConcurrentStartsReserveOnlyOneRuntime() async throws {
+    let scriptURL = try makeExecutableScript("while true; do sleep 1; done")
+    defer { try? FileManager.default.removeItem(at: scriptURL.deletingLastPathComponent()) }
+
+    let controller = LuaProcessController(
+      logger: ProcessLogger(label: "lua.termination.tests", minimumLevel: .error)
+    )
+    let context = makeContext(executablePath: scriptURL.path)
+    let resources = [
+      LuaProcessController.LaunchResources(),
+      LuaProcessController.LaunchResources(),
+    ]
+    defer {
+      for resource in resources {
+        close(resource)
+      }
+    }
+
+    let startBarrier = AsyncTestBarrier(participantCount: resources.count)
+    let starts = await withTaskGroup(of: Bool.self, returning: [Bool].self) { group in
+      for resource in resources {
+        group.addTask {
+          await startBarrier.wait()
+          return controller.start(
+            context: context,
+            resources: resource,
+            terminationHandler: { _ in }
+          ) != nil
+        }
+      }
+
+      var results: [Bool] = []
+      for await result in group {
+        results.append(result)
+      }
+      return results
+    }
+
+    XCTAssertEqual(starts.filter { $0 }.count, 1)
+    XCTAssertNotNil(controller.processIdentifier)
+    await controller.shutdownAndWait()
     XCTAssertNil(controller.processIdentifier)
   }
 

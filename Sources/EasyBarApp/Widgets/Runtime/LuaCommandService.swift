@@ -152,7 +152,7 @@ actor LuaCommandService {
 
   /// Sends one command response back into the Lua runtime.
   private func sendCommandResponse(token: String, result: LuaCommandResult) async {
-    let response = LuaCommandResponse(token: token, output: result.output, status: result.status)
+    let response = LuaCommandResponse(token: token, output: result.rawOutput, status: result.status)
 
     guard
       let data = try? encoder.encode(response),

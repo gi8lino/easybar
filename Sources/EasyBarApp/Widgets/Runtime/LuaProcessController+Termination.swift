@@ -1,6 +1,5 @@
 import Darwin
 import EasyBarShared
-import Foundation
 
 /// Grace period between terminate and forced kill.
 private let easyBarLuaTerminationGracePeriodNanoseconds: UInt64 = 150_000_000
@@ -8,24 +7,30 @@ private let easyBarLuaTerminationGracePeriodNanoseconds: UInt64 = 150_000_000
 extension LuaProcessController {
   /// Terminates the Lua runtime process tree and schedules one forced kill fallback.
   func terminateProcess(processIdentifier: Int32, processGroupIdentifier: Int32?) {
-    guard easyBarProcessIsRunning(processIdentifier) else { return }
+    let processIsRunning = ProcessSignalSupport.isRunning(processIdentifier: processIdentifier)
+    let groupIsRunning =
+      processGroupIdentifier.map {
+        ProcessSignalSupport.isRunning(processGroupIdentifier: $0)
+      } ?? false
+    guard processIsRunning || groupIsRunning else { return }
 
     cancelForcedKillWorkItem()
 
-    if let processGroupIdentifier, processGroupIdentifier > 0 {
-      logger.debug(
-        "sending SIGTERM to lua process group",
-        .field("pgid", processGroupIdentifier),
-        .field("pid", processIdentifier)
-      )
-      kill(-processGroupIdentifier, SIGTERM)
-    } else {
-      logger.debug(
-        "sending SIGTERM to lua process",
-        .field("pid", processIdentifier),
-      )
-      kill(processIdentifier, SIGTERM)
-    }
+    logger.debug(
+      "sending SIGTERM to lua process tree",
+      .field("pgid", processGroupIdentifier),
+      .field("pid", processIdentifier)
+    )
+    logSignalFailure(
+      ProcessSignalSupport.send(
+        SIGTERM,
+        processIdentifier: processIdentifier,
+        processGroupIdentifier: processGroupIdentifier
+      ),
+      signal: SIGTERM,
+      processIdentifier: processIdentifier,
+      processGroupIdentifier: processGroupIdentifier
+    )
 
     let task = DetachedTask.run(priority: .utility) { [weak self] in
       do {
@@ -35,43 +40,72 @@ extension LuaProcessController {
       }
 
       guard let self else { return }
-      guard easyBarProcessIsRunning(processIdentifier) else { return }
+      let processIsRunning = ProcessSignalSupport.isRunning(
+        processIdentifier: processIdentifier
+      )
+      let groupIsRunning =
+        processGroupIdentifier.map {
+          ProcessSignalSupport.isRunning(processGroupIdentifier: $0)
+        } ?? false
+      guard processIsRunning || groupIsRunning else { return }
 
-      if let processGroupIdentifier, processGroupIdentifier > 0 {
-        self.logger.warn(
-          "forcing lua process group shutdown",
-          .field("pgid", processGroupIdentifier),
-          .field("pid", processIdentifier)
-        )
-        kill(-processGroupIdentifier, SIGKILL)
-      } else {
-        self.logger.warn("forcing lua process shutdown", .field("pid", processIdentifier))
-        kill(processIdentifier, SIGKILL)
-      }
+      self.logger.warn(
+        "forcing lua process tree shutdown",
+        .field("pgid", processGroupIdentifier),
+        .field("pid", processIdentifier)
+      )
+      self.logSignalFailure(
+        ProcessSignalSupport.send(
+          SIGKILL,
+          processIdentifier: processIdentifier,
+          processGroupIdentifier: processGroupIdentifier
+        ),
+        signal: SIGKILL,
+        processIdentifier: processIdentifier,
+        processGroupIdentifier: processGroupIdentifier
+      )
     }
 
-    withLock {
-      forcedKillTask = task
+    let installed = state.withLock { state -> Bool in
+      guard case .running(let trackedProcessIdentifier, _, _) = state.lifecycle,
+        trackedProcessIdentifier == processIdentifier
+      else {
+        return false
+      }
+      state.forcedKillTask = task
+      return true
+    }
+
+    if !installed {
+      task.cancel()
     }
   }
 
   /// Cancels the pending forced kill work item when present.
   func cancelForcedKillWorkItem() {
-    let task = withLock { () -> Task<Void, Never>? in
-      let task = forcedKillTask
-      forcedKillTask = nil
+    let task = state.withLock { state -> Task<Void, Never>? in
+      let task = state.forcedKillTask
+      state.forcedKillTask = nil
       return task
     }
-
     task?.cancel()
   }
-}
 
-/// Returns whether the given process identifier still exists.
-private func easyBarProcessIsRunning(_ processIdentifier: Int32) -> Bool {
-  if kill(processIdentifier, 0) == 0 {
-    return true
+  /// Logs checked signal failures while ignoring an already-absent process tree.
+  private func logSignalFailure(
+    _ delivery: ProcessSignalDelivery,
+    signal: Int32,
+    processIdentifier: Int32,
+    processGroupIdentifier: Int32?
+  ) {
+    guard !delivery.delivered, !delivery.targetWasMissing else { return }
+    logger.warn(
+      "failed to signal lua process tree",
+      .field("pid", processIdentifier),
+      .field("pgid", processGroupIdentifier),
+      .field("signal", signal),
+      .field("group_errno", delivery.processGroupError),
+      .field("process_errno", delivery.processError)
+    )
   }
-
-  return errno == EPERM
 }

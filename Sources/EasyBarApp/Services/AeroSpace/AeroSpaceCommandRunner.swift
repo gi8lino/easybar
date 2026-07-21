@@ -1,8 +1,7 @@
-import Darwin
 import EasyBarShared
 import Foundation
 
-/// Runs the AeroSpace CLI and returns trimmed stdout.
+/// Runs the AeroSpace CLI through the shared process executor.
 final class AeroSpaceCommandRunner {
   /// Logger used for AeroSpace command diagnostics.
   private let logger: ProcessLogger
@@ -12,6 +11,8 @@ final class AeroSpaceCommandRunner {
   private let commandTimeout: TimeInterval
   /// Maximum stdout or stderr bytes kept for one AeroSpace command.
   private let commandOutputLimit: Int
+  /// Shared process runner with bounded pipe and process-group cleanup.
+  private let processExecutor: ProcessExecutor
 
   /// Creates one AeroSpace command runner.
   init(
@@ -22,163 +23,95 @@ final class AeroSpaceCommandRunner {
   ) {
     self.logger = logger
     self.executablePathResolver = executablePathResolver
-    self.commandTimeout = max(0.001, commandTimeout)
+    self.commandTimeout = Self.normalizedTimeout(commandTimeout)
     self.commandOutputLimit = max(1, commandOutputLimit)
+    self.processExecutor = ProcessExecutor(logger: logger.child("process"))
   }
 
-  /// Creates one configured AeroSpace process.
-  func makeProcess(arguments: [String]) -> Process? {
+  /// Executes one AeroSpace command and returns trimmed stdout on success.
+  func run(arguments: [String]) -> String? {
     guard let executable = executablePathResolver() else {
       logger.debug("aerospace executable not found")
       return nil
     }
 
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: executable)
-    process.arguments = arguments
-    return process
-  }
+    let request = ProcessExecutionRequest(
+      executablePath: executable,
+      arguments: [executable] + arguments,
+      environment: ProcessInfo.processInfo.environment,
+      timeout: commandTimeout,
+      standardOutputLimit: commandOutputLimit,
+      standardErrorLimit: commandOutputLimit
+    )
 
-  /// Executes one AeroSpace command.
-  func run(arguments: [String]) -> String? {
-    guard let process = makeProcess(arguments: arguments) else {
-      return nil
-    }
-
-    let outputPipe = Pipe()
-    let errorPipe = Pipe()
-    process.standardOutput = outputPipe
-    process.standardError = errorPipe
-    let outputHandle = outputPipe.fileHandleForReading
-    let errorHandle = errorPipe.fileHandleForReading
-
-    let exitSemaphore = DispatchSemaphore(value: 0)
-    process.terminationHandler = { _ in
-      exitSemaphore.signal()
-    }
-
+    let result: ProcessExecutionResult
     do {
-      try process.run()
+      result = try processExecutor.runSynchronously(request)
     } catch {
-      process.terminationHandler = nil
       logger.debug(
         "failed to run aerospace",
         .field("args", arguments.joined(separator: " ")),
-        .field("error", error),
+        .field("error", error)
       )
       return nil
     }
 
-    let outputReader = PipeReader(handle: outputHandle, maxBytes: commandOutputLimit)
-    let errorReader = PipeReader(handle: errorHandle, maxBytes: commandOutputLimit)
-    outputReader.start()
-    errorReader.start()
-
-    let didExit = waitForExit(
-      process: process,
-      arguments: arguments,
-      exitSemaphore: exitSemaphore
-    )
-    process.terminationHandler = nil
-
-    let outputResult = outputReader.finish()
-    let errorResult = errorReader.finish()
-
-    guard didExit else { return nil }
-
-    guard case .success(let outputReadResult) = outputResult else {
-      if case .failure(let error) = outputResult {
-        logger.debug(
-          "failed to read aerospace output",
-          .field("args", arguments.joined(separator: " ")),
-          .field("error", error),
-        )
-      }
+    switch result.outcome {
+    case .completed:
+      break
+    case .timedOut:
+      logger.warn(
+        "aerospace command timed out",
+        .field("args", arguments.joined(separator: " ")),
+        .field("timeout_seconds", commandTimeout)
+      )
       return nil
-    }
-
-    let errorReadResult = try? errorResult.get()
-    let errorData = errorReadResult?.data ?? Data()
-
-    if outputReadResult.exceededLimit {
+    case .cancelled:
+      logger.debug(
+        "aerospace command cancelled",
+        .field("args", arguments.joined(separator: " "))
+      )
+      return nil
+    case .outputLimitExceeded(let stream):
       logger.warn(
         "aerospace command output exceeded limit",
         .field("args", arguments.joined(separator: " ")),
+        .field("stream", stream.rawValue),
         .field("max_output_bytes", commandOutputLimit)
+      )
+      return nil
+    case .readFailed(let stream, let errnoValue):
+      logger.debug(
+        "failed to read aerospace output",
+        .field("args", arguments.joined(separator: " ")),
+        .field("stream", stream.rawValue),
+        .field("errno", errnoValue)
+      )
+      return nil
+    case .reapFailed(let errnoValue):
+      logger.warn(
+        "failed to reap aerospace command",
+        .field("args", arguments.joined(separator: " ")),
+        .field("errno", errnoValue)
       )
       return nil
     }
 
-    if errorReadResult?.exceededLimit == true {
-      logger.warn(
-        "aerospace command stderr exceeded limit",
-        .field("args", arguments.joined(separator: " ")),
-        .field("max_output_bytes", commandOutputLimit)
-      )
-    }
-
-    let outputData = outputReadResult.data
-
-    if process.terminationStatus != 0 {
-      let stderr = String(data: errorData, encoding: .utf8)?
+    let exitStatus = result.termination.shellExitStatus
+    guard exitStatus == 0 else {
+      let stderr = String(decoding: result.standardError, as: UTF8.self)
         .trimmingCharacters(in: .whitespacesAndNewlines)
-
       logger.debug(
         "aerospace command exited",
-        .field("status", process.terminationStatus),
+        .field("status", exitStatus),
         .field("args", arguments.joined(separator: " ")),
-        .field("stderr_bytes", stderr?.utf8.count ?? 0)
+        .field("stderr_bytes", stderr.utf8.count)
       )
       return nil
     }
 
-    return String(data: outputData, encoding: .utf8)?
+    return String(decoding: result.standardOutput, as: UTF8.self)
       .trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  /// Waits for a short-lived AeroSpace CLI command and terminates it on timeout.
-  private func waitForExit(
-    process: Process,
-    arguments: [String],
-    exitSemaphore: DispatchSemaphore
-  ) -> Bool {
-    let deadline = DispatchTime.now() + dispatchTimeInterval(commandTimeout)
-    guard exitSemaphore.wait(timeout: deadline) == .timedOut else {
-      return true
-    }
-
-    logger.warn(
-      "aerospace command timed out",
-      .field("args", arguments.joined(separator: " ")),
-      .field("timeout_seconds", commandTimeout)
-    )
-
-    terminateTimedOutProcess(process, exitSemaphore: exitSemaphore)
-    return false
-  }
-
-  /// Converts one positive second value into a dispatch timeout interval.
-  private func dispatchTimeInterval(_ seconds: TimeInterval) -> DispatchTimeInterval {
-    return .milliseconds(Int(ceil(seconds * 1_000)))
-  }
-
-  /// Terminates one timed-out AeroSpace process with a SIGKILL fallback.
-  private func terminateTimedOutProcess(
-    _ process: Process,
-    exitSemaphore: DispatchSemaphore
-  ) {
-    if process.isRunning {
-      process.terminate()
-    }
-
-    if exitSemaphore.wait(timeout: .now() + .milliseconds(300)) == .success {
-      return
-    }
-
-    if process.isRunning {
-      kill(process.processIdentifier, SIGKILL)
-      process.waitUntilExit()
-    }
   }
 
   /// Resolves the AeroSpace binary path from `PATH`, then known install locations.
@@ -211,78 +144,10 @@ final class AeroSpaceCommandRunner {
     var seen = Set<String>()
     return candidates.filter { seen.insert($0).inserted }
   }
-}
 
-/// Reads one process pipe while the subprocess is still running.
-private final class PipeReader: @unchecked Sendable {
-  struct ReadResult {
-    let data: Data
-    let exceededLimit: Bool
-  }
-
-  private let handle: FileHandle
-  private let maxBytes: Int
-  private let group = DispatchGroup()
-  private let result = LockedState<Result<ReadResult, Error>>(
-    .success(ReadResult(data: Data(), exceededLimit: false))
-  )
-
-  init(handle: FileHandle, maxBytes: Int) {
-    self.handle = handle
-    self.maxBytes = max(1, maxBytes)
-  }
-
-  func start() {
-    group.enter()
-    DispatchQueue.global(qos: .utility).async { [handle, maxBytes] in
-      defer { self.group.leave() }
-
-      do {
-        let result = try Self.readOutput(from: handle.fileDescriptor, maxBytes: maxBytes)
-        self.result.withLock { $0 = .success(result) }
-      } catch {
-        self.result.withLock { $0 = .failure(error) }
-      }
-    }
-  }
-
-  func finish() -> Result<ReadResult, Error> {
-    group.wait()
-    return result.withLock { $0 }
-  }
-
-  private static func readOutput(from fd: Int32, maxBytes: Int) throws -> ReadResult {
-    var output = Data()
-    var exceededLimit = false
-    var buffer = [UInt8](repeating: 0, count: 4096)
-
-    while true {
-      let bytesRead = buffer.withUnsafeMutableBytes { rawBuffer in
-        guard let baseAddress = rawBuffer.baseAddress else { return 0 }
-        return Darwin.read(fd, baseAddress, rawBuffer.count)
-      }
-
-      if bytesRead > 0 {
-        let remainingBytes = max(0, maxBytes - output.count)
-        if remainingBytes > 0 {
-          output.append(contentsOf: buffer.prefix(min(bytesRead, remainingBytes)))
-        }
-        if bytesRead > remainingBytes {
-          exceededLimit = true
-        }
-        continue
-      }
-
-      if bytesRead == 0 {
-        return ReadResult(data: output, exceededLimit: exceededLimit)
-      }
-
-      let errnoValue = errno
-      if errnoValue == EINTR {
-        continue
-      }
-
-      throw NSError(domain: NSPOSIXErrorDomain, code: Int(errnoValue))
-    }
+  /// Normalizes a caller-supplied timeout without allowing NaN or infinity.
+  private static func normalizedTimeout(_ value: TimeInterval) -> TimeInterval {
+    guard value.isFinite, value > 0 else { return 5 }
+    return max(0.001, value)
   }
 }

@@ -47,21 +47,22 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertEqual(result.status, LuaCommandRunner.Limits.timedOutStatus)
   }
 
-  func testRunDoesNotWaitForBackgroundChildHoldingOutputPipe() async {
+  func testRunDoesNotLeaveBackgroundChildHoldingOutputPipe() async throws {
     let runner = LuaCommandRunner(
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
     )
 
     let startedAt = Date()
     let result = await runner.run(
-      command: "sleep 3 & printf done",
+      command: "sleep 30 & child=$!; printf '%s' \"$child\"",
       limits: .init(timeoutSeconds: 1, maxOutputBytes: 1024)
     )
     let elapsedSeconds = Date().timeIntervalSince(startedAt)
+    let childPID = try XCTUnwrap(Int32(result.output))
 
-    XCTAssertEqual(result.output, "done")
     XCTAssertEqual(result.status, 0)
     XCTAssertLessThan(elapsedSeconds, 1.5)
+    XCTAssertTrue(waitUntilProcessIsAbsent(childPID))
   }
 
   func testRunTerminatesChildProcessGroupOnTimeout() async {
@@ -241,6 +242,39 @@ final class LuaCommandRunnerTests: XCTestCase {
     }
   }
 
+  func testRunPreservesRawTrailingLineEndings() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let result = await runner.run(command: "printf 'line\n\n'", limits: defaultLimits)
+
+    XCTAssertEqual(result.output, "line")
+    XCTAssertEqual(result.rawOutput, "line\n\n")
+    XCTAssertEqual(result.status, 0)
+  }
+
+  func testRunRejectsEmbeddedNULArgumentsAndEnvironment() async {
+    let runner = LuaCommandRunner(
+      logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
+    )
+
+    let argumentResult = await runner.run(
+      arguments: ["printf", "%s", "safe\0hidden"],
+      limits: defaultLimits
+    )
+    XCTAssertEqual(argumentResult.status, 1)
+    XCTAssertTrue(argumentResult.output.contains("embedded NUL"))
+
+    let environmentResult = await runner.run(
+      command: "printf ok",
+      limits: defaultLimits,
+      environment: ["BAD=KEY": "value"]
+    )
+    XCTAssertEqual(environmentResult.status, 1)
+    XCTAssertTrue(environmentResult.output.contains("invalid process environment key"))
+  }
+
   func testRunExecutesDirectArgumentsWithoutShellInterpolation() async {
     let runner = LuaCommandRunner(
       logger: ProcessLogger(label: "lua.command-runner.tests", minimumLevel: .error)
@@ -285,6 +319,16 @@ final class LuaCommandRunnerTests: XCTestCase {
     XCTAssertEqual(result.status, 127)
     XCTAssertTrue(result.output.contains("command not found"))
     XCTAssertTrue(result.output.contains("__easybar_missing_executable__"))
+  }
+
+  private func waitUntilProcessIsAbsent(_ processIdentifier: Int32) -> Bool {
+    for _ in 0..<100 {
+      if kill(processIdentifier, 0) != 0, errno == ESRCH {
+        return true
+      }
+      usleep(20_000)
+    }
+    return false
   }
 
 }

@@ -1,4 +1,3 @@
-import Darwin
 import EasyBarShared
 import Foundation
 
@@ -41,7 +40,6 @@ extension LuaProcessController {
       logger.error("runtime.lua not found")
       return nil
     }
-
     return runtime.path
   }
 
@@ -93,7 +91,6 @@ extension LuaProcessController {
       files
       .filter { url in
         guard url.pathExtension == "lua" else { return false }
-
         let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
         return values?.isRegularFile == true
       }
@@ -115,135 +112,76 @@ extension LuaProcessController {
 
   /// Spawns one Lua runtime process with a dedicated process group assigned at spawn time.
   func spawnProcess(context: LaunchContext, resources: LaunchResources) throws -> Int32 {
-    var fileActions: posix_spawn_file_actions_t?
-    var attributes: posix_spawnattr_t?
+    let arguments =
+      [
+        context.runtimeAgentPath,
+        context.luaSocketPath,
+        context.luaPath,
+        context.runtimePath,
+        context.widgetsPath,
+        String(context.defaultCommandTimeoutSeconds),
+        String(context.defaultCommandMaxOutputBytes),
+      ] + context.widgetFiles
 
-    try PosixSpawnSupport.initializeFileActions(&fileActions)
-    defer {
-      if fileActions != nil {
-        posix_spawn_file_actions_destroy(&fileActions)
-      }
-    }
+    var environment = ProcessInfo.processInfo.environment
+    environment.merge(context.environment) { _, configuredValue in configuredValue }
+    environment["EASYBAR_LUA_TRANSPORT_TOKEN"] = context.transportAuthenticationToken
 
-    try PosixSpawnSupport.initializeSpawnAttributes(&attributes)
-    defer {
-      if attributes != nil {
-        posix_spawnattr_destroy(&attributes)
-      }
-    }
-
-    try configureChildStandardStreams(
-      fileActions: &fileActions,
-      resources: resources
-    )
-
-    try PosixSpawnSupport.configureDedicatedProcessGroup(attributes: &attributes)
-
-    let argv = try makeArgumentVector(
+    let pid = try ProcessSpawnSupport.spawn(
       executablePath: context.runtimeAgentPath,
-      socketPath: context.luaSocketPath,
-      luaPath: context.luaPath,
-      runtimePath: context.runtimePath,
-      widgetsPath: context.widgetsPath,
-      defaultCommandTimeoutSeconds: context.defaultCommandTimeoutSeconds,
-      defaultCommandMaxOutputBytes: context.defaultCommandMaxOutputBytes,
-      widgetFiles: context.widgetFiles
+      arguments: arguments,
+      environment: environment,
+      standardErrorFileDescriptor: resources.error.fileHandleForWriting.fileDescriptor,
+      closeFileDescriptors: [resources.error.fileHandleForReading.fileDescriptor],
+      createProcessGroup: true
     )
-    defer { PosixSpawnSupport.freeCStringVector(argv) }
 
-    let envp = try makeEnvironmentVector(
-      overrides: context.environment.merging(
-        ["EASYBAR_LUA_TRANSPORT_TOKEN": context.transportAuthenticationToken]
-      ) { _, launchValue in launchValue }
-    )
-    defer { PosixSpawnSupport.freeCStringVector(envp) }
-
-    var pid: pid_t = 0
-
-    let spawnResult = context.runtimeAgentPath.withCString { executablePath in
-      posix_spawn(
-        &pid,
-        executablePath,
-        &fileActions,
-        &attributes,
-        argv,
-        envp
-      )
-    }
-
-    guard spawnResult == 0 else {
-      throw NSError(
-        domain: NSPOSIXErrorDomain,
-        code: Int(spawnResult),
-        userInfo: [
-          NSLocalizedDescriptionKey:
-            "posix_spawn failed for lua runtime agent=\(context.runtimeAgentPath) errno=\(spawnResult)"
-        ]
-      )
-    }
-
-    closeParentPipeEndsAfterSuccessfulSpawn(resources)
-
+    try? resources.error.fileHandleForWriting.close()
     return pid
   }
 
   /// Installs exit observation for the spawned Lua child.
   func installTerminationSource(for pid: Int32) {
-    let previousTask = withLock { () -> Task<Void, Never>? in
-      let previousTask = terminationTask
-      terminationTask = nil
+    let previousTask = state.withLock { state -> Task<Void, Never>? in
+      let previousTask = state.terminationTask
+      state.terminationTask = nil
       return previousTask
     }
-
     previousTask?.cancel()
 
     let task = DetachedTask.run(priority: .utility) { [weak self] in
       guard let self else { return }
-      let waitResult = self.waitForRuntimeProcessExit(pid: pid)
+      let observation = ProcessWaitSupport.wait(processIdentifier: pid)
       guard !Task.isCancelled else { return }
-      self.handleTermination(
-        pid: pid,
-        waitResult: waitResult.result,
-        status: waitResult.status,
-        errnoValue: waitResult.errnoValue
-      )
+      self.handleTermination(pid: pid, observation: observation)
     }
 
-    withLock {
-      terminationTask = task
-    }
-  }
-
-  /// Waits for the Lua runtime process to exit and retries interrupted waits.
-  private func waitForRuntimeProcessExit(pid: Int32) -> (
-    result: Int32,
-    status: Int32,
-    errnoValue: Int32
-  ) {
-    var status: Int32 = 0
-
-    while true {
-      errno = 0
-      let waitResult = waitpid(pid, &status, 0)
-      let errnoValue = errno
-
-      if waitResult < 0, errnoValue == EINTR {
-        continue
+    let installed = state.withLock { state -> Bool in
+      guard case .running(let processIdentifier, _, _) = state.lifecycle,
+        processIdentifier == pid
+      else {
+        return false
       }
+      state.terminationTask = task
+      return true
+    }
 
-      return (waitResult, status, errnoValue)
+    if !installed {
+      task.cancel()
     }
   }
 
   /// Handles one observed Lua runtime termination.
-  func handleTermination(pid: Int32, waitResult: Int32, status: Int32, errnoValue: Int32) {
+  func handleTermination(pid: Int32, observation: ProcessWaitObservation) {
     let reason: Termination.Reason
-
-    if waitResult == pid {
-      logTermination(pid: pid, status: status)
-      reason = terminationReason(status: status)
-    } else {
-      if shouldLogReapFailure(waitResult: waitResult, errnoValue: errnoValue) {
+    switch observation {
+    case .running:
+      return
+    case .terminated(_, let terminationReason):
+      reason = terminationReason
+      logTermination(pid: pid, reason: terminationReason)
+    case .failed(let errnoValue):
+      if errnoValue != ECHILD {
         logger.warn(
           "failed to reap lua runtime",
           .field("pid", pid),
@@ -263,150 +201,45 @@ extension LuaProcessController {
     )
   }
 
-  /// Converts one Darwin wait status into a stable termination reason.
+  /// Converts one raw Darwin wait status into the shared termination reason.
   func terminationReason(status: Int32) -> Termination.Reason {
-    if waitStatusExited(status) {
-      return .exited(code: waitStatusExitCode(status))
-    }
-
-    if waitStatusSignaled(status) {
-      return .signaled(signal: waitStatusTerminationSignal(status))
-    }
-
-    return .unknown(status: status)
+    ProcessWaitSupport.decode(status: status)
   }
 
-  /// Returns whether a failed reap should be logged for the observed child process.
-  private func shouldLogReapFailure(waitResult: Int32, errnoValue: Int32) -> Bool {
-    return waitResult < 0 && errnoValue != ECHILD
-  }
-
-  /// Logs one Lua runtime termination status.
-  private func logTermination(pid processIdentifier: Int32, status: Int32) {
-    if waitStatusExited(status) {
-      let exitCode = waitStatusExitCode(status)
-
-      if exitCode == 0 {
-        logger.debug(
-          "lua runtime exited",
-          .field("pid", processIdentifier),
-          .field("code", exitCode)
-        )
-      } else {
-        logger.warn(
-          "lua runtime exited",
-          .field("pid", processIdentifier),
-          .field("code", exitCode)
-        )
-      }
-
-      return
-    }
-
-    if waitStatusSignaled(status) {
+  /// Logs one Lua runtime termination reason.
+  private func logTermination(pid processIdentifier: Int32, reason: Termination.Reason) {
+    switch reason {
+    case .exited(let code) where code == 0:
+      logger.debug(
+        "lua runtime exited",
+        .field("pid", processIdentifier),
+        .field("code", code)
+      )
+    case .exited(let code):
+      logger.warn(
+        "lua runtime exited",
+        .field("pid", processIdentifier),
+        .field("code", code)
+      )
+    case .signaled(let signal):
       logger.warn(
         "lua runtime terminated by signal",
         .field("pid", processIdentifier),
-        .field("signal", waitStatusTerminationSignal(status))
+        .field("signal", signal)
       )
-      return
+    case .unknown(let status):
+      logger.warn(
+        "lua runtime terminated",
+        .field("pid", processIdentifier),
+        .field("status", status)
+      )
+    case .reapFailed(let errnoValue):
+      logger.warn(
+        "failed to reap lua runtime",
+        .field("pid", processIdentifier),
+        .field("errno", errnoValue)
+      )
     }
-
-    logger.warn(
-      "lua runtime terminated",
-      .field("pid", processIdentifier),
-      .field("status", status)
-    )
-  }
-
-  /// Returns the low wait-status byte used by Darwin wait macros.
-  private func waitStatusCode(_ status: Int32) -> Int32 {
-    return status & 0x7f
-  }
-
-  /// Returns whether one wait status represents normal process exit.
-  private func waitStatusExited(_ status: Int32) -> Bool {
-    return waitStatusCode(status) == 0
-  }
-
-  /// Returns the process exit code from one wait status.
-  private func waitStatusExitCode(_ status: Int32) -> Int32 {
-    return (status >> 8) & 0xff
-  }
-
-  /// Returns whether one wait status represents signal termination.
-  private func waitStatusSignaled(_ status: Int32) -> Bool {
-    let code = waitStatusCode(status)
-    return code != 0x7f && code != 0
-  }
-
-  /// Returns the terminating signal from one wait status.
-  private func waitStatusTerminationSignal(_ status: Int32) -> Int32 {
-    return waitStatusCode(status)
-  }
-
-  /// Configures stderr redirection for the Lua child launcher.
-  private func configureChildStandardStreams(
-    fileActions: inout posix_spawn_file_actions_t?,
-    resources: LaunchResources
-  ) throws {
-    try PosixSpawnSupport.addDup2Action(
-      fileActions: &fileActions,
-      sourceFileDescriptor: resources.error.fileHandleForWriting.fileDescriptor,
-      destinationFileDescriptor: STDERR_FILENO
-    )
-
-    try PosixSpawnSupport.addCloseAction(
-      fileActions: &fileActions,
-      fileDescriptor: resources.error.fileHandleForReading.fileDescriptor
-    )
-  }
-
-  /// Builds the argv vector for the spawned Lua runtime.
-  private func makeArgumentVector(
-    executablePath: String,
-    socketPath: String,
-    luaPath: String,
-    runtimePath: String,
-    widgetsPath: String,
-    defaultCommandTimeoutSeconds: TimeInterval,
-    defaultCommandMaxOutputBytes: Int,
-    widgetFiles: [String]
-  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
-    try PosixSpawnSupport.makeCStringVector(
-      [
-        executablePath,
-        socketPath,
-        luaPath,
-        runtimePath,
-        widgetsPath,
-        String(defaultCommandTimeoutSeconds),
-        String(defaultCommandMaxOutputBytes),
-      ] + widgetFiles
-    )
-  }
-
-  /// Builds the environment vector inherited by the Lua runtime.
-  private func makeEnvironmentVector(
-    overrides: [String: String]
-  ) throws -> UnsafeMutablePointer<UnsafeMutablePointer<CChar>?> {
-    var environment = ProcessInfo.processInfo.environment
-
-    for (key, value) in overrides {
-      environment[key] = value
-    }
-
-    let flattenedEnvironment =
-      environment
-      .map { "\($0.key)=\($0.value)" }
-      .sorted()
-
-    return try PosixSpawnSupport.makeCStringVector(flattenedEnvironment)
-  }
-
-  /// Closes the child-side pipe ends in the parent after a successful spawn.
-  private func closeParentPipeEndsAfterSuccessfulSpawn(_ resources: LaunchResources) {
-    try? resources.error.fileHandleForWriting.close()
   }
 
   /// Closes all launch resources after a failed spawn attempt.
@@ -418,8 +251,6 @@ extension LuaProcessController {
   /// Returns the Lua runtime environment with app config and resolved theme values.
   private func luaRuntimeEnvironment(config: ConfigSnapshot) -> [String: String] {
     config.app.environment
-      .merging(config.luaThemeEnvironment()) {
-        _, themeValue in themeValue
-      }
+      .merging(config.luaThemeEnvironment()) { _, themeValue in themeValue }
   }
 }

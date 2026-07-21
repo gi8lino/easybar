@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import XCTest
 
@@ -520,5 +521,58 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
     XCTAssertTrue(output.contains("aerospace command exited"))
     XCTAssertTrue(output.contains("status=2"))
     XCTAssertTrue(output.contains("stderr_bytes=16"))
+  }
+
+  func testRunCleansUpDescendantHoldingOutputPipes() throws {
+    let directoryURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent(
+        "easybar-aerospace-descendant-tests-\(UUID().uuidString)",
+        isDirectory: true
+      )
+    try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+    let childPIDURL = directoryURL.appendingPathComponent("child.pid")
+    let scriptURL = directoryURL.appendingPathComponent("aerospace")
+    try """
+    #!/bin/sh
+    sleep 30 &
+    echo "$!" > "\(childPIDURL.path)"
+    printf 'ok'
+    """.write(to: scriptURL, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes(
+      [.posixPermissions: 0o755],
+      ofItemAtPath: scriptURL.path
+    )
+
+    let runner = AeroSpaceCommandRunner(
+      logger: ProcessLogger(
+        label: "easybar.app.services.aerospace.commands",
+        minimumLevel: .error,
+        outputStream: nil,
+        errorStream: nil
+      ),
+      executablePathResolver: { scriptURL.path },
+      commandTimeout: 2
+    )
+    let startedAt = Date()
+
+    XCTAssertEqual(runner.run(arguments: ["list-workspaces"]), "ok")
+    XCTAssertLessThan(Date().timeIntervalSince(startedAt), 2)
+
+    let childPIDText = try String(contentsOf: childPIDURL, encoding: .utf8)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let childPID = try XCTUnwrap(Int32(childPIDText))
+    XCTAssertTrue(waitUntilProcessIsAbsent(childPID))
+  }
+
+  private func waitUntilProcessIsAbsent(_ processIdentifier: Int32) -> Bool {
+    for _ in 0..<100 {
+      if kill(processIdentifier, 0) != 0, errno == ESRCH {
+        return true
+      }
+      usleep(20_000)
+    }
+    return false
   }
 }
