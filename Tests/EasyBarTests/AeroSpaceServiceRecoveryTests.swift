@@ -104,7 +104,10 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
     }
 
     func setWorkspaceName(_ name: String) {
-      state.withLock { $0.workspaceName = name }
+      state.withLock { state in
+        state.workspaceName = name
+        state.workspaceNames = [name]
+      }
     }
 
     func setWorkspaces(_ names: [String], focused name: String) {
@@ -265,6 +268,7 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
 
     let latestPublished = await waitUntil(timeout: 2) {
       service.snapshotStatus == .current
+        && service.spaces.map(\.name) == ["6"]
     }
     XCTAssertTrue(latestPublished)
     XCTAssertEqual(service.spaces.map(\.name), ["6"])
@@ -283,7 +287,8 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
     service.registerConsumer("test") { updateCount += 1 }
     defer { service.stop() }
 
-    XCTAssertTrue(await waitUntil { service.snapshotStatus == .current })
+    let initialSnapshotLoaded = await waitUntil { service.snapshotStatus == .current }
+    XCTAssertTrue(initialSnapshotLoaded)
     runner.setWorkspaceCommandSucceeds(false)
 
     service.focusWorkspace("2")
@@ -306,7 +311,8 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
     service.registerConsumer("test") {}
     defer { service.stop() }
 
-    XCTAssertTrue(await waitUntil { service.snapshotStatus == .current })
+    let initialSnapshotLoaded = await waitUntil { service.snapshotStatus == .current }
+    XCTAssertTrue(initialSnapshotLoaded)
 
     service.focusWorkspace("2")
 
