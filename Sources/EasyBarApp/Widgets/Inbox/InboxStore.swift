@@ -56,10 +56,12 @@ final class InboxStore: ObservableObject {
   func replace(source: String, items: [InboxItem]) {
     guard let source = normalizedSource(source) else { return }
 
-    let uniqueItems = Dictionary(
-      items.lazy.filter(isValid).prefix(configuration.maxItems).map { ($0.id, $0) },
-      uniquingKeysWith: { _, newest in newest }
-    )
+    var uniqueItems: [String: InboxItem] = [:]
+    for item in items where isValid(item) {
+      if uniqueItems[item.id] != nil || uniqueItems.count < configuration.maxItems {
+        uniqueItems[item.id] = item
+      }
+    }
     sources[source] = Array(uniqueItems.values)
 
     reconcileState(source: source, items: uniqueItems.values)

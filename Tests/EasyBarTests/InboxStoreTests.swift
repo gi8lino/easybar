@@ -20,6 +20,25 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertEqual(store.unreadCount, 0)
   }
 
+  func testReplacementLimitCountsUniqueItemIDs() {
+    var config = Config.InboxBuiltinConfig.default
+    config.maxItems = 2
+    let store = InboxStore(configuration: config)
+
+    store.replace(
+      source: "GitHub",
+      items: [
+        item("one", title: "Older"),
+        item("one", title: "Newer"),
+        item("two", title: "Second"),
+        item("three", title: "Over limit"),
+      ]
+    )
+
+    XCTAssertEqual(Set(store.presentedItems.map(\.item.id)), ["one", "two"])
+    XCTAssertEqual(store.presentedItems.first { $0.item.id == "one" }?.item.title, "Newer")
+  }
+
   func testGroupingUsesConfiguredCategoryAndFallback() {
     var config = Config.InboxBuiltinConfig.default
     config.groupBy = .category
