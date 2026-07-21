@@ -518,6 +518,7 @@ function M.new(log, hooks)
 		local widget_api = {}
 		local widget_defaults = {}
 		local source_directory = tostring(source):match("^(.*)/[^/]+$") or "."
+		local widget_name = widget_log_source(source)
 
 		--- Resolves one safe path relative to this widget's source directory.
 		function widget_api.asset(path)
@@ -660,9 +661,21 @@ function M.new(log, hooks)
 			return make_node_handle(id)
 		end
 
-		widget_api.exec = api.exec
-		widget_api.exec_async = api.exec_async
-		widget_api.spawn_async = api.spawn_async
+		function widget_api.exec(command, options, ...)
+			assert(select("#", ...) == 0, "easybar.exec(command, options) does not accept a callback")
+			return registry.exec_for_widget(widget_name, command, options)
+		end
+
+		function widget_api.exec_async(command, options, callback, ...)
+			assert(select("#", ...) == 0, "easybar.exec_async(command, options, callback) does not accept extra arguments")
+			return registry.exec_async_for_widget(widget_name, command, options, callback)
+		end
+
+		function widget_api.spawn_async(arguments, options, callback, ...)
+			assert(select("#", ...) == 0, "easybar.spawn_async(arguments, options, callback) does not accept extra arguments")
+			return registry.spawn_async_for_widget(widget_name, arguments, options, callback)
+		end
+
 		widget_api.cancel_async = api.cancel_async
 		widget_api.after = api.after
 		widget_api.DEFAULT_EXEC_OPTIONS = api.DEFAULT_EXEC_OPTIONS
@@ -748,5 +761,3 @@ function M.new(log, hooks)
 end
 
 return M
-
-

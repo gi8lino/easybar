@@ -579,12 +579,17 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@field ref EasyBarThemeRefs Theme reference strings such as `theme.text`.
 -- END GENERATED SECTION: easybar.themes
 
----Per-call limits for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`.
----Omitted fields use the current `[app.lua_commands]` defaults.
+---Per-call execution and diagnostic options for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`.
+---Omitted execution-limit fields use the current `[app.lua_commands]` defaults.
 ---@class (exact) EasyBarCommandOptions
 ---@field timeout_seconds? number Hard timeout in seconds. Must be greater than zero.
 ---@field max_output_bytes? integer Maximum combined stdout and stderr bytes. Must be a positive integer.
 ---@field raw_output? boolean Preserve output exactly, including trailing line endings. Defaults to false.
+---@field log_operation? string Optional human-readable operation name attached to command diagnostics.
+
+---Metadata supplied with one completed EasyBar command.
+---@class (exact) EasyBarCommandMetadata
+---@field duration_ms integer Host-measured command duration in milliseconds.
 
 ---Opaque token identifying one asynchronous command in the current Lua runtime session.
 ---Do not persist tokens across config reloads or application restarts.
@@ -597,7 +602,7 @@ function EasyBarInbox.on_context_action(source, handler) end
 
 ---Completion callback for asynchronous command APIs.
 ---It runs exactly once with combined stdout and stderr after the process exits or is terminated.
----@alias EasyBarCommandCallback fun(output:string, code:EasyBarCommandExitCode)
+---@alias EasyBarCommandCallback fun(output:string, code:EasyBarCommandExitCode, metadata:EasyBarCommandMetadata)
 
 ---One-shot callback scheduled by `easybar.after(...)`.
 ---@alias EasyBarTimerCallback fun()
@@ -766,8 +771,8 @@ function EasyBar.exec(command, options) end
 ---Use this only when shell syntax such as pipes, redirection, expansion, or compound commands is required.
 ---The callback runs exactly once after normal exit, timeout, output-limit termination, launch failure, or cancellation.
 ---@param command string Shell source passed to `/bin/sh -lc`.
----@param options EasyBarCommandOptions|nil Optional per-call limits, or `nil` to use host defaults.
----@param callback EasyBarCommandCallback Receives combined output and the final exit status.
+---@param options EasyBarCommandOptions|nil Optional per-call execution and diagnostic options, or `nil` to use host defaults.
+---@param callback EasyBarCommandCallback Receives combined output, final exit status, and duration metadata.
 ---@return EasyBarAsyncToken token Token accepted by `easybar.cancel_async(...)` while the command is pending.
 function EasyBar.exec_async(command, options, callback) end
 
@@ -775,8 +780,8 @@ function EasyBar.exec_async(command, options, callback) end
 ---The first array element is the executable; remaining elements are passed exactly as process arguments.
 ---Prefer this over `easybar.exec_async(...)` whenever shell behavior is not required.
 ---@param arguments string[] Dense argument array whose first element is an executable name or path.
----@param options EasyBarCommandOptions|nil Optional per-call limits, or `nil` to use host defaults.
----@param callback EasyBarCommandCallback Receives combined output and the final exit status.
+---@param options EasyBarCommandOptions|nil Optional per-call execution and diagnostic options, or `nil` to use host defaults.
+---@param callback EasyBarCommandCallback Receives combined output, final exit status, and duration metadata.
 ---@return EasyBarAsyncToken token Token accepted by `easybar.cancel_async(...)` while the command is pending.
 function EasyBar.spawn_async(arguments, options, callback) end
 

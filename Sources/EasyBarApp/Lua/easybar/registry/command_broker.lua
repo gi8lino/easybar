@@ -21,6 +21,17 @@ local function count_entries(values)
 	return count
 end
 
+local function command_context(widget, options)
+	local operation = type(options) == "table" and options.log_operation or nil
+	if widget == nil and operation == nil then
+		return nil
+	end
+	return {
+		widget = widget,
+		operation = operation,
+	}
+end
+
 function M.new(state, hooks)
 	local broker = {}
 	local request_sync_command = hooks.request_sync_command
@@ -51,17 +62,19 @@ function M.new(state, hooks)
 		state.pending_sync_commands[token] = { options = options }
 	end
 
-	function broker.handle_command_response(token, output, code)
+	function broker.handle_command_response(token, output, code, metadata)
 		assert(type(token) == "string" and token ~= "", "command response requires token")
 		local raw_output = type(output) == "string" and output or tostring(output or "")
 		local normalized_code = tonumber(code) or 1
+		local normalized_metadata = type(metadata) == "table" and metadata or {}
 		local pending = state.pending_async_commands[token]
 
 		if pending ~= nil then
 			state.pending_async_commands[token] = nil
-			on_async_job_completed(token, normalized_code)
+			on_async_job_completed(token, normalized_code, pending.context, normalized_metadata, pending.options)
 			before_async_callback()
-			local ok, err = pcall(pending.callback, normalize_output(raw_output, pending.options), normalized_code)
+			local ok, err =
+				pcall(pending.callback, normalize_output(raw_output, pending.options), normalized_code, normalized_metadata)
 			if not ok then
 				on_async_callback_error(pending.command, err)
 			end
@@ -73,6 +86,7 @@ function M.new(state, hooks)
 			state.pending_command_responses[token] = {
 				output = normalize_output(raw_output, synchronous.options),
 				code = normalized_code,
+				metadata = normalized_metadata,
 			}
 			return true
 		end
@@ -97,7 +111,7 @@ function M.new(state, hooks)
 		return existed
 	end
 
-	local function add_async(token, command, callback, options)
+	local function add_async(token, command, callback, options, context)
 		assert(
 			count_entries(state.pending_async_commands) < MAX_PENDING_ASYNC_COMMANDS,
 			"too many pending asynchronous easybar commands"
@@ -107,32 +121,51 @@ function M.new(state, hooks)
 			command = command,
 			callback = callback,
 			options = options,
+			context = context,
 		}
-		on_async_job_started(token, command)
+		on_async_job_started(token, command, context, options)
 		return token
+	end
+
+	local function spawn_async(widget, arguments, options, callback, signature)
+		assert(type(callback) == "function", signature .. " requires callback")
+		assert(type(request_async_process) == "function", "easybar.spawn_async unavailable without host runner")
+		local normalized_arguments = normalize_process_arguments(arguments, signature)
+		local normalized_options = normalize_command_options(options, signature)
+		local context = command_context(widget, normalized_options)
+		local token = request_async_process(normalized_arguments, normalized_options, context) or fallback_token("command")
+		return add_async(token, table.concat(normalized_arguments, " "), callback, normalized_options, context)
 	end
 
 	function broker.spawn_async(arguments, options, callback, ...)
 		local signature = "easybar.spawn_async(arguments, options, callback)"
 		assert(select("#", ...) == 0, signature .. " does not accept extra arguments")
+		return spawn_async(nil, arguments, options, callback, signature)
+	end
+
+	function broker.spawn_async_for_widget(widget, arguments, options, callback)
+		return spawn_async(widget, arguments, options, callback, "easybar.spawn_async(arguments, options, callback)")
+	end
+
+	local function exec_async(widget, command, options, callback, signature)
+		assert(type(command) == "string" and command ~= "", signature .. " requires command")
+		assert(not command:find("%z"), signature .. " rejects NUL bytes")
 		assert(type(callback) == "function", signature .. " requires callback")
-		assert(type(request_async_process) == "function", "easybar.spawn_async unavailable without host runner")
-		local normalized_arguments = normalize_process_arguments(arguments, signature)
+		assert(type(request_async_command) == "function", "easybar.exec_async unavailable without host runner")
 		local normalized_options = normalize_command_options(options, signature)
-		local token = request_async_process(normalized_arguments, normalized_options) or fallback_token("command")
-		return add_async(token, table.concat(normalized_arguments, " "), callback, normalized_options)
+		local context = command_context(widget, normalized_options)
+		local token = request_async_command(command, normalized_options, context) or fallback_token("command")
+		return add_async(token, command, callback, normalized_options, context)
 	end
 
 	function broker.exec_async(command, options, callback, ...)
 		local signature = "easybar.exec_async(command, options, callback)"
-		assert(type(command) == "string" and command ~= "", signature .. " requires command")
-		assert(not command:find("%z"), signature .. " rejects NUL bytes")
 		assert(select("#", ...) == 0, signature .. " does not accept extra arguments")
-		assert(type(callback) == "function", signature .. " requires callback")
-		assert(type(request_async_command) == "function", "easybar.exec_async unavailable without host runner")
-		local normalized_options = normalize_command_options(options, signature)
-		local token = request_async_command(command, normalized_options) or fallback_token("command")
-		return add_async(token, command, callback, normalized_options)
+		return exec_async(nil, command, options, callback, signature)
+	end
+
+	function broker.exec_async_for_widget(widget, command, options, callback)
+		return exec_async(widget, command, options, callback, "easybar.exec_async(command, options, callback)")
 	end
 
 	function broker.cancel_async(token, ...)
@@ -146,16 +179,25 @@ function M.new(state, hooks)
 		return true
 	end
 
-	function broker.exec(command, options, ...)
-		local signature = "easybar.exec(command, options)"
+	local function exec(widget, command, options, signature)
 		assert(type(command) == "string" and command ~= "", signature .. " requires command")
 		assert(not command:find("%z"), signature .. " rejects NUL bytes")
-		assert(select("#", ...) == 0, signature .. " does not accept a callback")
 		assert(type(request_sync_command) == "function", "easybar.exec unavailable without host runner")
 		local normalized_options = normalize_command_options(options, signature)
+		local context = command_context(widget, normalized_options)
 		before_exec_callback()
-		local output, code = request_sync_command(command, normalized_options)
+		local output, code = request_sync_command(command, normalized_options, context)
 		return normalize_output(output, normalized_options), tonumber(code) or 1
+	end
+
+	function broker.exec(command, options, ...)
+		local signature = "easybar.exec(command, options)"
+		assert(select("#", ...) == 0, signature .. " does not accept a callback")
+		return exec(nil, command, options, signature)
+	end
+
+	function broker.exec_for_widget(widget, command, options)
+		return exec(widget, command, options, "easybar.exec(command, options)")
 	end
 
 	return broker

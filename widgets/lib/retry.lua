@@ -1,5 +1,9 @@
+---Metadata supplied with one EasyBar command completion.
+---@class RetryCommandMetadata
+---@field duration_ms? number Host-measured command duration in milliseconds.
+
 ---Completion callback supplied to one retry attempt.
----@alias RetryDoneCallback fun(output:string, code:EasyBarCommandExitCode)
+---@alias RetryDoneCallback fun(output:string, code:EasyBarCommandExitCode, metadata?:RetryCommandMetadata)
 
 ---Starts one asynchronous attempt and returns its EasyBar command token.
 ---@alias RetryAttempt fun(done:RetryDoneCallback, attempt_number:integer):string
@@ -8,7 +12,7 @@
 ---@alias RetryPredicate fun(output:string, code:EasyBarCommandExitCode):boolean
 
 ---Receives the final non-retried result and total number of started attempts.
----@alias RetryCompletion fun(output:string, code:EasyBarCommandExitCode, attempts:integer)
+---@alias RetryCompletion fun(output:string, code:integer, attempts:integer, metadata:RetryCommandMetadata)
 
 ---Options accepted by `retry.run(...)`.
 ---@class (exact) RetryOptions
@@ -78,11 +82,19 @@ function M.is_transient_network_error(output, code)
 	return false
 end
 
+local function duration_ms(metadata)
+	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
+	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
+		return 0
+	end
+	return value
+end
+
 ---Runs one asynchronous operation with delays before subsequent attempts.
 ---
 ---`attempt(done, attempt_number)` must start an asynchronous operation, return its EasyBar
----command token, and invoke `done(output, code)` once. The returned handle cancels either the
----active command or the pending host timer. Cancellation never invokes `on_complete`.
+---command token, and invoke `done(output, code, metadata)` once. The returned handle cancels either
+---the active command or the pending host timer. Cancellation never invokes `on_complete`.
 ---
 ---The first attempt starts immediately. `delays[1]` is used before attempt 2, `delays[2]`
 ---before attempt 3, and so on. Store the returned operation only when the caller needs to cancel
@@ -117,6 +129,7 @@ function M.run(easybar_api, options)
 		timer = nil,
 		cancelled = false,
 		completed = false,
+		duration_ms = 0,
 	}
 
 	local operation = {}
@@ -130,7 +143,9 @@ function M.run(easybar_api, options)
 		state.completed = true
 		state.active_token = nil
 		state.timer = nil
-		options.on_complete(output, code, state.attempts)
+		options.on_complete(output, code, state.attempts, {
+			duration_ms = math.floor(state.duration_ms + 0.5),
+		})
 	end
 
 	run_attempt = function()
@@ -141,13 +156,14 @@ function M.run(easybar_api, options)
 		state.attempts = state.attempts + 1
 
 		local callback_called = false
-		local ok, token_or_error = pcall(options.attempt, function(output, code)
+		local ok, token_or_error = pcall(options.attempt, function(output, code, metadata)
 			if callback_called then
 				return
 			end
 
 			callback_called = true
 			state.active_token = nil
+			state.duration_ms = state.duration_ms + duration_ms(metadata)
 
 			if state.cancelled or state.completed then
 				return
@@ -162,6 +178,7 @@ function M.run(easybar_api, options)
 				return
 			end
 
+			state.duration_ms = state.duration_ms + delay * 1000
 			state.timer = easybar_api.after(delay, function()
 				state.timer = nil
 				run_attempt()

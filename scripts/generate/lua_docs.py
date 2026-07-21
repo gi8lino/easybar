@@ -535,7 +535,7 @@ def write_functions(
     ]:
         if name in aliases:
             lines.extend(render_alias(aliases[name], heading_level=3))
-    for name in ["EasyBarCommandOptions", "EasyBarTimerHandle"]:
+    for name in ["EasyBarCommandOptions", "EasyBarCommandMetadata", "EasyBarTimerHandle"]:
         if name in classes:
             lines.extend(render_class(classes[name], heading_level=3))
     lines += ["## API functions", ""]
@@ -609,4 +609,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
 

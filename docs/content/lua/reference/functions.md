@@ -29,9 +29,9 @@ Exit status returned by EasyBar command APIs. Normal process exit codes are pres
 
 Completion callback for asynchronous command APIs. It runs exactly once with combined stdout and stderr after the process exits or is terminated.
 
-| Value                                             |
-| ------------------------------------------------- |
-| `fun(output:string, code:EasyBarCommandExitCode)` |
+| Value                                                                              |
+| ---------------------------------------------------------------------------------- |
+| `fun(output:string, code:EasyBarCommandExitCode, metadata:EasyBarCommandMetadata)` |
 
 ### `EasyBarTimerCallback`
 
@@ -45,13 +45,24 @@ One-shot callback scheduled by `easybar.after(...)`.
 
 Modifiers: `exact`.
 
-Per-call limits for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`. Omitted fields use the current `[app.lua_commands]` defaults.
+Per-call execution and diagnostic options for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`. Omitted execution-limit fields use the current `[app.lua_commands]` defaults.
 
 | Property                        | Type      | Description                                                                  |
 | ------------------------------- | --------- | ---------------------------------------------------------------------------- |
 | `timeout_seconds` _(optional)_  | `number`  | Hard timeout in seconds. Must be greater than zero.                          |
 | `max_output_bytes` _(optional)_ | `integer` | Maximum combined stdout and stderr bytes. Must be a positive integer.        |
 | `raw_output` _(optional)_       | `boolean` | Preserve output exactly, including trailing line endings. Defaults to false. |
+| `log_operation` _(optional)_    | `string`  | Optional human-readable operation name attached to command diagnostics.      |
+
+### `EasyBarCommandMetadata`
+
+Modifiers: `exact`.
+
+Metadata supplied with one completed EasyBar command.
+
+| Property      | Type      | Description                                     |
+| ------------- | --------- | ----------------------------------------------- |
+| `duration_ms` | `integer` | Host-measured command duration in milliseconds. |
 
 ### `EasyBarTimerHandle`
 
@@ -121,11 +132,11 @@ Runs one shell command asynchronously through `/bin/sh -lc`. Use this only when 
 
 #### Parameters
 
-| Name       | Type                         | Description                                              |
-| ---------- | ---------------------------- | -------------------------------------------------------- |
-| `command`  | `string`                     | Shell source passed to `/bin/sh -lc`.                    |
-| `options`  | `EasyBarCommandOptions\|nil` | Optional per-call limits, or `nil` to use host defaults. |
-| `callback` | `EasyBarCommandCallback`     | Receives combined output and the final exit status.      |
+| Name       | Type                         | Description                                                                        |
+| ---------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `command`  | `string`                     | Shell source passed to `/bin/sh -lc`.                                              |
+| `options`  | `EasyBarCommandOptions\|nil` | Optional per-call execution and diagnostic options, or `nil` to use host defaults. |
+| `callback` | `EasyBarCommandCallback`     | Receives combined output, final exit status, and duration metadata.                |
 
 #### Returns
 
@@ -139,11 +150,11 @@ Runs one executable asynchronously without shell parsing or interpolation. The f
 
 #### Parameters
 
-| Name        | Type                         | Description                                                             |
-| ----------- | ---------------------------- | ----------------------------------------------------------------------- |
-| `arguments` | `string[]`                   | Dense argument array whose first element is an executable name or path. |
-| `options`   | `EasyBarCommandOptions\|nil` | Optional per-call limits, or `nil` to use host defaults.                |
-| `callback`  | `EasyBarCommandCallback`     | Receives combined output and the final exit status.                     |
+| Name        | Type                         | Description                                                                        |
+| ----------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `arguments` | `string[]`                   | Dense argument array whose first element is an executable name or path.            |
+| `options`   | `EasyBarCommandOptions\|nil` | Optional per-call execution and diagnostic options, or `nil` to use host defaults. |
+| `callback`  | `EasyBarCommandCallback`     | Receives combined output, final exit status, and duration metadata.                |
 
 #### Returns
 

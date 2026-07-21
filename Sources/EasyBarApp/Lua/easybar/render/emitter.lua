@@ -67,5 +67,3 @@ function M.emit_all(trees, live_roots, log, json)
 end
 
 return M
-
-

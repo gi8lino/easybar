@@ -130,8 +130,20 @@ local function log_request_id(token)
 	return sequence ~= nil and "lua-" .. sequence or "lua-unknown"
 end
 
+--- Returns normalized command log context with options as a fallback.
+local function command_log_context(options, context)
+	local widget = type(context) == "table" and context.widget or nil
+	local operation = type(context) == "table" and context.operation or nil
+
+	if (type(operation) ~= "string" or operation == "") and type(options) == "table" then
+		operation = options.log_operation
+	end
+
+	return widget, operation
+end
+
 --- Sends one command request to the Swift host.
-local function send_command_request(request, synchronous, options)
+local function send_command_request(request, synchronous, options, context)
 	local token = next_command_token()
 
 	local payload = {
@@ -157,6 +169,14 @@ local function send_command_request(request, synchronous, options)
 		end
 	end
 
+	local widget, operation = command_log_context(options, context)
+	if type(widget) == "string" and widget ~= "" then
+		payload.widget = widget
+	end
+	if type(operation) == "string" and operation ~= "" then
+		payload.operation = operation
+	end
+
 	send_payload(payload)
 
 	return token
@@ -176,7 +196,9 @@ local function handle_command_response(payload)
 		output = tostring(output)
 	end
 
-	local handled = registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1)
+	local handled = registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1, {
+		duration_ms = tonumber(payload.duration_ms),
+	})
 	if not handled then
 		log.warn("runtime dropped unknown command response token=" .. tostring(payload.token))
 	end
@@ -230,7 +252,6 @@ local function process_next_host_message()
 		return false
 	end
 
-
 	local ok, payload = pcall(json.decode, line)
 
 	if not ok then
@@ -243,8 +264,8 @@ local function process_next_host_message()
 end
 
 --- Runs one host-owned command synchronously and returns raw combined output plus exit code.
-local function request_sync_command(command, options)
-	local token = send_command_request(command, true, options)
+local function request_sync_command(command, options, context)
+	local token = send_command_request(command, true, options, context)
 	registry.expect_sync_command_response(token, options)
 
 	while true do
@@ -261,13 +282,13 @@ local function request_sync_command(command, options)
 end
 
 --- Starts one host-owned asynchronous command and returns its token.
-local function request_async_command(command, options)
-	return send_command_request(command, false, options)
+local function request_async_command(command, options, context)
+	return send_command_request(command, false, options, context)
 end
 
 --- Starts one host-owned asynchronous executable without shell parsing.
-local function request_async_process(arguments, options)
-	return send_command_request({ arguments = arguments }, false, options)
+local function request_async_process(arguments, options, context)
+	return send_command_request({ arguments = arguments }, false, options, context)
 end
 
 --- Requests one host-owned one-shot timer.
@@ -333,21 +354,39 @@ registry = api.new(log, {
 			actions = actions,
 		})
 	end,
-	on_async_job_started = function(token, command)
+	on_async_job_started = function(token, command, context, options)
+		local suffix = ""
+		local widget, operation = command_log_context(options, context)
+		if type(widget) == "string" and widget ~= "" then
+			suffix = suffix .. " widget=" .. widget
+		end
+		if type(operation) == "string" and operation ~= "" then
+			suffix = suffix .. " operation=" .. operation
+		end
 		log.trace(
 			"async callback registered request_id="
 				.. log_request_id(token)
-				.. " command_bytes="
+				.. " request_bytes="
 				.. tostring(#command)
+				.. suffix
 		)
 	end,
-	on_async_job_completed = function(token, code)
-		log.trace(
-			"async callback resumed request_id=" .. log_request_id(token) .. " status=" .. tostring(code)
-		)
+	on_async_job_completed = function(token, code, context, metadata, options)
+		local suffix = ""
+		local widget, operation = command_log_context(options, context)
+		if type(widget) == "string" and widget ~= "" then
+			suffix = suffix .. " widget=" .. widget
+		end
+		if type(operation) == "string" and operation ~= "" then
+			suffix = suffix .. " operation=" .. operation
+		end
+		if type(metadata) == "table" and tonumber(metadata.duration_ms) ~= nil then
+			suffix = suffix .. " duration_ms=" .. tostring(math.floor(tonumber(metadata.duration_ms) + 0.5))
+		end
+		log.trace("async callback resumed request_id=" .. log_request_id(token) .. " status=" .. tostring(code) .. suffix)
 	end,
 	on_async_callback_error = function(command, err)
-		log.error("lua async callback failed command_bytes=" .. tostring(#command) .. " error_type=" .. type(err))
+		log.error("lua async callback failed request_bytes=" .. tostring(#command) .. " error_type=" .. type(err))
 	end,
 	on_unknown_command_response = function(token)
 		log.warn("lua command broker rejected unknown response token=" .. tostring(token))
@@ -382,5 +421,3 @@ flush_pending_outputs(true, false)
 
 while process_next_host_message() do
 end
-
-

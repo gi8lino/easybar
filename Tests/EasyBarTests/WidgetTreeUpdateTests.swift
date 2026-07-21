@@ -54,12 +54,30 @@ final class WidgetTreeUpdateTests: XCTestCase {
         #"{"protocol_version":1,"type":"command_request","token":"job-1","arguments":["printf","%s","hello world"],"sync":false}"#
     )
 
-    guard case .commandRequest(let token, let invocation, let isSynchronous, _, _) = message else {
+    guard
+      case .commandRequest(
+        let token, let invocation, let isSynchronous, _, _, let widget, let operation) = message
+    else {
       return XCTFail("Expected command request message")
     }
     XCTAssertEqual(token, "job-1")
     XCTAssertEqual(invocation, .executable(["printf", "%s", "hello world"]))
     XCTAssertFalse(isSynchronous)
+    XCTAssertNil(widget)
+    XCTAssertNil(operation)
+  }
+
+  func testCommandLogContextIsDecoded() throws {
+    let message = try WidgetRuntimeProtocolDecoder().decodeMessage(
+      from:
+        #"{"protocol_version":1,"type":"command_request","token":"job-1","arguments":["printf","hello"],"sync":false,"widget":"github-inbox","operation":"refresh"}"#
+    )
+
+    guard case .commandRequest(_, _, _, _, _, let widget, let operation) = message else {
+      return XCTFail("Expected command request message")
+    }
+    XCTAssertEqual(widget, "github-inbox")
+    XCTAssertEqual(operation, "refresh")
   }
 
   func testCommandPayloadRejectsShellAndArgumentsTogether() throws {

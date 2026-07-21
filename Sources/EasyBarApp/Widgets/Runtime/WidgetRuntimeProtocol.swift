@@ -11,7 +11,9 @@ enum WidgetRuntimeMessage {
     invocation: LuaCommandInvocation,
     isSynchronous: Bool,
     timeoutSeconds: TimeInterval?,
-    maxOutputBytes: Int?
+    maxOutputBytes: Int?,
+    widget: String?,
+    operation: String?
   )
   case commandCancel(token: String)
   case timerRequest(token: String, delaySeconds: TimeInterval)
@@ -87,12 +89,17 @@ struct WidgetRuntimeProtocolDecoder {
         )
       }
 
+      let widget = try normalizedCommandLogField(request.widget, name: "widget")
+      let operation = try normalizedCommandLogField(request.operation, name: "operation")
+
       return .commandRequest(
         token: request.token,
         invocation: request.invocation,
         isSynchronous: request.isSynchronous,
         timeoutSeconds: request.timeoutSeconds,
-        maxOutputBytes: request.maxOutputBytes
+        maxOutputBytes: request.maxOutputBytes,
+        widget: widget,
+        operation: operation
       )
     case .commandCancel:
       guard let token = update.commandCancelToken, !token.isEmpty else {
@@ -141,6 +148,21 @@ struct WidgetRuntimeProtocolDecoder {
       }
       return .inboxConfigure(configuration)
     }
+  }
+
+  /// Validates one optional human-readable command log field.
+  private func normalizedCommandLogField(_ value: String?, name: String) throws -> String? {
+    guard let value else { return nil }
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty,
+      normalized.utf8.count <= 128,
+      !normalized.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+    else {
+      throw WidgetRuntimeProtocolError.invalidPayload(
+        "invalid lua command \(name)"
+      )
+    }
+    return normalized
   }
 
   /// Decodes one structured runtime update line.

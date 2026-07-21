@@ -12,6 +12,14 @@ local refreshing = false
 local pending_wake_refresh = nil
 local log = easybar.log
 
+local function command_duration_ms(metadata)
+	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
+	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
+		return 0
+	end
+	return value
+end
+
 easybar.inbox.configure(SOURCE, {
 	actions = { { id = "refresh", title = "Refresh" } },
 })
@@ -30,30 +38,35 @@ end
 
 local function fetch(endpoint, operation, complete)
 	local current_attempt = 0
+	local total_duration_ms = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
 		attempt = function(done, attempt_number)
 			current_attempt = attempt_number
 			log(
 				easybar.level.trace,
-				"inbox command started operation="
-					.. operation
-					.. " attempt="
-					.. tostring(attempt_number)
-					.. " executable=glab"
+				"inbox command started operation=" .. operation .. " attempt=" .. tostring(attempt_number) .. " executable=glab"
 			)
-			return easybar.spawn_async({
-				"/usr/bin/env",
-				"GLAB_NO_PROMPT=1",
-				"glab",
-				"api",
-				"--paginate",
-				endpoint,
-			}, { timeout_seconds = 30, max_output_bytes = 2097152 }, done)
+			return easybar.spawn_async(
+				{
+					"/usr/bin/env",
+					"GLAB_NO_PROMPT=1",
+					"glab",
+					"api",
+					"--paginate",
+					endpoint,
+				},
+				{ timeout_seconds = 30, max_output_bytes = 2097152, log_operation = operation },
+				function(output, code, metadata)
+					total_duration_ms = total_duration_ms + command_duration_ms(metadata)
+					done(output, code, metadata)
+				end
+			)
 		end,
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
+				total_duration_ms = total_duration_ms + (REFRESH_BACKOFF_SECONDS[current_attempt] or 0) * 1000
 				log(
 					easybar.level.trace,
 					"inbox retry scheduled operation="
@@ -69,7 +82,9 @@ local function fetch(endpoint, operation, complete)
 			return retryable
 		end,
 		on_complete = function(output, code, attempts)
-			complete(output, code, attempts)
+			complete(output, code, attempts, {
+				duration_ms = math.floor(total_duration_ms + 0.5),
+			})
 		end,
 	})
 end
@@ -148,7 +163,7 @@ local function refresh(reason)
 	local merge_requests_endpoint =
 		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 
-	fetch(issues_endpoint, "fetch_issues", function(issues_output, issues_code, issues_attempts)
+	fetch(issues_endpoint, "fetch_issues", function(issues_output, issues_code, issues_attempts, issues_metadata)
 		if issues_code ~= 0 then
 			finish_error(
 				"fetch_issues",
@@ -173,7 +188,7 @@ local function refresh(reason)
 			return
 		end
 
-		fetch(merge_requests_endpoint, "fetch_merge_requests", function(mrs_output, mrs_code, mrs_attempts)
+		fetch(merge_requests_endpoint, "fetch_merge_requests", function(mrs_output, mrs_code, mrs_attempts, mrs_metadata)
 			refreshing = false
 			if mrs_code ~= 0 then
 				log(
@@ -184,9 +199,7 @@ local function refresh(reason)
 						.. tostring(mrs_code)
 				)
 				publish_error(
-					text.trim(mrs_output) ~= ""
-						and text.trim(mrs_output)
-						or "Run 'glab auth login' and check app.env PATH"
+					text.trim(mrs_output) ~= "" and text.trim(mrs_output) or "Run 'glab auth login' and check app.env PATH"
 				)
 				return
 			end
@@ -209,6 +222,8 @@ local function refresh(reason)
 					.. tostring(mrs_attempts)
 					.. " items="
 					.. tostring(item_count)
+					.. " duration_ms="
+					.. tostring((issues_metadata.duration_ms or 0) + (mrs_metadata.duration_ms or 0))
 			)
 		end)
 	end)
@@ -219,10 +234,7 @@ local function schedule_wake_refresh()
 		pending_wake_refresh:cancel()
 	end
 
-	log(
-		easybar.level.trace,
-		"inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS)
-	)
+	log(easybar.level.trace, "inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS))
 	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
 		pending_wake_refresh = nil
 		refresh("wake")
@@ -231,7 +243,7 @@ end
 
 local function open_work_item(item, item_id)
 	log(easybar.level.debug, "inbox item open started item_id=" .. item_id)
-	easybar.spawn_async({ "open", item.web_url }, nil, function(_, code)
+	easybar.spawn_async({ "open", item.web_url }, { log_operation = "open_work_item" }, function(_, code)
 		if code ~= 0 then
 			log(easybar.level.warn, "inbox item open failed item_id=" .. item_id .. " status=" .. tostring(code))
 		end

@@ -12,6 +12,14 @@ local refreshing = false
 local pending_wake_refresh = nil
 local log = easybar.log
 
+local function command_duration_ms(metadata)
+	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
+	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
+		return 0
+	end
+	return value
+end
+
 easybar.inbox.configure(SOURCE, {
 	actions = { { id = "refresh", title = "Refresh" } },
 })
@@ -99,6 +107,7 @@ local function refresh(reason)
 	log(easybar.level.debug, "inbox refresh started reason=" .. reason)
 
 	local current_attempt = 0
+	local total_duration_ms = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
 		attempt = function(done, attempt_number)
@@ -107,19 +116,27 @@ local function refresh(reason)
 				easybar.level.trace,
 				"inbox command started operation=refresh attempt=" .. tostring(attempt_number) .. " executable=gh"
 			)
-			return easybar.spawn_async({
-				"gh",
-				"api",
-				"--paginate",
-				"--slurp",
-				"-H",
-				"Accept: application/vnd.github+json",
-				"notifications?all=false&per_page=100",
-			}, { timeout_seconds = 20, max_output_bytes = 1048576 }, done)
+			return easybar.spawn_async(
+				{
+					"gh",
+					"api",
+					"--paginate",
+					"--slurp",
+					"-H",
+					"Accept: application/vnd.github+json",
+					"notifications?all=false&per_page=100",
+				},
+				{ timeout_seconds = 20, max_output_bytes = 1048576, log_operation = "refresh" },
+				function(output, code, metadata)
+					total_duration_ms = total_duration_ms + command_duration_ms(metadata)
+					done(output, code, metadata)
+				end
+			)
 		end,
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
+				total_duration_ms = total_duration_ms + (REFRESH_BACKOFF_SECONDS[current_attempt] or 0) * 1000
 				log(
 					easybar.level.trace,
 					"inbox retry scheduled operation=refresh attempt="
@@ -132,17 +149,12 @@ local function refresh(reason)
 			end
 			return retryable
 		end,
-		on_complete = function(output, code, attempts)
+		on_complete = function(output, code, attempts, metadata)
 			refreshing = false
 			if code ~= 0 then
 				log(
 					easybar.level.warn,
-					"inbox refresh failed reason="
-						.. reason
-						.. " attempts="
-						.. tostring(attempts)
-						.. " status="
-						.. tostring(code)
+					"inbox refresh failed reason=" .. reason .. " attempts=" .. tostring(attempts) .. " status=" .. tostring(code)
 				)
 				publish_error(text.trim(output) ~= "" and text.trim(output) or "Run 'gh auth login' and check app.env PATH")
 				return
@@ -158,6 +170,8 @@ local function refresh(reason)
 						.. tostring(attempts)
 						.. " items="
 						.. tostring(item_count)
+						.. " duration_ms="
+						.. tostring(math.floor(total_duration_ms + 0.5))
 				)
 			end
 		end,
@@ -169,10 +183,7 @@ local function schedule_wake_refresh()
 		pending_wake_refresh:cancel()
 	end
 
-	log(
-		easybar.level.trace,
-		"inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS)
-	)
+	log(easybar.level.trace, "inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS))
 	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
 		pending_wake_refresh = nil
 		refresh("wake")
@@ -182,11 +193,15 @@ end
 local function open_notification(notification)
 	local item_id = tostring(notification.id)
 	log(easybar.level.debug, "inbox item open started item_id=" .. item_id)
-	easybar.spawn_async({ "open", notification_url(notification) }, nil, function(_, code)
-		if code ~= 0 then
-			log(easybar.level.warn, "inbox item open failed item_id=" .. item_id .. " status=" .. tostring(code))
+	easybar.spawn_async(
+		{ "open", notification_url(notification) },
+		{ log_operation = "open_notification" },
+		function(_, code)
+			if code ~= 0 then
+				log(easybar.level.warn, "inbox item open failed item_id=" .. item_id .. " status=" .. tostring(code))
+			end
 		end
-	end)
+	)
 end
 
 easybar.inbox.on_action(SOURCE, function(event)
@@ -201,6 +216,7 @@ easybar.inbox.on_action(SOURCE, function(event)
 			log(easybar.level.info, "inbox mutation started operation=mark_read item_id=" .. item_id)
 			easybar.spawn_async({ "gh", "api", "--method", "PATCH", "notifications/threads/" .. item_id }, {
 				timeout_seconds = 20,
+				log_operation = "mark_read",
 			}, function(output, code)
 				if code == 0 then
 					log(easybar.level.info, "inbox mutation completed operation=mark_read item_id=" .. item_id)
@@ -208,10 +224,7 @@ easybar.inbox.on_action(SOURCE, function(event)
 				else
 					log(
 						easybar.level.error,
-						"inbox mutation failed operation=mark_read item_id="
-							.. item_id
-							.. " status="
-							.. tostring(code)
+						"inbox mutation failed operation=mark_read item_id=" .. item_id .. " status=" .. tostring(code)
 					)
 				end
 			end)

@@ -175,6 +175,7 @@ local COMMAND_OPTION_KEYS = {
 	timeout_seconds = true,
 	max_output_bytes = true,
 	raw_output = true,
+	log_operation = true,
 }
 
 local function normalize_command_options(options, signature)
@@ -189,7 +190,7 @@ local function normalize_command_options(options, signature)
 			signature
 				.. " received unknown option '"
 				.. tostring(key)
-				.. "'; expected timeout_seconds, max_output_bytes, or raw_output"
+				.. "'; expected timeout_seconds, max_output_bytes, raw_output, or log_operation"
 		)
 	end
 	if options.timeout_seconds ~= nil then
@@ -205,6 +206,15 @@ local function normalize_command_options(options, signature)
 	if options.raw_output ~= nil then
 		assert(type(options.raw_output) == "boolean", signature .. " requires options.raw_output as boolean")
 		normalized.raw_output = options.raw_output
+	end
+	if options.log_operation ~= nil then
+		assert(type(options.log_operation) == "string", signature .. " requires options.log_operation as string")
+		local operation = options.log_operation:match("^%s*(.-)%s*$")
+		assert(operation ~= "", signature .. " requires non-empty options.log_operation")
+		assert(#operation <= 128, signature .. " limits options.log_operation to 128 bytes")
+		assert(not operation:find("%z"), signature .. " rejects NUL bytes in options.log_operation")
+		assert(not operation:find("[\r\n\t]"), signature .. " rejects control characters in options.log_operation")
+		normalized.log_operation = operation
 	end
 	return next(normalized) and normalized or nil
 end
@@ -393,9 +403,12 @@ function M.new(hooks)
 	registry.take_pending_command_response = command_broker.take_pending_command_response
 	registry.abandon_sync_response = command_broker.abandon_sync_response
 	registry.spawn_async = command_broker.spawn_async
+	registry.spawn_async_for_widget = command_broker.spawn_async_for_widget
 	registry.exec_async = command_broker.exec_async
+	registry.exec_async_for_widget = command_broker.exec_async_for_widget
 	registry.cancel_async = command_broker.cancel_async
 	registry.exec = command_broker.exec
+	registry.exec_for_widget = command_broker.exec_for_widget
 	registry.after = timer_broker.after
 	registry.handle_timer_fired = timer_broker.handle_timer_fired
 

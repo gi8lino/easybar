@@ -44,6 +44,9 @@ local timer_sequence = 0
 local warnings = {}
 local inbox_publish_count = 0
 local widget_logs = {}
+local last_command_context = nil
+local last_async_hook_options = nil
+local last_completed_hook_options = nil
 
 local log = {
 	trace = function() end,
@@ -69,17 +72,26 @@ local function new_api()
 		on_mutation = function() end,
 		before_exec_callback = function() end,
 		before_async_callback = function() end,
-		request_sync_command = function(_, options)
+		on_async_job_started = function(_, _, _, options)
+			last_async_hook_options = options
+		end,
+		on_async_job_completed = function(_, _, _, _, options)
+			last_completed_hook_options = options
+		end,
+		request_sync_command = function(_, options, context)
+			last_command_context = context
 			if options and options.raw_output then
 				return "raw\r\n", 0
 			end
 			return "trimmed\r\n", 0
 		end,
-		request_async_command = function()
+		request_async_command = function(_, _, context)
+			last_command_context = context
 			async_sequence = async_sequence + 1
 			return "async:" .. tostring(async_sequence)
 		end,
-		request_async_process = function()
+		request_async_process = function(_, _, context)
+			last_command_context = context
 			async_sequence = async_sequence + 1
 			return "process:" .. tostring(async_sequence)
 		end,
@@ -181,6 +193,22 @@ do
 	assert(raw == "raw\r\n")
 end
 
+-- Widget-scoped commands propagate diagnostic context and completion metadata.
+do
+	local api = new_api()
+	local widget = api.make_widget_api("/widgets/github-inbox.lua")
+	local completed = nil
+	local token = widget.spawn_async({ "printf", "ok" }, { log_operation = "refresh" }, function(_, _, metadata)
+		completed = metadata
+	end)
+	assert(last_command_context.widget == "github-inbox")
+	assert(last_command_context.operation == "refresh")
+	assert(last_async_hook_options.log_operation == "refresh")
+	assert(api.handle_command_response(token, "ok", 0, { duration_ms = 42 }) == true)
+	assert(last_completed_hook_options.log_operation == "refresh")
+	assert(completed.duration_ms == 42)
+end
+
 -- Unknown response tokens are dropped rather than retained forever.
 do
 	local api = new_api()
@@ -280,5 +308,3 @@ do
 end
 
 print("Lua runtime regression checks passed")
-
-

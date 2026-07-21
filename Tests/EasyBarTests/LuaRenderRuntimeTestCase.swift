@@ -51,6 +51,8 @@ extension LuaRenderRuntimeTestCase {
     let isSynchronous: Bool
     let timeoutSeconds: TimeInterval?
     let maxOutputBytes: Int?
+    let widget: String?
+    let operation: String?
   }
 
   actor RuntimeHostBridge {
@@ -86,7 +88,9 @@ extension LuaRenderRuntimeTestCase {
             arguments: request.arguments,
             isSynchronous: request.isSynchronous,
             timeoutSeconds: request.timeoutSeconds,
-            maxOutputBytes: request.maxOutputBytes
+            maxOutputBytes: request.maxOutputBytes,
+            widget: request.widget,
+            operation: request.operation
           )
         )
 
@@ -142,7 +146,7 @@ extension LuaRenderRuntimeTestCase {
 
     private func sendCommandResponse(token: String, output: String, status: Int) throws {
       let payload = """
-        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
+        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status),"duration_ms":1}
         \n
         """
       try stdinHandle.write(contentsOf: Data(payload.utf8))
@@ -250,7 +254,7 @@ extension LuaRenderRuntimeTestCase {
 
     func sendCommandResponse(token: String, output: String, status: Int) throws {
       let payload = """
-        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status)}
+        {"protocol_version":1,"type":"command_response","token":"\(token)","output":"\(output)","status":\(status),"duration_ms":1}
         \n
         """
       try sendHostEvent(payload)

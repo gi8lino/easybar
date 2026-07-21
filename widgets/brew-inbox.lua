@@ -9,7 +9,7 @@ local WAKE_REFRESH_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
 
 local EXEC = {
-	check = { timeout_seconds = 30, max_output_bytes = 1024 * 1024 },
+	check = { timeout_seconds = 30, max_output_bytes = 1024 * 1024, log_operation = "refresh" },
 	update = { timeout_seconds = 5 * 60, max_output_bytes = 2 * 1024 * 1024 },
 	upgrade = { timeout_seconds = 30 * 60, max_output_bytes = 4 * 1024 * 1024 },
 }
@@ -29,6 +29,14 @@ local state = {
 local pending_wake_refresh = nil
 local refresh
 local log = easybar.log
+
+local function command_duration_ms(metadata)
+	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
+	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
+		return 0
+	end
+	return value
+end
 
 local function split_outdated_output(raw)
 	raw = tostring(raw or "")
@@ -211,6 +219,7 @@ refresh = function(reason)
 	publish()
 
 	local current_attempt = 0
+	local total_duration_ms = 0
 	state.active_operation = retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
 		attempt = function(done, attempt_number)
@@ -219,17 +228,25 @@ refresh = function(reason)
 				easybar.level.trace,
 				"inbox command started operation=refresh attempt=" .. tostring(attempt_number) .. " executable=brew"
 			)
-			return easybar.spawn_async({
-				"/usr/bin/env",
-				"HOMEBREW_NO_AUTO_UPDATE=1",
-				"brew",
-				"outdated",
-				"--json=v2",
-			}, EXEC.check, done)
+			return easybar.spawn_async(
+				{
+					"/usr/bin/env",
+					"HOMEBREW_NO_AUTO_UPDATE=1",
+					"brew",
+					"outdated",
+					"--json=v2",
+				},
+				EXEC.check,
+				function(output, code, metadata)
+					total_duration_ms = total_duration_ms + command_duration_ms(metadata)
+					done(output, code, metadata)
+				end
+			)
 		end,
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
+				total_duration_ms = total_duration_ms + (REFRESH_BACKOFF_SECONDS[current_attempt] or 0) * 1000
 				log(
 					easybar.level.trace,
 					"inbox retry scheduled operation=refresh attempt="
@@ -242,7 +259,7 @@ refresh = function(reason)
 			end
 			return retryable
 		end,
-		on_complete = function(output, code, attempts)
+		on_complete = function(output, code, attempts, metadata)
 			state.active_operation = nil
 			state.operation = nil
 			state.operation_kind = nil
@@ -256,12 +273,7 @@ refresh = function(reason)
 				}
 				log(
 					easybar.level.warn,
-					"inbox refresh failed reason="
-						.. reason
-						.. " attempts="
-						.. tostring(attempts)
-						.. " status="
-						.. tostring(code)
+					"inbox refresh failed reason=" .. reason .. " attempts=" .. tostring(attempts) .. " status=" .. tostring(code)
 				)
 			else
 				local decoded = apply_outdated(output)
@@ -278,6 +290,8 @@ refresh = function(reason)
 							.. tostring(#state.casks)
 							.. " warning="
 							.. tostring(state.warning ~= nil)
+							.. " duration_ms="
+							.. tostring(math.floor(total_duration_ms + 0.5))
 					)
 				end
 			end
@@ -289,10 +303,7 @@ end
 
 local function run_operation(operation_id, label, arguments, options)
 	if state.active_operation ~= nil then
-		log(
-			easybar.level.trace,
-			"inbox mutation skipped operation=" .. operation_id .. " state=operation_active"
-		)
+		log(easybar.level.trace, "inbox mutation skipped operation=" .. operation_id .. " state=operation_active")
 		return
 	end
 	state.operation = label
@@ -309,7 +320,12 @@ local function run_operation(operation_id, label, arguments, options)
 		return type(token) == "string" and easybar.cancel_async(token) or false
 	end
 	state.active_operation = operation
-	token = easybar.spawn_async(arguments, options, function(output, code)
+	local command_options = {}
+	for key, value in pairs(options or {}) do
+		command_options[key] = value
+	end
+	command_options.log_operation = operation_id
+	token = easybar.spawn_async(arguments, command_options, function(output, code)
 		local cancelled = state.cancellation_requested
 		state.active_operation = nil
 		state.operation = nil
@@ -328,10 +344,7 @@ local function run_operation(operation_id, label, arguments, options)
 				message = text.trim(output) ~= "" and text.truncate(output, 12000, "…")
 					or "Command exited with code " .. tostring(code),
 			}
-			log(
-				easybar.level.error,
-				"inbox mutation failed operation=" .. operation_id .. " status=" .. tostring(code)
-			)
+			log(easybar.level.error, "inbox mutation failed operation=" .. operation_id .. " status=" .. tostring(code))
 			publish()
 			return
 		end
@@ -354,10 +367,7 @@ local function schedule_wake_refresh()
 	if pending_wake_refresh ~= nil then
 		pending_wake_refresh:cancel()
 	end
-	log(
-		easybar.level.trace,
-		"inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS)
-	)
+	log(easybar.level.trace, "inbox wake refresh scheduled delay_seconds=" .. tostring(WAKE_REFRESH_DELAY_SECONDS))
 	pending_wake_refresh = easybar.after(WAKE_REFRESH_DELAY_SECONDS, function()
 		pending_wake_refresh = nil
 		refresh("wake")

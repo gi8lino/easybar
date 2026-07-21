@@ -311,13 +311,21 @@ actor WidgetEngine {
     case .clearRoot(let rootID):
       await handleClearRoot(rootID: rootID)
     case .commandRequest(
-      let token, let invocation, let isSynchronous, let timeoutSeconds, let maxOutputBytes):
+      let token,
+      let invocation,
+      let isSynchronous,
+      let timeoutSeconds,
+      let maxOutputBytes,
+      let widget,
+      let operation):
       await commandService.handleCommandRequest(
         token: token,
         invocation: invocation,
         isSynchronous: isSynchronous,
         timeoutSecondsOverride: timeoutSeconds,
         maxOutputBytesOverride: maxOutputBytes,
+        widget: widget,
+        operation: operation,
         runtimeSessionID: runtimeSessionID,
         isRuntimeSessionActive: { [weak self] sessionID in
           guard let self else { return false }

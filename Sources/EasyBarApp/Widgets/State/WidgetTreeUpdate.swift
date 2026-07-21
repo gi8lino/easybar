@@ -18,6 +18,8 @@ struct WidgetTreeUpdate: Codable, Sendable {
   let delaySeconds: TimeInterval?
   let timeoutSeconds: TimeInterval?
   let maxOutputBytes: Int?
+  let widget: String?
+  let operation: String?
   let source: String?
   let items: [InboxItem]?
   let actions: [InboxAction]?
@@ -35,6 +37,8 @@ struct WidgetTreeUpdate: Codable, Sendable {
     case delaySeconds
     case timeoutSeconds
     case maxOutputBytes
+    case widget
+    case operation
     case source
     case items
     case actions
@@ -148,7 +152,9 @@ struct WidgetTreeUpdate: Codable, Sendable {
       invocation: LuaCommandInvocation,
       isSynchronous: Bool,
       timeoutSeconds: TimeInterval?,
-      maxOutputBytes: Int?
+      maxOutputBytes: Int?,
+      widget: String?,
+      operation: String?
     )?
   {
     guard let token, let sync else { return nil }
@@ -180,7 +186,9 @@ struct WidgetTreeUpdate: Codable, Sendable {
       invocation: invocation,
       isSynchronous: sync,
       timeoutSeconds: timeoutSeconds,
-      maxOutputBytes: maxOutputBytes
+      maxOutputBytes: maxOutputBytes,
+      widget: widget,
+      operation: operation
     )
   }
 }

@@ -122,4 +122,3 @@ final class LuaTransportAuthenticationTests: XCTestCase {
       .appendingPathComponent("\(prefix)-\(UUID().uuidString)", isDirectory: true)
   }
 }
-
