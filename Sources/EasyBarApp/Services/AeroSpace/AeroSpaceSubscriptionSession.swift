@@ -13,12 +13,18 @@ protocol AeroSpaceReconnectScheduling: Sendable {
 
 extension BackoffScheduler: AeroSpaceReconnectScheduling {}
 
+/// Lifecycle surface consumed by `AeroSpaceService`.
+protocol AeroSpaceSubscriptionControlling: Sendable {
+  /// Starts subscription attempts until stopped.
+  func start()
+  /// Stops the active session and pending reconnect work.
+  func stop()
+}
+
 /// Creates AeroSpace subscription sessions.
 protocol AeroSpaceSubscriptionLaunching: Sendable {
-  /// Whether the AeroSpace socket is currently available.
-  var isAvailable: Bool { get }
   /// Creates one subscription session.
-  func makeSubscription() -> AeroSpaceSubscriptionSession?
+  func makeSubscription() -> AeroSpaceSubscriptionSession
 }
 
 /// One launchable AeroSpace subscription session.

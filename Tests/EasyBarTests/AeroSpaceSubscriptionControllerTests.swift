@@ -10,14 +10,9 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     private var subscriptions: [FakeSubscriptionSession] = []
     private var available = true
 
-    var isAvailable: Bool {
-      lock.withLock { available }
-    }
-
-    func makeSubscription() -> AeroSpaceSubscriptionSession? {
+    func makeSubscription() -> AeroSpaceSubscriptionSession {
       lock.withLock {
-        guard available else { return nil }
-        let subscription = FakeSubscriptionSession()
+        let subscription = FakeSubscriptionSession(failStart: !available)
         subscriptions.append(subscription)
         return subscription
       }
@@ -42,19 +37,31 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
   }
 
   private final class FakeSubscriptionSession: AeroSpaceSubscriptionSession, @unchecked Sendable {
+    private struct StartError: Error {}
+
     private let lock = NSLock()
+    private let failStart: Bool
     private var eventFrameHandler: (@Sendable (Data) -> Void)?
     private var disconnectHandler: (@Sendable (AeroSpaceSubscriptionSession, String?) -> Void)?
-    private(set) var started = false
-    private(set) var stopped = false
-    private(set) var invalidated = false
+    private var didStart = false
+    private var didStop = false
+    private var didInvalidate = false
+
+    init(failStart: Bool = false) {
+      self.failStart = failStart
+    }
+
+    var started: Bool { lock.withLock { didStart } }
+    var stopped: Bool { lock.withLock { didStop } }
+    var invalidated: Bool { lock.withLock { didInvalidate } }
 
     func start(
       onEventFrame: @escaping @Sendable (Data) -> Void,
       onDisconnect: @escaping @Sendable (AeroSpaceSubscriptionSession, String?) -> Void
     ) throws {
+      if failStart { throw StartError() }
       lock.withLock {
-        started = true
+        didStart = true
         eventFrameHandler = onEventFrame
         disconnectHandler = onDisconnect
       }
@@ -62,14 +69,14 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
 
     func stop() {
       lock.withLock {
-        stopped = true
+        didStop = true
         clearHandlers()
       }
     }
 
     func invalidate() {
       lock.withLock {
-        invalidated = true
+        didInvalidate = true
         clearHandlers()
       }
     }
@@ -80,7 +87,8 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     }
 
     func terminate(status: Int32) {
-      let handler = lock.withLock { () -> (@Sendable (AeroSpaceSubscriptionSession, String?) -> Void)? in
+      let handler = lock.withLock {
+        () -> (@Sendable (AeroSpaceSubscriptionSession, String?) -> Void)? in
         let handler = disconnectHandler
         disconnectHandler = nil
         return handler
@@ -149,6 +157,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     defer { controller.stop() }
 
     XCTAssertEqual(launcher.launchCount, 1)
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 0)?.started == true })
     launcher.subscription(at: 0)?.terminate(status: 3)
 
     XCTAssertEqual(scheduler.scheduledCount, 1)
@@ -156,7 +165,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     XCTAssertEqual(launcher.launchCount, 2)
   }
 
-  func testDoesNotReconnectWhenExecutableDisappears() throws {
+  func testReconnectsWhenSocketAppearsAfterStartup() throws {
     let logger = Self.makeLogger()
     let launcher = FakeSubscriptionLauncher()
     let scheduler = RecordingReconnectScheduler()
@@ -166,15 +175,17 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       scheduler: scheduler
     )
 
+    launcher.setAvailable(false)
     controller.start()
     defer { controller.stop() }
 
     XCTAssertEqual(launcher.launchCount, 1)
-    launcher.setAvailable(false)
-    launcher.subscription(at: 0)?.terminate(status: 3)
+    XCTAssertTrue(waitUntil { scheduler.scheduledCount == 1 })
 
-    XCTAssertEqual(scheduler.scheduledCount, 0)
-    XCTAssertEqual(launcher.launchCount, 1)
+    launcher.setAvailable(true)
+    XCTAssertTrue(scheduler.runNextScheduledAction())
+    XCTAssertTrue(waitUntil { launcher.launchCount == 2 })
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 1)?.started == true })
   }
 
   func testSchedulesReconnectForEachCrash() throws {
@@ -191,11 +202,13 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     defer { controller.stop() }
 
     XCTAssertEqual(launcher.launchCount, 1)
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 0)?.started == true })
     launcher.subscription(at: 0)?.terminate(status: 3)
     XCTAssertEqual(scheduler.scheduledCount, 1)
 
     XCTAssertTrue(scheduler.runNextScheduledAction())
     XCTAssertEqual(launcher.launchCount, 2)
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 1)?.started == true })
     launcher.subscription(at: 1)?.terminate(status: 3)
     XCTAssertEqual(scheduler.scheduledCount, 1)
 
@@ -217,6 +230,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
     defer { controller.stop() }
 
     XCTAssertEqual(launcher.launchCount, 1)
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 0)?.started == true })
     launcher.subscription(at: 0)?.emitOutputLine(#"{"_event":"focused-workspace-changed"}"#)
 
     XCTAssertEqual(scheduler.resetDelayCount, 1)
@@ -239,6 +253,7 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
 
     controller.start()
     XCTAssertEqual(launcher.launchCount, 1)
+    XCTAssertTrue(waitUntil { launcher.subscription(at: 0)?.started == true })
     launcher.subscription(at: 0)?.terminate(status: 3)
     XCTAssertEqual(scheduler.scheduledCount, 1)
 
@@ -269,5 +284,17 @@ final class AeroSpaceSubscriptionControllerTests: XCTestCase {
       outputStream: nil,
       errorStream: nil
     )
+  }
+
+  private func waitUntil(
+    timeout: TimeInterval = 1,
+    condition: () -> Bool
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+      if condition() { return true }
+      usleep(1_000)
+    }
+    return condition()
   }
 }

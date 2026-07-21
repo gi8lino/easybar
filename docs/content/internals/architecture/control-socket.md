@@ -40,7 +40,7 @@ They are intended for local automation that already knows something changed and 
 
 For AeroSpace-backed widgets, the app connects directly to AeroSpace's native Unix socket and sends the equivalent of an `aerospace subscribe --all` request. It reacts to framed events for focus, focused workspace, focused monitor, binding mode, new-window detection, and triggered bindings. No `aerospace subscribe` CLI process is spawned.
 
-If the subscription connection closes while AeroSpace's socket is still available, EasyBar schedules reconnect attempts with bounded backoff.
+While AeroSpace-backed state is active, EasyBar schedules reconnect attempts with bounded backoff even if AeroSpace's socket is temporarily absent. Socket connect, handshake, and subscription setup share a finite startup deadline.
 
 The app also uses a small amount of native macOS observation to keep UI state current when AeroSpace events are not enough by themselves:
 

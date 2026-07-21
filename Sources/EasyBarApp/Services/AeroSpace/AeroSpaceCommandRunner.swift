@@ -1,8 +1,14 @@
 import EasyBarShared
 import Foundation
 
+/// Executes one AeroSpace CLI command.
+protocol AeroSpaceCommandRunning: Sendable {
+  /// Runs one command and returns trimmed stdout only when it succeeds.
+  func run(arguments: [String]) async -> String?
+}
+
 /// Runs the AeroSpace CLI through the shared process executor.
-final class AeroSpaceCommandRunner {
+final class AeroSpaceCommandRunner: AeroSpaceCommandRunning, @unchecked Sendable {
   /// Logger used for AeroSpace command diagnostics.
   private let logger: ProcessLogger
   /// Resolves the AeroSpace executable path.
@@ -29,7 +35,7 @@ final class AeroSpaceCommandRunner {
   }
 
   /// Executes one AeroSpace command and returns trimmed stdout on success.
-  func run(arguments: [String]) -> String? {
+  func run(arguments: [String]) async -> String? {
     guard let executable = executablePathResolver() else {
       logger.debug("aerospace executable not found")
       return nil
@@ -46,7 +52,7 @@ final class AeroSpaceCommandRunner {
 
     let result: ProcessExecutionResult
     do {
-      result = try processExecutor.runSynchronously(request)
+      result = try await processExecutor.run(request)
     } catch {
       logger.debug(
         "failed to run aerospace",

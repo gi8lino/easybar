@@ -2,7 +2,7 @@ import EasyBarShared
 import Foundation
 
 /// One resolved snapshot of AeroSpace state.
-struct AeroSpaceSnapshot {
+struct AeroSpaceSnapshot: Equatable, Sendable {
   /// Workspace items to publish.
   let spaces: [SpaceItem]
   /// Focused application when known.
@@ -13,24 +13,25 @@ struct AeroSpaceSnapshot {
 
 /// Loads and parses AeroSpace CLI JSON output into app-ready state.
 enum AeroSpaceSnapshotLoader {
-  /// Reads the current AeroSpace snapshot.
+  /// Reads the current AeroSpace snapshot with an asynchronous command runner.
   static func load(
+    run: @escaping @Sendable ([String]) async -> String?,
+    resolveAppID: @Sendable (String, String?) -> String
+  ) async throws -> AeroSpaceSnapshot {
+    let state = try await AsyncJSONAeroSpaceSnapshotProvider(run: run).loadState()
+    try Task.checkCancellation()
+    return buildSnapshot(state: state, resolveAppID: resolveAppID)
+  }
+
+  /// Reads the current AeroSpace snapshot with a synchronous test or utility runner.
+  static func loadSynchronously(
     run: @escaping ([String]) -> String?,
-    resolveAppID: (String, String?) -> String,
-    logger: ProcessLogger? = nil
-  ) -> AeroSpaceSnapshot {
-    do {
-      return try buildSnapshot(
-        state: JSONAeroSpaceSnapshotProvider(run: run).loadState(),
-        resolveAppID: resolveAppID
-      )
-    } catch {
-      logger?.error(
-        "aerospace JSON snapshot unavailable",
-        .field("error", error)
-      )
-      return AeroSpaceSnapshot(spaces: [], focusedApp: nil, focusedLayoutMode: .unknown)
-    }
+    resolveAppID: (String, String?) -> String
+  ) throws -> AeroSpaceSnapshot {
+    try buildSnapshot(
+      state: JSONAeroSpaceSnapshotProvider(run: run).loadState(),
+      resolveAppID: resolveAppID
+    )
   }
 
   /// Builds app-facing state from provider-neutral AeroSpace state.
@@ -145,34 +146,93 @@ private struct JSONAeroSpaceSnapshotProvider {
 
   func loadState() throws -> AeroSpaceRawSnapshot {
     let workspacesOutput = try requireOutput(
-      run([
-        "list-workspaces",
-        "--all",
-        "--json",
-        "--format",
-        "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
-      ]),
-      command: "list-workspaces --all --json --format"
+      run(AeroSpaceSnapshotCommands.workspaces),
+      command: AeroSpaceSnapshotCommands.workspacesDescription
     )
     let windowsOutput = try requireOutput(
-      run([
-        "list-windows",
-        "--all",
-        "--json",
-        "--format",
-        "%{workspace} %{app-name} %{app-bundle-path}",
-      ]),
-      command: "list-windows --all --json --format"
+      run(AeroSpaceSnapshotCommands.windows),
+      command: AeroSpaceSnapshotCommands.windowsDescription
     )
-    let focusedWindowOutput =
-      run([
-        "list-windows",
-        "--focused",
-        "--json",
-        "--format",
-        "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
-      ]) ?? "[]"
+    let focusedWindowOutput = try requireOutput(
+      run(AeroSpaceSnapshotCommands.focusedWindow),
+      command: AeroSpaceSnapshotCommands.focusedWindowDescription
+    )
 
+    return try JSONAeroSpaceSnapshotParser.parse(
+      workspacesOutput: workspacesOutput,
+      windowsOutput: windowsOutput,
+      focusedWindowOutput: focusedWindowOutput
+    )
+  }
+}
+
+/// Loads AeroSpace state without blocking the caller's cooperative executor.
+private struct AsyncJSONAeroSpaceSnapshotProvider {
+  let run: @Sendable ([String]) async -> String?
+
+  func loadState() async throws -> AeroSpaceRawSnapshot {
+    let workspacesOutput = try requireOutput(
+      await run(AeroSpaceSnapshotCommands.workspaces),
+      command: AeroSpaceSnapshotCommands.workspacesDescription
+    )
+    try Task.checkCancellation()
+
+    let windowsOutput = try requireOutput(
+      await run(AeroSpaceSnapshotCommands.windows),
+      command: AeroSpaceSnapshotCommands.windowsDescription
+    )
+    try Task.checkCancellation()
+
+    let focusedWindowOutput = try requireOutput(
+      await run(AeroSpaceSnapshotCommands.focusedWindow),
+      command: AeroSpaceSnapshotCommands.focusedWindowDescription
+    )
+    try Task.checkCancellation()
+
+    return try JSONAeroSpaceSnapshotParser.parse(
+      workspacesOutput: workspacesOutput,
+      windowsOutput: windowsOutput,
+      focusedWindowOutput: focusedWindowOutput
+    )
+  }
+}
+
+/// Canonical formatted JSON commands used for every snapshot.
+private enum AeroSpaceSnapshotCommands {
+  static let workspaces = [
+    "list-workspaces",
+    "--all",
+    "--json",
+    "--format",
+    "%{workspace} %{workspace-is-focused} %{workspace-is-visible}",
+  ]
+  static let windows = [
+    "list-windows",
+    "--all",
+    "--json",
+    "--format",
+    "%{workspace} %{app-name} %{app-bundle-path}",
+  ]
+  static let focusedWindow = [
+    "list-windows",
+    "--focused",
+    "--json",
+    "--format",
+    "%{workspace} %{app-name} %{app-bundle-path} %{window-layout}",
+  ]
+
+  static let workspacesDescription = "list-workspaces --all --json --format"
+  static let windowsDescription = "list-windows --all --json --format"
+  static let focusedWindowDescription = "list-windows --focused --json --format"
+}
+
+/// Decodes the three formatted JSON payloads into provider-neutral state.
+private enum JSONAeroSpaceSnapshotParser {
+  static func parse(
+    workspacesOutput: String,
+    windowsOutput: String,
+    focusedWindowOutput: String
+  ) throws -> AeroSpaceRawSnapshot {
     let decoder = JSONDecoder()
     let workspaces = try decode([JSONWorkspaceDTO].self, from: workspacesOutput, decoder: decoder)
       .map {
@@ -212,7 +272,7 @@ private struct JSONAeroSpaceSnapshotProvider {
   }
 
   /// Decodes one JSON payload.
-  private func decode<T: Decodable>(
+  private static func decode<T: Decodable>(
     _ type: T.Type,
     from output: String,
     decoder: JSONDecoder

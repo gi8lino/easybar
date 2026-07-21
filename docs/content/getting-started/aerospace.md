@@ -28,7 +28,7 @@ aerospace subscribe --all
 
 AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as an immediate sync signal. Event bursts are debounced before EasyBar re-reads AeroSpace state; `binding-triggered` gets a slightly longer debounce because AeroSpace emits it before running the binding's commands.
 
-EasyBar does not spawn the `aerospace subscribe` CLI process. If the socket connection closes while AeroSpace's socket remains available, EasyBar schedules a reconnect with bounded backoff. This covers common cases such as restarting or updating AeroSpace while EasyBar is already running.
+EasyBar does not spawn the `aerospace subscribe` CLI process. While an AeroSpace-backed widget is active, EasyBar keeps scheduling reconnect attempts with bounded backoff even when the socket is temporarily absent. Each connect, handshake, and subscription request has a finite startup deadline, so launching EasyBar before AeroSpace or restarting AeroSpace later recovers without blocking the UI or restarting EasyBar.
 
 EasyBar uses the subscription events only as update triggers. The source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`.
 

@@ -20,6 +20,89 @@ struct AeroSpaceRefreshSequence: Sendable {
   }
 }
 
+/// Health of the most recent AeroSpace snapshot attempt.
+enum AeroSpaceSnapshotStatus: Equatable, Sendable {
+  /// No complete snapshot has been loaded yet.
+  case unavailable(message: String)
+  /// The published state came from the latest successful refresh.
+  case current
+  /// Published state is last-known-good because the latest refresh failed.
+  case stale(message: String)
+}
+
+/// Coalesces concurrent version checks and caches only successful validation.
+private actor AeroSpaceVersionValidationCache {
+  private struct Attempt {
+    let id: UInt64
+    let generation: UInt64
+    let task: Task<Bool, Never>
+  }
+
+  private let commandRunner: any AeroSpaceCommandRunning
+  private let logger: ProcessLogger
+  private var successfulGeneration: UInt64?
+  private var attempt: Attempt?
+  private var nextAttemptID: UInt64 = 0
+
+  init(commandRunner: any AeroSpaceCommandRunning, logger: ProcessLogger) {
+    self.commandRunner = commandRunner
+    self.logger = logger
+  }
+
+  func validate(generation: UInt64) async -> Bool {
+    if successfulGeneration == generation {
+      return true
+    }
+    if let attempt, attempt.generation == generation {
+      return await attempt.task.value
+    }
+
+    attempt?.task.cancel()
+    nextAttemptID &+= 1
+    let attemptID = nextAttemptID
+    let commandRunner = commandRunner
+    let logger = logger
+    let task = Task.detached(priority: .utility) {
+      guard let output = await commandRunner.run(arguments: ["--version"]) else {
+        logger.debug("aerospace version command unavailable")
+        return false
+      }
+
+      do {
+        try AeroSpaceVersionRequirement.validate(output: output)
+        logger.debug(
+          "aerospace version requirement satisfied",
+          .field("minimum", AeroSpaceVersionRequirement.minimum.description)
+        )
+        return true
+      } catch {
+        logger.error(
+          "aerospace version requirement failed",
+          .field("minimum", AeroSpaceVersionRequirement.minimum.description),
+          .field("error", error)
+        )
+        return false
+      }
+    }
+    attempt = Attempt(id: attemptID, generation: generation, task: task)
+
+    let result = await task.value
+    if attempt?.id == attemptID {
+      attempt = nil
+      if result {
+        successfulGeneration = generation
+      }
+    }
+    return result
+  }
+
+  func cancel() {
+    attempt?.task.cancel()
+    attempt = nil
+    successfulGeneration = nil
+  }
+}
+
 /// Loads workspace and focused-app state from AeroSpace.
 ///
 /// Widgets can register themselves as consumers so AeroSpace refresh work only
@@ -27,14 +110,19 @@ struct AeroSpaceRefreshSequence: Sendable {
 final class AeroSpaceService: ObservableObject, @unchecked Sendable {
   /// Published workspace list used by spaces widgets.
   @Published private(set) var spaces: [SpaceItem] = []
-  /// Stable id of the focused application.
-  @Published private(set) var focusedAppID: String?
-
   /// Resolved focused app used by `FrontAppNativeWidget`.
   @Published private(set) var focusedApp: SpaceApp?
 
+  /// Stable id derived from the canonical focused application state.
+  var focusedAppID: String? { focusedApp?.id }
+
   /// Resolved layout mode used by `AeroSpaceModeNativeWidget`.
   @Published private(set) var focusedLayoutMode: AeroSpaceLayoutMode = .unknown
+
+  /// Whether the published snapshot is current or retained after an error.
+  @Published private(set) var snapshotStatus: AeroSpaceSnapshotStatus = .unavailable(
+    message: "not loaded"
+  )
 
   /// Locked service coordination state.
   private struct CoordinationState {
@@ -44,26 +132,35 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
     var running = false
     /// Whether AeroSpace observation is active for at least one consumer.
     var active = false
-    /// Cached AeroSpace version validation result for the current active run.
-    var versionRequirementSatisfied: Bool?
     /// Generation used to ignore stale lifecycle work.
     var generation: UInt64 = 0
     /// Sequence used to ensure only the newest refresh can publish.
     var refreshSequence = AeroSpaceRefreshSequence()
+    /// Token reserved for the queued or running refresh.
+    var pendingRefreshToken: AeroSpaceRefreshToken?
+    /// Cancellable refresh task that owns current CLI commands.
+    var refreshTask: Task<Void, Never>?
   }
 
   /// Logger used for AeroSpace diagnostics.
   private let logger: ProcessLogger
   private let eventHub: EventHub
   /// Runner for AeroSpace CLI commands.
-  private let commandRunner: AeroSpaceCommandRunner
+  private let commandRunner: any AeroSpaceCommandRunning
+  /// Optional test-provided subscription controller.
+  private let subscriptionControllerOverride: (any AeroSpaceSubscriptionControlling)?
   /// Long-lived AeroSpace event subscription.
-  private lazy var subscriptionController = AeroSpaceSubscriptionController(
-    logger: logger.child("subscribe"),
-    handleEvent: { [weak self] event in
-      self?.handleAeroSpaceSubscriptionEvent(event)
+  private lazy var subscriptionController: any AeroSpaceSubscriptionControlling = {
+    if let subscriptionControllerOverride {
+      return subscriptionControllerOverride
     }
-  )
+    return AeroSpaceSubscriptionController(
+      logger: logger.child("subscribe"),
+      handleEvent: { [weak self] event in
+        self?.handleAeroSpaceSubscriptionEvent(event)
+      }
+    )
+  }()
   /// Debounces delayed subscription reloads so event bursts produce one state read.
   private lazy var subscriptionRefreshScheduler = DebouncedActionScheduler(
     label: "aerospace subscription refresh",
@@ -71,14 +168,39 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
       / 1_000_000_000,
     logger: logger
   )
+  /// Retries failed version checks and snapshots without requiring another external event.
+  private let refreshRetryScheduler: any AeroSpaceReconnectScheduling
+  /// Shares one in-flight version check and caches successes per lifecycle generation.
+  private let versionValidationCache: AeroSpaceVersionValidationCache
   /// Current locked coordination state.
   private let coordination = LockedState(CoordinationState())
 
   /// Creates the shared AeroSpace service.
-  init(logger: ProcessLogger, eventHub: EventHub) {
+  init(
+    logger: ProcessLogger,
+    eventHub: EventHub,
+    commandRunner: (any AeroSpaceCommandRunning)? = nil,
+    subscriptionController: (any AeroSpaceSubscriptionControlling)? = nil,
+    refreshRetryScheduler: (any AeroSpaceReconnectScheduling)? = nil
+  ) {
     self.logger = logger
     self.eventHub = eventHub
-    self.commandRunner = AeroSpaceCommandRunner(logger: logger.child("commands"))
+    let resolvedCommandRunner =
+      commandRunner ?? AeroSpaceCommandRunner(logger: logger.child("commands"))
+    self.commandRunner = resolvedCommandRunner
+    self.subscriptionControllerOverride = subscriptionController
+    self.refreshRetryScheduler =
+      refreshRetryScheduler
+      ?? BackoffScheduler(
+        label: "aerospace refresh retry",
+        delays: [0.5, 1, 2, 5, 10],
+        logger: logger,
+        logLevel: .debug
+      )
+    self.versionValidationCache = AeroSpaceVersionValidationCache(
+      commandRunner: resolvedCommandRunner,
+      logger: logger
+    )
   }
 }
 
@@ -105,7 +227,6 @@ extension AeroSpaceService {
     let shouldStart = withLock { coordination -> Bool in
       guard !coordination.running else { return false }
       coordination.running = true
-      coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
       return true
     }
@@ -128,7 +249,6 @@ extension AeroSpaceService {
     withLock { coordination in
       coordination.running = false
       coordination.consumers.removeAll()
-      coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
     }
 
@@ -186,19 +306,7 @@ extension AeroSpaceService {
       return
     }
 
-    guard let refreshToken = reserveRefreshToken() else { return }
-
-    logger.debug(
-      "aerospace triggerRefresh queued",
-      .field("source", source),
-      .field("consumers", consumerCount),
-      .field("request_id", refreshToken.requestID)
-    )
-
-    DetachedTask.run(priority: .userInitiated) { [weak self] in
-      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
-      self.reloadState(refreshToken: refreshToken)
-    }
+    queueRefresh(source: source)
   }
 
   /// Focuses the requested workspace.
@@ -221,17 +329,14 @@ extension AeroSpaceService {
 
     let generation = currentGeneration()
 
-    DetachedTask.run(priority: .userInitiated) { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
 
-      _ = self.runAeroSpace(arguments: ["workspace", workspace])
+      _ = await self.runAeroSpace(arguments: ["workspace", workspace])
 
       guard self.shouldExecute(generation: generation) else { return }
-      guard let refreshToken = self.reserveRefreshToken(expectedGeneration: generation) else {
-        return
-      }
-      self.reloadState(refreshToken: refreshToken)
+      self.queueRefresh(source: "workspace focus completed", expectedGeneration: generation)
     }
   }
 
@@ -362,10 +467,10 @@ extension AeroSpaceService {
 
     let generation = currentGeneration()
 
-    DetachedTask.run(priority: .userInitiated) { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
-      guard self.runAeroSpace(arguments: AeroSpaceCommandArguments.layout(mode)) != nil else {
+      guard await self.runAeroSpace(arguments: AeroSpaceCommandArguments.layout(mode)) != nil else {
         self.logger.warn(
           "failed to change AeroSpace layout",
           .field("layout", mode.rawValue)
@@ -377,10 +482,7 @@ extension AeroSpaceService {
         .field("layout", mode.rawValue)
       )
       guard self.shouldExecute(generation: generation) else { return }
-      guard let refreshToken = self.reserveRefreshToken(expectedGeneration: generation) else {
-        return
-      }
-      self.reloadState(refreshToken: refreshToken)
+      self.queueRefresh(source: "layout change completed", expectedGeneration: generation)
     }
   }
 
@@ -388,11 +490,11 @@ extension AeroSpaceService {
   func openConfig() {
     let generation = currentGeneration()
 
-    DetachedTask.run(priority: .userInitiated) { [weak self] in
+    Task.detached(priority: .userInitiated) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
       guard
-        let path = self.runAeroSpace(arguments: AeroSpaceCommandArguments.configPath),
+        let path = await self.runAeroSpace(arguments: AeroSpaceCommandArguments.configPath),
         !path.isEmpty
       else {
         self.logger.warn("failed to resolve AeroSpace config path")
@@ -426,18 +528,7 @@ extension AeroSpaceService {
       return
     }
 
-    guard let refreshToken = reserveRefreshToken() else { return }
-
-    logger.debug(
-      "aerospace refresh queued",
-      .field("consumers", consumerCount),
-      .field("request_id", refreshToken.requestID)
-    )
-
-    DetachedTask.run(priority: .userInitiated) { [weak self] in
-      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
-      self.reloadState(refreshToken: refreshToken)
-    }
+    queueRefresh(source: "explicit refresh")
   }
 }
 
@@ -453,7 +544,6 @@ extension AeroSpaceService {
       }
 
       coordination.active = true
-      coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
       return true
     }
@@ -466,12 +556,7 @@ extension AeroSpaceService {
       .field("consumers", consumerCount)
     )
 
-    if ensureAeroSpaceVersionSupported() {
-      subscriptionController.start()
-    } else {
-      logger.debug("aerospace subscription skipped due to unsupported AeroSpace version")
-    }
-
+    subscriptionController.start()
     refresh()
 
     logger.debug("aerospace service activate end")
@@ -480,20 +565,25 @@ extension AeroSpaceService {
 
   /// Stops AeroSpace observation once the last consumer disappears.
   fileprivate func deactivateIfNeeded(reason: String) {
-    let didDeactivate = withLock { coordination -> Bool in
-      guard coordination.active else { return false }
+    let result = withLock { coordination -> (didDeactivate: Bool, task: Task<Void, Never>?) in
+      guard coordination.active else { return (false, nil) }
 
       coordination.active = false
-      coordination.versionRequirementSatisfied = nil
       coordination.generation &+= 1
+      coordination.pendingRefreshToken = nil
+      let task = coordination.refreshTask
+      coordination.refreshTask = nil
 
-      return true
+      return (true, task)
     }
 
-    guard didDeactivate else { return }
+    guard result.didDeactivate else { return }
 
+    result.task?.cancel()
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
+    refreshRetryScheduler.cancel()
+    Task { await versionValidationCache.cancel() }
 
     logger.debug(
       "aerospace service deactivate end",
@@ -535,7 +625,8 @@ extension AeroSpaceService {
       return
     }
 
-    subscriptionRefreshScheduler.schedule { [weak self] in
+    let delaySeconds = TimeInterval(delayNanoseconds) / 1_000_000_000
+    subscriptionRefreshScheduler.schedule(after: delaySeconds) { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
       self.triggerRefresh(source: source)
@@ -552,37 +643,119 @@ extension AeroSpaceService {
 // MARK: - State Reloading
 
 extension AeroSpaceService {
-  /// Reads current AeroSpace state and publishes it.
-  fileprivate func reloadState(refreshToken: AeroSpaceRefreshToken) {
-    guard shouldExecute(refreshToken: refreshToken) else { return }
+  /// Replaces any queued or running refresh with the newest request.
+  fileprivate func queueRefresh(source: String, expectedGeneration: UInt64? = nil) {
+    let reservation = withLock {
+      state -> (token: AeroSpaceRefreshToken, replacedTask: Task<Void, Never>?)? in
+      guard state.running, state.active, !state.consumers.isEmpty else { return nil }
+      if let expectedGeneration, state.generation != expectedGeneration {
+        return nil
+      }
 
-    logger.debug("aerospace reloadState begin")
+      let token = state.refreshSequence.issue(generation: state.generation)
+      let replacedTask = state.refreshTask
+      state.pendingRefreshToken = token
+      state.refreshTask = nil
+      return (token, replacedTask)
+    }
 
-    guard ensureAeroSpaceVersionSupported() else {
-      logger.debug("aerospace reloadState skipped due to unsupported AeroSpace version")
+    guard let reservation else { return }
+    reservation.replacedTask?.cancel()
+
+    logger.debug(
+      "aerospace refresh queued",
+      .field("source", source),
+      .field("consumers", consumerCount),
+      .field("request_id", reservation.token.requestID)
+    )
+
+    let task = Task.detached(priority: .userInitiated) { [weak self] in
+      guard let self else { return }
+      await self.reloadState(refreshToken: reservation.token)
+    }
+
+    let shouldCancel = withLock { state -> Bool in
+      guard state.pendingRefreshToken == reservation.token else { return true }
+      state.refreshTask = task
+      return false
+    }
+    if shouldCancel {
+      task.cancel()
+    }
+  }
+
+  /// Reads current AeroSpace state and publishes it, retaining last-known-good state on failure.
+  fileprivate func reloadState(refreshToken: AeroSpaceRefreshToken) async {
+    defer { finishRefresh(refreshToken) }
+    guard shouldExecute(refreshToken: refreshToken), !Task.isCancelled else { return }
+
+    logger.debug(
+      "aerospace reloadState begin",
+      .field("request_id", refreshToken.requestID)
+    )
+
+    guard await versionValidationCache.validate(generation: refreshToken.generation) else {
+      guard shouldExecute(refreshToken: refreshToken), !Task.isCancelled else { return }
+      await publishRefreshFailure(
+        message: "AeroSpace version validation failed",
+        refreshToken: refreshToken
+      )
+      scheduleRefreshRetry(generation: refreshToken.generation)
       return
     }
 
-    guard shouldExecute(refreshToken: refreshToken) else { return }
+    guard shouldExecute(refreshToken: refreshToken), !Task.isCancelled else { return }
 
-    let snapshot = AeroSpaceSnapshotLoader.load(
-      run: runAeroSpace(arguments:),
-      resolveAppID: resolvedAppID(name:bundlePath:),
-      logger: logger
-    )
+    do {
+      let snapshot = try await AeroSpaceSnapshotLoader.load(
+        run: { [weak self] arguments in
+          guard let self else { return nil }
+          return await self.runAeroSpace(arguments: arguments)
+        },
+        resolveAppID: { name, bundlePath in
+          Self.resolvedAppID(name: name, bundlePath: bundlePath)
+        }
+      )
 
-    Task { @MainActor [weak self] in
-      guard let self else { return }
-      guard self.shouldExecute(refreshToken: refreshToken) else { return }
+      guard shouldExecute(refreshToken: refreshToken), !Task.isCancelled else { return }
+      refreshRetryScheduler.cancel()
+      await publish(snapshot: snapshot, refreshToken: refreshToken)
+    } catch is CancellationError {
+      return
+    } catch {
+      guard shouldExecute(refreshToken: refreshToken), !Task.isCancelled else { return }
+      logger.error(
+        "aerospace JSON snapshot unavailable",
+        .field("error", error),
+        .field("request_id", refreshToken.requestID)
+      )
+      await publishRefreshFailure(
+        message: String(describing: error),
+        refreshToken: refreshToken
+      )
+      scheduleRefreshRetry(generation: refreshToken.generation)
+    }
+  }
 
-      guard self.hasStateChanged(for: snapshot) else {
+  /// Publishes one successful snapshot on the main actor.
+  private func publish(
+    snapshot: AeroSpaceSnapshot,
+    refreshToken: AeroSpaceRefreshToken
+  ) async {
+    await MainActor.run { [weak self] in
+      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
+
+      let stateChanged = self.hasStateChanged(for: snapshot)
+      let statusChanged = self.snapshotStatus != .current
+      self.snapshotStatus = .current
+
+      guard stateChanged || statusChanged else {
         self.logger.debug("aerospace reloadState end without changes")
         return
       }
 
       self.spaces = snapshot.spaces
       self.focusedApp = snapshot.focusedApp
-      self.focusedAppID = snapshot.focusedApp?.id
       self.focusedLayoutMode = snapshot.focusedLayoutMode
 
       self.logger.debug(
@@ -600,12 +773,52 @@ extension AeroSpaceService {
     }
   }
 
+  /// Marks the snapshot stale or unavailable without clearing published values.
+  private func publishRefreshFailure(
+    message: String,
+    refreshToken: AeroSpaceRefreshToken
+  ) async {
+    await MainActor.run { [weak self] in
+      guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
+
+      let nextStatus: AeroSpaceSnapshotStatus
+      switch self.snapshotStatus {
+      case .current, .stale:
+        nextStatus = .stale(message: message)
+      case .unavailable:
+        nextStatus = .unavailable(message: message)
+      }
+
+      guard self.snapshotStatus != nextStatus else { return }
+      self.snapshotStatus = nextStatus
+      for callback in self.withLock({ Array($0.consumers.values) }) {
+        callback()
+      }
+    }
+  }
+
+  /// Schedules another refresh after a transient validation or snapshot failure.
+  private func scheduleRefreshRetry(generation: UInt64) {
+    guard shouldExecute(generation: generation) else { return }
+    refreshRetryScheduler.schedule { [weak self] in
+      self?.queueRefresh(source: "failure retry", expectedGeneration: generation)
+    }
+  }
+
+  /// Clears task ownership only when the completed task is still current.
+  private func finishRefresh(_ refreshToken: AeroSpaceRefreshToken) {
+    withLock { state in
+      guard state.pendingRefreshToken == refreshToken else { return }
+      state.pendingRefreshToken = nil
+      state.refreshTask = nil
+    }
+  }
+
   /// Returns whether a freshly loaded snapshot differs from the currently published state.
   @MainActor
   private func hasStateChanged(for snapshot: AeroSpaceSnapshot) -> Bool {
-    return spaces != snapshot.spaces
+    spaces != snapshot.spaces
       || focusedApp != snapshot.focusedApp
-      || focusedAppID != snapshot.focusedApp?.id
       || focusedLayoutMode != snapshot.focusedLayoutMode
   }
 }
@@ -613,46 +826,18 @@ extension AeroSpaceService {
 // MARK: - AeroSpace Command Execution
 
 extension AeroSpaceService {
-  /// Runs the AeroSpace CLI.
-  fileprivate func runAeroSpace(arguments: [String]) -> String? {
-    guard isActive else { return nil }
+  /// Runs the AeroSpace CLI while the service lifecycle remains active.
+  fileprivate func runAeroSpace(arguments: [String]) async -> String? {
+    guard isActive, !Task.isCancelled else { return nil }
 
-    let output = commandRunner.run(arguments: arguments)
+    let output = await commandRunner.run(arguments: arguments)
 
-    guard isActive else {
-      return nil
-    }
-
+    guard isActive, !Task.isCancelled else { return nil }
     return output
   }
 
-  /// Validates the configured AeroSpace version once per active service run.
-  fileprivate func ensureAeroSpaceVersionSupported() -> Bool {
-    if let cached = withLock({ $0.versionRequirementSatisfied }) {
-      return cached
-    }
-
-    do {
-      try AeroSpaceVersionRequirement.validate(run: commandRunner.run(arguments:))
-      withLock { $0.versionRequirementSatisfied = true }
-      logger.debug(
-        "aerospace version requirement satisfied",
-        .field("minimum", AeroSpaceVersionRequirement.minimum.description)
-      )
-      return true
-    } catch {
-      withLock { $0.versionRequirementSatisfied = false }
-      logger.error(
-        "aerospace version requirement failed",
-        .field("minimum", AeroSpaceVersionRequirement.minimum.description),
-        .field("error", error)
-      )
-      return false
-    }
-  }
-
   /// Resolves a stable app identity from bundle path or name.
-  fileprivate func resolvedAppID(name: String, bundlePath: String?) -> String {
+  fileprivate static func resolvedAppID(name: String, bundlePath: String?) -> String {
     guard let bundlePath, !bundlePath.isEmpty else {
       return name
     }
@@ -660,36 +845,10 @@ extension AeroSpaceService {
     return bundlePath
   }
 
-  /// Returns whether the service is still allowed to execute the queued refresh work.
+  /// Returns whether the service is still allowed to execute queued work.
   fileprivate func shouldExecute(generation: UInt64) -> Bool {
     withLock { state in
       state.running && state.active && !state.consumers.isEmpty && state.generation == generation
-    }
-  }
-
-  /// Reserves the newest refresh token while the service is active.
-  fileprivate func reserveRefreshToken() -> AeroSpaceRefreshToken? {
-    withLock { state in
-      guard state.running, state.active, !state.consumers.isEmpty else { return nil }
-      return state.refreshSequence.issue(generation: state.generation)
-    }
-  }
-
-  /// Reserves a refresh token only if the originating lifecycle is still active.
-  fileprivate func reserveRefreshToken(
-    expectedGeneration: UInt64
-  ) -> AeroSpaceRefreshToken? {
-    withLock { state in
-      guard
-        state.running,
-        state.active,
-        !state.consumers.isEmpty,
-        state.generation == expectedGeneration
-      else {
-        return nil
-      }
-
-      return state.refreshSequence.issue(generation: state.generation)
     }
   }
 
@@ -699,6 +858,7 @@ extension AeroSpaceService {
       state.running
         && state.active
         && !state.consumers.isEmpty
+        && state.pendingRefreshToken == refreshToken
         && state.refreshSequence.isCurrent(refreshToken, generation: state.generation)
     }
   }

@@ -6,7 +6,7 @@ import Foundation
 /// Sendability is guarded by `LockedState`; process session ownership,
 /// generation checks, reconnect queue state, and stream buffering are serialized
 /// before callbacks can observe or mutate them.
-final class AeroSpaceSubscriptionController: @unchecked Sendable {
+final class AeroSpaceSubscriptionController: AeroSpaceSubscriptionControlling, @unchecked Sendable {
   /// Default reconnect delays used after an existing AeroSpace subscription exits.
   private static let defaultReconnectDelays: [TimeInterval] = [0.25, 0.5, 1, 2, 5]
 
@@ -117,10 +117,7 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
   private func startSubscription(generation: UInt64) {
     guard isActive(generation: generation) else { return }
 
-    guard let subscription = subscriptionLauncher.makeSubscription() else {
-      logger.debug("aerospace subscription skipped because its socket is unavailable")
-      return
-    }
+    let subscription = subscriptionLauncher.makeSubscription()
 
     let shouldStart = withLock { state in
       state.attach(subscription, generation: generation)
@@ -131,36 +128,46 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
       return
     }
 
-    do {
-      try subscription.start(
-        onEventFrame: { [weak self] data in
-          self?.handleEventFrame(data, generation: generation)
-        },
-        onDisconnect: { [weak self] subscription, errorMessage in
-          self?.handleDisconnect(
-            subscription: subscription,
-            errorMessage: errorMessage,
-            generation: generation
-          )
-        }
-      )
-    } catch {
-      let result = withLock { state in
-        state.detach(subscription: subscription, generation: generation)
-      }
-      result.subscription?.invalidate()
-      logger.debug(
-        "failed to start aerospace subscription",
-        .field("error", error)
-      )
-      scheduleReconnect(generation: generation)
-      return
-    }
+    DetachedTask.run(priority: .utility) { [weak self] in
+      guard let self else { return }
 
-    logger.debug(
-      "aerospace subscription started",
-      .field("events", AeroSpaceSubscriptionEvent.subscriptionDescription)
-    )
+      do {
+        try subscription.start(
+          onEventFrame: { [weak self] data in
+            self?.handleEventFrame(data, generation: generation)
+          },
+          onDisconnect: { [weak self] subscription, errorMessage in
+            self?.handleDisconnect(
+              subscription: subscription,
+              errorMessage: errorMessage,
+              generation: generation
+            )
+          }
+        )
+      } catch {
+        let result = self.withLock { state in
+          state.detach(subscription: subscription, generation: generation)
+        }
+        result.subscription?.invalidate()
+        guard result.wasActive else { return }
+        self.logger.debug(
+          "failed to start aerospace subscription",
+          .field("error", error)
+        )
+        self.scheduleReconnect(generation: generation)
+        return
+      }
+
+      guard self.isActive(generation: generation) else {
+        subscription.stop()
+        return
+      }
+
+      self.logger.debug(
+        "aerospace subscription started",
+        .field("events", AeroSpaceSubscriptionEvent.subscriptionDescription)
+      )
+    }
   }
 
   /// Decodes one complete length-prefixed event frame.
@@ -213,13 +220,9 @@ final class AeroSpaceSubscriptionController: @unchecked Sendable {
     scheduleReconnect(generation: generation)
   }
 
-  /// Schedules a bounded reconnect attempt when AeroSpace still appears installed.
+  /// Schedules a bounded reconnect attempt while the integration remains active.
   private func scheduleReconnect(generation: UInt64) {
     guard isActive(generation: generation) else { return }
-    guard subscriptionLauncher.isAvailable else {
-      logger.debug("aerospace subscription reconnect skipped because socket is unavailable")
-      return
-    }
 
     reconnectScheduler.schedule { [weak self] in
       guard let self else { return }

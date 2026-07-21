@@ -49,21 +49,18 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     XCTAssertEqual(snapshot.focusedLayoutMode, .hTiles)
   }
 
-  func testLoadReturnsEmptySnapshotWhenJSONWorkspaceFieldsAreMissing() {
-    let snapshot = loadSnapshot(
-      jsonWorkspaces:
-        """
-        [
-          {"workspace": "1"}
-        ]
-        """,
-      jsonWindows: "[]",
-      jsonFocusedWindow: "[]"
+  func testLoadRejectsJSONWorkspaceFieldsThatAreMissing() {
+    XCTAssertThrowsError(
+      try AeroSpaceSnapshotLoader.loadSynchronously(
+        run: { arguments in
+          if arguments.first == "list-workspaces" {
+            return #"[{"workspace":"1"}]"#
+          }
+          return "[]"
+        },
+        resolveAppID: { name, bundlePath in bundlePath ?? name }
+      )
     )
-
-    XCTAssertEqual(snapshot.spaces, [])
-    XCTAssertNil(snapshot.focusedApp)
-    XCTAssertEqual(snapshot.focusedLayoutMode, .unknown)
   }
 
   func testLoadKeepsEmptyWorkspacesInSnapshot() {
@@ -280,10 +277,10 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     )
   }
 
-  func testLoadUsesFormattedJSONCommandsOnly() {
+  func testLoadUsesFormattedJSONCommandsOnly() throws {
     var requestedArguments: [[String]] = []
 
-    _ = AeroSpaceSnapshotLoader.load(
+    _ = try AeroSpaceSnapshotLoader.loadSynchronously(
       run: { arguments in
         requestedArguments.append(arguments)
         switch arguments {
@@ -411,7 +408,7 @@ final class AeroSpaceSnapshotLoaderTests: XCTestCase {
     jsonFocusedWindow: String,
     resolveAppID: (String, String?) -> String = { name, bundlePath in bundlePath ?? name }
   ) -> AeroSpaceSnapshot {
-    AeroSpaceSnapshotLoader.load(
+    try! AeroSpaceSnapshotLoader.loadSynchronously(
       run: { arguments in
         switch arguments {
         case [
@@ -479,7 +476,7 @@ final class AeroSpaceVersionRequirementTests: XCTestCase {
 }
 
 final class AeroSpaceCommandRunnerTests: XCTestCase {
-  func testRunLogsStderrWhenCommandExitsNonZero() throws {
+  func testRunLogsStderrWhenCommandExitsNonZero() async throws {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
         "easybar-aerospace-runner-tests-\(UUID().uuidString)", isDirectory: true)
@@ -512,7 +509,7 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
       executablePathResolver: { scriptURL.path }
     )
 
-    let outputValue = runner.run(arguments: ["list-workspaces", "--all", "--json"])
+    let outputValue = await runner.run(arguments: ["list-workspaces", "--all", "--json"])
     logger.configureFileLogging(enabled: false, path: "")
 
     XCTAssertNil(outputValue)
@@ -523,7 +520,7 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
     XCTAssertTrue(output.contains("stderr_bytes=16"))
   }
 
-  func testRunCleansUpDescendantHoldingOutputPipes() throws {
+  func testRunCleansUpDescendantHoldingOutputPipes() async throws {
     let directoryURL = FileManager.default.temporaryDirectory
       .appendingPathComponent(
         "easybar-aerospace-descendant-tests-\(UUID().uuidString)",
@@ -557,7 +554,8 @@ final class AeroSpaceCommandRunnerTests: XCTestCase {
     )
     let startedAt = Date()
 
-    XCTAssertEqual(runner.run(arguments: ["list-workspaces"]), "ok")
+    let output = await runner.run(arguments: ["list-workspaces"])
+    XCTAssertEqual(output, "ok")
     XCTAssertLessThan(Date().timeIntervalSince(startedAt), 2)
 
     let childPIDText = try String(contentsOf: childPIDURL, encoding: .utf8)
