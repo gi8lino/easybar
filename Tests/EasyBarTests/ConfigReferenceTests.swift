@@ -40,7 +40,23 @@ final class ConfigReferenceTests: ConfigLoaderTestCase {
       ),
       ["Not set", "`2`"]
     )
-    XCTAssertTrue(reference.contains("Generated from the `EasyBarConfigSchema` module."))
+  }
+
+  func testGeneratedReferenceNamesCompleteSchemaSource() throws {
+    let referenceURL = repoRootURL()
+      .appendingPathComponent("docs/content/configuration/reference.md")
+    let reference = try String(contentsOf: referenceURL, encoding: .utf8)
+
+    let provenance =
+      "Generated from the `EasyBarConfigSchema` module: "
+      + "`ConfigSchema.swift` and the `ConfigSchema*Lines.swift` files."
+
+    XCTAssertTrue(reference.contains(provenance))
+    XCTAssertFalse(
+      reference.contains(
+        "Generated from `Sources/EasyBarConfigSchema/ConfigSchema.swift`."
+      )
+    )
   }
 
   private func documentedSchemaKeys() -> Set<String> {
