@@ -59,10 +59,8 @@ extension Config {
   }
 
   /// Returns the default native group style derived from the active theme.
-  func defaultBuiltinGroupStyle() -> BuiltinWidgetStyle {
-    BuiltinWidgetStyle(
-      icon: "",
-      textColorHex: nil,
+  func defaultBuiltinGroupStyle() -> BuiltinWidgetChromeStyle {
+    BuiltinWidgetChromeStyle(
       backgroundColorHex: themeSurfaceHex,
       borderColorHex: themeBorderColorHex,
       borderWidth: 1,

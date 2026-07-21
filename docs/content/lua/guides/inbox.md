@@ -111,9 +111,10 @@ position = "right"
 order = 5
 
 [builtins.inbox.style]
-icon = "󰂚"
-text_color = "theme.text_secondary"
-icon_color = "theme.text_secondary"
+unread_icon = "􀛬"
+read_icon = "􀍕"
+unread_icon_color = "theme.text_secondary"
+read_icon_color = "theme.muted"
 unread_count_color = "theme.accent"
 
 [builtins.inbox.colors]
@@ -139,13 +140,12 @@ popup_width = 360
 popup_max_height = 440
 use_inactive_style_when_read = true
 show_when_empty = true
-inactive_icon = "󰂜"
-inactive_color = "theme.muted"
 max_items = 100
 ```
 
-When there are no unread messages, EasyBar uses `inactive_icon` and `inactive_color`. Set
-`use_inactive_style_when_read = false` to keep the active icon and color after everything is read. Set
+When there are no unread messages, EasyBar uses `read_icon` and `read_icon_color`. Unread messages
+use `unread_icon` and `unread_icon_color`. Set `use_inactive_style_when_read = false` to keep the
+unread icon and color after everything is read. Set
 `show_when_empty = false` to remove the native icon when the inbox contains no messages. Set
 `show_unread_count = false` to keep the stateful icon without displaying its numeric badge.
 Set `show_source_actions = false` to hide the popup's publisher actions button while keeping

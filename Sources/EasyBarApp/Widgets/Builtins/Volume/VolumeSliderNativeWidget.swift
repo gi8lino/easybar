@@ -118,13 +118,13 @@ final class VolumeSliderNativeWidget: NativeWidget {
   /// Returns the current render snapshot.
   func makeSnapshot() -> Snapshot {
     let placement = config.placement
-    var style = config.style
     let volumeState = currentSystemVolumeState(config: config)
-
-    style.icon = resolvedIcon(
-      for: volumeState.clampedSystem,
-      muted: volumeState.isMuted,
-      config: config
+    let style = config.style.widgetStyle(
+      icon: resolvedIcon(
+        for: volumeState.clampedSystem,
+        muted: volumeState.isMuted,
+        config: config
+      )
     )
 
     let text = VolumePresentation.percentageText(

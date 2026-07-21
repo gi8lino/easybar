@@ -17,9 +17,21 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
       order = 7
 
       [builtins.inbox.style]
-      icon = "IN"
-      icon_color = "#eeeeee"
+      unread_icon = "IN"
+      read_icon = "OUT"
+      unread_icon_color = "#eeeeee"
+      read_icon_color = "#123456"
       unread_count_color = "#dddddd"
+      background_color = "#121212"
+      border_color = "#232323"
+      border_width = 2
+      corner_radius = 9
+      margin_x = 1
+      margin_y = 2
+      padding_x = 3
+      padding_y = 4
+      spacing = 5
+      opacity = 0.75
 
       [builtins.inbox.colors]
       background = "#010101"
@@ -44,8 +56,6 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
       show_source_actions = false
       popup_width = 480
       popup_max_height = 600
-      inactive_icon = "OUT"
-      inactive_color = "#123456"
       max_items = 25
       """,
       to: configFileURL
@@ -55,9 +65,21 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertNil(config.reload())
     XCTAssertEqual(config.builtinInbox.placement.position, .left)
     XCTAssertEqual(config.builtinInbox.placement.order, 7)
-    XCTAssertEqual(config.builtinInbox.style.icon, "IN")
-    XCTAssertEqual(config.builtinInbox.iconColorHex, "#eeeeee")
-    XCTAssertEqual(config.builtinInbox.unreadCountColorHex, "#dddddd")
+    XCTAssertEqual(config.builtinInbox.style.unreadIcon, "IN")
+    XCTAssertEqual(config.builtinInbox.style.readIcon, "OUT")
+    XCTAssertEqual(config.builtinInbox.style.unreadIconColorHex, "#eeeeee")
+    XCTAssertEqual(config.builtinInbox.style.readIconColorHex, "#123456")
+    XCTAssertEqual(config.builtinInbox.style.unreadCountColorHex, "#dddddd")
+    XCTAssertEqual(config.builtinInbox.style.chrome.backgroundColorHex, "#121212")
+    XCTAssertEqual(config.builtinInbox.style.chrome.borderColorHex, "#232323")
+    XCTAssertEqual(config.builtinInbox.style.chrome.borderWidth, 2)
+    XCTAssertEqual(config.builtinInbox.style.chrome.cornerRadius, 9)
+    XCTAssertEqual(config.builtinInbox.style.chrome.marginX, 1)
+    XCTAssertEqual(config.builtinInbox.style.chrome.marginY, 2)
+    XCTAssertEqual(config.builtinInbox.style.chrome.paddingX, 3)
+    XCTAssertEqual(config.builtinInbox.style.chrome.paddingY, 4)
+    XCTAssertEqual(config.builtinInbox.style.chrome.spacing, 5)
+    XCTAssertEqual(config.builtinInbox.style.chrome.opacity, 0.75)
     XCTAssertEqual(config.builtinInbox.groupBy, .date)
     XCTAssertEqual(config.builtinInbox.sortBy, .severity)
     XCTAssertFalse(config.builtinInbox.sortDescending)
@@ -67,8 +89,6 @@ final class ConfigLoaderBuiltinTests: ConfigLoaderTestCase {
     XCTAssertFalse(config.builtinInbox.showSourceActions)
     XCTAssertEqual(config.builtinInbox.popupWidth, 480)
     XCTAssertEqual(config.builtinInbox.popupMaxHeight, 600)
-    XCTAssertEqual(config.builtinInbox.inactiveIcon, "OUT")
-    XCTAssertEqual(config.builtinInbox.inactiveColorHex, "#123456")
     XCTAssertEqual(config.builtinInbox.popupBackgroundColorHex, "#010101")
     XCTAssertEqual(config.builtinInbox.popupBorderColorHex, "#020202")
     XCTAssertEqual(config.builtinInbox.popupTitleColorHex, "#030303")

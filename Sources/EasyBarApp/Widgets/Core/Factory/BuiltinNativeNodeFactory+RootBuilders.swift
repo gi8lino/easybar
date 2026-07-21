@@ -79,16 +79,16 @@ extension BuiltinNativeNodeFactory {
   static func makeSpacesNode(
     rootID: String,
     placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle
+    style: Config.BuiltinWidgetChromeStyle
   ) -> WidgetNodeState {
     makeRootNode(
       id: rootID,
       kind: .spaces,
       placement: placement,
-      style: style,
+      style: style.widgetStyle(),
       icon: "",
       text: "",
-      color: style.textColorHex
+      color: nil
     )
   }
 
@@ -96,16 +96,16 @@ extension BuiltinNativeNodeFactory {
   static func makeGroupNode(
     id: String,
     placement: Config.BuiltinWidgetPlacement,
-    style: Config.BuiltinWidgetStyle
+    style: Config.BuiltinWidgetChromeStyle
   ) -> WidgetNodeState {
     var node = makeRootNode(
       id: id,
       kind: .group,
       placement: placement,
-      style: style,
+      style: style.widgetStyle(),
       icon: "",
       text: "",
-      color: style.textColorHex
+      color: nil
     )
     // Native groups are layout containers; letting them own hover surfaces
     // interferes with hover-driven children such as tooltip widgets.

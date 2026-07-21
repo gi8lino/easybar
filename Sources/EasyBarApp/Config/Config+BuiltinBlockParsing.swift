@@ -26,9 +26,33 @@ extension Config {
     reader: ConfigReader,
     fallback: BuiltinWidgetStyle
   ) throws -> BuiltinWidgetStyle {
-    BuiltinWidgetStyle(
+    let chrome = try parseBuiltinChromeStyle(
+      reader: reader,
+      fallback: fallback.chrome
+    )
+
+    return BuiltinWidgetStyle(
       icon: try reader.string("icon", fallback: fallback.icon),
       textColorHex: try reader.optionalColor("text_color", fallback: fallback.textColorHex),
+      backgroundColorHex: chrome.backgroundColorHex,
+      borderColorHex: chrome.borderColorHex,
+      borderWidth: chrome.borderWidth,
+      cornerRadius: chrome.cornerRadius,
+      marginX: chrome.marginX,
+      marginY: chrome.marginY,
+      paddingX: chrome.paddingX,
+      paddingY: chrome.paddingY,
+      spacing: chrome.spacing,
+      opacity: chrome.opacity
+    )
+  }
+
+  /// Parses shared visual chrome without accepting icon or text-color keys.
+  func parseBuiltinChromeStyle(
+    reader: ConfigReader,
+    fallback: BuiltinWidgetChromeStyle
+  ) throws -> BuiltinWidgetChromeStyle {
+    BuiltinWidgetChromeStyle(
       backgroundColorHex: try reader.optionalColor(
         "background_color",
         fallback: fallback.backgroundColorHex
@@ -42,6 +66,17 @@ extension Config {
       paddingY: try reader.double("padding_y", fallback: fallback.paddingY, minimum: 0),
       spacing: try reader.double("spacing", fallback: fallback.spacing, minimum: 0),
       opacity: try reader.double("opacity", fallback: fallback.opacity, minimum: 0, maximum: 1)
+    )
+  }
+
+  /// Parses text color and visual chrome without accepting a generic icon key.
+  func parseBuiltinTextStyle(
+    reader: ConfigReader,
+    fallback: BuiltinWidgetTextStyle
+  ) throws -> BuiltinWidgetTextStyle {
+    BuiltinWidgetTextStyle(
+      textColorHex: try reader.optionalColor("text_color", fallback: fallback.textColorHex),
+      chrome: try parseBuiltinChromeStyle(reader: reader, fallback: fallback.chrome)
     )
   }
 

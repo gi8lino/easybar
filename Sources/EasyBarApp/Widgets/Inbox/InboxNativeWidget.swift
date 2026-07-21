@@ -57,16 +57,20 @@ final class InboxNativeWidget: NativeWidget {
     let unreadCount = items.lazy.filter(\.isUnread).count
     let hasUnread = unreadCount > 0
     let shouldShow = config.showWhenEmpty || !items.isEmpty
+    let presentation = InboxAnchorPresentation.resolve(
+      config: config,
+      hasUnread: hasUnread
+    )
     var node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,
       placement: config.placement,
-      style: config.style,
+      style: config.style.chrome.widgetStyle(
+        icon: presentation.icon,
+        textColorHex: presentation.countColorHex
+      ),
       text: config.showUnreadCount && hasUnread ? String(unreadCount) : ""
     )
-    let inactive = !hasUnread && config.useInactiveStyleWhenRead
-    node.icon = inactive ? config.inactiveIcon : config.style.icon
-    node.iconColor = inactive ? config.inactiveColorHex : config.iconColorHex
-    node.labelColor = inactive ? config.inactiveColorHex : config.unreadCountColorHex
+    node.iconColor = presentation.iconColorHex
     node.visible = shouldShow
     node.contextMenu = InboxContextMenu.make(config: config)
     applyNodes([node])
@@ -107,5 +111,25 @@ final class InboxNativeWidget: NativeWidget {
     inboxStore.updateConfiguration(updated)
     configSnapshotStore.applyInboxOverride(updated)
     publish(items: items)
+  }
+}
+
+struct InboxAnchorPresentation: Equatable {
+  let icon: String
+  let iconColorHex: String?
+  let countColorHex: String?
+
+  static func resolve(
+    config: Config.InboxBuiltinConfig,
+    hasUnread: Bool
+  ) -> InboxAnchorPresentation {
+    let usesReadStyle = !hasUnread && config.useInactiveStyleWhenRead
+    return InboxAnchorPresentation(
+      icon: usesReadStyle ? config.style.readIcon : config.style.unreadIcon,
+      iconColorHex: usesReadStyle
+        ? config.style.readIconColorHex : config.style.unreadIconColorHex,
+      countColorHex: usesReadStyle
+        ? config.style.readIconColorHex : config.style.unreadCountColorHex
+    )
   }
 }

@@ -93,8 +93,6 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `enabled`          | `true`                | —       | Shows or hides the built-in spaces widget.                       |
 | `position`         | `"left"`              | —       | Places the widget on the left, center, or right side of the bar. |
 | `order`            | `10`                  | —       | Sort order among widgets in the same position.                   |
-| `icon`             | `""`                  | —       | Unused fallback icon for the spaces root widget.                 |
-| `text_color`       | `"theme.text"`        | —       | Fallback text color for the spaces root widget.                  |
 | `background_color` | `"theme.transparent"` | —       | Background color behind the whole spaces block.                  |
 | `border_color`     | `"theme.transparent"` | —       | Border color around the whole spaces block.                      |
 | `border_width`     | `0`                   | —       | Border width around the whole spaces block.                      |
@@ -205,20 +203,19 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.aerospace_mode.style`
 
-| Key                | Default           | Example | Description                                                                     |
-| ------------------ | ----------------- | ------- | ------------------------------------------------------------------------------- |
-| `icon`             | `""`              | —       | Leading icon of the widget. The mode-specific icon comes from content settings. |
-| `text_color`       | `"theme.text"`    | —       | Text color of the widget.                                                       |
-| `background_color` | `"theme.surface"` | —       | Background color of the widget.                                                 |
-| `border_color`     | `"theme.border"`  | —       | Border color of the widget.                                                     |
-| `border_width`     | `1`               | —       | Border width of the widget.                                                     |
-| `corner_radius`    | `8`               | —       | Corner radius of the widget background.                                         |
-| `margin_x`         | `0`               | —       | Horizontal outer margin around the widget.                                      |
-| `margin_y`         | `0`               | —       | Vertical outer margin around the widget.                                        |
-| `padding_x`        | `8`               | —       | Horizontal inner padding of the widget.                                         |
-| `padding_y`        | `4`               | —       | Vertical inner padding of the widget.                                           |
-| `spacing`          | `6`               | —       | Gap between the icon and text.                                                  |
-| `opacity`          | `1`               | —       | Overall opacity of the widget.                                                  |
+| Key                | Default           | Example | Description                                |
+| ------------------ | ----------------- | ------- | ------------------------------------------ |
+| `text_color`       | `"theme.text"`    | —       | Text color of the widget.                  |
+| `background_color` | `"theme.surface"` | —       | Background color of the widget.            |
+| `border_color`     | `"theme.border"`  | —       | Border color of the widget.                |
+| `border_width`     | `1`               | —       | Border width of the widget.                |
+| `corner_radius`    | `8`               | —       | Corner radius of the widget background.    |
+| `margin_x`         | `0`               | —       | Horizontal outer margin around the widget. |
+| `margin_y`         | `0`               | —       | Vertical outer margin around the widget.   |
+| `padding_x`        | `8`               | —       | Horizontal inner padding of the widget.    |
+| `padding_y`        | `4`               | —       | Vertical inner padding of the widget.      |
+| `spacing`          | `6`               | —       | Gap between the icon and text.             |
+| `opacity`          | `1`               | —       | Overall opacity of the widget.             |
 
 ## `builtins.aerospace_mode.content`
 
@@ -249,22 +246,23 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.inbox.style`
 
-| Key                  | Default                  | Example | Description                                                        |
-| -------------------- | ------------------------ | ------- | ------------------------------------------------------------------ |
-| `icon`               | `"󰂚"`                    | —       | Icon shown when unread inbox messages exist.                       |
-| `text_color`         | `"theme.text_secondary"` | —       | Fallback color used by the active icon when icon_color is omitted. |
-| `icon_color`         | `"theme.text_secondary"` | —       | Color of the active inbox icon.                                    |
-| `unread_count_color` | `"theme.accent"`         | —       | Color of the unread count.                                         |
-| `background_color`   | `"theme.transparent"`    | —       | Background color of the inbox anchor.                              |
-| `border_color`       | `"theme.transparent"`    | —       | Border color of the inbox anchor.                                  |
-| `border_width`       | `0`                      | —       | Border width of the inbox anchor.                                  |
-| `corner_radius`      | `8`                      | —       | Corner radius of the inbox anchor.                                 |
-| `margin_x`           | `0`                      | —       | Horizontal outer margin around the inbox anchor.                   |
-| `margin_y`           | `0`                      | —       | Vertical outer margin around the inbox anchor.                     |
-| `padding_x`          | `7`                      | —       | Horizontal inner padding of the inbox anchor.                      |
-| `padding_y`          | `3`                      | —       | Vertical inner padding of the inbox anchor.                        |
-| `spacing`            | `4`                      | —       | Gap between the inbox icon and unread count.                       |
-| `opacity`            | `1`                      | —       | Overall opacity of the inbox anchor.                               |
+| Key                  | Default                  | Example | Description                                            |
+| -------------------- | ------------------------ | ------- | ------------------------------------------------------ |
+| `unread_icon`        | `"􀛬"`                    | —       | Icon shown when unread inbox messages exist.           |
+| `read_icon`          | `"􀍕"`                    | —       | Icon shown when no unread inbox messages exist.        |
+| `unread_icon_color`  | `"theme.text_secondary"` | —       | Color of the inbox icon when unread messages exist.    |
+| `read_icon_color`    | `"theme.muted"`          | —       | Color of the inbox icon when no unread messages exist. |
+| `unread_count_color` | `"theme.accent"`         | —       | Color of the unread count.                             |
+| `background_color`   | `"theme.transparent"`    | —       | Background color of the inbox anchor.                  |
+| `border_color`       | `"theme.transparent"`    | —       | Border color of the inbox anchor.                      |
+| `border_width`       | `0`                      | —       | Border width of the inbox anchor.                      |
+| `corner_radius`      | `8`                      | —       | Corner radius of the inbox anchor.                     |
+| `margin_x`           | `0`                      | —       | Horizontal outer margin around the inbox anchor.       |
+| `margin_y`           | `0`                      | —       | Vertical outer margin around the inbox anchor.         |
+| `padding_x`          | `7`                      | —       | Horizontal inner padding of the inbox anchor.          |
+| `padding_y`          | `3`                      | —       | Vertical inner padding of the inbox anchor.            |
+| `spacing`            | `4`                      | —       | Gap between the inbox icon and unread count.           |
+| `opacity`            | `1`                      | —       | Overall opacity of the inbox anchor.                   |
 
 ## `builtins.inbox.colors`
 
@@ -284,20 +282,18 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 ## `builtins.inbox.content`
 
-| Key                            | Default         | Example | Description                                                           |
-| ------------------------------ | --------------- | ------- | --------------------------------------------------------------------- |
-| `group_by`                     | `"source"`      | —       | Groups messages by source, date, category, severity, or none.         |
-| `sort_by`                      | `"timestamp"`   | —       | Sorts messages by timestamp, source, severity, or title.              |
-| `sort_descending`              | `true`          | —       | Reverses the configured sort order when true.                         |
-| `show_unread_count`            | `true`          | —       | Shows the total unread message count beside the icon.                 |
-| `use_inactive_style_when_read` | `true`          | —       | Uses the inactive icon and color when no unread messages remain.      |
-| `show_when_empty`              | `true`          | —       | Keeps an inactive inbox icon visible when no messages exist.          |
-| `show_source_actions`          | `true`          | —       | Shows publisher-provided actions in the inbox popup header.           |
-| `popup_width`                  | `360`           | —       | Sets the inbox popup width in points (240–800).                       |
-| `popup_max_height`             | `440`           | —       | Sets the maximum scrollable message-list height in points (120–1000). |
-| `inactive_icon`                | `"󰂜"`           | —       | Icon shown when no unread messages exist.                             |
-| `inactive_color`               | `"theme.muted"` | —       | Color used by the inactive icon.                                      |
-| `max_items`                    | `100`           | —       | Maximum number of current messages accepted from each publisher.      |
+| Key                            | Default       | Example | Description                                                           |
+| ------------------------------ | ------------- | ------- | --------------------------------------------------------------------- |
+| `group_by`                     | `"source"`    | —       | Groups messages by source, date, category, severity, or none.         |
+| `sort_by`                      | `"timestamp"` | —       | Sorts messages by timestamp, source, severity, or title.              |
+| `sort_descending`              | `true`        | —       | Reverses the configured sort order when true.                         |
+| `show_unread_count`            | `true`        | —       | Shows the total unread message count beside the icon.                 |
+| `use_inactive_style_when_read` | `true`        | —       | Uses the read icon and color when no unread messages remain.          |
+| `show_when_empty`              | `true`        | —       | Keeps the read-state inbox icon visible when no messages exist.       |
+| `show_source_actions`          | `true`        | —       | Shows publisher-provided actions in the inbox popup header.           |
+| `popup_width`                  | `360`         | —       | Sets the inbox popup width in points (240–800).                       |
+| `popup_max_height`             | `440`         | —       | Sets the maximum scrollable message-list height in points (120–1000). |
+| `max_items`                    | `100`         | —       | Maximum number of current messages accepted from each publisher.      |
 
 ## `builtins.cpu`
 
@@ -412,8 +408,6 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default               | Example | Description                                            |
 | ------------------ | --------------------- | ------- | ------------------------------------------------------ |
-| `icon`             | `""`                  | —       | Unused fallback icon for the Wi-Fi root widget.        |
-| `text_color`       | `"theme.text"`        | —       | Default text color for the Wi-Fi widget root.          |
 | `background_color` | `"theme.transparent"` | —       | Background color of the widget.                        |
 | `border_color`     | `"theme.transparent"` | —       | Border color of the widget.                            |
 | `border_width`     | `0`                   | —       | Border width of the widget.                            |
@@ -497,7 +491,6 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key                | Default               | Example | Description                                |
 | ------------------ | --------------------- | ------- | ------------------------------------------ |
-| `icon`             | `""`                  | —       | Leading icon of the compact widget.        |
 | `text_color`       | `"theme.text"`        | —       | Text color of the widget.                  |
 | `background_color` | `"theme.transparent"` | —       | Background color of the widget.            |
 | `border_color`     | `"theme.transparent"` | —       | Border color of the widget.                |

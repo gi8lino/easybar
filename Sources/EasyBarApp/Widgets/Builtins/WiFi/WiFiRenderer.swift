@@ -120,7 +120,7 @@ extension WiFiRenderer {
     var rootNode = BuiltinNativeNodeFactory.makeRowContainerNode(
       rootID: rootID,
       placement: snapshot.config.placement,
-      style: snapshot.config.style
+      style: snapshot.config.style.widgetStyle()
     )
     rootNode.popupPresented = snapshot.detailsContentVisible
 

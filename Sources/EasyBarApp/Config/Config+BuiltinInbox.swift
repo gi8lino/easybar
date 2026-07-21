@@ -7,9 +7,7 @@ extension InboxSortMode: TOMLStringDecodable {}
 extension Config {
   struct InboxBuiltinConfig: @unchecked Sendable {
     var placement: BuiltinWidgetPlacement
-    var style: BuiltinWidgetStyle
-    var iconColorHex: String?
-    var unreadCountColorHex: String?
+    var style: InboxBuiltinStyle
     var groupBy: InboxGroupMode
     var sortBy: InboxSortMode
     var sortDescending: Bool
@@ -19,8 +17,6 @@ extension Config {
     var showSourceActions: Bool
     var popupWidth: Int
     var popupMaxHeight: Int
-    var inactiveIcon: String
-    var inactiveColorHex: String?
     var popupBackgroundColorHex: String?
     var popupBorderColorHex: String?
     var popupTitleColorHex: String?
@@ -39,21 +35,24 @@ extension Config {
     static let `default` = InboxBuiltinConfig(
       placement: .init(enabled: true, position: .right, order: 5),
       style: .init(
-        icon: "󰂚",
-        textColorHex: "theme.text_secondary",
-        backgroundColorHex: "theme.transparent",
-        borderColorHex: "theme.transparent",
-        borderWidth: 0,
-        cornerRadius: 8,
-        marginX: 0,
-        marginY: 0,
-        paddingX: 7,
-        paddingY: 3,
-        spacing: 4,
-        opacity: 1
+        unreadIcon: "􀛬",
+        readIcon: "􀍕",
+        unreadIconColorHex: "theme.text_secondary",
+        readIconColorHex: "theme.muted",
+        unreadCountColorHex: "theme.accent",
+        chrome: .init(
+          backgroundColorHex: "theme.transparent",
+          borderColorHex: "theme.transparent",
+          borderWidth: 0,
+          cornerRadius: 8,
+          marginX: 0,
+          marginY: 0,
+          paddingX: 7,
+          paddingY: 3,
+          spacing: 4,
+          opacity: 1
+        )
       ),
-      iconColorHex: "theme.text_secondary",
-      unreadCountColorHex: "theme.accent",
       groupBy: .source,
       sortBy: .timestamp,
       sortDescending: true,
@@ -63,8 +62,6 @@ extension Config {
       showSourceActions: true,
       popupWidth: 360,
       popupMaxHeight: 440,
-      inactiveIcon: "󰂜",
-      inactiveColorHex: "theme.muted",
       popupBackgroundColorHex: "theme.background",
       popupBorderColorHex: "theme.border_strong",
       popupTitleColorHex: "theme.text",
@@ -84,16 +81,27 @@ extension Config {
     guard let inbox = try builtins.optionalSection("inbox") else { return }
     let placement = try parseBuiltinPlacement(reader: inbox, fallback: builtinInbox.placement)
     let styleReader = try inbox.section("style")
-    let style = try parseBuiltinStyle(reader: styleReader, fallback: builtinInbox.style)
+    let chrome = try parseBuiltinChromeStyle(
+      reader: styleReader,
+      fallback: builtinInbox.style.chrome
+    )
+    let style = InboxBuiltinStyle(
+      unreadIcon: try styleReader.string("unread_icon", fallback: builtinInbox.style.unreadIcon),
+      readIcon: try styleReader.string("read_icon", fallback: builtinInbox.style.readIcon),
+      unreadIconColorHex: try styleReader.optionalColor(
+        "unread_icon_color", fallback: builtinInbox.style.unreadIconColorHex),
+      readIconColorHex: try styleReader.optionalColor(
+        "read_icon_color", fallback: builtinInbox.style.readIconColorHex),
+      unreadCountColorHex: try styleReader.optionalColor(
+        "unread_count_color", fallback: builtinInbox.style.unreadCountColorHex),
+      chrome: chrome
+    )
     let content = try inbox.section("content")
     let colors = try inbox.optionalSection("colors")
 
     builtinInbox = InboxBuiltinConfig(
       placement: placement,
       style: style,
-      iconColorHex: try styleReader.optionalColor("icon_color", fallback: style.textColorHex),
-      unreadCountColorHex: try styleReader.optionalColor(
-        "unread_count_color", fallback: builtinInbox.unreadCountColorHex),
       groupBy: try content.enum("group_by", fallback: builtinInbox.groupBy),
       sortBy: try content.enum("sort_by", fallback: builtinInbox.sortBy),
       sortDescending: try content.bool("sort_descending", fallback: builtinInbox.sortDescending),
@@ -107,9 +115,6 @@ extension Config {
         "popup_width", fallback: builtinInbox.popupWidth, minimum: 240, maximum: 800),
       popupMaxHeight: try content.int(
         "popup_max_height", fallback: builtinInbox.popupMaxHeight, minimum: 120, maximum: 1000),
-      inactiveIcon: try content.string("inactive_icon", fallback: builtinInbox.inactiveIcon),
-      inactiveColorHex: try content.optionalColor(
-        "inactive_color", fallback: builtinInbox.inactiveColorHex),
       popupBackgroundColorHex: try colors?.optionalColor(
         "background", fallback: builtinInbox.popupBackgroundColorHex) ?? builtinInbox.popupBackgroundColorHex,
       popupBorderColorHex: try colors?.optionalColor("border", fallback: builtinInbox.popupBorderColorHex)

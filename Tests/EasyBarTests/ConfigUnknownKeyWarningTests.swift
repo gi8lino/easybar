@@ -61,6 +61,96 @@ final class ConfigUnknownKeyWarningTests: ConfigLoaderTestCase {
     )
   }
 
+  /// Verifies that removed inbox icon keys remain unsupported instead of being migrated.
+  func testRemovedInboxIconKeysAreUnknownAndDoNotChangeStateStyle() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("removed-inbox-icon-keys.toml")
+
+    try writeConfig(
+      """
+      [builtins.inbox.style]
+      icon = "OLD_UNREAD"
+      icon_color = "#111111"
+      text_color = "#333333"
+
+      [builtins.inbox.content]
+      inactive_icon = "OLD_READ"
+      inactive_color = "#222222"
+      """,
+      to: configFileURL
+    )
+
+    let result = try ConfigValidator.validate(configPathOverride: configFileURL.path)
+
+    XCTAssertEqual(
+      result.warnings,
+      [
+        "unknown config key builtins.inbox.content.inactive_color",
+        "unknown config key builtins.inbox.content.inactive_icon",
+        "unknown config key builtins.inbox.style.icon",
+        "unknown config key builtins.inbox.style.icon_color",
+        "unknown config key builtins.inbox.style.text_color",
+      ]
+    )
+
+    let config = Config.makeUnloadedConfig()
+    setEnvironmentValue(configFileURL.path, for: SharedEnvironmentKeys.configPath)
+    XCTAssertNil(config.reload())
+    XCTAssertEqual(
+      config.builtinInbox.style.unreadIcon,
+      Config.InboxBuiltinConfig.default.style.unreadIcon
+    )
+    XCTAssertEqual(
+      config.builtinInbox.style.readIcon,
+      Config.InboxBuiltinConfig.default.style.readIcon
+    )
+    XCTAssertEqual(
+      config.builtinInbox.style.unreadIconColorHex,
+      config.themeTextSecondaryColorHex
+    )
+    XCTAssertEqual(
+      config.builtinInbox.style.readIconColorHex,
+      config.themeMutedColorHex
+    )
+  }
+
+  /// Verifies that custom-rendered built-ins reject generic content style keys they cannot use.
+  func testCustomRenderedBuiltinsRejectUnusedContentStyleKeys() throws {
+    let configFileURL = tempDirectoryURL.appendingPathComponent("unused-content-style-keys.toml")
+
+    try writeConfig(
+      """
+      [builtins.spaces]
+      icon = "UNUSED"
+      text_color = "#111111"
+
+      [builtins.aerospace_mode.style]
+      icon = "UNUSED"
+
+      [builtins.volume.style]
+      icon = "UNUSED"
+
+      [builtins.wifi.style]
+      icon = "UNUSED"
+      text_color = "#222222"
+      """,
+      to: configFileURL
+    )
+
+    let result = try ConfigValidator.validate(configPathOverride: configFileURL.path)
+
+    XCTAssertEqual(
+      result.warnings,
+      [
+        "unknown config key builtins.aerospace_mode.style.icon",
+        "unknown config key builtins.spaces.icon",
+        "unknown config key builtins.spaces.text_color",
+        "unknown config key builtins.volume.style.icon",
+        "unknown config key builtins.wifi.style.icon",
+        "unknown config key builtins.wifi.style.text_color",
+      ]
+    )
+  }
+
   /// Verifies that intentionally dynamic config tables do not produce unknown-key warnings.
   func testValidateConfigDoesNotWarnForDynamicTables() throws {
     let configFileURL = tempDirectoryURL.appendingPathComponent("dynamic-tables.toml")

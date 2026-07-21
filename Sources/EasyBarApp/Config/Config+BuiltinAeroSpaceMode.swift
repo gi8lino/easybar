@@ -26,8 +26,8 @@ extension Config {
 
     /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
-    /// Shared visual style settings.
-    var style: BuiltinWidgetStyle
+    /// Text and visual chrome settings.
+    var style: BuiltinWidgetTextStyle
     /// Mode-specific content settings.
     var content: Content
 
@@ -124,18 +124,19 @@ extension Config {
         order: 30
       ),
       style: .init(
-        icon: "",
         textColorHex: "#ffffff",
-        backgroundColorHex: "#1a1a1a",
-        borderColorHex: "#333333",
-        borderWidth: 1,
-        cornerRadius: 8,
-        marginX: 0,
-        marginY: 0,
-        paddingX: 8,
-        paddingY: 4,
-        spacing: 6,
-        opacity: 1
+        chrome: .init(
+          backgroundColorHex: "#1a1a1a",
+          borderColorHex: "#333333",
+          borderWidth: 1,
+          cornerRadius: 8,
+          marginX: 0,
+          marginY: 0,
+          paddingX: 8,
+          paddingY: 4,
+          spacing: 6,
+          opacity: 1
+        )
       ),
       content: .init(
         showIcon: true,
@@ -165,7 +166,7 @@ extension Config {
       fallback: builtinAeroSpaceMode.placement
     )
 
-    let style = try parseBuiltinStyle(
+    let style = try parseBuiltinTextStyle(
       reader: try aerospaceMode.section("style"),
       fallback: builtinAeroSpaceMode.style
     )

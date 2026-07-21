@@ -370,6 +370,56 @@ final class NativeBuiltinContextMenuTests: XCTestCase {
     )
   }
 
+  @MainActor
+  func testInboxStyleConfigUpdateWritesStateKeysToStyleSection() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-inbox-style-update-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let configURL = directory.appendingPathComponent("config.toml")
+    try """
+    [builtins.inbox.content]
+    use_inactive_style_when_read = true # Keep behavior here.
+    """.write(to: configURL, atomically: true, encoding: .utf8)
+
+    let persisted = NativeWidgetConfigUpdate.persist(
+      edits: [
+        TOMLEdit(
+          path: ["builtins", "inbox", "style", "unread_icon"],
+          value: .string("UNREAD")
+        ),
+        TOMLEdit(
+          path: ["builtins", "inbox", "style", "read_icon"],
+          value: .string("READ")
+        ),
+        TOMLEdit(
+          path: ["builtins", "inbox", "style", "unread_icon_color"],
+          value: .string("theme.text_secondary")
+        ),
+        TOMLEdit(
+          path: ["builtins", "inbox", "style", "read_icon_color"],
+          value: .string("theme.muted")
+        ),
+        TOMLEdit(
+          path: ["builtins", "inbox", "style", "unread_count_color"],
+          value: .string("theme.accent")
+        ),
+      ],
+      using: ConfigPersistence(configPath: configURL.path, logger: silentLogger())
+    ) {}
+
+    XCTAssertTrue(persisted)
+    let source = try String(contentsOf: configURL, encoding: .utf8)
+    XCTAssertTrue(source.contains("[builtins.inbox.style]"))
+    XCTAssertTrue(source.contains("unread_icon = \"UNREAD\""))
+    XCTAssertTrue(source.contains("read_icon = \"READ\""))
+    XCTAssertTrue(source.contains("unread_icon_color = \"theme.text_secondary\""))
+    XCTAssertTrue(source.contains("read_icon_color = \"theme.muted\""))
+    XCTAssertTrue(source.contains("unread_count_color = \"theme.accent\""))
+    XCTAssertTrue(source.contains("use_inactive_style_when_read = true # Keep behavior here."))
+  }
+
   private func silentLogger() -> ProcessLogger {
     ProcessLogger(
       label: "native-context-menu-tests",

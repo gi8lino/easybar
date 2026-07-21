@@ -45,6 +45,21 @@ extension Config {
     style.borderColorHex = themeTransparentColorHex
   }
 
+  /// Applies transparent theme chrome to a built-in with custom-rendered content.
+  private func applyTransparentBuiltinStyle(_ style: inout BuiltinWidgetChromeStyle) {
+    style.backgroundColorHex = themeTransparentColorHex
+    style.borderColorHex = themeTransparentColorHex
+  }
+
+  /// Applies transparent theme styling to dynamic-icon content.
+  private func applyTransparentBuiltinStyle(
+    _ style: inout BuiltinWidgetTextStyle,
+    textColorHex: String? = nil
+  ) {
+    style.textColorHex = textColorHex ?? themeTextColorHex
+    applyTransparentBuiltinStyle(&style.chrome)
+  }
+
   /// Applies the standard surface-style built-in chrome.
   private func applySurfaceBuiltinStyle(
     _ style: inout BuiltinWidgetStyle,
@@ -53,6 +68,16 @@ extension Config {
     style.textColorHex = textColorHex ?? themeTextColorHex
     style.backgroundColorHex = themeSurfaceHex
     style.borderColorHex = themeBorderColorHex
+  }
+
+  /// Applies surface theme styling to dynamic-icon content.
+  private func applySurfaceBuiltinStyle(
+    _ style: inout BuiltinWidgetTextStyle,
+    textColorHex: String? = nil
+  ) {
+    style.textColorHex = textColorHex ?? themeTextColorHex
+    style.chrome.backgroundColorHex = themeSurfaceHex
+    style.chrome.borderColorHex = themeBorderColorHex
   }
 
   /// Applies theme defaults to the bar.
@@ -77,8 +102,11 @@ extension Config {
   }
 
   private func applyThemeInboxDefaults() {
-    applyTransparentBuiltinStyle(&builtinInbox.style, textColorHex: themeAccentColorHex)
-    builtinInbox.inactiveColorHex = themeMutedColorHex
+    builtinInbox.style.chrome.backgroundColorHex = themeTransparentColorHex
+    builtinInbox.style.chrome.borderColorHex = themeTransparentColorHex
+    builtinInbox.style.unreadIconColorHex = themeTextSecondaryColorHex
+    builtinInbox.style.readIconColorHex = themeMutedColorHex
+    builtinInbox.style.unreadCountColorHex = themeAccentColorHex
     builtinInbox.popupBackgroundColorHex = themeBackgroundHex
     builtinInbox.popupBorderColorHex = themeBorderStrongColorHex
     builtinInbox.popupTitleColorHex = themeTextColorHex

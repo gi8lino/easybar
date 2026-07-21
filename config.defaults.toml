@@ -49,8 +49,6 @@ border = "theme.transparent" # Bottom border color of the bar. Use a visible col
 enabled = true # Shows or hides the built-in spaces widget.
 position = "left" # Places the widget on the left, center, or right side of the bar.
 order = 10 # Sort order among widgets in the same position.
-icon = "" # Unused fallback icon for the spaces root widget.
-text_color = "theme.text" # Fallback text color for the spaces root widget.
 background_color = "theme.transparent" # Background color behind the whole spaces block.
 border_color = "theme.transparent" # Border color around the whole spaces block.
 border_width = 0 # Border width around the whole spaces block.
@@ -136,7 +134,6 @@ position = "left" # Places the widget on the left, center, or right side of the 
 order = 30 # Sort order among widgets in the same position.
 
 [builtins.aerospace_mode.style]
-icon = "" # Leading icon of the widget. The mode-specific icon comes from content settings.
 text_color = "theme.text" # Text color of the widget.
 background_color = "theme.surface" # Background color of the widget.
 border_color = "theme.border" # Border color of the widget.
@@ -171,9 +168,10 @@ position = "right" # Places the inbox on the left, center, or right side of the 
 order = 5 # Sort order among widgets in the same position.
 
 [builtins.inbox.style]
-icon = "󰂚" # Icon shown when unread inbox messages exist.
-text_color = "theme.text_secondary" # Fallback color used by the active icon when icon_color is omitted.
-icon_color = "theme.text_secondary" # Color of the active inbox icon.
+unread_icon = "􀛬" # Icon shown when unread inbox messages exist.
+read_icon = "􀍕" # Icon shown when no unread inbox messages exist.
+unread_icon_color = "theme.text_secondary" # Color of the inbox icon when unread messages exist.
+read_icon_color = "theme.muted" # Color of the inbox icon when no unread messages exist.
 unread_count_color = "theme.accent" # Color of the unread count.
 background_color = "theme.transparent" # Background color of the inbox anchor.
 border_color = "theme.transparent" # Border color of the inbox anchor.
@@ -204,13 +202,11 @@ group_by = "source" # Groups messages by source, date, category, severity, or no
 sort_by = "timestamp" # Sorts messages by timestamp, source, severity, or title.
 sort_descending = true # Reverses the configured sort order when true.
 show_unread_count = true # Shows the total unread message count beside the icon.
-use_inactive_style_when_read = true # Uses the inactive icon and color when no unread messages remain.
-show_when_empty = true # Keeps an inactive inbox icon visible when no messages exist.
+use_inactive_style_when_read = true # Uses the read icon and color when no unread messages remain.
+show_when_empty = true # Keeps the read-state inbox icon visible when no messages exist.
 show_source_actions = true # Shows publisher-provided actions in the inbox popup header.
 popup_width = 360 # Sets the inbox popup width in points (240–800).
 popup_max_height = 440 # Sets the maximum scrollable message-list height in points (120–1000).
-inactive_icon = "󰂜" # Icon shown when no unread messages exist.
-inactive_color = "theme.muted" # Color used by the inactive icon.
 max_items = 100 # Maximum number of current messages accepted from each publisher.
 
 [builtins.cpu]
@@ -316,8 +312,6 @@ order = 30 # Sort order among widgets in the same position.
 # group = "system" # Optional native group id that should contain this widget.
 
 [builtins.wifi.style]
-icon = "" # Unused fallback icon for the Wi-Fi root widget.
-text_color = "theme.text" # Default text color for the Wi-Fi widget root.
 background_color = "theme.transparent" # Background color of the widget.
 border_color = "theme.transparent" # Border color of the widget.
 border_width = 0 # Border width of the widget.
@@ -383,7 +377,6 @@ position = "right" # Places the widget on the left, center, or right side of the
 order = 20 # Sort order among widgets in the same position.
 
 [builtins.volume.style]
-icon = "" # Leading icon of the compact widget.
 text_color = "theme.text" # Text color of the widget.
 background_color = "theme.transparent" # Background color of the widget.
 border_color = "theme.transparent" # Border color of the widget.

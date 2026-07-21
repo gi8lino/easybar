@@ -8,11 +8,14 @@ extension ConfigSchemaRegistry {
     entry(key: "order", value: "5", description: "Sort order among widgets in the same position."),
     .blank,
     section(name: "builtins.inbox.style"),
-    entry(key: "icon", value: "\"󰂚\"", description: "Icon shown when unread inbox messages exist."),
+    entry(key: "unread_icon", value: "\"􀛬\"", description: "Icon shown when unread inbox messages exist."),
+    entry(key: "read_icon", value: "\"􀍕\"", description: "Icon shown when no unread inbox messages exist."),
     entry(
-      key: "text_color", value: "\"theme.text_secondary\"",
-      description: "Fallback color used by the active icon when icon_color is omitted."),
-    entry(key: "icon_color", value: "\"theme.text_secondary\"", description: "Color of the active inbox icon."),
+      key: "unread_icon_color", value: "\"theme.text_secondary\"",
+      description: "Color of the inbox icon when unread messages exist."),
+    entry(
+      key: "read_icon_color", value: "\"theme.muted\"",
+      description: "Color of the inbox icon when no unread messages exist."),
     entry(key: "unread_count_color", value: "\"theme.accent\"", description: "Color of the unread count."),
     entry(
       key: "background_color", value: "\"theme.transparent\"", description: "Background color of the inbox anchor."),
@@ -51,9 +54,10 @@ extension ConfigSchemaRegistry {
       key: "show_unread_count", value: "true", description: "Shows the total unread message count beside the icon."),
     entry(
       key: "use_inactive_style_when_read", value: "true",
-      description: "Uses the inactive icon and color when no unread messages remain."),
+      description: "Uses the read icon and color when no unread messages remain."),
     entry(
-      key: "show_when_empty", value: "true", description: "Keeps an inactive inbox icon visible when no messages exist."
+      key: "show_when_empty", value: "true",
+      description: "Keeps the read-state inbox icon visible when no messages exist."
     ),
     entry(
       key: "show_source_actions", value: "true",
@@ -63,8 +67,6 @@ extension ConfigSchemaRegistry {
     entry(
       key: "popup_max_height", value: "440",
       description: "Sets the maximum scrollable message-list height in points (120–1000)."),
-    entry(key: "inactive_icon", value: "\"󰂜\"", description: "Icon shown when no unread messages exist."),
-    entry(key: "inactive_color", value: "\"theme.muted\"", description: "Color used by the inactive icon."),
     entry(
       key: "max_items", value: "100", description: "Maximum number of current messages accepted from each publisher."),
     .blank,
@@ -514,16 +516,6 @@ extension ConfigSchemaRegistry {
     .blank,
     section(name: "builtins.wifi.style"),
     entry(
-      key: "icon",
-      value: "\"\"",
-      description: "Unused fallback icon for the Wi-Fi root widget.",
-    ),
-    entry(
-      key: "text_color",
-      value: "\"theme.text\"",
-      description: "Default text color for the Wi-Fi widget root.",
-    ),
-    entry(
       key: "background_color",
       value: "\"theme.transparent\"",
       description: "Background color of the widget.",
@@ -801,11 +793,6 @@ extension ConfigSchemaRegistry {
     ),
     .blank,
     section(name: "builtins.volume.style"),
-    entry(
-      key: "icon",
-      value: "\"\"",
-      description: "Leading icon of the compact widget.",
-    ),
     entry(
       key: "text_color",
       value: "\"theme.text\"",

@@ -23,8 +23,8 @@ extension Config {
 
     /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
-    /// Shared visual style settings.
-    var style: BuiltinWidgetStyle
+    /// Text and visual chrome settings.
+    var style: BuiltinWidgetTextStyle
     /// Volume-specific content settings.
     var content: Content
     /// Slider behavior settings.
@@ -98,18 +98,19 @@ extension Config {
         order: 20
       ),
       style: .init(
-        icon: "",
         textColorHex: "#cdd6f4",
-        backgroundColorHex: "#00000000",
-        borderColorHex: "#00000000",
-        borderWidth: 0,
-        cornerRadius: 8,
-        marginX: 0,
-        marginY: 0,
-        paddingX: 8,
-        paddingY: 0,
-        spacing: 8,
-        opacity: 1
+        chrome: .init(
+          backgroundColorHex: "#00000000",
+          borderColorHex: "#00000000",
+          borderWidth: 0,
+          cornerRadius: 8,
+          marginX: 0,
+          marginY: 0,
+          paddingX: 8,
+          paddingY: 0,
+          spacing: 8,
+          opacity: 1
+        )
       ),
       content: .init(
         mutedIcon: "􀊢",
@@ -136,7 +137,7 @@ extension Config {
       fallback: builtinVolume.placement
     )
 
-    let style = try parseBuiltinStyle(
+    let style = try parseBuiltinTextStyle(
       reader: try volume.section("style"),
       fallback: builtinVolume.style
     )

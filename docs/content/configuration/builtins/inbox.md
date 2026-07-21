@@ -16,25 +16,26 @@ popup_width = 360
 popup_max_height = 440
 use_inactive_style_when_read = true
 show_when_empty = true
-inactive_icon = "󰂜"
-inactive_color = "theme.muted"
 ```
 
 ## Appearance
 
-The active bell and unread counter can be colored independently:
+The unread and read states have independent icons and colors:
 
 ```toml
 [builtins.inbox.style]
-icon_color = "theme.text_secondary"
+unread_icon = "􀛬"
+read_icon = "􀍕"
+unread_icon_color = "theme.text_secondary"
+read_icon_color = "theme.muted"
 unread_count_color = "theme.accent"
 ```
 
-`text_color` is the icon fallback when `icon_color` is omitted. `[builtins.inbox.colors]` controls the popup background, border, title, body, muted labels, item background, actions, and severity indicators.
+`[builtins.inbox.colors]` controls the popup background, border, title, body, muted labels, item background, actions, and severity indicators.
 
 ## Behavior
 
-When there are no unread messages, `use_inactive_style_when_read` selects `inactive_icon` and `inactive_color`. Set `show_when_empty = false` to hide the anchor when no messages exist. Set `show_unread_count = false` to retain the stateful icon without its numeric badge.
+When there are no unread messages, `use_inactive_style_when_read` selects `read_icon` and `read_icon_color`. Otherwise the anchor uses `unread_icon` and `unread_icon_color`. Set `show_when_empty = false` to hide the anchor when no messages exist. Set `show_unread_count = false` to retain the stateful icon without its numeric badge.
 
 The popup header exposes publisher-provided source submenus through its actions button. Set `show_source_actions = false` to hide these actions while retaining the inbox-wide controls.
 

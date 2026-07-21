@@ -64,24 +64,20 @@ final class AeroSpaceModeNativeWidget: NativeWidget {
   /// Publishes the currently focused AeroSpace layout mode.
   private func publish() {
     let placement = config.placement
-    let style = config.style
     let mode = aeroSpaceService.focusedLayoutMode
 
-    let node = BuiltinNativeNodeFactory.makeItemNode(
+    var node = BuiltinNativeNodeFactory.makeItemNode(
       rootID: rootID,
       placement: placement,
-      style: style,
+      style: config.style.widgetStyle(icon: resolvedIcon(for: mode, config: config)),
       text: resolvedText(for: mode, config: config)
     )
-
-    var renderedNode = node
-    renderedNode.icon = resolvedIcon(for: mode, config: config)
-    renderedNode.contextMenu = AeroSpaceModeContextMenu.make(
+    node.contextMenu = AeroSpaceModeContextMenu.make(
       config: config,
       currentLayout: mode
     )
 
-    applyNodes([renderedNode])
+    applyNodes([node])
   }
 
   /// Handles one AeroSpace-mode-specific native context-menu action.

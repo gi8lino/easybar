@@ -17,16 +17,6 @@ extension ConfigSchemaRegistry {
       description: "Sort order among widgets in the same position.",
     ),
     entry(
-      key: "icon",
-      value: "\"\"",
-      description: "Unused fallback icon for the spaces root widget.",
-    ),
-    entry(
-      key: "text_color",
-      value: "\"theme.text\"",
-      description: "Fallback text color for the spaces root widget.",
-    ),
-    entry(
       key: "background_color",
       value: "\"theme.transparent\"",
       description: "Background color behind the whole spaces block.",
@@ -379,12 +369,6 @@ extension ConfigSchemaRegistry {
     ),
     .blank,
     section(name: "builtins.aerospace_mode.style"),
-    entry(
-      key: "icon",
-      value: "\"\"",
-      description:
-        "Leading icon of the widget. The mode-specific icon comes from content settings.",
-    ),
     entry(
       key: "text_color",
       value: "\"theme.text\"",

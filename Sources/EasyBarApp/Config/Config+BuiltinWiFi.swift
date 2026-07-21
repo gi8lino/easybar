@@ -67,8 +67,8 @@ extension Config {
 
     /// Shared placement settings.
     var placement: BuiltinWidgetPlacement
-    /// Shared visual style settings.
-    var style: BuiltinWidgetStyle
+    /// Shared visual chrome settings.
+    var style: BuiltinWidgetChromeStyle
     /// Wi-Fi-specific content settings.
     var content: Content
     /// Inline text style.
@@ -142,8 +142,6 @@ extension Config {
         group: nil
       ),
       style: .init(
-        icon: "",
-        textColorHex: "#ffffff",
         backgroundColorHex: "#00000000",
         borderColorHex: "#00000000",
         borderWidth: 0,
@@ -215,7 +213,7 @@ extension Config {
       fallback: builtinWiFi.placement
     )
 
-    let style = try parseBuiltinStyle(
+    let style = try parseBuiltinChromeStyle(
       reader: try wifi.section("style"),
       fallback: builtinWiFi.style
     )

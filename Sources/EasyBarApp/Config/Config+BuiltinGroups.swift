@@ -6,7 +6,7 @@ extension Config {
   struct BuiltinGroupConfig {
     var id: String
     var placement: BuiltinWidgetPlacement
-    var style: BuiltinWidgetStyle
+    var style: BuiltinWidgetChromeStyle
   }
 
   /// Parses the built-in native groups.
@@ -30,7 +30,7 @@ extension Config {
       )
 
       let styleReader = try group.optionalSection("style") ?? group
-      let style = try parseBuiltinStyle(
+      let style = try parseBuiltinChromeStyle(
         reader: styleReader,
         fallback: defaultBuiltinGroupStyle()
       )

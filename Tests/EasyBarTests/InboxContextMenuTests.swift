@@ -23,4 +23,53 @@ final class InboxContextMenuTests: XCTestCase {
     XCTAssertNil(InboxContextMenuAction(id: "inbox.group.unknown"))
     XCTAssertNil(InboxContextMenuAction(id: "inbox.unknown"))
   }
+
+  func testUnreadPresentationUsesUnreadIconAndColors() {
+    var config = Config.InboxBuiltinConfig.default
+    config.style.unreadIcon = "UNREAD"
+    config.style.unreadIconColorHex = "#111111"
+    config.style.unreadCountColorHex = "#222222"
+
+    XCTAssertEqual(
+      InboxAnchorPresentation.resolve(config: config, hasUnread: true),
+      InboxAnchorPresentation(
+        icon: "UNREAD",
+        iconColorHex: "#111111",
+        countColorHex: "#222222"
+      )
+    )
+  }
+
+  func testReadPresentationUsesReadIconAndColor() {
+    var config = Config.InboxBuiltinConfig.default
+    config.style.readIcon = "READ"
+    config.style.readIconColorHex = "#333333"
+    config.useInactiveStyleWhenRead = true
+
+    XCTAssertEqual(
+      InboxAnchorPresentation.resolve(config: config, hasUnread: false),
+      InboxAnchorPresentation(
+        icon: "READ",
+        iconColorHex: "#333333",
+        countColorHex: "#333333"
+      )
+    )
+  }
+
+  func testReadPresentationKeepsUnreadStyleWhenInactiveStyleIsDisabled() {
+    var config = Config.InboxBuiltinConfig.default
+    config.style.unreadIcon = "UNREAD"
+    config.style.unreadIconColorHex = "#111111"
+    config.style.unreadCountColorHex = "#222222"
+    config.useInactiveStyleWhenRead = false
+
+    XCTAssertEqual(
+      InboxAnchorPresentation.resolve(config: config, hasUnread: false),
+      InboxAnchorPresentation(
+        icon: "UNREAD",
+        iconColorHex: "#111111",
+        countColorHex: "#222222"
+      )
+    )
+  }
 }
