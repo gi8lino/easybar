@@ -134,6 +134,15 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertEqual(store.presentedItems.map(\.item.id), ["valid"])
   }
 
+  func testCompositeIDSeparatorIsRejectedInSourcesAndItemIDs() {
+    let store = InboxStore()
+    store.replace(source: "GitHub\u{1f}shared", items: [item("one")])
+    store.replace(source: "GitHub", items: [item("shared\u{1f}one"), item("valid")])
+
+    XCTAssertEqual(store.presentedItems.map(\.item.id), ["valid"])
+    XCTAssertEqual(store.presentedItems.map(\.source), ["GitHub"])
+  }
+
   func testSourceActionsRemainConfiguredWhenMessagesAreCleared() {
     let store = InboxStore()
     store.configure(

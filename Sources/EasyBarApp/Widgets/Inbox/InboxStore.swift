@@ -3,6 +3,8 @@ import Foundation
 
 @MainActor
 final class InboxStore: ObservableObject {
+  private static let compositeIDSeparator: Character = "\u{1f}"
+
   @Published private(set) var presentedItems: [InboxPresentedItem] = []
   @Published private(set) var sourceConfigurations: [InboxSourceConfiguration] = []
 
@@ -68,9 +70,10 @@ final class InboxStore: ObservableObject {
   func clear(source: String) {
     guard let source = normalizedSource(source) else { return }
     sources.removeValue(forKey: source)
-    readItemIDs = readItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
-    unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
-    dismissedItemIDs = dismissedItemIDs.filter { !$0.hasPrefix(source + "\u{1f}") }
+    let prefix = source + String(Self.compositeIDSeparator)
+    readItemIDs = readItemIDs.filter { !$0.hasPrefix(prefix) }
+    unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(prefix) }
+    dismissedItemIDs = dismissedItemIDs.filter { !$0.hasPrefix(prefix) }
     persistState()
     rebuild()
   }
@@ -242,15 +245,16 @@ final class InboxStore: ObservableObject {
 
   private func normalizedSource(_ source: String) -> String? {
     let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
-    return source.isEmpty || source.utf8.count > 512 ? nil : source
+    return source.isEmpty || source.utf8.count > 512
+      || source.contains(Self.compositeIDSeparator) ? nil : source
   }
 
   private func compositeID(source: String, itemID: String) -> String {
-    source + "\u{1f}" + itemID
+    source + String(Self.compositeIDSeparator) + itemID
   }
 
   private func reconcileState<S: Sequence>(source: String, items: S) where S.Element == InboxItem {
-    let prefix = source + "\u{1f}"
+    let prefix = source + String(Self.compositeIDSeparator)
     let liveIDs = Set(items.map { compositeID(source: source, itemID: $0.id) })
     readItemIDs = readItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
     unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
@@ -280,7 +284,9 @@ final class InboxStore: ObservableObject {
   private func isValid(_ item: InboxItem) -> Bool {
     let id = item.id.trimmingCharacters(in: .whitespacesAndNewlines)
     let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !id.isEmpty, id.utf8.count <= 512, !title.isEmpty, title.utf8.count <= 4_096 else {
+    guard !id.isEmpty, id.utf8.count <= 512, !id.contains(Self.compositeIDSeparator),
+      !title.isEmpty, title.utf8.count <= 4_096
+    else {
       return false
     }
     guard (item.body?.utf8.count ?? 0) <= 64 * 1_024 else { return false }
