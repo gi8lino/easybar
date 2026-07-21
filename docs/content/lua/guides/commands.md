@@ -30,7 +30,7 @@ while a synchronous command is running.
 ## Asynchronous shell commands
 
 `easybar.exec_async(command, options, callback)` runs `/bin/sh -lc <command>` in the background and
-calls back exactly once with combined output and the final status.
+calls back exactly once with combined output, the final status, and host-measured metadata.
 
 Use it for commands that genuinely require shell behavior such as:
 
@@ -42,11 +42,17 @@ Use it for commands that genuinely require shell behavior such as:
 ```lua
 easybar.exec_async("brew outdated --json=v2", {
     timeout_seconds = 15,
-}, function(output, code)
+    log_operation = "refresh",
+}, function(output, code, metadata)
     if code ~= 0 then
         easybar.log(easybar.level.warn, "brew failed", code, output)
         return
     end
+
+    easybar.log(
+        easybar.level.debug,
+        "brew refresh completed duration_ms=" .. tostring(metadata.duration_ms)
+    )
 
     brew_status:set({
         label = {
@@ -58,19 +64,25 @@ end)
 
 ## Command options
 
-All command APIs accept the same optional limits:
+All command APIs accept the same optional execution and diagnostic options:
 
-- `timeout_seconds`
-- `max_output_bytes`
+- `timeout_seconds`: hard timeout in seconds; must be greater than zero
+- `max_output_bytes`: maximum combined stdout and stderr bytes; must be a positive integer
+- `raw_output`: preserves output exactly, including trailing line endings, when `true`
+- `log_operation`: adds a short operation name such as `refresh` or `fetch_issues` to command logs
 
-Both values must be greater than zero, and `max_output_bytes` must be an integer. Pass `nil` or `{}`
-when you want the global defaults from `[app.lua_commands]`. Use
+Pass `nil` or `{}` when you want the global execution limits from `[app.lua_commands]`. Use
 `easybar.DEFAULT_EXEC_OPTIONS` when you want to pass the current configured host defaults explicitly.
+
+`log_operation` must be a non-empty string of at most 128 bytes without line-control characters.
+It is diagnostic metadata only and does not change command execution. The Lua runtime also attaches
+the current widget name automatically, so host logs can correlate one command across its request,
+execution, and callback lifecycle.
 
 ## Output and status codes
 
-All command APIs combine stdout and stderr into one bounded output string. Trailing newline
-characters are removed before Lua receives the result.
+All command APIs combine stdout and stderr into one bounded output string. Trailing line endings
+are removed before Lua receives the result unless `raw_output = true`.
 
 Normal executable exit codes are preserved. EasyBar reserves these statuses for host-side outcomes:
 
@@ -95,8 +107,11 @@ easybar.spawn_async({
     "api",
     "--paginate",
     "notifications?all=false&per_page=100",
-}, { timeout_seconds = 20 }, function(output, code)
-    -- Handle the final process result.
+}, {
+    timeout_seconds = 20,
+    log_operation = "refresh",
+}, function(output, code, metadata)
+    -- Handle the final process result and metadata.duration_ms.
 end)
 ```
 
@@ -118,7 +133,9 @@ easybar.spawn_async({
 ```
 
 Both asynchronous APIs return a token accepted by `easybar.cancel_async(...)` and use the same
-command limits.
+command options. Their callbacks receive an `EasyBarCommandMetadata` table whose `duration_ms` field
+contains the host-measured command duration, including termination after timeout, output limits, or
+cancellation.
 
 ## Cancelling asynchronous commands
 
@@ -128,7 +145,7 @@ command limits.
 ```lua
 local active_job
 
-active_job = easybar.exec_async("long-running-command", {}, function(output, code)
+active_job = easybar.exec_async("long-running-command", {}, function(output, code, metadata)
     active_job = nil
 
     if code == 130 then

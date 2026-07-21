@@ -67,6 +67,10 @@ Common kinds include:
 - `restarting`
 - `error`
 
+Error responses may include a stable `errorCode` in addition to the human-readable `message`. The
+calendar agent uses `invalid_request` when a decoded request violates protocol limits, including its
+maximum 366-day date range.
+
 ## Typical behavior
 
 - `ping`
@@ -79,6 +83,22 @@ Common kinds include:
   returns one `subscribed`, returns one immediate data payload, then keeps the socket open for later pushes
 - `restart`
   returns one `restarting` acknowledgement, closes the request socket, then exits the agent process cleanly
+
+## Reconnect behavior
+
+Transport failures such as an unavailable socket or an unexpected disconnect are transient. EasyBar
+reconnects long-lived subscriptions with bounded backoff.
+
+A structured calendar `invalid_request` response is different: the connection worked, but retrying
+the same subscription cannot succeed. EasyBar therefore:
+
+1. logs the rejection once;
+2. suspends reconnects for that exact request;
+3. retains the last valid snapshot; and
+4. resumes immediately when the request or socket configuration changes.
+
+Other calendar errors follow their normal response handling and do not redefine the shared transport
+contract.
 
 ## Agent restart flow
 

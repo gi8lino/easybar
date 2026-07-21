@@ -189,6 +189,30 @@ Restart the calendar agent after changing permission settings:
 easybar --restart-calendar-agent
 ```
 
+### Calendar request permanently rejected
+
+A log such as:
+
+```text
+month calendar agent client request permanently rejected code=invalid_request
+```
+
+means the socket connection succeeded, but the calendar agent rejected the subscription payload.
+Calendar fetch and subscription ranges may span at most 366 days. EasyBar derives its normal month
+preload from that shared limit, so this message usually indicates an incompatible client, malformed
+manual request, or a regression in request construction.
+
+`invalid_request` is permanent for the exact request. EasyBar logs it once, stops reconnecting with
+the same payload, and keeps the last valid calendar snapshot visible. A changed request or socket
+configuration resumes the connection. Reload configuration after correcting the request:
+
+```bash
+easybar --reload-config
+```
+
+Do not interpret this message as a missing socket or stopped agent. A repeated `connected` /
+`reconnect scheduled` loop for the same `invalid_request` indicates incorrect client behavior.
+
 ### Permission stuck at `not_determined`
 
 Agents retry with backoff:
