@@ -54,12 +54,21 @@ final class EasyBarEventObserver: Sendable {
     handler: @escaping @MainActor @Sendable (EasyBarEventPayload) -> Void
   ) {
     let nextTask = Task {
-      let stream = await eventHub.subscribe(
-        eventNames: eventNames,
-        widgetTargetIDs: widgetTargetIDs,
-        replayLatest: replayLatest,
-        bufferingPolicy: bufferingPolicy
-      )
+      let stream: AsyncStream<EasyBarEventPayload>
+      if let eventNames {
+        stream = await eventHub.subscribe(
+          eventNames: eventNames,
+          widgetTargetIDs: widgetTargetIDs,
+          replayLatest: replayLatest,
+          bufferingPolicy: bufferingPolicy
+        )
+      } else {
+        stream = await eventHub.subscribeAll(
+          widgetTargetIDs: widgetTargetIDs,
+          replayLatest: replayLatest,
+          bufferingPolicy: bufferingPolicy ?? .unbounded
+        )
+      }
 
       for await payload in stream {
         guard !Task.isCancelled else { break }

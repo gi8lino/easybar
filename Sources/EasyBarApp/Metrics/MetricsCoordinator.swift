@@ -227,8 +227,12 @@ actor MetricsCoordinator {
     return collectSnapshot(collectionEnabled: isStreamingActive)
   }
 
-  /// Records one emitted event.
-  func recordEvent(name: String, isWidgetEvent: Bool) {
+  /// Records one emitted event and any subscriber overflow observed during delivery.
+  func recordEvent(
+    name: String,
+    isWidgetEvent: Bool,
+    backpressure: [EventBackpressureSample] = []
+  ) {
     state.totalEvents += 1
     if isWidgetEvent {
       state.widgetEvents += 1
@@ -236,6 +240,7 @@ actor MetricsCoordinator {
       state.appEvents += 1
     }
     state.eventCounts[name, default: 0] += 1
+    recordEventBackpressure(backpressure)
   }
 
   /// Records one socket client rejected because the server was at capacity.
@@ -243,14 +248,16 @@ actor MetricsCoordinator {
     state.eventCounts["socket_client_rejected", default: 0] += 1
   }
 
-  /// Records one event dropped or coalesced because a subscriber buffer was full.
-  func recordEventBackpressure(name: String, coalesced: Bool) {
-    if coalesced {
-      state.coalescedEvents += 1
-      state.coalescedEventCounts[name, default: 0] += 1
-    } else {
-      state.droppedEvents += 1
-      state.droppedEventCounts[name, default: 0] += 1
+  /// Records events dropped or coalesced because subscriber buffers were full.
+  func recordEventBackpressure(_ samples: [EventBackpressureSample]) {
+    for sample in samples where sample.count > 0 {
+      if sample.coalesced {
+        state.coalescedEvents += sample.count
+        state.coalescedEventCounts[sample.name, default: 0] += sample.count
+      } else {
+        state.droppedEvents += sample.count
+        state.droppedEventCounts[sample.name, default: 0] += sample.count
+      }
     }
   }
 

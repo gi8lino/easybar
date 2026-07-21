@@ -6,11 +6,39 @@ actor EventHub {
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
 
+  /// Injectable metrics operations used by event delivery.
+  struct MetricsRecorder: Sendable {
+    let recordEmission:
+      @Sendable (
+        _ name: String,
+        _ isWidgetEvent: Bool,
+        _ backpressure: [EventBackpressureSample]
+      ) async -> Void
+    let recordBackpressure: @Sendable (_ samples: [EventBackpressureSample]) async -> Void
+
+    /// Builds the production recorder backed by one metrics coordinator.
+    static func live(_ coordinator: MetricsCoordinator) -> MetricsRecorder {
+      MetricsRecorder(
+        recordEmission: { name, isWidgetEvent, backpressure in
+          await coordinator.recordEvent(
+            name: name,
+            isWidgetEvent: isWidgetEvent,
+            backpressure: backpressure
+          )
+        },
+        recordBackpressure: { samples in
+          await coordinator.recordEventBackpressure(samples)
+        }
+      )
+    }
+  }
+
   /// Logger used for event diagnostics.
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.
   private let enqueueLuaEvent: @Sendable (EasyBarEventPayload) -> Void
-  private let metricsCoordinator: MetricsCoordinator
+  /// Metrics operations kept outside ordering-sensitive actor state.
+  private let metricsRecorder: MetricsRecorder
   private let wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
 
   /// Active stream subscribers keyed by id.
@@ -28,6 +56,12 @@ actor EventHub {
     let widgetTargetIDs: Set<String>?
     /// Stream continuation used to deliver payloads.
     let continuation: AsyncStream<EasyBarEventPayload>.Continuation
+  }
+
+  /// Dictionary key used while aggregating one synchronous delivery pass.
+  private struct BackpressureKey: Hashable, Sendable {
+    let name: String
+    let coalesced: Bool
   }
 
   /// Creates one production event hub.
@@ -56,56 +90,47 @@ actor EventHub {
     logger: ProcessLogger,
     enqueueLuaEvent: @escaping @Sendable (EasyBarEventPayload) -> Void,
     metricsCoordinator: MetricsCoordinator = .shared,
+    metricsRecorder: MetricsRecorder? = nil,
     wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
   ) {
     self.logger = logger
     self.enqueueLuaEvent = enqueueLuaEvent
-    self.metricsCoordinator = metricsCoordinator
+    self.metricsRecorder = metricsRecorder ?? .live(metricsCoordinator)
     self.wifiSnapshotProvider = wifiSnapshotProvider
   }
 
-  /// Subscribes to the app-wide event stream.
+  /// Subscribes to a filtered subset of the app-wide event stream.
   func subscribe(
-    eventNames: Set<String>? = nil,
+    eventNames: Set<String>,
     widgetTargetIDs: Set<String>? = nil,
     replayLatest: Bool = false,
     bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy? = nil
   ) -> AsyncStream<EasyBarEventPayload> {
-    let id = UUID()
+    let normalizedEventNames = eventNames.isEmpty ? nil : eventNames
     let resolvedBufferingPolicy =
       bufferingPolicy
-      ?? EventDeliveryPolicy.defaultBufferingPolicy(
-        for: eventNames
-      )
+      ?? EventDeliveryPolicy.defaultBufferingPolicy(for: eventNames)
 
-    return AsyncStream(bufferingPolicy: resolvedBufferingPolicy) { continuation in
-      let normalizedEventNames = eventNames?.isEmpty == true ? nil : eventNames
-      let normalizedWidgetTargetIDs = widgetTargetIDs?.isEmpty == true ? nil : widgetTargetIDs
+    return makeSubscription(
+      eventNames: normalizedEventNames,
+      widgetTargetIDs: widgetTargetIDs,
+      replayLatest: replayLatest,
+      bufferingPolicy: resolvedBufferingPolicy
+    )
+  }
 
-      subscribers[id] = Subscriber(
-        eventNames: normalizedEventNames,
-        widgetTargetIDs: normalizedWidgetTargetIDs,
-        continuation: continuation
-      )
-
-      if replayLatest {
-        for event in EventReplayCatalog.orderedEvents {
-          let eventName = event.rawValue
-          if let normalizedEventNames, !normalizedEventNames.contains(eventName) {
-            continue
-          }
-
-          guard let payload = replayablePayloads[eventName] else { continue }
-          continuation.yield(payload)
-        }
-      }
-
-      continuation.onTermination = { [weak self] _ in
-        Task {
-          await self?.removeContinuation(id: id)
-        }
-      }
-    }
+  /// Subscribes to every event with an explicit mixed-stream buffering contract.
+  func subscribeAll(
+    widgetTargetIDs: Set<String>? = nil,
+    replayLatest: Bool = false,
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy
+  ) -> AsyncStream<EasyBarEventPayload> {
+    makeSubscription(
+      eventNames: nil,
+      widgetTargetIDs: widgetTargetIDs,
+      replayLatest: replayLatest,
+      bufferingPolicy: bufferingPolicy
+    )
   }
 
   /// Emits one app-wide event.
@@ -150,15 +175,41 @@ actor EventHub {
       replayablePayloads[payload.eventName] = payload
     }
 
-    let deliveryPolicy = EventDeliveryPolicy.forEventName(payload.eventName)
-    var backpressureCount = 0
+    var backpressureCounts: [BackpressureKey: Int] = [:]
+    var terminatedSubscriberIDs: [UUID] = []
 
-    for subscriber in subscribers.values {
+    for (subscriberID, subscriber) in subscribers {
       guard shouldDeliver(payload, to: subscriber) else { continue }
 
-      if case .dropped = subscriber.continuation.yield(payload) {
-        backpressureCount += 1
+      switch subscriber.continuation.yield(payload) {
+      case .enqueued:
+        break
+      case .dropped(let droppedPayload):
+        recordBackpressure(for: droppedPayload, in: &backpressureCounts)
+      case .terminated:
+        terminatedSubscriberIDs.append(subscriberID)
+      @unknown default:
+        break
       }
+    }
+
+    for subscriberID in terminatedSubscriberIDs {
+      subscribers.removeValue(forKey: subscriberID)
+    }
+
+    let backpressure = backpressureSamples(from: backpressureCounts)
+    let mustDeliverDropCount = backpressure.reduce(into: 0) { count, sample in
+      if !sample.coalesced {
+        count += sample.count
+      }
+    }
+
+    if mustDeliverDropCount > 0 {
+      logger.error(
+        "subscriber buffer overflow displaced must-deliver events",
+        .field("trigger", payload.eventName),
+        .field("dropped_events", mustDeliverDropCount)
+      )
     }
 
     logEmission(payload)
@@ -167,17 +218,11 @@ actor EventHub {
       enqueueLuaEvent(payload)
     }
 
-    await metricsCoordinator.recordEvent(
-      name: payload.eventName,
-      isWidgetEvent: payload.widgetEvent != nil
+    await metricsRecorder.recordEmission(
+      payload.eventName,
+      payload.widgetEvent != nil,
+      backpressure
     )
-
-    for _ in 0..<backpressureCount {
-      await metricsCoordinator.recordEventBackpressure(
-        name: payload.eventName,
-        coalesced: deliveryPolicy == .coalescing
-      )
-    }
   }
 
   /// Replaces the set of app-level events that may be forwarded into Lua.
@@ -200,6 +245,119 @@ actor EventHub {
     for payload in payloads {
       await emit(payload)
     }
+  }
+
+  /// Creates one stream and synchronously seeds requested replay state.
+  private func makeSubscription(
+    eventNames: Set<String>?,
+    widgetTargetIDs: Set<String>?,
+    replayLatest: Bool,
+    bufferingPolicy: AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy
+  ) -> AsyncStream<EasyBarEventPayload> {
+    let id = UUID()
+    let normalizedWidgetTargetIDs = widgetTargetIDs?.isEmpty == true ? nil : widgetTargetIDs
+    let (stream, continuation) = AsyncStream<EasyBarEventPayload>.makeStream(
+      bufferingPolicy: bufferingPolicy
+    )
+
+    continuation.onTermination = { [weak self] _ in
+      Task {
+        await self?.removeContinuation(id: id)
+      }
+    }
+
+    subscribers[id] = Subscriber(
+      eventNames: eventNames,
+      widgetTargetIDs: normalizedWidgetTargetIDs,
+      continuation: continuation
+    )
+
+    guard replayLatest else { return stream }
+
+    var replayBackpressure: [BackpressureKey: Int] = [:]
+    var terminated = false
+
+    for event in EventReplayCatalog.orderedEvents {
+      let eventName = event.rawValue
+      if let eventNames, !eventNames.contains(eventName) {
+        continue
+      }
+
+      guard let payload = replayablePayloads[eventName] else { continue }
+
+      switch continuation.yield(payload) {
+      case .enqueued:
+        break
+      case .dropped(let droppedPayload):
+        recordBackpressure(for: droppedPayload, in: &replayBackpressure)
+      case .terminated:
+        terminated = true
+      @unknown default:
+        break
+      }
+
+      if terminated {
+        break
+      }
+    }
+
+    if terminated {
+      subscribers.removeValue(forKey: id)
+    }
+
+    reportReplayBackpressure(backpressureSamples(from: replayBackpressure))
+    return stream
+  }
+
+  /// Reports replay overflow outside the event-hub actor without hiding it.
+  private func reportReplayBackpressure(_ samples: [EventBackpressureSample]) {
+    guard !samples.isEmpty else { return }
+
+    let metricsRecorder = metricsRecorder
+    let logger = logger
+
+    Task {
+      for sample in samples {
+        logger.warn(
+          "replay subscriber buffer overflowed",
+          .field("name", sample.name),
+          .field("count", sample.count)
+        )
+      }
+      await metricsRecorder.recordBackpressure(samples)
+    }
+  }
+
+  /// Counts the payload actually displaced by one bounded AsyncStream buffer.
+  private func recordBackpressure(
+    for payload: EasyBarEventPayload,
+    in counts: inout [BackpressureKey: Int]
+  ) {
+    let key = BackpressureKey(
+      name: payload.eventName,
+      coalesced: EventDeliveryPolicy.forEventName(payload.eventName) == .coalescing
+    )
+    counts[key, default: 0] += 1
+  }
+
+  /// Converts one delivery-pass counter map into stable metrics samples.
+  private func backpressureSamples(
+    from counts: [BackpressureKey: Int]
+  ) -> [EventBackpressureSample] {
+    counts
+      .map { key, count in
+        EventBackpressureSample(
+          name: key.name,
+          count: count,
+          coalesced: key.coalesced
+        )
+      }
+      .sorted { lhs, rhs in
+        if lhs.name != rhs.name {
+          return lhs.name < rhs.name
+        }
+        return !lhs.coalesced && rhs.coalesced
+      }
   }
 
   /// Removes one terminated subscription.

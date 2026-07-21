@@ -3,16 +3,86 @@ import XCTest
 
 @testable import EasyBarApp
 
+private actor SuspendedEventMetricsGate {
+  private var didSuspend = false
+  private var enteredWaiters: [CheckedContinuation<Void, Never>] = []
+  private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+  func recordEmission() async {
+    guard !didSuspend else { return }
+
+    didSuspend = true
+    let waiters = enteredWaiters
+    enteredWaiters.removeAll()
+    for waiter in waiters {
+      waiter.resume()
+    }
+
+    await withCheckedContinuation { continuation in
+      releaseContinuation = continuation
+    }
+  }
+
+  func waitUntilSuspended() async {
+    guard !didSuspend else { return }
+
+    await withCheckedContinuation { continuation in
+      enteredWaiters.append(continuation)
+    }
+  }
+
+  func release() {
+    releaseContinuation?.resume()
+    releaseContinuation = nil
+  }
+}
+
+private actor EventBackpressureCapture {
+  struct Sample: Equatable, Sendable {
+    let name: String
+    let count: Int
+    let coalesced: Bool
+  }
+
+  private var samples: [Sample] = []
+  private var waiters: [CheckedContinuation<Void, Never>] = []
+
+  func record(name: String, count: Int, coalesced: Bool) {
+    samples.append(Sample(name: name, count: count, coalesced: coalesced))
+
+    let waiters = waiters
+    self.waiters.removeAll()
+    for waiter in waiters {
+      waiter.resume()
+    }
+  }
+
+  func waitForTotalCount(_ expectedCount: Int) async {
+    while samples.reduce(0, { $0 + $1.count }) < expectedCount {
+      await withCheckedContinuation { continuation in
+        waiters.append(continuation)
+      }
+    }
+  }
+
+  func snapshot() -> [Sample] {
+    samples
+  }
+}
+
 @MainActor
 final class EventHubTests: XCTestCase {
   /// Builds an event hub with logging muted and Lua delivery replaced by a no-op sink.
-  private static func makeHub() -> EventHub {
+  private static func makeHub(
+    metricsRecorder: EventHub.MetricsRecorder? = nil
+  ) -> EventHub {
     EventHub(
       logger: ProcessLogger(
         label: "eventhub.test",
         minimumLevel: .error
       ),
-      enqueueLuaEvent: { _ in }
+      enqueueLuaEvent: { _ in },
+      metricsRecorder: metricsRecorder
     )
   }
 
@@ -33,7 +103,7 @@ final class EventHubTests: XCTestCase {
   /// Verifies that unfiltered subscription receives app event.
   func testUnfilteredSubscriptionReceivesAppEvent() async {
     let hub = Self.makeHub()
-    let stream = await hub.subscribe()
+    let stream = await hub.subscribeAll(bufferingPolicy: .unbounded)
     let task = Task { await Self.next(from: stream) }
 
     await hub.emit(.minuteTick, source: "test timer")
@@ -116,7 +186,10 @@ final class EventHubTests: XCTestCase {
     await hub.emit(.secondTick)
     await hub.emit(.app(.networkChange, primaryInterfaceIsTunnel: true))
 
-    let stream = await hub.subscribe(replayLatest: true)
+    let stream = await hub.subscribeAll(
+      replayLatest: true,
+      bufferingPolicy: .unbounded
+    )
 
     let payloads = await Self.collect(
       from: stream,
@@ -133,6 +206,82 @@ final class EventHubTests: XCTestCase {
     )
     XCTAssertEqual(payloads.first?.primaryInterfaceIsTunnel, true)
     XCTAssertNil(payloads.last?.primaryInterfaceIsTunnel)
+  }
+
+  /// Verifies that suspended metrics cannot reorder concurrent delivery or replay state.
+  func testConcurrentEmissionsPreserveOrderWhileMetricsSuspend() async {
+    let gate = SuspendedEventMetricsGate()
+    let metricsRecorder = EventHub.MetricsRecorder(
+      recordEmission: { _, _, _ in
+        await gate.recordEmission()
+      },
+      recordBackpressure: { _ in }
+    )
+    let hub = Self.makeHub(metricsRecorder: metricsRecorder)
+    let stream = await hub.subscribe(eventNames: [AppEvent.networkChange.rawValue])
+    let deliveryTask = Task {
+      await Self.collect(
+        from: stream,
+        count: 2,
+        timeoutNanoseconds: 1_000_000_000
+      )
+    }
+
+    let firstEmission = Task {
+      await hub.emit(.app(.networkChange, source: "first"))
+    }
+    await gate.waitUntilSuspended()
+
+    let secondEmission = Task {
+      await hub.emit(.app(.networkChange, source: "second"))
+    }
+
+    let delivered = await deliveryTask.value
+    let replayStream = await hub.subscribe(
+      eventNames: [AppEvent.networkChange.rawValue],
+      replayLatest: true
+    )
+    let replayed = await Self.next(from: replayStream)
+
+    XCTAssertEqual(delivered.map(\.source), ["first", "second"])
+    XCTAssertEqual(replayed?.source, "second")
+
+    await gate.release()
+    await firstEmission.value
+    await secondEmission.value
+  }
+
+  /// Verifies that replay overflow is surfaced through backpressure metrics.
+  func testReplayOverflowRecordsBackpressure() async {
+    let capture = EventBackpressureCapture()
+    let metricsRecorder = EventHub.MetricsRecorder(
+      recordEmission: { _, _, _ in },
+      recordBackpressure: { samples in
+        for sample in samples {
+          await capture.record(
+            name: sample.name,
+            count: sample.count,
+            coalesced: sample.coalesced
+          )
+        }
+      }
+    )
+    let hub = Self.makeHub(metricsRecorder: metricsRecorder)
+
+    await hub.emit(.app(.networkChange, source: "network"))
+    await hub.emit(.secondTick, source: "clock")
+
+    let stream = await hub.subscribeAll(
+      replayLatest: true,
+      bufferingPolicy: .bufferingNewest(1)
+    )
+
+    await capture.waitForTotalCount(1)
+    let samples = await capture.snapshot()
+    let replayed = await Self.next(from: stream)
+
+    XCTAssertEqual(samples.reduce(0, { $0 + $1.count }), 1)
+    XCTAssertEqual(replayed?.eventName, AppEvent.secondTick.rawValue)
   }
 
   /// Verifies that replay latest does not emit when no cached payload exists.
@@ -496,26 +645,26 @@ final class EventHubTests: XCTestCase {
     )
   }
 
-  /// Verifies that event delivery policy classifies reliable events.
-  func testEventDeliveryPolicyClassifiesReliableEvents() {
+  /// Verifies that event delivery policy classifies must-deliver events.
+  func testEventDeliveryPolicyClassifiesMustDeliverEvents() {
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName(AppEvent.systemWoke.rawValue),
-      .reliable
+      .mustDeliver
     )
 
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName(AppEvent.powerSourceChange.rawValue),
-      .reliable
+      .mustDeliver
     )
 
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName(WidgetEvent.mouseClicked.rawValue),
-      .reliable
+      .mustDeliver
     )
 
     XCTAssertEqual(
       EventDeliveryPolicy.forEventName("unknown_event"),
-      .reliable
+      .mustDeliver
     )
   }
 
@@ -531,8 +680,8 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(bufferSize(for: policy), 1)
   }
 
-  /// Verifies that default buffering policy uses medium buffer for mixed subscriptions.
-  func testDefaultBufferingPolicyUsesMediumBufferForMixedSubscriptions() {
+  /// Verifies that mixed subscriptions preserve must-deliver events.
+  func testDefaultBufferingPolicyIsUnboundedForMixedSubscriptions() {
     let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
         AppEvent.secondTick.rawValue,
@@ -540,21 +689,19 @@ final class EventHubTests: XCTestCase {
       ]
     )
 
-    XCTAssertEqual(bufferSize(for: policy), 8)
+    XCTAssertNil(bufferSize(for: policy))
   }
 
-  /// Verifies that default buffering policy uses largest buffer for reliable only or unfiltered subscriptions.
-  func testDefaultBufferingPolicyUsesLargestBufferForReliableOnlyOrUnfilteredSubscriptions() {
-    let reliableOnlyPolicy = EventDeliveryPolicy.defaultBufferingPolicy(
+  /// Verifies that must-deliver-only subscriptions use an unbounded stream.
+  func testDefaultBufferingPolicyIsUnboundedForMustDeliverSubscriptions() {
+    let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
         AppEvent.systemWoke.rawValue,
         AppEvent.powerSourceChange.rawValue,
       ]
     )
-    let unfilteredPolicy = EventDeliveryPolicy.defaultBufferingPolicy(for: nil)
 
-    XCTAssertEqual(bufferSize(for: reliableOnlyPolicy), 32)
-    XCTAssertEqual(bufferSize(for: unfilteredPolicy), 32)
+    XCTAssertNil(bufferSize(for: policy))
   }
 
   /// Waits for one payload, timing out instead of hanging the test.

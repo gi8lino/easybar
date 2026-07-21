@@ -91,11 +91,6 @@ final class EventManager {
     refresh()
   }
 
-  /// Replaces the current Lua runtime event subscriptions.
-  func start(subscriptions: Set<String>) {
-    setLuaSubscriptions(subscriptions)
-  }
-
   /// Stops only Lua-owned event subscriptions while preserving native ones.
   func stopLuaSubscriptions() {
     guard !luaRequestedEvents.isEmpty else { return }

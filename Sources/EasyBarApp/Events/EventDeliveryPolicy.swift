@@ -2,8 +2,8 @@ import Foundation
 
 /// Delivery and buffering policy for one event name.
 enum EventDeliveryPolicy {
-  /// Preserve delivery with a larger buffer.
-  case reliable
+  /// Preserve every event in enqueue order.
+  case mustDeliver
   /// Prefer the newest value when events arrive faster than consumers read.
   case coalescing
 
@@ -18,7 +18,7 @@ enum EventDeliveryPolicy {
       WidgetEvent.sliderPreview.rawValue:
       return .coalescing
     default:
-      return .reliable
+      return .mustDeliver
     }
   }
 
@@ -27,28 +27,29 @@ enum EventDeliveryPolicy {
     return WidgetEvent(rawValue: eventName) != nil
   }
 
-  /// Returns the default buffering policy for one subscription set.
+  /// Returns the default buffering policy for one filtered subscription set.
+  ///
+  /// Streams that include any must-deliver event are unbounded so action events
+  /// cannot be displaced by newer state. Callers that observe every event must
+  /// select their buffering contract explicitly through `subscribeAll`.
   static func defaultBufferingPolicy(
-    for eventNames: Set<String>?
+    for eventNames: Set<String>
   ) -> AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy {
-    guard let eventNames, !eventNames.isEmpty else {
-      return .bufferingNewest(32)
+    guard !eventNames.isEmpty else {
+      return .unbounded
     }
 
-    let reliableCount = eventNames.reduce(into: 0) { count, name in
-      if forEventName(name) == .reliable {
-        count += 1
-      }
+    let containsMustDeliverEvent = eventNames.contains { eventName in
+      forEventName(eventName) == .mustDeliver
     }
 
-    if reliableCount == 0 {
-      return .bufferingNewest(1)
-    }
-
-    if reliableCount < eventNames.count {
-      return .bufferingNewest(8)
-    }
-
-    return .bufferingNewest(32)
+    return containsMustDeliverEvent ? .unbounded : .bufferingNewest(1)
   }
+}
+
+/// Aggregated subscriber-buffer overflow for one event class.
+struct EventBackpressureSample: Hashable, Sendable {
+  let name: String
+  let count: Int
+  let coalesced: Bool
 }

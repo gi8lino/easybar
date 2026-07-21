@@ -387,7 +387,7 @@ actor WidgetEngine {
     await eventHub.setLuaForwardedAppEvents(requiredEvents)
 
     await MainActor.run {
-      eventManager.start(subscriptions: requiredEvents)
+      eventManager.setLuaSubscriptions(requiredEvents)
     }
 
     await emitInitialEventsIfPossible()
