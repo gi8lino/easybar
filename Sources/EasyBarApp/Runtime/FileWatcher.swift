@@ -170,26 +170,37 @@ actor FileWatcher {
         return
       }
 
-      await self?.emitChanged(
+      await self?.emitChangedAndRearm(
         generation: generation,
         configPath: configPath
       )
     }
   }
 
-  /// Emits one debounced changed event if the watcher generation is still active.
-  private func emitChanged(
+  /// Emits one debounced change and rearms the descriptor after replacement-style writes.
+  private func emitChangedAndRearm(
     generation: UInt64,
     configPath: String
   ) {
-    guard generation == watcherGeneration else { return }
+    guard generation == watcherGeneration, let continuation else { return }
 
     logger.debug(
       "config file changed",
       .field("path", configPath)
     )
 
-    continuation?.yield(.changed)
+    continuation.yield(.changed)
+
+    // Atomic saves replace the watched inode. Reinstalling after every debounced
+    // event is inexpensive for config files and also keeps standalone watcher
+    // consumers correct without relying on RuntimeCoordinator to restart it.
+    cancelSource()
+    install(
+      continuation: continuation,
+      configPath: configPath,
+      enabled: true,
+      generation: generation
+    )
   }
 
   /// Handles stream termination from the consumer side.
