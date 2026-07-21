@@ -265,13 +265,15 @@ private func makeLogger(
 /// Creates a logger fixture without mirroring output to process streams.
 private func makeQuietLogger(
   label: String,
-  minimumLevel: ProcessLogLevel = .info
+  minimumLevel: ProcessLogLevel = .info,
+  rotationPolicy: ProcessLogRotationPolicy = .default
 ) -> ProcessLogger {
   ProcessLogger(
     label: label,
     minimumLevel: minimumLevel,
     outputStream: nil,
-    errorStream: nil
+    errorStream: nil,
+    rotationPolicy: rotationPolicy
   )
 }
 
@@ -468,5 +470,85 @@ final class ProcessLoggerAdditionalTests: XCTestCase {
       .path
 
     XCTAssertEqual(defaultLoggingDirectoryPath(), expected)
+  }
+}
+
+extension ProcessLoggerAdditionalTests {
+  /// Verifies that size-based rotation retains the configured numbered archives.
+  func testFileLoggingRotatesBeforeNextLineExceedsLimit() throws {
+    let directoryURL = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+    let fileURL = directoryURL.appendingPathComponent("rotating.log")
+    let logger = makeQuietLogger(
+      label: "easybar",
+      rotationPolicy: ProcessLogRotationPolicy(
+        maximumFileBytes: 150,
+        retainedFileCount: 2
+      )
+    )
+    logger.configureFileLogging(enabled: true, path: fileURL.path)
+
+    for index in 1...4 {
+      logger.info("rotation-message-\(index)-" + String(repeating: "x", count: 72))
+    }
+    logger.configureFileLogging(enabled: false, path: "")
+
+    let active = try String(contentsOf: fileURL, encoding: .utf8)
+    let firstArchive = try String(contentsOfFile: fileURL.path + ".1", encoding: .utf8)
+    let secondArchive = try String(contentsOfFile: fileURL.path + ".2", encoding: .utf8)
+
+    XCTAssertTrue(active.contains("rotation-message-4"))
+    XCTAssertTrue(firstArchive.contains("rotation-message-3"))
+    XCTAssertTrue(secondArchive.contains("rotation-message-2"))
+    XCTAssertFalse((active + firstArchive + secondArchive).contains("rotation-message-1"))
+  }
+
+  /// Verifies that writes remain complete while file output is reconfigured concurrently.
+  func testConcurrentWritesRemainCompleteDuringFileReconfiguration() throws {
+    let directoryURL = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+    let firstURL = directoryURL.appendingPathComponent("first.log")
+    let secondURL = directoryURL.appendingPathComponent("second.log")
+    let logger = makeQuietLogger(
+      label: "easybar",
+      rotationPolicy: .disabled
+    )
+    logger.configureFileLogging(enabled: true, path: firstURL.path)
+
+    let group = DispatchGroup()
+    let queue = DispatchQueue(label: "process-logger-tests", attributes: .concurrent)
+
+    for index in 0..<100 {
+      group.enter()
+      queue.async {
+        logger.info("concurrent-message-\(index)")
+        group.leave()
+      }
+    }
+
+    group.enter()
+    queue.async {
+      for index in 0..<20 {
+        let path = index.isMultiple(of: 2) ? secondURL.path : firstURL.path
+        logger.configureFileLogging(enabled: true, path: path)
+      }
+      group.leave()
+    }
+
+    XCTAssertEqual(group.wait(timeout: .now() + 5), .success)
+    logger.configureFileLogging(enabled: false, path: "")
+
+    let first = (try? String(contentsOf: firstURL, encoding: .utf8)) ?? ""
+    let second = (try? String(contentsOf: secondURL, encoding: .utf8)) ?? ""
+    let combined = first + second
+
+    for index in 0..<100 {
+      XCTAssertEqual(
+        combined.components(separatedBy: "] [INFO ] concurrent-message-\(index)\n").count - 1,
+        1
+      )
+    }
   }
 }

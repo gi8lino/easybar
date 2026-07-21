@@ -8,6 +8,10 @@ When file logging is enabled, EasyBar writes:
 - `calendar-agent.out`
 - `network-agent.out`
 
+Each process log rotates automatically before it grows beyond 10 MiB. EasyBar retains three
+numbered archives beside the active file, for example `easybar.out.1` through `easybar.out.3`.
+Rotation is a built-in safety limit and does not require additional configuration.
+
 ## Config
 
 ```toml
@@ -91,3 +95,5 @@ or:
 ```bash
 EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
 ```
+
+
