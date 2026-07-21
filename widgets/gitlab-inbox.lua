@@ -12,14 +12,6 @@ local refreshing = false
 local pending_wake_refresh = nil
 local log = easybar.log
 
-local function command_duration_ms(metadata)
-	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
-	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
-		return 0
-	end
-	return value
-end
-
 easybar.inbox.configure(SOURCE, {
 	actions = { { id = "refresh", title = "Refresh" } },
 })
@@ -38,7 +30,6 @@ end
 
 local function fetch(endpoint, operation, complete)
 	local current_attempt = 0
-	local total_duration_ms = 0
 	retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
 		attempt = function(done, attempt_number)
@@ -47,26 +38,18 @@ local function fetch(endpoint, operation, complete)
 				easybar.level.trace,
 				"inbox command started operation=" .. operation .. " attempt=" .. tostring(attempt_number) .. " executable=glab"
 			)
-			return easybar.spawn_async(
-				{
-					"/usr/bin/env",
-					"GLAB_NO_PROMPT=1",
-					"glab",
-					"api",
-					"--paginate",
-					endpoint,
-				},
-				{ timeout_seconds = 30, max_output_bytes = 2097152, log_operation = operation },
-				function(output, code, metadata)
-					total_duration_ms = total_duration_ms + command_duration_ms(metadata)
-					done(output, code, metadata)
-				end
-			)
+			return easybar.spawn_async({
+				"/usr/bin/env",
+				"GLAB_NO_PROMPT=1",
+				"glab",
+				"api",
+				"--paginate",
+				endpoint,
+			}, { timeout_seconds = 30, max_output_bytes = 2097152, log_operation = operation }, done)
 		end,
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
-				total_duration_ms = total_duration_ms + (REFRESH_BACKOFF_SECONDS[current_attempt] or 0) * 1000
 				log(
 					easybar.level.trace,
 					"inbox retry scheduled operation="
@@ -81,11 +64,7 @@ local function fetch(endpoint, operation, complete)
 			end
 			return retryable
 		end,
-		on_complete = function(output, code, attempts)
-			complete(output, code, attempts, {
-				duration_ms = math.floor(total_duration_ms + 0.5),
-			})
-		end,
+		on_complete = complete,
 	})
 end
 

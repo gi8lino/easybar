@@ -30,14 +30,6 @@ local pending_wake_refresh = nil
 local refresh
 local log = easybar.log
 
-local function command_duration_ms(metadata)
-	local value = type(metadata) == "table" and tonumber(metadata.duration_ms) or 0
-	if value == nil or value ~= value or value == math.huge or value == -math.huge or value < 0 then
-		return 0
-	end
-	return value
-end
-
 local function split_outdated_output(raw)
 	raw = tostring(raw or "")
 	local json_start = raw:find("{", 1, true)
@@ -219,7 +211,6 @@ refresh = function(reason)
 	publish()
 
 	local current_attempt = 0
-	local total_duration_ms = 0
 	state.active_operation = retry.run(easybar, {
 		delays = REFRESH_BACKOFF_SECONDS,
 		attempt = function(done, attempt_number)
@@ -228,25 +219,17 @@ refresh = function(reason)
 				easybar.level.trace,
 				"inbox command started operation=refresh attempt=" .. tostring(attempt_number) .. " executable=brew"
 			)
-			return easybar.spawn_async(
-				{
-					"/usr/bin/env",
-					"HOMEBREW_NO_AUTO_UPDATE=1",
-					"brew",
-					"outdated",
-					"--json=v2",
-				},
-				EXEC.check,
-				function(output, code, metadata)
-					total_duration_ms = total_duration_ms + command_duration_ms(metadata)
-					done(output, code, metadata)
-				end
-			)
+			return easybar.spawn_async({
+				"/usr/bin/env",
+				"HOMEBREW_NO_AUTO_UPDATE=1",
+				"brew",
+				"outdated",
+				"--json=v2",
+			}, EXEC.check, done)
 		end,
 		should_retry = function(output, code)
 			local retryable = retry.is_transient_network_error(output, code)
 			if retryable then
-				total_duration_ms = total_duration_ms + (REFRESH_BACKOFF_SECONDS[current_attempt] or 0) * 1000
 				log(
 					easybar.level.trace,
 					"inbox retry scheduled operation=refresh attempt="
@@ -291,7 +274,7 @@ refresh = function(reason)
 							.. " warning="
 							.. tostring(state.warning ~= nil)
 							.. " duration_ms="
-							.. tostring(math.floor(total_duration_ms + 0.5))
+							.. tostring(metadata.duration_ms or 0)
 					)
 				end
 			end
