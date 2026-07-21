@@ -9,6 +9,11 @@ enum CLIOutput {
     fputs("easybar: \(message)\n", stderr)
   }
 
+  /// Prints a warning.
+  static func printWarning(_ message: String) {
+    fputs("easybar: warning: \(message)\n", stderr)
+  }
+
   /// Prints the version.
   static func printVersion() {
     fputs("easybar \(BuildInfo.appVersion)\n", stdout)
@@ -29,7 +34,14 @@ enum CLIOutput {
         "  easybar <command> [options]",
         "",
         "commands:",
+        CLI.formatOption("logs", "Show retained logs and follow new entries"),
       ] + commandLines + [
+        "",
+        "log options:",
+      ]
+      + CLI.logOptions.map {
+        CLI.formatOption(CLI.optionText(for: $0), $0.description)
+      } + [
         "",
         "options:",
       ] + appOptionLines

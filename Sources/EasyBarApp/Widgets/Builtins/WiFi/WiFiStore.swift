@@ -22,6 +22,8 @@ final class NativeWiFiStore: ObservableObject {
     lastPublishedSignature = signature
     logger.debug(
       "wifi widget applied snapshot",
+      .field("runtime", "native"),
+      .field("widget", "wifi"),
       .field("access_granted", "\(snapshot.accessGranted)"),
       .field("permission_state", "\(snapshot.permissionState)"),
       .field("ssid_present", "\(snapshot.ssid != nil)"),
@@ -40,7 +42,11 @@ final class NativeWiFiStore: ObservableObject {
   func clear() -> Bool {
     guard snapshot != nil else { return false }
     lastPublishedSignature = nil
-    logger.debug("wifi widget cleared")
+    logger.debug(
+      "wifi widget cleared",
+      .field("runtime", "native"),
+      .field("widget", "wifi")
+    )
     snapshot = nil
     return true
   }

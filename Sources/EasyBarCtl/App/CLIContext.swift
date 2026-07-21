@@ -1,3 +1,4 @@
+import Darwin
 import EasyBarShared
 
 /// Shared runtime context for CLI operations.
@@ -9,7 +10,9 @@ struct AppContext {
   init(debugEnabled: Bool) {
     logger = ProcessLogger(
       label: "easybarctl",
-      minimumLevel: debugEnabled ? .debug : .info
+      minimumLevel: debugEnabled ? .debug : .info,
+      outputStream: stderr,
+      errorStream: stderr
     )
   }
 

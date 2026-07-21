@@ -208,6 +208,7 @@ final class ProcessLoggerTests: XCTestCase {
         "] [INFO ] process startup process=easybar event=startup"
       )
     )
+    XCTAssertTrue(output.contains("run_id="))
     XCTAssertTrue(
       output.contains(
         "] [INFO ] process startup config config_path=/tmp/easybar/config.toml"
@@ -235,6 +236,27 @@ final class ProcessLoggerTests: XCTestCase {
     XCTAssertEqual(ProcessLogLevel.normalized("error"), .error)
     XCTAssertNil(ProcessLogLevel.normalized(nil))
     XCTAssertNil(ProcessLogLevel.normalized("verbose"))
+  }
+
+  /// Verifies that request-correlated entries include the process run identifier.
+  func testRequestLogsIncludeRunIdentifier() throws {
+    let directoryURL = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directoryURL) }
+    let fileURL = directoryURL.appendingPathComponent("request.log")
+    let logger = ProcessLogger(
+      label: "easybar",
+      minimumLevel: .debug,
+      outputStream: nil,
+      errorStream: nil,
+      runID: "test-run"
+    )
+    logger.configureFileLogging(enabled: true, path: fileURL.path)
+    logger.debug("request started", .field("request_id", "lua-19"))
+    logger.configureFileLogging(enabled: false, path: "")
+
+    let output = try String(contentsOf: fileURL, encoding: .utf8)
+    XCTAssertTrue(output.contains("request_id=lua-19 run_id=test-run subsystem=easybar"))
+    XCTAssertEqual(logger.child("child").runID, "test-run")
   }
 }
 

@@ -126,7 +126,11 @@ final class NativeWidgetRegistry {
     eventManager.setNativeSubscriptions(subscriptions)
 
     for widget in widgets {
-      logger.debug("starting native widget", .field("id", widget.rootID))
+      logger.debug(
+        "starting native widget",
+        .field("runtime", "native"),
+        .field("widget", widget.rootID)
+      )
       widget.start()
     }
 
@@ -148,7 +152,8 @@ final class NativeWidgetRegistry {
     for widget in widgets {
       logger.debug(
         "stopping native widget",
-        .field("id", widget.rootID),
+        .field("runtime", "native"),
+        .field("widget", widget.rootID),
       )
       widget.stop()
     }

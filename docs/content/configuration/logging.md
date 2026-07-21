@@ -12,6 +12,16 @@ Each process log rotates automatically before it grows beyond 10 MiB. EasyBar re
 numbered archives beside the active file, for example `easybar.out.1` through `easybar.out.3`.
 Rotation is a built-in safety limit and does not require additional configuration.
 
+Use the CLI to read the retained files as one timestamp-ordered stream:
+
+```bash
+easybar logs
+easybar logs --widget tailscale --level debug
+easybar logs --since 30m --no-follow
+```
+
+The command prints recent history before following new entries and continues across file rotation. See the [CLI Reference](../runtime/cli.md#logs) for every filter and output option.
+
 ## Config
 
 ```toml
@@ -64,6 +74,8 @@ The main app and helper agents use the shared logging config from `config.toml`.
 
 The `easybar` CLI can enable its own debug output explicitly with `--debug`. This does not change the main app or agent log level.
 
+Structured request logs include both `request_id` and `run_id`. A request ID identifies one operation within a process; the run ID distinguishes it from the same counter value after a restart. `easybar logs --request-id ID` searches every retained app and agent log, while the printed `run_id` exposes any cross-run matches.
+
 ## Temporary log-level override
 
 Use `EASYBAR_LOG_LEVEL` when you want more or less verbose logs without editing `config.toml`:
@@ -82,6 +94,7 @@ Use `--debug` when you want CLI-side diagnostics:
 ```bash
 easybar --debug --metrics
 easybar --debug --validate-config --config /path/to/config.toml
+easybar logs --debug --runtime lua
 ```
 
 This keeps validation explicit:
@@ -95,5 +108,4 @@ or:
 ```bash
 EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
 ```
-
 

@@ -1,6 +1,6 @@
 # CLI Reference
 
-The `easybar` command controls the running app, validates configuration, restarts helper agents, and exposes diagnostics. Most commands contact a Unix-domain socket, so the relevant process must be running.
+The `easybar` command controls the running app, validates configuration, restarts helper agents, and exposes diagnostics. Most commands contact a Unix-domain socket, so the relevant process must be running. The `logs` command reads the configured process log directory directly and does not require a control socket.
 
 ## Runtime commands
 
@@ -11,8 +11,42 @@ The `easybar` command controls the running app, validates configuration, restart
 | `easybar --restart-lua-runtime` | Restart only the Lua widget runtime using the currently loaded configuration. |
 | `easybar --metrics`             | Print one runtime metrics snapshot.                                           |
 | `easybar --metrics --watch`     | Continuously display runtime metrics and rolling graphs.                      |
+| `easybar logs`                  | Show recent retained logs, then follow new app and agent entries.             |
 
 See [Runtime Control](control.md) for the difference between refresh, reload, and restart operations. See [Metrics](metrics.md) for the fields included in a snapshot.
+
+## Logs
+
+`easybar logs` merges the main app, calendar-agent, and network-agent logs in timestamp order. It prints the latest 100 matching entries and then follows all three active files across log rotation. Each plain-text line is prefixed with its source process.
+
+```bash
+easybar logs
+easybar logs --widget tailscale --runtime lua --level debug
+easybar logs --runtime native --since 30m
+easybar logs --request-id lua-19
+```
+
+`--request-id` and `--since` search all matching retained history by default. Use `--lines` to limit that history explicitly. Request-correlated entries also carry a `run_id`, which distinguishes repeated request IDs from different EasyBar process runs.
+
+| Option                  | Purpose                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `--widget NAME`         | Match a Lua or native widget name.                                         |
+| `--runtime KIND`        | Match `lua`, `native`, or `agent`.                                         |
+| `--level LEVEL`         | Match the selected severity and higher.                                    |
+| `--request-id ID`       | Match one request across every retained process log.                       |
+| `--since TIME`          | Match entries since `30s`, `15m`, `2h`, `1d`, `1w`, or an ISO-8601 time.   |
+| `--lines COUNT`, `-n`   | Limit the matching history printed before live following starts.           |
+| `--all`                 | Print all matching retained history.                                       |
+| `--no-follow`           | Exit after history; useful for scripts, issue reports, and shell pipelines. |
+| `--json`                | Emit JSON Lines with parsed fields, source, runtime, and widget metadata.   |
+
+Filters compose. For example, this prints errors from the Lua runtime during the last hour and exits:
+
+```bash
+easybar logs --runtime lua --level error --since 1h --no-follow
+```
+
+History is limited to the active files and numbered archives retained by EasyBar's rotation policy. `--all` means all retained history, not logs that have already rotated out.
 
 ## Helper-agent commands
 
@@ -92,5 +126,4 @@ easybar --version
 - [Logging](../configuration/logging.md)
 - [Environment](../configuration/environment.md)
 - [Control Socket Internals](../internals/architecture/control-socket.md)
-
 

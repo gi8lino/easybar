@@ -20,7 +20,8 @@ public func logProcessStartup(
     .field("version", version),
     .field("build", build),
     .field("bundle_id", bundle.bundleIdentifier ?? "unknown"),
-    .field("pid", processInfo.processIdentifier)
+    .field("pid", processInfo.processIdentifier),
+    .field("run_id", logger.runID)
   )
 
   logger.info(

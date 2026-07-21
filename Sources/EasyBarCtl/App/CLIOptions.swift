@@ -41,6 +41,8 @@ struct ParsedArguments {
   let debugEnabled: Bool
   /// Whether metrics should be streamed continuously.
   let watchMetrics: Bool
+  /// Options used by the logs command.
+  let logOptions: LogCommandOptions
 }
 
 /// Supported top-level CLI actions.
@@ -50,6 +52,7 @@ enum CLIAction: Equatable {
   case restartCalendarAgent
   case restartNetworkAgent
   case restartAgents
+  case logs
 }
 
 /// Defines supported command-line options and formatting helpers.
@@ -124,6 +127,70 @@ enum CLI {
     flag: "--restart-agents",
     description: "Restart both helper agents and report any partial failure"
   )
+
+  static let logWidgetOption = CLIOption(
+    flag: "--widget",
+    description: "Show logs for one Lua or native widget",
+    placeholder: "name"
+  )
+
+  static let logRuntimeOption = CLIOption(
+    flag: "--runtime",
+    description: "Show logs for lua, native, or agent runtime",
+    placeholder: "kind"
+  )
+
+  static let logLevelOption = CLIOption(
+    flag: "--level",
+    description: "Show this severity and higher",
+    placeholder: "level"
+  )
+
+  static let logRequestIDOption = CLIOption(
+    flag: "--request-id",
+    description: "Find a request across retained logs",
+    placeholder: "id"
+  )
+
+  static let logSinceOption = CLIOption(
+    flag: "--since",
+    description: "Show entries since a duration or ISO-8601 timestamp",
+    placeholder: "time"
+  )
+
+  static let logLinesOption = CLIOption(
+    flag: "--lines",
+    short: "-n",
+    description: "Show the latest matching history before following",
+    placeholder: "count"
+  )
+
+  static let logAllOption = CLIOption(
+    flag: "--all",
+    description: "Show all matching retained history"
+  )
+
+  static let logNoFollowOption = CLIOption(
+    flag: "--no-follow",
+    description: "Exit after printing retained history"
+  )
+
+  static let logJSONOption = CLIOption(
+    flag: "--json",
+    description: "Print one JSON object per log entry"
+  )
+
+  static let logOptions: [CLIOption] = [
+    logWidgetOption,
+    logRuntimeOption,
+    logLevelOption,
+    logRequestIDOption,
+    logSinceOption,
+    logLinesOption,
+    logAllOption,
+    logNoFollowOption,
+    logJSONOption,
+  ]
 
   /// Command options that map directly to IPC commands.
   static let cmdOptions: [CLIOption] = [

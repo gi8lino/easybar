@@ -192,6 +192,7 @@ let package = Package(
       name: "EasyBarTests",
       dependencies: [
         "EasyBarApp",
+        "EasyBarCtl",
         "EasyBarLuaRuntime",
         "EasyBarShared",
         "EasyBarConfigParsing",

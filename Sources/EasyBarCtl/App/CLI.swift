@@ -54,6 +54,9 @@ private struct AppController {
           throw AppError.message("--socket cannot be used with --restart-agents")
         }
         try restartAgents(context: context)
+
+      case .logs:
+        try showLogs(options: parsed.logOptions, context: context)
       }
 
       return 0

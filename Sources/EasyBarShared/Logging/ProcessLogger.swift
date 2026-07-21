@@ -97,6 +97,8 @@ extension Array where Element == ProcessLogField {
 public final class ProcessLogger: @unchecked Sendable {
   /// Reserved field keys managed by the logger itself.
   private enum ReservedFieldKey {
+    static let requestID = "request_id"
+    static let runID = "run_id"
     static let subsystem = "subsystem"
   }
 
@@ -114,6 +116,7 @@ public final class ProcessLogger: @unchecked Sendable {
     let outputStream: UnsafeMutablePointer<FILE>?
     let errorStream: UnsafeMutablePointer<FILE>?
     let rotationPolicy: ProcessLogRotationPolicy
+    let runID: String
 
     /// Accessed only from `outputQueue`.
     var fileHandle: FileHandle?
@@ -124,12 +127,14 @@ public final class ProcessLogger: @unchecked Sendable {
       minimumLevel: ProcessLogLevel,
       outputStream: UnsafeMutablePointer<FILE>?,
       errorStream: UnsafeMutablePointer<FILE>?,
-      rotationPolicy: ProcessLogRotationPolicy
+      rotationPolicy: ProcessLogRotationPolicy,
+      runID: String
     ) {
       configuration = LockedState(LoggerConfiguration(minimumLevel: minimumLevel))
       self.outputStream = outputStream
       self.errorStream = errorStream
       self.rotationPolicy = rotationPolicy
+      self.runID = runID
     }
   }
 
@@ -154,14 +159,16 @@ public final class ProcessLogger: @unchecked Sendable {
     minimumLevel: ProcessLogLevel = .info,
     outputStream: UnsafeMutablePointer<FILE>? = stdout,
     errorStream: UnsafeMutablePointer<FILE>? = stderr,
-    rotationPolicy: ProcessLogRotationPolicy = .default
+    rotationPolicy: ProcessLogRotationPolicy = .default,
+    runID: String = UUID().uuidString.lowercased()
   ) {
     self.label = label
     sharedState = SharedState(
       minimumLevel: minimumLevel,
       outputStream: outputStream,
       errorStream: errorStream,
-      rotationPolicy: rotationPolicy
+      rotationPolicy: rotationPolicy,
+      runID: runID
     )
   }
 
@@ -192,6 +199,11 @@ public final class ProcessLogger: @unchecked Sendable {
   /// Current file logging path.
   public var fileLoggingPath: String {
     sharedState.configuration.withLock { $0.fileLoggingPath }
+  }
+
+  /// Identifier shared by every logger created during this process run.
+  public var runID: String {
+    sharedState.runID
   }
 
   /// Updates the current minimum log level.
@@ -428,12 +440,21 @@ public final class ProcessLogger: @unchecked Sendable {
     existingFields: [ProcessLogField],
     minimumLevel: ProcessLogLevel
   ) -> [ProcessLogField] {
-    guard shouldAppendSubsystem(for: level, minimumLevel: minimumLevel) else { return [] }
-    guard !existingFields.containsField(named: ReservedFieldKey.subsystem) else {
-      return []
+    var metadata: [ProcessLogField] = []
+
+    if existingFields.containsField(named: ReservedFieldKey.requestID),
+      !existingFields.containsField(named: ReservedFieldKey.runID)
+    {
+      metadata.append(.field(ReservedFieldKey.runID, sharedState.runID))
     }
 
-    return [.field(ReservedFieldKey.subsystem, label)]
+    if shouldAppendSubsystem(for: level, minimumLevel: minimumLevel),
+      !existingFields.containsField(named: ReservedFieldKey.subsystem)
+    {
+      metadata.append(.field(ReservedFieldKey.subsystem, label))
+    }
+
+    return metadata
   }
 
   /// Writes one line to the configured log file and rotates it before overflow.
