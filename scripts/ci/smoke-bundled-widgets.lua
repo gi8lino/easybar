@@ -19,7 +19,9 @@ package.path = table.concat({
 
 local all_ids = {}
 local ids_by_widget = {}
+local nodes_by_widget = {}
 local commands_by_widget = {}
+local command_callbacks_by_widget = {}
 
 local function basename(path)
 	return tostring(path):match("([^/]+)$") or tostring(path)
@@ -97,7 +99,9 @@ end
 
 local function make_easybar(widget_name)
 	ids_by_widget[widget_name] = {}
+	nodes_by_widget[widget_name] = {}
 	commands_by_widget[widget_name] = {}
+	command_callbacks_by_widget[widget_name] = {}
 
 	local theme_refs = setmetatable({}, {
 		__index = function(_, key)
@@ -171,7 +175,9 @@ local function make_easybar(widget_name)
 		)
 		all_ids[id] = widget_name
 		ids_by_widget[widget_name][id] = (ids_by_widget[widget_name][id] or 0) + 1
-		return make_node(id, props)
+		local node = make_node(id, props)
+		nodes_by_widget[widget_name][id] = node
+		return node
 	end
 
 	function easybar.default() end
@@ -194,7 +200,11 @@ local function make_easybar(widget_name)
 			cancel = function() end,
 		}
 		if type(callback) == "function" then
-			callback("smoke-test command disabled", 1)
+			if widget_name == "tailscale.lua" then
+				command_callbacks_by_widget[widget_name][#command_callbacks_by_widget[widget_name] + 1] = callback
+			else
+				callback("smoke-test command disabled", 1)
+			end
 		end
 		return operation
 	end
@@ -300,6 +310,23 @@ assert_expected_ids(
 	"gitlab.lua",
 	expected_rows("gitlab_work_items", "gitlab_work_items_header", "gitlab_work_item_", "gitlab_work_items_footer")
 )
+
+-- Bursts of replayed state events should not launch redundant concurrent status reads.
+do
+	local widget_name = "tailscale.lua"
+	local node = assert(nodes_by_widget[widget_name].tailscale_icon)
+	assert(#commands_by_widget[widget_name] == 1, "tailscale must start one initial status read")
+	for _, subscription in ipairs(node.subscriptions) do
+		if type(subscription.events) == "table" then
+			subscription.handler()
+			subscription.handler()
+		end
+	end
+	assert(#commands_by_widget[widget_name] == 1, "tailscale started overlapping status reads")
+	command_callbacks_by_widget[widget_name][1]("{}", 0)
+	assert(#commands_by_widget[widget_name] == 2, "tailscale did not run one coalesced follow-up read")
+end
+
 assert_registry_rejects_duplicate_ids()
 
 print("Bundled Lua widget smoke test passed for " .. tostring(#widget_files) .. " files")

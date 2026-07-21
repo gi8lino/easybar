@@ -49,8 +49,9 @@ local state = {
 
 local refresh
 
--- Guards against older slower async status reads overwriting newer refresh results.
-local refresh_generation = 0
+-- Coalesces bursts of status events while one asynchronous read is in flight.
+local refresh_running = false
+local refresh_pending = false
 --
 -- Prevents double-clicks from starting overlapping up/down or exit-node commands.
 local action_running = false
@@ -351,17 +352,23 @@ local function render_working(message)
 	})
 end
 
---- Re-reads status and ignores stale async results from older refreshes.
+--- Re-reads status while coalescing events that arrive during an active read.
 refresh = function()
-	refresh_generation = refresh_generation + 1
-	local generation = refresh_generation
+	if refresh_running then
+		refresh_pending = true
+		return
+	end
+
+	refresh_running = true
 
 	read_status(function(snapshot)
-		if generation ~= refresh_generation then
-			return
-		end
-
+		refresh_running = false
 		render(update_state(snapshot))
+
+		if refresh_pending then
+			refresh_pending = false
+			refresh()
+		end
 	end)
 end
 
