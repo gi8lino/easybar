@@ -79,8 +79,9 @@ local function flush_pending_render(force)
 		return
 	end
 
-	render.emit_all(registry, log, json)
-	render_dirty = false
+	if render.emit_all(registry, log, json) then
+		render_dirty = false
+	end
 end
 
 --- Emits runtime subscription requirements when they changed.
@@ -170,7 +171,10 @@ local function handle_command_response(payload)
 		output = tostring(output)
 	end
 
-	registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1)
+	local handled = registry.handle_command_response(payload.token, output, tonumber(payload.status) or 1)
+	if not handled then
+		log.warn("runtime dropped unknown command response token=" .. tostring(payload.token))
+	end
 	flush_pending_outputs(false, false)
 end
 
@@ -234,9 +238,10 @@ local function process_next_host_message()
 	return true
 end
 
---- Runs one host-owned command synchronously and returns trimmed output plus exit code.
+--- Runs one host-owned command synchronously and returns raw combined output plus exit code.
 local function request_sync_command(command, options)
 	local token = send_command_request(command, true, options)
+	registry.expect_sync_command_response(token, options)
 
 	while true do
 		local response = registry.take_pending_command_response(token)
@@ -245,6 +250,7 @@ local function request_sync_command(command, options)
 		end
 
 		if not process_next_host_message() then
+			registry.abandon_sync_command_response(token)
 			return "", 1
 		end
 	end
@@ -331,6 +337,9 @@ registry = api.new(log, {
 	end,
 	on_async_callback_error = function(command, err)
 		log.error("lua async callback failed command_bytes=" .. tostring(#command) .. " error_type=" .. type(err))
+	end,
+	on_unknown_command_response = function(token)
+		log.warn("lua command broker rejected unknown response token=" .. tostring(token))
 	end,
 	on_invalid_public_api = function(path, value, expected)
 		log.error(

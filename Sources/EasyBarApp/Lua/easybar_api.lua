@@ -486,11 +486,13 @@ function EasyBarInbox.configure(source, configuration) end
 ---Registers an action handler for one source.
 ---@param source string Publisher name whose item actions should be delivered.
 ---@param handler fun(event:EasyBarInboxActionEvent) Callback invoked for matching item actions.
+---@return EasyBarSubscriptionHandle subscription Disposable registration handle.
 function EasyBarInbox.on_action(source, handler) end
 
 ---Registers a source context-menu action handler.
 ---@param source string Publisher name whose source actions should be delivered.
 ---@param handler fun(event:EasyBarInboxContextActionEvent) Callback invoked for matching source actions.
+---@return EasyBarSubscriptionHandle subscription Disposable registration handle.
 function EasyBarInbox.on_context_action(source, handler) end
 
 ---@class EasyBarJsonNull
@@ -582,6 +584,7 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@class (exact) EasyBarCommandOptions
 ---@field timeout_seconds? number Hard timeout in seconds. Must be greater than zero.
 ---@field max_output_bytes? integer Maximum combined stdout and stderr bytes. Must be a positive integer.
+---@field raw_output? boolean Preserve output exactly, including trailing line endings. Defaults to false.
 
 ---Opaque token identifying one asynchronous command in the current Lua runtime session.
 ---Do not persist tokens across config reloads or application restarts.
@@ -645,7 +648,7 @@ function EasyBarInbox.on_context_action(source, handler) end
 ---@field remove fun(id: string) Removes one node and all descendants by id.
 ---@field set fun(id: string, props: EasyBarNodeProps) Merges props into one node by id.
 ---@field unset fun(id: string, paths: string|string[]) Removes one or more nested property paths from one node by id.
----@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler) Subscribes one node by id to runtime or interaction events.
+---@field subscribe fun(id: string, events: EasyBarEventToken|EasyBarEventToken[], handler: EasyBarEventHandler): EasyBarSubscriptionHandle Subscribes one node by id and returns a disposable handle.
 ---@field theme EasyBarTheme Active resolved theme.
 ---@field inbox EasyBarInbox Shared native inbox publishing API.
 local EasyBar = {}
@@ -660,6 +663,18 @@ local EasyBarFileLogger = {}
 
 ---@class EasyBarNodeHandle
 local EasyBarNodeHandle = {}
+
+---Disposable event subscription returned by `node:subscribe(...)` and `easybar.subscribe(...)`.
+---@class EasyBarSubscriptionHandle
+local EasyBarSubscriptionHandle = {}
+
+---Removes this subscription. Repeated calls return false.
+---@return boolean removed Whether an active registration was removed.
+function EasyBarSubscriptionHandle:dispose() end
+
+---Alias for `dispose()`.
+---@return boolean removed Whether an active registration was removed.
+function EasyBarSubscriptionHandle:unsubscribe() end
 
 ---Cancellable one-shot timer returned by `easybar.after(...)`.
 ---The handle belongs to the current Lua runtime session and becomes inactive after firing or cancellation.
@@ -690,6 +705,7 @@ function EasyBarNodeHandle:unset(paths) end
 ---Interaction belongs to this node frame.
 ---@param events EasyBarEventToken|EasyBarEventToken[] One event token or an array of tokens.
 ---@param handler EasyBarEventHandler Callback invoked when one subscribed event is delivered.
+---@return EasyBarSubscriptionHandle subscription Disposable registration handle.
 function EasyBarNodeHandle:subscribe(events, handler) end
 
 ---Sets per-widget default properties for future `easybar.add(...)` calls.
@@ -723,6 +739,7 @@ function EasyBar.remove(id) end
 ---@param id string Existing node id in the current widget runtime.
 ---@param events EasyBarEventToken|EasyBarEventToken[] One event token or an array of tokens.
 ---@param handler EasyBarEventHandler Callback invoked when one subscribed event is delivered.
+---@return EasyBarSubscriptionHandle subscription Disposable registration handle.
 function EasyBar.subscribe(id, events, handler) end
 
 ---Creates one EasyBar node and returns its handle.
@@ -738,10 +755,10 @@ function EasyBar.add(kind, id, props) end
 
 ---Runs one shell command synchronously through `/bin/sh -lc`.
 ---This blocks the Lua runtime until completion, so prefer it only for short, local commands.
----Output combines stdout and stderr and strips trailing newline characters.
+---Output combines stdout and stderr. Trailing line endings are removed unless `raw_output = true`.
 ---@param command string Shell source passed to `/bin/sh -lc`.
 ---@param options? EasyBarCommandOptions Optional per-call limits; omitted fields use host defaults.
----@return string output Combined stdout and stderr with trailing newlines removed.
+---@return string output Combined stdout and stderr, optionally preserved exactly with `raw_output`.
 ---@return EasyBarCommandExitCode code Process exit status or an EasyBar termination status.
 function EasyBar.exec(command, options) end
 

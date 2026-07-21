@@ -8,17 +8,23 @@ local tree = require("easybar.render.tree")
 local emitter = require("easybar.render.emitter")
 
 function M.emit_all(registry, log, json)
+	local ok, prepared_or_error = pcall(tree.prepare, registry)
+	if not ok then
+		if log then
+			log.error(tostring(prepared_or_error))
+		end
+		return false
+	end
+
+	local prepared = prepared_or_error
 	local trees = {}
 	local live_roots = {}
-
-	for _, id in ipairs(tree.root_ids(registry)) do
+	for _, id in ipairs(tree.root_ids(registry, prepared)) do
 		local item = registry._state.items[id]
-
 		if item ~= nil then
 			live_roots[id] = true
 			local root_position = style.normalize_position(item.props.position)
-			local built = tree.build_tree(registry, id, root_position)
-
+			local built = tree.build_tree(registry, id, root_position, prepared)
 			if built ~= nil then
 				trees[#trees + 1] = built
 			end
@@ -26,6 +32,7 @@ function M.emit_all(registry, log, json)
 	end
 
 	emitter.emit_all(trees, live_roots, log, json)
+	return true
 end
 
 return M

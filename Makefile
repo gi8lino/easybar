@@ -224,6 +224,7 @@ lint-lua: ## Check Lua formatting, syntax, and bundled widget startup.
 
 check-lua: ## Parse Lua sources and smoke-test every bundled widget.
 	@LUA="$(LUA)" scripts/ci/check-lua.sh
+	@$(LUA) scripts/ci/test-lua-runtime.lua "$(CURDIR)"
 
 lint-rust: ## Check Rust formatting without modifying files.
 	@cargo fmt --manifest-path Rust/EasyBarTOML/Cargo.toml --check

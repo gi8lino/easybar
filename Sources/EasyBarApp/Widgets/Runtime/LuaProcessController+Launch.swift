@@ -8,6 +8,19 @@ extension LuaProcessController {
     guard let runtimePath = resolvedRuntimePath() else { return nil }
     guard let runtimeAgentPath = resolvedRuntimeAgentPath() else { return nil }
 
+    do {
+      try FileManager.default.createDirectory(
+        atPath: config.logging.directory,
+        withIntermediateDirectories: true
+      )
+    } catch {
+      logger.warn(
+        "failed to create lua widget logging directory",
+        .field("path", config.logging.directory),
+        .field("error", "\(error)")
+      )
+    }
+
     return LaunchContext(
       runtimeAgentPath: runtimeAgentPath,
       runtimePath: runtimePath,

@@ -47,10 +47,11 @@ Modifiers: `exact`.
 
 Per-call limits for `easybar.exec(...)`, `easybar.exec_async(...)`, and `easybar.spawn_async(...)`. Omitted fields use the current `[app.lua_commands]` defaults.
 
-| Property                        | Type      | Description                                                           |
-| ------------------------------- | --------- | --------------------------------------------------------------------- |
-| `timeout_seconds` _(optional)_  | `number`  | Hard timeout in seconds. Must be greater than zero.                   |
-| `max_output_bytes` _(optional)_ | `integer` | Maximum combined stdout and stderr bytes. Must be a positive integer. |
+| Property                        | Type      | Description                                                                  |
+| ------------------------------- | --------- | ---------------------------------------------------------------------------- |
+| `timeout_seconds` _(optional)_  | `number`  | Hard timeout in seconds. Must be greater than zero.                          |
+| `max_output_bytes` _(optional)_ | `integer` | Maximum combined stdout and stderr bytes. Must be a positive integer.        |
+| `raw_output` _(optional)_       | `boolean` | Preserve output exactly, including trailing line endings. Defaults to false. |
 
 ### `EasyBarTimerHandle`
 
@@ -98,7 +99,7 @@ Sets per-widget default properties for future `easybar.add(...)` calls. Defaults
 
 ### `EasyBar.exec`
 
-Runs one shell command synchronously through `/bin/sh -lc`. This blocks the Lua runtime until completion, so prefer it only for short, local commands. Output combines stdout and stderr and strips trailing newline characters.
+Runs one shell command synchronously through `/bin/sh -lc`. This blocks the Lua runtime until completion, so prefer it only for short, local commands. Output combines stdout and stderr. Trailing line endings are removed unless `raw_output = true`.
 
 #### Parameters
 
@@ -109,10 +110,10 @@ Runs one shell command synchronously through `/bin/sh -lc`. This blocks the Lua 
 
 #### Returns
 
-| Type                     | Name     | Description                                                |
-| ------------------------ | -------- | ---------------------------------------------------------- |
-| `string`                 | `output` | Combined stdout and stderr with trailing newlines removed. |
-| `EasyBarCommandExitCode` | `code`   | Process exit status or an EasyBar termination status.      |
+| Type                     | Name     | Description                                                                 |
+| ------------------------ | -------- | --------------------------------------------------------------------------- |
+| `string`                 | `output` | Combined stdout and stderr, optionally preserved exactly with `raw_output`. |
+| `EasyBarCommandExitCode` | `code`   | Process exit status or an EasyBar termination status.                       |
 
 ### `EasyBar.exec_async`
 
@@ -253,6 +254,12 @@ Subscribes one existing node to one or more event tokens by id.
 | `events`  | `EasyBarEventToken\|EasyBarEventToken[]` | One event token or an array of tokens.                   |
 | `handler` | `EasyBarEventHandler`                    | Callback invoked when one subscribed event is delivered. |
 
+#### Returns
+
+| Type                        | Name           | Description                     |
+| --------------------------- | -------------- | ------------------------------- |
+| `EasyBarSubscriptionHandle` | `subscription` | Disposable registration handle. |
+
 ### `EasyBar.unset`
 
 Removes one or more nested properties from one existing node by id.
@@ -298,6 +305,12 @@ Subscribes this node to one or more event tokens. Interaction belongs to this no
 | --------- | ---------------------------------------- | -------------------------------------------------------- |
 | `events`  | `EasyBarEventToken\|EasyBarEventToken[]` | One event token or an array of tokens.                   |
 | `handler` | `EasyBarEventHandler`                    | Callback invoked when one subscribed event is delivered. |
+
+#### Returns
+
+| Type                        | Name           | Description                     |
+| --------------------------- | -------------- | ------------------------------- |
+| `EasyBarSubscriptionHandle` | `subscription` | Disposable registration handle. |
 
 ### `EasyBarNodeHandle:unset`
 
@@ -457,6 +470,12 @@ Registers an action handler for one source.
 | `source`  | `string`                             | Publisher name whose item actions should be delivered. |
 | `handler` | `fun(event:EasyBarInboxActionEvent)` | Callback invoked for matching item actions.            |
 
+#### Returns
+
+| Type                        | Name           | Description                     |
+| --------------------------- | -------------- | ------------------------------- |
+| `EasyBarSubscriptionHandle` | `subscription` | Disposable registration handle. |
+
 ### `EasyBarInbox.on_context_action`
 
 Registers a source context-menu action handler.
@@ -468,6 +487,12 @@ Registers a source context-menu action handler.
 | `source`  | `string`                                    | Publisher name whose source actions should be delivered. |
 | `handler` | `fun(event:EasyBarInboxContextActionEvent)` | Callback invoked for matching source actions.            |
 
+#### Returns
+
+| Type                        | Name           | Description                     |
+| --------------------------- | -------------- | ------------------------------- |
+| `EasyBarSubscriptionHandle` | `subscription` | Disposable registration handle. |
+
 ### `EasyBarInbox.replace`
 
 Atomically replaces every current inbox item for one source.
@@ -478,3 +503,23 @@ Atomically replaces every current inbox item for one source.
 | -------- | -------------------- | ----------------------------------------------------------- |
 | `source` | `string`             | Stable publisher name used for grouping and action routing. |
 | `items`  | `EasyBarInboxItem[]` | Complete current snapshot for this source.                  |
+
+### `EasyBarSubscriptionHandle:dispose`
+
+Removes this subscription. Repeated calls return false.
+
+#### Returns
+
+| Type      | Name      | Description                                 |
+| --------- | --------- | ------------------------------------------- |
+| `boolean` | `removed` | Whether an active registration was removed. |
+
+### `EasyBarSubscriptionHandle:unsubscribe`
+
+Alias for `dispose()`.
+
+#### Returns
+
+| Type      | Name      | Description                                 |
+| --------- | --------- | ------------------------------------------- |
+| `boolean` | `removed` | Whether an active registration was removed. |

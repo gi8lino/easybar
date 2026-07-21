@@ -29,6 +29,8 @@ local theme_module = load_module("theme")
 local registry_module = load_module("registry")
 --- Subscription module used for event and interval callbacks.
 local subscriptions_module = load_module("subscriptions")
+--- Shared finite numeric validators.
+local validation = load_module("validation")
 
 --- Supported widget log levels.
 local LOG_LEVELS = {
@@ -87,7 +89,6 @@ local function configured_log_dir()
 	if type(configured) == "string" and configured ~= "" then
 		return configured
 	end
-
 	return (os.getenv("HOME") or "/tmp") .. "/.local/state/easybar"
 end
 
@@ -99,141 +100,165 @@ local function normalize_inbox_source(source)
 	return normalized
 end
 
+local MAX_WIDGET_LOG_SCAN_BYTES = 8 * 1024 * 1024
+local WIDGET_LOG_READ_CHUNK_BYTES = 32 * 1024
+
+local function shell_quote(value)
+	return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local ensured_log_directories = {}
+
+local function ensure_log_directory(log_dir)
+	log_dir = tostring(log_dir or configured_log_dir())
+	if ensured_log_directories[log_dir] then
+		return true, nil
+	end
+	local ok, reason, status = os.execute("mkdir -p -- " .. shell_quote(log_dir))
+	if ok == true or ok == 0 then
+		ensured_log_directories[log_dir] = true
+		return true, nil
+	end
+	return false, "mkdir failed reason=" .. tostring(reason) .. " status=" .. tostring(status)
+end
+
 --- Returns a safe widget log file name, or nil plus an error message.
 local function validate_log_file_name(file_name)
 	file_name = tostring(file_name or "")
-
 	if file_name == "" then
 		return nil, "log file name is required"
 	end
-
 	if file_name == "." or file_name == ".." then
 		return nil, "log file name must be a plain file name"
 	end
-
 	if file_name:find("/", 1, true) or file_name:find("\\", 1, true) then
 		return nil, "log file name must not contain path separators"
 	end
-
 	if file_name:find("%z") or file_name:find("[\r\n]") then
 		return nil, "log file name must not contain control characters"
 	end
-
 	return file_name, nil
 end
 
---- Returns the absolute path for one widget log file inside the configured log directory.
 local function widget_log_path(log_dir, file_name)
 	return tostring(log_dir or configured_log_dir()) .. "/" .. file_name
 end
 
---- Appends text to one widget log file and ensures the file ends with a newline.
 local function append_widget_log(log_dir, file_name, text)
 	local validated, validation_error = validate_log_file_name(file_name)
 	if validated == nil then
 		return false, validation_error
 	end
-
+	local directory_ok, directory_error = ensure_log_directory(log_dir)
+	if not directory_ok then
+		return false, directory_error
+	end
 	local file, err = io.open(widget_log_path(log_dir, validated), "a")
 	if file == nil then
 		return false, tostring(err)
 	end
-
 	text = tostring(text or "")
-	file:write(text)
-	if text == "" or text:sub(-1) ~= "\n" then
-		file:write("\n")
+	local wrote, write_error = file:write(text)
+	if wrote and (text == "" or text:sub(-1) ~= "\n") then
+		wrote, write_error = file:write("\n")
 	end
 	file:close()
-
+	if not wrote then
+		return false, tostring(write_error)
+	end
 	return true, nil
 end
 
---- Reads all lines from one widget log file.
-local function read_widget_log_lines(log_dir, file_name)
+local function read_widget_log_tail(log_dir, file_name, limit)
 	local validated, validation_error = validate_log_file_name(file_name)
 	if validated == nil then
 		return nil, validation_error
 	end
-
-	local file = io.open(widget_log_path(log_dir, validated), "r")
+	local normalized_limit = validation.positive_integer(limit)
+	if normalized_limit == nil then
+		return {}, nil
+	end
+	local file = io.open(widget_log_path(log_dir, validated), "rb")
 	if file == nil then
 		return {}, nil
 	end
-
-	local lines = {}
-	for line in file:lines() do
-		lines[#lines + 1] = line
+	local size = file:seek("end") or 0
+	local position = size
+	local scanned = 0
+	local chunks = {}
+	local newline_count = 0
+	while position > 0 and newline_count <= normalized_limit and scanned < MAX_WIDGET_LOG_SCAN_BYTES do
+		local chunk_size = math.min(WIDGET_LOG_READ_CHUNK_BYTES, position, MAX_WIDGET_LOG_SCAN_BYTES - scanned)
+		position = position - chunk_size
+		file:seek("set", position)
+		local chunk = file:read(chunk_size) or ""
+		table.insert(chunks, 1, chunk)
+		scanned = scanned + #chunk
+		local _, count = chunk:gsub("\n", "")
+		newline_count = newline_count + count
 	end
 	file:close()
-
-	return lines, nil
+	local text = table.concat(chunks)
+	local lines = {}
+	for line in (text .. "\n"):gmatch("(.-)\n") do
+		lines[#lines + 1] = line
+	end
+	if text:sub(-1) == "\n" and #lines > 0 and lines[#lines] == "" then
+		lines[#lines] = nil
+	end
+	local start = math.max(1, #lines - normalized_limit + 1)
+	local tail = {}
+	for index = start, #lines do
+		tail[#tail + 1] = lines[index]
+	end
+	return tail, nil
 end
 
---- Rewrites one widget log file with the provided lines.
 local function write_widget_log_lines(log_dir, file_name, lines)
 	local validated, validation_error = validate_log_file_name(file_name)
 	if validated == nil then
 		return false, validation_error
 	end
-
+	local directory_ok, directory_error = ensure_log_directory(log_dir)
+	if not directory_ok then
+		return false, directory_error
+	end
 	local file, err = io.open(widget_log_path(log_dir, validated), "w")
 	if file == nil then
 		return false, tostring(err)
 	end
-
 	for _, line in ipairs(lines or {}) do
-		file:write(tostring(line or ""), "\n")
+		local wrote, write_error = file:write(tostring(line or ""), "\n")
+		if not wrote then
+			file:close()
+			return false, tostring(write_error)
+		end
 	end
 	file:close()
-
 	return true, nil
 end
 
---- Returns the newest log lines as one newline-delimited string.
 local function tail_widget_log(log_dir, file_name, limit)
-	local lines, err = read_widget_log_lines(log_dir, file_name)
+	local lines, err = read_widget_log_tail(log_dir, file_name, limit)
 	if lines == nil then
 		return "", err
 	end
-
-	limit = tonumber(limit) or 0
-	if limit <= 0 or #lines == 0 then
-		return "", nil
-	end
-
-	local start = math.max(1, #lines - limit + 1)
-	local tail = {}
-	for index = start, #lines do
-		tail[#tail + 1] = lines[index]
-	end
-
-	return table.concat(tail, "\n"), nil
+	return table.concat(lines, "\n"), nil
 end
 
---- Keeps only the newest lines in one widget log file.
 local function trim_widget_log(log_dir, file_name, limit)
-	local lines, err = read_widget_log_lines(log_dir, file_name)
+	local normalized_limit = validation.non_negative_number(limit)
+	if normalized_limit == nil or math.floor(normalized_limit) ~= normalized_limit then
+		return false, "log trim limit must be a finite non-negative integer"
+	end
+	if normalized_limit == 0 then
+		return write_widget_log_lines(log_dir, file_name, {})
+	end
+	local lines, err = read_widget_log_tail(log_dir, file_name, normalized_limit)
 	if lines == nil then
 		return false, err
 	end
-
-	limit = tonumber(limit) or 0
-	if limit <= 0 then
-		return write_widget_log_lines(log_dir, file_name, {})
-	end
-
-	if #lines <= limit then
-		return true, nil
-	end
-
-	local start = #lines - limit + 1
-	local kept = {}
-	for index = start, #lines do
-		kept[#kept + 1] = lines[index]
-	end
-
-	return write_widget_log_lines(log_dir, file_name, kept)
+	return write_widget_log_lines(log_dir, file_name, lines)
 end
 
 --- Returns one shallow copy of props without `on_interval`.
@@ -255,8 +280,7 @@ end
 
 --- Returns whether one interval value is valid.
 local function valid_interval(value)
-	local interval = tonumber(value)
-	return interval ~= nil and interval > 0
+	return validation.interval_seconds(value) ~= nil
 end
 
 --- Builds one widget-scoped EasyBar API instance.
@@ -265,8 +289,6 @@ function M.new(log, hooks)
 	local subscriptions = subscriptions_module.new(registry._state, registry.ensure_item_exists, log, event_tokens)
 	local default_exec_options = type(hooks.default_exec_options) == "table" and hooks.default_exec_options or {}
 	local log_dir = configured_log_dir()
-	local inbox_action_handlers = {}
-	local inbox_context_action_handlers = {}
 
 	local function readonly_copy(values, name)
 		local copy = {}
@@ -416,20 +438,36 @@ function M.new(log, hooks)
 		return result
 	end
 
+	local function handler_snapshot(handlers)
+		local copy = {}
+		for index, handler in ipairs(handlers or {}) do
+			copy[index] = handler
+		end
+		return copy
+	end
+
 	local function handle_event(event)
 		if event.name == "inbox.action" then
-			local handlers = inbox_action_handlers[tostring(event.source or "")]
-			for _, handler in ipairs(handlers or {}) do
-				local ok, err = pcall(handler, event)
+			local handlers = registry._state.inbox_action_handlers[tostring(event.source or "")]
+			for _, entry in ipairs(handler_snapshot(handlers)) do
+				local handler = type(entry) == "table" and entry.active and entry.handler or entry
+				local ok, err = true, nil
+				if type(handler) == "function" then
+					ok, err = pcall(handler, event)
+				end
 				if not ok then
 					log.error("inbox action handler failed source=" .. tostring(event.source) .. " error=" .. tostring(err))
 				end
 			end
 		end
 		if event.name == "inbox.context_action" then
-			local handlers = inbox_context_action_handlers[tostring(event.source or "")]
-			for _, handler in ipairs(handlers or {}) do
-				local ok, err = pcall(handler, event)
+			local handlers = registry._state.inbox_context_action_handlers[tostring(event.source or "")]
+			for _, entry in ipairs(handler_snapshot(handlers)) do
+				local handler = type(entry) == "table" and entry.active and entry.handler or entry
+				local ok, err = true, nil
+				if type(handler) == "function" then
+					ok, err = pcall(handler, event)
+				end
 				if not ok then
 					log.error(
 						"inbox context action handler failed source=" .. tostring(event.source) .. " error=" .. tostring(err)
@@ -443,6 +481,9 @@ function M.new(log, hooks)
 	local api = {
 		_state = registry._state,
 		add = registry.add,
+		begin_widget_load = registry.begin_widget_load,
+		commit_widget_load = registry.commit_widget_load,
+		rollback_widget_load = registry.rollback_widget_load,
 		DEFAULT_EXEC_OPTIONS = readonly_copy(default_exec_options, "easybar.DEFAULT_EXEC_OPTIONS"),
 		set = registry.set,
 		unset = registry.unset,
@@ -454,6 +495,8 @@ function M.new(log, hooks)
 		cancel_async = registry.cancel_async,
 		after = registry.after,
 		handle_command_response = registry.handle_command_response,
+		expect_sync_command_response = registry.expect_sync_response,
+		abandon_sync_command_response = registry.abandon_sync_response,
 		handle_timer_fired = registry.handle_timer_fired,
 		take_pending_command_response = registry.take_pending_command_response,
 		subscribe = subscriptions.subscribe,
@@ -549,7 +592,7 @@ function M.new(log, hooks)
 
 			--- Subscribes this node to one or more events.
 			function handle:subscribe(events, handler)
-				return api.subscribe(self.id, events, handler)
+				return subscriptions.subscribe(self.id, events, handler)
 			end
 
 			return handle
@@ -587,7 +630,7 @@ function M.new(log, hooks)
 
 		--- Subscribes one existing node to one or more events.
 		function widget_api.subscribe(id, events, handler)
-			return api.subscribe(id, events, handler)
+			return subscriptions.subscribe(id, events, handler)
 		end
 
 		--- Adds one item using this widget's scoped defaults.
@@ -602,7 +645,7 @@ function M.new(log, hooks)
 				error("interval requires on_interval")
 			end
 
-			api.add(kind, id, item_props, widget_defaults)
+			registry.add(kind, id, item_props, widget_defaults, source)
 
 			if interval_handler ~= nil then
 				subscriptions.set_interval_handler(id, interval_handler)
@@ -628,12 +671,16 @@ function M.new(log, hooks)
 		function widget_api.inbox.replace(source, items)
 			source = normalize_inbox_source(source)
 			assert(json_module.is_array(items), "inbox items must be a dense array")
-			hooks.publish_inbox(source, items)
+			registry.defer_side_effect(function()
+				hooks.publish_inbox(source, items)
+			end)
 		end
 
 		function widget_api.inbox.clear(source)
 			source = normalize_inbox_source(source)
-			hooks.clear_inbox(source)
+			registry.defer_side_effect(function()
+				hooks.clear_inbox(source)
+			end)
 		end
 
 		function widget_api.inbox.configure(source, configuration)
@@ -641,21 +688,49 @@ function M.new(log, hooks)
 			assert(type(configuration) == "table", "inbox configuration must be a table")
 			local actions = configuration.actions or {}
 			assert(json_module.is_array(actions), "inbox configuration actions must be a dense array")
-			hooks.configure_inbox(source, actions)
+			registry.defer_side_effect(function()
+				hooks.configure_inbox(source, actions)
+			end)
+		end
+
+		local function register_inbox_handler(storage, source, handler, description)
+			source = normalize_inbox_source(source)
+			assert(type(handler) == "function", description .. " must be a function")
+			storage[source] = storage[source] or {}
+			local entry = { handler = handler, active = true }
+			table.insert(storage[source], entry)
+			local handle = {}
+			function handle:unsubscribe()
+				if not entry.active then
+					return false
+				end
+				entry.active = false
+				local handlers = storage[source] or {}
+				for index = #handlers, 1, -1 do
+					if handlers[index] == entry then
+						table.remove(handlers, index)
+					end
+				end
+				if #handlers == 0 then
+					storage[source] = nil
+				end
+				return true
+			end
+			handle.dispose = handle.unsubscribe
+			return handle
 		end
 
 		function widget_api.inbox.on_action(source, handler)
-			source = normalize_inbox_source(source)
-			assert(type(handler) == "function", "inbox action handler must be a function")
-			inbox_action_handlers[source] = inbox_action_handlers[source] or {}
-			table.insert(inbox_action_handlers[source], handler)
+			return register_inbox_handler(registry._state.inbox_action_handlers, source, handler, "inbox action handler")
 		end
 
 		function widget_api.inbox.on_context_action(source, handler)
-			source = normalize_inbox_source(source)
-			assert(type(handler) == "function", "inbox context action handler must be a function")
-			inbox_context_action_handlers[source] = inbox_context_action_handlers[source] or {}
-			table.insert(inbox_context_action_handlers[source], handler)
+			return register_inbox_handler(
+				registry._state.inbox_context_action_handlers,
+				source,
+				handler,
+				"inbox context action handler"
+			)
 		end
 
 		widget_api.log = make_log_api(source)

@@ -7,6 +7,7 @@ final class EventManager {
   /// Shared event manager instance.
   /// Prefix used for Lua interval subscriptions.
   private static let intervalTickPrefix = "interval_tick:"
+  private static let maximumIntervalSeconds: TimeInterval = 365 * 24 * 60 * 60
   /// Native event source managed by subscription demand.
   private enum ManagedSource: Hashable {
     /// System wake notifications.
@@ -302,7 +303,9 @@ final class EventManager {
   }
 
   /// Returns the widget-scoped Lua interval schedules requested by the runtime.
-  private static func intervalTickSchedules(in subscriptions: Set<String>) -> Set<WidgetIntervalSchedule> {
+  private static func intervalTickSchedules(in subscriptions: Set<String>) -> Set<
+    WidgetIntervalSchedule
+  > {
     Set(
       subscriptions.compactMap { name in
         guard name.hasPrefix(intervalTickPrefix) else { return nil }
@@ -313,7 +316,13 @@ final class EventManager {
         guard parts.count == 2 else { return nil }
 
         let widgetID = String(parts[0])
-        guard !widgetID.isEmpty, let interval = TimeInterval(parts[1]), interval > 0 else { return nil }
+        guard
+          !widgetID.isEmpty,
+          let interval = TimeInterval(parts[1]),
+          interval.isFinite,
+          interval > 0,
+          interval <= maximumIntervalSeconds
+        else { return nil }
 
         return WidgetIntervalSchedule(widgetID: widgetID, interval: interval)
       })
