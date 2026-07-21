@@ -65,8 +65,13 @@ final class NativeMonthCalendarStore: CalendarMonthPopupStore {
   func prepareMonthSubscriptionRange(for visibleMonth: Date, radius: Int, calendar: Calendar)
     -> Bool
   {
-    let startOfVisibleMonth = CalendarMonthRangeBuilder.startOfMonth(visibleMonth, calendar: calendar)
-    let normalizedRadius = max(radius, 0)
+    let startOfVisibleMonth = CalendarMonthRangeBuilder.startOfMonth(
+      visibleMonth, calendar: calendar)
+    let maximumSafeRadius = CalendarMonthRangeBuilder.maximumSafeSubscriptionRadius(
+      for: startOfVisibleMonth,
+      calendar: calendar
+    )
+    let normalizedRadius = min(max(radius, 0), maximumSafeRadius)
     let preparedRange = CalendarMonthRangeBuilder.subscriptionRange(
       for: startOfVisibleMonth,
       radius: normalizedRadius,

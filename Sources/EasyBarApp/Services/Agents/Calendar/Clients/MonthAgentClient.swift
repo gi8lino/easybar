@@ -17,9 +17,6 @@ final class MonthCalendarAgentClient {
   private let eventRelay: CalendarAgentEventRelay
   private var refreshRelatedClients: @MainActor () -> Void = {}
 
-  /// Month radii loaded around the currently visible month.
-  private let preloadRadii = [0, 1, 2, 3, 4, 5, 6]
-
   /// Delay schedule for staged month preload requests.
   private let preloadDelays: [TimeInterval] = [0.0, 0.20, 0.75, 1.75, 3.5, 6.5, 10.0]
 
@@ -107,7 +104,13 @@ final class MonthCalendarAgentClient {
   func focusVisibleMonth(_ visibleMonth: Date) {
     cancelStagedPreload()
 
-    for (index, radius) in preloadRadii.enumerated() {
+    let calendar = resolvedCalendar()
+    let maximumRadius = CalendarMonthRangeBuilder.maximumSafeSubscriptionRadius(
+      for: visibleMonth,
+      calendar: calendar
+    )
+
+    for (index, radius) in (0...maximumRadius).enumerated() {
       let delay = preloadDelays[min(index, preloadDelays.count - 1)]
       let nanoseconds = UInt64(max(delay, 0) * 1_000_000_000)
       let task = Task { @MainActor [weak self] in
@@ -287,7 +290,8 @@ final class MonthCalendarAgentClient {
   /// Returns the default month preload range around the given reference date.
   private func defaultRequestedDateRange(referenceDate: Date) -> DateInterval {
     let calendar = resolvedCalendar()
-    let currentMonthStart = CalendarMonthRangeBuilder.startOfMonth(referenceDate, calendar: calendar)
+    let currentMonthStart = CalendarMonthRangeBuilder.startOfMonth(
+      referenceDate, calendar: calendar)
 
     return CalendarMonthRangeBuilder.visibleGridRange(for: currentMonthStart, calendar: calendar)
       ?? DateInterval(

@@ -1,3 +1,4 @@
+import EasyBarShared
 import Foundation
 
 /// Shared helpers for month-calendar date windows used by hosts and stores.
@@ -26,6 +27,27 @@ public enum CalendarMonthRangeBuilder {
       start: calendar.startOfDay(for: firstWeek.start),
       end: calendar.startOfDay(for: lastWeek.end)
     )
+  }
+
+  /// Returns the largest whole-month preload radius accepted by the calendar agent.
+  public static func maximumSafeSubscriptionRadius(
+    for visibleMonth: Date,
+    calendar: Calendar,
+    maximumSpan: TimeInterval = CalendarAgentRequestLimits.maximumDateSpan
+  ) -> Int {
+    guard maximumSpan.isFinite, maximumSpan > 0 else { return 0 }
+
+    var radius = 0
+
+    while let candidate = subscriptionRange(
+      for: visibleMonth,
+      radius: radius + 1,
+      calendar: calendar
+    ), candidate.duration <= maximumSpan {
+      radius += 1
+    }
+
+    return radius
   }
 
   /// Returns the requested subscription range for one visible month and preload radius.
