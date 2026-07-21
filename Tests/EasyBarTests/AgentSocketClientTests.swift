@@ -294,6 +294,35 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertTrue(server.subscribersSnapshot().isEmpty)
   }
 
+  func testSubscriberRegistrationReplacesExistingSubscription() async throws {
+    let logger = Self.makeLogger()
+    let server = LineSocketServerTransport<String, TestRequest, TestMessage>(
+      socketPath: socketPath,
+      serverLabel: "test agent",
+      logger: logger
+    )
+
+    XCTAssertTrue(
+      server.start { fd, request in
+        guard server.addSubscriber(request.command, for: fd) else { return .close }
+        _ = server.send(TestMessage(kind: request.command), to: fd)
+        return .keepOpen
+      })
+    defer { server.stop() }
+
+    let clientFD = try connectUnixSocket()
+    defer { close(clientFD) }
+
+    try writeLine(#"{"command":"initial"}"#, to: clientFD)
+    XCTAssertEqual(try readMessage(from: clientFD), TestMessage(kind: "initial"))
+    try writeLine(#"{"command":"refreshed"}"#, to: clientFD)
+    XCTAssertEqual(try readMessage(from: clientFD), TestMessage(kind: "refreshed"))
+
+    try await waitUntil("subscriber replacement") {
+      server.subscribersSnapshot().map(\.subscriber) == ["refreshed"]
+    }
+  }
+
   func testServerStopWakesIdleClientReadTask() async throws {
     let logger = Self.makeLogger()
     let server = makeServer(logger: logger)

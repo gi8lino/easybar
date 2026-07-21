@@ -288,14 +288,15 @@ public final class LineSocketServerTransport<
     return .close
   }
 
-  /// Adds one subscriber without consuming the short-lived request-client budget.
+  /// Adds or replaces one subscriber without consuming the short-lived request-client budget.
   @discardableResult
   public func addSubscriber(_ subscriber: Subscriber, for fd: Int32) -> Bool {
     let added = state.withLock { state -> Bool in
       guard state.running, let connection = state.clients[fd] else { return false }
-      guard state.subscribers[fd] == nil else { return false }
-      guard state.subscribers.count < maxSubscribers else { return false }
-      state.requestClientFDs.remove(fd)
+      if state.subscribers[fd] == nil {
+        guard state.subscribers.count < maxSubscribers else { return false }
+        state.requestClientFDs.remove(fd)
+      }
       state.subscribers[fd] = SubscriberRegistration(
         connection: connection,
         subscriber: subscriber

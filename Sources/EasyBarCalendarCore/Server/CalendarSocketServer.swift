@@ -206,7 +206,7 @@ final class CalendarSocketServer {
       return .close
     }
     logger.info(
-      "calendar agent subscriber added",
+      "calendar agent subscriber registered",
       .field("fd", clientFD),
     )
 

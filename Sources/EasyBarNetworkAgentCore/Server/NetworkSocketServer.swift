@@ -169,7 +169,7 @@ final class NetworkSocketServer {
       return .close
     }
     logger.info(
-      "\(componentName) subscriber added",
+      "\(componentName) subscriber registered",
       .field("fd", clientFD),
     )
 
