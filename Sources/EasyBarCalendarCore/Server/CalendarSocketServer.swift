@@ -27,8 +27,7 @@ final class CalendarSocketServer {
   /// Host callback invoked after a restart acknowledgement has been sent.
   private let onRestartRequested: @MainActor () -> Void
   /// Line-delimited socket transport backing the server.
-  private let transport:
-    LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
   init(

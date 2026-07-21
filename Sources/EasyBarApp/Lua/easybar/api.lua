@@ -504,6 +504,7 @@ function M.new(log, hooks)
 		expect_sync_command_response = registry.expect_sync_response,
 		abandon_sync_command_response = registry.abandon_sync_response,
 		handle_timer_fired = registry.handle_timer_fired,
+		handle_timer_rejected = registry.handle_timer_rejected,
 		take_pending_command_response = registry.take_pending_command_response,
 		subscribe = subscriptions.subscribe,
 		handle_event = handle_event,

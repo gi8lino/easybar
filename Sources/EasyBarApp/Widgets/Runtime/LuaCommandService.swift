@@ -114,6 +114,24 @@ actor LuaCommandService {
       activeAsyncCommandSessionID = runtimeSessionID
     }
 
+    if activeAsyncCommands[token] != nil {
+      logger.warn(
+        "lua async command rejected because token is already active",
+        .field("request_id", requestID),
+        .field("widget", widget ?? "unknown"),
+        .field("operation", operation ?? "none")
+      )
+      await sendCommandResponse(
+        token: token,
+        result: LuaCommandResult(
+          output: "\(invocation.asynchronousAPIName) rejected: duplicate active token",
+          status: 69
+        ),
+        durationMS: elapsedMilliseconds(since: startedAt)
+      )
+      return
+    }
+
     let maxAsyncJobs = commandSettings.maxAsyncJobs
     guard activeAsyncCommands.count < maxAsyncJobs else {
       logAsyncCommandRejected(

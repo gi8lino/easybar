@@ -89,6 +89,35 @@ final class WidgetTreeUpdateTests: XCTestCase {
     )
   }
 
+  func testCommandAndTimerTokensAreBounded() throws {
+    let decoder = WidgetRuntimeProtocolDecoder()
+
+    XCTAssertThrowsError(
+      try decoder.decodeMessage(
+        from:
+          #"{"protocol_version":1,"type":"command_request","token":"","arguments":["true"],"sync":false}"#
+      )
+    )
+
+    let oversized = String(
+      repeating: "x", count: WidgetRuntimeProtocolDecoder.maximumTokenBytes + 1)
+    let encodedOversized = try XCTUnwrap(
+      String(data: JSONEncoder().encode(oversized), encoding: .utf8)
+    )
+    XCTAssertThrowsError(
+      try decoder.decodeMessage(
+        from:
+          "{\"protocol_version\":1,\"type\":\"timer_request\",\"token\":\(encodedOversized),\"delay_seconds\":1}"
+      )
+    )
+
+    XCTAssertThrowsError(
+      try decoder.decodeMessage(
+        from: #"{"protocol_version":1,"type":"timer_cancel","token":"bad\nvalue"}"#
+      )
+    )
+  }
+
   func testTimerRequestAndCancellationPayloadsAreDecoded() throws {
     let request = try WidgetRuntimeProtocolDecoder().decodeMessage(
       from: #"{"protocol_version":1,"type":"timer_request","token":"timer-1","delay_seconds":2.5}"#

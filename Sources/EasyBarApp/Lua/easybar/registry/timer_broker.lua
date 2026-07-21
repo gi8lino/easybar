@@ -37,6 +37,14 @@ function M.new(state, hooks)
 		return handle
 	end
 
+	function broker.handle_timer_rejected(token)
+		if state.pending_timers[token] == nil then
+			return false
+		end
+		state.pending_timers[token] = nil
+		return true
+	end
+
 	function broker.handle_timer_fired(token)
 		local callback = state.pending_timers[token]
 		if callback == nil then

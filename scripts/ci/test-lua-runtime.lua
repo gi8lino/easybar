@@ -217,6 +217,17 @@ do
 	assert(next(api._state.pending_sync_commands) == nil)
 end
 
+-- A host-side timer rejection releases the pending callback deterministically.
+do
+	local api = new_api()
+	local handle = api.after(60, function() end)
+	assert(api._state.pending_timers[handle.token] ~= nil)
+	assert(api.handle_timer_rejected(handle.token) == true)
+	assert(api._state.pending_timers[handle.token] == nil)
+	assert(api.handle_timer_rejected(handle.token) == false)
+	assert(handle:cancel() == false)
+end
+
 -- A failed widget load rolls back nodes, subscriptions, jobs, timers, and inbox handlers.
 do
 	local temp_dir = os.tmpname() .. "-easybar-widget-test"

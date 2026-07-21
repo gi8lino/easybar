@@ -411,6 +411,7 @@ function M.new(hooks)
 	registry.exec_for_widget = command_broker.exec_for_widget
 	registry.after = timer_broker.after
 	registry.handle_timer_fired = timer_broker.handle_timer_fired
+	registry.handle_timer_rejected = timer_broker.handle_timer_rejected
 
 	function registry.validate()
 		graph.build(state)

@@ -25,6 +25,9 @@ enum WidgetRuntimeMessage {
 
 /// Decodes and classifies structured messages emitted by the Lua widget runtime.
 struct WidgetRuntimeProtocolDecoder {
+  /// Maximum UTF-8 size accepted for opaque command and timer tokens.
+  static let maximumTokenBytes = 256
+
   private let decoder: JSONDecoder = {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -89,11 +92,12 @@ struct WidgetRuntimeProtocolDecoder {
         )
       }
 
+      let token = try normalizedToken(request.token, name: "command request")
       let widget = try normalizedCommandLogField(request.widget, name: "widget")
       let operation = try normalizedCommandLogField(request.operation, name: "operation")
 
       return .commandRequest(
-        token: request.token,
+        token: token,
         invocation: request.invocation,
         isSynchronous: request.isSynchronous,
         timeoutSeconds: request.timeoutSeconds,
@@ -102,15 +106,10 @@ struct WidgetRuntimeProtocolDecoder {
         operation: operation
       )
     case .commandCancel:
-      guard let token = update.commandCancelToken, !token.isEmpty else {
-        throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua command cancellation request"
-        )
-      }
+      let token = try normalizedToken(update.commandCancelToken, name: "command cancellation")
       return .commandCancel(token: token)
     case .timerRequest:
       guard let request = update.timerRequestPayload,
-        !request.token.isEmpty,
         request.delaySeconds.isFinite,
         request.delaySeconds >= 0
       else {
@@ -118,13 +117,10 @@ struct WidgetRuntimeProtocolDecoder {
           "invalid lua timer request"
         )
       }
-      return .timerRequest(token: request.token, delaySeconds: request.delaySeconds)
+      let token = try normalizedToken(request.token, name: "timer request")
+      return .timerRequest(token: token, delaySeconds: request.delaySeconds)
     case .timerCancel:
-      guard let token = update.timerCancelToken, !token.isEmpty else {
-        throw WidgetRuntimeProtocolError.invalidPayload(
-          "invalid lua timer cancellation request"
-        )
-      }
+      let token = try normalizedToken(update.timerCancelToken, name: "timer cancellation")
       return .timerCancel(token: token)
     case .inboxReplace:
       guard let snapshot = update.inboxReplacePayload,
@@ -148,6 +144,20 @@ struct WidgetRuntimeProtocolDecoder {
       }
       return .inboxConfigure(configuration)
     }
+  }
+
+  /// Validates one opaque command or timer token without changing its value.
+  private func normalizedToken(_ value: String?, name: String) throws -> String {
+    guard let value,
+      !value.isEmpty,
+      value.utf8.count <= Self.maximumTokenBytes,
+      !value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+    else {
+      throw WidgetRuntimeProtocolError.invalidPayload(
+        "invalid lua \(name) token"
+      )
+    }
+    return value
   }
 
   /// Validates one optional human-readable command log field.

@@ -205,6 +205,27 @@ local function handle_command_response(payload)
 	flush_pending_outputs(false, false)
 end
 
+--- Releases one timer callback rejected by the host.
+local function handle_timer_rejected(payload)
+	if type(payload.token) ~= "string" or payload.token == "" then
+		log.error("runtime ignored timer rejection missing token")
+		return
+	end
+
+	local handled = registry.handle_timer_rejected(payload.token)
+	if handled then
+		log.warn(
+			"runtime timer rejected token="
+				.. tostring(payload.token)
+				.. " message="
+				.. tostring(payload.message or "unknown")
+		)
+	else
+		log.warn("runtime dropped unknown timer rejection token=" .. tostring(payload.token))
+	end
+	flush_pending_outputs(false, false)
+end
+
 --- Dispatches one host timer response into the registry and flushes callback mutations.
 local function handle_timer_fired(payload)
 	if type(payload.token) ~= "string" or payload.token == "" then
@@ -230,6 +251,11 @@ local function handle_host_payload(payload, raw_line)
 
 	if payload.type == "timer_fired" then
 		handle_timer_fired(payload)
+		return
+	end
+
+	if payload.type == "timer_rejected" then
+		handle_timer_rejected(payload)
 		return
 	end
 
