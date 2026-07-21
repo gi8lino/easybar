@@ -475,12 +475,6 @@ actor RuntimeCoordinator {
     }
   }
 
-  /// Rebinds the IPC socket server when the config changed the socket path.
-  private func reloadSocketServerConfiguration() async {
-    let socketPath = await configManager.easyBarSocketPath()
-    socketServer.reloadConfiguration(socketPath: socketPath)
-  }
-
   /// Broadcasts one metrics snapshot through the runtime socket server.
   private func broadcastMetrics(_ snapshot: IPC.MetricsSnapshot) {
     socketServer.broadcastMetrics(snapshot)
