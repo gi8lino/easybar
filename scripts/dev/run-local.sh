@@ -24,6 +24,69 @@ run_arch="${RUN_ARCH:-arm64}"
 version="${VERSION:-dev}"
 bundle_id="${BUNDLE_ID:-com.gi8lino.EasyBar}"
 dist_dir="${DIST_DIR:-dist}"
+user_domain="gui/$(id -u)"
+suspended_service_labels=()
+suspended_service_plists=()
+
+service_is_running() {
+  local label="$1"
+
+  launchctl list | awk -v label="$label" '
+    $3 == label && $1 != "-" { found = 1 }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+suspend_service_if_running() {
+  local label="$1"
+  local plist="$2"
+
+  if ! service_is_running "$label"; then
+    return
+  fi
+
+  echo "Suspending conflicting agent service: $label"
+  launchctl bootout "$user_domain/$label"
+  suspended_service_labels+=("$label")
+  suspended_service_plists+=("$plist")
+}
+
+restore_suspended_services() {
+  local index
+  local label
+  local plist
+  local restore_failed=false
+
+  for index in "${!suspended_service_labels[@]}"; do
+    label="${suspended_service_labels[$index]}"
+    plist="${suspended_service_plists[$index]}"
+    if [ ! -f "$plist" ]; then
+      echo "Cannot restore agent service; plist is missing: $plist" >&2
+      restore_failed=true
+      continue
+    fi
+
+    echo "Restoring agent service: $label"
+    if ! launchctl bootstrap "$user_domain" "$plist"; then
+      echo "Failed to restore agent service: $label" >&2
+      restore_failed=true
+    fi
+  done
+
+  [ "$restore_failed" = false ]
+}
+
+cleanup() {
+  local status=$?
+  trap - EXIT
+
+  scripts/dev/stop-local.sh --dist-dir "$dist_dir"
+  if ! restore_suspended_services; then
+    status=1
+  fi
+
+  exit "$status"
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -149,11 +212,24 @@ scripts/build/stamp.py plist \
 touch "$app_bundle"
 
 echo "Stopping existing EasyBar services and local processes"
+trap cleanup EXIT
+suspend_service_if_running \
+  "io.github.gi8lino.easybar.local.calendar-agent" \
+  "$HOME/Library/LaunchAgents/io.github.gi8lino.easybar.local.calendar-agent.plist"
+suspend_service_if_running \
+  "io.github.gi8lino.easybar.local.network-agent" \
+  "$HOME/Library/LaunchAgents/io.github.gi8lino.easybar.local.network-agent.plist"
+suspend_service_if_running \
+  "homebrew.mxcl.easybar-calendar-agent" \
+  "$HOME/Library/LaunchAgents/homebrew.mxcl.easybar-calendar-agent.plist"
+suspend_service_if_running \
+  "homebrew.mxcl.easybar-network-agent" \
+  "$HOME/Library/LaunchAgents/homebrew.mxcl.easybar-network-agent.plist"
 scripts/dev/stop-local.sh --dist-dir "$dist_dir"
 
 echo "Launching standalone debug agents"
-open -g "$calendar_agent_bundle"
-open -g "$network_agent_bundle"
+open -n -g "$calendar_agent_bundle"
+open -n -g "$network_agent_bundle"
 
 echo "Launching $app_bin with EASYBAR_LOG_LEVEL=$log_level"
 echo "App logs follow stdout/stderr and configured logging.directory"
