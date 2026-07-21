@@ -4,38 +4,6 @@ import Foundation
 
 /// Builds calendar snapshots and applies calendar event mutations.
 final class CalendarSnapshotProvider: @unchecked Sendable {
-  /// Bridges EventKit travel-time storage that is not exposed as public Swift API.
-  enum EventTravelTimeBridge {
-    /// Key-value coding key used by EventKit for travel time.
-    static let key = "travelTime"
-    /// Getter selector used to verify that the current EventKit object supports travel time.
-    static let getterSelector = NSSelectorFromString(key)
-    /// Setter selector used to avoid an Objective-C exception for unsupported KVC writes.
-    static let setterSelector = NSSelectorFromString("setTravelTime:")
-
-    /// Reads positive travel time from one compatible object.
-    static func getSeconds(from object: NSObject) -> TimeInterval? {
-      guard object.responds(to: getterSelector) else { return nil }
-
-      if let value = object.value(forKey: key) as? NSNumber {
-        let seconds = value.doubleValue
-        return seconds > 0 ? seconds : nil
-      }
-
-      return nil
-    }
-
-    /// Writes travel time only when the current object exposes the matching setter.
-    @discardableResult
-    static func setSeconds(_ seconds: TimeInterval?, on object: NSObject) -> Bool {
-      guard object.responds(to: setterSelector) else { return false }
-
-      let normalizedSeconds = max(0, seconds ?? 0)
-      object.setValue(NSNumber(value: normalizedSeconds), forKey: key)
-      return true
-    }
-  }
-
   /// Locale used for stable date formatting.
   static let formatterLocale = Locale(identifier: "en_US_POSIX")
   /// Calendar used for stable date formatting.
@@ -44,6 +12,14 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
   static let formatterTimeZone = TimeZone.autoupdatingCurrent
   /// Cached birthday formatters keyed by format string.
   static let birthdayFormatters = LockedState([String: DateFormatter]())
+  /// Serializes access to shared Foundation formatter instances.
+  static let formatterLock = NSLock()
+  /// Cached link detector reused across event snapshots.
+  static let linkDetector = try? NSDataDetector(
+    types: NSTextCheckingResult.CheckingType.link.rawValue
+  )
+  /// Serializes use of the shared link detector.
+  static let linkDetectorLock = NSLock()
 
   /// Formatter for timed event rows.
   static let eventTimeFormatter: DateFormatter = makeFormatter(format: "HH:mm")
@@ -51,7 +27,9 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
   static let dayTitleFormatter: DateFormatter = makeFormatter(format: "dd.MM.yyyy")
 
   /// EventKit store used for reads and mutations.
-  let eventStore = EKEventStore()
+  let eventStore: EKEventStore
+  /// Notification center used for EventKit change observation.
+  private let notificationCenter: NotificationCenter
   /// Shared authorization state used by the provider and controller.
   private let authState = CalendarAuthorizationState()
   /// Logger used for snapshot and mutation diagnostics.
@@ -64,12 +42,22 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
   private var onChange: (() -> Void)?
 
   /// Creates one calendar snapshot provider that logs through the provided logger.
-  init(logger: ProcessLogger) {
+  init(
+    logger: ProcessLogger,
+    eventStore: EKEventStore = EKEventStore(),
+    notificationCenter: NotificationCenter = .default,
+    authorizationStatus: (() -> EKAuthorizationStatus)? = nil,
+    requestAccess: ((@escaping (Bool, Error?) -> Void) -> Void)? = nil
+  ) {
     self.logger = logger
+    self.eventStore = eventStore
+    self.notificationCenter = notificationCenter
     authorizationController = CalendarAuthorizationController(
       eventStore: eventStore,
       authState: authState,
-      logger: logger.child("authorization")
+      logger: logger.child("authorization"),
+      authorizationStatus: authorizationStatus,
+      requestAccess: requestAccess
     )
   }
 
@@ -82,7 +70,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
       self?.onChange?()
     }
 
-    observer = NotificationCenter.default.addObserver(
+    observer = notificationCenter.addObserver(
       forName: .EKEventStoreChanged,
       object: eventStore,
       queue: .main
@@ -97,7 +85,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
     authorizationController.stop()
 
     if let observer {
-      NotificationCenter.default.removeObserver(observer)
+      notificationCenter.removeObserver(observer)
       self.observer = nil
     }
 
@@ -119,6 +107,17 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
         .field("permission_state", permissionState),
       )
       return makeAccessDeniedSnapshot(permissionState: permissionState, generatedAt: now)
+    }
+
+    do {
+      try CalendarAgentRequestValidator.validate(query)
+    } catch {
+      logger.warn("calendar snapshot rejected", .field("error", error))
+      return makeEmptySnapshot(
+        permissionState: permissionState,
+        generatedAt: now,
+        writableCalendars: writableCalendars()
+      )
     }
 
     guard let fetchRange = normalizedFetchRange(from: query) else {
@@ -176,6 +175,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
   /// Creates one new calendar event through EventKit.
   @discardableResult
   func createEvent(_ draft: CalendarAgentCreateEvent) throws -> String {
+    try CalendarAgentRequestValidator.validate(draft)
     authorizationController.refreshStatus()
 
     guard authorizationController.effectiveAccessGranted() else {
@@ -212,11 +212,19 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
       self?.onChange?()
     }
 
-    return event.eventIdentifier ?? ""
+    guard let eventIdentifier = normalizedOptionalText(event.eventIdentifier) else {
+      logger.error(
+        "calendar event saved without a stable EventKit identifier",
+        .field("title", event.title ?? "Untitled")
+      )
+      throw CalendarAgentCreateError.eventIdentifierUnavailable
+    }
+    return eventIdentifier
   }
 
   /// Updates one existing calendar event through EventKit.
   func updateEvent(_ draft: CalendarAgentUpdateEvent) throws {
+    try CalendarAgentRequestValidator.validate(draft)
     authorizationController.refreshStatus()
 
     guard authorizationController.effectiveAccessGranted() else {
@@ -265,6 +273,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
 
   /// Deletes one existing calendar event through EventKit.
   func deleteEvent(_ draft: CalendarAgentDeleteEvent) throws {
+    try CalendarAgentRequestValidator.validate(draft)
     authorizationController.refreshStatus()
 
     guard authorizationController.effectiveAccessGranted() else {
@@ -290,7 +299,7 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
 
   /// Applies EventKit travel time when the current macOS implementation supports it.
   private func applyTravelTime(_ seconds: TimeInterval?, to event: EKEvent) {
-    guard !EventTravelTimeBridge.setSeconds(seconds, on: event), seconds != nil else { return }
+    guard !EventKitTravelTimeAdapter.write(seconds, to: event), seconds != nil else { return }
 
     logger.debug(
       "calendar event travel time unsupported",
@@ -300,11 +309,8 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
 
   /// Returns one normalized fetch range when valid.
   private func normalizedFetchRange(from query: CalendarAgentQuery) -> DateInterval? {
-    let start = min(query.startDate, query.endDate)
-    let end = max(query.startDate, query.endDate)
-
-    guard start < end else { return nil }
-    return DateInterval(start: start, end: end)
+    guard query.startDate < query.endDate else { return nil }
+    return DateInterval(start: query.startDate, end: query.endDate)
   }
 
   /// Returns one empty snapshot for denied access.
@@ -346,18 +352,5 @@ final class CalendarSnapshotProvider: @unchecked Sendable {
     formatter.timeZone = formatterTimeZone
     formatter.dateFormat = format
     return formatter
-  }
-
-  /// Returns a cached birthday formatter for one format string.
-  static func birthdayFormatter(for format: String) -> DateFormatter {
-    birthdayFormatters.withLock { formatters in
-      if let formatter = formatters[format] {
-        return formatter
-      }
-
-      let formatter = makeFormatter(format: format)
-      formatters[format] = formatter
-      return formatter
-    }
   }
 }

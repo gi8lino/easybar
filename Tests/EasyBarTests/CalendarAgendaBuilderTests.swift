@@ -40,13 +40,32 @@ final class CalendarAgendaBuilderTests: XCTestCase {
     )
   }
 
+  func testEndTimeRemainsVisibleAcrossDifferentDaysWithSameClockTime() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+    let start = Date(timeIntervalSince1970: 1_700_000_000)
+    let end = start.addingTimeInterval(86_400)
+
+    XCTAssertEqual(
+      CalendarEventFormatter.endTimeText(
+        startDate: start,
+        endDate: end,
+        isAllDay: false,
+        calendar: calendar
+      ),
+      CalendarDateFormatter.string(from: end, calendar: calendar, dateFormat: "HH:mm")
+    )
+  }
+
   func testBuildUsesInjectedDisplayDateForGroupedSelections() {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
 
-    let start = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 23, minute: 30))!
+    let start = calendar.date(
+      from: DateComponents(year: 2026, month: 5, day: 1, hour: 23, minute: 30))!
     let end = calendar.date(from: DateComponents(year: 2026, month: 5, day: 2, hour: 1, minute: 0))!
-    let clampedDay = calendar.date(from: DateComponents(year: 2026, month: 5, day: 2, hour: 0, minute: 0))!
+    let clampedDay = calendar.date(
+      from: DateComponents(year: 2026, month: 5, day: 2, hour: 0, minute: 0))!
 
     let event = CalendarAgentEvent(
       id: "event-1",

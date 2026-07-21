@@ -18,9 +18,11 @@ final class CalendarAuthorizationState {
       state.status = newStatus
 
       switch newStatus {
-      case .authorized, .fullAccess:
+      case .denied, .restricted, .writeOnly:
+        state.accessGrantedInProcess = false
+      case .notDetermined, .authorized, .fullAccess:
         break
-      default:
+      @unknown default:
         state.accessGrantedInProcess = false
       }
     }

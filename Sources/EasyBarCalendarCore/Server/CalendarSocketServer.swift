@@ -27,7 +27,8 @@ final class CalendarSocketServer {
   /// Host callback invoked after a restart acknowledgement has been sent.
   private let onRestartRequested: @MainActor () -> Void
   /// Line-delimited socket transport backing the server.
-  private let transport: LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
+  private let transport:
+    LineSocketServerTransport<Subscriber, CalendarAgentRequest, CalendarAgentMessage>
 
   /// Builds the calendar socket server for one socket path.
   init(
@@ -91,6 +92,21 @@ final class CalendarSocketServer {
       .field("fd", clientFD),
       .field("command", request.command.rawValue),
     )
+
+    do {
+      try CalendarAgentRequestValidator.validate(request)
+    } catch {
+      logger.warn(
+        "calendar agent request rejected",
+        .field("command", request.command.rawValue),
+        .field("error", error)
+      )
+      return sendError(
+        to: clientFD,
+        code: .invalidRequest,
+        message: errorMessage(for: error, code: .invalidRequest)
+      )
+    }
 
     switch request.command {
     case .version:
@@ -343,6 +359,8 @@ final class CalendarSocketServer {
         return .invalidDateRange
       case .noWritableCalendar:
         return .noWritableCalendar
+      case .eventIdentifierUnavailable:
+        return .eventIdentifierUnavailable
       }
     }
 

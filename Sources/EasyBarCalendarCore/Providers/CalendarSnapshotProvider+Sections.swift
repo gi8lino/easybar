@@ -6,7 +6,8 @@ import Foundation
 extension CalendarSnapshotProvider {
   /// Builds simple rendered sections from normalized events.
   ///
-  /// These sections are only for the regular calendar popup.
+  /// Events are bucketed once by their overlapping section days so the work scales
+  /// with actual event/day overlaps instead of rescanning every event for every day.
   func makeSections(
     query: CalendarAgentQuery,
     events: [CalendarAgentEvent]
@@ -14,19 +15,24 @@ extension CalendarSnapshotProvider {
     guard
       let sectionStartDate = query.sectionStartDate,
       let sectionDayCount = query.sectionDayCount,
-      sectionDayCount > 0
+      (1...CalendarAgentRequestLimits.maximumSectionDayCount).contains(sectionDayCount)
     else {
       return []
     }
 
     let calendar = Calendar.current
     let startOfSections = calendar.startOfDay(for: sectionStartDate)
+    guard
+      let endOfSections = calendar.date(
+        byAdding: .day,
+        value: sectionDayCount,
+        to: startOfSections
+      )
+    else {
+      return []
+    }
+
     var sections: [CalendarAgentSection] = []
-
-    let endOfSections =
-      calendar.date(byAdding: .day, value: sectionDayCount, to: startOfSections)
-      ?? startOfSections.addingTimeInterval(TimeInterval(sectionDayCount * 86_400))
-
     let birthdayEvents = events.filter { event in
       event.isAllDay
         && event.id.hasPrefix("birthday-")
@@ -60,6 +66,13 @@ extension CalendarSnapshotProvider {
     }
 
     let regularEvents = events.filter { !$0.id.hasPrefix("birthday-") }
+    let eventsByDay = CalendarSectionBucketer.bucket(
+      events: regularEvents,
+      sectionStartDate: sectionStartDate,
+      dayCount: sectionDayCount,
+      calendar: calendar
+    )
+    guard eventsByDay.count == sectionDayCount else { return sections }
 
     for dayOffset in 0..<sectionDayCount {
       guard
@@ -70,23 +83,8 @@ extension CalendarSnapshotProvider {
       }
 
       let effectiveDayStart = max(day, sectionStartDate)
-      let dayEvents = regularEvents.filter { event in
-        event.startDate < nextDay && event.endDate > effectiveDayStart
-      }
-
-      let title: String
-      let kind: CalendarAgentSectionKind
-
-      if calendar.isDateInToday(day) {
-        title = query.todayTitle
-        kind = .today
-      } else if calendar.isDateInTomorrow(day) {
-        title = query.tomorrowTitle
-        kind = .tomorrow
-      } else {
-        title = formatDayTitle(day)
-        kind = .future
-      }
+      let dayEvents = eventsByDay[dayOffset]
+      let (title, kind) = sectionHeading(for: day, query: query, calendar: calendar)
 
       guard !dayEvents.isEmpty else {
         sections.append(
@@ -106,13 +104,19 @@ extension CalendarSnapshotProvider {
           title: title,
           kind: kind,
           items: dayEvents.map { event in
-            CalendarAgentItem(
-              id: event.id,
-              time: event.isAllDay ? query.allDayLabel : formatEventTime(event.startDate),
-              startDate: event.startDate,
-              endDate: event.endDate,
+            let displayedStart = max(event.startDate, effectiveDayStart)
+            let displayedEnd = min(event.endDate, nextDay)
+            return CalendarAgentItem(
+              id: "\(event.id)-day-\(dayOffset)",
+              time: event.isAllDay ? query.allDayLabel : formatEventTime(displayedStart),
+              startDate: displayedStart,
+              endDate: displayedEnd,
               isAllDay: event.isAllDay,
-              endTime: formattedEndTime(for: event),
+              endTime: formattedEndTime(
+                startDate: displayedStart,
+                endDate: displayedEnd,
+                isAllDay: event.isAllDay
+              ),
               title: event.title,
               calendarName: event.calendarName,
               calendarColorHex: event.calendarColorHex,
@@ -126,5 +130,20 @@ extension CalendarSnapshotProvider {
     }
 
     return sections
+  }
+
+  /// Resolves one localized section heading.
+  private func sectionHeading(
+    for day: Date,
+    query: CalendarAgentQuery,
+    calendar: Calendar
+  ) -> (String, CalendarAgentSectionKind) {
+    if calendar.isDateInToday(day) {
+      return (query.todayTitle, .today)
+    }
+    if calendar.isDateInTomorrow(day) {
+      return (query.tomorrowTitle, .tomorrow)
+    }
+    return (formatDayTitle(day), .future)
   }
 }

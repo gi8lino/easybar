@@ -4,12 +4,14 @@ import Foundation
 
 /// Coordinates EventKit authorization state, prompts, and retries.
 final class CalendarAuthorizationController: @unchecked Sendable {
-  /// EventKit store used to inspect and request calendar access.
-  private let eventStore: EKEventStore
   /// Thread-safe authorization state cache.
   private let authState: CalendarAuthorizationState
   /// Logger used for authorization diagnostics.
   private let logger: ProcessLogger
+  /// Current EventKit authorization status provider.
+  private let authorizationStatus: () -> EKAuthorizationStatus
+  /// EventKit access-request adapter.
+  private let requestAccess: (@escaping @Sendable (Bool, Error?) -> Void) -> Void
   /// Generation-scoped callback and retry ownership.
   private let lifecycle: AuthorizationLifecycle
 
@@ -17,11 +19,20 @@ final class CalendarAuthorizationController: @unchecked Sendable {
   init(
     eventStore: EKEventStore,
     authState: CalendarAuthorizationState,
-    logger: ProcessLogger
+    logger: ProcessLogger,
+    authorizationStatus: (() -> EKAuthorizationStatus)? = nil,
+    requestAccess: ((@escaping @Sendable (Bool, Error?) -> Void) -> Void)? = nil
   ) {
-    self.eventStore = eventStore
     self.authState = authState
     self.logger = logger
+    self.authorizationStatus =
+      authorizationStatus ?? {
+        EKEventStore.authorizationStatus(for: .event)
+      }
+    self.requestAccess =
+      requestAccess ?? { completion in
+        eventStore.requestFullAccessToEvents(completion: completion)
+      }
     lifecycle = AuthorizationLifecycle(logger: logger)
   }
 
@@ -29,7 +40,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
   func start(onResolvedChange: @escaping () -> Void) {
     let session = lifecycle.start(onChange: onResolvedChange)
 
-    let status = EKEventStore.authorizationStatus(for: .event)
+    let status = authorizationStatus()
     authState.setStatus(status)
 
     logger.info(
@@ -47,7 +58,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
 
   /// Refreshes the stored status from EventKit.
   func refreshStatus() {
-    authState.setStatus(EKEventStore.authorizationStatus(for: .event))
+    authState.setStatus(authorizationStatus())
   }
 
   /// Returns whether calendar access is currently effective.
@@ -69,7 +80,7 @@ final class CalendarAuthorizationController: @unchecked Sendable {
   private func requestAccessIfNeeded(for session: AuthorizationLifecycle.Session) {
     guard lifecycle.isCurrent(session) else { return }
 
-    let status = EKEventStore.authorizationStatus(for: .event)
+    let status = authorizationStatus()
     authState.setStatus(status)
 
     logger.info(
@@ -86,10 +97,10 @@ final class CalendarAuthorizationController: @unchecked Sendable {
     case .notDetermined:
       logger.info("requesting calendar full access")
 
-      eventStore.requestFullAccessToEvents { [weak self, weak session] granted, error in
+      requestAccess { [weak self, weak session] granted, error in
         guard let self, let session, self.lifecycle.isCurrent(session) else { return }
 
-        let newStatus = EKEventStore.authorizationStatus(for: .event)
+        let newStatus = self.authorizationStatus()
         self.authState.setStatus(newStatus)
 
         if let error {

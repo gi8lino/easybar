@@ -68,9 +68,20 @@ extension CalendarSnapshotProvider {
         return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
       }
       .map { event in
-        let eventIdentifier = event.eventIdentifier
-        let stableID =
-          "\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+        let eventIdentifier = normalizedOptionalText(event.eventIdentifier)
+        let title = normalizedTitle(event.title)
+        let location = normalizedOptionalText(event.location)
+        let stableID = CalendarEventIdentity.makeID(
+          prefix: "event-",
+          eventIdentifier: eventIdentifier,
+          calendarID: event.calendar.calendarIdentifier,
+          sourceID: event.calendar.source.sourceIdentifier,
+          title: title,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: event.isAllDay,
+          location: location
+        )
         let travelTimeSeconds = resolvedTravelTimeSeconds(for: event)
         let alertOffsetsSeconds = visibleAlertOffsetsSeconds(
           for: event,
@@ -80,14 +91,14 @@ extension CalendarSnapshotProvider {
         return CalendarAgentEvent(
           id: stableID,
           eventIdentifier: eventIdentifier,
-          title: normalizedTitle(event.title),
+          title: title,
           startDate: event.startDate,
           endDate: event.endDate,
           isAllDay: event.isAllDay,
           calendarID: event.calendar.calendarIdentifier,
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
-          location: normalizedOptionalText(event.location),
+          location: location,
           url: normalizedEventURLText(for: event),
           alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
@@ -105,7 +116,7 @@ extension CalendarSnapshotProvider {
   ) -> [CalendarAgentEvent] {
     guard query.showBirthdays else { return [] }
 
-    let birthdayCalendars = eventStore.calendars(for: .event).filter { $0.type == .birthday }
+    let birthdayCalendars = filteredCalendars(query: query, birthdayOnly: true)
     guard !birthdayCalendars.isEmpty else { return [] }
 
     let predicate = eventStore.predicateForEvents(
@@ -127,9 +138,23 @@ extension CalendarSnapshotProvider {
         return (lhs.eventIdentifier ?? "") < (rhs.eventIdentifier ?? "")
       }
       .map { event in
-        let eventIdentifier = event.eventIdentifier
-        let stableID =
-          "birthday-\(eventIdentifier ?? UUID().uuidString)-\(event.startDate.timeIntervalSince1970)"
+        let eventIdentifier = normalizedOptionalText(event.eventIdentifier)
+        let title = CalendarEventNormalization.birthdayTitle(
+          normalizedTitle(event.title),
+          showAge: query.birthdaysShowAge
+        )
+        let location = normalizedOptionalText(event.location)
+        let stableID = CalendarEventIdentity.makeID(
+          prefix: "birthday-",
+          eventIdentifier: eventIdentifier,
+          calendarID: event.calendar.calendarIdentifier,
+          sourceID: event.calendar.source.sourceIdentifier,
+          title: title,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          isAllDay: true,
+          location: location
+        )
         let travelTimeSeconds = resolvedTravelTimeSeconds(for: event)
         let alertOffsetsSeconds = visibleAlertOffsetsSeconds(
           for: event,
@@ -139,14 +164,14 @@ extension CalendarSnapshotProvider {
         return CalendarAgentEvent(
           id: stableID,
           eventIdentifier: eventIdentifier,
-          title: birthdayTitle(for: event, showAge: query.birthdaysShowAge),
+          title: title,
           startDate: event.startDate,
           endDate: event.endDate,
           isAllDay: true,
           calendarID: event.calendar.calendarIdentifier,
           calendarName: normalizedTitle(event.calendar.title),
           calendarColorHex: colorHex(for: event.calendar.cgColor),
-          location: normalizedOptionalText(event.location),
+          location: location,
           url: normalizedEventURLText(for: event),
           alertOffsetsSeconds: alertOffsetsSeconds,
           isHoliday: isHolidayCalendar(event.calendar),
@@ -173,24 +198,43 @@ extension CalendarSnapshotProvider {
 
   /// Returns the filtered non-birthday calendars for the query.
   private func filteredRegularCalendars(query: CalendarAgentQuery) -> [EKCalendar] {
+    filteredCalendars(query: query, birthdayOnly: false)
+  }
+
+  /// Applies the same include/exclude contract to regular and birthday calendars.
+  private func filteredCalendars(
+    query: CalendarAgentQuery,
+    birthdayOnly: Bool
+  ) -> [EKCalendar] {
     eventStore.calendars(for: .event)
-      .filter { $0.type != .birthday }
+      .filter { birthdayOnly ? $0.type == .birthday : $0.type != .birthday }
       .filter { calendar in
-        CalendarFilterMatcher.matches(
+        Self.calendarMatchesQuery(
           CalendarFilterTarget(
             title: calendar.title,
             identifier: calendar.calendarIdentifier,
             sourceTitle: calendar.source.title,
             sourceIdentifier: calendar.source.sourceIdentifier
           ),
-          includedTitleTokens: query.includedCalendarNames,
-          excludedTitleTokens: query.excludedCalendarNames,
-          includedCalendarIDTokens: query.includedCalendarIDs,
-          excludedCalendarIDTokens: query.excludedCalendarIDs,
-          includedSourceIDTokens: query.includedCalendarSourceIDs,
-          excludedSourceIDTokens: query.excludedCalendarSourceIDs
+          query: query
         )
       }
+  }
+
+  /// Applies the query's include/exclude policy independently of calendar type.
+  static func calendarMatchesQuery(
+    _ target: CalendarFilterTarget,
+    query: CalendarAgentQuery
+  ) -> Bool {
+    CalendarFilterMatcher.matches(
+      target,
+      includedTitleTokens: query.includedCalendarNames,
+      excludedTitleTokens: query.excludedCalendarNames,
+      includedCalendarIDTokens: query.includedCalendarIDs,
+      excludedCalendarIDTokens: query.excludedCalendarIDs,
+      includedSourceIDTokens: query.includedCalendarSourceIDs,
+      excludedSourceIDTokens: query.excludedCalendarSourceIDs
+    )
   }
 
   /// Resolves one writable calendar for creation or update.
@@ -229,16 +273,9 @@ extension CalendarSnapshotProvider {
     return eventStore.event(withIdentifier: trimmed)
   }
 
-  /// Normalizes one calendar name for matching.
-  private func normalizedCalendarName(_ value: String) -> String {
-    value
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-      .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-  }
-
   /// Resolves travel time from the best available source.
   private func resolvedTravelTimeSeconds(for event: EKEvent) -> TimeInterval? {
-    return EventTravelTimeBridge.getSeconds(from: event)
+    return EventKitTravelTimeAdapter.read(from: event)
   }
 
   /// Returns whether the event has at least one visible non-travel alert.
@@ -249,88 +286,39 @@ extension CalendarSnapshotProvider {
   /// Returns visible non-travel alert lead times.
   private func visibleAlertOffsetsSeconds(
     for event: EKEvent,
-    travelTimeSeconds: TimeInterval?
+    travelTimeSeconds _: TimeInterval?
   ) -> [TimeInterval] {
     guard let alarms = event.alarms, !alarms.isEmpty else { return [] }
 
-    return alarms.compactMap { alarm in
-      let offset = alarm.relativeOffset
-      guard offset <= 0 else { return nil }
-      let seconds = abs(offset)
-
-      if let travelTimeSeconds {
-        guard seconds != travelTimeSeconds else { return nil }
+    var relativeOffsets: [TimeInterval] = []
+    var absoluteDates: [Date] = []
+    for alarm in alarms {
+      if let absoluteDate = alarm.absoluteDate {
+        absoluteDates.append(absoluteDate)
+      } else {
+        relativeOffsets.append(alarm.relativeOffset)
       }
-
-      return seconds
     }
+
+    return CalendarEventNormalization.visibleAlertOffsetsSeconds(
+      eventStartDate: event.startDate,
+      relativeOffsets: relativeOffsets,
+      absoluteDates: absoluteDates
+    )
   }
 
   /// Returns whether one calendar should be treated as a holiday calendar.
   private func isHolidayCalendar(_ calendar: EKCalendar) -> Bool {
-    let candidates = [calendar.title, calendar.source.title]
-      .map(normalizedCalendarName(_:))
-
-    return candidates.contains { name in
-      name.contains("holiday")
-        || name.contains("holidays")
-        || name.contains("feiertag")
-        || name.contains("feiertage")
-        || name.contains("jour ferie")
-        || name.contains("jours feries")
-    }
+    CalendarEventNormalization.isHolidayCalendar(
+      isSubscription: calendar.type == .subscription,
+      titles: [calendar.title, calendar.source.title]
+    )
   }
 }
 
 // MARK: - Formatting
 
 extension CalendarSnapshotProvider {
-  /// Returns one birthday title, optionally with age appended.
-  private func birthdayTitle(for event: EKEvent, showAge: Bool) -> String {
-    let rawTitle = normalizedTitle(event.title)
-    let normalized = normalizedBirthdayTitle(rawTitle)
-
-    guard showAge, let age = extractedAge(from: rawTitle) else {
-      return normalized
-    }
-
-    return "\(normalized) (\(age))"
-  }
-
-  /// Removes one trailing age suffix from a birthday title when present.
-  private func normalizedBirthdayTitle(_ title: String) -> String {
-    guard let open = title.lastIndex(of: "("),
-      let close = title.lastIndex(of: ")"),
-      open < close
-    else {
-      return title
-    }
-
-    let suffix = title[title.index(after: open)..<close]
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard Int(suffix) != nil else {
-      return title
-    }
-
-    return title[..<open].trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  /// Extracts an age suffix from one birthday event title.
-  private func extractedAge(from title: String) -> Int? {
-    guard let open = title.lastIndex(of: "("),
-      let close = title.lastIndex(of: ")"),
-      open < close
-    else {
-      return nil
-    }
-
-    let value = title[title.index(after: open)..<close].trimmingCharacters(
-      in: .whitespacesAndNewlines
-    )
-    return Int(value)
-  }
-
   /// Normalizes one optional title into display text.
   func normalizedTitle(_ value: String?) -> String {
     guard let value else { return "Untitled" }
@@ -362,18 +350,14 @@ extension CalendarSnapshotProvider {
 
   /// Extracts the first URL from one of the provided text fields.
   func firstURLText(in values: [String?]) -> String? {
-    guard
-      let detector = try? NSDataDetector(
-        types: NSTextCheckingResult.CheckingType.link.rawValue
-      )
-    else {
-      return nil
-    }
+    guard let detector = Self.linkDetector else { return nil }
 
     for value in values {
       guard let text = normalizedOptionalText(value) else { continue }
       let range = NSRange(text.startIndex..<text.endIndex, in: text)
-      let matches = detector.matches(in: text, options: [], range: range)
+      let matches = Self.linkDetectorLock.withLock {
+        detector.matches(in: text, options: [], range: range)
+      }
 
       if let url = matches.first?.url?.absoluteString {
         return url
@@ -385,28 +369,54 @@ extension CalendarSnapshotProvider {
 
   /// Formats one event time for popup display.
   func formatEventTime(_ date: Date) -> String {
-    return Self.eventTimeFormatter.string(from: date)
+    Self.formatterLock.withLock { Self.eventTimeFormatter.string(from: date) }
   }
 
   /// Returns one rendered end time for timed events when it differs from the start.
+  func formattedEndTime(
+    startDate: Date,
+    endDate: Date,
+    isAllDay: Bool
+  ) -> String? {
+    guard
+      CalendarEventNormalization.shouldShowEndTime(
+        startDate: startDate,
+        endDate: endDate,
+        isAllDay: isAllDay,
+        calendar: .current
+      )
+    else {
+      return nil
+    }
+    return formatEventTime(endDate)
+  }
+
   func formattedEndTime(for event: CalendarAgentEvent) -> String? {
-    guard !event.isAllDay, event.endDate > event.startDate else { return nil }
-
-    let startTime = formatEventTime(event.startDate)
-    let endTime = formatEventTime(event.endDate)
-    guard startTime != endTime else { return nil }
-
-    return endTime
+    formattedEndTime(
+      startDate: event.startDate,
+      endDate: event.endDate,
+      isAllDay: event.isAllDay
+    )
   }
 
   /// Formats one day header for popup display.
   func formatDayTitle(_ date: Date) -> String {
-    return Self.dayTitleFormatter.string(from: date)
+    Self.formatterLock.withLock { Self.dayTitleFormatter.string(from: date) }
   }
 
   /// Formats one birthday date using the configured format.
   func formatBirthdayDate(_ date: Date, format: String) -> String {
-    return Self.birthdayFormatter(for: format).string(from: date)
+    Self.birthdayFormatters.withLock { formatters in
+      let formatter: DateFormatter
+      if let cached = formatters[format] {
+        formatter = cached
+      } else {
+        let created = Self.makeFormatter(format: format)
+        formatters[format] = created
+        formatter = created
+      }
+      return formatter.string(from: date)
+    }
   }
 }
 

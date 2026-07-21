@@ -33,6 +33,11 @@ let package = Package(
       name: "CEasyBarTOML",
       path: "Sources/CEasyBarTOML"
     ),
+    .target(
+      name: "CEasyBarEventKitCompat",
+      path: "Sources/CEasyBarEventKitCompat",
+      publicHeadersPath: "include"
+    ),
     .executableTarget(
       name: "EasyBarGenerateBuildInfo",
       path: "Sources/EasyBarGenerateBuildInfo",
@@ -76,7 +81,8 @@ let package = Package(
     .target(
       name: "EasyBarCalendarCore",
       dependencies: [
-        "EasyBarShared"
+        "EasyBarShared",
+        "CEasyBarEventKitCompat",
       ],
       path: "Sources/EasyBarCalendarCore",
       swiftSettings: strictConcurrencySettings

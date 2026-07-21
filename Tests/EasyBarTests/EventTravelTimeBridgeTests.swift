@@ -11,9 +11,9 @@ final class EventTravelTimeBridgeTests: XCTestCase {
   func testUnsupportedObjectIsIgnoredWithoutUsingKVC() {
     let object = NSObject()
 
-    XCTAssertNil(CalendarSnapshotProvider.EventTravelTimeBridge.getSeconds(from: object))
+    XCTAssertNil(EventKitTravelTimeAdapter.read(from: object))
     XCTAssertFalse(
-      CalendarSnapshotProvider.EventTravelTimeBridge.setSeconds(300, on: object)
+      EventKitTravelTimeAdapter.write(300, to: object)
     )
   }
 
@@ -21,10 +21,10 @@ final class EventTravelTimeBridgeTests: XCTestCase {
     let object = TravelTimeObject()
 
     XCTAssertTrue(
-      CalendarSnapshotProvider.EventTravelTimeBridge.setSeconds(600, on: object)
+      EventKitTravelTimeAdapter.write(600, to: object)
     )
     XCTAssertEqual(
-      CalendarSnapshotProvider.EventTravelTimeBridge.getSeconds(from: object),
+      EventKitTravelTimeAdapter.read(from: object),
       600
     )
   }
@@ -34,8 +34,8 @@ final class EventTravelTimeBridgeTests: XCTestCase {
     object.travelTime = 600
 
     XCTAssertTrue(
-      CalendarSnapshotProvider.EventTravelTimeBridge.setSeconds(nil, on: object)
+      EventKitTravelTimeAdapter.write(nil, to: object)
     )
-    XCTAssertNil(CalendarSnapshotProvider.EventTravelTimeBridge.getSeconds(from: object))
+    XCTAssertNil(EventKitTravelTimeAdapter.read(from: object))
   }
 }

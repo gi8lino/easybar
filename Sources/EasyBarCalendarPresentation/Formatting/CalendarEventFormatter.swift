@@ -21,7 +21,9 @@ public enum CalendarEventFormatter {
       calendar: calendar,
       dateFormat: "HH:mm"
     )
-    guard startTime != endTime else { return nil }
+    guard !calendar.isDate(startDate, inSameDayAs: endDate) || startTime != endTime else {
+      return nil
+    }
 
     return endTime
   }

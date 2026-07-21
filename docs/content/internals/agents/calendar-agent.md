@@ -26,8 +26,9 @@ It is responsible for:
 Notes:
 
 - `query` is required for `fetch` and `subscribe`
-- date range is inclusive/exclusive
-- filters are applied server-side
+- date range is inclusive/exclusive and must be forward, finite, and bounded
+- section counts, filter arrays, text, identifiers, alerts, and mutation durations are bounded before EventKit work begins
+- filters are applied server-side to regular and birthday calendars
 
 ## Responses
 
@@ -78,9 +79,11 @@ Other kinds:
 ## Behavior notes
 
 - no access returns an empty snapshot
-- birthdays are separated
-- travel time is handled explicitly
-- sections are optional
+- birthdays are separated and use the same calendar filters as regular events
+- occurrence ids are deterministic even when EventKit omits an event identifier
+- relative and absolute alarms are normalized into visible lead times
+- EventKit exposes no public event travel-time API; compatibility access is isolated behind an exception-safe Objective-C adapter and invalid values fail closed
+- sections are optional, day-bucketed once, and clamp multi-day display times to each section day
 
 ## Boundary
 
