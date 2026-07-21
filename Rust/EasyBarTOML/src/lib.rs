@@ -184,14 +184,14 @@ fn apply_edit(document: &mut DocumentMut, edit: Edit) -> Result<(), BridgeError>
         .path
         .split_last()
         .ok_or_else(|| bridge_error("edit path must not be empty"))?;
-    let mut table = document.as_table_mut();
+    let mut table: &mut dyn toml_edit::TableLike = document.as_table_mut();
     for component in tables {
         if !table.contains_key(component) {
             table.insert(component, Item::Table(Table::new()));
         }
         table = table
             .get_mut(component)
-            .and_then(Item::as_table_mut)
+            .and_then(Item::as_table_like_mut)
             .ok_or_else(|| bridge_error(format!("{} is not a TOML table", component)))?;
     }
     let mut replacement = edit_item(edit.value);

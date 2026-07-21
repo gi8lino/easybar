@@ -70,6 +70,26 @@ final class TOMLDocumentTests: XCTestCase {
     )
   }
 
+  func testEditPreservesInlineTablesAndComments() throws {
+    let source =
+      "builtins = { inbox = { content = { show_when_empty = true, max_items = 10 } } } # Keep me\n"
+
+    let edited = try TOMLDocument.edit(
+      source,
+      edits: [
+        TOMLEdit(
+          path: ["builtins", "inbox", "content", "show_when_empty"],
+          value: .bool(false)
+        )
+      ]
+    )
+
+    XCTAssertEqual(
+      edited,
+      source.replacingOccurrences(of: "show_when_empty = true", with: "show_when_empty = false")
+    )
+  }
+
   func testParseErrorContainsSourceLocation() {
     XCTAssertThrowsError(try TOMLTable(string: "[broken\nvalue = true")) { error in
       guard let parseError = error as? TOMLParseError else {
