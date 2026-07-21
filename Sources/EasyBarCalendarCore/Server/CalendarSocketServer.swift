@@ -114,7 +114,7 @@ final class CalendarSocketServer {
 
   /// Acknowledges the request before allowing the host app to terminate.
   private func handleRestart(to clientFD: Int32) -> ClientDisposition {
-    return transport.sendAndClose(CalendarAgentMessage(kind: .restarting), to: clientFD) {
+    return transport.closeAfterSending(CalendarAgentMessage(kind: .restarting), to: clientFD) {
       [onRestartRequested] in
       onRestartRequested()
     }
@@ -122,7 +122,7 @@ final class CalendarSocketServer {
 
   /// Sends the calendar-agent version response.
   private func sendVersion(to clientFD: Int32) -> ClientDisposition {
-    transport.sendAndClose(
+    transport.closeAfterSending(
       CalendarAgentMessage(
         kind: .version,
         version: CalendarAgentVersion(
@@ -136,7 +136,7 @@ final class CalendarSocketServer {
 
   /// Sends a pong response.
   private func sendPong(to clientFD: Int32) -> ClientDisposition {
-    return transport.sendAndClose(CalendarAgentMessage(kind: .pong), to: clientFD)
+    return transport.closeAfterSending(CalendarAgentMessage(kind: .pong), to: clientFD)
   }
 
   /// Handles a one-shot snapshot fetch.
@@ -153,7 +153,7 @@ final class CalendarSocketServer {
     }
 
     let snapshot = provider.snapshot(for: query)
-    return transport.sendAndClose(
+    return transport.closeAfterSending(
       CalendarAgentMessage(kind: .snapshot, snapshot: snapshot),
       to: clientFD
     )
@@ -172,7 +172,10 @@ final class CalendarSocketServer {
       )
     }
 
-    transport.addSubscriber(Subscriber(query: query), for: clientFD)
+    guard transport.addSubscriber(Subscriber(query: query), for: clientFD) else {
+      logger.warn("calendar agent subscriber rejected", .field("fd", clientFD))
+      return .close
+    }
     logger.info(
       "calendar agent subscriber added",
       .field("fd", clientFD),

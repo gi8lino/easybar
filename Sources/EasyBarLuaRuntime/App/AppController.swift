@@ -4,11 +4,13 @@ import Foundation
 
 /// App-level controller for the Lua runtime process.
 ///
-/// This process stays intentionally small. It connects the configured Lua
-/// transport socket, maps that connection onto standard input and output, and
-/// then replaces itself with the configured Lua interpreter.
+/// This bootstrap authenticates to the host with a per-launch token before it
+/// maps the transport onto standard input and output and replaces itself with
+/// the configured Lua interpreter.
 @main
 final class AppController {
+  private static let transportTokenEnvironmentKey = "EASYBAR_LUA_TRANSPORT_TOKEN"
+
   /// Captures the command-line inputs for the Lua runtime process.
   private struct RuntimeArguments {
     let socketPath: String
@@ -20,6 +22,11 @@ final class AppController {
     let widgetFiles: [String]
   }
 
+  private struct AuthenticationRecord: Encodable {
+    let type = "hello"
+    let token: String
+  }
+
   /// Runs the Lua runtime process.
   static func main() {
     Darwin.exit(AppController().run())
@@ -29,7 +36,16 @@ final class AppController {
   func run() -> Int32 {
     do {
       let arguments = try parseArguments()
+      let token = try transportAuthenticationToken()
       let socketFileDescriptor = try connectSocket(path: arguments.socketPath)
+      try authenticateSocket(fd: socketFileDescriptor, token: token)
+      guard configureBlocking(fd: socketFileDescriptor) else {
+        close(socketFileDescriptor)
+        throw RuntimeBootstrapError.blockingModeFailed(errno: errno)
+      }
+      _ = Self.transportTokenEnvironmentKey.withCString { key in
+        unsetenv(key)
+      }
       try duplicateTransportToStandardIO(fd: socketFileDescriptor)
       try execLua(arguments)
     } catch {
@@ -56,42 +72,36 @@ final class AppController {
     )
   }
 
+  /// Reads the required launch token without forwarding it into the Lua process.
+  private func transportAuthenticationToken() throws -> String {
+    guard
+      let token = ProcessInfo.processInfo.environment[Self.transportTokenEnvironmentKey],
+      !token.isEmpty
+    else {
+      throw RuntimeBootstrapError.missingAuthenticationToken
+    }
+    return token
+  }
+
   /// Connects the runtime process to the configured Lua transport socket.
   private func connectSocket(path: String) throws -> Int32 {
-    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard fd >= 0 else {
-      throw RuntimeBootstrapError.socketFailed(errno: errno)
-    }
-
-    guard configureNoSigPipe(fd: fd) else {
-      close(fd)
-      throw RuntimeBootstrapError.noSigPipeFailed
-    }
-
-    let address: sockaddr_un
     do {
-      address = try makeSockAddrUn(path: path)
+      return try openConnectedUnixSocket(at: path, timeout: 5, keepNonBlocking: true)
     } catch {
+      throw RuntimeBootstrapError.connectFailed(path: path, message: "\(error)")
+    }
+  }
+
+  /// Sends the token record before any Lua protocol data can reach the host.
+  private func authenticateSocket(fd: Int32, token: String) throws {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let data = try encoder.encode(AuthenticationRecord(token: token)) + Data([0x0A])
+
+    if let error = writeAll(data, to: fd, timeout: 2) {
       close(fd)
-      throw RuntimeBootstrapError.invalidSocketPath(path: path, message: "\(error)")
+      throw RuntimeBootstrapError.authenticationFailed(message: String(describing: error))
     }
-
-    var mutableAddress = address
-    let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
-
-    let connectResult = withUnsafePointer(to: &mutableAddress) {
-      $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        connect(fd, $0, addressLength)
-      }
-    }
-
-    guard connectResult == 0 else {
-      let message = String(cString: strerror(errno))
-      close(fd)
-      throw RuntimeBootstrapError.connectFailed(path: path, message: message)
-    }
-
-    return fd
   }
 
   /// Maps the connected transport socket onto standard input and output.
@@ -148,10 +158,10 @@ final class AppController {
 /// Startup errors produced by the Lua runtime bootstrap process.
 private enum RuntimeBootstrapError: LocalizedError {
   case usage
-  case socketFailed(errno: Int32)
-  case noSigPipeFailed
-  case invalidSocketPath(path: String, message: String)
+  case missingAuthenticationToken
   case connectFailed(path: String, message: String)
+  case authenticationFailed(message: String)
+  case blockingModeFailed(errno: Int32)
   case dup2Failed(stream: String, message: String)
   case execUnexpectedlyReturned
   case execFailed(luaPath: String, message: String)
@@ -162,14 +172,14 @@ private enum RuntimeBootstrapError: LocalizedError {
     case .usage:
       return
         "usage: EasyBarLuaRuntime <socket-path> <lua-path> <runtime-path> <widgets-path> <default-command-timeout-seconds> <default-command-max-output-bytes> [widget-file...]"
-    case .socketFailed(let errno):
-      return "socket failed errno=\(errno)"
-    case .noSigPipeFailed:
-      return "failed to configure socket no-sigpipe"
-    case .invalidSocketPath(let path, let message):
-      return "invalid socket path path=\(path) error=\(message)"
+    case .missingAuthenticationToken:
+      return "missing Lua transport authentication token"
     case .connectFailed(let path, let message):
       return "connect failed path=\(path) error=\(message)"
+    case .authenticationFailed(let message):
+      return "transport authentication failed error=\(message)"
+    case .blockingModeFailed(let errnoValue):
+      return "failed to restore blocking socket mode errno=\(errnoValue)"
     case .dup2Failed(let stream, let message):
       return "dup2 \(stream) failed error=\(message)"
     case .execUnexpectedlyReturned:

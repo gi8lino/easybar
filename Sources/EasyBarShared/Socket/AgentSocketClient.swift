@@ -3,22 +3,41 @@ import Foundation
 
 /// Shared newline-delimited client transport used by app-side and helper-process agent clients.
 ///
-/// Sendability is guarded by `LockedState`; all mutable socket/task state is
-/// accessed through that lock, and callbacks are invoked outside the lock.
+/// Every connection owns a deadline-bound writer. Shutdown invalidates and
+/// shuts down the socket before queued writes drain, preventing a peer that has
+/// stopped reading from deadlocking reconnect or application teardown.
 public final class AgentSocketClient<
   Request: Encodable & Sendable,
   Message: Decodable & Sendable
 >: @unchecked Sendable {
+  private final class Connection: @unchecked Sendable {
+    let identifier: UInt64
+    let writer: BoundedSocketWriter
+
+    var fd: Int32 { writer.fd }
+
+    init(fd: Int32, identifier: UInt64, label: String, writeTimeout: TimeInterval) {
+      self.identifier = identifier
+      self.writer = BoundedSocketWriter(
+        fd: fd,
+        label: "easybar.\(label).socket-writer.\(identifier)",
+        writeTimeout: writeTimeout,
+        maxPendingMessages: 8,
+        maxPendingBytes: 256 * 1024
+      )
+    }
+  }
+
   private struct State {
-    var socketFD: Int32 = -1
     var running = false
     var connectionThread: Thread?
     var nextReconnectDelayOverride: TimeInterval?
-    var activeConnectionID: UInt64 = 0
+    var nextConnectionID: UInt64 = 0
+    var connection: Connection?
   }
 
   private struct StopSnapshot {
-    let fd: Int32
+    let connection: Connection?
     let connectionID: UInt64
     let shouldNotifyDisconnect: Bool
   }
@@ -34,7 +53,7 @@ public final class AgentSocketClient<
   private let onDecodeError: (() -> Void)?
   private let logger: ProcessLogger
   private let reconnectScheduler: BackoffScheduler
-  private let writerQueue: DispatchQueue
+  private let writeTimeout: TimeInterval
   private let state = LockedState(State())
 
   /// Creates one shared agent client transport.
@@ -48,6 +67,7 @@ public final class AgentSocketClient<
     onDisconnected: (() -> Void)? = nil,
     onDecodedMessage: (() -> Void)? = nil,
     onDecodeError: (() -> Void)? = nil,
+    writeTimeout: TimeInterval = 1,
     logger: ProcessLogger
   ) {
     self.label = label
@@ -59,8 +79,8 @@ public final class AgentSocketClient<
     self.onDisconnected = onDisconnected
     self.onDecodedMessage = onDecodedMessage
     self.onDecodeError = onDecodeError
+    self.writeTimeout = normalizedSocketTimeout(writeTimeout, fallback: 1)
     self.logger = logger
-    self.writerQueue = DispatchQueue(label: "easybar.\(label).socket-writer")
     self.reconnectScheduler = BackoffScheduler(
       label: "\(label) reconnect",
       delays: [2, 5, 10, 30],
@@ -70,15 +90,13 @@ public final class AgentSocketClient<
 
   /// Returns whether the client currently has an open socket.
   public var isConnected: Bool {
-    state.withLock { state in
-      state.running && state.socketFD >= 0
-    }
+    state.withLock { $0.running && $0.connection != nil }
   }
 
   /// Returns whether a callback generation still belongs to the current client run.
   public func isCurrentConnectionGeneration(_ connectionID: UInt64) -> Bool {
     state.withLock { state in
-      state.running && state.activeConnectionID == connectionID
+      state.running && state.connection?.identifier == connectionID
     }
   }
 
@@ -101,26 +119,20 @@ public final class AgentSocketClient<
       state.running = false
       state.nextReconnectDelayOverride = nil
 
-      let currentFD = state.socketFD
-      let connectionID = state.activeConnectionID
-      state.socketFD = -1
+      let connection = state.connection
+      state.connection = nil
       state.connectionThread = nil
-      state.activeConnectionID &+= 1
+      state.nextConnectionID &+= 1
 
       return StopSnapshot(
-        fd: currentFD,
-        connectionID: connectionID,
-        shouldNotifyDisconnect: currentFD >= 0
+        connection: connection,
+        connectionID: connection?.identifier ?? state.nextConnectionID,
+        shouldNotifyDisconnect: connection != nil
       )
     }
 
     reconnectScheduler.cancel()
-    writerQueue.sync {}
-    if snapshot.fd >= 0 {
-      shutdown(snapshot.fd, SHUT_RDWR)
-      close(snapshot.fd)
-    }
-
+    snapshot.connection?.writer.close()
     clearState(snapshot.connectionID)
 
     if snapshot.shouldNotifyDisconnect {
@@ -131,23 +143,24 @@ public final class AgentSocketClient<
   /// Overrides the delay used for the next reconnect attempt.
   public func setNextReconnectDelay(_ delay: TimeInterval?) {
     state.withLock { state in
-      state.nextReconnectDelayOverride = delay
+      state.nextReconnectDelayOverride = delay.flatMap {
+        $0.isFinite ? max(0, $0) : nil
+      }
     }
   }
 
   /// Sends one fresh subscribe request through the active socket.
   public func refresh() {
-    let connection = currentConnection()
-    guard connection.fd >= 0 else { return }
+    guard let connection = currentConnection() else { return }
 
     guard send(subscribeRequest(), to: connection) else {
       logger.warn("\(label) failed to send refresh request")
-      handleDisconnect(fd: connection.fd, connectionID: connection.id)
+      handleDisconnect(connection)
       return
     }
   }
 
-  /// Starts one connection attempt on a dedicated blocking socket thread.
+  /// Starts one connection attempt on a dedicated socket thread.
   private func connect() {
     let thread = Thread { [weak self] in
       self?.runConnectionAttempt()
@@ -176,8 +189,8 @@ public final class AgentSocketClient<
       return
     }
 
-    guard let connectionID = activateConnectedSocketFD(fd) else {
-      shutdown(fd, SHUT_RDWR)
+    guard let connection = activateConnectedSocketFD(fd) else {
+      Darwin.shutdown(fd, SHUT_RDWR)
       close(fd)
       return
     }
@@ -188,46 +201,43 @@ public final class AgentSocketClient<
       .field("socket", resolvedSocketPath),
     )
 
-    guard send(subscribeRequest(), to: (fd, connectionID)) else {
+    guard send(subscribeRequest(), to: connection) else {
       logger.warn("\(label) failed to send subscribe request")
-      handleDisconnect(fd: fd, connectionID: connectionID)
+      handleDisconnect(connection)
       return
     }
 
     reconnectScheduler.resetDelay()
-    readLoop(fd: fd, connectionID: connectionID)
+    readLoop(connection)
   }
 
   /// Reads newline-delimited messages until the socket disconnects.
-  private func readLoop(fd: Int32, connectionID: UInt64) {
+  private func readLoop(_ connection: Connection) {
     var buffer = [UInt8](repeating: 0, count: 4096)
     var lineDecoder = LineDelimitedJSONDecoder<Message>()
 
-    while isActiveConnection(fd: fd, connectionID: connectionID) {
+    while isActiveConnection(connection) {
+      guard waitForReadable(connection) else { break }
+
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
-        return Darwin.read(fd, baseAddress, rawBuffer.count)
+        return Darwin.read(connection.fd, baseAddress, rawBuffer.count)
       }
 
       if count > 0 {
         handleDecodedMessages(
           lineDecoder.append(buffer.prefix(count)),
-          fd: fd,
-          connectionID: connectionID
+          connection: connection
         )
         continue
       }
 
       if count == 0 {
-        handleDecodedMessages(
-          lineDecoder.flush(),
-          fd: fd,
-          connectionID: connectionID
-        )
+        handleDecodedMessages(lineDecoder.flush(), connection: connection)
         break
       }
 
-      if errno == EINTR {
+      if errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK {
         continue
       }
 
@@ -238,23 +248,22 @@ public final class AgentSocketClient<
       break
     }
 
-    handleDisconnect(fd: fd, connectionID: connectionID)
+    handleDisconnect(connection)
   }
 
   /// Handles decoded message payloads and records decode failures.
   private func handleDecodedMessages(
     _ results: [Result<Message, Error>],
-    fd: Int32,
-    connectionID: UInt64
+    connection: Connection
   ) {
     for result in results {
-      guard isActiveConnection(fd: fd, connectionID: connectionID) else { return }
+      guard isActiveConnection(connection) else { return }
 
       switch result {
       case .success(let message):
         onDecodedMessage?()
-        guard isActiveConnection(fd: fd, connectionID: connectionID) else { return }
-        handleMessage(message, connectionID)
+        guard isActiveConnection(connection) else { return }
+        handleMessage(message, connection.identifier)
 
       case .failure(let error):
         onDecodeError?()
@@ -267,15 +276,12 @@ public final class AgentSocketClient<
   }
 
   /// Handles one socket disconnect and schedules reconnect when still running.
-  private func handleDisconnect(fd: Int32, connectionID: UInt64) {
-    let wasActive = clearConnectedSocketFD(fd, connectionID: connectionID)
+  private func handleDisconnect(_ connection: Connection) {
+    let wasActive = clearConnectedSocket(connection)
     guard wasActive else { return }
 
-    writerQueue.sync {}
-    shutdown(fd, SHUT_RDWR)
-    close(fd)
-
-    clearState(connectionID)
+    connection.writer.close()
+    clearState(connection.identifier)
     onDisconnected?()
 
     guard isRunning() else { return }
@@ -304,57 +310,58 @@ public final class AgentSocketClient<
     state.withLock { $0.running }
   }
 
-  /// Returns the currently active connection tuple.
-  private func currentConnection() -> (fd: Int32, id: UInt64) {
-    state.withLock { state in
-      (state.socketFD, state.activeConnectionID)
-    }
+  /// Returns the currently active connection.
+  private func currentConnection() -> Connection? {
+    state.withLock { $0.connection }
   }
 
   /// Stores one newly connected socket when still running.
-  private func activateConnectedSocketFD(_ fd: Int32) -> UInt64? {
-    let activation = state.withLock { state -> (connectionID: UInt64, replacedFD: Int32)? in
+  private func activateConnectedSocketFD(_ fd: Int32) -> Connection? {
+    let activation = state.withLock { state -> (Connection, Connection?)? in
       guard state.running else { return nil }
 
-      let replacedFD = state.socketFD >= 0 && state.socketFD != fd ? state.socketFD : -1
-      state.socketFD = fd
-      state.activeConnectionID &+= 1
-      return (state.activeConnectionID, replacedFD)
+      state.nextConnectionID &+= 1
+      let connection = Connection(
+        fd: fd,
+        identifier: state.nextConnectionID,
+        label: label,
+        writeTimeout: writeTimeout
+      )
+      let replacedConnection = state.connection
+      state.connection = connection
+      return (connection, replacedConnection)
     }
 
     guard let activation else { return nil }
-    if activation.replacedFD >= 0 {
-      writerQueue.sync {}
-      shutdown(activation.replacedFD, SHUT_RDWR)
-      close(activation.replacedFD)
-    }
-    return activation.connectionID
+    activation.1?.writer.close()
+    return activation.0
   }
 
-  /// Clears the active fd if it still matches the given connection.
-  private func clearConnectedSocketFD(_ fd: Int32, connectionID: UInt64) -> Bool {
+  /// Clears the active connection if it still matches the given object.
+  private func clearConnectedSocket(_ connection: Connection) -> Bool {
     state.withLock { state -> Bool in
-      guard state.socketFD == fd, state.activeConnectionID == connectionID else {
-        return false
-      }
-
-      state.socketFD = -1
+      guard state.connection === connection else { return false }
+      state.connection = nil
       state.connectionThread = nil
       return true
     }
   }
 
-  /// Returns whether the fd still represents the active connection.
-  private func isActiveConnection(fd: Int32, connectionID: UInt64) -> Bool {
+  /// Returns whether the object still represents the active connection.
+  private func isActiveConnection(_ connection: Connection) -> Bool {
     state.withLock { state in
-      state.running && state.socketFD == fd && state.activeConnectionID == connectionID
+      state.running && state.connection === connection
     }
   }
 
-  /// Opens one connected Unix socket.
+  /// Opens one connected nonblocking Unix socket.
   private func openConnectedSocket(socketPath: String) -> Int32? {
     do {
-      return try openConnectedUnixSocket(at: socketPath)
+      return try openConnectedUnixSocket(
+        at: socketPath,
+        timeout: 5,
+        keepNonBlocking: true
+      )
     } catch {
       logger.warn(
         "\(label) socket connection failed",
@@ -366,27 +373,51 @@ public final class AgentSocketClient<
   }
 
   /// Encodes and sends one request line.
-  private func send(_ request: Request, to connection: (fd: Int32, id: UInt64)) -> Bool {
-    return writerQueue.sync {
-      guard isActiveConnection(fd: connection.fd, connectionID: connection.id) else {
-        logger.debug("\(label) dropping stale socket write")
-        return false
-      }
+  private func send(_ request: Request, to connection: Connection) -> Bool {
+    guard isActiveConnection(connection) else {
+      logger.debug("\(label) dropping stale socket write")
+      return false
+    }
 
-      let encoder = JSONEncoder()
-      encoder.outputFormatting = [.sortedKeys]
-      encoder.dateEncodingStrategy = .iso8601
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    encoder.dateEncodingStrategy = .iso8601
 
-      do {
-        let data = try encoder.encode(request) + Data([0x0A])
-        return writeAll(data, to: connection.fd)
-      } catch {
+    do {
+      let data = try encoder.encode(request) + Data([0x0A])
+      if let error = connection.writer.writeSynchronously(data) {
         logger.warn(
-          "\(label) failed to encode request",
-          .field("error", error),
+          "\(label) request write failed",
+          .field("error", String(describing: error))
         )
         return false
       }
+      return true
+    } catch {
+      logger.warn(
+        "\(label) failed to encode request",
+        .field("error", error),
+      )
+      return false
     }
+  }
+
+  /// Waits for input while periodically checking connection ownership.
+  private func waitForReadable(_ connection: Connection) -> Bool {
+    var descriptor = pollfd(fd: connection.fd, events: Int16(POLLIN), revents: 0)
+
+    while isActiveConnection(connection) {
+      let result = poll(&descriptor, 1, 1_000)
+      if result > 0 {
+        let events = Int32(descriptor.revents)
+        if (events & POLLIN) != 0 { return true }
+        if (events & (POLLERR | POLLHUP | POLLNVAL)) != 0 { return false }
+        continue
+      }
+      if result == 0 { continue }
+      if errno == EINTR { continue }
+      return false
+    }
+    return false
   }
 }

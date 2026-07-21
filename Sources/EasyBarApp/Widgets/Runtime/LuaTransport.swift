@@ -3,16 +3,20 @@ import EasyBarShared
 import Foundation
 
 private enum LuaTransportLimits {
-  /// Maximum bytes buffered for one newline-delimited JSON message from Lua.
   static let maxLineBytes = 1024 * 1024
+  static let maxAuthenticationBytes = 4096
+  static let authenticationTimeout: TimeInterval = 2
+  static let writeTimeout: TimeInterval = 1
+  static let maxPendingWrites = 256
+  static let maxPendingWriteBytes = 2 * 1024 * 1024
 }
 
 /// Handles dedicated socket transport plus stderr logging for the Lua runtime process.
 ///
-/// Sendability is guarded by `LockedState`; file descriptors, task handles, and
-/// the current line handler are all read or changed through that lock. Outbound
-/// socket writes are additionally serialized by `writerQueue` so JSON lines keep
-/// their ordering and cannot interleave on the stream socket.
+/// The first accepted peer must prove knowledge of a per-launch token before it
+/// can become the runtime connection. Outbound records use a bounded writer, and
+/// shutdown closes the socket before queued work drains so a stalled Lua process
+/// cannot block reload or grow memory without limit.
 final class LuaTransport: @unchecked Sendable {
   /// Startup errors surfaced while preparing the transport.
   enum TransportError: LocalizedError {
@@ -26,23 +30,27 @@ final class LuaTransport: @unchecked Sendable {
     }
   }
 
+  private struct AuthenticationRecord: Decodable {
+    let type: String
+    let token: String
+  }
+
   private struct State {
     var generation: UInt64 = 0
-    var socketPath: String?
-    var listenerFD: Int32 = -1
-    var clientFD: Int32 = -1
+    var listener: OwnedUnixSocketListener?
+    var clientWriter: BoundedSocketWriter?
     var errorPipe: Pipe?
     var acceptTask: Task<Void, Never>?
     var readTask: Task<Void, Never>?
     var stderrTask: Task<Void, Never>?
     var lineHandler: (@Sendable (String) -> Void)?
+    var authenticationToken: String?
   }
 
   private let logger: ProcessLogger
   private let logBridge: LuaLogBridge
   private let metricsCoordinator: MetricsCoordinator
   private let state = LockedState(State())
-  private let writerQueue = DispatchQueue(label: "easybar.lua-transport.writer")
 
   /// Creates one Lua transport.
   init(logger: ProcessLogger, metricsCoordinator: MetricsCoordinator = .shared) {
@@ -54,17 +62,22 @@ final class LuaTransport: @unchecked Sendable {
   /// Starts listening on the configured Lua socket and installs stderr handling.
   func startListening(
     socketPath: String,
+    authenticationToken: String,
     error: Pipe,
     lineHandler: @escaping @Sendable (String) -> Void
   ) throws {
     shutdown()
 
-    let listenerFD = try makeListeningSocket(at: socketPath)
+    guard !authenticationToken.isEmpty else {
+      throw TransportError.startupFailed("lua transport authentication token is empty")
+    }
+
+    let listener = try makeListeningSocket(at: socketPath)
     let generation = state.withLock { state -> UInt64 in
-      state.socketPath = socketPath
+      state.listener = listener
       state.errorPipe = error
       state.lineHandler = lineHandler
-      state.listenerFD = listenerFD
+      state.authenticationToken = authenticationToken
       state.generation &+= 1
       return state.generation
     }
@@ -81,8 +94,7 @@ final class LuaTransport: @unchecked Sendable {
     }
 
     let acceptTask = DetachedTask.run(priority: .utility) { [weak self] in
-      guard let self else { return }
-      self.acceptConnection(generation: generation)
+      self?.acceptAuthenticatedConnection(generation: generation)
     }
 
     state.withLock { state in
@@ -101,14 +113,14 @@ final class LuaTransport: @unchecked Sendable {
     let snapshot = state.withLock { state -> State in
       state.generation &+= 1
       let snapshot = state
-      state.socketPath = nil
-      state.listenerFD = -1
-      state.clientFD = -1
+      state.listener = nil
+      state.clientWriter = nil
       state.errorPipe = nil
       state.acceptTask = nil
       state.readTask = nil
       state.stderrTask = nil
       state.lineHandler = nil
+      state.authenticationToken = nil
       return snapshot
     }
 
@@ -116,23 +128,9 @@ final class LuaTransport: @unchecked Sendable {
     snapshot.readTask?.cancel()
     snapshot.stderrTask?.cancel()
 
-    // Drain queued writes after the generation was invalidated but before the
-    // file descriptors are closed. This prevents a stale queued send from
-    // writing to a descriptor after the OS has reused it for another resource.
-    writerQueue.sync {}
-
-    if snapshot.clientFD >= 0 {
-      Darwin.shutdown(snapshot.clientFD, SHUT_RDWR)
-      close(snapshot.clientFD)
-    }
-
-    if snapshot.listenerFD >= 0 {
-      Darwin.shutdown(snapshot.listenerFD, SHUT_RDWR)
-      close(snapshot.listenerFD)
-    }
-
-    if let socketPath = snapshot.socketPath {
-      unlink(socketPath)
+    snapshot.clientWriter?.close()
+    if let listener = snapshot.listener {
+      closeListeningUnixSocket(listener)
     }
 
     try? snapshot.errorPipe?.fileHandleForReading.close()
@@ -144,39 +142,49 @@ final class LuaTransport: @unchecked Sendable {
     guard let data = (string + "\n").data(using: .utf8) else { return }
 
     let snapshot = state.withLock { state in
-      (generation: state.generation, clientFD: state.clientFD)
+      (generation: state.generation, writer: state.clientWriter)
     }
 
-    guard snapshot.clientFD >= 0 else {
+    guard let writer = snapshot.writer else {
       logger.debug("cannot send event, lua socket not connected")
       return
     }
 
-    let byteCount = string.utf8.count
-    writerQueue.async { [weak self, data, snapshot, byteCount] in
-      guard let self else { return }
-      guard self.isCurrentClientFD(snapshot.clientFD, generation: snapshot.generation) else {
-        self.logger.debug("dropping stale lua socket write")
+    let accepted = writer.enqueue(data) { [weak self, weak writer] error in
+      guard let self, let writer else { return }
+      if let error {
+        self.logger.error(
+          "failed writing to lua socket",
+          .field("error", String(describing: error))
+        )
+        self.clearClientWriter(writer, generation: snapshot.generation)
         return
       }
 
-      if writeAll(data, to: snapshot.clientFD) {
-        Task {
-          await self.metricsCoordinator.recordLuaWrite()
-        }
-        self.logger.trace("sent to lua socket", .field("bytes", byteCount))
-      } else {
-        self.logger.error("failed writing to lua socket")
+      Task {
+        await self.metricsCoordinator.recordLuaWrite()
       }
+      self.logger.trace("sent to lua socket", .field("bytes", data.count - 1))
+    }
+
+    guard accepted else {
+      logger.warn(
+        "dropping lua socket message because the write queue is full",
+        .field("bytes", data.count),
+        .field("max_messages", LuaTransportLimits.maxPendingWrites),
+        .field("max_bytes", LuaTransportLimits.maxPendingWriteBytes)
+      )
+      clearClientWriter(writer, generation: snapshot.generation)
+      return
     }
   }
 
   /// Creates and binds the listening Unix socket.
-  private func makeListeningSocket(at socketPath: String) throws -> Int32 {
+  private func makeListeningSocket(at socketPath: String) throws -> OwnedUnixSocketListener {
     do {
-      let fd = try makeListeningUnixSocket(
+      let listener = try makeOwnedListeningUnixSocket(
         at: socketPath,
-        backlog: 1,
+        backlog: 2,
         onChmodFailure: { [logger, socketPath] errnoValue in
           logger.warn(
             "lua socket chmod failed",
@@ -186,7 +194,7 @@ final class LuaTransport: @unchecked Sendable {
         }
       )
       logger.debug("lua socket listening", .field("socket_path", socketPath))
-      return fd
+      return listener
     } catch {
       throw TransportError.startupFailed(
         "lua socket setup failed path=\(socketPath) error=\(error)"
@@ -194,45 +202,147 @@ final class LuaTransport: @unchecked Sendable {
     }
   }
 
-  /// Accepts one runtime connection when still current.
-  private func acceptConnection(generation: UInt64) {
-    let listenerFD = state.withLock { state in
-      state.generation == generation ? state.listenerFD : -1
-    }
-
-    guard listenerFD >= 0 else { return }
-
-    let clientFD = accept(listenerFD, nil, nil)
-    guard clientFD >= 0 else {
-      if shouldLogAcceptFailure(errnoValue: errno) {
-        logger.error("lua socket accept failed", .field("errno", errno))
+  /// Accepts peers until one supplies the launch token for this generation.
+  private func acceptAuthenticatedConnection(generation: UInt64) {
+    while !Task.isCancelled {
+      let snapshot = state.withLock { state in
+        (
+          listener: state.generation == generation ? state.listener : nil,
+          token: state.generation == generation ? state.authenticationToken : nil
+        )
       }
-      return
-    }
+      guard let listener = snapshot.listener, let expectedToken = snapshot.token else { return }
 
-    guard configureNoSigPipe(fd: clientFD) else {
-      logger.error("failed to configure lua client socket no-sigpipe", .field("fd", clientFD))
-      close(clientFD)
-      return
-    }
-
-    let lineHandler = state.withLock { state -> (@Sendable (String) -> Void)? in
-      guard state.generation == generation else {
-        return nil
+      let clientFD = accept(listener.fd, nil, nil)
+      guard clientFD >= 0 else {
+        if shouldLogAcceptFailure(errnoValue: errno), isCurrent(generation: generation) {
+          logger.error("lua socket accept failed", .field("errno", errno))
+        }
+        return
       }
 
-      state.clientFD = clientFD
-      return state.lineHandler
+      guard configureNoSigPipe(fd: clientFD), configureNonBlocking(fd: clientFD) else {
+        logger.error("failed to configure lua client socket", .field("fd", clientFD))
+        close(clientFD)
+        continue
+      }
+
+      let writer = BoundedSocketWriter(
+        fd: clientFD,
+        label: "easybar.lua-transport.writer.\(generation)",
+        writeTimeout: LuaTransportLimits.writeTimeout,
+        maxPendingMessages: LuaTransportLimits.maxPendingWrites,
+        maxPendingBytes: LuaTransportLimits.maxPendingWriteBytes
+      )
+
+      guard
+        let initialPending = authenticate(
+          fd: clientFD,
+          expectedToken: expectedToken,
+          generation: generation
+        )
+      else {
+        logger.warn("rejected unauthenticated lua socket peer", .field("fd", clientFD))
+        writer.close()
+        continue
+      }
+
+      guard installClientWriter(writer, generation: generation) else {
+        writer.close()
+        return
+      }
+
+      startReadTask(
+        writer: writer,
+        generation: generation,
+        initialPending: initialPending
+      )
+      logger.debug("lua socket connected", .field("fd", clientFD))
+      return
+    }
+  }
+
+  /// Validates the first line and returns bytes already read after that line.
+  private func authenticate(
+    fd: Int32,
+    expectedToken: String,
+    generation: UInt64
+  ) -> Data? {
+    let deadline = monotonicDeadline(after: LuaTransportLimits.authenticationTimeout)
+    var pending = Data()
+    var buffer = [UInt8](repeating: 0, count: 1024)
+
+    while isCurrent(generation: generation) {
+      guard waitForReadable(fd: fd, deadline: deadline) else { return nil }
+
+      let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+        guard let baseAddress = rawBuffer.baseAddress else { return -1 }
+        return Darwin.read(fd, baseAddress, rawBuffer.count)
+      }
+
+      if count > 0 {
+        pending.append(contentsOf: buffer.prefix(count))
+        guard pending.count <= LuaTransportLimits.maxAuthenticationBytes else { return nil }
+        guard let newline = pending.firstIndex(of: 0x0A) else { continue }
+
+        let line = pending.prefix(upTo: newline)
+        let remainderStart = pending.index(after: newline)
+        let remainder = Data(pending[remainderStart...])
+        guard
+          let record = try? JSONDecoder().decode(AuthenticationRecord.self, from: Data(line)),
+          record.type == "hello",
+          constantTimeEqual(record.token, expectedToken)
+        else {
+          return nil
+        }
+        return remainder
+      }
+
+      if count == 0 { return nil }
+      if errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK { continue }
+      return nil
     }
 
+    return nil
+  }
+
+  /// Installs the authenticated connection when it still belongs to this generation.
+  private func installClientWriter(
+    _ writer: BoundedSocketWriter,
+    generation: UInt64
+  ) -> Bool {
+    state.withLock { state in
+      guard
+        state.generation == generation,
+        state.clientWriter == nil,
+        state.lineHandler != nil
+      else { return false }
+      state.clientWriter = writer
+      return true
+    }
+  }
+
+  /// Starts line decoding for one authenticated runtime connection.
+  private func startReadTask(
+    writer: BoundedSocketWriter,
+    generation: UInt64,
+    initialPending: Data
+  ) {
+    let lineHandler = state.withLock { state in
+      state.generation == generation ? state.lineHandler : nil
+    }
     guard let lineHandler else {
-      close(clientFD)
+      clearClientWriter(writer, generation: generation)
       return
     }
 
-    let readTask = DetachedTask.run(priority: .utility) { [weak self] in
-      guard let self else { return }
-      self.readLinesFromFD(clientFD, generation: generation) { [weak self] line in
+    let readTask = DetachedTask.run(priority: .utility) { [weak self, weak writer] in
+      guard let self, let writer else { return }
+      self.readLinesFromFD(
+        writer.fd,
+        generation: generation,
+        initialPending: initialPending
+      ) { [weak self] line in
         Task {
           await self?.metricsCoordinator.recordLuaTransportLine()
         }
@@ -240,31 +350,40 @@ final class LuaTransport: @unchecked Sendable {
         lineHandler(line)
       }
 
-      self.clearClientFD(clientFD, generation: generation)
+      self.clearClientWriter(writer, generation: generation)
     }
 
     state.withLock { state in
-      guard state.generation == generation, state.clientFD == clientFD else {
+      guard state.generation == generation, state.clientWriter === writer else {
         readTask.cancel()
         return
       }
       state.readTask = readTask
     }
-
-    logger.debug("lua socket connected", .field("fd", clientFD))
   }
 
   /// Reads buffered newline-delimited UTF-8 lines from one fd until it closes.
   private func readLinesFromFD(
     _ fd: Int32,
     generation: UInt64,
+    initialPending: Data = Data(),
     handleLine: @escaping @Sendable (String) -> Void
   ) {
-    var pending = Data()
+    var pending = initialPending
     var isDroppingOversizedLine = false
     var buffer = [UInt8](repeating: 0, count: 4096)
 
+    processPendingLines(
+      &pending,
+      isDroppingOversizedLine: &isDroppingOversizedLine,
+      fd: fd,
+      generation: generation,
+      handleLine: handleLine
+    )
+
     while !Task.isCancelled, isCurrent(generation: generation) {
+      guard waitForReadable(fd: fd) else { return }
+
       let count = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
         guard let baseAddress = rawBuffer.baseAddress else { return -1 }
         return Darwin.read(fd, baseAddress, rawBuffer.count)
@@ -274,9 +393,7 @@ final class LuaTransport: @unchecked Sendable {
         let bytes = buffer.prefix(count)
 
         if isDroppingOversizedLine {
-          guard let newlineIndex = bytes.firstIndex(of: 0x0A) else {
-            continue
-          }
+          guard let newlineIndex = bytes.firstIndex(of: 0x0A) else { continue }
 
           pending.removeAll(keepingCapacity: true)
           let afterNewline = bytes.index(after: newlineIndex)
@@ -288,35 +405,13 @@ final class LuaTransport: @unchecked Sendable {
           pending.append(contentsOf: bytes)
         }
 
-        while let newlineIndex = pending.firstIndex(of: 0x0A) {
-          let lineData = pending.prefix(upTo: newlineIndex)
-          pending.removeSubrange(...newlineIndex)
-
-          guard lineData.count <= LuaTransportLimits.maxLineBytes else {
-            logger.warn(
-              "dropping oversized lua transport line",
-              .field("bytes", lineData.count),
-              .field("max_bytes", LuaTransportLimits.maxLineBytes),
-              .field("fd", fd)
-            )
-            continue
-          }
-
-          guard let line = decodeLine(from: lineData) else { continue }
-          guard isCurrent(generation: generation) else { return }
-          handleLine(line)
-        }
-
-        if pending.count > LuaTransportLimits.maxLineBytes {
-          logger.warn(
-            "dropping oversized lua transport line",
-            .field("bytes", pending.count),
-            .field("max_bytes", LuaTransportLimits.maxLineBytes),
-            .field("fd", fd)
-          )
-          pending.removeAll(keepingCapacity: true)
-          isDroppingOversizedLine = true
-        }
+        processPendingLines(
+          &pending,
+          isDroppingOversizedLine: &isDroppingOversizedLine,
+          fd: fd,
+          generation: generation,
+          handleLine: handleLine
+        )
         continue
       }
 
@@ -328,38 +423,70 @@ final class LuaTransport: @unchecked Sendable {
         return
       }
 
-      if shouldRetryInterruptedRead(count: count, errnoValue: errno) {
-        continue
-      }
-
+      if errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK { continue }
       return
     }
   }
 
-  /// Clears one client fd when it still matches the active generation.
-  private func clearClientFD(_ fd: Int32, generation: UInt64) {
+  /// Emits complete buffered lines and applies the per-record size limit.
+  private func processPendingLines(
+    _ pending: inout Data,
+    isDroppingOversizedLine: inout Bool,
+    fd: Int32,
+    generation: UInt64,
+    handleLine: @escaping @Sendable (String) -> Void
+  ) {
+    while let newlineIndex = pending.firstIndex(of: 0x0A) {
+      let lineData = pending.prefix(upTo: newlineIndex)
+      pending.removeSubrange(...newlineIndex)
+
+      guard lineData.count <= LuaTransportLimits.maxLineBytes else {
+        logger.warn(
+          "dropping oversized lua transport line",
+          .field("bytes", lineData.count),
+          .field("max_bytes", LuaTransportLimits.maxLineBytes),
+          .field("fd", fd)
+        )
+        continue
+      }
+
+      guard let line = decodeLine(from: lineData) else { continue }
+      guard isCurrent(generation: generation) else { return }
+      handleLine(line)
+    }
+
+    if pending.count > LuaTransportLimits.maxLineBytes {
+      logger.warn(
+        "dropping oversized lua transport line",
+        .field("bytes", pending.count),
+        .field("max_bytes", LuaTransportLimits.maxLineBytes),
+        .field("fd", fd)
+      )
+      pending.removeAll(keepingCapacity: true)
+      isDroppingOversizedLine = true
+    }
+  }
+
+  /// Clears and closes one client only when it is still current.
+  private func clearClientWriter(
+    _ writer: BoundedSocketWriter,
+    generation: UInt64
+  ) {
     let shouldClose = state.withLock { state -> Bool in
-      guard state.generation == generation, state.clientFD == fd else { return false }
-      state.clientFD = -1
+      guard state.generation == generation, state.clientWriter === writer else { return false }
+      state.clientWriter = nil
       state.readTask = nil
       return true
     }
 
-    guard shouldClose else { return }
-    Darwin.shutdown(fd, SHUT_RDWR)
-    close(fd)
+    if shouldClose {
+      writer.close()
+    }
   }
 
   /// Returns whether the generation is still active.
   private func isCurrent(generation: UInt64) -> Bool {
     state.withLock { $0.generation == generation }
-  }
-
-  /// Returns whether one client fd still belongs to the current Lua generation.
-  private func isCurrentClientFD(_ fd: Int32, generation: UInt64) -> Bool {
-    state.withLock { state in
-      state.generation == generation && state.clientFD == fd
-    }
   }
 
   /// Decodes one non-empty UTF-8 line.
@@ -377,11 +504,69 @@ final class LuaTransport: @unchecked Sendable {
 
   /// Returns whether an `accept` failure is unexpected enough to log.
   private func shouldLogAcceptFailure(errnoValue: Int32) -> Bool {
-    return errnoValue != EINVAL && errnoValue != EBADF
+    errnoValue != EINVAL && errnoValue != EBADF
   }
 
-  /// Returns whether the current read failure should simply retry the socket read loop.
-  private func shouldRetryInterruptedRead(count: Int, errnoValue: Int32) -> Bool {
-    return count < 0 && errnoValue == EINTR
+  /// Waits for readable input, polling periodically when no deadline is supplied.
+  private func waitForReadable(fd: Int32, deadline: UInt64? = nil) -> Bool {
+    var descriptor = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+
+    while !Task.isCancelled {
+      let timeout = deadline.map { remainingMilliseconds(until: $0) } ?? 1_000
+      if let deadline, timeout == 0, DispatchTime.now().uptimeNanoseconds >= deadline {
+        return false
+      }
+
+      let result = poll(&descriptor, 1, timeout)
+      if result > 0 {
+        let events = Int32(descriptor.revents)
+        if (events & POLLIN) != 0 { return true }
+        if (events & (POLLERR | POLLHUP | POLLNVAL)) != 0 { return false }
+        continue
+      }
+      if result == 0 {
+        if deadline != nil { return false }
+        continue
+      }
+      if errno == EINTR { continue }
+      return false
+    }
+    return false
+  }
+
+  /// Creates a local monotonic deadline without exposing shared internal helpers.
+  private func monotonicDeadline(after timeout: TimeInterval) -> UInt64 {
+    let seconds = min(
+      normalizedSocketTimeout(timeout),
+      Double(UInt64.max / 1_000_000_000)
+    )
+    let nanoseconds = UInt64(seconds * 1_000_000_000)
+    let (deadline, overflow) = DispatchTime.now().uptimeNanoseconds.addingReportingOverflow(
+      nanoseconds
+    )
+    return overflow ? UInt64.max : deadline
+  }
+
+  /// Returns a poll-compatible number of milliseconds until a local deadline.
+  private func remainingMilliseconds(until deadline: UInt64) -> Int32 {
+    let now = DispatchTime.now().uptimeNanoseconds
+    guard deadline > now else { return 0 }
+    let remaining = deadline - now
+    return Int32(min((remaining + 999_999) / 1_000_000, UInt64(Int32.max)))
+  }
+
+  /// Compares secrets without returning early on the first mismatching byte.
+  private func constantTimeEqual(_ lhs: String, _ rhs: String) -> Bool {
+    let left = Array(lhs.utf8)
+    let right = Array(rhs.utf8)
+    var difference = UInt64(left.count ^ right.count)
+    let count = max(left.count, right.count)
+
+    for index in 0..<count {
+      let leftByte = index < left.count ? left[index] : 0
+      let rightByte = index < right.count ? right[index] : 0
+      difference |= UInt64(leftByte ^ rightByte)
+    }
+    return difference == 0
   }
 }

@@ -2,12 +2,13 @@ import Darwin
 import Dispatch
 import Foundation
 
-private let socketWriteRetryTimeoutMilliseconds: Int32 = 1_000
+private let defaultSocketWriteTimeout: TimeInterval = 1
 
 /// Errors produced while opening a Unix-domain client socket.
 public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedError {
   case createSocket(errnoValue: Int32)
   case configureNoSigPipe
+  case configureBlockingMode(errnoValue: Int32)
   case invalidAddress(any Error)
   case connect(errnoValue: Int32)
   case timedOut(TimeInterval)
@@ -18,6 +19,8 @@ public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedErr
       return "socket creation failed: \(Self.errnoDescription(errnoValue))"
     case .configureNoSigPipe:
       return "failed to configure socket no-sigpipe"
+    case .configureBlockingMode(let errnoValue):
+      return "failed to configure socket blocking mode: \(Self.errnoDescription(errnoValue))"
     case .invalidAddress(let error):
       return "invalid Unix socket address: \(error)"
     case .connect(let errnoValue):
@@ -34,17 +37,61 @@ public enum UnixSocketConnectError: Error, CustomStringConvertible, LocalizedErr
   }
 }
 
+/// Describes a failed deadline-bound socket write.
+public enum UnixSocketWriteError: Error, Equatable, Sendable {
+  case closed
+  case timedOut
+  case failed(errnoValue: Int32)
+}
+
+/// Identifies one concrete filesystem entry used by a Unix-domain socket.
+public struct UnixSocketPathIdentity: Equatable, Sendable {
+  public let device: UInt64
+  public let inode: UInt64
+
+  fileprivate init(_ value: stat) {
+    device = UInt64(value.st_dev)
+    inode = UInt64(value.st_ino)
+  }
+}
+
+/// Owns a listening descriptor together with the exact socket path it created.
+public struct OwnedUnixSocketListener: Sendable {
+  public let fd: Int32
+  public let socketPath: String
+  public let pathIdentity: UnixSocketPathIdentity
+
+  fileprivate init(fd: Int32, socketPath: String, pathIdentity: UnixSocketPathIdentity) {
+    self.fd = fd
+    self.socketPath = socketPath
+    self.pathIdentity = pathIdentity
+  }
+}
+
+/// Returns a finite positive timeout and rejects NaN and infinity consistently.
+public func normalizedSocketTimeout(
+  _ value: TimeInterval,
+  fallback: TimeInterval = 5,
+  minimum: TimeInterval = 0.001
+) -> TimeInterval {
+  let finiteFallback = fallback.isFinite && fallback > 0 ? fallback : 5
+  let finiteMinimum = minimum.isFinite && minimum > 0 ? minimum : 0.001
+  guard value.isFinite else { return max(finiteMinimum, finiteFallback) }
+  return max(finiteMinimum, value)
+}
+
 /// Creates and connects one Unix-domain client socket.
 public func openConnectedUnixSocket(
   at socketPath: String,
-  timeout: TimeInterval = 5
+  timeout: TimeInterval = 5,
+  keepNonBlocking: Bool = false
 ) throws -> Int32 {
-  let normalizedTimeout = max(0.001, timeout)
+  let normalizedTimeout = normalizedSocketTimeout(timeout)
   return try openConnectedUnixSocket(
     at: socketPath,
     timeout: normalizedTimeout,
     deadline: monotonicPollDeadline(after: normalizedTimeout),
-    restoreBlocking: true
+    restoreBlocking: !keepNonBlocking
   )
 }
 
@@ -75,7 +122,7 @@ func openConnectedUnixSocket(
     let addressLength = socklen_t(MemoryLayout<sockaddr_un>.size)
     let originalFlags = fcntl(fd, F_GETFL)
     guard originalFlags >= 0, fcntl(fd, F_SETFL, originalFlags | O_NONBLOCK) == 0 else {
-      throw UnixSocketConnectError.connect(errnoValue: errno)
+      throw UnixSocketConnectError.configureBlockingMode(errnoValue: errno)
     }
 
     let result = withUnsafePointer(to: &address) {
@@ -94,7 +141,7 @@ func openConnectedUnixSocket(
         pollResult = poll(&descriptor, 1, remainingPollMilliseconds(until: deadline))
       } while pollResult < 0 && errno == EINTR
       guard pollResult > 0 else {
-        if pollResult == 0 { throw UnixSocketConnectError.timedOut(max(0.001, timeout)) }
+        if pollResult == 0 { throw UnixSocketConnectError.timedOut(timeout) }
         throw UnixSocketConnectError.connect(errnoValue: errno)
       }
 
@@ -108,10 +155,8 @@ func openConnectedUnixSocket(
       }
     }
 
-    if restoreBlocking {
-      guard fcntl(fd, F_SETFL, originalFlags) == 0 else {
-        throw UnixSocketConnectError.connect(errnoValue: errno)
-      }
+    if restoreBlocking, fcntl(fd, F_SETFL, originalFlags) != 0 {
+      throw UnixSocketConnectError.configureBlockingMode(errnoValue: errno)
     }
 
     return fd
@@ -123,7 +168,8 @@ func openConnectedUnixSocket(
 
 /// Returns a monotonic deadline suitable for retrying interrupted `poll` calls.
 func monotonicPollDeadline(after timeout: TimeInterval) -> UInt64 {
-  let milliseconds = UInt64(min(max(0.001, timeout) * 1_000, Double(Int32.max)))
+  let normalizedTimeout = normalizedSocketTimeout(timeout)
+  let milliseconds = UInt64(min(normalizedTimeout * 1_000, Double(Int32.max)))
   let now = DispatchTime.now().uptimeNanoseconds
   let (deadline, overflow) = now.addingReportingOverflow(milliseconds * 1_000_000)
   return overflow ? UInt64.max : deadline
@@ -147,6 +193,8 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
   case configureNoSigPipe(fd: Int32)
   case invalidAddress(path: String, message: String)
   case existingPathIsNotSocket(path: String)
+  case existingSocketIsActive(path: String)
+  case inspectPath(path: String, errnoValue: Int32)
   case bind(path: String, errnoValue: Int32)
   case chmod(path: String, errnoValue: Int32)
   case listen(path: String, errnoValue: Int32)
@@ -164,6 +212,10 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
       return "invalid socket path path=\(path) error=\(message)"
     case .existingPathIsNotSocket(let path):
       return "socket path already exists and is not a socket path=\(path)"
+    case .existingSocketIsActive(let path):
+      return "socket path is already owned by an active listener path=\(path)"
+    case .inspectPath(let path, let errnoValue):
+      return "failed to inspect socket path path=\(path) errno=\(errnoValue)"
     case .bind(let path, let errnoValue):
       return "socket bind failed path=\(path) errno=\(errnoValue)"
     case .chmod(let path, let errnoValue):
@@ -174,9 +226,7 @@ public enum UnixSocketListenError: Error, CustomStringConvertible, LocalizedErro
   }
 
   /// User-facing socket setup error.
-  public var errorDescription: String? {
-    description
-  }
+  public var errorDescription: String? { description }
 }
 
 /// Configures one Unix socket file descriptor to suppress SIGPIPE on write.
@@ -186,16 +236,52 @@ public func configureNoSigPipe(fd: Int32) -> Bool {
   return setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, socklen_t(MemoryLayout<Int32>.size)) == 0
 }
 
-/// Writes the full data payload to one connected Unix socket.
+/// Configures one file descriptor for nonblocking I/O.
+@discardableResult
+public func configureNonBlocking(fd: Int32) -> Bool {
+  let flags = fcntl(fd, F_GETFL)
+  return flags >= 0 && fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0
+}
+
+/// Restores one file descriptor to blocking I/O.
+@discardableResult
+public func configureBlocking(fd: Int32) -> Bool {
+  let flags = fcntl(fd, F_GETFL)
+  return flags >= 0 && fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) == 0
+}
+
+/// Writes the full data payload to one connected Unix socket with a finite default deadline.
 public func writeAll(_ data: Data, to fd: Int32) -> Bool {
-  guard !data.isEmpty else { return true }
+  writeAll(data, to: fd, timeout: defaultSocketWriteTimeout) == nil
+}
+
+/// Writes the full data payload before the supplied timeout expires.
+public func writeAll(
+  _ data: Data,
+  to fd: Int32,
+  timeout: TimeInterval
+) -> UnixSocketWriteError? {
+  writeAll(
+    data,
+    to: fd,
+    deadline: monotonicPollDeadline(after: normalizedSocketTimeout(timeout))
+  )
+}
+
+/// Writes the full data payload before an existing monotonic deadline expires.
+public func writeAll(
+  _ data: Data,
+  to fd: Int32,
+  deadline: UInt64
+) -> UnixSocketWriteError? {
+  guard !data.isEmpty else { return nil }
 
   return data.withUnsafeBytes { rawBuffer in
-    guard let base = rawBuffer.baseAddress else { return false }
+    guard let base = rawBuffer.baseAddress else { return .closed }
 
     var sent = 0
     while sent < data.count {
-      let written = write(fd, base.advanced(by: sent), data.count - sent)
+      let written = Darwin.write(fd, base.advanced(by: sent), data.count - sent)
 
       if written > 0 {
         sent += written
@@ -203,7 +289,7 @@ public func writeAll(_ data: Data, to fd: Int32) -> Bool {
       }
 
       if written == 0 {
-        return false
+        return .closed
       }
 
       let errnoValue = errno
@@ -211,24 +297,34 @@ public func writeAll(_ data: Data, to fd: Int32) -> Bool {
         continue
       }
 
-      if isTemporarilyUnavailable(errnoValue), waitForWritable(fd: fd) {
-        continue
+      if isTemporarilyUnavailable(errnoValue) {
+        switch waitForWritable(fd: fd, deadline: deadline) {
+        case .ready:
+          continue
+        case .timedOut:
+          return .timedOut
+        case .failed(let waitErrno):
+          return .failed(errnoValue: waitErrno)
+        }
       }
 
-      return false
+      if errnoValue == EPIPE || errnoValue == ECONNRESET || errnoValue == EBADF {
+        return .closed
+      }
+      return .failed(errnoValue: errnoValue)
     }
 
-    return true
+    return nil
   }
 }
 
-/// Creates, binds, chmods, and starts one Unix-domain listening socket.
-public func makeListeningUnixSocket(
+/// Creates, binds, chmods, and starts one Unix-domain listening socket with path ownership.
+public func makeOwnedListeningUnixSocket(
   at socketPath: String,
   backlog: Int32,
   mode: mode_t = 0o600,
   onChmodFailure: ((Int32) -> Void)? = nil
-) throws -> Int32 {
+) throws -> OwnedUnixSocketListener {
   let socketURL = URL(fileURLWithPath: socketPath)
   let socketDir = socketURL.deletingLastPathComponent()
 
@@ -244,24 +340,14 @@ public func makeListeningUnixSocket(
     )
   }
 
-  var existingInfo = stat()
-  if lstat(socketPath, &existingInfo) == 0 {
-    guard existingInfo.st_mode & S_IFMT == S_IFSOCK else {
-      throw UnixSocketListenError.existingPathIsNotSocket(path: socketPath)
-    }
-    guard unlink(socketPath) == 0 else {
-      throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
-    }
-  } else if errno != ENOENT {
-    throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
-  }
+  try removeStaleSocketIfNeeded(at: socketPath)
 
   let fd = socket(AF_UNIX, SOCK_STREAM, 0)
   guard fd >= 0 else {
     throw UnixSocketListenError.createSocket(errnoValue: errno)
   }
 
-  var didBind = false
+  var boundIdentity: UnixSocketPathIdentity?
   do {
     guard configureNoSigPipe(fd: fd) else {
       throw UnixSocketListenError.configureNoSigPipe(fd: fd)
@@ -286,7 +372,7 @@ public func makeListeningUnixSocket(
     guard bindResult == 0 else {
       throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
     }
-    didBind = true
+    boundIdentity = try unixSocketPathIdentity(at: socketPath)
 
     if chmod(socketPath, mode) != 0 {
       let errnoValue = errno
@@ -298,21 +384,117 @@ public func makeListeningUnixSocket(
       throw UnixSocketListenError.listen(path: socketPath, errnoValue: errno)
     }
 
-    return fd
+    guard let boundIdentity else {
+      throw UnixSocketListenError.inspectPath(path: socketPath, errnoValue: ENOENT)
+    }
+    return OwnedUnixSocketListener(
+      fd: fd,
+      socketPath: socketPath,
+      pathIdentity: boundIdentity
+    )
   } catch {
     close(fd)
-    if didBind {
-      unlink(socketPath)
+    if let boundIdentity {
+      unlinkSocketPathIfOwned(socketPath, expectedIdentity: boundIdentity)
     }
     throw error
   }
 }
 
-/// Closes one Unix-domain listening socket and removes its filesystem path.
+/// Compatibility wrapper that returns only the listening descriptor.
+public func makeListeningUnixSocket(
+  at socketPath: String,
+  backlog: Int32,
+  mode: mode_t = 0o600,
+  onChmodFailure: ((Int32) -> Void)? = nil
+) throws -> Int32 {
+  try makeOwnedListeningUnixSocket(
+    at: socketPath,
+    backlog: backlog,
+    mode: mode,
+    onChmodFailure: onChmodFailure
+  ).fd
+}
+
+/// Closes one owned listener and removes only the path entry it originally created.
+public func closeListeningUnixSocket(_ listener: OwnedUnixSocketListener) {
+  Darwin.shutdown(listener.fd, SHUT_RDWR)
+  close(listener.fd)
+  unlinkSocketPathIfOwned(listener.socketPath, expectedIdentity: listener.pathIdentity)
+}
+
+/// Compatibility wrapper for call sites that do not retain path ownership metadata.
 public func closeListeningUnixSocket(_ fd: Int32, at socketPath: String) {
+  let identity = try? unixSocketPathIdentity(at: socketPath)
   Darwin.shutdown(fd, SHUT_RDWR)
   close(fd)
-  unlink(socketPath)
+  if let identity {
+    unlinkSocketPathIfOwned(socketPath, expectedIdentity: identity)
+  }
+}
+
+/// Returns the identity of one filesystem socket entry.
+public func unixSocketPathIdentity(at socketPath: String) throws -> UnixSocketPathIdentity {
+  var value = stat()
+  guard lstat(socketPath, &value) == 0 else {
+    throw UnixSocketListenError.inspectPath(path: socketPath, errnoValue: errno)
+  }
+  guard value.st_mode & S_IFMT == S_IFSOCK else {
+    throw UnixSocketListenError.existingPathIsNotSocket(path: socketPath)
+  }
+  return UnixSocketPathIdentity(value)
+}
+
+/// Removes a socket path only when it still refers to the expected filesystem entry.
+@discardableResult
+public func unlinkSocketPathIfOwned(
+  _ socketPath: String,
+  expectedIdentity: UnixSocketPathIdentity
+) -> Bool {
+  guard let currentIdentity = try? unixSocketPathIdentity(at: socketPath) else { return false }
+  guard currentIdentity == expectedIdentity else { return false }
+  return unlink(socketPath) == 0
+}
+
+private enum SocketPollResult {
+  case ready
+  case timedOut
+  case failed(errnoValue: Int32)
+}
+
+/// Removes a refused stale socket but never unlinks a live or ambiguous listener.
+private func removeStaleSocketIfNeeded(at socketPath: String) throws {
+  var existingInfo = stat()
+  if lstat(socketPath, &existingInfo) != 0 {
+    if errno == ENOENT { return }
+    throw UnixSocketListenError.inspectPath(path: socketPath, errnoValue: errno)
+  }
+
+  guard existingInfo.st_mode & S_IFMT == S_IFSOCK else {
+    throw UnixSocketListenError.existingPathIsNotSocket(path: socketPath)
+  }
+
+  do {
+    let probeFD = try openConnectedUnixSocket(at: socketPath, timeout: 0.1, keepNonBlocking: true)
+    close(probeFD)
+    throw UnixSocketListenError.existingSocketIsActive(path: socketPath)
+  } catch let error as UnixSocketListenError {
+    throw error
+  } catch let error as UnixSocketConnectError {
+    switch error {
+    case .connect(let errnoValue) where errnoValue == ECONNREFUSED || errnoValue == ENOENT:
+      break
+    default:
+      throw UnixSocketListenError.existingSocketIsActive(path: socketPath)
+    }
+  } catch {
+    throw UnixSocketListenError.existingSocketIsActive(path: socketPath)
+  }
+
+  let expectedIdentity = UnixSocketPathIdentity(existingInfo)
+  guard unlinkSocketPathIfOwned(socketPath, expectedIdentity: expectedIdentity) else {
+    throw UnixSocketListenError.bind(path: socketPath, errnoValue: errno)
+  }
 }
 
 /// Returns whether one socket write failed because the descriptor would block.
@@ -320,28 +502,34 @@ private func isTemporarilyUnavailable(_ errnoValue: Int32) -> Bool {
   errnoValue == EAGAIN || errnoValue == EWOULDBLOCK
 }
 
-/// Waits briefly until one socket fd is writable again.
-private func waitForWritable(fd: Int32) -> Bool {
+/// Waits until one socket fd is writable or the absolute deadline expires.
+private func waitForWritable(fd: Int32, deadline: UInt64) -> SocketPollResult {
   var pollDescriptor = pollfd(fd: fd, events: Int16(POLLOUT), revents: 0)
 
   while true {
-    let result = poll(&pollDescriptor, 1, socketWriteRetryTimeoutMilliseconds)
+    let remaining = remainingPollMilliseconds(until: deadline)
+    guard remaining > 0 else { return .timedOut }
+    let result = poll(&pollDescriptor, 1, remaining)
 
     if result > 0 {
       let revents = Int32(pollDescriptor.revents)
-      let hasFailure = (revents & (POLLERR | POLLHUP | POLLNVAL)) != 0
-      let isWritable = (revents & POLLOUT) != 0
-      return isWritable && !hasFailure
+      if (revents & (POLLERR | POLLHUP | POLLNVAL)) != 0 {
+        return .failed(errnoValue: EPIPE)
+      }
+      if (revents & POLLOUT) != 0 {
+        return .ready
+      }
+      continue
     }
 
     if result == 0 {
-      return false
+      return .timedOut
     }
 
     if errno == EINTR {
       continue
     }
 
-    return false
+    return .failed(errnoValue: errno)
   }
 }

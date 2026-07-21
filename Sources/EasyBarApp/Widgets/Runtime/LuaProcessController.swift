@@ -10,6 +10,7 @@ final class LuaProcessController: @unchecked Sendable {
     let runtimePath: String
     let luaPath: String
     let luaSocketPath: String
+    let transportAuthenticationToken: String
     let widgetsPath: String
     let defaultCommandTimeoutSeconds: TimeInterval
     let defaultCommandMaxOutputBytes: Int

@@ -26,6 +26,7 @@ extension LuaProcessController {
       runtimePath: runtimePath,
       luaPath: config.app.luaPath,
       luaSocketPath: config.app.luaSocketPath,
+      transportAuthenticationToken: UUID().uuidString.replacingOccurrences(of: "-", with: ""),
       widgetsPath: config.app.widgetsPath,
       defaultCommandTimeoutSeconds: config.app.luaCommandLimits.timeoutSeconds,
       defaultCommandMaxOutputBytes: config.app.luaCommandLimits.maxOutputBytes,
@@ -150,7 +151,11 @@ extension LuaProcessController {
     )
     defer { PosixSpawnSupport.freeCStringVector(argv) }
 
-    let envp = try makeEnvironmentVector(overrides: context.environment)
+    let envp = try makeEnvironmentVector(
+      overrides: context.environment.merging(
+        ["EASYBAR_LUA_TRANSPORT_TOKEN": context.transportAuthenticationToken]
+      ) { _, launchValue in launchValue }
+    )
     defer { PosixSpawnSupport.freeCStringVector(envp) }
 
     var pid: pid_t = 0

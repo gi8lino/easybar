@@ -75,6 +75,7 @@ final class LuaProcessControllerTerminationTests: XCTestCase, @unchecked Sendabl
       runtimePath: "/tmp/runtime.lua",
       luaPath: "/usr/bin/lua",
       luaSocketPath: "/tmp/easybar-test.sock",
+      transportAuthenticationToken: "test-token",
       widgetsPath: "/tmp/widgets",
       defaultCommandTimeoutSeconds: 5,
       defaultCommandMaxOutputBytes: 65_536,

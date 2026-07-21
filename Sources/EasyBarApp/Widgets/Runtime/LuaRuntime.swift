@@ -60,6 +60,7 @@ actor LuaRuntime {
     do {
       try transport.startListening(
         socketPath: context.luaSocketPath,
+        authenticationToken: context.transportAuthenticationToken,
         error: resources.error,
         lineHandler: lineHandler ?? { _ in }
       )

@@ -109,7 +109,7 @@ final class NetworkSocketServer {
 
   /// Acknowledges the request before allowing the host app to terminate.
   private func handleRestart(to clientFD: Int32) -> ClientDisposition {
-    return transport.sendAndClose(NetworkAgentMessage(kind: .restarting), to: clientFD) {
+    return transport.closeAfterSending(NetworkAgentMessage(kind: .restarting), to: clientFD) {
       [onRestartRequested] in
       onRestartRequested()
     }
@@ -117,12 +117,12 @@ final class NetworkSocketServer {
 
   /// Sends a pong response.
   private func sendPong(to clientFD: Int32) -> ClientDisposition {
-    return transport.sendAndClose(NetworkAgentMessage(kind: .pong), to: clientFD)
+    return transport.closeAfterSending(NetworkAgentMessage(kind: .pong), to: clientFD)
   }
 
   /// Sends the network-agent version response.
   private func sendVersion(to clientFD: Int32) -> ClientDisposition {
-    return transport.sendAndClose(
+    return transport.closeAfterSending(
       NetworkAgentMessage(
         kind: .version,
         version: NetworkAgentVersion(
@@ -148,7 +148,7 @@ final class NetworkSocketServer {
     }
 
     let response = responseFields(for: fields, provider: provider)
-    return transport.sendAndClose(makeResponseMessage(from: response), to: clientFD)
+    return transport.closeAfterSending(makeResponseMessage(from: response), to: clientFD)
   }
 
   /// Handles a live field subscription.
@@ -164,7 +164,10 @@ final class NetworkSocketServer {
       return sendError(to: clientFD, code: .missingFields)
     }
 
-    transport.addSubscriber(Subscriber(fields: fields), for: clientFD)
+    guard transport.addSubscriber(Subscriber(fields: fields), for: clientFD) else {
+      logger.warn("\(componentName) subscriber rejected", .field("fd", clientFD))
+      return .close
+    }
     logger.info(
       "\(componentName) subscriber added",
       .field("fd", clientFD),

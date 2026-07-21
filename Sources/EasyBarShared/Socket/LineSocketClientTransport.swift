@@ -67,7 +67,7 @@ public struct LineSocketClientTransport<Request: Encodable, Response: Decodable>
     }
   ) {
     self.socketPath = socketPath
-    self.responseTimeout = max(0.001, responseTimeout)
+    self.responseTimeout = normalizedSocketTimeout(responseTimeout)
     self.maxResponseBytes = max(1, maxResponseBytes)
     self.makeEncoder = makeEncoder
     self.makeDecoder = makeDecoder
