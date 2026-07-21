@@ -3,11 +3,11 @@ dist/
 .swiftpm/
 .cache/
 .home/
-Rust/EasyBarTOML/target/
-
-# mkdocs
-docs/.site/
+# Generated documentation site
+/docs/.site/
 docs/.venv/
 
 .DS_Store
 todo.txt
+# Rust build artifacts
+/Rust/**/target/
