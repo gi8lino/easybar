@@ -680,8 +680,8 @@ final class EventHubTests: XCTestCase {
     XCTAssertEqual(bufferSize(for: policy), 1)
   }
 
-  /// Verifies that mixed subscriptions preserve must-deliver events.
-  func testDefaultBufferingPolicyIsUnboundedForMixedSubscriptions() {
+  /// Verifies that mixed subscriptions use the bounded must-deliver buffer.
+  func testDefaultBufferingPolicyBoundsMixedSubscriptions() {
     let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
         AppEvent.secondTick.rawValue,
@@ -689,11 +689,14 @@ final class EventHubTests: XCTestCase {
       ]
     )
 
-    XCTAssertNil(bufferSize(for: policy))
+    XCTAssertEqual(
+      bufferSize(for: policy),
+      EventDeliveryPolicy.maximumBufferedMustDeliverEvents
+    )
   }
 
-  /// Verifies that must-deliver-only subscriptions use an unbounded stream.
-  func testDefaultBufferingPolicyIsUnboundedForMustDeliverSubscriptions() {
+  /// Verifies that must-deliver-only subscriptions use the bounded action stream.
+  func testDefaultBufferingPolicyBoundsMustDeliverSubscriptions() {
     let policy = EventDeliveryPolicy.defaultBufferingPolicy(
       for: [
         AppEvent.systemWoke.rawValue,
@@ -701,7 +704,33 @@ final class EventHubTests: XCTestCase {
       ]
     )
 
-    XCTAssertNil(bufferSize(for: policy))
+    XCTAssertEqual(
+      bufferSize(for: policy),
+      EventDeliveryPolicy.maximumBufferedMustDeliverEvents
+    )
+  }
+
+  /// Verifies that must-deliver overflow terminates a stalled subscriber.
+  func testMustDeliverOverflowTerminatesStalledSubscriber() async {
+    let hub = Self.makeHub()
+    let stream = await hub.subscribe(eventNames: [AppEvent.systemWoke.rawValue])
+
+    for index in 0...EventDeliveryPolicy.maximumBufferedMustDeliverEvents {
+      await hub.emit(.systemWoke, source: "event-\(index)")
+    }
+
+    let payloads = await Self.collect(
+      from: stream,
+      count: EventDeliveryPolicy.maximumBufferedMustDeliverEvents + 1,
+      timeoutNanoseconds: 1_000_000_000
+    )
+
+    XCTAssertEqual(payloads.count, EventDeliveryPolicy.maximumBufferedMustDeliverEvents)
+    XCTAssertEqual(payloads.first?.source, "event-0")
+    XCTAssertEqual(
+      payloads.last?.source,
+      "event-\(EventDeliveryPolicy.maximumBufferedMustDeliverEvents - 1)"
+    )
   }
 
   /// Waits for one payload, timing out instead of hanging the test.

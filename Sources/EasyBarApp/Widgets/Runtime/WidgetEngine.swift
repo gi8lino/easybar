@@ -105,6 +105,7 @@ actor WidgetEngine {
     runtimeState.reset()
     await commandService.resetActiveAsyncCommandCount()
     await timerService.reset()
+    await eventHub.resetLuaEventSink()
 
     runtimeSessionID &+= 1
     let sessionID = runtimeSessionID

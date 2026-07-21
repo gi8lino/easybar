@@ -129,6 +129,8 @@ extension MetricsCoordinator {
       ),
       decodeErrors: snapshotState.decodeErrors,
       luaRuntimeInputOverflows: snapshotState.luaRuntimeInputOverflows,
+      luaEventQueueDepth: snapshotState.luaEventQueueDepth,
+      luaEventQueueOverflows: snapshotState.luaEventQueueOverflows,
       lastTreeRoot: snapshotState.lastTreeRoot,
       lastTreeNodeCount: snapshotState.lastTreeNodeCount,
       lastTreeAt: snapshotState.lastTreeAt

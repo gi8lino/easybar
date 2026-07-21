@@ -37,6 +37,8 @@ actor EventHub {
   private let logger: ProcessLogger
   /// Sink that forwards selected events into Lua.
   private let enqueueLuaEvent: @Sendable (EasyBarEventPayload) -> Void
+  /// Production sink retained so a new Lua runtime session can reset overflow state.
+  private let luaEventSink: LuaEventSink?
   /// Metrics operations kept outside ordering-sensitive actor state.
   private let metricsRecorder: MetricsRecorder
   private let wifiSnapshotProvider: @MainActor @Sendable () -> NetworkAgentSnapshot?
@@ -71,15 +73,15 @@ actor EventHub {
     metricsCoordinator: MetricsCoordinator,
     wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot?
   ) {
+    let sink = LuaEventSink(
+      runtime: luaRuntime,
+      logger: logger.child("lua_sink"),
+      metricsCoordinator: metricsCoordinator
+    )
     self.init(
       logger: logger,
-      enqueueLuaEvent: {
-        let sink = LuaEventSink(
-          runtime: luaRuntime,
-          logger: logger.child("lua_sink")
-        )
-        return { @Sendable payload in sink.enqueue(payload) }
-      }(),
+      enqueueLuaEvent: { payload in sink.enqueue(payload) },
+      luaEventSink: sink,
       metricsCoordinator: metricsCoordinator,
       wifiSnapshotProvider: wifiSnapshotProvider
     )
@@ -89,12 +91,14 @@ actor EventHub {
   init(
     logger: ProcessLogger,
     enqueueLuaEvent: @escaping @Sendable (EasyBarEventPayload) -> Void,
+    luaEventSink: LuaEventSink? = nil,
     metricsCoordinator: MetricsCoordinator = .shared,
     metricsRecorder: MetricsRecorder? = nil,
     wifiSnapshotProvider: @escaping @MainActor @Sendable () -> NetworkAgentSnapshot? = { nil }
   ) {
     self.logger = logger
     self.enqueueLuaEvent = enqueueLuaEvent
+    self.luaEventSink = luaEventSink
     self.metricsRecorder = metricsRecorder ?? .live(metricsCoordinator)
     self.wifiSnapshotProvider = wifiSnapshotProvider
   }
@@ -176,7 +180,8 @@ actor EventHub {
     }
 
     var backpressureCounts: [BackpressureKey: Int] = [:]
-    var terminatedSubscriberIDs: [UUID] = []
+    var terminatedSubscriberIDs = Set<UUID>()
+    var overflowedSubscriberIDs = Set<UUID>()
 
     for (subscriberID, subscriber) in subscribers {
       guard shouldDeliver(payload, to: subscriber) else { continue }
@@ -186,14 +191,20 @@ actor EventHub {
         break
       case .dropped(let droppedPayload):
         recordBackpressure(for: droppedPayload, in: &backpressureCounts)
+        if EventDeliveryPolicy.forEventName(droppedPayload.eventName) == .mustDeliver {
+          overflowedSubscriberIDs.insert(subscriberID)
+        }
       case .terminated:
-        terminatedSubscriberIDs.append(subscriberID)
+        terminatedSubscriberIDs.insert(subscriberID)
       @unknown default:
         break
       }
     }
 
-    for subscriberID in terminatedSubscriberIDs {
+    for subscriberID in overflowedSubscriberIDs {
+      subscribers[subscriberID]?.continuation.finish()
+    }
+    for subscriberID in terminatedSubscriberIDs.union(overflowedSubscriberIDs) {
       subscribers.removeValue(forKey: subscriberID)
     }
 
@@ -206,9 +217,10 @@ actor EventHub {
 
     if mustDeliverDropCount > 0 {
       logger.error(
-        "subscriber buffer overflow displaced must-deliver events",
+        "subscriber buffer overflow terminated stalled subscribers",
         .field("trigger", payload.eventName),
-        .field("dropped_events", mustDeliverDropCount)
+        .field("dropped_events", mustDeliverDropCount),
+        .field("terminated_subscribers", overflowedSubscriberIDs.count)
       )
     }
 
@@ -233,6 +245,11 @@ actor EventHub {
   /// Clears all app-level event forwarding for the Lua runtime.
   func clearLuaForwardedAppEvents() {
     luaForwardedAppEvents.removeAll()
+  }
+
+  /// Resets Lua queue state before one new runtime process session begins.
+  func resetLuaEventSink() {
+    luaEventSink?.reset()
   }
 
   /// Emits the latest replayable state for the requested event names.
@@ -276,6 +293,7 @@ actor EventHub {
 
     var replayBackpressure: [BackpressureKey: Int] = [:]
     var terminated = false
+    var mustDeliverOverflow = false
 
     for event in EventReplayCatalog.orderedEvents {
       let eventName = event.rawValue
@@ -290,18 +308,23 @@ actor EventHub {
         break
       case .dropped(let droppedPayload):
         recordBackpressure(for: droppedPayload, in: &replayBackpressure)
+        mustDeliverOverflow =
+          EventDeliveryPolicy.forEventName(droppedPayload.eventName) == .mustDeliver
       case .terminated:
         terminated = true
       @unknown default:
         break
       }
 
-      if terminated {
+      if terminated || mustDeliverOverflow {
         break
       }
     }
 
-    if terminated {
+    if mustDeliverOverflow {
+      continuation.finish()
+    }
+    if terminated || mustDeliverOverflow {
       subscribers.removeValue(forKey: id)
     }
 

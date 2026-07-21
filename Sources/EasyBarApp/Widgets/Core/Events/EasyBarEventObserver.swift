@@ -66,7 +66,9 @@ final class EasyBarEventObserver: Sendable {
         stream = await eventHub.subscribeAll(
           widgetTargetIDs: widgetTargetIDs,
           replayLatest: replayLatest,
-          bufferingPolicy: bufferingPolicy ?? .unbounded
+          bufferingPolicy:
+            bufferingPolicy
+            ?? .bufferingOldest(EventDeliveryPolicy.maximumBufferedMustDeliverEvents)
         )
       }
 

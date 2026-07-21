@@ -85,6 +85,8 @@ extension IPC {
     public let treeUpdatesPerSecond: Double
     public let decodeErrors: Int
     public let luaRuntimeInputOverflows: Int
+    public let luaEventQueueDepth: Int
+    public let luaEventQueueOverflows: Int
     public let lastTreeRoot: String?
     public let lastTreeNodeCount: Int?
     public let lastTreeAt: Date?
@@ -110,6 +112,8 @@ extension IPC {
       treeUpdatesPerSecond: Double,
       decodeErrors: Int,
       luaRuntimeInputOverflows: Int,
+      luaEventQueueDepth: Int,
+      luaEventQueueOverflows: Int,
       lastTreeRoot: String?,
       lastTreeNodeCount: Int?,
       lastTreeAt: Date?
@@ -133,6 +137,8 @@ extension IPC {
       self.treeUpdatesPerSecond = treeUpdatesPerSecond
       self.decodeErrors = decodeErrors
       self.luaRuntimeInputOverflows = luaRuntimeInputOverflows
+      self.luaEventQueueDepth = luaEventQueueDepth
+      self.luaEventQueueOverflows = luaEventQueueOverflows
       self.lastTreeRoot = lastTreeRoot
       self.lastTreeNodeCount = lastTreeNodeCount
       self.lastTreeAt = lastTreeAt

@@ -132,6 +132,8 @@ actor MetricsCoordinator {
     var luaWrites = 0
     var decodeErrors = 0
     var luaRuntimeInputOverflows = 0
+    var luaEventQueueDepth = 0
+    var luaEventQueueOverflows = 0
 
     var treeUpdates = 0
     var lastTreeRoot: String?
@@ -285,6 +287,17 @@ actor MetricsCoordinator {
   /// Records one bounded Lua runtime input queue overflow.
   func recordLuaRuntimeInputOverflow() {
     state.luaRuntimeInputOverflows += 1
+  }
+
+  /// Records the current number of event payloads waiting for Lua delivery.
+  func recordLuaEventQueueDepth(_ depth: Int) {
+    state.luaEventQueueDepth = max(0, depth)
+  }
+
+  /// Records one hard must-deliver event queue overflow.
+  func recordLuaEventQueueOverflow() {
+    state.luaEventQueueOverflows += 1
+    state.luaEventQueueDepth = 0
   }
 
   /// Records the Lua runtime starting with a new PID.

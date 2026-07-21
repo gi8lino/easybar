@@ -120,6 +120,10 @@ external process execution and one-shot scheduling to Swift:
 This keeps retries and backoff orchestration in Lua while process lifecycle, PATH resolution,
 timeouts, output limits, and scheduling remain host-owned.
 
+## Event delivery backpressure
+
+Lua event delivery keeps at most 512 queued must-deliver actions and 128 coalescing state entries. The state queue replaces older values by event and target. The action queue never silently evicts an action: reaching its hard limit records `luaEventQueueOverflows`, clears and suspends the failed session queue, and restarts the Lua child. A fresh runtime session resets delivery and begins with an empty queue.
+
 ## Runtime input backpressure
 
 The host accepts at most 256 complete Lua protocol lines waiting for actor-side processing. A full queue is treated as an unhealthy runtime rather than silently dropping an ordered protocol message. EasyBar records `luaRuntimeInputOverflows`, terminates the current child as an unexpected failure, and restarts it through normal bounded-backoff supervision.

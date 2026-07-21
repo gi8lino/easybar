@@ -2,6 +2,9 @@ import Foundation
 
 /// Delivery and buffering policy for one event name.
 enum EventDeliveryPolicy {
+  /// Hard buffer used for automatically configured must-deliver subscriptions.
+  static let maximumBufferedMustDeliverEvents = 256
+
   /// Preserve every event in enqueue order.
   case mustDeliver
   /// Prefer the newest value when events arrive faster than consumers read.
@@ -29,21 +32,23 @@ enum EventDeliveryPolicy {
 
   /// Returns the default buffering policy for one filtered subscription set.
   ///
-  /// Streams that include any must-deliver event are unbounded so action events
-  /// cannot be displaced by newer state. Callers that observe every event must
-  /// select their buffering contract explicitly through `subscribeAll`.
+  /// Streams that include must-deliver events retain the oldest bounded sequence.
+  /// Overflow terminates the stalled subscriber rather than silently losing an action.
+  /// Callers that observe every event may still select an explicit contract through `subscribeAll`.
   static func defaultBufferingPolicy(
     for eventNames: Set<String>
   ) -> AsyncStream<EasyBarEventPayload>.Continuation.BufferingPolicy {
     guard !eventNames.isEmpty else {
-      return .unbounded
+      return .bufferingOldest(Self.maximumBufferedMustDeliverEvents)
     }
 
     let containsMustDeliverEvent = eventNames.contains { eventName in
       forEventName(eventName) == .mustDeliver
     }
 
-    return containsMustDeliverEvent ? .unbounded : .bufferingNewest(1)
+    return containsMustDeliverEvent
+      ? .bufferingOldest(Self.maximumBufferedMustDeliverEvents)
+      : .bufferingNewest(1)
   }
 }
 

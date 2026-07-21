@@ -168,6 +168,12 @@ enum MetricsRenderer {
       row([
         column("input_overflow", width: 16),
         column(String(runtime.luaRuntimeInputOverflows), width: 18),
+        column("event_overflow", width: 16),
+        column(String(runtime.luaEventQueueOverflows), width: 18),
+      ]),
+      row([
+        column("event_queue", width: 16),
+        column(String(runtime.luaEventQueueDepth), width: 18),
         column("", width: 16),
         column("", width: 18),
       ]),
