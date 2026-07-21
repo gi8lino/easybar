@@ -15,7 +15,7 @@ public enum CalendarAgentErrorCode: String, Codable, Equatable, Sendable {
 }
 
 /// Commands supported by the calendar agent socket.
-public enum CalendarAgentCommand: String, Codable, Sendable {
+public enum CalendarAgentCommand: String, Codable, Equatable, Sendable {
   case ping
   case version
   case fetch

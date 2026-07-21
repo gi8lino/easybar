@@ -133,6 +133,47 @@ final class AgentSocketClientTests: XCTestCase {
     XCTAssertEqual(handledMessages.withLock { $0 }, 0)
   }
 
+  func testReconnectStaysSuspendedUntilExplicitResume() async throws {
+    let logger = Self.makeLogger()
+    let server = makeServer(logger: logger)
+    let requestCount = LockedState(0)
+
+    server.start { fd, _ in
+      requestCount.withLock { $0 += 1 }
+      _ = server.send(TestMessage(kind: "permanent_error"), to: fd)
+      return .close
+    }
+    defer { server.stop() }
+
+    let clientBox = LockedState<AgentSocketClient<TestRequest, TestMessage>?>(nil)
+    let client = AgentSocketClient<TestRequest, TestMessage>(
+      label: "test agent",
+      socketPath: { self.socketPath },
+      subscribeRequest: { TestRequest(command: "subscribe") },
+      handleMessage: { _, _ in
+        clientBox.withLock { $0 }?.suspendReconnect()
+      },
+      clearState: { _ in },
+      logger: logger
+    )
+    clientBox.withLock { $0 = client }
+    client.setNextReconnectDelay(0.05)
+    client.start()
+    defer { client.stop() }
+
+    try await waitUntil("first permanent error and disconnect") {
+      requestCount.withLock { $0 == 1 } && !client.isConnected
+    }
+    try await Task.sleep(nanoseconds: 150_000_000)
+    XCTAssertEqual(requestCount.withLock { $0 }, 1)
+
+    client.resumeReconnect()
+
+    try await waitUntil("explicit resume to reconnect") {
+      requestCount.withLock { $0 == 2 }
+    }
+  }
+
   func testServerStopClosesKeptOpenSubscriberSocket() async throws {
     let logger = Self.makeLogger()
     let removedSubscribers = LockedState(0)

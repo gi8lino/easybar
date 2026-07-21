@@ -30,6 +30,7 @@ public final class AgentSocketClient<
 
   private struct State {
     var running = false
+    var reconnectSuspended = false
     var connectionThread: Thread?
     var nextReconnectDelayOverride: TimeInterval?
     var nextConnectionID: UInt64 = 0
@@ -105,6 +106,7 @@ public final class AgentSocketClient<
     let shouldConnect = state.withLock { state -> Bool in
       guard !state.running else { return false }
       state.running = true
+      state.reconnectSuspended = false
       return true
     }
 
@@ -117,6 +119,7 @@ public final class AgentSocketClient<
   public func stop() {
     let snapshot = state.withLock { state -> StopSnapshot in
       state.running = false
+      state.reconnectSuspended = false
       state.nextReconnectDelayOverride = nil
 
       let connection = state.connection
@@ -146,6 +149,39 @@ public final class AgentSocketClient<
       state.nextReconnectDelayOverride = delay.flatMap {
         $0.isFinite ? max(0, $0) : nil
       }
+    }
+  }
+
+  /// Suspends automatic reconnect attempts while preserving the active run.
+  public func suspendReconnect() {
+    let shouldCancel = state.withLock { state -> Bool in
+      guard state.running else { return false }
+      state.reconnectSuspended = true
+      return true
+    }
+
+    if shouldCancel {
+      reconnectScheduler.cancel()
+    }
+  }
+
+  /// Resumes reconnects and immediately reconnects when no socket is active.
+  public func resumeReconnect() {
+    let resume = state.withLock { state -> (wasSuspended: Bool, shouldConnect: Bool) in
+      guard state.running else { return (false, false) }
+
+      let wasSuspended = state.reconnectSuspended
+      state.reconnectSuspended = false
+      let shouldConnect =
+        wasSuspended && state.connection == nil && state.connectionThread == nil
+      return (wasSuspended, shouldConnect)
+    }
+
+    guard resume.wasSuspended else { return }
+
+    reconnectScheduler.cancel()
+    if resume.shouldConnect {
+      connect()
     }
   }
 
@@ -293,7 +329,7 @@ public final class AgentSocketClient<
   /// Schedules one reconnect attempt.
   private func scheduleReconnect() {
     let reconnect = state.withLock { state -> (running: Bool, delayOverride: TimeInterval?) in
-      guard state.running else { return (false, nil) }
+      guard state.running, !state.reconnectSuspended else { return (false, nil) }
       let delay = state.nextReconnectDelayOverride
       state.nextReconnectDelayOverride = nil
       return (true, delay)

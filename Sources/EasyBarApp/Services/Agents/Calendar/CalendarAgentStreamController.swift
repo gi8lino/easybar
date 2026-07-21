@@ -9,6 +9,12 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     var started = false
     var socketPath: String
     var request: CalendarAgentRequest
+    var permanentlyRejectedRequest: CalendarAgentRequest?
+  }
+
+  private struct ConnectionInputUpdate {
+    let blockedByPermanentError: Bool
+    let resumedAfterRequestChange: Bool
   }
 
   /// Human-readable stream label used in logs.
@@ -83,7 +89,11 @@ final class CalendarAgentStreamController: @unchecked Sendable {
     self.clearState = clearState
     self.logger = logger
     self.lifecycleState = LockedState(
-      LifecycleState(socketPath: socketPath(), request: CalendarAgentRequest(command: .ping))
+      LifecycleState(
+        socketPath: socketPath(),
+        request: CalendarAgentRequest(command: .ping),
+        permanentlyRejectedRequest: nil
+      )
     )
 
     wakeRefreshController = AgentWakeRefreshController(
@@ -112,7 +122,7 @@ final class CalendarAgentStreamController: @unchecked Sendable {
       return
     }
 
-    updateCachedConnectionInputs(started: true)
+    _ = updateCachedConnectionInputs(started: true, resetPermanentError: true)
 
     wakeRefreshController.start { [weak self] in
       guard let self, self.isStarted else { return }
@@ -171,7 +181,16 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   func refresh() {
     guard isStarted else { return }
 
-    updateCachedConnectionInputs(started: true)
+    let inputUpdate = updateCachedConnectionInputs(started: true)
+    guard !inputUpdate.blockedByPermanentError else {
+      logger.debug("\(label) refresh skipped for permanently rejected request")
+      return
+    }
+
+    if inputUpdate.resumedAfterRequestChange {
+      logger.debug("\(label) request changed; resuming calendar-agent connection")
+      client.resumeReconnect()
+    }
 
     Task {
       await metricsCoordinator.recordAgentRefresh(metricsAgent)
@@ -209,8 +228,28 @@ final class CalendarAgentStreamController: @unchecked Sendable {
       }
 
     case .error:
+      if response.errorCode == .invalidRequest {
+        let shouldLog = lifecycleState.withLock { state -> Bool in
+          let shouldLog = state.permanentlyRejectedRequest != state.request
+          state.permanentlyRejectedRequest = state.request
+          return shouldLog
+        }
+
+        client.suspendReconnect()
+
+        if shouldLog {
+          logger.warn(
+            "\(label) request permanently rejected",
+            .field("code", response.errorCode?.rawValue ?? "unknown"),
+            .field("message", response.message ?? "unknown"),
+          )
+        }
+        return
+      }
+
       logger.warn(
         "\(label) received error",
+        .field("code", response.errorCode?.rawValue ?? "unknown"),
         .field("message", response.message ?? "unknown"),
       )
       Task { @MainActor [weak self] in
@@ -242,13 +281,29 @@ final class CalendarAgentStreamController: @unchecked Sendable {
   }
 
   /// Refreshes the cached request and socket path used by background socket work.
-  private func updateCachedConnectionInputs(started: Bool) {
+  private func updateCachedConnectionInputs(
+    started: Bool,
+    resetPermanentError: Bool = false
+  ) -> ConnectionInputUpdate {
     let socketPath = socketPath()
     let request = makeRequest()
-    lifecycleState.withLock { state in
+
+    return lifecycleState.withLock { state in
+      let requestChanged = state.socketPath != socketPath || state.request != request
+      let wasPermanentlyRejected = state.permanentlyRejectedRequest != nil
+
+      if resetPermanentError || requestChanged {
+        state.permanentlyRejectedRequest = nil
+      }
+
       state.started = started
       state.socketPath = socketPath
       state.request = request
+
+      return ConnectionInputUpdate(
+        blockedByPermanentError: state.permanentlyRejectedRequest == request,
+        resumedAfterRequestChange: wasPermanentlyRejected && state.permanentlyRejectedRequest == nil
+      )
     }
   }
 

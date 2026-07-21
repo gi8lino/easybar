@@ -114,10 +114,14 @@ public struct CalendarAgentQuery: Codable, Equatable, Sendable {
     birthdaysTitle = try container.decode(String.self, forKey: .birthdaysTitle)
     birthdaysDateFormat = try container.decode(String.self, forKey: .birthdaysDateFormat)
     birthdaysShowAge = try container.decode(Bool.self, forKey: .birthdaysShowAge)
-    includedCalendarNames = try container.decodeIfPresent([String].self, forKey: .includedCalendarNames) ?? []
-    excludedCalendarNames = try container.decodeIfPresent([String].self, forKey: .excludedCalendarNames) ?? []
-    includedCalendarIDs = try container.decodeIfPresent([String].self, forKey: .includedCalendarIDs) ?? []
-    excludedCalendarIDs = try container.decodeIfPresent([String].self, forKey: .excludedCalendarIDs) ?? []
+    includedCalendarNames =
+      try container.decodeIfPresent([String].self, forKey: .includedCalendarNames) ?? []
+    excludedCalendarNames =
+      try container.decodeIfPresent([String].self, forKey: .excludedCalendarNames) ?? []
+    includedCalendarIDs =
+      try container.decodeIfPresent([String].self, forKey: .includedCalendarIDs) ?? []
+    excludedCalendarIDs =
+      try container.decodeIfPresent([String].self, forKey: .excludedCalendarIDs) ?? []
     includedCalendarSourceIDs =
       try container.decodeIfPresent([String].self, forKey: .includedCalendarSourceIDs) ?? []
     excludedCalendarSourceIDs =
@@ -223,7 +227,7 @@ public struct CalendarAgentDeleteEvent: Codable, Equatable, Sendable {
 }
 
 /// One request sent to the calendar agent.
-public struct CalendarAgentRequest: Codable, Sendable {
+public struct CalendarAgentRequest: Codable, Equatable, Sendable {
   /// Command to execute on the agent.
   public var command: CalendarAgentCommand
   /// Optional query used for fetch and subscribe requests.
