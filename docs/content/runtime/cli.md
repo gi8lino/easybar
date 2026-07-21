@@ -61,6 +61,23 @@ Hyphens and underscores are accepted in event names. These commands emit driver 
 | `--version`, `-v`     | Print the installed CLI version.                               |
 | `--help`, `-h`        | Print command usage.                                           |
 
+## Socket resolution failures
+
+Without `--socket`, the CLI resolves control and helper-agent sockets from the same shared runtime
+configuration used by EasyBar and its agents. A missing config file is valid and uses built-in
+defaults. A present but malformed config is an error and is reported directly; the CLI no longer
+silently falls back to a different default socket.
+
+Use an explicit socket to diagnose or recover while the shared config is malformed:
+
+```bash
+easybar --refresh --socket ~/.local/state/easybar/runtime/easybar.sock
+easybar --restart-calendar-agent --socket ~/.local/state/easybar/runtime/calendar-agent.sock
+```
+
+With `--debug`, the CLI reports whether each socket came from `--socket` or the shared config file.
+`--restart-agents` cannot bypass config resolution because it needs two different agent sockets.
+
 The CLI and running app versions should normally match after a Homebrew upgrade:
 
 ```bash
@@ -75,3 +92,5 @@ easybar --version
 - [Logging](../configuration/logging.md)
 - [Environment](../configuration/environment.md)
 - [Control Socket Internals](../internals/architecture/control-socket.md)
+
+

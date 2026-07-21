@@ -19,13 +19,19 @@ private struct AppController {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
-      let socketPath = parsed.socketPath ?? defaultEasyBarSocketPath()
-
       switch parsed.action {
       case .validateConfig:
+        let socketPath = try resolvedControlSocketPath(
+          explicitPath: parsed.socketPath,
+          context: context
+        )
         try validateConfig(configPath: parsed.configPath, socketPath: socketPath, context: context)
 
       case .command(let command):
+        let socketPath = try resolvedControlSocketPath(
+          explicitPath: parsed.socketPath,
+          context: context
+        )
         if command == .metrics {
           if parsed.watchMetrics {
             try streamMetrics(to: socketPath, context: context)
@@ -68,11 +74,36 @@ private struct AppController {
   }
 }
 
-/// Resolves the control socket from the active shared runtime configuration.
-private func defaultEasyBarSocketPath() -> String {
-  if let runtime = try? SharedRuntimeConfig.load() {
-    return runtime.easyBar.socketPath
+/// Resolves the control socket and reports malformed shared configuration clearly.
+private func resolvedControlSocketPath(
+  explicitPath: String?,
+  context: AppContext
+) throws -> String {
+  do {
+    let resolution = try SharedRuntimeSocketResolver.controlSocket(explicitPath: explicitPath)
+    logSocketResolution(resolution, kind: "control", context: context)
+    return resolution.path
+  } catch {
+    throw AppError.message(
+      "failed to resolve control socket from shared runtime config: "
+        + "\(error.localizedDescription). Use --socket PATH to bypass config resolution."
+    )
   }
+}
 
-  return SharedRuntimeConfig.environmentDefaults().easyBar.socketPath
+/// Logs one resolved CLI socket source.
+func logSocketResolution(
+  _ resolution: SharedRuntimeSocketResolution,
+  kind: String,
+  context: AppContext
+) {
+  switch resolution.source {
+  case .explicit:
+    context.debug("resolved \(kind) socket from --socket: \(resolution.path)")
+
+  case .sharedConfig(let path):
+    context.debug(
+      "resolved \(kind) socket from shared config \(path): \(resolution.path)"
+    )
+  }
 }

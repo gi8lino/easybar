@@ -17,7 +17,9 @@ func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppCont
 }
 
 func restartCalendarAgent(socketPath: String?, context: AppContext) throws {
-  let path = socketPath ?? defaultAgentSocketPaths().calendar
+  let resolution = try resolveCalendarAgentSocket(explicitPath: socketPath)
+  logSocketResolution(resolution, kind: "calendar agent", context: context)
+  let path = resolution.path
   context.debug("requesting calendar agent restart through \(path)")
   do {
     try AgentRestartClient.restartCalendarAgent(socketPath: path)
@@ -27,7 +29,9 @@ func restartCalendarAgent(socketPath: String?, context: AppContext) throws {
 }
 
 func restartNetworkAgent(socketPath: String?, context: AppContext) throws {
-  let path = socketPath ?? defaultAgentSocketPaths().network
+  let resolution = try resolveNetworkAgentSocket(explicitPath: socketPath)
+  logSocketResolution(resolution, kind: "network agent", context: context)
+  let path = resolution.path
   context.debug("requesting network agent restart through \(path)")
   do {
     try AgentRestartClient.restartNetworkAgent(socketPath: path)
@@ -37,17 +41,19 @@ func restartNetworkAgent(socketPath: String?, context: AppContext) throws {
 }
 
 func restartAgents(context: AppContext) throws {
-  let paths = defaultAgentSocketPaths()
+  let paths = try resolveAgentSockets()
+  logSocketResolution(paths.calendar, kind: "calendar agent", context: context)
+  logSocketResolution(paths.network, kind: "network agent", context: context)
   var failures: [String] = []
 
   do {
-    try AgentRestartClient.restartCalendarAgent(socketPath: paths.calendar)
+    try AgentRestartClient.restartCalendarAgent(socketPath: paths.calendar.path)
   } catch {
     failures.append("calendar: \(error.localizedDescription)")
   }
 
   do {
-    try AgentRestartClient.restartNetworkAgent(socketPath: paths.network)
+    try AgentRestartClient.restartNetworkAgent(socketPath: paths.network.path)
   } catch {
     failures.append("network: \(error.localizedDescription)")
   }
@@ -58,9 +64,41 @@ func restartAgents(context: AppContext) throws {
   context.debug("both agent restart requests were acknowledged")
 }
 
-private func defaultAgentSocketPaths() -> (calendar: String, network: String) {
-  let runtime = (try? SharedRuntimeConfig.load()) ?? SharedRuntimeConfig.environmentDefaults()
-  return (runtime.calendarAgent.socketPath, runtime.networkAgent.socketPath)
+private func resolveCalendarAgentSocket(
+  explicitPath: String?
+) throws -> SharedRuntimeSocketResolution {
+  do {
+    return try SharedRuntimeSocketResolver.calendarAgentSocket(explicitPath: explicitPath)
+  } catch {
+    throw AppError.message(
+      "failed to resolve calendar agent socket from shared runtime config: "
+        + "\(error.localizedDescription). Use --socket PATH to bypass config resolution."
+    )
+  }
+}
+
+private func resolveNetworkAgentSocket(
+  explicitPath: String?
+) throws -> SharedRuntimeSocketResolution {
+  do {
+    return try SharedRuntimeSocketResolver.networkAgentSocket(explicitPath: explicitPath)
+  } catch {
+    throw AppError.message(
+      "failed to resolve network agent socket from shared runtime config: "
+        + "\(error.localizedDescription). Use --socket PATH to bypass config resolution."
+    )
+  }
+}
+
+private func resolveAgentSockets() throws -> SharedAgentSocketResolutions {
+  do {
+    return try SharedRuntimeSocketResolver.agentSockets()
+  } catch {
+    throw AppError.message(
+      "failed to resolve agent sockets from shared runtime config: "
+        + "\(error.localizedDescription). Fix the config before using --restart-agents."
+    )
+  }
 }
 
 /// Fetches one metrics snapshot.

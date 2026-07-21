@@ -278,6 +278,58 @@ final class SharedRuntimeConfigTests: XCTestCase {
     }
   }
 
+  /// Verifies that an explicit CLI socket bypasses malformed shared configuration.
+  func testSocketResolverExplicitPathBypassesConfigLoading() throws {
+    let explicitPath = tempDirectoryURL.appendingPathComponent("explicit.sock").path
+    var loadCount = 0
+
+    let resolution = try SharedRuntimeSocketResolver.controlSocket(
+      explicitPath: explicitPath,
+      loadRuntimeConfig: {
+        loadCount += 1
+        throw SharedRuntimeConfigError.parseFailure(path: "bad.toml", message: "invalid")
+      }
+    )
+
+    XCTAssertEqual(resolution.path, explicitPath)
+    XCTAssertEqual(resolution.source, .explicit)
+    XCTAssertEqual(loadCount, 0)
+  }
+
+  /// Verifies that malformed shared configuration is not hidden by socket defaults.
+  func testSocketResolverPropagatesSharedConfigFailure() {
+    XCTAssertThrowsError(
+      try SharedRuntimeSocketResolver.controlSocket(
+        explicitPath: nil,
+        loadRuntimeConfig: {
+          throw SharedRuntimeConfigError.parseFailure(path: "bad.toml", message: "invalid")
+        }
+      )
+    ) { error in
+      XCTAssertEqual(
+        error as? SharedRuntimeConfigError,
+        .parseFailure(path: "bad.toml", message: "invalid")
+      )
+    }
+  }
+
+  /// Verifies that both agent paths come from one shared runtime config load.
+  func testSocketResolverLoadsBothAgentPathsOnce() throws {
+    let runtime = SharedRuntimeConfig.environmentDefaults()
+    var loadCount = 0
+
+    let resolutions = try SharedRuntimeSocketResolver.agentSockets {
+      loadCount += 1
+      return runtime
+    }
+
+    XCTAssertEqual(loadCount, 1)
+    XCTAssertEqual(resolutions.calendar.path, runtime.calendarAgent.socketPath)
+    XCTAssertEqual(resolutions.network.path, runtime.networkAgent.socketPath)
+    XCTAssertEqual(resolutions.calendar.source, .sharedConfig(path: runtime.configPath))
+    XCTAssertEqual(resolutions.network.source, .sharedConfig(path: runtime.configPath))
+  }
+
 }
 
 extension SharedRuntimeConfigTests {
