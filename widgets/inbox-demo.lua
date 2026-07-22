@@ -15,7 +15,7 @@ local GITLAB = {
 }
 local HOMEBREW = {
 	name = "Homebrew",
-	icon = "🍺",
+	icon = easybar.asset("assets/brew.svg"),
 	color = "#FBB040",
 }
 

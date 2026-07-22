@@ -6,7 +6,7 @@ local text = require("text")
 local SOURCE = "Homebrew"
 local SOURCE_PRESENTATION = {
 	name = "Homebrew",
-	icon = "🍺",
+	icon = easybar.asset("assets/brew.svg"),
 	color = "#FBB040",
 }
 local POLL_INTERVAL_SECONDS = 30 * 60
