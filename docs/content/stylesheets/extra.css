@@ -130,10 +130,35 @@
   margin: 0.08rem 0;
 }
 
-/* Compact screenshots should resize through layout, not transforms, so they stay aligned. */
+/* Display Retina captures at their approximate macOS point size. */
 .md-typeset img.screenshot-compact {
   display: block;
-  width: min(100%, 420px);
+  width: min(100%, var(--screenshot-width));
   height: auto;
   margin: 0 auto;
+}
+
+.md-typeset img.screenshot-month {
+  --screenshot-width: 374px;
+}
+.md-typeset img.screenshot-upcoming {
+  --screenshot-width: 511px;
+}
+.md-typeset img.screenshot-inbox {
+  --screenshot-width: 457px;
+}
+.md-typeset img.screenshot-cpu {
+  --screenshot-width: 292px;
+}
+.md-typeset img.screenshot-wifi {
+  --screenshot-width: 507px;
+}
+.md-typeset img.screenshot-spaces {
+  --screenshot-width: 557px;
+}
+.md-typeset img.screenshot-context {
+  --screenshot-width: 422px;
+}
+.md-typeset img.screenshot-topbar {
+  --screenshot-width: 270px;
 }

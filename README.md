@@ -14,9 +14,7 @@ native widgets with custom Lua widgets and integrates with AeroSpace.
 - AeroSpace integration and separate calendar and network helper agents
 - Menu bar controller and CLI for runtime control and diagnostics
 
-<p align="center">
-  <img src="./docs/content/assets/inbox.png" alt="EasyBar inbox" width="520">
-</p>
+See screenshots in the [documentation](https://gi8lino.github.io/easybar/#screenshots).
 
 ## Requirements
 

@@ -59,32 +59,32 @@ For architecture, process boundaries, agent protocols, Lua runtime internals, an
 
 ### Calendar
 
-[![Calendar screenshot](assets/month.png){ .screenshot-compact }](assets/month.png)
+[![Calendar screenshot](assets/month.png){ .screenshot-compact .screenshot-month }](assets/month.png)
 
 ### Upcoming
 
-[![Upcoming screenshot](assets/upcoming.png){ .screenshot-compact }](assets/upcoming.png)
+[![Upcoming screenshot](assets/upcoming.png){ .screenshot-compact .screenshot-upcoming }](assets/upcoming.png)
 
 ## Inbox
 
-[![Inbox screenshot](assets/inbox.png){ .screenshot-compact }](assets/inbox.png)
+[![Inbox screenshot](assets/inbox.png){ .screenshot-compact .screenshot-inbox }](assets/inbox.png)
 
 ### CPU
 
-[![CPU screenshot](assets/cpu.png){ .screenshot-compact }](assets/cpu.png)
+[![CPU screenshot](assets/cpu.png){ .screenshot-compact .screenshot-cpu }](assets/cpu.png)
 
 ### Wi-Fi
 
-[![Wi-Fi screenshot](assets/wifi.png){ .screenshot-compact }](assets/wifi.png)
+[![Wi-Fi screenshot](assets/wifi.png){ .screenshot-compact .screenshot-wifi }](assets/wifi.png)
 
 ### Spaces with Front App
 
-[![Spaces with Front app screenshot](assets/spaces_with_front_app.png){ .screenshot-compact }](assets/spaces_with_front_app.png)
+[![Spaces with Front app screenshot](assets/spaces_with_front_app.png){ .screenshot-compact .screenshot-spaces }](assets/spaces_with_front_app.png)
 
 ### Custom context menu
 
-[![Context menu screenshot](assets/custom_context.png){ .screenshot-compact }](assets/custom_context.png)
+[![Context menu screenshot](assets/custom_context.png){ .screenshot-compact .screenshot-context }](assets/custom_context.png)
 
 ### Top bar app context menu
 
-[![Topbar App](assets/topbar_app.png){ .screenshot-compact }](assets/topbar_app.png)
+[![Topbar App](assets/topbar_app.png){ .screenshot-compact .screenshot-topbar }](assets/topbar_app.png)
