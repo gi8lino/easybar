@@ -153,8 +153,17 @@
 .md-typeset img.screenshot-wifi {
   --screenshot-width: 507px;
 }
+.md-typeset img.screenshot-tailscale {
+  --screenshot-width: 482px;
+}
 .md-typeset img.screenshot-spaces {
-  --screenshot-width: 557px;
+  --screenshot-width: 382px;
+}
+.md-typeset img.screenshot-spaces-front-app {
+  --screenshot-width: 322px;
+}
+.md-typeset img.screenshot-native-widgets {
+  --screenshot-width: 582px;
 }
 .md-typeset img.screenshot-context {
   --screenshot-width: 422px;
