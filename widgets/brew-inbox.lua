@@ -4,6 +4,7 @@ local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "Homebrew"
+---@type EasyBarInboxSourcePresentation
 local SOURCE_PRESENTATION = {
 	name = "Homebrew",
 	icon = easybar.asset("assets/brew.svg"),

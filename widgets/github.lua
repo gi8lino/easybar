@@ -2,6 +2,22 @@
 
 local text = require("text")
 
+---@class GitHubNotification
+---@field id? string
+---@field reason? string
+---@field repository? { full_name?: string, html_url?: string }
+---@field subject? { title?: string, type?: string, url?: string }
+
+---@class GitHubWidgetState
+---@field notifications GitHubNotification[]
+---@field error? string
+---@field loading boolean
+---@field popup_open boolean
+---@field trigger_hovered boolean
+---@field popup_hovered boolean
+---@field hover_revision integer
+---@field hover_close_timer? EasyBarTimerHandle
+
 local POLL_INTERVAL_SECONDS = 300
 local MAX_POPUP_ITEMS = 8
 local HOVER_CLOSE_DELAY_SECONDS = 0.20
@@ -18,6 +34,7 @@ local COLORS = {
 	surface_hover = easybar.theme.ref.surface_hover,
 }
 
+---@type GitHubWidgetState
 local state = {
 	notifications = {},
 	error = nil,
@@ -53,7 +70,7 @@ local function open_url(url)
 end
 
 --- Returns the browser URL for one GitHub notification.
----@param notification table
+---@param notification GitHubNotification
 ---@return string
 local function notification_url(notification)
 	local repository = type(notification.repository) == "table" and notification.repository or {}
@@ -76,7 +93,7 @@ local function notification_url(notification)
 end
 
 --- Returns the popup text for one GitHub notification.
----@param notification table
+---@param notification GitHubNotification
 ---@return string
 local function notification_text(notification)
 	local repository = type(notification.repository) == "table" and notification.repository or {}
@@ -95,8 +112,8 @@ local function notification_text(notification)
 end
 
 --- Flattens paginated `gh api --slurp` output into notifications.
----@param pages table
----@return table[]? notifications
+---@param pages GitHubNotification[][]
+---@return GitHubNotification[]? notifications
 ---@return string? error_message
 local function flatten_notifications(pages)
 	if type(pages) ~= "table" then
@@ -407,7 +424,7 @@ local function schedule_popup_close(source)
 end
 
 --- Adds popup hover handling to a node.
----@param node EasyBarNode
+---@param node EasyBarNodeHandle
 local function attach_popup_hover(node)
 	node:subscribe(easybar.events.mouse.entered, function()
 		open_popup("popup")

@@ -4,6 +4,7 @@ local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "GitHub"
+---@type EasyBarInboxSourcePresentation
 local SOURCE_PRESENTATION = {
 	name = "GitHub",
 	icon = easybar.asset("assets/github.svg"),

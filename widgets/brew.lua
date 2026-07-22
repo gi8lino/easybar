@@ -5,6 +5,40 @@
 
 local text = require("text")
 
+---@alias BrewPackageKind "formula"|"cask"
+---@alias BrewOperationKind "update"|"upgrade"
+---@alias BrewPhase "checking"|"updating"|"upgrading"|"cancelling"|"ready"|"error"
+---@alias BrewCommandCallback fun(output:string, code:EasyBarCommandExitCode)
+
+---@class BrewPackage
+---@field kind BrewPackageKind
+---@field name string
+---@field installed string
+---@field current string
+---@field pinned boolean
+
+---@class BrewDiagnostic
+---@field title? string
+---@field source string
+---@field summary string
+---@field raw string
+
+---@class BrewPopupRowOptions
+---@field order? integer
+---@field color? string
+---@field size? number
+---@field popup? table
+
+---@class BrewWidgetState
+---@field formulae BrewPackage[]
+---@field casks BrewPackage[]
+---@field error? BrewDiagnostic
+---@field warning? BrewDiagnostic
+---@field status string
+---@field last_attempted_at? integer
+---@field last_checked? string
+---@field phase BrewPhase
+
 local WIDGET_ID = "brew_outdated"
 
 local ID_TITLE = WIDGET_ID .. "_title"
@@ -96,6 +130,7 @@ local add_popup_row
 local finish_cancelled_operation
 local make_error
 
+---@type BrewWidgetState
 local state = {
 	formulae = {},
 	casks = {},
@@ -112,21 +147,26 @@ local log = easybar.log.with_file(BREW_LOG_FILE_NAME, {
 })
 
 --- Returns the current time as HH:MM.
+---@return string
 local function now_label()
 	return os.date("%H:%M")
 end
 
 --- Returns a timestamp suitable for log section markers.
+---@return string
 local function log_timestamp()
 	return os.date("%Y-%m-%dT%H:%M:%S%z")
 end
 
 --- Appends a structured operation marker to the brew widget log.
+---@param kind string
+---@param status string
 local function append_log_marker(kind, status)
 	log.append("=== " .. log_timestamp() .. " brew-widget " .. kind .. " " .. status .. " ===")
 end
 
 --- Appends command output to the brew widget log when there is output.
+---@param output unknown
 local function append_log_output(output)
 	output = tostring(output or "")
 	if output ~= "" then
@@ -143,11 +183,15 @@ local function prune_brew_log()
 end
 
 --- Returns whether one cask should be upgraded by the widget.
+---@param cask unknown
+---@return boolean
 local function cask_allowed(cask)
 	return CASK_DENYLIST[tostring(cask or "")] ~= true
 end
 
 --- Parses newline-delimited cask names and returns allowed casks.
+---@param output unknown
+---@return string[]
 local function allowed_casks_from_output(output)
 	local casks = {}
 
@@ -167,6 +211,8 @@ local function allowed_casks_from_output(output)
 end
 
 --- Builds the direct argument vector for allowed cask upgrades.
+---@param casks string[]
+---@return string[]
 local function cask_upgrade_arguments(casks)
 	local arguments = {
 		"/usr/bin/env",
@@ -186,6 +232,8 @@ local function cask_upgrade_arguments(casks)
 end
 
 --- Returns a readable command label for widget logs.
+---@param arguments string[]
+---@return string
 local function command_label(arguments)
 	local values = {}
 	for index, argument in ipairs(arguments) do
@@ -195,6 +243,8 @@ local function command_label(arguments)
 end
 
 --- Fails the current brew operation while keeping diagnostics out of the main popup.
+---@param kind BrewOperationKind
+---@param message string|BrewDiagnostic
 local function fail_brew_operation(kind, message)
 	if type(message) == "table" then
 		state.error = message
@@ -213,6 +263,10 @@ local function fail_brew_operation(kind, message)
 end
 
 --- Runs one direct command, logs its output and exit code, then invokes the callback.
+---@param arguments string[]
+---@param options EasyBarCommandOptions
+---@param exit_label string
+---@param callback BrewCommandCallback
 local function run_logged_command(arguments, options, exit_label, callback)
 	log.append("$ " .. command_label(arguments))
 
@@ -241,11 +295,13 @@ local function run_logged_command(arguments, options, exit_label, callback)
 end
 
 --- Runs `brew update`.
+---@param callback BrewCommandCallback
 local function run_brew_update(callback)
 	run_logged_command({ "brew", "update" }, EXEC.update, "brew update", callback)
 end
 
 --- Runs `brew outdated --json=v2`.
+---@param callback BrewCommandCallback
 local function run_outdated_json(callback)
 	run_logged_command({
 		"/usr/bin/env",
@@ -257,6 +313,7 @@ local function run_outdated_json(callback)
 end
 
 --- Runs formula upgrades.
+---@param callback BrewCommandCallback
 local function run_formula_upgrade(callback)
 	run_logged_command({
 		"/usr/bin/env",
@@ -270,6 +327,7 @@ local function run_formula_upgrade(callback)
 end
 
 --- Runs the cask outdated list command.
+---@param callback BrewCommandCallback
 local function run_outdated_casks(callback)
 	run_logged_command({
 		"/usr/bin/env",
@@ -282,6 +340,8 @@ local function run_outdated_casks(callback)
 end
 
 --- Runs cask upgrades for allowed casks, or skips when none remain.
+---@param casks string[]
+---@param callback BrewCommandCallback
 local function run_allowed_cask_upgrade(casks, callback)
 	if #casks == 0 then
 		log.append("no casks to upgrade after denylist")
@@ -293,6 +353,7 @@ local function run_allowed_cask_upgrade(casks, callback)
 end
 
 --- Returns whether the widget should run another Homebrew update now.
+---@return boolean
 local function check_due()
 	if state.last_attempted_at == nil then
 		return true
@@ -302,6 +363,7 @@ local function check_due()
 end
 
 --- Returns the next scheduled check time as HH:MM or `now` when overdue.
+---@return string
 local function next_check_label()
 	if check_due() then
 		return "now"
@@ -311,6 +373,8 @@ local function next_check_label()
 end
 
 --- Returns the threshold color for the outdated package count.
+---@param count unknown
+---@return string
 local function threshold_color(count)
 	count = tonumber(count) or 0
 
@@ -324,6 +388,9 @@ local function threshold_color(count)
 end
 
 --- Parses Homebrew JSON package entries into normalized rows.
+---@param entries table[]?
+---@param kind BrewPackageKind
+---@return BrewPackage[]
 local function parse_package_list(entries, kind)
 	local packages = {}
 
@@ -350,6 +417,9 @@ local function parse_package_list(entries, kind)
 end
 
 --- Separates Homebrew's JSON payload from warnings written around it.
+---@param raw unknown
+---@return string json
+---@return string warning
 local function split_outdated_output(raw)
 	raw = tostring(raw or "")
 
@@ -375,6 +445,8 @@ local function split_outdated_output(raw)
 end
 
 --- Returns a readable package and tap label from a Homebrew warning source path.
+---@param raw unknown
+---@return string
 local function warning_source(raw)
 	local owner, tap, token = tostring(raw or ""):match("/Taps/([^/]+)/homebrew%-([^/]+)/Casks/([^/]+)%.rb:%d+")
 
@@ -391,6 +463,10 @@ local function warning_source(raw)
 end
 
 --- Builds a concise error plus diagnostic details shown only on hover.
+---@param title string
+---@param summary unknown
+---@param raw unknown
+---@return BrewDiagnostic
 make_error = function(title, summary, raw)
 	raw = text.trim(raw)
 	return {
@@ -402,6 +478,8 @@ make_error = function(title, summary, raw)
 end
 
 --- Builds warning details while retaining both readable and complete forms.
+---@param raw unknown
+---@return BrewDiagnostic?
 local function parse_warning(raw)
 	local lines = {}
 	raw = text.trim(raw)
@@ -428,6 +506,7 @@ local function parse_warning(raw)
 end
 
 --- Stores parsed Homebrew outdated JSON in widget state.
+---@param raw string
 local function apply_outdated_json(raw)
 	local json, warning = split_outdated_output(raw)
 	local parsed = easybar.json.decode(json)
@@ -451,6 +530,8 @@ local function apply_outdated_json(raw)
 end
 
 --- Renders a compact warning section and returns the next popup order.
+---@param order integer
+---@return integer
 local function render_warning(order)
 	if state.warning == nil then
 		return order
@@ -530,6 +611,8 @@ local function render_warning(order)
 end
 
 --- Applies Homebrew JSON output to state and returns whether parsing succeeded.
+---@param output string
+---@return boolean
 local function apply_outdated_result(output)
 	local ok, err = pcall(apply_outdated_json, output)
 	if not ok then
@@ -547,6 +630,8 @@ local function apply_outdated_result(output)
 end
 
 --- Renders a concise error with complete command details in a hover popup.
+---@param order integer
+---@return integer
 local function render_error(order)
 	if state.error == nil then
 		return order
@@ -620,6 +705,7 @@ local function render_error(order)
 end
 
 --- Returns the number of outdated packages.
+---@return integer
 local function count_packages()
 	return #state.formulae + #state.casks
 end
@@ -636,6 +722,10 @@ local function remove_dynamic_rows()
 end
 
 --- Adds a popup text row and tracks it for later cleanup.
+---@param id string
+---@param text string
+---@param opts? BrewPopupRowOptions
+---@return EasyBarNodeHandle
 add_popup_row = function(id, text, opts)
 	opts = opts or {}
 
@@ -662,6 +752,13 @@ add_popup_row = function(id, text, opts)
 end
 
 --- Renders a package section in the popup.
+---@param title string
+---@param packages BrewPackage[]
+---@param row_prefix string
+---@param order integer
+---@param remaining_rows integer
+---@return integer next_order
+---@return integer rendered_count
 local function render_list_section(title, packages, row_prefix, order, remaining_rows)
 	if #packages == 0 or remaining_rows <= 0 then
 		return order, 0
@@ -703,6 +800,8 @@ local function render_list_section(title, packages, row_prefix, order, remaining
 end
 
 --- Returns the bar icon and color for the current widget state.
+---@return string icon
+---@return string color
 local function current_bar_visual()
 	local total = count_packages()
 
@@ -730,6 +829,8 @@ local function current_bar_visual()
 end
 
 --- Returns labels for action buttons based on the current phase.
+---@return string upgrade_label
+---@return string update_label
 local function action_button_labels()
 	if running and (state.phase == "updating" or state.phase == "upgrading" or state.phase == "cancelling") then
 		return "", state.phase == "cancelling" and "Cancelling…" or "Cancel"
@@ -910,6 +1011,8 @@ render = function()
 end
 
 --- Starts a brew operation and updates shared widget state.
+---@param phase BrewPhase
+---@param status string
 local function start_operation(phase, status)
 	running = true
 	state.status = status
@@ -953,6 +1056,7 @@ local function cancel_operation()
 end
 
 --- Checks outdated packages without updating Homebrew.
+---@param status_label? string
 local function check_outdated(status_label)
 	if running then
 		log(easybar.level.debug, "check_outdated skipped", "status=" .. tostring(status_label))
@@ -981,6 +1085,7 @@ local function check_outdated(status_label)
 end
 
 --- Completes a successful brew operation.
+---@param kind BrewOperationKind
 local function finish_brew_operation(kind)
 	running = false
 	active_operation_kind = nil
@@ -990,6 +1095,9 @@ local function finish_brew_operation(kind)
 end
 
 --- Handles the final outdated-package check for update or upgrade flows.
+---@param kind BrewOperationKind
+---@param output string
+---@param code EasyBarCommandExitCode
 local function finish_with_outdated_result(kind, output, code)
 	if code ~= 0 then
 		fail_brew_operation(kind, "brew outdated failed with exit code " .. tostring(code))
@@ -1005,6 +1113,8 @@ local function finish_with_outdated_result(kind, output, code)
 end
 
 --- Handles the `brew update` result for the update flow.
+---@param _ string
+---@param update_code EasyBarCommandExitCode
 local function handle_update_brew_update(_, update_code)
 	if update_code ~= 0 then
 		fail_brew_operation("update", "brew update failed with exit code " .. tostring(update_code))
@@ -1044,6 +1154,8 @@ local handle_upgrade_outdated_casks
 local handle_upgrade_casks
 
 --- Handles the `brew update` result for the upgrade flow.
+---@param _ string
+---@param update_code EasyBarCommandExitCode
 local function handle_upgrade_brew_update(_, update_code)
 	if update_code ~= 0 then
 		fail_brew_operation("upgrade", "brew update failed with exit code " .. tostring(update_code))
@@ -1054,6 +1166,8 @@ local function handle_upgrade_brew_update(_, update_code)
 end
 
 --- Handles the formula upgrade result for the upgrade flow.
+---@param _ string
+---@param formula_code EasyBarCommandExitCode
 handle_upgrade_formula = function(_, formula_code)
 	if formula_code ~= 0 then
 		fail_brew_operation("upgrade", "brew upgrade --formula failed with exit code " .. tostring(formula_code))
@@ -1064,6 +1178,8 @@ handle_upgrade_formula = function(_, formula_code)
 end
 
 --- Handles the outdated-cask list result before cask upgrades.
+---@param cask_output string
+---@param cask_code EasyBarCommandExitCode
 handle_upgrade_outdated_casks = function(cask_output, cask_code)
 	if cask_code ~= 0 then
 		fail_brew_operation("upgrade", "brew outdated --cask failed with exit code " .. tostring(cask_code))
@@ -1074,6 +1190,8 @@ handle_upgrade_outdated_casks = function(cask_output, cask_code)
 end
 
 --- Handles the cask upgrade result for the upgrade flow.
+---@param _ string
+---@param cask_upgrade_code EasyBarCommandExitCode
 handle_upgrade_casks = function(_, cask_upgrade_code)
 	if cask_upgrade_code ~= 0 then
 		fail_brew_operation("upgrade", "brew upgrade --cask failed with exit code " .. tostring(cask_upgrade_code))
@@ -1100,6 +1218,7 @@ local function upgrade_now()
 end
 
 --- Returns a fresh button background configuration.
+---@return table
 local function button_background()
 	return {
 		color = COLORS.button_bg,

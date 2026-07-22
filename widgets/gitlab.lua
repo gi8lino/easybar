@@ -3,6 +3,27 @@
 
 local text = require("text")
 
+---@alias GitLabWorkItemKind "issue"|"merge_request"
+
+---@class GitLabWorkItem
+---@field id? integer
+---@field iid? integer
+---@field title? string
+---@field updated_at? string
+---@field web_url? string
+---@field references? { full?: string }
+---@field kind? GitLabWorkItemKind
+
+---@class GitLabWidgetState
+---@field items GitLabWorkItem[]
+---@field error? string
+---@field loading boolean
+---@field popup_open boolean
+---@field trigger_hovered boolean
+---@field popup_hovered boolean
+---@field hover_revision integer
+---@field hover_close_timer? EasyBarTimerHandle
+
 local POLL_INTERVAL_SECONDS = 300
 local MAX_POPUP_ITEMS = 8
 local HOVER_CLOSE_DELAY_SECONDS = 0.20
@@ -26,6 +47,7 @@ local COLORS = {
 	surface_hover = easybar.theme.ref.surface_hover,
 }
 
+---@type GitLabWidgetState
 local state = {
 	items = {},
 	error = nil,
@@ -42,6 +64,8 @@ local popup_header
 local popup_rows = {}
 local popup_footer
 
+--- Opens a URL using the default macOS browser.
+---@param url string
 local function open_url(url)
 	url = text.trim(url)
 	if url == "" then
@@ -58,6 +82,9 @@ local function open_url(url)
 	end)
 end
 
+--- Returns the project-qualified reference for one work item.
+---@param item GitLabWorkItem
+---@return string
 local function item_reference(item)
 	if type(item.references) == "table" then
 		local reference = text.trim(item.references.full)
@@ -69,6 +96,9 @@ local function item_reference(item)
 	return item.kind == "merge_request" and "Merge request" or "Issue"
 end
 
+--- Returns the compact popup label for one work item.
+---@param item GitLabWorkItem
+---@return string
 local function item_text(item)
 	local title = text.trim(item.title)
 	if title == "" then
@@ -78,6 +108,11 @@ local function item_text(item)
 	return text.truncate(item_reference(item) .. "  ·  " .. title, 100)
 end
 
+--- Appends decoded work items while attaching their API kind.
+---@param target GitLabWorkItem[]
+---@param source unknown
+---@param kind GitLabWorkItemKind
+---@return boolean valid
 local function append_items(target, source, kind)
 	if type(source) ~= "table" then
 		return false
@@ -93,6 +128,11 @@ local function append_items(target, source, kind)
 	return true
 end
 
+--- Combines and sorts issue and merge-request API responses.
+---@param issues unknown
+---@param merge_requests unknown
+---@return GitLabWorkItem[]? items
+---@return string? error_message
 local function combine_items(issues, merge_requests)
 	local items = {}
 	if not append_items(items, issues, "issue") or not append_items(items, merge_requests, "merge_request") then
@@ -106,6 +146,9 @@ local function combine_items(issues, merge_requests)
 	return items, nil
 end
 
+--- Returns popup presentation properties.
+---@param drawing boolean
+---@return table
 local function popup_props(drawing)
 	return {
 		drawing = drawing,
@@ -122,6 +165,7 @@ local function popup_props(drawing)
 	}
 end
 
+--- Renders the GitLab popup from the current state.
 local function render_popup()
 	local count = #state.items
 
@@ -168,6 +212,7 @@ local function render_popup()
 	})
 end
 
+--- Renders the bar item and popup.
 local function render()
 	local color = state.error ~= nil and COLORS.danger or (#state.items > 0 and COLORS.accent or COLORS.muted)
 
@@ -192,6 +237,7 @@ local function render()
 	render_popup()
 end
 
+--- Fetches assigned GitLab issues and merge requests.
 local function refresh()
 	if state.loading then
 		return
@@ -206,6 +252,9 @@ local function refresh()
 		"merge_requests?scope=assigned_to_me&state=opened&non_archived=true&order_by=updated_at&sort=desc&per_page=100"
 	local options = { timeout_seconds = 30, max_output_bytes = 2097152 }
 
+	--- Stores one request failure and clears results that would otherwise be incomplete.
+	---@param output string
+	---@param fallback string
 	local function fail(output, fallback)
 		state.loading = false
 		local message = text.trim(output)
@@ -214,6 +263,9 @@ local function refresh()
 		render()
 	end
 
+	--- Runs one authenticated GitLab API request without shell parsing.
+	---@param endpoint string
+	---@param callback EasyBarCommandCallback
 	local function fetch(endpoint, callback)
 		easybar.spawn_async({
 			"/usr/bin/env",
@@ -225,6 +277,7 @@ local function refresh()
 		}, options, callback)
 	end
 
+	-- Fetch sequentially so the widget never publishes a half-refreshed issue/MR snapshot.
 	fetch(issues_endpoint, function(issues_output, issues_code)
 		if issues_code ~= 0 then
 			fail(issues_output, "Run 'glab auth login' and verify GITLAB_HOST and app.env PATH")
@@ -325,6 +378,7 @@ popup_footer = easybar.add(easybar.kind.item, "gitlab_work_items_footer", {
 	padding_y = 5,
 })
 
+--- Cancels a pending delayed popup close.
 local function cancel_hover_close()
 	if state.hover_close_timer ~= nil then
 		state.hover_close_timer:cancel()
@@ -332,6 +386,8 @@ local function cancel_hover_close()
 	end
 end
 
+--- Opens the popup and records the hovered surface.
+---@param source "trigger"|"popup"
 local function open_popup(source)
 	cancel_hover_close()
 	state.hover_revision = state.hover_revision + 1
@@ -341,6 +397,8 @@ local function open_popup(source)
 	render()
 end
 
+--- Schedules the popup to close after the hover grace period.
+---@param source "trigger"|"popup"
 local function schedule_popup_close(source)
 	state.hover_revision = state.hover_revision + 1
 	if source == "trigger" then
@@ -364,6 +422,8 @@ local function schedule_popup_close(source)
 	state.hover_close_timer = timer
 end
 
+--- Adds popup hover handling to a node.
+---@param node EasyBarNodeHandle
 local function attach_popup_hover(node)
 	node:subscribe(easybar.events.mouse.entered, function()
 		open_popup("popup")

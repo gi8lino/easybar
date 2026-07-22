@@ -3,22 +3,26 @@
 local SOURCE = "Inbox demo"
 local NOW = os.time()
 
+---@type EasyBarInboxSourcePresentation
 local GITHUB = {
 	name = "GitHub",
 	icon = easybar.asset("assets/github.svg"),
 	color = "#A371F7",
 }
+---@type EasyBarInboxSourcePresentation
 local GITLAB = {
 	name = "GitLab",
 	icon = easybar.asset("assets/gitlab.svg"),
 	color = "#FC6D26",
 }
+---@type EasyBarInboxSourcePresentation
 local HOMEBREW = {
 	name = "Homebrew",
 	icon = easybar.asset("assets/brew.svg"),
 	color = "#FBB040",
 }
 
+---@type EasyBarInboxItem[]
 local DEMO_ITEMS = {
 	{
 		id = "github-review",
@@ -115,8 +119,10 @@ local DEMO_ITEMS = {
 		source = HOMEBREW,
 	},
 }
+---@type EasyBarInboxItem[]
 local items = {}
 
+---Restores a fresh mutable snapshot from the immutable demo templates.
 local function reset_items()
 	items = {}
 	for _, item in ipairs(DEMO_ITEMS) do
@@ -124,10 +130,13 @@ local function reset_items()
 	end
 end
 
+---Publishes the current demo snapshot without affecting real inbox sources.
 local function publish()
 	easybar.inbox.replace(SOURCE, items)
 end
 
+---Removes one demo item selected through its inline Dismiss action.
+---@param event EasyBarInboxActionEvent
 local function handle_action(event)
 	if event.action_id ~= "dismiss" then
 		return
@@ -161,4 +170,5 @@ easybar.inbox.on_context_action(SOURCE, function(event)
 	end
 end)
 
+-- Loading the widget registers its actions but leaves item creation to Refresh.
 easybar.inbox.clear(SOURCE)
