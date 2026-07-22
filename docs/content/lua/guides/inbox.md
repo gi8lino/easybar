@@ -27,6 +27,7 @@ easybar.inbox.replace("gitlab", {
         timestamp = os.time(),
         category = "Merge requests",
         severity = "success",
+        url = "https://gitlab.example.com/project/-/merge_requests/42",
         source = {
             name = "GitLab",
             icon = easybar.asset("assets/gitlab.svg"),
@@ -50,6 +51,9 @@ easybar.inbox.clear("gitlab")
 
 Message content is owned by publishers and remains in memory. EasyBar persists only local read,
 unread, and dismissed state in `inbox-state.json` inside `app.runtime_dir`.
+
+Set `url` to add a native **Open** action. CLI-published URLs are restricted to HTTP(S); Lua
+publishers should use HTTP(S) URLs as well.
 
 Click a message to mark it read. Click its status dot to toggle read/unread, or right-click the
 message to change its state or dismiss it. **Dismiss all** suppresses every currently displayed

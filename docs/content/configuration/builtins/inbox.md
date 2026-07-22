@@ -1,6 +1,8 @@
 # Inbox
 
-The native inbox collects structured snapshots published by Lua widgets into one bar item. It displays the total unread count and can group messages by source, date, category, severity, or not at all.
+The native inbox collects structured messages published by Lua widgets or the `easybar inbox` CLI
+into one bar item. It displays the total unread count and can group messages by source, date,
+category, severity, or not at all.
 
 ```toml
 [builtins.inbox]
@@ -39,7 +41,10 @@ When there are no unread messages, `use_inactive_style_when_read` selects `read_
 
 The popup header exposes publisher-provided source submenus through its actions button. Set `show_source_actions = false` to hide these actions while retaining the inbox-wide controls.
 
-See [Native Inbox for Lua](../../lua/guides/inbox.md) for publishing snapshots, limited Markdown, item actions, source actions, persistence, and dismissal behavior.
+See [Native Inbox for Lua](../../lua/guides/inbox.md) for publishing snapshots, limited Markdown,
+item actions, source actions, persistence, and dismissal behavior. Local shell scripts can instead
+use [`easybar inbox`](../../runtime/cli.md#inbox-commands) to send, inspect, update, dismiss, remove,
+and clear messages through the control socket.
 
 ## Context menu
 

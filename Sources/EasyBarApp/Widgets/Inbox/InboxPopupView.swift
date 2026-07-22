@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct InboxPopupView: View {
@@ -155,6 +156,16 @@ struct InboxPopupView: View {
           }
         }
         .font(.caption)
+      }
+
+      if let value = presented.item.url, let url = URL(string: value) {
+        Button("Open") {
+          store.markRead(presented)
+          NSWorkspace.shared.open(url)
+        }
+        .buttonStyle(.plain)
+        .font(.caption)
+        .foregroundStyle(color(config.popupActionColorHex))
       }
     }
     .padding(8)

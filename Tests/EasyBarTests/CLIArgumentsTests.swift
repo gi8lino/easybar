@@ -53,4 +53,61 @@ final class CLIArgumentsTests: XCTestCase {
     XCTAssertThrowsError(try parseArguments(["easybar", "--refresh", "--since", "1h"]))
     XCTAssertThrowsError(try parseArguments(["easybar", "logs", "--all", "--lines", "10"]))
   }
+
+  func testInboxSendParsesStructuredMessage() throws {
+    let parsed = try parseArguments([
+      "easybar", "inbox", "send",
+      "--source", "backup",
+      "--id", "minio-nightly",
+      "--severity", "error",
+      "--title", "Backup failed",
+      "--message", "The nightly backup failed.",
+      "--group", "backup:minio",
+      "--url", "https://grafana.example.com/backup-logs",
+    ])
+
+    guard case .inbox(.send(let item)) = parsed.action else {
+      return XCTFail("Expected inbox send action")
+    }
+    XCTAssertEqual(item.source, "backup")
+    XCTAssertEqual(item.id, "minio-nightly")
+    XCTAssertEqual(item.severity, .error)
+    XCTAssertEqual(item.title, "Backup failed")
+    XCTAssertEqual(item.message, "The nightly backup failed.")
+    XCTAssertEqual(item.group, "backup:minio")
+    XCTAssertEqual(item.url, "https://grafana.example.com/backup-logs")
+    XCTAssertTrue(item.unread)
+  }
+
+  func testInboxReadAndMutationParsing() throws {
+    let read = try parseArguments([
+      "easybar", "inbox", "read", "--source", "backup", "--unread", "--json",
+    ])
+    XCTAssertEqual(
+      read.action,
+      .inbox(.read(source: "backup", unreadOnly: true, json: true))
+    )
+
+    let markRead = try parseArguments([
+      "easybar", "inbox", "mark-read", "--source", "backup", "--id", "nightly",
+    ])
+    XCTAssertEqual(
+      markRead.action,
+      .inbox(.markRead(source: "backup", id: "nightly"))
+    )
+
+    let remove = try parseArguments([
+      "easybar", "inbox", "remove", "--source", "backup", "--id", "nightly",
+    ])
+    XCTAssertEqual(remove.action, .inbox(.remove(source: "backup", id: "nightly")))
+  }
+
+  func testInboxDestructiveCommandsRequireScope() {
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "dismiss"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "clear"]))
+    XCTAssertThrowsError(
+      try parseArguments(["easybar", "inbox", "remove", "--source", "backup"])
+    )
+    XCTAssertNoThrow(try parseArguments(["easybar", "inbox", "clear", "--all"]))
+  }
 }

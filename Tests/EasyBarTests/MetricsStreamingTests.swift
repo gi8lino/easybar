@@ -101,6 +101,39 @@ final class MetricsStreamingTests: XCTestCase {
     XCTAssertEqual(warnings, [])
   }
 
+  func testInboxRequestUsesTypedHandlerAndResponse() throws {
+    let server = SocketServer(
+      logger: ProcessLogger(label: "inbox.socket.tests", minimumLevel: .error),
+      socketPath: socketPath
+    )
+    let item = IPC.InboxItem(
+      source: "backup",
+      id: "nightly",
+      title: "Backup failed",
+      severity: .error,
+      timestamp: 123
+    )
+    server.start(
+      handler: { _ in },
+      validateConfigHandler: { _ in .rejected(message: "unused") },
+      inboxHandler: { request in
+        guard request.operation == .read else {
+          return .rejected(message: "unexpected operation")
+        }
+        return .inbox([item])
+      }
+    )
+    defer { server.stop() }
+
+    let client = LineSocketClientTransport<IPC.Request, IPC.Message>(socketPath: socketPath)
+    let response = try client.send(request: .makeInbox(.init(operation: .read)))
+
+    guard case .inbox(let items) = response else {
+      return XCTFail("Expected inbox response")
+    }
+    XCTAssertEqual(items, [item])
+  }
+
   func testDuplicateSocketServerStartKeepsExistingListener() throws {
     let server = SocketServer(
       logger: ProcessLogger(label: "metrics.streaming.tests", minimumLevel: .error),

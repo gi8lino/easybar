@@ -59,6 +59,35 @@ struct InboxItem: Codable, Equatable, Identifiable, Sendable {
   let dismissible: Bool?
   let actions: [InboxAction]?
   let source: InboxSourcePresentation?
+  let url: String?
+
+  init(
+    id: String,
+    title: String,
+    body: String? = nil,
+    format: InboxBodyFormat? = nil,
+    timestamp: TimeInterval? = nil,
+    category: String? = nil,
+    severity: InboxSeverity? = nil,
+    unread: Bool? = nil,
+    dismissible: Bool? = nil,
+    actions: [InboxAction]? = nil,
+    source: InboxSourcePresentation? = nil,
+    url: String? = nil
+  ) {
+    self.id = id
+    self.title = title
+    self.body = body
+    self.format = format
+    self.timestamp = timestamp
+    self.category = category
+    self.severity = severity
+    self.unread = unread
+    self.dismissible = dismissible
+    self.actions = actions
+    self.source = source
+    self.url = url
+  }
 
   var resolvedFormat: InboxBodyFormat { format ?? .plain }
   var resolvedSeverity: InboxSeverity { severity ?? .info }

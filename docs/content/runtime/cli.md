@@ -15,6 +15,63 @@ The `easybar` command controls the running app, validates configuration, restart
 
 See [Runtime Control](control.md) for the difference between refresh, reload, and restart operations. See [Metrics](metrics.md) for the fields included in a snapshot.
 
+## Inbox commands
+
+Local scripts can publish structured notifications directly to the native inbox:
+
+```bash
+easybar inbox send \
+  --source backup \
+  --severity error \
+  --title "Backup failed" \
+  --message "The nightly MinIO backup failed after 3 attempts." \
+  --group "backup:minio" \
+  --url "https://grafana.example.com/backup-logs"
+```
+
+`--source` and `--title` are required. Severity defaults to `info` and accepts `info`, `success`,
+`warning`, or `error`. `--group` supplies the inbox category used by category grouping. An HTTP(S)
+`--url` adds an **Open** action to the message. New messages are unread unless `--read` is supplied.
+
+By default, `send` generates a unique message ID. Use `--id` when a recurring script should update
+the same notification instead of creating another one:
+
+```bash
+easybar inbox send --source backup --id minio-nightly \
+  --severity success --title "Backup completed"
+```
+
+Read the currently visible messages in human-readable or JSON form:
+
+```bash
+easybar inbox read
+easybar inbox read --source backup --unread
+easybar inbox read --json
+```
+
+`read` queries the inbox without changing message state. Use the explicit mutation commands to
+change it:
+
+```bash
+easybar inbox mark-read --source backup --id minio-nightly
+easybar inbox mark-unread --source backup --id minio-nightly
+easybar inbox dismiss --source backup --id minio-nightly
+easybar inbox remove --source backup --id minio-nightly
+easybar inbox clear --source backup
+easybar inbox clear --all
+```
+
+Omitting `--id` from `mark-read`, `mark-unread`, or `dismiss` applies the operation to every visible
+message from the selected source. `remove` requires both `--source` and `--id` and deletes that
+message plus its saved local state. A Lua publisher can recreate a removed item in a later snapshot;
+use `dismiss` when it should remain suppressed across publisher refreshes. `clear --all` is required
+to remove every source, preventing an unscoped clear by accident. `add` is an alias for `send`, and
+`list` is an alias for `read`.
+
+CLI-published message content follows the same lifecycle as Lua-published snapshots: it remains in
+memory until cleared or until EasyBar restarts. Local read, unread, and dismissed state is persisted
+for stable source/ID pairs. See [Native Inbox](../lua/guides/inbox.md) for the complete inbox model.
+
 ## Logs
 
 `easybar logs` merges the main app, calendar-agent, and network-agent logs in timestamp order. It prints the latest 100 matching entries and then follows all three active files across log rotation. Each plain-text line is prefixed with its source process.
@@ -28,17 +85,17 @@ easybar logs --request-id lua-19
 
 `--request-id` and `--since` search all matching retained history by default. Use `--lines` to limit that history explicitly. Request-correlated entries also carry a `run_id`, which distinguishes repeated request IDs from different EasyBar process runs.
 
-| Option                  | Purpose                                                                    |
-| ----------------------- | -------------------------------------------------------------------------- |
-| `--widget NAME`         | Match a Lua or native widget name.                                         |
-| `--runtime KIND`        | Match `lua`, `native`, or `agent`.                                         |
-| `--level LEVEL`         | Match the selected severity and higher.                                    |
-| `--request-id ID`       | Match one request across every retained process log.                       |
-| `--since TIME`          | Match entries since `30s`, `15m`, `2h`, `1d`, `1w`, or an ISO-8601 time.   |
-| `--lines COUNT`, `-n`   | Limit the matching history printed before live following starts.           |
-| `--all`                 | Print all matching retained history.                                       |
-| `--no-follow`           | Exit after history; useful for scripts, issue reports, and shell pipelines. |
-| `--json`                | Emit JSON Lines with parsed fields, source, runtime, and widget metadata.   |
+| Option                | Purpose                                                                     |
+| --------------------- | --------------------------------------------------------------------------- |
+| `--widget NAME`       | Match a Lua or native widget name.                                          |
+| `--runtime KIND`      | Match `lua`, `native`, or `agent`.                                          |
+| `--level LEVEL`       | Match the selected severity and higher.                                     |
+| `--request-id ID`     | Match one request across every retained process log.                        |
+| `--since TIME`        | Match entries since `30s`, `15m`, `2h`, `1d`, `1w`, or an ISO-8601 time.    |
+| `--lines COUNT`, `-n` | Limit the matching history printed before live following starts.            |
+| `--all`               | Print all matching retained history.                                        |
+| `--no-follow`         | Exit after history; useful for scripts, issue reports, and shell pipelines. |
+| `--json`              | Emit JSON Lines with parsed fields, source, runtime, and widget metadata.   |
 
 Filters compose. For example, this prints errors from the Lua runtime during the last hour and exits:
 
@@ -126,4 +183,3 @@ easybar --version
 - [Logging](../configuration/logging.md)
 - [Environment](../configuration/environment.md)
 - [Control Socket Internals](../internals/architecture/control-socket.md)
-

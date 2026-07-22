@@ -5,6 +5,68 @@ import XCTest
 
 @MainActor
 final class InboxStoreTests: XCTestCase {
+  func testControlSocketItemsCanBeUpsertedReadAndDismissed() {
+    let store = InboxStore()
+    let first = InboxItem(
+      id: "nightly",
+      title: "Backup failed",
+      timestamp: 100,
+      category: "backup:minio",
+      severity: .error,
+      url: "https://grafana.example.com/backup-logs"
+    )
+
+    XCTAssertTrue(store.upsert(source: "backup", item: first))
+    XCTAssertEqual(store.ipcItems().map(\.title), ["Backup failed"])
+    XCTAssertTrue(store.setRead(true, source: "backup", id: "nightly"))
+    XCTAssertFalse(store.ipcItems().first?.unread ?? true)
+
+    let replacement = InboxItem(id: "nightly", title: "Backup recovered", timestamp: 101)
+    XCTAssertTrue(store.upsert(source: "backup", item: replacement))
+    XCTAssertEqual(store.ipcItems().map(\.title), ["Backup recovered"])
+    XCTAssertFalse(store.ipcItems().first?.unread ?? true)
+
+    XCTAssertTrue(store.dismiss(source: "backup", id: "nightly"))
+    XCTAssertTrue(store.ipcItems().isEmpty)
+  }
+
+  func testControlSocketItemsSurviveLuaRefreshAndRuntimeClear() {
+    let store = InboxStore()
+    XCTAssertTrue(
+      store.upsert(
+        source: "backup",
+        item: InboxItem(id: "cli", title: "CLI alert", timestamp: 2)
+      )
+    )
+
+    store.replace(
+      source: "backup",
+      items: [InboxItem(id: "lua", title: "Lua alert", timestamp: 1)]
+    )
+    XCTAssertEqual(Set(store.ipcItems().map(\.id)), ["cli", "lua"])
+
+    store.clearPublishedItems()
+    XCTAssertEqual(store.ipcItems().map(\.id), ["cli"])
+  }
+
+  func testRemoveDeletesOneItemAcrossPublicationChannels() {
+    let store = InboxStore()
+    store.replace(
+      source: "backup",
+      items: [
+        InboxItem(id: "shared", title: "Lua copy"),
+        InboxItem(id: "lua-only", title: "Lua only"),
+      ]
+    )
+    XCTAssertTrue(
+      store.upsert(source: "backup", item: InboxItem(id: "shared", title: "CLI copy"))
+    )
+
+    XCTAssertTrue(store.remove(source: "backup", id: "shared"))
+    XCTAssertEqual(store.ipcItems().map(\.id), ["lua-only"])
+    XCTAssertFalse(store.remove(source: "backup", id: "missing"))
+  }
+
   func testReplacementTracksUnreadStateAndRemovesStaleItems() {
     let store = InboxStore()
     store.replace(source: "GitLab", items: [item("one", timestamp: 1), item("two", timestamp: 2)])

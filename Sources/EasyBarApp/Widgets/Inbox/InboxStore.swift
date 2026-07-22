@@ -9,6 +9,7 @@ final class InboxStore: ObservableObject {
   @Published private(set) var sourceConfigurations: [InboxSourceConfiguration] = []
 
   private var sources: [String: [InboxItem]] = [:]
+  private var controlSources: [String: [InboxItem]] = [:]
   private var sourceActions: [String: [InboxAction]] = [:]
   private var readItemIDs = Set<String>()
   private var unreadItemIDs = Set<String>()
@@ -57,21 +58,118 @@ final class InboxStore: ObservableObject {
     guard let source = normalizedSource(source) else { return }
 
     var uniqueItems: [String: InboxItem] = [:]
+    var occupiedIDs = Set((controlSources[source] ?? []).map(\.id))
     for item in items where isValid(item) {
-      if uniqueItems[item.id] != nil || uniqueItems.count < configuration.maxItems {
+      if uniqueItems[item.id] != nil || occupiedIDs.contains(item.id)
+        || occupiedIDs.count < configuration.maxItems
+      {
         uniqueItems[item.id] = item
+        occupiedIDs.insert(item.id)
       }
     }
     sources[source] = Array(uniqueItems.values)
 
-    reconcileState(source: source, items: uniqueItems.values)
+    reconcileState(source: source)
     persistState()
     rebuild()
+  }
+
+  /// Adds or replaces one item without removing the source's other messages.
+  @discardableResult
+  func upsert(source: String, item: InboxItem) -> Bool {
+    guard let source = normalizedSource(source), isValid(item) else { return false }
+    let existingIDs = Set((sources[source] ?? []).map(\.id) + (controlSources[source] ?? []).map(\.id))
+    guard existingIDs.contains(item.id) || existingIDs.count < configuration.maxItems else {
+      return false
+    }
+    var items = controlSources[source] ?? []
+    items.removeAll { $0.id == item.id }
+    items.append(item)
+    controlSources[source] = items
+    reconcileState(source: source)
+    persistState()
+    rebuild()
+    return true
+  }
+
+  /// Returns visible items in their configured presentation order.
+  func ipcItems(source: String? = nil, unreadOnly: Bool = false) -> [IPC.InboxItem] {
+    let normalizedFilter: String?
+    if let source {
+      guard let normalized = normalizedSource(source) else { return [] }
+      normalizedFilter = normalized
+    } else {
+      normalizedFilter = nil
+    }
+    return presentedItems.compactMap { presented in
+      guard normalizedFilter == nil || presented.source == normalizedFilter else { return nil }
+      guard !unreadOnly || presented.isUnread else { return nil }
+      return IPC.InboxItem(
+        source: presented.source,
+        id: presented.item.id,
+        title: presented.item.title,
+        message: presented.item.body,
+        severity: IPC.InboxSeverity(rawValue: presented.item.resolvedSeverity.rawValue) ?? .info,
+        group: presented.item.category,
+        url: presented.item.url,
+        timestamp: presented.item.timestamp ?? 0,
+        unread: presented.isUnread
+      )
+    }
+  }
+
+  /// Changes read state for one item or all matching visible items.
+  func setRead(_ read: Bool, source: String?, id: String?) -> Bool {
+    let matches = matchingItems(source: source, id: id)
+    for item in matches {
+      if read { markRead(item) } else { markUnread(item) }
+    }
+    return !matches.isEmpty
+  }
+
+  /// Dismisses one item or all matching visible items.
+  func dismiss(source: String?, id: String?) -> Bool {
+    let matches = matchingItems(source: source, id: id).filter(\.item.isDismissible)
+    for item in matches { dismiss(item) }
+    return !matches.isEmpty
+  }
+
+  /// Removes one item and its local state from both publication channels.
+  func remove(source: String, id: String) -> Bool {
+    guard let source = normalizedSource(source), !id.isEmpty else { return false }
+    let luaCount = sources[source]?.count ?? 0
+    let controlCount = controlSources[source]?.count ?? 0
+    sources[source]?.removeAll { $0.id == id }
+    controlSources[source]?.removeAll { $0.id == id }
+    if sources[source]?.isEmpty == true { sources.removeValue(forKey: source) }
+    if controlSources[source]?.isEmpty == true { controlSources.removeValue(forKey: source) }
+    let removed =
+      luaCount != (sources[source]?.count ?? 0)
+      || controlCount != (controlSources[source]?.count ?? 0)
+    guard removed else { return false }
+
+    let compositeID = compositeID(source: source, itemID: id)
+    readItemIDs.remove(compositeID)
+    unreadItemIDs.remove(compositeID)
+    dismissedItemIDs.remove(compositeID)
+    persistState()
+    rebuild()
+    return true
   }
 
   func clear(source: String) {
     guard let source = normalizedSource(source) else { return }
     sources.removeValue(forKey: source)
+    reconcileState(source: source)
+    persistState()
+    rebuild()
+  }
+
+  /// Clears every Lua- and control-owned item for a source.
+  func clearFromControl(source: String) {
+    guard let source = normalizedSource(source) else { return }
+    sources.removeValue(forKey: source)
+    controlSources.removeValue(forKey: source)
     let prefix = source + String(Self.compositeIDSeparator)
     readItemIDs = readItemIDs.filter { !$0.hasPrefix(prefix) }
     unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(prefix) }
@@ -82,6 +180,7 @@ final class InboxStore: ObservableObject {
 
   func clearAll() {
     sources.removeAll()
+    controlSources.removeAll()
     sourceActions.removeAll()
     readItemIDs.removeAll()
     unreadItemIDs.removeAll()
@@ -187,7 +286,14 @@ final class InboxStore: ObservableObject {
   }
 
   private func rebuild() {
-    let flattened: [InboxPresentedItem] = sources.flatMap { source, items in
+    var mergedSources = sources
+    for (source, controlItems) in controlSources {
+      var mergedItems = Dictionary(uniqueKeysWithValues: (mergedSources[source] ?? []).map { ($0.id, $0) })
+      for item in controlItems { mergedItems[item.id] = item }
+      mergedSources[source] = Array(mergedItems.values)
+    }
+
+    let flattened: [InboxPresentedItem] = mergedSources.flatMap { source, items in
       items.compactMap { item in
         let id = compositeID(source: source, itemID: item.id)
         guard !dismissedItemIDs.contains(id) else { return nil }
@@ -251,6 +357,20 @@ final class InboxStore: ObservableObject {
     return trimmed.isEmpty ? nil : trimmed
   }
 
+  private func matchingItems(source: String?, id: String?) -> [InboxPresentedItem] {
+    let normalizedFilter: String?
+    if let source {
+      guard let normalized = normalizedSource(source) else { return [] }
+      normalizedFilter = normalized
+    } else {
+      normalizedFilter = nil
+    }
+    return presentedItems.filter { item in
+      (normalizedFilter == nil || item.source == normalizedFilter)
+        && (id == nil || item.item.id == id)
+    }
+  }
+
   private func normalizedSource(_ source: String) -> String? {
     let source = source.trimmingCharacters(in: .whitespacesAndNewlines)
     return source.isEmpty || source.utf8.count > 512
@@ -261,8 +381,9 @@ final class InboxStore: ObservableObject {
     source + String(Self.compositeIDSeparator) + itemID
   }
 
-  private func reconcileState<S: Sequence>(source: String, items: S) where S.Element == InboxItem {
+  private func reconcileState(source: String) {
     let prefix = source + String(Self.compositeIDSeparator)
+    let items = (sources[source] ?? []) + (controlSources[source] ?? [])
     let liveIDs = Set(items.map { compositeID(source: source, itemID: $0.id) })
     readItemIDs = readItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
     unreadItemIDs = unreadItemIDs.filter { !$0.hasPrefix(prefix) || liveIDs.contains($0) }
@@ -298,6 +419,7 @@ final class InboxStore: ObservableObject {
       return false
     }
     guard (item.body?.utf8.count ?? 0) <= 64 * 1_024 else { return false }
+    guard (item.url?.utf8.count ?? 0) <= 8 * 1_024 else { return false }
     let actions = item.actions ?? []
     return actions.count <= 16
       && actions.allSatisfy(isValidAction)

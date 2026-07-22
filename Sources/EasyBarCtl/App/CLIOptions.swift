@@ -45,6 +45,17 @@ struct ParsedArguments {
   let logOptions: LogCommandOptions
 }
 
+/// Parsed `easybar inbox` operation.
+enum InboxCLICommand: Equatable {
+  case send(IPC.InboxItem)
+  case read(source: String?, unreadOnly: Bool, json: Bool)
+  case markRead(source: String?, id: String?)
+  case markUnread(source: String?, id: String?)
+  case dismiss(source: String?, id: String?)
+  case remove(source: String, id: String)
+  case clear(source: String?)
+}
+
 /// Supported top-level CLI actions.
 enum CLIAction: Equatable {
   case command(IPC.Command)
@@ -53,6 +64,7 @@ enum CLIAction: Equatable {
   case restartNetworkAgent
   case restartAgents
   case logs
+  case inbox(InboxCLICommand)
 }
 
 /// Defines supported command-line options and formatting helpers.

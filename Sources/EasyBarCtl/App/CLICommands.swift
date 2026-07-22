@@ -16,6 +16,56 @@ func sendCommand(_ command: IPC.Command, to socketPath: String, context: AppCont
   context.debug("command sent")
 }
 
+/// Runs one native inbox command through the app control socket.
+func runInboxCommand(
+  _ command: InboxCLICommand,
+  socketPath: String,
+  context: AppContext
+) throws {
+  let request: IPC.InboxRequest
+  let printsItems: Bool
+  let json: Bool
+
+  switch command {
+  case .send(let item):
+    request = .init(operation: .send, item: item)
+    printsItems = false
+    json = false
+  case .read(let source, let unreadOnly, let useJSON):
+    request = .init(operation: .read, source: source, unreadOnly: unreadOnly)
+    printsItems = true
+    json = useJSON
+  case .markRead(let source, let id):
+    request = .init(operation: .markRead, source: source, id: id)
+    printsItems = false
+    json = false
+  case .markUnread(let source, let id):
+    request = .init(operation: .markUnread, source: source, id: id)
+    printsItems = false
+    json = false
+  case .dismiss(let source, let id):
+    request = .init(operation: .dismiss, source: source, id: id)
+    printsItems = false
+    json = false
+  case .remove(let source, let id):
+    request = .init(operation: .remove, source: source, id: id)
+    printsItems = false
+    json = false
+  case .clear(let source):
+    request = .init(operation: .clear, source: source)
+    printsItems = false
+    json = false
+  }
+
+  let response = try sendIPCRequest(.makeInbox(request), to: socketPath, context: context)
+  if printsItems {
+    let items = try expectInbox(response, fallback: "inbox read failed")
+    try CLIOutput.printInboxItems(items, json: json)
+  } else {
+    try expectAccepted(response, fallback: "inbox command rejected")
+  }
+}
+
 func restartCalendarAgent(socketPath: String?, context: AppContext) throws {
   let resolution = try resolveCalendarAgentSocket(explicitPath: socketPath)
   logSocketResolution(resolution, kind: "calendar agent", context: context)
@@ -200,6 +250,8 @@ private func expectAccepted(_ response: IPC.Message, fallback: String) throws {
 
   case .metrics:
     throw AppError.message("unexpected metrics response")
+  case .inbox:
+    throw AppError.message("unexpected inbox response")
   }
 }
 
@@ -212,7 +264,7 @@ private func expectMetrics(_ response: IPC.Message, fallback: String) throws -> 
   case .rejected:
     throw rejectedResponseError(response, fallback: fallback)
 
-  case .accepted, .configValidated:
+  case .accepted, .configValidated, .inbox:
     throw AppError.message(fallback)
   }
 }
@@ -233,6 +285,8 @@ private func expectConfigValidated(_ response: IPC.Message, fallback: String) th
 
   case .metrics:
     throw AppError.message("unexpected metrics response")
+  case .inbox:
+    throw AppError.message("unexpected inbox response")
   }
 }
 
@@ -245,8 +299,20 @@ private func metricsSnapshot(fromStreamMessage message: IPC.Message) throws -> I
   case .rejected:
     throw rejectedResponseError(message, fallback: "metrics rejected")
 
-  case .accepted, .configValidated:
+  case .accepted, .configValidated, .inbox:
     return nil
+  }
+}
+
+/// Extracts inbox items from one control-socket response.
+private func expectInbox(_ response: IPC.Message, fallback: String) throws -> [IPC.InboxItem] {
+  switch response {
+  case .inbox(let items):
+    return items
+  case .rejected:
+    throw rejectedResponseError(response, fallback: fallback)
+  case .accepted, .configValidated, .metrics:
+    throw AppError.message(fallback)
   }
 }
 

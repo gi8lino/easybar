@@ -39,6 +39,8 @@ final class SocketServer: @unchecked Sendable {
   private var commandHandler: (@Sendable (IPC.Command) -> Void)?
   /// Handler invoked for config validation requests.
   private var validateConfigHandler: (@Sendable (String?) async -> IPC.Message)?
+  /// Handler invoked for native inbox queries and mutations.
+  private var inboxHandler: (@Sendable (IPC.InboxRequest) async -> IPC.Message)?
   /// Whether the socket server has already been started.
   private var started = false
 
@@ -64,17 +66,22 @@ final class SocketServer: @unchecked Sendable {
   @discardableResult
   func start(
     handler: @escaping @Sendable (IPC.Command) -> Void,
-    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message,
+    inboxHandler: @escaping @Sendable (IPC.InboxRequest) async -> IPC.Message = { _ in
+      .rejected(message: "inbox control unavailable")
+    }
   ) -> Bool {
     guard !started else { return true }
 
     commandHandler = handler
     self.validateConfigHandler = validateConfigHandler
+    self.inboxHandler = inboxHandler
 
     let didStart = startTransport(
       transport,
       handler: handler,
-      validateConfigHandler: validateConfigHandler
+      validateConfigHandler: validateConfigHandler,
+      inboxHandler: inboxHandler
     )
     started = didStart
     return didStart
@@ -91,11 +98,14 @@ final class SocketServer: @unchecked Sendable {
         validateConfigHandler ?? { _ in
           .rejected(message: "config validation unavailable")
         }
+      let activeInboxHandler: @Sendable (IPC.InboxRequest) async -> IPC.Message =
+        inboxHandler ?? { _ in .rejected(message: "inbox control unavailable") }
 
       let didStart = startTransport(
         transport,
         handler: commandHandler,
-        validateConfigHandler: activeValidateConfigHandler
+        validateConfigHandler: activeValidateConfigHandler,
+        inboxHandler: activeInboxHandler
       )
       started = didStart
       return didStart ? .rebound : .failed(requestedPath: updatedSocketPath)
@@ -127,11 +137,14 @@ final class SocketServer: @unchecked Sendable {
       validateConfigHandler ?? { _ in
         .rejected(message: "config validation unavailable")
       }
+    let activeInboxHandler: @Sendable (IPC.InboxRequest) async -> IPC.Message =
+      inboxHandler ?? { _ in .rejected(message: "inbox control unavailable") }
 
     let didStart = startTransport(
       replacementTransport,
       handler: commandHandler,
-      validateConfigHandler: activeValidateConfigHandler
+      validateConfigHandler: activeValidateConfigHandler,
+      inboxHandler: activeInboxHandler
     )
 
     guard didStart else {
@@ -160,6 +173,7 @@ final class SocketServer: @unchecked Sendable {
     started = false
     commandHandler = nil
     validateConfigHandler = nil
+    inboxHandler = nil
 
     transport.stop()
     SynchronousTask.run {
@@ -182,7 +196,8 @@ final class SocketServer: @unchecked Sendable {
   private func startTransport(
     _ transport: Transport,
     handler: @escaping @Sendable (IPC.Command) -> Void,
-    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message
+    validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message,
+    inboxHandler: @escaping @Sendable (IPC.InboxRequest) async -> IPC.Message
   ) -> Bool {
     transport.start { [weak self, weak transport] clientFD, request in
       guard let self, let transport else {
@@ -194,6 +209,7 @@ final class SocketServer: @unchecked Sendable {
         request: request,
         handler: handler,
         validateConfigHandler: validateConfigHandler,
+        inboxHandler: inboxHandler,
         transport: transport
       )
     }
@@ -205,6 +221,7 @@ final class SocketServer: @unchecked Sendable {
     request: IPC.Request,
     handler: @escaping @Sendable (IPC.Command) -> Void,
     validateConfigHandler: @escaping @Sendable (String?) async -> IPC.Message,
+    inboxHandler: @escaping @Sendable (IPC.InboxRequest) async -> IPC.Message,
     transport: Transport
   ) -> Transport.ClientDisposition {
     logger.debug("socket dispatching command '\(request.command.rawValue)'")
@@ -225,6 +242,11 @@ final class SocketServer: @unchecked Sendable {
         validateConfigHandler: validateConfigHandler,
         transport: transport
       )
+
+    case .inbox(let request):
+      let response = SynchronousTask.run { await inboxHandler(request) }
+      _ = transport.send(response, to: clientFD)
+      return .close
 
     case .command(let command):
       _ = transport.send(.accepted, to: clientFD)

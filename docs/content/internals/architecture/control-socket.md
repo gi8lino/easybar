@@ -13,6 +13,13 @@ The control socket is used for commands such as:
 - `restart_lua_runtime`
 - `reload_config`
 - `metrics`
+- `inbox_send`
+- `inbox_read`
+- `inbox_mark_read`
+- `inbox_mark_unread`
+- `inbox_dismiss`
+- `inbox_remove`
+- `inbox_clear`
 
 Requests and responses are typed JSON.
 
@@ -24,7 +31,8 @@ The boundary exists so that:
 - local scripts can emit EasyBar driver events
 - external integrations do not need direct access to internal app objects
 
-The control socket is a command interface, not a general event stream.
+The control socket is a command interface, not a general event stream. Inbox requests carry typed
+item, source, and ID payloads; they do not execute commands supplied in notification content.
 
 ## Scripting events
 

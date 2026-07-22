@@ -73,9 +73,9 @@ time, and location.
 
 ### Inbox
 
-The native [Inbox](configuration/builtins/inbox.md) collects notifications from Lua sources and can
-group them by source or category. Items may expose actions such as opening, dismissing, or marking
-them as read.
+The native [Inbox](configuration/builtins/inbox.md) collects notifications from Lua sources and the
+`easybar inbox` CLI. It can group them by source or category, and items may expose actions such as
+opening, dismissing, or marking them as read.
 
 [![Inbox screenshot](assets/inbox.png){ .screenshot-compact .screenshot-inbox }](assets/inbox.png)
 

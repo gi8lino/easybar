@@ -457,6 +457,7 @@
 ---@field dismissible? boolean Whether local dismiss actions are available. Defaults to true.
 ---@field actions? EasyBarInboxAction[] Actions routed back through `on_action`.
 ---@field source? EasyBarInboxSourcePresentation Optional source presentation metadata.
+---@field url? string Optional HTTP(S) URL shown as an Open action.
 
 ---@class EasyBarInboxActionEvent
 ---@field name 'inbox.action'

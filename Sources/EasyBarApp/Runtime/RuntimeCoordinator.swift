@@ -326,6 +326,76 @@ actor RuntimeCoordinator {
 
     case .metrics:
       break
+
+    case .inboxSend, .inboxRead, .inboxMarkRead, .inboxMarkUnread, .inboxDismiss, .inboxRemove,
+      .inboxClear:
+      break
+    }
+  }
+
+  /// Handles one typed inbox query or mutation on the main-actor store.
+  private func handleInboxRequest(_ request: IPC.InboxRequest) async -> IPC.Message {
+    await MainActor.run {
+      switch request.operation {
+      case .send:
+        guard let payload = request.item else {
+          return .rejected(message: "inbox send requires an item")
+        }
+        if let value = payload.url {
+          guard let url = URL(string: value), url.host != nil,
+            let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https"
+          else {
+            return .rejected(message: "inbox URL must use http or https")
+          }
+        }
+        let item = InboxItem(
+          id: payload.id,
+          title: payload.title,
+          body: payload.message,
+          timestamp: payload.timestamp,
+          category: payload.group,
+          severity: InboxSeverity(rawValue: payload.severity.rawValue),
+          unread: payload.unread,
+          source: InboxSourcePresentation(name: payload.source, icon: nil, color: nil),
+          url: payload.url
+        )
+        guard services.inboxStore.upsert(source: payload.source, item: item) else {
+          return .rejected(message: "invalid inbox item")
+        }
+        return .accepted
+
+      case .read:
+        return .inbox(
+          services.inboxStore.ipcItems(source: request.source, unreadOnly: request.unreadOnly)
+        )
+
+      case .markRead, .markUnread:
+        let changed = services.inboxStore.setRead(
+          request.operation == .markRead,
+          source: request.source,
+          id: request.id
+        )
+        return changed ? .accepted : .rejected(message: "no matching inbox items")
+
+      case .dismiss:
+        let changed = services.inboxStore.dismiss(source: request.source, id: request.id)
+        return changed ? .accepted : .rejected(message: "no matching dismissible inbox items")
+
+      case .remove:
+        guard let source = request.source, let id = request.id else {
+          return .rejected(message: "inbox remove requires source and id")
+        }
+        return services.inboxStore.remove(source: source, id: id)
+          ? .accepted : .rejected(message: "no matching inbox item")
+
+      case .clear:
+        if let source = request.source {
+          services.inboxStore.clearFromControl(source: source)
+        } else {
+          services.inboxStore.clearAll()
+        }
+        return .accepted
+      }
     }
   }
 
@@ -472,6 +542,11 @@ actor RuntimeCoordinator {
       }
 
       return await self.validateConfig(configPathOverride: configPathOverride)
+    } inboxHandler: { [weak self] request in
+      guard let self else {
+        return .rejected(message: "inbox control unavailable")
+      }
+      return await self.handleInboxRequest(request)
     }
   }
 
