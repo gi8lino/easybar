@@ -13,10 +13,14 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       var workspaceName = "1"
       var workspaceNames = ["1"]
       var workspaceCommandSucceeds = true
+      var focusedAppName: String?
+      var focusedAppPath = ""
+      var focusedLayout = "tiles"
       var snapshotDelayNanoseconds: UInt64 = 0
       var versionCallCount = 0
       var workspaceCallCount = 0
       var workspaceCommandCallCount = 0
+      var focusedWindowCallCount = 0
       var activeCalls = 0
       var maximumActiveCalls = 0
       var cancellationCount = 0
@@ -87,7 +91,12 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
         return "[\(rows.joined(separator: ","))]"
       case "list-windows":
         if arguments.contains("--focused") {
-          return "[]"
+          return state.withLock { state in
+            state.focusedWindowCallCount += 1
+            guard let name = state.focusedAppName else { return "[]" }
+            return
+              #"[{"workspace":"\#(state.workspaceName)","app-name":"\#(name)","app-bundle-path":"\#(state.focusedAppPath)","window-layout":"\#(state.focusedLayout)"}]"#
+          }
         }
         return "[]"
       default:
@@ -121,6 +130,14 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
       state.withLock { $0.workspaceCommandSucceeds = succeeds }
     }
 
+    func setFocusedApp(name: String, path: String, layout: String = "tiles") {
+      state.withLock { state in
+        state.focusedAppName = name
+        state.focusedAppPath = path
+        state.focusedLayout = layout
+      }
+    }
+
     func setSnapshotDelayNanoseconds(_ value: UInt64) {
       state.withLock { $0.snapshotDelayNanoseconds = value }
     }
@@ -128,6 +145,7 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
     var versionCallCount: Int { state.withLock(\.versionCallCount) }
     var workspaceCallCount: Int { state.withLock(\.workspaceCallCount) }
     var workspaceCommandCallCount: Int { state.withLock(\.workspaceCommandCallCount) }
+    var focusedWindowCallCount: Int { state.withLock(\.focusedWindowCallCount) }
     var maximumActiveCalls: Int { state.withLock(\.maximumActiveCalls) }
     var cancellationCount: Int { state.withLock(\.cancellationCount) }
 
@@ -322,6 +340,73 @@ final class AeroSpaceServiceRecoveryTests: XCTestCase {
         && runner.workspaceCallCount >= 2
     }
     XCTAssertTrue(focused)
+  }
+
+  func testFocusEventPublishesFastStateBeforeDebouncedFullSnapshot() async {
+    let runner = ScriptedRunner()
+    runner.setFocusedApp(name: "Initial", path: "/Applications/Initial.app")
+    let service = makeService(runner: runner, retry: RecordingRetryScheduler())
+
+    service.start()
+    service.registerConsumer("test") {}
+    defer { service.stop() }
+
+    let initialSnapshotLoaded = await waitUntil { service.snapshotStatus == .current }
+    XCTAssertTrue(initialSnapshotLoaded)
+    let initialWorkspaceCalls = runner.workspaceCallCount
+
+    runner.setFocusedApp(name: "Next", path: "/Applications/Next.app", layout: "floating")
+    service.handleAeroSpaceSubscriptionEvent(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusChanged)
+    )
+
+    let fastStatePublished = await waitUntil(timeout: 0.1) {
+      service.focusedApp?.name == "Next"
+        && service.focusedLayoutMode == .floating
+    }
+    XCTAssertTrue(fastStatePublished)
+    XCTAssertEqual(runner.workspaceCallCount, initialWorkspaceCalls)
+
+    let fullSnapshotRan = await waitUntil(timeout: 0.5) {
+      runner.workspaceCallCount == initialWorkspaceCalls + 1
+    }
+    XCTAssertTrue(fullSnapshotRan)
+    XCTAssertGreaterThanOrEqual(runner.focusedWindowCallCount, 3)
+  }
+
+  func testWorkspaceEventPublishesFocusBeforeImmediateFullSnapshotCompletes() async {
+    let runner = ScriptedRunner()
+    runner.setWorkspaces(["1", "2"], focused: "1")
+    let service = makeService(runner: runner, retry: RecordingRetryScheduler())
+
+    service.start()
+    service.registerConsumer("test") {}
+    defer { service.stop() }
+
+    let initialSnapshotLoaded = await waitUntil { service.snapshotStatus == .current }
+    XCTAssertTrue(initialSnapshotLoaded)
+
+    runner.setSnapshotDelayNanoseconds(150_000_000)
+    runner.setWorkspaces(["1", "2"], focused: "2")
+    service.handleAeroSpaceSubscriptionEvent(
+      AeroSpaceSubscriptionEvent(
+        name: AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged,
+        workspace: "2"
+      )
+    )
+
+    let optimisticFocusPublished = await waitUntil(timeout: 0.1) {
+      service.spaces.first(where: { $0.isFocused })?.name == "2"
+    }
+    XCTAssertTrue(optimisticFocusPublished)
+
+    let canonicalSnapshotCompleted = await waitUntil(timeout: 1) {
+      service.snapshotStatus == .current
+        && runner.workspaceCallCount >= 2
+        && runner.focusedWindowCallCount >= 2
+        && service.spaces.first(where: { $0.isFocused })?.name == "2"
+    }
+    XCTAssertTrue(canonicalSnapshotCompleted)
   }
 
   private func makeService(

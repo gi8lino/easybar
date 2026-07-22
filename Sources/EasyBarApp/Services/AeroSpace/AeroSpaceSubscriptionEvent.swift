@@ -2,6 +2,12 @@ import Foundation
 
 /// One event emitted by `aerospace subscribe`.
 struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
+  enum RefreshPolicy: Equatable, Sendable {
+    case fastFocusAndDebouncedSnapshot
+    case immediateSnapshot
+    case debouncedSnapshot
+  }
+
   /// AeroSpace event names that affect EasyBar's AeroSpace-backed state.
   enum Name {
     static let focusChanged = "focus-changed"
@@ -22,31 +28,36 @@ struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
   /// Human-readable subscription scope used in logs.
   static let subscriptionDescription = "all"
 
-  /// Longer debounce for key bindings because AeroSpace emits `binding-triggered`
-  /// before running the binding's commands.
-  static let bindingTriggeredRefreshDelayNanoseconds: UInt64 = 150_000_000
+  /// Trailing delay used to coalesce focus and other high-frequency event bursts.
+  static let fullSnapshotDebounceNanoseconds: UInt64 = 120_000_000
 
   /// Raw AeroSpace event name.
   let name: String
+  /// Focused workspace supplied by workspace-change events, when available.
+  let workspace: String?
 
   /// Creates one event with a raw AeroSpace event name.
-  init(name: String) {
+  init(name: String, workspace: String? = nil) {
     self.name = name
+    self.workspace = workspace
   }
 
   /// Decodes one JSON-line event from AeroSpace.
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     name = try container.decode(String.self, forKey: .name)
+    workspace = try container.decodeIfPresent(String.self, forKey: .workspace)
   }
 
-  /// Delay to use before re-reading AeroSpace state.
-  var refreshDelayNanoseconds: UInt64 {
+  /// Refresh behavior appropriate for this event's ordering and frequency.
+  var refreshPolicy: RefreshPolicy {
     switch name {
-    case Name.bindingTriggered:
-      return Self.bindingTriggeredRefreshDelayNanoseconds
+    case Name.focusChanged:
+      return .fastFocusAndDebouncedSnapshot
+    case Name.focusedWorkspaceChanged, Name.focusedMonitorChanged:
+      return .immediateSnapshot
     default:
-      return 0
+      return .debouncedSnapshot
     }
   }
 
@@ -64,5 +75,6 @@ struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
 
   private enum CodingKeys: String, CodingKey {
     case name = "_event"
+    case workspace
   }
 }

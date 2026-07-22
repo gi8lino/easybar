@@ -11,6 +11,7 @@ final class AeroSpaceSubscriptionEventTests: XCTestCase {
     )
 
     XCTAssertEqual(event.name, AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged)
+    XCTAssertEqual(event.workspace, "2")
     XCTAssertEqual(event.appEvent, .workspaceChange)
   }
 
@@ -47,35 +48,44 @@ final class AeroSpaceSubscriptionEventTests: XCTestCase {
     )
   }
 
-  func testBindingTriggeredUsesLongerRefreshDelay() {
-    XCTAssertGreaterThan(
-      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.bindingTriggered)
-        .refreshDelayNanoseconds,
+  func testFocusChangesUseFastFocusAndDebouncedSnapshotPolicy() {
+    XCTAssertEqual(
       AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusChanged)
-        .refreshDelayNanoseconds
+        .refreshPolicy,
+      .fastFocusAndDebouncedSnapshot
     )
   }
 
-  func testStateChangeEventsRefreshImmediately() {
-    XCTAssertEqual(
-      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusChanged)
-        .refreshDelayNanoseconds,
-      0
-    )
+  func testWorkspaceAndMonitorChangesRefreshImmediately() {
     XCTAssertEqual(
       AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged)
-        .refreshDelayNanoseconds,
-      0
+        .refreshPolicy,
+      .immediateSnapshot
     )
     XCTAssertEqual(
-      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.windowDetected)
-        .refreshDelayNanoseconds,
-      0
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusedMonitorChanged)
+        .refreshPolicy,
+      .immediateSnapshot
+    )
+  }
+
+  func testOtherEventsUseDebouncedSnapshotPolicy() {
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.windowDetected).refreshPolicy,
+      .debouncedSnapshot
     )
     XCTAssertEqual(
-      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.modeChanged)
-        .refreshDelayNanoseconds,
-      0
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.modeChanged).refreshPolicy,
+      .debouncedSnapshot
     )
+    XCTAssertEqual(
+      AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.bindingTriggered)
+        .refreshPolicy,
+      .debouncedSnapshot
+    )
+  }
+
+  func testFullSnapshotDebounceIsOneHundredTwentyMilliseconds() {
+    XCTAssertEqual(AeroSpaceSubscriptionEvent.fullSnapshotDebounceNanoseconds, 120_000_000)
   }
 }

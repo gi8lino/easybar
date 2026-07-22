@@ -11,6 +11,12 @@ struct AeroSpaceSnapshot: Equatable, Sendable {
   let focusedLayoutMode: AeroSpaceLayoutMode
 }
 
+/// Focus-sensitive subset that can be loaded without rebuilding every workspace.
+struct AeroSpaceFocusedState: Equatable, Sendable {
+  let app: SpaceApp?
+  let layoutMode: AeroSpaceLayoutMode
+}
+
 /// Loads and parses AeroSpace CLI JSON output into app-ready state.
 enum AeroSpaceSnapshotLoader {
   /// Reads the current AeroSpace snapshot with an asynchronous command runner.
@@ -21,6 +27,23 @@ enum AeroSpaceSnapshotLoader {
     let state = try await AsyncJSONAeroSpaceSnapshotProvider(run: run).loadState()
     try Task.checkCancellation()
     return buildSnapshot(state: state, resolveAppID: resolveAppID)
+  }
+
+  /// Reads only the focused window state for latency-sensitive focus updates.
+  static func loadFocusedState(
+    run: @escaping @Sendable ([String]) async -> String?,
+    resolveAppID: @Sendable (String, String?) -> String
+  ) async throws -> AeroSpaceFocusedState {
+    let output = try requireOutput(
+      await run(AeroSpaceSnapshotCommands.focusedWindow),
+      command: AeroSpaceSnapshotCommands.focusedWindowDescription
+    )
+    try Task.checkCancellation()
+    let focusedWindow = try JSONAeroSpaceSnapshotParser.parseFocusedWindow(output)
+    return AeroSpaceFocusedState(
+      app: makeFocusedApp(focusedWindow, resolveAppID: resolveAppID),
+      layoutMode: parseLayoutMode(focusedWindow?.layout ?? "")
+    )
   }
 
   /// Reads the current AeroSpace snapshot with a synchronous test or utility runner.
@@ -250,25 +273,33 @@ private enum JSONAeroSpaceSnapshotParser {
           bundlePath: $0.appBundlePath
         )
       }
-    let focusedWindows = try decode(
-      [JSONWindowDTO].self,
-      from: focusedWindowOutput,
-      decoder: decoder
-    )
-    let focusedWindow = focusedWindows.first.map {
-      FocusedWindowDTO(
-        name: $0.appName,
-        bundlePath: $0.appBundlePath
-      )
-    }
-    let focusedLayout = focusedWindows.first?.windowLayout ?? ""
+    let focusedWindow = try parseFocusedWindow(focusedWindowOutput, decoder: decoder)
 
     return AeroSpaceRawSnapshot(
       workspaces: workspaces,
       windows: windows,
       focusedWindow: focusedWindow,
-      focusedLayout: focusedLayout
+      focusedLayout: focusedWindow?.layout ?? ""
     )
+  }
+
+  /// Decodes the focused-window command used by both full and fast snapshots.
+  static func parseFocusedWindow(_ output: String) throws -> FocusedWindowDTO? {
+    try parseFocusedWindow(output, decoder: JSONDecoder())
+  }
+
+  private static func parseFocusedWindow(
+    _ output: String,
+    decoder: JSONDecoder
+  ) throws -> FocusedWindowDTO? {
+    let focusedWindows = try decode([JSONWindowDTO].self, from: output, decoder: decoder)
+    return focusedWindows.first.map {
+      FocusedWindowDTO(
+        name: $0.appName,
+        bundlePath: $0.appBundlePath,
+        layout: $0.windowLayout ?? ""
+      )
+    }
   }
 
   /// Decodes one JSON payload.
@@ -423,6 +454,8 @@ private struct FocusedWindowDTO {
   let name: String
   /// App bundle path reported for the window.
   let bundlePath: String
+  /// Layout of the focused window container.
+  let layout: String
 }
 
 /// JSON workspace shape returned by `aerospace list-workspaces --json --format`.

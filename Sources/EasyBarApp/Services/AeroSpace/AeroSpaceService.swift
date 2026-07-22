@@ -5,6 +5,12 @@ import Foundation
 struct AeroSpaceRefreshToken: Equatable, Sendable {
   let generation: UInt64
   let requestID: UInt64
+  let focusedStateRevision: UInt64
+}
+
+struct AeroSpaceFocusedStateToken: Equatable, Sendable {
+  let generation: UInt64
+  let requestID: UInt64
 }
 
 struct AeroSpaceWorkspaceFocusToken: Equatable, Sendable {
@@ -15,9 +21,16 @@ struct AeroSpaceWorkspaceFocusToken: Equatable, Sendable {
 struct AeroSpaceRefreshSequence: Sendable {
   private var latestRequestID: UInt64 = 0
 
-  mutating func issue(generation: UInt64) -> AeroSpaceRefreshToken {
+  mutating func issue(
+    generation: UInt64,
+    focusedStateRevision: UInt64 = 0
+  ) -> AeroSpaceRefreshToken {
     latestRequestID &+= 1
-    return AeroSpaceRefreshToken(generation: generation, requestID: latestRequestID)
+    return AeroSpaceRefreshToken(
+      generation: generation,
+      requestID: latestRequestID,
+      focusedStateRevision: focusedStateRevision
+    )
   }
 
   func isCurrent(_ token: AeroSpaceRefreshToken, generation: UInt64) -> Bool {
@@ -145,6 +158,12 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
     var pendingRefreshToken: AeroSpaceRefreshToken?
     /// Cancellable refresh task that owns current CLI commands.
     var refreshTask: Task<Void, Never>?
+    /// Revision used to prevent full snapshots from overwriting newer fast focus results.
+    var focusedStateRevision: UInt64 = 0
+    /// Token reserved for the newest focused-window query.
+    var pendingFocusedStateToken: AeroSpaceFocusedStateToken?
+    /// Cancellable focused-window query task.
+    var focusedStateTask: Task<Void, Never>?
     /// Sequence used to own optimistic workspace-focus mutations.
     var workspaceFocusRequestID: UInt64 = 0
     /// Current optimistic workspace-focus request.
@@ -172,10 +191,10 @@ final class AeroSpaceService: ObservableObject, @unchecked Sendable {
       }
     )
   }()
-  /// Debounces delayed subscription reloads so event bursts produce one state read.
+  /// Debounces complete snapshots so focus bursts produce one full state read.
   private lazy var subscriptionRefreshScheduler = DebouncedActionScheduler(
     label: "aerospace subscription refresh",
-    delay: TimeInterval(AeroSpaceSubscriptionEvent.bindingTriggeredRefreshDelayNanoseconds)
+    delay: TimeInterval(AeroSpaceSubscriptionEvent.fullSnapshotDebounceNanoseconds)
       / 1_000_000_000,
     logger: logger
   )
@@ -621,25 +640,30 @@ extension AeroSpaceService {
       coordination -> (
         didDeactivate: Bool,
         refreshTask: Task<Void, Never>?,
+        focusedStateTask: Task<Void, Never>?,
         workspaceFocusTask: Task<Void, Never>?
       ) in
-      guard coordination.active else { return (false, nil, nil) }
+      guard coordination.active else { return (false, nil, nil, nil) }
 
       coordination.active = false
       coordination.generation &+= 1
       coordination.pendingRefreshToken = nil
+      coordination.pendingFocusedStateToken = nil
       coordination.pendingWorkspaceFocusToken = nil
       let refreshTask = coordination.refreshTask
+      let focusedStateTask = coordination.focusedStateTask
       let workspaceFocusTask = coordination.workspaceFocusTask
       coordination.refreshTask = nil
+      coordination.focusedStateTask = nil
       coordination.workspaceFocusTask = nil
 
-      return (true, refreshTask, workspaceFocusTask)
+      return (true, refreshTask, focusedStateTask, workspaceFocusTask)
     }
 
     guard result.didDeactivate else { return }
 
     result.refreshTask?.cancel()
+    result.focusedStateTask?.cancel()
     result.workspaceFocusTask?.cancel()
     subscriptionController.stop()
     subscriptionRefreshScheduler.cancel()
@@ -657,12 +681,26 @@ extension AeroSpaceService {
 
 extension AeroSpaceService {
   /// Handles one JSON-line event received from `aerospace subscribe`.
-  fileprivate func handleAeroSpaceSubscriptionEvent(_ event: AeroSpaceSubscriptionEvent) {
+  func handleAeroSpaceSubscriptionEvent(_ event: AeroSpaceSubscriptionEvent) {
     let source = "aerospace subscribe \(event.name)"
-    scheduleSubscriptionRefresh(
-      source: source,
-      delayNanoseconds: event.refreshDelayNanoseconds
-    )
+    if event.name == AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged,
+      let workspace = event.workspace
+    {
+      Task { @MainActor [weak self] in
+        self?.publishFocusedWorkspace(workspace, source: source)
+      }
+    }
+
+    switch event.refreshPolicy {
+    case .fastFocusAndDebouncedSnapshot:
+      queueFocusedStateRefresh(source: source)
+      scheduleDebouncedSnapshot(source: source)
+    case .immediateSnapshot:
+      subscriptionRefreshScheduler.cancel()
+      triggerRefresh(source: source)
+    case .debouncedSnapshot:
+      scheduleDebouncedSnapshot(source: source)
+    }
 
     guard let appEvent = event.appEvent else { return }
 
@@ -671,23 +709,34 @@ extension AeroSpaceService {
     }
   }
 
-  /// Refreshes immediately for state-change events and delays only pre-action events.
-  fileprivate func scheduleSubscriptionRefresh(source: String, delayNanoseconds: UInt64) {
-    let generation = currentGeneration()
+  /// Applies the workspace carried by a post-change event before canonical reload completes.
+  @MainActor
+  private func publishFocusedWorkspace(_ workspace: String, source: String) {
+    guard spaces.contains(where: { $0.name == workspace }) else { return }
+    guard spaces.first(where: { $0.isFocused })?.name != workspace else { return }
 
-    guard delayNanoseconds > 0 else {
-      guard shouldExecute(generation: generation) else { return }
-      triggerRefresh(source: source)
-      logger.debug(
-        "aerospace subscription refresh triggered",
-        .field("source", source),
-        .field("delay_ms", 0)
+    spaces = spaces.map { space in
+      SpaceItem(
+        id: space.id,
+        name: space.name,
+        isFocused: space.name == workspace,
+        isVisible: space.isVisible,
+        apps: space.apps
       )
-      return
     }
+    notifyConsumers()
+    logger.debug(
+      "aerospace focused workspace updated from event",
+      .field("source", source),
+      .field("workspace", workspace)
+    )
+  }
 
-    let delaySeconds = TimeInterval(delayNanoseconds) / 1_000_000_000
-    subscriptionRefreshScheduler.schedule(after: delaySeconds) { [weak self] in
+  /// Schedules one trailing complete snapshot after a burst of subscription events.
+  private func scheduleDebouncedSnapshot(source: String) {
+    let generation = currentGeneration()
+    let delayNanoseconds = AeroSpaceSubscriptionEvent.fullSnapshotDebounceNanoseconds
+    subscriptionRefreshScheduler.schedule { [weak self] in
       guard let self else { return }
       guard self.shouldExecute(generation: generation) else { return }
       self.triggerRefresh(source: source)
@@ -698,6 +747,112 @@ extension AeroSpaceService {
       .field("source", source),
       .field("delay_ms", Int(delayNanoseconds / 1_000_000))
     )
+  }
+}
+
+// MARK: - Focused State Reloading
+
+extension AeroSpaceService {
+  /// Replaces only the focused-window query, leaving complete snapshots independent.
+  private func queueFocusedStateRefresh(source: String) {
+    let reservation = withLock {
+      state -> (token: AeroSpaceFocusedStateToken, replacedTask: Task<Void, Never>?)? in
+      guard state.running, state.active, !state.consumers.isEmpty else { return nil }
+
+      state.focusedStateRevision &+= 1
+      let token = AeroSpaceFocusedStateToken(
+        generation: state.generation,
+        requestID: state.focusedStateRevision
+      )
+      let replacedTask = state.focusedStateTask
+      state.pendingFocusedStateToken = token
+      state.focusedStateTask = nil
+      return (token, replacedTask)
+    }
+
+    guard let reservation else { return }
+    reservation.replacedTask?.cancel()
+
+    logger.debug(
+      "aerospace focused state refresh queued",
+      .field("source", source),
+      .field("request_id", reservation.token.requestID)
+    )
+
+    let task = Task.detached(priority: .userInitiated) { [weak self] in
+      guard let self else { return }
+      defer { self.finishFocusedStateRefresh(reservation.token) }
+      guard self.shouldExecute(focusedStateToken: reservation.token) else { return }
+
+      do {
+        let focusedState = try await AeroSpaceSnapshotLoader.loadFocusedState(
+          run: { [weak self] arguments in
+            guard let self else { return nil }
+            return await self.runAeroSpace(arguments: arguments)
+          },
+          resolveAppID: { name, bundlePath in
+            Self.resolvedAppID(name: name, bundlePath: bundlePath)
+          }
+        )
+        await self.publishFocusedState(focusedState, token: reservation.token)
+      } catch is CancellationError {
+        return
+      } catch {
+        guard self.shouldExecute(focusedStateToken: reservation.token) else { return }
+        self.logger.debug(
+          "aerospace focused state refresh failed",
+          .field("source", source),
+          .field("error", error)
+        )
+      }
+    }
+
+    let shouldCancel = withLock { state -> Bool in
+      guard state.pendingFocusedStateToken == reservation.token else { return true }
+      state.focusedStateTask = task
+      return false
+    }
+    if shouldCancel {
+      task.cancel()
+    }
+  }
+
+  @MainActor
+  private func publishFocusedState(
+    _ focusedState: AeroSpaceFocusedState,
+    token: AeroSpaceFocusedStateToken
+  ) {
+    guard shouldExecute(focusedStateToken: token) else { return }
+    guard focusedApp != focusedState.app || focusedLayoutMode != focusedState.layoutMode else {
+      return
+    }
+
+    focusedApp = focusedState.app
+    focusedLayoutMode = focusedState.layoutMode
+    notifyConsumers()
+    logger.debug(
+      "aerospace focused state updated",
+      .field("focused", focusedState.app?.name ?? "none"),
+      .field("layout", focusedState.layoutMode.rawValue)
+    )
+  }
+
+  private func finishFocusedStateRefresh(_ token: AeroSpaceFocusedStateToken) {
+    withLock { state in
+      guard state.pendingFocusedStateToken == token else { return }
+      state.pendingFocusedStateToken = nil
+      state.focusedStateTask = nil
+    }
+  }
+
+  private func shouldExecute(focusedStateToken token: AeroSpaceFocusedStateToken) -> Bool {
+    withLock { state in
+      state.running
+        && state.active
+        && !state.consumers.isEmpty
+        && state.generation == token.generation
+        && state.pendingFocusedStateToken == token
+    }
   }
 }
 
@@ -713,7 +868,10 @@ extension AeroSpaceService {
         return nil
       }
 
-      let token = state.refreshSequence.issue(generation: state.generation)
+      let token = state.refreshSequence.issue(
+        generation: state.generation,
+        focusedStateRevision: state.focusedStateRevision
+      )
       let replacedTask = state.refreshTask
       state.pendingRefreshToken = token
       state.refreshTask = nil
@@ -806,7 +964,12 @@ extension AeroSpaceService {
     await MainActor.run { [weak self] in
       guard let self, self.shouldExecute(refreshToken: refreshToken) else { return }
 
-      let stateChanged = self.hasStateChanged(for: snapshot)
+      let appliesFocusedState = self.shouldApplyFocusedState(from: refreshToken)
+      let stateChanged =
+        self.spaces != snapshot.spaces
+        || (appliesFocusedState
+          && (self.focusedApp != snapshot.focusedApp
+            || self.focusedLayoutMode != snapshot.focusedLayoutMode))
       let statusChanged = self.snapshotStatus != .current
       self.snapshotStatus = .current
 
@@ -816,8 +979,10 @@ extension AeroSpaceService {
       }
 
       self.spaces = snapshot.spaces
-      self.focusedApp = snapshot.focusedApp
-      self.focusedLayoutMode = snapshot.focusedLayoutMode
+      if appliesFocusedState {
+        self.focusedApp = snapshot.focusedApp
+        self.focusedLayoutMode = snapshot.focusedLayoutMode
+      }
 
       self.logger.debug(
         "aerospace state updated",
@@ -875,12 +1040,9 @@ extension AeroSpaceService {
     }
   }
 
-  /// Returns whether a freshly loaded snapshot differs from the currently published state.
-  @MainActor
-  private func hasStateChanged(for snapshot: AeroSpaceSnapshot) -> Bool {
-    spaces != snapshot.spaces
-      || focusedApp != snapshot.focusedApp
-      || focusedLayoutMode != snapshot.focusedLayoutMode
+  /// Prevents an older full snapshot from overwriting a newer fast focus request.
+  private func shouldApplyFocusedState(from token: AeroSpaceRefreshToken) -> Bool {
+    withLock { $0.focusedStateRevision == token.focusedStateRevision }
   }
 }
 

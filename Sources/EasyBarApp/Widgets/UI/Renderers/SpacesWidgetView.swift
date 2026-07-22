@@ -284,7 +284,7 @@ private struct AppIconView: View {
             lineWidth: resolvedBorderWidth
           )
       }
-      .animation(.easeOut(duration: 0.12), value: isFocusedApp)
+      .animation(.easeOut(duration: 0.06), value: isFocusedApp)
   }
 
   /// Returns the rendered app icon or fallback initial.
