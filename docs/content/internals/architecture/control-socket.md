@@ -42,16 +42,12 @@ For AeroSpace-backed widgets, the app connects directly to AeroSpace's native Un
 
 While AeroSpace-backed state is active, EasyBar schedules reconnect attempts with bounded backoff even if AeroSpace's socket is temporarily absent. Socket connect, handshake, and subscription setup share a finite startup deadline.
 
-The app also uses a small amount of native macOS observation to keep UI state current when AeroSpace events are not enough by themselves:
+Focus events take a low-latency path: app focus runs only the focused-window query before a trailing full snapshot, while a focused-workspace event updates the existing Spaces model from its `workspace` field before starting a full snapshot. Focused-monitor changes start a full snapshot immediately. Other event bursts share a 120 ms trailing debounce. Full snapshots cannot overwrite a newer fast focus result.
 
-- app activation updates focused-app UI immediately
-- app termination triggers one refresh so closed apps disappear from spaces promptly
-- app launch schedules one short delayed refresh so newly launched apps have time to create windows before EasyBar re-reads AeroSpace state
-
-Those native notifications complement the AeroSpace subscription. They do not replace snapshot reloads from AeroSpace itself. After a snapshot changes, the service invokes typed callbacks registered by the active native widgets instead of broadcasting an in-process notification.
+After state changes, the service invokes typed callbacks registered by the active native widgets instead of broadcasting an in-process notification.
 
 ## AeroSpace Snapshot Refreshes
 
-AeroSpace subscription events are update triggers, not a complete state API. EasyBar still fetches the actual state through the `aerospace list-workspaces` and `aerospace list-windows` CLI commands.
+AeroSpace subscription events are not a complete state API. EasyBar uses focused-workspace metadata for immediate presentation, then fetches canonical state through the `aerospace list-workspaces` and `aerospace list-windows` CLI commands.
 
 Some changes do not have dedicated AeroSpace subscription events, especially layout changes and window closures. `binding-triggered` is used as a debounced hint for layout-related keybindings, but it is not the same as a real `layout-changed` event.

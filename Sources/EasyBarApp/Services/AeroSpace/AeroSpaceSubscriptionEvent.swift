@@ -4,6 +4,7 @@ import Foundation
 struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
   enum RefreshPolicy: Equatable, Sendable {
     case fastFocusAndDebouncedSnapshot
+    case fastWorkspaceAndImmediateSnapshot
     case immediateSnapshot
     case debouncedSnapshot
   }
@@ -54,7 +55,9 @@ struct AeroSpaceSubscriptionEvent: Decodable, Equatable, Sendable {
     switch name {
     case Name.focusChanged:
       return .fastFocusAndDebouncedSnapshot
-    case Name.focusedWorkspaceChanged, Name.focusedMonitorChanged:
+    case Name.focusedWorkspaceChanged:
+      return .fastWorkspaceAndImmediateSnapshot
+    case Name.focusedMonitorChanged:
       return .immediateSnapshot
     default:
       return .debouncedSnapshot

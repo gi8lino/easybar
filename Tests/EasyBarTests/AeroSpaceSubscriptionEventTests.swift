@@ -56,12 +56,15 @@ final class AeroSpaceSubscriptionEventTests: XCTestCase {
     )
   }
 
-  func testWorkspaceAndMonitorChangesRefreshImmediately() {
+  func testWorkspaceChangesUseFastWorkspaceAndImmediateSnapshotPolicy() {
     XCTAssertEqual(
       AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged)
         .refreshPolicy,
-      .immediateSnapshot
+      .fastWorkspaceAndImmediateSnapshot
     )
+  }
+
+  func testMonitorChangesRefreshImmediately() {
     XCTAssertEqual(
       AeroSpaceSubscriptionEvent(name: AeroSpaceSubscriptionEvent.Name.focusedMonitorChanged)
         .refreshPolicy,

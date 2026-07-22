@@ -683,18 +683,18 @@ extension AeroSpaceService {
   /// Handles one JSON-line event received from `aerospace subscribe`.
   func handleAeroSpaceSubscriptionEvent(_ event: AeroSpaceSubscriptionEvent) {
     let source = "aerospace subscribe \(event.name)"
-    if event.name == AeroSpaceSubscriptionEvent.Name.focusedWorkspaceChanged,
-      let workspace = event.workspace
-    {
-      Task { @MainActor [weak self] in
-        self?.publishFocusedWorkspace(workspace, source: source)
-      }
-    }
-
     switch event.refreshPolicy {
     case .fastFocusAndDebouncedSnapshot:
       queueFocusedStateRefresh(source: source)
       scheduleDebouncedSnapshot(source: source)
+    case .fastWorkspaceAndImmediateSnapshot:
+      if let workspace = event.workspace {
+        Task { @MainActor [weak self] in
+          self?.publishFocusedWorkspace(workspace, source: source)
+        }
+      }
+      subscriptionRefreshScheduler.cancel()
+      triggerRefresh(source: source)
     case .immediateSnapshot:
       subscriptionRefreshScheduler.cancel()
       triggerRefresh(source: source)

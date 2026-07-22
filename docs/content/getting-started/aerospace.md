@@ -2,7 +2,7 @@
 
 EasyBar v0.4.0 and newer keeps AeroSpace-backed widgets current through a long-lived subscription to AeroSpace's native Unix socket.
 
-That means the built-in spaces, front-app, and AeroSpace mode widgets update without extra workspace or focus commands in your AeroSpace config. EasyBar subscribes to all AeroSpace event types and refreshes its AeroSpace snapshot when those events arrive.
+That means the built-in spaces, front-app, and AeroSpace mode widgets update without extra workspace or focus commands in your AeroSpace config. EasyBar subscribes to all AeroSpace event types, applies latency-sensitive focus state immediately, and reconciles it with AeroSpace snapshots.
 
 ## Requirements
 
@@ -26,11 +26,11 @@ When an AeroSpace-backed widget starts, EasyBar connects directly to AeroSpace's
 aerospace subscribe --all
 ```
 
-AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as an immediate sync signal. Event bursts are debounced before EasyBar re-reads AeroSpace state; `binding-triggered` gets a slightly longer debounce because AeroSpace emits it before running the binding's commands.
+AeroSpace sends the current state immediately when the stream connects, and EasyBar uses that initial event as a sync signal. Focus changes run one focused-window query immediately, then schedule a complete snapshot with a 120 ms trailing debounce. Focused-workspace events apply their `workspace` value to the existing Spaces model immediately and start a complete snapshot for reconciliation. Focused-monitor changes also start a complete snapshot immediately. Other event bursts share the 120 ms trailing snapshot debounce.
 
 EasyBar does not spawn the `aerospace subscribe` CLI process. While an AeroSpace-backed widget is active, EasyBar keeps scheduling reconnect attempts with bounded backoff even when the socket is temporarily absent. Each connect, handshake, and subscription request has a finite startup deadline, so launching EasyBar before AeroSpace or restarting AeroSpace later recovers without blocking the UI or restarting EasyBar.
 
-EasyBar uses the subscription events only as update triggers. The source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`.
+EasyBar uses focused-workspace event metadata for an immediate visual update, but the source of truth remains the snapshot loaded from `aerospace list-workspaces --json` and `aerospace list-windows --json`. A failed fast focused-window query keeps the previous focus until the complete snapshot reconciles it.
 
 The currently supported AeroSpace subscription events are:
 
@@ -45,17 +45,11 @@ The currently supported AeroSpace subscription events are:
 
 Focus and workspace events are forwarded into the EasyBar event system for Lua widgets that subscribe to those driver events.
 
-EasyBar still observes a few native macOS notifications as a complement:
-
-- app activation updates the focused-app UI optimistically
-- app termination refreshes spaces so closed apps disappear promptly
-- app launch schedules one short delayed refresh for apps that create windows slightly later
-
 ## AeroSpace config
 
 EasyBar updates AeroSpace-backed widgets from its automatic socket subscription, so no EasyBar commands are required in your AeroSpace config for normal updates. Refreshed state is delivered directly to the registered native widgets through typed in-process callbacks.
 
-EasyBar listens to `binding-triggered` and re-reads AeroSpace state after a short delay, so separate layout commands are not needed either.
+EasyBar listens to `binding-triggered` and includes it in the trailing snapshot debounce, so separate layout commands are not needed either.
 
 ## Manual refresh
 

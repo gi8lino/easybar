@@ -72,11 +72,7 @@ easybar --event workspace_change
 
 ## Spaces widget misses an app launch or quit
 
-The built-in spaces widget refreshes AeroSpace-derived state from a mix of native socket subscription events and macOS app lifecycle notifications.
-
-App quits are also refreshed from macOS termination notifications.
-
-App launches use a short delayed refresh so background apps such as Docker have a chance to create their first window before EasyBar asks AeroSpace for `list-windows`.
+The built-in spaces widget refreshes AeroSpace-derived state from native socket subscription events. App-focus events use a focused-window fast path, workspace-focus events update the highlight directly from event metadata, and complete snapshots reconcile the workspace and window lists. Events without a dedicated fast path use a 120 ms trailing debounce so bursts produce one snapshot.
 
 If icons still look stale after a launch, trigger a manual refresh once:
 
