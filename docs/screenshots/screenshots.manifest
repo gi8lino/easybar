@@ -6,9 +6,9 @@ inbox|850x1800+2200+0|32
 cpu|520x64+2700+0|32
 spaces|700x64+0+0|32
 spaces_front_app|580x64+0+0|32
-native_widgets|1100x844+1100+60|32
+native_widgets|1100x844+1100+65|32
 wifi|950x990+2350+0|32
-tailscale_enabled|900x165+2450+50|32
-tailscale_disabled|900x165+2450+50|32
+tailscale_enabled|900x210+2450+0|32
+tailscale_disabled|900x210+2450+0|32
 topbar_app|-|32
 custom_context|780x350+2650+0|32
