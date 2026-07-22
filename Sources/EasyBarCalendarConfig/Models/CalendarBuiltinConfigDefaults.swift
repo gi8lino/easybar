@@ -31,7 +31,7 @@ extension CalendarBuiltinConfig {
         fontWeight: .regular
       ),
       date: .init(
-        format: "d. MMM",
+        format: "E, d. MMM",
         textColorHex: "#d0d0d0",
         fontFamily: nil,
         fontSize: nil,

@@ -436,7 +436,7 @@ text_color = "theme.text" # Text color of the time field.
 font_weight = "regular" # Font weight: ultralight | thin | light | regular | medium | semibold | bold | heavy | black.
 
 [builtins.calendar.anchor.date]
-format = "d. MMM" # DateFormatter pattern for the date field.
+format = "E, d. MMM" # DateFormatter pattern for the date field.
 text_color = "theme.text_secondary" # Text color of the date field.
 # font_family = "SF Pro" # Optional font family.
 # font_size = 12 # Optional font size in points.

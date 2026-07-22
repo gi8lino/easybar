@@ -571,7 +571,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 
 | Key           | Default                  | Example    | Description                                                                                          |
 | ------------- | ------------------------ | ---------- | ---------------------------------------------------------------------------------------------------- |
-| `format`      | `"d. MMM"`               | —          | DateFormatter pattern for the date field.                                                            |
+| `format`      | `"E, d. MMM"`            | —          | DateFormatter pattern for the date field.                                                            |
 | `text_color`  | `"theme.text_secondary"` | —          | Text color of the date field.                                                                        |
 | `font_family` | Not set                  | `"SF Pro"` | Optional font family.                                                                                |
 | `font_size`   | Not set                  | `12`       | Optional font size in points.                                                                        |

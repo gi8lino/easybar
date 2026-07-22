@@ -124,7 +124,7 @@ extension ConfigSchemaRegistry {
     section(name: "builtins.calendar.anchor.date"),
     entry(
       key: "format",
-      value: "\"d. MMM\"",
+      value: "\"E, d. MMM\"",
       description: "DateFormatter pattern for the date field.",
     ),
     entry(
