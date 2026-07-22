@@ -6,38 +6,52 @@ It is a thin client for the app and agent control sockets, plus a read-only view
 
 ## Responsibilities
 
-The CLI translates user commands into socket requests.
+The CLI translates user commands into typed operations. Its job is to:
 
-Its job is to:
-
-- translate CLI flags into typed control commands
-- connect to the EasyBar Unix socket
-- send JSON requests
-- decode typed JSON responses
+- resolve a user-facing command path
+- parse only the options belonging to that command
+- map socket-backed commands to `IPC.Command`
+- connect to the relevant Unix socket
+- encode requests and decode typed responses
 - report success or failure to the shell
-- merge, filter, and follow retained app and agent logs through `EasyBarShared`
+- merge, filter, and optionally follow retained app and agent logs through `EasyBarShared`
 
 This keeps automation simple and avoids forcing users to speak the socket protocol manually.
 
+## Command catalog
+
+`CLICommandDescriptor` is the source of truth for the user-facing command hierarchy. Each descriptor contains:
+
+- the canonical command path, such as `config validate`
+- the help description
+- command-specific options and positional arguments
+- the parser behavior for the command
+- an `IPC.Command` mapping when the operation uses the main control socket
+
+The same catalog drives command resolution and help output, preventing the parser and usage text from drifting apart.
+
+The wire protocol remains separate. `IPC.Command` is shared by the CLI and socket server, while CLI names and descriptions remain in `EasyBarCtl`. This is intentional: user-facing paths such as `refresh` do not need to match stable protocol values such as `manual_refresh`, and commands such as `logs` or agent restarts do not use the main control socket at all.
+
 ## Common commands
 
-Typical examples:
-
 ```bash
-easybar --refresh
-easybar --restart-lua-runtime
-easybar --reload-config
-easybar --restart-calendar-agent
-easybar --restart-network-agent
-easybar --restart-agents
-easybar --event workspace_change
+easybar refresh
+easybar runtime restart
+easybar config reload
+easybar config validate
+easybar metrics --watch
+easybar agent restart calendar
+easybar agent restart network
+easybar agent restart all
+easybar event emit workspace_change
 easybar logs --widget tailscale --since 30m
+easybar inbox list --unread
 ```
 
 ## Design rule
 
 The CLI should stay small.
 
-Most commands use the main EasyBar control socket. Agent restart commands contact the calendar or network socket directly through the shared agent protocol. `easybar logs` instead reads the configured log directory and follows active files by file identity so rename-based rotation does not interrupt the stream.
+Most commands use the main EasyBar control socket. Agent restart commands contact the calendar or network socket directly through the shared agent protocol. `easybar logs` reads the configured log directory and follows active files only when `--follow` is supplied.
 
-It is a transport client, not a second source of application logic.
+The CLI is a transport client, not a second source of application logic.

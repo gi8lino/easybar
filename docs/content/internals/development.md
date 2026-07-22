@@ -58,8 +58,8 @@ open dist/EasyBar.app
 ```
 
 The agents are standalone apps that communicate with EasyBar over Unix sockets. Restart them with
-`easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or
-`easybar --restart-agents`.
+`easybar agent restart calendar`, `easybar agent restart network`, or
+`easybar agent restart all`.
 
 ## Install the current checkout
 
@@ -125,3 +125,5 @@ use `dev`. Lua API versions are stamped only into the copy under `dist/`.
 
 Continue with [Architecture](architecture/overview.md), [Agents](agents/overview.md), or the
 [Lua runtime](lua-runtime/overview.md) for subsystem details.
+
+

@@ -2,7 +2,7 @@
 
 Use this page when EasyBar is stuck, stale, or behaving unexpectedly.
 
-For responsive helper agents, prefer `easybar --restart-calendar-agent`, `easybar --restart-network-agent`, or `easybar --restart-agents`. Homebrew Services relaunches each helper after it acknowledges the request and exits. If a socket is unresponsive, restart its service with `brew services restart easybar-calendar-agent` or `brew services restart easybar-network-agent`.
+For responsive helper agents, prefer `easybar agent restart calendar`, `easybar agent restart network`, or `easybar agent restart all`. Homebrew Services relaunches each helper after it acknowledges the request and exits. If a socket is unresponsive, restart its service with `brew services restart easybar-calendar-agent` or `brew services restart easybar-network-agent`.
 
 For detailed helper-agent process checks, socket probes, permission debugging, and raw agent output inspection, see [Debugging Agents](../internals/agents/debugging.md).
 
@@ -15,7 +15,7 @@ EasyBar exposes menu actions to open the relevant settings pages, and the calend
 If you changed permissions and nothing updates, restart the calendar agent and EasyBar:
 
 ```bash
-easybar --restart-calendar-agent
+easybar agent restart calendar
 ```
 
 For deeper checks, including socket pings and logs, use [Debugging Agents](../internals/agents/debugging.md).
@@ -29,7 +29,7 @@ The network agent depends on Location Services permission. If permission is deni
 Restart the network agent and EasyBar after changing permission settings:
 
 ```bash
-easybar --restart-network-agent
+easybar agent restart network
 ```
 
 For deeper checks, including raw Wi-Fi and network field inspection, use [Debugging Agents](../internals/agents/debugging.md).
@@ -61,13 +61,13 @@ If AeroSpace is restarted or updated while EasyBar is running, EasyBar reconnect
 You can trigger one refresh manually with:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 Local scripts can also emit EasyBar driver events when they need widgets to react to a known external state change:
 
 ```bash
-easybar --event workspace_change
+easybar event emit workspace_change
 ```
 
 ## Spaces widget misses an app launch or quit
@@ -77,7 +77,7 @@ The built-in spaces widget refreshes AeroSpace-derived state from native socket 
 If icons still look stale after a launch, trigger a manual refresh once:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 ## Config changes do not apply
@@ -87,7 +87,7 @@ If `watch_config = false`, EasyBar will not automatically reload config changes.
 Either enable config watching or reload manually:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 If a reload is rejected, EasyBar keeps the last valid config and logs the parse or validation error. Check the logs instead of assuming the new file was accepted.
@@ -97,7 +97,7 @@ If a reload is rejected, EasyBar keeps the last valid config and logs the parse 
 First try a normal refresh:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 That refreshes the bar and widgets using the currently loaded config and pulls fresh data from agents, but it does not reload config from disk and does not restart the Lua runtime.
@@ -105,7 +105,7 @@ That refreshes the bar and widgets using the currently loaded config and pulls f
 If the Lua side itself seems stuck, restart it explicitly:
 
 ```bash
-easybar --restart-lua-runtime
+easybar runtime restart
 ```
 
 The bar context menu item does the same thing:
@@ -136,3 +136,5 @@ open -a EasyBar
 ```
 
 This clears the usual problems caused by duplicate instances or stale agent state.
+
+

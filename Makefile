@@ -193,7 +193,7 @@ validate-config: cli ## Validate a config file with CONFIG=/path/to/config.toml.
 		echo "Usage: make validate-config CONFIG=/path/to/config.toml"; \
 		exit 2; \
 	fi
-	@"$(CLI_BIN)" --validate-config --config "$(CONFIG)"
+	@"$(CLI_BIN)" config validate --config "$(CONFIG)"
 
 ##@ Formatting
 
@@ -486,3 +486,5 @@ ICON_SIZES := 16x16 32x32 48x48 64x64
 
 favicon: ## Create favicons.
 	@scripts/assets/favicons.sh "$(IMAGE_CONVERT)" "$(ICON_FONT)" "$(SVG)" "$(ICON_DIR)" $(ICON_SIZES)
+
+

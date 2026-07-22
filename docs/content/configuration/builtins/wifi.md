@@ -48,7 +48,7 @@ The separately installed network agent owns Wi-Fi observation. Wi-Fi-specific fi
 After changing permission, restart the network agent:
 
 ```bash
-easybar --restart-network-agent
+easybar agent restart network
 ```
 
 ## Context menu
@@ -60,3 +60,5 @@ Configuration changes are written to `config.toml` immediately. Comments, whites
 unrelated settings are preserved. Checked menu items show the persisted values.
 
 See [Agents](../agents.md) and [Recovery](../../runtime/recovery.md) for further checks.
+
+

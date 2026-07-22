@@ -49,7 +49,7 @@ open -a EasyBar
 Use:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 This:
@@ -67,7 +67,7 @@ Use this when the config is already correct and you want fresh UI state or fresh
 Use:
 
 ```bash
-easybar --restart-lua-runtime
+easybar runtime restart
 ```
 
 This:
@@ -85,7 +85,7 @@ Use this when the Lua side is stuck, stale, or needs a full runtime reset.
 Use:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 This:
@@ -99,23 +99,23 @@ Use this when you changed the config file itself.
 ## Restart helper agents
 
 ```bash
-easybar --restart-calendar-agent
-easybar --restart-network-agent
-easybar --restart-agents
+easybar agent restart calendar
+easybar agent restart network
+easybar agent restart all
 ```
 
 These commands send an acknowledged restart request directly to the selected agent socket. The agent exits after replying, and its Homebrew keep-alive service starts it again. The combined command attempts both agents and returns a nonzero status with partial-failure details if either request fails.
 
-`--socket <path>` can override one per-agent socket. It is not accepted with `--restart-agents`, because the agents use different sockets.
+`--socket <path>` can override a single agent socket. It is not accepted with `agent restart all`, because the agents use different sockets.
 
 ## Scripting events
 
 Use:
 
 ```bash
-easybar --event workspace_change
-easybar --event focus_change
-easybar --event space_mode_change
+easybar event emit workspace_change
+easybar event emit focus_change
+easybar event emit space_mode_change
 ```
 
 This emits an EasyBar driver event for Lua widgets and refreshes the current bar state.
@@ -128,3 +128,5 @@ Use this from local scripts when an external action should notify widgets that w
 - [Metrics](metrics.md)
 - [Troubleshooting](troubleshooting.md)
 - [Control Socket](../internals/architecture/control-socket.md)
+
+

@@ -7,7 +7,7 @@ EasyBar can stream lightweight internal metrics over the main socket.
 Use:
 
 ```bash
-easybar --metrics
+easybar metrics
 ```
 
 for one point-in-time snapshot.
@@ -17,7 +17,7 @@ for one point-in-time snapshot.
 Use:
 
 ```bash
-easybar --metrics --watch
+easybar metrics --watch
 ```
 
 for a rolling terminal view with simple graphs.
@@ -34,3 +34,5 @@ The metrics stream includes:
 - top emitted event names
 
 The periodic sampler stays off until a metrics client asks for it, so normal idle runtime does not keep collecting process samples when nobody is watching.
+
+

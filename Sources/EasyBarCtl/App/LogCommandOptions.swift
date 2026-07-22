@@ -9,14 +9,13 @@ struct LogCommandOptions: Equatable {
   var requestID: String?
   var since: String?
   var historyLimit: Int?
-  var follow = true
+  var follow = false
   var json = false
 }
 
 /// Mutable parsing state for log-specific command-line options.
 struct LogCommandOptionState {
   var options = LogCommandOptions(historyLimit: 100)
-  var wasUsed = false
   var linesSpecified = false
   var allHistory = false
 

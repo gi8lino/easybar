@@ -5,7 +5,6 @@ import Foundation
 /// CLI entry point.
 @main
 enum EasyBarCtlApp {
-  /// Runs the CLI.
   static func main() {
     exit(AppController().run())
   }
@@ -13,50 +12,50 @@ enum EasyBarCtlApp {
 
 /// Runs the CLI flow.
 private struct AppController {
-  /// Returns the exit code.
   func run() -> Int32 {
     do {
       let parsed = try parseArguments(CommandLine.arguments)
       let context = AppContext(debugEnabled: parsed.debugEnabled)
 
       switch parsed.action {
-      case .validateConfig:
+      case .validateConfig(let configPath):
         let socketPath = try resolvedControlSocketPath(
           explicitPath: parsed.socketPath,
           context: context
         )
-        try validateConfig(configPath: parsed.configPath, socketPath: socketPath, context: context)
+        try validateConfig(configPath: configPath, socketPath: socketPath, context: context)
 
-      case .command(let command):
+      case .control(let command):
         let socketPath = try resolvedControlSocketPath(
           explicitPath: parsed.socketPath,
           context: context
         )
-        if command == .metrics {
-          if parsed.watchMetrics {
-            try streamMetrics(to: socketPath, context: context)
-          } else {
-            let snapshot = try fetchMetricsSnapshot(from: socketPath, context: context)
-            CLIOutput.printMetricsSnapshot(snapshot)
-          }
+        try sendCommand(command, to: socketPath, context: context)
+
+      case .metrics(let watch):
+        let socketPath = try resolvedControlSocketPath(
+          explicitPath: parsed.socketPath,
+          context: context
+        )
+        if watch {
+          try streamMetrics(to: socketPath, context: context)
         } else {
-          try sendCommand(command, to: socketPath, context: context)
+          let snapshot = try fetchMetricsSnapshot(from: socketPath, context: context)
+          CLIOutput.printMetricsSnapshot(snapshot)
         }
 
-      case .restartCalendarAgent:
-        try restartCalendarAgent(socketPath: parsed.socketPath, context: context)
-
-      case .restartNetworkAgent:
-        try restartNetworkAgent(socketPath: parsed.socketPath, context: context)
-
-      case .restartAgents:
-        guard parsed.socketPath == nil else {
-          throw AppError.message("--socket cannot be used with --restart-agents")
+      case .restartAgent(let target):
+        switch target {
+        case .calendar:
+          try restartCalendarAgent(socketPath: parsed.socketPath, context: context)
+        case .network:
+          try restartNetworkAgent(socketPath: parsed.socketPath, context: context)
+        case .all:
+          try restartAgents(context: context)
         }
-        try restartAgents(context: context)
 
-      case .logs:
-        try showLogs(options: parsed.logOptions, context: context)
+      case .logs(let options):
+        try showLogs(options: options, context: context)
 
       case .inbox(let command):
         let socketPath = try resolvedControlSocketPath(
@@ -67,9 +66,9 @@ private struct AppController {
       }
 
       return 0
-    } catch AppError.showUsage {
-      CLIOutput.printUsage()
-      return 1
+    } catch AppError.showUsage(let topic) {
+      CLIOutput.printUsage(topic: topic)
+      return 0
     } catch AppError.showVersion {
       CLIOutput.printVersion()
       return 0

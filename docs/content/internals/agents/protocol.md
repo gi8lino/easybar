@@ -136,7 +136,7 @@ Homebrew Services runs the separately installed agents through `launchd` with `k
 
 Restart is available only while the agent socket is responsive. If the agent has already crashed or cannot answer requests, its service supervisor remains responsible for recovery.
 
-The CLI exposes this operation as `--restart-calendar-agent`, `--restart-network-agent`, and `--restart-agents`. The combined command attempts both agents before reporting a partial failure with a nonzero exit status.
+The CLI exposes this operation as `easybar agent restart calendar`, `easybar agent restart network`, and `easybar agent restart all`. The combined command attempts both agents before reporting a partial failure with a nonzero exit status.
 
 ## EasyBar command behavior
 
@@ -145,7 +145,7 @@ EasyBar keeps long-lived subscriptions open to the agents for normal runtime upd
 A manual refresh:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 - does not reload config
@@ -155,7 +155,7 @@ easybar --refresh
 A Lua restart:
 
 ```bash
-easybar --restart-lua-runtime
+easybar runtime restart
 ```
 
 - restarts only Lua
@@ -164,11 +164,13 @@ easybar --restart-lua-runtime
 A config reload:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 - reloads `config.toml`
 - rebuilds runtime state
 - recreates agent-backed subscriptions
+
+
 
 

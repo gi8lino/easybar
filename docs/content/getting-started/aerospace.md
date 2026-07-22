@@ -56,7 +56,7 @@ EasyBar listens to `binding-triggered` and includes it in the trailing snapshot 
 You can always trigger one refresh manually:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 ## Troubleshooting
@@ -83,3 +83,5 @@ If a local script needs to notify widgets about a known state change, use EasyBa
 
 - [Runtime Control](../runtime/control.md)
 - [Troubleshooting](../runtime/troubleshooting.md)
+
+

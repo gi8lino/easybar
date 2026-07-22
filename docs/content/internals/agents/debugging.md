@@ -103,7 +103,7 @@ socket_path = "~/.local/state/easybar/runtime/network-agent.sock"
 Restart the agent:
 
 ```bash
-easybar --restart-network-agent
+easybar agent restart network
 ```
 
 ### Wi-Fi fields missing
@@ -124,7 +124,7 @@ systemsettings Privacy LocationServices
 Then restart:
 
 ```bash
-easybar --restart-network-agent
+easybar agent restart network
 ```
 
 ### IPv4 or IPv6 missing in the Wi-Fi widget
@@ -157,7 +157,7 @@ ipv6_address = true
 Then reload config:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 ### Wi-Fi details are stale
@@ -165,13 +165,13 @@ easybar --reload-config
 Try a normal refresh:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 If that does not help, restart the network agent and EasyBar:
 
 ```bash
-easybar --restart-network-agent
+easybar agent restart network
 ```
 
 ### Calendar empty
@@ -186,7 +186,7 @@ Likely causes:
 Restart the calendar agent after changing permission settings:
 
 ```bash
-easybar --restart-calendar-agent
+easybar agent restart calendar
 ```
 
 ### Calendar request permanently rejected
@@ -207,7 +207,7 @@ the same payload, and keeps the last valid calendar snapshot visible. A changed 
 configuration resumes the connection. Reload configuration after correcting the request:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 Do not interpret this message as a missing socket or stopped agent. A repeated `connected` /
@@ -228,7 +228,7 @@ Wait or restart the agent.
 Restart agents:
 
 ```bash
-easybar --restart-agents
+easybar agent restart all
 ```
 
 ## Debugging Lua vs Agent
@@ -278,3 +278,5 @@ flowchart LR
     Lua --> UI["UI"]
     Native --> UI
 ```
+
+

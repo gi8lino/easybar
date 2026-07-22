@@ -17,10 +17,10 @@ Use the CLI to read the retained files as one timestamp-ordered stream:
 ```bash
 easybar logs
 easybar logs --widget tailscale --level debug
-easybar logs --since 30m --no-follow
+easybar logs --since 30m
 ```
 
-The command prints recent history before following new entries and continues across file rotation. See the [CLI Reference](../runtime/cli.md#logs) for every filter and output option.
+The command prints recent retained history and exits. Add `--follow` to continue following new entries across file rotation. See the [CLI Reference](../runtime/cli.md#logs) for every filter and output option.
 
 ## Config
 
@@ -81,7 +81,7 @@ Structured request logs include both `request_id` and `run_id`. A request ID ide
 Use `EASYBAR_LOG_LEVEL` when you want more or less verbose logs without editing `config.toml`:
 
 ```bash
-EASYBAR_LOG_LEVEL=debug easybar --refresh
+EASYBAR_LOG_LEVEL=debug easybar refresh
 EASYBAR_LOG_LEVEL=trace open /Applications/EasyBar.app
 ```
 
@@ -92,20 +92,22 @@ This override affects only the minimum log level. File logging still depends on 
 Use `--debug` when you want CLI-side diagnostics:
 
 ```bash
-easybar --debug --metrics
-easybar --debug --validate-config --config /path/to/config.toml
+easybar metrics --debug
+easybar config validate --config /path/to/config.toml --debug
 easybar logs --debug --runtime lua
 ```
 
 This keeps validation explicit:
 
 ```bash
-easybar --validate-config --config /path/to/config.toml
+easybar config validate --config /path/to/config.toml
 ```
 
 or:
 
 ```bash
-EASYBAR_CONFIG_PATH=/path/to/config.toml easybar --validate-config
+EASYBAR_CONFIG_PATH=/path/to/config.toml easybar config validate
 ```
+
+
 

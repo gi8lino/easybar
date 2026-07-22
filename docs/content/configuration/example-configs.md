@@ -60,7 +60,7 @@ cp config.minimal.toml ~/.config/easybar/config.toml
 Then reload EasyBar:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 ## Add a custom theme
@@ -86,3 +86,5 @@ themes_dir = "~/.config/easybar/themes"
 ```
 
 See [Themes](themes.md) for the theme file format.
+
+

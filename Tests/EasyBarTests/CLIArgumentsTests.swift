@@ -1,24 +1,104 @@
+import EasyBarShared
 import XCTest
 
 @testable import EasyBarCtl
 
 final class CLIArgumentsTests: XCTestCase {
-  func testLogsDefaultsToRecentHistoryAndFollowing() throws {
-    let parsed = try parseArguments(["easybar", "logs"])
 
-    XCTAssertEqual(parsed.action, .logs)
-    XCTAssertEqual(parsed.logOptions.historyLimit, 100)
-    XCTAssertTrue(parsed.logOptions.follow)
-    XCTAssertFalse(parsed.logOptions.json)
+  func testCommandCatalogPathsAreUnique() {
+    let paths = CLI.commands.map { $0.path.joined(separator: " ") }
+    XCTAssertEqual(Set(paths).count, paths.count)
   }
 
-  func testLogsParsesComposableFilters() throws {
+  func testEveryRootCommandGroupHasAtLeastOneCommand() {
+    for group in CLI.commandGroups {
+      XCTAssertTrue(
+        CLI.commands.contains(where: { $0.path.first == group.name }),
+        "Missing command for root group \(group.name)"
+      )
+    }
+  }
+
+  func testTopLevelRuntimeCommandsMapToSharedIPCCommands() throws {
+    XCTAssertEqual(try parseArguments(["easybar", "refresh"]).action, .control(.manualRefresh))
+    XCTAssertEqual(
+      try parseArguments(["easybar", "config", "reload"]).action,
+      .control(.reloadConfig)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "runtime", "restart"]).action,
+      .control(.restartLuaRuntime)
+    )
+  }
+
+  func testMetricsParsesSnapshotAndWatchModes() throws {
+    XCTAssertEqual(try parseArguments(["easybar", "metrics"]).action, .metrics(watch: false))
+    XCTAssertEqual(
+      try parseArguments(["easybar", "metrics", "--watch"]).action,
+      .metrics(watch: true)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "metrics", "-w"]).action,
+      .metrics(watch: true)
+    )
+  }
+
+  func testConfigValidateParsesOptionalPath() throws {
+    XCTAssertEqual(
+      try parseArguments(["easybar", "config", "validate"]).action,
+      .validateConfig(configPath: nil)
+    )
+    XCTAssertEqual(
+      try parseArguments([
+        "easybar", "config", "validate", "--config", "/tmp/easybar.toml",
+      ]).action,
+      .validateConfig(configPath: "/tmp/easybar.toml")
+    )
+  }
+
+  func testAgentRestartTargetsParse() throws {
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "restart", "calendar"]).action,
+      .restartAgent(.calendar)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "restart", "network"]).action,
+      .restartAgent(.network)
+    )
+    XCTAssertEqual(
+      try parseArguments(["easybar", "agent", "restart", "all"]).action,
+      .restartAgent(.all)
+    )
+  }
+
+  func testEventEmitMapsPublicNameToSharedIPCCommand() throws {
+    XCTAssertEqual(
+      try parseArguments(["easybar", "event", "emit", "workspace-change"]).action,
+      .control(.workspaceChange)
+    )
+    XCTAssertThrowsError(
+      try parseArguments(["easybar", "event", "emit", "unknown-event"])
+    )
+  }
+
+  func testLogsDefaultsToRecentHistoryWithoutFollowing() throws {
+    let parsed = try parseArguments(["easybar", "logs"])
+
+    guard case .logs(let options) = parsed.action else {
+      return XCTFail("Expected logs action")
+    }
+    XCTAssertEqual(options.historyLimit, 100)
+    XCTAssertFalse(options.follow)
+    XCTAssertFalse(options.json)
+  }
+
+  func testLogsParsesComposableFiltersAndExplicitFollow() throws {
     let parsed = try parseArguments([
       "easybar",
       "logs",
       "--widget",
       "tailscale",
-      "--runtime=lua",
+      "--runtime=app",
       "--level",
       "debug",
       "--since",
@@ -27,31 +107,40 @@ final class CLIArgumentsTests: XCTestCase {
       "lua-19",
       "--lines",
       "25",
-      "--no-follow",
+      "--follow",
       "--json",
     ])
 
-    XCTAssertEqual(parsed.logOptions.widget, "tailscale")
-    XCTAssertEqual(parsed.logOptions.runtime, .lua)
-    XCTAssertEqual(parsed.logOptions.minimumLevel, .debug)
-    XCTAssertEqual(parsed.logOptions.since, "30m")
-    XCTAssertEqual(parsed.logOptions.requestID, "lua-19")
-    XCTAssertEqual(parsed.logOptions.historyLimit, 25)
-    XCTAssertFalse(parsed.logOptions.follow)
-    XCTAssertTrue(parsed.logOptions.json)
+    guard case .logs(let options) = parsed.action else {
+      return XCTFail("Expected logs action")
+    }
+    XCTAssertEqual(options.widget, "tailscale")
+    XCTAssertEqual(options.runtime, .native)
+    XCTAssertEqual(options.minimumLevel, .debug)
+    XCTAssertEqual(options.since, "30m")
+    XCTAssertEqual(options.requestID, "lua-19")
+    XCTAssertEqual(options.historyLimit, 25)
+    XCTAssertTrue(options.follow)
+    XCTAssertTrue(options.json)
   }
 
   func testSinceAndRequestIDDefaultToAllRetainedHistory() throws {
     let since = try parseArguments(["easybar", "logs", "--since", "1h"])
     let request = try parseArguments(["easybar", "logs", "--request-id", "lua-19"])
 
-    XCTAssertNil(since.logOptions.historyLimit)
-    XCTAssertNil(request.logOptions.historyLimit)
+    guard case .logs(let sinceOptions) = since.action,
+      case .logs(let requestOptions) = request.action
+    else {
+      return XCTFail("Expected logs actions")
+    }
+    XCTAssertNil(sinceOptions.historyLimit)
+    XCTAssertNil(requestOptions.historyLimit)
   }
 
-  func testLogOptionsRequireLogsCommand() {
-    XCTAssertThrowsError(try parseArguments(["easybar", "--refresh", "--since", "1h"]))
+  func testLogOptionsAreCommandLocal() {
+    XCTAssertThrowsError(try parseArguments(["easybar", "refresh", "--since", "1h"]))
     XCTAssertThrowsError(try parseArguments(["easybar", "logs", "--all", "--lines", "10"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "logs", "--no-follow"]))
   }
 
   func testInboxSendParsesStructuredMessage() throws {
@@ -62,7 +151,7 @@ final class CLIArgumentsTests: XCTestCase {
       "--severity", "error",
       "--title", "Backup failed",
       "--message", "The nightly backup failed.",
-      "--group", "backup:minio",
+      "--category", "backup:minio",
       "--url", "https://grafana.example.com/backup-logs",
     ])
 
@@ -79,13 +168,28 @@ final class CLIArgumentsTests: XCTestCase {
     XCTAssertTrue(item.unread)
   }
 
-  func testInboxReadAndMutationParsing() throws {
-    let read = try parseArguments([
-      "easybar", "inbox", "read", "--source", "backup", "--unread", "--json",
+  func testInboxValuesThatLookLikeGlobalOptionsRemainValues() throws {
+    let parsed = try parseArguments([
+      "easybar", "inbox", "send", "--source", "test", "--title", "--debug",
+      "--message", "--socket",
+    ])
+
+    guard case .inbox(.send(let item)) = parsed.action else {
+      return XCTFail("Expected inbox send action")
+    }
+    XCTAssertEqual(item.title, "--debug")
+    XCTAssertEqual(item.message, "--socket")
+    XCTAssertFalse(parsed.debugEnabled)
+    XCTAssertNil(parsed.socketPath)
+  }
+
+  func testInboxListAndMutationParsing() throws {
+    let list = try parseArguments([
+      "easybar", "inbox", "list", "--source", "backup", "--unread", "--json",
     ])
     XCTAssertEqual(
-      read.action,
-      .inbox(.read(source: "backup", unreadOnly: true, json: true))
+      list.action,
+      .inbox(.list(source: "backup", unreadOnly: true, json: true))
     )
 
     let markRead = try parseArguments([
@@ -102,12 +206,81 @@ final class CLIArgumentsTests: XCTestCase {
     XCTAssertEqual(remove.action, .inbox(.remove(source: "backup", id: "nightly")))
   }
 
-  func testInboxDestructiveCommandsRequireScope() {
+  func testInboxDestructiveCommandsRequireUnambiguousScope() {
     XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "dismiss"]))
     XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "clear"]))
     XCTAssertThrowsError(
       try parseArguments(["easybar", "inbox", "remove", "--source", "backup"])
     )
+    XCTAssertThrowsError(
+      try parseArguments([
+        "easybar", "inbox", "clear", "--source", "backup", "--all",
+      ])
+    )
     XCTAssertNoThrow(try parseArguments(["easybar", "inbox", "clear", "--all"]))
+  }
+
+  func testGlobalOptionsCanAppearBeforeOrAfterCommand() throws {
+    let before = try parseArguments([
+      "easybar", "--debug", "--socket", "/tmp/easybar.sock", "refresh",
+    ])
+    let after = try parseArguments([
+      "easybar", "refresh", "--socket=/tmp/easybar.sock", "-d",
+    ])
+
+    XCTAssertEqual(before, after)
+    XCTAssertEqual(before.socketPath, "/tmp/easybar.sock")
+    XCTAssertTrue(before.debugEnabled)
+  }
+
+  func testSocketIsRejectedForCommandsThatDoNotUseOneSocket() {
+    XCTAssertThrowsError(
+      try parseArguments(["easybar", "logs", "--socket", "/tmp/easybar.sock"])
+    )
+    XCTAssertThrowsError(
+      try parseArguments([
+        "easybar", "agent", "restart", "all", "--socket", "/tmp/easybar.sock",
+      ])
+    )
+  }
+
+  func testRemovedLegacySyntaxIsRejected() {
+    XCTAssertThrowsError(try parseArguments(["easybar", "--refresh"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "--metrics"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "--validate-config"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "add"]))
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "read"]))
+    XCTAssertThrowsError(
+      try parseArguments([
+        "easybar", "inbox", "send", "--source", "backup", "--title", "Done",
+        "--group", "storage",
+      ])
+    )
+    XCTAssertThrowsError(
+      try parseArguments(["easybar", "logs", "--runtime", "native"])
+    )
+  }
+
+  func testHelpSelectsRootGroupAndCommandTopics() {
+    XCTAssertThrowsError(try parseArguments(["easybar", "--help"])) { error in
+      guard case AppError.showUsage(let topic) = error else {
+        return XCTFail("Expected root usage")
+      }
+      XCTAssertEqual(topic, [])
+    }
+
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "--help"])) { error in
+      guard case AppError.showUsage(let topic) = error else {
+        return XCTFail("Expected inbox usage")
+      }
+      XCTAssertEqual(topic, ["inbox"])
+    }
+
+    XCTAssertThrowsError(try parseArguments(["easybar", "inbox", "send", "--help"])) { error in
+      guard case AppError.showUsage(let topic) = error else {
+        return XCTFail("Expected inbox send usage")
+      }
+      XCTAssertEqual(topic, ["inbox", "send"])
+    }
   }
 }

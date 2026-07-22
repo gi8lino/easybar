@@ -32,7 +32,7 @@ EasyBar also shows a controller icon in the macOS menu bar. Use it to stop or re
 Trigger one refresh through the installed CLI:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 If this fails or the bar does not appear, follow the matching symptom in [Troubleshooting](../runtime/troubleshooting.md). Installation-specific process checks are in [Installation](installation.md).
@@ -52,7 +52,7 @@ From a cloned repository:
 ```bash
 mkdir -p ~/.config/easybar
 cp config.minimal.toml ~/.config/easybar/config.toml
-easybar --reload-config
+easybar config reload
 ```
 
 Use [Example Configs](../configuration/example-configs.md) for the available starter files.
@@ -91,7 +91,7 @@ enabled = true
 Reload config after editing:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 Use [Built-ins](../configuration/builtins.md) for built-in widget behavior and [Native Groups](../configuration/native-groups.md) when several widgets should share one visual container.
@@ -116,3 +116,5 @@ After the initial setup:
 - [Lua Reference](../lua/reference/index.md) for exact Lua API shapes.
 - [CLI Reference](../runtime/cli.md) for every control and diagnostic command.
 - [Internals](../internals/overview.md) for contributors, architecture, agents, process boundaries, and runtime implementation details.
+
+

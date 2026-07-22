@@ -51,7 +51,7 @@ Use `included_calendar_names` and `excluded_calendar_names` for calendar titles 
 macOS grants Calendar access to the calendar agent, not the main EasyBar application. After changing access, restart the agent:
 
 ```bash
-easybar --restart-calendar-agent
+easybar agent restart calendar
 ```
 
 ## Context menu
@@ -66,3 +66,5 @@ Each configuration change is written to `config.toml` immediately. Comments, whi
 unrelated settings are preserved.
 
 See the [Configuration Reference](../reference.md) for month, upcoming, selection, composer, appointment, and filter keys. See [Calendar Agent](../../internals/agents/calendar-agent.md) for the process boundary and [Recovery](../../runtime/recovery.md) for permission troubleshooting.
+
+

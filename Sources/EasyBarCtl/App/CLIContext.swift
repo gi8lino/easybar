@@ -24,8 +24,8 @@ struct AppContext {
 
 /// Errors used to control CLI flow and user-facing output.
 enum AppError: Error {
-  /// Requests usage output.
-  case showUsage
+  /// Requests root, group, or command-specific usage output.
+  case showUsage([String])
   /// Requests version output.
   case showVersion
   /// Carries a user-facing error message.

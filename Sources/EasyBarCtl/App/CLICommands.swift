@@ -31,7 +31,7 @@ func runInboxCommand(
     request = .init(operation: .send, item: item)
     printsItems = false
     json = false
-  case .read(let source, let unreadOnly, let useJSON):
+  case .list(let source, let unreadOnly, let useJSON):
     request = .init(operation: .read, source: source, unreadOnly: unreadOnly)
     printsItems = true
     json = useJSON
@@ -59,7 +59,7 @@ func runInboxCommand(
 
   let response = try sendIPCRequest(.makeInbox(request), to: socketPath, context: context)
   if printsItems {
-    let items = try expectInbox(response, fallback: "inbox read failed")
+    let items = try expectInbox(response, fallback: "inbox list failed")
     try CLIOutput.printInboxItems(items, json: json)
   } else {
     try expectAccepted(response, fallback: "inbox command rejected")
@@ -146,7 +146,7 @@ private func resolveAgentSockets() throws -> SharedAgentSocketResolutions {
   } catch {
     throw AppError.message(
       "failed to resolve agent sockets from shared runtime config: "
-        + "\(error.localizedDescription). Fix the config before using --restart-agents."
+        + "\(error.localizedDescription). Fix the config before using agent restart all."
     )
   }
 }

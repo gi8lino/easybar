@@ -2,7 +2,7 @@ import Darwin
 import EasyBarShared
 import Foundation
 
-/// Streaming client for `--metrics --watch`.
+/// Streaming client for `easybar metrics --watch`.
 struct MetricsStreamClient {
   /// Unix-domain socket path used for the metrics stream.
   let socketPath: String

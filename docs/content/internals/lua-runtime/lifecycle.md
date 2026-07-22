@@ -85,7 +85,7 @@ Examples:
 Triggered via:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 This:
@@ -100,7 +100,7 @@ This:
 Triggered via:
 
 ```bash
-easybar --restart-lua-runtime
+easybar runtime restart
 ```
 
 This:
@@ -111,10 +111,12 @@ This:
 ### Config reload
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 This:
 
 - reloads config file
 - rebuilds runtime state
+
+

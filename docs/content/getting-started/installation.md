@@ -84,7 +84,7 @@ brew services list | grep easybar
 Trigger one refresh through the CLI:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
 ## Uninstall
@@ -113,3 +113,5 @@ Common user data remains under:
 ```
 
 See [Configuration Path](configuration-path.md) and [Logging](../configuration/logging.md) before deleting these directories.
+
+

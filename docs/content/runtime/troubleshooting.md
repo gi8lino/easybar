@@ -10,10 +10,10 @@ pgrep -fl EasyBarLuaRuntime
 pgrep -fl EasyBarCalendarAgent
 pgrep -fl EasyBarNetworkAgent
 brew services list | grep easybar
-easybar --refresh
+easybar refresh
 ```
 
-`easybar --refresh` confirms that the CLI can reach the main control socket. Use `easybar --metrics` for one process and connection snapshot.
+`easybar refresh` confirms that the CLI can reach the main control socket. Use `easybar metrics` for one process and connection snapshot.
 
 ## Find the logs
 
@@ -57,8 +57,8 @@ Check whether the widget is enabled and whether its source process is available:
 Restart the relevant agent after changing a permission:
 
 ```bash
-easybar --restart-calendar-agent
-easybar --restart-network-agent
+easybar agent restart calendar
+easybar agent restart network
 ```
 
 Use [Recovery](recovery.md) for source-specific checks and [Agent Debugging](../internals/agents/debugging.md) for raw socket and service diagnostics.
@@ -76,13 +76,13 @@ Loader errors identify the widget filename and failing API call in `easybar.out`
 Validate config separately from Lua source:
 
 ```bash
-easybar --validate-config
+easybar config validate
 ```
 
 After fixing the widget, restart only the Lua runtime:
 
 ```bash
-easybar --restart-lua-runtime
+easybar runtime restart
 ```
 
 See [Bundled Widgets](../lua/guides/bundled-widgets.md), [Commands](../lua/guides/commands.md), and [Lua Logging](../lua/guides/logging.md).
@@ -92,10 +92,10 @@ See [Bundled Widgets](../lua/guides/bundled-widgets.md), [Commands](../lua/guide
 First request a normal refresh:
 
 ```bash
-easybar --refresh
+easybar refresh
 ```
 
-If only Lua is stale, use `easybar --restart-lua-runtime`. Asynchronous commands must have bounded timeouts and should expose cancellation for long-running user actions. For the Homebrew examples, inspect `brew-widget.log` before restarting so the last operation remains diagnosable.
+If only Lua is stale, use `easybar runtime restart`. Asynchronous commands must have bounded timeouts and should expose cancellation for long-running user actions. For the Homebrew examples, inspect `brew-widget.log` before restarting so the last operation remains diagnosable.
 
 ## Popup or context menu does not open
 
@@ -113,13 +113,13 @@ If a hover popup covers the anchor, move back to the actual bar icon before righ
 When `watch_config = false`, reload manually:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 An invalid reload is rejected and the previous valid configuration remains active. Validate the file and inspect the reported key or section:
 
 ```bash
-easybar --validate-config --config ~/.config/easybar/config.toml
+easybar config validate --config ~/.config/easybar/config.toml
 ```
 
 ## Homebrew install or upgrade fails
@@ -153,7 +153,7 @@ When reporting a problem, include:
 - installation method: Homebrew or manual archive
 - the affected widget or process
 - the smallest relevant log excerpt
-- whether `easybar --refresh` and `easybar --validate-config` succeed
+- whether `easybar refresh` and `easybar config validate` succeed
 
 Do not include access tokens, private URLs, calendar content, or other secrets from widget command output.
 
@@ -164,3 +164,5 @@ Do not include access tokens, private URLs, calendar content, or other secrets f
 - [Agent Debugging](../internals/agents/debugging.md)
 - [macOS Quarantine](../getting-started/macos-quarantine.md)
 - [Configuration Logging](../configuration/logging.md)
+
+

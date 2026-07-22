@@ -152,7 +152,7 @@ themes_dir = "~/.config/easybar/themes"
 Reload EasyBar:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 ## Theme file format
@@ -407,7 +407,7 @@ Plain `swift run EasyBar` is not enough for bundled theme testing unless you hav
 Reload config:
 
 ```bash
-easybar --reload-config
+easybar config reload
 ```
 
 If `watch_config = false`, EasyBar will not reload automatically.
@@ -417,3 +417,5 @@ If `watch_config = false`, EasyBar will not reload automatically.
 Check whether that widget has an explicit color in `config.toml`.
 
 Explicit widget colors override theme defaults.
+
+

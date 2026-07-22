@@ -1,166 +1,229 @@
 import EasyBarShared
 
-/// Describes a command-line option accepted by `easybarctl`.
-struct CLIOption {
-  /// Long-form option flag, such as `--metrics`.
+/// Describes one command-line option accepted by `easybar`.
+struct CLIOption: Equatable {
+  /// Canonical long-form option, such as `--socket`.
   let flag: String
-  /// Optional short-form alias, such as `-m`.
+  /// Optional short-form alias, such as `-s`.
   let short: String?
-  /// IPC command triggered by this option, when the option is a command.
-  let command: IPC.Command?
-  /// Human-readable help text shown in usage output.
+  /// Human-readable help text.
   let description: String
-  /// Optional value placeholder shown after the option in usage output.
+  /// Optional value placeholder shown after the option.
   let placeholder: String?
 
-  /// Creates a command-line option descriptor.
   init(
     flag: String,
     short: String? = nil,
-    command: IPC.Command? = nil,
     description: String,
     placeholder: String? = nil
   ) {
     self.flag = flag
     self.short = short
-    self.command = command
     self.description = description
     self.placeholder = placeholder
   }
+
+  /// Canonical option text rendered in help output.
+  var helpText: String {
+    var text = flag
+    if let short {
+      text += ", \(short)"
+    }
+    if let placeholder {
+      text += " <\(placeholder)>"
+    }
+    return text
+  }
+
+  /// Long and optional short spellings accepted by the parser.
+  var acceptedFlags: [String] {
+    [flag] + (short.map { [$0] } ?? [])
+  }
+
+  /// Returns whether one argument is this option without an inline value.
+  func matches(_ argument: String) -> Bool {
+    acceptedFlags.contains(argument)
+  }
+
+  /// Returns the value from `--option=value`.
+  func inlineValue(from argument: String) -> String? {
+    for acceptedFlag in acceptedFlags where acceptedFlag.hasPrefix("--") {
+      let prefix = "\(acceptedFlag)="
+      if argument.hasPrefix(prefix) {
+        return String(argument.dropFirst(prefix.count))
+      }
+    }
+    return nil
+  }
 }
 
-/// Parsed command-line configuration.
-struct ParsedArguments {
-  /// Action selected by the user.
-  let action: CLIAction
-  /// Unix-domain socket path used to contact the running EasyBar process.
-  let socketPath: String?
-  /// Optional config path override used by validation.
-  let configPath: String?
-  /// Whether debug logging was requested.
-  let debugEnabled: Bool
-  /// Whether metrics should be streamed continuously.
-  let watchMetrics: Bool
-  /// Options used by the logs command.
-  let logOptions: LogCommandOptions
+/// Helper-agent restart target selected by the CLI.
+enum AgentRestartTarget: String, Equatable {
+  case calendar
+  case network
+  case all
+}
+
+/// Supported native inbox verbs.
+enum InboxCLIVerb: String, Equatable {
+  case send
+  case list
+  case markRead = "mark-read"
+  case markUnread = "mark-unread"
+  case dismiss
+  case remove
+  case clear
+}
+
+/// Parser behavior associated with one declarative CLI command.
+enum CLICommandKind: Equatable {
+  case control(IPC.Command)
+  case metrics
+  case logs
+  case validateConfig
+  case restartAgent(AgentRestartTarget)
+  case emitEvent
+  case inbox(InboxCLIVerb)
+
+  /// Whether this command can target one explicit Unix socket.
+  var acceptsSocketOverride: Bool {
+    switch self {
+    case .logs, .restartAgent(.all):
+      return false
+    default:
+      return true
+    }
+  }
+}
+
+/// One user-facing command definition.
+///
+/// This catalog is the source of truth for command paths, descriptions, help,
+/// and mapping to the shared IPC command model.
+struct CLICommandDescriptor: Equatable {
+  let path: [String]
+  let description: String
+  let kind: CLICommandKind
+  let usageArguments: [String]
+  let options: [CLIOption]
+
+  init(
+    path: [String],
+    description: String,
+    kind: CLICommandKind,
+    usageArguments: [String] = [],
+    options: [CLIOption] = []
+  ) {
+    self.path = path
+    self.description = description
+    self.kind = kind
+    self.usageArguments = usageArguments
+    self.options = options
+  }
+
+  var commandText: String {
+    path.joined(separator: " ")
+  }
+
+  var usageText: String {
+    (["easybar"] + path + usageArguments).joined(separator: " ")
+  }
+}
+
+/// One top-level command or command group shown by root help.
+struct CLICommandGroup: Equatable {
+  let name: String
+  let description: String
 }
 
 /// Parsed `easybar inbox` operation.
 enum InboxCLICommand: Equatable {
   case send(IPC.InboxItem)
-  case read(source: String?, unreadOnly: Bool, json: Bool)
-  case markRead(source: String?, id: String?)
-  case markUnread(source: String?, id: String?)
-  case dismiss(source: String?, id: String?)
+  case list(source: String?, unreadOnly: Bool, json: Bool)
+  case markRead(source: String, id: String?)
+  case markUnread(source: String, id: String?)
+  case dismiss(source: String, id: String?)
   case remove(source: String, id: String)
   case clear(source: String?)
 }
 
-/// Supported top-level CLI actions.
+/// Supported top-level CLI actions after command-specific options are parsed.
 enum CLIAction: Equatable {
-  case command(IPC.Command)
-  case validateConfig
-  case restartCalendarAgent
-  case restartNetworkAgent
-  case restartAgents
-  case logs
+  case control(IPC.Command)
+  case metrics(watch: Bool)
+  case validateConfig(configPath: String?)
+  case restartAgent(AgentRestartTarget)
+  case logs(LogCommandOptions)
   case inbox(InboxCLICommand)
 }
 
-/// Defines supported command-line options and formatting helpers.
+/// Parsed command-line configuration.
+struct ParsedArguments: Equatable {
+  let action: CLIAction
+  let socketPath: String?
+  let debugEnabled: Bool
+}
+
+/// Defines the declarative command catalog and shared CLI options.
 enum CLI {
-  /// Option used to override the EasyBar IPC socket path.
   static let socketOption = CLIOption(
     flag: "--socket",
     short: "-s",
-    description: "Override socket path",
+    description: "Override the relevant Unix socket path",
     placeholder: "path"
   )
 
-  /// Option used to override the config path for validation.
-  static let configOption = CLIOption(
-    flag: "--config",
-    description: "Override config path for validation",
-    placeholder: "path"
-  )
-
-  /// Option used to enable debug output.
   static let debugOption = CLIOption(
     flag: "--debug",
     short: "-d",
-    description: "Enable debug output"
+    description: "Enable CLI diagnostic output"
   )
 
-  /// Option used to print the app version.
   static let versionOption = CLIOption(
     flag: "--version",
     short: "-v",
-    description: "Show the easybar version"
+    description: "Show the EasyBar version"
   )
 
-  /// Option used to print usage help.
   static let helpOption = CLIOption(
     flag: "--help",
     short: "-h",
-    description: "Show this help"
+    description: "Show help"
   )
 
-  /// Option used to stream metrics continuously.
   static let watchOption = CLIOption(
     flag: "--watch",
     short: "-w",
-    description: "Keep streaming metrics and render rolling graphs"
+    description: "Continuously stream metrics and render rolling graphs"
   )
 
-  /// Option used to validate config through the running EasyBar app.
-  static let validateConfigOption = CLIOption(
-    flag: "--validate-config",
-    description: "Ask the running EasyBar app to validate config"
-  )
-
-  /// Option used to emit one EasyBar scripting event.
-  static let eventOption = CLIOption(
-    flag: "--event",
-    description: "Emit an EasyBar scripting event",
-    placeholder: "name"
-  )
-
-  static let restartCalendarAgentOption = CLIOption(
-    flag: "--restart-calendar-agent",
-    description: "Restart the calendar agent through its socket"
-  )
-
-  static let restartNetworkAgentOption = CLIOption(
-    flag: "--restart-network-agent",
-    description: "Restart the network agent through its socket"
-  )
-
-  static let restartAgentsOption = CLIOption(
-    flag: "--restart-agents",
-    description: "Restart both helper agents and report any partial failure"
+  static let configPathOption = CLIOption(
+    flag: "--config",
+    description: "Validate this config file instead of the active config",
+    placeholder: "path"
   )
 
   static let logWidgetOption = CLIOption(
     flag: "--widget",
-    description: "Show logs for one Lua or native widget",
+    description: "Match one Lua or native widget",
     placeholder: "name"
   )
 
   static let logRuntimeOption = CLIOption(
     flag: "--runtime",
-    description: "Show logs for lua, native, or agent runtime",
+    description: "Match the app, Lua, or agent runtime",
     placeholder: "kind"
   )
 
   static let logLevelOption = CLIOption(
     flag: "--level",
-    description: "Show this severity and higher",
+    description: "Match this severity and higher",
     placeholder: "level"
   )
 
   static let logRequestIDOption = CLIOption(
     flag: "--request-id",
-    description: "Find a request across retained logs",
+    description: "Find one request across retained logs",
     placeholder: "id"
   )
 
@@ -173,7 +236,7 @@ enum CLI {
   static let logLinesOption = CLIOption(
     flag: "--lines",
     short: "-n",
-    description: "Show the latest matching history before following",
+    description: "Limit the latest matching retained history",
     placeholder: "count"
   )
 
@@ -182,17 +245,77 @@ enum CLI {
     description: "Show all matching retained history"
   )
 
-  static let logNoFollowOption = CLIOption(
-    flag: "--no-follow",
-    description: "Exit after printing retained history"
+  static let logFollowOption = CLIOption(
+    flag: "--follow",
+    short: "-f",
+    description: "Continue following new matching entries"
   )
 
-  static let logJSONOption = CLIOption(
+  static let jsonOption = CLIOption(
     flag: "--json",
-    description: "Print one JSON object per log entry"
+    description: "Print JSON output"
   )
 
-  static let logOptions: [CLIOption] = [
+  static let inboxSourceOption = CLIOption(
+    flag: "--source",
+    description: "Publisher source",
+    placeholder: "name"
+  )
+
+  static let inboxIDOption = CLIOption(
+    flag: "--id",
+    description: "Stable message identifier",
+    placeholder: "id"
+  )
+
+  static let inboxTitleOption = CLIOption(
+    flag: "--title",
+    description: "Message title",
+    placeholder: "text"
+  )
+
+  static let inboxMessageOption = CLIOption(
+    flag: "--message",
+    description: "Optional message body",
+    placeholder: "text"
+  )
+
+  static let inboxSeverityOption = CLIOption(
+    flag: "--severity",
+    description: "Message severity: info, success, warning, or error",
+    placeholder: "level"
+  )
+
+  static let inboxCategoryOption = CLIOption(
+    flag: "--category",
+    description: "Optional inbox category",
+    placeholder: "name"
+  )
+
+  static let inboxURLOption = CLIOption(
+    flag: "--url",
+    description: "Optional HTTP(S) URL opened by the message action",
+    placeholder: "url"
+  )
+
+  static let inboxReadOption = CLIOption(
+    flag: "--read",
+    description: "Create the message in the read state"
+  )
+
+  static let inboxUnreadOption = CLIOption(
+    flag: "--unread",
+    description: "List only unread messages"
+  )
+
+  static let inboxAllOption = CLIOption(
+    flag: "--all",
+    description: "Clear every inbox source"
+  )
+
+  static let globalOptions = [socketOption, debugOption, versionOption, helpOption]
+
+  static let logOptions = [
     logWidgetOption,
     logRuntimeOption,
     logLevelOption,
@@ -200,88 +323,137 @@ enum CLI {
     logSinceOption,
     logLinesOption,
     logAllOption,
-    logNoFollowOption,
-    logJSONOption,
+    logFollowOption,
+    jsonOption,
   ]
 
-  /// Command options that map directly to IPC commands.
-  static let cmdOptions: [CLIOption] = [
-    .init(
-      flag: "--refresh",
-      command: .manualRefresh,
-      description:
-        "Refresh the bar and widgets using the currently loaded config and pull fresh data from agents"
-    ),
-    .init(
-      flag: "--reload-config",
-      command: .reloadConfig,
-      description: "Reload config from disk and rebuild EasyBar with the new settings"
-    ),
-    .init(
-      flag: "--restart-lua-runtime",
-      command: .restartLuaRuntime,
-      description: "Restart only the Lua widget runtime using the currently loaded config"
-    ),
-    .init(
-      flag: "--metrics",
-      command: .metrics,
-      description: "Print a metrics snapshot or stream live metrics with --watch"
-    ),
-    restartCalendarAgentOption,
-    restartNetworkAgentOption,
-    restartAgentsOption,
-    validateConfigOption,
+  static let commandGroups: [CLICommandGroup] = [
+    .init(name: "refresh", description: "Refresh the bar, widgets, and agent-backed data"),
+    .init(name: "logs", description: "Show retained process logs"),
+    .init(name: "metrics", description: "Show runtime metrics"),
+    .init(name: "inbox", description: "Manage native inbox messages"),
+    .init(name: "config", description: "Reload or validate configuration"),
+    .init(name: "runtime", description: "Manage the Lua widget runtime"),
+    .init(name: "agent", description: "Manage calendar and network agents"),
+    .init(name: "event", description: "Emit EasyBar scripting events"),
   ]
 
-  /// App-level options that configure CLI behavior.
-  static let appOptions: [CLIOption] = [
-    socketOption,
-    configOption,
-    eventOption,
-    watchOption,
-    debugOption,
-    versionOption,
-    helpOption,
+  static let commands: [CLICommandDescriptor] = [
+    .init(
+      path: ["refresh"],
+      description: "Refresh the bar, widgets, and agent-backed data",
+      kind: .control(.manualRefresh)
+    ),
+    .init(
+      path: ["logs"],
+      description: "Show retained logs and optionally follow new entries",
+      kind: .logs,
+      options: logOptions
+    ),
+    .init(
+      path: ["metrics"],
+      description: "Print a metrics snapshot or stream live metrics",
+      kind: .metrics,
+      options: [watchOption]
+    ),
+    .init(
+      path: ["inbox", "send"],
+      description: "Add or update a native inbox message",
+      kind: .inbox(.send),
+      options: [
+        inboxSourceOption, inboxIDOption, inboxTitleOption, inboxMessageOption,
+        inboxSeverityOption, inboxCategoryOption, inboxURLOption, inboxReadOption,
+      ]
+    ),
+    .init(
+      path: ["inbox", "list"],
+      description: "List native inbox messages without changing their state",
+      kind: .inbox(.list),
+      options: [inboxSourceOption, inboxUnreadOption, jsonOption]
+    ),
+    .init(
+      path: ["inbox", "mark-read"],
+      description: "Mark matching inbox messages as read",
+      kind: .inbox(.markRead),
+      options: [inboxSourceOption, inboxIDOption]
+    ),
+    .init(
+      path: ["inbox", "mark-unread"],
+      description: "Mark matching inbox messages as unread",
+      kind: .inbox(.markUnread),
+      options: [inboxSourceOption, inboxIDOption]
+    ),
+    .init(
+      path: ["inbox", "dismiss"],
+      description: "Dismiss matching inbox messages",
+      kind: .inbox(.dismiss),
+      options: [inboxSourceOption, inboxIDOption]
+    ),
+    .init(
+      path: ["inbox", "remove"],
+      description: "Delete one inbox message by source and ID",
+      kind: .inbox(.remove),
+      options: [inboxSourceOption, inboxIDOption]
+    ),
+    .init(
+      path: ["inbox", "clear"],
+      description: "Remove one source or every inbox message",
+      kind: .inbox(.clear),
+      options: [inboxSourceOption, inboxAllOption]
+    ),
+    .init(
+      path: ["config", "reload"],
+      description: "Reload config from disk and rebuild EasyBar",
+      kind: .control(.reloadConfig)
+    ),
+    .init(
+      path: ["config", "validate"],
+      description: "Ask the running app to validate configuration",
+      kind: .validateConfig,
+      options: [configPathOption]
+    ),
+    .init(
+      path: ["runtime", "restart"],
+      description: "Restart only the Lua widget runtime",
+      kind: .control(.restartLuaRuntime)
+    ),
+    .init(
+      path: ["agent", "restart", "calendar"],
+      description: "Restart the calendar agent through its socket",
+      kind: .restartAgent(.calendar)
+    ),
+    .init(
+      path: ["agent", "restart", "network"],
+      description: "Restart the network agent through its socket",
+      kind: .restartAgent(.network)
+    ),
+    .init(
+      path: ["agent", "restart", "all"],
+      description: "Restart both helper agents and report partial failure",
+      kind: .restartAgent(.all)
+    ),
+    .init(
+      path: ["event", "emit"],
+      description: "Emit one EasyBar scripting event",
+      kind: .emitEvent,
+      usageArguments: ["<name>"]
+    ),
   ]
 
-  /// Formats one help row.
-  static func formatOption(_ option: String, _ description: String) -> String {
-    return "  " + option.padding(toLength: 26, withPad: " ", startingAt: 0) + description
-  }
+  /// Returns the longest command path matching the beginning of `arguments`.
+  static func resolveCommand(in arguments: [String]) -> (CLICommandDescriptor, Int)? {
+    var best: (CLICommandDescriptor, Int)?
 
-  /// Renders one option label.
-  static func optionText(for option: CLIOption) -> String {
-    var text = option.flag
-
-    if let short = option.short {
-      text += ", \(short)"
+    for command in commands where arguments.starts(with: command.path) {
+      if best == nil || command.path.count > best!.1 {
+        best = (command, command.path.count)
+      }
     }
 
-    if let placeholder = option.placeholder {
-      text += " <\(placeholder)>"
-    }
-
-    return text
+    return best
   }
 
-  /// Checks whether an argument matches an option.
-  static func matches(_ option: CLIOption, argument: String) -> Bool {
-    return option.flag == argument || option.short == argument
-  }
-
-  /// Returns the value from `--flag=value`.
-  static func inlineValue(for option: CLIOption, argument: String) -> String? {
-    let prefix = "\(option.flag)="
-    guard argument.hasPrefix(prefix) else { return nil }
-    return String(argument.dropFirst(prefix.count))
-  }
-
-  /// Returns the command for one argument.
-  static func command(for argument: String) -> IPC.Command? {
-    cmdOptions.first { matches($0, argument: argument) }?.command
-  }
-
-  /// Returns the IPC command for one EasyBar scripting event name.
+  /// Returns the IPC command for one public scripting event name.
   static func eventCommand(for value: String) -> IPC.Command? {
     switch value.replacingOccurrences(of: "-", with: "_") {
     case IPC.Command.workspaceChange.rawValue:
@@ -293,5 +465,9 @@ enum CLI {
     default:
       return nil
     }
+  }
+
+  static func formatRow(_ value: String, _ description: String, width: Int = 28) -> String {
+    "  " + value.padding(toLength: width, withPad: " ", startingAt: 0) + description
   }
 }
