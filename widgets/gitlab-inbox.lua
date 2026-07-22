@@ -4,6 +4,11 @@ local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "GitLab"
+local SOURCE_PRESENTATION = {
+	name = "GitLab",
+	icon = easybar.asset("assets/gitlab.svg"),
+	color = "#FC6D26",
+}
 local POLL_INTERVAL_SECONDS = 300
 local WAKE_REFRESH_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
@@ -23,6 +28,7 @@ local function publish_error(message)
 			title = "GitLab work items unavailable",
 			body = message,
 			severity = "error",
+			source = SOURCE_PRESENTATION,
 			actions = { { id = "refresh", title = "Refresh" } },
 		},
 	})
@@ -88,6 +94,7 @@ local function publish(issues, merge_requests)
 			category = item.kind == "merge_request" and "Merge requests" or "Issues",
 			severity = "info",
 			unread = true,
+			source = SOURCE_PRESENTATION,
 			actions = {
 				{ id = "mark_read", title = "Mark as read" },
 				{ id = "open", title = "Open" },

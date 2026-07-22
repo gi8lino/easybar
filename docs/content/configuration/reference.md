@@ -292,7 +292,7 @@ For concepts and usage examples, use the hand-written configuration guides.
 | `show_when_empty`              | `true`        | —       | Keeps the read-state inbox icon visible when no messages exist.       |
 | `show_source_actions`          | `true`        | —       | Shows publisher-provided actions in the inbox popup header.           |
 | `popup_width`                  | `360`         | —       | Sets the inbox popup width in points (240–800).                       |
-| `popup_max_height`             | `440`         | —       | Sets the maximum scrollable message-list height in points (120–1000). |
+| `popup_max_height`             | `540`         | —       | Sets the maximum scrollable message-list height in points (120–1000). |
 | `max_items`                    | `100`         | —       | Maximum number of current messages accepted from each publisher.      |
 
 ## `builtins.cpu`

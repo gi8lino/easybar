@@ -57,15 +57,18 @@ struct InboxPopupView: View {
           LazyVStack(alignment: .leading, spacing: 8) {
             ForEach(Array(store.groups().enumerated()), id: \.offset) { _, group in
               if let title = group.title {
-                Text(title)
-                  .font(.caption.weight(.semibold))
-                  .foregroundStyle(color(config.popupMutedColorHex))
+                sourceGroupHeader(
+                  title: title,
+                  presentation: group.sourcePresentation,
+                  config: config
+                )
               }
               ForEach(group.items) { item in
                 itemView(item, config: config)
               }
             }
           }
+          .id(config.groupBy)
         }
         .frame(maxHeight: CGFloat(config.popupMaxHeight))
       }
@@ -88,6 +91,22 @@ struct InboxPopupView: View {
     config: Config.InboxBuiltinConfig
   ) -> some View {
     VStack(alignment: .leading, spacing: 5) {
+      if config.groupBy != .source {
+        let source = presented.item.source
+        HStack(spacing: 4) {
+          if let icon = source?.icon, !icon.isEmpty {
+            InboxSourceIconView(
+              value: icon,
+              color: color(source?.color ?? config.popupMutedColorHex)
+            )
+          }
+          Text(source?.name?.isEmpty == false ? source?.name ?? presented.source : presented.source)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(color(source?.color ?? config.popupMutedColorHex))
+        .onTapGesture { store.markRead(presented) }
+      }
+
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Button {
           store.toggleRead(presented)
@@ -108,12 +127,6 @@ struct InboxPopupView: View {
           .foregroundStyle(color(config.popupTitleColorHex))
           .onTapGesture { store.markRead(presented) }
         Spacer(minLength: 4)
-        if config.groupBy != .source {
-          Text(presented.source)
-            .font(.caption2)
-            .foregroundStyle(color(config.popupMutedColorHex))
-            .onTapGesture { store.markRead(presented) }
-        }
       }
 
       if let body = presented.item.body, !body.isEmpty {
@@ -160,6 +173,24 @@ struct InboxPopupView: View {
     }
   }
 
+  private func sourceGroupHeader(
+    title: String,
+    presentation: InboxSourcePresentation?,
+    config: Config.InboxBuiltinConfig
+  ) -> some View {
+    HStack(spacing: 5) {
+      if config.groupBy == .source, let icon = presentation?.icon, !icon.isEmpty {
+        InboxSourceIconView(
+          value: icon,
+          color: color(presentation?.color ?? config.popupMutedColorHex)
+        )
+      }
+      Text(title)
+    }
+    .font(.caption.weight(.semibold))
+    .foregroundStyle(color(presentation?.color ?? config.popupMutedColorHex))
+  }
+
   @ViewBuilder
   private func bodyText(_ body: String, format: InboxBodyFormat) -> some View {
     if format == .markdown,
@@ -202,6 +233,23 @@ struct InboxPopupView: View {
     case .success: return color(config.successColorHex)
     case .warning: return color(config.warningColorHex)
     case .error: return color(config.errorColorHex)
+    }
+  }
+}
+
+private struct InboxSourceIconView: View {
+  let value: String
+  let color: Color
+
+  private var imageSource: WidgetImageSource? {
+    value.hasPrefix("/") ? .path(value) : nil
+  }
+
+  var body: some View {
+    if let imageSource {
+      WidgetImageView(source: imageSource, size: 12, tint: color)
+    } else {
+      Text(value)
     }
   }
 }

@@ -13,8 +13,8 @@ fi
 
 "${lua_bin}" -e 'assert(_VERSION == "Lua 5.5", "expected Lua 5.5, got " .. tostring(_VERSION))'
 
-if [ ! -f widgets/assets/github-mark.svg ]; then
-  echo "Bundled GitHub widget asset is missing: widgets/assets/github-mark.svg" >&2
+if [ ! -f widgets/assets/github.svg ]; then
+  echo "Bundled GitHub widget asset is missing: widgets/assets/github.svg" >&2
   exit 1
 fi
 

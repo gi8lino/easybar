@@ -4,6 +4,11 @@ local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "GitHub"
+local SOURCE_PRESENTATION = {
+	name = "GitHub",
+	icon = easybar.asset("assets/github.svg"),
+	color = "#A371F7",
+}
 local POLL_INTERVAL_SECONDS = 300
 local WAKE_REFRESH_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
@@ -40,6 +45,7 @@ local function publish_error(message)
 			title = "GitHub notifications unavailable",
 			body = message,
 			severity = "error",
+			source = SOURCE_PRESENTATION,
 			actions = { { id = "refresh", title = "Refresh" } },
 		},
 	})
@@ -71,6 +77,7 @@ local function publish_notifications(output)
 			category = text.trim(subject.type) ~= "" and subject.type or "Notification",
 			severity = "info",
 			unread = true,
+			source = SOURCE_PRESENTATION,
 			actions = {
 				{ id = "mark_read", title = "Mark as read" },
 				{ id = "open", title = "Open" },

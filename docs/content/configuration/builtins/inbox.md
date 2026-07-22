@@ -13,7 +13,7 @@ group_by = "source"
 show_unread_count = true
 show_source_actions = true
 popup_width = 360
-popup_max_height = 440
+popup_max_height = 540
 use_inactive_style_when_read = true
 show_when_empty = true
 ```

@@ -11,7 +11,6 @@ struct WidgetNodeView: View {
   @Environment(\.appViewServices) var appViewServices
 
   @StateObject var popupPanel = WidgetPopupPanelController()
-  @StateObject var imageLoader = WidgetImageLoader()
   @State var popupPresented = false
   @State var anchorHovered = false
   @State var popupHovered = false

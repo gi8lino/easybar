@@ -27,6 +27,11 @@ easybar.inbox.replace("gitlab", {
         timestamp = os.time(),
         category = "Merge requests",
         severity = "success",
+        source = {
+            name = "GitLab",
+            icon = easybar.asset("assets/gitlab.svg"),
+            color = "#FC6D26",
+        },
         unread = true,
         actions = {
             { id = "open", title = "Open" },
@@ -50,6 +55,12 @@ Click a message to mark it read. Click its status dot to toggle read/unread, or 
 message to change its state or dismiss it. **Dismiss all** suppresses every currently displayed
 message. Local changes survive restarts and publisher refreshes while the source and item ID remain
 stable. Once a publisher omits an item, EasyBar removes its saved local state as well.
+
+Optional per-item `source` metadata makes the origin more prominent without changing the stable
+publisher name used for grouping and action routing. Set `name`, `icon`, and `color` independently;
+the publisher source and the inbox's neutral text color are used as fallbacks. Source color identifies
+the origin, while `severity` remains reserved for message status. `icon` accepts either text or an
+image path resolved with `easybar.asset(...)`; SVG and raster images use the configured source color.
 
 Set `dismissible = false` on persistent controls or status rows that must remain available. Such
 items are excluded from both the per-message dismiss action and **Dismiss all**.
@@ -137,7 +148,7 @@ sort_descending = true
 show_unread_count = true
 show_source_actions = true
 popup_width = 360
-popup_max_height = 440
+popup_max_height = 540
 use_inactive_style_when_read = true
 show_when_empty = true
 max_items = 100

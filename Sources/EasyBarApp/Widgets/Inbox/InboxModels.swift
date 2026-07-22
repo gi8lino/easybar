@@ -41,6 +41,12 @@ struct InboxAction: Codable, Equatable, Identifiable, Sendable {
   let title: String
 }
 
+struct InboxSourcePresentation: Codable, Equatable, Sendable {
+  let name: String?
+  let icon: String?
+  let color: String?
+}
+
 struct InboxItem: Codable, Equatable, Identifiable, Sendable {
   let id: String
   let title: String
@@ -52,6 +58,7 @@ struct InboxItem: Codable, Equatable, Identifiable, Sendable {
   let unread: Bool?
   let dismissible: Bool?
   let actions: [InboxAction]?
+  let source: InboxSourcePresentation?
 
   var resolvedFormat: InboxBodyFormat { format ?? .plain }
   var resolvedSeverity: InboxSeverity { severity ?? .info }

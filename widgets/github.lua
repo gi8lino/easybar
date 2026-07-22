@@ -204,7 +204,7 @@ local function render()
 			string = "",
 			color = color,
 			image = {
-				path = easybar.asset("assets/github-mark.svg"),
+				path = easybar.asset("assets/github.svg"),
 				size = 16,
 			},
 		},
@@ -287,7 +287,7 @@ github = easybar.add(easybar.kind.item, "github_notifications", {
 		string = "",
 		color = COLORS.muted,
 		image = {
-			path = easybar.asset("assets/github-mark.svg"),
+			path = easybar.asset("assets/github.svg"),
 			size = 16,
 		},
 	},

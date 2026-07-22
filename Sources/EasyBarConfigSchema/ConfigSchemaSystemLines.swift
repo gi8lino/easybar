@@ -65,7 +65,7 @@ extension ConfigSchemaRegistry {
     entry(
       key: "popup_width", value: "360", description: "Sets the inbox popup width in points (240–800)."),
     entry(
-      key: "popup_max_height", value: "440",
+      key: "popup_max_height", value: "540",
       description: "Sets the maximum scrollable message-list height in points (120–1000)."),
     entry(
       key: "max_items", value: "100", description: "Maximum number of current messages accepted from each publisher."),

@@ -51,6 +51,25 @@ final class InboxStoreTests: XCTestCase {
     XCTAssertEqual(store.groups().map(\.title), ["Reviews", "Other"])
   }
 
+  func testSourceGroupingUsesPresentationWithoutChangingPublisherIdentity() {
+    let store = InboxStore()
+    let github = InboxSourcePresentation(name: "GitHub", icon: "GH", color: "#ffffff")
+    let gitlab = InboxSourcePresentation(name: "GitLab", icon: "GL", color: "#fc6d26")
+    store.replace(
+      source: "Inbox demo",
+      items: [
+        item("github-one", sourcePresentation: github),
+        item("github-two", sourcePresentation: github),
+        item("gitlab-one", sourcePresentation: gitlab),
+      ]
+    )
+
+    let groups = store.groups()
+    XCTAssertEqual(groups.map(\.title), ["GitHub", "GitLab"])
+    XCTAssertEqual(groups.map(\.sourcePresentation), [github, gitlab])
+    XCTAssertEqual(store.presentedItems.map(\.source), ["Inbox demo", "Inbox demo", "Inbox demo"])
+  }
+
   func testClearAllRemovesMessagesAndReadState() {
     let store = InboxStore()
     store.replace(source: "GitHub", items: [item("one")])
@@ -89,7 +108,8 @@ final class InboxStoreTests: XCTestCase {
       severity: readItem.severity,
       unread: false,
       dismissible: readItem.dismissible,
-      actions: readItem.actions
+      actions: readItem.actions,
+      source: readItem.source
     )
     store.replace(source: "GitHub", items: [readItem])
 
@@ -229,7 +249,8 @@ final class InboxStoreTests: XCTestCase {
       severity: message.severity,
       unread: message.unread,
       dismissible: message.dismissible,
-      actions: duplicateActions
+      actions: duplicateActions,
+      source: message.source
     )
 
     store.replace(source: "GitLab", items: [message])
@@ -277,7 +298,8 @@ final class InboxStoreTests: XCTestCase {
     title: String? = nil,
     timestamp: TimeInterval = 0,
     category: String? = nil,
-    dismissible: Bool? = nil
+    dismissible: Bool? = nil,
+    sourcePresentation: InboxSourcePresentation? = nil
   ) -> InboxItem {
     InboxItem(
       id: id,
@@ -289,7 +311,8 @@ final class InboxStoreTests: XCTestCase {
       severity: nil,
       unread: nil,
       dismissible: dismissible,
-      actions: nil
+      actions: nil,
+      source: sourcePresentation
     )
   }
 }

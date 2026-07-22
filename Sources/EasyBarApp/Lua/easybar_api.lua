@@ -440,6 +440,11 @@
 ---@field id string Action id returned to the publisher.
 ---@field title string Button title shown in the inbox.
 
+---@class (exact) EasyBarInboxSourcePresentation
+---@field name? string Display name. Defaults to the publisher source.
+---@field icon? string Optional icon text or image path returned by `easybar.asset(...)`.
+---@field color? string Optional source accent color. Accepts theme tokens or hex colors.
+
 ---@class (exact) EasyBarInboxItem
 ---@field id string Stable id within the source snapshot.
 ---@field title string Message title.
@@ -451,6 +456,7 @@
 ---@field unread? boolean Initial unread state. Defaults to true.
 ---@field dismissible? boolean Whether local dismiss actions are available. Defaults to true.
 ---@field actions? EasyBarInboxAction[] Actions routed back through `on_action`.
+---@field source? EasyBarInboxSourcePresentation Optional source presentation metadata.
 
 ---@class EasyBarInboxActionEvent
 ---@field name 'inbox.action'

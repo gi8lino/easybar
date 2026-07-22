@@ -165,9 +165,11 @@ final class InboxStore: ObservableObject {
     rebuild()
   }
 
-  func groups() -> [(title: String?, items: [InboxPresentedItem])] {
+  func groups() -> [(
+    title: String?, sourcePresentation: InboxSourcePresentation?, items: [InboxPresentedItem]
+  )] {
     guard configuration.groupBy != .none else {
-      return [(nil, presentedItems)]
+      return [(nil, nil, presentedItems)]
     }
 
     var order: [String] = []
@@ -177,7 +179,11 @@ final class InboxStore: ObservableObject {
       if grouped[title] == nil { order.append(title) }
       grouped[title, default: []].append(item)
     }
-    return order.map { ($0, grouped[$0] ?? []) }
+    return order.map { title in
+      let items = grouped[title] ?? []
+      let presentation = configuration.groupBy == .source ? items.first?.item.source : nil
+      return (title, presentation, items)
+    }
   }
 
   private func rebuild() {
@@ -223,7 +229,7 @@ final class InboxStore: ObservableObject {
   private func groupTitle(for item: InboxPresentedItem) -> String {
     switch configuration.groupBy {
     case .source:
-      return item.source
+      return nonempty(item.item.source?.name) ?? item.source
     case .category:
       return nonempty(item.item.category) ?? "Other"
     case .severity:

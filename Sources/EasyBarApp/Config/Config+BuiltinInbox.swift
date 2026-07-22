@@ -61,7 +61,7 @@ extension Config {
       showWhenEmpty: true,
       showSourceActions: true,
       popupWidth: 360,
-      popupMaxHeight: 440,
+      popupMaxHeight: 540,
       popupBackgroundColorHex: "theme.background",
       popupBorderColorHex: "theme.border_strong",
       popupTitleColorHex: "theme.text",

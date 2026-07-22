@@ -40,6 +40,11 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
         timestamp = 123,
         category = "Reviews",
         severity = "success",
+        source = {
+          name = "GitLab",
+          icon = "GL",
+          color = "#FC6D26",
+        },
         actions = { { id = "open", title = "Open" } },
       },
     })
@@ -69,6 +74,9 @@ final class LuaInboxTests: LuaRenderRuntimeTestCase, @unchecked Sendable {
       $0.inboxReplacePayload?.source == "gitlab"
     }
     XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.id, "mr-42")
+    XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.source?.name, "GitLab")
+    XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.source?.icon, "GL")
+    XCTAssertEqual(replacement.inboxReplacePayload?.items.first?.source?.color, "#FC6D26")
 
     let configuration = try await nextUpdate(from: recorder) {
       $0.inboxConfigurationPayload?.source == "gitlab"

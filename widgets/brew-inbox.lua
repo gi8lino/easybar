@@ -4,6 +4,11 @@ local retry = require("retry")
 local text = require("text")
 
 local SOURCE = "Homebrew"
+local SOURCE_PRESENTATION = {
+	name = "Homebrew",
+	icon = "🍺",
+	color = "#FBB040",
+}
 local POLL_INTERVAL_SECONDS = 30 * 60
 local WAKE_REFRESH_DELAY_SECONDS = 3
 local REFRESH_BACKOFF_SECONDS = { 2, 5 }
@@ -130,6 +135,7 @@ local function publish()
 			category = package.kind == "cask" and "Casks" or "Formulae",
 			severity = package.pinned and "warning" or "info",
 			unread = true,
+			source = SOURCE_PRESENTATION,
 			actions = actions,
 		}
 	end
@@ -141,6 +147,7 @@ local function publish()
 			body = state.warning.message,
 			severity = "warning",
 			unread = true,
+			source = SOURCE_PRESENTATION,
 		}
 	end
 
@@ -151,6 +158,7 @@ local function publish()
 			body = state.error.message,
 			severity = "error",
 			unread = true,
+			source = SOURCE_PRESENTATION,
 			actions = { { id = "refresh", title = "Refresh" } },
 		}
 	end

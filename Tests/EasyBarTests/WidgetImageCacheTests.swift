@@ -1,5 +1,6 @@
 import EasyBarShared
 import Foundation
+import SwiftUI
 import XCTest
 
 @testable import EasyBarApp
@@ -178,27 +179,15 @@ final class WidgetImageCacheTests: XCTestCase {
   }
 
   @MainActor
-  func testPathAndInlineSVGUseTheSameTintingBehavior() throws {
-    let pathImage = try XCTUnwrap(NSImage(data: Self.pixelPNG))
-    let svgImage = try XCTUnwrap(NSImage(data: Data(Self.redSVG.utf8)))
-    let tintedNode = try makeNode(iconColor: "#ffffff")
-    let untintedNode = try makeNode(iconColor: nil)
-    let logger = ProcessLogger(label: "image.tint.test", minimumLevel: .error)
-
-    let tintedView = WidgetNodeView(node: tintedNode, logger: logger)
-    XCTAssertEqual(
-      tintedView.tintedImage(from: pathImage, allowsTemplateTint: true)?.isTemplate,
-      true
+  func testPathAndInlineSVGUseTheSameTintingBehavior() {
+    let tint = Color.white
+    XCTAssertTrue(WidgetImageView.usesTemplateRendering(source: .path("/tmp/icon.png"), tint: tint))
+    XCTAssertTrue(WidgetImageView.usesTemplateRendering(source: .svg(Self.redSVG), tint: tint))
+    XCTAssertFalse(WidgetImageView.usesTemplateRendering(source: .path("/tmp/icon.png"), tint: nil))
+    XCTAssertFalse(WidgetImageView.usesTemplateRendering(source: .svg(Self.redSVG), tint: nil))
+    XCTAssertFalse(
+      WidgetImageView.usesTemplateRendering(source: .path("/Applications/App.app"), tint: tint)
     )
-    XCTAssertEqual(
-      tintedView.tintedImage(from: svgImage, allowsTemplateTint: true)?.isTemplate,
-      true
-    )
-
-    let untintedView = WidgetNodeView(node: untintedNode, logger: logger)
-    XCTAssertNil(untintedView.tintedImage(from: pathImage, allowsTemplateTint: true))
-    XCTAssertNil(untintedView.tintedImage(from: svgImage, allowsTemplateTint: true))
-    XCTAssertNil(tintedView.tintedImage(from: pathImage, allowsTemplateTint: false))
   }
 
   func testApplicationBundleIconsKeepOriginalRendering() {
@@ -208,17 +197,4 @@ final class WidgetImageCacheTests: XCTestCase {
     XCTAssertTrue(WidgetImageSource.svg(Self.redSVG).allowsTemplateTint)
   }
 
-  private func makeNode(iconColor: String?) throws -> WidgetNodeState {
-    let iconColorField = iconColor.map { ",\"icon_color\":\"\($0)\"" } ?? ""
-    let decoder = JSONDecoder()
-    decoder.keyDecodingStrategy = .convertFromSnakeCase
-    return try decoder.decode(
-      WidgetNodeState.self,
-      from: Data(
-        """
-        {"id":"image","root":"image","kind":"item","position":"right","order":0,"icon":"","text":"","visible":true\(iconColorField)}
-        """.utf8
-      )
-    )
-  }
 }

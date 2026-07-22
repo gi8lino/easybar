@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 // MARK: - Node Content
@@ -385,20 +384,6 @@ extension WidgetNodeView {
     }
   }
 
-  /// Returns a templated image when custom image tinting is enabled.
-  func tintedImage(from image: NSImage, allowsTemplateTint: Bool) -> NSImage? {
-    guard allowsTemplateTint,
-      let tint = node.iconColor ?? node.color,
-      !tint.isEmpty
-    else {
-      return nil
-    }
-
-    let templated = image.copy() as? NSImage ?? image
-    templated.isTemplate = true
-    return templated
-  }
-
   var imageSize: CGFloat {
     return WidgetRenderMetrics.nonnegative(node.imageSize, fallback: 14)
   }
@@ -411,50 +396,21 @@ extension WidgetNodeView {
   @ViewBuilder
   func renderedImageView() -> some View {
     if let imageSource = node.imageSource {
-      let imageRevision = WidgetImageRevision(source: imageSource)
-      Group {
-        if let loadedImage = imageLoader.image(for: imageSource) {
-          if let tintedImage = tintedImage(
-            from: loadedImage.image,
-            allowsTemplateTint: imageSource.allowsTemplateTint
-          ) {
-            imageBaseView(image: tintedImage, renderingMode: .template)
-              .foregroundStyle(iconResolvedColor)
-              .frame(width: imageSize, height: imageSize)
-              .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
-          } else {
-            imageBaseView(image: loadedImage.image, renderingMode: .original)
-              .frame(width: imageSize, height: imageSize)
-              .clipShape(RoundedRectangle(cornerRadius: imageCornerRadius))
-          }
-        } else {
-          Color.clear
-            .frame(width: imageSize, height: imageSize)
-        }
-      }
-      .task(id: imageRevision) {
-        if await imageLoader.load(revision: imageRevision) {
-          logger.warn(
-            "widget image could not be decoded",
-            .field("widget", node.id),
-            .field("source", imageSource.diagnosticLabel)
-          )
-        }
+      WidgetImageView(
+        source: imageSource,
+        size: imageSize,
+        cornerRadius: imageCornerRadius,
+        tint: (node.iconColor ?? node.color)?.isEmpty == false ? iconResolvedColor : nil
+      ) { failedSource in
+        logger.warn(
+          "widget image could not be decoded",
+          .field("widget", node.id),
+          .field("source", failedSource.diagnosticLabel)
+        )
       }
     }
   }
 
-  /// Builds the shared image view with the requested rendering mode.
-  func imageBaseView(
-    image: NSImage,
-    renderingMode: Image.TemplateRenderingMode
-  ) -> some View {
-    Image(nsImage: image)
-      .renderingMode(renderingMode)
-      .resizable()
-      .interpolation(.high)
-      .scaledToFit()
-  }
 }
 
 /// Draws glyphs into a surface wider than their typographic advance width.
