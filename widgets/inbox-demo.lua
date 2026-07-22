@@ -19,7 +19,7 @@ local HOMEBREW = {
 	color = "#FBB040",
 }
 
-local items = {
+local DEMO_ITEMS = {
 	{
 		id = "github-review",
 		title = "Review requested on pull request #482",
@@ -115,6 +115,14 @@ local items = {
 		source = HOMEBREW,
 	},
 }
+local items = {}
+
+local function reset_items()
+	items = {}
+	for _, item in ipairs(DEMO_ITEMS) do
+		items[#items + 1] = item
+	end
+end
 
 local function publish()
 	easybar.inbox.replace(SOURCE, items)
@@ -136,4 +144,21 @@ end
 
 easybar.inbox.on_action(SOURCE, handle_action)
 
-publish()
+easybar.inbox.configure(SOURCE, {
+	actions = {
+		{ id = "refresh", title = "Refresh" },
+		{ id = "clear", title = "Clear demo" },
+	},
+})
+
+easybar.inbox.on_context_action(SOURCE, function(event)
+	if event.action_id == "refresh" then
+		reset_items()
+		publish()
+	elseif event.action_id == "clear" then
+		items = {}
+		publish()
+	end
+end)
+
+easybar.inbox.clear(SOURCE)
