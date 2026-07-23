@@ -74,6 +74,50 @@ final class ProcessExecutorTests: XCTestCase {
     XCTAssertTrue(waitUntilProcessIsAbsent(childPID))
   }
 
+  func testAlreadyCancelledExecutionDoesNotLaunchProcess() async {
+    let logger = ProcessLogger(
+      label: "process.executor.tests",
+      minimumLevel: .error,
+      outputStream: nil,
+      errorStream: nil
+    )
+    let executor = ProcessExecutor(logger: logger)
+    let markerURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("easybar-process-executor-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: markerURL) }
+
+    let task = Task {
+      do {
+        try await Task.sleep(nanoseconds: 60_000_000_000)
+      } catch {
+        // Keep the task's cancelled state and enter the executor deterministically.
+      }
+
+      return try await executor.run(
+        ProcessExecutionRequest(
+          executablePath: "/usr/bin/touch",
+          arguments: ["/usr/bin/touch", markerURL.path],
+          environment: ProcessInfo.processInfo.environment,
+          timeout: 2,
+          standardOutputLimit: 1024
+        )
+      )
+    }
+
+    task.cancel()
+
+    do {
+      _ = try await task.value
+      XCTFail("Expected the already-cancelled execution to throw")
+    } catch is CancellationError {
+      // Expected.
+    } catch {
+      XCTFail("Expected CancellationError, got \(error)")
+    }
+
+    XCTAssertFalse(FileManager.default.fileExists(atPath: markerURL.path))
+  }
+
   private func waitUntilProcessIsAbsent(_ processIdentifier: Int32) -> Bool {
     for _ in 0..<100 {
       if kill(processIdentifier, 0) != 0, errno == ESRCH {

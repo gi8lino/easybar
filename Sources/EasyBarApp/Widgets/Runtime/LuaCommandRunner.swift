@@ -117,6 +117,12 @@ final class LuaCommandRunner: @unchecked Sendable {
       )
       let result = try await executor.run(request)
       return commandResult(from: result, invocation: invocation, limits: limits)
+    } catch is CancellationError {
+      logger.debug(
+        "lua command cancelled before launch",
+        .field("command_bytes", invocation.payloadByteCount)
+      )
+      return LuaCommandResult(output: "", status: Limits.cancelledStatus)
     } catch let error as ProcessSpawnError {
       return launchFailure(error, invocation: invocation)
     } catch {

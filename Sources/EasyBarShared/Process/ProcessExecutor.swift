@@ -126,6 +126,7 @@ public final class ProcessExecutor: @unchecked Sendable {
 
   /// Executes one process without blocking the caller's cooperative executor thread.
   public func run(_ request: ProcessExecutionRequest) async throws -> ProcessExecutionResult {
+    try Task.checkCancellation()
     let cancellation = CancellationState()
     if Task.isCancelled {
       cancellation.cancel()
@@ -161,6 +162,10 @@ public final class ProcessExecutor: @unchecked Sendable {
     cancellation: CancellationState
   ) throws -> ProcessExecutionResult {
     try validate(request)
+
+    if cancellation.isCancelled {
+      throw CancellationError()
+    }
 
     var standardOutputPipe = [Int32](repeating: -1, count: 2)
     guard pipe(&standardOutputPipe) == 0 else {
