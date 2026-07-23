@@ -286,7 +286,8 @@ func streamMetrics(to socketPath: String, context: AppContext) throws {
 
     history.append(snapshot)
     fputs(
-      terminal.redrawPrefix + MetricsRenderer.watchText(snapshot, history: history),
+      terminal.redrawPrefix
+        + MetricsRenderer.watchText(snapshot, history: history, terminalWidth: terminal.width),
       stdout
     )
     fflush(stdout)

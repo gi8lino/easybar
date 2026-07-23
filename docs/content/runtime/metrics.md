@@ -56,6 +56,10 @@ The **Widget trees** and **Events** sections show the eight highest-volume entri
 timestamps measure tree publications; activity performed through a separate service, such as an
 inbox refresh that does not replace a widget tree, does not update them.
 
-Watch mode redraws one complete frame but does not hide sections to fit the current terminal
-height. If the frame is taller than the viewport, use the scrollable one-shot `easybar metrics`
-output to inspect lower sections.
+Watch mode uses a compact dashboard. Terminals at least 100 columns wide place process and agent
+activity side by side, followed by three-column Runtime/Lua/Delivery and
+Subscriptions/Widget-trees/Events rows. Narrow terminals stack the same compact tiles vertically.
+The renderer checks the terminal width for every frame, so resizing takes effect without restarting
+the command. Wide dashboards are capped at 120 columns so their internal columns remain visually
+grouped. If even the compact frame is taller than the viewport, use the scrollable one-shot
+`easybar metrics` output.

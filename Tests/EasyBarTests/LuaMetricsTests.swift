@@ -97,6 +97,69 @@ final class LuaMetricsTests: XCTestCase {
     XCTAssertFalse(text.contains("lua_raw_stderr"))
   }
 
+  func testWideWatchRendererUsesCompactSideBySideTiles() {
+    let snapshot = snapshot(
+      runtime: runtimeMetrics(
+        subscribedEvents: [
+          "forced",
+          "interval_tick:github_inbox_timer:300",
+          "system_woke",
+        ],
+        stderrLines: 10,
+        luaLogLines: 8,
+        luaWarningLines: 2,
+        luaErrorLines: 1,
+        luaRawStderrLines: 2
+      )
+    )
+    var history = MetricsHistory(limit: 32)
+    history.append(snapshot)
+
+    let text = MetricsRenderer.watchText(snapshot, history: history, terminalWidth: 240)
+    let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+
+    XCTAssertTrue(lines.contains { $0.hasPrefix("Runtime") && $0.contains("Lua") && $0.contains("Delivery") })
+    XCTAssertTrue(
+      lines.contains {
+        $0.hasPrefix("Subscriptions (3)")
+          && $0.contains("Widget trees (top 8)")
+          && $0.contains("Events (top 8)")
+      }
+    )
+    XCTAssertTrue(text.contains("github_inbox_timer (5m)"))
+    XCTAssertTrue(text.contains("upd nodes    age"))
+    XCTAssertTrue(text.contains("tot   rate drop coal"))
+    XCTAssertFalse(text.contains("github_inbox_timer (every 5m)"))
+    XCTAssertFalse(text.contains("last_tree"))
+    XCTAssertLessThanOrEqual(lines.map(\.count).max() ?? 0, 119)
+  }
+
+  func testNarrowWatchRendererStacksCompactTiles() {
+    let snapshot = snapshot(
+      runtime: runtimeMetrics(
+        subscribedEvents: ["forced", "system_woke"],
+        stderrLines: 1,
+        luaLogLines: 1,
+        luaWarningLines: 0,
+        luaErrorLines: 0,
+        luaRawStderrLines: 0
+      )
+    )
+    var history = MetricsHistory(limit: 32)
+    history.append(snapshot)
+
+    let text = MetricsRenderer.watchText(snapshot, history: history, terminalWidth: 80)
+    let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+
+    XCTAssertTrue(lines.contains("Runtime"))
+    XCTAssertTrue(lines.contains("Lua"))
+    XCTAssertTrue(lines.contains("Delivery"))
+    XCTAssertTrue(lines.contains("Subscriptions (2)"))
+    XCTAssertTrue(lines.contains("Widget trees (top 8)"))
+    XCTAssertTrue(lines.contains("Events (top 8)"))
+    XCTAssertFalse(lines.contains { $0.hasPrefix("Runtime") && $0.contains("Delivery") })
+  }
+
   func testRuntimeMetricsDecodesPayloadWithoutLuaLogBreakdown() throws {
     let encoder = JSONEncoder()
     let encoded = try encoder.encode(runtimeMetrics(stderrLines: 7))
@@ -151,7 +214,15 @@ final class LuaMetricsTests: XCTestCase {
           lastUpdatedAt: nil
         )
       ],
-      events: []
+      events: [
+        IPC.CounterMetrics(
+          name: "network_change",
+          total: 3,
+          perSecond: 0,
+          droppedTotal: 0,
+          coalescedTotal: 0
+        )
+      ]
     )
   }
 

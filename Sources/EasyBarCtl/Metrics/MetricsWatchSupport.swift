@@ -9,6 +9,15 @@ final class WatchTerminal {
   /// Whether watch mode has switched into alternate-screen mode.
   private var activated = false
 
+  /// Current terminal width, with a conservative fallback for redirected output.
+  var width: Int {
+    var size = winsize()
+    guard ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0, size.ws_col > 0 else {
+      return 80
+    }
+    return Int(size.ws_col)
+  }
+
   /// Escape sequence used to clear the terminal before drawing a new frame.
   var redrawPrefix: String {
     interactive ? "\u{001B}[H\u{001B}[2J\u{001B}[3J" : ""
