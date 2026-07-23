@@ -372,7 +372,7 @@ public struct TOMLConfigReader<Failure: Error> {
 
   private func describeNumberBound(_ value: Double) -> String {
     if value.rounded(.towardZero) == value {
-      return String(Int(value))
+      return String(format: "%.0f", value)
     }
 
     return String(value)
